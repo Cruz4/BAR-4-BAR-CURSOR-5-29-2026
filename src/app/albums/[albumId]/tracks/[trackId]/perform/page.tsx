@@ -26,22 +26,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/use-auth';
 import { isProUser } from '@/lib/subscription';
+import { db } from '@/lib/firebase/client/firebase';
+import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
+import { doc, getDoc } from 'firebase/firestore';
+import type { Track } from '@/lib/types';
 
 /** Scroll speed levels — pixels per second */
 const SCROLL_SPEED_PX: Record<number, number> = {
-  1: 28,
-  2: 48,
-  3: 72,
-  4: 96,
+  1: 22,
+  2: 38,
+  3: 82,
+  4: 118,
 };
 
 export default function PerformancePage() {
   const params = useParams();
   const albumId = params.albumId as string;
   const trackId = params.trackId as string;
-  const { getTrackById, updateTrack, loading } = useContext(DataContext);
+  const { getTrackById, updateTrack, loading: dataLoading, albums } = useContext(DataContext);
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
+  const [resolvedTrack, setResolvedTrack] = useState<Track | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     if (user && !isProUser(user)) {
@@ -49,6 +55,66 @@ export default function PerformancePage() {
     }
   }, [user, router]);
   
+  const contextTrack = useMemo(
+    () => getTrackById(albumId, trackId).track,
+    [getTrackById, albumId, trackId, albums],
+  );
+
+  useEffect(() => {
+    setResolvedTrack(null);
+    setLoadFailed(false);
+  }, [albumId, trackId]);
+
+  useEffect(() => {
+    if (contextTrack) {
+      setResolvedTrack(contextTrack);
+      setLoadFailed(false);
+    }
+  }, [contextTrack]);
+
+  useEffect(() => {
+    if (contextTrack || !user?.id || !authReady || dataLoading) return;
+
+    let cancelled = false;
+
+    const loadTrack = async () => {
+      try {
+        await waitForAuthUser();
+        const snap = await getDoc(doc(db, 'users', user.id, 'albums', albumId, 'tracks', trackId));
+        if (cancelled) return;
+
+        if (snap.exists()) {
+          setResolvedTrack({
+            ...(snap.data() as Track),
+            id: snap.id,
+            albumId,
+            sections: (snap.data() as Track).sections || [],
+          });
+          setLoadFailed(false);
+        } else {
+          setLoadFailed(true);
+        }
+      } catch (error) {
+        console.error('Performance mode track load failed:', error);
+        if (!cancelled) setLoadFailed(true);
+      }
+    };
+
+    void loadTrack();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [contextTrack, user?.id, authReady, dataLoading, albumId, trackId]);
+
+  useEffect(() => {
+    if (resolvedTrack || loadFailed) return;
+    const timeout = setTimeout(() => setLoadFailed(true), 12000);
+    return () => clearTimeout(timeout);
+  }, [resolvedTrack, loadFailed, albumId, trackId]);
+
+  const track = resolvedTrack;
+
   const [fontSize, setFontSize] = useState(24);
   const [isDarkMode, setIsDarkMode] = useState(true);
   
@@ -58,10 +124,9 @@ export default function PerformancePage() {
   const [countdown, setCountdown] = useState(0);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRemainderRef = useRef(0);
   const scrollStateRef = useRef({ isScrolling, scrollSpeed, countdown });
   scrollStateRef.current = { isScrolling, scrollSpeed, countdown };
-  
-  const { track } = useMemo(() => getTrackById(albumId, trackId), [getTrackById, albumId, trackId]);
 
   useEffect(() => {
     let raf = 0;
@@ -72,6 +137,7 @@ export default function PerformancePage() {
 
       if (!active) {
         lastTime = 0;
+        scrollRemainderRef.current = 0;
         return;
       }
 
@@ -90,12 +156,18 @@ export default function PerformancePage() {
       if (!lastTime) lastTime = time;
       const deltaMs = Math.min(time - lastTime, 48);
       const pxPerSec = SCROLL_SPEED_PX[speed] ?? SCROLL_SPEED_PX[2];
-      el.scrollTop += (pxPerSec * deltaMs) / 1000;
+      scrollRemainderRef.current += (pxPerSec * deltaMs) / 1000;
+      const pixels = Math.floor(scrollRemainderRef.current);
+      if (pixels > 0) {
+        el.scrollTop += pixels;
+        scrollRemainderRef.current -= pixels;
+      }
       lastTime = time;
       raf = requestAnimationFrame(tick);
     };
 
     if (isScrolling) {
+      scrollRemainderRef.current = 0;
       raf = requestAnimationFrame(tick);
     }
 
@@ -135,6 +207,7 @@ export default function PerformancePage() {
   const handleToggleHighlight = (checked: boolean) => {
     if (!track) return;
     updateTrack(albumId, trackId, { rhymeHighlightingEnabled: checked });
+    setResolvedTrack({ ...track, rhymeHighlightingEnabled: checked });
   };
 
   const handleBackToTop = () => {
@@ -142,13 +215,41 @@ export default function PerformancePage() {
     stopScroll();
   };
 
-  if (loading || !track) {
+  const handleExit = () => {
+    stopScroll();
+    window.close();
+    // Tabs opened via Performance Mode can close; otherwise return to the track editor.
+    window.setTimeout(() => {
+      router.push(`/albums/${albumId}/tracks/${trackId}`);
+    }, 150);
+  };
+
+  const isBootstrapping = !authReady || !user;
+  const isResolvingTrack = !isBootstrapping && !track && !loadFailed;
+
+  if (isBootstrapping || isResolvingTrack) {
     return (
       <div className="flex h-screen items-center justify-center bg-black">
         <StudioLoader size="lg" />
       </div>
     );
   }
+
+  if (loadFailed || !track) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-black px-6 text-center">
+        <p className="text-sm font-code uppercase tracking-widest text-muted-foreground">Teleprompter could not load this track.</p>
+        <Button
+          className="font-bold uppercase text-xs"
+          onClick={() => router.push(`/albums/${albumId}/tracks/${trackId}`)}
+        >
+          Back to Track
+        </Button>
+      </div>
+    );
+  }
+
+  const sections = track.sections || [];
 
   return (
     <div className={cn(
@@ -158,7 +259,7 @@ export default function PerformancePage() {
       <header className="shrink-0 z-[100] w-full border-b border-neutral-800 bg-background/95 backdrop-blur px-4 py-3 shadow-2xl">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 shrink-0">
-                <Button variant="ghost" size="sm" onClick={() => router.back()} className="hover:bg-neutral-800 h-9 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">
+                <Button variant="ghost" size="sm" onClick={handleExit} className="hover:bg-neutral-800 h-9 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">
                     <ChevronLeft className="mr-2 h-4 w-4" /> Exit
                 </Button>
                 <div className="hidden lg:block border-l border-neutral-800 pl-4">
@@ -174,7 +275,7 @@ export default function PerformancePage() {
                         <SelectTrigger className="h-7 w-[65px] text-[10px] font-bold bg-transparent border-0 focus:ring-0">
                             <SelectValue placeholder="Delay" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent side="bottom" align="start" className="z-[150]">
                             {[0, 1, 2, 3, 5, 10].map(s => (
                                 <SelectItem key={s} value={String(s)} className="text-[10px] font-bold">{s}s Delay</SelectItem>
                             ))}
@@ -262,7 +363,7 @@ export default function PerformancePage() {
         className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden studio-scrollbar relative"
       >
         <div className="max-w-4xl mx-auto px-6 py-12 md:py-24 space-y-12 pb-64">
-            {track.sections.map((section) => (
+            {sections.map((section) => (
                 <section key={section.id} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-1000">
                     <div className="flex items-center gap-6 border-l-4 border-primary pl-8">
                         <Badge variant="outline" className="text-lg px-4 py-1 h-auto font-headline font-bold uppercase tracking-[0.2em] border-primary/40 text-primary bg-primary/5">

@@ -51,7 +51,7 @@ const CreativeEffectsInputSchema = z.object({
     feeling: z.array(z.string()),
   }),
   intents: z.array(z.string()),
-  styleProfileProfile: z.object({ analysis: z.string() }),
+  styleProfile: z.object({ analysis: z.string() }),
   sectionContext: z.object({
     name: z.string(),
     priorLines: z.array(z.string()),
@@ -70,6 +70,34 @@ const CreativeEffectsInputSchema = z.object({
   mustIncludeWords: z.array(z.string()).optional(),
 });
 export type CreativeEffectsInput = z.infer<typeof CreativeEffectsInputSchema>;
+
+const DEFAULT_EFFECTS_VIBE: CreativeEffectsInput['vibe'] = {
+  genre: 'General',
+  tempoBPM: 90,
+  feeling: ['neutral'],
+};
+
+function normalizeCreativeEffectsInput(input: CreativeEffectsInput): CreativeEffectsInput {
+  const vibe = input.vibe ?? DEFAULT_EFFECTS_VIBE;
+  return {
+    ...input,
+    vibe: {
+      genre: vibe.genre || DEFAULT_EFFECTS_VIBE.genre,
+      tempoBPM: typeof vibe.tempoBPM === 'number' ? vibe.tempoBPM : DEFAULT_EFFECTS_VIBE.tempoBPM,
+      feeling: Array.isArray(vibe.feeling) && vibe.feeling.length > 0 ? vibe.feeling : DEFAULT_EFFECTS_VIBE.feeling,
+    },
+    styleProfile: input.styleProfile ?? { analysis: 'Initial neutral style profile.' },
+    intents: input.intents ?? [],
+    sectionContext: input.sectionContext ?? { name: 'verse', priorLines: [], nextLines: [] },
+    editorConstraints: input.editorConstraints ?? {
+      maxLineLen: 80,
+      rhymePreset: 'none',
+      endWith: null,
+      startWith: null,
+      mustRhyme: false,
+    },
+  };
+}
 
 // Schema for the prompt, adding boolean flags for the selected tool
 const CreativeEffectsPromptInputSchema = CreativeEffectsInputSchema.extend({
@@ -94,7 +122,7 @@ export type CreativeEffectsOutput = z.infer<typeof CreativeEffectsOutputSchema>;
 
 
 export async function runCreativeEffect(input: CreativeEffectsInput & AiSecuredInput): Promise<CreativeEffectsOutput> {
-    const flowInput = stripAiAuth(input);
+    const flowInput = normalizeCreativeEffectsInput(stripAiAuth(input));
     return runSecuredAiAction(
       { idToken: input.idToken, userId: input.userId, actionName: 'runCreativeEffect', inkCost: AI_COSTS.runCreativeEffect },
       () => creativeEffectsFlow(flowInput),
@@ -125,7 +153,7 @@ DIRECTION (merged album→track)
 
 VIBE: Genre={{vibe.genre}} | BPM={{vibe.tempoBPM}} | Feeling={{vibe.feeling}}
 INTENTS (light weave): {{{intents}}}
-STYLE PROFILE: {{styleProfileProfile.analysis}}
+STYLE PROFILE: {{styleProfile.analysis}}
 SECTION CONTEXT: In a "{{sectionContext.name}}" section. Prior lines: "{{sectionContext.priorLines}}". Next lines: "{{sectionContext.nextLines}}".
 CONSTRAINTS:
 - Max Line Length: {{editorConstraints.maxLineLen}}

@@ -67,8 +67,8 @@ export default function SharedProjectPage() {
         setIsImporting(true);
         try {
             const data = share.data;
-            if (share.type === 'album') mergeData([data], []);
-            else mergeData([], [data]);
+            if (share.type === 'album') await mergeData([data as Album], []);
+            else await mergeData([], [data as Track]);
             
             await updateDoc(doc(db, 'shares', shareId), { imports: increment(1) });
             router.push('/');

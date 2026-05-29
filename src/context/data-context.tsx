@@ -7,6 +7,67 @@ import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase/client/firebase';
 import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import { doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
+import { stripForFirestore } from '@/lib/utils';
+
+const UNASSIGNED_ALBUM_ID = 'unassigned';
+
+const createUnassignedShell = (ownerId: string): Omit<Album, 'tracks'> => ({
+  id: UNASSIGNED_ALBUM_ID,
+  ownerId,
+  title: 'Loose Tracks',
+  theme: 'Unassigned tracks.',
+  createdAt: new Date().toISOString(),
+});
+
+function ensureTrackId(track: Track, index: number): string {
+  const id = track.id?.trim();
+  if (id) return id;
+  return `track-import-${Date.now()}-${index}`;
+}
+
+async function persistLooseTracks(
+  userId: string,
+  tracks: Track[],
+  batch?: ReturnType<typeof writeBatch>,
+): Promise<{ batch: ReturnType<typeof writeBatch>; opCount: number; persisted: Track[] }> {
+  let activeBatch = batch ?? writeBatch(db);
+  let opCount = 0;
+  const persisted: Track[] = [];
+
+  if (tracks.length === 0) {
+    return { batch: activeBatch, opCount, persisted };
+  }
+
+  activeBatch.set(
+    doc(db, 'users', userId, 'albums', UNASSIGNED_ALBUM_ID),
+    stripForFirestore({
+      ...createUnassignedShell(userId),
+      updatedAt: new Date().toISOString(),
+    }),
+    { merge: true },
+  );
+  opCount++;
+
+  tracks.forEach((track, index) => {
+    const trackId = ensureTrackId(track, index);
+    const trackData = stripForFirestore({
+      ...track,
+      id: trackId,
+      ownerId: userId,
+      albumId: UNASSIGNED_ALBUM_ID,
+      updatedAt: new Date().toISOString(),
+    });
+    activeBatch.set(
+      doc(db, 'users', userId, 'albums', UNASSIGNED_ALBUM_ID, 'tracks', trackId),
+      trackData,
+      { merge: true },
+    );
+    opCount++;
+    persisted.push(trackData as Track);
+  });
+
+  return { batch: activeBatch, opCount, persisted };
+}
 
 interface DataContextType {
   albums: Album[];
@@ -23,7 +84,8 @@ interface DataContextType {
   updateTrack: (albumId: string, trackId: string, updates: Partial<Track>) => void;
   deleteTrack: (albumId: string, trackId: string) => void;
   getTrackById: (albumId: string, trackId: string) => { track: Track | undefined, album: Album | undefined };
-  mergeData: (albumsToMerge: Album[], tracksToMerge: Track[]) => void;
+  mergeData: (albumsToMerge: Album[], tracksToMerge: Track[]) => Promise<void>;
+  clearVault: () => Promise<void>;
   moveTrack: (trackId: string, fromAlbumId: string, toAlbumId: string) => void;
   updateStyleProfile: (analysis: string, metrics?: any) => void;
   dropDNA: (type: 'album' | 'track', id: string) => Promise<string>;
@@ -44,7 +106,8 @@ export const DataContext = createContext<DataContextType>({
   updateTrack: () => {},
   deleteTrack: () => {},
   getTrackById: () => ({ track: undefined, album: undefined }),
-  mergeData: () => {},
+  mergeData: async () => {},
+  clearVault: async () => {},
   moveTrack: () => {},
   updateStyleProfile: () => {},
   dropDNA: async () => '',
@@ -138,7 +201,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const loadData = async () => {
       if (!user || !authReady) {
-        if (!user) setLoading(false);
+        setLoading(false);
         return;
       }
       setLoading(true);
@@ -170,11 +233,45 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           const tracksSnap = await getDocs(collection(db, 'users', user.id, 'albums', albumDoc.id, 'tracks'));
           loadedAlbums.push({ ...albumDoc.data(), id: albumDoc.id, tracks: tracksSnap.docs.map(d => ({ ...d.data(), id: d.id })) } as Album);
         }
+
+        // Loose tracks may exist under albums/unassigned/tracks without an album doc.
+        let looseTracks = (
+          await getDocs(collection(db, 'users', user.id, 'albums', UNASSIGNED_ALBUM_ID, 'tracks'))
+        ).docs.map((d) => ({ ...d.data(), id: d.id, albumId: UNASSIGNED_ALBUM_ID })) as Track[];
+
+        // Self-heal: if local backup has loose tracks missing from cloud, push them back up.
+        try {
+          const savedLocal = localStorage.getItem(`${ALBUM_STORAGE_KEY}-${user.id}`);
+          if (savedLocal) {
+            const localAlbums = JSON.parse(savedLocal) as Album[];
+            const localLoose = localAlbums.find((a) => a.id === UNASSIGNED_ALBUM_ID)?.tracks ?? [];
+            const missingLoose = localLoose.filter((lt) => lt?.id && !looseTracks.some((ct) => ct.id === lt.id));
+            if (missingLoose.length > 0) {
+              const { batch, persisted } = await persistLooseTracks(user.id, missingLoose);
+              await batch.commit();
+              looseTracks = [...looseTracks, ...persisted];
+            }
+          }
+        } catch (recoveryError) {
+          console.warn('Loose track cloud recovery skipped', recoveryError);
+        }
+
+        let finalAlbums = [...loadedAlbums];
+        const unassignedIdx = finalAlbums.findIndex((a) => a.id === UNASSIGNED_ALBUM_ID);
+        if (unassignedIdx >= 0) {
+          finalAlbums[unassignedIdx] = { ...finalAlbums[unassignedIdx], tracks: looseTracks };
+        } else if (looseTracks.length > 0) {
+          finalAlbums.unshift({ ...createUnassignedShell(user.id), tracks: looseTracks });
+        }
+
+        if (!finalAlbums.find((a) => a.id === UNASSIGNED_ALBUM_ID)) {
+          finalAlbums.unshift({ ...createUnassignedShell(user.id), tracks: [] });
+        }
         
         const styleSnap = await getDoc(doc(db, 'users', user.id, 'styleProfile', 'main'));
         if (styleSnap.exists()) setStyleProfile(styleSnap.data() as StyleProfile);
         
-        setAlbums(loadedAlbums);
+        setAlbums(finalAlbums);
 
         if (!styleProfile && !styleSnap.exists()) {
           const defaultProfile: StyleProfile = {
@@ -186,8 +283,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           };
           setStyleProfile(defaultProfile);
         }
-
-        setAlbums(prev => !prev.find(a => a.id === 'unassigned') ? [{ id: 'unassigned', ownerId: user.id, title: 'Loose Tracks', theme: 'Unassigned tracks.', createdAt: new Date().toISOString(), tracks: [] }, ...prev] : prev);
       } catch (e) { 
         console.error("Load failed", e);
         const savedLocal = localStorage.getItem(`${ALBUM_STORAGE_KEY}-${user.id}`);
@@ -211,17 +306,37 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const addAlbum = useCallback((album: Album) => {
     setAlbums(prev => [album, ...prev]);
     if (user) {
-      const { tracks, ...data } = album;
-      setDoc(doc(db, 'users', user.id, 'albums', album.id), data);
+      const { tracks = [], ...data } = album;
+      void setDoc(
+        doc(db, 'users', user.id, 'albums', album.id),
+        stripForFirestore({ ...data, ownerId: user.id }),
+        { merge: true },
+      );
+      for (const t of tracks) {
+        void setDoc(
+          doc(db, 'users', user.id, 'albums', album.id, 'tracks', t.id),
+          stripForFirestore({ ...t, ownerId: user.id, albumId: album.id }),
+          { merge: true },
+        );
+      }
     }
   }, [user]);
 
   const addTrack = useCallback((albumId: string, track: Omit<Track, 'id'>): Track => {
     const id = track.id || `track-${Date.now()}`;
-    const newTrack = { ...track, id, ownerId: user!.id, albumId };
-    setAlbums(prev => prev.map(a => (a.id === albumId ? { ...a, tracks: [...a.tracks, newTrack as Track] } : a)));
-    if (user) setDoc(doc(db, 'users', user.id, 'albums', albumId, 'tracks', id), newTrack);
-    return newTrack as Track;
+    const newTrack = stripForFirestore({ ...track, id, ownerId: user!.id, albumId }) as Track;
+    setAlbums(prev => prev.map(a => (a.id === albumId ? { ...a, tracks: [...a.tracks, newTrack] } : a)));
+    if (user) {
+      if (albumId === UNASSIGNED_ALBUM_ID) {
+        void setDoc(
+          doc(db, 'users', user.id, 'albums', UNASSIGNED_ALBUM_ID),
+          stripForFirestore({ ...createUnassignedShell(user.id), updatedAt: new Date().toISOString() }),
+          { merge: true },
+        );
+      }
+      void setDoc(doc(db, 'users', user.id, 'albums', albumId, 'tracks', id), newTrack, { merge: true });
+    }
+    return newTrack;
   }, [user]);
 
   const updateTrack = useCallback((albumId: string, trackId: string, updates: Partial<Track>) => {
@@ -278,9 +393,155 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const mergeData = useCallback(async (importedAlbums: Album[], importedTracks: Track[]) => {
     if (!user) return;
-    importedAlbums.forEach(a => addAlbum(a));
-    importedTracks.forEach(t => addTrack('unassigned', t));
-  }, [user, addAlbum, addTrack]);
+
+    await flushCloudNow();
+
+    let batch = writeBatch(db);
+    let opCount = 0;
+    const commitIfNeeded = async (force = false) => {
+      if (opCount === 0) return;
+      if (force || opCount >= 450) {
+        await batch.commit();
+        batch = writeBatch(db);
+        opCount = 0;
+      }
+    };
+
+    const persistedAlbums: Album[] = [];
+    let persistedLooseTracks: Track[] = [];
+
+    const looseFromUnassignedAlbum = importedAlbums
+      .filter((album) => album.id === UNASSIGNED_ALBUM_ID)
+      .flatMap((album) => album.tracks ?? []);
+    const looseTrackMap = new Map<string, Track>();
+    [...importedTracks, ...looseFromUnassignedAlbum].forEach((track, index) => {
+      const id = ensureTrackId(track, index);
+      looseTrackMap.set(id, { ...track, id });
+    });
+    const allLooseTracks = Array.from(looseTrackMap.values());
+
+    try {
+      for (const album of importedAlbums) {
+        if (album.id === UNASSIGNED_ALBUM_ID) continue;
+        const { tracks = [], ...albumData } = album;
+        const stampedAlbum = stripForFirestore({
+          ...albumData,
+          ownerId: user.id,
+          updatedAt: new Date().toISOString(),
+        });
+        batch.set(doc(db, 'users', user.id, 'albums', album.id), stampedAlbum, { merge: true });
+        opCount++;
+
+        const persistedTracks: Track[] = [];
+        for (const track of tracks) {
+          const trackId = ensureTrackId(track, persistedTracks.length);
+          const trackData = stripForFirestore({
+            ...track,
+            id: trackId,
+            ownerId: user.id,
+            albumId: album.id,
+            updatedAt: new Date().toISOString(),
+          });
+          batch.set(doc(db, 'users', user.id, 'albums', album.id, 'tracks', trackId), trackData, { merge: true });
+          opCount++;
+          persistedTracks.push(trackData as Track);
+          await commitIfNeeded();
+        }
+        persistedAlbums.push({ ...stampedAlbum, id: album.id, tracks: persistedTracks });
+      }
+
+      if (allLooseTracks.length > 0) {
+        const looseResult = await persistLooseTracks(user.id, allLooseTracks, batch);
+        batch = looseResult.batch;
+        opCount += looseResult.opCount;
+        persistedLooseTracks = looseResult.persisted;
+        await commitIfNeeded();
+      }
+
+      await commitIfNeeded(true);
+    } catch (error) {
+      console.error('Vault merge failed:', error);
+      throw error;
+    }
+
+    setAlbums((prev) => {
+      let next = [...prev];
+
+      for (const imported of persistedAlbums) {
+        const idx = next.findIndex((a) => a.id === imported.id);
+        if (idx >= 0) {
+          const existing = next[idx];
+          const trackMap = new Map(existing.tracks.map((t) => [t.id, t]));
+          imported.tracks.forEach((t) => trackMap.set(t.id, t));
+          next[idx] = { ...existing, ...imported, tracks: Array.from(trackMap.values()) };
+        } else {
+          next = [imported, ...next];
+        }
+      }
+
+      if (persistedLooseTracks.length > 0) {
+        const unassignedIdx = next.findIndex((a) => a.id === UNASSIGNED_ALBUM_ID);
+        if (unassignedIdx >= 0) {
+          const existing = next[unassignedIdx];
+          const trackMap = new Map(existing.tracks.map((t) => [t.id, t]));
+          persistedLooseTracks.forEach((t) => trackMap.set(t.id, t));
+          next[unassignedIdx] = { ...existing, tracks: Array.from(trackMap.values()) };
+        } else {
+          next = [{ ...createUnassignedShell(user.id), tracks: persistedLooseTracks }, ...next];
+        }
+      }
+
+      return next;
+    });
+
+    setCloudSaveStatus('saved');
+  }, [user, flushCloudNow]);
+
+  const clearVault = useCallback(async () => {
+    if (!user) return;
+
+    await flushCloudNow();
+
+    const albumsSnap = await getDocs(collection(db, 'users', user.id, 'albums'));
+    for (const albumDoc of albumsSnap.docs) {
+      let batch = writeBatch(db);
+      let opCount = 0;
+
+      const tracksSnap = await getDocs(collection(db, 'users', user.id, 'albums', albumDoc.id, 'tracks'));
+      for (const trackDoc of tracksSnap.docs) {
+        batch.delete(trackDoc.ref);
+        opCount++;
+        if (opCount >= 450) {
+          await batch.commit();
+          batch = writeBatch(db);
+          opCount = 0;
+        }
+      }
+
+      batch.delete(albumDoc.ref);
+      await batch.commit();
+    }
+
+    const orphanLooseSnap = await getDocs(collection(db, 'users', user.id, 'albums', UNASSIGNED_ALBUM_ID, 'tracks'));
+    if (!orphanLooseSnap.empty) {
+      let batch = writeBatch(db);
+      orphanLooseSnap.docs.forEach((trackDoc) => batch.delete(trackDoc.ref));
+      await batch.commit();
+    }
+
+    const freshUnassigned: Album = {
+      ...createUnassignedShell(user.id),
+      tracks: [],
+    };
+
+    setAlbums([freshUnassigned]);
+    try {
+      localStorage.setItem(`${ALBUM_STORAGE_KEY}-${user.id}`, JSON.stringify([freshUnassigned]));
+    } catch {
+      // ignore quota errors
+    }
+    setCloudSaveStatus('saved');
+  }, [user, flushCloudNow]);
 
   const moveTrack = useCallback((tId: string, fromId: string, toId: string) => {
     const { track } = getTrackById(fromId, tId);
@@ -291,7 +552,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     <DataContext.Provider value={{ 
       albums, styleProfile, loading, isCloudSyncActive, cloudSaveStatus, flushCloudNow,
       addAlbum, updateAlbum, deleteAlbum, getAlbumById,
-      addTrack, updateTrack, deleteTrack, getTrackById, mergeData, moveTrack, updateStyleProfile, dropDNA
+      addTrack, updateTrack, deleteTrack, getTrackById, mergeData, clearVault, moveTrack, updateStyleProfile, dropDNA
     }}>{children}</DataContext.Provider>
   );
 };

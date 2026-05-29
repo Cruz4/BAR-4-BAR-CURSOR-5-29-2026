@@ -43,6 +43,30 @@ const GenerateNextLineInputSchema = z.object({
 });
 export type GenerateNextLineInput = z.infer<typeof GenerateNextLineInputSchema>;
 
+const DEFAULT_VIBE: GenerateNextLineInput['vibe'] = {
+  genre: 'General',
+  tempoBPM: 90,
+  feeling: ['neutral'],
+};
+
+function normalizeGenerateNextLineInput(input: GenerateNextLineInput): GenerateNextLineInput {
+  const vibe = input.vibe ?? DEFAULT_VIBE;
+  return {
+    ...input,
+    vibe: {
+      genre: vibe.genre || DEFAULT_VIBE.genre,
+      tempoBPM: typeof vibe.tempoBPM === 'number' ? vibe.tempoBPM : DEFAULT_VIBE.tempoBPM,
+      feeling: Array.isArray(vibe.feeling) && vibe.feeling.length > 0 ? vibe.feeling : DEFAULT_VIBE.feeling,
+      ...(vibe.enabled !== undefined ? { enabled: vibe.enabled } : {}),
+      ...(vibe.instrumentation ? { instrumentation: vibe.instrumentation } : {}),
+      ...(vibe.productionNotes ? { productionNotes: vibe.productionNotes } : {}),
+    },
+    styleProfileSummary: input.styleProfileSummary ?? 'Initial neutral style profile.',
+    intents: input.intents ?? [],
+    nextLines: input.nextLines ?? [],
+  };
+}
+
 const GenerateNextLineOutputSchema = z.object({
   line: z.string(),
   rhymeKey: z.string(),
@@ -56,7 +80,7 @@ export type GenerateNextLineFlowOutput = z.infer<typeof GenerateNextLineFlowOutp
 
 export async function generateNextLine(input: GenerateNextLineInput & AiSecuredInput): Promise<GenerateNextLineFlowOutput> {
   try {
-    const flowInput = stripAiAuth(input);
+    const flowInput = normalizeGenerateNextLineInput(stripAiAuth(input));
     return await runSecuredAiAction(
       { idToken: input.idToken, userId: input.userId, actionName: 'generateNextLine', inkCost: AI_COSTS.generateNextLine },
       () => generateNextLineFlow(flowInput),

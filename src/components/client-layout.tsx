@@ -20,6 +20,7 @@ import { ServiceWorkerRegister } from './service-worker-register';
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLoginPage = pathname === '/login';
+  const isPerformPage = pathname.endsWith('/perform');
 
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
@@ -29,7 +30,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             <UIStateProvider>
                 <FirebaseErrorListener />
                 <div className="relative flex min-h-screen flex-col flex-1 overflow-hidden bg-background">
-                  {!isLoginPage && <Header />}
+                  {!isLoginPage && !isPerformPage && <Header />}
                   <main className="flex-1 overflow-hidden flex flex-col">{children}</main>
                   <StudioTips />
                   <FloatingInkSpent />

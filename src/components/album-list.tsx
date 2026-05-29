@@ -61,7 +61,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { DataContext } from '@/context/data-context';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -345,7 +345,7 @@ const VinylRecord = ({ album }: { album: Album }) => (
 
 export function AlbumList() {
   const [createItemType, setCreateItemType] = useState<'Album' | 'Track' | null>(null);
-  const { albums, loading, deleteAlbum, deleteTrack, moveTrack, getAlbumById, mergeData, isCloudSyncActive } = useContext(DataContext);
+  const { albums, loading, deleteAlbum, deleteTrack, moveTrack, getAlbumById, mergeData, clearVault, isCloudSyncActive } = useContext(DataContext);
   const { user } = useAuth();
   const isPro = isProUser(user);
   const albumCount = albums.filter((a) => a.id !== 'unassigned').length;
@@ -353,16 +353,33 @@ export function AlbumList() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const router = useRouter();
+  const pathname = usePathname();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'alphabetical'>('newest');
   const [showImportConfirm, setShowImportConfirm] = useState(false);
+  const [showClearVaultConfirm, setShowClearVaultConfirm] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isClearingVault, setIsClearingVault] = useState(false);
   const [dataToImport, setDataToImport] = useState<any>(null);
   const [trackToDelete, setTrackToDelete] = useState<Track | null>(null);
   const [looseTracksMinimized, setLooseTracksMinimized] = useState(false);
 
   const unassignedTracks = getAlbumById('unassigned')?.tracks || [];
   const realAlbums = albums.filter(a => a.id !== 'unassigned');
+
+  // Login and route transitions can leave the window scrolled mid-page before vault content paints.
+  useEffect(() => {
+    if (pathname !== '/' || loading) return;
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    const resetScroll = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    resetScroll();
+    requestAnimationFrame(() => requestAnimationFrame(resetScroll));
+  }, [pathname, loading]);
 
   // Unified Sorting Logic
   const sortData = (data: any[]) => {
@@ -442,6 +459,50 @@ export function AlbumList() {
     link.download = `bar4bar-studio-vault-${new Date().toISOString().split('T')[0]}.json`;
     link.href = url; link.click(); URL.revokeObjectURL(url);
     toast({ title: 'Studio Vault Exported!' });
+  };
+
+  const handleImportMerge = async () => {
+    if (!dataToImport) return;
+    setIsImporting(true);
+    try {
+      let albumsPayload: Album[] = [];
+      let looseTracks: Track[] = [];
+
+      if (Array.isArray(dataToImport)) {
+        const unassigned = dataToImport.find((a: Album) => a.id === 'unassigned');
+        looseTracks = unassigned?.tracks || [];
+        albumsPayload = dataToImport.filter((a: Album) => a.id !== 'unassigned');
+      } else if (dataToImport.albums) {
+        const unassigned = dataToImport.albums.find((a: Album) => a.id === 'unassigned');
+        looseTracks = unassigned?.tracks || dataToImport.tracks || [];
+        albumsPayload = dataToImport.albums.filter((a: Album) => a.id !== 'unassigned');
+      } else {
+        throw new Error('Invalid blueprint format');
+      }
+
+      await mergeData(albumsPayload, looseTracks);
+      setShowImportConfirm(false);
+      setDataToImport(null);
+      toast({ title: 'Vault Merged Successfully', description: 'Imported albums and tracks saved to your cloud vault.' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Import Failed', description: 'Could not merge studio blueprint.' });
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleClearVault = async () => {
+    setIsClearingVault(true);
+    try {
+      await clearVault();
+      setShowClearVaultConfirm(false);
+      toast({ title: 'Vault Cleared', description: 'All albums and loose tracks removed. Start fresh.' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Clear Failed', description: 'Could not erase vault. Try again.' });
+    } finally {
+      setIsClearingVault(false);
+    }
   };
 
   if (loading) return <div className="flex h-screen items-center justify-center bg-[#0a121e]"><StudioLoader size="lg" /></div>;
@@ -692,6 +753,20 @@ export function AlbumList() {
                 </div>
             )}
         </div>
+
+        {user && !isEmpty && (
+          <div className="fixed bottom-4 right-4 z-50 pointer-events-none">
+            <Button
+              variant="outline"
+              tabIndex={-1}
+              onClick={() => setShowClearVaultConfirm(true)}
+              className="pointer-events-auto h-6 min-h-6 px-2.5 gap-1 rounded-lg border-red-500/30 bg-black/80 backdrop-blur-md text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50 shadow-[0_4px_16px_rgba(0,0,0,0.35)] font-bold text-[8px] uppercase tracking-wider"
+            >
+              <Trash2 className="h-3 w-3 shrink-0" />
+              Clear Vault
+            </Button>
+          </div>
+        )}
       </div>
 
       <CreateItemDialog open={!!createItemType} onOpenChange={(isOpen) => !isOpen && setCreateItemType(null)} type={createItemType || 'Album'} />
@@ -709,7 +784,50 @@ export function AlbumList() {
               </AlertDialogHeader>
               <AlertDialogFooter>
                   <AlertDialogCancel className="font-bold">Abort</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => { mergeData(dataToImport.albums || dataToImport, []); setShowImportConfirm(false); toast({ title: "Vault Merged Successfully" }); }} className="font-bold">Merge Blueprints</AlertDialogAction>
+                  <AlertDialogAction onClick={handleImportMerge} disabled={isImporting} className="font-bold">
+                    {isImporting ? 'Merging...' : 'Merge Blueprints'}
+                  </AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showClearVaultConfirm} onOpenChange={setShowClearVaultConfirm}>
+          <AlertDialogContent className="bg-card border-2 max-w-lg">
+              <AlertDialogHeader>
+                  <AlertDialogTitle className="font-headline text-2xl text-red-500 uppercase">Clear Vault / Start Fresh?</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-3 text-sm font-code text-muted-foreground">
+                      <p>
+                        This permanently deletes all albums and loose tracks from your studio vault. Your style profile and account stay intact.
+                      </p>
+                      <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-amber-200/90">
+                        <strong className="text-amber-300">Recommended:</strong> export your vault first so you can import it again later if you change your mind.
+                      </p>
+                    </div>
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      handleExport();
+                      toast({
+                        title: 'Vault Exported',
+                        description: 'Backup saved. You can erase the vault when ready.',
+                      });
+                    }}
+                    className="w-full sm:w-auto gap-2 font-bold border-primary/30 hover:bg-primary/10"
+                  >
+                    <Download className="h-4 w-4" />
+                    Export Vault First
+                  </Button>
+                  <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+                    <AlertDialogCancel className="font-bold" disabled={isClearingVault}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleClearVault} disabled={isClearingVault} className="bg-red-600 hover:bg-red-700 font-bold">
+                      {isClearingVault ? 'Clearing...' : 'Erase Everything'}
+                    </AlertDialogAction>
+                  </div>
               </AlertDialogFooter>
           </AlertDialogContent>
       </AlertDialog>

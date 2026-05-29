@@ -6,7 +6,10 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "frameworksBackend": {}
+    "frameworksBackend": {
+      "region": "us-central1",
+      "memory": "4GiB"
+    }
   },
   "firestore": {
     "rules": "firestore.rules"

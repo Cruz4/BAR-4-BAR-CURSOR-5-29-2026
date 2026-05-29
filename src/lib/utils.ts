@@ -6,6 +6,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Remove undefined values so Firestore set()/batch.set() does not reject documents. */
+export function stripForFirestore<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 export function mergeDirection(album?: Direction, track?: Track["direction"]): Direction {
   const a = album ?? {};
   const t = track ?? { inheritFromAlbum: true };

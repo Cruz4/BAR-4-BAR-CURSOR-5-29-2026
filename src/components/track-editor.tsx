@@ -969,7 +969,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                       {buttonLabel('analyzeStructure')}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent><p className="text-[10px] font-bold">{tooltip('analyzeStructure')}</p></TooltipContent>
+                <TooltipContent side="bottom"><p className="text-[10px] font-bold">{tooltip('analyzeStructure')}</p></TooltipContent>
               </Tooltip>
             </TooltipProvider>
         </div>
@@ -989,7 +989,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                 <Undo2 className="h-4 w-4" />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent><p className="text-[10px] font-bold uppercase">Undo Last Action</p></TooltipContent>
+                        <TooltipContent side="bottom"><p className="text-[10px] font-bold uppercase">Undo Last Action</p></TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
                 <div className="w-px h-4 bg-border/40 mx-1" />
@@ -1017,7 +1017,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                           {isRhymeLoading ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <Target className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />}
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent><p className="text-[10px] font-bold">{tooltip('findRhymes')}</p></TooltipContent>
+                    <TooltipContent side="bottom"><p className="text-[10px] font-bold">{tooltip('findRhymes')}</p></TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
                 <Badge variant="outline" className="h-4 px-1 text-[7px] font-bold border-primary/20 text-primary">{getEffectiveCost('findRhymes')} INK</Badge>
@@ -1870,7 +1870,22 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         if (mode === 'next') priorLines.push(targetLine);
         else nextLines.unshift(targetLine);
         const res = await generateNextLine(await withAiAuth({
-            userName: user?.displayName, priorLines, nextLines, sectionType: section.type, vibe: isVibeActive(track) ? track.vibe : undefined, intents: isIntentsActive(track) ? (track.checkedIntents || []) : [], styleProfileSummary: isStyleActive(track) ? (effectiveStyleProfile?.history[0]?.analysis || '') : '', rhymeMode: 'continue', theme: track.title, endWith: isIntentsActive(track) ? track.endWith : null, mergedDirection: mergeDirection(album.direction, track.direction), negativePrompt: isGuardrailsActive(track) ? track.guardrails?.negativePrompt : undefined, forbiddenWords: isGuardrailsActive(track) ? track.guardrails?.forbiddenWords : undefined, mustIncludeWords: isGuardrailsActive(track) ? track.guardrails?.mustIncludeWords : undefined,
+            userName: user?.displayName,
+            priorLines,
+            nextLines,
+            sectionType: section.type,
+            vibe: track.vibe ?? { genre: 'General', tempoBPM: 90, feeling: ['neutral'] },
+            intents: isIntentsActive(track) ? (track.checkedIntents || []) : [],
+            styleProfileSummary: isStyleActive(track)
+              ? (effectiveStyleProfile?.history[0]?.analysis || 'Initial neutral style profile.')
+              : 'Initial neutral style profile.',
+            rhymeMode: 'continue',
+            theme: track.title || album.title || 'Untitled',
+            endWith: isIntentsActive(track) ? track.endWith : null,
+            mergedDirection: mergeDirection(album.direction, track.direction),
+            negativePrompt: isGuardrailsActive(track) ? track.guardrails?.negativePrompt : undefined,
+            forbiddenWords: isGuardrailsActive(track) ? track.guardrails?.forbiddenWords : undefined,
+            mustIncludeWords: isGuardrailsActive(track) ? track.guardrails?.mustIncludeWords : undefined,
         }));
         if (!res || res.length === 0) throw new Error("Synthesis produced no results.");
         setGenerationOptions(res);
