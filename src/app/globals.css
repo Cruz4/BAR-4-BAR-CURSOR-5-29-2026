@@ -1,0 +1,197 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'B4B_Font';
+  src: url('/B4B_Font.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'YUSRB_font';
+  src: url('/YUSRB_font.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --background: 216 50% 8%; /* Locked Blue Base (RGB 10, 18, 30) */
+    --foreground: 220 20% 90%; 
+
+    --card: 216 50% 10%;
+    --card-foreground: 220 20% 85%;
+
+    --popover: 216 50% 10%;
+    --popover-foreground: 220 20% 85%;
+
+    --primary: 217 91% 60%; 
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 216 30% 15%;
+    --secondary-foreground: 217 91% 75%;
+
+    --muted: 216 40% 12%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 340 75% 55%; /* Professional Rose Theme */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 74.2% 50.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 216 40% 15%;
+    --input: 216 40% 15%;
+    --ring: 217 91% 60%;
+
+    --radius: 0.25rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    @apply font-body antialiased;
+  }
+  body {
+    @apply bg-background text-foreground font-body;
+  }
+}
+
+@layer utilities {
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .animate-spin-slow {
+    animation: spin-slow 8s linear infinite;
+  }
+
+  @keyframes brand-glow {
+    0%, 100% { text-shadow: 0 0 5px rgba(59, 130, 246, 0); color: currentColor; }
+    50% { text-shadow: 0 0 15px rgba(59, 130, 246, 0.6); color: hsl(217, 91%, 60%); }
+  }
+  .animate-brand-glow {
+    animation: brand-glow 4s ease-in-out infinite;
+  }
+
+  @keyframes writing {
+    0%, 100% { transform: translateX(0) translateY(0) rotate(0deg); }
+    20% { transform: translateX(3px) translateY(-2px) rotate(10deg); }
+    40% { transform: translateX(-2px) translateY(3px) rotate(-5deg); }
+    60% { transform: translateX(4px) translateY(-1px) rotate(15deg); }
+    80% { transform: translateX(-1px) translateY(2px) rotate(-10deg); }
+  }
+  .animate-writing {
+    animation: writing 0.8s infinite ease-in-out;
+  }
+
+  @keyframes ink-drip {
+    0% { transform: translateY(-10px) scaleY(1.2); opacity: 1; }
+    70% { transform: translateY(30px) scaleY(1); opacity: 1; }
+    100% { transform: translateY(40px) scale(1.5); opacity: 0; }
+  }
+
+  @keyframes ink-splatter {
+    0% { transform: scale(0.5); opacity: 0; }
+    20% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); opacity: 0; }
+  }
+
+  @keyframes line-anchor-glow {
+    0% {
+      background-color: rgba(236, 72, 153, 0.28);
+      box-shadow: inset 0 0 18px rgba(236, 72, 153, 0.35), 0 0 10px rgba(236, 72, 153, 0.45);
+    }
+    20% {
+      background-color: rgba(236, 72, 153, 0.22);
+      box-shadow: inset 0 0 22px rgba(236, 72, 153, 0.5), 0 0 14px rgba(236, 72, 153, 0.55);
+    }
+    100% {
+      background-color: transparent;
+      box-shadow: none;
+    }
+  }
+  .animate-line-glow {
+    animation: line-anchor-glow 3s ease-out forwards;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* 5/14 Master Lockdown: ZERO-TWITCH SCROLLBARS */
+  .studio-scrollbar {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
+  }
+
+  .studio-scrollbar:hover {
+    scrollbar-color: hsla(var(--primary), 0.2) transparent;
+  }
+
+  .studio-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .studio-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .studio-scrollbar::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 10px;
+    transition: background 0.3s ease;
+  }
+
+  .studio-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: hsla(var(--primary), 0.2);
+  }
+
+  .studio-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsla(var(--primary), 0.4);
+  }
+}
+
+@keyframes pro-lock-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(236, 72, 153, 0.22);
+    border-color: rgba(236, 72, 153, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(236, 72, 153, 0.42);
+    border-color: rgba(236, 72, 153, 0.65);
+  }
+}
+
+@keyframes pro-lock-icon-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px rgba(236, 72, 153, 0.45));
+    opacity: 0.9;
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(236, 72, 153, 0.75));
+    opacity: 1;
+  }
+}
+
+/* Shared class for all Pro-locked surfaces — slow breathing glow */
+.pro-lock-surface {
+  animation: pro-lock-pulse 4s ease-in-out infinite;
+}
+
+.pro-lock-icon {
+  animation: pro-lock-icon-pulse 4s ease-in-out infinite;
+}

@@ -1,0 +1,468 @@
+{
+  "projectName": "Bar 4 Bar Studio — 90-Day Web-Only Revenue Plan",
+  "isTimeline": false,
+  "phases": [
+    {
+      "phaseName": "Strategy & Positioning",
+      "tasks": [
+        {
+          "taskName": "Lock Core Positioning Statement",
+          "description": "Establish the one-line positioning used everywhere: Bar 4 Bar is the rhyme book + co-writer for rappers and songwriters who think in bars—not paragraphs.",
+          "priority": "High",
+          "dependencies": [],
+          "checklist": [
+            "Write one-line positioning for all channels",
+            "Document what Bar 4 Bar is NOT (not ChatGPT in a box, not Suno/Udio, not a DAW)",
+            "Align all landing page and ad copy to this statement"
+          ]
+        },
+        {
+          "taskName": "Define Ideal Customer Profile (ICP)",
+          "description": "Identify the three primary customer segments to target in all marketing and product messaging.",
+          "priority": "High",
+          "dependencies": ["Lock Core Positioning Statement"],
+          "checklist": [
+            "Independent rappers / lyricists writing seriously (not casual one-shot tourists)",
+            "Songwriters with messy notes, voice memos, and half-finished verses",
+            "Producers who write toplines and need structure + rhyme discipline"
+          ]
+        },
+        {
+          "taskName": "Select Primary Problem to Lead With in Ads",
+          "description": "Choose the #1 problem hook for cold traffic: I'm stuck on the next bar — rhyme, syllables, flow continuity. Secondary rotation: chaos to structure via Paste Your Lyrics.",
+          "priority": "High",
+          "dependencies": ["Define Ideal Customer Profile (ICP)"],
+          "checklist": [
+            "Primary hook: stuck on the next bar (Generate Next Line + Rhyme Pulse visual in 10 seconds)",
+            "Secondary hook: paste mess to structured verse/hook blocks (+ Paste Your Lyrics with [Verse]/[Hook])",
+            "Tertiary hooks queued: generic AI sounds like everyone else (DNA/guardrails/style training)",
+            "Quaternary hooks queued: losing ideas between sessions (vault, share links on Pro)"
+          ]
+        },
+        {
+          "taskName": "Define Price Anchor and Tier Story",
+          "description": "Map the free-to-paid upgrade narrative using current tiers: Visitor free demo, Pro Monthly $7.77/mo, Pro Yearly ~$4.44/mo effective with more Ink and 50% off ink packs.",
+          "priority": "High",
+          "dependencies": ["Lock Core Positioning Statement"],
+          "checklist": [
+            "Visitor: 300 signup Ink + 150/mo residency, 1 album, 2 tracks, 3 Creative Effects",
+            "Pro Monthly: $7.77/mo, 1,100 Ink/mo, unlimited projects, full co-writer unlocks",
+            "Pro Yearly: $4.44/mo effective ($53.28/yr), 2,500 Ink/mo, ~43% sub savings vs monthly, 50% off Permanent Ink packs",
+            "Push monthly Pro in ads; mention yearly on pricing page and to power users only"
+          ]
+        },
+        {
+          "taskName": "Establish Build vs Market Rules for 90 Days",
+          "description": "Commit to 80% marketing / 20% build-only-if-blocking for the full 90-day window. Do not build native apps, social feeds, beat marketplace, or new AI modalities until MRR justifies it.",
+          "priority": "High",
+          "dependencies": [],
+          "checklist": [
+            "Market now: screen demos, free demo to Pro story, TikTok/Reels/Shorts, pricing/yearly story, SEO keywords",
+            "Build only if blocking: prod stability, signup to first AI onboarding, PWA prompt, share/DNA Drop loop, landing hero",
+            "Do NOT build in 90 days: native iOS/Android store apps, social network/feeds, beat marketplace, video/music gen modes, complex tier changes"
+          ]
+        }
+      ]
+    },
+    {
+      "phaseName": "Foundation — Days 1–30 (Fix Funnel and Prove Conversion)",
+      "tasks": [
+        {
+          "taskName": "Fix Production Firebase and Billing Stability",
+          "description": "Critical prerequisite before any paid traffic. Ensure Cloud Run does not reference missing firebase-service-account.json; AI actions and ink deduction must work end-to-end on mobile web.",
+          "priority": "High",
+          "dependencies": ["Establish Build vs Market Rules for 90 Days"],
+          "checklist": [
+            "Remove GOOGLE_APPLICATION_CREDENTIALS from deployed env; use ADC on Cloud Run",
+            "Move service account path to .env.local only (not deployed)",
+            "Verify generateNextLine and draft generation return 200 in production",
+            "Verify Stripe checkout to fulfillment to Pro unlock works on mobile web",
+            "Confirm signup to first AI action completes without Studio billing temporarily unavailable"
+          ]
+        },
+        {
+          "taskName": "Optimize Landing Page and First CTA",
+          "description": "Ensure the homepage/landing clearly communicates bar-by-bar co-writer value with a single Start free CTA above the fold.",
+          "priority": "High",
+          "dependencies": ["Lock Core Positioning Statement", "Fix Production Firebase and Billing Stability"],
+          "checklist": [
+            "Hero copy reflects rhyme book + co-writer for bars positioning",
+            "Single primary CTA: Start free — 300 Ink",
+            "Mobile layout tested — no horizontal scroll or broken CTAs",
+            "Link to /pricing visible but secondary to signup CTA"
+          ]
+        },
+        {
+          "taskName": "Enable Mobile PWA Install Prompt",
+          "description": "Prompt mobile users to Add to Home Screen after first session for full-screen studio experience (web app works on phone without App Store).",
+          "priority": "Medium",
+          "dependencies": ["Fix Production Firebase and Billing Stability"],
+          "checklist": [
+            "Surface PWA install prompt after first successful AI action or second session",
+            "End-card copy: Add to Home Screen for full-screen studio",
+            "Test on iOS Safari and Android Chrome"
+          ]
+        },
+        {
+          "taskName": "Deploy and Verify Admin Growth Metrics Dashboard",
+          "description": "Confirm Admin Panel Growth Metrics tab loads and tracks all KPIs: signups, activation, pricing funnel, MRR, retention, free tier pressure, ad CPS.",
+          "priority": "Medium",
+          "dependencies": ["Fix Production Firebase and Billing Stability"],
+          "checklist": [
+            "Deploy Firestore rules for analytics_events and studioMetrics/marketing",
+            "Deploy hosting with admin panel fix (no vault redirect)",
+            "Verify event tracking: signup, session_start, track_editor_open, pricing_view, checkout_started/completed, ai_action, free_limit_hit",
+            "Confirm ad spend manual entry calculates cost per signup and cost per activated user"
+          ]
+        },
+        {
+          "taskName": "Launch Organic Content Week 1–4",
+          "description": "Market lightly with 3–5 short screen recordings per week on TikTok + Instagram Reels. No paid spend yet. Goal: first organic Pro checkout.",
+          "priority": "High",
+          "dependencies": ["Select Primary Problem to Lead With in Ads", "Optimize Landing Page and First CTA"],
+          "checklist": [
+            "Post 3–5 vertical screen demos per week (15–25 sec, 9:16)",
+            "1 Reddit post per week (r/WeAreTheMusicMakers, r/Songwriting, r/rap)",
+            "1–2 Twitter/X threads showing bar-by-bar workflow per week",
+            "Use dark UI + real finger taps — not mockups",
+            "CTA every post: Free demo — link in bio or 300 Ink free"
+          ]
+        },
+        {
+          "taskName": "Create Ad Creative Template (Organic Use First)",
+          "description": "Standardize the 15–25 second vertical ad structure for all organic and future paid content.",
+          "priority": "Medium",
+          "dependencies": ["Select Primary Problem to Lead With in Ads"],
+          "checklist": [
+            "Sec 0–2: Hook pain — Stuck on the next bar?",
+            "Sec 2–8: Screen record — paste messy lyrics",
+            "Sec 8–14: Smart Structure or Generate Next Line — split into hooks and bars",
+            "Sec 14–20: Co-writer badges / Rhyme Pulse flash — Not generic paragraphs",
+            "Sec 20–25: CTA — Free demo — link in bio / 300 Ink free",
+            "Optional face: hands + screen outperforms talking head for tool demos"
+          ]
+        },
+        {
+          "taskName": "Track Phase 1 Weekly KPIs",
+          "description": "Review metrics weekly during Days 1–30. Most values may be zero early — that is expected. Focus on funnel health signals.",
+          "priority": "High",
+          "dependencies": ["Deploy and Verify Admin Growth Metrics Dashboard", "Launch Organic Content Week 1–4"],
+          "checklist": [
+            "Signups (total and weekly)",
+            "Percent who open track editor within 24h",
+            "Percent who use Generate Next Line or Paste Your Lyrics once",
+            "Pricing page visits per signup",
+            "First Pro checkout (target: 1–3/week is a win early)",
+            "Ink depleted to upgrade click rate",
+            "Revenue target: $50–200/mo from first Pro + occasional ink packs"
+          ]
+        }
+      ]
+    },
+    {
+      "phaseName": "Growth Engine — Days 31–60 (Paid Tests and Content Engine)",
+      "tasks": [
+        {
+          "taskName": "Build Signup to First AI Onboarding Checklist",
+          "description": "Only build item for Phase 2 if not done: 3-step in-app checklist — paste lyrics, generate one bar, save track.",
+          "priority": "Medium",
+          "dependencies": ["Fix Production Firebase and Billing Stability", "Track Phase 1 Weekly KPIs"],
+          "checklist": [
+            "Step 1: Prompt user to paste lyrics (+ Paste Your Lyrics)",
+            "Step 2: Prompt user to generate one bar (Generate Next Line)",
+            "Step 3: Prompt user to save / return to track",
+            "Measure time-to-first-AI and activation rate impact"
+          ]
+        },
+        {
+          "taskName": "Improve Pricing Page Mobile Layout",
+          "description": "Ensure /pricing converts on mobile — tier comparison, yearly toggle, and upgrade CTAs must be thumb-friendly.",
+          "priority": "Medium",
+          "dependencies": ["Define Price Anchor and Tier Story"],
+          "checklist": [
+            "Yearly toggle shows ~43% subscription savings vs monthly (50% is ink packs only)",
+            "Pro Monthly $7.77 and Pro Yearly $4.44/mo effective clearly displayed",
+            "Upgrade CTA routes to /usage?tab=cloud",
+            "Track pricing_view and upgrade_click events in admin metrics"
+          ]
+        },
+        {
+          "taskName": "Launch Paid Ad Tests $10–20 Per Day",
+          "description": "Run TikTok Spark Ads or Meta Reels ads testing 3 hooks x 2 creatives. Goal: find one channel + one hook that converts at acceptable CAC.",
+          "priority": "High",
+          "dependencies": ["Fix Production Firebase and Billing Stability", "Launch Organic Content Week 1–4", "Create Ad Creative Template (Organic Use First)"],
+          "checklist": [
+            "Budget: $10–20/day across TikTok and/or Meta Reels",
+            "Test 3 hooks x 2 creatives (6 variants minimum)",
+            "Hook A: POV you have had the same 4 bars for 3 weeks",
+            "Hook B: Stop asking ChatGPT for a whole song",
+            "Hook C: Your notes app is not a rhyme book",
+            "Outcome hook: Watch AI land the next bar not rewrite your whole song",
+            "Objection killer: Web studio works on phone no download + show PWA add-to-home",
+            "Flow: Ad on phone to link in bio to mobile web signup to first AI action to PWA prompt",
+            "Do NOT scale spend until prod billing is confirmed working"
+          ]
+        },
+        {
+          "taskName": "Install Meta Pixel and Retargeting",
+          "description": "Retarget site visitors who viewed pricing or used AI but did not checkout.",
+          "priority": "Medium",
+          "dependencies": ["Launch Paid Ad Tests $10–20 Per Day"],
+          "checklist": [
+            "Install Meta pixel on site",
+            "Create retargeting audience: visited /pricing or /usage in last 7 days, no purchase",
+            "Retarget ad message: Unlock unlimited albums + full co-writer — $7.77/mo",
+            "Track pricing to checkout start to paid in admin metrics"
+          ]
+        },
+        {
+          "taskName": "Launch Email Capture on Pricing",
+          "description": "Offer lead magnet on pricing page: Get 50 bar-writing tips PDF — not more Ink. Build list for nurture.",
+          "priority": "Low",
+          "dependencies": ["Improve Pricing Page Mobile Layout"],
+          "checklist": [
+            "Add email capture form to /pricing",
+            "Create simple PDF lead magnet (50 bar-writing tips)",
+            "Connect to email tool (Mailchimp, ConvertKit, etc.)",
+            "Only prioritize after 100+ pricing page views"
+          ]
+        },
+        {
+          "taskName": "Create Before/After Screenshot Assets for Social",
+          "description": "Build shareable before/after visuals: messy notes to structured verse/hook blocks for social proof in ads and organic posts.",
+          "priority": "Medium",
+          "dependencies": ["Create Ad Creative Template (Organic Use First)"],
+          "checklist": [
+            "Capture screenshot: raw pasted lyrics chaos",
+            "Capture screenshot: same lyrics after Smart Structure split",
+            "Capture screenshot: Generate Next Line landing on rhyme",
+            "Use in Reels, TikTok, and Reddit posts"
+          ]
+        },
+        {
+          "taskName": "Track Phase 2 Weekly KPIs",
+          "description": "Review paid and organic metrics weekly. Target 2–5% free to Pro conversion of activated users within 30 days.",
+          "priority": "High",
+          "dependencies": ["Launch Paid Ad Tests $10–20 Per Day", "Deploy and Verify Admin Growth Metrics Dashboard"],
+          "checklist": [
+            "Cost per signup (CPS)",
+            "Cost per activated user (used AI once)",
+            "Cost per Pro trial/purchase",
+            "7-day retention (returned to same track)",
+            "Free to Pro conversion rate (target: 2–5% of activated users in 30 days)",
+            "Pricing to checkout start to paid funnel rates",
+            "Revenue target: $300–800/mo (10–25 Pro subs mix + ink packs)"
+          ]
+        },
+        {
+          "taskName": "Identify Winning Hook and Channel",
+          "description": "At end of Phase 2, declare one winning ad hook and one winning channel based on lowest cost per activated user and highest checkout completion.",
+          "priority": "High",
+          "dependencies": ["Track Phase 2 Weekly KPIs"],
+          "checklist": [
+            "Compare CPS and cost per activated user across TikTok vs Meta",
+            "Compare hook performance (stuck on next bar vs chaos to structure vs objection killer)",
+            "Kill underperforming ad sets",
+            "Document winner in admin marketing notes field"
+          ]
+        }
+      ]
+    },
+    {
+      "phaseName": "Scale and Partnerships — Days 61–90 (Double Down and Grow MRR)",
+      "tasks": [
+        {
+          "taskName": "Scale Winning Ad Set 2x Budget",
+          "description": "Double budget ONLY on the single best-performing ad set from Phase 2. Do not spread spend across untested variants.",
+          "priority": "High",
+          "dependencies": ["Identify Winning Hook and Channel"],
+          "checklist": [
+            "Increase daily spend 2x on winner only",
+            "Pause all other ad sets",
+            "Monitor checkout completion rate daily for first week",
+            "If CPS rises more than 50%, reduce budget and refresh creative"
+          ]
+        },
+        {
+          "taskName": "Repost Winners to YouTube Shorts",
+          "description": "Repurpose top-performing TikTok/Reels clips to YouTube Shorts for longer shelf life and secondary discovery.",
+          "priority": "Medium",
+          "dependencies": ["Identify Winning Hook and Channel"],
+          "checklist": [
+            "Upload top 5 performing organic/paid clips to YouTube Shorts",
+            "Use same hooks and CTAs with link in description",
+            "Post 2–3 Shorts per week ongoing"
+          ]
+        },
+        {
+          "taskName": "Micro-Influencer Seeding Campaign",
+          "description": "Seed 5–10 micro-influencers (beatmakers, writing coaches) with free Pro for honest demo videos.",
+          "priority": "Medium",
+          "dependencies": ["Identify Winning Hook and Channel"],
+          "checklist": [
+            "Identify 10 micro-influencers (5K–50K followers) in rap/s songwriting niche",
+            "Offer free Pro Monthly or Yearly in exchange for honest demo video",
+            "Provide creative template and talking points (stuck on next bar hook)",
+            "Track signups with UTM or unique landing mention",
+            "Target: 5–10 seedings, 2–3 posted videos minimum"
+          ]
+        },
+        {
+          "taskName": "Activate DNA Drop Share Link Growth Loop",
+          "description": "Market Pro share links (DNA Drop live links) as collab and feedback loop. Optional: build public /demo read-only track for ads.",
+          "priority": "Medium",
+          "dependencies": ["Scale Winning Ad Set 2x Budget"],
+          "checklist": [
+            "Add share link CTA in Pro user onboarding tip",
+            "Create social post showing DNA Drop share flow",
+            "Optional build: public /demo read-only track for ad landing (no login required preview)",
+            "Track share link creation count in admin metrics"
+          ]
+        },
+        {
+          "taskName": "Launch SEO Content 2 Posts Per Month",
+          "description": "Start slow SEO: 2 blog posts per month targeting long-tail songwriting keywords. Slow channel — do not over-invest early.",
+          "priority": "Low",
+          "dependencies": ["Lock Core Positioning Statement"],
+          "checklist": [
+            "Post 1: How to structure a rap verse with [Verse] and [Hook] labels",
+            "Post 2: Bar-by-bar songwriting vs whole-song AI generators",
+            "Target keywords: AI lyric writer, rhyme book app, rap lyrics generator, lyric workstation, DNA remix lyrics",
+            "Internal link to /pricing and free signup"
+          ]
+        },
+        {
+          "taskName": "Evaluate Channel Expansion",
+          "description": "Based on Phase 2 data, decide whether to add Reddit/Discord honest tool posts or Google Search ads. Skip Twitter ads and mass influencer buys.",
+          "priority": "Low",
+          "dependencies": ["Track Phase 2 Weekly KPIs"],
+          "checklist": [
+            "Reddit/Discord: 1 honest tool post if organic traction is strong (high trust, low volume)",
+            "Skip Google Search ads for now (expensive for AI lyrics keywords)",
+            "Skip Twitter ads",
+            "Skip influencer mass buys — micro only",
+            "Email nurture: only after 500+ signups"
+          ]
+        },
+        {
+          "taskName": "Track Phase 3 Weekly KPIs and 90-Day Success Review",
+          "description": "Final 30-day push toward 90-day success definition. Review all metrics and decide Month 4 strategy.",
+          "priority": "High",
+          "dependencies": ["Scale Winning Ad Set 2x Budget", "Micro-Influencer Seeding Campaign"],
+          "checklist": [
+            "MRR + ink pack revenue (track in admin metrics)",
+            "Monthly churn rate (monthly Pro cancels)",
+            "LTV estimate: monthly Pro ~$7.77 x avg 4 mo ≈ $31; yearly ~$53 upfront",
+            "Organic vs paid signup split",
+            "7-day return rate",
+            "Revenue target: $800–2,000/mo if one hook + offer clicks",
+            "90-day success: 30–80 paying Pro users + $400–1,500 MRR + one repeatable ad hook under ~$15–25 CPS",
+            "Enter total ad spend in admin Paid Acquisition section for final CPS report"
+          ]
+        }
+      ]
+    },
+    {
+      "phaseName": "Channel Playbook and Creative Library",
+      "tasks": [
+        {
+          "taskName": "TikTok and Instagram Reels Playbook",
+          "description": "Full playbook for advertising a web app on phone-first platforms. Web converts via mobile browser + PWA — no App Store required.",
+          "priority": "High",
+          "dependencies": ["Select Primary Problem to Lead With in Ads"],
+          "checklist": [
+            "Yes — advertise on TikTok/Instagram even though product is web-only",
+            "Conversion flow: Ad to link in bio to mobile web signup to first AI action to Add to Home Screen (PWA)",
+            "Compete on 30-second outcome (next bar appears / chaos becomes structure), not App Store presence",
+            "Format: 9:16 vertical, 15–25 seconds, no logo-first intro",
+            "Shoot style: dark UI, gold/amber accents, finger taps on real UI",
+            "Post 3–5x/week organic; paid tests in Phase 2"
+          ]
+        },
+        {
+          "taskName": "Hook Library Rotate Weekly",
+          "description": "Complete hook library for cold, warm, and objection-killer creatives. Rotate weekly during paid tests.",
+          "priority": "Medium",
+          "dependencies": ["TikTok and Instagram Reels Playbook"],
+          "checklist": [
+            "Problem: POV you have had the same 4 bars for 3 weeks",
+            "Problem: Stop asking ChatGPT for a whole song",
+            "Problem: Your notes app is not a rhyme book",
+            "Problem: I paste my mess and it becomes verse / hook / verse",
+            "Outcome: Watch AI land the next bar not rewrite your whole song",
+            "Outcome: Rhyme pulse + next line in one workstation",
+            "Outcome: From voice memo chaos to structured lyrics in 60 seconds",
+            "Objection: Web studio works on phone no download + PWA demo",
+            "Objection: Free tier is a real demo not a 3-day trial scam",
+            "CTA: Try free — 300 Ink / Write bar 5 today / Link in bio Bar 4 Bar Studio"
+          ]
+        },
+        {
+          "taskName": "Offer Strategy by Audience Temperature",
+          "description": "Match ad message and upgrade moment to audience temperature using current tier structure.",
+          "priority": "Medium",
+          "dependencies": ["Define Price Anchor and Tier Story"],
+          "checklist": [
+            "Cold traffic: Free demo — paste + next bar. Upgrade when 2-track limit or Ink runs low",
+            "Warm retarget: Unlock unlimited albums + full co-writer — $7.77/mo for pricing visitors with 3+ AI uses",
+            "Heavy users: Yearly pitch — more Ink/mo + 50% off refills when Ink depleted twice in one month",
+            "Free tier limits to reference in ads: 1 album, 2 tracks, 300 signup + 150/mo Ink"
+          ]
+        },
+        {
+          "taskName": "Channel Priority Ranking",
+          "description": "Ranked channel list for 90-day web-only SaaS growth. Focus top 3; deprioritize rest.",
+          "priority": "Medium",
+          "dependencies": [],
+          "checklist": [
+            "1. TikTok + Instagram Reels — best discovery; web fine via mobile browser/PWA",
+            "2. YouTube Shorts — same clips, longer shelf life",
+            "3. Reddit / Discord — honest tool posts (high trust, low volume)",
+            "4. SEO / blog — slow; 2 posts/month starting Phase 3",
+            "5. Paid Meta Reels — after organic hooks prove out (Phase 2)",
+            "6. Email — only after 500+ signups",
+            "Skip: Twitter ads, Google Search ads, influencer mass buys"
+          ]
+        }
+      ]
+    },
+    {
+      "phaseName": "Metrics and Reporting Framework",
+      "tasks": [
+        {
+          "taskName": "Configure Weekly Metrics Dashboard Review",
+          "description": "Weekly admin review of all KPIs in Growth Metrics tab. Enter ad spend manually to calculate CPS and cost per activated user.",
+          "priority": "High",
+          "dependencies": ["Deploy and Verify Admin Growth Metrics Dashboard"],
+          "checklist": [
+            "Signups — top of funnel",
+            "Activation rate — 1+ AI action (target 40–60% early)",
+            "Time to first Generate Next Line — core value moment",
+            "Free limit hits — 2 tracks / low Ink upgrade trigger",
+            "Pricing to checkout start to paid — monetization funnel",
+            "MRR + ink pack revenue",
+            "7-day return rate — stickiness",
+            "Ad CPS / cost per activated user — scale decision (target under $15–25 CPS)",
+            "Free tier pressure: users at album/track limits, low ink, limit-hit events"
+          ]
+        },
+        {
+          "taskName": "Set 90-Day Revenue Milestones",
+          "description": "Phase-by-phase revenue targets and final 90-day success definition.",
+          "priority": "High",
+          "dependencies": ["Configure Weekly Metrics Dashboard Review"],
+          "checklist": [
+            "Days 1–30 target: $50–200/mo (first Pro + occasional ink packs)",
+            "Days 31–60 target: $300–800/mo (10–25 Pro subs + ink)",
+            "Days 61–90 target: $800–2,000/mo (if one hook + offer clicks)",
+            "90-day success: 30–80 paying Pro users",
+            "90-day success: $400–1,500 MRR",
+            "90-day success: one repeatable ad hook under ~$15–25 cost per signup",
+            "Monthly Pro LTV estimate: ~$31 (4-month avg retention)",
+            "Yearly Pro LTV: ~$53 upfront"
+          ]
+        }
+      ]
+    }
+  ]
+}

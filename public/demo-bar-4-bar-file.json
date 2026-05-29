@@ -1,0 +1,152 @@
+
+[
+  {
+    "id": "album-earthen-monolith-2026",
+    "ownerId": "demo-user-id",
+    "title": "EARTHEN MONOLITH",
+    "theme": "The resilience of ancient nature and the silence of geological time.",
+    "message": "We are but moss on the stones of eternity.",
+    "thingsToSay": [
+      "The weight of a thousand rings",
+      "Sap like liquid amber",
+      "Shadows stretching across the canyon",
+      "Roots tangled in the deep dark",
+      "The first rain after a decade of dust"
+    ],
+    "createdAt": "2026-05-14T03:25:00.000Z",
+    "coverArtUrl": "https://picsum.photos/seed/monolith/800/800",
+    "direction": {
+      "enabled": true,
+      "setting_world": "An ancient, untouched redwood forest at the edge of a jagged cliff.",
+      "emotion_core": "Stark reverence and the cold peace of survival.",
+      "trigger_moment": "The shifting of the tectonic plates beneath the valley floor.",
+      "message_truth": "Growth happens in the silence between the storms.",
+      "tone_palette": "Moss green, deep earth brown, and the grey of morning mist."
+    },
+    "dnaPresets": [
+      {
+        "name": "Ancient Growth Strain",
+        "createdAt": "2026-05-14T03:25:00.000Z",
+        "sourceTrackTitle": "The Great Redwood",
+        "analysis": {
+          "themes": ["Longevity", "Nature's Persistence", "Time"],
+          "motifs": ["Roots", "Bark", "Mist", "Sunlight"],
+          "emotionalTone": {
+            "primaryEmotion": "Peaceful",
+            "secondaryEmotion": "Haunting",
+            "valence": 65,
+            "intensity": 40
+          },
+          "emotionalShift": "From isolated silence to a connected forest network.",
+          "narrativeArc": "The seed falls, the centuries pass, the forest remains.",
+          "structure": "Intro sets the mist, Verse climbs the trunk, Hook expands the canopy.",
+          "pov": "First Person (The Tree)",
+          "tense": "Present",
+          "voiceStyle": "Timeless and patient.",
+          "whatMakesItWork": "A rhythmic use of sibilance mimicking the wind in needles."
+        },
+        "mapping": {
+          "setting_world": "The Heart of the Grove",
+          "emotion_core": "Patience",
+          "trigger_moment": "The sunrise",
+          "message_truth": "Standing still is a form of power.",
+          "tone_palette": "Deep greens and filtered light.",
+          "enabled": true
+        }
+      }
+    ],
+    "tracks": [
+      {
+        "id": "track-redwood-001",
+        "albumId": "album-earthen-monolith-2026",
+        "ownerId": "demo-user-id",
+        "title": "THE GREAT REDWOOD",
+        "vibe": {
+          "enabled": true,
+          "genre": "Ambient Cinematic Folk",
+          "tempoBPM": 60,
+          "feeling": ["ancient", "breathless", "towering"],
+          "instrumentation": "A single cello bowed slowly, field recordings of wind through pine needles, and a distant thunder clap pitched down three octaves.",
+          "productionNotes": "Heavy reverb with a 4s tail, high-cut at 2k Hz to simulate damp forest floor acoustics."
+        },
+        "intentRefs": ["The weight of a thousand rings", "Sap like liquid amber"],
+        "checkedIntents": ["The weight of a thousand rings"],
+        "intentsEnabled": true,
+        "endWith": "the weight of a thousand rings",
+        "status": "complete",
+        "createdAt": "2026-05-14T03:25:00.000Z",
+        "direction": {
+          "enabled": true,
+          "inheritFromAlbum": true,
+          "setting_world": "The highest branch overlooking the Pacific."
+        },
+        "guardrails": {
+          "enabled": true,
+          "negativePrompt": "digital, machines, wires, cities, clockwork, noise",
+          "forbiddenWords": ["data", "phone", "network", "signal", "power"],
+          "mustIncludeWords": ["timber", "granite", "horizon"]
+        },
+        "sections": [
+          {
+            "id": "sec-demo-1",
+            "type": "intro",
+            "bars": [
+              { "idx": 1, "text": "The mist rolls in like a ghost from the shore", "accepted": true, "syllables": 10, "rhymeKey": "shore" },
+              { "idx": 2, "text": "Tapping at the bark of the giants who saw it all before", "accepted": true, "syllables": 14, "rhymeKey": "shore" }
+            ]
+          },
+          {
+            "id": "sec-demo-2",
+            "type": "verse",
+            "bars": [
+              { "idx": 1, "text": "My skin is timber, my heart is solid stone", "accepted": true, "syllables": 10, "rhymeKey": "stone" },
+              { "idx": 2, "text": "I’ve watched the empires crumble while I stood here all alone", "accepted": true, "syllables": 12, "rhymeKey": "stone" },
+              { "idx": 3, "text": "The riverbed is dry, the granite starts to sing", "accepted": true, "syllables": 10, "rhymeKey": "rings" },
+              { "idx": 4, "text": "I feel the turning of the tide, the weight of a thousand rings", "accepted": true, "syllables": 13, "rhymeKey": "rings" }
+            ]
+          },
+          {
+            "id": "sec-demo-3",
+            "type": "hook",
+            "bars": [
+              { "idx": 1, "text": "Deep in the earth where the darkness is gold", "accepted": true, "syllables": 10, "rhymeKey": "gold" },
+              { "idx": 2, "text": "Holding the secrets that never were told", "accepted": true, "syllables": 10, "rhymeKey": "gold" }
+            ]
+          }
+        ],
+        "rhymeGroups": [
+          { "words": ["shore", "before"] },
+          { "words": ["stone", "alone"] },
+          { "words": ["sing", "rings"] },
+          { "words": ["gold", "told"] }
+        ],
+        "rhymeHighlightingEnabled": true
+      },
+      {
+        "id": "track-canyon-002",
+        "albumId": "album-earthen-monolith-2026",
+        "ownerId": "demo-user-id",
+        "title": "BASALT HYMN",
+        "vibe": {
+          "enabled": true,
+          "genre": "Dark Folk",
+          "tempoBPM": 88,
+          "feeling": ["jagged", "cold", "determined"],
+          "instrumentation": "Stomps on wooden floorboards, a detuned banjo, and a gravelly vocal harmony."
+        },
+        "sections": [
+          {
+            "id": "sec-verse-2",
+            "type": "verse",
+            "bars": [
+              { "idx": 1, "text": "The canyon walls are narrow and they’re closing in today", "accepted": true, "syllables": 12, "rhymeKey": "way" },
+              { "idx": 2, "text": "I’m looking for the sun but the clouds are in the way", "accepted": true, "syllables": 12, "rhymeKey": "way" }
+            ]
+          }
+        ],
+        "status": "in_progress",
+        "createdAt": "2026-05-14T03:30:00.000Z"
+      }
+    ]
+  }
+]

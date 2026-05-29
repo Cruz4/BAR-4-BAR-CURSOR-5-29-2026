@@ -1,0 +1,208 @@
+
+      type User @table(key: "id") {
+        id: String!
+        createdAt: Timestamp!
+        albums: [Album!] @relation(table: "Album", field: "owner")
+      }
+
+      type Album @table(key: "id") {
+        id: UUID!
+        ownerId: String!
+        title: String!
+        theme: String!
+        message: String
+        thingsToSay: [String]
+        trackIds: [UUID]
+        createdAt: Timestamp!
+        coverArtUrl: String
+        tracks: [Track!] @relation(table: "Track", field: "album")
+        owner: User! @relation(on: "ownerId", to: "id")
+      }
+
+      type Track @table(key: "id") {
+        id: UUID!
+        albumId: UUID!
+        ownerId: String!
+        title: String!
+        vibe: JSON
+        intentRefs: [String]
+        sections: [TrackSection] @nested
+        status: String!
+        createdAt: Timestamp!
+        album: Album! @relation(on: "albumId", to: "id")
+      }
+
+      type TrackSection {
+        id: UUID!
+        type: String!
+        bars: [Bar]
+      }
+
+      type Bar {
+        idx: Int!
+        text: String!
+        accepted: Boolean!
+        rhymeKey: String
+        syllables: Int
+      }
+
+      # Top-level queries
+      query listAlbums {
+        albums(
+          orderBy: { createdAt: "ASC" }
+        ) {
+          id
+          title
+          theme
+          coverArtUrl
+          trackIds
+        }
+      }
+
+      query getAlbum(id: UUID!) {
+        album(id: $id) {
+          id
+          title
+          theme
+          message
+          thingsToSay
+          coverArtUrl
+          tracks {
+            id
+            title
+            vibe
+            status
+          }
+        }
+      }
+
+      query getTrack(id: UUID!) {
+        track(id: $id) {
+          id
+          title
+          vibe
+          status
+          intentRefs
+          sections
+          album {
+            id
+            title
+            theme
+            thingsToSay
+          }
+        }
+      }
+
+      # Top-level mutations
+      mutation createAlbum(title: String!, theme: String!, ownerId: String!) {
+        album_insert(
+          data: {
+            id: gen_random_uuid()
+            title: $title
+            theme: $theme
+            ownerId: $ownerId
+            createdAt: now()
+            status: "in_progress"
+            vibe: { genre: "Lofi-Hop", tempoBPM: 90, feeling: ["reflective"] }
+            trackIds: []
+          }
+        ) {
+          id
+        }
+      }
+
+      mutation updateAlbum(
+        albumId: UUID!,
+        title: String,
+        theme: String,
+        message: String,
+        thingsToSay: [String],
+        coverArtUrl: String,
+      ) {
+        album_update(
+          where: { id: { eq: $albumId } }
+          data: {
+            title: $title,
+            theme: $theme,
+            message: $message,
+            thingsToSay: $thingsToSay,
+            coverArtUrl: $coverArtUrl
+          }
+        ) {
+          id
+        }
+      }
+
+      mutation createTrack(albumId: UUID!, title: String!, ownerId: String!) {
+        track_insert(
+          data: {
+            id: gen_random_uuid()
+            albumId: $albumId
+            title: $title
+            ownerId: $ownerId
+            createdAt: now()
+            status: "in_progress"
+            vibe: { genre: "Lofi-Hop", tempoBPM: 90, feeling: ["reflective"] }
+            sections: [
+              {
+                id: gen_random_uuid(),
+                type: "verse",
+                bars: []
+              }
+            ]
+          }
+        ) {
+          id
+        }
+      }
+
+      mutation updateTrack(
+        trackId: UUID!
+        title: String
+        status: String
+        vibe: JSON
+        intentRefs: [String]
+      ) {
+        track_update(
+          where: { id: { eq: $trackId } }
+          data: { title: $title, status: $status, vibe: $vibe, intentRefs: $intentRefs }
+        ) {
+          id
+        }
+      }
+
+      mutation updateTrackSections(sectionId: UUID!, bars: JSON!, trackId: UUID!) {
+        track_update(
+          where: { id: { eq: $trackId } }
+          data: {
+            sections: {
+              update: {
+                where: { id: { eq: $sectionId } }
+                data: { bars: $bars }
+              }
+            }
+          }
+        ) {
+          id
+        }
+      }
+
+      mutation addTrackSection(trackId: UUID!, type: String!) {
+        track_update(
+          where: {id: {eq: $trackId}}
+          data: {
+            sections: {
+              create: [
+                {
+                  id: gen_random_uuid(),
+                  type: $type,
+                  bars: []
+                }
+              ]
+            }
+          }
+        ) {
+          id
+        }
+      }
+    

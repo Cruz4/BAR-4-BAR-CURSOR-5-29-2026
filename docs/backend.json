@@ -1,0 +1,140 @@
+{
+  "entities": {
+    "Album": {
+      "title": "Album",
+      "description": "An album containing multiple tracks.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "title": { "type": "string" },
+        "theme": { "type": "string" },
+        "message": { "type": "string" },
+        "thingsToSay": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "coverArtUrl": { "type": "string" },
+        "direction": { "$ref": "#/entities/Direction" },
+        "dnaPresets": { 
+          "type": "array", 
+          "items": { 
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "createdAt": { "type": "string" },
+              "sourceTrackTitle": { "type": "string" },
+              "analysis": { "type": "object" },
+              "mapping": { "$ref": "#/entities/Direction" }
+            }
+          }
+        },
+        "isPublic": { "type": "boolean" },
+        "shareId": { "type": "string" }
+      },
+      "required": ["ownerId", "title", "theme", "createdAt"]
+    },
+    "Direction": {
+      "title": "Direction",
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "setting_world": { "type": "string" },
+        "emotion_core": { "type": "string" },
+        "trigger_moment": { "type": "string" },
+        "message_truth": { "type": "string" },
+        "tone_palette": { "type": "string" },
+        "inheritFromAlbum": { "type": "boolean" }
+      }
+    },
+    "Track": {
+      "title": "Track",
+      "description": "A musical track with lyrics.",
+      "type": "object",
+      "properties": {
+        "albumId": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "title": { "type": "string" },
+        "coverArtUrl": { "type": "string" },
+        "vibe": { 
+          "type": "object",
+          "properties": {
+            "genre": { "type": "string" },
+            "tempoBPM": { "type": "number" },
+            "feeling": { "type": "array", "items": { "type": "string" } },
+            "instrumentation": { "type": "string" }
+          }
+        },
+        "vibePresets": { "type": "array", "items": { "type": "object" } },
+        "intentRefs": { "type": "array", "items": { "type": "string" } },
+        "checkedIntents": { "type": "array", "items": { "type": "string" } },
+        "intentsEnabled": { "type": "boolean" },
+        "endWith": { "type": "string" },
+        "sections": { "type": "array" },
+        "status": { "type": "string", "enum": ["in_progress", "complete"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "direction": { "$ref": "#/entities/Direction" },
+        "guardrails": { 
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "negativePrompt": { "type": "string" },
+            "forbiddenWords": { "type": "array", "items": { "type": "string" } },
+            "mustIncludeWords": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "rhymeGroups": { 
+          "type": "array", 
+          "items": { 
+            "type": "object",
+            "properties": {
+              "words": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "rhymeHighlightingEnabled": { "type": "boolean" },
+        "isPublic": { "type": "boolean" },
+        "shareId": { "type": "string" }
+      },
+      "required": ["albumId", "ownerId", "title", "sections", "status", "createdAt"]
+    },
+    "ProjectShare": {
+      "title": "ProjectShare",
+      "description": "A public snapshot of an album or track for fan consumption.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["album", "track"] },
+        "projectId": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "data": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "views": { "type": "number" },
+        "imports": { "type": "number" }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["google.com", "password"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "object",
+      "description": "User profile and metadata."
+    },
+    "/users/{userId}/albums/{albumId}": {
+      "schema": "#/entities/Album",
+      "description": "User's albums."
+    },
+    "/users/{userId}/albums/{albumId}/tracks/{trackId}": {
+        "schema": "#/entities/Track",
+        "description": "User's individual tracks."
+    },
+    "/shares/{shareId}": {
+      "schema": "#/entities/ProjectShare",
+      "description": "Public shared project snapshots."
+    },
+    "/config/studio": {
+      "schema": "object",
+      "description": "Global studio configuration and announcements."
+    }
+  }
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Bar 4 Bar Studio</string>
+    <string name="title_activity_main">Bar 4 Bar Studio</string>
+    <string name="package_name">studio.bar4bar.app</string>
+    <string name="custom_url_scheme">studio.bar4bar.app</string>
+</resources>

@@ -1,0 +1,43 @@
+{
+  "version": "5.14.2026",
+  "project": "Bar 4 Bar Studio - MASTER LOCKDOWN",
+  "state_reference": "5/14/2026 3:25 AM STATE",
+  "mandatory_ui_stack": {
+    "right_panel": [
+      "DNA Suite (Vault Folder Unlocked)",
+      "Track Vibe (Preset Vault Unlocked)",
+      "Intents (Precision Lock)",
+      "Guardrails (Must-Include Focus)",
+      "AI Co-Writer (Neural Sharpening)",
+      "Creative Effects (Specialized Tools)",
+      "Scratch Pad (Persistent History)"
+    ],
+    "left_panel": [
+      "Track Status (Performance Mode)",
+      "Structure (Section Management)",
+      "Vibe Suggester (Beat Prompt Gen)",
+      "Scene / Cover Gen (Cinematic DNA)"
+    ],
+    "center_panel": [
+      "Rhyme Pulse (Round push-down button - 10 Ink)",
+      "Smart Structure (Neural Paste - 40 Ink)",
+      "Undo System (20-Level Stack)",
+      "Bar Workstation (Live Badge Context)"
+    ]
+  },
+  "alignment_locks": {
+    "red_margin_px": 100,
+    "text_start_px": 120,
+    "hanging_indent_px": 145,
+    "line_height_px": 32,
+    "workstation_compaction": "compact_header_footer_p3"
+  },
+  "logic_requirements": {
+    "editing": "Notepad-style direct permanent inputs with hanging indents",
+    "navigation": "Enter key splits bar; Backspace at start merges bars",
+    "undo_support": "Pulsing history stack for structural/lyrical reverts",
+    "dna_remix": "Extraction -> Archival -> Mixed-Strain Calibration -> Synthesis",
+    "rhyme_pulse": "One-time manual scan per click (Manual 10 Ink trigger)",
+    "vault_archival": "Strains saved with source track, date, and timestamp"
+  }
+}
