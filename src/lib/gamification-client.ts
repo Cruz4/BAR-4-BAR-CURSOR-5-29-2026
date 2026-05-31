@@ -1,7 +1,8 @@
 'use client';
 
 import { auth } from '@/lib/firebase/client/firebase';
-import type { GamificationTrigger } from '@/lib/gamification/types';
+import type { GamificationTrigger, GamificationUnlock } from '@/lib/gamification/types';
+import { dispatchAchievementUnlocks } from '@/lib/gamification/unlock-events';
 
 async function authHeaders() {
   const user = auth.currentUser;
@@ -10,10 +11,15 @@ async function authHeaders() {
   return { user, token };
 }
 
+export type GamificationEventResult = {
+  unlocks: GamificationUnlock[];
+  xpGain: number;
+};
+
 export async function postGamificationEvent(
   trigger: GamificationTrigger,
   metadata: Record<string, string | number | boolean | null> = {}
-): Promise<{ unlocks: Array<{ id: string; title: string; description: string; inkReward: number }> }> {
+): Promise<GamificationEventResult> {
   try {
     const { user, token } = await authHeaders();
     const res = await fetch('/api/gamification/event', {
@@ -29,10 +35,12 @@ export async function postGamificationEvent(
         metadata,
       }),
     });
-    if (!res.ok) return { unlocks: [] };
-    return res.json();
+    if (!res.ok) return { unlocks: [], xpGain: 0 };
+    const data = (await res.json()) as GamificationEventResult;
+    dispatchAchievementUnlocks(data.unlocks, data.xpGain ?? 0);
+    return data;
   } catch {
-    return { unlocks: [] };
+    return { unlocks: [], xpGain: 0 };
   }
 }
 

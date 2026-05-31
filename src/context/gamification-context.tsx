@@ -5,11 +5,11 @@ import { doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client/firebase';
 import { subscribeDocument } from '@/lib/firebase/client/firestore-subscribe';
 import { useAuth } from '@/hooks/use-auth';
-import { useToast } from '@/hooks/use-toast';
 import { DEFAULT_GAMIFICATION_SUMMARY, type GamificationSummary } from '@/lib/gamification/types';
 import { rankFromXp } from '@/lib/gamification/ranks';
 import { getAchievement } from '@/lib/gamification/achievements';
 import { isProUser } from '@/lib/subscription';
+import { dispatchAchievementUnlocks } from '@/lib/gamification/unlock-events';
 
 type GamificationContextType = {
   summary: GamificationSummary;
@@ -29,35 +29,16 @@ export function useGamification() {
 
 export function GamificationProvider({ children }: { children: ReactNode }) {
   const { user, authReady } = useAuth();
-  const { toast } = useToast();
   const [summary, setSummary] = useState<GamificationSummary>(DEFAULT_GAMIFICATION_SUMMARY);
   const [loading, setLoading] = useState(true);
   const prevUnlocksRef = useRef<Set<string>>(new Set());
-  const toastRef = useRef(toast);
-  toastRef.current = toast;
-
-  useEffect(() => {
-    const onUnlock = (e: Event) => {
-      const detail = (e as CustomEvent).detail as {
-        unlocks?: Array<{ id: string; title: string; description: string; inkReward: number }>;
-      };
-      detail?.unlocks?.forEach((u) => {
-        toastRef.current({
-          title: `Achievement unlocked: ${u.title}`,
-          description: u.inkReward
-            ? `${u.description} (+${u.inkReward} Ink)`
-            : u.description,
-        });
-      });
-    };
-    window.addEventListener('b4b-achievement-unlock', onUnlock);
-    return () => window.removeEventListener('b4b-achievement-unlock', onUnlock);
-  }, []);
+  const listenerReadyRef = useRef(false);
 
   useEffect(() => {
     if (!user?.id || !authReady) {
       setSummary(DEFAULT_GAMIFICATION_SUMMARY);
       prevUnlocksRef.current = new Set();
+      listenerReadyRef.current = false;
       setLoading(false);
       return;
     }
@@ -72,21 +53,37 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
           : DEFAULT_GAMIFICATION_SUMMARY;
 
         const currentIds = new Set(Object.keys(data.unlockedAchievements || {}));
-        if (prevUnlocksRef.current.size > 0) {
-          for (const id of currentIds) {
-            if (!prevUnlocksRef.current.has(id)) {
+        if (listenerReadyRef.current) {
+          const newUnlocks = [...currentIds]
+            .filter((id) => !prevUnlocksRef.current.has(id))
+            .map((id) => {
               const def = getAchievement(id);
-              if (def) {
-                toastRef.current({
-                  title: `Achievement unlocked: ${def.title}`,
-                  description: def.inkReward
-                    ? `${def.description} (+${def.inkReward} Ink)`
-                    : def.description,
-                });
-              }
-            }
+              if (!def) return null;
+              return {
+                id: def.id,
+                title: def.title,
+                description: def.description,
+                inkReward: def.inkReward,
+                xpReward: def.xpReward,
+                proOnly: def.proOnly,
+              };
+            })
+            .filter(Boolean) as Array<{
+            id: string;
+            title: string;
+            description: string;
+            inkReward: number;
+            xpReward: number;
+            proOnly?: boolean;
+          }>;
+
+          if (newUnlocks.length) {
+            dispatchAchievementUnlocks(newUnlocks);
           }
+        } else {
+          listenerReadyRef.current = true;
         }
+
         prevUnlocksRef.current = currentIds;
         setSummary(data);
         setLoading(false);

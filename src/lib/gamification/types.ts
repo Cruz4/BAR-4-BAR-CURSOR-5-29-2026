@@ -45,6 +45,7 @@ export type GamificationUnlock = {
   title: string;
   description: string;
   inkReward: number;
+  xpReward: number;
   proOnly?: boolean;
 };
 

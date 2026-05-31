@@ -99,9 +99,9 @@ export function Header() {
                     variant="ghost" 
                     size="sm" 
                     onClick={() => router.push(`/albums/${albumId}`)} 
-                    className="h-9 px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-all hover:bg-primary/5 shrink-0"
+                    className="h-9 px-3 max-md:px-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-all hover:bg-primary/5 shrink-0"
                   >
-                    <ChevronLeft className="mr-2 h-4 w-4" /> Back to Album
+                    <ChevronLeft className="mr-2 max-md:mr-0 h-4 w-4" /> <span className="max-md:hidden">Back to Album</span>
                   </Button>
                 )}
                 <div className={cn(

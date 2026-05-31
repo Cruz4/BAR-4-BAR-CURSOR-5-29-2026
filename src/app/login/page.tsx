@@ -20,7 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Sparkles, BrainCircuit, ArrowRight, Mail, Lock, User as UserIcon, LogIn, Coffee, Gift, Music, NotebookPen, Waves, Clapperboard, Zap, Target } from 'lucide-react';
+import { Sparkles, BrainCircuit, ArrowRight, Mail, Lock, User as UserIcon, LogIn, Coffee, Gift, Music, NotebookPen, Waves, Clapperboard, Zap, Target, Import } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -52,6 +52,8 @@ function LoginForm() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   
   const loginFormRef = useRef<HTMLDivElement>(null);
+  const importIntent = searchParams.get('intent') === 'dna-import';
+  const returnPath = searchParams.get('next');
 
   // Parallax logic for atmospheric voids
   const yParallax1 = useTransform(scrollY, [0, 1000], [0, 200]);
@@ -293,6 +295,20 @@ function LoginForm() {
                     </div>
                 </motion.div>
             </div>
+
+            {importIntent && (
+              <Card className="w-full max-w-md mb-6 border-primary/30 bg-primary/10 backdrop-blur-md relative z-50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-headline uppercase tracking-wide flex items-center gap-2 text-primary">
+                    <Import className="h-4 w-4" /> DNA Drop — Import Setup
+                  </CardTitle>
+                  <CardDescription className="text-[11px] font-code leading-relaxed text-left">
+                    Someone shared a Bar 4 Bar project with you. After you sign in, you&apos;ll return to that DNA Drop and can merge its lyrics, structure, DNA, and vibe into your vault.
+                    {returnPath ? ' Studio Pro is required to import drops from other artists.' : ''}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            )}
 
             <Card className="w-full max-w-md border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.8)] bg-[#0c121d]/80 backdrop-blur-3xl overflow-hidden relative z-50 transition-all duration-700 hover:border-primary/20">
                 <CardHeader className="text-center bg-white/5 p-0">

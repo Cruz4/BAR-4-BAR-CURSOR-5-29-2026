@@ -121,15 +121,18 @@ function tryUnlock(
   if (!def) return summary;
   if (def.proOnly && !isPro) return summary;
 
+  const xpReward = def.xpReward ?? 35;
   summary.unlockedAchievements = {
     ...summary.unlockedAchievements,
     [achievementId]: new Date().toISOString(),
   };
+  summary.xp = (summary.xp || 0) + xpReward;
   unlocks.push({
     id: def.id,
     title: def.title,
     description: def.description,
     inkReward: def.inkReward,
+    xpReward,
     proOnly: def.proOnly,
   });
   return summary;
@@ -190,9 +193,9 @@ export async function processGamificationEvent(
   trigger: GamificationTrigger,
   metadata: GamificationEventMetadata = {},
   userName?: string
-): Promise<{ unlocks: GamificationUnlock[]; summary: GamificationSummary }> {
+): Promise<{ unlocks: GamificationUnlock[]; summary: GamificationSummary; xpGain: number }> {
   if (!hasAdminFirestoreCredentials()) {
-    return { unlocks: [], summary: DEFAULT_GAMIFICATION_SUMMARY };
+    return { unlocks: [], summary: DEFAULT_GAMIFICATION_SUMMARY, xpGain: 0 };
   }
 
   const db = await getDb();
@@ -263,7 +266,7 @@ export async function processGamificationEvent(
   if (trigger === 'ai_action') {
     const action = String(metadata.actionName || '');
     if (action === 'generateNextLine') {
-      if (!analytics.firstGenerateNextLineAt) {
+      if (!summary.unlockedAchievements.first_next_bar) {
         summary = tryUnlock(summary, 'first_next_bar', isPro, unlocks);
       }
       summary.generateNextLineWeekCount = (summary.generateNextLineWeekCount || 0) + 1;
@@ -359,7 +362,7 @@ export async function processGamificationEvent(
   await syncLeaderboardEntry(userId, summary, displayName);
   await syncPublicProfile(userId, summary, displayName);
 
-  return { unlocks, summary };
+  return { unlocks, summary, xpGain };
 }
 
 export async function processGamificationFromAnalytics(

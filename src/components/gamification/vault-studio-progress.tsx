@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import { rankFromXp, STUDIO_RANKS, xpProgressInRank } from '@/lib/gamification/r
 import { ACHIEVEMENTS, type AchievementDef } from '@/lib/gamification/achievements';
 import { isProUser } from '@/lib/subscription';
 import { CheckCircle2, Circle, Flame, Lock, Trophy, ChevronRight, ChevronDown } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const RECENT_EARN_MS = 48 * 60 * 60 * 1000;
 
@@ -47,6 +48,7 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
   const isSidebar = variant === 'sidebar';
   const [expanded, setExpanded] = useState(true);
   const initializedRef = useRef(false);
+  const xpRingGradientId = useId();
 
   const unlocked = summary?.unlockedAchievements || {};
 
@@ -85,6 +87,79 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
   const xpPercent = next ? Math.min(100, Math.round((current / next) * 100)) : 100;
 
   const xpShort = summary.xp >= 1000 ? `${(summary.xp / 1000).toFixed(summary.xp >= 10000 ? 0 : 1)}k` : String(summary.xp);
+  const ringRadius = 28;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+  const ringOffset = ringCircumference * (1 - xpPercent / 100);
+
+  const sidebarBubble = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className={cn(
+            'group relative flex h-[3.75rem] w-[3.75rem] shrink-0 items-center justify-center rounded-full',
+            'border-2 border-primary/35 bg-gradient-to-br from-black/90 via-violet-950/50 to-black/90',
+            'shadow-[0_4px_28px_rgba(0,0,0,0.45),0_0_32px_rgba(139,92,246,0.25)]',
+            'transition-all duration-300 hover:scale-105 hover:border-primary/55 hover:shadow-[0_0_40px_rgba(139,92,246,0.4)]',
+            hasRecentEarn && 'border-amber-400/50 shadow-[0_0_36px_rgba(251,191,36,0.35)]'
+          )}
+          aria-label={`Studio progress: ${rankLabel}, ${summary.xp.toLocaleString()} XP. Click to expand.`}
+        >
+          <svg
+            className="absolute inset-0 h-full w-full -rotate-90"
+            viewBox="0 0 64 64"
+            aria-hidden
+          >
+            <circle
+              cx="32"
+              cy="32"
+              r={ringRadius}
+              fill="none"
+              stroke="rgba(255,255,255,0.08)"
+              strokeWidth="3"
+            />
+            <circle
+              cx="32"
+              cy="32"
+              r={ringRadius}
+              fill="none"
+              stroke={`url(#${xpRingGradientId})`}
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray={ringCircumference}
+              strokeDashoffset={ringOffset}
+              className="transition-all duration-500"
+            />
+            <defs>
+              <linearGradient id={xpRingGradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#0ea5e9" />
+                <stop offset="100%" stopColor="#a855f7" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <Trophy className="relative h-5 w-5 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
+          {summary.currentStreak > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-orange-500/50 bg-orange-950/80 shadow-[0_0_10px_rgba(249,115,22,0.35)]">
+              <Flame className="h-3 w-3 text-orange-400" />
+            </span>
+          )}
+          {hasRecentEarn && (
+            <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 rounded-full bg-amber-400 px-1.5 py-px text-[7px] font-black uppercase tracking-wide text-black">
+              New
+            </span>
+          )}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="right" className="max-w-[200px]">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-primary">Studio Progress</p>
+        <p className="text-[10px] text-muted-foreground mt-1">
+          {rankLabel} · {summary.xp.toLocaleString()} XP
+        </p>
+        <p className="text-[9px] text-muted-foreground/80 mt-0.5">Click to expand</p>
+      </TooltipContent>
+    </Tooltip>
+  );
 
   const headerBlock = (
     <div
@@ -313,9 +388,13 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
   const cardClassName = cn(
     'overflow-hidden mb-0 border rounded-xl shadow-none',
     isSidebar
-      ? 'border-white/10 bg-black/35'
+      ? 'w-[236px] 2xl:w-[256px] max-h-[calc(100vh-5.75rem)] overflow-y-auto studio-scrollbar border-white/10 bg-black/35'
       : 'mb-4 border-primary/20 bg-gradient-to-br from-primary/[0.08] via-card/50 to-amber-500/[0.06] shadow-[0_0_32px_rgba(59,130,246,0.08)]'
   );
+
+  if (isSidebar && !expanded) {
+    return sidebarBubble;
+  }
 
   return (
     <Card className={cardClassName}>

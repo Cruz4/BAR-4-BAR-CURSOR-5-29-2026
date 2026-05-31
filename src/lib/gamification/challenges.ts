@@ -54,7 +54,7 @@ export const WEEKLY_CHALLENGES: ChallengeDef[] = [
   {
     id: 'complete_1_track',
     label: 'Complete 1 track',
-    description: 'Mark at least one track complete this week.',
+    description: 'Mark at least one track complete this week (Track Status → Mark Track Complete).',
     target: 1,
     scale: 'weekly',
     tier: 'standard',
@@ -84,7 +84,7 @@ export const MONTHLY_CHALLENGES: ChallengeDef[] = [
   {
     id: 'complete_3_tracks',
     label: 'Complete 3 tracks',
-    description: 'Lock in three finished tracks this month.',
+    description: 'Lock in three finished tracks this month (Mark Track Complete in the Workstation).',
     target: 3,
     scale: 'monthly',
     tier: 'epic',

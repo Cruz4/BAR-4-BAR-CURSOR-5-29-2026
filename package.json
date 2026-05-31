@@ -56,6 +56,7 @@
     "@radix-ui/react-toggle-group": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.1.8",
     "@stripe/stripe-js": "^5.6.0",
+    "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "color-hash": "^2.0.2",
@@ -84,6 +85,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/canvas-confetti": "^1.9.0",
     "@types/color-hash": "^1.0.5",
     "@types/jspdf": "^2.0.0",
     "@types/node": "^20.19.13",

@@ -1,46 +1,53 @@
 'use client';
 
-import React, { useEffect, useState, useContext, useMemo } from 'react';
+import React, { useEffect, useState, useContext, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase/client/firebase';
 import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { DataContext } from '@/context/data-context';
 import type { ProjectShare, Album, Track } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-    Globe, 
-    Music, 
-    Compass, 
-    Target, 
-    Palette, 
-    Sparkles, 
-    ArrowRight, 
-    MonitorPlay, 
-    Import, 
-    CheckCircle2,
+import {
+    Globe,
+    Compass,
+    Target,
+    Sparkles,
+    Import,
     Eye,
     Zap,
-    ChevronLeft,
-    Clock
+    Clock,
+    LogIn,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { HighlightedText } from '@/components/highlighted-text';
 import { StudioLoader } from '@/components/studio-loader';
+import { ShareCoverImage } from '@/components/share-cover-image';
 import { format } from 'date-fns';
-import Image from 'next/image';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function SharedProjectPage() {
     const params = useParams();
     const shareId = params.shareId as string;
     const router = useRouter();
-    const { mergeData, isCloudSyncActive } = useContext(DataContext);
-    
+    const { toast } = useToast();
+    const { user, authReady } = useAuth();
+    const { mergeData, isCloudSyncActive, getAlbumById, getTrackById } = useContext(DataContext);
+
     const [share, setShare] = useState<ProjectShare | null>(null);
     const [loading, setLoading] = useState(true);
     const [isImporting, setIsImporting] = useState(false);
+    const [confirmOpen, setConfirmOpen] = useState(false);
 
     useEffect(() => {
         const fetchShare = async () => {
@@ -49,35 +56,12 @@ export default function SharedProjectPage() {
             if (snap.exists()) {
                 const data = snap.data() as ProjectShare;
                 setShare(data);
-                // Background update for view count
-                updateDoc(docRef, { views: increment(1) });
+                updateDoc(docRef, { views: increment(1) }).catch(() => undefined);
             }
             setLoading(false);
         };
-        fetchShare();
+        void fetchShare();
     }, [shareId]);
-
-    const handleImport = async () => {
-        if (!share) return;
-        if (!isCloudSyncActive) {
-            router.push('/pricing');
-            return;
-        }
-
-        setIsImporting(true);
-        try {
-            const data = share.data;
-            if (share.type === 'album') await mergeData([data as Album], []);
-            else await mergeData([], [data as Track]);
-            
-            await updateDoc(doc(db, 'shares', shareId), { imports: increment(1) });
-            router.push('/');
-        } catch (e) {
-            console.error("Import failed", e);
-        } finally {
-            setIsImporting(false);
-        }
-    };
 
     const formattedShareDate = useMemo(() => {
         if (!share?.createdAt) return 'Recent';
@@ -85,35 +69,123 @@ export default function SharedProjectPage() {
         return isNaN(date.getTime()) ? 'Recent' : format(date, 'MMM d, yyyy');
     }, [share?.createdAt]);
 
-    if (loading) return <div className="h-screen flex flex-col items-center justify-center"><StudioLoader size="lg" /><p className="mt-4 text-xs font-code uppercase animate-pulse">Accessing Studio Vault...</p></div>;
+    const project = share?.data;
+    const isAlbum = share?.type === 'album';
+    const isOwnShare = Boolean(user && share && user.id === share.ownerId);
 
-    if (!share) return (
-        <div className="h-screen flex items-center justify-center p-4">
-            <Card className="max-w-md text-center border-2">
-                <CardHeader>
-                    <Zap className="h-12 w-12 text-primary mx-auto mb-4" />
-                    <CardTitle className="font-headline text-3xl">VAULT CLOSED</CardTitle>
-                    <CardDescription>This project share is no longer live or the link is invalid.</CardDescription>
-                </CardHeader>
-                <CardFooter><Button className="w-full" onClick={() => router.push('/')}>Return to Dashboard</Button></CardFooter>
-            </Card>
-        </div>
-    );
+    const alreadyInVault = useMemo(() => {
+        if (!project || !isOwnShare) return false;
+        if (isAlbum) return Boolean(getAlbumById(project.id));
+        return Boolean(getTrackById('unassigned', project.id).track);
+    }, [project, isOwnShare, isAlbum, getAlbumById, getTrackById]);
 
-    const project = share.data;
-    const isAlbum = share.type === 'album';
+    const openInVault = useCallback(() => {
+        if (!project) return;
+        if (isAlbum) router.push(`/albums/${project.id}`);
+        else router.push(`/albums/unassigned/tracks/${project.id}`);
+    }, [project, isAlbum, router]);
+
+    const handleImportClick = () => {
+        if (!authReady) return;
+
+        if (!user) {
+            router.push(`/login?next=${encodeURIComponent(`/share/${shareId}`)}&intent=dna-import`);
+            return;
+        }
+
+        if (!isCloudSyncActive) {
+            router.push(`/pricing?next=${encodeURIComponent(`/share/${shareId}`)}`);
+            return;
+        }
+
+        if (isOwnShare && alreadyInVault) {
+            toast({
+                title: 'Already in your vault',
+                description: 'This DNA Drop is yours — opening the project in your studio.',
+            });
+            openInVault();
+            return;
+        }
+
+        setConfirmOpen(true);
+    };
+
+    const handleConfirmImport = async () => {
+        if (!share || !project) return;
+
+        setConfirmOpen(false);
+        setIsImporting(true);
+        try {
+            const data = share.data;
+            if (share.type === 'album') await mergeData([data as Album], []);
+            else await mergeData([], [data as Track]);
+
+            await updateDoc(doc(db, 'shares', shareId), { imports: increment(1) });
+
+            toast({
+                title: 'DNA Imported',
+                description: `"${project.title}" was merged into your vault. You can edit it anytime.`,
+            });
+
+            if (isAlbum) router.push(`/albums/${(data as Album).id}`);
+            else router.push(`/albums/unassigned/tracks/${(data as Track).id}`);
+        } catch (e) {
+            console.error('Import failed', e);
+            toast({
+                variant: 'destructive',
+                title: 'Import failed',
+                description: 'Could not merge this DNA Drop. Try again in a moment.',
+            });
+        } finally {
+            setIsImporting(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="h-screen flex flex-col items-center justify-center">
+                <StudioLoader size="lg" />
+                <p className="mt-4 text-xs font-code uppercase animate-pulse">Accessing Studio Vault...</p>
+            </div>
+        );
+    }
+
+    if (!share || !project) {
+        return (
+            <div className="h-screen flex items-center justify-center p-4">
+                <Card className="max-w-md text-center border-2">
+                    <CardHeader>
+                        <Zap className="h-12 w-12 text-primary mx-auto mb-4" />
+                        <CardTitle className="font-headline text-3xl">VAULT CLOSED</CardTitle>
+                        <CardDescription>This project share is no longer live or the link is invalid.</CardDescription>
+                    </CardHeader>
+                    <CardFooter className="justify-center">
+                        <Button className="w-full" onClick={() => router.push('/login')}>
+                            Go to Bar 4 Bar
+                        </Button>
+                    </CardFooter>
+                </Card>
+            </div>
+        );
+    }
+
+    const importLabel = !user
+        ? 'Sign in to Import'
+        : isOwnShare && alreadyInVault
+          ? 'Open in My Vault'
+          : 'Import Setup';
 
     return (
         <div className="min-h-screen relative selection:bg-primary/30 overflow-x-hidden font-code">
-            {/* Global Aesthetic Overlays */}
             <div className="fixed inset-0 z-0 pointer-events-none opacity-20">
-                <div className="h-full w-full bg-[repeating-linear-gradient(theme(colors.border),theme(colors.border)_1px,transparent_1px,transparent_24px)]"></div>
+                <div className="h-full w-full bg-[repeating-linear-gradient(theme(colors.border),theme(colors.border)_1px,transparent_1px,transparent_24px)]" />
             </div>
 
-            {/* Header: Platform Branding */}
             <header className="sticky top-0 z-[100] h-16 border-b bg-background/80 backdrop-blur-md px-6 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <div className="bg-black rounded-lg w-10 h-10 p-1.5 border border-primary/20"><img src="/Logo.png" alt="Bar 4 Bar" className="w-full h-full object-contain" /></div>
+                    <div className="bg-black rounded-lg w-10 h-10 p-1.5 border border-primary/20">
+                        <img src="/Logo.png" alt="Bar 4 Bar" className="w-full h-full object-contain" />
+                    </div>
                     <div>
                         <h1 className="text-xl font-headline font-bold text-foreground">BAR 4 BAR</h1>
                         <p className="text-[8px] text-muted-foreground uppercase tracking-[0.2em] -mt-1">DNA Drop Snapshot</p>
@@ -121,30 +193,55 @@ export default function SharedProjectPage() {
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="hidden md:flex items-center gap-4 mr-4 text-muted-foreground">
-                        <div className="flex items-center gap-1.5"><Eye className="h-3.5 w-3.5" /><span className="text-[10px] font-bold">{share.views.toLocaleString()}</span></div>
-                        <div className="flex items-center gap-1.5"><Import className="h-3.5 w-3.5" /><span className="text-[10px] font-bold">{share.imports.toLocaleString()}</span></div>
+                        <div className="flex items-center gap-1.5">
+                            <Eye className="h-3.5 w-3.5" />
+                            <span className="text-[10px] font-bold">{share.views.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <Import className="h-3.5 w-3.5" />
+                            <span className="text-[10px] font-bold">{share.imports.toLocaleString()}</span>
+                        </div>
                     </div>
-                    <Button onClick={handleImport} size="sm" className="h-9 px-4 font-bold shadow-lg" disabled={isImporting}>
-                        {isImporting ? <StudioLoader size="sm" /> : <Import className="h-4 w-4 mr-2" />}
-                        Import Setup
+                    <Button onClick={handleImportClick} size="sm" className="h-9 px-4 font-bold shadow-lg" disabled={isImporting}>
+                        {isImporting ? (
+                            <StudioLoader size="sm" />
+                        ) : !user ? (
+                            <LogIn className="h-4 w-4 mr-2" />
+                        ) : (
+                            <Import className="h-4 w-4 mr-2" />
+                        )}
+                        {importLabel}
                     </Button>
                 </div>
             </header>
 
+            {!user && (
+                <div className="container max-w-7xl mx-auto px-4 pt-4 relative z-10">
+                    <Card className="border-primary/25 bg-primary/5">
+                        <CardContent className="p-4 text-[11px] font-code text-muted-foreground leading-relaxed">
+                            <span className="font-bold uppercase text-primary">Import Setup</span> copies this project&apos;s lyrics,
+                            structure, DNA, and vibe into your Bar 4 Bar vault so you can write on top of it.
+                            {' '}
+                            <button type="button" className="text-primary underline underline-offset-2 font-bold" onClick={() => router.push(`/login?next=${encodeURIComponent(`/share/${shareId}`)}&intent=dna-import`)}>
+                                Sign in or create a free account
+                            </button>
+                            {' '}to import. Studio Pro is required to import DNA Drops from other artists.
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
             <main className="container max-w-7xl mx-auto py-8 px-4 grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
-                {/* Side: DNA & Architecture */}
                 <div className="lg:col-span-4 space-y-6">
                     <Card className="border-2 overflow-hidden bg-card/80">
-                        <div className="aspect-square relative w-full border-b">
-                            <Image 
-                                src={project.coverArtUrl || 'https://picsum.photos/seed/share/600/600'} 
-                                alt={project.title || 'Project Snapshot'} 
-                                fill 
-                                className="object-cover" 
+                        <div className="aspect-square relative w-full border-b bg-neutral-950">
+                            <ShareCoverImage
+                                src={project.coverArtUrl}
+                                alt={project.title || 'Project Snapshot'}
                                 priority
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                            <div className="absolute bottom-6 left-6 right-6">
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+                            <div className="absolute bottom-6 left-6 right-6 pointer-events-none">
                                 <h2 className="text-4xl font-headline font-bold text-white uppercase tracking-tighter leading-none">{project.title}</h2>
                                 <p className="text-[10px] text-primary font-bold uppercase mt-2 tracking-widest flex items-center gap-2">
                                     <Sparkles className="h-3 w-3" /> by {share.ownerName}
@@ -153,12 +250,18 @@ export default function SharedProjectPage() {
                         </div>
                         <CardContent className="p-6 space-y-6">
                             <div>
-                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-2"><Globe className="h-3 w-3" /> {isAlbum ? 'Album Concept' : 'Track Theme'}</h4>
-                                <p className="text-sm italic text-muted-foreground leading-relaxed">"{isAlbum ? project.theme : project.vibe?.feeling.join(', ')}"</p>
+                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-2">
+                                    <Globe className="h-3 w-3" /> {isAlbum ? 'Album Concept' : 'Track Theme'}
+                                </h4>
+                                <p className="text-sm italic text-muted-foreground leading-relaxed">
+                                    &ldquo;{isAlbum ? project.theme : project.vibe?.feeling?.join(', ')}&rdquo;
+                                </p>
                             </div>
                             {project.direction && (
                                 <div className="space-y-4 border-t pt-4">
-                                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-green-600 flex items-center gap-2"><Compass className="h-3 w-3" /> Architecture (The 5 Questions)</h4>
+                                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-green-600 flex items-center gap-2">
+                                        <Compass className="h-3 w-3" /> Architecture (The 5 Questions)
+                                    </h4>
                                     <div className="space-y-3">
                                         {Object.entries(project.direction).map(([key, value]) => {
                                             if (!value || typeof value !== 'string') return null;
@@ -176,23 +279,28 @@ export default function SharedProjectPage() {
                     </Card>
 
                     <Card className="border-sky-500/30 bg-sky-500/5">
-                        <CardHeader className="p-4"><CardTitle className="text-xs font-headline uppercase text-sky-500 flex items-center gap-2"><Target className="h-4 w-4" /> Selected Motifs</CardTitle></CardHeader>
+                        <CardHeader className="p-4">
+                            <CardTitle className="text-xs font-headline uppercase text-sky-500 flex items-center gap-2">
+                                <Target className="h-4 w-4" /> Selected Motifs
+                            </CardTitle>
+                        </CardHeader>
                         <CardContent className="p-4 pt-0">
                             <div className="flex flex-wrap gap-1.5">
                                 {(isAlbum ? project.thingsToSay : project.intentRefs || []).map((intent: string) => (
-                                    <Badge key={intent} variant="outline" className="text-[8px] uppercase border-sky-500/30 text-sky-600 bg-sky-500/5 py-1 px-2">{intent}</Badge>
+                                    <Badge key={intent} variant="outline" className="text-[8px] uppercase border-sky-500/30 text-sky-600 bg-sky-500/5 py-1 px-2">
+                                        {intent}
+                                    </Badge>
                                 ))}
                             </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Center: The Lyrics Grid (Static Background Protocol) */}
                 <div className="lg:col-span-8 space-y-8">
                     <Card className="border-2 shadow-2xl relative overflow-hidden bg-notebook min-h-[80vh]">
                         <style>{`
                             .bg-notebook {
-                                background-image: 
+                                background-image:
                                     linear-gradient(90deg, transparent 100px, #ff000022 100px, #ff000022 101px, transparent 101px),
                                     repeating-linear-gradient(transparent, transparent 31px, #ffffff05 31px, #ffffff05 32px);
                                 background-attachment: fixed;
@@ -200,8 +308,12 @@ export default function SharedProjectPage() {
                         `}</style>
                         <CardHeader className="bg-card border-b relative z-10 p-12 py-8">
                             <div className="flex items-center gap-4">
-                                <Badge variant="outline" className="text-[9px] uppercase tracking-widest border-primary/20 text-primary">Live Transcription</Badge>
-                                <div className="flex items-center gap-2 text-[9px] text-muted-foreground uppercase font-bold"><Clock className="h-3 w-3" /> {formattedShareDate}</div>
+                                <Badge variant="outline" className="text-[9px] uppercase tracking-widest border-primary/20 text-primary">
+                                    Live Transcription
+                                </Badge>
+                                <div className="flex items-center gap-2 text-[9px] text-muted-foreground uppercase font-bold">
+                                    <Clock className="h-3 w-3" /> {formattedShareDate}
+                                </div>
                             </div>
                         </CardHeader>
                         <CardContent className="p-0 relative z-10">
@@ -209,15 +321,21 @@ export default function SharedProjectPage() {
                                 <div className="p-12 space-y-12">
                                     {project.tracks?.map((track: Track, idx: number) => (
                                         <div key={track.id} className="space-y-6">
-                                            <h4 className="text-3xl font-headline font-bold text-primary uppercase ml-[120px]">{idx + 1}. {track.title}</h4>
+                                            <h4 className="text-3xl font-headline font-bold text-primary uppercase ml-[120px]">
+                                                {idx + 1}. {track.title}
+                                            </h4>
                                             <div className="space-y-8">
                                                 {track.sections.map((sec) => (
                                                     <div key={sec.id} className="space-y-0">
                                                         <h5 className="text-sm font-bold text-sky-400 uppercase mb-2 ml-[120px]">[{sec.type}]</h5>
                                                         {sec.bars.map((bar) => (
-                                                            <div key={bar.idx} className="flex items-start min-h-[32px] pl-[120px]">
-                                                                <span className="absolute left-[50px] font-mono text-muted-foreground/10 text-lg leading-[32px] font-bold">{String(bar.idx).padStart(2, '0')}</span>
-                                                                <p className="text-xl md:text-2xl font-code font-bold leading-[32px] tracking-tight text-foreground/90">{bar.text || '...'}</p>
+                                                            <div key={bar.idx} className="flex items-start min-h-[32px] pl-[120px] relative">
+                                                                <span className="absolute left-[50px] font-mono text-muted-foreground/10 text-lg leading-[32px] font-bold">
+                                                                    {String(bar.idx).padStart(2, '0')}
+                                                                </span>
+                                                                <p className="text-xl md:text-2xl font-code font-bold leading-[32px] tracking-tight text-foreground/90">
+                                                                    {bar.text || '...'}
+                                                                </p>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -228,13 +346,17 @@ export default function SharedProjectPage() {
                                 </div>
                             ) : (
                                 <div className="p-12 space-y-12">
-                                    {project.sections.map((sec: any) => (
+                                    {project.sections.map((sec: Track['sections'][number]) => (
                                         <div key={sec.id} className="space-y-0">
                                             <h4 className="text-2xl font-headline font-bold text-sky-400 uppercase mb-4 ml-[120px]">{sec.type}</h4>
-                                            {sec.bars.map((bar: any) => (
-                                                <div key={bar.idx} className="flex items-start min-h-[32px] pl-[120px]">
-                                                    <span className="absolute left-[50px] font-mono text-muted-foreground/10 text-lg leading-[32px] font-bold">{String(bar.idx).padStart(2, '0')}</span>
-                                                    <p className="text-xl md:text-2xl font-code font-bold leading-[32px] tracking-tight text-foreground/90">{bar.text || '...'}</p>
+                                            {sec.bars.map((bar) => (
+                                                <div key={bar.idx} className="flex items-start min-h-[32px] pl-[120px] relative">
+                                                    <span className="absolute left-[50px] font-mono text-muted-foreground/10 text-lg leading-[32px] font-bold">
+                                                        {String(bar.idx).padStart(2, '0')}
+                                                    </span>
+                                                    <p className="text-xl md:text-2xl font-code font-bold leading-[32px] tracking-tight text-foreground/90">
+                                                        {bar.text || '...'}
+                                                    </p>
                                                 </div>
                                             ))}
                                         </div>
@@ -247,10 +369,47 @@ export default function SharedProjectPage() {
             </main>
 
             <footer className="py-12 border-t mt-12 bg-muted/5 flex flex-col items-center gap-6 relative z-10">
-                <div className="bg-black p-3 rounded-xl border"><img src="/Logo.png" alt="B4B" className="h-8 w-8" /></div>
-                <p className="text-[11px] text-muted-foreground font-code text-center uppercase tracking-[0.4em]">Built and Share via Bar 4 Bar Studio</p>
-                <Button variant="outline" size="sm" onClick={() => router.push('/')} className="h-10 px-8 font-bold uppercase tracking-widest text-[10px] rounded-full border-primary/20 text-primary">Initialize your own studio</Button>
+                <div className="bg-black p-3 rounded-xl border">
+                    <img src="/Logo.png" alt="B4B" className="h-8 w-8" />
+                </div>
+                <p className="text-[11px] text-muted-foreground font-code text-center uppercase tracking-[0.4em]">
+                    Built and shared via Bar 4 Bar Studio
+                </p>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(user ? '/' : '/login')}
+                    className="h-10 px-8 font-bold uppercase tracking-widest text-[10px] rounded-full border-primary/20 text-primary"
+                >
+                    {user ? 'Go to my vault' : 'Initialize your own studio'}
+                </Button>
             </footer>
+
+            <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                <AlertDialogContent className="bg-card border-2">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="font-headline text-2xl uppercase">Import DNA setup?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm font-code leading-relaxed space-y-2">
+                            <span className="block">
+                                This merges <strong className="text-foreground">{project.title}</strong> into your vault — lyrics, sections, DNA questions, motifs, and vibe settings.
+                            </span>
+                            {isOwnShare ? (
+                                <span className="block text-amber-200/90">
+                                    This is your own DNA Drop. Import updates the copy already in your vault (same project ID).
+                                </span>
+                            ) : (
+                                <span className="block">You can edit everything after import. Existing projects with the same ID will be merged.</span>
+                            )}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="font-bold">Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => void handleConfirmImport()} className="font-bold" disabled={isImporting}>
+                            {isImporting ? 'Importing…' : 'Import into vault'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

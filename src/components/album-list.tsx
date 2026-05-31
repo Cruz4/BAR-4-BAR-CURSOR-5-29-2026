@@ -88,6 +88,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StudioLoader } from '@/components/studio-loader';
 import { countUserTracks, FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, isProUser } from '@/lib/subscription';
+import { isDataUrl } from '@/lib/cover-art';
 import { postGamificationEvent } from '@/lib/gamification-client';
 import { VaultStudioProgress } from '@/components/gamification/vault-studio-progress';
 import { VaultChamberAtmosphere } from '@/components/vault-chamber-atmosphere';
@@ -304,7 +305,7 @@ function FreeVisitorVault({
           </h2>
           <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 font-mono">{realAlbums.length}/{FREE_ALBUM_LIMIT}</Badge>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-16 px-4">
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-x-12 gap-y-12 px-2 sm:grid-cols-2 lg:grid-cols-3">
           {album ? <VinylRecord key={album.id} album={album} /> : <OpenAlbumSlot onClick={onCreateAlbum} />}
           <LockedVaultSlot variant="album" label="Unlimited Albums" sublabel="Upgrade for full vault expansion" />
         </div>
@@ -321,12 +322,17 @@ const VinylRecord = ({ album }: { album: Album }) => (
              }}>
             <div className="relative w-[38%] h-[38%] rounded-full overflow-hidden border-4 border-neutral-700 shadow-inner z-10 bg-neutral-800 flex items-center justify-center">
                 {album.coverArtUrl ? (
-                    <Image 
-                        src={album.coverArtUrl} 
-                        alt={album.title} 
-                        fill 
-                        className="object-cover opacity-90" 
-                    />
+                    isDataUrl(album.coverArtUrl) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={album.coverArtUrl} alt={album.title} className="absolute inset-0 h-full w-full object-cover opacity-90" />
+                    ) : (
+                        <Image 
+                            src={album.coverArtUrl} 
+                            alt={album.title} 
+                            fill 
+                            className="object-cover opacity-90" 
+                        />
+                    )
                 ) : (
                     <div className="flex items-center justify-center h-full w-full p-2 bg-neutral-900">
                         <img src="/Logo.png" alt="B4B" className="w-full h-full object-contain opacity-20" />
@@ -515,12 +521,17 @@ export function AlbumList() {
         <VaultChamberAtmosphere />
 
         {!loading && user && (
-          <div className="hidden xl:block fixed left-2 2xl:left-4 top-[5.25rem] z-30 w-[236px] 2xl:w-[256px] max-h-[calc(100vh-5.75rem)] overflow-y-auto studio-scrollbar pointer-events-auto">
+          <div className="hidden xl:block fixed left-2 2xl:left-4 top-[5.25rem] z-30 pointer-events-auto">
             <VaultStudioProgress variant="sidebar" />
           </div>
         )}
 
-        <div className="container relative z-20 mx-auto px-6 pt-6 pb-10">
+        <div
+          className={cn(
+            'container relative z-20 mx-auto px-6 pt-6 pb-10',
+            !loading && user && 'xl:pl-10 2xl:pl-12'
+          )}
+        >
             <header className="mb-8 pb-6 border-b border-white/5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-6">
                 <div className="flex items-center gap-3 shrink-0">
@@ -764,7 +775,7 @@ export function AlbumList() {
                               <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 font-mono ml-auto">{filteredAlbums.length}</Badge>
                             )}
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12 px-2 max-w-6xl">
+                        <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-x-12 gap-y-12 px-2 sm:grid-cols-2 lg:grid-cols-3">
                             {filteredAlbums.map((album) => (
                                 <VinylRecord key={album.id} album={album} />
                             ))}

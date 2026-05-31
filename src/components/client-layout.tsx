@@ -9,6 +9,7 @@ import { ThemeProvider } from '@/context/theme-provider';
 import { UIStateProvider } from '@/context/ui-state-context';
 import { UsageProvider } from '@/context/usage-context';
 import { GamificationProvider } from '@/context/gamification-context';
+import { AchievementUnlockCelebration } from '@/components/gamification/achievement-unlock-celebration';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { usePathname } from 'next/navigation';
 import { StudioTips } from './studio-tips';
@@ -23,6 +24,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLoginPage = pathname === '/login';
   const isPerformPage = pathname.endsWith('/perform');
+  const isSharePage = pathname.startsWith('/share/');
 
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
@@ -34,16 +36,17 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                 <FirebaseErrorListener />
                 <StudioPageBackground />
                 <div className="relative z-10 flex min-h-screen flex-col flex-1 overflow-hidden">
-                  {!isLoginPage && !isPerformPage && <Header />}
+                  {!isLoginPage && !isPerformPage && !isSharePage && <Header />}
                   <main className="flex-1 overflow-hidden flex flex-col">{children}</main>
-                  <StudioTips />
+                  {!isSharePage && <StudioTips />}
                   <FloatingInkSpent />
-                  {!isLoginPage && <WhatsNewDialog />}
+                  {!isLoginPage && !isSharePage && <WhatsNewDialog />}
                   <CookieConsent />
                   <OfflineBanner />
                   <ServiceWorkerRegister />
                 </div>
                 <Toaster />
+                <AchievementUnlockCelebration />
             </UIStateProvider>
             </GamificationProvider>
           </UsageProvider>

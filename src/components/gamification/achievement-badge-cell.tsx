@@ -88,6 +88,12 @@ export function AchievementBadgeCell({
             <span className="text-amber-200/80">{statusLabel}</span>
           )}
         </p>
+        {!unlocked && achievement.howTo && (
+          <p className="text-[10px] text-sky-200/90 leading-snug border-t border-white/10 pt-2">
+            <span className="font-bold uppercase text-[9px] text-sky-300/80">How: </span>
+            {achievement.howTo}
+          </p>
+        )}
       </TooltipContent>
     </Tooltip>
   );

@@ -137,10 +137,29 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const syncAlbumTimeout = useRef<NodeJS.Timeout | null>(null);
   const albumsRef = useRef<Album[]>([]);
   const prevBarCountsRef = useRef<Record<string, number>>({});
+  const prevTrackCompleteRef = useRef<Record<string, boolean>>({});
+
+  const seedTrackProgressBaselines = useCallback((albumList: Album[]) => {
+    const barBaselines: Record<string, number> = {};
+    const completeBaselines: Record<string, boolean> = {};
+    for (const album of albumList) {
+      for (const track of album.tracks) {
+        barBaselines[track.id] = countNonEmptyBars(track.sections);
+        completeBaselines[track.id] = track.status === 'complete';
+      }
+    }
+    prevBarCountsRef.current = barBaselines;
+    prevTrackCompleteRef.current = completeBaselines;
+  }, []);
 
   useEffect(() => {
     albumsRef.current = albums;
   }, [albums]);
+
+  useEffect(() => {
+    prevBarCountsRef.current = {};
+    prevTrackCompleteRef.current = {};
+  }, [user?.id]);
 
   const performTrackSync = useCallback(async () => {
     if (!user) return;
@@ -165,19 +184,26 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const album = albumsRef.current.find((a) => a.id === data.albumId);
       const track = album?.tracks.find((t) => t.id === trackId);
       if (!track) continue;
-      const barCount = countNonEmptyBars(track.sections);
-      const prevBarCount = prevBarCountsRef.current[trackId] ?? barCount;
+
+      const sections = data.updates?.sections ?? track.sections;
+      const barCount = countNonEmptyBars(sections);
+      const prevBarCount = prevBarCountsRef.current[trackId] ?? 0;
       prevBarCountsRef.current[trackId] = barCount;
+
+      const nextStatus = data.updates?.status ?? track.status;
+      const wasComplete = prevTrackCompleteRef.current[trackId] ?? track.status === 'complete';
+      const trackComplete = nextStatus === 'complete' && !wasComplete;
+      prevTrackCompleteRef.current[trackId] = nextStatus === 'complete';
+
+      const delta = Math.max(0, barCount - prevBarCount);
+      if (delta === 0 && !trackComplete) continue;
+
       void postGamificationEvent('track_saved', {
         barCount,
         prevBarCount,
-        trackComplete: track.status === 'complete',
+        trackComplete,
         albumTrackCount: album?.id !== UNASSIGNED_ALBUM_ID ? (album?.tracks?.length || 0) : 0,
         sessionBarCount: barCount,
-      }).then(({ unlocks }) => {
-        if (unlocks?.length) {
-          window.dispatchEvent(new CustomEvent('b4b-achievement-unlock', { detail: { unlocks } }));
-        }
       });
     }
   }, [user]);
@@ -308,6 +334,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         if (styleSnap.exists()) setStyleProfile(styleSnap.data() as StyleProfile);
         
         setAlbums(finalAlbums);
+        seedTrackProgressBaselines(finalAlbums);
 
         if (!styleProfile && !styleSnap.exists()) {
           const defaultProfile: StyleProfile = {
@@ -322,13 +349,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       } catch (e) { 
         console.error("Load failed", e);
         const savedLocal = localStorage.getItem(`${ALBUM_STORAGE_KEY}-${user.id}`);
-        if (savedLocal) setAlbums(JSON.parse(savedLocal));
+        if (savedLocal) {
+          const parsed = JSON.parse(savedLocal) as Album[];
+          setAlbums(parsed);
+          seedTrackProgressBaselines(parsed);
+        }
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, [user?.id, authReady]);
+  }, [user?.id, authReady, seedTrackProgressBaselines]);
 
   useEffect(() => {
     if (user && !loading) {
@@ -361,7 +392,25 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const addTrack = useCallback((albumId: string, track: Omit<Track, 'id'>): Track => {
     const id = track.id || `track-${Date.now()}`;
     const newTrack = stripForFirestore({ ...track, id, ownerId: user!.id, albumId }) as Track;
-    setAlbums(prev => prev.map(a => (a.id === albumId ? { ...a, tracks: [...a.tracks, newTrack] } : a)));
+    setAlbums(prev => {
+      const next = prev.map(a => (a.id === albumId ? { ...a, tracks: [...a.tracks, newTrack] } : a));
+      if (user && albumId !== UNASSIGNED_ALBUM_ID) {
+        const album = next.find((a) => a.id === albumId);
+        const albumTrackCount = album?.tracks?.length || 0;
+        if (albumTrackCount >= 3) {
+          queueMicrotask(() => {
+            void postGamificationEvent('track_saved', {
+              barCount: countNonEmptyBars(newTrack.sections),
+              prevBarCount: countNonEmptyBars(newTrack.sections),
+              trackComplete: false,
+              albumTrackCount,
+              sessionBarCount: countNonEmptyBars(newTrack.sections),
+            });
+          });
+        }
+      }
+      return next;
+    });
     if (user) {
       if (albumId === UNASSIGNED_ALBUM_ID) {
         void setDoc(
@@ -371,6 +420,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         );
       }
       void setDoc(doc(db, 'users', user.id, 'albums', albumId, 'tracks', id), newTrack, { merge: true });
+      prevBarCountsRef.current[id] = countNonEmptyBars(newTrack.sections);
+      prevTrackCompleteRef.current[id] = newTrack.status === 'complete';
     }
     return newTrack;
   }, [user]);
@@ -424,11 +475,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const shareId = Math.random().toString(36).substring(2, 12).toUpperCase();
     const data = type === 'album' ? getAlbumById(id) : getTrackById('unassigned', id).track;
     await setDoc(doc(db, 'shares', shareId), { id: shareId, type, projectId: id, ownerId: user.id, ownerName: user.displayName, data: JSON.parse(JSON.stringify(data)), createdAt: new Date().toISOString(), views: 0, imports: 0 });
-    void postGamificationEvent('share_created').then(({ unlocks }) => {
-      if (unlocks?.length) {
-        window.dispatchEvent(new CustomEvent('b4b-achievement-unlock', { detail: { unlocks } }));
-      }
-    });
+    void postGamificationEvent('share_created');
     return shareId;
   }, [user, getAlbumById, getTrackById]);
 
@@ -532,11 +579,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
+      seedTrackProgressBaselines(next);
       return next;
     });
 
     setCloudSaveStatus('saved');
-  }, [user, flushCloudNow]);
+  }, [user, flushCloudNow, seedTrackProgressBaselines]);
 
   const clearVault = useCallback(async () => {
     if (!user) return;
@@ -576,13 +624,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     setAlbums([freshUnassigned]);
+    seedTrackProgressBaselines([freshUnassigned]);
     try {
       localStorage.setItem(`${ALBUM_STORAGE_KEY}-${user.id}`, JSON.stringify([freshUnassigned]));
     } catch {
       // ignore quota errors
     }
     setCloudSaveStatus('saved');
-  }, [user, flushCloudNow]);
+  }, [user, flushCloudNow, seedTrackProgressBaselines]);
 
   const moveTrack = useCallback((tId: string, fromId: string, toId: string) => {
     const { track } = getTrackById(fromId, tId);

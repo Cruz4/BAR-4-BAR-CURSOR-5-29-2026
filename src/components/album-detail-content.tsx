@@ -37,7 +37,9 @@ import {
   LogOut,
   CassetteTape,
   Move,
-  Sparkles
+  Sparkles,
+  Globe,
+  Share2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -81,12 +83,20 @@ import {
   } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
 import { ExportDialog } from './export-dialog';
+import { ShareDialog } from './share-dialog';
 import { TooltipProvider } from './ui/tooltip';
 import { DataContext } from '@/context/data-context';
 import { useAuth } from '@/hooks/use-auth';
+import { isProUser } from '@/lib/subscription';
 import { format } from 'date-fns';
 import { countNonEmptyBars } from '@/lib/gamification/bar-count';
 import { cn } from '@/lib/utils';
+import { isDataUrl } from '@/lib/cover-art';
+import {
+  processCoverArtFile,
+  COVER_ART_EXPORT_SIZE,
+  COVER_ART_MIN_DIMENSION,
+} from '@/lib/cover-art';
 
 function CreateTrackDialog({ open, onOpenChange, albumId }: { open: boolean, onOpenChange: (open: boolean) => void, albumId: string }) {
     const [title, setTitle] = useState('');
@@ -248,6 +258,7 @@ function EditCoverArtDialog({ album, onOpenChange }: { album: Album, onOpenChang
     const { toast } = useToast();
     const [isSaving, startSavingTransition] = useTransition();
     const [imagePreview, setImagePreview] = useState<string | null>(album.coverArtUrl || null);
+    const [processingCover, setProcessingCover] = useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     if (user?.subscriptionStatus !== 'active') {
@@ -266,13 +277,26 @@ function EditCoverArtDialog({ album, onOpenChange }: { album: Album, onOpenChang
         );
     }
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (file) {
-            if (file.size > 800 * 1024) { toast({ variant: "destructive", title: "Image too large" }); return; }
-            const reader = new FileReader();
-            reader.onloadend = () => setImagePreview(reader.result as string);
-            reader.readAsDataURL(file);
+        if (!file) return;
+        setProcessingCover(true);
+        try {
+            const { dataUrl } = await processCoverArtFile(file);
+            setImagePreview(dataUrl);
+            toast({
+                title: 'Cover optimized',
+                description: `Saved as ${COVER_ART_EXPORT_SIZE}×${COVER_ART_EXPORT_SIZE} for sharp vault & DNA Drop display.`,
+            });
+        } catch (e) {
+            toast({
+                variant: 'destructive',
+                title: 'Image not accepted',
+                description: e instanceof Error ? e.message : 'Could not process image.',
+            });
+        } finally {
+            setProcessingCover(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
@@ -283,22 +307,34 @@ function EditCoverArtDialog({ album, onOpenChange }: { album: Album, onOpenChang
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle className="font-headline">Edit Album Cover</DialogTitle>
-                    <DialogDescription className="text-xs uppercase tracking-tight font-code">Update the visual representation of this project.</DialogDescription>
+                    <DialogDescription className="text-xs uppercase tracking-tight font-code">
+                        Square cover, min {COVER_ART_MIN_DIMENSION}px per side — we export {COVER_ART_EXPORT_SIZE}×{COVER_ART_EXPORT_SIZE} for vault vinyls and DNA Drops.
+                    </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
                     <div className="flex flex-col items-center gap-4">
                         <div className="w-48 h-48 rounded-lg border-2 border-dashed flex flex-col items-center justify-center bg-muted/20 relative overflow-hidden">
                             {imagePreview ? (
-                                <Image src={imagePreview} alt="Preview" width={192} height={192} className="object-cover w-full h-full" />
+                                isDataUrl(imagePreview) ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={imagePreview} alt="Preview" className="object-cover w-full h-full" />
+                                ) : (
+                                    <Image src={imagePreview} alt="Preview" width={192} height={192} className="object-cover w-full h-full" />
+                                )
                             ) : (
                                 <>
                                     <img src="/Logo.png" alt="B4B" className="w-12 h-12 opacity-20 mb-2" />
-                                    <p className="text-[8px] font-bold uppercase text-muted-foreground">Recommended: 1000 x 1000px</p>
+                                    <p className="text-[8px] font-bold uppercase text-muted-foreground text-center px-2">
+                                        Min {COVER_ART_MIN_DIMENSION}px · exports {COVER_ART_EXPORT_SIZE}px square
+                                    </p>
                                 </>
                             )}
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Change Image</Button>
+                        <Button variant="outline" size="sm" disabled={processingCover} onClick={() => fileInputRef.current?.click()}>
+                            {processingCover ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                            {processingCover ? 'Processing…' : 'Change Image'}
+                        </Button>
                     </div>
                 </div>
                 <DialogFooter><Button onClick={handleSave} disabled={isSaving}>Save Changes</Button></DialogFooter>
@@ -516,6 +552,8 @@ function LooseTrackCard({
 export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isPro = isProUser(user);
   const { getAlbumById, updateAlbum, deleteTrack, loading, moveTrack, deleteAlbum, albums } = useContext(DataContext);
   const [album, setAlbum] = useState<Album | null>(null);
 
@@ -532,6 +570,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const [createTrackOpen, setCreateTrackOpen] = useState(false);
   const [trackToDelete, setTrackToDelete] = useState<Track | null>(null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   
   const handleAlbumUpdate = (updates: Partial<Album>) => { if (album) updateAlbum(album.id, updates); }
   const handleDirectionUpdate = (field: keyof Direction, value: string) => { if (album) handleAlbumUpdate({ direction: { ...(album.direction || {}), [field]: value } }); };
@@ -612,7 +651,12 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                     <div className="relative group shrink-0">
                         <div className="w-48 h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8)] border-4 border-white/5 bg-neutral-900 flex flex-col items-center justify-center relative">
                             {album.coverArtUrl ? (
-                                <Image src={album.coverArtUrl} alt="Cover" width={256} height={256} className="object-cover w-full h-full" priority />
+                                isDataUrl(album.coverArtUrl) ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={album.coverArtUrl} alt="Cover" className="object-cover w-full h-full" />
+                                ) : (
+                                    <Image src={album.coverArtUrl} alt="Cover" width={256} height={256} className="object-cover w-full h-full" priority />
+                                )
                             ) : (
                                 <div className="flex flex-col items-center gap-2">
                                     <img src="/Logo.png" alt="B4B" className="w-16 h-16 opacity-10" />
@@ -664,6 +708,17 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 <Button variant="outline" size="sm" className="h-9 px-4 font-bold text-[10px] uppercase tracking-widest border-white/10 rounded-xl bg-white/5" onClick={() => setExportDialogOpen(true)}>
                                     <FileDown className="mr-2 h-4 w-4" /> Export All
                                 </Button>
+                                {!isUnassignedVault && (
+                                  isPro ? (
+                                    <Button variant="outline" size="sm" className="h-9 px-4 font-bold text-[10px] uppercase tracking-widest border-primary/30 rounded-xl bg-primary/5 text-primary hover:bg-primary/10" onClick={() => setShareDialogOpen(true)}>
+                                      <Globe className="mr-2 h-4 w-4" /> DNA Drop
+                                    </Button>
+                                  ) : (
+                                    <Button variant="outline" size="sm" className="h-9 px-4 font-bold text-[10px] uppercase tracking-widest border-white/10 rounded-xl bg-white/5 text-muted-foreground" onClick={() => router.push('/usage?tab=cloud')}>
+                                      <Share2 className="mr-2 h-4 w-4" /> DNA Drop
+                                    </Button>
+                                  )
+                                )}
                             </div>
                         </CardHeader>
                         <CardContent className={cn(isUnassignedVault ? 'p-6' : 'p-0')}>
@@ -815,6 +870,15 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
         tracks={album.tracks} 
         exportType="album" 
       />
+      {!isUnassignedVault && (
+        <ShareDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          type="album"
+          id={album.id}
+          title={album.title}
+        />
+      )}
 
       <AlertDialog open={!!trackToDelete} onOpenChange={(o) => !o && setTrackToDelete(null)}>
           <AlertDialogContent className="bg-card border-2">

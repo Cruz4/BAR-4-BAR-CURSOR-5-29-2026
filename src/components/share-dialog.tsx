@@ -109,6 +109,9 @@ export function ShareDialog({ open, onOpenChange, type, id, title, existingShare
                         <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                         <span className="text-[10px] font-bold uppercase text-green-600">DNA is Live in the Vault</span>
                     </div>
+                    <p className="text-[9px] text-muted-foreground mt-2 leading-relaxed">
+                        Tip: Re-drop after changing album cover art so the public link shows the latest image.
+                    </p>
                 </div>
             </div>
           )}
