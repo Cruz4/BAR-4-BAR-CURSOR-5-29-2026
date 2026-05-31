@@ -94,6 +94,9 @@ import { useAuth } from '@/hooks/use-auth';
 import { isProUser } from '@/lib/subscription';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
+import { DnaVaultPresetDetails } from '@/components/dna-vault-preset-details';
+import type { DnaPreset } from '@/lib/types';
+import { STRAIN_TARGETS, appendDirectionField, buildDnaPresetFromDirection, DEFAULT_STYLE_METRICS } from '@/lib/dna-strands';
 import { UpgradeTooltip } from '@/components/upgrade-tooltip';
 import { LockedSaveButton, ProLockBadge, proLockShell, proLockIcon, proLockText, markBarAnchorGlow } from '@/components/pro-lock';
 import {
@@ -341,7 +344,7 @@ function ImproveMyStyleDialog({ open, onOpenChange, track, onUpdateStyle }: any)
   );
 }
 
-function DNAVaultDialog({ open, onOpenChange, album, updateAlbum, onApply, isPro }: any) {
+function DNAVaultDialog({ open, onOpenChange, album, updateAlbum, track, onUpdateTrack, onLoadPreset, updateStyleProfile, isPro }: any) {
     const { toast } = useToast();
     const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
     const presets = isPro ? (album?.dnaPresets || []) : SYSTEM_DNA_PRESETS;
@@ -359,6 +362,7 @@ function DNAVaultDialog({ open, onOpenChange, album, updateAlbum, onApply, isPro
                     </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="h-[450px] mt-4">
+                    <TooltipProvider delayDuration={300}>
                     <div className="space-y-4">
                         {presets.length > 0 ? presets.map((p: any, i: number) => (
                             <Card key={`${p.name}-${i}`} className="bg-background/40 border-white/5 overflow-hidden flex flex-col transition-all">
@@ -379,37 +383,67 @@ function DNAVaultDialog({ open, onOpenChange, album, updateAlbum, onApply, isPro
                                         {isPro && !isSystem(p) && (
                                             <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={(e) => { e.stopPropagation(); updateAlbum(album.id, { dnaPresets: album.dnaPresets.filter((_:any, idx:number) => idx !== i) }); toast({ title: "DNA Strain Erased" }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
                                         )}
-                                        <Button size="icon" variant="ghost" className="h-7 w-7 text-primary" onClick={(e) => { e.stopPropagation(); onApply(p.mapping); onOpenChange(false); toast({ title: "Full DNA Profile Loaded" }); }}><RefreshCw className="h-3.5 w-3.5" /></Button>
+                                        <Button size="icon" variant="ghost" className="h-7 w-7 text-primary" onClick={(e) => { e.stopPropagation(); onLoadPreset(p); onOpenChange(false); }}><RefreshCw className="h-3.5 w-3.5" /></Button>
                                         {expandedIdx === i ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                     </div>
                                 </div>
                                 {expandedIdx === i && (
-                                    <div className="p-3 bg-black/40 border-t border-white/5 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                                        {[
-                                            { k: 'setting_world', l: 'Setting', v: p.mapping.setting_world },
-                                            { k: 'emotion_core', l: 'Emotion', v: p.mapping.emotion_core },
-                                            { k: 'trigger_moment', l: 'Trigger', v: p.mapping.trigger_moment },
-                                            { k: 'message_truth', l: 'Truth', v: p.mapping.message_truth },
-                                            { k: 'tone_palette', l: 'Palette', v: p.mapping.tone_palette }
-                                        ].map(field => (
-                                            <div key={field.k} className="flex flex-col gap-2 p-2 rounded bg-background/20 border border-white/5 group/part">
-                                                <div className="flex items-center justify-between">
-                                                    <p className="text-[8px] font-bold uppercase text-muted-foreground tracking-widest">{field.l}</p>
-                                                    <Button 
-                                                      variant="ghost" 
-                                                      size="icon" 
-                                                      className="h-7 w-7 text-primary hover:bg-primary/20" 
-                                                      onClick={() => { onApply({ [field.k]: field.v }); toast({ title: `${field.l} Part Injected` }); }}
-                                                      disabled={!field.v}
-                                                    >
-                                                        <Zap className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                                <p className="text-[11px] text-foreground leading-relaxed font-code whitespace-pre-wrap break-words italic opacity-90 pr-2">
-                                                    {field.v ? `"${field.v}"` : "N/A"}
-                                                </p>
-                                            </div>
-                                        ))}
+                                    <div className="p-3 bg-black/40 border-t border-white/5 animate-in slide-in-from-top-2 duration-300">
+                                        <DnaVaultPresetDetails
+                                            preset={p}
+                                            onInjectMappingField={(field, value) => {
+                                                if (!value) return;
+                                                onUpdateTrack({
+                                                    direction: { ...(track.direction ?? {}), [field]: value, enabled: true },
+                                                });
+                                                toast({ title: `${field} loaded` });
+                                            }}
+                                            onInjectStrain={(title, content) => {
+                                                const target = STRAIN_TARGETS[title];
+                                                if (!target) return;
+                                                if (target.kind === 'style_profile') {
+                                                    const text = Array.isArray(content) ? content.join(', ') : content;
+                                                    updateStyleProfile?.(text, DEFAULT_STYLE_METRICS);
+                                                    onUpdateTrack({ styleEnabled: true });
+                                                    toast({ title: 'Style DNA loaded' });
+                                                    return;
+                                                }
+                                                if (target.kind !== 'direction') return;
+                                                const text = Array.isArray(content) ? content.join(', ') : content;
+                                                onUpdateTrack({
+                                                    direction: {
+                                                        ...(track.direction ?? {}),
+                                                        ...appendDirectionField(
+                                                            track.direction ?? {},
+                                                            target.field,
+                                                            target.label,
+                                                            text
+                                                        ),
+                                                        enabled: true,
+                                                    },
+                                                });
+                                                toast({ title: `${title} injected` });
+                                            }}
+                                            onInjectIntents={(intents) => {
+                                                onUpdateTrack({
+                                                    checkedIntents: intents,
+                                                    intentsEnabled: true,
+                                                });
+                                                if (album) {
+                                                    const existing = album.thingsToSay || [];
+                                                    const novel = intents.filter((m: string) => !existing.includes(m));
+                                                    if (novel.length) {
+                                                        updateAlbum(album.id, { thingsToSay: [...existing, ...novel] });
+                                                    }
+                                                }
+                                                toast({ title: 'Motifs loaded into Intents' });
+                                            }}
+                                            onInjectStyle={(analysis, metrics) => {
+                                                updateStyleProfile?.(analysis, metrics ?? DEFAULT_STYLE_METRICS);
+                                                onUpdateTrack({ styleEnabled: true });
+                                                toast({ title: 'Style DNA loaded' });
+                                            }}
+                                        />
                                     </div>
                                 )}
                             </Card>
@@ -423,6 +457,7 @@ function DNAVaultDialog({ open, onOpenChange, album, updateAlbum, onApply, isPro
                             </div>
                         )}
                     </div>
+                    </TooltipProvider>
                 </ScrollArea>
             </DialogContent>
         </Dialog>
@@ -1208,7 +1243,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
 
 // --- Right Panel Component ---
 
-function RightPanel({ track, album, onUpdateTrack, styleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, improveStyleOpen, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange }: any) {
+function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, improveStyleOpen, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange }: any) {
   const { tooltip, buttonLabel } = useInkCosts();
   const activeSection = track.sections.find((s:any) => s.id === activeSectionId);
   const { toast } = useToast();
@@ -1293,14 +1328,12 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, scratchPadRef, 
         return;
       }
       if (!album) return;
-      const currentDir = track.direction || { enabled: true };
-      const profile = {
+      const profile = buildDnaPresetFromDirection({
           name,
-          createdAt: new Date().toISOString(),
           sourceTrackTitle: track.title,
-          analysis: { themes: [], motifs: [], emotionalTone: { primaryEmotion: '', secondaryEmotion: '', valence: 50, intensity: 50 }, emotionalShift: '', narrativeArc: '', structure: '', pov: '', tense: '', voiceStyle: '', whatMakesItWork: '' } as any,
-          mapping: JSON.parse(JSON.stringify(currentDir))
-      };
+          direction: track.direction ?? { enabled: true },
+          intents: track.checkedIntents,
+      });
       const existing = album.dnaPresets || [];
       updateAlbum(album.id, { dnaPresets: [...existing, profile] });
       toast({ title: "DNA Archived", description: `"${name}" saved to vault.` });
@@ -1695,7 +1728,37 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, scratchPadRef, 
         </div>
       </div>
       
-      <DNAVaultDialog open={dnaVaultOpen} onOpenChange={setDNAVaultOpen} album={album} updateAlbum={updateAlbum} onApply={(mapping: any) => onUpdateTrack({ direction: { ...track.direction, ...mapping } })} isPro={isPro} />
+      <DNAVaultDialog
+        open={dnaVaultOpen}
+        onOpenChange={setDNAVaultOpen}
+        album={album}
+        track={track}
+        updateAlbum={updateAlbum}
+        onUpdateTrack={onUpdateTrack}
+        onLoadPreset={(p: DnaPreset) => {
+          const intents = p.intents?.length ? p.intents : p.analysis?.motifs ?? [];
+          onUpdateTrack({
+            direction: { ...(track.direction ?? {}), ...p.mapping, enabled: true },
+            checkedIntents: intents,
+            intentsEnabled: intents.length > 0,
+            styleEnabled: !!(p.styleAnalysis?.trim() || p.analysis?.styleAnalysis?.trim()),
+          });
+          if (album && intents.length) {
+            const existing = album.thingsToSay || [];
+            const novel = intents.filter((m) => !existing.includes(m));
+            if (novel.length) {
+              updateAlbum(album.id, { thingsToSay: [...existing, ...novel] });
+            }
+          }
+          const savedStyle = p.styleAnalysis?.trim() || p.analysis?.styleAnalysis?.trim();
+          if (savedStyle) {
+            updateStyleProfile(savedStyle, p.styleMetrics ?? p.analysis?.styleMetrics ?? DEFAULT_STYLE_METRICS);
+          }
+          toast({ title: 'Full DNA Profile Loaded' });
+        }}
+        updateStyleProfile={updateStyleProfile}
+        isPro={isPro}
+      />
       <VibeVaultDialog open={vibeVaultOpen} onOpenChange={setVibeVaultOpen} track={track} onUpdateTrack={onUpdateTrack} onApply={(v: any) => onUpdateTrack({ vibe: v })} isPro={isPro} />
       <StyleVaultDialog open={styleVaultOpen} onOpenChange={setStyleVaultOpen} album={album} updateAlbum={updateAlbum} onApply={(analysis: string, metrics: any) => updateStyleProfile(analysis, metrics)} isPro={isPro} />
       <ArchivalNamingDialog open={archivalDialog.open} onOpenChange={(o:any) => setArchivalDialog(prev => ({ ...prev, open: o }))} type={archivalDialog.type} onConfirm={archivalDialog.type === 'DNA' ? handleConfirmSaveDNA : handleConfirmSaveVibe} />
@@ -1947,6 +2010,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         album={album} 
         onUpdateTrack={handleUpdateTrack} 
         styleProfile={effectiveStyleProfile} 
+        updateStyleProfile={updateStyleProfile}
         scratchPadRef={scratchPadRef} 
         activeSectionId={activeSectionId} 
         rightCollapsed={rightCollapsed} 

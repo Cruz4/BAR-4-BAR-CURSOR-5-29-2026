@@ -142,7 +142,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const updates = { ...pendingTrackUpdates.current };
     pendingTrackUpdates.current = {};
     Object.entries(updates).forEach(([trackId, data]) => {
-        batch.set(doc(db, 'users', user.id, 'albums', data.albumId, 'tracks', trackId), { ...data.updates, updatedAt: new Date().toISOString() }, { merge: true });
+        batch.set(
+          doc(db, 'users', user.id, 'albums', data.albumId, 'tracks', trackId),
+          stripForFirestore({ ...data.updates, updatedAt: new Date().toISOString() }),
+          { merge: true },
+        );
     });
     await batch.commit();
     if (Object.keys(pendingTrackUpdates.current).length === 0 && Object.keys(pendingAlbumUpdates.current).length === 0) {
@@ -158,7 +162,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const updates = { ...pendingAlbumUpdates.current };
     pendingAlbumUpdates.current = {};
     Object.entries(updates).forEach(([albumId, data]) => {
-        batch.set(doc(db, 'users', user.id, 'albums', albumId), { ...data, updatedAt: new Date().toISOString() }, { merge: true });
+        batch.set(
+          doc(db, 'users', user.id, 'albums', albumId),
+          stripForFirestore({ ...data, updatedAt: new Date().toISOString() }),
+          { merge: true },
+        );
     });
     await batch.commit();
     if (Object.keys(pendingTrackUpdates.current).length === 0 && Object.keys(pendingAlbumUpdates.current).length === 0) {

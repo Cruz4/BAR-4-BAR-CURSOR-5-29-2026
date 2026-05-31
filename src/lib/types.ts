@@ -35,13 +35,7 @@ export interface Album {
   coverArtUrl?: string;
   direction?: Direction;    
   tracks: Track[];
-  dnaPresets?: Array<{
-    name: string;
-    createdAt: string;
-    sourceTrackTitle?: string;
-    analysis: WizardAnalysis;
-    mapping: Direction;
-  }>;
+  dnaPresets?: DnaPreset[];
   stylePresets?: Array<{
     name: string;
     createdAt: string;
@@ -192,11 +186,39 @@ export interface WizardAnalysis {
   tense: string;
   voiceStyle: string;
   whatMakesItWork: string;
+  /** Lyrical technique DNA (flow, rhyme architecture) — aura-only, no literal phrases. */
+  styleAnalysis?: string;
+  styleMetrics?: {
+    vocabularyScore: number;
+    rhymeComplexity: number;
+    cadenceMap: string;
+  };
 }
+
+export type StyleMetrics = {
+  vocabularyScore: number;
+  rhymeComplexity: number;
+  cadenceMap: string;
+};
+
+export type DnaPreset = {
+  name: string;
+  createdAt: string;
+  sourceTrackTitle?: string;
+  analysis?: WizardAnalysis | Partial<WizardAnalysis>;
+  mapping: Direction;
+  intents?: string[];
+  structure?: Array<{ name: string; bars: number; enabled: boolean }>;
+  structureGuide?: string;
+  styleAnalysis?: string;
+  styleMetrics?: StyleMetrics;
+};
 
 export interface WizardDirection {
   name: string;
   description: string;
+  /** 0–100: how strongly this remix pivot should influence synthesis. */
+  weight?: number;
 }
 
 export interface WizardGeneratedVariant {

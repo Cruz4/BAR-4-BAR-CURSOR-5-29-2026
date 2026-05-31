@@ -8,9 +8,9 @@
  * - FIX (5/24): Resolved Structure header overlap by enforcing shrink-0 and gap protocols.
  */
 
-import React, { useState, useContext, useEffect, useMemo } from 'react';
+import React, { useState, useContext, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Track, StyleProfile, WizardState, Direction, TrackSection, Bar, WizardAnalysis, StyleAnalysis } from '@/lib/types';
+import type { Track, Album, StyleProfile, WizardState, Direction, TrackSection, Bar, WizardAnalysis, StyleAnalysis, DnaPreset } from '@/lib/types';
 import {
   Dialog,
   DialogContent,
@@ -64,7 +64,8 @@ import {
     TimerReset,
     ArrowDown,
     Trash2,
-    ListMusic
+    ListMusic,
+    Replace
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -82,7 +83,22 @@ import {
 import { suggestRelayDirections, generateRelayDraft } from '@/ai/flows/writers-relay';
 import { generateSongDraft } from '@/ai/flows/generate-song-draft';
 import { findRhymes } from '@/ai/flows/find-rhymes';
-import { mergeDirection, cn } from '@/lib/utils';
+import { mergeDirection, cn, stripForFirestore } from '@/lib/utils';
+import {
+  STRAIN_TARGETS,
+  appendDirectionField,
+  buildDirectionMappingFromAnalysis,
+  buildDnaPresetPayload,
+  CREATIVE_DNA_FIELDS,
+  normalizeWizardAnalysis,
+  DEFAULT_STYLE_METRICS,
+  rebalanceRemixWeights,
+  formatRemixDirectionsWithWeights,
+  getStrainInjectTooltip,
+  getStrainDestinationTheme,
+  getVaultFieldInjectTooltip,
+  type StrainInjectionTarget,
+} from '@/lib/dna-strands';
 import { DataContext } from '@/context/data-context';
 import { Checkbox } from './ui/checkbox';
 import { ScrollArea } from './ui/scroll-area';
@@ -94,13 +110,16 @@ import { Textarea } from './ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useUIState } from '@/hooks/use-ui-state';
 import { Progress } from './ui/progress';
+import { Slider } from './ui/slider';
 import { useAuth } from '@/hooks/use-auth';
 import { isProUser } from '@/lib/subscription';
 import { SYSTEM_DNA_PRESETS, SYSTEM_STYLE_PRESETS, SYSTEM_VIBE_PRESETS } from '@/lib/system-presets';
 import { DNASynthesisLoader } from '@/components/dna-synthesis-loader';
 import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DnaVaultPresetDetails } from '@/components/dna-vault-preset-details';
 import { HighlightedText } from './highlighted-text';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface GenerateSongDraftDialogProps {
   open: boolean;
@@ -159,6 +178,81 @@ const STRUCTURE_PRESETS = [
     }
 ];
 
+type HubSectionKey =
+  | 'structure'
+  | 'vibe'
+  | 'intents'
+  | 'creativeDna'
+  | 'specialInstructions'
+  | 'remix'
+  | 'dnaStrains'
+  | 'style'
+  | 'guardrails';
+
+const DEFAULT_HUB_COLLAPSED: Record<HubSectionKey, boolean> = {
+  structure: true,
+  vibe: true,
+  intents: true,
+  creativeDna: true,
+  specialInstructions: true,
+  remix: true,
+  dnaStrains: true,
+  style: true,
+  guardrails: true,
+};
+
+function HubSectionShell({
+  title,
+  icon: Icon,
+  colorClass,
+  collapsed,
+  onToggle,
+  trailing,
+  summary,
+  children,
+}: {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  colorClass: string;
+  collapsed: boolean;
+  onToggle: () => void;
+  trailing?: React.ReactNode;
+  summary?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2 w-full">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex items-center gap-2 min-w-0 flex-1 text-left group"
+          aria-expanded={!collapsed}
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
+          ) : (
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
+          )}
+          <span className={cn('flex items-center gap-2 min-w-0', colorClass)}>
+            <Icon className="h-5 w-5 shrink-0" />
+            <span className="font-headline font-bold text-lg uppercase leading-none truncate">{title}</span>
+          </span>
+          {collapsed && summary && (
+            <span className="text-[9px] text-muted-foreground truncate italic hidden md:inline">{summary}</span>
+          )}
+        </button>
+        {trailing && (
+          <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+            {trailing}
+          </div>
+        )}
+      </div>
+      {!collapsed && children}
+    </div>
+  );
+}
+
 export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfile, onDraftGenerated }: GenerateSongDraftDialogProps) {
   const { user } = useAuth();
   const isPro = isProUser(user);
@@ -171,8 +265,12 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   const album = getAlbumById(track.albumId);
 
   const [hubStructure, setHubSections] = useState<{name: string, bars: number, enabled: boolean}[]>([]);
+  const [hubStructureGuide, setHubStructureGuide] = useState('');
   const [lyricsAbout, setLyricsAbout] = useState('');
   const [maxLineLen, setMaxLineLen] = useState(120);
+  const [hubCollapsed, setHubCollapsed] = useState<Record<HubSectionKey, boolean>>(DEFAULT_HUB_COLLAPSED);
+  const [hubSeededSections, setHubSeededSections] = useState<Set<HubSectionKey>>(() => new Set());
+  const hubLayoutInitializedRef = useRef(false);
   
   const [hubDirection, setHubDirection] = useState<Partial<Direction>>({});
   const [hubVibe, setHubVibe] = useState<Track['vibe']>(track.vibe);
@@ -211,38 +309,107 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   const [saveStyleNamingOpen, setSaveStyleNamingOpen] = useState(false);
   const [expandedVaultIdx, setExpandedVaultIdx] = useState<number | null>(null);
 
+  const lastTrackIdRef = useRef(track.id);
+  const sessionReadyRef = useRef(false);
+  const hardClosedRef = useRef(false);
+  const pendingReopenOnCompleteRef = useRef(false);
+
   const { deductInk, refundInk, addUsageLog } = useUsage();
   const { getCost, getEffectiveCost, tooltip, buttonLabel } = useInkCosts();
 
   useEffect(() => {
-    if (open) { 
-        setStep(0); 
-        setProgress(0);
-        setLyricsAbout(track.specialInstructions || '');
-        setSyncLyricsToggle(false);
-        setHubDirection(track.direction || {});
-        setHubVibe(track.vibe);
-        setHubVibeEnabled(track.vibe?.enabled ?? true);
-        setHubIntents(track.checkedIntents || []);
-        setIntentsEnabled(track.intentsEnabled ?? (track.checkedIntents?.length > 0));
-        setEnableGuardrails(track.guardrails?.enabled ?? true);
-        setNegativePrompt(track.guardrails?.negativePrompt ?? '');
-        setForbiddenWords((track.guardrails?.forbiddenWords || []).join(', '));
-        setMustIncludeWords((track.guardrails?.mustIncludeWords || []).join(', '));
-        setHubStyleEnabled(track.styleEnabled === true);
-        setHubStyleAnalysis(styleProfile?.history[0]?.analysis || '');
-        setHubStyleMetrics(styleProfile?.history[0]?.metrics || { vocabularyScore: 50, rhymeComplexity: 50, cadenceMap: 'Neutral' });
-        setExpandedVaultIdx(null);
-        setPreviewRhymeGroups([]);
-        setNewHubIntent('');
-        
-        if (track.sections?.length > 0) {
-            setHubSections(track.sections.map(s => ({ name: s.type, bars: s.bars.length, enabled: true })));
-        } else {
-            setHubSections(STRUCTURE_PRESETS[0].sections);
-        }
+    if (track.id !== lastTrackIdRef.current) {
+      lastTrackIdRef.current = track.id;
+      sessionReadyRef.current = false;
+      hardClosedRef.current = true;
+      pendingReopenOnCompleteRef.current = false;
     }
-  }, [open, track.id]);
+  }, [track.id]);
+
+  const initializeSessionFromTrack = useCallback(() => {
+    setStep(0);
+    setProgress(0);
+    setWizardState({
+      lyrics: '',
+      analysis: null,
+      directions: null,
+      selectedDirections: [],
+      generatedVariant: null,
+      excludedWords: '',
+    });
+    setLyricsAbout(track.specialInstructions || '');
+    setHubStructureGuide('');
+    setSyncLyricsToggle(false);
+    setHubCollapsed(DEFAULT_HUB_COLLAPSED);
+    setHubSeededSections(new Set());
+    hubLayoutInitializedRef.current = false;
+    setHubDirection(track.direction || {});
+    setHubVibe(track.vibe);
+    setHubVibeEnabled(track.vibe?.enabled ?? true);
+    setHubIntents(track.checkedIntents || []);
+    setIntentsEnabled(track.intentsEnabled ?? ((track.checkedIntents?.length ?? 0) > 0));
+    setEnableGuardrails(track.guardrails?.enabled ?? true);
+    setNegativePrompt(track.guardrails?.negativePrompt ?? '');
+    setForbiddenWords((track.guardrails?.forbiddenWords || []).join(', '));
+    setMustIncludeWords((track.guardrails?.mustIncludeWords || []).join(', '));
+    setHubStyleEnabled(track.styleEnabled === true);
+    setHubStyleAnalysis(styleProfile?.history[0]?.analysis || '');
+    setHubStyleMetrics(styleProfile?.history[0]?.metrics || { vocabularyScore: 50, rhymeComplexity: 50, cadenceMap: 'Neutral' });
+    setExpandedVaultIdx(null);
+    setPreviewRhymeGroups([]);
+    setNewHubIntent('');
+
+    if (track.sections?.length > 0) {
+      setHubSections(track.sections.map((s) => ({ name: s.type, bars: s.bars.length, enabled: true })));
+    } else {
+      setHubSections(STRUCTURE_PRESETS[0].sections);
+    }
+  }, [track, styleProfile]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!sessionReadyRef.current || hardClosedRef.current) {
+      initializeSessionFromTrack();
+      sessionReadyRef.current = true;
+      hardClosedRef.current = false;
+      pendingReopenOnCompleteRef.current = false;
+    }
+  }, [open, initializeSessionFromTrack]);
+
+  const completeAndMaybeReopen = useCallback((targetStep: number) => {
+    setStep(targetStep);
+    if (pendingReopenOnCompleteRef.current) {
+      pendingReopenOnCompleteRef.current = false;
+      onOpenChange(true);
+    }
+  }, [onOpenChange]);
+
+  const handleDialogOpenChange = useCallback((nextOpen: boolean) => {
+    if (nextOpen) {
+      onOpenChange(true);
+      return;
+    }
+
+    if (hardClosedRef.current) {
+      sessionReadyRef.current = false;
+      pendingReopenOnCompleteRef.current = false;
+      hardClosedRef.current = false;
+      onOpenChange(false);
+      return;
+    }
+
+    if (isGenerating) {
+      pendingReopenOnCompleteRef.current = true;
+    }
+
+    onOpenChange(false);
+  }, [isGenerating, onOpenChange]);
+
+  const handleHardClose = useCallback(() => {
+    hardClosedRef.current = true;
+    pendingReopenOnCompleteRef.current = false;
+    handleDialogOpenChange(false);
+  }, [handleDialogOpenChange]);
 
   useEffect(() => {
     if (syncLyricsToggle && track.sections) {
@@ -250,6 +417,45 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
         setWizardState(prev => ({ ...prev, lyrics: allLyrics }));
     }
   }, [syncLyricsToggle, track.sections]);
+
+  const markHubSeeded = useCallback((key: HubSectionKey) => {
+    setHubSeededSections((prev) => {
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+    setHubCollapsed((prev) => ({ ...prev, [key]: false }));
+  }, []);
+
+  const toggleHubSection = useCallback((key: HubSectionKey) => {
+    setHubCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  useEffect(() => {
+    if (step !== 10) {
+      hubLayoutInitializedRef.current = false;
+      return;
+    }
+    if (hubLayoutInitializedRef.current) return;
+    hubLayoutInitializedRef.current = true;
+
+    const expanded = new Set(hubSeededSections);
+    if (wizardState.selectedDirections.length > 0) expanded.add('remix');
+    if (lyricsAbout.trim()) expanded.add('specialInstructions');
+
+    setHubCollapsed({
+      structure: !expanded.has('structure'),
+      vibe: !expanded.has('vibe'),
+      intents: !expanded.has('intents'),
+      creativeDna: !expanded.has('creativeDna'),
+      specialInstructions: !expanded.has('specialInstructions'),
+      remix: !expanded.has('remix'),
+      dnaStrains: true,
+      style: !expanded.has('style'),
+      guardrails: !expanded.has('guardrails'),
+    });
+  }, [step, hubSeededSections, wizardState.selectedDirections.length, lyricsAbout]);
 
   useEffect(() => {
     let interval: any;
@@ -289,10 +495,10 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
       return badges;
   }, [enableGuardrails, intentsEnabled, hubIntents, lyricsAbout, hubVibeEnabled, inheritAlbum, album, inheritTrack, hubStyleEnabled, wizardState.selectedDirections]);
 
-  const handleApplyGeneratedDraft = () => {
-    if (!wizardState.generatedVariant) return;
+  const buildDraftSections = () => {
+    if (!wizardState.generatedVariant) return [];
     const g = wizardState.generatedVariant;
-    const sections = g.sections.map((s, i) => ({
+    return g.sections.map((s, i) => ({
         id: `draft-${Date.now()}-${i}`,
         type: s.name.toLowerCase() as any,
         bars: s.bars.map((l, j) => ({
@@ -304,9 +510,25 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
             justGenerated: true
         }))
     }));
+  };
+
+  const handleApplyGeneratedDraft = (mode: 'append' | 'replace') => {
+    if (!wizardState.generatedVariant) return;
+    const newSections = buildDraftSections();
+    const sections =
+      mode === 'append'
+        ? [...(track.sections ?? []), ...newSections]
+        : newSections;
     onDraftGenerated(sections);
-    toast({ title: "Draft Applied to Sheet" });
-    onOpenChange(false);
+    toast({
+      title: mode === 'append' ? 'Draft appended to sheet' : 'Sheet replaced with draft',
+      description:
+        mode === 'append'
+          ? `${newSections.length} section(s) added to the bottom of your page.`
+          : 'Previous lyrics on this track were replaced.',
+    });
+    hardClosedRef.current = true;
+    handleDialogOpenChange(false);
   };
 
   const handleFullDraftGenerate = async (e: any) => {
@@ -362,7 +584,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
       } catch (err) { console.warn("Preview pulse failed", err); }
 
       addUsageLog({ flowName: 'generateSongDraft', inkCost: activeDraftCharged, status: 'success' });
-      setStep(5);
+      completeAndMaybeReopen(5);
     } catch (e: any) {
       refundInk(activeDraftBase);
       toast({ variant: 'destructive', title: 'Generation Failed', description: e.message });
@@ -380,8 +602,14 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
     try {
         const result = await suggestRelayDirections(await withAiAuth({ lyrics: sourceText, userName: user?.displayName }));
         setWizardState(prev => ({ ...prev, lyrics: sourceText, analysis: result.analysis, directions: result.directions }));
+        if (result.analysis.styleAnalysis?.trim()) {
+            setHubStyleAnalysis(result.analysis.styleAnalysis);
+            setHubStyleMetrics(result.analysis.styleMetrics ?? DEFAULT_STYLE_METRICS);
+            setHubStyleEnabled(true);
+            markHubSeeded('style');
+        }
         addUsageLog({ flowName: 'analyzeRelayAssets', inkCost: cost, status: 'success' });
-        setStep(2);
+        completeAndMaybeReopen(2);
     } catch (e: any) { 
         refundInk(cost); 
         toast({ variant: 'destructive', title: 'Analysis Failed', description: e.message });
@@ -396,19 +624,158 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
         toast({ variant: 'destructive', title: 'Pro Feature', description: 'Archive custom DNA strains with Studio Pro.' });
         return;
       }
-      if (!album || !name.trim()) return;
-      const currentDir = hubDirection || { enabled: true };
-      const profile = {
+      if (!album || !name.trim() || !wizardState.analysis) return;
+      const profile = stripForFirestore(
+        buildDnaPresetPayload(wizardState.analysis, {
+          hubDirection,
+          hubIntents,
+          hubStructure,
+          hubStructureGuide,
+          hubStyleAnalysis,
+          hubStyleMetrics,
           name: name.trim(),
-          createdAt: new Date().toISOString(),
           sourceTrackTitle: track.title,
-          analysis: wizardState.analysis!,
-          mapping: JSON.parse(JSON.stringify(currentDir))
-      };
+        })
+      );
       const existing = album.dnaPresets || [];
       updateAlbum(album.id, { dnaPresets: [...existing, profile] });
-      toast({ title: "DNA Strain Archived" });
+      setHubDirection(profile.mapping);
+      if (profile.intents?.length) {
+          setHubIntents(profile.intents);
+          setIntentsEnabled(true);
+          const existingMotifs = album.thingsToSay || [];
+          const novel = profile.intents.filter((m) => !existingMotifs.includes(m));
+          if (novel.length) {
+              updateAlbum(album.id, { thingsToSay: [...existingMotifs, ...novel] });
+          }
+      }
+      if (profile.structureGuide) {
+          setHubStructureGuide(profile.structureGuide);
+      }
+      if (profile.styleAnalysis?.trim()) {
+          setHubStyleAnalysis(profile.styleAnalysis);
+          setHubStyleMetrics(profile.styleMetrics ?? DEFAULT_STYLE_METRICS);
+          setHubStyleEnabled(true);
+      }
+      toast({
+        title: 'DNA Strain Archived',
+        description: 'Setting, style, motifs, structure guide, and full extraction saved.',
+      });
       setSaveNamingOpen(false);
+  };
+
+  const loadDnaPreset = (preset: DnaPreset) => {
+      setHubDirection(preset.mapping);
+      const intents = preset.intents?.length
+          ? preset.intents
+          : preset.analysis?.motifs ?? [];
+      if (intents.length) {
+          setHubIntents(intents);
+          setIntentsEnabled(true);
+          if (album) {
+              const existing = album.thingsToSay || [];
+              const novel = intents.filter((m) => !existing.includes(m));
+              if (novel.length) {
+                  updateAlbum(album.id, { thingsToSay: [...existing, ...novel] });
+              }
+          }
+      }
+      if (preset.structure?.length) {
+          setHubSections(preset.structure.map((s: { name: string; bars: number; enabled: boolean }) => ({ ...s })));
+      }
+      if (preset.structureGuide) {
+          setHubStructureGuide(preset.structureGuide);
+      }
+      if (preset.analysis) {
+          setWizardState((prev) => ({
+            ...prev,
+            analysis: normalizeWizardAnalysis(preset.analysis),
+          }));
+      }
+      const savedStyle = preset.styleAnalysis?.trim() || preset.analysis?.styleAnalysis?.trim();
+      if (savedStyle) {
+          setHubStyleAnalysis(savedStyle);
+          setHubStyleMetrics(preset.styleMetrics ?? preset.analysis?.styleMetrics ?? DEFAULT_STYLE_METRICS);
+          setHubStyleEnabled(true);
+          markHubSeeded('style');
+      }
+      markHubSeeded('creativeDna');
+      if (intents.length) markHubSeeded('intents');
+      if (preset.structureGuide) markHubSeeded('structure');
+      toast({ title: "Full DNA Profile Loaded" });
+  };
+
+  const toggleRemixDirection = (dir: WizardState['selectedDirections'][number]) => {
+      setWizardState((prev) => {
+          const active = prev.selectedDirections.some((d) => d.name === dir.name);
+          const next = active
+              ? prev.selectedDirections.filter((d) => d.name !== dir.name)
+              : [...prev.selectedDirections, { ...dir, weight: 50 }];
+          if (!active) markHubSeeded('remix');
+          return { ...prev, selectedDirections: rebalanceRemixWeights(next) };
+      });
+  };
+
+  const updateRemixWeight = (name: string, weight: number) => {
+      setWizardState((prev) => ({
+          ...prev,
+          selectedDirections: prev.selectedDirections.map((d) =>
+              d.name === name ? { ...d, weight } : d
+          ),
+      }));
+  };
+
+  const handleInjectStrain = (
+      title: string,
+      content: string | string[] | null | undefined,
+      target: StrainInjectionTarget
+  ) => {
+      if (!content || (Array.isArray(content) && content.length === 0)) return;
+
+      if (target.kind === 'intents') {
+          const motifs = Array.isArray(content) ? content : [content];
+          if (album) {
+              const existing = album.thingsToSay || [];
+              const novel = motifs.filter((m) => !existing.includes(m));
+              if (novel.length) {
+                  updateAlbum(album.id, { thingsToSay: [...existing, ...novel] });
+              }
+          }
+          setHubIntents((prev) => [...new Set([...prev, ...motifs])]);
+          setIntentsEnabled(true);
+          markHubSeeded('intents');
+          toast({ title: `Motifs injected (${motifs.length})`, description: 'Added to Intents panel.' });
+          return;
+      }
+
+      if (target.kind === 'structure_guide') {
+          const text = Array.isArray(content) ? content.join(', ') : content;
+          setHubStructureGuide((prev) => {
+              const tagged = `[Structure] ${text}`;
+              if (prev.includes(text)) return prev;
+              return prev ? `${prev}\n${tagged}` : tagged;
+          });
+          markHubSeeded('structure');
+          toast({ title: 'Structure guide injected', description: 'See Structure panel in Calibration Hub.' });
+          return;
+      }
+
+      if (target.kind === 'style_profile') {
+          const text = Array.isArray(content) ? content.join(', ') : content;
+          setHubStyleAnalysis(text);
+          setHubStyleMetrics(
+              wizardState.analysis?.styleMetrics ?? DEFAULT_STYLE_METRICS
+          );
+          setHubStyleEnabled(true);
+          markHubSeeded('style');
+          toast({ title: 'Style DNA injected', description: 'Loaded into Artist Style panel.' });
+          return;
+      }
+
+      const text = Array.isArray(content) ? content.join(', ') : content;
+      setHubDirection((prev) => appendDirectionField(prev, target.field, target.label, text));
+      markHubSeeded('creativeDna');
+      toast({ title: `DNA Part Injected: ${title}` });
   };
 
   const handleConfirmSaveStyle = (name: string) => {
@@ -460,10 +827,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
             styleEnabled: hubStyleEnabled,
         });
 
-        const remixDirection =
-          wizardState.selectedDirections.length > 0
-            ? wizardState.selectedDirections.map((d) => `${d.name}: ${d.description}`).join(' | ')
-            : 'No remix paths selected — follow Calibration Hub rules only.';
+        const remixDirection = formatRemixDirectionsWithWeights(wizardState.selectedDirections);
 
         const result = await generateRelayDraft(await withAiAuth({
             analysis: JSON.stringify(wizardState.analysis),
@@ -480,6 +844,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
             forbiddenWords: enableGuardrails ? forbiddenWords.split(',').map(w => w.trim()).filter(Boolean) : undefined,
             mustIncludeWords: enableGuardrails ? mustIncludeWords.split(',').map(w => w.trim()).filter(Boolean) : undefined,
             structure: hubStructure.filter(s => s.enabled).map(s => ({ name: s.name, bars: s.bars })),
+            structureGuide: hubStructureGuide.trim() || undefined,
             userName: user?.displayName
         }));
         setWizardState(prev => ({ ...prev, generatedVariant: result }));
@@ -489,7 +854,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
             setPreviewRhymeGroups(rhymeRes.rhymeGroups);
         } catch (err) { console.warn("Pulse failed", err); }
         addUsageLog({ flowName: 'generateRelayDraft', inkCost: cost, status: 'success' });
-        setStep(5);
+        completeAndMaybeReopen(5);
     } catch (e: any) { refundInk(cost); toast({ variant: 'destructive', title: 'Synthesis Failed', description: e.message }); } finally { setIsGenerating(false); setGenerating(false); }
   };
 
@@ -501,40 +866,340 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
       setHubSections(prev => prev.filter((_, i) => i !== idx));
   };
 
-  const renderAnalysisField = (title: string, content: string | string[] | null | undefined, icon: any, fieldKey?: keyof Direction) => {
-      if (!content) return null;
+  const renderStrainInjectButton = (
+      title: string,
+      content: string | string[] | null | undefined,
+      size: 'sm' | 'md' = 'md'
+  ) => {
+      const target = STRAIN_TARGETS[title];
+      if (!target || !content) return null;
+      const theme = getStrainDestinationTheme(title);
       return (
-          <Card className="bg-card/50 border-white/10 p-6 space-y-4 group transition-all hover:bg-white/10 relative overflow-hidden shadow-xl min-h-[160px] flex flex-col">
-              <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-3 text-primary">
-                      {React.createElement(icon, { className: "h-5 w-5" })}
-                      <h5 className="text-xs font-bold uppercase tracking-[0.2em]">{title}</h5>
-                  </div>
-                  {fieldKey && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => {
-                        setHubDirection(prev => ({ ...prev, [fieldKey]: Array.isArray(content) ? content.join(', ') : content }));
-                        toast({ title: `DNA Part Injected: ${title}` });
-                      }}>
-                          <Zap className="h-5 w-5" />
-                      </Button>
-                  )}
-              </div>
-              <div className="flex-grow">
-                  {Array.isArray(content) ? (
-                      <div className="flex flex-wrap gap-2.5 mt-3">
-                          {content.map((c, i) => <Badge key={i} variant="outline" className="text-xs font-bold uppercase py-1.5 px-4 border-white/20 bg-background/50 text-primary">{c}</Badge>)}
+          <Tooltip>
+              <TooltipTrigger asChild>
+                  <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn('shrink-0', theme.inject, theme.injectHover, size === 'sm' ? 'h-7 w-7' : 'h-8 w-8')}
+                      onClick={() => handleInjectStrain(title, content, target)}
+                      aria-label={getStrainInjectTooltip(title)}
+                  >
+                      <Zap className={size === 'sm' ? 'h-3.5 w-3.5' : 'h-5 w-5'} />
+                  </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="max-w-[240px] text-[10px] leading-snug">
+                  {getStrainInjectTooltip(title)}
+              </TooltipContent>
+          </Tooltip>
+      );
+  };
+
+  const renderDestinationPill = (title: string) => {
+      const theme = getStrainDestinationTheme(title);
+      return (
+          <span className={cn('text-[7px] font-bold uppercase tracking-[0.18em]', theme.pill)}>
+              → {theme.hubSection}
+              {theme.hubField ? ` · ${theme.hubField}` : ''}
+          </span>
+      );
+  };
+
+  const renderBadgeStrainCard = (
+      title: string,
+      content: string[] | null | undefined,
+      icon: React.ComponentType<{ className?: string }>
+  ) => {
+      if (!content?.length) return null;
+      const theme = getStrainDestinationTheme(title);
+      return (
+          <Card className={cn(
+              'p-5 space-y-3 group transition-all shadow-xl h-full flex flex-col border',
+              theme.cardBg,
+              theme.cardBorder,
+              theme.cardHover
+          )}>
+              <div className="flex justify-between items-start gap-2">
+                  <div className="space-y-1 min-w-0">
+                      <div className={cn('flex items-center gap-2.5', theme.icon)}>
+                          {React.createElement(icon, { className: 'h-4 w-4 shrink-0' })}
+                          <h5 className={cn('text-[10px] font-bold uppercase tracking-[0.2em]', theme.title)}>{title}</h5>
                       </div>
-                  ) : <p className="text-sm md:text-base font-code font-bold text-foreground/90 italic leading-relaxed whitespace-pre-wrap break-words mt-2">"{content}"</p>}
+                      {renderDestinationPill(title)}
+                  </div>
+                  {renderStrainInjectButton(title, content, 'sm')}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                  {content.map((c, i) => (
+                      <Badge
+                          key={i}
+                          variant="outline"
+                          className={cn(
+                              'text-[10px] font-bold uppercase py-1 px-3',
+                              theme.badgeBg,
+                              theme.badgeBorder,
+                              theme.badgeText
+                          )}
+                      >
+                          {c}
+                      </Badge>
+                  ))}
               </div>
           </Card>
       );
   };
 
+  const renderExpandedStrainCard = (
+      title: string,
+      content: string | null | undefined,
+      icon: React.ComponentType<{ className?: string }>
+  ) => {
+      if (!content?.trim()) return null;
+      const theme = getStrainDestinationTheme(title);
+      return (
+          <Card className={cn(
+              'p-5 space-y-3 group transition-all shadow-xl h-full flex flex-col border',
+              theme.cardBg,
+              theme.cardBorder,
+              theme.cardHover
+          )}>
+              <div className="flex justify-between items-start gap-2">
+                  <div className="space-y-1 min-w-0">
+                      <div className={cn('flex items-center gap-2.5', theme.icon)}>
+                          {React.createElement(icon, { className: 'h-4 w-4 shrink-0' })}
+                          <h5 className={cn('text-[10px] font-bold uppercase tracking-[0.2em]', theme.title)}>{title}</h5>
+                      </div>
+                      {renderDestinationPill(title)}
+                  </div>
+                  {renderStrainInjectButton(title, content, 'sm')}
+              </div>
+              <p className={cn('text-sm font-code font-bold italic leading-relaxed whitespace-pre-wrap break-words', theme.title, 'opacity-90')}>
+                  "{content}"
+              </p>
+          </Card>
+      );
+  };
+
+  const renderMetaStrainStack = (
+      items: Array<{ title: string; content: string; icon: React.ComponentType<{ className?: string }> }>
+  ) => {
+      if (items.length === 0) return null;
+      return (
+          <div className="h-full flex flex-col gap-2">
+              {items.map(({ title, content, icon }) => {
+                  const theme = getStrainDestinationTheme(title);
+                  return (
+                      <Card
+                          key={title}
+                          className={cn(
+                              'flex flex-col justify-center gap-2 p-4 min-h-[5rem] group transition-all border shadow-lg flex-1',
+                              theme.cardBg,
+                              theme.cardBorder,
+                              theme.cardHover
+                          )}
+                      >
+                          <div className="flex justify-between items-center gap-2">
+                              <div className="space-y-1 min-w-0">
+                                  <div className={cn('flex items-center gap-2', theme.icon)}>
+                                      {React.createElement(icon, { className: 'h-4 w-4 shrink-0' })}
+                                      <h5 className={cn('text-[10px] font-bold uppercase tracking-[0.15em] truncate', theme.title)}>{title}</h5>
+                                  </div>
+                                  {renderDestinationPill(title)}
+                              </div>
+                              {renderStrainInjectButton(title, content, 'sm')}
+                          </div>
+                          <p className={cn('text-sm font-code font-bold italic leading-snug break-words opacity-90', theme.title)}>
+                              "{content}"
+                          </p>
+                      </Card>
+                  );
+              })}
+          </div>
+      );
+  };
+
+  const renderStyleStrainCard = (analysis: WizardAnalysis) => {
+      const styleText = analysis.styleAnalysis?.trim();
+      if (!styleText) return null;
+      const metrics = analysis.styleMetrics ?? DEFAULT_STYLE_METRICS;
+      const theme = getStrainDestinationTheme('Style');
+
+      return (
+          <Card className={cn(
+              'p-5 space-y-3 group transition-all shadow-xl flex flex-col border',
+              theme.cardBg,
+              theme.cardBorder,
+              theme.cardHover
+          )}>
+              <div className="flex justify-between items-start gap-2">
+                  <div className="space-y-1 min-w-0">
+                      <div className={cn('flex items-center gap-2.5', theme.icon)}>
+                          <Fingerprint className="h-4 w-4 shrink-0" />
+                          <h5 className={cn('text-[10px] font-bold uppercase tracking-[0.2em]', theme.title)}>Style</h5>
+                      </div>
+                      {renderDestinationPill('Style')}
+                  </div>
+                  {renderStrainInjectButton('Style', styleText, 'sm')}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                      <p className={cn('text-[9px] font-bold uppercase', theme.pill)}>Vocab · {metrics.vocabularyScore}</p>
+                      <Progress value={metrics.vocabularyScore} className="h-1.5 bg-fuchsia-500/10" />
+                  </div>
+                  <div className="space-y-1">
+                      <p className={cn('text-[9px] font-bold uppercase', theme.pill)}>Rhyme · {metrics.rhymeComplexity}</p>
+                      <Progress value={metrics.rhymeComplexity} className="h-1.5 bg-fuchsia-500/10" />
+                  </div>
+              </div>
+              <p className={cn('text-[10px] font-bold uppercase', theme.pill)}>Cadence: {metrics.cadenceMap}</p>
+              <p className={cn('text-sm font-code font-bold italic leading-relaxed whitespace-pre-wrap break-words opacity-90', theme.title)}>
+                  "{styleText}"
+              </p>
+          </Card>
+      );
+  };
+
+  const renderAnalysisStrainLayout = (analysis: WizardAnalysis, variant: 'full' | 'sidebar' = 'full') => {
+      const emotion = [analysis.emotionalTone?.primaryEmotion, analysis.emotionalTone?.secondaryEmotion]
+          .filter(Boolean)
+          .join(' / ');
+
+      const metaItems: Array<{ title: string; content: string; icon: React.ComponentType<{ className?: string }> }> = [];
+      if (emotion && emotion.length < 120) {
+          metaItems.push({ title: 'Emotion', content: emotion, icon: Compass });
+      }
+      if (analysis.pov?.trim()) {
+          metaItems.push({ title: 'POV', content: analysis.pov, icon: UserCircle });
+      }
+      if (analysis.tense?.trim()) {
+          metaItems.push({ title: 'Tense', content: analysis.tense, icon: TimerReset });
+      }
+
+      const hasShift = !!analysis.emotionalShift?.trim();
+      const hasArc = !!analysis.narrativeArc?.trim();
+      const hasStructure = !!analysis.structure?.trim();
+      const longEmotion = emotion.length >= 120;
+      const isSidebar = variant === 'sidebar';
+      const longCol = isSidebar ? 'col-span-1' : 'lg:col-span-7';
+      const sideCol = isSidebar ? 'col-span-1' : 'lg:col-span-5';
+
+      return (
+          <div className={cn('space-y-3', !isSidebar && 'md:space-y-4')}>
+              <div className={cn('grid items-stretch', isSidebar ? 'grid-cols-1 gap-3' : 'grid-cols-1 md:grid-cols-2 gap-4')}>
+                  {renderBadgeStrainCard('Themes', analysis.themes, Link2)}
+                  {renderBadgeStrainCard('Motifs', analysis.motifs, Target)}
+              </div>
+
+              {longEmotion && renderExpandedStrainCard('Emotion', emotion, Compass)}
+
+              {(hasShift || metaItems.length > 0) && (
+                  <div className={cn('grid items-stretch', isSidebar ? 'grid-cols-1 gap-3' : 'grid-cols-1 lg:grid-cols-12 gap-4')}>
+                      {hasShift && (
+                          <div className={cn(metaItems.length > 0 ? longCol : isSidebar ? 'col-span-1' : 'lg:col-span-12')}>
+                              {renderExpandedStrainCard('Shift', analysis.emotionalShift, ArrowRightLeft)}
+                          </div>
+                      )}
+                      {metaItems.length > 0 && (
+                          <div className={cn(hasShift ? sideCol : isSidebar ? 'col-span-1' : 'lg:col-span-12 md:max-w-md')}>
+                              {renderMetaStrainStack(metaItems)}
+                          </div>
+                      )}
+                  </div>
+              )}
+
+              {(hasArc || hasStructure) && (
+                  <div className={cn('grid items-stretch', isSidebar ? 'grid-cols-1 gap-3' : 'grid-cols-1 lg:grid-cols-12 gap-4')}>
+                      {hasArc && (
+                          <div className={cn(hasStructure ? longCol : isSidebar ? 'col-span-1' : 'lg:col-span-12')}>
+                              {renderExpandedStrainCard('Arc', analysis.narrativeArc, GitBranch)}
+                          </div>
+                      )}
+                      {hasStructure && (
+                          <div className={cn(hasArc ? sideCol : isSidebar ? 'col-span-1' : 'lg:col-span-12')}>
+                              {renderExpandedStrainCard('Structure', analysis.structure, LayoutTemplate)}
+                          </div>
+                      )}
+                  </div>
+              )}
+
+              {renderExpandedStrainCard('Technical Fingerprint', analysis.voiceStyle, Fingerprint)}
+
+              {renderStyleStrainCard(analysis)}
+          </div>
+      );
+  };
+
+  const renderRemixWeightControls = (compact = false) => (
+      <div className={cn("space-y-3", compact ? "mt-3 pt-3 border-t border-primary/10" : "")}>
+          {wizardState.selectedDirections.map((d) => (
+              <div
+                  key={d.name}
+                  className="space-y-1.5"
+                  onClick={(e) => e.stopPropagation()}
+              >
+                  <div className="flex items-center justify-between gap-2">
+                      <span className={cn("font-bold uppercase text-primary truncate", compact ? "text-[8px]" : "text-[9px]")}>{d.name}</span>
+                      <span className={cn("font-mono text-muted-foreground shrink-0", compact ? "text-[8px]" : "text-[9px]")}>{d.weight ?? 50}%</span>
+                  </div>
+                  <Slider
+                      value={[d.weight ?? 50]}
+                      min={0}
+                      max={100}
+                      step={5}
+                      onValueChange={([v]) => updateRemixWeight(d.name, v)}
+                      className="py-1"
+                  />
+              </div>
+          ))}
+      </div>
+  );
+
+  const hubSectionSummary = useMemo(
+    (): Partial<Record<HubSectionKey, string>> => ({
+      structure: hubStructureGuide.trim()
+        ? 'Structure guide active'
+        : `${hubStructure.filter((s) => s.enabled).length} sections`,
+      vibe: hubVibe?.genre?.trim() || (hubVibeEnabled ? 'Enabled' : 'Off'),
+      intents: hubIntents.length ? `${hubIntents.length} motifs` : undefined,
+      creativeDna: CREATIVE_DNA_FIELDS.some(({ key }) => String(hubDirection[key] ?? '').trim())
+        ? 'DNA loaded'
+        : undefined,
+      specialInstructions: lyricsAbout.trim() ? 'Instructions set' : undefined,
+      remix: wizardState.selectedDirections.length
+        ? `${wizardState.selectedDirections.length} paths`
+        : undefined,
+      style: hubStyleAnalysis.trim() ? 'Style loaded' : undefined,
+      guardrails: enableGuardrails ? 'Active' : 'Off',
+    }),
+    [
+      hubStructureGuide,
+      hubStructure,
+      hubVibe,
+      hubVibeEnabled,
+      hubIntents,
+      hubDirection,
+      lyricsAbout,
+      wizardState.selectedDirections.length,
+      hubStyleAnalysis,
+      enableGuardrails,
+    ]
+  );
+
   return (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="fixed left-1/2 top-[4vh] -translate-x-1/2 translate-y-0 sm:max-w-7xl w-[98vw] h-[min(92vh,calc(100dvh-2rem))] max-h-[calc(100dvh-2rem)] flex flex-col gap-0 bg-[#050505] border-2 overflow-hidden p-0 rounded-xl shadow-2xl z-[2100]">
+    <TooltipProvider delayDuration={300}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+      <DialogContent className="fixed left-1/2 top-[2vh] -translate-x-1/2 translate-y-0 w-[min(99vw,1720px)] max-w-none h-[min(94vh,calc(100dvh-1rem))] max-h-[calc(100dvh-1rem)] flex flex-col gap-0 bg-[#050505] border-2 overflow-hidden p-0 rounded-xl shadow-2xl z-[2100] [&>button.absolute]:hidden">
         <DialogHeader className="shrink-0 p-3 border-b bg-[#050505] flex-row items-center justify-between relative z-[110]">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-4 top-3 h-8 w-8 rounded-full z-[120] text-muted-foreground hover:text-foreground"
+              onClick={handleHardClose}
+              aria-label="Close Generation Workstation"
+            >
+              <X className="h-5 w-5" />
+            </Button>
             <div className="flex items-center">
                 {step > 0 && <Button variant="ghost" size="icon" className="h-8 w-8 mr-2 rounded-full" onClick={() => {
                     if (step === 10 && wizardState.analysis) setStep(3);
@@ -626,15 +1291,18 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
 
           {(step === 10) && (
               <ScrollArea className="flex-grow studio-scrollbar">
-                  <div className="p-10 flex flex-col items-center animate-in fade-in slide-in-from-bottom-8">
-                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 w-full max-w-7xl pb-20">
-                          <div className="lg:col-span-3 space-y-8">
-                              <div className="space-y-4">
-                                  <div className="flex items-center justify-between gap-4 w-full">
-                                      <div className="flex items-center gap-2 text-yellow-500 shrink-0">
-                                          <GitMerge className="h-5 w-5" />
-                                          <h3 className="font-headline font-bold text-xl uppercase leading-none">Structure</h3>
-                                      </div>
+                  <div className="px-6 py-5 animate-in fade-in slide-in-from-bottom-8">
+                      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 w-full items-start pb-6">
+                          {/* Column 1 — Production setup */}
+                          <div className="flex flex-col gap-5 min-w-0">
+                              <HubSectionShell
+                                  title="Structure"
+                                  icon={GitMerge}
+                                  colorClass="text-yellow-500"
+                                  collapsed={hubCollapsed.structure}
+                                  onToggle={() => toggleHubSection('structure')}
+                                  summary={hubSectionSummary.structure}
+                                  trailing={
                                       <Select onValueChange={(val) => {
                                           const p = STRUCTURE_PRESETS.find(x => x.id === val);
                                           if (p) setHubSections(p.sections.map(s => ({ ...s })));
@@ -648,9 +1316,10 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                               ))}
                                           </SelectContent>
                                       </Select>
-                                  </div>
-                                  <Card className="bg-black/40 border-white/5 p-4 rounded-xl shadow-2xl">
-                                      <ScrollArea className="h-[280px] pr-2">
+                                  }
+                              >
+                                  <Card className="bg-black/40 border-white/5 p-3 rounded-xl shadow-2xl">
+                                      <ScrollArea className="h-[min(22vh,200px)] pr-2">
                                           <div className="space-y-2">
                                               {hubStructure.map((s, idx) => (
                                                   <div key={`${s.name}-${idx}`} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5 group">
@@ -668,6 +1337,27 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                               ))}
                                           </div>
                                       </ScrollArea>
+                                      {hubStructureGuide.trim() && (
+                                          <div className="mt-3 p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
+                                              <div className="flex items-center justify-between gap-2 mb-1">
+                                                  <p className="text-[8px] font-bold uppercase text-yellow-600">Extracted Structure Guide</p>
+                                                  <Button
+                                                      type="button"
+                                                      variant="ghost"
+                                                      size="icon"
+                                                      className="h-6 w-6 text-yellow-600/60 hover:text-red-500 hover:bg-red-500/10 shrink-0"
+                                                      onClick={() => {
+                                                          setHubStructureGuide('');
+                                                          toast({ title: 'Structure guide removed' });
+                                                      }}
+                                                      aria-label="Remove extracted structure guide"
+                                                  >
+                                                      <Trash2 className="h-3 w-3" />
+                                                  </Button>
+                                              </div>
+                                              <p className="text-[9px] text-muted-foreground font-code italic leading-relaxed whitespace-pre-wrap">{hubStructureGuide}</p>
+                                          </div>
+                                      )}
                                       <div className="pt-3 border-t border-white/5">
                                           <DropdownMenu>
                                               <DropdownMenuTrigger asChild>
@@ -683,21 +1373,23 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                           </DropdownMenu>
                                       </div>
                                   </Card>
-                              </div>
-                              <div className="space-y-4">
-                                  <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2 text-amber-500">
-                                          <Palette className="h-5 w-5" />
-                                          <h3 className="font-headline font-bold text-xl uppercase">Track Vibe</h3>
-                                      </div>
-                                      <Switch checked={hubVibeEnabled} onCheckedChange={setHubVibeEnabled} />
-                                  </div>
-                                  <Card className={cn("bg-amber-500/5 border-amber-500/20 p-4 rounded-xl space-y-4 transition-opacity", !hubVibeEnabled && "opacity-50 pointer-events-none")}>
-                                      <div className="grid grid-cols-2 gap-4">
+                              </HubSectionShell>
+
+                              <HubSectionShell
+                                  title="Track Vibe"
+                                  icon={Palette}
+                                  colorClass="text-amber-500"
+                                  collapsed={hubCollapsed.vibe}
+                                  onToggle={() => toggleHubSection('vibe')}
+                                  summary={hubSectionSummary.vibe}
+                                  trailing={<Switch checked={hubVibeEnabled} onCheckedChange={setHubVibeEnabled} />}
+                              >
+                                  <Card className={cn("bg-amber-500/5 border-amber-500/20 p-3 rounded-xl space-y-3 transition-opacity", !hubVibeEnabled && "opacity-50 pointer-events-none")}>
+                                      <div className="grid grid-cols-2 gap-3">
                                           <div className="space-y-1"><Label className="text-[9px] font-bold uppercase text-amber-700">Genre</Label><Input placeholder="e.g. Lofi-Hop" value={hubVibe.genre} onChange={(e) => setHubVibe(v => ({ ...v, genre: e.target.value }))} className="h-8 text-[10px] bg-background/50" /></div>
                                           <div className="space-y-1"><Label className="text-[9px] font-bold uppercase text-amber-700">BPM</Label><Input type="number" placeholder="90" value={hubVibe.tempoBPM} onChange={(e) => setHubVibe(v => ({ ...v, tempoBPM: parseInt(e.target.value) || 90 }))} className="h-8 text-[10px] bg-background/50" /></div>
                                       </div>
-                                      <div className="space-y-1"><Label className="text-[9px] font-bold uppercase text-amber-700">Production</Label><Textarea placeholder="e.g. Saturated 808s, airy vocal pads..." value={hubVibe.instrumentation} onChange={(e) => setHubVibe(v => ({ ...v, instrumentation: e.target.value }))} className="h-20 text-[10px] bg-background/50 resize-none" /></div>
+                                      <div className="space-y-1"><Label className="text-[9px] font-bold uppercase text-amber-700">Production</Label><Textarea placeholder="e.g. Saturated 808s, airy vocal pads..." value={hubVibe.instrumentation} onChange={(e) => setHubVibe(v => ({ ...v, instrumentation: e.target.value }))} className="h-16 text-[10px] bg-background/50 resize-none" /></div>
                                       {!isPro && (
                                         <Select onValueChange={(name) => {
                                           const p = SYSTEM_VIBE_PRESETS.find((x) => x.name === name);
@@ -710,19 +1402,20 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                         </Select>
                                       )}
                                   </Card>
-                              </div>
-                              <div className="space-y-4">
-                                  <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2 text-sky-500">
-                                          <Target className="h-5 w-5" />
-                                          <h3 className="font-headline font-bold text-xl uppercase">Intents</h3>
-                                      </div>
-                                      <Switch checked={intentsEnabled} onCheckedChange={setIntentsEnabled} />
-                                  </div>
-                                  <Card className={cn("bg-sky-500/5 border-sky-500/20 p-4 rounded-xl transition-opacity", !intentsEnabled && "opacity-50 pointer-events-none")}>
-                                      <div className="space-y-4">
-                                          <ScrollArea className="h-[120px] pr-2">
-                                              <div className="flex flex-wrap gap-2">
+                              </HubSectionShell>
+
+                              <HubSectionShell
+                                  title="Intents"
+                                  icon={Target}
+                                  colorClass="text-sky-500"
+                                  collapsed={hubCollapsed.intents}
+                                  onToggle={() => toggleHubSection('intents')}
+                                  summary={hubSectionSummary.intents}
+                                  trailing={<Switch checked={intentsEnabled} onCheckedChange={setIntentsEnabled} />}
+                              >
+                                  <Card className={cn("bg-sky-500/5 border-sky-500/20 p-3 rounded-xl transition-opacity", !intentsEnabled && "opacity-50 pointer-events-none")}>
+                                      <div className="space-y-3">
+                                          <div className="flex flex-wrap gap-1.5 max-h-[min(14vh,120px)] overflow-y-auto studio-scrollbar pr-1">
                                                   {(album?.thingsToSay || []).map(intent => {
                                                       const isSelected = hubIntents.includes(intent);
                                                       return (
@@ -736,8 +1429,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                                           </Badge>
                                                       );
                                                   })}
-                                              </div>
-                                          </ScrollArea>
+                                          </div>
                                           <div className="flex gap-2 pt-2 border-t border-sky-500/10">
                                               <Input 
                                                   placeholder="Add new intent..." 
@@ -752,90 +1444,115 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                           </div>
                                       </div>
                                   </Card>
-                              </div>
+                              </HubSectionShell>
                           </div>
 
-                          <div className="lg:col-span-5 space-y-8">
-                              <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2 text-green-500">
-                                      <Compass className="h-5 w-5" />
-                                      <h3 className="font-headline font-bold text-xl uppercase">Creative DNA</h3>
-                                  </div>
-                                  <div className="flex items-center gap-4">
-                                      <div className="flex items-center gap-2"><span className="text-[8px] font-bold text-muted-foreground uppercase">Inherit Album</span><Switch checked={inheritAlbum} onCheckedChange={setInheritAlbum} /></div>
-                                      <div className="flex items-center gap-2"><span className="text-[8px] font-bold text-muted-foreground uppercase">Track DNA</span><Switch checked={inheritTrack} onCheckedChange={setInheritTrack} /></div>
-                                  </div>
-                              </div>
-                              <Card className="bg-green-500/5 border-green-500/20 p-6 rounded-xl space-y-4 shadow-2xl">
-                                  <ScrollArea className="h-[400px] pr-4">
-                                      <div className="space-y-5">
-                                          {[
-                                            { id: 'setting_world', label: '1. Setting / World', placeholder: 'e.g. A rainy midnight in 1940s Chicago...' },
-                                            { id: 'emotion_core', label: '2. Emotion / Core', placeholder: 'e.g. Bitter betrayal mixed with a sense of relief...' },
-                                            { id: 'trigger_moment', label: '3. Trigger Moment', placeholder: 'e.g. When the final letter was signed in blood...' },
-                                            { id: 'message_truth', label: '4. Message / Truth', placeholder: 'e.g. Loyalty is a luxury no one can afford...' },
-                                            { id: 'tone_palette', label: '5. Tone / Palette', placeholder: 'e.g. Gritty, neon-drenched, smoky textures...' }
-                                          ].map(f => (
-                                              <div key={f.id} className="space-y-2">
-                                                  <Label className="text-[9px] font-bold uppercase tracking-widest text-green-700/80">{f.label}</Label>
-                                                  <Textarea 
-                                                      placeholder={f.placeholder} 
-                                                      className="bg-background/40 border-green-500/10 h-16 text-[11px] font-code" 
-                                                      value={hubDirection[f.id as keyof Direction] as string || ''}
-                                                      onChange={(e) => setHubDirection(prev => ({ ...prev, [f.id]: e.target.value }))}
-                                                  />
-                                              </div>
-                                          ))}
+                          {/* Column 2 — Creative core + remix tuning */}
+                          <div className="flex flex-col gap-5 min-w-0">
+                              <HubSectionShell
+                                  title="Creative DNA"
+                                  icon={Compass}
+                                  colorClass="text-green-500"
+                                  collapsed={hubCollapsed.creativeDna}
+                                  onToggle={() => toggleHubSection('creativeDna')}
+                                  summary={hubSectionSummary.creativeDna}
+                                  trailing={
+                                      <div className="flex items-center gap-3">
+                                          <div className="flex items-center gap-2"><span className="text-[8px] font-bold text-muted-foreground uppercase">Inherit Album</span><Switch checked={inheritAlbum} onCheckedChange={setInheritAlbum} /></div>
+                                          <div className="flex items-center gap-2"><span className="text-[8px] font-bold text-muted-foreground uppercase">Track DNA</span><Switch checked={inheritTrack} onCheckedChange={setInheritTrack} /></div>
                                       </div>
-                                  </ScrollArea>
+                                  }
+                              >
+                              <Card className="bg-green-500/5 border-green-500/20 p-4 rounded-xl shadow-2xl">
+                                  <div className="space-y-3">
+                                      {[
+                                        { id: 'setting_world', label: '1. Setting / World', placeholder: 'e.g. A rainy midnight in 1940s Chicago...' },
+                                        { id: 'emotion_core', label: '2. Emotion / Core', placeholder: 'e.g. Bitter betrayal mixed with a sense of relief...' },
+                                        { id: 'trigger_moment', label: '3. Trigger Moment', placeholder: 'e.g. When the final letter was signed in blood...' },
+                                        { id: 'message_truth', label: '4. Message / Truth', placeholder: 'e.g. Loyalty is a luxury no one can afford...' },
+                                        { id: 'tone_palette', label: '5. Tone / Palette', placeholder: 'e.g. Gritty, neon-drenched, smoky textures...' }
+                                      ].map(f => (
+                                          <div key={f.id} className="space-y-1.5">
+                                              <Label className="text-[9px] font-bold uppercase tracking-widest text-green-700/80">{f.label}</Label>
+                                              <Textarea 
+                                                  placeholder={f.placeholder} 
+                                                  className="bg-background/40 border-green-500/10 min-h-[3rem] h-12 text-[11px] font-code resize-none" 
+                                                  value={hubDirection[f.id as keyof Direction] as string || ''}
+                                                  onChange={(e) => setHubDirection(prev => ({ ...prev, [f.id]: e.target.value }))}
+                                              />
+                                          </div>
+                                      ))}
+                                  </div>
                               </Card>
+                              </HubSectionShell>
 
-                              <div className="space-y-4">
-                                  <div className="flex items-center gap-2 text-primary">
-                                      <MessageSquareQuote className="h-5 w-5" />
-                                      <h3 className="font-headline font-bold text-xl uppercase">Special Instructions</h3>
-                                  </div>
-                                  <Card className="bg-primary/5 border-primary/20 p-6 rounded-xl">
-                                      <Label className="text-[9px] font-bold uppercase tracking-widest text-primary/60 mb-2 block">What should this song/remix be about?</Label>
+                              <HubSectionShell
+                                  title="Special Instructions"
+                                  icon={MessageSquareQuote}
+                                  colorClass="text-primary"
+                                  collapsed={hubCollapsed.specialInstructions}
+                                  onToggle={() => toggleHubSection('specialInstructions')}
+                                  summary={hubSectionSummary.specialInstructions}
+                              >
+                                  <Card className="bg-primary/5 border-primary/20 p-4 rounded-xl">
+                                      <Label className="text-[9px] font-bold uppercase tracking-widest text-primary/60 mb-2 block">What do you want this song or remix to do?</Label>
                                       <Textarea 
-                                          placeholder="e.g. A journey through a lost city, focusing on the feeling of isolation and discovery..." 
-                                          className="bg-background/40 border-primary/10 h-32 text-xs font-code p-4" 
+                                          placeholder="Direct instructions — e.g. start every line with 'But then', flip the POV to a bystander, keep it under 16 bars..." 
+                                          className="bg-background/40 border-primary/10 min-h-[5rem] h-24 text-xs font-code p-3 resize-none" 
                                           value={lyricsAbout}
-                                          onChange={(e) => setLyricsAbout(e.target.value)}
+                                          onChange={(e) => {
+                                              setLyricsAbout(e.target.value);
+                                              if (e.target.value.trim()) markHubSeeded('specialInstructions');
+                                          }}
                                       />
-                                      <p className="text-[8px] text-muted-foreground mt-3 uppercase tracking-widest italic">MANDATORY: These instructions override all general artistic advice.</p>
+                                      <p className="text-[9px] text-muted-foreground mt-2 leading-snug italic">Direct creative brief — synthesis treats this as a core anchor alongside DNA strains and remix paths.</p>
                                   </Card>
-                              </div>
+                              </HubSectionShell>
+
+                              {wizardState.selectedDirections.length > 0 && (
+                                  <HubSectionShell
+                                      title="Remix Directions"
+                                      icon={GitBranch}
+                                      colorClass="text-primary"
+                                      collapsed={hubCollapsed.remix}
+                                      onToggle={() => toggleHubSection('remix')}
+                                      summary={hubSectionSummary.remix}
+                                  >
+                                      <Card className="bg-primary/5 border-primary/20 p-4 rounded-xl space-y-3">
+                                          <div className="flex flex-wrap gap-1.5">
+                                              {wizardState.selectedDirections.map(d => (
+                                                  <Badge key={d.name} variant="outline" className="text-[9px] uppercase border-primary/30 text-primary py-0.5 px-2">{d.name} · {d.weight ?? 50}%</Badge>
+                                              ))}
+                                          </div>
+                                          {renderRemixWeightControls(true)}
+                                      </Card>
+                                  </HubSectionShell>
+                              )}
                           </div>
 
-                          <div className="lg:col-span-4 space-y-8">
-                              <div className="space-y-4">
-                                  <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2 text-primary">
-                                          <Dna className="h-5 w-5" />
-                                          <h3 className="font-headline font-bold text-xl uppercase">DNA Strains</h3>
-                                      </div>
+                          {/* Column 3 — Strains, style, guardrails */}
+                          <div className="flex flex-col gap-5 min-w-0">
+                              <HubSectionShell
+                                  title="DNA Strains"
+                                  icon={Dna}
+                                  colorClass="text-primary"
+                                  collapsed={hubCollapsed.dnaStrains}
+                                  onToggle={() => toggleHubSection('dnaStrains')}
+                                  summary={wizardState.analysis ? 'Extraction ready' : undefined}
+                                  trailing={
                                       <Tabs value={strainTab} onValueChange={(v:any) => setStrainTab(v)} className="w-fit">
                                           <TabsList className="h-8 bg-white/5 border-white/10 p-0.5">
-                                              <TabsTrigger value="insights" className="text-[8px] px-3 font-bold">INSIGHTS</TabsTrigger>
-                                              <TabsTrigger value="vault" className="text-[8px] px-3 font-bold">VAULT</TabsTrigger>
+                                              <TabsTrigger value="insights" className="text-[9px] px-3 font-bold">INSIGHTS</TabsTrigger>
+                                              <TabsTrigger value="vault" className="text-[9px] px-3 font-bold">VAULT</TabsTrigger>
                                           </TabsList>
                                       </Tabs>
-                                  </div>
-                                  <Card className="bg-primary/5 border-primary/20 p-4 rounded-xl shadow-inner min-h-[220px]">
-                                      <ScrollArea className="h-[280px] pr-2">
+                                  }
+                              >
+                                  <Card className="bg-primary/5 border-primary/20 p-3 rounded-xl shadow-inner">
+                                      <ScrollArea className="h-[min(28vh,260px)] pr-2">
                                           {strainTab === 'insights' ? (
                                               wizardState.analysis ? (
-                                                  <div className="space-y-4">
-                                                      {renderAnalysisField('Themes', wizardState.analysis.themes, Link2, 'setting_world')}
-                                                      {renderAnalysisField('Emotion', `${wizardState.analysis.emotionalTone.primaryEmotion} / ${wizardState.analysis.emotionalTone.secondaryEmotion}`, Compass, 'emotion_core')}
-                                                      {renderAnalysisField('Shift', wizardState.analysis.emotionalShift, ArrowRightLeft, 'trigger_moment')}
-                                                      {renderAnalysisField('Arc', wizardState.analysis.narrativeArc, GitBranch, 'message_truth')}
-                                                      {renderAnalysisField('POV', wizardState.analysis.pov, UserCircle, 'setting_world')}
-                                                      {renderAnalysisField('Tense', wizardState.analysis.tense, TimerReset, 'trigger_moment')}
-                                                      {renderAnalysisField('Structure', wizardState.analysis.structure, LayoutTemplate, 'message_truth')}
-                                                      {renderAnalysisField('Technical Fingerprint', wizardState.analysis.voiceStyle, Fingerprint, 'tone_palette')}
-                                                  </div>
+                                                  renderAnalysisStrainLayout(wizardState.analysis, 'sidebar')
                                               ) : (
                                                   <div className="h-[180px] flex flex-col items-center justify-center text-center p-6 gap-4 border-2 border-dashed border-white/5 rounded-lg">
                                                       <BrainCircuit className="h-10 w-10 text-muted-foreground/20" />
@@ -851,42 +1568,56 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                                             onClick={() => setExpandedVaultIdx(expandedVaultIdx === i ? null : i)}
                                                           >
                                                               <div className="min-w-0 flex-grow pr-4">
-                                                                  <p className="text-[10px] font-bold text-primary truncate uppercase">{p.name}</p>
-                                                                  <p className="text-[7px] text-muted-foreground uppercase">{p.sourceTrackTitle}</p>
+                                                                  <p className="text-xs font-bold text-primary truncate uppercase">{p.name}</p>
+                                                                  <p className="text-[10px] text-muted-foreground uppercase">{p.sourceTrackTitle}</p>
                                                               </div>
                                                               <div className="flex items-center gap-2 shrink-0">
                                                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={(e) => { e.stopPropagation(); updateAlbum(album.id, { dnaPresets: album.dnaPresets?.filter((_, idx) => idx !== i) }); toast({ title: "DNA Strain Erased" }); }}><Trash2 className="h-3 w-3" /></Button>
-                                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={(e) => { e.stopPropagation(); setHubDirection(p.mapping); toast({ title: "Full DNA Profile Loaded" }); }}><RefreshCw className="h-3 w-3" /></Button>
+                                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={(e) => { e.stopPropagation(); loadDnaPreset(p); }}><RefreshCw className="h-3 w-3" /></Button>
                                                                 {expandedVaultIdx === i ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                                                               </div>
                                                           </div>
                                                           {expandedVaultIdx === i && (
-                                                              <div className="p-3 bg-black/40 border-t border-white/5 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                                                                  {[
-                                                                      { k: 'setting_world', l: 'Setting', v: p.mapping.setting_world },
-                                                                      { k: 'emotion_core', l: 'Emotion', v: p.mapping.emotion_core },
-                                                                      { k: 'trigger_moment', l: 'Trigger', v: p.mapping.trigger_moment },
-                                                                      { k: 'message_truth', l: 'Truth', v: p.mapping.message_truth },
-                                                                      { k: 'tone_palette', l: 'Palette', v: p.mapping.tone_palette }
-                                                                  ].map(field => (
-                                                                      <div key={field.k} className="flex flex-col gap-2 p-2 rounded bg-background/20 border border-white/5 group/part">
-                                                                          <div className="flex items-center justify-between">
-                                                                              <p className="text-[8px] font-bold uppercase text-muted-foreground tracking-widest">{field.l}</p>
-                                                                              <Button 
-                                                                                variant="ghost" 
-                                                                                size="icon" 
-                                                                                className="h-6 w-6 text-primary hover:bg-primary/20" 
-                                                                                onClick={() => { setHubDirection(prev => ({ ...prev, [field.k]: field.v })); toast({ title: `${field.l} Part Injected` }); }}
-                                                                                disabled={!field.v}
-                                                                              >
-                                                                                  <Zap className="h-3.5 w-3.5" />
-                                                                              </Button>
-                                                                          </div>
-                                                                          <p className="text-[10px] text-foreground leading-relaxed font-code whitespace-pre-wrap break-words italic opacity-90 pr-2">
-                                                                              {field.v ? `"${field.v}"` : "N/A"}
-                                                                          </p>
-                                                                      </div>
-                                                                  ))}
+                                                              <div className="p-3 bg-black/40 border-t border-white/5 animate-in slide-in-from-top-2 duration-300">
+                                                                  <DnaVaultPresetDetails
+                                                                      preset={p}
+                                                                      compact
+                                                                      onInjectMappingField={(field, value) => {
+                                                                          if (!value) return;
+                                                                          setHubDirection((prev) => ({ ...prev, [field]: value }));
+                                                                          markHubSeeded('creativeDna');
+                                                                          toast({ title: `${field} loaded` });
+                                                                      }}
+                                                                      onInjectStrain={(title, content) => {
+                                                                          const target = STRAIN_TARGETS[title];
+                                                                          if (target) handleInjectStrain(title, content, target);
+                                                                      }}
+                                                                      onInjectIntents={(intents) => {
+                                                                          setHubIntents(intents);
+                                                                          setIntentsEnabled(true);
+                                                                          markHubSeeded('intents');
+                                                                          if (album) {
+                                                                              const existing = album.thingsToSay || [];
+                                                                              const novel = intents.filter((m) => !existing.includes(m));
+                                                                              if (novel.length) {
+                                                                                  updateAlbum(album.id, { thingsToSay: [...existing, ...novel] });
+                                                                              }
+                                                                          }
+                                                                          toast({ title: 'Motifs loaded into Intents' });
+                                                                      }}
+                                                                      onInjectStructureGuide={(guide) => {
+                                                                          setHubStructureGuide(guide);
+                                                                          markHubSeeded('structure');
+                                                                          toast({ title: 'Structure guide loaded' });
+                                                                      }}
+                                                                      onInjectStyle={(analysis, metrics) => {
+                                                                          setHubStyleAnalysis(analysis);
+                                                                          setHubStyleMetrics(metrics ?? DEFAULT_STYLE_METRICS);
+                                                                          setHubStyleEnabled(true);
+                                                                          markHubSeeded('style');
+                                                                          toast({ title: 'Style DNA loaded' });
+                                                                      }}
+                                                                  />
                                                               </div>
                                                           )}
                                                       </Card>
@@ -895,90 +1626,76 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                           )}
                                       </ScrollArea>
                                   </Card>
-                              </div>
+                              </HubSectionShell>
 
-                              {wizardState.selectedDirections.length > 0 && (
-                                  <div className="space-y-4">
-                                      <div className="flex items-center gap-2 text-primary">
-                                          <GitBranch className="h-5 w-5" />
-                                          <h3 className="font-headline font-bold text-xl uppercase">Remix Directions</h3>
-                                      </div>
-                                      <Card className="bg-primary/5 border-primary/20 p-4 rounded-xl space-y-3">
-                                          <div className="flex flex-wrap gap-2">
-                                              {wizardState.selectedDirections.map(d => (
-                                                  <Badge key={d.name} variant="outline" className="text-[9px] uppercase border-primary/30 text-primary py-1 px-2">{d.name}</Badge>
-                                              ))}
-                                          </div>
-                                          <p className="text-[9px] text-muted-foreground italic leading-relaxed">Active pivots selected during path selection step.</p>
-                                      </Card>
-                                  </div>
-                              )}
-
-                              <div className="space-y-4">
-                                  <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2 text-fuchsia-500">
-                                          <Fingerprint className="h-5 w-5" />
-                                          <h3 className="font-headline font-bold text-xl uppercase">Style DNA</h3>
-                                      </div>
+                              <HubSectionShell
+                                  title="Style DNA"
+                                  icon={Fingerprint}
+                                  colorClass="text-fuchsia-500"
+                                  collapsed={hubCollapsed.style}
+                                  onToggle={() => toggleHubSection('style')}
+                                  summary={hubSectionSummary.style}
+                                  trailing={
                                       <div className="flex items-center gap-2">
                                         <Switch checked={hubStyleEnabled} onCheckedChange={setHubStyleEnabled} />
                                         <Tabs value={styleTab} onValueChange={(v:any) => setStyleTab(v)} className="w-fit">
                                           <TabsList className="h-8 bg-white/5 border-white/10 p-0.5">
-                                              <TabsTrigger value="current" className="text-[8px] px-3 font-bold">LATEST</TabsTrigger>
-                                              <TabsTrigger value="vault" className="text-[8px] px-3 font-bold">VAULT</TabsTrigger>
+                                              <TabsTrigger value="current" className="text-[9px] px-3 font-bold">LATEST</TabsTrigger>
+                                              <TabsTrigger value="vault" className="text-[9px] px-3 font-bold">VAULT</TabsTrigger>
                                           </TabsList>
                                         </Tabs>
                                       </div>
-                                  </div>
-                                  <Card className={cn("bg-fuchsia-500/5 border-fuchsia-500/20 p-4 rounded-xl shadow-inner min-h-[160px] transition-opacity", !hubStyleEnabled && "opacity-50 pointer-events-none")}>
-                                      <ScrollArea className="h-[160px] pr-2">
+                                  }
+                              >
+                                  <Card className={cn("bg-fuchsia-500/5 border-fuchsia-500/20 p-3 rounded-xl shadow-inner transition-opacity", !hubStyleEnabled && "opacity-50 pointer-events-none")}>
                                           {styleTab === 'current' ? (
-                                              <div className="space-y-4">
-                                                  <div className="p-3 bg-background/40 border border-fuchsia-500/10 rounded-lg space-y-3">
-                                                      <div className="flex justify-between items-center text-[8px] font-bold uppercase text-fuchsia-700">
-                                                          <span>Active Profiling</span>
-                                                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSaveStyleNamingOpen(true)}><Save className="h-3 w-3" /></Button>
-                                                      </div>
-                                                      <div className="space-y-1">
-                                                          <div className="flex justify-between text-[8px] font-bold uppercase"><span>Vocab</span><span>{hubStyleMetrics.vocabularyScore}%</span></div>
-                                                          <Progress value={hubStyleMetrics.vocabularyScore} className="h-1 bg-fuchsia-500/10" />
-                                                      </div>
-                                                      <div className="space-y-1">
-                                                          <div className="flex justify-between text-[8px] font-bold uppercase"><span>Complexity</span><span>{hubStyleMetrics.rhymeComplexity}%</span></div>
-                                                          <Progress value={hubStyleMetrics.rhymeComplexity} className="h-1 bg-fuchsia-500/10" />
-                                                      </div>
-                                                      <p className="text-[9px] text-muted-foreground italic leading-relaxed">"{hubStyleAnalysis}"</p>
+                                              <div className="p-3 bg-background/40 border border-fuchsia-500/10 rounded-lg space-y-3">
+                                                  <div className="flex justify-between items-center text-[10px] font-bold uppercase text-fuchsia-700">
+                                                      <span>Active Profiling</span>
+                                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSaveStyleNamingOpen(true)}><Save className="h-3.5 w-3.5" /></Button>
                                                   </div>
+                                                  <div className="grid grid-cols-2 gap-3">
+                                                      <div className="space-y-1">
+                                                          <div className="flex justify-between text-[10px] font-bold uppercase"><span>Vocab</span><span>{hubStyleMetrics.vocabularyScore}%</span></div>
+                                                          <Progress value={hubStyleMetrics.vocabularyScore} className="h-1.5 bg-fuchsia-500/10" />
+                                                      </div>
+                                                      <div className="space-y-1">
+                                                          <div className="flex justify-between text-[10px] font-bold uppercase"><span>Complexity</span><span>{hubStyleMetrics.rhymeComplexity}%</span></div>
+                                                          <Progress value={hubStyleMetrics.rhymeComplexity} className="h-1.5 bg-fuchsia-500/10" />
+                                                      </div>
+                                                  </div>
+                                                  <p className="text-[10px] font-bold uppercase text-fuchsia-500/80">Cadence: {hubStyleMetrics.cadenceMap}</p>
+                                                  <p className="text-xs text-foreground/90 italic leading-relaxed whitespace-pre-wrap break-words">"{hubStyleAnalysis || 'No style extracted yet — run DNA extraction or load a preset.'}"</p>
                                               </div>
                                           ) : (
-                                              <div className="space-y-3">
+                                              <div className="space-y-2 max-h-[min(18vh,160px)] overflow-y-auto studio-scrollbar pr-1">
                                                   {album?.stylePresets && album.stylePresets.length > 0 ? album.stylePresets.map((s, i) => (
-                                                      <Card key={i} className="bg-background/40 border-white/5 p-3 flex items-center justify-between shadow-lg">
+                                                      <Card key={i} className="bg-background/40 border-white/5 p-2.5 flex items-center justify-between shadow-lg">
                                                           <div className="min-w-0">
-                                                              <p className="text-[10px] font-bold text-fuchsia-400 truncate uppercase">{s.name}</p>
-                                                              <p className="text-[7px] text-muted-foreground uppercase">{s.metrics.cadenceMap}</p>
+                                                              <p className="text-xs font-bold text-fuchsia-400 truncate uppercase">{s.name}</p>
+                                                              <p className="text-[10px] text-muted-foreground uppercase">{s.metrics.cadenceMap}</p>
                                                           </div>
                                                           <div className="flex items-center gap-2">
                                                             <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={() => { updateAlbum(album.id, { stylePresets: album.stylePresets?.filter((_, idx) => idx !== i) }); toast({ title: "Style DNA Erased" }); }}><Trash2 className="h-3 w-3" /></Button>
-                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-fuchsia-400" onClick={() => { setHubStyleAnalysis(s.analysis); setHubStyleMetrics(s.metrics); }}><RefreshCw className="h-3 w-3" /></Button>
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-fuchsia-400" onClick={() => { setHubStyleAnalysis(s.analysis); setHubStyleMetrics(s.metrics); markHubSeeded('style'); }}><RefreshCw className="h-3 w-3" /></Button>
                                                           </div>
                                                       </Card>
-                                                  )) : <p className="text-center text-[9px] uppercase opacity-40 py-10">No Style Strains saved.</p>}
+                                                  )) : <p className="text-center text-xs uppercase opacity-40 py-6">No Style Strains saved.</p>}
                                               </div>
                                           )}
-                                      </ScrollArea>
                                   </Card>
-                              </div>
+                              </HubSectionShell>
 
-                              <div className="space-y-4">
-                                  <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2 text-rose-500">
-                                          <Shield className="h-5 w-5" />
-                                          <h3 className="font-headline font-bold text-xl uppercase">Guardrails</h3>
-                                  </div>
-                                  <Switch checked={enableGuardrails} onCheckedChange={enableGuardrails => setEnableGuardrails(enableGuardrails)} />
-                                  </div>
-                                  <Card className={cn("bg-rose-500/5 border-rose-500/20 p-4 rounded-xl space-y-4 transition-opacity", !enableGuardrails && "opacity-50 pointer-events-none")}>
+                              <HubSectionShell
+                                  title="Guardrails"
+                                  icon={Shield}
+                                  colorClass="text-rose-500"
+                                  collapsed={hubCollapsed.guardrails}
+                                  onToggle={() => toggleHubSection('guardrails')}
+                                  summary={hubSectionSummary.guardrails}
+                                  trailing={<Switch checked={enableGuardrails} onCheckedChange={setEnableGuardrails} />}
+                              >
+                                  <Card className={cn("bg-rose-500/5 border-rose-500/20 p-3 rounded-xl space-y-3 transition-opacity", !enableGuardrails && "opacity-50 pointer-events-none")}>
                                       <div className="space-y-1">
                                         <Label className="text-[9px] font-bold uppercase text-rose-800">Negative Prompt</Label>
                                         <Input 
@@ -1007,7 +1724,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                         />
                                       </div>
                                   </Card>
-                              </div>
+                              </HubSectionShell>
                           </div>
                       </div>
                   </div>
@@ -1055,17 +1772,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                           <Badge variant="outline" className="text-[8px] uppercase border-primary/30 text-primary">Pro required to archive custom DNA</Badge>
                         )}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {renderAnalysisField('Themes', wizardState.analysis.themes, Link2, 'setting_world')}
-                        {renderAnalysisField('Emotion', `${wizardState.analysis.emotionalTone.primaryEmotion} / ${wizardState.analysis.emotionalTone.secondaryEmotion}`, Compass, 'emotion_core')}
-                        {renderAnalysisField('Shift', wizardState.analysis.emotionalShift, ArrowRightLeft, 'trigger_moment')}
-                        {renderAnalysisField('Arc', wizardState.analysis.narrativeArc, GitBranch, 'message_truth')}
-                        {renderAnalysisField('POV', wizardState.analysis.pov, UserCircle, 'setting_world')}
-                        {renderAnalysisField('Tense', wizardState.analysis.tense, TimerReset, 'trigger_moment')}
-                        {renderAnalysisField('Structure', wizardState.analysis.structure, LayoutTemplate, 'message_truth')}
-                        {renderAnalysisField('Technical Fingerprint', wizardState.analysis.voiceStyle, Fingerprint, 'tone_palette')}
-                        {renderAnalysisField('Motifs', wizardState.analysis.motifs, Target, 'setting_world')}
-                    </div>
+                    {renderAnalysisStrainLayout(wizardState.analysis)}
                 </div>
             </ScrollArea>
           )}
@@ -1094,16 +1801,32 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                         "p-8 border-2 cursor-pointer transition-all hover:scale-[1.02] flex flex-col justify-between min-h-72 h-auto shadow-xl overflow-visible", 
                                         isSelected ? "border-primary bg-primary/10 shadow-[0_0_30px_rgba(59,130,246,0.15)]" : "border-border/50 bg-card hover:bg-white/5"
                                     )} 
-                                    onClick={() => setWizardState(prev => {
-                                        const active = prev.selectedDirections.some(d => d.name === dir.name);
-                                        return { ...prev, selectedDirections: active ? prev.selectedDirections.filter(d => d.name !== dir.name) : [...prev.selectedDirections, dir] };
-                                    })}
+                                    onClick={() => toggleRemixDirection(dir)}
                                 >
                                     <div className="space-y-4">
                                         <h4 className="text-sm font-bold uppercase text-primary tracking-[0.2em]">{dir.name}</h4>
                                         <p className="text-sm text-muted-foreground leading-relaxed font-code">{dir.description}</p>
                                     </div>
-                                    {isSelected && <div className="flex justify-end pt-2"><CheckCircle2 className="h-6 w-6 text-primary" /></div>}
+                                    {isSelected && (
+                                        <div className="pt-4 space-y-3">
+                                            <div className="flex justify-end"><CheckCircle2 className="h-6 w-6 text-primary" /></div>
+                                            <div onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className="text-[8px] font-bold uppercase text-primary">Influence</span>
+                                                    <span className="text-[8px] font-mono text-muted-foreground">
+                                                        {wizardState.selectedDirections.find((d) => d.name === dir.name)?.weight ?? 50}%
+                                                    </span>
+                                                </div>
+                                                <Slider
+                                                    value={[wizardState.selectedDirections.find((d) => d.name === dir.name)?.weight ?? 50]}
+                                                    min={0}
+                                                    max={100}
+                                                    step={5}
+                                                    onValueChange={([v]) => updateRemixWeight(dir.name, v)}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </Card>
                             );
                         })}
@@ -1232,6 +1955,29 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                       </div>
 
                       <div className="pt-6 border-t border-white/5 space-y-4">
+                        <Card className="border-primary/30 bg-primary/5 p-4 space-y-3">
+                            <CardTitle className="text-[10px] font-bold uppercase text-primary flex items-center gap-2"><CheckCircle2 className="h-3 w-3" /> Apply Draft</CardTitle>
+                            <p className="text-[9px] text-muted-foreground leading-relaxed">
+                              Append adds all generated sections to the bottom of your current sheet. Replace clears existing lyrics and uses this draft only.
+                            </p>
+                            <div className="flex flex-col gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full h-9 text-[9px] font-bold uppercase border-primary/30 text-primary justify-start gap-2"
+                                onClick={() => handleApplyGeneratedDraft('append')}
+                              >
+                                <PlusCircle className="h-3.5 w-3.5 shrink-0" /> Add to Current Page
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="w-full h-9 text-[9px] font-bold uppercase bg-primary text-white justify-start gap-2"
+                                onClick={() => handleApplyGeneratedDraft('replace')}
+                              >
+                                <Replace className="h-3.5 w-3.5 shrink-0" /> Replace Current Lyrics
+                              </Button>
+                            </div>
+                        </Card>
                         <Card className="border-rose-500/30 bg-rose-500/5 p-4 space-y-3">
                             <CardTitle className="text-[10px] font-bold uppercase text-rose-500 flex items-center gap-2"><RefreshCw className="h-3 w-3" /> Neural Refinement</CardTitle>
                             <div className="space-y-1.5">
@@ -1277,9 +2023,10 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                       </Button>
                   )}
                   {step === 5 && (
-                      <div className="flex w-full gap-4 max-w-lg">
-                          <Button variant="outline" size="lg" className="flex-1 h-14 text-lg font-bold rounded-full" onClick={() => setStep(10)}><RefreshCw className="mr-2 h-6 w-6" /> Re-Calibrate</Button>
-                          <Button size="lg" className="flex-1 h-14 text-lg font-bold rounded-full bg-primary text-white shadow-lg" onClick={handleApplyGeneratedDraft}><CheckCircle2 className="mr-2 h-6 w-6" /> Add to Sheet</Button>
+                      <div className="flex w-full gap-3 max-w-3xl">
+                          <Button variant="outline" size="lg" className="flex-1 h-14 text-sm font-bold rounded-full" onClick={() => setStep(10)}><RefreshCw className="mr-2 h-5 w-5 shrink-0" /> Re-Calibrate</Button>
+                          <Button variant="outline" size="lg" className="flex-1 h-14 text-sm font-bold rounded-full border-primary/40 text-primary" onClick={() => handleApplyGeneratedDraft('append')}><PlusCircle className="mr-2 h-5 w-5 shrink-0" /> Add to Page</Button>
+                          <Button size="lg" className="flex-1 h-14 text-sm font-bold rounded-full bg-primary text-white shadow-lg" onClick={() => handleApplyGeneratedDraft('replace')}><Replace className="mr-2 h-5 w-5 shrink-0" /> Replace Sheet</Button>
                       </div>
                   )}
               </div>
@@ -1300,6 +2047,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
         onConfirm={(name: string) => handleConfirmSaveStyle(name)} 
         type="Style" 
     />
+    </TooltipProvider>
     </>
   );
 }

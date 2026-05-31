@@ -51,6 +51,8 @@ import {
     NotebookPen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { rebalanceRemixWeights, formatRemixDirectionsWithWeights } from '@/lib/dna-strands';
+import { Slider } from '@/components/ui/slider';
 import { StudioLoader } from '@/components/studio-loader';
 
 // --- Wizard Components ---
@@ -83,6 +85,26 @@ function RelayWizardContent() {
         excludedWords: '',
     });
     const [permissionChecked, setPermissionChecked] = useState(false);
+    const [specialInstructionsWeight, setSpecialInstructionsWeight] = useState(100);
+
+    const toggleRemixDirection = (dir: WizardDirection) => {
+        setWizardState((prev) => {
+            const active = prev.selectedDirections.some((d) => d.name === dir.name);
+            const next = active
+                ? prev.selectedDirections.filter((d) => d.name !== dir.name)
+                : [...prev.selectedDirections, { ...dir, weight: 50 }];
+            return { ...prev, selectedDirections: rebalanceRemixWeights(next) };
+        });
+    };
+
+    const updateRemixWeight = (name: string, weight: number) => {
+        setWizardState((prev) => ({
+            ...prev,
+            selectedDirections: prev.selectedDirections.map((d) =>
+                d.name === name ? { ...d, weight } : d
+            ),
+        }));
+    };
 
     // Step 1: Analyze
     const handleAnalyze = async () => {
@@ -125,10 +147,14 @@ function RelayWizardContent() {
         setIsProcessing(true);
         setGenerating(true, 'Synthesizing Original Content...');
         try {
-            const directionStr = wizardState.selectedDirections.map(d => `${d.name}: ${d.description}`).join(' | ');
+            const directionStr = formatRemixDirectionsWithWeights(
+                wizardState.selectedDirections,
+                specialInstructionsWeight
+            );
             const result = await generateRelayDraft(await withAiAuth({
                 analysis: JSON.stringify(wizardState.analysis),
                 direction: directionStr,
+                specialInstructionsWeight,
                 excludedWords: wizardState.excludedWords,
                 userName: user?.displayName
             }));
@@ -316,23 +342,32 @@ function RelayWizardContent() {
                                         "cursor-pointer transition-all duration-300 hover:scale-[1.02] border-2",
                                         isSelected ? "border-primary bg-primary/10 shadow-[0_0_20px_rgba(59,130,246,0.15)]" : "border-border/50 bg-card hover:bg-muted/30"
                                     )}
-                                    onClick={() => {
-                                        setWizardState(prev => {
-                                            const active = prev.selectedDirections.some(d => d.name === dir.name);
-                                            return {
-                                                ...prev,
-                                                selectedDirections: active 
-                                                    ? prev.selectedDirections.filter(d => d.name !== dir.name)
-                                                    : [...prev.selectedDirections, dir]
-                                            };
-                                        });
-                                    }}
+                                    onClick={() => toggleRemixDirection(dir)}
                                 >
                                     <CardHeader className="pb-2 flex-row items-center justify-between">
                                         <CardTitle className="text-xs font-bold uppercase tracking-widest truncate pr-4">{dir.name}</CardTitle>
                                         {isSelected && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
                                     </CardHeader>
-                                    <CardContent><p className="text-[10px] leading-relaxed text-muted-foreground">{dir.description}</p></CardContent>
+                                    <CardContent className="space-y-3">
+                                        <p className="text-[10px] leading-relaxed text-muted-foreground">{dir.description}</p>
+                                        {isSelected && (
+                                            <div onClick={(e) => e.stopPropagation()} className="space-y-1.5 pt-2 border-t border-primary/10">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[8px] font-bold uppercase text-primary">Influence</span>
+                                                    <span className="text-[8px] font-mono text-muted-foreground">
+                                                        {wizardState.selectedDirections.find((d) => d.name === dir.name)?.weight ?? 50}%
+                                                    </span>
+                                                </div>
+                                                <Slider
+                                                    value={[wizardState.selectedDirections.find((d) => d.name === dir.name)?.weight ?? 50]}
+                                                    min={0}
+                                                    max={100}
+                                                    step={5}
+                                                    onValueChange={([v]) => updateRemixWeight(dir.name, v)}
+                                                />
+                                            </div>
+                                        )}
+                                    </CardContent>
                                 </Card>
                             );
                         })}
