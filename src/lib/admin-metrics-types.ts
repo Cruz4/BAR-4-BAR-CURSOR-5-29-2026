@@ -58,4 +58,13 @@ export type AdminMetricsSnapshot = {
     userName: string | null;
     metadata: Record<string, unknown>;
   }>;
+  gamification: {
+    usersWithAchievements: number;
+    achievementUnlockEvents: number;
+    streakMilestoneEvents: number;
+    shareCardGenerated: number;
+    shareCardOpened: number;
+    leaderboardViews: number;
+    avgStreakActiveUsers: number;
+  };
 };

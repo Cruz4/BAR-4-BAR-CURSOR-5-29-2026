@@ -85,6 +85,8 @@ import { TooltipProvider } from './ui/tooltip';
 import { DataContext } from '@/context/data-context';
 import { useAuth } from '@/hooks/use-auth';
 import { format } from 'date-fns';
+import { countNonEmptyBars } from '@/lib/gamification/bar-count';
+import { cn } from '@/lib/utils';
 
 function CreateTrackDialog({ open, onOpenChange, albumId }: { open: boolean, onOpenChange: (open: boolean) => void, albumId: string }) {
     const [title, setTitle] = useState('');
@@ -305,6 +307,212 @@ function EditCoverArtDialog({ album, onOpenChange }: { album: Album, onOpenChang
     );
 }
 
+function LooseTracksSidebar({
+  tracks,
+  realAlbums,
+  onMoveTrack,
+  onAddTrack,
+}: {
+  tracks: Track[];
+  realAlbums: Album[];
+  onMoveTrack: (trackId: string, targetAlbumId: string) => void;
+  onAddTrack: () => void;
+}) {
+  const genreCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    tracks.forEach((t) => {
+      const g = t.vibe?.genre?.trim() || 'Untitled vibe';
+      counts.set(g, (counts.get(g) || 0) + 1);
+    });
+    return Array.from(counts.entries()).slice(0, 4);
+  }, [tracks]);
+
+  const totalBars = useMemo(
+    () => tracks.reduce((sum, t) => sum + countNonEmptyBars(t.sections), 0),
+    [tracks]
+  );
+
+  return (
+    <div className="space-y-6">
+      <Card className="overflow-hidden rounded-2xl border-sky-500/20 bg-gradient-to-br from-sky-500/10 via-black/50 to-primary/10 shadow-xl">
+        <CardHeader className="pb-3">
+          <CardTitle className="font-headline text-lg uppercase tracking-tight text-white">Vault Snapshot</CardTitle>
+          <CardDescription className="text-[9px] uppercase tracking-widest font-bold text-sky-400/80">
+            Singles waiting for a home
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-3 gap-3 pb-5">
+          <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
+            <p className="font-headline text-2xl text-white">{tracks.length}</p>
+            <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Tracks</p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
+            <p className="font-headline text-2xl text-white">{totalBars}</p>
+            <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Bars</p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
+            <p className="font-headline text-2xl text-white">{realAlbums.length}</p>
+            <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Albums</p>
+          </div>
+        </CardContent>
+        {genreCounts.length > 0 && (
+          <div className="border-t border-white/5 px-5 py-4 flex flex-wrap gap-2">
+            {genreCounts.map(([genre, count]) => (
+              <Badge key={genre} variant="outline" className="text-[8px] border-sky-500/25 text-sky-300 font-code">
+                {genre} · {count}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <Card className="rounded-2xl border-white/10 bg-black/40 backdrop-blur-xl shadow-xl">
+        <CardHeader className="pb-3">
+          <CardTitle className="font-headline text-lg uppercase tracking-tight text-white flex items-center gap-2">
+            <Move className="h-4 w-4 text-primary" />
+            Assign to Album
+          </CardTitle>
+          <CardDescription className="text-[9px] uppercase tracking-widest font-bold text-muted-foreground">
+            Pick a track, then park it in a collection
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 pb-5">
+          {realAlbums.length > 0 ? (
+            realAlbums.map((targetAlbum) => (
+              <DropdownMenu key={targetAlbum.id}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left hover:border-primary/30 hover:bg-primary/5 transition-all"
+                  >
+                    <div className="h-10 w-10 shrink-0 rounded-lg border border-white/10 bg-neutral-900 overflow-hidden flex items-center justify-center">
+                      {targetAlbum.coverArtUrl ? (
+                        <Image src={targetAlbum.coverArtUrl} alt="" width={40} height={40} className="h-full w-full object-cover" />
+                      ) : (
+                        <ListMusic className="h-4 w-4 text-muted-foreground/50" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-headline text-sm uppercase text-white truncate">{targetAlbum.title}</p>
+                      <p className="text-[9px] font-code text-muted-foreground uppercase">
+                        {targetAlbum.tracks?.length ?? 0} track{(targetAlbum.tracks?.length ?? 0) === 1 ? '' : 's'}
+                      </p>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-card border-white/10 w-56 max-h-64 overflow-y-auto">
+                  {tracks.map((t) => (
+                    <DropdownMenuItem
+                      key={t.id}
+                      onClick={() => onMoveTrack(t.id, targetAlbum.id)}
+                      className="text-[10px] font-bold uppercase truncate"
+                    >
+                      <PlusCircle className="mr-2 h-3 w-3 shrink-0" />
+                      {t.title}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ))
+          ) : (
+            <div className="rounded-xl border border-dashed border-white/10 p-6 text-center space-y-3">
+              <p className="text-[10px] font-code text-muted-foreground uppercase tracking-widest">No albums yet</p>
+              <Button variant="outline" size="sm" asChild className="text-[9px] font-bold uppercase">
+                <Link href="/">Create from The Vault</Link>
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl border-primary/15 bg-gradient-to-t from-primary/10 to-transparent">
+        <CardContent className="p-5 space-y-3">
+          <p className="text-[10px] font-code text-muted-foreground leading-relaxed">
+            Loose tracks stay editable here until you assign them. Use the card menu or the shelf above to move ideas into an album blueprint.
+          </p>
+          <Button onClick={onAddTrack} className="w-full h-10 font-bold text-[10px] uppercase tracking-widest">
+            <PlusCircle className="mr-2 h-4 w-4" /> New Loose Track
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function LooseTrackCard({
+  track,
+  index,
+  albumId,
+  realAlbums,
+  onMoveTrack,
+  onDelete,
+}: {
+  track: Track;
+  index: number;
+  albumId: string;
+  realAlbums: Album[];
+  onMoveTrack: (trackId: string, targetAlbumId: string) => void;
+  onDelete: () => void;
+}) {
+  const barCount = countNonEmptyBars(track.sections);
+  const sectionCount = track.sections?.length ?? 0;
+
+  return (
+    <div className="group relative flex flex-col rounded-2xl border border-white/10 bg-gradient-to-br from-black/60 via-black/40 to-primary/[0.06] p-5 hover:border-primary/35 hover:shadow-[0_0_32px_rgba(59,130,246,0.12)] transition-all min-h-[168px]">
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <span className="font-code text-sm text-primary/70 tabular-nums">{String(index + 1).padStart(2, '0')}</span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white opacity-70 group-hover:opacity-100">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-card border-white/10 w-48">
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="text-[10px] font-bold uppercase">
+                <Move className="mr-2 h-4 w-4" /> Move To Album
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent className="bg-card border-white/10">
+                  {realAlbums.map((targetAlbum) => (
+                    <DropdownMenuItem
+                      key={targetAlbum.id}
+                      onClick={() => onMoveTrack(track.id, targetAlbum.id)}
+                      className="text-[10px] font-bold uppercase"
+                    >
+                      <PlusCircle className="mr-2 h-3 w-3" /> {targetAlbum.title}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onDelete} className="text-red-500 focus:text-red-500 text-[10px] font-bold uppercase">
+              <Trash2 className="mr-2 h-4 w-4" /> Scrap Asset
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <Link href={`/albums/${albumId}/tracks/${track.id}`} className="flex flex-col flex-1 min-w-0">
+        <p className="font-headline text-xl md:text-2xl text-white uppercase tracking-tight group-hover:text-primary transition-colors line-clamp-2">
+          {track.title}
+        </p>
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          <Badge variant="outline" className="h-5 px-2 text-[8px] border-white/10 text-muted-foreground font-code">
+            {track.vibe?.genre || 'No genre'}
+          </Badge>
+          <span className="text-[9px] text-muted-foreground/70 font-code uppercase">{track.vibe?.tempoBPM ?? '—'} BPM</span>
+        </div>
+        <p className="text-[9px] font-code text-muted-foreground/80 uppercase tracking-widest mt-auto pt-4">
+          {barCount} bar{barCount === 1 ? '' : 's'} · {sectionCount} section{sectionCount === 1 ? '' : 's'}
+        </p>
+      </Link>
+    </div>
+  );
+}
+
 export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -344,6 +552,15 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
       toast({ title: "Track Unassigned", description: "Moved to Loose Tracks vault." });
   };
 
+  const handleMoveToAlbum = (trackId: string, targetAlbumId: string) => {
+    moveTrack(trackId, albumId, targetAlbumId);
+    const target = realAlbums.find((a) => a.id === targetAlbumId);
+    toast({
+      title: 'Track Assigned',
+      description: target ? `Moved to ${target.title}.` : 'Track assigned to album.',
+    });
+  };
+
   const formattedCreationDate = useMemo(() => {
     if (!album?.createdAt) return 'Initialized';
     const date = new Date(album.createdAt);
@@ -353,23 +570,23 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const isUnassignedVault = album?.id === 'unassigned';
   const realAlbums = albums.filter(a => a.id !== 'unassigned');
 
-  if (loading || !album) return <div className="flex h-screen items-center justify-center bg-[#0a121e]"><Loader className="animate-spin h-8 w-8 text-primary" /></div>;
+  if (loading || !album) return <div className="flex h-screen items-center justify-center"><Loader className="animate-spin h-8 w-8 text-primary" /></div>;
 
   return (
     <TooltipProvider>
-      <div className="container mx-auto px-6 py-10 relative min-h-screen selection:bg-primary/30 overflow-x-hidden bg-[#0a121e]">
+      <div className="container mx-auto px-6 py-10 relative min-h-screen selection:bg-primary/30 overflow-x-hidden">
         <div className="absolute inset-0 top-0 bottom-0 left-0 right-0 pointer-events-none">
             <div className="h-full w-full bg-[repeating-linear-gradient(theme(colors.border/.4),theme(colors.border/.4)_1px,transparent_1px,transparent_24px)] opacity-50"></div>
             <div className="absolute inset-y-0 left-0 w-px bg-primary/20 ml-12 md:ml-24"></div>
         </div>
         
-        <div className="relative z-10 pl-16 md:pl-32">
+        <div className={cn('relative z-10', isUnassignedVault ? 'pl-8 md:pl-14' : 'pl-16 md:pl-32')}>
             <Button variant="ghost" size="sm" onClick={() => router.push('/')} className="mb-6 -ml-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-all">
                 <ChevronLeft className="mr-2 h-4 w-4" /> Collection
             </Button>
 
-            <div className="flex flex-col lg:flex-row items-start justify-between gap-12 mb-16">
-                <div className="flex-grow w-full space-y-4">
+            <div className="flex flex-col lg:flex-row items-start justify-between gap-8 mb-12">
+                <div className={cn('space-y-4', isUnassignedVault ? 'lg:max-w-2xl' : 'flex-grow w-full')}>
                     <Input 
                         defaultValue={album.title} 
                         onBlur={(e) => updateAlbum(album.id, { title: e.target.value })} 
@@ -383,10 +600,15 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                     />
                     <div className="flex items-center gap-4 pt-2">
                         <span className="text-[10px] font-code text-muted-foreground/60 uppercase">Created {formattedCreationDate}</span>
+                        {isUnassignedVault && (
+                          <Badge variant="outline" className="text-[8px] border-sky-500/30 text-sky-400 font-mono">
+                            {album.tracks?.length ?? 0} loose
+                          </Badge>
+                        )}
                     </div>
                 </div>
                 
-                {!isUnassignedVault && (
+                {!isUnassignedVault ? (
                     <div className="relative group shrink-0">
                         <div className="w-48 h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8)] border-4 border-white/5 bg-neutral-900 flex flex-col items-center justify-center relative">
                             {album.coverArtUrl ? (
@@ -404,11 +626,26 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                             </div>
                         </div>
                     </div>
+                ) : (
+                    <div className="w-full lg:w-[min(100%,340px)] shrink-0 rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/10 via-black/50 to-primary/10 p-5 shadow-xl">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2.5 rounded-xl bg-sky-500/15 border border-sky-500/25">
+                                <CassetteTape className="h-6 w-6 text-sky-400" />
+                            </div>
+                            <div>
+                                <p className="font-headline text-lg uppercase text-white tracking-tight">Idea Shelf</p>
+                                <p className="text-[9px] font-code text-muted-foreground uppercase tracking-widest">Unassigned workspace</p>
+                            </div>
+                        </div>
+                        <p className="text-[11px] font-code text-muted-foreground leading-relaxed">
+                            Drafts live here until you slot them into an album. Open any card to write, or assign from the shelf on the right.
+                        </p>
+                    </div>
                 )}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 pb-40">
-                <div className="lg:col-span-2 space-y-10">
+            <div className={cn('grid gap-8 pb-40', isUnassignedVault ? 'grid-cols-1 xl:grid-cols-12' : 'grid-cols-1 lg:grid-cols-3')}>
+                <div className={cn('space-y-10', isUnassignedVault ? 'xl:col-span-8' : 'lg:col-span-2')}>
                     <Card className="bg-black/40 border-white/5 backdrop-blur-3xl shadow-2xl overflow-hidden rounded-2xl">
                         <CardHeader className="flex flex-row items-center justify-between p-8 border-b border-white/5">
                             <div className="flex items-center gap-4">
@@ -429,9 +666,25 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 </Button>
                             </div>
                         </CardHeader>
-                        <CardContent className="p-0">
-                            <div className="divide-y divide-white/5">
-                                {album.tracks?.length > 0 ? album.tracks.map((track, index) => (
+                        <CardContent className={cn(isUnassignedVault ? 'p-6' : 'p-0')}>
+                            {album.tracks?.length > 0 ? (
+                              isUnassignedVault ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {album.tracks.map((track, index) => (
+                                    <LooseTrackCard
+                                      key={track.id}
+                                      track={track}
+                                      index={index}
+                                      albumId={album.id}
+                                      realAlbums={realAlbums}
+                                      onMoveTrack={handleMoveToAlbum}
+                                      onDelete={() => setTrackToDelete(track)}
+                                    />
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="divide-y divide-white/5">
+                                {album.tracks.map((track, index) => (
                                     <div key={track.id} className="group flex items-center p-6 hover:bg-primary/5 transition-all">
                                         <div className="text-muted-foreground font-code text-xl mr-6 w-8 text-right opacity-30 group-hover:opacity-100 group-hover:text-primary transition-all">
                                             {String(index + 1).padStart(2, '0')}
@@ -479,18 +732,29 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                             </DropdownMenu>
                                         </div>
                                     </div>
-                                )) : (
+                                ))}
+                                </div>
+                              )
+                            ) : (
                                     <div className="py-20 text-center flex flex-col items-center gap-6 opacity-30">
                                         <CassetteTape className="h-16 w-16" />
                                         <p className="font-code text-sm uppercase tracking-[0.4em]">No tracks in this blueprint</p>
                                     </div>
                                 )}
-                            </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                <div className="space-y-10">
+                <div className={cn(isUnassignedVault ? 'xl:col-span-4 space-y-6' : 'space-y-10')}>
+                    {isUnassignedVault ? (
+                      <LooseTracksSidebar
+                        tracks={album.tracks ?? []}
+                        realAlbums={realAlbums}
+                        onMoveTrack={handleMoveToAlbum}
+                        onAddTrack={() => setCreateTrackOpen(true)}
+                      />
+                    ) : (
+                    <>
                     {!isUnassignedVault && (
                         <Card className="bg-emerald-500/5 border-emerald-500/20 shadow-2xl rounded-2xl">
                             <CardHeader className="flex flex-row items-center justify-between p-8">
@@ -532,6 +796,8 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 <Trash2 className="mr-2 h-4 w-4" /> Delete Album
                             </Button>
                         </div>
+                    )}
+                    </>
                     )}
                 </div>
             </div>

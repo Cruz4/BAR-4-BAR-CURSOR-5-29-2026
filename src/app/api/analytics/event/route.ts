@@ -16,6 +16,12 @@ const ALLOWED_EVENTS: AnalyticsEventName[] = [
   'upgrade_click',
   'free_limit_hit',
   'ai_action',
+  'achievement_unlocked',
+  'quest_step_complete',
+  'streak_milestone',
+  'share_card_generated',
+  'share_card_opened',
+  'leaderboard_view',
 ];
 
 export async function POST(req: Request) {

@@ -11,6 +11,14 @@ export interface User {
   subscriptionStatus?: 'active' | 'canceled' | 'none';
   subscriptionTier?: 'monthly' | 'yearly' | 'none';
   subscriptionId?: string;
+  /** Unique code for refer-a-friend links */
+  referralCode?: string;
+  /** User id of referrer */
+  referredBy?: string;
+  /** Successful referrals credited (max 4) */
+  referralCount?: number;
+  /** ISO timestamp — first lyrics-page guided tour completed or skipped */
+  lyricsTutorialCompletedAt?: string;
 }
 
 export type Direction = {

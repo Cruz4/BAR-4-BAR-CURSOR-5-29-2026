@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LogOut, LayoutDashboard, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer } from 'lucide-react';
+import { LogOut, LayoutDashboard, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -115,7 +115,7 @@ export function Header() {
             
             <div className="flex justify-center items-center overflow-hidden">
                 <Link href="/" className="flex items-center space-x-3 text-center group whitespace-nowrap">
-                    <div className="bg-black rounded-xl group-hover:scale-110 transition-transform duration-300 shrink-0 border border-primary/20 w-9 h-9 overflow-hidden flex items-center justify-center">
+                    <div className="bg-black rounded-xl group-hover:scale-110 transition-transform duration-300 shrink-0 border border-primary/20 w-11 h-11 overflow-hidden flex items-center justify-center p-0.5">
                         <img src="/Logo.png" alt="Bar 4 Bar" className="h-full w-full object-contain" />
                     </div>
                     <div className="flex flex-col text-left">
@@ -140,7 +140,7 @@ export function Header() {
 
                 <Popover>
                     <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8 md:h-9 gap-1.5 md:gap-2 font-code px-2 md:px-3 border-primary/20 hover:bg-primary/5 transition-all">
+                        <Button variant="outline" size="sm" data-tour="ink-balance" className="h-8 md:h-9 gap-1.5 md:gap-2 font-code px-2 md:px-3 border-primary/20 hover:bg-primary/5 transition-all">
                             <Droplets className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary shrink-0"/>
                             <span className="text-xs md:text-sm">{inkBalance.toLocaleString()}</span>
                         </Button>
@@ -210,6 +210,7 @@ export function Header() {
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => router.push('/')}><LayoutDashboard className="mr-2 h-4 w-4" /><span>Dashboard</span></DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => router.push('/studio-progress')}><Trophy className="mr-2 h-4 w-4 text-amber-400" /><span>Studio Progress</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage')}><Droplets className="mr-2 h-4 w-4" /><span>Ink Store & Settings</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=cloud')}><Star className="mr-2 h-4 w-4 text-pink-400" /><span>Studio Tier</span></DropdownMenuItem>
                       <DropdownMenuSeparator />

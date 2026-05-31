@@ -4,7 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase/client/firebase';
-import { collection, query, doc, updateDoc, orderBy, onSnapshot, increment, getDoc, limit, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, doc, updateDoc, orderBy, increment, getDoc, limit, setDoc, deleteDoc } from 'firebase/firestore';
+import { subscribeQuery } from '@/lib/firebase/client/firestore-subscribe';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -77,15 +78,22 @@ export default function AdminPage() {
     });
 
     const logsRef = collection(db, 'system', 'logs', 'entries');
-    const unsubLogs = onSnapshot(query(logsRef, orderBy('timestamp', 'desc'), limit(100)), (snap) => {
-      setSystemLogs(snap.docs.map(d => ({ ...d.data(), id: d.id })) as SystemLog[]);
-    }, (err) => {
-      console.error('[admin] ops log listener:', err);
-    });
+    const unsubLogs = subscribeQuery(
+      query(logsRef, orderBy('timestamp', 'desc'), limit(100)),
+      (rows) => {
+        setSystemLogs(rows as SystemLog[]);
+      },
+      (err) => {
+        console.error('[admin] ops log listener:', err);
+      },
+      20000
+    );
 
     const usersRef = collection(db, 'users');
-    const unsubUsers = onSnapshot(usersRef, (snap) => {
-      const allUsers = snap.docs.map(d => ({ ...d.data(), id: d.id })) as User[];
+    const unsubUsers = subscribeQuery(
+      usersRef,
+      (rows) => {
+      const allUsers = rows as User[];
       setUsers(allUsers.filter(u => u.status !== 'blocked'));
       setBlockedUsers(allUsers.filter(u => u.status === 'blocked'));
       
@@ -106,7 +114,7 @@ export default function AdminPage() {
       console.error('[admin] users listener:', err);
       toast({ variant: 'destructive', title: 'Roster access error', description: (err as Error).message });
       setRosterLoading(false);
-    });
+    }, 25000);
 
     return () => { unsubUsers(); unsubLogs(); };
   }, [user, authLoading, authReady, router, toast]);
@@ -169,7 +177,7 @@ export default function AdminPage() {
       }
   };
 
-  if (authLoading || !authReady) return <div className="flex h-screen items-center justify-center bg-background"><StudioLoader size="lg" /></div>;
+  if (authLoading || !authReady) return <div className="flex h-screen items-center justify-center"><StudioLoader size="lg" /></div>;
   if (!user || user.role !== 'admin') return null;
 
   return (

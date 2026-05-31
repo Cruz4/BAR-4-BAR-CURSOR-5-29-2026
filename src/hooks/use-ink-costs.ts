@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client/firebase';
+import { subscribeDocument } from '@/lib/firebase/client/firestore-subscribe';
 import { mergeStudioCosts, type StudioCosts } from '@/lib/studio-costs';
 import type { InkActionKey } from '@/lib/ink-labels';
 import { inkButtonLabel, inkTooltip } from '@/lib/ink-labels';
@@ -11,12 +12,13 @@ export function useInkCosts() {
   const [costs, setCosts] = useState<StudioCosts>(() => mergeStudioCosts());
 
   useEffect(() => {
-    const unsub = onSnapshot(
+    const unsub = subscribeDocument(
       doc(db, 'config', 'studio'),
-      (snap) => {
-        setCosts(mergeStudioCosts(snap.data()?.costs));
+      (data) => {
+        setCosts(mergeStudioCosts(data?.costs));
       },
-      () => undefined
+      () => undefined,
+      60000
     );
     return () => unsub();
   }, []);

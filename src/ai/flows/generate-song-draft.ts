@@ -142,7 +142,7 @@ You MUST use the following words throughout the draft, integrating them naturall
 SPECIAL INSTRUCTIONS: 
 {{{lyricsAbout}}}
 
-DIRECTION (MASTER ARCHITECTURE):
+DIRECTION (MASTER ARCHITECTURE — merged from active Inherit Album / Track DNA toggles):
 - World: {{mergedDirection.setting_world}}
 - Emotion: {{mergedDirection.emotion_core}}
 - Trigger: {{mergedDirection.trigger_moment}}
@@ -166,8 +166,15 @@ const generateDraftFlow = ai.defineFlow(
     outputSchema: GenerateDraftOutputSchema,
   },
   async (input) => {
-    const albumDirection = input.useAlbumDirection ? input.albumDirection : {};
-    const trackDirection = input.useTrackDirection ? input.trackDirection : { inheritFromAlbum: false };
+    const albumDirection = input.useAlbumDirection ? (input.albumDirection ?? {}) : {};
+    let trackDirection: GenerateDraftInput['trackDirection'];
+    if (input.useTrackDirection) {
+      trackDirection = { ...(input.trackDirection ?? {}), inheritFromAlbum: input.useAlbumDirection };
+    } else if (input.useAlbumDirection) {
+      trackDirection = { inheritFromAlbum: true };
+    } else {
+      trackDirection = { inheritFromAlbum: false };
+    }
     const mergedDirection = mergeDirection(albumDirection, trackDirection);
 
     const promptInput: any = {

@@ -12,18 +12,24 @@ export { PRO_LOCK, proLockShell, proLockIcon, proLockText, markBarAnchorGlow };
 export function LockedSaveButton({
   feature,
   benefit,
+  example,
   className,
   size = 'sm',
 }: {
   feature: string;
   benefit: string;
+  example?: string;
   className?: string;
   size?: 'sm' | 'md';
 }) {
   const dim = size === 'sm' ? 'h-7 w-7' : 'h-9 w-9';
   const icon = size === 'sm' ? 'h-4 w-4' : 'h-4 w-4';
   return (
-    <UpgradeTooltip feature={feature} benefit={benefit} example="Upgrade to Studio Pro to archive your own strains.">
+    <UpgradeTooltip
+      feature={feature}
+      benefit={benefit}
+      example={example ?? `Example: archive "${feature}" on this track and reuse it on every song in the album.`}
+    >
       <Button
         variant="ghost"
         size="icon"
@@ -76,7 +82,11 @@ export function LockedVaultSlot({
   );
 
   return (
-    <UpgradeTooltip feature={label} benefit={sublabel} example="Unlock unlimited albums and tracks with Pro.">
+    <UpgradeTooltip
+      feature={label}
+      benefit={sublabel}
+      example="Example: your second album slot unlocks with Pro — keep separate concepts without deleting work."
+    >
       <div className="pointer-events-auto">{inner}</div>
     </UpgradeTooltip>
   );
@@ -165,14 +175,20 @@ export function OpenTrackSlot({ onClick, filled }: { onClick: () => void; filled
 export function LockedToolbarButton({
   feature,
   benefit,
+  example,
   children,
 }: {
   feature: string;
   benefit: string;
+  example?: string;
   children: React.ReactNode;
 }) {
   return (
-    <UpgradeTooltip feature={feature} benefit={benefit}>
+    <UpgradeTooltip
+      feature={feature}
+      benefit={benefit}
+      example={example ?? 'Upgrade to Studio Pro to unlock this vault action.'}
+    >
       <div className={cn('inline-flex items-center justify-center rounded-xl p-[2px]', proLockShell('sm'))}>
         {children}
       </div>

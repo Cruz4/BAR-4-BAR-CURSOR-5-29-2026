@@ -8,6 +8,8 @@ import { db } from '@/lib/firebase/client/firebase';
 import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import { doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
 import { stripForFirestore } from '@/lib/utils';
+import { countNonEmptyBars } from '@/lib/gamification/bar-count';
+import { postGamificationEvent } from '@/lib/gamification-client';
 
 const UNASSIGNED_ALBUM_ID = 'unassigned';
 
@@ -133,6 +135,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const syncTrackTimeout = useRef<NodeJS.Timeout | null>(null);
   const pendingAlbumUpdates = useRef<Record<string, any>>({});
   const syncAlbumTimeout = useRef<NodeJS.Timeout | null>(null);
+  const albumsRef = useRef<Album[]>([]);
+  const prevBarCountsRef = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    albumsRef.current = albums;
+  }, [albums]);
 
   const performTrackSync = useCallback(async () => {
     if (!user) return;
@@ -151,6 +159,26 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     await batch.commit();
     if (Object.keys(pendingTrackUpdates.current).length === 0 && Object.keys(pendingAlbumUpdates.current).length === 0) {
       setCloudSaveStatus('saved');
+    }
+
+    for (const [trackId, data] of Object.entries(updates)) {
+      const album = albumsRef.current.find((a) => a.id === data.albumId);
+      const track = album?.tracks.find((t) => t.id === trackId);
+      if (!track) continue;
+      const barCount = countNonEmptyBars(track.sections);
+      const prevBarCount = prevBarCountsRef.current[trackId] ?? barCount;
+      prevBarCountsRef.current[trackId] = barCount;
+      void postGamificationEvent('track_saved', {
+        barCount,
+        prevBarCount,
+        trackComplete: track.status === 'complete',
+        albumTrackCount: album?.id !== UNASSIGNED_ALBUM_ID ? (album?.tracks?.length || 0) : 0,
+        sessionBarCount: barCount,
+      }).then(({ unlocks }) => {
+        if (unlocks?.length) {
+          window.dispatchEvent(new CustomEvent('b4b-achievement-unlock', { detail: { unlocks } }));
+        }
+      });
     }
   }, [user]);
 
@@ -396,6 +424,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const shareId = Math.random().toString(36).substring(2, 12).toUpperCase();
     const data = type === 'album' ? getAlbumById(id) : getTrackById('unassigned', id).track;
     await setDoc(doc(db, 'shares', shareId), { id: shareId, type, projectId: id, ownerId: user.id, ownerName: user.displayName, data: JSON.parse(JSON.stringify(data)), createdAt: new Date().toISOString(), views: 0, imports: 0 });
+    void postGamificationEvent('share_created').then(({ unlocks }) => {
+      if (unlocks?.length) {
+        window.dispatchEvent(new CustomEvent('b4b-achievement-unlock', { detail: { unlocks } }));
+      }
+    });
     return shareId;
   }, [user, getAlbumById, getTrackById]);
 

@@ -148,45 +148,57 @@ export default function PricingPage() {
 
   const FAQS = [
     {
-      q: "What is the difference between Residency and Permanent Ink?",
-      a: "Residency Ink is provided by your membership and resets monthly—it does not rollover. Permanent Ink is purchased separately, never expires, and is 'permanent fuel' for your workstation."
+      q: 'What is INK?',
+      a: 'Ink is the digital fuel for the Bar 4 Bar Studio logic. Every high-level neural action—from finding complex rhymes to generating full drafts—consumes a specific amount of Ink.',
     },
     {
-      q: "What is INK?",
-      a: "Ink is the digital fuel for the Bar 4 Bar Studio logic. Every high-level neural action—from finding complex rhymes to generating full drafts—consumes a specific amount of Ink."
+      q: 'What is the difference between Residency and Permanent Ink?',
+      a: 'Residency Ink is provided by your membership and resets monthly—it does not rollover. Permanent Ink is purchased separately, never expires, and is permanent fuel for your workstation.',
     },
     {
-      q: "Is Cloud Sync active on the Free tier?",
-      a: "Yes. Your work syncs across devices. Free visitors get DNA & REMIX, the Generation Workstation, and PDF/track export — but are limited to one album and two tracks, system vault presets (no custom saves), and three Creative Effects."
+      q: 'Who gets the Ink Discounts?',
+      a: 'A 50% discount on Permanent Ink Packs is an exclusive benefit for Yearly Pro members. Monthly Pro members pay standard rates for additional Ink packs.',
     },
     {
-      q: "What is DNA & Remix Mode?",
-      a: "It is our proprietary architectural tool. DNA Extraction pulls themes, motifs, and technical patterns from any source text. Remix Mode then utilizes those extracted 'strains' to synthesize a completely original lyrical draft."
+      q: 'Is Cloud Sync active on the Free tier?',
+      a: 'Yes. Your work syncs across devices. Free visitors get DNA & REMIX, the Generation Workstation, and PDF/track export — but are limited to one album and two tracks, system vault presets (no custom saves), and three Creative Effects.',
     },
     {
-        q: "What is Artist Style Training?",
-        a: "It is our high-fidelity technical extraction protocol. By analyzing your existing lyrics, the workstation learns your unique cadence, vocabulary variety, and rhyme density to anchor future neural suggestions."
+      q: 'What is DNA & Remix Mode?',
+      a: "It is our proprietary architectural tool. DNA Extraction pulls themes, motifs, and technical patterns from any source text. Remix Mode then utilizes those extracted 'strains' to synthesize a completely original lyrical draft.",
     },
     {
-      q: "Can I store full discographies?",
-      a: "Yes. Bar 4 Bar is built to be your career-long rhyme book. Unlike simple note apps, our Vault allows you to organize unlimited albums and tracks (Pro) in a professional structure."
+      q: 'What is Artist Style Training?',
+      a: 'It is our high-fidelity technical extraction protocol. By analyzing your existing lyrics, the workstation learns your unique cadence, vocabulary variety, and rhyme density to anchor future neural suggestions.',
     },
     {
-      q: "Who gets the Ink Discounts?",
-      a: "A 50% discount on Permanent Ink Packs is an exclusive benefit for Yearly Pro members. Monthly Pro members pay standard rates for additional Ink packs."
+      q: 'Can I store full discographies?',
+      a: 'Yes. Bar 4 Bar is built to be your career-long rhyme book. Unlike simple note apps, our Vault allows you to organize unlimited albums and tracks (Pro) in a professional structure.',
     },
     {
-      q: "What is Studio Roadmap Input?",
-      a: "Yearly Pro members get a direct feedback channel to shape what we build next — feature requests, workflow pain points, and priority votes on the studio roadmap. It's our way of investing in artists who commit for the long haul."
+      q: 'What is Studio Roadmap Input?',
+      a: "Yearly Pro members get a direct feedback channel to shape what we build next — feature requests, workflow pain points, and priority votes on the studio roadmap. It's our way of investing in artists who commit for the long haul.",
     },
     {
-      q: "How secure is my hardware?",
-      a: "Your lyrics and project DNA are stored in an encrypted cloud environment with real-time backups. We value the privacy of the creative process—your work is yours alone."
-    }
+      q: 'How secure is my hardware?',
+      a: 'Your lyrics and project DNA are stored in an encrypted cloud environment with real-time backups. We value the privacy of the creative process—your work is yours alone.',
+    },
+    {
+      q: 'Where is Studio Progress?',
+      a: 'The Vault shows a Studio Progress panel (desktop left gutter). Open the full progress board from the header profile menu or at /studio-progress for weekly/monthly goals, rank XP, achievements, and leaderboard compare.',
+    },
+    {
+      q: 'What are achievement share cards?',
+      a: 'In Ink Store → Settings → Studio Profile, tap Share achievement card to export a foil milestone card with your rank, XP, streak, and latest badge — built for social sharing.',
+    },
+    {
+      q: 'How does Refer a Friend work?',
+      a: 'Copy your link from Ink Store → Refer a Friend. When a new artist signs up through it, you each get 150 permanent Ink (referrers earn up to 4 bonuses). Bonuses apply automatically at signup and are tracked on Stripe checkout when they upgrade.',
+    },
   ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col relative selection:bg-primary/30 overflow-x-hidden">
+    <div className="min-h-screen flex flex-col relative selection:bg-primary/30 overflow-x-hidden">
       <div className="fixed inset-0 z-0">
         <img src="/Bar 4 Bar background.png" alt="Studio Background" className="w-full h-full object-cover opacity-20 blur-[1px] scale-105" />
       </div>

@@ -9,12 +9,14 @@ import React, {
 import type { User as FirebaseUser } from 'firebase/auth';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/client/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
+import { subscribeDocument } from '@/lib/firebase/client/firestore-subscribe';
 import { useRouter, usePathname } from 'next/navigation';
 import type { User } from '@/lib/types';
 import { StudioLoader } from '@/components/studio-loader';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
+import { clearWhatsNewLoginSession } from '@/lib/whats-new-session';
 
 interface AuthContextType {
   user: User | null;
@@ -28,7 +30,7 @@ export const AuthContext = createContext<AuthContextType>({
   authReady: false,
 });
 
-const PROTECTED_ROUTES = ['/usage', '/albums', '/admin'];
+const PROTECTED_ROUTES = ['/usage', '/albums', '/admin', '/studio-progress'];
 const PUBLIC_ROUTES = ['/login', '/pricing'];
 const MASTER_ADMIN_EMAIL = 'plotformaiplan@gmail.com';
 
@@ -45,23 +47,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let unsubscribeDoc: (() => void) | null = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      if (unsubscribeDoc) unsubscribeDoc();
-      setAuthReady(false);
+      if (unsubscribeDoc) {
+        unsubscribeDoc();
+        unsubscribeDoc = null;
+      }
 
-      if (firebaseUser) {
-        const isMaster = firebaseUser.email === MASTER_ADMIN_EMAIL;
+      if (!firebaseUser) {
+        clearWhatsNewLoginSession();
+        setUser(null);
+        setAuthReady(false);
+        setLoading(false);
+        return;
+      }
 
-        try {
-          await firebaseUser.getIdToken();
-        } catch (error) {
-          console.error('Auth token error:', error);
-          setUser(null);
-          setAuthReady(false);
-          setLoading(false);
-          return;
-        }
+      const isMaster = firebaseUser.email === MASTER_ADMIN_EMAIL;
 
-        setAuthReady(true);
+      try {
+        await firebaseUser.getIdToken();
+      } catch (error) {
+        console.error('Auth token error:', error);
+        setUser(null);
+        setAuthReady(false);
+        setLoading(false);
+        return;
+      }
+
+      setAuthReady(true);
 
         const hydrateFromFirebase = () => ({
           id: firebaseUser.uid,
@@ -74,10 +85,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           subscriptionTier: 'none' as const,
         });
 
-        unsubscribeDoc = onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnap) => {
-          if (docSnap.exists()) {
-              const data = docSnap.data();
-              
+        unsubscribeDoc = subscribeDocument(
+          doc(db, 'users', firebaseUser.uid),
+          (data) => {
+          if (data) {
               // BLACKLIST ENFORCEMENT
               if (data.status === 'blocked') {
                   setIsBlocked(true);
@@ -97,7 +108,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 status: data?.status || 'active',
                 subscriptionStatus: data?.subscriptionStatus || 'none',
                 subscriptionTier: data?.subscriptionTier || 'none',
-                trialStartedAt: data?.trialStartedAt || null
+                trialStartedAt: data.trialStartedAt || null,
+                lyricsTutorialCompletedAt: data.lyricsTutorialCompletedAt || undefined,
               });
           } else {
               setUser(hydrateFromFirebase());
@@ -108,11 +120,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(hydrateFromFirebase());
             setLoading(false);
         });
-      } else {
-        setUser(null);
-        setAuthReady(false);
-        setLoading(false);
-      }
     });
 
     return () => {
@@ -169,7 +176,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AuthContext.Provider value={{ user, loading, authReady }}>
       {showLoader ? (
-        <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex h-screen w-full items-center justify-center">
           <div className="flex flex-col items-center gap-6">
             <StudioLoader size="lg" />
             <p className="text-xs font-code uppercase tracking-widest text-muted-foreground animate-pulse">Initializing Studio...</p>

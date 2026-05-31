@@ -23,3 +23,31 @@ export function mergeDirection(album?: Direction, track?: Track["direction"]): D
     tone_palette  : t.tone_palette   ?? (useAlbum ? a.tone_palette   : "") ?? "",
   };
 }
+
+export function hasDirectionContent(d?: Partial<Direction> | null): boolean {
+  if (!d) return false;
+  return Boolean(
+    d.setting_world?.trim() ||
+      d.emotion_core?.trim() ||
+      d.trigger_moment?.trim() ||
+      d.message_truth?.trim() ||
+      d.tone_palette?.trim()
+  );
+}
+
+/** Calibration Hub: merge album + track DNA per Inherit Album / Track DNA toggles. */
+export function resolveWorkstationDirection(
+  inheritAlbum: boolean,
+  inheritTrack: boolean,
+  albumDirection?: Direction,
+  hubDirection: Partial<Direction> = {}
+): Direction {
+  const album = inheritAlbum ? (albumDirection ?? {}) : {};
+  if (inheritTrack) {
+    return mergeDirection(album, { ...hubDirection, inheritFromAlbum: inheritAlbum });
+  }
+  if (inheritAlbum) {
+    return mergeDirection(album, { inheritFromAlbum: true });
+  }
+  return mergeDirection({}, { inheritFromAlbum: false, ...hubDirection });
+}

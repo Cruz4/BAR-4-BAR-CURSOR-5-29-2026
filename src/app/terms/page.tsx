@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-[#050a1e] text-foreground">
+    <div className="min-h-screen text-foreground">
       <div className="container max-w-3xl mx-auto py-16 px-4 space-y-8">
         <header className="space-y-2">
           <Link href="/" className="text-primary text-sm font-bold uppercase tracking-widest hover:underline">← Back to Studio</Link>

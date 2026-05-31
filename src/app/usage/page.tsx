@@ -46,6 +46,8 @@ import { updateProfile, deleteUser } from 'firebase/auth';
 import { Progress } from '@/components/ui/progress';
 import { getInkPackRows, getStudioTierPlans, PRO_MONTHLY_INK, PRO_YEARLY_INK, getTierFeatureHighlight, PRO_YEARLY_EXCLUSIVES, INK_PACK_YEARLY_DISCOUNT_SHORT, INK_PACK_YEARLY_DISCOUNT_LABEL } from '@/lib/studio-tiers';
 import { TierPriceSummary } from '@/components/tier-price-summary';
+import { StudioProfileSection } from '@/components/gamification/studio-profile-section';
+import { ReferAFriendSection } from '@/components/refer-a-friend-section';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -194,6 +196,8 @@ function UsagePageContent() {
         </TabsList>
 
         <TabsContent value="buy-ink" className="space-y-8 w-full">
+          <ReferAFriendSection />
+
           <div className={cn("border p-6 rounded-xl flex items-center justify-between gap-6 shadow-lg", isYearlyUser ? "bg-accent/5 border-accent/20" : "bg-primary/5 border-primary/20")}>
               <div className="flex items-center gap-4">
                   <div className={cn("p-3 rounded-full", isYearlyUser ? "bg-accent/10" : "bg-primary/10")}><TrendingDown className={cn("h-6 w-6", isYearlyUser ? "text-accent" : "text-primary")} /></div>
@@ -384,6 +388,7 @@ function UsagePageContent() {
 
         <TabsContent value="settings" className="w-full max-w-2xl">
             <div className="space-y-8">
+                <StudioProfileSection />
                 {isCloudSyncActive && (
                 <Card className="border-primary/20">
                     <CardHeader>
@@ -410,11 +415,19 @@ function UsagePageContent() {
                     <CardContent><div className="space-y-2"><Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Stage Name</Label><div className="flex gap-2"><Input value={displayNameInput} onChange={(e) => setDisplayNameInput(e.target.value)} className="font-code font-bold h-11" /><Button onClick={() => {}} className="h-11 px-8 font-bold">Save</Button></div></div></CardContent>
                 </Card>
                 <Card className={cn("border-2", !isYearlyUser && "opacity-50")}>
-                    <CardHeader><div className="flex items-center justify-between"><CardTitle className="font-headline text-xl">Studio API Bypass (BYO-API)</CardTitle>{!isYearlyUser && <Badge variant="destructive" className="uppercase tracking-widest text-[10px]">Yearly Pro Only</Badge>}</div><CardDescription className="text-xs uppercase tracking-tight">Connect your own Google AI key to bypass rate limits.</CardDescription></CardHeader>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="font-headline text-xl">Studio API Bypass (BYO-API)</CardTitle>
+                        {!isYearlyUser && <Badge variant="destructive" className="uppercase tracking-widest text-[10px]">Yearly Pro Only</Badge>}
+                      </div>
+                      <CardDescription className="text-xs leading-relaxed normal-case tracking-normal text-muted-foreground">
+                        Connect your Google AI key for your own API quota and rate limits. Ink still applies — that is the workstation IP fee (DNA flows, guardrails, remix logic), not a second charge for model tokens.
+                      </CardDescription>
+                    </CardHeader>
                     <CardContent className="space-y-4">
                         {customApiKey && (
                         <div className="p-4 bg-accent/5 border border-accent/20 rounded-md">
-                            <p className="text-xs leading-relaxed font-code text-accent font-bold"><Zap className="inline h-3 w-3 mr-1" /> Custom key active — your AI requests use your Google API quota and bypass platform rate limits.</p>
+                            <p className="text-xs leading-relaxed font-code text-accent font-bold"><Zap className="inline h-3 w-3 mr-1" /> Custom key active — Google bills your API usage; Bar 4 Bar Ink covers studio orchestration only.</p>
                         </div>
                         )}
                         <div className="flex gap-2">

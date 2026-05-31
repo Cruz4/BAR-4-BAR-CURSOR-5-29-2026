@@ -5,7 +5,8 @@ import type { AIUsageLog } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase/client/firebase';
-import { doc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
+import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
+import { subscribeDocument, subscribeQuery } from '@/lib/firebase/client/firestore-subscribe';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { initUserUsageAction } from '@/lib/server/usage-actions';
@@ -14,6 +15,7 @@ import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import { computeActiveRules } from '@/lib/active-rules';
 import type { ActiveRules } from '@/components/dna-synthesis-loader';
 import type { Album, StyleProfile, Track } from '@/lib/types';
+import { INK_PACK_YEARLY_DISCOUNT_PERCENT } from '@/lib/studio-tiers';
 
 const API_KEY_STORAGE_KEY = 'bar4bar-custom-api-key';
 
@@ -91,6 +93,8 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
     }
 
     let cancelled = false;
+    let unsubBalance: (() => void) | null = null;
+    let unsubLogs: (() => void) | null = null;
     setLoading(true);
     hasInitializedRef.current = false;
     const balanceRef = doc(db, 'users', user.id, 'usage', 'balance');
@@ -110,9 +114,12 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
         .then(({ idToken, userId }) => initUserUsageAction(idToken, userId))
         .catch((e) => console.warn('Usage init skipped:', e));
 
-      const unsubBalance = onSnapshot(balanceRef, (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
+      if (cancelled) return;
+
+      unsubBalance = subscribeDocument(
+        balanceRef,
+        (data) => {
+        if (data) {
           const res = data.residencyBalance || 0;
           const pur = data.purchasedBalance || 0;
           setResidencyBalance(res);
@@ -132,28 +139,22 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
 
       const logsRef = collection(db, 'users', user.id, 'usageLogs');
       const q = query(logsRef, orderBy('timestamp', 'desc'), limit(50));
-      const unsubLogs = onSnapshot(q, (snap) => {
-          const logs = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+      unsubLogs = subscribeQuery(q, (logs) => {
           setUsageHistory(logs);
       }, (error) => {
           console.warn("Usage history listener error", error);
           setUsageHistory([]);
       });
-
-      return () => {
-        unsubBalance();
-        unsubLogs();
-      };
     };
 
-    let cleanup: (() => void) | undefined;
-    setupListeners().then((fn) => {
-      cleanup = fn;
-    });
+    void setupListeners();
 
     return () => {
       cancelled = true;
-      cleanup?.();
+      unsubBalance?.();
+      unsubLogs?.();
+      unsubBalance = null;
+      unsubLogs = null;
     };
   }, [user?.id, authReady]);
 
@@ -163,23 +164,31 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
     const finalAmount = Math.max(1, Math.ceil(amount));
 
     if (inkBalance < finalAmount) {
+        const isYearly = user.subscriptionTier === 'yearly';
         toast({
           variant: 'destructive',
           title: 'Ink Reserve Low',
           description: (
             <span className="flex flex-col gap-2 text-sm">
-              <span>You need {finalAmount} Ink for this action. Refill or upgrade for monthly residency ink.</span>
+              <span>You need {finalAmount} Ink for this action. Refill residency or buy permanent Ink packs.</span>
+              {!isYearly && (
+                <span className="text-[11px] text-muted-foreground leading-snug">
+                  Yearly Pro includes {INK_PACK_YEARLY_DISCOUNT_PERCENT}% off permanent Ink packs — best value if you run out often.
+                </span>
+              )}
               <span className="flex gap-2 flex-wrap">
                 <Button asChild size="sm" variant="secondary" className="h-8 text-[10px] font-bold uppercase">
-                  <Link href="/usage?tab=buy-ink">Buy Ink</Link>
+                  <Link href={isYearly ? '/usage?tab=buy-ink' : '/usage?tab=cloud'}>
+                    {isYearly ? 'Buy Ink' : 'Yearly Pro + Ink'}
+                  </Link>
                 </Button>
                 <Button asChild size="sm" className="h-8 text-[10px] font-bold uppercase">
-                  <Link href="/usage?tab=cloud">Upgrade Pro</Link>
+                  <Link href="/usage?tab=buy-ink">Buy Ink</Link>
                 </Button>
               </span>
             </span>
           ),
-          duration: 8000,
+          duration: 9000,
         });
         return false;
     }
@@ -223,7 +232,7 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
     setCustomApiKey(key);
     if (key) {
         localStorage.setItem(`${API_KEY_STORAGE_KEY}-${user.id}`, key);
-        toast({ title: "Custom API Key Saved", description: "Your requests will use your Google AI key and bypass platform rate limits." });
+        toast({ title: "Custom API Key Saved", description: "Your Google key runs the model calls — Ink covers Bar 4 Bar workstation IP (prompts, DNA flow, guardrails), not double-billing for tokens." });
     } else {
         localStorage.removeItem(`${API_KEY_STORAGE_KEY}-${user.id}`);
     }

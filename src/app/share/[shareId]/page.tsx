@@ -104,7 +104,7 @@ export default function SharedProjectPage() {
     const isAlbum = share.type === 'album';
 
     return (
-        <div className="min-h-screen bg-background relative selection:bg-primary/30 overflow-x-hidden font-code">
+        <div className="min-h-screen relative selection:bg-primary/30 overflow-x-hidden font-code">
             {/* Global Aesthetic Overlays */}
             <div className="fixed inset-0 z-0 pointer-events-none opacity-20">
                 <div className="h-full w-full bg-[repeating-linear-gradient(theme(colors.border),theme(colors.border)_1px,transparent_1px,transparent_24px)]"></div>

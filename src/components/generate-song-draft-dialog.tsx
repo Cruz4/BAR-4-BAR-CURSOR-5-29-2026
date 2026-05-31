@@ -8,7 +8,7 @@
  * - FIX (5/24): Resolved Structure header overlap by enforcing shrink-0 and gap protocols.
  */
 
-import React, { useState, useContext, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useContext, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Track, Album, StyleProfile, WizardState, Direction, TrackSection, Bar, WizardAnalysis, StyleAnalysis, DnaPreset } from '@/lib/types';
 import {
@@ -83,7 +83,7 @@ import {
 import { suggestRelayDirections, generateRelayDraft } from '@/ai/flows/writers-relay';
 import { generateSongDraft } from '@/ai/flows/generate-song-draft';
 import { findRhymes } from '@/ai/flows/find-rhymes';
-import { mergeDirection, cn, stripForFirestore } from '@/lib/utils';
+import { mergeDirection, cn, stripForFirestore, resolveWorkstationDirection, hasDirectionContent } from '@/lib/utils';
 import {
   STRAIN_TARGETS,
   appendDirectionField,
@@ -97,6 +97,7 @@ import {
   getStrainInjectTooltip,
   getStrainDestinationTheme,
   getVaultFieldInjectTooltip,
+  DNA_HUB_TOOLTIPS,
   type StrainInjectionTarget,
 } from '@/lib/dna-strands';
 import { DataContext } from '@/context/data-context';
@@ -115,6 +116,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { isProUser } from '@/lib/subscription';
 import { SYSTEM_DNA_PRESETS, SYSTEM_STYLE_PRESETS, SYSTEM_VIBE_PRESETS } from '@/lib/system-presets';
 import { DNASynthesisLoader } from '@/components/dna-synthesis-loader';
+import { WorkstationStepBackground, stepToWorkstationVariant } from '@/components/workstation-step-background';
+import { HubCalibrationAmbient, HUB_INK_KEYS, type HubInkKey } from '@/components/hub-calibration-ambient';
 import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DnaVaultPresetDetails } from '@/components/dna-vault-preset-details';
@@ -201,6 +204,62 @@ const DEFAULT_HUB_COLLAPSED: Record<HubSectionKey, boolean> = {
   guardrails: true,
 };
 
+/** Max visible height for Creative DNA fields before scrolling (~11 lines at 11px). */
+const CREATIVE_DNA_FIELD_MAX_HEIGHT_PX = 176;
+
+function HubCreativeDnaTextarea({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  placeholder: string;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const hasContent = value.trim().length > 0;
+
+  const syncHeight = useCallback(() => {
+    const el = ref.current;
+    if (!el || !hasContent) return;
+    el.style.height = 'auto';
+    const scrollH = el.scrollHeight;
+    if (scrollH <= CREATIVE_DNA_FIELD_MAX_HEIGHT_PX) {
+      el.style.height = `${scrollH}px`;
+      el.style.overflowY = 'hidden';
+    } else {
+      el.style.height = `${CREATIVE_DNA_FIELD_MAX_HEIGHT_PX}px`;
+      el.style.overflowY = 'auto';
+    }
+  }, [hasContent]);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (!hasContent) {
+      el.style.height = '';
+      el.style.overflowY = '';
+      return;
+    }
+    syncHeight();
+  }, [value, hasContent, syncHeight]);
+
+  return (
+    <Textarea
+      ref={ref}
+      placeholder={placeholder}
+      rows={hasContent ? undefined : 2}
+      className={cn(
+        'bg-background/40 border-green-500/10 w-full text-[11px] font-code resize-none leading-relaxed px-3 py-2',
+        hasContent ? 'min-h-[3rem]' : 'min-h-[3rem] h-12'
+      )}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onInput={syncHeight}
+    />
+  );
+}
+
 function HubSectionShell({
   title,
   icon: Icon,
@@ -209,6 +268,7 @@ function HubSectionShell({
   onToggle,
   trailing,
   summary,
+  headerTooltip = DNA_HUB_TOOLTIPS.sectionCollapse,
   children,
 }: {
   title: string;
@@ -218,30 +278,44 @@ function HubSectionShell({
   onToggle: () => void;
   trailing?: React.ReactNode;
   summary?: string;
+  headerTooltip?: string;
   children: React.ReactNode;
 }) {
+  const headerButton = (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex items-center gap-2 min-w-0 flex-1 text-left group"
+      aria-expanded={!collapsed}
+    >
+      {collapsed ? (
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
+      ) : (
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
+      )}
+      <span className={cn('flex items-center gap-2 min-w-0', colorClass)}>
+        <Icon className="h-5 w-5 shrink-0" />
+        <span className="font-headline font-bold text-lg uppercase leading-none truncate">{title}</span>
+      </span>
+      {collapsed && summary && (
+        <span className="text-[9px] text-muted-foreground truncate italic hidden md:inline">{summary}</span>
+      )}
+    </button>
+  );
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2 w-full">
-        <button
-          type="button"
-          onClick={onToggle}
-          className="flex items-center gap-2 min-w-0 flex-1 text-left group"
-          aria-expanded={!collapsed}
-        >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
-          ) : (
-            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
-          )}
-          <span className={cn('flex items-center gap-2 min-w-0', colorClass)}>
-            <Icon className="h-5 w-5 shrink-0" />
-            <span className="font-headline font-bold text-lg uppercase leading-none truncate">{title}</span>
-          </span>
-          {collapsed && summary && (
-            <span className="text-[9px] text-muted-foreground truncate italic hidden md:inline">{summary}</span>
-          )}
-        </button>
+        {headerTooltip ? (
+          <Tooltip>
+            <TooltipTrigger asChild>{headerButton}</TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-[260px] text-[10px] leading-snug">
+              {headerTooltip}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          headerButton
+        )}
         {trailing && (
           <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
             {trailing}
@@ -270,7 +344,10 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   const [maxLineLen, setMaxLineLen] = useState(120);
   const [hubCollapsed, setHubCollapsed] = useState<Record<HubSectionKey, boolean>>(DEFAULT_HUB_COLLAPSED);
   const [hubSeededSections, setHubSeededSections] = useState<Set<HubSectionKey>>(() => new Set());
+  const [hubFlashKey, setHubFlashKey] = useState<HubInkKey | null>(null);
   const hubLayoutInitializedRef = useRef(false);
+  const hubFlashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevHubActiveRef = useRef<Record<HubInkKey, boolean> | null>(null);
   
   const [hubDirection, setHubDirection] = useState<Partial<Direction>>({});
   const [hubVibe, setHubVibe] = useState<Track['vibe']>(track.vibe);
@@ -429,8 +506,29 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   }, []);
 
   const toggleHubSection = useCallback((key: HubSectionKey) => {
-    setHubCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+    setHubCollapsed((prev) => {
+      const wasCollapsed = prev[key];
+      const next = { ...prev, [key]: !prev[key] };
+      if (wasCollapsed && !next[key]) {
+        if (hubFlashTimeoutRef.current) clearTimeout(hubFlashTimeoutRef.current);
+        setHubFlashKey(key);
+        hubFlashTimeoutRef.current = setTimeout(() => setHubFlashKey(null), 350);
+      }
+      return next;
+    });
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (hubFlashTimeoutRef.current) clearTimeout(hubFlashTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    document.body.classList.add('workstation-modal-open');
+    return () => document.body.classList.remove('workstation-modal-open');
+  }, [open]);
 
   useEffect(() => {
     if (step !== 10) {
@@ -488,8 +586,8 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
       if (intentsEnabled && hubIntents.length > 0) badges.push({ text: `${hubIntents.length} INTENTS`, color: 'border-sky-500 text-sky-500' });
       if (lyricsAbout.trim()) badges.push({ text: 'SPECIAL INSTRUCTIONS', color: 'border-primary text-primary' });
       if (hubVibeEnabled) badges.push({ text: 'VIBE', color: 'border-amber-500 text-amber-500' });
-      if (inheritAlbum && album?.direction?.enabled) badges.push({ text: 'ALBUM DNA', color: 'border-emerald-500 text-emerald-500' });
-      if (inheritTrack) badges.push({ text: 'TRACK DNA', color: 'border-green-500 text-green-500' });
+      if (inheritAlbum) badges.push({ text: 'INHERIT ALBUM', color: 'border-teal-500 text-teal-400' });
+      if (inheritTrack) badges.push({ text: 'TRACK DNA', color: 'border-green-500 text-green-400' });
       if (hubStyleEnabled && hubStyleAnalysis.trim()) badges.push({ text: 'STYLE DNA', color: 'border-fuchsia-500 text-fuchsia-500' });
       if (wizardState.selectedDirections.length > 0) badges.push({ text: `${wizardState.selectedDirections.length} REMIX PATHS`, color: 'border-primary text-primary' });
       return badges;
@@ -554,7 +652,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
       const result = await generateSongDraft(await withAiAuth({
         userName: user?.displayName,
         albumDirection: album?.direction,
-        trackDirection: hubDirection,
+        trackDirection: { ...hubDirection, inheritFromAlbum: inheritAlbum },
         useAlbumDirection: inheritAlbum,
         useTrackDirection: inheritTrack,
         vibe: { ...hubVibe, enabled: hubVibeEnabled },
@@ -768,7 +866,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           );
           setHubStyleEnabled(true);
           markHubSeeded('style');
-          toast({ title: 'Style DNA injected', description: 'Loaded into Artist Style panel.' });
+          toast({ title: 'Style DNA injected', description: 'Loaded into Style DNA panel.' });
           return;
       }
 
@@ -829,6 +927,13 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
 
         const remixDirection = formatRemixDirectionsWithWeights(wizardState.selectedDirections);
 
+        const mergedCreativeDirection = resolveWorkstationDirection(
+          inheritAlbum,
+          inheritTrack,
+          album?.direction,
+          hubDirection
+        );
+
         const result = await generateRelayDraft(await withAiAuth({
             analysis: JSON.stringify(wizardState.analysis),
             direction: remixDirection,
@@ -838,7 +943,11 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
             cleanliness: 'standard',
             intents: intentsEnabled ? hubIntents : [],
             vibe: { ...hubVibe, enabled: hubVibeEnabled },
-            directionSuite: hubDirection,
+            directionSuite: mergedCreativeDirection,
+            useAlbumDirection: inheritAlbum,
+            useTrackDirection: inheritTrack,
+            albumDirection: inheritAlbum ? album?.direction : undefined,
+            trackDirection: inheritTrack ? hubDirection : undefined,
             specialInstructions: lyricsAbout,
             negativePrompt: enableGuardrails ? negativePrompt : undefined,
             forbiddenWords: enableGuardrails ? forbiddenWords.split(',').map(w => w.trim()).filter(Boolean) : undefined,
@@ -896,11 +1005,21 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
 
   const renderDestinationPill = (title: string) => {
       const theme = getStrainDestinationTheme(title);
-      return (
+      const pill = (
           <span className={cn('text-[7px] font-bold uppercase tracking-[0.18em]', theme.pill)}>
               → {theme.hubSection}
               {theme.hubField ? ` · ${theme.hubField}` : ''}
           </span>
+      );
+      return (
+          <Tooltip>
+              <TooltipTrigger asChild>
+                  <span className="inline-block cursor-help">{pill}</span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-[220px] text-[10px] leading-snug">
+                  {DNA_HUB_TOOLTIPS.destinationPill}
+              </TooltipContent>
+          </Tooltip>
       );
   };
 
@@ -1123,6 +1242,8 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
 
               {renderExpandedStrainCard('Technical Fingerprint', analysis.voiceStyle, Fingerprint)}
 
+              {renderExpandedStrainCard('What Makes It Work', analysis.whatMakesItWork, Sparkles)}
+
               {renderStyleStrainCard(analysis)}
           </div>
       );
@@ -1137,7 +1258,14 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                   onClick={(e) => e.stopPropagation()}
               >
                   <div className="flex items-center justify-between gap-2">
-                      <span className={cn("font-bold uppercase text-primary truncate", compact ? "text-[8px]" : "text-[9px]")}>{d.name}</span>
+                      <Tooltip>
+                          <TooltipTrigger asChild>
+                              <span className={cn("font-bold uppercase text-primary truncate cursor-help", compact ? "text-[8px]" : "text-[9px]")}>{d.name}</span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[220px] text-[10px] leading-snug">
+                              {DNA_HUB_TOOLTIPS.remixInfluence}
+                          </TooltipContent>
+                      </Tooltip>
                       <span className={cn("font-mono text-muted-foreground shrink-0", compact ? "text-[8px]" : "text-[9px]")}>{d.weight ?? 50}%</span>
                   </div>
                   <Slider
@@ -1160,9 +1288,15 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
         : `${hubStructure.filter((s) => s.enabled).length} sections`,
       vibe: hubVibe?.genre?.trim() || (hubVibeEnabled ? 'Enabled' : 'Off'),
       intents: hubIntents.length ? `${hubIntents.length} motifs` : undefined,
-      creativeDna: CREATIVE_DNA_FIELDS.some(({ key }) => String(hubDirection[key] ?? '').trim())
-        ? 'DNA loaded'
-        : undefined,
+      creativeDna: (() => {
+        const parts: string[] = [];
+        if (inheritAlbum) parts.push('Inherit Album');
+        if (inheritTrack) parts.push('Track DNA');
+        if (CREATIVE_DNA_FIELDS.some(({ key }) => String(hubDirection[key] ?? '').trim())) {
+          parts.push('Fields set');
+        }
+        return parts.length ? parts.join(' · ') : undefined;
+      })(),
       specialInstructions: lyricsAbout.trim() ? 'Instructions set' : undefined,
       remix: wizardState.selectedDirections.length
         ? `${wizardState.selectedDirections.length} paths`
@@ -1181,15 +1315,70 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
       wizardState.selectedDirections.length,
       hubStyleAnalysis,
       enableGuardrails,
+      inheritAlbum,
+      inheritTrack,
     ]
   );
+
+  const hubModuleActive = useMemo(
+    (): Record<HubInkKey, boolean> => ({
+      structure: hubStructure.some((s) => s.enabled),
+      vibe: hubVibeEnabled,
+      intents: intentsEnabled && hubIntents.length > 0,
+      albumDna: inheritAlbum,
+      trackDna: inheritTrack,
+      creativeDna: CREATIVE_DNA_FIELDS.some(({ key }) => String(hubDirection[key] ?? '').trim()),
+      specialInstructions: !!lyricsAbout.trim(),
+      remix: wizardState.selectedDirections.length > 0,
+      dnaStrains: !!wizardState.analysis,
+      style: hubStyleEnabled && !!hubStyleAnalysis.trim(),
+      guardrails: enableGuardrails,
+    }),
+    [
+      hubStructure,
+      hubVibeEnabled,
+      intentsEnabled,
+      hubIntents.length,
+      inheritAlbum,
+      inheritTrack,
+      hubDirection,
+      lyricsAbout,
+      wizardState.selectedDirections.length,
+      wizardState.analysis,
+      hubStyleEnabled,
+      hubStyleAnalysis,
+      enableGuardrails,
+    ]
+  );
+
+  useEffect(() => {
+    if (step !== 10) {
+      prevHubActiveRef.current = null;
+      return;
+    }
+    const prev = prevHubActiveRef.current;
+    if (prev) {
+      for (const key of HUB_INK_KEYS) {
+        if (prev[key] !== hubModuleActive[key]) {
+          if (hubFlashTimeoutRef.current) clearTimeout(hubFlashTimeoutRef.current);
+          setHubFlashKey(key);
+          hubFlashTimeoutRef.current = setTimeout(() => setHubFlashKey(null), 400);
+          break;
+        }
+      }
+    }
+    prevHubActiveRef.current = hubModuleActive;
+  }, [hubModuleActive, step]);
 
   return (
     <>
     <TooltipProvider delayDuration={300}>
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="fixed left-1/2 top-[2vh] -translate-x-1/2 translate-y-0 w-[min(99vw,1720px)] max-w-none h-[min(94vh,calc(100dvh-1rem))] max-h-[calc(100dvh-1rem)] flex flex-col gap-0 bg-[#050505] border-2 overflow-hidden p-0 rounded-xl shadow-2xl z-[2100] [&>button.absolute]:hidden">
-        <DialogHeader className="shrink-0 p-3 border-b bg-[#050505] flex-row items-center justify-between relative z-[110]">
+      <DialogContent
+        overlayClassName="z-[2090] bg-[hsl(216_50%_4%/0.98)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+        className="fixed left-1/2 top-[2vh] -translate-x-1/2 translate-y-0 w-[min(99vw,1720px)] max-w-none h-[min(94vh,calc(100dvh-1rem))] max-h-[calc(100dvh-1rem)] flex flex-col gap-0 bg-[hsl(216_48%_7%)] border-2 border-white/10 overflow-hidden p-0 rounded-xl shadow-2xl z-[2100] [&>button.absolute]:hidden"
+      >
+        <DialogHeader className="shrink-0 p-3 border-b border-white/10 bg-[hsl(216_48%_8%/0.95)] flex-row items-center justify-between relative z-[110]">
             <Button
               type="button"
               variant="ghost"
@@ -1221,10 +1410,13 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
             </div>
         </DialogHeader>
         
-        <div className="flex-1 min-h-0 relative overflow-hidden flex flex-col bg-[#050505] isolate">
+        <div className="flex-1 min-h-0 relative overflow-hidden flex flex-col isolate studio-page-base">
+          {!isGenerating && (
+            <WorkstationStepBackground variant={stepToWorkstationVariant(step)} />
+          )}
           {isGenerating && (
             <div
-              className="generating-overlay-backdrop absolute inset-0 z-[100] bg-[#050505]"
+              className="generating-overlay-backdrop absolute inset-0 z-[100] studio-page-base"
               aria-hidden
             />
           )}
@@ -1239,7 +1431,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
               progress={progress}
               compact
               activeRules={{
-                dna: (inheritAlbum && !!album?.direction?.enabled) || inheritTrack,
+                dna: inheritAlbum || inheritTrack || hasDirectionContent(hubDirection),
                 intents: intentsEnabled && hubIntents.length > 0,
                 style: hubStyleEnabled && !!hubStyleAnalysis?.trim(),
                 vibe: hubVibeEnabled,
@@ -1263,24 +1455,28 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
             </div>
           </div>
 
-          <div className={cn('flex-1 min-h-0 flex flex-col bg-[#050505] overflow-y-auto studio-scrollbar', isGenerating && 'invisible pointer-events-none')}>
+          <div className={cn('flex-1 min-h-0 flex flex-col relative z-10 overflow-y-auto studio-scrollbar', isGenerating && 'invisible pointer-events-none')}>
           {step === 0 && (
-            <div className="min-h-full flex flex-col items-center justify-center p-6 py-10 space-y-8 md:space-y-12 animate-in fade-in duration-700">
+            <div className="min-h-full flex flex-col items-center justify-center p-6 py-8 space-y-6 md:space-y-8 animate-in fade-in duration-700">
                 <div className="text-center space-y-2">
                     <h2 className="text-4xl font-headline font-bold text-white uppercase tracking-tight">Select Workflow Mode</h2>
                     <p className="text-[11px] text-muted-foreground uppercase tracking-[0.4em]">Initialize your creative process.</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
-                    <Card className="cursor-pointer border-2 hover:border-primary/50 p-10 flex flex-col items-center justify-center gap-6 bg-primary/5 hover:scale-[1.05] transition-all group relative overflow-hidden" onClick={() => setStep(10)}>
-                        <Wand2 className="h-16 w-12 text-primary group-hover:animate-bounce" />
-                        <div className="text-center space-y-3">
+                    <Card className="cursor-pointer border-2 hover:border-primary/50 p-10 flex flex-col items-center justify-center gap-6 bg-black/45 hover:scale-[1.05] transition-all group relative overflow-hidden" onClick={() => setStep(10)}>
+                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent opacity-80" />
+                        <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/20 blur-3xl" />
+                        <Wand2 className="relative h-16 w-12 text-primary group-hover:animate-bounce" />
+                        <div className="relative text-center space-y-3">
                             <h4 className="font-headline text-3xl font-bold uppercase text-white">Full Studio Draft</h4>
                             <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-relaxed">Direct synthesis from active rules.</p>
                         </div>
                     </Card>
-                    <Card className="cursor-pointer border-2 hover:border-sky-500/50 p-10 flex flex-col items-center justify-center gap-6 bg-sky-500/5 hover:scale-[1.05] transition-all group" onClick={() => setStep(1)}>
-                        <BrainCircuit className="h-16 w-12 text-sky-400 group-hover:animate-pulse" />
-                        <div className="text-center space-y-3">
+                    <Card className="cursor-pointer border-2 hover:border-sky-500/50 p-10 flex flex-col items-center justify-center gap-6 bg-black/45 hover:scale-[1.05] transition-all group relative overflow-hidden" onClick={() => setStep(1)}>
+                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-sky-500/15 via-cyan-500/5 to-transparent opacity-80" />
+                        <div className="pointer-events-none absolute -left-8 -bottom-8 h-32 w-32 rounded-full bg-sky-500/20 blur-3xl" />
+                        <BrainCircuit className="relative h-16 w-12 text-sky-400 group-hover:animate-pulse" />
+                        <div className="relative text-center space-y-3">
                             <h4 className="font-headline text-3xl font-bold uppercase text-white">DNA & REMIX</h4>
                             <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-relaxed">Extract and Archive strains to seed your next synthesis loop.</p>
                         </div>
@@ -1290,9 +1486,16 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           )}
 
           {(step === 10) && (
-              <ScrollArea className="flex-grow studio-scrollbar">
+              <div className="relative flex-1 min-h-0 flex flex-col">
+                  <HubCalibrationAmbient
+                    hubActive={hubModuleActive}
+                    hubCollapsed={hubCollapsed}
+                    flashKey={hubFlashKey}
+                    className="absolute inset-0 z-[2]"
+                  />
+                  <ScrollArea className="relative z-10 flex-1 min-h-0 studio-scrollbar">
                   <div className="px-6 py-5 animate-in fade-in slide-in-from-bottom-8">
-                      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 w-full items-start pb-6">
+                      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)_minmax(0,0.95fr)] gap-6 w-full items-start pb-6">
                           {/* Column 1 — Production setup */}
                           <div className="flex flex-col gap-5 min-w-0">
                               <HubSectionShell
@@ -1341,19 +1544,26 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                           <div className="mt-3 p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
                                               <div className="flex items-center justify-between gap-2 mb-1">
                                                   <p className="text-[8px] font-bold uppercase text-yellow-600">Extracted Structure Guide</p>
-                                                  <Button
-                                                      type="button"
-                                                      variant="ghost"
-                                                      size="icon"
-                                                      className="h-6 w-6 text-yellow-600/60 hover:text-red-500 hover:bg-red-500/10 shrink-0"
-                                                      onClick={() => {
-                                                          setHubStructureGuide('');
-                                                          toast({ title: 'Structure guide removed' });
-                                                      }}
-                                                      aria-label="Remove extracted structure guide"
-                                                  >
-                                                      <Trash2 className="h-3 w-3" />
-                                                  </Button>
+                                                  <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                          <Button
+                                                              type="button"
+                                                              variant="ghost"
+                                                              size="icon"
+                                                              className="h-6 w-6 text-yellow-600/60 hover:text-red-500 hover:bg-red-500/10 shrink-0"
+                                                              onClick={() => {
+                                                                  setHubStructureGuide('');
+                                                                  toast({ title: 'Structure guide removed' });
+                                                              }}
+                                                              aria-label="Remove extracted structure guide"
+                                                          >
+                                                              <Trash2 className="h-3 w-3" />
+                                                          </Button>
+                                                      </TooltipTrigger>
+                                                      <TooltipContent side="left" className="max-w-[220px] text-[10px] leading-snug">
+                                                          {DNA_HUB_TOOLTIPS.structureGuideClear}
+                                                      </TooltipContent>
+                                                  </Tooltip>
                                               </div>
                                               <p className="text-[9px] text-muted-foreground font-code italic leading-relaxed whitespace-pre-wrap">{hubStructureGuide}</p>
                                           </div>
@@ -1448,7 +1658,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                           </div>
 
                           {/* Column 2 — Creative core + remix tuning */}
-                          <div className="flex flex-col gap-5 min-w-0">
+                          <div className="flex flex-col gap-5 min-w-0 w-full">
                               <HubSectionShell
                                   title="Creative DNA"
                                   icon={Compass}
@@ -1458,13 +1668,33 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                   summary={hubSectionSummary.creativeDna}
                                   trailing={
                                       <div className="flex items-center gap-3">
-                                          <div className="flex items-center gap-2"><span className="text-[8px] font-bold text-muted-foreground uppercase">Inherit Album</span><Switch checked={inheritAlbum} onCheckedChange={setInheritAlbum} /></div>
-                                          <div className="flex items-center gap-2"><span className="text-[8px] font-bold text-muted-foreground uppercase">Track DNA</span><Switch checked={inheritTrack} onCheckedChange={setInheritTrack} /></div>
+                                          <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                  <div className="flex items-center gap-2 cursor-help">
+                                                      <span className="text-[8px] font-bold text-muted-foreground uppercase">Inherit Album</span>
+                                                      <Switch checked={inheritAlbum} onCheckedChange={setInheritAlbum} />
+                                                  </div>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="bottom" className="max-w-[220px] text-[10px] leading-snug">
+                                                  {DNA_HUB_TOOLTIPS.inheritAlbum}
+                                              </TooltipContent>
+                                          </Tooltip>
+                                          <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                  <div className="flex items-center gap-2 cursor-help">
+                                                      <span className="text-[8px] font-bold text-muted-foreground uppercase">Track DNA</span>
+                                                      <Switch checked={inheritTrack} onCheckedChange={setInheritTrack} />
+                                                  </div>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="bottom" className="max-w-[220px] text-[10px] leading-snug">
+                                                  {DNA_HUB_TOOLTIPS.inheritTrack}
+                                              </TooltipContent>
+                                          </Tooltip>
                                       </div>
                                   }
                               >
-                              <Card className="bg-green-500/5 border-green-500/20 p-4 rounded-xl shadow-2xl">
-                                  <div className="space-y-3">
+                              <Card className="bg-green-500/5 border-green-500/20 p-4 rounded-xl shadow-2xl w-full min-w-0">
+                                  <div className="space-y-3 w-full min-w-0">
                                       {[
                                         { id: 'setting_world', label: '1. Setting / World', placeholder: 'e.g. A rainy midnight in 1940s Chicago...' },
                                         { id: 'emotion_core', label: '2. Emotion / Core', placeholder: 'e.g. Bitter betrayal mixed with a sense of relief...' },
@@ -1472,13 +1702,12 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                         { id: 'message_truth', label: '4. Message / Truth', placeholder: 'e.g. Loyalty is a luxury no one can afford...' },
                                         { id: 'tone_palette', label: '5. Tone / Palette', placeholder: 'e.g. Gritty, neon-drenched, smoky textures...' }
                                       ].map(f => (
-                                          <div key={f.id} className="space-y-1.5">
+                                          <div key={f.id} className="space-y-1.5 w-full min-w-0">
                                               <Label className="text-[9px] font-bold uppercase tracking-widest text-green-700/80">{f.label}</Label>
-                                              <Textarea 
-                                                  placeholder={f.placeholder} 
-                                                  className="bg-background/40 border-green-500/10 min-h-[3rem] h-12 text-[11px] font-code resize-none" 
-                                                  value={hubDirection[f.id as keyof Direction] as string || ''}
-                                                  onChange={(e) => setHubDirection(prev => ({ ...prev, [f.id]: e.target.value }))}
+                                              <HubCreativeDnaTextarea
+                                                  placeholder={f.placeholder}
+                                                  value={(hubDirection[f.id as keyof Direction] as string) || ''}
+                                                  onChange={(next) => setHubDirection(prev => ({ ...prev, [f.id]: next }))}
                                               />
                                           </div>
                                       ))}
@@ -1542,8 +1771,22 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                   trailing={
                                       <Tabs value={strainTab} onValueChange={(v:any) => setStrainTab(v)} className="w-fit">
                                           <TabsList className="h-8 bg-white/5 border-white/10 p-0.5">
-                                              <TabsTrigger value="insights" className="text-[9px] px-3 font-bold">INSIGHTS</TabsTrigger>
-                                              <TabsTrigger value="vault" className="text-[9px] px-3 font-bold">VAULT</TabsTrigger>
+                                              <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                      <TabsTrigger value="insights" className="text-[9px] px-3 font-bold">INSIGHTS</TabsTrigger>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent side="bottom" className="max-w-[200px] text-[10px] leading-snug">
+                                                      {DNA_HUB_TOOLTIPS.vaultInsightsTab}
+                                                  </TooltipContent>
+                                              </Tooltip>
+                                              <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                      <TabsTrigger value="vault" className="text-[9px] px-3 font-bold">VAULT</TabsTrigger>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent side="bottom" className="max-w-[200px] text-[10px] leading-snug">
+                                                      {DNA_HUB_TOOLTIPS.vaultVaultTab}
+                                                  </TooltipContent>
+                                              </Tooltip>
                                           </TabsList>
                                       </Tabs>
                                   }
@@ -1572,8 +1815,18 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                                                   <p className="text-[10px] text-muted-foreground uppercase">{p.sourceTrackTitle}</p>
                                                               </div>
                                                               <div className="flex items-center gap-2 shrink-0">
-                                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={(e) => { e.stopPropagation(); updateAlbum(album.id, { dnaPresets: album.dnaPresets?.filter((_, idx) => idx !== i) }); toast({ title: "DNA Strain Erased" }); }}><Trash2 className="h-3 w-3" /></Button>
-                                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={(e) => { e.stopPropagation(); loadDnaPreset(p); }}><RefreshCw className="h-3 w-3" /></Button>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={(e) => { e.stopPropagation(); updateAlbum(album.id, { dnaPresets: album.dnaPresets?.filter((_, idx) => idx !== i) }); toast({ title: "DNA Strain Erased" }); }}><Trash2 className="h-3 w-3" /></Button>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent side="left" className="max-w-[200px] text-[10px] leading-snug">{DNA_HUB_TOOLTIPS.vaultDelete}</TooltipContent>
+                                                                </Tooltip>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={(e) => { e.stopPropagation(); loadDnaPreset(p); }}><RefreshCw className="h-3 w-3" /></Button>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent side="left" className="max-w-[220px] text-[10px] leading-snug">{DNA_HUB_TOOLTIPS.vaultFullLoad}</TooltipContent>
+                                                                </Tooltip>
                                                                 {expandedVaultIdx === i ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                                                               </div>
                                                           </div>
@@ -1729,11 +1982,13 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                       </div>
                   </div>
               </ScrollArea>
+              </div>
           )}
 
           {step === 1 && (
-            <div className="flex flex-col h-full p-8 gap-4 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
-                <div className="flex items-center justify-between">
+            <div className="flex flex-col h-full p-8 gap-4 overflow-hidden animate-in fade-in slide-in-from-bottom-4 relative">
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-sky-500/10 to-transparent" aria-hidden />
+                <div className="relative flex items-center justify-between">
                     <h3 className="text-xl font-headline font-bold uppercase flex items-center gap-2 text-primary"><NotebookPen className="h-6 w-6"/> Seed DNA & REMIX</h3>
                     <div className="flex items-center gap-3 bg-primary/5 px-4 py-2 rounded-lg border border-primary/20">
                         <Label htmlFor="sync-lyrics" className="text-[10px] font-bold uppercase tracking-widest text-primary/80">Sync Current Lyrics</Label>
@@ -1757,17 +2012,25 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           )}
 
           {step === 2 && wizardState.analysis && (
-            <ScrollArea className="flex-grow p-8 studio-scrollbar">
-                <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 text-foreground pb-12">
+            <ScrollArea className="flex-grow p-8 studio-scrollbar relative">
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-emerald-500/10 to-transparent" aria-hidden />
+                <div className="relative max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 text-foreground pb-12">
                     <div className="flex justify-between items-center bg-primary/10 p-4 rounded-xl border border-primary/20">
                         <div className="flex items-center gap-3 text-primary">
                             <Sparkles className="h-5 w-5" />
                             <p className="text-xs font-bold uppercase tracking-widest">Neural Extraction Complete. Archive profile to reuse strains.</p>
                         </div>
                         {isPro ? (
-                          <Button variant="default" size="sm" className="font-bold uppercase text-[10px] h-9 px-6 shadow-lg gap-2" onClick={() => setSaveNamingOpen(true)}>
-                            <Save className="h-4 w-4" /> Save DNA Profile
-                          </Button>
+                          <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <Button variant="default" size="sm" className="font-bold uppercase text-[10px] h-9 px-6 shadow-lg gap-2" onClick={() => setSaveNamingOpen(true)}>
+                                    <Save className="h-4 w-4" /> Save DNA Profile
+                                  </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="left" className="max-w-[240px] text-[10px] leading-snug">
+                                  {DNA_HUB_TOOLTIPS.saveDnaProfile}
+                              </TooltipContent>
+                          </Tooltip>
                         ) : (
                           <Badge variant="outline" className="text-[8px] uppercase border-primary/30 text-primary">Pro required to archive custom DNA</Badge>
                         )}
@@ -1778,20 +2041,30 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           )}
 
           {step === 3 && (
-            <div className="flex flex-col h-full p-6 gap-6 animate-in fade-in slide-in-from-bottom-8">
-                <div className="text-center space-y-2">
-                    <h2 className="text-2xl font-headline font-bold text-primary uppercase">Choose Path</h2>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-[0.3em]">Optional — select remix paths or skip straight to calibration.</p>
-                    <button
-                      onClick={(e) => handleRelayAnalyze(wizardState.lyrics, e)}
-                      disabled={isGenerating}
-                      className="text-[9px] font-bold uppercase tracking-widest text-primary/50 hover:text-primary border border-primary/10 hover:border-primary/40 rounded-full px-4 py-1.5 transition-all mt-1"
-                    >
-                      ↻ Re-Matrix Ideas
-                    </button>
+            <div className="flex flex-col h-full px-4 pt-3 pb-2 gap-2 animate-in fade-in slide-in-from-bottom-8 relative">
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-primary/12 via-violet-500/5 to-transparent" aria-hidden />
+                <div className="relative flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                    <div className="min-w-0 text-center sm:text-left">
+                        <h2 className="text-lg font-headline font-bold text-primary uppercase leading-none">Choose Path</h2>
+                        <p className="mt-1 text-[9px] text-muted-foreground uppercase tracking-[0.18em] leading-tight">Optional — select remix paths or skip straight to calibration.</p>
+                    </div>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button
+                              onClick={(e) => handleRelayAnalyze(wizardState.lyrics, e)}
+                              disabled={isGenerating}
+                              className="mx-auto shrink-0 text-[9px] font-bold uppercase tracking-widest text-primary/50 hover:text-primary border border-primary/10 hover:border-primary/40 rounded-full px-3 py-1 transition-all sm:mx-0"
+                            >
+                              ↻ Re-Matrix Ideas
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-[220px] text-[10px] leading-snug">
+                            {DNA_HUB_TOOLTIPS.reMatrixIdeas} Costs {getEffectiveCost('analyzeRelayAssets')} Ink.
+                        </TooltipContent>
+                    </Tooltip>
                 </div>
-                <ScrollArea className="flex-grow border border-white/5 rounded-xl bg-muted/5 studio-scrollbar">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 p-8">
+                <ScrollArea className="relative flex-grow min-h-0 border border-white/10 rounded-xl bg-black/40 studio-scrollbar">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
                         {(wizardState.directions || []).map((dir, idx) => {
                             const isSelected = wizardState.selectedDirections.some(d => d.name === dir.name);
                             return (
@@ -1812,7 +2085,14 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                             <div className="flex justify-end"><CheckCircle2 className="h-6 w-6 text-primary" /></div>
                                             <div onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex items-center justify-between mb-1">
-                                                    <span className="text-[8px] font-bold uppercase text-primary">Influence</span>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span className="text-[8px] font-bold uppercase text-primary cursor-help">Influence</span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top" className="max-w-[220px] text-[10px] leading-snug">
+                                                            {DNA_HUB_TOOLTIPS.remixInfluence}
+                                                        </TooltipContent>
+                                                    </Tooltip>
                                                     <span className="text-[8px] font-mono text-muted-foreground">
                                                         {wizardState.selectedDirections.find((d) => d.name === dir.name)?.weight ?? 50}%
                                                     </span>
@@ -1836,7 +2116,8 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           )}
 
           {step === 5 && wizardState.generatedVariant && (
-              <div className="flex-1 min-0 flex flex-row items-stretch overflow-hidden animate-in fade-in slide-in-from-bottom-8 bg-[#050505] relative">
+              <div className="flex-1 min-0 flex flex-row items-stretch overflow-hidden animate-in fade-in slide-in-from-bottom-8 relative">
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-500/8 via-transparent to-orange-500/6" aria-hidden />
                   <div className="relative flex-grow min-0 py-6 px-4">
                       <Card className="w-full h-full border-2 shadow-2xl relative overflow-hidden bg-notebook-hub">
                         <style>{`
@@ -1874,7 +2155,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                         </ScrollArea>
                       </Card>
                   </div>
-                  <div className="w-[340px] shrink-0 p-6 space-y-6 bg-card border-l overflow-y-auto studio-scrollbar">
+                  <div className="relative w-[340px] shrink-0 p-6 space-y-6 bg-black/50 border-l border-white/10 overflow-y-auto studio-scrollbar">
                       <div className="space-y-2">
                         <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Context Summary</h4>
                         <p className="text-[9px] text-muted-foreground font-code uppercase">Settings used for this synthesis.</p>
@@ -1890,14 +2171,31 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                               </div>
                           )}
 
-                          {/* Receipt: DNA */}
-                          {(inheritAlbum || inheritTrack) && (
-                              <div className="space-y-1.5 p-3 rounded-lg bg-green-500/5 border border-green-500/10">
-                                  <p className="text-[9px] font-bold text-green-500 uppercase tracking-widest flex items-center gap-1.5"><Compass className="h-3 w-3" /> Creative DNA</p>
+                          {inheritAlbum && (
+                              <div className="space-y-1.5 p-3 rounded-lg bg-teal-500/5 border border-teal-500/15">
+                                  <p className="text-[9px] font-bold text-teal-400 uppercase tracking-widest flex items-center gap-1.5"><Compass className="h-3 w-3" /> Inherit Album</p>
+                                  {hasDirectionContent(album?.direction) ? (
+                                    <div className="space-y-1 mt-1">
+                                        {album?.direction?.setting_world && <p className="text-[11px] text-white/50 leading-tight">• Setting: {album.direction.setting_world}</p>}
+                                        {album?.direction?.emotion_core && <p className="text-[11px] text-white/50 leading-tight">• Core: {album.direction.emotion_core}</p>}
+                                        {album?.direction?.message_truth && <p className="text-[11px] text-white/50 leading-tight">• Truth: {album.direction.message_truth}</p>}
+                                    </div>
+                                  ) : (
+                                    <p className="text-[10px] text-white/35 italic">Album direction will layer in when set on the album.</p>
+                                  )}
+                              </div>
+                          )}
+
+                          {inheritTrack && (
+                              <div className="space-y-1.5 p-3 rounded-lg bg-green-500/5 border border-green-500/15">
+                                  <p className="text-[9px] font-bold text-green-400 uppercase tracking-widest flex items-center gap-1.5"><Compass className="h-3 w-3" /> Track DNA</p>
                                   <div className="space-y-1 mt-1">
                                       {hubDirection.setting_world && <p className="text-[11px] text-white/50 leading-tight">• Setting: {hubDirection.setting_world}</p>}
                                       {hubDirection.emotion_core && <p className="text-[11px] text-white/50 leading-tight">• Core: {hubDirection.emotion_core}</p>}
                                       {hubDirection.message_truth && <p className="text-[11px] text-white/50 leading-tight">• Truth: {hubDirection.message_truth}</p>}
+                                      {!hasDirectionContent(hubDirection) && (
+                                        <p className="text-[10px] text-white/35 italic">Track fields empty — add Creative DNA below or load a preset.</p>
+                                      )}
                                   </div>
                               </div>
                           )}
@@ -2025,8 +2323,18 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                   {step === 5 && (
                       <div className="flex w-full gap-3 max-w-3xl">
                           <Button variant="outline" size="lg" className="flex-1 h-14 text-sm font-bold rounded-full" onClick={() => setStep(10)}><RefreshCw className="mr-2 h-5 w-5 shrink-0" /> Re-Calibrate</Button>
-                          <Button variant="outline" size="lg" className="flex-1 h-14 text-sm font-bold rounded-full border-primary/40 text-primary" onClick={() => handleApplyGeneratedDraft('append')}><PlusCircle className="mr-2 h-5 w-5 shrink-0" /> Add to Page</Button>
-                          <Button size="lg" className="flex-1 h-14 text-sm font-bold rounded-full bg-primary text-white shadow-lg" onClick={() => handleApplyGeneratedDraft('replace')}><Replace className="mr-2 h-5 w-5 shrink-0" /> Replace Sheet</Button>
+                          <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <Button variant="outline" size="lg" className="flex-1 h-14 text-sm font-bold rounded-full border-primary/40 text-primary" onClick={() => handleApplyGeneratedDraft('append')}><PlusCircle className="mr-2 h-5 w-5 shrink-0" /> Add to Page</Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[220px] text-[10px] leading-snug">{DNA_HUB_TOOLTIPS.approvalAppend}</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <Button size="lg" className="flex-1 h-14 text-sm font-bold rounded-full bg-primary text-white shadow-lg" onClick={() => handleApplyGeneratedDraft('replace')}><Replace className="mr-2 h-5 w-5 shrink-0" /> Replace Sheet</Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[220px] text-[10px] leading-snug">{DNA_HUB_TOOLTIPS.approvalReplace}</TooltipContent>
+                          </Tooltip>
                       </div>
                   )}
               </div>

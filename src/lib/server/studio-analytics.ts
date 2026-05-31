@@ -79,6 +79,9 @@ export async function recordStudioEvent(
     }
 
     await summaryRef.set(updates, { merge: true });
+
+    const { processGamificationFromAnalytics } = await import('@/lib/server/gamification');
+    await processGamificationFromAnalytics(userId, event, metadata, userName);
   } catch (error) {
     console.warn('[recordStudioEvent] skipped:', (error as Error).message);
   }

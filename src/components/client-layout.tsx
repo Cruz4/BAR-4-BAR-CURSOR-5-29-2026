@@ -8,6 +8,7 @@ import { DataProvider } from '@/context/data-context';
 import { ThemeProvider } from '@/context/theme-provider';
 import { UIStateProvider } from '@/context/ui-state-context';
 import { UsageProvider } from '@/context/usage-context';
+import { GamificationProvider } from '@/context/gamification-context';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { usePathname } from 'next/navigation';
 import { StudioTips } from './studio-tips';
@@ -16,6 +17,7 @@ import { WhatsNewDialog } from './whats-new-dialog';
 import { CookieConsent } from './cookie-consent';
 import { OfflineBanner } from './offline-banner';
 import { ServiceWorkerRegister } from './service-worker-register';
+import { StudioPageBackground } from './studio-page-background';
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -27,9 +29,11 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       <AuthProvider>
         <DataProvider>
           <UsageProvider>
+            <GamificationProvider>
             <UIStateProvider>
                 <FirebaseErrorListener />
-                <div className="relative flex min-h-screen flex-col flex-1 overflow-hidden bg-background">
+                <StudioPageBackground />
+                <div className="relative z-10 flex min-h-screen flex-col flex-1 overflow-hidden">
                   {!isLoginPage && !isPerformPage && <Header />}
                   <main className="flex-1 overflow-hidden flex flex-col">{children}</main>
                   <StudioTips />
@@ -41,6 +45,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                 </div>
                 <Toaster />
             </UIStateProvider>
+            </GamificationProvider>
           </UsageProvider>
         </DataProvider>
       </AuthProvider>

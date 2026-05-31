@@ -173,6 +173,39 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
     if (data.event === 'upgrade_click') upgradeClickEvents += 1;
   }
 
+  let achievementUnlockEvents = 0;
+  let streakMilestoneEvents = 0;
+  let shareCardGenerated = 0;
+  let shareCardOpened = 0;
+  let leaderboardViews = 0;
+  for (const doc of eventsSnap.docs) {
+    const ev = String(doc.data().event || '');
+    if (ev === 'achievement_unlocked') achievementUnlockEvents += 1;
+    if (ev === 'streak_milestone') streakMilestoneEvents += 1;
+    if (ev === 'share_card_generated') shareCardGenerated += 1;
+    if (ev === 'share_card_opened') shareCardOpened += 1;
+    if (ev === 'leaderboard_view') leaderboardViews += 1;
+  }
+
+  const gamSnaps = await Promise.all(
+    users.map((u) => db.doc(`users/${u.id}/gamification/summary`).get())
+  );
+  let usersWithAchievements = 0;
+  let streakSum = 0;
+  let streakCount = 0;
+  for (const snap of gamSnaps) {
+    const g = snap.data() || {};
+    if (g.unlockedAchievements && Object.keys(g.unlockedAchievements).length > 0) {
+      usersWithAchievements += 1;
+    }
+    if (typeof g.currentStreak === 'number' && g.currentStreak > 0) {
+      streakSum += g.currentStreak;
+      streakCount += 1;
+    }
+  }
+  const avgStreakActiveUsers =
+    streakCount > 0 ? Math.round((streakSum / streakCount) * 10) / 10 : 0;
+
   const signupsLast7 = signupDates.filter((d) => d >= d7).length;
   const signupsLast30 = signupDates.filter((d) => d >= d30).length;
   const signupsLast90 = signupDates.filter((d) => d >= d90).length;
@@ -285,6 +318,15 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
       notes,
     },
     recentEvents,
+    gamification: {
+      usersWithAchievements,
+      achievementUnlockEvents,
+      streakMilestoneEvents,
+      shareCardGenerated,
+      shareCardOpened,
+      leaderboardViews,
+      avgStreakActiveUsers,
+    },
   };
 }
 
@@ -335,5 +377,14 @@ function emptyMetrics(notes: string): AdminMetricsSnapshot {
     },
     acquisition: { adSpend30d: 0, adSpend90d: 0, costPerSignup: null, costPerActivatedUser: null, notes },
     recentEvents: [],
+    gamification: {
+      usersWithAchievements: 0,
+      achievementUnlockEvents: 0,
+      streakMilestoneEvents: 0,
+      shareCardGenerated: 0,
+      shareCardOpened: 0,
+      leaderboardViews: 0,
+      avgStreakActiveUsers: 0,
+    },
   };
 }

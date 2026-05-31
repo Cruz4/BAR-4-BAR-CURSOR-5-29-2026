@@ -1,58 +1,86 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Sparkles, 
   Zap, 
   RefreshCw, 
-  Undo2, 
   ShieldCheck, 
   CheckCircle2, 
-  AlertCircle, 
   Cpu, 
-  Waves,
   Rocket,
   ArrowRight,
-  Fingerprint,
-  ClipboardPaste,
-  FolderOpen
+  Trophy,
+  Share2,
+  Gift,
+  LayoutGrid,
+  Target,
+  BookOpen
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
-
-const VERSION = '0.3.0';
-const STORAGE_KEY = 'b4b_seen_v03';
+import { useAuth } from '@/hooks/use-auth';
+import {
+  hasWhatsNewBeenShownThisLogin,
+  markWhatsNewShownThisLogin,
+} from '@/lib/whats-new-session';
 
 export function WhatsNewDialog() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { user } = useAuth();
+  const scheduledRef = useRef(false);
+
+  const dismiss = useCallback(() => {
+    if (user?.id) {
+      markWhatsNewShownThisLogin(user.id);
+    }
+    setOpen(false);
+  }, [user?.id]);
+
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next) {
+        dismiss();
+        return;
+      }
+      setOpen(true);
+    },
+    [dismiss]
+  );
 
   useEffect(() => {
-    // Only show on the main dashboard to avoid collision with tips
-    if (pathname !== '/') return;
-
-    const hasSeen = localStorage.getItem(STORAGE_KEY);
-    if (!hasSeen) {
-      const timer = setTimeout(() => setOpen(true), 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [pathname]);
-
-  const handleClose = () => {
-    localStorage.setItem(STORAGE_KEY, 'true');
+    scheduledRef.current = false;
     setOpen(false);
-  };
+  }, [pathname, user?.id]);
+
+  useEffect(() => {
+    if (pathname !== '/' || !user?.id) {
+      return;
+    }
+
+    if (hasWhatsNewBeenShownThisLogin(user.id) || scheduledRef.current) {
+      return;
+    }
+
+    scheduledRef.current = true;
+    const timer = setTimeout(() => {
+      if (hasWhatsNewBeenShownThisLogin(user.id)) return;
+      markWhatsNewShownThisLogin(user.id);
+      setOpen(true);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [pathname, user?.id]);
 
   const CATEGORIES = [
     {
@@ -61,27 +89,27 @@ export function WhatsNewDialog() {
       bgColor: 'bg-primary/5',
       icon: <Rocket className="h-4 w-4" />,
       items: [
-        { 
-          title: 'Remix Mode', 
-          desc: 'Analyze lyrics to re-synthesize new structures.',
-          icon: <RefreshCw className="h-3.5 w-3.5" />
+        {
+          title: 'Studio Progress',
+          desc: 'Vault sidebar + full board at /studio-progress — weekly goals, rank XP, milestones, and leaderboard compare.',
+          icon: <Trophy className="h-3.5 w-3.5" />,
         },
-        { 
-          title: 'Smart Structure', 
-          desc: 'Auto-paste deconstruction of raw text.',
-          icon: <ClipboardPaste className="h-3.5 w-3.5" />
+        {
+          title: 'Achievements',
+          desc: 'Badges unlock as you write, generate, and explore. Hover trophies in Studio Profile for details.',
+          icon: <Sparkles className="h-3.5 w-3.5" />,
         },
-        { 
-          title: 'Undo System', 
-          desc: '20-level history stack for instant reverts.',
-          icon: <Undo2 className="h-3.5 w-3.5" />
+        {
+          title: 'Share Cards',
+          desc: 'Export a foil milestone card from Studio Profile — rank, XP, streak, and your latest badge for social posts.',
+          icon: <Share2 className="h-3.5 w-3.5" />,
         },
-        { 
-          title: 'Ink Animation', 
-          desc: 'Visual feedback pen for every Ink spent.',
-          icon: <Zap className="h-3.5 w-3.5" />
-        }
-      ]
+        {
+          title: 'Refer a Friend',
+          desc: 'Ink Store → copy your link. You and each friend get 150 permanent Ink when they join (up to 4 referrals).',
+          icon: <Gift className="h-3.5 w-3.5" />,
+        },
+      ],
     },
     {
       title: 'Updates',
@@ -89,27 +117,27 @@ export function WhatsNewDialog() {
       bgColor: 'bg-amber-500/5',
       icon: <Cpu className="h-4 w-4" />,
       items: [
-        { 
-          title: '6-Section Hub', 
-          desc: 'Full calibration grid in Generation Hub.',
-          icon: <Fingerprint className="h-3.5 w-3.5" />
+        {
+          title: 'Vault Layout',
+          desc: 'Unified header row, tighter spacing, larger vinyl grid, and Studio Progress panel in the left gutter.',
+          icon: <LayoutGrid className="h-3.5 w-3.5" />,
         },
-        { 
-          title: 'Vibe Vault', 
-          desc: 'Save and load custom instrumentation.',
-          icon: <FolderOpen className="h-3.5 w-3.5" />
+        {
+          title: 'Guided Tour',
+          desc: 'First-time lyrics-page walkthrough with replay from the Studio Manual (? icon).',
+          icon: <BookOpen className="h-3.5 w-3.5" />,
         },
-        { 
-          title: 'Dual DNA', 
-          desc: 'Emerald and Green rule layer badges.',
-          icon: <CheckCircle2 className="h-3.5 w-3.5" />
+        {
+          title: 'Calibration Hub',
+          desc: 'Generation Workstation step backgrounds, ambient hub polish, and clearer DNA strain routing.',
+          icon: <Target className="h-3.5 w-3.5" />,
         },
-        { 
-          title: 'Scale Up', 
-          desc: 'Upgraded legibility for Bar Workstation.',
-          icon: <Sparkles className="h-3.5 w-3.5" />
-        }
-      ]
+        {
+          title: 'Nav & Docs',
+          desc: 'Larger center logo, Studio Progress in the profile menu, and FAQ/tips for progress, cards, and referrals.',
+          icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+        },
+      ],
     },
     {
       title: 'Fixes',
@@ -117,39 +145,39 @@ export function WhatsNewDialog() {
       bgColor: 'bg-emerald-500/5',
       icon: <ShieldCheck className="h-4 w-4" />,
       items: [
-        { 
-          title: 'Notepad logic', 
-          desc: 'Hardened Split/Merge index integrity.',
-          icon: <ArrowRight className="h-3 w-3" />
+        {
+          title: 'Studio Tips',
+          desc: 'Tips show once per lyrics-page visit instead of repeating on every auth refresh.',
+          icon: <Zap className="h-3 w-3" />,
         },
-        { 
-          title: 'UI Decoupling', 
-          desc: 'Vibe toggles no longer minimize cards.',
-          icon: <Waves className="h-3 w-3" />
+        {
+          title: "What's New",
+          desc: 'Upgrade notes show once per login; Escape and backdrop dismiss count properly.',
+          icon: <RefreshCw className="h-3 w-3" />,
         },
-        { 
-          title: 'Crash Patch', 
-          desc: 'Resolved Reference Errors in synthesis.',
-          icon: <AlertCircle className="h-3 w-3" />
+        {
+          title: 'Vault UX',
+          desc: 'Removed awkward blank zones, empty Loose Tracks section when you have none, and progress text overflow.',
+          icon: <ArrowRight className="h-3 w-3" />,
         },
-        { 
-          title: 'Admin Logic', 
-          desc: 'Refined Ink adjustment dashboard tools.',
-          icon: <Cpu className="h-3 w-3" />
-        }
-      ]
-    }
+        {
+          title: 'Stripe Referrals',
+          desc: 'Referral signups credit Ink automatically; referred users carry metadata on checkout for tracking.',
+          icon: <Gift className="h-3 w-3" />,
+        },
+      ],
+    },
   ];
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-5xl h-auto max-h-[90vh] flex flex-col p-0 overflow-hidden bg-background border-2 rounded-xl shadow-2xl z-[3000]">
         <DialogHeader className="p-6 pb-4 border-b bg-muted/5 relative">
           <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
             <Cpu className="h-16 w-16" />
           </div>
           <div className="flex items-center gap-3 mb-1">
-            <Badge className="bg-primary/20 text-primary border-primary/20 font-code px-2 text-[10px]">Bar 4 Bar v.03</Badge>
+            <Badge className="bg-primary/20 text-primary border-primary/20 font-code px-2 text-[10px]">Bar 4 Bar v.04</Badge>
             <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Studio Upgrade Notes</span>
           </div>
           <DialogTitle className="font-headline text-3xl font-bold tracking-tighter">What's New in the Studio</DialogTitle>
@@ -184,8 +212,8 @@ export function WhatsNewDialog() {
         </div>
 
         <DialogFooter className="p-6 border-t bg-muted/5 sm:justify-between items-center">
-          <p className="text-[9px] text-muted-foreground font-code uppercase tracking-widest">Architected for the 5/14/2026 State</p>
-          <Button onClick={handleClose} className="px-10 font-bold h-10 shadow-lg">
+          <p className="text-[9px] text-muted-foreground font-code uppercase tracking-widest">May 2026 Studio Update</p>
+          <Button onClick={dismiss} className="px-10 font-bold h-10 shadow-lg">
             Dismiss & Enter Vault
           </Button>
         </DialogFooter>

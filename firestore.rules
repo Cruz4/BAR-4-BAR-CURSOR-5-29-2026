@@ -68,6 +68,26 @@ service cloud.firestore {
         allow read: if isOwnerOrAdmin(userId);
         allow write: if false;
       }
+
+      match /gamification/{docId} {
+        allow read: if isOwnerOrAdmin(userId);
+        allow write: if false;
+      }
+    }
+
+    match /publicProfiles/{slug} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /leaderboard_weekly/{weekId} {
+      allow read: if true;
+      allow write: if false;
+
+      match /entries/{entryId} {
+        allow read: if true;
+        allow write: if false;
+      }
     }
 
     match /reports/{reportId} {

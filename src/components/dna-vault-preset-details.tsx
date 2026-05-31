@@ -184,7 +184,7 @@ export function DnaVaultPresetDetails({
       {styleAnalysis && (
         <div className="space-y-2.5 pt-2 border-t border-white/5">
           <p className={cn('text-[10px] font-bold uppercase tracking-widest', styleTheme.title)}>
-            Artist Style
+            Style DNA
           </p>
           <div
             className={cn(
@@ -204,13 +204,13 @@ export function DnaVaultPresetDetails({
                       size="icon"
                       className={cn('h-7 w-7', styleTheme.inject, styleTheme.injectHover)}
                       onClick={() => onInjectStyle(styleAnalysis, styleMetrics)}
-                      aria-label="Load style into Artist Style panel"
+                      aria-label="Load style into Style DNA panel"
                     >
                       <Zap className="h-3.5 w-3.5" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="left" className="max-w-[240px] text-xs">
-                    Load style into Artist Style panel
+                    Load style into Style DNA panel
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -294,7 +294,7 @@ export function DnaVaultPresetDetails({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="left" className="max-w-[240px] text-xs">
-                      Load structure guide into Structure panel
+                      Append to Structure guide in the Calibration Hub
                     </TooltipContent>
                   </Tooltip>
                 )}

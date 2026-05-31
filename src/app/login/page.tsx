@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/client/firebase';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,10 +33,12 @@ import { cn } from '@/lib/utils';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import Image from 'next/image';
-import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import { REFERRAL_INK_REWARD, REFERRAL_STORAGE_KEY, normalizeReferralCode } from '@/lib/referrals';
+import { claimPendingReferral } from '@/components/refer-a-friend-section';
 
 function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { user } = useAuth();
   const { scrollY } = useScroll();
@@ -67,6 +69,35 @@ function LoginForm() {
     loginFormRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  useEffect(() => {
+    const ref = normalizeReferralCode(searchParams.get('ref'));
+    if (ref) {
+      try {
+        sessionStorage.setItem(REFERRAL_STORAGE_KEY, ref);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [searchParams]);
+
+  const applyReferralIfNew = async (userId: string) => {
+    try {
+      const stored = sessionStorage.getItem(REFERRAL_STORAGE_KEY);
+      const code = normalizeReferralCode(stored);
+      if (!code) return;
+      const rewarded = await claimPendingReferral(userId, code);
+      sessionStorage.removeItem(REFERRAL_STORAGE_KEY);
+      if (rewarded) {
+        toast({
+          title: 'Referral bonus applied',
+          description: `You and your friend each received ${REFERRAL_INK_REWARD} permanent Ink.`,
+        });
+      }
+    } catch (e) {
+      console.warn('Referral claim failed', e);
+    }
+  };
+
   const syncUserProfile = async (firebaseUser: any, isNewSignup = false) => {
     try {
         const userRef = doc(db, 'users', firebaseUser.uid);
@@ -85,7 +116,9 @@ function LoginForm() {
         await setDoc(userRef, userData, { merge: true });
         if (isNew) {
           await trackStudioEvent(ANALYTICS_EVENTS.SIGNUP, { method: authMode === 'signup' ? 'email' : 'google' });
+          await applyReferralIfNew(firebaseUser.uid);
         }
+        return isNew;
     } catch (e) {
       console.error("Profile sync failed", e);
     }
@@ -100,7 +133,14 @@ function LoginForm() {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      await syncUserProfile(result.user);
+      const isNew = await syncUserProfile(result.user);
+      if (!isNew) {
+        try {
+          sessionStorage.removeItem(REFERRAL_STORAGE_KEY);
+        } catch {
+          /* ignore */
+        }
+      }
       router.push('/');
     } catch (error: any) {
       setIsProcessing(false);
@@ -137,9 +177,9 @@ function LoginForm() {
   if (user && !isProcessing) return null;
 
   return (
-    <div className="min-h-screen bg-[#050a1e] flex flex-col selection:bg-primary/30 overflow-x-hidden relative">
+    <div className="min-h-screen flex flex-col selection:bg-primary/30 overflow-x-hidden relative">
       {/* FIXED HEADER - ABSOLUTELY CENTERED BRANDING */}
-      <header className="fixed top-0 left-0 right-0 h-16 border-b border-white/5 bg-[#050a1e]/80 backdrop-blur-xl z-[200] flex items-center justify-between px-6 shadow-2xl">
+      <header className="fixed top-0 left-0 right-0 h-16 border-b border-white/5 bg-background/70 backdrop-blur-xl z-[200] flex items-center justify-between px-6 shadow-2xl">
           {/* Centered Logo & Title - ABSOLUTE MIDPOINT LOCK */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-4 z-10">
               <div className="w-10 h-10 bg-white rounded-xl overflow-hidden flex items-center justify-center p-1.5 shadow-2xl">
@@ -168,7 +208,7 @@ function LoginForm() {
                   className="object-cover opacity-90 blur-[1px] scale-105"
                   sizes="100vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#050a1e]" />
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
             </div>
             
             <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in zoom-in duration-1000 relative z-50">
@@ -218,11 +258,11 @@ function LoginForm() {
             </div>
 
             {/* NEURAL TRANSITION: DEEP RADIAL BLEND */}
-            <div className="absolute bottom-0 left-0 w-full h-48 bg-gradient-to-t from-[#050a1e] to-transparent z-40 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-full h-48 bg-gradient-to-t from-background to-transparent z-40 pointer-events-none" />
         </section>
 
         {/* COMMAND DECK SECTION */}
-        <section ref={loginFormRef} className="relative py-32 px-4 flex flex-col justify-center items-center overflow-hidden bg-[#050a1e]">
+        <section ref={loginFormRef} className="relative py-32 px-4 flex flex-col justify-center items-center overflow-hidden">
             {/* ATMOSPHERIC DEPTH LAYERS */}
             <div className="absolute inset-0 z-0 opacity-40 pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
@@ -323,11 +363,11 @@ function LoginForm() {
             </Card>
 
             {/* SOFT BLEND TRANSITION TO BADGES */}
-            <div className="absolute bottom-0 left-0 w-full h-48 bg-gradient-to-t from-[#050a1e] to-transparent z-40 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-full h-48 bg-gradient-to-t from-background to-transparent z-40 pointer-events-none" />
         </section>
 
         {/* FEATURE DEEP-DIVE - REFERENCE IMAGE SYNC */}
-        <section className="py-32 px-4 relative overflow-hidden bg-[#050a1e]">
+        <section className="py-32 px-4 relative overflow-hidden">
             <div className="container mx-auto max-w-7xl relative z-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                     {/* Card 1: ALBUM DNA */}
@@ -407,10 +447,10 @@ function LoginForm() {
                   <div className="p-2 rounded-full bg-white/5 group-hover:bg-primary/20"><Coffee className="h-4 w-4" /></div>
                   Buy Me A Coffee
               </a>
-              <a href="#" className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground hover:text-primary transition-all uppercase tracking-widest group">
+              <Link href="/usage?tab=buy-ink" className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground hover:text-primary transition-all uppercase tracking-widest group">
                   <div className="p-2 rounded-full bg-white/5 group-hover:bg-primary/20"><Gift className="h-4 w-4" /></div>
                   Refer A Friend
-              </a>
+              </Link>
           </div>
           <LegalFooter className="opacity-60" />
       </footer>

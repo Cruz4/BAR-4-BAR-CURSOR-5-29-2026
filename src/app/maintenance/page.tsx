@@ -4,7 +4,7 @@ import { HardHat } from 'lucide-react';
 
 export default function MaintenancePage() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background text-center p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
       <HardHat className="h-24 w-24 text-primary animate-pulse" />
       <h1 className="mt-8 text-4xl font-headline font-bold">Under Maintenance</h1>
       <p className="mt-4 text-lg text-muted-foreground font-code">

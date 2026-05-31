@@ -85,7 +85,6 @@ function RelayWizardContent() {
         excludedWords: '',
     });
     const [permissionChecked, setPermissionChecked] = useState(false);
-    const [specialInstructionsWeight, setSpecialInstructionsWeight] = useState(100);
 
     const toggleRemixDirection = (dir: WizardDirection) => {
         setWizardState((prev) => {
@@ -148,13 +147,11 @@ function RelayWizardContent() {
         setGenerating(true, 'Synthesizing Original Content...');
         try {
             const directionStr = formatRemixDirectionsWithWeights(
-                wizardState.selectedDirections,
-                specialInstructionsWeight
+                wizardState.selectedDirections
             );
             const result = await generateRelayDraft(await withAiAuth({
                 analysis: JSON.stringify(wizardState.analysis),
                 direction: directionStr,
-                specialInstructionsWeight,
                 excludedWords: wizardState.excludedWords,
                 userName: user?.displayName
             }));
@@ -487,7 +484,7 @@ function RelayWizardContent() {
 
 export default function RelayPage() {
     return (
-        <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-background"><StudioLoader size="lg" /></div>}>
+        <Suspense fallback={<div className="h-screen w-full flex items-center justify-center"><StudioLoader size="lg" /></div>}>
             <RelayWizardContent />
         </Suspense>
     );

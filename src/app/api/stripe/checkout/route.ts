@@ -62,6 +62,8 @@ export async function POST(req: Request) {
         inkAmount: inkAmount.toString(),
         type: isSubscription ? 'subscription' : 'one_time',
         ...(isSubscription ? { subscriptionTier: catalogEntry.tier } : {}),
+        ...(userData?.referredBy ? { referredBy: String(userData.referredBy) } : {}),
+        ...(userData?.referralCode ? { referralCode: String(userData.referralCode) } : {}),
       },
       automatic_tax: { enabled: false },
       allow_promotion_codes: true,

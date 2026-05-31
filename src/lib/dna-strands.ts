@@ -39,21 +39,42 @@ export const STRAIN_TARGETS: Record<string, StrainInjectionTarget> = {
 /** Hover text for ⚡ inject buttons on analysis strain cards. */
 export function getStrainInjectTooltip(strainTitle: string): string {
   const target = STRAIN_TARGETS[strainTitle];
-  if (!target) return 'Inject this strain into the Calibration Hub';
+  if (!target) return 'Append this strain into the Calibration Hub';
   if (target.kind === 'intents') {
-    return 'Inject motifs into Intents — AI weaves them into lyrics and punchlines';
+    return 'Add motifs to Intents — AI weaves them into lyrics and punchlines';
   }
   if (target.kind === 'structure_guide') {
-    return 'Inject song structure insight into the Structure panel guide';
+    return 'Append to Structure guide in the Calibration Hub';
   }
   if (target.kind === 'style_profile') {
-    return 'Inject lyrical style DNA into Artist Style panel';
+    return 'Replace Style DNA profile in the Calibration Hub';
   }
   const dest = DIRECTION_FIELD_LABELS[target.field];
-  return target.label
-    ? `Inject ${strainTitle} into ${dest}`
-    : `Inject into ${dest}`;
+  const tagged = target.label ? `[${target.label}]` : strainTitle;
+  return `Append ${tagged} to ${dest} in Creative DNA (won't overwrite existing text)`;
 }
+
+/** Shared Calibration Hub UI tooltips. */
+export const DNA_HUB_TOOLTIPS = {
+  sectionCollapse:
+    'Sections start minimized. They auto-expand when you inject strains, load a vault preset, or add remix paths.',
+  destinationPill: 'Color matches the hub section — use ⚡ to send this strain there.',
+  vaultFullLoad:
+    'Load entire saved profile — Creative DNA, motifs, structure guide, Style DNA, and extraction archive.',
+  vaultDelete: 'Delete this saved DNA profile from your album vault.',
+  vaultInsightsTab: 'Current extraction from your latest analyze step.',
+  vaultVaultTab: 'Saved album DNA profiles — full load or partial inject.',
+  remixInfluence:
+    'Relative weight among selected remix paths only — not vs Special Instructions or DNA.',
+  saveDnaProfile:
+    'Archive full extraction, hub mapping, structure guide, motifs, and Style DNA for reuse on any track.',
+  reMatrixIdeas: 'Regenerate remix path options without re-analyzing source lyrics.',
+  inheritAlbum: 'Pull album-level Creative DNA into this synthesis when enabled.',
+  inheritTrack: "Pull this track's saved DNA fields into the hub when enabled.",
+  structureGuideClear: 'Clear extracted structure guide text (does not remove your section list).',
+  approvalAppend: 'Append generated sections to your current sheet without deleting existing lyrics.',
+  approvalReplace: 'Replace all lyrics on the sheet with the generated draft.',
+} as const;
 
 /** Soft UI tint matching where a strain lands in the Calibration Hub. */
 export type StrainDestinationTheme = {
@@ -132,7 +153,7 @@ const HUB_THEMES = {
     inject: 'text-fuchsia-500',
     injectHover: 'hover:bg-fuchsia-500/15',
     divider: 'divide-fuchsia-500/10',
-    hubSection: 'Artist Style',
+    hubSection: 'Style DNA',
   },
 } satisfies Record<string, Omit<StrainDestinationTheme, 'hubField'>>;
 
@@ -164,7 +185,7 @@ export function getVaultFieldInjectTooltip(fieldKey: keyof Direction): string {
     inheritFromAlbum: 'Inherit album DNA',
     updatedAt: 'Updated',
   };
-  return `Load saved strain into ${labels[fieldKey] ?? fieldKey}`;
+  return `Load saved value into ${labels[fieldKey] ?? fieldKey} — replaces current field text`;
 }
 
 export function appendDirectionField(

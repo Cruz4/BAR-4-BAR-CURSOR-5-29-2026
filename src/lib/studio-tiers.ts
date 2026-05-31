@@ -99,7 +99,7 @@ export const PRO_UNLOCKS = [
 export const PRO_YEARLY_EXCLUSIVES = [
   `${PRO_YEARLY_INK.toLocaleString()} residency Ink/mo — upgraded from ${PRO_MONTHLY_INK.toLocaleString()} on monthly Pro`,
   `${INK_PACK_YEARLY_DISCOUNT_SHORT} — forever, not a limited promo`,
-  'BYO Google AI key — bypass platform rate limits on your generations',
+  'BYO Google AI key — your API quota for model calls; Ink covers workstation orchestration (not double token billing)',
   'Studio Roadmap Input — direct feature feedback & vote on what we ship next (yearly only)',
   `Best price: ${PRO_YEARLY_BILLED}/yr (${PRO_YEARLY_PRICE}/mo effective · save $${PRO_YEARLY_ANNUAL_SAVINGS_DOLLARS.toFixed(2)}/yr vs monthly · ${PRO_YEARLY_SUBSCRIPTION_SAVINGS_PERCENT}% off)`,
 ] as const;

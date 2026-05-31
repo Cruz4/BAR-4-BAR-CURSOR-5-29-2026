@@ -36,7 +36,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={cn('font-body antialiased min-h-screen bg-background flex flex-col')} suppressHydrationWarning>
+      <body className={cn('font-body antialiased min-h-screen studio-page-base flex flex-col')} suppressHydrationWarning>
           <ClientLayout>{children}</ClientLayout>
       </body>
     </html>

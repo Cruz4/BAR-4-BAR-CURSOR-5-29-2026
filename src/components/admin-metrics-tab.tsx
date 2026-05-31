@@ -173,7 +173,7 @@ export function AdminMetricsTab() {
 
   if (!metrics) return null;
 
-  const { funnel, retention, monetization, freeTierPressure, acquisition } = metrics;
+  const { funnel, retention, monetization, freeTierPressure, acquisition, gamification } = metrics;
 
   return (
     <div className="space-y-8">
@@ -294,6 +294,24 @@ export function AdminMetricsTab() {
           <MetricCard label="Users returned (7d)" value={retention.usersWith7DayReturn} />
           <MetricCard label="Active last 7d" value={retention.activeLast7Days} />
           <MetricCard label="Active last 30d" value={retention.activeLast30Days} />
+        </div>
+      </section>
+
+      {/* Gamification */}
+      <section>
+        <h3 className="text-[10px] font-bold uppercase tracking-[0.35em] text-muted-foreground mb-4 flex items-center gap-2">
+          <BarChart3 className="h-3 w-3" /> Gamification
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <MetricCard label="Users w/ badges" value={gamification.usersWithAchievements} accent="text-primary" />
+          <MetricCard label="Achievement unlocks" value={gamification.achievementUnlockEvents} sub="Recent events" />
+          <MetricCard label="Avg streak (active)" value={gamification.avgStreakActiveUsers} sub="Days" accent="text-amber-400" />
+          <MetricCard label="Leaderboard views" value={gamification.leaderboardViews} />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3">
+          <MetricCard label="Share cards made" value={gamification.shareCardGenerated} />
+          <MetricCard label="Share cards opened" value={gamification.shareCardOpened} />
+          <MetricCard label="Streak milestones" value={gamification.streakMilestoneEvents} />
         </div>
       </section>
 

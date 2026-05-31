@@ -148,6 +148,10 @@ export async function generateRelayDraft(input: {
   intents?: string[],
   vibe?: any,
   directionSuite?: any,
+  useAlbumDirection?: boolean,
+  useTrackDirection?: boolean,
+  albumDirection?: any,
+  trackDirection?: any,
   styleProfile?: { analysis?: string },
   specialInstructions?: string,
   negativePrompt?: string,
@@ -155,7 +159,6 @@ export async function generateRelayDraft(input: {
   mustIncludeWords?: string[],
   structure?: any[],
   structureGuide?: string,
-  specialInstructionsWeight?: number,
   userId?: string,
   userName?: string 
 } & AiSecuredInput) {
@@ -171,11 +174,14 @@ export async function generateRelayDraft(input: {
           intentsStr: (input.intents || []).join(', '),
           vibeStr: JSON.stringify(input.vibe || {}),
           dnaStr: JSON.stringify(input.directionSuite || {}),
+          albumDnaStr: input.useAlbumDirection ? JSON.stringify(input.albumDirection || {}) : '',
+          trackDnaStr: input.useTrackDirection ? JSON.stringify(input.trackDirection || {}) : '',
+          useAlbumDirection: !!input.useAlbumDirection,
+          useTrackDirection: !!input.useTrackDirection,
           styleStr: styleAnalysis || 'NONE — do not apply artist style DNA.',
           forbiddenWords: input.forbiddenWords || [],
           mustIncludeWords: input.mustIncludeWords || [],
           specialInstructions: input.specialInstructions || 'N/A',
-          specialInstructionsWeight: input.specialInstructionsWeight ?? 100,
           structureStr: input.structure ? JSON.stringify(input.structure) : undefined,
           structureGuide: input.structureGuide?.trim() || undefined
         });
@@ -199,10 +205,13 @@ const generateRelayDraftPrompt = ai.definePrompt({
     delivery: z.string(), 
     cleanliness: z.string(),
     specialInstructions: z.string().optional(),
-    specialInstructionsWeight: z.number().optional(),
     intentsStr: z.string().optional(),
     vibeStr: z.string().optional(),
     dnaStr: z.string().optional(),
+    albumDnaStr: z.string().optional(),
+    trackDnaStr: z.string().optional(),
+    useAlbumDirection: z.boolean().optional(),
+    useTrackDirection: z.boolean().optional(),
     styleStr: z.string().optional(),
     negativePrompt: z.string().optional(),
     forbiddenWords: z.array(z.string()).optional(),
@@ -260,9 +269,17 @@ You MUST ONLY generate the following sections and bar counts: {{{structureStr}}}
 **DNA ANCHORS:**
 {{{analysis}}}
 
+**CREATIVE DNA (respect active toggles — merged master direction):**
+{{#if useAlbumDirection}}
+- INHERIT ALBUM (active): {{{albumDnaStr}}}
+{{/if}}
+{{#if useTrackDirection}}
+- TRACK DNA (active): {{{trackDnaStr}}}
+{{/if}}
+- MERGED DIRECTION (use this as the architectural blueprint): {{{dnaStr}}}
+
 **CONTEXT:**
 - Vibe: {{vibeStr}}
-- Master Direction: {{dnaStr}}
 
 {{#if styleStr}}
 **ARTIST STYLE DNA (ONLY IF NOT "NONE"):**

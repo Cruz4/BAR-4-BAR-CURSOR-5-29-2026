@@ -5,7 +5,7 @@ import { Music, ArrowLeft } from 'lucide-react';
 
 export default function NotFound() {
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] bg-background p-4">
+    <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
       <div className="fixed inset-0 z-0 pointer-events-none opacity-20">
         <div className="h-full w-full bg-[repeating-linear-gradient(theme(colors.border),theme(colors.border)_1px,transparent_1px,transparent_24px)]"></div>
       </div>
