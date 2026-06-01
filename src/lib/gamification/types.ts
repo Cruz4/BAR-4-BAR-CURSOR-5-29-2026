@@ -15,13 +15,16 @@ export type GamificationSummary = {
   monthlyChallengeMonthKey: string;
   generateNextLineMonthCount: number;
   tracksCompletedMonthCount: number;
+  /** Lifetime **line** count (historical field name). Display as rhyme bars via linesToRhymeBars(). */
   lifetimeBarsWritten: number;
   lifetimeTracksCompleted: number;
   lifetimeGenerateNextLine: number;
   lifetimeStudioSessions: number;
   personalBests: {
+    /** Lines written in one calendar day */
     barsInDay: number;
     longestStreak: number;
+    /** Lines written in one session on a track */
     barsInSession: number;
   };
   publicProfile: boolean;
@@ -29,7 +32,9 @@ export type GamificationSummary = {
   leaderboardHidden: boolean;
   bonusInkGrantedThisMonth: number;
   bonusInkMonthKey: string;
+  /** Rolling 7-day **line** count for leaderboard ranking */
   barsWritten7d: number;
+  /** Lines written today (resets daily) */
   barsWrittenToday: number;
   barsWrittenDayKey: string;
   tracksCompleted30d: number;

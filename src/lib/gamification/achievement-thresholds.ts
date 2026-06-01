@@ -1,22 +1,22 @@
-/** Server-side unlock thresholds — Studio trophies should feel earned. */
+/** Server-side unlock thresholds — counts are in **rhyme bars** (2 lines = 1 bar). */
 
 export const ACHIEVEMENT_THRESHOLDS = {
-  /** Bars on one track in a session */
-  sessionBars: 32,
+  /** Rhyme bars on one track in a session (32 lines) */
+  sessionBars: 16,
   /** Tracks on one concept album */
   albumTracks: 5,
   /** Wide concept album */
   albumTracksWide: 8,
   /** Concept albums that count toward Dual Blueprint */
   albumQualifyMinTracks: 3,
-  /** Non-empty bars required to count a "Track Locked" completion */
+  /** Rhyme bars required to count a "Track Locked" completion (16 lines) */
   trackCompleteMinBars: 8,
-  /** Deep single-track drafts (verified from Firestore) */
-  trackBarsDeep: 64,
-  trackBarsCentury: 100,
-  /** Lifetime bars (server delta on save only) */
-  lifetimeBars1k: 1000,
-  lifetimeBars2500: 2500,
+  /** Deep single-track drafts — rhyme bars (verified from Firestore line count) */
+  trackBarsDeep: 32,
+  trackBarsCentury: 50,
+  /** Lifetime rhyme bars (stored counters are lines; compare via rhymeBarsToLines) */
+  lifetimeBars1k: 500,
+  lifetimeBars2500: 1250,
   /** Verified AI next-line generations */
   lifetimeNextLine50: 50,
   lifetimeNextLine200: 200,
@@ -25,23 +25,23 @@ export const ACHIEVEMENT_THRESHOLDS = {
   catalogCompleted12: 12,
   /** Completed tracks on one album */
   albumCompletedTracks: 3,
-  /** Bars written in one calendar day */
-  barsInDayNight: 24,
-  barsInDayGraveyard: 40,
+  /** Rhyme bars written in one calendar day */
+  barsInDayNight: 12,
+  barsInDayGraveyard: 20,
   streak3Days: 3,
   streak7Days: 7,
   streak30Days: 30,
-  streak3MinLifetimeBars: 24,
-  streak7MinLifetimeBars: 70,
-  streak30MinLifetimeBars: 300,
-  /** Longest streak milestones + writing floor */
+  streak3MinLifetimeBars: 12,
+  streak7MinLifetimeBars: 35,
+  streak30MinLifetimeBars: 150,
+  /** Longest streak milestones + writing floor (rhyme bars) */
   longestStreak14: 14,
-  longestStreak14MinBars: 120,
+  longestStreak14MinBars: 60,
   longestStreak60: 60,
-  longestStreak60MinBars: 450,
-  /** Unique studio days + writing floor */
+  longestStreak60MinBars: 225,
+  /** Unique studio days + writing floor (rhyme bars) */
   sessionDaysVeteran: 45,
-  sessionVeteranMinBars: 250,
+  sessionVeteranMinBars: 125,
 } as const;
 
 /** Feet-wet trophies — only these are meant to unlock quickly for new artists. */

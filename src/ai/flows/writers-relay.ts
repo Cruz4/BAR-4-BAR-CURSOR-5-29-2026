@@ -287,5 +287,5 @@ You MUST ONLY generate the following sections and bar counts: {{{structureStr}}}
 If the style string is "NONE", ignore artist style entirely.
 {{/if}}
 
-Return ONLY JSON with "title" and "sections" (array of {name, bars}). Bars must be single-line strings.`,
+Return ONLY JSON with "title" and "sections" (array of {name, bars}). Lines must be single-line strings.`,
 });

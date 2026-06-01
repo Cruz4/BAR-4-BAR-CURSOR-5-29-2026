@@ -153,9 +153,10 @@ import {
   DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
 import { cn, mergeDirection } from '@/lib/utils';
+import { linesToRhymeBars } from '@/lib/lyrics-units';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, Hint } from '@/components/ui/tooltip';
 
 // --- Hoisted Workstation Dialogs ---
 
@@ -365,8 +366,8 @@ function DNAVaultDialog({ open, onOpenChange, album, updateAlbum, track, onUpdat
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md bg-card border-2">
-                <DialogHeader>
+            <DialogContent className="sm:max-w-2xl max-h-[min(92vh,calc(100dvh-2rem))] flex flex-col overflow-hidden bg-card border-2">
+                <DialogHeader className="shrink-0">
                     <DialogTitle className="font-headline text-2xl flex items-center gap-2 text-green-500">
                         <FolderOpen className="h-6 w-6" /> DNA Vault
                     </DialogTitle>
@@ -374,9 +375,9 @@ function DNAVaultDialog({ open, onOpenChange, album, updateAlbum, track, onUpdat
                         {isPro ? 'Selectively load creative strains or full profiles from your history.' : 'Load system DNA strains — pick individual fields or apply full profiles.'}
                     </DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="h-[450px] mt-4">
+                <div className="mt-4 min-h-0 flex-1 overflow-y-auto studio-scrollbar pr-2 max-h-[min(calc(92vh-7.5rem),660px)]">
                     <TooltipProvider delayDuration={300}>
-                    <div className="space-y-4">
+                    <div className="space-y-4 pb-1">
                         {presets.length > 0 ? presets.map((p: any, i: number) => (
                             <Card key={`${p.name}-${i}`} className="bg-background/40 border-white/5 overflow-hidden flex flex-col transition-all">
                                 <div 
@@ -471,7 +472,7 @@ function DNAVaultDialog({ open, onOpenChange, album, updateAlbum, track, onUpdat
                         )}
                     </div>
                     </TooltipProvider>
-                </ScrollArea>
+                </div>
             </DialogContent>
         </Dialog>
     );
@@ -663,7 +664,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   }
 
   return (
-    <div className={cn("flex flex-col h-full bg-card border-r relative overflow-hidden w-[260px] max-xl:w-[220px] max-lg:w-[200px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'left'))}>
+    <div className={cn("flex flex-col h-full bg-card border-r relative overflow-hidden w-[260px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'left'))}>
       <div className="flex items-center justify-between p-4 border-b shrink-0 h-14">
         <h3 className="font-headline font-bold text-xs uppercase tracking-widest text-muted-foreground">Workstation</h3>
         {!mobileActive && (
@@ -704,7 +705,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                       <Badge
                         variant="outline"
                         className={cn(
-                          'text-[8px] font-bold uppercase h-5',
+                          'text-[8px] font-bold uppercase h-5 px-2 leading-none whitespace-nowrap shrink-0 max-w-full truncate',
                           track.status === 'complete'
                             ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
                             : 'border-sky-500/30 bg-sky-500/5 text-sky-300'
@@ -720,7 +721,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                       variant={track.status === 'complete' ? 'outline' : 'default'}
                       size="sm"
                       className={cn(
-                        'w-full text-[9px] font-bold h-9 uppercase justify-start',
+                        'w-full min-w-0 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2',
                         track.status === 'complete'
                           ? 'border-sky-500/30 text-sky-300 hover:bg-sky-500/10'
                           : 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/30 shadow-[0_0_16px_rgba(16,185,129,0.2)]'
@@ -748,20 +749,20 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                       )}
                     </Button>
                   </div>
-                  <div className="grid grid-cols-1 gap-2 pt-2">
+                  <div className="grid grid-cols-1 gap-2 pt-2 min-w-0">
                     {isPro ? (
-                      <Button variant="secondary" size="sm" className="w-full bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 text-[9px] font-bold h-9 uppercase justify-start" onClick={() => window.open(`${window.location.pathname}/perform`, '_blank')}><MonitorPlay className="mr-2 h-4 w-4" /> Performance Mode</Button>
+                      <Button variant="secondary" size="sm" className="w-full min-w-0 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => window.open(`${window.location.pathname}/perform`, '_blank')}><MonitorPlay className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">Performance Mode</span></Button>
                     ) : (
                       <UpgradeTooltip feature="Performance Mode" benefit="Full-screen teleprompter with scroll-synced lyrics for stage and studio sessions." example="Rehearse hooks without losing your place mid-verse.">
-                        <Button variant="secondary" size="sm" className={cn('w-full text-[9px] font-bold h-9 uppercase justify-start', proLockShell('md'), proLockText())} onClick={() => router.push('/usage?tab=cloud')}><Lock className={cn('mr-2 h-4 w-4', proLockIcon())} /> Performance Mode</Button>
+                        <Button variant="secondary" size="sm" className={cn('w-full min-w-0 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2', proLockShell('md'), proLockText())} onClick={() => router.push('/usage?tab=cloud')}><Lock className={cn('mr-2 h-4 w-4 shrink-0', proLockIcon())} /> <span className="truncate">Performance Mode</span></Button>
                       </UpgradeTooltip>
                     )}
-                    <Button variant="secondary" size="sm" className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold h-9 uppercase justify-start" onClick={() => setExportDialogOpen(true)}><FileDown className="mr-2 h-4 w-4" /> Export Track</Button>
+                    <Button variant="secondary" size="sm" className="w-full min-w-0 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => setExportDialogOpen(true)}><FileDown className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">Export Track</span></Button>
                     {isPro ? (
-                      <Button variant="secondary" size="sm" className="w-full bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-[9px] font-bold h-9 uppercase justify-start" onClick={() => setShareDialogOpen(true)}><Globe className="mr-2 h-4 w-4" /> DNA Drop (Share)</Button>
+                      <Button variant="secondary" size="sm" data-tour="dna-drop" className="w-full min-w-0 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => setShareDialogOpen(true)}><Globe className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">DNA Drop (Share)</span></Button>
                     ) : (
                       <UpgradeTooltip feature="DNA Drop" benefit="Publish a shareable link to your track blueprint for collab and feedback." example="Drop a link so collaborators can import your structure.">
-                        <Button variant="secondary" size="sm" className={cn('w-full text-[9px] font-bold h-9 uppercase justify-start', proLockShell('md'), proLockText())} onClick={() => router.push('/usage?tab=cloud')}><Lock className={cn('mr-2 h-4 w-4', proLockIcon())} /> DNA Drop (Share)</Button>
+                        <Button variant="secondary" size="sm" className={cn('w-full min-w-0 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2', proLockShell('md'), proLockText())} onClick={() => router.push('/usage?tab=cloud')}><Lock className={cn('mr-2 h-4 w-4 shrink-0', proLockIcon())} /> <span className="truncate">DNA Drop (Share)</span></Button>
                       </UpgradeTooltip>
                     )}
                   </div>
@@ -780,7 +781,13 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                         activeSectionId === s.id ? "bg-yellow-500/10 border-yellow-500/20" : "hover:bg-yellow-500/5"
                     )}>
                         <div className="flex items-center gap-2 min-w-0">
-                             <Badge variant="outline" className="h-4 px-1 text-[7px] font-mono border-white/10 text-muted-foreground">{s.bars.length}</Badge>
+                             <Badge
+                               variant="outline"
+                               className="h-4 px-1 text-[7px] font-mono border-white/10 text-muted-foreground"
+                               title={`${s.bars.length} lines · ${linesToRhymeBars(s.bars.length)} bars`}
+                             >
+                               {linesToRhymeBars(s.bars.length)}
+                             </Badge>
                              <span className="font-bold text-xs text-white uppercase truncate">{s.type}</span>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
@@ -1081,73 +1088,69 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
 
   return (
         <div className={cn("flex flex-1 flex-col min-w-0 basis-0 h-full relative overflow-hidden", mobileLyricsPanelClass(mobileActive))}>
-      <div className="h-14 max-md:h-auto max-md:min-h-0 max-md:py-2 px-3 max-md:px-2 md:px-8 flex max-md:flex-col max-md:gap-2 md:flex-row md:items-center md:justify-between bg-card z-20 border-b shrink-0 min-w-0">
-        <div className="flex items-center gap-2 md:gap-6 min-w-0 shrink-0">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" data-tour="smart-structure" className="h-8 max-md:px-2 max-md:text-[9px] px-4 font-bold text-xs uppercase tracking-widest border-border/40 hover:bg-primary/5 text-muted-foreground hover:text-primary" onClick={() => setSmartStructureOpen(true)}>
-                      <span className="max-md:hidden">{buttonLabel('analyzeStructure')}</span>
-                      <span className="md:hidden">Paste</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom"><p className="text-[10px] font-bold">{tooltip('analyzeStructure')}</p></TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+      <div className="h-14 max-md:h-auto max-md:min-h-0 max-md:py-2 px-2 max-md:px-2 md:px-4 flex flex-row items-center gap-2 bg-card z-20 border-b shrink-0 min-w-0 overflow-hidden">
+        <div className="flex items-center gap-2 min-w-0 shrink-0">
+            <Hint
+              skipOnTouch
+              side="bottom"
+              content={<p className="text-[10px] font-bold">{tooltip('analyzeStructure')}</p>}
+            >
+              <Button variant="outline" size="sm" data-tour="smart-structure" className="h-8 max-md:px-2 max-md:text-[9px] px-3 font-bold text-[10px] md:text-xs uppercase tracking-widest border-border/40 hover:bg-primary/5 text-muted-foreground hover:text-primary shrink-0" onClick={() => setSmartStructureOpen(true)}>
+                  <span className="max-md:hidden truncate max-w-[10rem]">{buttonLabel('analyzeStructure')}</span>
+                  <span className="md:hidden">Paste</span>
+              </Button>
+            </Hint>
         </div>
-        <div className="flex items-center gap-2 md:gap-4 min-w-0 max-md:w-full max-md:overflow-x-auto max-md:studio-scrollbar">
-          <div className="flex items-center gap-2 md:gap-3 bg-muted/40 px-2 md:px-3 py-1 rounded-full border border-border/40 shrink-0">
-             <div className="flex items-center gap-1.5 md:gap-2">
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary transition-all disabled:opacity-20 shrink-0"
-                                onClick={handleUndo}
-                                disabled={!canUndo}
-                            >
-                                <Undo2 className="h-4 w-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom"><p className="text-[10px] font-bold uppercase">Undo Last Action</p></TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-                <div className="w-px h-4 bg-border/40 mx-0.5 hidden sm:block" />
-                <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-muted-foreground mr-0.5 hidden sm:inline">RHYME FOCUS</span>
+        <div className="flex flex-1 min-w-0 items-center justify-end gap-2 overflow-x-auto studio-scrollbar">
+          <div className="flex items-center gap-1.5 md:gap-2 bg-muted/40 px-2 py-1 rounded-full border border-border/40 shrink-0">
+             <div className="flex items-center gap-1 md:gap-1.5">
+                <Hint
+                  side="bottom"
+                  content={<p className="text-[10px] font-bold uppercase">Undo Last Action</p>}
+                >
+                  <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary transition-all disabled:opacity-20 shrink-0"
+                      onClick={handleUndo}
+                      disabled={!canUndo}
+                  >
+                      <Undo2 className="h-4 w-4" />
+                  </Button>
+                </Hint>
+                <div className="w-px h-4 bg-border/40 hidden lg:block shrink-0" />
+                <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground hidden xl:inline shrink-0">Rhyme Focus</span>
                 <Switch 
                   checked={track.rhymeHighlightingEnabled} 
                   onCheckedChange={(c) => onUpdateTrack({ rhymeHighlightingEnabled: c })} 
                   className="scale-75 shrink-0"
                 />
-                <div className="w-px h-4 bg-border/40 mx-0.5" />
-                <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-muted-foreground mr-0.5 max-sm:hidden">RHYME PULSE</span>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div data-tour="rhyme-pulse" className="inline-flex shrink-0">
-                      <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className={cn(
-                              "rounded-full h-8 w-8 md:h-9 md:w-9 p-0 transition-all active:scale-90 active:shadow-inner bg-background border-primary/40 hover:bg-primary/5 group shadow-lg flex items-center justify-center",
-                              isRhymeLoading && "animate-pulse"
-                          )}
-                          onClick={handleRunRhymeScan}
-                          disabled={isRhymeLoading}
-                      >
-                          {isRhymeLoading ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <Target className="h-4 w-4 md:h-5 md:w-5 text-primary group-hover:scale-110 transition-transform" />}
-                      </Button>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom"><p className="text-[10px] font-bold">{tooltip('findRhymes')}</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <Badge variant="outline" className="h-4 px-1 text-[7px] font-bold border-primary/20 text-primary shrink-0">{getEffectiveCost('findRhymes')} INK</Badge>
+                <div className="w-px h-4 bg-border/40 shrink-0" />
+                <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground hidden xl:inline shrink-0">Rhyme Pulse</span>
+                <Hint
+                  skipOnTouch
+                  side="bottom"
+                  content={<p className="text-[10px] font-bold">{tooltip('findRhymes')}</p>}
+                >
+                  <div data-tour="rhyme-pulse" className="inline-flex shrink-0">
+                  <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className={cn(
+                          "rounded-full h-8 w-8 p-0 transition-all active:scale-90 bg-background border-primary/40 hover:bg-primary/5 group shadow-lg flex items-center justify-center shrink-0",
+                          isRhymeLoading && "animate-pulse"
+                      )}
+                      onClick={handleRunRhymeScan}
+                      disabled={isRhymeLoading}
+                  >
+                      {isRhymeLoading ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <Target className="h-4 w-4 text-primary" />}
+                  </Button>
+                  </div>
+                </Hint>
+                <Badge variant="outline" className="h-4 px-1.5 text-[7px] font-bold border-primary/20 text-primary shrink-0 leading-none whitespace-nowrap">{getEffectiveCost('findRhymes')} INK</Badge>
              </div>
           </div>
-          <ToggleGroup type="single" value={fontSize} onValueChange={(val) => val && setFontSize(val as any)} className="hidden md:flex bg-muted/40 border border-border/40 rounded-lg p-0.5 shrink-0">
+          <ToggleGroup type="single" value={fontSize} onValueChange={(val) => val && setFontSize(val as any)} className="hidden lg:flex bg-muted/40 border border-border/40 rounded-lg p-0.5 shrink-0">
             <ToggleGroupItem value="sm" className="h-7 w-8 text-[10px] font-bold">T</ToggleGroupItem>
             <ToggleGroupItem value="md" className="h-7 w-8 text-sm font-bold">T</ToggleGroupItem>
             <ToggleGroupItem value="lg" className="h-7 w-8 text-lg font-bold">T</ToggleGroupItem>
@@ -1242,28 +1245,29 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
         </div>
       </div>
 
-      <div data-tour="bar-workstation" className={cn("bg-card border-t shadow-[0_-10px_40px_rgba(0,0,0,0.5)] shrink-0 z-[40] relative transition-all duration-300 w-full max-w-full max-md:max-h-[45dvh] max-xl:max-h-[42dvh] max-md:overflow-y-auto max-xl:overflow-y-auto max-md:studio-scrollbar max-xl:studio-scrollbar", isMinimized ? "h-10 max-md:max-h-10 max-md:overflow-hidden max-xl:max-h-10 max-xl:overflow-hidden" : "h-auto min-h-[7.25rem] xl:h-[115px] max-md:h-auto")}>
-        <div className="mx-auto w-full min-w-0 max-w-full xl:max-w-7xl px-2 max-md:px-2 md:px-4 xl:px-8 h-full flex flex-col justify-start pt-2 pb-2 md:pb-3 gap-1">
-            <div className="flex max-md:flex-col max-xl:flex-col max-md:gap-1.5 max-xl:gap-1.5 xl:flex-row xl:items-center xl:justify-between border-b border-white/5 shrink-0 max-md:pb-1.5 max-xl:pb-1.5 xl:h-6">
-                <div className="flex items-center gap-2 md:gap-4 min-w-0 h-full max-md:flex-wrap max-xl:flex-wrap">
-                    <h4 className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.15em] md:tracking-[0.2em] text-primary flex items-center gap-1.5 shrink-0 leading-none"><Zap className="h-3 w-3" /> BAR WORKSTATION</h4>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button type="button" className="text-muted-foreground/40 hover:text-muted-foreground shrink-0" aria-label="AI disclaimer">
-                            <Info className="h-3 w-3" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-[240px] text-[9px] leading-snug">
-                          AI suggestions are assistive only — review before use. See Terms of Service (§5) for full AI &amp; content policies.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <span className="text-muted-foreground font-code text-[8px] md:text-[9px] font-bold tracking-widest uppercase shrink-0 leading-none truncate max-w-[40vw] xl:max-w-none">{activeBarLabel}</span>
+      <div data-tour="bar-workstation" className={cn("bg-card border-t shadow-[0_-10px_40px_rgba(0,0,0,0.5)] shrink-0 z-[40] relative w-full min-w-0 overflow-hidden", isMinimized ? "h-10" : "h-[115px] max-md:h-auto max-md:max-h-[38dvh] max-md:overflow-y-auto max-md:studio-scrollbar")}>
+        <div className="w-full min-w-0 h-full px-2 md:px-4 lg:px-6 flex flex-col justify-start pt-2 pb-2 gap-1 overflow-hidden">
+            <div className="flex flex-row items-center justify-between gap-2 border-b border-white/5 shrink-0 h-6 min-w-0">
+                <div className="flex items-center gap-1.5 md:gap-2 min-w-0 overflow-hidden">
+                    <h4 className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] text-primary flex items-center gap-1 shrink-0 leading-none whitespace-nowrap"><Zap className="h-3 w-3 shrink-0" /> BAR WS</h4>
+                    <Hint
+                      side="top"
+                      className="max-w-[240px] text-[9px] leading-snug"
+                      content={
+                        <>AI suggestions are assistive only — review before use. See Terms of Service (§5) for full AI &amp; content policies.</>
+                      }
+                    >
+                      <button type="button" className="text-muted-foreground/40 hover:text-muted-foreground shrink-0 touch-manipulation" aria-label="AI disclaimer">
+                        <Info className="h-3 w-3" />
+                      </button>
+                    </Hint>
+                    <span className="text-muted-foreground font-code text-[8px] md:text-[9px] font-bold tracking-widest uppercase min-w-0 truncate leading-none">{activeBarLabel}</span>
                 </div>
-                <div className="flex items-center gap-1 max-md:w-full max-xl:w-full max-md:justify-between max-xl:justify-between min-w-0">
-                    <div className="flex flex-wrap items-center gap-1 max-md:flex-1 max-xl:flex-1 max-md:max-h-14 max-xl:max-h-14 max-md:overflow-y-auto max-xl:overflow-y-auto max-md:studio-scrollbar max-xl:studio-scrollbar xl:gap-1.5 xl:overflow-hidden xl:ml-2 h-full min-w-0">
-                        {ruleBadges.map(b => <Badge key={b.id} variant="outline" className={cn("text-[7px] md:text-[8px] font-bold uppercase h-4 px-1.5 md:px-2 bg-background/20 shrink-0", b.color, b.id === 'END WITH' && "animate-pulse")}>{b.id}</Badge>)}
+                <div className="flex items-center gap-1 min-w-0 shrink">
+                    <div className="flex items-center gap-1 overflow-x-auto studio-scrollbar flex-nowrap max-w-[min(52vw,14rem)] md:max-w-[min(40vw,18rem)] lg:max-w-none">
+                        {ruleBadges.map(b => (
+                          <Badge key={b.id} variant="outline" className={cn("text-[7px] font-bold uppercase h-4 px-1.5 leading-none whitespace-nowrap shrink-0 max-w-[4.25rem] truncate bg-background/20", b.color, b.id === 'END WITH' && "animate-pulse")}>{b.id}</Badge>
+                        ))}
                     </div>
                     <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0" onClick={() => setIsMinimized(!isMinimized)}>
                         {isMinimized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -1271,64 +1275,57 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                 </div>
             </div>
             {!isMinimized && (
-                <div className="flex max-md:flex-col max-xl:flex-col xl:flex-row gap-2 xl:gap-4 xl:items-center mt-1 min-h-0 max-md:pb-1 max-xl:pb-1">
+                <div className="flex max-md:flex-col md:flex-row md:items-center gap-2 mt-1 min-h-0 min-w-0 flex-1 overflow-hidden">
                     {generationOptions ? (
-                        <div className="flex-grow flex max-md:flex-col max-xl:flex-col xl:flex-row gap-2 xl:gap-4 animate-in fade-in slide-in-from-bottom-4 min-h-0 py-1 w-full min-w-0">
+                        <div className="flex-grow flex max-md:flex-col md:flex-row gap-2 animate-in fade-in slide-in-from-bottom-4 min-h-0 min-w-0 py-0.5 w-full overflow-hidden">
                             {generationOptions.map((opt, i) => (
                                 <Button 
                                     key={i} 
                                     variant="outline" 
-                                    className="flex-1 min-h-[3.5rem] md:h-full py-1 px-3 md:px-5 font-bold bg-primary/10 border-primary/40 hover:bg-primary/20 text-white text-left justify-start gap-2 md:gap-4 group border-2 shadow-2xl transition-all hover:scale-[1.01] w-full"
+                                    className="flex-1 min-w-0 h-14 py-1 px-2 md:px-4 font-bold bg-primary/10 border-primary/40 hover:bg-primary/20 text-white text-left justify-start gap-2 group border-2 shadow-2xl transition-all w-full"
                                     onClick={() => handleAcceptOption(opt.line)}
                                 >
-                                    <div className="flex flex-col gap-0.5 shrink-0 border-r border-white/10 pr-2 md:pr-3">
-                                        <Badge className="bg-primary text-[8px] h-4 w-fit uppercase px-1">Opt {i+1}</Badge>
-                                        <span className="text-[9px] text-muted-foreground font-mono uppercase tracking-tighter">{opt.syllables} SYLL</span>
+                                    <div className="flex flex-col gap-0.5 shrink-0 border-r border-white/10 pr-2">
+                                        <Badge className="bg-primary text-[8px] h-4 px-1 uppercase leading-none whitespace-nowrap">Opt {i+1}</Badge>
+                                        <span className="text-[9px] text-muted-foreground font-mono uppercase tracking-tighter leading-none">{opt.syllables} SYLL</span>
                                     </div>
-                                    <span className="text-xs md:text-lg leading-tight tracking-tight flex-grow break-words line-clamp-3 md:line-clamp-2">{opt.line}</span>
+                                    <span className="text-xs md:text-sm leading-tight tracking-tight flex-1 min-w-0 break-words line-clamp-2">{opt.line}</span>
                                 </Button>
                             ))}
-                            <Button variant="ghost" size="icon" onClick={() => setGenerationOptions(null)} className="h-10 w-10 md:h-full md:w-10 shrink-0 text-muted-foreground hover:text-red-500 bg-white/5 border border-white/10 rounded-lg self-end md:self-auto">
+                            <Button variant="ghost" size="icon" onClick={() => setGenerationOptions(null)} className="h-10 w-10 md:h-14 md:w-10 shrink-0 text-muted-foreground hover:text-red-500 bg-white/5 border border-white/10 rounded-lg">
                                 <X className="h-5 w-5" />
                             </Button>
                         </div>
                     ) : (
-                        <>
+                        <div className="flex max-md:flex-col md:flex-row md:items-center gap-2 min-w-0 w-full flex-1 overflow-hidden">
                             <textarea 
-                                placeholder="Tap to edit active bar..."
+                                placeholder="Tap to edit active line..."
                                 value={activeBarText} 
                                 onKeyDown={handleBarSyncEnter}
                                 onChange={(e: any) => { 
                                     setActiveBarText(e.target.value); 
                                     if (activeGeneratorBar) onUpdateTrack({ sections: track.sections.map((s: any) => s.id === activeGeneratorBar.sectionId ? { ...s, bars: s.bars.map((b: any) => b.idx === activeGeneratorBar.idx ? { ...b, text: e.target.value } : b) } : s) }); 
                                 }} 
-                                className="bg-background/40 border border-white/10 w-full min-w-0 xl:flex-grow px-3 py-2 font-code font-bold text-sm shadow-inner rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 tracking-tight resize-none min-h-[3.25rem] xl:h-14 shrink-0" 
+                                className="bg-background/40 border border-white/10 w-full md:flex-1 md:min-w-[5rem] px-3 py-2 font-code font-bold text-sm shadow-inner rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 tracking-tight resize-none h-14 max-h-14 shrink-0 min-w-0" 
                             />
-                            <div className="grid grid-cols-2 max-md:gap-1.5 max-xl:gap-1.5 xl:flex xl:gap-2 shrink-0 max-md:w-full max-xl:w-full xl:h-14 min-w-0">
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button variant="outline" size="sm" className="max-md:h-10 max-xl:h-10 xl:h-full max-md:px-2 max-xl:px-3 xl:px-5 font-bold text-[10px] xl:text-xs uppercase border-border/40 gap-1 xl:gap-2 shadow-lg w-full min-w-0" onClick={(e) => handleSharedLineGeneration('next', e)}>
-                                                <ArrowDown className="h-3.5 w-3.5 xl:h-4 xl:w-4 text-primary shrink-0" /> <span className="truncate">Next</span>
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent><p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p></TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button variant="outline" size="sm" className="max-md:h-10 max-xl:h-10 xl:h-full max-md:px-2 max-xl:px-3 xl:px-5 font-bold text-[10px] xl:text-xs uppercase border-border/40 gap-1 xl:gap-2 shadow-lg w-full min-w-0" onClick={(e) => handleSharedLineGeneration('previous', e)}>
-                                                <ArrowUp className="h-3.5 w-3.5 xl:h-4 xl:w-4 text-primary shrink-0" /> <span className="truncate">Prev</span>
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent><p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p></TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                                <Button variant="outline" size="sm" className="max-md:h-10 max-xl:h-10 xl:h-full max-md:px-2 max-xl:px-2 xl:w-12 font-bold border-red-500/20 text-red-500 bg-red-500/5 hover:bg-red-500/10 shadow-lg w-full min-w-0" onClick={() => { if(activeGeneratorBar) handleDeleteBar(activeGeneratorBar.sectionId, activeGeneratorBar.idx); }}><Trash2 className="h-4 w-4 xl:h-5 xl:w-5 mx-auto" /></Button>
+                            <div className="flex flex-row flex-nowrap items-center gap-1.5 shrink-0 min-w-0 max-md:w-full overflow-x-auto studio-scrollbar md:overflow-visible md:max-w-[min(100%,22rem)] lg:max-w-none">
+                                <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
+                                  <Button variant="outline" size="sm" aria-label="Generate next line" className="h-10 md:h-14 px-2 md:px-3 font-bold text-[10px] uppercase border-border/40 gap-1 shadow-lg shrink-0" onClick={(e) => handleSharedLineGeneration('next', e)}>
+                                      <ArrowDown className="h-3.5 w-3.5 text-primary shrink-0" />
+                                      <span className="hidden sm:inline truncate">Next</span>
+                                  </Button>
+                                </Hint>
+                                <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
+                                  <Button variant="outline" size="sm" aria-label="Generate previous line" className="h-10 md:h-14 px-2 md:px-3 font-bold text-[10px] uppercase border-border/40 gap-1 shadow-lg shrink-0" onClick={(e) => handleSharedLineGeneration('previous', e)}>
+                                      <ArrowUp className="h-3.5 w-3.5 text-primary shrink-0" />
+                                      <span className="hidden sm:inline truncate">Prev</span>
+                                  </Button>
+                                </Hint>
+                                <Button variant="outline" size="sm" aria-label="Delete line" className="h-10 md:h-14 w-10 md:w-11 font-bold border-red-500/20 text-red-500 bg-red-500/5 hover:bg-red-500/10 shadow-lg shrink-0 px-0" onClick={() => { if(activeGeneratorBar) handleDeleteBar(activeGeneratorBar.sectionId, activeGeneratorBar.idx); }}><Trash2 className="h-4 w-4 mx-auto" /></Button>
                                 {user?.subscriptionStatus === 'active' ? (
-                                  <Button variant="secondary" size="sm" className="max-md:h-10 max-xl:h-10 xl:h-full max-md:col-span-2 max-xl:col-span-2 xl:col-span-1 xl:px-4 2xl:px-6 font-bold text-[10px] xl:text-xs uppercase tracking-widest gap-1.5 xl:gap-2 bg-primary/20 text-primary border border-primary/20 shadow-lg w-full min-w-0" onClick={handleOpenFreestyle} title={tooltip('freestyleTranscription')}>
-                                    <Mic className="h-3.5 w-3.5 xl:h-4 xl:w-4 shrink-0" />
-                                    <span className="truncate max-xl:hidden 2xl:inline">Freestyle ({getEffectiveCost('freestyleTranscription')} Ink)</span>
-                                    <span className="truncate hidden max-xl:inline 2xl:hidden">Freestyle</span>
+                                  <Button variant="secondary" size="sm" aria-label="Freestyle recording" className="h-10 md:h-14 px-2 md:px-4 font-bold text-[10px] uppercase tracking-wide gap-1 bg-primary/20 text-primary border border-primary/20 shadow-lg shrink-0 min-w-0" onClick={handleOpenFreestyle} title={tooltip('freestyleTranscription')}>
+                                    <Mic className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="truncate hidden md:inline">Free</span>
                                   </Button>
                                 ) : (
                                   <UpgradeTooltip
@@ -1340,16 +1337,17 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                       variant="secondary"
                                       size="sm"
                                       type="button"
-                                      className={cn('max-md:h-10 max-xl:h-10 xl:h-full max-md:col-span-2 max-xl:col-span-2 xl:col-span-1 xl:px-4 font-bold text-[10px] xl:text-xs uppercase tracking-widest gap-1.5 xl:gap-2 shadow-lg w-full min-w-0', proLockShell('md'), proLockText())}
+                                      aria-label="Freestyle recording — Studio Pro"
+                                      className={cn('h-10 md:h-14 px-2 md:px-4 font-bold text-[10px] uppercase tracking-wide gap-1 shadow-lg shrink-0 min-w-0', proLockShell('md'), proLockText())}
                                       onClick={(e) => e.preventDefault()}
                                     >
-                                      <Lock className={cn('h-3.5 w-3.5', proLockIcon())} />
-                                      <span className="truncate">Freestyle</span>
+                                      <Lock className={cn('h-3.5 w-3.5 shrink-0', proLockIcon())} />
+                                      <span className="truncate hidden md:inline">Free</span>
                                     </Button>
                                   </UpgradeTooltip>
                                 )}
                             </div>
-                        </>
+                        </div>
                     )}
                 </div>
             )}
@@ -1483,7 +1481,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   }
 
   return (
-    <div className={cn("flex flex-col h-full bg-card border-l relative overflow-hidden w-[340px] max-xl:w-[280px] max-lg:w-[240px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'right'))}>
+    <div className={cn("flex flex-col h-full bg-card border-l relative overflow-hidden w-[340px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'right'))}>
       <div className={cn("flex items-center justify-between p-4 border-b shrink-0 h-14", mobileActive && "justify-center")}>
         {!mobileActive && (
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onCollapse(true)}><PanelRightClose className="h-4 w-4" /></Button>
@@ -1498,9 +1496,9 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
             <Card className="border-green-500/30 bg-green-500/5" data-tour="dna-suite">
                 <div className="p-4 flex flex-row items-center justify-between space-y-0">
                     <CollapsibleTrigger asChild>
-                        <div className="space-y-0.5 cursor-pointer flex-grow">
-                            <CardTitle className="text-sm flex items-center gap-2 text-green-500 font-headline uppercase leading-none"><Dna className="h-4 w-4" /> DNA Suite</CardTitle>
-                            <p className="text-[8px] text-green-600/60 font-bold uppercase tracking-widest leading-none">Creative Direction Questions</p>
+                        <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 overflow-hidden min-w-0 overflow-hidden">
+                            <CardTitle className="text-sm flex items-center gap-2 text-green-500 font-headline uppercase leading-none truncate"><Dna className="h-4 w-4 shrink-0" /> DNA Suite</CardTitle>
+                            <p className="text-[8px] text-green-600/60 font-bold uppercase tracking-widest leading-none truncate">Creative Direction Questions</p>
                         </div>
                     </CollapsibleTrigger>
                     <div className="flex items-center gap-1">
@@ -1562,9 +1560,9 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
             <Card className="border-amber-500/30 bg-amber-500/5">
                 <div className="p-4 flex flex-row items-center justify-between space-y-0">
                     <CollapsibleTrigger asChild>
-                        <div className="space-y-0.5 cursor-pointer flex-grow">
-                            <CardTitle className="text-sm flex items-center gap-2 text-amber-500 font-headline uppercase leading-none"><Palette className="h-4 w-4" /> Track Vibe</CardTitle>
-                            <p className="text-[8px] text-amber-600/60 font-bold uppercase tracking-widest leading-none">Instrumentation & Atmosphere</p>
+                        <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 overflow-hidden">
+                            <CardTitle className="text-sm flex items-center gap-2 text-amber-500 font-headline uppercase leading-none truncate"><Palette className="h-4 w-4 shrink-0" /> Track Vibe</CardTitle>
+                            <p className="text-[8px] text-amber-600/60 font-bold uppercase tracking-widest leading-none truncate">Instrumentation & Atmosphere</p>
                         </div>
                     </CollapsibleTrigger>
                     <div className="flex items-center gap-1">
@@ -1645,12 +1643,12 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <CollapsibleTrigger asChild>
-                            <div className="space-y-1 cursor-pointer flex-grow text-left">
-                              <div className="flex items-center gap-2">
-                                  <Target className="h-5 w-5 text-sky-400" />
-                                  <h3 className="font-headline font-bold text-xl text-sky-400 uppercase tracking-tighter">Intents</h3>
+                            <div className="space-y-1 cursor-pointer flex-grow min-w-0 overflow-hidden text-left">
+                              <div className="flex items-center gap-2 min-w-0">
+                                  <Target className="h-5 w-5 text-sky-400 shrink-0" />
+                                  <h3 className="font-headline font-bold text-xl text-sky-400 uppercase tracking-tighter truncate">Intents</h3>
                               </div>
-                              <p className="text-[9px] text-muted-foreground leading-snug font-code normal-case tracking-normal pr-2">
+                              <p className="text-[9px] text-muted-foreground leading-snug font-code normal-case tracking-normal truncate">
                                 Punchlines and lines to weave into this track.
                               </p>
                             </div>
@@ -1670,27 +1668,27 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                     </div>
                 </div>
                 <CollapsibleContent>
-                    <CardContent className="space-y-4 p-4 pt-4">
-                        <div className="space-y-2">
+                    <CardContent className="space-y-4 p-4 pt-4 min-w-0">
+                        <div className="space-y-2 min-w-0">
                             {(album?.thingsToSay || []).map((intent: string) => {
                                 const isLocked = track.endWith === intent;
                                 const isChecked = (track.checkedIntents || []).includes(intent);
                                 return (
                                     <div key={intent} className={cn(
-                                        "flex items-center gap-3 p-3 rounded-lg border transition-all group",
+                                        "flex items-start gap-2 sm:gap-3 p-3 rounded-lg border transition-all group min-w-0 overflow-hidden",
                                         isLocked ? "bg-sky-500/10 border-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.1)]" : "bg-[#142633] border-white/5 hover:bg-[#1a3040]"
                                     )}>
                                         <Checkbox 
                                             checked={isChecked || isLocked} 
                                             onCheckedChange={(c) => handleIntentCheck(intent, !!c)} 
-                                            className="border-sky-500 data-[state=checked]:bg-sky-500"
+                                            className="border-sky-500 data-[state=checked]:bg-sky-500 shrink-0 mt-0.5"
                                         />
                                         <span className={cn(
-                                            "text-xs font-code whitespace-normal break-words flex-grow leading-snug",
+                                            "text-xs font-code flex-1 min-w-0 whitespace-normal break-words leading-snug",
                                             isLocked ? "text-sky-300 font-bold" : "text-white/70"
                                         )}>{intent}</span>
                                         <TooltipProvider delayDuration={300}>
-                                            <div className="flex items-center gap-1 shrink-0">
+                                            <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 flex-none self-start sm:self-center">
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
                                                         <Button variant="ghost" size="icon" className="h-7 w-7 text-sky-400/40 hover:text-sky-400 hover:bg-sky-500/10" onClick={(e) => { e.stopPropagation(); setEditIntentDialog({ open: true, intent }); }}><Pencil className="h-3.5 w-3.5" /></Button>
@@ -1756,7 +1754,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                     <CardHeader className="p-4 flex-row items-center justify-between cursor-pointer space-y-0">
                         <div className="space-y-0.5">
                             <CardTitle className="text-sm flex items-center gap-2 text-rose-500 font-headline uppercase leading-none"><Shield className="h-4 w-4" /> Guardrails</CardTitle>
-                            <p className="text-[8px] text-rose-600/60 font-bold uppercase tracking-widest leading-none">Content Restrictions</p>
+                            <p className="text-[8px] text-rose-600/60 font-bold uppercase tracking-widest leading-none truncate">Content Restrictions</p>
                         </div>
                         <Switch checked={track.guardrails?.enabled ?? true} onCheckedChange={(c) => onUpdateTrack({ guardrails: { ...track.guardrails, enabled: c } })} onClick={(e) => e.stopPropagation()} />
                     </CardHeader>
@@ -1799,11 +1797,11 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
             <Card className="border-fuchsia-500/30 bg-fuchsia-500/5 shadow-xl">
                 <div className="p-4 flex flex-row items-center justify-between space-y-0">
                     <CollapsibleTrigger asChild>
-                        <div className="space-y-0.5 cursor-pointer flex-grow">
+                        <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 overflow-hidden">
                             <div className="flex items-center gap-2">
                                 <CardTitle className="text-sm flex items-center gap-2 text-fuchsia-500 font-headline uppercase leading-none"><BrainCircuit className="h-4 w-4" /> AI Co-Writer</CardTitle>
                             </div>
-                            <p className="text-[8px] text-fuchsia-600/60 font-bold uppercase tracking-widest leading-none">Neural Sharpening Tools</p>
+                            <p className="text-[8px] text-fuchsia-600/60 font-bold uppercase tracking-widest leading-none truncate">Neural Sharpening Tools</p>
                         </div>
                     </CollapsibleTrigger>
                     <div className="flex items-center gap-1">
@@ -1826,23 +1824,26 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                             <div className="flex items-center justify-between">
                                 <Label className="text-[9px] font-bold uppercase text-fuchsia-700/70">Technical DNA</Label>
                                 <div className="flex items-center gap-1.5">
-                                    <TooltipProvider>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-fuchsia-400 hover:bg-fuchsia-500/10" onClick={() => clearStyleProfile()}><X className="h-3.5 w-3.5" /></Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent><p className="text-[10px] font-bold">Clear Style History</p></TooltipContent>
-                                        </Tooltip>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <HelpCircle className="h-3.5 w-3.5 text-fuchsia-500/50 cursor-help" />
-                                            </TooltipTrigger>
-                                            <TooltipContent className="max-w-[240px] p-3 text-[10px] leading-relaxed">
-                                                <p className="font-bold mb-1 uppercase text-primary">How to Use:</p>
-                                                This is your **Global Artist Profile**. It learns your cadence across ALL songs. Press 'Train' to feed your latest sheet into the co-writer's brain.
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
+                                    <Hint
+                                      side="left"
+                                      content={<p className="text-[10px] font-bold">Clear Style History</p>}
+                                    >
+                                      <Button variant="ghost" size="icon" className="h-6 w-6 text-fuchsia-400 hover:bg-fuchsia-500/10" onClick={() => clearStyleProfile()}><X className="h-3.5 w-3.5" /></Button>
+                                    </Hint>
+                                    <Hint
+                                      side="left"
+                                      className="max-w-[240px] p-3 text-[10px] leading-relaxed"
+                                      content={
+                                        <>
+                                          <p className="font-bold mb-1 uppercase text-primary">How to Use:</p>
+                                          This is your Global Artist Profile. It learns your cadence across ALL songs. Press Train to feed your latest sheet into the co-writer&apos;s brain.
+                                        </>
+                                      }
+                                    >
+                                      <button type="button" className="text-fuchsia-500/50 hover:text-fuchsia-400 touch-manipulation" aria-label="Style profile help">
+                                        <HelpCircle className="h-3.5 w-3.5" />
+                                      </button>
+                                    </Hint>
                                 </div>
                             </div>
                             
@@ -2079,7 +2080,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       setRightCollapsed(false);
       setMobilePanelTab('cowriter');
       handleSectionChange('dna', true);
-    } else if (step.id === 'generation' || step.id === 'save') {
+    } else if (step.id === 'generation' || step.id === 'save' || step.id === 'dna-drop') {
       setLeftCollapsed(false);
       setMobilePanelTab('workstation');
     } else if (['paste', 'sheet', 'bar-workstation', 'rhyme-pulse'].includes(step.id)) {

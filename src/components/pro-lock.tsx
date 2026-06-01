@@ -198,9 +198,9 @@ export function LockedToolbarButton({
 
 export function ProLockBadge({ label = 'System Preset', className }: { label?: string; className?: string }) {
   return (
-    <span className={cn('inline-flex items-center gap-1 text-[7px] px-2 py-0.5 rounded-md shrink-0', proLockShell('sm'), proLockText(), className)}>
-      <Lock className={cn('h-2.5 w-2.5', proLockIcon())} />
-      {label}
+    <span className={cn('inline-flex items-center gap-1 text-[7px] px-1.5 py-0.5 rounded-md shrink-0 max-w-full leading-none', proLockShell('sm'), proLockText(), className)}>
+      <Lock className={cn('h-2.5 w-2.5 shrink-0', proLockIcon())} />
+      <span className="truncate">{label}</span>
     </span>
   );
 }

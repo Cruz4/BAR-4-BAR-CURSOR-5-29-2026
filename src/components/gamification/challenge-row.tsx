@@ -163,14 +163,16 @@ export function LeaderboardCompareCard({
   value,
   unit = '',
   hidden,
+  formatValue = (v: number) => v,
 }: {
   label: string;
   rank: { rank: number; total: number; value: number } | null;
   value?: number;
   unit?: string;
   hidden?: boolean;
+  formatValue?: (value: number) => number;
 }) {
-  const displayValue = value ?? rank?.value ?? 0;
+  const displayValue = formatValue(value ?? rank?.value ?? 0);
 
   return (
     <div className="rounded-lg border border-orange-500/20 bg-gradient-to-br from-black/40 to-orange-950/15 px-3 py-2.5 space-y-1 min-w-0 overflow-hidden">

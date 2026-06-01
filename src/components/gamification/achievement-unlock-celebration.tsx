@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Trophy, Zap, Droplets } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,53 +10,67 @@ import {
 } from '@/lib/gamification/unlock-events';
 import type { GamificationUnlock } from '@/lib/gamification/types';
 import { getAchievement } from '@/lib/gamification/achievements';
+import {
+  fireAchievementConfetti,
+  stopCelebrationConfetti,
+} from '@/lib/gamification/celebration-confetti';
 import { cn } from '@/lib/utils';
 
 type CelebrationItem = GamificationUnlock & { actionXpGain?: number };
 
-function fireAchievementConfetti() {
-  const duration = 2800;
-  const end = Date.now() + duration;
-  const colors = ['#fbbf24', '#a855f7', '#22d3ee', '#f472b6', '#34d399'];
-
-  const frame = () => {
-    confetti({
-      particleCount: 4,
-      angle: 60,
-      spread: 62,
-      origin: { x: 0, y: 0.65 },
-      colors,
-      zIndex: 9999,
-    });
-    confetti({
-      particleCount: 4,
-      angle: 120,
-      spread: 62,
-      origin: { x: 1, y: 0.65 },
-      colors,
-      zIndex: 9999,
-    });
-    confetti({
-      particleCount: 80,
-      spread: 100,
-      origin: { x: 0.5, y: 0.45 },
-      colors,
-      startVelocity: 42,
-      gravity: 0.9,
-      scalar: 1.1,
-      zIndex: 9999,
-    });
-
-    if (Date.now() < end) requestAnimationFrame(frame);
-  };
-
-  frame();
-}
+type CursorEmojiBurst = {
+  id: string;
+  emoji: string;
+  x: number;
+  y: number;
+};
 
 export function AchievementUnlockCelebration() {
   const [queue, setQueue] = useState<CelebrationItem[]>([]);
   const [active, setActive] = useState<CelebrationItem | null>(null);
+  const [cursorEmojis, setCursorEmojis] = useState<CursorEmojiBurst[]>([]);
   const shownIdsRef = useRef(new Set<string>());
+  const pointerRef = useRef({ x: 0, y: 0 });
+  const emojiTimersRef = useRef<number[]>([]);
+
+  useEffect(() => {
+    const onPointer = (e: PointerEvent) => {
+      pointerRef.current = { x: e.clientX, y: e.clientY };
+    };
+    window.addEventListener('pointermove', onPointer, { passive: true });
+    window.addEventListener('pointerdown', onPointer, { passive: true });
+    return () => {
+      window.removeEventListener('pointermove', onPointer);
+      window.removeEventListener('pointerdown', onPointer);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      emojiTimersRef.current.forEach((t) => window.clearTimeout(t));
+      stopCelebrationConfetti();
+    };
+  }, []);
+
+  const spawnCursorEmojiSequence = useCallback(() => {
+    const { x, y } = pointerRef.current;
+    const px = x || window.innerWidth / 2;
+    const py = y || window.innerHeight / 2;
+    const grimId = `grim-${Date.now()}`;
+
+    setCursorEmojis((prev) => [...prev, { id: grimId, emoji: '😬', x: px, y: py }]);
+
+    const t1 = window.setTimeout(() => {
+      setCursorEmojis((prev) => prev.filter((e) => e.id !== grimId));
+      const fireId = `fire-${Date.now()}`;
+      setCursorEmojis((prev) => [...prev, { id: fireId, emoji: '🔥', x: px, y: py }]);
+      const t2 = window.setTimeout(() => {
+        setCursorEmojis((prev) => prev.filter((e) => e.id !== fireId));
+      }, 900);
+      emojiTimersRef.current.push(t2);
+    }, 650);
+    emojiTimersRef.current.push(t1);
+  }, []);
 
   const enqueueUnlocks = useCallback((unlocks: GamificationUnlock[], xpGain = 0) => {
     const fresh = unlocks.filter((u) => !shownIdsRef.current.has(u.id));
@@ -88,15 +101,54 @@ export function AchievementUnlockCelebration() {
     const [next, ...rest] = queue;
     setQueue(rest);
     setActive(next);
+    spawnCursorEmojiSequence();
     fireAchievementConfetti();
-  }, [active, queue]);
+  }, [active, queue, spawnCursorEmojiSequence]);
 
-  const dismiss = () => setActive(null);
+  const dismiss = () => {
+    stopCelebrationConfetti();
+    setActive(null);
+  };
 
   const def = active ? getAchievement(active.id) : undefined;
   const totalXp = (active?.xpReward ?? 0) + (active?.actionXpGain ?? 0);
 
   return (
+    <>
+      <div className="pointer-events-none fixed inset-0 z-[250]" aria-hidden>
+        <AnimatePresence>
+          {cursorEmojis.map((item) => (
+            <motion.span
+              key={item.id}
+              className="absolute select-none text-[2.75rem] leading-none drop-shadow-[0_4px_12px_rgba(0,0,0,0.45)]"
+              style={{ left: item.x, top: item.y, translateX: '-50%', translateY: '-50%' }}
+              initial={
+                item.emoji === '😬'
+                  ? { opacity: 0, scale: 0.6 }
+                  : { opacity: 0, scale: 0.75, y: 6 }
+              }
+              animate={
+                item.emoji === '😬'
+                  ? { opacity: 1, scale: 1 }
+                  : { opacity: 1, scale: 1.05, y: -8 }
+              }
+              exit={
+                item.emoji === '😬'
+                  ? { opacity: 0, scale: 0.85, y: -10 }
+                  : { opacity: 0, scale: 1.15, y: -22 }
+              }
+              transition={
+                item.emoji === '😬'
+                  ? { duration: 0.55, ease: 'easeOut' }
+                  : { duration: 0.45, ease: 'easeOut' }
+              }
+            >
+              {item.emoji}
+            </motion.span>
+          ))}
+        </AnimatePresence>
+      </div>
+
     <AnimatePresence>
       {active && (
         <motion.div
@@ -110,7 +162,7 @@ export function AchievementUnlockCelebration() {
         >
           <motion.button
             type="button"
-            className="absolute inset-0 bg-black/75 backdrop-blur-md"
+            className="absolute inset-0 bg-black/80"
             aria-label="Dismiss achievement celebration"
             onClick={dismiss}
             initial={{ opacity: 0 }}
@@ -130,8 +182,9 @@ export function AchievementUnlockCelebration() {
             <div className="relative px-6 pt-8 pb-6 text-center space-y-5">
               <motion.div
                 className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border-2 border-amber-400/60 bg-amber-400/10 shadow-[0_0_40px_rgba(251,191,36,0.45)]"
-                animate={{ scale: [1, 1.08, 1], rotate: [0, -4, 4, 0] }}
-                transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 0.6 }}
+                initial={{ scale: 0.85, rotate: -8 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 18 }}
               >
                 <Trophy className="h-10 w-10 text-amber-400" />
               </motion.div>
@@ -176,7 +229,7 @@ export function AchievementUnlockCelebration() {
                 className={cn(
                   'w-full h-12 font-black uppercase tracking-widest text-xs',
                   'bg-gradient-to-r from-amber-500 to-primary hover:from-amber-400 hover:to-primary/90',
-                  'shadow-[0_0_24px_rgba(251,191,36,0.35)] animate-pulse'
+                  'shadow-[0_0_24px_rgba(251,191,36,0.35)]'
                 )}
                 onClick={dismiss}
               >
@@ -187,5 +240,6 @@ export function AchievementUnlockCelebration() {
         </motion.div>
       )}
     </AnimatePresence>
+    </>
   );
 }

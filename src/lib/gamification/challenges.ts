@@ -1,6 +1,7 @@
 import type { GamificationSummary } from '@/lib/gamification/types';
 import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { rankFromXp, STUDIO_RANKS } from '@/lib/gamification/ranks';
+import { linesToRhymeBars, rhymeBarsToLines } from '@/lib/lyrics-units';
 
 export type ChallengeScale = 'weekly' | 'monthly' | 'lifetime';
 export type ChallengeTier = 'standard' | 'epic' | 'legendary';
@@ -31,6 +32,13 @@ export type ChallengeDef = {
     | 'rankHeadliner'
     | 'rankVaultArchitect';
 };
+
+/** Summary fields that accumulate **line** counts; challenge targets are rhyme bars. */
+const BAR_LINE_FIELDS = new Set<ChallengeDef['field']>([
+  'barsWeek',
+  'barsMonth',
+  'lifetimeBarsWritten',
+]);
 
 export const WEEKLY_CHALLENGES: ChallengeDef[] = [
   {
@@ -312,7 +320,11 @@ export function getChallengeProgress(
   challenge: Pick<ChallengeDef, 'field' | 'target'>,
   isPro = false
 ): number {
-  return resolveFieldProgress(summary, challenge.field, isPro);
+  const raw = resolveFieldProgress(summary, challenge.field, isPro);
+  if (BAR_LINE_FIELDS.has(challenge.field)) {
+    return linesToRhymeBars(raw);
+  }
+  return raw;
 }
 
 export function isChallengeComplete(
@@ -320,12 +332,15 @@ export function isChallengeComplete(
   challenge: ChallengeDef,
   isPro = false
 ): boolean {
-  const progress = getChallengeProgress(summary, challenge, isPro);
   const target = resolveChallengeTarget(challenge, isPro);
   if (challenge.field === 'rankHeadliner' || challenge.field === 'rankVaultArchitect') {
-    return progress >= 1;
+    return getChallengeProgress(summary, challenge, isPro) >= 1;
   }
-  return progress >= target;
+  if (BAR_LINE_FIELDS.has(challenge.field)) {
+    const rawLines = resolveFieldProgress(summary, challenge.field, isPro);
+    return rawLines >= rhymeBarsToLines(target);
+  }
+  return resolveFieldProgress(summary, challenge.field, isPro) >= target;
 }
 
 export function getChallengePercent(

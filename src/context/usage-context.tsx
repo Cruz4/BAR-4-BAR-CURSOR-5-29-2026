@@ -16,6 +16,7 @@ import { computeActiveRules } from '@/lib/active-rules';
 import type { ActiveRules } from '@/components/dna-synthesis-loader';
 import type { Album, StyleProfile, Track } from '@/lib/types';
 import { INK_PACK_YEARLY_DISCOUNT_PERCENT } from '@/lib/studio-tiers';
+import { isProUser, isYearlyPro } from '@/lib/subscription';
 
 const API_KEY_STORAGE_KEY = 'bar4bar-custom-api-key';
 
@@ -164,26 +165,50 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
     const finalAmount = Math.max(1, Math.ceil(amount));
 
     if (inkBalance < finalAmount) {
-        const isYearly = user.subscriptionTier === 'yearly';
+        const isPro = isProUser(user);
+        const isYearly = isYearlyPro(user);
+
         toast({
           variant: 'destructive',
           title: 'Ink Reserve Low',
           description: (
             <span className="flex flex-col gap-2 text-sm">
-              <span>You need {finalAmount} Ink for this action. Refill residency or buy permanent Ink packs.</span>
-              {!isYearly && (
-                <span className="text-[11px] text-muted-foreground leading-snug">
+              <span>
+                You need {finalAmount} Ink for this action.
+                {!isPro
+                  ? ' Upgrade for monthly residency refills, or buy a permanent Ink pack.'
+                  : ' Refill residency or buy permanent Ink packs.'}
+              </span>
+              {isPro && !isYearly && (
+                <span className="text-[11px] text-white/75 leading-snug">
                   Yearly Pro includes {INK_PACK_YEARLY_DISCOUNT_PERCENT}% off permanent Ink packs — best value if you run out often.
                 </span>
               )}
-              <span className="flex gap-2 flex-wrap">
-                <Button asChild size="sm" variant="secondary" className="h-8 text-[10px] font-bold uppercase">
-                  <Link href={isYearly ? '/usage?tab=buy-ink' : '/usage?tab=cloud'}>
-                    {isYearly ? 'Buy Ink' : 'Yearly Pro + Ink'}
+              <span className="flex gap-2 flex-wrap pt-0.5">
+                {!isPro && (
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-[10px] font-bold uppercase border-white/35 text-white hover:bg-white/10 hover:text-white"
+                  >
+                    <Link href="/usage?tab=cloud">Upgrade Studio</Link>
+                  </Button>
+                )}
+                {isPro && !isYearly && (
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-[10px] font-bold uppercase border-white/35 text-white hover:bg-white/10 hover:text-white"
+                  >
+                    <Link href="/usage?tab=cloud">Upgrade to Yearly</Link>
+                  </Button>
+                )}
+                <Button asChild size="sm" className="h-8 text-[10px] font-bold uppercase bg-primary text-white hover:bg-primary/90">
+                  <Link href="/usage?tab=buy-ink">
+                    {isYearly ? 'Buy Ink Packs' : 'Buy Ink'}
                   </Link>
-                </Button>
-                <Button asChild size="sm" className="h-8 text-[10px] font-bold uppercase">
-                  <Link href="/usage?tab=buy-ink">Buy Ink</Link>
                 </Button>
               </span>
             </span>

@@ -90,24 +90,24 @@ export function WhatsNewDialog() {
       icon: <Rocket className="h-4 w-4" />,
       items: [
         {
-          title: 'Studio Progress',
-          desc: 'Vault sidebar + full board at /studio-progress — weekly goals, rank XP, milestones, and leaderboard compare.',
-          icon: <Trophy className="h-3.5 w-3.5" />,
-        },
-        {
-          title: 'Achievements',
-          desc: 'Badges unlock as you write, generate, and explore. Hover trophies in Studio Profile for details.',
+          title: '14 New Studio Tips',
+          desc: '45+ rotating Insights and Did You Knows — DNA Drop, rhyme-bar math, strain inject, ranks, vault scroll, and more.',
           icon: <Sparkles className="h-3.5 w-3.5" />,
         },
         {
-          title: 'Share Cards',
-          desc: 'Export a foil milestone card from Studio Profile — rank, XP, streak, and your latest badge for social posts.',
-          icon: <Share2 className="h-3.5 w-3.5" />,
+          title: 'DNA Drop Tour Step',
+          desc: 'Guided tour now covers DNA Vault inject vs load and Pro DNA Drop sharing from the left panel.',
+          icon: <BookOpen className="h-3.5 w-3.5" />,
         },
         {
-          title: 'Refer a Friend',
-          desc: 'Ink Store → copy your link. You and each friend get 150 permanent Ink when they join (up to 4 referrals).',
-          icon: <Gift className="h-3.5 w-3.5" />,
+          title: 'Rhyme Bar Progress',
+          desc: 'Weekly and monthly goals now count rhyme bars (two sheet lines = one bar). Tips and FAQ explain the math.',
+          icon: <Target className="h-3.5 w-3.5" />,
+        },
+        {
+          title: 'Creative Sync Polish',
+          desc: 'Generation and extraction overlays redesigned — horizontal strain tides, larger helix, cleaner ambient field.',
+          icon: <Rocket className="h-3.5 w-3.5" />,
         },
       ],
     },
@@ -118,24 +118,24 @@ export function WhatsNewDialog() {
       icon: <Cpu className="h-4 w-4" />,
       items: [
         {
-          title: 'Vault Layout',
-          desc: 'Unified header row, tighter spacing, larger vinyl grid, and Studio Progress panel in the left gutter.',
+          title: 'DNA Vault UX',
+          desc: 'Wider vault dialog, scrollable expanded presets, and clearer strain inject targets in the Calibration Hub.',
           icon: <LayoutGrid className="h-3.5 w-3.5" />,
         },
         {
-          title: 'Guided Tour',
-          desc: 'First-time lyrics-page walkthrough with replay from the Studio Manual (? icon).',
-          icon: <BookOpen className="h-3.5 w-3.5" />,
+          title: 'Studio Progress',
+          desc: 'Vault sidebar + full board at /studio-progress — weekly goals, rank XP, milestones, and leaderboard compare.',
+          icon: <Trophy className="h-3.5 w-3.5" />,
         },
         {
-          title: 'Calibration Hub',
-          desc: 'Generation Workstation step backgrounds, ambient hub polish, and clearer DNA strain routing.',
-          icon: <Target className="h-3.5 w-3.5" />,
+          title: 'Achievements & Share Cards',
+          desc: 'Badges unlock as you explore; export foil milestone cards from Studio Profile for social posts.',
+          icon: <Share2 className="h-3.5 w-3.5" />,
         },
         {
-          title: 'Nav & Docs',
-          desc: 'Larger center logo, Studio Progress in the profile menu, and FAQ/tips for progress, cards, and referrals.',
-          icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+          title: 'Refer a Friend',
+          desc: 'Ink Store → copy your link. You and each friend get 150 permanent Ink when they join (up to 4 referrals).',
+          icon: <Gift className="h-3.5 w-3.5" />,
         },
       ],
     },
@@ -212,7 +212,7 @@ export function WhatsNewDialog() {
         </div>
 
         <DialogFooter className="p-6 border-t bg-muted/5 sm:justify-between items-center">
-          <p className="text-[9px] text-muted-foreground font-code uppercase tracking-widest">May 2026 Studio Update</p>
+          <p className="text-[9px] text-muted-foreground font-code uppercase tracking-widest">May 28, 2026 Studio Update</p>
           <Button onClick={dismiss} className="px-10 font-bold h-10 shadow-lg">
             Dismiss & Enter Vault
           </Button>

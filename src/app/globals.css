@@ -540,3 +540,75 @@
 .pro-lock-icon {
   animation: pro-lock-icon-pulse 4s ease-in-out infinite;
 }
+
+/* Generation Workstation — creative syncing side ambient */
+.mask-fade-y {
+  mask-image: linear-gradient(to bottom, transparent, black 12%, black 88%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 12%, black 88%, transparent);
+}
+
+.mask-fade-x {
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
+
+@keyframes generation-sync-telemetry-scroll {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes generation-sync-telemetry-h {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.generation-sync-telemetry {
+  animation: generation-sync-telemetry-scroll 28s linear infinite;
+}
+
+.generation-sync-telemetry-reverse {
+  animation-direction: reverse;
+  animation-duration: 32s;
+}
+
+.generation-sync-telemetry-h {
+  animation: generation-sync-telemetry-h 42s linear infinite;
+}
+
+.generation-sync-telemetry-h-reverse {
+  animation: generation-sync-telemetry-h 52s linear infinite reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .generation-sync-telemetry,
+  .generation-sync-telemetry-reverse,
+  .generation-sync-telemetry-h,
+  .generation-sync-telemetry-h-reverse,
+  .sync-logo-well-ring {
+    animation: none;
+  }
+}
+
+@keyframes sync-logo-well-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+}
+
+.sync-logo-well-ring {
+  animation: sync-logo-well-pulse 3.2s ease-in-out infinite;
+}

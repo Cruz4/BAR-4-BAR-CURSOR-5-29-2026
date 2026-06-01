@@ -35,8 +35,8 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
     id: 'sheet',
     target: '[data-tour="lyrics-sheet"]',
     title: 'Your rhyme book',
-    body: 'Write bar-by-bar on the sheet. Click any line to activate the Bar Workstation below.',
-    example: 'Each bar is its own line — think in bars, not paragraphs.',
+    body: 'Write line-by-line on the sheet. Two lines = one rhyme bar for Studio Progress and challenges. Click any line to activate the Bar Workstation below.',
+    example: 'Think in couplets — each line is its own row, but goals count pairs.',
   },
   {
     id: 'bar-workstation',
@@ -61,8 +61,15 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
     id: 'dna',
     target: '[data-tour="dna-suite"]',
     title: 'Creative DNA',
-    body: 'Five direction questions keep every suggestion on-theme. Free tier loads system presets; Pro archives your own strains.',
-    example: 'Free = try the full workflow. Pro = save YOUR DNA to the vault.',
+    body: 'Five direction questions keep every suggestion on-theme. Use the folder icon to open the DNA Vault — expand a preset to ⚡ inject one strain or ↻ load the full profile.',
+    example: 'Free = system presets. Pro = archive YOUR extractions to the vault.',
+  },
+  {
+    id: 'dna-drop',
+    target: '[data-tour="dna-drop"]',
+    title: 'DNA Drop (Pro)',
+    body: 'Publish a shareable project link from the left panel. Collaborators import your lyrics, structure, DNA, and vibe after they sign in.',
+    example: 'Drop a link for feedback — they merge it into their vault.',
   },
   {
     id: 'ink',

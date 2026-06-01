@@ -89,7 +89,7 @@ import { DataContext } from '@/context/data-context';
 import { useAuth } from '@/hooks/use-auth';
 import { isProUser } from '@/lib/subscription';
 import { format } from 'date-fns';
-import { countNonEmptyBars } from '@/lib/gamification/bar-count';
+import { countRhymeBars } from '@/lib/lyrics-units';
 import { cn } from '@/lib/utils';
 import { isDataUrl } from '@/lib/cover-art';
 import {
@@ -364,7 +364,7 @@ function LooseTracksSidebar({
   }, [tracks]);
 
   const totalBars = useMemo(
-    () => tracks.reduce((sum, t) => sum + countNonEmptyBars(t.sections), 0),
+    () => tracks.reduce((sum, t) => sum + countRhymeBars(t.sections), 0),
     [tracks]
   );
 
@@ -491,7 +491,7 @@ function LooseTrackCard({
   onMoveTrack: (trackId: string, targetAlbumId: string) => void;
   onDelete: () => void;
 }) {
-  const barCount = countNonEmptyBars(track.sections);
+  const barCount = countRhymeBars(track.sections);
   const sectionCount = track.sections?.length ?? 0;
 
   return (

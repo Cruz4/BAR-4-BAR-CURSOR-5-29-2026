@@ -12,6 +12,7 @@ import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { cn } from '@/lib/utils';
 import { LeaderboardHeatBackground } from '@/components/studio-page-background';
+import { linesToRhymeBars } from '@/lib/lyrics-units';
 
 type Entry = {
   userId: string;
@@ -102,8 +103,10 @@ function LeaderboardTable({
   return (
     <div className="space-y-2.5">
       {rows.map((row, i) => {
-        const value = Number(row[valueKey] || 0);
-        const heatPct = Math.min(100, (value / maxValue) * 100);
+        const rawValue = Number(row[valueKey] || 0);
+        const value =
+          valueKey === 'barsWritten7d' ? linesToRhymeBars(rawValue) : rawValue;
+        const heatPct = Math.min(100, (rawValue / maxValue) * 100);
         const style = rankStyle(i);
         const RankIcon = style.icon;
 
@@ -254,7 +257,7 @@ export default function LeaderboardPage() {
                   <Music className="h-4 w-4 text-orange-400" /> Bars written this week
                 </CardTitle>
                 <CardDescription className="text-orange-200/40">
-                  Non-empty bars saved to your rhyme book — hottest writers rise to the top.
+                  Rhyme bars saved this week (2 lines = 1 bar) — hottest writers rise to the top.
                 </CardDescription>
               </CardHeader>
               <CardContent>

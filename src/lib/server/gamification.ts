@@ -19,6 +19,7 @@ import {
 } from '@/lib/gamification/types';
 import type { AdminGamificationRosterEntry } from '@/lib/gamification/admin-roster-types';
 import type { AnalyticsEventName } from '@/lib/analytics-events';
+import { countNonEmptyLines, rhymeBarsToLines } from '@/lib/lyrics-units';
 
 export const MAX_DAILY_XP = 500;
 
@@ -45,12 +46,7 @@ function slugify(name: string, uid: string): string {
 }
 
 function countNonEmptyBars(sections: unknown): number {
-  if (!Array.isArray(sections)) return 0;
-  return sections.reduce((acc: number, s: any) => {
-    const bars = s?.bars;
-    if (!Array.isArray(bars)) return acc;
-    return acc + bars.filter((b: any) => String(b?.text || '').trim().length > 0).length;
-  }, 0);
+  return countNonEmptyLines(sections as Parameters<typeof countNonEmptyLines>[0]);
 }
 
 function mergeSummary(existing: Partial<GamificationSummary>): GamificationSummary {
@@ -141,11 +137,11 @@ async function loadTrackVerifyContext(
     albumTrackCountVerified = tracksSnap.size;
   }
 
-  const minBars = ACHIEVEMENT_THRESHOLDS.trackCompleteMinBars;
+  const minLines = rhymeBarsToLines(ACHIEVEMENT_THRESHOLDS.trackCompleteMinBars);
 
   return {
     trackCompleteVerified:
-      track.status === 'complete' && barsOnTrackVerified >= minBars,
+      track.status === 'complete' && barsOnTrackVerified >= minLines,
     barsOnTrackVerified,
     albumTrackCountVerified,
     lifetimeCompletedTracksVerified: 0,
@@ -168,7 +164,7 @@ async function loadPortfolioVerifyContext(
   >
 > {
   const db = await getDb();
-  const minBars = ACHIEVEMENT_THRESHOLDS.trackCompleteMinBars;
+  const minLines = rhymeBarsToLines(ACHIEVEMENT_THRESHOLDS.trackCompleteMinBars);
   const qualifyMin = ACHIEVEMENT_THRESHOLDS.albumQualifyMinTracks;
 
   let lifetimeCompleted = 0;
@@ -192,7 +188,7 @@ async function loadPortfolioVerifyContext(
         const track = trackDoc.data() || {};
         const bars = countNonEmptyBars(track.sections);
         if (bars > localMaxBars) localMaxBars = bars;
-        if (track.status === 'complete' && bars >= minBars) {
+        if (track.status === 'complete' && bars >= minLines) {
           localLifetimeCompleted += 1;
           completedInAlbum += 1;
         }

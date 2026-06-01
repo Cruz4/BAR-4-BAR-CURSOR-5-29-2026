@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { StudioLoader } from '@/components/studio-loader';
 import { cn } from '@/lib/utils';
+import { linesToRhymeBars } from '@/lib/lyrics-units';
 import {
   Calendar,
   CalendarRange,
@@ -193,6 +194,7 @@ export function StudioProgressBoard() {
                   label="Bars (7 days)"
                   rank={ranks?.barsWritten7d ?? null}
                   value={summary.barsWritten7d}
+                  formatValue={linesToRhymeBars}
                   hidden={hidden}
                 />
                 <LeaderboardCompareCard

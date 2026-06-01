@@ -7,6 +7,10 @@ import { rankFromXp } from '@/lib/gamification/ranks';
 import { getAchievement } from '@/lib/gamification/achievements';
 import { isProUser } from '@/lib/subscription';
 import {
+  detectProgressCelebrations,
+  dispatchProgressCelebrations,
+} from '@/lib/gamification/progress-celebrations';
+import {
   dispatchAchievementUnlocks,
   GAMIFICATION_SUMMARY_PATCH_EVENT,
 } from '@/lib/gamification/unlock-events';
@@ -38,12 +42,16 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const prevUnlocksRef = useRef<Set<string>>(new Set());
   const listenerReadyRef = useRef(false);
+  const prevSummaryRef = useRef<GamificationSummary | null>(null);
+  const progressReadyRef = useRef(false);
 
   useEffect(() => {
     if (!user?.id || !authReady) {
       setSummary(DEFAULT_GAMIFICATION_SUMMARY);
       prevUnlocksRef.current = new Set();
       listenerReadyRef.current = false;
+      prevSummaryRef.current = null;
+      progressReadyRef.current = false;
       setLoading(false);
       return;
     }
@@ -159,6 +167,26 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     window.addEventListener(GAMIFICATION_SUMMARY_PATCH_EVENT, onPatch);
     return () => window.removeEventListener(GAMIFICATION_SUMMARY_PATCH_EVENT, onPatch);
   }, []);
+
+  useEffect(() => {
+    if (loading || !user?.id) return;
+
+    const prev = prevSummaryRef.current;
+    if (!progressReadyRef.current) {
+      progressReadyRef.current = true;
+      prevSummaryRef.current = summary;
+      return;
+    }
+
+    if (prev) {
+      const celebrations = detectProgressCelebrations(prev, summary, isProUser(user));
+      if (celebrations.length) {
+        dispatchProgressCelebrations(celebrations);
+      }
+    }
+
+    prevSummaryRef.current = summary;
+  }, [summary, loading, user]);
 
   const rankLabel = rankFromXp(summary.xp, isProUser(user)).label;
 

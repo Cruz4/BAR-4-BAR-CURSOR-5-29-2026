@@ -64,7 +64,8 @@ import {
   MousePointer2,
   Clock,
   Star,
-  Trophy
+  Trophy,
+  Lightbulb
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -144,6 +145,22 @@ const FAQS = [
     {
       q: "How does Refer a Friend work?",
       a: "Ink Store → Refer a Friend copies your personal link. When a new artist signs up through it, you each receive 150 permanent Ink automatically. Referrers can earn up to 4 bonuses (600 Ink total). Referred signups are tracked on the platform and logged with Stripe checkout metadata when they upgrade."
+    },
+    {
+      q: "What is a rhyme bar vs a sheet line?",
+      a: "Each row on the lyrics sheet is one line. Studio Progress, weekly goals, monthly challenges, and achievement thresholds count rhyme bars — two non-empty lines equal one rhyme bar (a couplet). AI generation still works line-by-line."
+    },
+    {
+      q: "What is DNA Drop?",
+      a: "Studio Pro artists publish a shareable link from the left panel (DNA Drop). Recipients sign in and import lyrics, structure, Creative DNA, vibe, and related strains into their vault. Square album cover art keeps drop previews sharp."
+    },
+    {
+      q: "What happens during Creative Syncing vs DNA Extraction?",
+      a: "Creative Syncing runs during full drafts and remix synthesis — it weaves your active Hub rules into new lyrics. DNA Extraction is a separate analysis pass that maps strains from existing text without generating bars; archive the profile, then calibrate in the Hub."
+    },
+    {
+      q: "How do weekly and monthly challenges differ?",
+      a: "Weekly goals reset every Monday; monthly challenges follow the calendar month. Both track rhyme bars (lines ÷ 2). Open /studio-progress or the Vault sidebar for live counters, rank XP, and leaderboard compare."
     }
 ];
 
@@ -184,7 +201,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                   <p className="text-xs border-l-2 border-primary/30 pl-3 italic">Free tier: full DNA &amp; REMIX workflow + system vault presets. Pro saves <em>your</em> custom strains and unlocks cloud sync.</p>
                 </ChapterCard>
                 <ChapterCard icon={<Compass className="text-green-500" />} title="Guided Workstation Tour" colorClass="border-l-green-500">
-                  <p>Walk through the lyrics page with spotlight highlights — paste, sheet, bar AI, DNA, and Ink. Skippable anytime.</p>
+                  <p>Walk through the lyrics page with spotlight highlights — paste, sheet, bar AI, DNA, DNA Drop (Pro), and Ink. Skippable anytime.</p>
                   <p className="text-xs text-muted-foreground">Runs automatically the first time you open a track. Replay whenever you need a refresher.</p>
                   <Button
                     type="button"
@@ -196,6 +213,10 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                   >
                     <RefreshCw className="h-4 w-4" /> Replay Guided Tour
                   </Button>
+                </ChapterCard>
+                <ChapterCard icon={<Lightbulb className="text-yellow-500" />} title="Studio Insights & Did You Knows" colorClass="border-l-yellow-500 text-yellow-500">
+                  <p className="text-sm">After your first guided tour, the lyrics page surfaces one random tip per visit — either a <strong>Studio Insight</strong> or a <strong>Did You Know?</strong> card covering DNA Drop, rhyme-bar math, strain inject, ranks, vault import, and more.</p>
+                  <p className="text-xs text-muted-foreground">45+ tips rotate in the pool. Pause or dismiss anytime; they never repeat twice on the same page visit.</p>
                 </ChapterCard>
                 <ChapterCard icon={<Trophy className="text-amber-400" />} title="Progress, Badges & Share Cards" colorClass="border-l-amber-500 text-amber-400">
                   <ul className="list-disc list-inside space-y-2 text-sm">

@@ -6,8 +6,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { 
     ChevronLeft, 
-    Maximize2, 
-    Minimize2, 
+    Sun,
+    Moon,
     Type, 
     Target, 
     Play, 
@@ -331,8 +331,8 @@ export default function PerformancePage() {
                     </Button>
                 </div>
                 
-                <Button variant="ghost" size="icon" onClick={() => setIsDarkMode(!isDarkMode)} className="h-9 w-9 rounded-full">
-                    {isDarkMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                <Button variant="ghost" size="icon" onClick={() => setIsDarkMode(!isDarkMode)} className="h-9 w-9 rounded-full" aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
+                    {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 </Button>
             </div>
         </div>

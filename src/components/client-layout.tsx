@@ -10,6 +10,7 @@ import { UIStateProvider } from '@/context/ui-state-context';
 import { UsageProvider } from '@/context/usage-context';
 import { GamificationProvider } from '@/context/gamification-context';
 import { AchievementUnlockCelebration } from '@/components/gamification/achievement-unlock-celebration';
+import { ProgressCelebration } from '@/components/gamification/progress-celebration';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { usePathname } from 'next/navigation';
 import { StudioTips } from './studio-tips';
@@ -47,6 +48,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                 </div>
                 <Toaster />
                 <AchievementUnlockCelebration />
+                <ProgressCelebration />
             </UIStateProvider>
             </GamificationProvider>
           </UsageProvider>

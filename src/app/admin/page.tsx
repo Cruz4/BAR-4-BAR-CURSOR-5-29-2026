@@ -35,6 +35,7 @@ import type { RankId } from '@/lib/gamification/types';
 import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { STUDIO_RANKS } from '@/lib/gamification/ranks';
 import { cn } from '@/lib/utils';
+import { linesToRhymeBars } from '@/lib/lyrics-units';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -418,7 +419,7 @@ export default function AdminPage() {
                             <Zap className="h-3 w-3 text-amber-400" />
                             {(gam?.xp ?? 0).toLocaleString()} XP
                           </div>
-                          <p className="text-[8px] text-muted-foreground uppercase">{(gam?.lifetimeBarsWritten ?? 0).toLocaleString()} bars lifetime</p>
+                          <p className="text-[8px] text-muted-foreground uppercase">{linesToRhymeBars(gam?.lifetimeBarsWritten ?? 0).toLocaleString()} bars lifetime</p>
                         </div>
                       </TableCell>
                       <TableCell>

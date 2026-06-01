@@ -114,8 +114,11 @@ import { Progress } from './ui/progress';
 import { Slider } from './ui/slider';
 import { useAuth } from '@/hooks/use-auth';
 import { isProUser } from '@/lib/subscription';
+import { linesToRhymeBars } from '@/lib/lyrics-units';
 import { SYSTEM_DNA_PRESETS, SYSTEM_STYLE_PRESETS, SYSTEM_VIBE_PRESETS } from '@/lib/system-presets';
-import { DNASynthesisLoader } from '@/components/dna-synthesis-loader';
+import { DNASynthesisLoader, getDnaLoaderStatusText, type SynthesisLoaderMode } from '@/components/dna-synthesis-loader';
+import { GenerationSyncAmbient, type SyncAttractor } from '@/components/generation-sync-ambient';
+import { DnaSeedExtractPanel } from '@/components/dna-seed-extract-panel';
 import { WorkstationStepBackground, stepToWorkstationVariant } from '@/components/workstation-step-background';
 import { HubCalibrationAmbient, HUB_INK_KEYS, type HubInkKey } from '@/components/hub-calibration-ambient';
 import { format } from 'date-fns';
@@ -332,6 +335,10 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   const isPro = isProUser(user);
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingOperation, setGeneratingOperation] = useState<'extract' | 'draft' | 'remix'>('draft');
+  const syncSurfaceRef = useRef<HTMLDivElement>(null);
+  const logoAnchorRef = useRef<HTMLDivElement>(null);
+  const [syncAttractor, setSyncAttractor] = useState<SyncAttractor | null>(null);
   const { setGenerating } = useUIState();
   const [progress, setProgress] = useState(0);
   const [step, setStep] = useState<number>(0); 
@@ -437,7 +444,13 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
     setNewHubIntent('');
 
     if (track.sections?.length > 0) {
-      setHubSections(track.sections.map((s) => ({ name: s.type, bars: s.bars.length, enabled: true })));
+      setHubSections(
+        track.sections.map((s) => ({
+          name: s.type,
+          bars: linesToRhymeBars(s.bars.length),
+          enabled: true,
+        }))
+      );
     } else {
       setHubSections(STRUCTURE_PRESETS[0].sections);
     }
@@ -631,6 +644,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
 
   const handleFullDraftGenerate = async (e: any) => {
     if (!deductInk(activeDraftBase, 'generateSongDraft', e)) return;
+    setGeneratingOperation('draft');
     setIsGenerating(true);
     setGenerating(true, 'Synthesizing Studio Draft...');
     try {
@@ -695,6 +709,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   const handleRelayAnalyze = async (sourceText: string, e: any) => {
     const cost = getCost('analyzeRelayAssets');
     if (!deductInk(cost, 'analyzeRelayAssets', e)) return;
+    setGeneratingOperation('extract');
     setIsGenerating(true);
     setGenerating(true, 'Performing DNA Extraction...');
     try {
@@ -907,6 +922,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
     const cost = activeBarsCount * getCost('generateDraftPerBar');
     if (!deductInk(cost, 'generateRelayDraft', e)) return;
     
+    setGeneratingOperation('remix');
     setIsGenerating(true);
     setGenerating(true, 'Synthesizing Neural Draft...');
     try {
@@ -1370,6 +1386,72 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
     prevHubActiveRef.current = hubModuleActive;
   }, [hubModuleActive, step]);
 
+  const synthesisLoaderMode: SynthesisLoaderMode =
+    generatingOperation === 'extract' ? 'extract' : 'synthesize';
+
+  const synthesisActiveRules = useMemo(
+    () =>
+      synthesisLoaderMode === 'extract'
+        ? {}
+        : {
+            dna: inheritAlbum || inheritTrack || hasDirectionContent(hubDirection),
+            intents: intentsEnabled && hubIntents.length > 0,
+            style: hubStyleEnabled && !!hubStyleAnalysis?.trim(),
+            vibe: hubVibeEnabled,
+            guardrails: enableGuardrails,
+            instructions: !!lyricsAbout.trim(),
+          },
+    [
+      synthesisLoaderMode,
+      inheritAlbum,
+      inheritTrack,
+      hubDirection,
+      intentsEnabled,
+      hubIntents.length,
+      hubStyleEnabled,
+      hubStyleAnalysis,
+      hubVibeEnabled,
+      enableGuardrails,
+      lyricsAbout,
+    ]
+  );
+
+  const synthesisProgressLabel =
+    generatingOperation === 'extract' ? 'Profile Scan' : 'Strand Build';
+
+  useLayoutEffect(() => {
+    if (!isGenerating) {
+      setSyncAttractor(null);
+      return;
+    }
+
+    const measure = () => {
+      const surface = syncSurfaceRef.current;
+      const anchor = logoAnchorRef.current;
+      if (!surface || !anchor) return;
+      const s = surface.getBoundingClientRect();
+      const a = anchor.getBoundingClientRect();
+      setSyncAttractor({
+        cx: a.left + a.width / 2 - s.left,
+        cy: a.top + a.height / 2 - s.top,
+        r: Math.max(a.width, a.height) * 0.5,
+        ringR: Math.min(s.width * 0.17, s.height * 0.24),
+      });
+    };
+
+    measure();
+    const raf = requestAnimationFrame(measure);
+    const ro = new ResizeObserver(measure);
+    if (syncSurfaceRef.current) ro.observe(syncSurfaceRef.current);
+    if (logoAnchorRef.current) ro.observe(logoAnchorRef.current);
+    window.addEventListener('resize', measure);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [isGenerating, progress, synthesisLoaderMode]);
+
   return (
     <>
     <TooltipProvider delayDuration={300}>
@@ -1424,71 +1506,81 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
             />
           )}
           {isGenerating && (
-            <div
-              className="generating-overlay-backdrop absolute inset-0 z-[100] studio-page-base"
-              aria-hidden
-            />
+            <div ref={syncSurfaceRef} className="absolute inset-0 z-[100]">
+              <GenerationSyncAmbient
+                progress={progress}
+                mode={synthesisLoaderMode}
+                activeRules={synthesisActiveRules}
+                attractor={syncAttractor}
+                className="absolute inset-0"
+              />
+            </div>
           )}
           <div
             className={cn(
-              'generating-overlay absolute inset-0 z-[101] flex flex-col items-center justify-center gap-4 px-4 transition-opacity duration-300',
+              'generating-overlay absolute inset-0 z-[101] flex flex-col min-h-0 transition-opacity duration-300',
               isGenerating ? 'opacity-100' : 'opacity-0 pointer-events-none'
             )}
             aria-hidden={!isGenerating}
           >
-            <DNASynthesisLoader
-              progress={progress}
-              compact
-              activeRules={{
-                dna: inheritAlbum || inheritTrack || hasDirectionContent(hubDirection),
-                intents: intentsEnabled && hubIntents.length > 0,
-                style: hubStyleEnabled && !!hubStyleAnalysis?.trim(),
-                vibe: hubVibeEnabled,
-                guardrails: enableGuardrails,
-                instructions: !!lyricsAbout.trim(),
-              }}
-              statusText={wizardState.analysis ? 'Synthesizing DNA remix from active strains...' : 'Generating studio draft from active strains...'}
-            />
-            <div className="w-full max-w-[220px] space-y-2">
-              <div className="relative h-1.5 bg-white/5 border border-amber-500/20 rounded-full overflow-hidden">
-                <motion.div
-                  className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-amber-700 via-yellow-500 to-amber-300"
-                  animate={{ width: `${progress}%` }}
-                  transition={{ ease: 'linear' }}
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden studio-scrollbar">
+              <div className="flex min-h-full w-full flex-col items-center justify-center px-3 py-5 sm:px-4 sm:py-6">
+                <DNASynthesisLoader
+                  size="large"
+                  constrainHeight
+                  hideStatus
+                  progress={progress}
+                  mode={synthesisLoaderMode}
+                  activeRules={synthesisActiveRules}
+                  logoAnchorRef={logoAnchorRef}
                 />
               </div>
-              <div className="flex justify-between text-[9px] font-bold font-code text-amber-400 uppercase tracking-[0.15em]">
-                <span>Strand Build</span>
-                <span>{Math.round(progress)}%</span>
+            </div>
+            <div className="shrink-0 border-t border-white/10 bg-[hsl(216_48%_6%/0.95)] backdrop-blur-sm px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-4 space-y-2.5 sm:space-y-3">
+              <p className="text-[10px] sm:text-[11px] font-code uppercase text-white/70 text-center leading-relaxed tracking-[0.18em] px-1">
+                {getDnaLoaderStatusText(progress, undefined, synthesisLoaderMode)}
+              </p>
+              <div className="w-full max-w-lg mx-auto space-y-2">
+                <div className="relative h-2.5 sm:h-3 bg-white/5 border border-amber-500/25 rounded-full overflow-hidden">
+                  <motion.div
+                    className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-amber-700 via-yellow-500 to-amber-300"
+                    animate={{ width: `${progress}%` }}
+                    transition={{ ease: 'linear' }}
+                  />
+                </div>
+                <div className="flex justify-between text-[11px] sm:text-xs font-bold font-code text-amber-400 uppercase tracking-[0.18em]">
+                  <span>{synthesisProgressLabel}</span>
+                  <span>{Math.round(progress)}%</span>
+                </div>
               </div>
             </div>
           </div>
 
           <div className={cn('flex-1 min-h-0 flex flex-col relative z-10 overflow-y-auto studio-scrollbar', isGenerating && 'invisible pointer-events-none')}>
           {step === 0 && (
-            <div className="flex flex-col items-center justify-start sm:justify-center w-full min-h-0 px-3 sm:px-6 pt-4 pb-8 sm:py-8 space-y-4 sm:space-y-6 md:space-y-8 animate-in fade-in duration-700">
-                <div className="text-center space-y-2 w-full shrink-0">
-                    <p className="sm:hidden text-[9px] font-bold uppercase tracking-[0.35em] text-primary">Mode Select</p>
-                    <h2 className="text-2xl sm:text-4xl font-headline font-bold text-white uppercase tracking-tight leading-tight px-1">Select Workflow Mode</h2>
-                    <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase tracking-[0.25em] sm:tracking-[0.4em]">Initialize your creative process.</p>
+            <div className="flex flex-1 flex-col items-center justify-center w-full min-h-0 px-3 sm:px-8 py-8 sm:py-12 gap-6 sm:gap-9 md:gap-10 animate-in fade-in duration-700">
+                <div className="text-center space-y-2 sm:space-y-3 w-full shrink-0 max-w-5xl mx-auto">
+                    <p className="sm:hidden text-[10px] font-bold uppercase tracking-[0.35em] text-primary">Mode Select</p>
+                    <h2 className="text-3xl sm:text-5xl font-headline font-bold text-white uppercase tracking-tight leading-tight px-1">Select Workflow Mode</h2>
+                    <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-[0.25em] sm:tracking-[0.4em]">Initialize your creative process.</p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 w-full max-w-4xl">
-                    <Card className="cursor-pointer border-2 hover:border-primary/50 p-6 sm:p-10 flex flex-col items-center justify-center gap-4 sm:gap-6 bg-black/45 hover:scale-[1.02] sm:hover:scale-[1.05] transition-all group relative overflow-hidden" onClick={() => setStep(10)}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-10 w-full max-w-5xl mx-auto">
+                    <Card className="cursor-pointer border-2 hover:border-primary/50 p-8 sm:p-12 min-h-[220px] sm:min-h-[280px] flex flex-col items-center justify-center gap-5 sm:gap-7 bg-black/45 hover:scale-[1.02] sm:hover:scale-[1.04] transition-all group relative overflow-hidden" onClick={() => setStep(10)}>
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent opacity-80" />
-                        <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/20 blur-3xl" />
-                        <Wand2 className="relative h-16 w-12 text-primary group-hover:animate-bounce" />
-                        <div className="relative text-center space-y-2 sm:space-y-3">
-                            <h4 className="font-headline text-xl sm:text-3xl font-bold uppercase text-white">Full Studio Draft</h4>
-                            <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-widest leading-relaxed">Direct synthesis from active rules.</p>
+                        <div className="pointer-events-none absolute -right-8 -top-8 h-36 w-36 rounded-full bg-primary/20 blur-3xl" />
+                        <Wand2 className="relative h-20 w-16 sm:h-24 sm:w-20 text-primary group-hover:animate-bounce" />
+                        <div className="relative text-center space-y-2 sm:space-y-3 px-2">
+                            <h4 className="font-headline text-2xl sm:text-4xl font-bold uppercase text-white">Full Studio Draft</h4>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-widest leading-relaxed max-w-[280px] mx-auto">Direct synthesis from active rules.</p>
                         </div>
                     </Card>
-                    <Card className="cursor-pointer border-2 hover:border-sky-500/50 p-6 sm:p-10 flex flex-col items-center justify-center gap-4 sm:gap-6 bg-black/45 hover:scale-[1.02] sm:hover:scale-[1.05] transition-all group relative overflow-hidden" onClick={() => setStep(1)}>
+                    <Card className="cursor-pointer border-2 hover:border-sky-500/50 p-8 sm:p-12 min-h-[220px] sm:min-h-[280px] flex flex-col items-center justify-center gap-5 sm:gap-7 bg-black/45 hover:scale-[1.02] sm:hover:scale-[1.04] transition-all group relative overflow-hidden" onClick={() => setStep(1)}>
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-sky-500/15 via-cyan-500/5 to-transparent opacity-80" />
-                        <div className="pointer-events-none absolute -left-8 -bottom-8 h-32 w-32 rounded-full bg-sky-500/20 blur-3xl" />
-                        <BrainCircuit className="relative h-16 w-12 text-sky-400 group-hover:animate-pulse" />
-                        <div className="relative text-center space-y-2 sm:space-y-3">
-                            <h4 className="font-headline text-xl sm:text-3xl font-bold uppercase text-white">DNA & REMIX</h4>
-                            <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-widest leading-relaxed">Extract and Archive strains to seed your next synthesis loop.</p>
+                        <div className="pointer-events-none absolute -left-8 -bottom-8 h-36 w-36 rounded-full bg-sky-500/20 blur-3xl" />
+                        <BrainCircuit className="relative h-20 w-16 sm:h-24 sm:w-20 text-sky-400 group-hover:animate-pulse" />
+                        <div className="relative text-center space-y-2 sm:space-y-3 px-2">
+                            <h4 className="font-headline text-2xl sm:text-4xl font-bold uppercase text-white">DNA & REMIX</h4>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-widest leading-relaxed max-w-[320px] mx-auto">Extract and Archive strains to seed your next synthesis loop.</p>
                         </div>
                     </Card>
                 </div>
@@ -1527,6 +1619,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                               >
                                   <Card className="bg-black/40 border-white/5 p-3 rounded-xl shadow-2xl">
                                       <ScrollArea className="h-[min(22vh,200px)] pr-2">
+                                          <p className="text-[8px] text-muted-foreground uppercase tracking-wide mb-2 px-1">Bars · 2 lines per bar</p>
                                           <div className="space-y-2">
                                               {hubStructure.map((s, idx) => (
                                                   <div key={`${s.name}-${idx}`} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5 group">
@@ -1795,8 +1888,8 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                       </Tabs>
                                   }
                               >
-                                  <Card className="bg-primary/5 border-primary/20 p-3 rounded-xl shadow-inner">
-                                      <ScrollArea className="h-[min(28vh,260px)] pr-2">
+                                  <Card className="bg-primary/5 border-primary/20 p-3 rounded-xl shadow-inner min-h-0">
+                                      <div className="max-h-[min(52vh,520px)] overflow-y-auto studio-scrollbar pr-2">
                                           {strainTab === 'insights' ? (
                                               wizardState.analysis ? (
                                                   renderAnalysisStrainLayout(wizardState.analysis, 'sidebar')
@@ -1838,7 +1931,6 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                                               <div className="p-3 bg-black/40 border-t border-white/5 animate-in slide-in-from-top-2 duration-300">
                                                                   <DnaVaultPresetDetails
                                                                       preset={p}
-                                                                      compact
                                                                       onInjectMappingField={(field, value) => {
                                                                           if (!value) return;
                                                                           setHubDirection((prev) => ({ ...prev, [field]: value }));
@@ -1881,7 +1973,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                                   )) : <p className="text-center text-[9px] uppercase opacity-40 py-10">Vault is empty.</p>}
                                               </div>
                                           )}
-                                      </ScrollArea>
+                                      </div>
                                   </Card>
                               </HubSectionShell>
 
@@ -1990,27 +2082,40 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           )}
 
           {step === 1 && (
-            <div className="flex flex-col h-full p-8 gap-4 overflow-hidden animate-in fade-in slide-in-from-bottom-4 relative">
+            <div className="flex flex-col h-full min-h-0 p-4 sm:p-6 md:p-8 gap-3 sm:gap-4 overflow-hidden animate-in fade-in slide-in-from-bottom-4 relative">
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-sky-500/10 to-transparent" aria-hidden />
-                <div className="relative flex items-center justify-between">
-                    <h3 className="text-xl font-headline font-bold uppercase flex items-center gap-2 text-primary"><NotebookPen className="h-6 w-6"/> Seed DNA & REMIX</h3>
-                    <div className="flex items-center gap-3 bg-primary/5 px-4 py-2 rounded-lg border border-primary/20">
-                        <Label htmlFor="sync-lyrics" className="text-[10px] font-bold uppercase tracking-widest text-primary/80">Sync Current Lyrics</Label>
+                <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
+                    <h3 className="text-lg sm:text-xl font-headline font-bold uppercase flex items-center gap-2 text-primary">
+                      <NotebookPen className="h-5 w-5 sm:h-6 sm:w-6 shrink-0"/> Seed DNA & REMIX
+                    </h3>
+                    <div className="flex items-center gap-3 bg-primary/5 px-3 sm:px-4 py-2 rounded-lg border border-primary/20 self-start sm:self-auto">
+                        <Label htmlFor="sync-lyrics" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-primary/80">Sync Current Lyrics</Label>
                         <Switch id="sync-lyrics" checked={syncLyricsToggle} onCheckedChange={setSyncLyricsToggle} />
                     </div>
                 </div>
-                <Textarea 
-                    placeholder="Paste lyrics or rough notes to extract analytical strains..." 
-                    className="flex-grow font-code text-lg bg-background/50 border-2 p-6" 
-                    value={wizardState.lyrics} 
+
+                <div className="relative flex flex-1 min-h-0 flex-col md:flex-row rounded-xl border-2 border-primary/25 overflow-hidden bg-background/30 shadow-[inset_0_0_60px_rgba(56,189,248,0.04)]">
+                  <Textarea
+                    placeholder="Paste lyrics or rough notes to extract analytical strains..."
+                    className="flex-1 min-h-[200px] md:min-h-0 font-code text-sm sm:text-base md:text-lg bg-background/40 border-0 rounded-none p-4 sm:p-5 md:p-6 resize-none focus-visible:ring-0 focus-visible:ring-offset-0 md:max-w-[58%] lg:max-w-[55%]"
+                    value={wizardState.lyrics}
                     onChange={(e) => {
                         setSyncLyricsToggle(false);
                         setWizardState(prev => ({ ...prev, lyrics: e.target.value }));
-                    }} 
-                />
-                <div className="flex items-center gap-3 p-4 bg-muted/20 border-t rounded-lg">
+                    }}
+                  />
+                  <div className="hidden md:flex flex-1 min-w-[240px] max-w-[44%] border-l border-primary/20">
+                    <DnaSeedExtractPanel lyrics={wizardState.lyrics} className="w-full" />
+                  </div>
+                </div>
+
+                <div className="md:hidden shrink-0 h-[min(28vh,200px)] min-h-[140px] rounded-xl border border-primary/20 overflow-hidden">
+                  <DnaSeedExtractPanel lyrics={wizardState.lyrics} className="w-full h-full" compact />
+                </div>
+
+                <div className="flex items-center gap-3 p-3 sm:p-4 bg-muted/20 border border-white/5 rounded-lg shrink-0">
                     <Checkbox id="rc" checked={permissionChecked} onCheckedChange={(c) => setPermissionChecked(!!c)} />
-                    <Label htmlFor="rc" className="text-[10px] font-bold uppercase tracking-widest cursor-pointer text-foreground/70">I have clearance to utilize these lyrical assets.</Label>
+                    <Label htmlFor="rc" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest cursor-pointer text-foreground/70 leading-snug">I have clearance to utilize these lyrical assets.</Label>
                 </div>
             </div>
           )}
@@ -2295,7 +2400,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           </div>
         </div>
 
-        {(step === 1 || step === 2 || step === 3 || step === 5 || step === 10) && (
+        {(step === 1 || step === 2 || step === 3 || step === 5 || step === 10) && !isGenerating && (
         <div className="shrink-0 flex flex-col p-3 sm:p-4 border-t border-white/5 bg-[#050505] gap-3 relative z-[60] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 min-w-0 w-full sm:w-auto">

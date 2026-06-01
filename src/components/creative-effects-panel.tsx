@@ -231,7 +231,7 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
                     </CardTitle>
                     {!isPro && (
                       <div className="w-full flex justify-center mt-2 mb-1">
-                        <ProLockBadge label="3 Free · Pro Unlocks All" />
+                        <ProLockBadge label="3 Free · Pro+" />
                       </div>
                     )}
                     <CardDescription className="text-[9px] text-indigo-600/60 uppercase font-bold tracking-tight">Specialized Lyrical Tools</CardDescription>

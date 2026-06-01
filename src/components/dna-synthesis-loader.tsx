@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useMemo } from 'react';
 import { Hexagon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export interface ActiveRules {
   dna?: boolean;
@@ -12,11 +13,124 @@ export interface ActiveRules {
   instructions?: boolean;
 }
 
+/** What the workstation loader is doing — drives copy, palette, and strain panel. */
+export type SynthesisLoaderMode = 'extract' | 'synthesize';
+
 interface DNASynthesisLoaderProps {
   progress: number;
   activeRules?: ActiveRules;
   statusText?: string;
+  /** extract = reading text for DNA profile; synthesize = draft/remix from active rules */
+  mode?: SynthesisLoaderMode;
+  /** Anchor for logo well ring + ambient suction center (parent measures this) */
+  logoAnchorRef?: React.RefObject<HTMLDivElement | null>;
+  /** @deprecated use `size` instead */
   compact?: boolean;
+  size?: 'compact' | 'default' | 'large' | 'workstation';
+  /** Shrink helix so title/strains fit in modal viewports */
+  constrainHeight?: boolean;
+  /** Hide status line (e.g. when parent renders it in a pinned footer) */
+  hideStatus?: boolean;
+}
+
+const SIZE_CONFIG = {
+  compact: {
+    canvasW: 200,
+    canvasH: 240,
+    logo: 224,
+    strandRadius: 34,
+    maxW: 320,
+    titleClass: 'text-[11px] tracking-[0.35em]',
+    statusClass: 'text-[9px] tracking-[0.2em]',
+    strainsMaxW: 260,
+    strainsTitle: 'text-[8px]',
+    strainsLabel: 'text-[7px]',
+    gap: 'gap-3',
+    dotScale: 0.95,
+  },
+  default: {
+    canvasW: 300,
+    canvasH: 350,
+    logo: 310,
+    strandRadius: 52,
+    maxW: 420,
+    titleClass: 'text-xs tracking-[0.35em]',
+    statusClass: 'text-[10px] tracking-[0.22em]',
+    strainsMaxW: 340,
+    strainsTitle: 'text-[9px]',
+    strainsLabel: 'text-[8px]',
+    gap: 'gap-4',
+    dotScale: 1.08,
+  },
+  large: {
+    canvasW: 580,
+    canvasH: 680,
+    logo: 540,
+    strandRadius: 94,
+    maxW: 700,
+    titleClass: 'text-sm sm:text-base md:text-lg tracking-[0.35em] sm:tracking-[0.4em]',
+    statusClass: 'text-[10px] sm:text-xs md:text-sm tracking-[0.22em] sm:tracking-[0.25em]',
+    strainsMaxW: 560,
+    strainsTitle: 'text-[10px] sm:text-[11px]',
+    strainsLabel: 'text-[9px] sm:text-[10px]',
+    gap: 'gap-4 sm:gap-5 md:gap-7',
+    dotScale: 1.28,
+  },
+  workstation: {
+    canvasW: 460,
+    canvasH: 540,
+    logo: 410,
+    strandRadius: 74,
+    maxW: 520,
+    titleClass: 'text-sm sm:text-base tracking-[0.38em]',
+    statusClass: 'text-[10px] sm:text-xs tracking-[0.24em]',
+    strainsMaxW: 460,
+    strainsTitle: 'text-[10px]',
+    strainsLabel: 'text-[9px]',
+    gap: 'gap-4 sm:gap-5',
+    dotScale: 1.16,
+  },
+} as const;
+
+type LoaderSize = keyof typeof SIZE_CONFIG;
+
+function resolveSize(compact?: boolean, size?: LoaderSize): LoaderSize {
+  if (size) return size;
+  return compact === false ? 'default' : 'compact';
+}
+
+/** Maps `large` to a viewport-appropriate tier for phone / tablet / desktop. */
+function useResponsiveLoaderSize(requested: LoaderSize): LoaderSize {
+  const [effective, setEffective] = React.useState<LoaderSize>(() =>
+    requested === 'large' ? 'workstation' : requested
+  );
+
+  React.useEffect(() => {
+    if (requested !== 'large') {
+      setEffective(requested);
+      return;
+    }
+
+    const pick = (): LoaderSize => {
+      const w = window.innerWidth;
+      if (w < 420) return 'compact';
+      if (w < 768) return 'default';
+      if (w < 1200) return 'workstation';
+      return 'large';
+    };
+
+    setEffective(pick());
+    const mqls = [
+      window.matchMedia('(max-width: 419px)'),
+      window.matchMedia('(max-width: 767px)'),
+      window.matchMedia('(max-width: 1199px)'),
+    ];
+    const onChange = () => setEffective(pick());
+    mqls.forEach((mql) => mql.addEventListener('change', onChange));
+    return () => mqls.forEach((mql) => mql.removeEventListener('change', onChange));
+  }, [requested]);
+
+  return requested === 'large' ? effective : requested;
 }
 
 const RULE_COLORS: Record<string, string> = {
@@ -38,6 +152,9 @@ const RULE_LABELS: Record<string, string> = {
 };
 
 const FALLBACK_PALETTE = ['#d946ef', '#3b82f6', '#10b981'];
+
+/** Core strain colors for extraction — yellow, blue, pink, green */
+export const DNA_STRAIN_PALETTE = ['#f59e0b', '#38bdf8', '#d946ef', '#10b981'] as const;
 
 /** Helix geometry helpers — mirrored strands + major/minor groove */
 function helixPoint(
@@ -65,26 +182,41 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${Math.max(0, Math.min(1, alpha))})`;
 }
 
-function statusForProgress(p: number, custom?: string): string {
+function statusForProgress(p: number, custom?: string, mode: SynthesisLoaderMode = 'synthesize'): string {
   if (custom) return custom;
+  if (mode === 'extract') {
+    if (p < 20) return 'Reading source lyrics...';
+    if (p < 55) return 'Mapping strain patterns from text...';
+    if (p < 92) return 'Extracting DNA profile...';
+    return 'Profile extraction complete...';
+  }
   if (p < 20) return 'Applying active generation rules...';
   if (p < 55) return 'Pulling elements together based on active rules...';
   if (p < 92) return 'Weaving neural strands into project DNA...';
   return 'Generation complete. Finalizing output...';
 }
 
-/** App logo — faint backbone behind the helix (4× prior size) */
-function LogoMotif({ compact }: { compact: boolean }) {
-  const size = compact ? 224 : 288;
+export function getDnaLoaderStatusText(
+  progress: number,
+  custom?: string,
+  mode: SynthesisLoaderMode = 'synthesize'
+): string {
+  return statusForProgress(progress, custom, mode);
+}
+
+/** App logo — faint backbone behind the helix */
+function LogoMotif({ logoSize, constrainHeight }: { logoSize: number; constrainHeight?: boolean }) {
   return (
     <img
       src="/Logo.png"
       alt=""
       aria-hidden
-      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0 object-contain select-none"
+      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[2] object-contain select-none"
       style={{
         opacity: 0.35,
-        width: size,
+        width: constrainHeight
+          ? `min(${logoSize}px, 76vw, 30vh)`
+          : `min(${logoSize}px, 82vw)`,
         height: 'auto',
         filter: 'drop-shadow(0 0 16px rgba(217,70,239,0.12))',
       }}
@@ -114,26 +246,40 @@ export function DNASynthesisLoader({
   progress,
   activeRules = {},
   statusText,
+  mode = 'synthesize',
+  logoAnchorRef,
   compact = true,
+  size,
+  constrainHeight = false,
+  hideStatus = false,
 }: DNASynthesisLoaderProps) {
+  const requested = resolveSize(compact, size);
+  const responsiveSize = useResponsiveLoaderSize(requested);
+  const cfg = SIZE_CONFIG[responsiveSize];
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef<number>(0);
+  const progressRef = useRef(progress);
+
+  progressRef.current = progress;
 
   const activeRuleList = useMemo(
-    () => Object.entries(activeRules).filter(([, v]) => v).map(([k]) => k),
-    [activeRules]
+    () =>
+      mode === 'synthesize'
+        ? Object.entries(activeRules).filter(([, v]) => v).map(([k]) => k)
+        : [],
+    [activeRules, mode]
   );
 
-  const palette = useMemo(
-    () =>
-      activeRuleList.length > 0
-        ? activeRuleList.map((r) => RULE_COLORS[r])
-        : FALLBACK_PALETTE,
-    [activeRuleList]
-  );
+  const palette = useMemo(() => {
+    if (mode === 'extract') return [...DNA_STRAIN_PALETTE];
+    return activeRuleList.length > 0
+      ? activeRuleList.map((r) => RULE_COLORS[r])
+      : FALLBACK_PALETTE;
+  }, [activeRuleList, mode]);
 
   const completion = Math.min(1, Math.max(0, progress / 100));
-  const displayStatus = statusForProgress(progress, statusText);
+  const displayStatus = statusForProgress(progress, statusText, mode);
+  const loaderTitle = mode === 'extract' ? 'DNA Extraction' : 'Creative Syncing';
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -146,7 +292,7 @@ export function DNASynthesisLoader({
     const CENTER_X = W / 2;
     const CENTER_Y = H / 2;
     const RUNGS = 24;
-    const STRAND_RADIUS = compact ? 34 : 48;
+    const STRAND_RADIUS = cfg.strandRadius;
     const HELIX_HEIGHT = H * 0.82;
     const BOTTOM_Y = CENTER_Y + HELIX_HEIGHT / 2;
     const TOP_Y = CENTER_Y - HELIX_HEIGHT / 2;
@@ -190,7 +336,7 @@ export function DNASynthesisLoader({
 
     const draw = (timestamp: number) => {
       const t = timestamp * 0.0011;
-      const completionFactor = Math.min(1, progress / 100);
+      const completionFactor = Math.min(1, progressRef.current / 100);
       const upwardFlow = t * 26;
 
       ctx.clearRect(0, 0, W, H);
@@ -219,7 +365,7 @@ export function DNASynthesisLoader({
           const dotColor = palette[ruleIdx];
           const majorBoost = groove > 0 ? 1.08 : 0.92;
           const dotAlpha = (0.42 + Math.abs(depth) * 0.48) * Math.min(1, completionFactor + 0.2);
-          const dotSize = (2 + depth * 1.5) * majorBoost * (compact ? 0.95 : 1.08);
+          const dotSize = (2 + depth * 1.5) * majorBoost * cfg.dotScale;
 
           drawDot(ctx, x, y, dotSize, dotColor, dotAlpha, 4 + Math.abs(depth) * 6);
         }
@@ -264,49 +410,88 @@ export function DNASynthesisLoader({
 
     frameRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frameRef.current);
-  }, [activeRuleList.join(','), progress, palette.join(','), compact]);
-
-  const canvasW = compact ? 200 : 280;
-  const canvasH = compact ? 240 : 320;
+  }, [activeRuleList.join(','), palette.join(','), cfg.strandRadius, cfg.dotScale, cfg.canvasW, cfg.canvasH]);
 
   return (
-    <div className="flex flex-col items-center gap-3 w-full max-w-[320px] mx-auto overflow-visible px-2">
-      <p className="text-[11px] font-headline font-bold uppercase tracking-[0.35em] text-primary/90">
-        Creative Syncing
+    <div
+      className={cn(
+        'flex flex-col items-center justify-center w-full mx-auto px-1 sm:px-2 text-center shrink-0',
+        constrainHeight ? 'gap-3 sm:gap-4' : cfg.gap
+      )}
+      style={{ maxWidth: `min(${cfg.maxW}px, 100%)` }}
+    >
+      <p
+        className={cn(
+          'w-full shrink-0 font-headline font-bold uppercase',
+          'text-cyan-100 sm:text-white',
+          'drop-shadow-[0_0_18px_rgba(56,189,248,0.65)]',
+          cfg.titleClass
+        )}
+      >
+        {loaderTitle}
       </p>
 
       <div
-        className="relative w-full flex justify-center items-center overflow-visible"
-        style={{ minHeight: canvasH + 8 }}
+        className={cn(
+          'relative w-full flex justify-center items-center shrink-0',
+          constrainHeight
+            ? 'max-h-[32vh] sm:max-h-[38vh] md:max-h-[44vh]'
+            : 'overflow-visible'
+        )}
+        style={
+          constrainHeight
+            ? undefined
+            : { minHeight: `min(${cfg.canvasH + 12}px, 50vh)` }
+        }
       >
-        <LogoMotif compact={compact} />
+        <div
+          ref={logoAnchorRef}
+          className="absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0"
+          style={{
+            width: constrainHeight ? 'min(62%, 240px)' : 'min(58%, 260px)',
+            aspectRatio: '1',
+          }}
+          aria-hidden
+        />
+        <LogoMotif logoSize={cfg.logo} constrainHeight={constrainHeight} />
         <canvas
           ref={canvasRef}
-          width={canvasW}
-          height={canvasH}
-          className="relative z-10 block"
+          width={cfg.canvasW}
+          height={cfg.canvasH}
+          className={cn(
+            'relative z-10 block w-full max-w-[min(92vw,520px)] h-auto',
+            constrainHeight && 'max-h-[32vh] sm:max-h-[38vh] md:max-h-[44vh] object-contain'
+          )}
           style={{
             filter: `drop-shadow(0 0 ${12 + progress * 0.25}px rgba(217,70,239,${0.2 + completion * 0.35}))`,
           }}
         />
       </div>
 
-      {activeRuleList.length > 0 && (
-        <div className="w-full max-w-[260px] rounded-lg border border-white/10 bg-black/50 backdrop-blur-sm px-2.5 py-2">
-          <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1 mb-1.5">
-            <Hexagon className="h-2.5 w-2.5 text-primary" /> Active Neural Strains
+      {mode === 'synthesize' && activeRuleList.length > 0 && (
+        <div
+          className="w-full mx-auto shrink-0 rounded-xl border border-white/15 bg-black/55 backdrop-blur-sm px-2.5 py-2 sm:px-4 sm:py-3"
+          style={{ maxWidth: `min(${cfg.strainsMaxW}px, 100%)` }}
+        >
+          <p
+            className={cn(
+              'font-bold uppercase tracking-widest text-white/70 flex items-center justify-center gap-1.5 mb-2',
+              cfg.strainsTitle
+            )}
+          >
+            <Hexagon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-cyan-400" /> Active Neural Strains
           </p>
-          <div className="flex flex-wrap gap-x-2 gap-y-1 justify-center">
+          <div className="flex flex-wrap gap-x-2 sm:gap-x-3 gap-y-1.5 justify-center">
             {activeRuleList.map((rule) => (
-              <div key={rule} className="flex items-center gap-1">
+              <div key={rule} className="flex items-center gap-1 sm:gap-1.5">
                 <div
-                  className="w-2 h-2 rounded-full shrink-0 animate-pulse"
+                  className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shrink-0"
                   style={{
                     backgroundColor: RULE_COLORS[rule],
                     boxShadow: `0 0 6px ${RULE_COLORS[rule]}`,
                   }}
                 />
-                <span className="text-[7px] font-bold uppercase tracking-wider text-muted-foreground">
+                <span className={cn('font-bold uppercase tracking-wider text-white/55', cfg.strainsLabel)}>
                   {RULE_LABELS[rule]}
                 </span>
               </div>
@@ -315,9 +500,16 @@ export function DNASynthesisLoader({
         </div>
       )}
 
-      <p className="text-[9px] font-code uppercase tracking-[0.2em] text-muted-foreground animate-pulse text-center leading-relaxed px-2">
+      {!hideStatus && (
+      <p
+        className={cn(
+          'font-code uppercase text-white/65 text-center leading-relaxed px-1 sm:px-2 shrink-0',
+          cfg.statusClass
+        )}
+      >
         {displayStatus}
       </p>
+      )}
     </div>
   );
 }
