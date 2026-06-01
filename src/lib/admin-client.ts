@@ -1,0 +1,15 @@
+import { auth } from '@/lib/firebase/client/firebase';
+
+export async function adminApiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Sign in required');
+
+  const token = await user.getIdToken();
+  const headers = new Headers(init.headers);
+  headers.set('Authorization', `Bearer ${token}`);
+  if (init.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  return fetch(path, { ...init, headers });
+}

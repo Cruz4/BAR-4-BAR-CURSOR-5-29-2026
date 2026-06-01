@@ -663,7 +663,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   }
 
   return (
-    <div className={cn("flex flex-col h-full bg-card border-r relative overflow-hidden w-[260px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'left'))}>
+    <div className={cn("flex flex-col h-full bg-card border-r relative overflow-hidden w-[260px] max-xl:w-[220px] max-lg:w-[200px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'left'))}>
       <div className="flex items-center justify-between p-4 border-b shrink-0 h-14">
         <h3 className="font-headline font-bold text-xs uppercase tracking-widest text-muted-foreground">Workstation</h3>
         {!mobileActive && (
@@ -929,12 +929,12 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
   const notebookStyle = {
     backgroundColor: 'transparent',
     backgroundImage: `
-      linear-gradient(90deg, transparent 100px, rgba(255, 0, 0, 0.2) 100px, rgba(255, 0, 0, 0.2) 101px, transparent 101px),
+      linear-gradient(90deg, transparent var(--lyrics-gutter, 100px), rgba(255, 0, 0, 0.2) var(--lyrics-gutter, 100px), rgba(255, 0, 0, 0.2) calc(var(--lyrics-gutter, 100px) + 1px), transparent calc(var(--lyrics-gutter, 100px) + 1px)),
       repeating-linear-gradient(transparent, transparent ${parseInt(activeLineHeight) - 1}px, rgba(255, 255, 255, 0.08) ${parseInt(activeLineHeight) - 1}px, rgba(255, 255, 255, 0.08) ${activeLineHeight})
     `,
     backgroundSize: `100% ${activeLineHeight}`,
     backgroundAttachment: 'local'
-  };
+  } as React.CSSProperties;
 
   const handleDeleteBar = (sId: string, bIdx: number) => {
       onUpdateTrack({
@@ -1080,30 +1080,31 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
   };
 
   return (
-        <div className={cn("flex-grow flex flex-col min-w-0 h-full relative overflow-hidden", mobileLyricsPanelClass(mobileActive))}>
-      <div className="h-14 px-3 max-md:px-3 md:px-8 flex items-center justify-between bg-card z-20 border-b shrink-0">
-        <div className="flex items-center gap-6">
+        <div className={cn("flex flex-1 flex-col min-w-0 basis-0 h-full relative overflow-hidden", mobileLyricsPanelClass(mobileActive))}>
+      <div className="h-14 max-md:h-auto max-md:min-h-0 max-md:py-2 px-3 max-md:px-2 md:px-8 flex max-md:flex-col max-md:gap-2 md:flex-row md:items-center md:justify-between bg-card z-20 border-b shrink-0 min-w-0">
+        <div className="flex items-center gap-2 md:gap-6 min-w-0 shrink-0">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" data-tour="smart-structure" className="h-8 px-4 font-bold text-xs uppercase tracking-widest border-border/40 hover:bg-primary/5 text-muted-foreground hover:text-primary" onClick={() => setSmartStructureOpen(true)}>
-                      {buttonLabel('analyzeStructure')}
+                  <Button variant="outline" size="sm" data-tour="smart-structure" className="h-8 max-md:px-2 max-md:text-[9px] px-4 font-bold text-xs uppercase tracking-widest border-border/40 hover:bg-primary/5 text-muted-foreground hover:text-primary" onClick={() => setSmartStructureOpen(true)}>
+                      <span className="max-md:hidden">{buttonLabel('analyzeStructure')}</span>
+                      <span className="md:hidden">Paste</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom"><p className="text-[10px] font-bold">{tooltip('analyzeStructure')}</p></TooltipContent>
               </Tooltip>
             </TooltipProvider>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3 bg-muted/40 px-3 py-1 rounded-full border border-border/40">
-             <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 md:gap-4 min-w-0 max-md:w-full max-md:overflow-x-auto max-md:studio-scrollbar">
+          <div className="flex items-center gap-2 md:gap-3 bg-muted/40 px-2 md:px-3 py-1 rounded-full border border-border/40 shrink-0">
+             <div className="flex items-center gap-1.5 md:gap-2">
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary transition-all disabled:opacity-20"
+                                className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary transition-all disabled:opacity-20 shrink-0"
                                 onClick={handleUndo}
                                 disabled={!canUndo}
                             >
@@ -1113,40 +1114,40 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                         <TooltipContent side="bottom"><p className="text-[10px] font-bold uppercase">Undo Last Action</p></TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
-                <div className="w-px h-4 bg-border/40 mx-1" />
-                <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mr-1">RHYME FOCUS</span>
+                <div className="w-px h-4 bg-border/40 mx-0.5 hidden sm:block" />
+                <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-muted-foreground mr-0.5 hidden sm:inline">RHYME FOCUS</span>
                 <Switch 
                   checked={track.rhymeHighlightingEnabled} 
                   onCheckedChange={(c) => onUpdateTrack({ rhymeHighlightingEnabled: c })} 
-                  className="scale-75"
+                  className="scale-75 shrink-0"
                 />
-                <div className="w-px h-4 bg-border/40 mx-1" />
-                <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mr-1">RHYME PULSE</span>
+                <div className="w-px h-4 bg-border/40 mx-0.5" />
+                <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-muted-foreground mr-0.5 max-sm:hidden">RHYME PULSE</span>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div data-tour="rhyme-pulse" className="inline-flex">
+                      <div data-tour="rhyme-pulse" className="inline-flex shrink-0">
                       <Button 
                           variant="outline" 
                           size="sm" 
                           className={cn(
-                              "rounded-full h-9 w-9 p-0 transition-all active:scale-90 active:shadow-inner bg-background border-primary/40 hover:bg-primary/5 group shadow-lg flex items-center justify-center",
+                              "rounded-full h-8 w-8 md:h-9 md:w-9 p-0 transition-all active:scale-90 active:shadow-inner bg-background border-primary/40 hover:bg-primary/5 group shadow-lg flex items-center justify-center",
                               isRhymeLoading && "animate-pulse"
                           )}
                           onClick={handleRunRhymeScan}
                           disabled={isRhymeLoading}
                       >
-                          {isRhymeLoading ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <Target className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />}
+                          {isRhymeLoading ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <Target className="h-4 w-4 md:h-5 md:w-5 text-primary group-hover:scale-110 transition-transform" />}
                       </Button>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent side="bottom"><p className="text-[10px] font-bold">{tooltip('findRhymes')}</p></TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                <Badge variant="outline" className="h-4 px-1 text-[7px] font-bold border-primary/20 text-primary">{getEffectiveCost('findRhymes')} INK</Badge>
+                <Badge variant="outline" className="h-4 px-1 text-[7px] font-bold border-primary/20 text-primary shrink-0">{getEffectiveCost('findRhymes')} INK</Badge>
              </div>
           </div>
-          <ToggleGroup type="single" value={fontSize} onValueChange={(val) => val && setFontSize(val as any)} className="bg-muted/40 border border-border/40 rounded-lg p-0.5">
+          <ToggleGroup type="single" value={fontSize} onValueChange={(val) => val && setFontSize(val as any)} className="hidden md:flex bg-muted/40 border border-border/40 rounded-lg p-0.5 shrink-0">
             <ToggleGroupItem value="sm" className="h-7 w-8 text-[10px] font-bold">T</ToggleGroupItem>
             <ToggleGroupItem value="md" className="h-7 w-8 text-sm font-bold">T</ToggleGroupItem>
             <ToggleGroupItem value="lg" className="h-7 w-8 text-lg font-bold">T</ToggleGroupItem>
@@ -1154,7 +1155,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
         </div>
       </div>
       
-      <div id="lyrics-viewport" data-tour="lyrics-sheet" className="flex-1 relative overflow-x-hidden overflow-y-auto min-h-0 studio-scrollbar" style={notebookStyle}>
+      <div id="lyrics-viewport" data-tour="lyrics-sheet" className="flex-1 relative overflow-x-hidden overflow-y-auto min-h-0 studio-scrollbar max-md:[--lyrics-gutter:2.75rem]" style={notebookStyle}>
         <div className="w-full max-full pb-12">
           {!track.sections || track.sections.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-[400px] text-center gap-6 animate-in fade-in zoom-in duration-1000">
@@ -1169,22 +1170,27 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
           ) : (
             (track.sections || []).map((section: any) => (
                 <div key={section.id} className="relative">
-                <div id={`section-header-${section.id}`} style={{ height: `calc(${activeLineHeight} * 3)` }} className="flex items-end pb-2 pl-[120px] max-md:pl-12">
-                    <h3 className="text-xl md:text-2xl font-headline font-bold text-sky-400 uppercase leading-none">[{section.type}]</h3>
+                <div id={`section-header-${section.id}`} style={{ height: `calc(${activeLineHeight} * 3)` }} className="flex items-end pb-2 pl-[120px] max-md:pl-[2.75rem]">
+                    <h3 className="text-lg md:text-2xl font-headline font-bold text-sky-400 uppercase leading-none">[{section.type}]</h3>
                 </div>
                 {(section.bars || []).map((bar: any) => {
                     const isSelected = activeGeneratorBar?.sectionId === section.id && activeGeneratorBar?.idx === bar.idx;
                     return (
-                        <div key={`${section.id}-${bar.idx}`} className={cn("group relative flex items-start transition-colors h-auto", isSelected && "bg-primary/10", bar.justGenerated && "animate-line-glow")} style={{ minHeight: activeLineHeight }}>
-                        <span className={cn("absolute left-[50px] max-md:left-3 font-mono text-muted-foreground/30 w-10 text-right font-bold h-full flex items-start pt-1", fontSizes[fontSize])} style={{ lineHeight: activeLineHeight }}>{String(bar.idx).padStart(2, '0')}</span>
+                        <div key={`${section.id}-${bar.idx}`} className={cn("group relative flex max-md:flex-row md:block items-start transition-colors h-auto max-md:px-1", isSelected && "bg-primary/10", bar.justGenerated && "animate-line-glow")} style={{ minHeight: activeLineHeight }}>
+                        <span className={cn(
+                          "font-mono text-muted-foreground/40 text-right font-bold shrink-0 pt-1 z-10",
+                          "max-md:relative max-md:w-9 max-md:mr-1 max-md:text-[11px]",
+                          "md:absolute md:left-[50px] md:w-10 md:text-muted-foreground/30",
+                          fontSizes[fontSize]
+                        )} style={{ lineHeight: activeLineHeight }}>{String(bar.idx).padStart(2, '0')}</span>
                         
-                        <div className="absolute right-4 top-0 h-full flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={(e) => handleSharedLineGeneration('next', e, section.id, bar.idx)}><ArrowDown className="h-4 w-4"/></Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={(e) => handleSharedLineGeneration('previous', e, section.id, bar.idx)}><ArrowUp className="h-4 w-4"/></Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteBar(section.id, bar.idx)}><Trash2 className="h-4 w-4"/></Button>
+                        <div className="absolute right-1 md:right-4 top-0 h-full flex items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-20">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10" onClick={(e) => handleSharedLineGeneration('next', e, section.id, bar.idx)}><ArrowDown className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10" onClick={(e) => handleSharedLineGeneration('previous', e, section.id, bar.idx)}><ArrowUp className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteBar(section.id, bar.idx)}><Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
                         </div>
 
-                        <div className="flex-grow flex items-start min-w-0 h-full pl-0 relative overflow-hidden">
+                        <div className="flex-grow flex items-start min-w-0 h-full max-md:flex-1 relative overflow-hidden">
                             <textarea 
                             id={`bar-input-${section.id}-${bar.idx}`} 
                             value={bar.text} 
@@ -1204,8 +1210,9 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                 e.target.style.height = e.target.scrollHeight + 'px';
                             }} 
                             className={cn(
-                                "border-0 bg-transparent p-0 focus-visible:ring-0 font-code font-bold w-full shadow-none z-10 tracking-normal resize-none overflow-hidden whitespace-pre-wrap break-words pr-24 max-md:pr-14",
-                                "pl-[145px] -indent-[25px] max-md:pl-12 max-md:-indent-[18px]",
+                                "border-0 bg-transparent p-0 focus-visible:ring-0 font-code font-bold w-full shadow-none z-10 tracking-normal resize-none overflow-hidden whitespace-pre-wrap break-words",
+                                "max-md:pl-1 max-md:pr-12 max-md:indent-0",
+                                "md:pr-24 md:pl-[145px] md:-indent-[25px]",
                                 "antialiased text-rendering-geometric",
                                 fontSizes[fontSize]
                             )} 
@@ -1213,10 +1220,11 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                             placeholder="..." 
                             />
                             {track.rhymeHighlightingEnabled && bar.text && (
-                            <div className="absolute inset-0 pointer-events-none flex items-start pl-0 pr-24 max-md:pr-14 z-0 h-full overflow-hidden">
+                            <div className="absolute inset-0 pointer-events-none flex items-start pl-0 max-md:pl-1 md:pl-0 pr-12 md:pr-24 z-0 h-full overflow-hidden">
                                 <p className={cn(
                                     "font-code font-bold tracking-normal whitespace-pre-wrap break-words w-full text-transparent m-0",
-                                    "pl-[145px] -indent-[25px] max-md:pl-12 max-md:-indent-[18px]",
+                                    "max-md:indent-0",
+                                    "md:pl-[145px] md:-indent-[25px]",
                                     "antialiased text-rendering-geometric",
                                     fontSizes[fontSize]
                                 )} style={{ lineHeight: activeLineHeight, fontVariantLigatures: 'none' }}>
@@ -1234,11 +1242,11 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
         </div>
       </div>
 
-      <div data-tour="bar-workstation" className={cn("bg-card border-t shadow-[0_-10px_40px_rgba(0,0,0,0.5)] shrink-0 z-[40] relative transition-all duration-300", isMinimized ? "h-10" : "h-[115px]")}>
-        <div className="max-w-7xl mx-auto w-full px-3 max-md:px-3 md:px-8 h-full flex flex-col justify-start pt-2 pb-3 gap-1">
-            <div className="flex items-center justify-between border-b border-white/5 h-6 shrink-0">
-                <div className="flex items-center gap-4 overflow-hidden h-full">
-                    <h4 className="text-[9px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2 shrink-0 leading-none h-full"><Zap className="h-3 w-3" /> BAR WORKSTATION</h4>
+      <div data-tour="bar-workstation" className={cn("bg-card border-t shadow-[0_-10px_40px_rgba(0,0,0,0.5)] shrink-0 z-[40] relative transition-all duration-300 w-full max-w-full max-md:max-h-[45dvh] max-xl:max-h-[42dvh] max-md:overflow-y-auto max-xl:overflow-y-auto max-md:studio-scrollbar max-xl:studio-scrollbar", isMinimized ? "h-10 max-md:max-h-10 max-md:overflow-hidden max-xl:max-h-10 max-xl:overflow-hidden" : "h-auto min-h-[7.25rem] xl:h-[115px] max-md:h-auto")}>
+        <div className="mx-auto w-full min-w-0 max-w-full xl:max-w-7xl px-2 max-md:px-2 md:px-4 xl:px-8 h-full flex flex-col justify-start pt-2 pb-2 md:pb-3 gap-1">
+            <div className="flex max-md:flex-col max-xl:flex-col max-md:gap-1.5 max-xl:gap-1.5 xl:flex-row xl:items-center xl:justify-between border-b border-white/5 shrink-0 max-md:pb-1.5 max-xl:pb-1.5 xl:h-6">
+                <div className="flex items-center gap-2 md:gap-4 min-w-0 h-full max-md:flex-wrap max-xl:flex-wrap">
+                    <h4 className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.15em] md:tracking-[0.2em] text-primary flex items-center gap-1.5 shrink-0 leading-none"><Zap className="h-3 w-3" /> BAR WORKSTATION</h4>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -1251,73 +1259,76 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <span className="text-muted-foreground font-code text-[9px] font-bold tracking-widest uppercase shrink-0 leading-none h-full flex items-center">{activeBarLabel}</span>
-                    <div className="flex items-center gap-1.5 overflow-hidden ml-2 h-full">
-                        {ruleBadges.map(b => <Badge key={b.id} variant="outline" className={cn("text-[8px] font-bold uppercase h-4.5 px-2 bg-background/20", b.color, b.id === 'END WITH' && "animate-pulse")}>{b.id}</Badge>)}
-                    </div>
+                    <span className="text-muted-foreground font-code text-[8px] md:text-[9px] font-bold tracking-widest uppercase shrink-0 leading-none truncate max-w-[40vw] xl:max-w-none">{activeBarLabel}</span>
                 </div>
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => setIsMinimized(!isMinimized)}>
-                    {isMinimized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </Button>
+                <div className="flex items-center gap-1 max-md:w-full max-xl:w-full max-md:justify-between max-xl:justify-between min-w-0">
+                    <div className="flex flex-wrap items-center gap-1 max-md:flex-1 max-xl:flex-1 max-md:max-h-14 max-xl:max-h-14 max-md:overflow-y-auto max-xl:overflow-y-auto max-md:studio-scrollbar max-xl:studio-scrollbar xl:gap-1.5 xl:overflow-hidden xl:ml-2 h-full min-w-0">
+                        {ruleBadges.map(b => <Badge key={b.id} variant="outline" className={cn("text-[7px] md:text-[8px] font-bold uppercase h-4 px-1.5 md:px-2 bg-background/20 shrink-0", b.color, b.id === 'END WITH' && "animate-pulse")}>{b.id}</Badge>)}
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0" onClick={() => setIsMinimized(!isMinimized)}>
+                        {isMinimized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                </div>
             </div>
             {!isMinimized && (
-                <div className="flex gap-4 items-center mt-1 h-full min-h-0">
+                <div className="flex max-md:flex-col max-xl:flex-col xl:flex-row gap-2 xl:gap-4 xl:items-center mt-1 min-h-0 max-md:pb-1 max-xl:pb-1">
                     {generationOptions ? (
-                        <div className="flex-grow flex gap-4 animate-in fade-in slide-in-from-bottom-4 h-full py-1">
+                        <div className="flex-grow flex max-md:flex-col max-xl:flex-col xl:flex-row gap-2 xl:gap-4 animate-in fade-in slide-in-from-bottom-4 min-h-0 py-1 w-full min-w-0">
                             {generationOptions.map((opt, i) => (
                                 <Button 
                                     key={i} 
                                     variant="outline" 
-                                    className="flex-1 h-full py-1 px-5 font-bold bg-primary/10 border-primary/40 hover:bg-primary/20 text-white text-left justify-start gap-4 group border-2 shadow-2xl transition-all hover:scale-[1.01]"
+                                    className="flex-1 min-h-[3.5rem] md:h-full py-1 px-3 md:px-5 font-bold bg-primary/10 border-primary/40 hover:bg-primary/20 text-white text-left justify-start gap-2 md:gap-4 group border-2 shadow-2xl transition-all hover:scale-[1.01] w-full"
                                     onClick={() => handleAcceptOption(opt.line)}
                                 >
-                                    <div className="flex flex-col gap-0.5 shrink-0 border-r border-white/10 pr-3">
+                                    <div className="flex flex-col gap-0.5 shrink-0 border-r border-white/10 pr-2 md:pr-3">
                                         <Badge className="bg-primary text-[8px] h-4 w-fit uppercase px-1">Opt {i+1}</Badge>
                                         <span className="text-[9px] text-muted-foreground font-mono uppercase tracking-tighter">{opt.syllables} SYLL</span>
                                     </div>
-                                    <span className="text-sm md:text-lg leading-tight tracking-tight flex-grow break-words line-clamp-2">{opt.line}</span>
+                                    <span className="text-xs md:text-lg leading-tight tracking-tight flex-grow break-words line-clamp-3 md:line-clamp-2">{opt.line}</span>
                                 </Button>
                             ))}
-                            <Button variant="ghost" size="icon" onClick={() => setGenerationOptions(null)} className="h-full w-10 text-muted-foreground hover:text-red-500 bg-white/5 border border-white/10 rounded-lg">
+                            <Button variant="ghost" size="icon" onClick={() => setGenerationOptions(null)} className="h-10 w-10 md:h-full md:w-10 shrink-0 text-muted-foreground hover:text-red-500 bg-white/5 border border-white/10 rounded-lg self-end md:self-auto">
                                 <X className="h-5 w-5" />
                             </Button>
                         </div>
                     ) : (
                         <>
                             <textarea 
-                                placeholder="..."
+                                placeholder="Tap to edit active bar..."
                                 value={activeBarText} 
                                 onKeyDown={handleBarSyncEnter}
                                 onChange={(e: any) => { 
                                     setActiveBarText(e.target.value); 
                                     if (activeGeneratorBar) onUpdateTrack({ sections: track.sections.map((s: any) => s.id === activeGeneratorBar.sectionId ? { ...s, bars: s.bars.map((b: any) => b.idx === activeGeneratorBar.idx ? { ...b, text: e.target.value } : b) } : s) }); 
                                 }} 
-                                className="bg-background/40 border border-white/10 flex-grow px-4 py-2 font-code font-bold text-sm shadow-inner rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 tracking-tight resize-none h-14" 
+                                className="bg-background/40 border border-white/10 w-full min-w-0 xl:flex-grow px-3 py-2 font-code font-bold text-sm shadow-inner rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 tracking-tight resize-none min-h-[3.25rem] xl:h-14 shrink-0" 
                             />
-                            <div className="flex gap-2 shrink-0 h-14">
+                            <div className="grid grid-cols-2 max-md:gap-1.5 max-xl:gap-1.5 xl:flex xl:gap-2 shrink-0 max-md:w-full max-xl:w-full xl:h-14 min-w-0">
                                 <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <Button variant="outline" size="sm" className="h-full px-5 font-bold text-xs uppercase border-border/40 gap-2 shadow-lg" onClick={(e) => handleSharedLineGeneration('next', e)}>
-                                                <ArrowDown className="h-4 w-4 text-primary" /> NEXT LINE
+                                            <Button variant="outline" size="sm" className="max-md:h-10 max-xl:h-10 xl:h-full max-md:px-2 max-xl:px-3 xl:px-5 font-bold text-[10px] xl:text-xs uppercase border-border/40 gap-1 xl:gap-2 shadow-lg w-full min-w-0" onClick={(e) => handleSharedLineGeneration('next', e)}>
+                                                <ArrowDown className="h-3.5 w-3.5 xl:h-4 xl:w-4 text-primary shrink-0" /> <span className="truncate">Next</span>
                                             </Button>
                                         </TooltipTrigger>
                                         <TooltipContent><p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p></TooltipContent>
                                     </Tooltip>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <Button variant="outline" size="sm" className="h-full px-5 font-bold text-xs uppercase border-border/40 gap-2 shadow-lg" onClick={(e) => handleSharedLineGeneration('previous', e)}>
-                                                <ArrowUp className="h-4 w-4 text-primary" /> PREV LINE
+                                            <Button variant="outline" size="sm" className="max-md:h-10 max-xl:h-10 xl:h-full max-md:px-2 max-xl:px-3 xl:px-5 font-bold text-[10px] xl:text-xs uppercase border-border/40 gap-1 xl:gap-2 shadow-lg w-full min-w-0" onClick={(e) => handleSharedLineGeneration('previous', e)}>
+                                                <ArrowUp className="h-3.5 w-3.5 xl:h-4 xl:w-4 text-primary shrink-0" /> <span className="truncate">Prev</span>
                                             </Button>
                                         </TooltipTrigger>
                                         <TooltipContent><p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p></TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>
-                                <Button variant="outline" size="sm" className="h-full w-12 font-bold border-red-500/20 text-red-500 bg-red-500/5 hover:bg-red-500/10 shadow-lg" onClick={() => { if(activeGeneratorBar) handleDeleteBar(activeGeneratorBar.sectionId, activeGeneratorBar.idx); }}><Trash2 className="h-5 w-5" /></Button>
+                                <Button variant="outline" size="sm" className="max-md:h-10 max-xl:h-10 xl:h-full max-md:px-2 max-xl:px-2 xl:w-12 font-bold border-red-500/20 text-red-500 bg-red-500/5 hover:bg-red-500/10 shadow-lg w-full min-w-0" onClick={() => { if(activeGeneratorBar) handleDeleteBar(activeGeneratorBar.sectionId, activeGeneratorBar.idx); }}><Trash2 className="h-4 w-4 xl:h-5 xl:w-5 mx-auto" /></Button>
                                 {user?.subscriptionStatus === 'active' ? (
-                                  <Button variant="secondary" size="sm" className="h-full px-6 font-bold text-xs uppercase tracking-widest gap-2 bg-primary/20 text-primary border border-primary/20 shadow-lg" onClick={handleOpenFreestyle} title={tooltip('freestyleTranscription')}>
-                                    <Mic className="h-4 w-4" />
-                                    FREESTYLE ({getEffectiveCost('freestyleTranscription')} Ink)
+                                  <Button variant="secondary" size="sm" className="max-md:h-10 max-xl:h-10 xl:h-full max-md:col-span-2 max-xl:col-span-2 xl:col-span-1 xl:px-4 2xl:px-6 font-bold text-[10px] xl:text-xs uppercase tracking-widest gap-1.5 xl:gap-2 bg-primary/20 text-primary border border-primary/20 shadow-lg w-full min-w-0" onClick={handleOpenFreestyle} title={tooltip('freestyleTranscription')}>
+                                    <Mic className="h-3.5 w-3.5 xl:h-4 xl:w-4 shrink-0" />
+                                    <span className="truncate max-xl:hidden 2xl:inline">Freestyle ({getEffectiveCost('freestyleTranscription')} Ink)</span>
+                                    <span className="truncate hidden max-xl:inline 2xl:hidden">Freestyle</span>
                                   </Button>
                                 ) : (
                                   <UpgradeTooltip
@@ -1329,11 +1340,11 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                       variant="secondary"
                                       size="sm"
                                       type="button"
-                                      className={cn('h-full px-6 font-bold text-xs uppercase tracking-widest gap-2 shadow-lg', proLockShell('md'), proLockText())}
+                                      className={cn('max-md:h-10 max-xl:h-10 xl:h-full max-md:col-span-2 max-xl:col-span-2 xl:col-span-1 xl:px-4 font-bold text-[10px] xl:text-xs uppercase tracking-widest gap-1.5 xl:gap-2 shadow-lg w-full min-w-0', proLockShell('md'), proLockText())}
                                       onClick={(e) => e.preventDefault()}
                                     >
                                       <Lock className={cn('h-3.5 w-3.5', proLockIcon())} />
-                                      FREESTYLE
+                                      <span className="truncate">Freestyle</span>
                                     </Button>
                                   </UpgradeTooltip>
                                 )}
@@ -1472,7 +1483,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   }
 
   return (
-    <div className={cn("flex flex-col h-full bg-card border-l relative overflow-hidden w-[340px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'right'))}>
+    <div className={cn("flex flex-col h-full bg-card border-l relative overflow-hidden w-[340px] max-xl:w-[280px] max-lg:w-[240px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'right'))}>
       <div className={cn("flex items-center justify-between p-4 border-b shrink-0 h-14", mobileActive && "justify-center")}>
         {!mobileActive && (
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onCollapse(true)}><PanelRightClose className="h-4 w-4" /></Button>

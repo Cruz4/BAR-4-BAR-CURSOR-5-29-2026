@@ -13,12 +13,74 @@ export const runtime = 'nodejs';
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+/** Safe config check — open in a browser or Stripe Dashboard "Send test webhook". */
+export async function GET() {
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  const secret = endpointSecret;
+  return NextResponse.json({
+    ok: true,
+    hasSecret: Boolean(secret),
+    secretPrefix: secret ? secret.slice(0, 10) : null,
+    hasStripeKey: Boolean(stripeKey),
+    stripeKeyMode: stripeKey?.startsWith('sk_live_')
+      ? 'live'
+      : stripeKey?.startsWith('sk_test_')
+        ? 'test'
+        : 'unknown',
+    hint:
+      'Test-mode Stripe webhooks require the test signing secret (whsec_...) from Dashboard → Webhooks → your endpoint → Reveal. Do not use the secret from stripe listen.',
+  });
+}
+
+async function resolveSubscriptionUser(
+  db: Awaited<ReturnType<typeof getDb>>,
+  stripe: Stripe,
+  subscriptionId: string,
+  subscriptionObject?: Stripe.Subscription | string | null
+): Promise<{ userId?: string; tier: 'monthly' | 'yearly' }> {
+  if (subscriptionObject && typeof subscriptionObject === 'object') {
+    const userId = subscriptionObject.metadata?.userId;
+    const tier = subscriptionObject.metadata?.subscriptionTier === 'yearly' ? 'yearly' : 'monthly';
+    if (userId) return { userId, tier };
+  }
+
+  const userSnap = await db
+    .collection('users')
+    .where('subscriptionId', '==', subscriptionId)
+    .limit(1)
+    .get();
+  if (!userSnap.empty) {
+    const doc = userSnap.docs[0];
+    const tier = doc.data()?.subscriptionTier === 'yearly' ? 'yearly' : 'monthly';
+    return { userId: doc.id, tier };
+  }
+
+  try {
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    return {
+      userId: subscription.metadata?.userId,
+      tier: subscription.metadata?.subscriptionTier === 'yearly' ? 'yearly' : 'monthly',
+    };
+  } catch (err) {
+    console.error('[stripe/webhook] subscription lookup failed', subscriptionId, err);
+    return { tier: 'monthly' };
+  }
+}
+
 export async function POST(req: Request) {
   if (!endpointSecret) {
+    console.error('[stripe/webhook] STRIPE_WEBHOOK_SECRET is not configured');
     return NextResponse.json({ error: 'Webhook secret not configured on server.' }, { status: 500 });
   }
 
-  const stripe = getStripe();
+  let stripe: Stripe;
+  try {
+    stripe = getStripe();
+  } catch (err) {
+    console.error('[stripe/webhook] STRIPE_SECRET_KEY is not configured', err);
+    return NextResponse.json({ error: 'Stripe API key not configured on server.' }, { status: 500 });
+  }
+
   const body = await req.text();
   const sig = req.headers.get('stripe-signature');
 
@@ -31,6 +93,10 @@ export async function POST(req: Request) {
     event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Invalid signature';
+    console.error('[stripe/webhook] signature verification failed', {
+      message,
+      secretPrefix: endpointSecret.slice(0, 10),
+    });
     return NextResponse.json({ error: `Webhook Error: ${message}` }, { status: 400 });
   }
 
@@ -55,11 +121,16 @@ export async function POST(req: Request) {
           typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
         if (!subscriptionId) break;
 
-        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-        const userId = subscription.metadata?.userId;
-        const tier = subscription.metadata?.subscriptionTier === 'yearly' ? 'yearly' : 'monthly';
+        const { userId, tier } = await resolveSubscriptionUser(
+          db,
+          stripe,
+          subscriptionId,
+          invoice.subscription
+        );
         if (userId) {
           await refillProResidency(db, userId, tier);
+        } else {
+          console.warn('[stripe/webhook] invoice.paid: no user for subscription', subscriptionId);
         }
         break;
       }
@@ -94,7 +165,7 @@ export async function POST(req: Request) {
         break;
     }
   } catch (dbError) {
-    console.error('Webhook handler error:', dbError);
+    console.error('[stripe/webhook] handler error', event.type, event.id, dbError);
     return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
   }
 

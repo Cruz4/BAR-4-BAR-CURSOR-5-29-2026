@@ -27,7 +27,8 @@ service cloud.firestore {
 
     // User profile — owner can update except privileged billing fields
     match /users/{userId} {
-      allow read: if isOwnerOrAdmin(userId);
+      allow get: if isOwnerOrAdmin(userId);
+      allow list: if isAdmin();
       allow create: if isOwner(userId);
       allow update: if isAdmin()
         || (isOwner(userId)

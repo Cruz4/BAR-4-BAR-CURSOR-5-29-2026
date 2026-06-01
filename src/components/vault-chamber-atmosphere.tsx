@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { VaultSpeakerRippleBackground } from '@/components/vault-sound-pulse';
 
 /**
- * Vault chamber atmosphere — no icons, no helix, no center hero.
- * Two drifting interference veils + a floor-hugging lift on the 21s standby cycle.
+ * Vault chamber atmosphere — moiré drift + floor lift + center speaker ripples (21s cycle).
  */
 export function VaultChamberAtmosphere({ className }: { className?: string }) {
   return (
@@ -16,6 +16,8 @@ export function VaultChamberAtmosphere({ className }: { className?: string }) {
       )}
       aria-hidden
     >
+      <VaultSpeakerRippleBackground />
+
       <div className="vault-chamber-moire-a absolute inset-[-12%]" />
       <div className="vault-chamber-moire-b absolute inset-[-12%]" />
       <div className="vault-chamber-floor absolute inset-x-0 bottom-0 h-[38vh]" />

@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { formatUnlockDate } from '@/lib/gamification/achievement-card-theme';
-import type { AchievementDef } from '@/lib/gamification/achievements';
+import { isAchievementStarter, type AchievementDef } from '@/lib/gamification/achievements';
 import { Lock, Trophy } from 'lucide-react';
 
 type AchievementBadgeCellProps = {
@@ -25,6 +25,7 @@ export function AchievementBadgeCell({
   compact = false,
   className,
 }: AchievementBadgeCellProps) {
+  const starter = isAchievementStarter(achievement.id);
   const statusLabel = unlocked
     ? 'Unlocked'
     : lockedPro
@@ -61,6 +62,11 @@ export function AchievementBadgeCell({
           >
             {achievement.title}
           </p>
+          {starter && !unlocked && !lockedPro && (
+            <Badge variant="secondary" className="text-[7px] h-4">
+              Starter
+            </Badge>
+          )}
           {lockedPro && !unlocked && (
             <Badge variant="outline" className="text-[7px] h-4">
               Pro
@@ -75,6 +81,11 @@ export function AchievementBadgeCell({
           <Badge variant="outline" className="text-[9px] h-5 capitalize">
             {achievement.category}
           </Badge>
+          {starter && (
+            <Badge variant="secondary" className="text-[9px] h-5">
+              Starter
+            </Badge>
+          )}
           {achievement.inkReward > 0 && (
             <Badge variant="outline" className="text-[9px] h-5">
               +{achievement.inkReward} Ink

@@ -613,28 +613,28 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
 
   return (
     <TooltipProvider>
-      <div className="container mx-auto px-6 py-10 relative min-h-screen selection:bg-primary/30 overflow-x-hidden">
+      <div className="container mx-auto px-3 sm:px-6 py-6 sm:py-10 relative min-h-screen selection:bg-primary/30 overflow-x-hidden">
         <div className="absolute inset-0 top-0 bottom-0 left-0 right-0 pointer-events-none">
             <div className="h-full w-full bg-[repeating-linear-gradient(theme(colors.border/.4),theme(colors.border/.4)_1px,transparent_1px,transparent_24px)] opacity-50"></div>
-            <div className="absolute inset-y-0 left-0 w-px bg-primary/20 ml-12 md:ml-24"></div>
+            <div className="absolute inset-y-0 left-0 w-px bg-primary/20 ml-12 md:ml-24 hidden sm:block"></div>
         </div>
         
-        <div className={cn('relative z-10', isUnassignedVault ? 'pl-8 md:pl-14' : 'pl-16 md:pl-32')}>
-            <Button variant="ghost" size="sm" onClick={() => router.push('/')} className="mb-6 -ml-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-all">
+        <div className="relative z-10 min-w-0 md:pl-32">
+            <Button variant="ghost" size="sm" onClick={() => router.push('/')} className="mb-4 sm:mb-6 -ml-1 sm:-ml-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-all">
                 <ChevronLeft className="mr-2 h-4 w-4" /> Collection
             </Button>
 
-            <div className="flex flex-col lg:flex-row items-start justify-between gap-8 mb-12">
-                <div className={cn('space-y-4', isUnassignedVault ? 'lg:max-w-2xl' : 'flex-grow w-full')}>
+            <div className="flex flex-col lg:flex-row items-start justify-between gap-6 sm:gap-8 mb-8 sm:mb-12">
+                <div className={cn('space-y-3 sm:space-y-4 min-w-0 w-full', isUnassignedVault ? 'lg:max-w-2xl' : 'flex-grow')}>
                     <Input 
                         defaultValue={album.title} 
                         onBlur={(e) => updateAlbum(album.id, { title: e.target.value })} 
-                        className="text-5xl md:text-7xl font-headline font-bold text-white bg-transparent border-0 p-0 focus-visible:ring-0 h-auto tracking-tighter uppercase leading-none" 
+                        className="text-3xl sm:text-5xl md:text-7xl font-headline font-bold text-white bg-transparent border-0 p-0 focus-visible:ring-0 h-auto tracking-tighter uppercase leading-none w-full max-w-full" 
                     />
                     <Textarea 
                         defaultValue={album.theme} 
                         onBlur={(e) => updateAlbum(album.id, { theme: e.target.value })} 
-                        className="text-xl text-muted-foreground bg-transparent border-0 p-0 focus-visible:ring-0 font-code min-h-[60px] resize-none leading-relaxed italic" 
+                        className="text-base sm:text-xl text-muted-foreground bg-transparent border-0 p-0 focus-visible:ring-0 font-code min-h-[60px] resize-none leading-relaxed italic w-full max-w-full break-words" 
                         placeholder="Album concept..."
                     />
                     <div className="flex items-center gap-4 pt-2">
@@ -648,8 +648,8 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                 </div>
                 
                 {!isUnassignedVault ? (
-                    <div className="relative group shrink-0">
-                        <div className="w-48 h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8)] border-4 border-white/5 bg-neutral-900 flex flex-col items-center justify-center relative">
+                    <div className="relative group shrink-0 w-full sm:w-auto flex justify-center lg:justify-end">
+                        <div className="w-40 h-40 sm:w-48 sm:h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8)] border-4 border-white/5 bg-neutral-900 flex flex-col items-center justify-center relative">
                             {album.coverArtUrl ? (
                                 isDataUrl(album.coverArtUrl) ? (
                                     // eslint-disable-next-line @next/next/no-img-element
@@ -690,32 +690,32 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
 
             <div className={cn('grid gap-8 pb-40', isUnassignedVault ? 'grid-cols-1 xl:grid-cols-12' : 'grid-cols-1 lg:grid-cols-3')}>
                 <div className={cn('space-y-10', isUnassignedVault ? 'xl:col-span-8' : 'lg:col-span-2')}>
-                    <Card className="bg-black/40 border-white/5 backdrop-blur-3xl shadow-2xl overflow-hidden rounded-2xl">
-                        <CardHeader className="flex flex-row items-center justify-between p-8 border-b border-white/5">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-primary/10 rounded-xl border border-primary/20">
-                                    {isUnassignedVault ? <CassetteTape className="h-8 w-8 text-primary" /> : <ListMusic className="h-8 w-8 text-primary" />}
+                    <Card className="bg-black/40 border-white/5 backdrop-blur-3xl shadow-2xl overflow-hidden rounded-2xl min-w-0">
+                        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6 md:p-8 border-b border-white/5">
+                            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                                <div className="p-2 sm:p-3 bg-primary/10 rounded-xl border border-primary/20 shrink-0">
+                                    {isUnassignedVault ? <CassetteTape className="h-6 w-6 sm:h-8 sm:w-8 text-primary" /> : <ListMusic className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />}
                                 </div>
-                                <div>
-                                    <CardTitle className="font-headline text-3xl uppercase tracking-tighter">{isUnassignedVault ? 'Idea Vault' : 'Tracklist'}</CardTitle>
-                                    <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-0.5">Asset Reordering & Management</p>
+                                <div className="min-w-0">
+                                    <CardTitle className="font-headline text-xl sm:text-2xl md:text-3xl uppercase tracking-tighter truncate">{isUnassignedVault ? 'Idea Vault' : 'Tracklist'}</CardTitle>
+                                    <p className="text-[8px] sm:text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-0.5">Asset Reordering & Management</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <Button onClick={() => setCreateTrackOpen(true)} className="h-9 px-6 font-bold text-[10px] uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20">
-                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Track
+                            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:justify-end shrink-0">
+                                <Button onClick={() => setCreateTrackOpen(true)} className="h-9 px-3 sm:px-6 font-bold text-[10px] uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 flex-1 sm:flex-none min-w-0">
+                                    <PlusCircle className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Add Track
                                 </Button>
-                                <Button variant="outline" size="sm" className="h-9 px-4 font-bold text-[10px] uppercase tracking-widest border-white/10 rounded-xl bg-white/5" onClick={() => setExportDialogOpen(true)}>
-                                    <FileDown className="mr-2 h-4 w-4" /> Export All
+                                <Button variant="outline" size="sm" className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-white/10 rounded-xl bg-white/5 flex-1 sm:flex-none min-w-0" onClick={() => setExportDialogOpen(true)}>
+                                    <FileDown className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Export
                                 </Button>
                                 {!isUnassignedVault && (
                                   isPro ? (
-                                    <Button variant="outline" size="sm" className="h-9 px-4 font-bold text-[10px] uppercase tracking-widest border-primary/30 rounded-xl bg-primary/5 text-primary hover:bg-primary/10" onClick={() => setShareDialogOpen(true)}>
-                                      <Globe className="mr-2 h-4 w-4" /> DNA Drop
+                                    <Button variant="outline" size="sm" className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-primary/30 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 flex-1 sm:flex-none min-w-0" onClick={() => setShareDialogOpen(true)}>
+                                      <Globe className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> DNA Drop
                                     </Button>
                                   ) : (
-                                    <Button variant="outline" size="sm" className="h-9 px-4 font-bold text-[10px] uppercase tracking-widest border-white/10 rounded-xl bg-white/5 text-muted-foreground" onClick={() => router.push('/usage?tab=cloud')}>
-                                      <Share2 className="mr-2 h-4 w-4" /> DNA Drop
+                                    <Button variant="outline" size="sm" className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-white/10 rounded-xl bg-white/5 text-muted-foreground flex-1 sm:flex-none min-w-0" onClick={() => router.push('/usage?tab=cloud')}>
+                                      <Share2 className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> DNA Drop
                                     </Button>
                                   )
                                 )}
@@ -740,18 +740,20 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                               ) : (
                                 <div className="divide-y divide-white/5">
                                 {album.tracks.map((track, index) => (
-                                    <div key={track.id} className="group flex items-center p-6 hover:bg-primary/5 transition-all">
-                                        <div className="text-muted-foreground font-code text-xl mr-6 w-8 text-right opacity-30 group-hover:opacity-100 group-hover:text-primary transition-all">
+                                    <div key={track.id} className="group flex flex-col gap-3 sm:flex-row sm:items-center p-4 sm:p-6 hover:bg-primary/5 transition-all min-w-0">
+                                        <div className="flex items-start gap-3 sm:gap-0 min-w-0 flex-1 w-full">
+                                        <div className="text-muted-foreground font-code text-base sm:text-xl sm:mr-6 w-7 sm:w-8 text-right opacity-60 sm:opacity-30 group-hover:opacity-100 group-hover:text-primary transition-all shrink-0 pt-0.5">
                                             {String(index + 1).padStart(2, '0')}
                                         </div>
                                         <Link href={`/albums/${album.id}/tracks/${track.id}`} className="flex-grow min-w-0">
-                                            <p className="font-bold font-headline text-2xl text-white uppercase tracking-tight group-hover:text-primary transition-colors">{track.title}</p>
-                                            <div className="flex items-center gap-3 mt-1">
+                                            <p className="font-bold font-headline text-lg sm:text-2xl text-white uppercase tracking-tight group-hover:text-primary transition-colors break-words">{track.title}</p>
+                                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
                                                 <Badge variant="outline" className="h-4 px-1.5 text-[8px] border-white/10 text-muted-foreground font-code">{track.vibe?.genre}</Badge>
                                                 <span className="text-[9px] text-muted-foreground/60 font-code uppercase">{track.vibe?.tempoBPM} BPM</span>
                                             </div>
                                         </Link>
-                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        </div>
+                                        <div className="flex items-center gap-1 justify-end sm:justify-start opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0 pl-10 sm:pl-0">
                                             {!isUnassignedVault && (
                                                 <>
                                                     <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary" onClick={() => handleReorderTrack(track.id, 'up')} disabled={index === 0}><ArrowUp className="h-4 w-4" /></Button>

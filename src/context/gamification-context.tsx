@@ -1,15 +1,17 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
-import { doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client/firebase';
-import { subscribeDocument } from '@/lib/firebase/client/firestore-subscribe';
 import { useAuth } from '@/hooks/use-auth';
 import { DEFAULT_GAMIFICATION_SUMMARY, type GamificationSummary } from '@/lib/gamification/types';
 import { rankFromXp } from '@/lib/gamification/ranks';
 import { getAchievement } from '@/lib/gamification/achievements';
 import { isProUser } from '@/lib/subscription';
-import { dispatchAchievementUnlocks } from '@/lib/gamification/unlock-events';
+import {
+  dispatchAchievementUnlocks,
+  GAMIFICATION_SUMMARY_PATCH_EVENT,
+} from '@/lib/gamification/unlock-events';
+import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
+import { fetchGamificationSummary } from '@/lib/gamification-client';
 
 type GamificationContextType = {
   summary: GamificationSummary;
@@ -27,6 +29,9 @@ export function useGamification() {
   return useContext(GamificationContext);
 }
 
+/** Slow safety-net sync when the tab is visible; real-time updates use patch events. */
+const SUMMARY_SYNC_INTERVAL_MS = 60_000;
+
 export function GamificationProvider({ children }: { children: ReactNode }) {
   const { user, authReady } = useAuth();
   const [summary, setSummary] = useState<GamificationSummary>(DEFAULT_GAMIFICATION_SUMMARY);
@@ -43,59 +48,117 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    let cancelled = false;
+    let inFlight = false;
     setLoading(true);
-    const ref = doc(db, 'users', user.id, 'gamification', 'summary');
-    const unsub = subscribeDocument(
-      ref,
-      (raw) => {
-        const data = raw
-          ? ({ ...DEFAULT_GAMIFICATION_SUMMARY, ...raw } as GamificationSummary)
-          : DEFAULT_GAMIFICATION_SUMMARY;
 
-        const currentIds = new Set(Object.keys(data.unlockedAchievements || {}));
-        if (listenerReadyRef.current) {
-          const newUnlocks = [...currentIds]
-            .filter((id) => !prevUnlocksRef.current.has(id))
-            .map((id) => {
-              const def = getAchievement(id);
-              if (!def) return null;
-              return {
-                id: def.id,
-                title: def.title,
-                description: def.description,
-                inkReward: def.inkReward,
-                xpReward: def.xpReward,
-                proOnly: def.proOnly,
-              };
-            })
-            .filter(Boolean) as Array<{
-            id: string;
-            title: string;
-            description: string;
-            inkReward: number;
-            xpReward: number;
-            proOnly?: boolean;
-          }>;
+    const applySummary = (raw: GamificationSummary | null) => {
+      const data = raw
+        ? ({ ...DEFAULT_GAMIFICATION_SUMMARY, ...raw } as GamificationSummary)
+        : DEFAULT_GAMIFICATION_SUMMARY;
 
-          if (newUnlocks.length) {
-            dispatchAchievementUnlocks(newUnlocks);
-          }
-        } else {
-          listenerReadyRef.current = true;
+      const currentIds = new Set(Object.keys(data.unlockedAchievements || {}));
+      if (listenerReadyRef.current) {
+        const newUnlocks = [...currentIds]
+          .filter((id) => !prevUnlocksRef.current.has(id))
+          .map((id) => {
+            const def = getAchievement(id);
+            if (!def) return null;
+            return {
+              id: def.id,
+              title: def.title,
+              description: def.description,
+              inkReward: def.inkReward,
+              xpReward: def.xpReward,
+              proOnly: def.proOnly,
+            };
+          })
+          .filter(Boolean) as Array<{
+          id: string;
+          title: string;
+          description: string;
+          inkReward: number;
+          xpReward: number;
+          proOnly?: boolean;
+        }>;
+
+        if (newUnlocks.length) {
+          dispatchAchievementUnlocks(newUnlocks);
+        }
+      } else {
+        listenerReadyRef.current = true;
+      }
+
+      prevUnlocksRef.current = currentIds;
+      setSummary(data);
+      setLoading(false);
+    };
+
+    const pullSummary = async () => {
+      if (cancelled || inFlight) return;
+      inFlight = true;
+      try {
+        const firebaseUser = await waitForAuthUser();
+        if (cancelled || !firebaseUser || firebaseUser.uid !== user.id) {
+          if (!cancelled) setLoading(false);
+          return;
         }
 
-        prevUnlocksRef.current = currentIds;
-        setSummary(data);
-        setLoading(false);
-      },
-      (error) => {
-        console.warn('Gamification listener error:', error);
-        setLoading(false);
+        const data = await fetchGamificationSummary(user.id);
+        if (!cancelled) applySummary(data);
+      } finally {
+        inFlight = false;
       }
-    );
+    };
 
-    return () => unsub();
+    void pullSummary();
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void pullSummary();
+    };
+    const onFocus = () => void pullSummary();
+
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void pullSummary();
+    }, SUMMARY_SYNC_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [user?.id, authReady]);
+
+  useEffect(() => {
+    const onPatch = (e: Event) => {
+      const patch = (e as CustomEvent<GamificationSummary>).detail;
+      if (!patch) return;
+      setSummary((prev) => {
+        const merged = {
+          ...DEFAULT_GAMIFICATION_SUMMARY,
+          ...prev,
+          ...patch,
+          unlockedAchievements: {
+            ...(prev.unlockedAchievements || {}),
+            ...(patch.unlockedAchievements || {}),
+          },
+          personalBests: {
+            ...DEFAULT_GAMIFICATION_SUMMARY.personalBests,
+            ...(prev.personalBests || {}),
+            ...(patch.personalBests || {}),
+          },
+        } as GamificationSummary;
+        prevUnlocksRef.current = new Set(Object.keys(merged.unlockedAchievements || {}));
+        return merged;
+      });
+    };
+    window.addEventListener(GAMIFICATION_SUMMARY_PATCH_EVENT, onPatch);
+    return () => window.removeEventListener(GAMIFICATION_SUMMARY_PATCH_EVENT, onPatch);
+  }, []);
 
   const rankLabel = rankFromXp(summary.xp, isProUser(user)).label;
 

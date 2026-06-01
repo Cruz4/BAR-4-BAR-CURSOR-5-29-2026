@@ -1,8 +1,11 @@
 'use client';
 
 import { auth } from '@/lib/firebase/client/firebase';
-import type { GamificationTrigger, GamificationUnlock } from '@/lib/gamification/types';
-import { dispatchAchievementUnlocks } from '@/lib/gamification/unlock-events';
+import type { GamificationSummary, GamificationTrigger, GamificationUnlock } from '@/lib/gamification/types';
+import {
+  dispatchAchievementUnlocks,
+  dispatchGamificationSummaryPatch,
+} from '@/lib/gamification/unlock-events';
 
 async function authHeaders() {
   const user = auth.currentUser;
@@ -13,6 +16,7 @@ async function authHeaders() {
 
 export type GamificationEventResult = {
   unlocks: GamificationUnlock[];
+  summary: GamificationSummary;
   xpGain: number;
 };
 
@@ -35,12 +39,15 @@ export async function postGamificationEvent(
         metadata,
       }),
     });
-    if (!res.ok) return { unlocks: [], xpGain: 0 };
+    if (!res.ok) return { unlocks: [], summary: {} as GamificationSummary, xpGain: 0 };
     const data = (await res.json()) as GamificationEventResult;
+    if (data.summary) {
+      dispatchGamificationSummaryPatch(data.summary);
+    }
     dispatchAchievementUnlocks(data.unlocks, data.xpGain ?? 0);
     return data;
   } catch {
-    return { unlocks: [], xpGain: 0 };
+    return { unlocks: [], summary: {} as GamificationSummary, xpGain: 0 };
   }
 }
 
@@ -60,6 +67,20 @@ export async function patchGamificationSettings(settings: {
   });
   if (!res.ok) throw new Error('Failed to update profile settings');
   return res.json();
+}
+
+export async function fetchGamificationSummary(userId: string): Promise<GamificationSummary | null> {
+  try {
+    const { token } = await authHeaders();
+    const res = await fetch(`/api/gamification/summary?userId=${encodeURIComponent(userId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { summary?: GamificationSummary };
+    return data.summary ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function trackShareCardEvent(

@@ -33,8 +33,11 @@ import { cn } from '@/lib/utils';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import Image from 'next/image';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { REFERRAL_INK_REWARD, REFERRAL_STORAGE_KEY, normalizeReferralCode } from '@/lib/referrals';
 import { claimPendingReferral } from '@/components/refer-a-friend-section';
+
+const MASTER_ADMIN_EMAIL = 'plotformaiplan@gmail.com';
 
 function LoginForm() {
   const router = useRouter();
@@ -110,10 +113,13 @@ function LoginForm() {
           email: firebaseUser.email,
           photoURL: firebaseUser.photoURL || null,
           lastLogin: serverTimestamp(),
-          role: firebaseUser.email === 'plotformaiplan@gmail.com' ? 'admin' : 'artist',
         };
         if (isNew) {
           userData.createdAt = new Date().toISOString();
+          userData.role =
+            firebaseUser.email === MASTER_ADMIN_EMAIL ? 'admin' : 'artist';
+        } else if (firebaseUser.email === MASTER_ADMIN_EMAIL) {
+          userData.role = 'admin';
         }
         await setDoc(userRef, userData, { merge: true });
         if (isNew) {

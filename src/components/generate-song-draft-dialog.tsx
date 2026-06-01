@@ -295,7 +295,7 @@ function HubSectionShell({
       )}
       <span className={cn('flex items-center gap-2 min-w-0', colorClass)}>
         <Icon className="h-5 w-5 shrink-0" />
-        <span className="font-headline font-bold text-lg uppercase leading-none truncate">{title}</span>
+        <span className="font-headline font-bold text-sm sm:text-lg uppercase leading-tight break-words sm:truncate">{title}</span>
       </span>
       {collapsed && summary && (
         <span className="text-[9px] text-muted-foreground truncate italic hidden md:inline">{summary}</span>
@@ -305,7 +305,7 @@ function HubSectionShell({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2 w-full">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between gap-2 w-full min-w-0">
         {headerTooltip ? (
           <Tooltip>
             <TooltipTrigger asChild>{headerButton}</TooltipTrigger>
@@ -317,7 +317,7 @@ function HubSectionShell({
           headerButton
         )}
         {trailing && (
-          <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+          <div className="shrink-0 flex flex-wrap items-center justify-end gap-2 max-w-full" onClick={(e) => e.stopPropagation()}>
             {trailing}
           </div>
         )}
@@ -1376,21 +1376,21 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent
         overlayClassName="z-[2090] bg-[hsl(216_50%_4%/0.98)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-        className="fixed left-1/2 top-[2vh] -translate-x-1/2 translate-y-0 w-[min(99vw,1720px)] max-w-none h-[min(94vh,calc(100dvh-1rem))] max-h-[calc(100dvh-1rem)] flex flex-col gap-0 bg-[hsl(216_48%_7%)] border-2 border-white/10 overflow-hidden p-0 rounded-xl shadow-2xl z-[2100] [&>button.absolute]:hidden"
+        className="fixed left-1/2 top-[max(0.5rem,env(safe-area-inset-top))] sm:top-[2vh] -translate-x-1/2 translate-y-0 w-[min(99vw,1720px)] max-w-none h-[min(94vh,calc(100dvh-1rem))] max-h-[calc(100dvh-env(safe-area-inset-top,0px)-0.5rem)] sm:max-h-[calc(100dvh-1rem)] flex flex-col gap-0 bg-[hsl(216_48%_7%)] border-2 border-white/10 overflow-hidden p-0 rounded-xl shadow-2xl z-[2100] [&>button.absolute]:hidden"
       >
-        <DialogHeader className="shrink-0 p-3 border-b border-white/10 bg-[hsl(216_48%_8%/0.95)] flex-row items-center justify-between relative z-[110]">
+        <DialogHeader className="shrink-0 p-3 border-b border-white/10 bg-[hsl(216_48%_8%/0.95)] flex-row items-center justify-between relative z-[110] gap-2 min-w-0">
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="absolute right-4 top-3 h-8 w-8 rounded-full z-[120] text-muted-foreground hover:text-foreground"
+              className="absolute right-3 top-2.5 sm:right-4 sm:top-3 h-8 w-8 rounded-full z-[120] text-muted-foreground hover:text-foreground"
               onClick={handleHardClose}
               aria-label="Close Generation Workstation"
             >
               <X className="h-5 w-5" />
             </Button>
-            <div className="flex items-center">
-                {step > 0 && <Button variant="ghost" size="icon" className="h-8 w-8 mr-2 rounded-full" onClick={() => {
+            <div className="flex items-center min-w-0 flex-1 pr-10">
+                {step > 0 && <Button variant="ghost" size="icon" className="h-8 w-8 mr-1 sm:mr-2 rounded-full shrink-0" onClick={() => {
                     if (step === 10 && wizardState.analysis) setStep(3);
                     else if (step === 10) setStep(0);
                     else if (step === 3) setStep(2);
@@ -1398,12 +1398,13 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                     else if (step === 5) setStep(10);
                     else setStep(0);
                 }}><ArrowLeft className="h-4 w-4"/></Button>}
-                <DialogTitle className="font-headline text-xl font-bold flex items-center gap-2 uppercase tracking-tighter text-foreground">
-                    <Sparkles className="h-5 w-5 text-primary animate-pulse" /> Generation Workstation
+                <DialogTitle className="font-headline text-sm sm:text-xl font-bold flex items-center gap-2 uppercase tracking-tighter text-foreground min-w-0 truncate">
+                    <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary animate-pulse shrink-0" />
+                    <span className="truncate">Generation Workstation</span>
                 </DialogTitle>
                 <DialogDescription className="sr-only">Step-by-step neural synthesis and calibration.</DialogDescription>
             </div>
-            <div className="flex items-center gap-4 pr-12">
+            <div className="hidden sm:flex items-center gap-4 pr-12 shrink-0">
                 <Badge variant="outline" className="h-5 px-2 text-[9px] font-bold uppercase tracking-widest border-primary/20 text-primary">
                     {step === 0 ? 'Mode Select' : step === 10 ? 'Calibration Hub' : step === 5 ? 'Approval Step' : 'Analysis Step'}
                 </Badge>
@@ -1413,6 +1414,14 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
         <div className="flex-1 min-h-0 relative overflow-hidden flex flex-col isolate studio-page-base">
           {!isGenerating && (
             <WorkstationStepBackground variant={stepToWorkstationVariant(step)} />
+          )}
+          {!isGenerating && step === 10 && (
+            <HubCalibrationAmbient
+              hubActive={hubModuleActive}
+              hubCollapsed={hubCollapsed}
+              flashKey={hubFlashKey}
+              className="absolute inset-0 z-[1]"
+            />
           )}
           {isGenerating && (
             <div
@@ -1457,28 +1466,29 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
 
           <div className={cn('flex-1 min-h-0 flex flex-col relative z-10 overflow-y-auto studio-scrollbar', isGenerating && 'invisible pointer-events-none')}>
           {step === 0 && (
-            <div className="min-h-full flex flex-col items-center justify-center p-6 py-8 space-y-6 md:space-y-8 animate-in fade-in duration-700">
-                <div className="text-center space-y-2">
-                    <h2 className="text-4xl font-headline font-bold text-white uppercase tracking-tight">Select Workflow Mode</h2>
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-[0.4em]">Initialize your creative process.</p>
+            <div className="flex flex-col items-center justify-start sm:justify-center w-full min-h-0 px-3 sm:px-6 pt-4 pb-8 sm:py-8 space-y-4 sm:space-y-6 md:space-y-8 animate-in fade-in duration-700">
+                <div className="text-center space-y-2 w-full shrink-0">
+                    <p className="sm:hidden text-[9px] font-bold uppercase tracking-[0.35em] text-primary">Mode Select</p>
+                    <h2 className="text-2xl sm:text-4xl font-headline font-bold text-white uppercase tracking-tight leading-tight px-1">Select Workflow Mode</h2>
+                    <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase tracking-[0.25em] sm:tracking-[0.4em]">Initialize your creative process.</p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
-                    <Card className="cursor-pointer border-2 hover:border-primary/50 p-10 flex flex-col items-center justify-center gap-6 bg-black/45 hover:scale-[1.05] transition-all group relative overflow-hidden" onClick={() => setStep(10)}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 w-full max-w-4xl">
+                    <Card className="cursor-pointer border-2 hover:border-primary/50 p-6 sm:p-10 flex flex-col items-center justify-center gap-4 sm:gap-6 bg-black/45 hover:scale-[1.02] sm:hover:scale-[1.05] transition-all group relative overflow-hidden" onClick={() => setStep(10)}>
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent opacity-80" />
                         <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/20 blur-3xl" />
                         <Wand2 className="relative h-16 w-12 text-primary group-hover:animate-bounce" />
-                        <div className="relative text-center space-y-3">
-                            <h4 className="font-headline text-3xl font-bold uppercase text-white">Full Studio Draft</h4>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-relaxed">Direct synthesis from active rules.</p>
+                        <div className="relative text-center space-y-2 sm:space-y-3">
+                            <h4 className="font-headline text-xl sm:text-3xl font-bold uppercase text-white">Full Studio Draft</h4>
+                            <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-widest leading-relaxed">Direct synthesis from active rules.</p>
                         </div>
                     </Card>
-                    <Card className="cursor-pointer border-2 hover:border-sky-500/50 p-10 flex flex-col items-center justify-center gap-6 bg-black/45 hover:scale-[1.05] transition-all group relative overflow-hidden" onClick={() => setStep(1)}>
+                    <Card className="cursor-pointer border-2 hover:border-sky-500/50 p-6 sm:p-10 flex flex-col items-center justify-center gap-4 sm:gap-6 bg-black/45 hover:scale-[1.02] sm:hover:scale-[1.05] transition-all group relative overflow-hidden" onClick={() => setStep(1)}>
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-sky-500/15 via-cyan-500/5 to-transparent opacity-80" />
                         <div className="pointer-events-none absolute -left-8 -bottom-8 h-32 w-32 rounded-full bg-sky-500/20 blur-3xl" />
                         <BrainCircuit className="relative h-16 w-12 text-sky-400 group-hover:animate-pulse" />
-                        <div className="relative text-center space-y-3">
-                            <h4 className="font-headline text-3xl font-bold uppercase text-white">DNA & REMIX</h4>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-relaxed">Extract and Archive strains to seed your next synthesis loop.</p>
+                        <div className="relative text-center space-y-2 sm:space-y-3">
+                            <h4 className="font-headline text-xl sm:text-3xl font-bold uppercase text-white">DNA & REMIX</h4>
+                            <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-widest leading-relaxed">Extract and Archive strains to seed your next synthesis loop.</p>
                         </div>
                     </Card>
                 </div>
@@ -1487,14 +1497,8 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
 
           {(step === 10) && (
               <div className="relative flex-1 min-h-0 flex flex-col">
-                  <HubCalibrationAmbient
-                    hubActive={hubModuleActive}
-                    hubCollapsed={hubCollapsed}
-                    flashKey={hubFlashKey}
-                    className="absolute inset-0 z-[2]"
-                  />
                   <ScrollArea className="relative z-10 flex-1 min-h-0 studio-scrollbar">
-                  <div className="px-6 py-5 animate-in fade-in slide-in-from-bottom-8">
+                  <div className="px-3 sm:px-6 py-4 sm:py-5 animate-in fade-in slide-in-from-bottom-8">
                       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)_minmax(0,0.95fr)] gap-6 w-full items-start pb-6">
                           {/* Column 1 — Production setup */}
                           <div className="flex flex-col gap-5 min-w-0">
@@ -2291,47 +2295,60 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           </div>
         </div>
 
-        <div className="shrink-0 flex flex-col p-4 border-t border-white/5 bg-[#050505] gap-3 relative z-[60]">
-          <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+        {(step === 1 || step === 2 || step === 3 || step === 5 || step === 10) && (
+        <div className="shrink-0 flex flex-col p-3 sm:p-4 border-t border-white/5 bg-[#050505] gap-3 relative z-[60] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 min-w-0 w-full sm:w-auto">
                   {(step === 1 || step === 10) && (
-                    <div className="flex items-center gap-2.5 bg-primary/10 px-6 py-1.5 rounded-full border border-primary/40 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
-                        <Droplets className={cn("h-4 w-4 text-primary", isGenerating && "animate-pulse")} />
-                        <span className="text-sm font-bold uppercase font-code text-primary tracking-tight">COST: {Math.round(step === 1 ? getEffectiveCost('analyzeRelayAssets') : activeDraftCharged)} INK</span>
+                    <div className="flex items-center gap-2.5 bg-primary/10 px-4 sm:px-6 py-1.5 rounded-full border border-primary/40 shadow-[0_0_15px_rgba(59,130,246,0.2)] self-start shrink-0">
+                        <Droplets className={cn("h-4 w-4 text-primary shrink-0", isGenerating && "animate-pulse")} />
+                        <span className="text-xs sm:text-sm font-bold uppercase font-code text-primary tracking-tight whitespace-nowrap">COST: {Math.round(step === 1 ? getEffectiveCost('analyzeRelayAssets') : activeDraftCharged)} INK</span>
                     </div>
                   )}
                   {step === 10 && (
-                      <div className="flex flex-wrap gap-1.5 max-w-2xl overflow-hidden ml-4">
+                      <div className="flex flex-wrap gap-1.5 max-w-full sm:max-w-2xl sm:ml-4">
                           {activeBadges.map((b, i) => <Badge key={i} variant="outline" className={cn("text-[8px] font-bold uppercase py-0.5 px-2 bg-background/40", b.color, b.text === 'VIBE' && "animate-pulse")}>{b.text}</Badge>)}
                       </div>
                   )}
               </div>
-              <div className="flex gap-4 justify-end">
-                  {step === 1 && <Button className="w-auto min-w-[300px] px-12 h-14 font-bold text-xl rounded-full shadow-lg" disabled={!wizardState.lyrics.trim() || !permissionChecked || isGenerating} onClick={(e) => handleRelayAnalyze(wizardState.lyrics, e)} title={tooltip('analyzeRelayAssets')}>{buttonLabel('analyzeRelayAssets')}</Button>}
-                  {step === 2 && <Button size="lg" className="w-auto min-w-[300px] px-12 h-14 font-bold text-xl rounded-full shadow-lg" onClick={() => setStep(3)}>Define Paths <ChevronRight className="ml-2 h-6 w-6" /></Button>}
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto sm:justify-end shrink-0 min-w-0">
+                  {step === 1 && <Button className="w-full sm:w-auto sm:min-w-[300px] px-6 sm:px-12 h-12 sm:h-14 font-bold text-base sm:text-xl rounded-full shadow-lg" disabled={!wizardState.lyrics.trim() || !permissionChecked || isGenerating} onClick={(e) => handleRelayAnalyze(wizardState.lyrics, e)} title={tooltip('analyzeRelayAssets')}>{buttonLabel('analyzeRelayAssets')}</Button>}
+                  {step === 2 && <Button size="lg" className="w-full sm:w-auto sm:min-w-[300px] px-6 sm:px-12 h-12 sm:h-14 font-bold text-base sm:text-xl rounded-full shadow-lg" onClick={() => setStep(3)}>Define Paths <ChevronRight className="ml-2 h-5 w-5 sm:h-6 sm:w-6" /></Button>}
                   {step === 3 && (
-                    <Button size="lg" className="w-auto min-w-[300px] px-12 h-14 text-xl font-bold rounded-full shadow-lg bg-primary text-white" onClick={() => setStep(10)}>
-                      Review & Calibrate <ChevronRight className="ml-2 h-6 w-6" />
+                    <Button size="lg" className="w-full sm:w-auto sm:min-w-[300px] px-6 sm:px-12 h-12 sm:h-14 text-base sm:text-xl font-bold rounded-full shadow-lg bg-primary text-white" onClick={() => setStep(10)}>
+                      Review & Calibrate <ChevronRight className="ml-2 h-5 w-5 sm:h-6 sm:w-6" />
                     </Button>
                   )}
                   {step === 10 && (
-                      <Button onClick={(e) => wizardState.analysis ? handleRelayDraftSynthesis(e) : handleFullDraftGenerate(e)} disabled={isGenerating} size="lg" className="w-auto min-w-[380px] px-14 h-16 text-2xl font-bold rounded-xl bg-primary text-white gap-4 shadow-[0_0_40px_rgba(59,130,246,0.3)]" title={wizardState.analysis ? tooltip('generateRelayDraft', activeDraftBase) : tooltip('generateDraftPerBar', activeDraftBase)}>
-                          <Wand2 className="h-7 w-7" /> 
-                          {wizardState.analysis ? `Synthesize DNA Remix (${activeDraftCharged} Ink)` : `Generate Studio Draft (${activeDraftCharged} Ink)`}
+                      <Button onClick={(e) => wizardState.analysis ? handleRelayDraftSynthesis(e) : handleFullDraftGenerate(e)} disabled={isGenerating} size="lg" className="w-full sm:w-auto sm:min-w-[380px] max-w-full px-4 sm:px-14 h-12 sm:h-16 text-sm sm:text-2xl font-bold rounded-xl bg-primary text-white gap-2 sm:gap-4 shadow-[0_0_40px_rgba(59,130,246,0.3)]" title={wizardState.analysis ? tooltip('generateRelayDraft', activeDraftBase) : tooltip('generateDraftPerBar', activeDraftBase)}>
+                          <Wand2 className="h-5 w-5 sm:h-7 sm:w-7 shrink-0" /> 
+                          <span className="truncate sm:whitespace-normal">
+                            {wizardState.analysis ? (
+                              <>
+                                <span className="sm:hidden">Synthesize ({activeDraftCharged} Ink)</span>
+                                <span className="hidden sm:inline">Synthesize DNA Remix ({activeDraftCharged} Ink)</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="sm:hidden">Generate ({activeDraftCharged} Ink)</span>
+                                <span className="hidden sm:inline">Generate Studio Draft ({activeDraftCharged} Ink)</span>
+                              </>
+                            )}
+                          </span>
                       </Button>
                   )}
                   {step === 5 && (
-                      <div className="flex w-full gap-3 max-w-3xl">
-                          <Button variant="outline" size="lg" className="flex-1 h-14 text-sm font-bold rounded-full" onClick={() => setStep(10)}><RefreshCw className="mr-2 h-5 w-5 shrink-0" /> Re-Calibrate</Button>
+                      <div className="flex flex-col sm:flex-row w-full gap-2 sm:gap-3 max-w-3xl">
+                          <Button variant="outline" size="lg" className="w-full sm:flex-1 h-11 sm:h-14 text-xs sm:text-sm font-bold rounded-full" onClick={() => setStep(10)}><RefreshCw className="mr-2 h-4 w-4 sm:h-5 sm:w-5 shrink-0" /> Re-Calibrate</Button>
                           <Tooltip>
                               <TooltipTrigger asChild>
-                                  <Button variant="outline" size="lg" className="flex-1 h-14 text-sm font-bold rounded-full border-primary/40 text-primary" onClick={() => handleApplyGeneratedDraft('append')}><PlusCircle className="mr-2 h-5 w-5 shrink-0" /> Add to Page</Button>
+                                  <Button variant="outline" size="lg" className="w-full sm:flex-1 h-11 sm:h-14 text-xs sm:text-sm font-bold rounded-full border-primary/40 text-primary" onClick={() => handleApplyGeneratedDraft('append')}><PlusCircle className="mr-2 h-4 w-4 sm:h-5 sm:w-5 shrink-0" /> Add to Page</Button>
                               </TooltipTrigger>
                               <TooltipContent side="top" className="max-w-[220px] text-[10px] leading-snug">{DNA_HUB_TOOLTIPS.approvalAppend}</TooltipContent>
                           </Tooltip>
                           <Tooltip>
                               <TooltipTrigger asChild>
-                                  <Button size="lg" className="flex-1 h-14 text-sm font-bold rounded-full bg-primary text-white shadow-lg" onClick={() => handleApplyGeneratedDraft('replace')}><Replace className="mr-2 h-5 w-5 shrink-0" /> Replace Sheet</Button>
+                                  <Button size="lg" className="w-full sm:flex-1 h-11 sm:h-14 text-xs sm:text-sm font-bold rounded-full bg-primary text-white shadow-lg" onClick={() => handleApplyGeneratedDraft('replace')}><Replace className="mr-2 h-4 w-4 sm:h-5 sm:w-5 shrink-0" /> Replace Sheet</Button>
                               </TooltipTrigger>
                               <TooltipContent side="top" className="max-w-[220px] text-[10px] leading-snug">{DNA_HUB_TOOLTIPS.approvalReplace}</TooltipContent>
                           </Tooltip>
@@ -2340,6 +2357,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
               </div>
           </div>
         </div>
+        )}
       </DialogContent>
     </Dialog>
 

@@ -241,6 +241,93 @@
     animation: vault-chamber-sill 21s ease-in-out infinite;
   }
 
+  /*
+   * Vault speaker background — 21s loop:
+   * ripple @ 0s → +3s → +6s → +9s → +3s (restart)
+   */
+  @keyframes vault-speaker-ripple {
+    0%, 11.5%, 17.5%, 38.5%, 46.5%, 81%, 90.5%, 100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.12);
+    }
+    0.6% {
+      opacity: 0.7;
+      transform: translate(-50%, -50%) scale(0.18);
+    }
+    3.8% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(2.35);
+    }
+    14.9% {
+      opacity: 0.65;
+      transform: translate(-50%, -50%) scale(0.18);
+    }
+    18.1% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(2.35);
+    }
+    43.5% {
+      opacity: 0.6;
+      transform: translate(-50%, -50%) scale(0.18);
+    }
+    46.7% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(2.35);
+    }
+    86.3% {
+      opacity: 0.75;
+      transform: translate(-50%, -50%) scale(0.18);
+    }
+    89.5% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(2.35);
+    }
+  }
+
+  .vault-speaker-ripple {
+    width: min(92vmin, 980px);
+    height: min(92vmin, 980px);
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    box-shadow:
+      0 0 24px rgba(59, 130, 246, 0.12),
+      inset 0 0 40px rgba(59, 130, 246, 0.04);
+    animation: vault-speaker-ripple 21s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+    will-change: transform, opacity;
+  }
+
+  @keyframes vault-speaker-core {
+    0%, 11%, 17%, 38%, 46%, 80.5%, 90%, 100% {
+      opacity: 0.15;
+      transform: translate(-50%, -50%) scale(0.85);
+    }
+    1%, 15%, 43%, 86% {
+      opacity: 0.55;
+      transform: translate(-50%, -50%) scale(1.15);
+    }
+    2.5%, 16.5%, 44.5%, 87.5% {
+      opacity: 0.2;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+
+  .vault-speaker-core {
+    width: min(28vmin, 280px);
+    height: min(28vmin, 280px);
+    background: radial-gradient(
+      circle,
+      rgba(96, 165, 250, 0.35) 0%,
+      rgba(59, 130, 246, 0.12) 35%,
+      rgba(59, 130, 246, 0.04) 55%,
+      transparent 72%
+    );
+    animation: vault-speaker-core 21s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+
+  .vault-speaker-ripple-stage {
+    mask-image: radial-gradient(ellipse 85% 75% at 50% 40%, black 15%, transparent 78%);
+  }
+
   @keyframes hub-ink-flash {
     0% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
     35% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
@@ -306,14 +393,17 @@
     .vault-chamber-moire-b,
     .vault-chamber-floor,
     .vault-chamber-lift,
-    .vault-chamber-sill {
+    .vault-chamber-sill,
+    .vault-speaker-core,
+    .vault-speaker-ripple {
       animation: none;
     }
 
     .vault-chamber-moire-a,
     .vault-chamber-moire-b,
     .vault-chamber-lift,
-    .vault-chamber-sill {
+    .vault-chamber-sill,
+    .vault-speaker-ripple-stage {
       opacity: 0;
     }
   }

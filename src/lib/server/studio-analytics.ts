@@ -66,6 +66,12 @@ export async function recordStudioEvent(
       if (action === 'generateNextLine' && !existing.firstGenerateNextLineAt) {
         updates.firstGenerateNextLineAt = timestamp;
       }
+      if (action === 'analyzeStructure' && !existing.firstAnalyzeStructureAt) {
+        updates.firstAnalyzeStructureAt = timestamp;
+      }
+      if (action === 'findRhymes' && !existing.firstRhymePulseAt) {
+        updates.firstRhymePulseAt = timestamp;
+      }
       updates.totalAiActions = (existing.totalAiActions || 0) + 1;
     }
 

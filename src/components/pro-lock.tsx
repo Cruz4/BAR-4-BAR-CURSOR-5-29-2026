@@ -99,13 +99,13 @@ export function ProCreateAlbumSlot({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="group relative aspect-square block w-full text-left opacity-50 hover:opacity-100 transition-opacity duration-300"
     >
-      <div className="absolute inset-0 rounded-full border-2 border-dashed border-white/15 bg-white/[0.02] flex flex-col items-center justify-center gap-3 transition-all group-hover:border-emerald-500/40 group-hover:bg-emerald-500/[0.04] group-hover:shadow-[0_0_24px_rgba(16,185,129,0.12)]">
-        <div className="w-14 h-14 rounded-full border border-dashed border-white/20 bg-white/[0.03] flex items-center justify-center group-hover:border-emerald-500/50 group-hover:bg-emerald-500/10 transition-all">
-          <span className="text-2xl text-white/40 font-light group-hover:text-emerald-400">+</span>
+      <div className="absolute inset-0 rounded-full border-2 border-dashed border-amber-400/25 bg-amber-500/[0.03] flex flex-col items-center justify-center gap-3 transition-all group-hover:border-amber-300/50 group-hover:bg-amber-400/[0.07] group-hover:shadow-[0_0_28px_rgba(251,191,36,0.2)]">
+        <div className="w-14 h-14 rounded-full border border-dashed border-amber-400/30 bg-amber-500/[0.06] flex items-center justify-center group-hover:border-amber-300/55 group-hover:bg-amber-400/15 transition-all">
+          <span className="text-2xl text-amber-200/45 font-light group-hover:text-amber-200">+</span>
         </div>
         <div className="text-center px-4">
-          <p className="font-headline font-bold text-white/50 uppercase text-sm tracking-tight group-hover:text-white">New Album</p>
-          <p className="text-[8px] text-white/30 uppercase tracking-widest mt-1 font-bold group-hover:text-emerald-400/80">Create concept project</p>
+          <p className="font-headline font-bold text-amber-100/45 uppercase text-sm tracking-tight group-hover:text-amber-100/90">New Album</p>
+          <p className="text-[8px] text-amber-300/35 uppercase tracking-widest mt-1 font-bold group-hover:text-amber-200/75">Create concept project</p>
         </div>
       </div>
     </button>
@@ -117,14 +117,14 @@ export function ProCreateTrackSlot({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="group w-full py-4 px-6 rounded-2xl border-2 border-dashed border-white/10 bg-white/[0.02] opacity-50 hover:opacity-100 transition-all flex items-center gap-4 text-left hover:border-sky-500/30 hover:bg-sky-500/[0.04] hover:shadow-[0_0_20px_rgba(56,189,248,0.08)]"
+      className="group w-full py-4 px-6 rounded-2xl border-2 border-dashed border-amber-400/25 bg-amber-500/[0.03] opacity-50 hover:opacity-100 transition-all flex items-center gap-4 text-left hover:border-amber-300/50 hover:bg-amber-400/[0.07] hover:shadow-[0_0_24px_rgba(251,191,36,0.18)]"
     >
-      <div className="p-2 rounded-xl border border-dashed border-white/15 bg-white/[0.03] shrink-0 group-hover:border-sky-500/40 group-hover:bg-sky-500/10 transition-all">
-        <span className="text-lg text-white/40 font-light block w-5 h-5 text-center leading-5 group-hover:text-sky-400">+</span>
+      <div className="p-2 rounded-xl border border-dashed border-amber-400/30 bg-amber-500/[0.06] shrink-0 group-hover:border-amber-300/55 group-hover:bg-amber-400/15 transition-all">
+        <span className="text-lg text-amber-200/45 font-light block w-5 h-5 text-center leading-5 group-hover:text-amber-200">+</span>
       </div>
       <div>
-        <p className="text-xs font-bold uppercase text-white/50 group-hover:text-white">New Loose Track</p>
-        <p className="text-[8px] text-white/30 uppercase tracking-widest font-bold group-hover:text-sky-400/80">Capture a single · tap to create</p>
+        <p className="text-xs font-bold uppercase text-amber-100/45 group-hover:text-amber-100/90">New Loose Track</p>
+        <p className="text-[8px] text-amber-300/35 uppercase tracking-widest font-bold group-hover:text-amber-200/75">Capture a single · tap to create</p>
       </div>
     </button>
   );

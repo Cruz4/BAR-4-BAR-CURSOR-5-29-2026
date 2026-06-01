@@ -1,20 +1,37 @@
 import 'server-only';
 
+import { FieldValue } from 'firebase-admin/firestore';
 import { getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
-import { getAchievement } from '@/lib/gamification/achievements';
+import { getAchievement, ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { getDayKey, getMonthKey, getWeekKey } from '@/lib/gamification/challenges';
 import { rankFromXp } from '@/lib/gamification/ranks';
 import { computeStreakFromSessionDates } from '@/lib/gamification/streak';
+import {
+  canUnlockAchievement,
+  type AchievementVerifyContext,
+} from '@/lib/gamification/achievement-verification';
+import { ACHIEVEMENT_THRESHOLDS } from '@/lib/gamification/achievement-thresholds';
 import {
   DEFAULT_GAMIFICATION_SUMMARY,
   type GamificationSummary,
   type GamificationTrigger,
   type GamificationUnlock,
 } from '@/lib/gamification/types';
+import type { AdminGamificationRosterEntry } from '@/lib/gamification/admin-roster-types';
 import type { AnalyticsEventName } from '@/lib/analytics-events';
 
-export const MAX_BONUS_INK_PER_MONTH = 150;
 export const MAX_DAILY_XP = 500;
+
+const EMPTY_VERIFY_CTX: AchievementVerifyContext = {
+  tourCompletedVerified: false,
+  trackCompleteVerified: false,
+  barsOnTrackVerified: 0,
+  albumTrackCountVerified: 0,
+  lifetimeCompletedTracksVerified: 0,
+  qualifyingAlbumCountVerified: 0,
+  albumCompletedTracksVerified: 0,
+  maxBarsOnAnyTrackVerified: 0,
+};
 
 export type GamificationEventMetadata = Record<string, string | number | boolean | null>;
 
@@ -80,20 +97,15 @@ function resetBonusMonth(summary: GamificationSummary, monthKey: string): Gamifi
   return { ...summary, bonusInkMonthKey: monthKey, bonusInkGrantedThisMonth: 0 };
 }
 
-async function grantBonusInk(uid: string, amount: number, summary: GamificationSummary): Promise<number> {
+async function grantBonusInk(uid: string, amount: number): Promise<number> {
   if (amount <= 0) return 0;
-  const monthKey = getMonthKey();
-  summary = resetBonusMonth(summary, monthKey);
-  const remaining = MAX_BONUS_INK_PER_MONTH - (summary.bonusInkGrantedThisMonth || 0);
-  const grant = Math.min(amount, remaining);
-  if (grant <= 0) return 0;
 
   const db = await getDb();
   const balanceRef = db.doc(`users/${uid}/usage/balance`);
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(balanceRef);
     const data = snap.data() || { residencyBalance: 0, purchasedBalance: 0 };
-    const pur = (data.purchasedBalance || 0) + grant;
+    const pur = (data.purchasedBalance || 0) + amount;
     tx.set(
       balanceRef,
       {
@@ -105,21 +117,125 @@ async function grantBonusInk(uid: string, amount: number, summary: GamificationS
     );
   });
 
-  summary.bonusInkGrantedThisMonth = (summary.bonusInkGrantedThisMonth || 0) + grant;
-  summary.bonusInkMonthKey = monthKey;
-  return grant;
+  return amount;
+}
+
+async function loadTrackVerifyContext(
+  userId: string,
+  metadata: GamificationEventMetadata
+): Promise<AchievementVerifyContext> {
+  const trackId = String(metadata.trackId || '');
+  const albumId = String(metadata.albumId || '');
+  if (!trackId || !albumId) return EMPTY_VERIFY_CTX;
+
+  const db = await getDb();
+  const trackSnap = await db.doc(`users/${userId}/albums/${albumId}/tracks/${trackId}`).get();
+  if (!trackSnap.exists) return EMPTY_VERIFY_CTX;
+
+  const track = trackSnap.data() || {};
+  const barsOnTrackVerified = countNonEmptyBars(track.sections);
+  let albumTrackCountVerified = 0;
+
+  if (albumId !== 'unassigned') {
+    const tracksSnap = await db.collection(`users/${userId}/albums/${albumId}/tracks`).get();
+    albumTrackCountVerified = tracksSnap.size;
+  }
+
+  const minBars = ACHIEVEMENT_THRESHOLDS.trackCompleteMinBars;
+
+  return {
+    trackCompleteVerified:
+      track.status === 'complete' && barsOnTrackVerified >= minBars,
+    barsOnTrackVerified,
+    albumTrackCountVerified,
+    lifetimeCompletedTracksVerified: 0,
+    qualifyingAlbumCountVerified: 0,
+    albumCompletedTracksVerified: 0,
+    maxBarsOnAnyTrackVerified: barsOnTrackVerified,
+  };
+}
+
+async function loadPortfolioVerifyContext(
+  userId: string,
+  focusAlbumId?: string
+): Promise<
+  Pick<
+    AchievementVerifyContext,
+    | 'lifetimeCompletedTracksVerified'
+    | 'qualifyingAlbumCountVerified'
+    | 'albumCompletedTracksVerified'
+    | 'maxBarsOnAnyTrackVerified'
+  >
+> {
+  const db = await getDb();
+  const minBars = ACHIEVEMENT_THRESHOLDS.trackCompleteMinBars;
+  const qualifyMin = ACHIEVEMENT_THRESHOLDS.albumQualifyMinTracks;
+
+  let lifetimeCompleted = 0;
+  let qualifyingAlbums = 0;
+  let albumCompleted = 0;
+  let maxBars = 0;
+
+  const albumsSnap = await db.collection(`users/${userId}/albums`).get();
+
+  const parts = await Promise.all(
+    albumsSnap.docs.map(async (albumDoc) => {
+      const albumId = albumDoc.id;
+      const isConcept = albumId !== 'unassigned';
+      const tracksSnap = await db.collection(`users/${userId}/albums/${albumId}/tracks`).get();
+
+      let completedInAlbum = 0;
+      let localMaxBars = 0;
+      let localLifetimeCompleted = 0;
+
+      for (const trackDoc of tracksSnap.docs) {
+        const track = trackDoc.data() || {};
+        const bars = countNonEmptyBars(track.sections);
+        if (bars > localMaxBars) localMaxBars = bars;
+        if (track.status === 'complete' && bars >= minBars) {
+          localLifetimeCompleted += 1;
+          completedInAlbum += 1;
+        }
+      }
+
+      return {
+        qualifying: isConcept && tracksSnap.size >= qualifyMin ? 1 : 0,
+        lifetimeCompleted: localLifetimeCompleted,
+        completedInAlbum: focusAlbumId && albumId === focusAlbumId ? completedInAlbum : 0,
+        maxBars: localMaxBars,
+      };
+    })
+  );
+
+  for (const part of parts) {
+    qualifyingAlbums += part.qualifying;
+    lifetimeCompleted += part.lifetimeCompleted;
+    if (part.completedInAlbum > 0) albumCompleted = part.completedInAlbum;
+    if (part.maxBars > maxBars) maxBars = part.maxBars;
+  }
+
+  return {
+    lifetimeCompletedTracksVerified: lifetimeCompleted,
+    qualifyingAlbumCountVerified: qualifyingAlbums,
+    albumCompletedTracksVerified: albumCompleted,
+    maxBarsOnAnyTrackVerified: maxBars,
+  };
 }
 
 function tryUnlock(
   summary: GamificationSummary,
   achievementId: string,
   isPro: boolean,
-  unlocks: GamificationUnlock[]
+  unlocks: GamificationUnlock[],
+  analytics: Record<string, unknown>,
+  verifyCtx: AchievementVerifyContext,
+  trigger?: GamificationTrigger
 ): GamificationSummary {
   if (summary.unlockedAchievements[achievementId]) return summary;
   const def = getAchievement(achievementId);
   if (!def) return summary;
   if (def.proOnly && !isPro) return summary;
+  if (!canUnlockAchievement(achievementId, analytics, verifyCtx, summary, trigger)) return summary;
 
   const xpReward = def.xpReward ?? 35;
   summary.unlockedAchievements = {
@@ -216,11 +332,42 @@ export async function processGamificationEvent(
   const isPro = user.subscriptionStatus === 'active';
   const displayName = String(userName || user.displayName || 'Artist');
   const unlocks: GamificationUnlock[] = [];
+  let verifyCtx: AchievementVerifyContext = {
+    ...EMPTY_VERIFY_CTX,
+    tourCompletedVerified: Boolean(user.lyricsTutorialCompletedAt),
+  };
 
   summary = resetWeekCounters(summary, weekKey);
   summary = resetMonthCounters(summary, getMonthKey(now));
   summary = resetDayBarCounter(summary, dayKey);
-  summary = resetBonusMonth(summary, getMonthKey(now));
+
+  if (trigger === 'track_saved') {
+    const trackCtx = await loadTrackVerifyContext(userId, metadata);
+    const portfolioCtx = await loadPortfolioVerifyContext(
+      userId,
+      String(metadata.albumId || '')
+    );
+    verifyCtx = {
+      ...trackCtx,
+      ...portfolioCtx,
+      tourCompletedVerified: Boolean(user.lyricsTutorialCompletedAt),
+    };
+  } else if (trigger === 'session_start') {
+    const portfolioCtx = await loadPortfolioVerifyContext(userId);
+    verifyCtx = {
+      ...verifyCtx,
+      ...portfolioCtx,
+    };
+  }
+
+  if (
+    trigger === 'rhyme_pulse_on' ||
+    trigger === 'smart_structure_used' ||
+    trigger === 'ai_action'
+  ) {
+    const freshAnalytics = await db.doc(`users/${userId}/analytics/summary`).get();
+    Object.assign(analytics, freshAnalytics.data() || {});
+  }
 
   let xpGain = 0;
   const sessionDates: string[] = analytics.sessionDates || [];
@@ -240,35 +387,15 @@ export async function processGamificationEvent(
 
   if (trigger === 'smart_structure_used') {
     xpGain += 15;
-    summary = tryUnlock(summary, 'first_paste', isPro, unlocks);
   }
 
   if (trigger === 'tour_complete') {
-    summary = tryUnlock(summary, 'tour_graduate', isPro, unlocks);
-  }
-
-  if (trigger === 'rhyme_pulse_on') {
-    summary = tryUnlock(summary, 'rhyme_pulse_on', isPro, unlocks);
-  }
-
-  if (trigger === 'dna_preset_saved') {
-    summary = tryUnlock(summary, 'vault_strain', isPro, unlocks);
-  }
-
-  if (trigger === 'share_created') {
-    summary = tryUnlock(summary, 'share_drop', isPro, unlocks);
-  }
-
-  if (trigger === 'album_limit_hit') {
-    summary = tryUnlock(summary, 'second_album', isPro, unlocks);
+    verifyCtx.tourCompletedVerified = Boolean(user.lyricsTutorialCompletedAt);
   }
 
   if (trigger === 'ai_action') {
     const action = String(metadata.actionName || '');
     if (action === 'generateNextLine') {
-      if (!summary.unlockedAchievements.first_next_bar) {
-        summary = tryUnlock(summary, 'first_next_bar', isPro, unlocks);
-      }
       summary.generateNextLineWeekCount = (summary.generateNextLineWeekCount || 0) + 1;
       summary.generateNextLineMonthCount = (summary.generateNextLineMonthCount || 0) + 1;
       summary.lifetimeGenerateNextLine = (summary.lifetimeGenerateNextLine || 0) + 1;
@@ -303,32 +430,27 @@ export async function processGamificationEvent(
       if (sessionBars > (summary.personalBests.barsInSession || 0)) {
         summary.personalBests.barsInSession = sessionBars;
       }
-      if (sessionBars >= 16) {
-        summary = tryUnlock(summary, 'bars_16_session', isPro, unlocks);
-      }
     }
 
-    if (metadata.trackComplete === true) {
+    if (verifyCtx.trackCompleteVerified) {
       xpGain += 25;
       summary.tracksCompletedWeekCount = (summary.tracksCompletedWeekCount || 0) + 1;
       summary.tracksCompletedMonthCount = (summary.tracksCompletedMonthCount || 0) + 1;
       summary.tracksCompleted30d = (summary.tracksCompleted30d || 0) + 1;
       summary.lifetimeTracksCompleted = (summary.lifetimeTracksCompleted || 0) + 1;
-      summary = tryUnlock(summary, 'track_complete', isPro, unlocks);
-    }
-
-    const albumTrackCount = Number(metadata.albumTrackCount || 0);
-    if (albumTrackCount >= 3) {
-      summary = tryUnlock(summary, 'album_builder', isPro, unlocks);
     }
   }
 
-  if (summary.currentStreak >= 3) summary = tryUnlock(summary, 'streak_3', isPro, unlocks);
-  if (summary.currentStreak >= 7) summary = tryUnlock(summary, 'streak_7', isPro, unlocks);
-  if (summary.currentStreak >= 30) summary = tryUnlock(summary, 'streak_30', isPro, unlocks);
-
-  if (analytics.firstGenerateNextLineAt && !summary.unlockedAchievements.first_next_bar) {
-    summary = tryUnlock(summary, 'first_next_bar', isPro, unlocks);
+  for (const achievement of ACHIEVEMENTS) {
+    summary = tryUnlock(
+      summary,
+      achievement.id,
+      isPro,
+      unlocks,
+      analytics,
+      verifyCtx,
+      trigger
+    );
   }
 
   xpGain = Math.min(xpGain, MAX_DAILY_XP);
@@ -342,8 +464,11 @@ export async function processGamificationEvent(
 
   for (const u of unlocks) {
     const def = getAchievement(u.id);
-    if (def?.inkReward) {
-      await grantBonusInk(userId, def.inkReward, summary);
+    if (
+      def?.inkReward &&
+      canUnlockAchievement(u.id, analytics, verifyCtx, summary, trigger)
+    ) {
+      await grantBonusInk(userId, def.inkReward);
     }
     await recordGamificationAnalytics(userId, 'achievement_unlocked', { achievementId: u.id }, displayName);
   }
@@ -358,7 +483,21 @@ export async function processGamificationEvent(
   }
 
   summary.updatedAt = timestamp;
-  await db.doc(`users/${userId}/gamification/summary`).set(summary, { merge: true });
+
+  const summaryRef = db.doc(`users/${userId}/gamification/summary`);
+  const achievementPatch: Record<string, string> = {};
+  for (const u of unlocks) {
+    achievementPatch[`unlockedAchievements.${u.id}`] =
+      summary.unlockedAchievements[u.id] || timestamp;
+  }
+
+  await summaryRef.set(
+    {
+      ...summary,
+      ...achievementPatch,
+    },
+    { merge: true }
+  );
   await syncLeaderboardEntry(userId, summary, displayName);
   await syncPublicProfile(userId, summary, displayName);
 
@@ -409,6 +548,68 @@ export async function updateGamificationSettings(
   }
 
   return summary;
+}
+
+export async function getGamificationSummaryForUser(userId: string): Promise<GamificationSummary> {
+  if (!hasAdminFirestoreCredentials()) {
+    return DEFAULT_GAMIFICATION_SUMMARY;
+  }
+  const db = await getDb();
+  const snap = await db.doc(`users/${userId}/gamification/summary`).get();
+  return mergeSummary((snap.data() as Partial<GamificationSummary>) || {});
+}
+
+export type { AdminGamificationRosterEntry } from '@/lib/gamification/admin-roster-types';
+
+export async function getAdminGamificationRoster(): Promise<Record<string, AdminGamificationRosterEntry>> {
+  if (!hasAdminFirestoreCredentials()) {
+    return {};
+  }
+
+  const db = await getDb();
+  const usersSnap = await db.collection('users').get();
+  const entries = await Promise.all(
+    usersSnap.docs.map(async (userDoc) => {
+      const profile = userDoc.data() || {};
+      const base = {
+        displayName: String(profile.displayName || 'Artist'),
+        email: String(profile.email || ''),
+        status: String(profile.status || 'active'),
+      };
+
+      const gamSnap = await db.doc(`users/${userDoc.id}/gamification/summary`).get();
+      if (!gamSnap.exists) {
+        return [
+          userDoc.id,
+          {
+            ...base,
+            xp: 0,
+            rankId: 'open_mic' as const,
+            currentStreak: 0,
+            longestStreak: 0,
+            lifetimeBarsWritten: 0,
+            unlockedAchievements: {},
+          },
+        ] as const;
+      }
+
+      const data = gamSnap.data() || {};
+      return [
+        userDoc.id,
+        {
+          ...base,
+          xp: data.xp || 0,
+          rankId: (data.rankId as GamificationSummary['rankId']) || 'open_mic',
+          currentStreak: data.currentStreak || 0,
+          longestStreak: data.longestStreak || 0,
+          lifetimeBarsWritten: data.lifetimeBarsWritten || 0,
+          unlockedAchievements: data.unlockedAchievements || {},
+        },
+      ] as const;
+    })
+  );
+
+  return Object.fromEntries(entries);
 }
 
 export async function recordGamificationAnalytics(
@@ -495,6 +696,74 @@ export async function getLeaderboardSnapshot(weekKey = getWeekKey(), userId?: st
         }
       : undefined,
   };
+}
+
+export async function resetUserGamificationProgress(
+  targetUserId: string,
+  adminEmail: string
+): Promise<{ clearedAchievements: number; previousXp: number }> {
+  if (!hasAdminFirestoreCredentials()) {
+    throw new Error('Admin credentials required');
+  }
+
+  const db = await getDb();
+  const now = new Date().toISOString();
+
+  const [gamSnap, userSnap] = await Promise.all([
+    db.doc(`users/${targetUserId}/gamification/summary`).get(),
+    db.doc(`users/${targetUserId}`).get(),
+  ]);
+
+  if (!userSnap.exists) {
+    throw new Error('User not found');
+  }
+
+  const existing = mergeSummary((gamSnap.data() as Partial<GamificationSummary>) || {});
+  const clearedAchievements = Object.keys(existing.unlockedAchievements || {}).length;
+  const previousXp = existing.xp || 0;
+  const user = userSnap.data() || {};
+  const displayName = String(user.displayName || 'Artist');
+  const isPro = user.subscriptionStatus === 'active';
+
+  const resetSummary: GamificationSummary = {
+    ...DEFAULT_GAMIFICATION_SUMMARY,
+    publicProfile: existing.publicProfile,
+    leaderboardHidden: existing.leaderboardHidden,
+    profileSlug: existing.profileSlug,
+    rankId: rankFromXp(0, isPro).id,
+    updatedAt: now,
+  };
+
+  await db.doc(`users/${targetUserId}/gamification/summary`).set(resetSummary);
+
+  await db.doc(`users/${targetUserId}/analytics/summary`).set(
+    {
+      firstGenerateNextLineAt: FieldValue.delete(),
+      firstAnalyzeStructureAt: FieldValue.delete(),
+      firstRhymePulseAt: FieldValue.delete(),
+      updatedAt: now,
+    },
+    { merge: true }
+  );
+
+  await db.doc(`users/${targetUserId}`).set(
+    { lyricsTutorialCompletedAt: FieldValue.delete() },
+    { merge: true }
+  );
+
+  await syncLeaderboardEntry(targetUserId, resetSummary, displayName);
+  await syncPublicProfile(targetUserId, resetSummary, displayName);
+
+  await db.collection('system/logs/entries').add({
+    action: 'admin_gamification_reset',
+    userId: targetUserId,
+    userName: adminEmail,
+    inkUsed: 0,
+    timestamp: now,
+    details: `Reset ${clearedAchievements} trophies, XP ${previousXp} → 0`,
+  });
+
+  return { clearedAchievements, previousXp };
 }
 
 export async function getPublicProfile(slug: string) {

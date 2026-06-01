@@ -199,6 +199,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (delta === 0 && !trackComplete) continue;
 
       void postGamificationEvent('track_saved', {
+        trackId,
+        albumId: data.albumId,
         barCount,
         prevBarCount,
         trackComplete,
@@ -400,6 +402,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         if (albumTrackCount >= 3) {
           queueMicrotask(() => {
             void postGamificationEvent('track_saved', {
+              trackId: id,
+              albumId,
               barCount: countNonEmptyBars(newTrack.sections),
               prevBarCount: countNonEmptyBars(newTrack.sections),
               trackComplete: false,

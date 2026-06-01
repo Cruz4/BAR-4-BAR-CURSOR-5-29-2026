@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase/client/firebase';
-import { collection, query, doc, updateDoc, orderBy, increment, getDoc, limit, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, doc, updateDoc, orderBy, getDoc, limit, setDoc, deleteDoc } from 'firebase/firestore';
 import { subscribeQuery } from '@/lib/firebase/client/firestore-subscribe';
+import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
+import { adminApiFetch } from '@/lib/admin-client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -25,9 +27,13 @@ import {
     Star,
     AlertTriangle,
     LineChart,
+    Trophy,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { User, SystemLog } from '@/lib/types';
+import type { RankId } from '@/lib/gamification/types';
+import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
+import { STUDIO_RANKS } from '@/lib/gamification/ranks';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,6 +43,8 @@ import { mergeStudioCosts } from '@/lib/studio-costs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudioLoader } from '@/components/studio-loader';
 import { AdminMetricsTab } from '@/components/admin-metrics-tab';
+import { AdminAchievementsTab } from '@/components/admin-achievements-tab';
+import type { AdminGamificationRosterEntry } from '@/lib/gamification/admin-roster-types';
 import { format } from 'date-fns';
 import {
   Tooltip,
@@ -44,6 +52,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+type AdminGamificationStats = AdminGamificationRosterEntry;
+
+const TOTAL_ACHIEVEMENTS = ACHIEVEMENTS.length;
+
+function rankLabel(rankId: RankId | undefined): string {
+  return STUDIO_RANKS.find((r) => r.id === (rankId || 'open_mic'))?.label ?? 'Open Mic';
+}
 
 export default function AdminPage() {
   const { user, loading: authLoading, authReady } = useAuth();
@@ -54,11 +70,40 @@ export default function AdminPage() {
   const [blockedUsers, setBlockedUsers] = useState<User[]>([]);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
   const [balances, setBalances] = useState<Record<string, { res: number, pur: number }>>({});
+  const [gamificationStats, setGamificationStats] = useState<Record<string, AdminGamificationStats>>({});
   const [inkAdjustment, setInkAdjustment] = useState<Record<string, string>>({});
   const [adjustType, setAdjustType] = useState<Record<string, 'res' | 'pur'>>({});
   const [rosterLoading, setRosterLoading] = useState(true);
   const [studioConfig, setStudioConfig] = useState<any>(AI_COSTS);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
+  const [resettingGamification, setResettingGamification] = useState<string | null>(null);
+  const [gamificationRefreshing, setGamificationRefreshing] = useState(false);
+  const rosterLoadedRef = useRef(false);
+  const lastRosterUserIdsRef = useRef('');
+  const gamificationFetchRef = useRef<Promise<void> | null>(null);
+
+  const loadGamificationRoster = (force = false) => {
+    if (!force && gamificationFetchRef.current) return gamificationFetchRef.current;
+    setGamificationRefreshing(true);
+    gamificationFetchRef.current = adminApiFetch('/api/admin/gamification/roster')
+      .then(async (res) => {
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(body.error || `Gamification roster failed (${res.status})`);
+        }
+        if (body.stats) {
+          setGamificationStats(body.stats);
+        }
+      })
+      .catch((err) => {
+        console.warn('[admin] gamification roster load failed:', err);
+      })
+      .finally(() => {
+        gamificationFetchRef.current = null;
+        setGamificationRefreshing(false);
+      });
+    return gamificationFetchRef.current;
+  };
 
   useEffect(() => {
     if (authLoading || !authReady) return;
@@ -67,57 +112,116 @@ export default function AdminPage() {
       return;
     }
 
-    setRosterLoading(true);
-    
-    const configRef = doc(db, 'config', 'studio');
-    getDoc(configRef).then(snap => {
-      if (snap.exists()) {
-        const data = snap.data();
-        setStudioConfig(mergeStudioCosts(data.costs));
+    if (!rosterLoadedRef.current) {
+      setRosterLoading(true);
+    }
+
+    let unsubUsers: (() => void) | undefined;
+    let unsubLogs: (() => void) | undefined;
+    let cancelled = false;
+
+    const setupAdminListeners = async () => {
+      const firebaseUser = await waitForAuthUser();
+      if (cancelled || !firebaseUser || firebaseUser.uid !== user.id) {
+        if (!cancelled && !rosterLoadedRef.current) setRosterLoading(false);
+        return;
       }
-    });
 
-    const logsRef = collection(db, 'system', 'logs', 'entries');
-    const unsubLogs = subscribeQuery(
-      query(logsRef, orderBy('timestamp', 'desc'), limit(100)),
-      (rows) => {
-        setSystemLogs(rows as SystemLog[]);
-      },
-      (err) => {
-        console.error('[admin] ops log listener:', err);
-      },
-      20000
-    );
-
-    const usersRef = collection(db, 'users');
-    const unsubUsers = subscribeQuery(
-      usersRef,
-      (rows) => {
-      const allUsers = rows as User[];
-      setUsers(allUsers.filter(u => u.status !== 'blocked'));
-      setBlockedUsers(allUsers.filter(u => u.status === 'blocked'));
-      
-      allUsers.forEach(async (u) => {
-          const balDoc = await getDoc(doc(db, 'users', u.id, 'usage', 'balance'));
-          if (balDoc.exists()) {
-              setBalances(prev => ({ 
-                ...prev, 
-                [u.id]: { 
-                  res: balDoc.data().residencyBalance || 0, 
-                  pur: balDoc.data().purchasedBalance || 0 
-                }
-              }));
-          }
+      const configRef = doc(db, 'config', 'studio');
+      getDoc(configRef).then((snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          setStudioConfig(mergeStudioCosts(data.costs));
+        }
       });
-      setRosterLoading(false);
-    }, (err) => {
-      console.error('[admin] users listener:', err);
-      toast({ variant: 'destructive', title: 'Roster access error', description: (err as Error).message });
-      setRosterLoading(false);
-    }, 25000);
 
-    return () => { unsubUsers(); unsubLogs(); };
-  }, [user, authLoading, authReady, router, toast]);
+      const logsRef = collection(db, 'system', 'logs', 'entries');
+      unsubLogs = subscribeQuery(
+        query(logsRef, orderBy('timestamp', 'desc'), limit(100)),
+        (rows) => {
+          setSystemLogs(rows as SystemLog[]);
+        },
+        (err) => {
+          console.error('[admin] ops log listener:', err);
+        },
+        20000
+      );
+
+      const usersRef = collection(db, 'users');
+      unsubUsers = subscribeQuery(
+        usersRef,
+        (rows) => {
+          const allUsers = rows as User[];
+          setUsers(allUsers.filter((u) => u.status !== 'blocked'));
+          setBlockedUsers(allUsers.filter((u) => u.status === 'blocked'));
+
+          const rosterUserIds = allUsers
+            .map((u) => u.id)
+            .sort()
+            .join(',');
+          const rosterChanged = rosterUserIds !== lastRosterUserIdsRef.current;
+          if (rosterChanged) {
+            lastRosterUserIdsRef.current = rosterUserIds;
+            void loadGamificationRoster();
+          }
+
+          void (async () => {
+            const balanceEntries = await Promise.all(
+              allUsers.map(async (u) => {
+                try {
+                  const balDoc = await getDoc(doc(db, 'users', u.id, 'usage', 'balance'));
+                  if (!balDoc.exists()) return null;
+                  const data = balDoc.data();
+                  return [
+                    u.id,
+                    {
+                      res: data.residencyBalance || 0,
+                      pur: data.purchasedBalance || 0,
+                    },
+                  ] as const;
+                } catch (err) {
+                  console.warn('[admin] balance read failed for', u.id, err);
+                  return null;
+                }
+              })
+            );
+
+            const nextBalances = Object.fromEntries(
+              balanceEntries.filter(Boolean) as Array<
+                [string, { res: number; pur: number }]
+              >
+            );
+            if (Object.keys(nextBalances).length > 0) {
+              setBalances((prev) => ({ ...prev, ...nextBalances }));
+            }
+          })();
+
+          rosterLoadedRef.current = true;
+          setRosterLoading(false);
+        },
+        (err) => {
+          console.error('[admin] users listener:', err);
+          toast({
+            variant: 'destructive',
+            title: 'Roster access error',
+            description: (err as Error).message,
+          });
+          rosterLoadedRef.current = true;
+          setRosterLoading(false);
+        },
+        25000
+      );
+    };
+
+    void setupAdminListeners();
+
+    return () => {
+      cancelled = true;
+      unsubUsers?.();
+      unsubLogs?.();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-subscribe only when admin session identity changes
+  }, [user?.id, user?.role, authLoading, authReady]);
 
   const handleUpdateTier = async (targetUser: User, tier: 'none' | 'monthly' | 'yearly') => {
     const status = tier === 'none' ? 'none' : 'active';
@@ -134,18 +238,39 @@ export default function AdminPage() {
 
   const handleUpdateInk = async (userId: string, amount: number) => {
     const type = adjustType[userId] || 'pur';
-    const field = type === 'res' ? 'residencyBalance' : 'purchasedBalance';
-    const balanceRef = doc(db, 'users', userId, 'usage', 'balance');
-    
+    if (!amount) {
+      toast({ variant: 'destructive', title: 'Invalid amount', description: 'Enter a non-zero ink adjustment.' });
+      return;
+    }
+
     try {
-        await updateDoc(balanceRef, { [field]: increment(amount) });
-        toast({ 
-            title: amount > 0 ? "Ink Injected" : "Ink Recalled", 
-            description: `${amount > 0 ? '+' : ''}${amount} ${type === 'res' ? 'Residency' : 'Permanent'} Ink processed.` 
-        });
-        setInkAdjustment(prev => ({ ...prev, [userId]: '' }));
+      const res = await adminApiFetch('/api/admin/users/ink', {
+        method: 'POST',
+        body: JSON.stringify({ targetUserId: userId, amount, type }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body.error || `Adjustment failed (${res.status})`);
+      }
+
+      setBalances((prev) => {
+        const current = prev[userId] || { res: 0, pur: 0 };
+        return {
+          ...prev,
+          [userId]:
+            type === 'res'
+              ? { ...current, res: Math.max(0, current.res + amount) }
+              : { ...current, pur: Math.max(0, current.pur + amount) },
+        };
+      });
+
+      toast({
+        title: amount > 0 ? 'Ink Injected' : 'Ink Recalled',
+        description: `${amount > 0 ? '+' : ''}${amount} ${type === 'res' ? 'Residency' : 'Permanent'} Ink processed.`,
+      });
+      setInkAdjustment((prev) => ({ ...prev, [userId]: '' }));
     } catch (e: any) {
-        toast({ variant: 'destructive', title: "Adjustment Failed", description: e.message });
+      toast({ variant: 'destructive', title: 'Adjustment Failed', description: e.message });
     }
   };
 
@@ -167,6 +292,54 @@ export default function AdminPage() {
       }
   };
 
+  const handleResetGamification = async (targetUser: User) => {
+    if (
+      !confirm(
+        `Reset trophies & achievements for ${targetUser.displayName}?\n\nThis clears all unlocked trophies, XP, rank, streaks, challenge progress, and re-earn flags. Bonus Ink already granted is not removed.`
+      )
+    ) {
+      return;
+    }
+
+    setResettingGamification(targetUser.id);
+    try {
+      const res = await adminApiFetch('/api/admin/gamification/reset', {
+        method: 'POST',
+        body: JSON.stringify({ targetUserId: targetUser.id }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body.error || `Reset failed (${res.status})`);
+      }
+
+      toast({
+        title: 'Trophies Reset',
+        description: `Cleared ${body.clearedAchievements ?? 0} trophies for ${targetUser.displayName}. XP reset from ${body.previousXp ?? 0} to 0.`,
+      });
+      setGamificationStats((prev) => ({
+        ...prev,
+        [targetUser.id]: {
+          ...(prev[targetUser.id] || {
+            displayName: targetUser.displayName,
+            email: targetUser.email,
+            status: targetUser.status || 'active',
+          }),
+          xp: 0,
+          rankId: 'open_mic',
+          currentStreak: 0,
+          longestStreak: 0,
+          lifetimeBarsWritten: 0,
+          unlockedAchievements: {},
+        },
+      }));
+      void loadGamificationRoster(true);
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Reset Failed', description: e.message });
+    } finally {
+      setResettingGamification(null);
+    }
+  };
+
   const handleDeleteUser = async (targetUser: User) => {
       if (!confirm(`ERADICATION PROTOCOL: Are you absolutely sure you want to delete ${targetUser.displayName}? This removes their profile and albums from the studio view.`)) return;
       try {
@@ -181,7 +354,8 @@ export default function AdminPage() {
   if (!user || user.role !== 'admin') return null;
 
   return (
-    <div className="container mx-auto py-12 px-4 max-w-6xl font-code">
+    <TooltipProvider>
+    <div className="container mx-auto py-12 px-4 max-w-[88rem] font-code">
       <div className="flex items-center gap-4 mb-10">
         <ShieldCheck className="h-12 w-12 text-primary" />
         <div>
@@ -194,6 +368,7 @@ export default function AdminPage() {
         <TabsList className="bg-muted/50 border h-auto p-1.5 gap-2 w-full justify-start flex-wrap">
           <TabsTrigger value="metrics" className="gap-2 px-6 py-3 font-bold uppercase text-[10px] tracking-widest text-emerald-400"><LineChart className="h-4 w-4" /> Growth Metrics</TabsTrigger>
           <TabsTrigger value="users" className="gap-2 px-6 py-3 font-bold uppercase text-[10px] tracking-widest"><Users className="h-4 w-4" /> Artist Roster</TabsTrigger>
+          <TabsTrigger value="achievements" className="gap-2 px-6 py-3 font-bold uppercase text-[10px] tracking-widest text-amber-400"><Trophy className="h-4 w-4" /> Studio Trophies</TabsTrigger>
           <TabsTrigger value="blacklist" className="gap-2 px-6 py-3 font-bold uppercase text-[10px] tracking-widest text-red-500"><ShieldX className="h-4 w-4" /> Blacklist</TabsTrigger>
           <TabsTrigger value="logs" className="gap-2 px-6 py-3 font-bold uppercase text-[10px] tracking-widest"><BarChart3 className="h-4 w-4" /> Ops Log</TabsTrigger>
           <TabsTrigger value="config" className="gap-2 px-6 py-3 font-bold uppercase text-[10px] tracking-widest"><Settings className="h-4 w-4" /> Config</TabsTrigger>
@@ -209,11 +384,17 @@ export default function AdminPage() {
           ) : (
           <Card className="bg-card border-2 shadow-2xl">
             <CardHeader className="border-b"><CardTitle className="font-headline text-2xl uppercase">Residency Management</CardTitle></CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
-                <TableHeader><TableRow><TableHead>Artist</TableHead><TableHead>Tier</TableHead><TableHead>Residency Ink</TableHead><TableHead>Permanent Ink</TableHead><TableHead>Manual Calibration</TableHead><TableHead className="text-right">Access</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Artist</TableHead><TableHead>Tier</TableHead><TableHead>Rank / XP</TableHead><TableHead>Trophies</TableHead><TableHead>Streak</TableHead><TableHead>Residency Ink</TableHead><TableHead>Permanent Ink</TableHead><TableHead>Manual Calibration</TableHead><TableHead className="text-right">Access</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {users.length > 0 ? users.map(u => (
+                  {users.length > 0 ? users.map(u => {
+                    const gam = gamificationStats[u.id];
+                    const unlocked = gam?.unlockedAchievements || {};
+                    const unlockedCount = Object.keys(unlocked).length;
+                    const unlockedIds = new Set(Object.keys(unlocked));
+
+                    return (
                     <TableRow key={u.id} className="hover:bg-white/5 border-b border-white/5">
                       <TableCell><div className="font-bold text-white uppercase text-xs">{u.displayName}</div><div className="text-[9px] text-muted-foreground uppercase">{u.email}</div></TableCell>
                       <TableCell>
@@ -227,6 +408,69 @@ export default function AdminPage() {
                                   <SelectItem value="yearly" className="text-accent">PRO YR</SelectItem>
                               </SelectContent>
                           </Select>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <Badge variant="outline" className="text-[8px] h-5 border-amber-500/30 text-amber-300 uppercase">
+                            {rankLabel(gam?.rankId)}
+                          </Badge>
+                          <div className="flex items-center gap-1.5 font-bold text-xs text-white">
+                            <Zap className="h-3 w-3 text-amber-400" />
+                            {(gam?.xp ?? 0).toLocaleString()} XP
+                          </div>
+                          <p className="text-[8px] text-muted-foreground uppercase">{(gam?.lifetimeBarsWritten ?? 0).toLocaleString()} bars lifetime</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" className="text-left space-y-1 cursor-help rounded-md px-1 -mx-1 hover:bg-white/5 transition-colors">
+                              <div className="flex items-center gap-1.5 font-bold text-xs text-white">
+                                <Trophy className="h-3.5 w-3.5 text-amber-400" />
+                                {unlockedCount}/{TOTAL_ACHIEVEMENTS}
+                              </div>
+                              <div className="h-1.5 w-20 rounded-full bg-muted/40 overflow-hidden">
+                                <div
+                                  className="h-full bg-amber-400/80 rounded-full transition-all"
+                                  style={{ width: `${TOTAL_ACHIEVEMENTS ? (unlockedCount / TOTAL_ACHIEVEMENTS) * 100 : 0}%` }}
+                                />
+                              </div>
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="max-w-[280px] p-3 space-y-2">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-300">Trophy Progress</p>
+                            <div className="grid gap-1 max-h-52 overflow-y-auto pr-1">
+                              {ACHIEVEMENTS.map((achievement) => {
+                                const isUnlocked = unlockedIds.has(achievement.id);
+                                return (
+                                  <div
+                                    key={achievement.id}
+                                    className={cn(
+                                      'flex items-start gap-2 text-[10px] leading-snug',
+                                      isUnlocked ? 'text-emerald-300' : 'text-muted-foreground'
+                                    )}
+                                  >
+                                    <Trophy className={cn('h-3 w-3 shrink-0 mt-0.5', isUnlocked ? 'text-emerald-400' : 'text-white/20')} />
+                                    <span>
+                                      {achievement.title}
+                                      {isUnlocked && unlocked[achievement.id] && (
+                                        <span className="block text-[8px] text-emerald-400/70 font-code normal-case">
+                                          {format(new Date(unlocked[achievement.id]), 'MM/dd/yy')}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-bold text-white">{gam?.currentStreak ?? 0}d active</p>
+                          <p className="text-[8px] text-muted-foreground uppercase">best {gam?.longestStreak ?? 0}d</p>
+                        </div>
                       </TableCell>
                       <TableCell><div className="flex items-center gap-2 font-bold text-xs text-white"><Clock className="h-3 w-3 text-primary" />{(balances[u.id]?.res || 0).toLocaleString()}</div></TableCell>
                       <TableCell><div className="flex items-center gap-2 font-bold text-xs text-white"><Star className="h-3 w-3 text-orange-500" />{(balances[u.id]?.pur || 0).toLocaleString()}</div></TableCell>
@@ -247,7 +491,20 @@ export default function AdminPage() {
                       </TableCell>
                       <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                              <TooltipProvider>
+                                  <Tooltip>
+                                      <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-amber-400 hover:bg-amber-400/10"
+                                            disabled={resettingGamification === u.id}
+                                            onClick={() => handleResetGamification(u)}
+                                          >
+                                            <Trophy className="h-4 w-4" />
+                                          </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent><p className="text-[10px] font-bold">Reset Trophies & Achievements</p></TooltipContent>
+                                  </Tooltip>
                                   <Tooltip>
                                       <TooltipTrigger asChild>
                                           <Button variant="ghost" size="icon" className="h-8 w-8 text-orange-500 hover:bg-orange-500/10" onClick={() => handleBlockUser(u)}><Ban className="h-4 w-4" /></Button>
@@ -260,18 +517,27 @@ export default function AdminPage() {
                                       </TooltipTrigger>
                                       <TooltipContent><p className="text-[10px] font-bold uppercase">Eradicate Identity</p></TooltipContent>
                                   </Tooltip>
-                              </TooltipProvider>
                           </div>
                       </TableCell>
                     </TableRow>
-                  )) : (
-                    <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground text-[10px] uppercase tracking-[0.4em]">Searching studio roster...</TableCell></TableRow>
+                    );
+                  }) : (
+                    <TableRow><TableCell colSpan={9} className="h-32 text-center text-muted-foreground text-[10px] uppercase tracking-[0.4em]">Searching studio roster...</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="achievements">
+          <AdminAchievementsTab
+            stats={gamificationStats}
+            loading={rosterLoading && Object.keys(gamificationStats).length === 0}
+            refreshing={gamificationRefreshing}
+            onRefresh={() => loadGamificationRoster(true)}
+          />
         </TabsContent>
 
         <TabsContent value="blacklist">
@@ -346,5 +612,6 @@ export default function AdminPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </TooltipProvider>
   );
 }
