@@ -39,13 +39,14 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                 <div className="relative z-10 flex min-h-screen flex-col flex-1 overflow-hidden">
                   {!isLoginPage && !isPerformPage && !isSharePage && <Header />}
                   <main className="flex-1 overflow-hidden flex flex-col">{children}</main>
-                  {!isSharePage && <StudioTips />}
-                  <FloatingInkSpent />
-                  {!isLoginPage && !isSharePage && <WhatsNewDialog />}
+                  {!isSharePage && <WhatsNewDialog />}
                   <CookieConsent />
                   <OfflineBanner />
                   <ServiceWorkerRegister />
                 </div>
+                {/* Portaled overlays — must sit outside z-10 wrapper or they render behind Dialog greyout */}
+                {!isSharePage && <StudioTips />}
+                <FloatingInkSpent />
                 <Toaster />
                 <AchievementUnlockCelebration />
                 <ProgressCelebration />

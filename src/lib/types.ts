@@ -149,8 +149,9 @@ export interface ProjectShare {
   projectId: string;
   ownerId: string;
   ownerName: string;
-  data: any; // Serialized Album or Track
+  data: any; // Serialized Album or Track (see dna-drop.ts enrich helpers)
   createdAt: string;
+  updatedAt?: string;
   views: number;
   imports: number;
 }

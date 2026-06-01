@@ -161,6 +161,18 @@ const FAQS = [
     {
       q: "How do weekly and monthly challenges differ?",
       a: "Weekly goals reset every Monday; monthly challenges follow the calendar month. Both track rhyme bars (lines ÷ 2). Open /studio-progress or the Vault sidebar for live counters, rank XP, and leaderboard compare."
+    },
+    {
+      q: "What is included in a DNA Drop?",
+      a: "A DNA Drop is a public snapshot of your saved project — lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when that toggle is on. Album drops also include album DNA presets and album-level motifs."
+    },
+    {
+      q: "Is my DNA Drop live-synced when I edit?",
+      a: "No. The link shows the last published snapshot. After you change anything you want shared, open DNA Drop again and press Update snapshot — the URL stays the same but visitors see the new version. Until then, old shared links keep showing the previous snapshot."
+    },
+    {
+      q: "How do I unshare or take a DNA Drop offline?",
+      a: "Open DNA Drop from the left panel (track) or album page, then press Take offline. The public link stops working immediately. You can publish again later with Confirm DNA Drop."
     }
 ];
 

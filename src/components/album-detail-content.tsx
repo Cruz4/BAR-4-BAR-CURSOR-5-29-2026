@@ -879,6 +879,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
           type="album"
           id={album.id}
           title={album.title}
+          existingShareId={album.shareId}
         />
       )}
 

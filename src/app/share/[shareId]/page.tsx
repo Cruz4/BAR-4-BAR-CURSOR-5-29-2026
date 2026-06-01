@@ -23,6 +23,12 @@ import {
 import { StudioLoader } from '@/components/studio-loader';
 import { ShareCoverImage } from '@/components/share-cover-image';
 import { format } from 'date-fns';
+import {
+  sharedTrackIntents,
+  resolveSharedDirection,
+  type DnaDropTrackPayload,
+  type DnaDropAlbumPayload,
+} from '@/lib/dna-drop';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -64,13 +70,20 @@ export default function SharedProjectPage() {
     }, [shareId]);
 
     const formattedShareDate = useMemo(() => {
-        if (!share?.createdAt) return 'Recent';
-        const date = new Date(share.createdAt);
+        if (!share?.updatedAt && !share?.createdAt) return 'Recent';
+        const date = new Date(share.updatedAt || share.createdAt);
         return isNaN(date.getTime()) ? 'Recent' : format(date, 'MMM d, yyyy');
-    }, [share?.createdAt]);
+    }, [share?.updatedAt, share?.createdAt]);
 
-    const project = share?.data;
+    const project = share?.data as DnaDropAlbumPayload | DnaDropTrackPayload | undefined;
     const isAlbum = share?.type === 'album';
+    const trackProject = !isAlbum ? (project as DnaDropTrackPayload | undefined) : undefined;
+    const direction = project ? resolveSharedDirection(project) : undefined;
+    const displayIntents = useMemo(() => {
+        if (!project) return [] as string[];
+        if (isAlbum) return (project as DnaDropAlbumPayload).thingsToSay ?? [];
+        return sharedTrackIntents(project as DnaDropTrackPayload);
+    }, [project, isAlbum]);
     const isOwnShare = Boolean(user && share && user.id === share.ownerId);
 
     const alreadyInVault = useMemo(() => {
@@ -219,8 +232,7 @@ export default function SharedProjectPage() {
                 <div className="container max-w-7xl mx-auto px-4 pt-4 relative z-10">
                     <Card className="border-primary/25 bg-primary/5">
                         <CardContent className="p-4 text-[11px] font-code text-muted-foreground leading-relaxed">
-                            <span className="font-bold uppercase text-primary">Import Setup</span> copies this project&apos;s lyrics,
-                            structure, DNA, and vibe into your Bar 4 Bar vault so you can write on top of it.
+                            Import Setup copies this snapshot — lyrics, structure, Creative DNA, intents, vibe, guardrails, special instructions, and Style DNA when shared — into your Bar 4 Bar vault.
                             {' '}
                             <button type="button" className="text-primary underline underline-offset-2 font-bold" onClick={() => router.push(`/login?next=${encodeURIComponent(`/share/${shareId}`)}&intent=dna-import`)}>
                                 Sign in or create a free account
@@ -257,22 +269,33 @@ export default function SharedProjectPage() {
                                     &ldquo;{isAlbum ? project.theme : project.vibe?.feeling?.join(', ')}&rdquo;
                                 </p>
                             </div>
-                            {project.direction && (
+                            {direction && (
                                 <div className="space-y-4 border-t pt-4">
                                     <h4 className="text-[10px] font-bold uppercase tracking-widest text-green-600 flex items-center gap-2">
                                         <Compass className="h-3 w-3" /> Architecture (The 5 Questions)
                                     </h4>
                                     <div className="space-y-3">
-                                        {Object.entries(project.direction).map(([key, value]) => {
-                                            if (!value || typeof value !== 'string') return null;
+                                        {Object.entries(direction).map(([key, value]) => {
+                                            if (!value || typeof value !== 'string' || key === 'updatedAt') return null;
                                             return (
                                                 <div key={key} className="space-y-0.5">
-                                                    <p className="text-[8px] font-bold uppercase text-muted-foreground/60">{key.replace('_', ' ')}</p>
+                                                    <p className="text-[8px] font-bold uppercase text-muted-foreground/60">{key.replace(/_/g, ' ')}</p>
                                                     <p className="text-[11px] font-bold text-foreground leading-snug">{value}</p>
                                                 </div>
                                             );
                                         })}
                                     </div>
+                                </div>
+                            )}
+                            {!isAlbum && trackProject?.vibe?.enabled !== false && (trackProject?.vibe?.genre || trackProject?.vibe?.instrumentation) && (
+                                <div className="space-y-2 border-t pt-4">
+                                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Vibe</h4>
+                                    <p className="text-[11px] text-muted-foreground">
+                                        {[trackProject.vibe.genre, trackProject.vibe.tempoBPM ? `${trackProject.vibe.tempoBPM} BPM` : null].filter(Boolean).join(' · ')}
+                                    </p>
+                                    {trackProject.vibe.instrumentation && (
+                                        <p className="text-[11px] italic text-muted-foreground">&ldquo;{trackProject.vibe.instrumentation}&rdquo;</p>
+                                    )}
                                 </div>
                             )}
                         </CardContent>
@@ -286,14 +309,54 @@ export default function SharedProjectPage() {
                         </CardHeader>
                         <CardContent className="p-4 pt-0">
                             <div className="flex flex-wrap gap-1.5">
-                                {(isAlbum ? project.thingsToSay : project.intentRefs || []).map((intent: string) => (
+                                {displayIntents.length > 0 ? displayIntents.map((intent: string) => (
                                     <Badge key={intent} variant="outline" className="text-[8px] uppercase border-sky-500/30 text-sky-600 bg-sky-500/5 py-1 px-2">
                                         {intent}
                                     </Badge>
-                                ))}
+                                )) : (
+                                    <p className="text-[10px] text-muted-foreground italic">No motifs in this snapshot.</p>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
+
+                    {!isAlbum && trackProject?.sharedStyle?.analysis && (
+                        <Card className="border-fuchsia-500/30 bg-fuchsia-500/5">
+                            <CardHeader className="p-4 pb-2">
+                                <CardTitle className="text-xs font-headline uppercase text-fuchsia-400">Style DNA</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0 text-[11px] italic text-muted-foreground leading-relaxed">
+                                &ldquo;{trackProject.sharedStyle.analysis}&rdquo;
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {!isAlbum && trackProject?.specialInstructions?.trim() && (
+                        <Card className="border-blue-500/30 bg-blue-500/5">
+                            <CardHeader className="p-4 pb-2">
+                                <CardTitle className="text-xs font-headline uppercase text-blue-400">Special Instructions</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0 text-[11px] text-muted-foreground leading-relaxed">
+                                {trackProject.specialInstructions}
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {!isAlbum && trackProject?.guardrails?.enabled && (
+                        <Card className="border-rose-500/30 bg-rose-500/5">
+                            <CardHeader className="p-4 pb-2">
+                                <CardTitle className="text-xs font-headline uppercase text-rose-400">Guardrails</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0 space-y-2 text-[10px] text-muted-foreground">
+                                {trackProject.guardrails.forbiddenWords && (
+                                    <p><span className="font-bold uppercase text-rose-500/80">Forbidden:</span> {trackProject.guardrails.forbiddenWords}</p>
+                                )}
+                                {trackProject.guardrails.mustIncludeWords && (
+                                    <p><span className="font-bold uppercase text-emerald-500/80">Must include:</span> {trackProject.guardrails.mustIncludeWords.join(', ')}</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
 
                 <div className="lg:col-span-8 space-y-8">
@@ -309,10 +372,10 @@ export default function SharedProjectPage() {
                         <CardHeader className="bg-card border-b relative z-10 p-12 py-8">
                             <div className="flex items-center gap-4">
                                 <Badge variant="outline" className="text-[9px] uppercase tracking-widest border-primary/20 text-primary">
-                                    Live Transcription
+                                    Live Snapshot
                                 </Badge>
                                 <div className="flex items-center gap-2 text-[9px] text-muted-foreground uppercase font-bold">
-                                    <Clock className="h-3 w-3" /> {formattedShareDate}
+                                    <Clock className="h-3 w-3" /> Updated {formattedShareDate}
                                 </div>
                             </div>
                         </CardHeader>
@@ -391,7 +454,7 @@ export default function SharedProjectPage() {
                         <AlertDialogTitle className="font-headline text-2xl uppercase">Import DNA setup?</AlertDialogTitle>
                         <AlertDialogDescription className="text-sm font-code leading-relaxed space-y-2">
                             <span className="block">
-                                This merges <strong className="text-foreground">{project.title}</strong> into your vault — lyrics, sections, DNA questions, motifs, and vibe settings.
+                                This merges <strong className="text-foreground">{project.title}</strong> into your vault — lyrics, sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA (when included).
                             </span>
                             {isOwnShare ? (
                                 <span className="block text-amber-200/90">

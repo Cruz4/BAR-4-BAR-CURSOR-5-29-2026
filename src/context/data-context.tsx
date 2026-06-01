@@ -6,10 +6,16 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase/client/firebase';
 import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
-import { doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch, deleteField } from 'firebase/firestore';
 import { stripForFirestore } from '@/lib/utils';
 import { countNonEmptyBars } from '@/lib/gamification/bar-count';
 import { postGamificationEvent } from '@/lib/gamification-client';
+import {
+  buildAlbumDropPayload,
+  buildTrackDropPayload,
+  findTrackInVault,
+  type DnaDropTrackPayload,
+} from '@/lib/dna-drop';
 
 const UNASSIGNED_ALBUM_ID = 'unassigned';
 
@@ -90,7 +96,9 @@ interface DataContextType {
   clearVault: () => Promise<void>;
   moveTrack: (trackId: string, fromAlbumId: string, toAlbumId: string) => void;
   updateStyleProfile: (analysis: string, metrics?: any) => void;
-  dropDNA: (type: 'album' | 'track', id: string) => Promise<string>;
+  dropDNA: (type: 'album' | 'track', id: string, options?: { albumId?: string }) => Promise<string>;
+  updateDNA: (type: 'album' | 'track', id: string, shareId: string, options?: { albumId?: string }) => Promise<string>;
+  revokeDNA: (type: 'album' | 'track', id: string, shareId: string, options?: { albumId?: string }) => Promise<void>;
 }
 
 export const DataContext = createContext<DataContextType>({
@@ -113,6 +121,8 @@ export const DataContext = createContext<DataContextType>({
   moveTrack: () => {},
   updateStyleProfile: () => {},
   dropDNA: async () => '',
+  updateDNA: async () => '',
+  revokeDNA: async () => {},
 });
 
 const ALBUM_STORAGE_KEY = 'bar4bar-albums';
@@ -474,14 +484,172 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     if (user) setDoc(doc(db, 'users', user.id, 'styleProfile', 'main'), newProfile);
   }, [styleProfile, user]);
 
-  const dropDNA = useCallback(async (type: 'album' | 'track', id: string): Promise<string> => {
-    if (!user) throw new Error("Artist Session Required.");
-    const shareId = Math.random().toString(36).substring(2, 12).toUpperCase();
-    const data = type === 'album' ? getAlbumById(id) : getTrackById('unassigned', id).track;
-    await setDoc(doc(db, 'shares', shareId), { id: shareId, type, projectId: id, ownerId: user.id, ownerName: user.displayName, data: JSON.parse(JSON.stringify(data)), createdAt: new Date().toISOString(), views: 0, imports: 0 });
-    void postGamificationEvent('share_created');
-    return shareId;
-  }, [user, getAlbumById, getTrackById]);
+  const resolveTrackForDrop = useCallback(
+    (trackId: string, albumId?: string) => {
+      if (albumId) {
+        const { track, album } = getTrackById(albumId, trackId);
+        if (track) return { track, album };
+      }
+      const found = findTrackInVault(albums, trackId);
+      if (found) return found;
+      return { track: undefined, album: undefined };
+    },
+    [albums, getTrackById]
+  );
+
+  const buildDropPayload = useCallback(
+    (type: 'album' | 'track', id: string, albumId?: string) => {
+      if (type === 'album') {
+        const album = getAlbumById(id);
+        if (!album) throw new Error('Album not found in your vault.');
+        return buildAlbumDropPayload(album, styleProfile);
+      }
+      const { track, album } = resolveTrackForDrop(id, albumId);
+      if (!track) throw new Error('Track not found in your vault.');
+      return buildTrackDropPayload(track, album, styleProfile);
+    },
+    [getAlbumById, resolveTrackForDrop, styleProfile]
+  );
+
+  const persistProjectShareId = useCallback(
+    (type: 'album' | 'track', id: string, shareId: string, albumId?: string) => {
+      if (type === 'album') {
+        updateAlbum(id, { shareId });
+        return;
+      }
+      const resolved = resolveTrackForDrop(id, albumId);
+      if (resolved.album) {
+        updateTrack(resolved.album.id, id, { shareId });
+      }
+    },
+    [resolveTrackForDrop, updateAlbum, updateTrack]
+  );
+
+  const clearProjectShareId = useCallback(
+    async (type: 'album' | 'track', id: string, albumId?: string) => {
+      if (type === 'album') {
+        updateAlbum(id, { shareId: undefined });
+        if (user) {
+          await setDoc(doc(db, 'users', user.id, 'albums', id), { shareId: deleteField() }, { merge: true });
+        }
+        return;
+      }
+      const resolved = resolveTrackForDrop(id, albumId);
+      if (resolved.album) {
+        updateTrack(resolved.album.id, id, { shareId: undefined });
+        if (user) {
+          await setDoc(
+            doc(db, 'users', user.id, 'albums', resolved.album.id, 'tracks', id),
+            { shareId: deleteField() },
+            { merge: true }
+          );
+        }
+      }
+    },
+    [resolveTrackForDrop, updateAlbum, updateTrack, user]
+  );
+
+  const updateDNA = useCallback(
+    async (type: 'album' | 'track', id: string, shareId: string, options?: { albumId?: string }): Promise<string> => {
+      if (!user) throw new Error('Artist Session Required.');
+      const albumId = options?.albumId;
+      const data = buildDropPayload(type, id, albumId);
+      const now = new Date().toISOString();
+      const shareRef = doc(db, 'shares', shareId);
+      const existing = await getDoc(shareRef);
+
+      if (existing.exists() && existing.data()?.ownerId === user.id) {
+        await setDoc(
+          shareRef,
+          {
+            data,
+            updatedAt: now,
+            ownerName: user.displayName,
+          },
+          { merge: true }
+        );
+      } else {
+        await setDoc(shareRef, {
+          id: shareId,
+          type,
+          projectId: id,
+          ownerId: user.id,
+          ownerName: user.displayName,
+          data,
+          createdAt: now,
+          updatedAt: now,
+          views: existing.exists() ? existing.data()?.views ?? 0 : 0,
+          imports: existing.exists() ? existing.data()?.imports ?? 0 : 0,
+        });
+      }
+
+      persistProjectShareId(type, id, shareId, albumId);
+      return shareId;
+    },
+    [user, buildDropPayload, persistProjectShareId]
+  );
+
+  const dropDNA = useCallback(
+    async (type: 'album' | 'track', id: string, options?: { albumId?: string }): Promise<string> => {
+      if (!user) throw new Error('Artist Session Required.');
+      const albumId = options?.albumId;
+      const existingShareId =
+        type === 'album' ? getAlbumById(id)?.shareId : resolveTrackForDrop(id, albumId).track?.shareId;
+
+      if (existingShareId) {
+        return updateDNA(type, id, existingShareId, options);
+      }
+
+      const shareId = Math.random().toString(36).substring(2, 12).toUpperCase();
+      const data = buildDropPayload(type, id, albumId);
+      const now = new Date().toISOString();
+
+      await setDoc(doc(db, 'shares', shareId), {
+        id: shareId,
+        type,
+        projectId: id,
+        ownerId: user.id,
+        ownerName: user.displayName,
+        data,
+        createdAt: now,
+        updatedAt: now,
+        views: 0,
+        imports: 0,
+      });
+
+      persistProjectShareId(type, id, shareId, albumId);
+      void postGamificationEvent('share_created');
+      return shareId;
+    },
+    [user, getAlbumById, resolveTrackForDrop, buildDropPayload, persistProjectShareId, updateDNA]
+  );
+
+  const revokeDNA = useCallback(
+    async (type: 'album' | 'track', id: string, shareId: string, options?: { albumId?: string }) => {
+      if (!user) throw new Error('Artist Session Required.');
+      const shareRef = doc(db, 'shares', shareId);
+      const existing = await getDoc(shareRef);
+      if (existing.exists() && existing.data()?.ownerId !== user.id) {
+        throw new Error('You can only take offline your own DNA Drops.');
+      }
+      if (existing.exists()) {
+        await deleteDoc(shareRef);
+      }
+      await clearProjectShareId(type, id, options?.albumId);
+    },
+    [user, clearProjectShareId]
+  );
+
+  const applyImportedStyle = useCallback(
+    (tracks: Array<DnaDropTrackPayload | Track>) => {
+      const styled = tracks.find((t) => t.styleEnabled && (t as DnaDropTrackPayload).sharedStyle?.analysis);
+      const snapshot = styled ? (styled as DnaDropTrackPayload).sharedStyle : undefined;
+      if (snapshot?.analysis) {
+        updateStyleProfile(snapshot.analysis, snapshot.metrics);
+      }
+    },
+    [updateStyleProfile]
+  );
 
   const mergeData = useCallback(async (importedAlbums: Album[], importedTracks: Track[]) => {
     if (!user) return;
@@ -588,7 +756,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     });
 
     setCloudSaveStatus('saved');
-  }, [user, flushCloudNow, seedTrackProgressBaselines]);
+
+    const tracksForStyleImport: Array<DnaDropTrackPayload | Track> = [
+      ...persistedLooseTracks,
+      ...persistedAlbums.flatMap((a) => a.tracks ?? []),
+    ];
+    applyImportedStyle(tracksForStyleImport);
+  }, [user, flushCloudNow, seedTrackProgressBaselines, applyImportedStyle]);
 
   const clearVault = useCallback(async () => {
     if (!user) return;
@@ -646,7 +820,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     <DataContext.Provider value={{ 
       albums, styleProfile, loading, isCloudSyncActive, cloudSaveStatus, flushCloudNow,
       addAlbum, updateAlbum, deleteAlbum, getAlbumById,
-      addTrack, updateTrack, deleteTrack, getTrackById, mergeData, clearVault, moveTrack, updateStyleProfile, dropDNA
+      addTrack, updateTrack, deleteTrack, getTrackById, mergeData, clearVault, moveTrack, updateStyleProfile, dropDNA, updateDNA, revokeDNA
     }}>{children}</DataContext.Provider>
   );
 };
