@@ -340,11 +340,11 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </div>
 
                 <ChapterCard icon={<MousePointer2 className="text-primary" />} title="Way 1: In-Line Hover Triggers" colorClass="border-l-primary">
-                    <p>Hover over any lyrical bar on the notepad to reveal surgical triggers. Add a line directly below, above, or delete the bar with one click.</p>
+                    <p>Hover over any lyrical line on the notepad to reveal surgical triggers. Add a line directly below, above, or delete the line with one click.</p>
                 </ChapterCard>
 
                 <ChapterCard icon={<Zap className="text-primary" />} title="Way 2: Bar Workstation (Footer)" colorClass="border-l-primary">
-                    <p>Select a bar to activate the master workstation. Use the primary triggers to generate **Next** or **Previous** suggestions anchored to your active focus ({AI_COSTS.generateNextLine} Ink).</p>
+                    <p>Select a line to activate the master workstation. Use the primary triggers to generate **Next** or **Previous** suggestions anchored to your active focus ({AI_COSTS.generateNextLine} Ink).</p>
                 </ChapterCard>
 
                 <ChapterCard icon={<Sparkles className="text-primary" />} title="Way 3: Co-Writer (Right Panel)" colorClass="border-l-primary">
@@ -356,7 +356,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </div>
 
                 <ChapterCard icon={<Dna className="text-green-500" />} title="DNA Suite (Right Panel)" colorClass="border-l-green-500">
-                    <p>The core identity of your track. The AI uses these 5 questions to maintain thematic alignment during generation. If activated, every suggested bar will reflect your Setting, Emotion, and Message Truth.</p>
+                    <p>The core identity of your track. The AI uses these 5 questions to maintain thematic alignment during generation. If activated, every suggested line will reflect your Setting, Emotion, and Message Truth.</p>
                 </ChapterCard>
 
                 <ChapterCard icon={<Target className="text-sky-500" />} title="Precision Intents (Right Panel)" colorClass="border-l-sky-500">

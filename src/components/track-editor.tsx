@@ -1022,9 +1022,9 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
   };
 
   const activeBarLabel = useMemo(() => {
-    if (!activeGeneratorBar) return 'BAR: 0';
+    if (!activeGeneratorBar) return 'LINE: 0';
     const section = track.sections.find((s:any) => s.id === activeGeneratorBar.sectionId);
-    return `${section?.type?.toUpperCase() || 'BAR'} - BAR: ${activeGeneratorBar.idx}`;
+    return `${section?.type?.toUpperCase() || 'LINE'} - LINE: ${activeGeneratorBar.idx}`;
   }, [activeGeneratorBar, track.sections]);
 
   const ruleBadges = useMemo(() => getWorkstationRuleBadges(track, album), [

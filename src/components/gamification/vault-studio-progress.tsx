@@ -264,8 +264,9 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
           </p>
           <ul className="space-y-1 min-w-0">
             {WEEKLY_CHALLENGES.map((challenge) => {
-              const progress = getChallengeProgress(summary, challenge);
-              const done = progress >= challenge.target;
+              const progress = getChallengeProgress(summary, challenge, isPro);
+              const done = isChallengeComplete(summary, challenge, isPro);
+              const target = resolveChallengeTarget(challenge, isPro);
               return (
                 <li key={challenge.id} className="flex items-center gap-2 min-h-[18px] min-w-0">
                   {done ? (
@@ -277,7 +278,7 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
                     {challenge.label}
                   </p>
                   <span className={cn('text-[9px] font-mono shrink-0 tabular-nums whitespace-nowrap', done ? 'text-emerald-400/80' : 'text-muted-foreground')}>
-                    {progress}/{challenge.target}
+                    {progress}/{target}
                   </span>
                 </li>
               );
