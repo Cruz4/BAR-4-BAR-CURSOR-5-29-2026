@@ -1435,7 +1435,8 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
         cx: a.left + a.width / 2 - s.left,
         cy: a.top + a.height / 2 - s.top,
         r: Math.max(a.width, a.height) * 0.5,
-        ringR: Math.min(s.width * 0.17, s.height * 0.24),
+        /** Match logo well — do not scale from full viewport height on phone */
+        ringR: Math.max(a.width, a.height) * 0.52,
       });
     };
 
@@ -2225,10 +2226,10 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           )}
 
           {step === 5 && wizardState.generatedVariant && (
-              <div className="flex-1 min-0 flex flex-row items-stretch overflow-hidden animate-in fade-in slide-in-from-bottom-8 relative">
+              <div className="flex-1 min-h-0 flex flex-col lg:flex-row items-stretch overflow-hidden animate-in fade-in slide-in-from-bottom-8 relative">
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-500/8 via-transparent to-orange-500/6" aria-hidden />
-                  <div className="relative flex-grow min-0 py-6 px-4">
-                      <Card className="w-full h-full border-2 shadow-2xl relative overflow-hidden bg-notebook-hub">
+                  <div className="relative flex-1 min-h-0 min-w-0 flex flex-col order-1 lg:order-none py-3 px-2 sm:py-6 sm:px-4">
+                      <Card className="w-full flex-1 min-h-[220px] border-2 shadow-2xl relative overflow-hidden bg-notebook-hub">
                         <style>{`
                             .bg-notebook-hub {
                                 background-image: 
@@ -2238,20 +2239,27 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                 background-color: #0c0c0c;
                                 background-attachment: local;
                             }
+                            @media (max-width: 639px) {
+                                .bg-notebook-hub {
+                                    background-image: 
+                                        linear-gradient(90deg, transparent 2.75rem, rgba(255, 0, 0, 0.2) 2.75rem, rgba(255, 0, 0, 0.2) calc(2.75rem + 1px), transparent calc(2.75rem + 1px)),
+                                        repeating-linear-gradient(transparent, transparent 31px, rgba(255, 255, 255, 0.05) 31px, rgba(255, 255, 255, 0.05) 32px);
+                                }
+                            }
                         `}</style>
-                        <ScrollArea className="h-full studio-scrollbar">
-                            <div className="p-12 space-y-12 pb-32">
+                        <ScrollArea className="h-full max-h-[min(52vh,520px)] lg:max-h-none studio-scrollbar">
+                            <div className="p-3 pt-4 sm:p-6 md:p-12 space-y-6 sm:space-y-12 pb-24 sm:pb-32">
                                 {wizardState.generatedVariant.sections.map((s, idx) => (
                                     <div key={idx} className="relative">
-                                        <div style={{ height: '96px' }} className="flex items-end pb-2 pl-[120px]">
-                                            <h4 className="text-xl md:text-2xl font-headline font-bold text-sky-400 uppercase leading-none">[{s.name}]</h4>
+                                        <div className="h-10 sm:h-16 md:h-24 flex items-end pb-1 sm:pb-2 pl-[2.75rem] sm:pl-[120px]">
+                                            <h4 className="text-sm sm:text-xl md:text-2xl font-headline font-bold text-sky-400 uppercase leading-none">[{s.name}]</h4>
                                         </div>
                                         <div className="space-y-0">
                                             {s.bars.map((line, lIdx) => (
-                                                <div key={lIdx} className="relative group flex items-start h-auto" style={{ minHeight: '32px' }}>
-                                                    <span className="absolute left-[50px] font-mono text-muted-foreground/20 w-10 text-right font-bold text-[10px] leading-[32px]">{String(lIdx + 1).padStart(2, '0')}</span>
-                                                    <div className="flex-grow flex items-start min-w-0 h-full relative overflow-hidden">
-                                                        <p className="font-code font-bold text-[24px] leading-[32px] tracking-tight text-white/90 whitespace-pre-wrap break-words w-full pl-[145px] -indent-[25px]">
+                                                <div key={lIdx} className="relative group flex items-start h-auto" style={{ minHeight: '28px' }}>
+                                                    <span className="absolute left-0 sm:left-[50px] font-mono text-muted-foreground/25 w-9 sm:w-10 text-right font-bold text-[9px] sm:text-[10px] leading-[28px] sm:leading-[32px]">{String(lIdx + 1).padStart(2, '0')}</span>
+                                                    <div className="flex-grow flex items-start min-w-0 h-full relative overflow-hidden pl-[2.75rem] sm:pl-[145px]">
+                                                        <p className="font-code font-bold text-[17px] sm:text-[22px] md:text-[24px] leading-[28px] sm:leading-[32px] tracking-tight text-white/90 whitespace-pre-wrap break-words w-full sm:-indent-[25px]">
                                                             <HighlightedText text={line} rhymeGroups={previewRhymeGroups} />
                                                         </p>
                                                     </div>
@@ -2264,7 +2272,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                         </ScrollArea>
                       </Card>
                   </div>
-                  <div className="relative w-[340px] shrink-0 p-6 space-y-6 bg-black/50 border-l border-white/10 overflow-y-auto studio-scrollbar">
+                  <div className="relative w-full lg:w-[340px] shrink-0 order-2 lg:order-none max-h-[min(42vh,420px)] lg:max-h-none p-3 sm:p-6 space-y-4 sm:space-y-6 bg-black/50 border-t lg:border-t-0 lg:border-l border-white/10 overflow-y-auto studio-scrollbar">
                       <div className="space-y-2">
                         <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Context Summary</h4>
                         <p className="text-[9px] text-muted-foreground font-code uppercase">Settings used for this synthesis.</p>

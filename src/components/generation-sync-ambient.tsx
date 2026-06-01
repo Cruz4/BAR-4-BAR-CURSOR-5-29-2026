@@ -162,8 +162,8 @@ export function GenerationSyncAmbient({
       const measured = attractorRef.current;
       const cx = measured?.cx ?? W * 0.5;
       const cy = measured?.cy ?? H * (1 - 0.14) * 0.48;
-      const ringR = measured?.ringR ?? Math.min(W * 0.17, H * 0.24);
-      const fadeR = measured?.r ?? ringR * 0.55;
+      const fadeR = measured?.r ?? Math.min(W * 0.12, H * 0.1, 64);
+      const ringR = measured?.ringR ?? fadeR * 1.05;
       return { cx, cy, ringR, fadeR };
     };
 
@@ -411,7 +411,7 @@ export function GenerationSyncAmbient({
 
   const wellMaskStyle = attractor
     ? {
-        background: `radial-gradient(ellipse ${Math.round(attractor.ringR * 2.1)}px ${Math.round(attractor.ringR * 2.35)}px at ${Math.round(attractor.cx)}px ${Math.round(attractor.cy)}px, rgba(6,12,24,0.92) 0%, rgba(6,12,24,0.55) 42%, transparent 58%), radial-gradient(ellipse ${Math.round(attractor.ringR * 2.8)}px ${Math.round(attractor.ringR * 3.2)}px at ${Math.round(attractor.cx)}px ${Math.round(attractor.cy)}px, transparent 0%, transparent 34%, rgba(6,12,24,0.45) 58%, rgba(6,12,24,0.88) 100%)`,
+        background: `radial-gradient(ellipse ${Math.round(attractor.r * 2.05)}px ${Math.round(attractor.r * 2.2)}px at ${Math.round(attractor.cx)}px ${Math.round(attractor.cy)}px, rgba(6,12,24,0.92) 0%, rgba(6,12,24,0.55) 42%, transparent 58%), radial-gradient(ellipse ${Math.round(attractor.ringR * 2.15)}px ${Math.round(attractor.ringR * 2.35)}px at ${Math.round(attractor.cx)}px ${Math.round(attractor.cy)}px, transparent 0%, transparent 34%, rgba(6,12,24,0.45) 58%, rgba(6,12,24,0.88) 100%)`,
       }
     : {
         background:

@@ -1088,7 +1088,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
 
   return (
         <div className={cn("flex flex-1 flex-col min-w-0 basis-0 h-full relative overflow-hidden", mobileLyricsPanelClass(mobileActive))}>
-      <div className="h-14 max-md:h-auto max-md:min-h-0 max-md:py-2 px-2 max-md:px-2 md:px-4 flex flex-row items-center gap-2 bg-card z-20 border-b shrink-0 min-w-0 overflow-hidden">
+      <div className="h-14 max-md:h-auto max-md:min-h-[3.25rem] max-md:py-1.5 px-2 max-md:px-2 md:px-4 flex flex-row items-center gap-2 bg-card z-20 border-b shrink-0 min-w-0 max-md:overflow-x-auto max-md:overflow-y-hidden md:overflow-hidden studio-scrollbar">
         <div className="flex items-center gap-2 min-w-0 shrink-0">
             <Hint
               skipOnTouch
@@ -1101,10 +1101,11 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
               </Button>
             </Hint>
         </div>
-        <div className="flex flex-1 min-w-0 items-center justify-end gap-2 overflow-x-auto studio-scrollbar">
+        <div className="flex flex-1 min-w-0 items-center justify-end gap-2 max-md:flex-nowrap overflow-x-auto studio-scrollbar">
           <div className="flex items-center gap-1.5 md:gap-2 bg-muted/40 px-2 py-1 rounded-full border border-border/40 shrink-0">
              <div className="flex items-center gap-1 md:gap-1.5">
                 <Hint
+                  skipOnTouch
                   side="bottom"
                   content={<p className="text-[10px] font-bold uppercase">Undo Last Action</p>}
                 >
@@ -1150,10 +1151,16 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                 <Badge variant="outline" className="h-4 px-1.5 text-[7px] font-bold border-primary/20 text-primary shrink-0 leading-none whitespace-nowrap">{getEffectiveCost('findRhymes')} INK</Badge>
              </div>
           </div>
-          <ToggleGroup type="single" value={fontSize} onValueChange={(val) => val && setFontSize(val as any)} className="hidden lg:flex bg-muted/40 border border-border/40 rounded-lg p-0.5 shrink-0">
-            <ToggleGroupItem value="sm" className="h-7 w-8 text-[10px] font-bold">T</ToggleGroupItem>
-            <ToggleGroupItem value="md" className="h-7 w-8 text-sm font-bold">T</ToggleGroupItem>
-            <ToggleGroupItem value="lg" className="h-7 w-8 text-lg font-bold">T</ToggleGroupItem>
+          <ToggleGroup
+            type="single"
+            value={fontSize}
+            onValueChange={(val) => val && setFontSize(val as 'sm' | 'md' | 'lg')}
+            className="flex bg-muted/40 border border-border/40 rounded-lg p-0.5 shrink-0"
+            aria-label="Lyrics text size"
+          >
+            <ToggleGroupItem value="sm" className="h-7 w-7 max-md:h-6 max-md:w-6 text-[10px] font-bold px-0" aria-label="Small text">T</ToggleGroupItem>
+            <ToggleGroupItem value="md" className="h-7 w-7 max-md:h-6 max-md:w-6 text-sm font-bold px-0" aria-label="Medium text">T</ToggleGroupItem>
+            <ToggleGroupItem value="lg" className="h-7 w-7 max-md:h-6 max-md:w-6 text-lg font-bold px-0" aria-label="Large text">T</ToggleGroupItem>
           </ToggleGroup>
         </div>
       </div>

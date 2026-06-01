@@ -92,8 +92,22 @@ export function Header() {
               />
           </div>
       )}
-      <div className="relative h-14 w-full grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 md:px-6">
-            <div className="flex items-center justify-start gap-4 min-w-0">
+      <div className="relative h-14 w-full px-2 sm:px-4 md:px-6">
+            {/* Logo centered — side columns cannot overlap it */}
+            <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center px-[4.75rem] sm:px-24 md:px-32">
+                <Link href="/" className="pointer-events-auto flex min-w-0 max-w-full items-center gap-2 text-center group">
+                    <div className="bg-black rounded-xl group-hover:scale-110 transition-transform duration-300 shrink-0 border border-primary/20 w-9 h-9 sm:w-11 sm:h-11 overflow-hidden flex items-center justify-center p-0.5">
+                        <img src="/Logo.png" alt="Bar 4 Bar" className="h-full w-full object-contain" />
+                    </div>
+                    <div className="flex min-w-0 flex-col text-left">
+                        <span className="truncate font-bold font-headline text-base sm:text-lg md:text-xl leading-none tracking-tight">Bar 4 Bar</span>
+                        <p className="hidden sm:block text-[7px] md:text-[8px] text-muted-foreground font-tagline -mt-0.5 uppercase tracking-widest opacity-70 truncate">Studio Rhyme Book</p>
+                    </div>
+                </Link>
+            </div>
+
+            <div className="relative z-10 flex h-14 items-center justify-between gap-1 min-w-0">
+            <div className="flex items-center justify-start gap-2 min-w-0 flex-1 basis-0 max-w-[42%] sm:max-w-none">
                 {albumId && trackId && (
                   <Button 
                     variant="ghost" 
@@ -112,26 +126,14 @@ export function Header() {
                     <span className="hidden lg:inline font-code uppercase tracking-tighter truncate max-w-[100px]">{generatingMessage}</span>
                 </div>
             </div>
-            
-            <div className="flex justify-center items-center overflow-hidden">
-                <Link href="/" className="flex items-center space-x-3 text-center group whitespace-nowrap">
-                    <div className="bg-black rounded-xl group-hover:scale-110 transition-transform duration-300 shrink-0 border border-primary/20 w-11 h-11 overflow-hidden flex items-center justify-center p-0.5">
-                        <img src="/Logo.png" alt="Bar 4 Bar" className="h-full w-full object-contain" />
-                    </div>
-                    <div className="flex flex-col text-left">
-                        <span className="font-bold font-headline text-lg md:text-xl leading-none tracking-tight">Bar 4 Bar</span>
-                        <p className="hidden xs:block text-[7px] md:text-[8px] text-muted-foreground font-tagline -mt-0.5 uppercase tracking-widest opacity-70">Studio Rhyme Book</p>
-                    </div>
-                </Link>
-            </div>
 
-          <nav className="flex items-center justify-end space-x-1 md:space-x-2 min-w-0">
+          <nav className="flex items-center justify-end gap-0.5 sm:gap-1 md:gap-2 min-w-0 flex-1 basis-0 max-w-[48%] sm:max-w-none shrink-0">
             <TooltipProvider>
             {!loading && user && (
               <>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 md:h-9 w-8 md:w-9 text-primary hover:bg-primary/10" onClick={() => setGuideOpen(true)}>
+                        <Button variant="ghost" size="icon" className="hidden md:inline-flex h-8 md:h-9 w-8 md:w-9 text-primary hover:bg-primary/10 shrink-0" onClick={() => setGuideOpen(true)}>
                             <HelpCircle className="h-5 w-5" />
                         </Button>
                     </TooltipTrigger>
@@ -210,6 +212,7 @@ export function Header() {
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => router.push('/')}><LayoutDashboard className="mr-2 h-4 w-4" /><span>Dashboard</span></DropdownMenuItem>
+                      <DropdownMenuItem className="md:hidden" onClick={() => setGuideOpen(true)}><HelpCircle className="mr-2 h-4 w-4 text-primary" /><span>Studio Manual</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/studio-progress')}><Trophy className="mr-2 h-4 w-4 text-amber-400" /><span>Studio Progress</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage')}><Droplets className="mr-2 h-4 w-4" /><span>Ink Store & Settings</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=cloud')}><Star className="mr-2 h-4 w-4 text-pink-400" /><span>Studio Tier</span></DropdownMenuItem>
@@ -226,6 +229,7 @@ export function Header() {
             )}
             </TooltipProvider>
           </nav>
+            </div>
       </div>
     </header>
     <BugReportDialog open={bugReportOpen} onOpenChange={setBugReportOpen} />

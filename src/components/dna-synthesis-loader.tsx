@@ -215,7 +215,7 @@ function LogoMotif({ logoSize, constrainHeight }: { logoSize: number; constrainH
       style={{
         opacity: 0.35,
         width: constrainHeight
-          ? `min(${logoSize}px, 76vw, 30vh)`
+          ? `min(${Math.round(logoSize * 0.46)}px, 42vw, 26vh)`
           : `min(${logoSize}px, 82vw)`,
         height: 'auto',
         filter: 'drop-shadow(0 0 16px rgba(217,70,239,0.12))',
@@ -448,7 +448,9 @@ export function DNASynthesisLoader({
           ref={logoAnchorRef}
           className="absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0"
           style={{
-            width: constrainHeight ? 'min(62%, 240px)' : 'min(58%, 260px)',
+            width: constrainHeight
+              ? `min(${Math.round(cfg.logo * 0.46)}px, 42vw, 26vh)`
+              : 'min(58%, 260px)',
             aspectRatio: '1',
           }}
           aria-hidden
