@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,65 @@ type StudioGuidedTourProps = {
 };
 
 const PAD = 8;
+const MOBILE_BREAKPOINT = 768;
+const MOBILE_CARD_HEIGHT = 220;
+/** Tab bar + quest progress floating above it on mobile */
+const MOBILE_BOTTOM_CHROME = 148;
+const MOBILE_TOP_CARD_STEPS = new Set(['bar-workstation', 'generation', 'save', 'dna-drop']);
+
+function useCompactViewport() {
+  const [compact, setCompact] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const sync = () => setCompact(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
+  return compact;
+}
+
+function getScrollParent(el: HTMLElement): HTMLElement | null {
+  let node: HTMLElement | null = el.parentElement;
+  while (node && node !== document.body) {
+    const { overflowY } = getComputedStyle(node);
+    if ((overflowY === 'auto' || overflowY === 'scroll') && node.scrollHeight > node.clientHeight + 1) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
+
+function scrollTargetVisible(
+  el: HTMLElement,
+  topReserve: number,
+  bottomReserve: number,
+  preferEnd: boolean
+) {
+  const parent = getScrollParent(el);
+  if (parent) {
+    const elRect = el.getBoundingClientRect();
+    const maxBottom = window.innerHeight - bottomReserve;
+    if (elRect.top < topReserve) {
+      parent.scrollBy({ top: elRect.top - topReserve - 8, behavior: 'smooth' });
+    } else if (elRect.bottom > maxBottom) {
+      parent.scrollBy({ top: elRect.bottom - maxBottom + 8, behavior: 'smooth' });
+    }
+    return;
+  }
+
+  el.scrollIntoView({ block: preferEnd ? 'end' : 'start', behavior: 'smooth' });
+  const elRect = el.getBoundingClientRect();
+  const maxBottom = window.innerHeight - bottomReserve;
+  if (elRect.bottom > maxBottom) {
+    window.scrollBy({ top: elRect.bottom - maxBottom + 8, behavior: 'smooth' });
+  } else if (elRect.top < topReserve) {
+    window.scrollBy({ top: elRect.top - topReserve - 8, behavior: 'smooth' });
+  }
+}
 
 export function StudioGuidedTour({
   active,
@@ -28,48 +87,129 @@ export function StudioGuidedTour({
 }: StudioGuidedTourProps) {
   const step = steps[stepIndex];
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const [cardPlacement, setCardPlacement] = useState<'top' | 'bottom'>('bottom');
   const [mounted, setMounted] = useState(false);
+  const isCompact = useCompactViewport();
+  const scrollStyledElRef = useRef<HTMLElement | null>(null);
+  const measureTimersRef = useRef<number[]>([]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  const clearScrollMargins = useCallback(() => {
+    if (!scrollStyledElRef.current) return;
+    scrollStyledElRef.current.style.scrollMarginTop = '';
+    scrollStyledElRef.current.style.scrollMarginBottom = '';
+    scrollStyledElRef.current = null;
+  }, []);
+
+  const clearMeasureTimers = useCallback(() => {
+    measureTimersRef.current.forEach((id) => window.clearTimeout(id));
+    measureTimersRef.current = [];
+  }, []);
+
   const measureTarget = useCallback(() => {
     if (!active || !step) {
+      clearScrollMargins();
       setRect(null);
       return;
     }
-    onBeforeStep?.(step);
+
     const el = document.querySelector(step.target);
     if (!el) {
+      clearScrollMargins();
       setRect(null);
       return;
     }
-    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    requestAnimationFrame(() => {
-      setRect(el.getBoundingClientRect());
-    });
-  }, [active, step, onBeforeStep]);
+
+    clearScrollMargins();
+
+    const compact = window.innerWidth < MOBILE_BREAKPOINT;
+    const htmlEl = el as HTMLElement;
+
+    const capture = () => {
+      const next = htmlEl.getBoundingClientRect();
+      if (next.width === 0 && next.height === 0) return;
+
+      let placement: 'top' | 'bottom' = 'bottom';
+      if (compact) {
+        const bottomCardReserve = MOBILE_CARD_HEIGHT + MOBILE_BOTTOM_CHROME + 20;
+        const targetInLowerHalf = next.top > window.innerHeight * 0.42;
+        const forceTop = MOBILE_TOP_CARD_STEPS.has(step.id);
+        placement = forceTop || targetInLowerHalf ? 'top' : 'bottom';
+        setCardPlacement(placement);
+
+        const topReserve = placement === 'top' ? MOBILE_CARD_HEIGHT + 88 : 72;
+        const bottomReserve =
+          placement === 'bottom' ? bottomCardReserve : MOBILE_BOTTOM_CHROME + 24;
+
+        scrollTargetVisible(htmlEl, topReserve, bottomReserve, placement === 'top');
+
+        window.setTimeout(() => {
+          setRect(htmlEl.getBoundingClientRect());
+        }, placement === 'top' ? 320 : 280);
+      } else {
+        setCardPlacement('bottom');
+        htmlEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        setRect(next);
+      }
+    };
+
+    if (compact) {
+      scrollStyledElRef.current = htmlEl;
+    }
+
+    requestAnimationFrame(capture);
+    measureTimersRef.current.push(window.setTimeout(capture, 180));
+    measureTimersRef.current.push(window.setTimeout(capture, 420));
+  }, [active, step, clearScrollMargins]);
 
   useLayoutEffect(() => {
+    clearMeasureTimers();
+    if (!active || !step) {
+      clearScrollMargins();
+      setRect(null);
+      return;
+    }
+
+    onBeforeStep?.(step);
     measureTarget();
-    if (!active) return;
+
     const onResize = () => measureTarget();
     window.addEventListener('resize', onResize);
     window.addEventListener('scroll', onResize, true);
     return () => {
+      clearMeasureTimers();
+      clearScrollMargins();
       window.removeEventListener('resize', onResize);
       window.removeEventListener('scroll', onResize, true);
     };
-  }, [active, stepIndex, measureTarget]);
+  }, [active, stepIndex, step, onBeforeStep, measureTarget, clearMeasureTimers, clearScrollMargins]);
 
   if (!mounted || !active || !step) return null;
 
   const isLast = stepIndex >= steps.length - 1;
-  const cardTop = rect ? Math.min(rect.bottom + 16, window.innerHeight - 220) : 80;
-  const cardLeft = rect
-    ? Math.max(16, Math.min(rect.left, window.innerWidth - 320))
-    : 16;
+
+  let cardTop: number | undefined;
+  let cardLeft: number | undefined;
+
+  if (!isCompact && rect) {
+    const cardHeight = 220;
+    const cardWidth = Math.min(300, window.innerWidth - 32);
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    if (spaceBelow >= cardHeight + 24) {
+      cardTop = rect.bottom + 16;
+    } else if (spaceAbove >= cardHeight + 24) {
+      cardTop = rect.top - cardHeight - 16;
+    } else {
+      cardTop = Math.min(rect.bottom + 16, window.innerHeight - cardHeight - 16);
+    }
+
+    cardLeft = Math.max(16, Math.min(rect.left, window.innerWidth - cardWidth - 16));
+  }
 
   return createPortal(
     <div className="fixed inset-0 z-[6000] pointer-events-none">
@@ -89,8 +229,15 @@ export function StudioGuidedTour({
       )}
 
       <div
-        className="fixed z-[6001] w-[min(300px,calc(100vw-32px))] pointer-events-auto animate-in fade-in slide-in-from-bottom-2 duration-300"
-        style={{ top: cardTop, left: cardLeft }}
+        className={cn(
+          'fixed z-[6001] pointer-events-auto animate-in fade-in duration-300 w-auto max-w-none',
+          isCompact
+            ? cardPlacement === 'top'
+              ? 'left-4 right-4 top-[max(4.25rem,env(safe-area-inset-top))] slide-in-from-top-2'
+              : 'left-4 right-4 bottom-[max(calc(3.75rem+env(safe-area-inset-bottom)),1rem)] slide-in-from-bottom-2'
+            : 'w-[min(300px,calc(100vw-32px))] slide-in-from-bottom-2'
+        )}
+        style={isCompact ? undefined : { top: cardTop ?? 80, left: cardLeft ?? 16 }}
       >
         <div className="rounded-xl border border-primary/30 bg-card shadow-[0_0_40px_rgba(59,130,246,0.25)] p-4 space-y-3">
           <div className="flex items-start justify-between gap-2">

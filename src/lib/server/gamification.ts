@@ -266,6 +266,7 @@ async function syncLeaderboardEntry(
       barsWritten7d: summary.barsWritten7d,
       currentStreak: summary.currentStreak,
       tracksCompleted30d: summary.tracksCompleted30d,
+      profileSlug: summary.publicProfile && summary.profileSlug ? summary.profileSlug : null,
       updatedAt: new Date().toISOString(),
     },
     { merge: true }
@@ -285,6 +286,7 @@ async function syncPublicProfile(
   }
 
   const badgeIds = Object.keys(summary.unlockedAchievements);
+  const albumCoverUrls = await getPublicAlbumCoverUrls(uid);
   await db.doc(`publicProfiles/${summary.profileSlug}`).set(
     {
       userId: uid,
@@ -294,6 +296,7 @@ async function syncPublicProfile(
       currentStreak: summary.currentStreak,
       longestStreak: summary.longestStreak,
       badgeIds,
+      albumCoverUrls,
       updatedAt: new Date().toISOString(),
     },
     { merge: true }
@@ -655,15 +658,39 @@ export async function getLeaderboardSnapshot(weekKey = getWeekKey(), userId?: st
     .limit(50)
     .get();
 
-  const mapEntry = (doc: { id: string; data: () => Record<string, unknown> }) => ({
+  type LeaderboardRow = { userId: string; profileSlug?: string | null; [key: string]: unknown };
+
+  const mapEntry = (doc: { id: string; data: () => Record<string, unknown> }): LeaderboardRow => ({
     userId: doc.id,
     ...doc.data(),
   });
 
-  const barsWritten7d = snap.docs.map(mapEntry);
-  const longestStreak = streakSnap.docs.map(mapEntry);
-  const tracksCompleted30d = tracksSnap.docs.map(mapEntry);
-  const xp = xpSnap.docs.map(mapEntry);
+  const enrichWithProfileSlugs = async (rows: LeaderboardRow[]) => {
+    const missing = [...new Set(rows.filter((r) => !r.profileSlug).map((r) => r.userId))];
+    if (!missing.length) return rows;
+
+    const slugByUserId = new Map<string, string>();
+    for (let i = 0; i < missing.length; i += 10) {
+      const chunk = missing.slice(i, i + 10);
+      const profilesSnap = await db.collection('publicProfiles').where('userId', 'in', chunk).get();
+      profilesSnap.docs.forEach((doc) => {
+        const data = doc.data();
+        if (data.userId) slugByUserId.set(String(data.userId), doc.id);
+      });
+    }
+
+    return rows.map((row) => ({
+      ...row,
+      profileSlug: row.profileSlug || slugByUserId.get(row.userId) || undefined,
+    }));
+  };
+
+  const [barsWritten7d, longestStreak, tracksCompleted30d, xp] = await Promise.all([
+    enrichWithProfileSlugs(snap.docs.map(mapEntry)),
+    enrichWithProfileSlugs(streakSnap.docs.map(mapEntry)),
+    enrichWithProfileSlugs(tracksSnap.docs.map(mapEntry)),
+    enrichWithProfileSlugs(xpSnap.docs.map(mapEntry)),
+  ]);
 
   const findUserRank = (rows: { userId: string }[], valueKey: string) => {
     if (!userId) return null;
@@ -766,7 +793,30 @@ export async function getPublicProfile(slug: string) {
   const db = await getDb();
   const snap = await db.doc(`publicProfiles/${slug}`).get();
   if (!snap.exists) return null;
-  return snap.data();
+  const data = snap.data()!;
+  const userId = String(data.userId || '');
+  const albumCoverUrls = userId ? await getPublicAlbumCoverUrls(userId) : [];
+  return { ...data, albumCoverUrls };
+}
+
+export async function getPublicAlbumCoverUrls(userId: string): Promise<string[]> {
+  const db = await getDb();
+  const albumsSnap = await db.collection(`users/${userId}/albums`).get();
+
+  return albumsSnap.docs
+    .filter((doc) => doc.id !== 'unassigned')
+    .map((doc) => {
+      const data = doc.data();
+      const url = typeof data.coverArtUrl === 'string' ? data.coverArtUrl.trim() : '';
+      if (!url) return null;
+      return {
+        url,
+        createdAt: typeof data.createdAt === 'string' ? data.createdAt : '',
+      };
+    })
+    .filter((entry): entry is { url: string; createdAt: string } => entry !== null)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((entry) => entry.url);
 }
 
 export { countNonEmptyBars, slugify };

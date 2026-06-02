@@ -151,7 +151,8 @@ function UsagePageContent() {
   };
 
   return (
-    <div className="container mx-auto max-w-5xl py-8 px-4">
+    <div className="relative min-h-[calc(100vh-3.5rem)] overflow-hidden pb-12">
+      <div className="container relative z-10 mx-auto max-w-5xl py-8 px-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
@@ -492,6 +493,7 @@ function UsagePageContent() {
               </AlertDialogFooter>
           </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 }

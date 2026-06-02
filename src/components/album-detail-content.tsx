@@ -691,17 +691,17 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
             <div className={cn('grid gap-8 pb-40', isUnassignedVault ? 'grid-cols-1 xl:grid-cols-12' : 'grid-cols-1 lg:grid-cols-3')}>
                 <div className={cn('space-y-10', isUnassignedVault ? 'xl:col-span-8' : 'lg:col-span-2')}>
                     <Card className="bg-black/40 border-white/5 backdrop-blur-3xl shadow-2xl overflow-hidden rounded-2xl min-w-0">
-                        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6 md:p-8 border-b border-white/5">
-                            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                        <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-4 sm:p-6 md:p-8 border-b border-white/5">
+                            <div className="flex items-center gap-3 sm:gap-4 min-w-0 shrink-0">
                                 <div className="p-2 sm:p-3 bg-primary/10 rounded-xl border border-primary/20 shrink-0">
                                     {isUnassignedVault ? <CassetteTape className="h-6 w-6 sm:h-8 sm:w-8 text-primary" /> : <ListMusic className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />}
                                 </div>
                                 <div className="min-w-0">
-                                    <CardTitle className="font-headline text-xl sm:text-2xl md:text-3xl uppercase tracking-tighter truncate">{isUnassignedVault ? 'Idea Vault' : 'Tracklist'}</CardTitle>
-                                    <p className="text-[8px] sm:text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-0.5">Asset Reordering & Management</p>
+                                    <CardTitle className="font-headline text-lg sm:text-xl md:text-2xl lg:text-3xl uppercase tracking-tighter whitespace-nowrap">{isUnassignedVault ? 'Idea Vault' : 'Tracklist'}</CardTitle>
+                                    <p className="text-[8px] sm:text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-0.5 whitespace-nowrap">Asset Reordering & Management</p>
                                 </div>
                             </div>
-                            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:justify-end shrink-0">
+                            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto md:justify-end shrink-0">
                                 <Button onClick={() => setCreateTrackOpen(true)} className="h-9 px-3 sm:px-6 font-bold text-[10px] uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 flex-1 sm:flex-none min-w-0">
                                     <PlusCircle className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Add Track
                                 </Button>

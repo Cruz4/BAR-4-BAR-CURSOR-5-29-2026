@@ -243,51 +243,49 @@ function SmartStructureDialog({ open, onOpenChange, onApply }: any) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl bg-card border-2">
-        <DialogHeader>
-          <DialogTitle className="font-headline text-2xl flex items-center gap-2">
-            <ClipboardPaste className="text-primary h-6 w-6" /> Smart Structure Paste
+      <DialogContent className="sm:max-w-2xl w-[min(96vw,42rem)] max-h-[min(88dvh,calc(100dvh-1.5rem))] flex flex-col gap-0 overflow-hidden bg-card border-2 p-4 sm:p-6">
+        <DialogHeader className="shrink-0 pr-8">
+          <DialogTitle className="font-headline text-xl sm:text-2xl flex items-center gap-2">
+            <ClipboardPaste className="text-primary h-5 w-5 sm:h-6 sm:w-6 shrink-0" /> Smart Structure Paste
           </DialogTitle>
           <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             Paste raw lyrics — we&apos;ll split them into Verse, Hook, and other blocks automatically.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-4">
-          <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
-              Tip: label sections with [ brackets ]
-            </p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Put each part name on its own line in square brackets so the system knows exactly where Verse, Hook, Bridge, etc. begin. Lines below a label belong to that section until the next label.
-            </p>
-            <div className="rounded border border-border/40 bg-background/60 p-3 font-code text-xs text-muted-foreground whitespace-pre-line leading-relaxed">
+        <div className="flex-1 min-h-0 overflow-y-auto studio-scrollbar px-1 py-3 space-y-3">
+          <details className="rounded-lg border border-primary/20 bg-primary/5 p-3 group open:pb-3">
+            <summary className="text-[10px] font-bold uppercase tracking-widest text-primary cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center justify-between gap-2">
+              <span>Tip: label sections with [ brackets ]</span>
+              <span className="text-[9px] font-code text-muted-foreground normal-case tracking-normal group-open:hidden">Show example</span>
+            </summary>
+            <div className="mt-3 space-y-2">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Put each part name on its own line in square brackets. Lines below a label belong to that section until the next label.
+              </p>
+              <div className="rounded border border-border/40 bg-background/60 p-2.5 font-code text-[11px] text-muted-foreground whitespace-pre-line leading-relaxed max-h-[9rem] overflow-y-auto studio-scrollbar">
 {`[Verse 1]
 First line of your verse
 Second line here
 
 [Hook]
 Catchy hook line one
-Hook line two
 
 [Verse 2]
-Back to the story
-Another bar
-
-[Bridge]
-Optional bridge lines`}
+Back to the story`}
+              </div>
+              <p className="text-[10px] text-muted-foreground/80">
+                No brackets? No problem — the AI will still guess Verse vs Hook from context.
+              </p>
             </div>
-            <p className="text-[10px] text-muted-foreground/80">
-              No brackets? No problem — the AI will still guess Verse vs Hook from context.
-            </p>
-          </div>
+          </details>
           <Textarea 
             placeholder="Paste your lyrics here — use [Verse], [Hook], [Bridge] labels for best results..."
-            className="min-h-[300px] font-code text-sm bg-background/50 border-white/10"
+            className="min-h-[220px] sm:min-h-[260px] h-[min(40vh,340px)] max-h-[min(55vh,480px)] resize-y font-code text-sm bg-background/50 border border-white/10 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset focus-visible:ring-offset-0"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
           />
         </div>
-        <DialogFooter>
+        <DialogFooter className="shrink-0 pt-3 border-t border-white/5">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleAnalyze} disabled={!inputText.trim() || isProcessing} className="font-bold gap-2" title={tooltip('analyzeStructure')}>
             {isProcessing ? <StudioLoader size="sm" /> : <ClipboardPaste className="h-4 w-4" />}
@@ -909,8 +907,9 @@ function NeuralStripItem({ text, active, color, onClick }: { text: string, activ
 
 // --- Center Panel Component ---
 
-function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true }: any) {
+function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false }: any) {
   const [fontSize, setFontSize] = useState<'sm' | 'md' | 'lg'>('md');
+  const lyricsViewportRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { tooltip, buttonLabel, getCost, getEffectiveCost } = useInkCosts();
   const { toast } = useToast();
@@ -919,19 +918,50 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
   const lineHeights = { sm: '22px', md: '32px', lg: '42px' };
   const activeLineHeight = lineHeights[fontSize];
 
+  const snapBarTextareaHeight = useCallback(
+    (el: HTMLTextAreaElement) => {
+      const lineHeightPx = parseInt(lineHeights[fontSize], 10);
+      el.style.minHeight = '0px';
+      el.style.height = '0px';
+      const scrollH = el.scrollHeight;
+      const snapped = Math.max(lineHeightPx, Math.ceil(scrollH / lineHeightPx) * lineHeightPx);
+      el.style.height = `${snapped}px`;
+      el.style.minHeight = `${lineHeightPx}px`;
+    },
+    [fontSize]
+  );
+
   const syncHeights = useCallback(() => {
-    requestAnimationFrame(() => {
-        const textareas = document.querySelectorAll('textarea[id^="bar-input-"]');
-        textareas.forEach((el: any) => {
-          el.style.height = 'auto';
-          el.style.height = el.scrollHeight + 'px';
-        });
-    });
-  }, []);
+    const run = () => {
+      document.querySelectorAll<HTMLTextAreaElement>('textarea[id^="bar-input-"]').forEach(snapBarTextareaHeight);
+    };
+    requestAnimationFrame(() => requestAnimationFrame(run));
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      void document.fonts.ready.then(() => requestAnimationFrame(run));
+    }
+    window.setTimeout(run, 120);
+  }, [snapBarTextareaHeight]);
 
   useEffect(() => {
     syncHeights();
-  }, [fontSize, track.sections, syncHeights]);
+  }, [fontSize, track.sections, syncHeights, mobileActive, leftCollapsed, rightCollapsed]);
+
+  useEffect(() => {
+    const viewport = lyricsViewportRef.current;
+    if (!viewport) return;
+
+    let raf = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => syncHeights());
+    });
+    observer.observe(viewport);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
+  }, [syncHeights]);
 
   const notebookStyle = {
     backgroundColor: 'transparent',
@@ -1165,7 +1195,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
         </div>
       </div>
       
-      <div id="lyrics-viewport" data-tour="lyrics-sheet" className="flex-1 relative overflow-x-hidden overflow-y-auto min-h-0 studio-scrollbar max-md:[--lyrics-gutter:2.75rem]" style={notebookStyle}>
+      <div id="lyrics-viewport" ref={lyricsViewportRef} data-tour="lyrics-sheet" className="flex-1 relative overflow-x-hidden overflow-y-auto min-h-0 studio-scrollbar max-md:[--lyrics-gutter:2rem]" style={notebookStyle}>
         <div className="w-full max-full pb-12">
           {!track.sections || track.sections.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-[400px] text-center gap-6 animate-in fade-in zoom-in duration-1000">
@@ -1180,7 +1210,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
           ) : (
             (track.sections || []).map((section: any) => (
                 <div key={section.id} className="relative">
-                <div id={`section-header-${section.id}`} style={{ height: `calc(${activeLineHeight} * 3)` }} className="flex items-end pb-2 pl-[120px] max-md:pl-[2.75rem]">
+                <div id={`section-header-${section.id}`} style={{ height: `calc(${activeLineHeight} * 2)` }} className="flex items-end pl-[120px] max-md:pl-[2rem]">
                     <h3 className="text-lg md:text-2xl font-headline font-bold text-sky-400 uppercase leading-none">[{section.type}]</h3>
                 </div>
                 {(section.bars || []).map((bar: any) => {
@@ -1188,8 +1218,8 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                     return (
                         <div key={`${section.id}-${bar.idx}`} className={cn("group relative flex max-md:flex-row md:block items-start transition-colors h-auto max-md:px-1", isSelected && "bg-primary/10", bar.justGenerated && "animate-line-glow")} style={{ minHeight: activeLineHeight }}>
                         <span className={cn(
-                          "font-mono text-muted-foreground/40 text-right font-bold shrink-0 pt-1 z-10",
-                          "max-md:relative max-md:w-9 max-md:mr-1 max-md:text-[11px]",
+                          "font-mono text-muted-foreground/40 text-right font-bold shrink-0 z-10",
+                          "max-md:relative max-md:w-7 max-md:mr-0.5 max-md:text-[10px]",
                           "md:absolute md:left-[50px] md:w-10 md:text-muted-foreground/30",
                           fontSizes[fontSize]
                         )} style={{ lineHeight: activeLineHeight }}>{String(bar.idx).padStart(2, '0')}</span>
@@ -1208,16 +1238,14 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                             onKeyDown={(e) => handleKeyDown(e, section.id, bar.idx)}
                             onChange={(e: any) => { 
                                 const text = e.target.value;
-                                e.target.style.height = 'auto';
-                                e.target.style.height = e.target.scrollHeight + 'px';
+                                snapBarTextareaHeight(e.target);
                                 onUpdateTrack({ sections: track.sections.map((s: any) => s.id === section.id ? { ...s, bars: s.bars.map((b: any) => b.idx === bar.idx ? { ...b, text, accepted: true, syllables: text.trim().split(' ').length } : b) } : s) });
                                 setActiveBarText(text); 
                             }} 
                             onFocus={(e: any) => { 
                                 setActiveGeneratorBar({ sectionId: section.id, idx: bar.idx }); 
                                 setActiveBarText(bar.text || '');
-                                e.target.style.height = 'auto';
-                                e.target.style.height = e.target.scrollHeight + 'px';
+                                snapBarTextareaHeight(e.target);
                             }} 
                             className={cn(
                                 "border-0 bg-transparent p-0 focus-visible:ring-0 font-code font-bold w-full shadow-none z-10 tracking-normal resize-none overflow-hidden whitespace-pre-wrap break-words",
@@ -2256,7 +2284,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       <FreeTierExpectationsBanner isPro={isPro} />
       <div className="flex flex-1 min-h-0 overflow-hidden w-full">
       <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={mobilePanelTab === 'workstation'} />
-      <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={mobilePanelTab === 'lyrics'} />
+      <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} />
       <RightPanel 
         track={track} 
         album={album} 

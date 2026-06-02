@@ -187,20 +187,21 @@ function LoginForm() {
   return (
     <div className="min-h-screen flex flex-col selection:bg-primary/30 overflow-x-hidden relative">
       {/* FIXED HEADER - ABSOLUTELY CENTERED BRANDING */}
-      <header className="fixed top-0 left-0 right-0 h-16 border-b border-white/5 bg-background/70 backdrop-blur-xl z-[200] flex items-center justify-between px-6 shadow-2xl">
-          {/* Centered Logo & Title - ABSOLUTE MIDPOINT LOCK */}
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-4 z-10">
-              <div className="w-10 h-10 bg-white rounded-xl overflow-hidden flex items-center justify-center p-1.5 shadow-2xl">
+      <header className="fixed top-0 left-0 right-0 h-16 border-b border-white/5 bg-background/70 backdrop-blur-xl z-[200] grid grid-cols-[1fr_auto_1fr] items-center px-3 sm:px-6 shadow-2xl gap-2">
+          <div aria-hidden className="min-w-0" />
+
+          <div className="flex items-center justify-center gap-2 sm:gap-4 min-w-0 max-w-[min(100%,14rem)] sm:max-w-none">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white rounded-xl overflow-hidden flex items-center justify-center p-1.5 shadow-2xl shrink-0">
                   <img src="/Logo.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
-              <h1 className="text-2xl font-headline font-bold text-white tracking-tighter uppercase">Bar 4 Bar</h1>
+              <h1 className="hidden sm:block text-lg sm:text-2xl font-headline font-bold text-white tracking-tighter uppercase truncate">Bar 4 Bar</h1>
           </div>
 
-          <div className="w-10 h-10" /> {/* Spacer for layout balance */}
-
-          <Button onClick={scrollToLogin} className="bg-primary hover:bg-primary/90 text-white font-bold h-9 px-5 gap-2 rounded-md shadow-lg relative z-20 transition-all hover:scale-105 active:scale-95">
-              <LogIn className="h-4 w-4" /> Login
+          <div className="flex justify-end min-w-0">
+          <Button onClick={scrollToLogin} className="bg-primary hover:bg-primary/90 text-white font-bold h-9 px-3 sm:px-5 gap-1.5 sm:gap-2 rounded-md shadow-lg shrink-0 transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm">
+              <LogIn className="h-4 w-4 shrink-0" /> <span className="truncate">Login</span>
           </Button>
+          </div>
       </header>
 
       <main className="flex-grow flex flex-col mt-16 relative z-10">

@@ -93,9 +93,9 @@ export function Header() {
           </div>
       )}
       <div className="relative h-14 w-full px-2 sm:px-4 md:px-6">
-            {/* Logo centered — side columns cannot overlap it */}
-            <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center px-[4.75rem] sm:px-24 md:px-32">
-                <Link href="/" className="pointer-events-auto flex min-w-0 max-w-full items-center gap-2 text-center group">
+            {/* Logo centered — above side columns so clicks reach home / vault */}
+            <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-[4.75rem] sm:px-24 md:px-32">
+                <Link href="/" className="pointer-events-auto flex min-w-0 max-w-full items-center gap-2 text-center group" aria-label="Back to The Vault">
                     <div className="bg-black rounded-xl group-hover:scale-110 transition-transform duration-300 shrink-0 border border-primary/20 w-9 h-9 sm:w-11 sm:h-11 overflow-hidden flex items-center justify-center p-0.5">
                         <img src="/Logo.png" alt="Bar 4 Bar" className="h-full w-full object-contain" />
                     </div>
@@ -106,8 +106,8 @@ export function Header() {
                 </Link>
             </div>
 
-            <div className="relative z-10 flex h-14 items-center justify-between gap-1 min-w-0">
-            <div className="flex items-center justify-start gap-2 min-w-0 flex-1 basis-0 max-w-[42%] sm:max-w-none">
+            <div className="relative z-10 flex h-14 items-center justify-between gap-1 min-w-0 pointer-events-none [&_button]:pointer-events-auto [&_a]:pointer-events-auto">
+            <div className="flex items-center justify-start gap-2 min-w-0 flex-1 basis-0 max-w-[42%] sm:max-w-none pointer-events-none [&>*]:pointer-events-auto">
                 {albumId && trackId && (
                   <Button 
                     variant="ghost" 
@@ -127,7 +127,7 @@ export function Header() {
                 </div>
             </div>
 
-          <nav className="flex items-center justify-end gap-0.5 sm:gap-1 md:gap-2 min-w-0 flex-1 basis-0 max-w-[48%] sm:max-w-none shrink-0">
+          <nav className="flex items-center justify-end gap-0.5 sm:gap-1 md:gap-2 min-w-0 flex-1 basis-0 max-w-[48%] sm:max-w-none shrink-0 pointer-events-none [&>*]:pointer-events-auto">
             <TooltipProvider>
             {!loading && user && (
               <>

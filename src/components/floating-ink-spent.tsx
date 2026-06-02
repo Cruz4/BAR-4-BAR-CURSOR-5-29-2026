@@ -17,12 +17,22 @@ function inkAnchorY(actionName: string | undefined, pressY: number): number {
   return pressY;
 }
 
-/** Generation Workstation already renders its own embedded DNA loader */
-const WORKSTATION_INK_ACTIONS = new Set([
+/** Skip full-screen DNA/logo loader (ink + emoji sequence still runs) */
+const SKIP_DNA_OVERLAY_ACTIONS = new Set([
   'generateSongDraft',
   'analyzeRelayAssets',
   'generateRelayDraft',
+  'freestyleTranscription',
 ]);
+
+/** Full ink → -Ink → emoji timing without the DNA phase (matches pre-loader freestyle feel) */
+const FULL_EMOJI_SEQUENCE_MS = 7800;
+const SHORT_EMOJI_SEQUENCE_MS = 4800;
+
+function emojiSequenceDurationMs(actionName: string | undefined): number {
+  if (actionName === 'freestyleTranscription') return FULL_EMOJI_SEQUENCE_MS;
+  return SHORT_EMOJI_SEQUENCE_MS;
+}
 
 type InkNotification = {
   id: number;
@@ -53,7 +63,7 @@ export function FloatingInkSpent() {
     useEffect(() => {
         if (!lastSpent || lastSpent.amount <= 0) return;
 
-        const skipDnaOverlay = WORKSTATION_INK_ACTIONS.has(lastSpent.actionName ?? '');
+        const skipDnaOverlay = SKIP_DNA_OVERLAY_ACTIONS.has(lastSpent.actionName ?? '');
 
         const id = Date.now();
         const anchorY = inkAnchorY(lastSpent.actionName, lastSpent.pressY);
@@ -90,9 +100,10 @@ export function FloatingInkSpent() {
             }, 7800);
             timersRef.current.push(cleanup);
         } else {
+            const durationMs = emojiSequenceDurationMs(lastSpent.actionName);
             const cleanup = setTimeout(() => {
                 setNotifications(prev => prev.filter(n => n.id !== id));
-            }, 4800);
+            }, durationMs);
             timersRef.current.push(cleanup);
         }
     }, [lastSpent]);
@@ -157,7 +168,7 @@ export function FloatingInkSpent() {
                             />
                         </motion.div>
 
-                        {/* PHASE 3: DNA SYNTHESIS — centered (skipped when Workstation already shows loader) */}
+                        {/* PHASE 3: DNA SYNTHESIS — centered (skipped when inline UI already active) */}
                         {n.showDna && !n.skipDnaOverlay && (
                             <motion.div
                                 initial={{ opacity: 0 }}

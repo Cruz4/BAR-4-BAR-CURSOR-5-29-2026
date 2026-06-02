@@ -1472,7 +1472,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
             >
               <X className="h-5 w-5" />
             </Button>
-            <div className="flex items-center min-w-0 flex-1 pr-10">
+            <div className="flex items-center min-w-0 flex-1 pr-[4.5rem] sm:pr-10">
                 {step > 0 && <Button variant="ghost" size="icon" className="h-8 w-8 mr-1 sm:mr-2 rounded-full shrink-0" onClick={() => {
                     if (step === 10 && wizardState.analysis) setStep(3);
                     else if (step === 10) setStep(0);
@@ -1486,6 +1486,12 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                     <span className="truncate">Generation Workstation</span>
                 </DialogTitle>
                 <DialogDescription className="sr-only">Step-by-step neural synthesis and calibration.</DialogDescription>
+                <Badge
+                  variant="outline"
+                  className="sm:hidden ml-auto shrink-0 h-4 px-1.5 text-[7px] font-bold uppercase tracking-widest border-primary/20 text-primary whitespace-nowrap"
+                >
+                  {step === 0 ? 'Mode Select' : step === 10 ? 'Calibration Hub' : step === 5 ? 'Approval Step' : 'Analysis Step'}
+                </Badge>
             </div>
             <div className="hidden sm:flex items-center gap-4 pr-12 shrink-0">
                 <Badge variant="outline" className="h-5 px-2 text-[9px] font-bold uppercase tracking-widest border-primary/20 text-primary">
@@ -1557,7 +1563,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
             </div>
           </div>
 
-          <div className={cn('flex-1 min-h-0 flex flex-col relative z-10 overflow-y-auto studio-scrollbar', isGenerating && 'invisible pointer-events-none')}>
+          <div className={cn('flex-1 min-h-0 flex flex-col relative z-10 studio-scrollbar', step === 5 ? 'overflow-hidden' : 'overflow-y-auto', isGenerating && 'invisible pointer-events-none')}>
           {step === 0 && (
             <div className="flex flex-1 flex-col items-center justify-center w-full min-h-0 px-3 sm:px-8 py-8 sm:py-12 gap-6 sm:gap-9 md:gap-10 animate-in fade-in duration-700">
                 <div className="text-center space-y-2 sm:space-y-3 w-full shrink-0 max-w-5xl mx-auto">
@@ -2226,10 +2232,10 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           )}
 
           {step === 5 && wizardState.generatedVariant && (
-              <div className="flex-1 min-h-0 flex flex-col lg:flex-row items-stretch overflow-hidden animate-in fade-in slide-in-from-bottom-8 relative">
+              <div className="flex-1 min-h-0 flex flex-col overflow-y-auto lg:overflow-hidden lg:flex-row items-stretch animate-in fade-in slide-in-from-bottom-8 relative isolate">
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-500/8 via-transparent to-orange-500/6" aria-hidden />
-                  <div className="relative flex-1 min-h-0 min-w-0 flex flex-col order-1 lg:order-none py-3 px-2 sm:py-6 sm:px-4">
-                      <Card className="w-full flex-1 min-h-[220px] border-2 shadow-2xl relative overflow-hidden bg-notebook-hub">
+                  <div className="relative shrink-0 lg:flex-1 lg:min-h-0 lg:min-w-0 flex flex-col order-1 lg:order-none py-3 px-2 sm:py-6 sm:px-4 z-[1]">
+                      <Card className="w-full lg:flex-1 lg:min-h-0 border-2 shadow-2xl relative overflow-hidden bg-notebook-hub">
                         <style>{`
                             .bg-notebook-hub {
                                 background-image: 
@@ -2247,8 +2253,8 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                 }
                             }
                         `}</style>
-                        <ScrollArea className="h-full max-h-[min(52vh,520px)] lg:max-h-none studio-scrollbar">
-                            <div className="p-3 pt-4 sm:p-6 md:p-12 space-y-6 sm:space-y-12 pb-24 sm:pb-32">
+                        <div className="max-h-[min(40vh,360px)] lg:max-h-none lg:h-full overflow-y-auto overflow-x-hidden studio-scrollbar overscroll-contain">
+                            <div className="p-3 pt-4 sm:p-6 md:p-12 space-y-6 sm:space-y-12 pb-6 sm:pb-32">
                                 {wizardState.generatedVariant.sections.map((s, idx) => (
                                     <div key={idx} className="relative">
                                         <div className="h-10 sm:h-16 md:h-24 flex items-end pb-1 sm:pb-2 pl-[2.75rem] sm:pl-[120px]">
@@ -2269,10 +2275,10 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                     </div>
                                 ))}
                             </div>
-                        </ScrollArea>
+                        </div>
                       </Card>
                   </div>
-                  <div className="relative w-full lg:w-[340px] shrink-0 order-2 lg:order-none max-h-[min(42vh,420px)] lg:max-h-none p-3 sm:p-6 space-y-4 sm:space-y-6 bg-black/50 border-t lg:border-t-0 lg:border-l border-white/10 overflow-y-auto studio-scrollbar">
+                  <div className="relative w-full lg:w-[340px] shrink-0 order-2 lg:order-none lg:min-h-0 p-3 sm:p-6 space-y-4 sm:space-y-6 bg-black/50 border-t lg:border-t-0 lg:border-l border-white/10 lg:overflow-y-auto studio-scrollbar z-[2]">
                       <div className="space-y-2">
                         <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Context Summary</h4>
                         <p className="text-[9px] text-muted-foreground font-code uppercase">Settings used for this synthesis.</p>
@@ -2369,7 +2375,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                           )}
                       </div>
 
-                      <div className="pt-6 border-t border-white/5 space-y-4">
+                      <div className="hidden lg:block pt-6 border-t border-white/5 space-y-4">
                         <Card className="border-primary/30 bg-primary/5 p-4 space-y-3">
                             <CardTitle className="text-[10px] font-bold uppercase text-primary flex items-center gap-2"><CheckCircle2 className="h-3 w-3" /> Apply Draft</CardTitle>
                             <p className="text-[9px] text-muted-foreground leading-relaxed">

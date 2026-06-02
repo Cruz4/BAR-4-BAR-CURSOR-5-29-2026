@@ -20,12 +20,14 @@ import { CookieConsent } from './cookie-consent';
 import { OfflineBanner } from './offline-banner';
 import { ServiceWorkerRegister } from './service-worker-register';
 import { StudioPageBackground } from './studio-page-background';
+import { SettingsControlAtmosphere } from './settings-control-atmosphere';
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLoginPage = pathname === '/login';
   const isPerformPage = pathname.endsWith('/perform');
   const isSharePage = pathname.startsWith('/share/');
+  const isSettingsRoute = pathname === '/usage' || pathname.startsWith('/usage/') || pathname === '/admin';
 
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
@@ -35,7 +37,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             <GamificationProvider>
             <UIStateProvider>
                 <FirebaseErrorListener />
-                <StudioPageBackground />
+                {isSettingsRoute ? <SettingsControlAtmosphere /> : <StudioPageBackground />}
                 <div className="relative z-10 flex min-h-screen flex-col flex-1 overflow-hidden">
                   {!isLoginPage && !isPerformPage && !isSharePage && <Header />}
                   <main className="flex-1 overflow-hidden flex flex-col">{children}</main>

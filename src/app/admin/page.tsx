@@ -356,7 +356,8 @@ export default function AdminPage() {
 
   return (
     <TooltipProvider>
-    <div className="container mx-auto py-12 px-4 max-w-[88rem] font-code">
+    <div className="relative min-h-[calc(100vh-3.5rem)] overflow-hidden pb-12">
+    <div className="container relative z-10 mx-auto py-12 px-4 max-w-[88rem] font-code">
       <div className="flex items-center gap-4 mb-10">
         <ShieldCheck className="h-12 w-12 text-primary" />
         <div>
@@ -612,6 +613,7 @@ export default function AdminPage() {
             </Card>
         </TabsContent>
       </Tabs>
+    </div>
     </div>
     </TooltipProvider>
   );

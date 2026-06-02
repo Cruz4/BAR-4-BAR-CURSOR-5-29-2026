@@ -17,6 +17,7 @@ import { linesToRhymeBars } from '@/lib/lyrics-units';
 type Entry = {
   userId: string;
   displayName?: string;
+  profileSlug?: string;
   barsWritten7d?: number;
   currentStreak?: number;
   tracksCompleted30d?: number;
@@ -71,6 +72,21 @@ function rankStyle(index: number) {
     value: 'text-orange-400/90',
     icon: null,
   };
+}
+
+function LeaderboardArtistName({ row }: { row: Entry }) {
+  const name = row.displayName || 'Artist';
+  if (row.profileSlug) {
+    return (
+      <Link
+        href={`/profile/${row.profileSlug}`}
+        className="font-bold text-sm uppercase truncate text-white/90 hover:text-primary transition-colors underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"
+      >
+        {name}
+      </Link>
+    );
+  }
+  return <span className="font-bold text-sm uppercase truncate text-white/90">{name}</span>;
 }
 
 function LeaderboardTable({
@@ -131,9 +147,7 @@ function LeaderboardTable({
               >
                 {RankIcon ? <RankIcon className="h-3.5 w-3.5" /> : i + 1}
               </Badge>
-              <span className="font-bold text-sm uppercase truncate text-white/90">
-                {row.displayName || 'Artist'}
-              </span>
+              <LeaderboardArtistName row={row} />
             </div>
             <div className={cn('relative flex items-center gap-1.5 font-code font-bold tabular-nums', style.value)}>
               {valueKey === 'currentStreak' && <Flame className="h-3.5 w-3.5 shrink-0" />}
@@ -302,7 +316,7 @@ export default function LeaderboardPage() {
         </Tabs>
 
         <p className="text-[10px] text-orange-200/35 text-center font-code">
-          Opt out anytime in Settings → Studio Profile → Hide from leaderboard.
+          Opt out anytime in Settings → Studio Profile → Hide from leaderboard. Names link to public profiles when enabled.
         </p>
       </div>
     </div>

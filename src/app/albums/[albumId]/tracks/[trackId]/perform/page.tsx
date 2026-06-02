@@ -256,11 +256,11 @@ export default function PerformancePage() {
         "h-screen flex flex-col overflow-hidden transition-colors duration-500",
         isDarkMode ? "bg-neutral-950 text-neutral-100" : "bg-neutral-50 text-neutral-900"
     )}>
-      <header className="shrink-0 z-[100] w-full border-b border-neutral-800 bg-background/95 backdrop-blur px-4 py-3 shadow-2xl">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4 shrink-0">
-                <Button variant="ghost" size="sm" onClick={handleExit} className="hover:bg-neutral-800 h-9 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">
-                    <ChevronLeft className="mr-2 h-4 w-4" /> Exit
+      <header className="shrink-0 z-[100] w-full border-b border-neutral-800 bg-background/95 backdrop-blur px-2 sm:px-4 py-2 sm:py-3 shadow-2xl">
+        <div className="max-w-7xl mx-auto flex flex-col gap-2 sm:gap-0 sm:flex-row sm:items-center sm:justify-between min-w-0">
+            <div className="flex items-center gap-2 sm:gap-4 shrink-0 min-w-0">
+                <Button variant="ghost" size="sm" onClick={handleExit} className="hover:bg-neutral-800 h-8 sm:h-9 px-2 sm:px-3 font-bold uppercase text-[9px] sm:text-[10px] tracking-widest text-muted-foreground shrink-0">
+                    <ChevronLeft className="mr-1 sm:mr-2 h-4 w-4" /> Exit
                 </Button>
                 <div className="hidden lg:block border-l border-neutral-800 pl-4">
                     <h1 className="text-sm font-headline font-bold uppercase tracking-tight truncate max-w-[200px]">{track.title}</h1>
@@ -268,11 +268,11 @@ export default function PerformancePage() {
                 </div>
             </div>
             
-            <div className="flex items-center gap-2 bg-neutral-900/80 p-1 rounded-lg border border-neutral-800 shadow-inner">
-                <div className="flex items-center gap-1.5 px-2 border-r border-neutral-800 mr-1">
-                    <Timer className="h-3.5 w-3.5 text-muted-foreground" />
+            <div className="flex items-center gap-1 sm:gap-2 bg-neutral-900/80 p-1 rounded-lg border border-neutral-800 shadow-inner min-w-0 overflow-x-auto max-w-full">
+                <div className="flex items-center gap-1 px-1.5 sm:px-2 border-r border-neutral-800 shrink-0">
+                    <Timer className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground shrink-0" />
                     <Select value={String(startDelay)} onValueChange={(v) => setStartDelay(parseInt(v))}>
-                        <SelectTrigger className="h-7 w-[65px] text-[10px] font-bold bg-transparent border-0 focus:ring-0">
+                        <SelectTrigger className="h-7 w-[52px] sm:w-[65px] text-[9px] sm:text-[10px] font-bold bg-transparent border-0 focus:ring-0 px-1">
                             <SelectValue placeholder="Delay" />
                         </SelectTrigger>
                         <SelectContent side="bottom" align="start" className="z-[150]">
@@ -283,8 +283,8 @@ export default function PerformancePage() {
                     </Select>
                 </div>
 
-                <div className="flex items-center gap-2 px-1 border-r border-neutral-800 mr-1">
-                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">Speed</span>
+                <div className="flex items-center gap-1 sm:gap-2 px-0.5 sm:px-1 border-r border-neutral-800 shrink-0">
+                    <span className="text-[8px] sm:text-[9px] font-bold text-muted-foreground uppercase tracking-tighter hidden min-[380px]:inline">Speed</span>
                     <ToggleGroup type="single" value={String(scrollSpeed)} onValueChange={(v) => v && setScrollSpeed(parseInt(v))} className="gap-0.5">
                         {[1, 2, 3, 4].map(s => (
                             <ToggleGroupItem key={s} value={String(s)} className="h-6 w-6 text-[9px] font-bold rounded-md data-[state=on]:bg-primary data-[state=on]:text-white">
@@ -299,39 +299,39 @@ export default function PerformancePage() {
                     size="sm" 
                     onClick={handleStartScroll}
                     className={cn(
-                        "h-8 px-4 font-bold text-[10px] uppercase tracking-widest gap-2 transition-all",
+                        "h-7 sm:h-8 px-2 sm:px-4 font-bold text-[8px] sm:text-[10px] uppercase tracking-widest gap-1 sm:gap-2 transition-all shrink-0",
                         isScrolling && "animate-pulse"
                     )}
                 >
                     {isScrolling ? (
                         <>
-                            <Square className="h-3.5 w-3.5 fill-current" /> Stop Scroll
+                            <Square className="h-3 w-3 sm:h-3.5 sm:w-3.5 fill-current shrink-0" /> <span className="hidden min-[400px]:inline">Stop</span>
                         </>
                     ) : (
                         <>
-                            <Play className="h-3.5 w-3.5 fill-current" /> Start Scroll
+                            <Play className="h-3 w-3 sm:h-3.5 sm:w-3.5 fill-current shrink-0" /> <span className="hidden min-[400px]:inline">Start</span>
                         </>
                     )}
                 </Button>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 self-end sm:self-auto">
                 <div className="hidden sm:flex items-center space-x-2 bg-neutral-800/50 p-1 rounded-full border border-neutral-700 px-3 h-9">
                     <Switch id="rhyme-highlight-toggle" onCheckedChange={handleToggleHighlight} checked={track.rhymeHighlightingEnabled} className="scale-75" />
                     <Target className={cn("h-4 w-4 transition-colors", track.rhymeHighlightingEnabled ? "text-primary" : "text-neutral-600")} />
                 </div>
 
-                <div className="flex items-center bg-neutral-800/50 rounded-full p-1 border border-neutral-700 h-9">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setFontSize(prev => Math.max(16, prev - 4))}>
+                <div className="flex items-center bg-neutral-800/50 rounded-full p-0.5 sm:p-1 border border-neutral-700 h-8 sm:h-9">
+                    <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7 rounded-full" onClick={() => setFontSize(prev => Math.max(16, prev - 4))}>
                         <Type className="h-3 w-3" />
                     </Button>
-                    <span className="text-[9px] font-bold font-code px-1.5 w-7 text-center">{fontSize}</span>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setFontSize(prev => Math.min(64, prev + 4))}>
-                        <Type className="h-4 w-4" />
+                    <span className="text-[8px] sm:text-[9px] font-bold font-code px-1 w-6 sm:w-7 text-center">{fontSize}</span>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7 rounded-full" onClick={() => setFontSize(prev => Math.min(64, prev + 4))}>
+                        <Type className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </Button>
                 </div>
                 
-                <Button variant="ghost" size="icon" onClick={() => setIsDarkMode(!isDarkMode)} className="h-9 w-9 rounded-full" aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
+                <Button variant="ghost" size="icon" onClick={() => setIsDarkMode(!isDarkMode)} className="h-8 w-8 sm:h-9 sm:w-9 rounded-full shrink-0" aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
                     {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 </Button>
             </div>
@@ -362,25 +362,25 @@ export default function PerformancePage() {
         ref={scrollRef}
         className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden studio-scrollbar relative"
       >
-        <div className="max-w-4xl mx-auto px-6 py-12 md:py-24 space-y-12 pb-64">
+        <div className="max-w-4xl mx-auto px-2 sm:px-4 md:px-6 py-6 sm:py-12 md:py-24 space-y-8 sm:space-y-12 pb-48 sm:pb-64">
             {sections.map((section) => (
-                <section key={section.id} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-                    <div className="flex items-center gap-6 border-l-4 border-primary pl-8">
-                        <Badge variant="outline" className="text-lg px-4 py-1 h-auto font-headline font-bold uppercase tracking-[0.2em] border-primary/40 text-primary bg-primary/5">
+                <section key={section.id} className="space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                    <div className="flex items-center gap-3 sm:gap-6 border-l-4 border-primary pl-3 sm:pl-6 md:pl-8">
+                        <Badge variant="outline" className="text-sm sm:text-lg px-3 sm:px-4 py-0.5 sm:py-1 h-auto font-headline font-bold uppercase tracking-[0.2em] border-primary/40 text-primary bg-primary/5">
                             {section.type}
                         </Badge>
                         <div className="h-px flex-grow bg-primary/10"></div>
                     </div>
                     
-                    <div className="space-y-2 pl-8">
+                    <div className="space-y-1 sm:space-y-2 pl-0 sm:pl-4 md:pl-8">
                         {section.bars.map((bar) => (
-                            <div key={bar.idx} className="group flex items-start gap-8">
-                                <span className="text-xs md:text-sm font-mono text-muted-foreground/20 pt-2 shrink-0 w-8 text-right font-bold">
+                            <div key={bar.idx} className="group flex items-start gap-2 sm:gap-4 md:gap-8">
+                                <span className="text-[10px] sm:text-xs md:text-sm font-mono text-muted-foreground/20 pt-1 sm:pt-2 shrink-0 w-6 sm:w-7 md:w-8 text-right font-bold">
                                     {String(bar.idx).padStart(2, '0')}
                                 </span>
                                 <p 
-                                    className="font-code font-bold leading-tight tracking-wide transition-all duration-300"
-                                    style={{ fontSize: `${fontSize}px` }}
+                                    className="font-code font-bold leading-tight tracking-wide transition-all duration-300 min-w-0 flex-1"
+                                    style={{ fontSize: `${fontSize}px`, lineHeight: 1.25 }}
                                 >
                                     {bar.text ? (
                                         <HighlightedText text={bar.text} rhymeGroups={track.rhymeHighlightingEnabled ? (track.rhymeGroups || []) : []} />
@@ -403,7 +403,7 @@ export default function PerformancePage() {
             initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -12 }}
-            className="fixed left-4 md:left-8 bottom-10 z-[150]"
+            className="fixed left-3 sm:left-4 md:left-8 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[150]"
           >
             <Button
               variant="destructive"
@@ -418,8 +418,8 @@ export default function PerformancePage() {
         )}
       </AnimatePresence>
 
-      <div className="fixed bottom-10 right-10 flex flex-col gap-3 z-[150]">
-          <Button variant="secondary" size="icon" className="h-12 w-12 rounded-full shadow-2xl bg-primary text-white hover:bg-primary/90" onClick={handleBackToTop}>
+      <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-3 sm:right-6 md:right-10 flex flex-col gap-3 z-[150]">
+          <Button variant="secondary" size="icon" className="h-10 w-10 sm:h-12 sm:w-12 rounded-full shadow-2xl bg-primary text-white hover:bg-primary/90" onClick={handleBackToTop}>
               <ArrowUp className="h-6 w-6" />
           </Button>
       </div>

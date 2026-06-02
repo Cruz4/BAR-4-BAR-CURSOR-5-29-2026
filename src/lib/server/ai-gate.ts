@@ -165,7 +165,7 @@ export async function runSecuredAiAction<T>(
     hasAdminFirestoreCredentials() || process.env.NODE_ENV === 'production';
   let finalAmount = 0;
 
-  if (serverInkEnabled) {
+  if (serverInkEnabled && baseCost > 0) {
     try {
       const deducted = await deductInkTransaction(uid, baseCost, ctx.actionName, userName);
       finalAmount = deducted.finalAmount;

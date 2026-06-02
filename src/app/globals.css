@@ -242,6 +242,102 @@
   }
 
   /*
+   * Settings / Ink Store control room — hex lattice + calibration HUD (not vault moiré).
+   */
+  @keyframes settings-hex-drift {
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(28px, 48px, 0); }
+  }
+
+  @keyframes settings-reticle-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes settings-scan-sweep {
+    0% { transform: translateY(-120%); opacity: 0; }
+    6% { opacity: 0.14; }
+    100% { transform: translateY(120vh); opacity: 0; }
+  }
+
+  @keyframes settings-grid-pulse {
+    0%, 100% { opacity: 0.04; }
+    50% { opacity: 0.07; }
+  }
+
+  .settings-control-room {
+    isolation: isolate;
+  }
+
+  .settings-control-base {
+    background-color: hsl(228 44% 6%);
+    background-image:
+      radial-gradient(ellipse 90% 55% at 50% -8%, hsl(187 55% 16% / 0.4), transparent 52%),
+      radial-gradient(ellipse 55% 45% at 100% 90%, hsl(265 45% 14% / 0.28), transparent 48%),
+      radial-gradient(ellipse 40% 35% at 0% 60%, hsl(199 50% 12% / 0.2), transparent 45%);
+  }
+
+  .settings-control-hex {
+    opacity: 0.055;
+    mix-blend-mode: soft-light;
+    background-image:
+      linear-gradient(30deg, rgba(45, 212, 191, 0.55) 1px, transparent 1px),
+      linear-gradient(150deg, rgba(45, 212, 191, 0.55) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59, 130, 246, 0.35) 1px, transparent 1px);
+    background-size: 32px 56px, 32px 56px, 28px 28px;
+    animation: settings-hex-drift 90s linear infinite;
+    will-change: transform;
+  }
+
+  .settings-control-grid {
+    opacity: 0.05;
+    background-image:
+      linear-gradient(rgba(148, 163, 184, 0.35) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148, 163, 184, 0.35) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, black 15%, transparent 72%);
+    animation: settings-grid-pulse 12s ease-in-out infinite;
+  }
+
+  .settings-control-reticle {
+    border: 1px solid rgba(94, 234, 212, 0.1);
+    box-shadow:
+      inset 0 0 0 1px rgba(59, 130, 246, 0.06),
+      0 0 80px rgba(45, 212, 191, 0.04);
+    animation: settings-reticle-spin 140s linear infinite;
+    will-change: transform;
+  }
+
+  .settings-control-reticle-inner {
+    border: 1px dashed rgba(59, 130, 246, 0.12);
+    animation: settings-reticle-spin 200s linear infinite reverse;
+    will-change: transform;
+  }
+
+  .settings-control-scan {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(94, 234, 212, 0.12) 42%,
+      rgba(59, 130, 246, 0.08) 58%,
+      transparent 100%
+    );
+    mix-blend-mode: soft-light;
+    animation: settings-scan-sweep 16s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+
+  .settings-control-vignette {
+    background-image: linear-gradient(
+      180deg,
+      hsl(228 44% 5% / 0.5) 0%,
+      transparent 18%,
+      transparent 72%,
+      hsl(232 40% 4% / 0.85) 100%
+    );
+  }
+
+  /*
    * Vault speaker background — 21s loop:
    * ripple @ 0s → +3s → +6s → +9s → +3s (restart)
    */
@@ -405,6 +501,19 @@
     .vault-chamber-sill,
     .vault-speaker-ripple-stage {
       opacity: 0;
+    }
+
+    .settings-control-hex,
+    .settings-control-grid,
+    .settings-control-reticle,
+    .settings-control-reticle-inner,
+    .settings-control-scan {
+      animation: none;
+    }
+
+    .settings-control-reticle,
+    .settings-control-reticle-inner {
+      opacity: 0.35;
     }
   }
 }
