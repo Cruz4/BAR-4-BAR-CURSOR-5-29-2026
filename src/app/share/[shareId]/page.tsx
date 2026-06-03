@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useContext, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase/client/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { DataContext } from '@/context/data-context';
 import type { ProjectShare, Album, Track } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';

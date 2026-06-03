@@ -771,7 +771,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   };
 
   const handleFullDraftGenerate = async (e: any) => {
-    runWithInk('generateSongDraft', activeDraftBase, 'generateSongDraft', e, async () => {
+    runWithInk('studio-draft', activeDraftCharged, 'generateDraftPerBar', e, async () => {
     setGeneratingOperation('draft');
     setIsGenerating(true);
     setGenerating(true, 'Synthesizing Studio Draft...');
@@ -1067,8 +1067,11 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   };
 
   const handleRelayDraftSynthesis = async (e: any) => {
-    const cost = activeBarsCount * getCost('generateDraftPerBar');
-    runWithInk('generateRelayDraft', cost, 'generateRelayDraft', e, async () => {
+    const relayCharged = getEffectiveCost(
+      'generateRelayDraft',
+      activeBarsCount * getCost('generateRelayDraft')
+    );
+    runWithInk('dna-remix-draft', relayCharged, 'generateRelayDraft', e, async () => {
     setGeneratingOperation('remix');
     setIsGenerating(true);
     setGenerating(true, 'Synthesizing Neural Draft...');
@@ -1134,11 +1137,11 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           'DNA remix draft'
         );
         setWizardState((prev) => ({ ...prev, generatedVariant: result }));
-        addUsageLog({ flowName: 'generateRelayDraft', inkCost: cost, status: 'success' });
+        addUsageLog({ flowName: 'generateRelayDraft', inkCost: relayCharged, status: 'success' });
         setProgress(100);
         completeAndMaybeReopen(5);
         loadPreviewRhymeGroups(result);
-    } catch (e: any) { refundInk(cost); toast({ variant: 'destructive', title: 'Synthesis Failed', description: e.message }); } finally { setIsGenerating(false); setGenerating(false); }
+    } catch (e: any) { refundInk(relayCharged); toast({ variant: 'destructive', title: 'Synthesis Failed', description: e.message }); } finally { setIsGenerating(false); setGenerating(false); }
     });
   };
 

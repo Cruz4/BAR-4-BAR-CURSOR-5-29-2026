@@ -112,29 +112,29 @@ export function StudioProgressBoard() {
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="space-y-6 pb-12">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="space-y-7 pb-12">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <Link
               href="/"
-              className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary mb-2"
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary mb-2"
             >
-              <ChevronLeft className="h-3.5 w-3.5" /> Vault
+              <ChevronLeft className="h-4 w-4" /> Vault
             </Link>
-            <h1 className="text-2xl md:text-3xl font-headline font-bold uppercase tracking-tight flex items-center gap-2">
-              <Trophy className="h-7 w-7 text-amber-400" />
+            <h1 className="text-3xl md:text-4xl font-headline font-bold uppercase tracking-tight flex items-center gap-2.5">
+              <Trophy className="h-8 w-8 text-amber-400" />
               Studio Progress
             </h1>
-            <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+            <p className="text-base text-muted-foreground mt-1.5 max-w-2xl leading-relaxed">
               Weekly goals, monthly arcs, lifetime milestones, and trophies — plus how you stack up against the
               community. Writing goals count <strong className="text-foreground/90 font-semibold">hand-typed</strong> lines only; AI-generated lines are tracked separately.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" className="text-[10px] font-bold uppercase" asChild>
+            <Button variant="outline" className="text-xs font-bold uppercase" asChild>
               <Link href="/leaderboard">Full leaderboard</Link>
             </Button>
-            <Button size="sm" variant="ghost" className="text-[10px] font-bold uppercase" asChild>
+            <Button variant="ghost" className="text-xs font-bold uppercase" asChild>
               <Link href="/usage?tab=settings">Profile settings</Link>
             </Button>
           </div>
@@ -142,47 +142,47 @@ export function StudioProgressBoard() {
 
         <Card className="border-primary/20 bg-gradient-to-br from-primary/[0.08] via-card/50 to-violet-500/[0.06]">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-headline uppercase">Your studio standing</CardTitle>
+            <CardTitle className="text-base font-headline uppercase">Your studio standing</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="rounded-lg border border-primary/15 bg-black/30 px-3 py-2.5 space-y-2 md:col-span-2 min-w-0 overflow-hidden">
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
+            <div className="rounded-lg border border-primary/15 bg-black/30 px-3.5 py-3 space-y-2.5 md:col-span-2 min-w-0 overflow-hidden">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className={cn('text-[9px] font-bold uppercase', RANK_BADGE[rank.id])}>
+                <Badge variant="outline" className={cn('text-[10px] font-bold uppercase', RANK_BADGE[rank.id])}>
                   {rankLabel}
                 </Badge>
                 {summary.currentStreak > 0 && (
-                  <Badge variant="outline" className="border-orange-500/45 text-orange-200 text-[9px] gap-1">
-                    <Flame className="h-3 w-3" /> {summary.currentStreak}d streak
+                  <Badge variant="outline" className="border-orange-500/45 text-orange-200 text-[10px] gap-1">
+                    <Flame className="h-3.5 w-3.5" /> {summary.currentStreak}d streak
                   </Badge>
                 )}
-                <span className="text-[11px] font-code font-bold">{summary.xp.toLocaleString()} XP</span>
+                <span className="text-xs font-code font-bold">{summary.xp.toLocaleString()} XP</span>
               </div>
-              <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+              <div className="h-2 rounded-full bg-white/5 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-sky-600 via-primary to-violet-500"
                   style={{ width: `${xpPercent}%` }}
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground font-code leading-snug break-words">
+              <p className="text-[11px] text-muted-foreground font-code leading-snug break-words">
                 {nextRank
                   ? `${Math.max(0, next - current).toLocaleString()} XP to ${nextRank.label}`
                   : 'Top rank — keep building.'}
               </p>
-              <div className="flex flex-wrap gap-2 pt-1 text-[9px] font-bold uppercase tracking-wide">
-                <span className="rounded border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-emerald-300/90">
+              <div className="flex flex-wrap gap-2 pt-1 text-[10px] font-bold uppercase tracking-wide">
+                <span className="rounded border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-emerald-300/90">
                   Written: {linesToRhymeBars(summary.lifetimeBarsWritten).toLocaleString()} bars
                 </span>
-                <span className="rounded border border-violet-500/25 bg-violet-500/10 px-2 py-0.5 text-violet-300/90">
+                <span className="rounded border border-violet-500/25 bg-violet-500/10 px-2.5 py-1 text-violet-300/90">
                   Generated: {linesToRhymeBars(summary.lifetimeLinesGenerated || 0).toLocaleString()} bars
                 </span>
               </div>
-              <div className="flex flex-wrap gap-1 pt-1">
+              <div className="flex flex-wrap gap-1.5 pt-1">
                 {STUDIO_RANKS.map((r) => (
                   <Badge
                     key={r.id}
                     variant="outline"
                     className={cn(
-                      'text-[7px] h-4 px-1.5',
+                      'text-[8px] h-5 px-2',
                       summary.xp >= r.minXp ? 'border-primary/30 text-primary/90' : 'opacity-40'
                     )}
                   >
@@ -204,6 +204,7 @@ export function StudioProgressBoard() {
                   value={summary.barsWritten7d}
                   formatValue={linesToRhymeBars}
                   hidden={hidden}
+                  comfortable
                 />
                 <LeaderboardCompareCard
                   label="Streak"
@@ -211,18 +212,21 @@ export function StudioProgressBoard() {
                   value={summary.currentStreak}
                   unit="d"
                   hidden={hidden}
+                  comfortable
                 />
                 <LeaderboardCompareCard
                   label="Tracks (30 days)"
                   rank={ranks?.tracksCompleted30d ?? null}
                   value={summary.tracksCompleted30d}
                   hidden={hidden}
+                  comfortable
                 />
                 <LeaderboardCompareCard
                   label="Total XP"
                   rank={ranks?.xp ?? null}
                   value={summary.xp}
                   hidden={hidden}
+                  comfortable
                 />
               </>
             )}
@@ -233,48 +237,51 @@ export function StudioProgressBoard() {
           <ChallengeSection
             title="Weekly goals"
             subtitle="Resets every Monday (UTC)"
-            icon={<Calendar className="h-4 w-4 text-emerald-400" />}
+            icon={<Calendar className="h-5 w-5 text-emerald-400" />}
             challenges={WEEKLY_CHALLENGES}
             summary={summary}
             isPro={isPro}
             accentClass="border-emerald-500/20"
+            comfortable
           />
           <ChallengeSection
             title="Monthly challenges"
             subtitle="Resets on the 1st of each month"
-            icon={<CalendarRange className="h-4 w-4 text-violet-400" />}
+            icon={<CalendarRange className="h-5 w-5 text-violet-400" />}
             challenges={MONTHLY_CHALLENGES}
             summary={summary}
             isPro={isPro}
             accentClass="border-violet-500/20"
+            comfortable
           />
           <ChallengeSection
             title="Lifetime milestones"
             subtitle="Grand achievements — no reset"
-            icon={<Infinity className="h-4 w-4 text-amber-400" />}
+            icon={<Infinity className="h-5 w-5 text-amber-400" />}
             challenges={LIFETIME_MILESTONES}
             summary={summary}
             isPro={isPro}
             accentClass="border-amber-500/20"
+            comfortable
           />
         </div>
 
         <section className="rounded-xl border border-violet-500/20 bg-card/40 overflow-hidden min-w-0">
-          <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-white/5 bg-black/20 min-w-0">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <Sparkles className="h-4 w-4 text-violet-300 shrink-0" />
+          <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3.5 border-b border-white/5 bg-black/20 min-w-0">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <Sparkles className="h-5 w-5 text-violet-300 shrink-0" />
               <div className="min-w-0 overflow-hidden">
-                <h2 className="text-sm font-headline font-bold uppercase tracking-tight">Studio trophies</h2>
-                <p className="text-[10px] text-muted-foreground leading-snug break-words">
+                <h2 className="text-base font-headline font-bold uppercase tracking-tight">Studio trophies</h2>
+                <p className="text-[11px] text-muted-foreground leading-snug break-words">
                   Hover any badge for how to unlock · {achievementCount}/{ACHIEVEMENTS.length} earned
                 </p>
               </div>
             </div>
-            <Badge variant="outline" className="text-[9px] shrink-0 max-w-full truncate">
+            <Badge variant="outline" className="text-[10px] shrink-0 max-w-full truncate">
               Activation · Retention · Pro
             </Badge>
           </div>
-          <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 min-w-0">
+          <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 min-w-0">
             {badgeGrid.map((b) => (
               <AchievementBadgeCell
                 key={b.id}
@@ -282,27 +289,28 @@ export function StudioProgressBoard() {
                 unlocked={b.unlocked}
                 lockedPro={b.lockedPro}
                 unlockedAt={b.unlockedAt}
+                comfortable
               />
             ))}
           </div>
-          <div className="px-4 pb-4 flex flex-wrap gap-4 text-[10px] text-muted-foreground border-t border-white/5 pt-3 mx-4 mb-4">
-            <span className="flex items-center gap-1">
-              <Zap className="h-3 w-3 text-sky-400" /> Activation — first wins
+          <div className="px-4 pb-4 flex flex-wrap gap-4 text-[11px] text-muted-foreground border-t border-white/5 pt-3.5 mx-4 mb-4">
+            <span className="flex items-center gap-1.5">
+              <Zap className="h-3.5 w-3.5 text-sky-400" /> Activation — first wins
             </span>
-            <span className="flex items-center gap-1">
-              <Flame className="h-3 w-3 text-amber-400" /> Retention — streaks & sessions
+            <span className="flex items-center gap-1.5">
+              <Flame className="h-3.5 w-3.5 text-amber-400" /> Retention — streaks & sessions
             </span>
-            <span className="flex items-center gap-1">
-              <Share2 className="h-3 w-3 text-fuchsia-400" /> Pro — vault & sharing
+            <span className="flex items-center gap-1.5">
+              <Share2 className="h-3.5 w-3.5 text-fuchsia-400" /> Pro — vault & sharing
             </span>
-            <span className="flex items-center gap-1">
-              <Music className="h-3 w-3 text-primary" /> Ink rewards on select badges
+            <span className="flex items-center gap-1.5">
+              <Music className="h-3.5 w-3.5 text-primary" /> Ink rewards on select badges
             </span>
           </div>
         </section>
 
         {hidden && (
-          <p className="text-[10px] text-center text-muted-foreground italic">
+          <p className="text-[11px] text-center text-muted-foreground italic">
             You are hidden from the public leaderboard. Rankings above are only visible to you until you opt in under
             Settings → Studio Profile.
           </p>

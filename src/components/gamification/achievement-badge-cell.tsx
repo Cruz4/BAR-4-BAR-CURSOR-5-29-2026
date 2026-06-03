@@ -14,6 +14,7 @@ type AchievementBadgeCellProps = {
   lockedPro: boolean;
   unlockedAt?: string;
   compact?: boolean;
+  comfortable?: boolean;
   className?: string;
 };
 
@@ -23,9 +24,11 @@ export function AchievementBadgeCell({
   lockedPro,
   unlockedAt,
   compact = false,
+  comfortable = false,
   className,
 }: AchievementBadgeCellProps) {
   const starter = isAchievementStarter(achievement.id);
+  const roomy = comfortable && !compact;
   const statusLabel = unlocked
     ? 'Unlocked'
     : lockedPro
@@ -37,19 +40,24 @@ export function AchievementBadgeCell({
       <TooltipTrigger asChild>
         <div
           className={cn(
-            'rounded-lg border p-2 text-center space-y-1 cursor-help transition-colors hover:border-primary/40 min-w-0 overflow-hidden',
+            'rounded-lg border text-center space-y-1 cursor-help transition-colors hover:border-primary/40 min-w-0 overflow-hidden',
+            roomy ? 'p-2.5' : compact ? 'p-1.5' : 'p-2',
             unlocked ? 'border-primary/30 bg-primary/5' : 'border-white/5 bg-muted/10 opacity-70 hover:opacity-90',
-            compact && 'p-1.5',
             className
           )}
         >
           {lockedPro && !unlocked ? (
-            <Lock className={cn('mx-auto text-muted-foreground', compact ? 'h-3.5 w-3.5' : 'h-4 w-4')} />
+            <Lock
+              className={cn(
+                'mx-auto text-muted-foreground',
+                compact ? 'h-3.5 w-3.5' : roomy ? 'h-5 w-5' : 'h-4 w-4'
+              )}
+            />
           ) : (
             <Trophy
               className={cn(
                 'mx-auto',
-                compact ? 'h-3.5 w-3.5' : 'h-4 w-4',
+                compact ? 'h-3.5 w-3.5' : roomy ? 'h-5 w-5' : 'h-4 w-4',
                 unlocked ? 'text-primary' : 'text-muted-foreground'
               )}
             />
@@ -57,26 +65,33 @@ export function AchievementBadgeCell({
           <p
             className={cn(
               'font-bold uppercase leading-tight line-clamp-2 break-words hyphens-auto',
-              compact ? 'text-[8px]' : 'text-[9px]'
+              compact ? 'text-[8px]' : roomy ? 'text-[10px]' : 'text-[9px]'
             )}
           >
             {achievement.title}
           </p>
           {starter && !unlocked && !lockedPro && (
-            <Badge variant="secondary" className="text-[7px] h-4">
+            <Badge variant="secondary" className={cn(roomy ? 'text-[8px] h-5' : 'text-[7px] h-4')}>
               Starter
             </Badge>
           )}
           {lockedPro && !unlocked && (
-            <Badge variant="outline" className="text-[7px] h-4">
+            <Badge variant="outline" className={cn(roomy ? 'text-[8px] h-5' : 'text-[7px] h-4')}>
               Pro
             </Badge>
           )}
         </div>
       </TooltipTrigger>
-      <TooltipContent side="top" className="max-w-[240px] space-y-1.5 p-3">
-        <p className="text-xs font-bold uppercase tracking-wide">{achievement.title}</p>
-        <p className="text-[11px] text-muted-foreground leading-snug">{achievement.description}</p>
+      <TooltipContent
+        side="top"
+        className={cn('space-y-1.5', roomy ? 'max-w-[260px] p-3.5' : 'max-w-[240px] p-3')}
+      >
+        <p className={cn('font-bold uppercase tracking-wide', roomy ? 'text-sm' : 'text-xs')}>
+          {achievement.title}
+        </p>
+        <p className={cn('text-muted-foreground leading-snug', roomy ? 'text-xs' : 'text-[11px]')}>
+          {achievement.description}
+        </p>
         <div className="flex flex-wrap gap-1.5 pt-0.5">
           <Badge variant="outline" className="text-[9px] h-5 capitalize">
             {achievement.category}

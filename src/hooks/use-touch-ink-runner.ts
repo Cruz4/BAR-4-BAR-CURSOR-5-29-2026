@@ -4,7 +4,7 @@ import { useCallback, useRef } from 'react';
 import { usePrefersTouch } from '@/hooks/use-prefers-touch';
 import { useUsage } from '@/context/usage-context';
 import { useInkCosts } from '@/hooks/use-ink-costs';
-import type { InkActionKey } from '@/lib/ink-labels';
+import { INK_ACTION_LABELS, type InkActionKey } from '@/lib/ink-labels';
 import { useToast } from '@/hooks/use-toast';
 
 const ARM_MS = 5000;
@@ -44,9 +44,14 @@ export function useTouchInkRunner() {
       }
 
       armedRef.current = { key: actionKey, expires: now + ARM_MS };
+      const safeCost = Number.isFinite(cost) && cost > 0 ? Math.ceil(cost) : 0;
+      const label =
+        actionName in INK_ACTION_LABELS
+          ? tooltip(actionName, safeCost)
+          : null;
       toast({
         title: 'Confirm Ink spend',
-        description: `${tooltip(actionName) || `${cost} Ink`} — tap again to run.`,
+        description: `${label || `Studio action — ${safeCost} Ink`} — tap again to run.`,
         duration: 3500,
       });
       return false;

@@ -721,3 +721,49 @@
 .sync-logo-well-ring {
   animation: sync-logo-well-pulse 3.2s ease-in-out infinite;
 }
+
+/* Co-Writer panel: slightly larger body type; main section titles (CardTitle) unchanged */
+@layer components {
+  .co-writer-body label {
+    font-size: 10px !important;
+    line-height: 1.35;
+  }
+  .co-writer-body [data-creative-effects] label {
+    font-size: 11px !important;
+  }
+  .co-writer-body [data-creative-effects] input:not([type='checkbox']),
+  .co-writer-body [data-creative-effects] textarea {
+    font-size: 12px !important;
+  }
+  .co-writer-body input:not([type='checkbox']),
+  .co-writer-body textarea {
+    font-size: 12px !important;
+    line-height: 1.4;
+  }
+  .co-writer-body .text-xs {
+    font-size: 0.8125rem !important;
+    line-height: 1.4;
+  }
+  .co-writer-body .text-\[8px\]:not(.font-headline) {
+    font-size: 9px !important;
+  }
+  .co-writer-body .text-\[9px\]:not(.font-headline) {
+    font-size: 10px !important;
+  }
+  .co-writer-body .text-\[10px\]:not(.font-headline) {
+    font-size: 11px !important;
+  }
+  .co-writer-body .text-\[11px\]:not(.font-headline) {
+    font-size: 12px !important;
+  }
+  .co-writer-body .text-\[12px\]:not(.font-headline) {
+    font-size: 13px !important;
+  }
+  .co-writer-body .text-\[13px\]:not(.font-headline) {
+    font-size: 14px !important;
+  }
+  .co-writer-body .font-code p,
+  .co-writer-body .font-code span.font-bold.uppercase {
+    color: hsl(var(--foreground) / 0.88);
+  }
+}

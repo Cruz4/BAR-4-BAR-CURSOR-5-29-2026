@@ -9,6 +9,7 @@ import type { CreativeTool } from '@/ai/flows/creative-effects';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import { cn } from '@/lib/utils';
 
 const TEXT_STORAGE_KEY = 'bar4bar-scratchpad-text';
 const EFFECTS_STORAGE_KEY = 'bar4bar-scratchpad-effects';
@@ -99,11 +100,19 @@ const ScratchPad = forwardRef<{ addEffectResult: (result: ScratchPadEffectResult
         <CollapsibleTrigger asChild>
           <CardHeader className="cursor-pointer p-4 md:p-6">
             <div className="flex justify-between items-center">
-                <div className="flex flex-col text-left">
+                <div className="flex flex-col text-left min-w-0 pr-1">
                     <CardTitle className="font-headline text-lg flex items-center gap-2 uppercase tracking-widest text-muted-foreground">
                       <NotebookText className="h-5 w-5" /> Scratch Pad
                     </CardTitle>
-                    <CardDescription className="text-[9px] uppercase font-bold tracking-tight text-muted-foreground/60">Temporary Work Area</CardDescription>
+                    <CardDescription
+                      className={cn(
+                        'font-code tracking-wider uppercase font-bold tracking-tight text-muted-foreground/75',
+                        isOpen ? 'text-[10px] leading-snug break-words' : 'text-[9px] leading-none truncate'
+                      )}
+                      title="Temporary Work Area"
+                    >
+                      {isOpen ? 'Temporary Work Area' : 'Scratch Notes'}
+                    </CardDescription>
                 </div>
                 <div className="flex items-center gap-1">
                   {effectResults.length > 0 && (

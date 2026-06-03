@@ -8,7 +8,7 @@ export default function StudioProgressPage() {
   return (
     <div className="relative min-h-[calc(100vh-3.5rem)]">
       <LeaderboardHeatBackground />
-      <div className="relative z-10 container max-w-6xl py-6 md:py-10 px-4 md:px-6">
+      <div className="relative z-10 container max-w-6xl py-7 md:py-11 px-4 md:px-6">
         <StudioProgressBoard />
       </div>
     </div>

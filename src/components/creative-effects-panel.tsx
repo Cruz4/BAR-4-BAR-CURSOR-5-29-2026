@@ -11,6 +11,13 @@ import { Slider } from '@/components/ui/slider';
 import { Wand2, ChevronsUpDown, Lock, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn, mergeDirection } from '@/lib/utils';
+
+function effectsSubtitleClass(expanded: boolean) {
+  return cn(
+    'uppercase font-bold tracking-tight text-indigo-200/90',
+    expanded ? 'text-[10px] leading-snug break-words' : 'text-[9px] leading-none truncate'
+  );
+}
 import type { Album, StyleProfile, Track, TrackSection } from '@/lib/types';
 import { runCreativeEffect, type CreativeTool, type CreativeEffectsInput } from '@/ai/flows/creative-effects';
 import { useUIState } from '@/hooks/use-ui-state';
@@ -198,22 +205,22 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
     const config = TOOL_CONFIG[tool];
     return Object.entries(config.inputs).map(([key, inputConfig]: [string, any]) => (
       <div key={key}>
-        <Label htmlFor={`${tool}-${key}`} className="text-[10px] font-bold uppercase text-indigo-700">{inputConfig.label}</Label>
+        <Label htmlFor={`${tool}-${key}`} className="text-[11px] font-bold uppercase text-indigo-100/95">{inputConfig.label}</Label>
         {inputConfig.type === 'text' && (
-          <Input id={`${tool}-${key}`} defaultValue={formStateRef.current[tool][key]} onChange={(e) => handleInputChange(tool, key, e.target.value)} className="h-8 bg-background/50" disabled={selectedIsLocked} />
+          <Input id={`${tool}-${key}`} defaultValue={formStateRef.current[tool][key]} onChange={(e) => handleInputChange(tool, key, e.target.value)} className="h-8 bg-background/50 text-[12px] text-foreground/90 placeholder:text-muted-foreground/75" disabled={selectedIsLocked} />
         )}
         {inputConfig.type === 'slider' && (
           <div className="flex items-center gap-4 py-1">
              <Slider id={`${tool}-${key}`} defaultValue={[formStateRef.current[tool][key]]} min={inputConfig.min} max={inputConfig.max} step={inputConfig.step} onValueChange={(value) => handleInputChange(tool, key, value[0])} disabled={selectedIsLocked} />
-            <span className="text-xs font-mono w-8">{formStateRef.current[tool][key].toFixed(1)}</span>
+            <span className="text-[12px] font-mono w-8 text-foreground/90">{formStateRef.current[tool][key].toFixed(1)}</span>
           </div>
         )}
         {inputConfig.type === 'select' && (
            <Select defaultValue={formStateRef.current[tool][key]} onValueChange={(value) => handleInputChange(tool, key, value)} disabled={selectedIsLocked}>
-                <SelectTrigger className="h-8 bg-background/50"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 bg-background/50 text-[12px] text-foreground/90"><SelectValue /></SelectTrigger>
                 <SelectContent>
                     {inputConfig.options.map((opt: string) => (
-                        <SelectItem key={opt} value={opt} className="capitalize">{opt}</SelectItem>
+                        <SelectItem key={opt} value={opt} className="capitalize text-[12px]">{opt}</SelectItem>
                     ))}
                 </SelectContent>
            </Select>
@@ -224,10 +231,10 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <Card className="bg-indigo-500/10 dark:bg-indigo-500/5 border-indigo-200/50">
+        <Card data-creative-effects className="bg-indigo-500/10 dark:bg-indigo-500/5 border-indigo-200/50">
         <CollapsibleTrigger asChild>
             <CardHeader className="flex-row items-center justify-between cursor-pointer p-4 md:p-6">
-                <div className="flex flex-col text-left w-full">
+                <div className="flex flex-col text-left w-full min-w-0 pr-1">
                     <CardTitle className="font-headline text-lg flex items-center gap-2 uppercase tracking-widest text-indigo-700 dark:text-indigo-400">
                       <Wand2 className="h-5 w-5 shrink-0"/> Creative Effects
                     </CardTitle>
@@ -236,38 +243,43 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
                         <ProLockBadge label="3 Free · Pro+" />
                       </div>
                     )}
-                    <CardDescription className="text-[9px] text-indigo-600/60 uppercase font-bold tracking-tight">Specialized Lyrical Tools</CardDescription>
+                    <CardDescription
+                      className={cn('font-code tracking-wider', effectsSubtitleClass(isOpen))}
+                      title="Specialized Lyrical Tools"
+                    >
+                      {isOpen ? 'Specialized Lyrical Tools' : 'Lyrical Tools'}
+                    </CardDescription>
                 </div>
                 <Button variant="ghost" size="icon" className="h-6 w-6"><ChevronsUpDown className="h-4 w-4" /></Button>
             </CardHeader>
         </CollapsibleTrigger>
         <CollapsibleContent>
-            <CardContent className="space-y-4 p-4 md:p-6 md:pt-0 font-code">
+            <CardContent className="space-y-4 p-4 md:p-6 md:pt-0 font-code text-[12px] text-foreground/90">
             <div>
-                <Label className="text-[10px] font-bold uppercase text-indigo-700/50">Select Tool</Label>
+                <Label className="text-[11px] font-bold uppercase text-indigo-100/95">Select Tool</Label>
                 <Select value={selectedTool} onValueChange={(value) => setSelectedTool(value as CreativeTool)}>
-                    <SelectTrigger className="bg-background/50 h-9"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="bg-background/50 h-9 text-[12px] text-foreground/90"><SelectValue /></SelectTrigger>
                     <SelectContent>
                         {(isPro ? Object.keys(TOOL_CONFIG) : FREE_CREATIVE_TOOLS).map((key) => (
-                        <SelectItem key={key} value={key}>{TOOL_CONFIG[key as CreativeTool].label}</SelectItem>
+                        <SelectItem key={key} value={key} className="text-[12px]">{TOOL_CONFIG[key as CreativeTool].label}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
             </div>
             
-            <div className={cn("space-y-3 p-3 bg-background/50 rounded-lg border border-indigo-500/10", selectedIsLocked && "opacity-60 pointer-events-none")}>
+            <div className={cn("space-y-3 p-3 bg-background/50 rounded-lg border border-indigo-500/20", selectedIsLocked && "opacity-60 pointer-events-none")}>
                 <div className="space-y-2">
                     {renderInputs(selectedTool)}
                 </div>
-                <div className="text-[10px] text-indigo-600/80 pt-2 border-t border-indigo-500/10 leading-relaxed">
-                    <p className="font-bold">{TOOL_CONFIG[selectedTool].description}</p>
-                    <p className="italic mt-0.5">{TOOL_CONFIG[selectedTool].howTo}</p>
+                <div className="text-[11px] text-indigo-50/90 pt-2 border-t border-indigo-500/20 leading-relaxed">
+                    <p className="font-bold text-foreground/95">{TOOL_CONFIG[selectedTool].description}</p>
+                    <p className="italic mt-0.5 text-indigo-100/80">{TOOL_CONFIG[selectedTool].howTo}</p>
                 </div>
             </div>
             
             <div className={cn(selectedIsLocked && "opacity-60 pointer-events-none")}>
-                <Label htmlFor="effect-end-with" className="text-[10px] font-bold uppercase text-indigo-700/70">End With (Optional)</Label>
-                <Input id="effect-end-with" placeholder="e.g., the moonlight" value={endWith} onChange={(e) => setEndWith(e.target.value)} className="h-9 bg-background/50" disabled={selectedIsLocked} />
+                <Label htmlFor="effect-end-with" className="text-[11px] font-bold uppercase text-indigo-100/90">End With (Optional)</Label>
+                <Input id="effect-end-with" placeholder="e.g., the moonlight" value={endWith} onChange={(e) => setEndWith(e.target.value)} className="h-9 bg-background/50 text-[12px] text-foreground/90 placeholder:text-muted-foreground/75" disabled={selectedIsLocked} />
             </div>
 
             <TooltipProvider>
