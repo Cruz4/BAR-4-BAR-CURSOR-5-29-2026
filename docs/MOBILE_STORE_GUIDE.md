@@ -6,7 +6,7 @@
 2. Open `https://lyricai-studio-otgxn.web.app` in Chrome (Android) or Safari (iOS)
 3. **Android:** Menu → Install app / Add to Home screen
 4. **iOS:** Share → Add to Home Screen
-5. Offline: lyric editing uses Firestore offline cache + localStorage mirror; AI requires connection
+5. Offline: full vault snapshot on device (editor + Performance mode); sync when back online; AI requires connection
 
 ## Phase 2: Capacitor (Google Play + App Store)
 

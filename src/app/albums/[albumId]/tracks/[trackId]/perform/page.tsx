@@ -30,6 +30,8 @@ import { db } from '@/lib/firebase/client/firebase';
 import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import { doc, getDoc } from 'firebase/firestore';
 import type { Track } from '@/lib/types';
+import { isBrowserOffline } from '@/lib/offline/network';
+import { getCachedTrack, loadCachedUserProfile } from '@/lib/offline/vault-cache';
 
 /** Scroll speed levels — pixels per second */
 const SCROLL_SPEED_PX: Record<number, number> = {
@@ -50,9 +52,13 @@ export default function PerformancePage() {
   const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
-    if (user && !isProUser(user)) {
-      router.replace(`/usage?tab=cloud`);
+    if (!user) return;
+    if (isProUser(user)) return;
+    if (isBrowserOffline()) {
+      const cached = loadCachedUserProfile(user.id);
+      if (cached && isProUser(cached)) return;
     }
+    router.replace(`/usage?tab=cloud`);
   }, [user, router]);
   
   const contextTrack = useMemo(
@@ -73,7 +79,22 @@ export default function PerformancePage() {
   }, [contextTrack]);
 
   useEffect(() => {
-    if (contextTrack || !user?.id || !authReady || dataLoading) return;
+    if (contextTrack) return;
+
+    if (user?.id) {
+      const cached = getCachedTrack(user.id, albumId, trackId);
+      if (cached.track) {
+        setResolvedTrack(cached.track);
+        setLoadFailed(false);
+        return;
+      }
+    }
+
+    if (!user?.id || !authReady || dataLoading) return;
+    if (isBrowserOffline()) {
+      setLoadFailed(true);
+      return;
+    }
 
     let cancelled = false;
 
@@ -119,6 +140,7 @@ export default function PerformancePage() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   
   const [isScrolling, setIsScrolling] = useState(false);
+  const [scrollSessionActive, setScrollSessionActive] = useState(false);
   const [scrollSpeed, setScrollSpeed] = useState(2);
   const [startDelay, setStartDelay] = useState(3);
   const [countdown, setCountdown] = useState(0);
@@ -190,18 +212,25 @@ export default function PerformancePage() {
     return () => clearInterval(timer);
   }, [isScrolling, countdown]);
 
-  const stopScroll = () => {
+  const stopScroll = (endSession = false) => {
     setIsScrolling(false);
     setCountdown(0);
+    if (endSession) setScrollSessionActive(false);
   };
 
   const handleStartScroll = () => {
       if (isScrolling) {
           stopScroll();
       } else {
+          setScrollSessionActive(true);
           setCountdown(startDelay);
           setIsScrolling(true);
       }
+  };
+
+  const handleResumeScroll = () => {
+    setScrollSessionActive(true);
+    setIsScrolling(true);
   };
 
   const handleToggleHighlight = (checked: boolean) => {
@@ -212,16 +241,20 @@ export default function PerformancePage() {
 
   const handleBackToTop = () => {
     scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-    stopScroll();
+    stopScroll(true);
   };
 
   const handleExit = () => {
     stopScroll();
-    window.close();
-    // Tabs opened via Performance Mode can close; otherwise return to the track editor.
-    window.setTimeout(() => {
-      router.push(`/albums/${albumId}/tracks/${trackId}`);
-    }, 150);
+    setScrollSessionActive(false);
+    const isStandalonePwa =
+      typeof window !== 'undefined' &&
+      (window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as Navigator & { standalone?: boolean }).standalone === true);
+    if (!isStandalonePwa) {
+      window.close();
+    }
+    router.push(`/albums/${albumId}/tracks/${trackId}`);
   };
 
   const isBootstrapping = !authReady || !user;
@@ -256,21 +289,32 @@ export default function PerformancePage() {
         "h-screen flex flex-col overflow-hidden transition-colors duration-500",
         isDarkMode ? "bg-neutral-950 text-neutral-100" : "bg-neutral-50 text-neutral-900"
     )}>
-      <header className="shrink-0 z-[100] w-full border-b border-neutral-800 bg-background/95 backdrop-blur px-2 sm:px-4 py-2 sm:py-3 shadow-2xl">
+      <header className={cn(
+        "shrink-0 z-[100] w-full border-b backdrop-blur px-2 sm:px-4 py-2 sm:py-3 shadow-2xl",
+        isDarkMode
+          ? "border-neutral-800 bg-background/95"
+          : "border-neutral-200 bg-white/95"
+      )}>
         <div className="max-w-7xl mx-auto flex flex-col gap-2 sm:gap-0 sm:flex-row sm:items-center sm:justify-between min-w-0">
             <div className="flex items-center gap-2 sm:gap-4 shrink-0 min-w-0">
-                <Button variant="ghost" size="sm" onClick={handleExit} className="hover:bg-neutral-800 h-8 sm:h-9 px-2 sm:px-3 font-bold uppercase text-[9px] sm:text-[10px] tracking-widest text-muted-foreground shrink-0">
+                <Button variant="ghost" size="sm" onClick={handleExit} className={cn(
+                  "h-8 sm:h-9 px-2 sm:px-3 font-bold uppercase text-[9px] sm:text-[10px] tracking-widest shrink-0",
+                  isDarkMode ? "hover:bg-neutral-800 text-muted-foreground" : "hover:bg-neutral-100 text-neutral-700"
+                )}>
                     <ChevronLeft className="mr-1 sm:mr-2 h-4 w-4" /> Exit
                 </Button>
-                <div className="hidden lg:block border-l border-neutral-800 pl-4">
+                <div className={cn("hidden lg:block border-l pl-4", isDarkMode ? "border-neutral-800" : "border-neutral-200")}>
                     <h1 className="text-sm font-headline font-bold uppercase tracking-tight truncate max-w-[200px]">{track.title}</h1>
                     <p className="text-[9px] font-code uppercase tracking-[0.2em] text-primary/70">Teleprompter Active</p>
                 </div>
             </div>
             
-            <div className="flex items-center gap-1 sm:gap-2 bg-neutral-900/80 p-1 rounded-lg border border-neutral-800 shadow-inner min-w-0 overflow-x-auto max-w-full">
-                <div className="flex items-center gap-1 px-1.5 sm:px-2 border-r border-neutral-800 shrink-0">
-                    <Timer className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground shrink-0" />
+            <div className={cn(
+              "flex items-center gap-1 sm:gap-2 p-1 rounded-lg border shadow-inner min-w-0 overflow-x-auto max-w-full",
+              isDarkMode ? "bg-neutral-900/80 border-neutral-800" : "bg-neutral-100 border-neutral-300"
+            )}>
+                <div className={cn("flex items-center gap-1 px-1.5 sm:px-2 border-r shrink-0", isDarkMode ? "border-neutral-800" : "border-neutral-300")}>
+                    <Timer className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0", isDarkMode ? "text-muted-foreground" : "text-neutral-600")} />
                     <Select value={String(startDelay)} onValueChange={(v) => setStartDelay(parseInt(v))}>
                         <SelectTrigger className="h-7 w-[52px] sm:w-[65px] text-[9px] sm:text-[10px] font-bold bg-transparent border-0 focus:ring-0 px-1">
                             <SelectValue placeholder="Delay" />
@@ -283,8 +327,8 @@ export default function PerformancePage() {
                     </Select>
                 </div>
 
-                <div className="flex items-center gap-1 sm:gap-2 px-0.5 sm:px-1 border-r border-neutral-800 shrink-0">
-                    <span className="text-[8px] sm:text-[9px] font-bold text-muted-foreground uppercase tracking-tighter hidden min-[380px]:inline">Speed</span>
+                <div className={cn("flex items-center gap-1 sm:gap-2 px-0.5 sm:px-1 border-r shrink-0", isDarkMode ? "border-neutral-800" : "border-neutral-300")}>
+                    <span className={cn("text-[8px] sm:text-[9px] font-bold uppercase tracking-tighter hidden min-[380px]:inline", isDarkMode ? "text-muted-foreground" : "text-neutral-600")}>Speed</span>
                     <ToggleGroup type="single" value={String(scrollSpeed)} onValueChange={(v) => v && setScrollSpeed(parseInt(v))} className="gap-0.5">
                         {[1, 2, 3, 4].map(s => (
                             <ToggleGroupItem key={s} value={String(s)} className="h-6 w-6 text-[9px] font-bold rounded-md data-[state=on]:bg-primary data-[state=on]:text-white">
@@ -316,12 +360,18 @@ export default function PerformancePage() {
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 self-end sm:self-auto">
-                <div className="hidden sm:flex items-center space-x-2 bg-neutral-800/50 p-1 rounded-full border border-neutral-700 px-3 h-9">
+                <div className={cn(
+                  "hidden sm:flex items-center space-x-2 p-1 rounded-full border px-3 h-9",
+                  isDarkMode ? "bg-neutral-800/50 border-neutral-700" : "bg-neutral-200/80 border-neutral-300"
+                )}>
                     <Switch id="rhyme-highlight-toggle" onCheckedChange={handleToggleHighlight} checked={track.rhymeHighlightingEnabled} className="scale-75" />
                     <Target className={cn("h-4 w-4 transition-colors", track.rhymeHighlightingEnabled ? "text-primary" : "text-neutral-600")} />
                 </div>
 
-                <div className="flex items-center bg-neutral-800/50 rounded-full p-0.5 sm:p-1 border border-neutral-700 h-8 sm:h-9">
+                <div className={cn(
+                  "flex items-center rounded-full p-0.5 sm:p-1 border h-8 sm:h-9",
+                  isDarkMode ? "bg-neutral-800/50 border-neutral-700" : "bg-neutral-200/80 border-neutral-300"
+                )}>
                     <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7 rounded-full" onClick={() => setFontSize(prev => Math.max(16, prev - 4))}>
                         <Type className="h-3 w-3" />
                     </Button>
@@ -396,9 +446,9 @@ export default function PerformancePage() {
         </div>
       </main>
 
-      {/* Floating pause — left margin, clear of lyric text */}
+      {/* Floating pause / resume — stays visible after pause until session ends */}
       <AnimatePresence>
-        {isScrolling && (
+        {scrollSessionActive && (
           <motion.div
             initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
@@ -406,13 +456,17 @@ export default function PerformancePage() {
             className="fixed left-3 sm:left-4 md:left-8 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[150]"
           >
             <Button
-              variant="destructive"
+              variant={isScrolling ? 'destructive' : 'default'}
               size="lg"
-              onClick={stopScroll}
+              onClick={isScrolling ? () => stopScroll() : handleResumeScroll}
               className="h-14 w-14 rounded-full shadow-2xl border-2 border-white/10"
-              aria-label="Pause teleprompter scroll"
+              aria-label={isScrolling ? 'Pause teleprompter scroll' : 'Resume teleprompter scroll'}
             >
-              <Pause className="h-6 w-6 fill-current" />
+              {isScrolling ? (
+                <Pause className="h-6 w-6 fill-current" />
+              ) : (
+                <Play className="h-6 w-6 fill-current" />
+              )}
             </Button>
           </motion.div>
         )}

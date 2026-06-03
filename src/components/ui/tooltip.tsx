@@ -70,14 +70,16 @@ const TooltipContent = React.forwardRef<
   }
 >(({ className, sideOffset = 4, side, align, collisionPadding = 12, ...props }, ref) => {
   const touch = useTouchHintMode()
+  const touchSide = touch && (side === 'right' || side === 'left') ? 'bottom' : side
+  const touchAlign = touch && (side === 'right' || side === 'left') ? 'center' : align
 
   if (touch) {
     return (
       <PopoverPrimitive.Portal>
         <PopoverPrimitive.Content
           ref={ref}
-          side={side}
-          align={align ?? "center"}
+          side={touchSide}
+          align={touchAlign ?? "center"}
           sideOffset={sideOffset}
           collisionPadding={collisionPadding}
           className={cn(

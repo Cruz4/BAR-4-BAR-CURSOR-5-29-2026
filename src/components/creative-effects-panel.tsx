@@ -18,6 +18,7 @@ import type { ScratchPadEffectResult } from './scratch-pad';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { useUsage } from '@/context/usage-context';
 import { useInkCosts } from '@/hooks/use-ink-costs';
+import { useTouchInkRunner } from '@/hooks/use-touch-ink-runner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { withAiAuth } from '@/lib/ai-client';
 import { useAuth } from '@/hooks/use-auth';
@@ -111,8 +112,9 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
   const isOpen = controlledOpen ?? internalOpen;
   const setIsOpen = onOpenChange ?? setInternalOpen;
   const [endWith, setEndWith] = useState('');
-  const { deductInk, refundInk, addUsageLog } = useUsage();
+  const { refundInk, addUsageLog } = useUsage();
   const { getCost, buttonLabel, tooltip } = useInkCosts();
+  const { runWithInk } = useTouchInkRunner();
 
   const proTools = (Object.keys(TOOL_CONFIG) as CreativeTool[]).filter(t => !FREE_CREATIVE_TOOLS.includes(t));
   const selectedIsLocked = !isToolFree(selectedTool, isPro);
@@ -139,18 +141,17 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
       return;
     }
     const cost = getCost('runCreativeEffect');
-    if (!deductInk(cost, 'runCreativeEffect', e)) return;
+    runWithInk(`runCreativeEffect-${selectedTool}`, cost, 'runCreativeEffect', e, () => {
+      const currentToolInputs = formStateRef.current[selectedTool];
 
-    const currentToolInputs = formStateRef.current[selectedTool];
+      if (Object.values(currentToolInputs).some((val) => val === '')) {
+        toast({ variant: 'destructive', title: 'Missing Input', description: 'Please fill out all fields for the selected tool.' });
+        refundInk(cost);
+        return;
+      }
 
-    if (Object.values(currentToolInputs).some(val => val === '')) {
-      toast({ variant: 'destructive', title: 'Missing Input', description: 'Please fill out all fields for the selected tool.' });
-      refundInk(cost);
-      return;
-    }
-
-    setGenerating(true, 'Running Effect...');
-    startGeneration(async () => {
+      setGenerating(true, 'Running Effect...');
+      startGeneration(async () => {
       try {
         const mergedDirection = mergeDirection(album.direction, track.direction);
         const priorLines = activeSection?.bars.map(b => b.text) || [];
@@ -189,6 +190,7 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
       } finally {
         setGenerating(false);
       }
+    });
     });
   };
 

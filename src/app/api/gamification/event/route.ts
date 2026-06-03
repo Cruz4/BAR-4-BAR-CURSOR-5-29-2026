@@ -2,8 +2,12 @@ import { NextResponse } from 'next/server';
 import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 import { processGamificationEvent } from '@/lib/server/gamification';
 import type { GamificationTrigger } from '@/lib/gamification/types';
+import { checkRateLimit } from '@/lib/server/rate-limit';
 
 export const runtime = 'nodejs';
+
+const EVENT_WINDOW_MS = 60_000;
+const EVENT_MAX_PER_WINDOW = 40;
 
 const ALLOWED: GamificationTrigger[] = [
   'session_start',
@@ -24,8 +28,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
 
+    let uid: string;
     try {
-      await verifyCheckoutUser(req, userId);
+      uid = await verifyCheckoutUser(req, userId);
     } catch (e) {
       if (e instanceof CheckoutAuthError) {
         return NextResponse.json({ error: e.message }, { status: 401 });
@@ -33,7 +38,12 @@ export async function POST(req: Request) {
       throw e;
     }
 
-    const result = await processGamificationEvent(userId, trigger, metadata || {}, userName);
+    const { allowed } = checkRateLimit(`gamification:${uid}`, EVENT_MAX_PER_WINDOW, EVENT_WINDOW_MS);
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too many events. Please slow down.' }, { status: 429 });
+    }
+
+    const result = await processGamificationEvent(uid, trigger, metadata || {}, userName);
     return NextResponse.json(result);
   } catch (err) {
     console.error('[gamification/event]', err);

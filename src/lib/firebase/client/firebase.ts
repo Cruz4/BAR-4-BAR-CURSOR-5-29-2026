@@ -11,6 +11,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import { registerFirestoreDevRecovery } from '@/lib/firebase/client/firestore-dev-recovery';
+import { registerFirestoreBlockedClientHint } from '@/lib/firebase/client/firestore-blocked-hint';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAJX5uEhA_8SFvXGEnboud6i3VETJcfWVg',
@@ -46,7 +47,8 @@ function getClientFirestore(): Firestore {
       localCache: isDev
         ? memoryLocalCache()
         : persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-      ...(isDev ? { experimentalForceLongPolling: true } : {}),
+      // Fewer streaming channel issues behind ad blockers / corporate proxies
+      experimentalForceLongPolling: true,
     });
   } catch {
     globalForFirebase.__b4bFirestore = getFirestore(app);
@@ -55,6 +57,7 @@ function getClientFirestore(): Firestore {
   if (!globalForFirebase.__b4bFirestoreRecoveryRegistered) {
     globalForFirebase.__b4bFirestoreRecoveryRegistered = true;
     registerFirestoreDevRecovery(globalForFirebase.__b4bFirestore);
+    registerFirestoreBlockedClientHint();
   }
 
   return globalForFirebase.__b4bFirestore;

@@ -157,6 +157,7 @@ import { linesToRhymeBars } from '@/lib/lyrics-units';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, Hint } from '@/components/ui/tooltip';
+import { useTouchInkRunner } from '@/hooks/use-touch-ink-runner';
 
 // --- Hoisted Workstation Dialogs ---
 
@@ -215,30 +216,38 @@ function SmartStructureDialog({ open, onOpenChange, onApply }: any) {
   const { deductInk, refundInk, addUsageLog } = useUsage();
   const { setGenerating } = useUIState();
   const { getCost, buttonLabel, tooltip } = useInkCosts();
+  const { runWithInk } = useTouchInkRunner();
 
   const handleAnalyze = async (e: any) => {
     const cost = getCost('analyzeStructure');
-    if (!deductInk(cost, 'analyzeStructure', e)) return;
-    setIsProcessing(true);
-    setGenerating(true, 'Deconstructing Neural Structure...');
-    try {
-      const res = await analyzeStructure(await withAiAuth({ text: inputText }));
-      const newSections = res.sections.map((s:any, i:number) => ({
-        id: `smart-${Date.now()}-${i}`,
-        type: s.type,
-        bars: s.lines.map((l:any, j:number) => ({ idx: j + 1, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' }))
-      }));
-      onApply(newSections);
-      addUsageLog({ flowName: 'analyzeStructure', inkCost: cost, status: 'success' });
-      toast({ title: "Structure Analyzed" });
-      onOpenChange(false);
-    } catch (err: any) {
-      refundInk(cost);
-      toast({ variant: 'destructive', title: 'Analysis Failed', description: err.message });
-    } finally {
-      setIsProcessing(false);
-      setGenerating(false);
-    }
+    runWithInk('analyzeStructure', cost, 'analyzeStructure', e, async () => {
+      setIsProcessing(true);
+      setGenerating(true, 'Deconstructing Neural Structure...');
+      try {
+        const res = await analyzeStructure(await withAiAuth({ text: inputText }));
+        const newSections = res.sections.map((s: any, i: number) => ({
+          id: `smart-${Date.now()}-${i}`,
+          type: s.type,
+          bars: s.lines.map((l: any, j: number) => ({
+            idx: j + 1,
+            text: l.trim(),
+            accepted: true,
+            syllables: l.trim().split(' ').length,
+            rhymeKey: '?',
+          })),
+        }));
+        onApply(newSections);
+        addUsageLog({ flowName: 'analyzeStructure', inkCost: cost, status: 'success' });
+        toast({ title: 'Structure Analyzed' });
+        onOpenChange(false);
+      } catch (err: any) {
+        refundInk(cost);
+        toast({ variant: 'destructive', title: 'Analysis Failed', description: err.message });
+      } finally {
+        setIsProcessing(false);
+        setGenerating(false);
+      }
+    });
   };
 
   return (
@@ -300,30 +309,32 @@ Back to the story`}
 function ImproveMyStyleDialog({ open, onOpenChange, track, onUpdateStyle }: any) {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-  const { deductInk, refundInk, addUsageLog } = useUsage();
+  const { refundInk, addUsageLog } = useUsage();
   const { setGenerating } = useUIState();
   const { getCost, buttonLabel, tooltip } = useInkCosts();
+  const { runWithInk } = useTouchInkRunner();
 
   const handleTrain = async (e: any) => {
     const cost = getCost('improveMyStyle');
-    if (!deductInk(cost, 'improveMyStyle', e)) return;
-    setIsProcessing(true);
-    setGenerating(true, 'Learning Artist DNA...');
-    try {
-      const allText = track.sections.flatMap((s:any) => s.bars.map((b:any) => b.text)).join('\n');
-      if (allText.length < 50) throw new Error("Need more lyrical data to train effectively.");
-      const res = await improveMyStyle(await withAiAuth({ lyrics: allText }));
-      onUpdateStyle(res.analysis, res.metrics);
-      addUsageLog({ flowName: 'improveMyStyle', inkCost: cost, status: 'success' });
-      toast({ title: "Style Profile Updated", description: "The AI co-writer has learned your unique flow pattern." });
-      onOpenChange(false);
-    } catch (err: any) {
-      refundInk(cost);
-      toast({ variant: 'destructive', title: 'Training Failed', description: err.message });
-    } finally {
-      setIsProcessing(false);
-      setGenerating(false);
-    }
+    runWithInk('improveMyStyle', cost, 'improveMyStyle', e, async () => {
+      setIsProcessing(true);
+      setGenerating(true, 'Learning Artist DNA...');
+      try {
+        const allText = track.sections.flatMap((s: any) => s.bars.map((b: any) => b.text)).join('\n');
+        if (allText.length < 50) throw new Error('Need more lyrical data to train effectively.');
+        const res = await improveMyStyle(await withAiAuth({ lyrics: allText }));
+        onUpdateStyle(res.analysis, res.metrics);
+        addUsageLog({ flowName: 'improveMyStyle', inkCost: cost, status: 'success' });
+        toast({ title: 'Style Profile Updated', description: 'The AI co-writer has learned your unique flow pattern.' });
+        onOpenChange(false);
+      } catch (err: any) {
+        refundInk(cost);
+        toast({ variant: 'destructive', title: 'Training Failed', description: err.message });
+      } finally {
+        setIsProcessing(false);
+        setGenerating(false);
+      }
+    });
   };
 
   return (
@@ -592,52 +603,57 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   const router = useRouter();
   const { setGenerating } = useUIState();
   const { toast } = useToast();
-  const { deductInk, refundInk, addUsageLog } = useUsage();
+  const { refundInk, addUsageLog } = useUsage();
   const { getCost, tooltip, buttonLabel } = useInkCosts();
+  const { runWithInk } = useTouchInkRunner();
 
   const handleSuggestVibe = async (e: any) => {
     const cost = getCost('suggestVibe');
-    if (!deductInk(cost, 'suggestVibe', e)) return;
-    setGenerating(true, 'Analyzing Sonic Landscape...');
-    try {
-        const fullLyrics = track.sections.flatMap((s:any) => s.bars.map((b:any) => b.text)).join('\n');
+    runWithInk('suggestVibe', cost, 'suggestVibe', e, async () => {
+      setGenerating(true, 'Analyzing Sonic Landscape...');
+      try {
+        const fullLyrics = track.sections.flatMap((s: any) => s.bars.map((b: any) => b.text)).join('\n');
         const res = await suggestVibe(await withAiAuth({ lyrics: fullLyrics }));
         onUpdateTrack({ vibe: { ...track.vibe, ...res, enabled: true } });
         addUsageLog({ flowName: 'suggestVibe', inkCost: cost, status: 'success' });
-        toast({ title: "Vibe Generated" });
-    } catch (e: any) {
+        toast({ title: 'Vibe Generated' });
+      } catch (err: any) {
         refundInk(cost);
-        toast({ variant: 'destructive', title: 'Vibe Failed', description: e.message });
-    } finally {
+        toast({ variant: 'destructive', title: 'Vibe Failed', description: err.message });
+      } finally {
         setGenerating(false);
-    }
+      }
+    });
   };
 
   const handleGenerateScene = async (e: any) => {
     const cost = getCost('generateCoverArt');
-    if (!deductInk(cost, 'generateCoverArt', e)) return;
-    setGenerating(true, 'Generating Cinematic DNA...');
-    try {
-      const fullLyrics = track.sections.flatMap((s:any) => s.bars.map((b:any) => b.text)).join('\n');
-      const res = await generateCoverArt(await withAiAuth({
-          lyrics: fullLyrics,
-          vibe: track.vibe,
-          mergedDirection: mergeDirection(album.direction, track.direction),
-          title: track.title,
-      }));
-      scratchPadRef.current?.addEffectResult({
+    runWithInk('generateCoverArt', cost, 'generateCoverArt', e, async () => {
+      setGenerating(true, 'Generating Cinematic DNA...');
+      try {
+        const fullLyrics = track.sections.flatMap((s: any) => s.bars.map((b: any) => b.text)).join('\n');
+        const res = await generateCoverArt(
+          await withAiAuth({
+            lyrics: fullLyrics,
+            vibe: track.vibe,
+            mergedDirection: mergeDirection(album.direction, track.direction),
+            title: track.title,
+          })
+        );
+        scratchPadRef.current?.addEffectResult({
           tool: 'scene-gen' as any,
           inputs: { prompt: 'Cinematic Scene' },
-          outputs: [res.prompt]
-      });
-      addUsageLog({ flowName: 'generateCoverArt', inkCost: cost, status: 'success' });
-      toast({ title: "Scene Generated", description: "Cinematic prompt added to Scratch Pad." });
-    } catch (e: any) {
-      refundInk(cost);
-      toast({ variant: 'destructive', title: 'Scene Generation Failed', description: e.message });
-    } finally {
-      setGenerating(false);
-    }
+          outputs: [res.prompt],
+        });
+        addUsageLog({ flowName: 'generateCoverArt', inkCost: cost, status: 'success' });
+        toast({ title: 'Scene Generated', description: 'Cinematic prompt added to Scratch Pad.' });
+      } catch (err: any) {
+        refundInk(cost);
+        toast({ variant: 'destructive', title: 'Scene Generation Failed', description: err.message });
+      } finally {
+        setGenerating(false);
+      }
+    });
   };
 
   const handleMoveSection = (id: string, direction: 'up' | 'down') => {
@@ -828,18 +844,21 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                   <p className="text-[11px] font-bold uppercase text-amber-700">{track.vibe.genre || 'Undefined'}</p>
                   <p className="text-[9px] text-muted-foreground mt-1 line-clamp-2">{track.vibe.feeling?.join(', ')}</p>
                 </div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full h-9 text-[9px] font-bold uppercase border-amber-500/20 hover:bg-amber-500/10 text-amber-600" onClick={(e) => handleSuggestVibe(e)}><RefreshCw className="mr-2 h-3.5 w-3.5"/> {buttonLabel('suggestVibe')}</Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="max-w-[240px] space-y-1">
+                <Hint
+                  skipOnTouch
+                  side="bottom"
+                  align="center"
+                  className="max-w-[min(calc(100vw-2rem),16rem)] space-y-1"
+                  content={
+                    <>
                       <p className="text-[10px] font-bold leading-snug">Analyze lyrics → fill Track Vibe fields</p>
                       <p className="text-[10px] text-muted-foreground leading-snug">Uses your current sheet text to infer genre, BPM, mood, and instrumentation.</p>
                       <p className="text-[9px] font-mono text-primary">{tooltip('suggestVibe')}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                    </>
+                  }
+                >
+                  <Button variant="outline" size="sm" className="w-full h-9 text-[9px] font-bold uppercase border-amber-500/20 hover:bg-amber-500/10 text-amber-600" onClick={(e) => handleSuggestVibe(e)}><RefreshCw className="mr-2 h-3.5 w-3.5"/> {buttonLabel('suggestVibe')}</Button>
+                </Hint>
               </CardContent>
           </Card>
 
@@ -851,20 +870,23 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                 </p>
               </CardHeader>
               <CardContent className="px-4 pb-4 font-code">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full h-9 text-[9px] font-bold uppercase border-indigo-500/20 hover:bg-indigo-500/10 text-indigo-400" onClick={(e) => handleGenerateScene(e)}>
-                          <Sparkles className="mr-2 h-3.5 w-3.5"/> {buttonLabel('generateCoverArt')}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="max-w-[240px] space-y-1">
+                <Hint
+                  skipOnTouch
+                  side="bottom"
+                  align="center"
+                  className="max-w-[min(calc(100vw-2rem),16rem)] space-y-1"
+                  content={
+                    <>
                       <p className="text-[10px] font-bold leading-snug">Cinematic scene prompt → Scratch Pad</p>
                       <p className="text-[10px] text-muted-foreground leading-snug">Combines lyrics, vibe, and direction into a shot list you can reuse in video AI tools.</p>
                       <p className="text-[9px] font-mono text-primary">{tooltip('generateCoverArt')}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                    </>
+                  }
+                >
+                  <Button variant="outline" size="sm" className="w-full h-9 text-[9px] font-bold uppercase border-indigo-500/20 hover:bg-indigo-500/10 text-indigo-400" onClick={(e) => handleGenerateScene(e)}>
+                    <Sparkles className="mr-2 h-3.5 w-3.5"/> {buttonLabel('generateCoverArt')}
+                  </Button>
+                </Hint>
               </CardContent>
           </Card>
         </div>
@@ -908,14 +930,14 @@ function NeuralStripItem({ text, active, color, onClick }: { text: string, activ
 // --- Center Panel Component ---
 
 function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false }: any) {
-  const [fontSize, setFontSize] = useState<'sm' | 'md' | 'lg'>('md');
+  const [fontSize, setFontSize] = useState<'xs' | 'sm' | 'md' | 'lg'>('md');
   const lyricsViewportRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { tooltip, buttonLabel, getCost, getEffectiveCost } = useInkCosts();
   const { toast } = useToast();
   
-  const fontSizes = { sm: 'text-[16px]', md: 'text-[24px]', lg: 'text-[36px]' };
-  const lineHeights = { sm: '22px', md: '32px', lg: '42px' };
+  const fontSizes = { xs: 'text-[14px]', sm: 'text-[16px]', md: 'text-[24px]', lg: 'text-[36px]' };
+  const lineHeights = { xs: '20px', sm: '22px', md: '32px', lg: '40px' };
   const activeLineHeight = lineHeights[fontSize];
 
   const snapBarTextareaHeight = useCallback(
@@ -924,7 +946,9 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
       el.style.minHeight = '0px';
       el.style.height = '0px';
       const scrollH = el.scrollHeight;
-      const snapped = Math.max(lineHeightPx, Math.ceil(scrollH / lineHeightPx) * lineHeightPx);
+      // Avoid rounding a single line up to two rows (caused blank gaps between bar numbers)
+      const lineCount = Math.max(1, Math.floor((scrollH + lineHeightPx * 0.2) / lineHeightPx));
+      const snapped = lineCount * lineHeightPx;
       el.style.height = `${snapped}px`;
       el.style.minHeight = `${lineHeightPx}px`;
     },
@@ -1184,12 +1208,13 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
           <ToggleGroup
             type="single"
             value={fontSize}
-            onValueChange={(val) => val && setFontSize(val as 'sm' | 'md' | 'lg')}
-            className="flex bg-muted/40 border border-border/40 rounded-lg p-0.5 shrink-0"
+            onValueChange={(val) => val && setFontSize(val as 'xs' | 'sm' | 'md' | 'lg')}
+            className="flex bg-muted/40 border border-border/40 rounded-lg p-0.5 shrink-0 max-md:max-w-[min(42vw,11rem)] max-md:overflow-x-auto max-md:studio-scrollbar"
             aria-label="Lyrics text size"
           >
-            <ToggleGroupItem value="sm" className="h-7 w-7 max-md:h-6 max-md:w-6 text-[10px] font-bold px-0" aria-label="Small text">T</ToggleGroupItem>
-            <ToggleGroupItem value="md" className="h-7 w-7 max-md:h-6 max-md:w-6 text-sm font-bold px-0" aria-label="Medium text">T</ToggleGroupItem>
+            <ToggleGroupItem value="xs" className="h-7 w-6 max-md:h-6 max-md:w-5 text-[9px] font-bold px-0" aria-label="Smaller text">T</ToggleGroupItem>
+            <ToggleGroupItem value="sm" className="h-7 w-6 max-md:h-6 max-md:w-5 text-[10px] font-bold px-0" aria-label="Small text">T</ToggleGroupItem>
+            <ToggleGroupItem value="md" className="h-7 w-6 max-md:h-6 max-md:w-5 text-sm font-bold px-0" aria-label="Medium text">T</ToggleGroupItem>
             <ToggleGroupItem value="lg" className="h-7 w-7 max-md:h-6 max-md:w-6 text-lg font-bold px-0" aria-label="Large text">T</ToggleGroupItem>
           </ToggleGroup>
         </div>
@@ -1216,7 +1241,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                 {(section.bars || []).map((bar: any) => {
                     const isSelected = activeGeneratorBar?.sectionId === section.id && activeGeneratorBar?.idx === bar.idx;
                     return (
-                        <div key={`${section.id}-${bar.idx}`} className={cn("group relative flex max-md:flex-row md:block items-start transition-colors h-auto max-md:px-1", isSelected && "bg-primary/10", bar.justGenerated && "animate-line-glow")} style={{ minHeight: activeLineHeight }}>
+                        <div key={`${section.id}-${bar.idx}`} className={cn("group relative flex max-md:flex-row md:block items-start transition-colors max-md:px-1", isSelected && "bg-primary/10", bar.justGenerated && "animate-line-glow")}>
                         <span className={cn(
                           "font-mono text-muted-foreground/40 text-right font-bold shrink-0 z-10",
                           "max-md:relative max-md:w-7 max-md:mr-0.5 max-md:text-[10px]",
@@ -1224,7 +1249,11 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                           fontSizes[fontSize]
                         )} style={{ lineHeight: activeLineHeight }}>{String(bar.idx).padStart(2, '0')}</span>
                         
-                        <div className="absolute right-1 md:right-4 top-0 h-full flex items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-20">
+                        <div className={cn(
+                          "absolute right-1 md:right-4 top-0 h-full flex items-center gap-0.5 transition-opacity z-20",
+                          isSelected ? "opacity-100" : "max-md:opacity-0 max-md:pointer-events-none",
+                          !isSelected && "md:opacity-0 md:group-hover:opacity-100"
+                        )}>
                             <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10" onClick={(e) => handleSharedLineGeneration('next', e, section.id, bar.idx)}><ArrowDown className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10" onClick={(e) => handleSharedLineGeneration('previous', e, section.id, bar.idx)}><ArrowUp className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteBar(section.id, bar.idx)}><Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
@@ -1343,7 +1372,10 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                 }} 
                                 className="bg-background/40 border border-white/10 w-full md:flex-1 md:min-w-[5rem] px-3 py-2 font-code font-bold text-sm shadow-inner rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 tracking-tight resize-none h-14 max-h-14 shrink-0 min-w-0" 
                             />
-                            <div className="flex flex-row flex-nowrap items-center gap-1.5 shrink-0 min-w-0 max-md:w-full overflow-x-auto studio-scrollbar md:overflow-visible md:max-w-[min(100%,22rem)] lg:max-w-none">
+                            <div className={cn(
+                              "flex flex-row flex-nowrap items-center gap-1.5 shrink-0 min-w-0 max-md:w-full overflow-x-auto studio-scrollbar md:overflow-visible md:max-w-[min(100%,22rem)] lg:max-w-none",
+                              !activeGeneratorBar && "max-md:hidden"
+                            )}>
                                 <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
                                   <Button variant="outline" size="sm" aria-label="Generate next line" className="h-10 md:h-14 px-2 md:px-3 font-bold text-[10px] uppercase border-border/40 gap-1 shadow-lg shrink-0" onClick={(e) => handleSharedLineGeneration('next', e)}>
                                       <ArrowDown className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -1991,8 +2023,9 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const { toast } = useToast();
   const { getTrackById, updateTrack, styleProfile, updateStyleProfile, updateAlbum } = useContext(DataContext);
   const { setGenerating } = useUIState();
-  const { deductInk, refundInk, addUsageLog, registerAiContext } = useUsage();
+  const { refundInk, addUsageLog, registerAiContext } = useUsage();
   const { getCost } = useInkCosts();
+  const { runWithInk } = useTouchInkRunner();
   const searchParams = useSearchParams();
 
   const [leftCollapsed, setLeftCollapsed] = useState(false);
@@ -2176,23 +2209,24 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const handleRunRhymeScan = async (e: any) => {
     if (!track) return;
     const cost = getCost('findRhymes');
-    if (!deductInk(cost, 'findRhymes', e)) return;
-    setIsRhymeLoading(true);
-    setGenerating(true, 'Initializing Rhyme Pulse...');
-    try {
-        const fullLyrics = track.sections.flatMap(s => s.bars.map(b => b.text)).join('\n');
+    runWithInk('findRhymes', cost, 'findRhymes', e, async () => {
+      setIsRhymeLoading(true);
+      setGenerating(true, 'Initializing Rhyme Pulse...');
+      try {
+        const fullLyrics = track.sections.flatMap((s) => s.bars.map((b) => b.text)).join('\n');
         const res = await findRhymes(await withAiAuth({ text: fullLyrics, userName: user?.displayName }));
         handleUpdateTrack({ rhymeGroups: res.rhymeGroups });
         addUsageLog({ flowName: 'findRhymes', inkCost: cost, status: 'success' });
-        toast({ title: "Rhyme Pulse Complete" });
+        toast({ title: 'Rhyme Pulse Complete' });
         void postGamificationEvent('rhyme_pulse_on');
-    } catch (e: any) {
+      } catch (err: any) {
         refundInk(cost);
-        toast({ variant: 'destructive', title: 'Scan Failed', description: e.message });
-    } finally {
+        toast({ variant: 'destructive', title: 'Scan Failed', description: err.message });
+      } finally {
         setIsRhymeLoading(false);
         setGenerating(false);
-    }
+      }
+    });
   };
 
   const handleSharedLineGeneration = async (mode: 'next' | 'previous', e: any, sId?: string, bIdx?: number) => {
@@ -2201,24 +2235,26 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     const barIdx = bIdx || activeGeneratorBar?.idx;
     if (!sectionId || !barIdx) { toast({ variant: 'destructive', title: 'Selection Required' }); return; }
     const cost = getCost('generateNextLine');
-    if (!deductInk(cost, 'generateNextLine', e)) return;
-    setGenerating(true, 'Neural Synthesis Active...');
-    try {
-        const section = track.sections.find(s => s.id === sectionId);
-        const priorLines = section.bars.filter(b => b.idx < barIdx).map(b => b.text);
-        const nextLines = section.bars.filter(b => b.idx > barIdx).map(b => b.text);
-        const targetLine = section.bars.find(b => b.idx === barIdx)?.text || '';
+    const inkKey = `generateNextLine-${mode}-${sectionId}-${barIdx}`;
+    runWithInk(inkKey, cost, 'generateNextLine', e, async () => {
+      setGenerating(true, 'Neural Synthesis Active...');
+      try {
+        const section = track.sections.find((s) => s.id === sectionId);
+        const priorLines = section.bars.filter((b) => b.idx < barIdx).map((b) => b.text);
+        const nextLines = section.bars.filter((b) => b.idx > barIdx).map((b) => b.text);
+        const targetLine = section.bars.find((b) => b.idx === barIdx)?.text || '';
         if (mode === 'next') priorLines.push(targetLine);
         else nextLines.unshift(targetLine);
-        const res = await generateNextLine(await withAiAuth({
+        const res = await generateNextLine(
+          await withAiAuth({
             userName: user?.displayName,
             priorLines,
             nextLines,
             sectionType: section.type,
             vibe: track.vibe ?? { genre: 'General', tempoBPM: 90, feeling: ['neutral'] },
-            intents: isIntentsActive(track) ? (track.checkedIntents || []) : [],
+            intents: isIntentsActive(track) ? track.checkedIntents || [] : [],
             styleProfileSummary: isStyleActive(track)
-              ? (effectiveStyleProfile?.history[0]?.analysis || 'Initial neutral style profile.')
+              ? effectiveStyleProfile?.history[0]?.analysis || 'Initial neutral style profile.'
               : 'Initial neutral style profile.',
             rhymeMode: 'continue',
             theme: track.title || album.title || 'Untitled',
@@ -2227,13 +2263,20 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
             negativePrompt: isGuardrailsActive(track) ? track.guardrails?.negativePrompt : undefined,
             forbiddenWords: isGuardrailsActive(track) ? track.guardrails?.forbiddenWords : undefined,
             mustIncludeWords: isGuardrailsActive(track) ? track.guardrails?.mustIncludeWords : undefined,
-        }));
-        if (!res || res.length === 0) throw new Error("Synthesis produced no results.");
+          })
+        );
+        if (!res || res.length === 0) throw new Error('Synthesis produced no results.');
         setGenerationOptions(res);
         setIsMinimized(false);
         setPendingGenCtx({ mode, sId: sectionId, bIdx: barIdx });
         addUsageLog({ flowName: 'generateNextLine', inkCost: cost, status: 'success' });
-    } catch (e: any) { refundInk(cost); toast({ variant: 'destructive', title: 'Synthesis Failed', description: e.message }); } finally { setGenerating(false); }
+      } catch (err: any) {
+        refundInk(cost);
+        toast({ variant: 'destructive', title: 'Synthesis Failed', description: err.message });
+      } finally {
+        setGenerating(false);
+      }
+    });
   };
 
   const handleAcceptOption = (line: string) => {

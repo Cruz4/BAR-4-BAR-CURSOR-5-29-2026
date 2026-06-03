@@ -90,6 +90,21 @@ const SIZE_CONFIG = {
     gap: 'gap-4 sm:gap-5',
     dotScale: 1.16,
   },
+  /** Ink-spend floating overlay — compact card, but legible logo + helix */
+  popup: {
+    canvasW: 280,
+    canvasH: 320,
+    logo: 280,
+    strandRadius: 44,
+    maxW: 360,
+    titleClass: 'text-[11px] tracking-[0.34em]',
+    statusClass: 'text-[9px] tracking-[0.2em]',
+    strainsMaxW: 300,
+    strainsTitle: 'text-[8px]',
+    strainsLabel: 'text-[7px]',
+    gap: 'gap-3',
+    dotScale: 1.02,
+  },
 } as const;
 
 type LoaderSize = keyof typeof SIZE_CONFIG;
@@ -113,8 +128,6 @@ function useResponsiveLoaderSize(requested: LoaderSize): LoaderSize {
 
     const pick = (): LoaderSize => {
       const w = window.innerWidth;
-      if (w < 420) return 'compact';
-      if (w < 768) return 'default';
       if (w < 1200) return 'workstation';
       return 'large';
     };
@@ -204,8 +217,28 @@ export function getDnaLoaderStatusText(
   return statusForProgress(progress, custom, mode);
 }
 
+/** Logo scale behind helix — workstation overlay uses `constrainHeight` */
+const LOGO_SCALE_DEFAULT = 0.82;
+const LOGO_SCALE_CONSTRAINED = 0.76;
+/** Matched top/bottom rows so the helix ring centers between header and progress footer */
+const WORKSTATION_EDGE_ROW_MIN_H = 'min-h-[4.75rem] sm:min-h-[5.25rem] md:min-h-[5.5rem]';
+const LOGO_SCALE_POPUP = 0.82;
+
 /** App logo — faint backbone behind the helix */
-function LogoMotif({ logoSize, constrainHeight }: { logoSize: number; constrainHeight?: boolean }) {
+function LogoMotif({
+  logoSize,
+  constrainHeight,
+  popup,
+}: {
+  logoSize: number;
+  constrainHeight?: boolean;
+  popup?: boolean;
+}) {
+  const scale = popup
+    ? LOGO_SCALE_POPUP
+    : constrainHeight
+      ? LOGO_SCALE_CONSTRAINED
+      : LOGO_SCALE_DEFAULT;
   return (
     <img
       src="/Logo.png"
@@ -213,10 +246,12 @@ function LogoMotif({ logoSize, constrainHeight }: { logoSize: number; constrainH
       aria-hidden
       className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[2] object-contain select-none"
       style={{
-        opacity: 0.35,
-        width: constrainHeight
-          ? `min(${Math.round(logoSize * 0.46)}px, 42vw, 26vh)`
-          : `min(${logoSize}px, 82vw)`,
+        opacity: 0.38,
+        width: popup
+          ? `min(${Math.round(logoSize * scale)}px, 52vw, 34vh)`
+          : constrainHeight
+            ? `min(${Math.round(logoSize * scale)}px, 54vw, 34vh)`
+            : `min(${logoSize}px, 82vw)`,
         height: 'auto',
         filter: 'drop-shadow(0 0 16px rgba(217,70,239,0.12))',
       }}
@@ -254,6 +289,7 @@ export function DNASynthesisLoader({
   hideStatus = false,
 }: DNASynthesisLoaderProps) {
   const requested = resolveSize(compact, size);
+  const isPopup = requested === 'popup';
   const responsiveSize = useResponsiveLoaderSize(requested);
   const cfg = SIZE_CONFIG[responsiveSize];
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -280,6 +316,8 @@ export function DNASynthesisLoader({
   const completion = Math.min(1, Math.max(0, progress / 100));
   const displayStatus = statusForProgress(progress, statusText, mode);
   const loaderTitle = mode === 'extract' ? 'DNA Extraction' : 'Creative Syncing';
+  const isWorkstationLayout = constrainHeight && !isPopup;
+  const showStrainsPanel = mode === 'synthesize' && activeRuleList.length > 0;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -412,10 +450,150 @@ export function DNASynthesisLoader({
     return () => cancelAnimationFrame(frameRef.current);
   }, [activeRuleList.join(','), palette.join(','), cfg.strandRadius, cfg.dotScale, cfg.canvasW, cfg.canvasH]);
 
+  const strainsPanel = (
+    <div
+      className={cn(
+        'w-full max-w-full mx-auto shrink-0 rounded-xl border border-white/15 bg-black/55 backdrop-blur-sm px-2.5 py-2 sm:px-4 sm:py-3',
+        isWorkstationLayout && WORKSTATION_EDGE_ROW_MIN_H,
+        !showStrainsPanel && isWorkstationLayout && 'invisible border-transparent bg-transparent pointer-events-none'
+      )}
+      style={{ maxWidth: `min(${cfg.strainsMaxW}px, 100%)` }}
+      aria-hidden={!showStrainsPanel}
+    >
+      <p
+        className={cn(
+          'font-bold uppercase tracking-widest text-white/70 flex items-center justify-center gap-1.5 mb-2',
+          cfg.strainsTitle
+        )}
+      >
+        <Hexagon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-cyan-400" /> Active Neural Strains
+      </p>
+      <div className="flex flex-wrap gap-x-2 sm:gap-x-3 gap-y-1.5 justify-center min-h-[1.25rem]">
+        {showStrainsPanel ? (
+          activeRuleList.map((rule) => (
+            <div key={rule} className="flex items-center gap-1 sm:gap-1.5">
+              <div
+                className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shrink-0"
+                style={{
+                  backgroundColor: RULE_COLORS[rule],
+                  boxShadow: `0 0 6px ${RULE_COLORS[rule]}`,
+                }}
+              />
+              <span className={cn('font-bold uppercase tracking-wider text-white/55', cfg.strainsLabel)}>
+                {RULE_LABELS[rule]}
+              </span>
+            </div>
+          ))
+        ) : (
+          <span className="sr-only">Strain legend slot</span>
+        )}
+      </div>
+    </div>
+  );
+
+  const logoAnchorStyle = {
+    width: isPopup
+      ? `min(${Math.round(cfg.logo * LOGO_SCALE_POPUP)}px, 52vw, 34vh)`
+      : isWorkstationLayout
+        ? `min(${Math.round(cfg.logo * LOGO_SCALE_CONSTRAINED)}px, min(48vw, 38dvh), 100%)`
+        : constrainHeight
+          ? `min(${Math.round(cfg.logo * LOGO_SCALE_CONSTRAINED)}px, 54vw, 34vh)`
+          : `min(62%, ${Math.round(cfg.logo * 0.9)}px, 72vw)`,
+    aspectRatio: '1' as const,
+  };
+
+  const helixStage = (
+    <div
+      className={cn(
+        'relative w-full flex justify-center items-center',
+        isPopup
+          ? 'min-h-[200px] max-h-[42vh] sm:max-h-[46vh] shrink-0'
+          : isWorkstationLayout
+            ? 'h-full min-h-[11rem] max-h-full mx-auto max-w-[min(100%,520px)]'
+            : constrainHeight
+              ? 'max-h-[32vh] sm:max-h-[38vh] md:max-h-[44vh] shrink-0'
+              : 'shrink-0 overflow-visible'
+      )}
+      style={
+        isWorkstationLayout
+          ? undefined
+          : isPopup || constrainHeight
+            ? undefined
+            : { minHeight: `min(${cfg.canvasH + 12}px, 50vh)` }
+      }
+    >
+      <div
+        ref={logoAnchorRef}
+        className="absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0"
+        style={logoAnchorStyle}
+        aria-hidden
+      />
+      <LogoMotif logoSize={cfg.logo} constrainHeight={constrainHeight || isWorkstationLayout} popup={isPopup} />
+      <canvas
+        ref={canvasRef}
+        width={cfg.canvasW}
+        height={cfg.canvasH}
+        className={cn(
+          'relative z-10 block h-auto w-auto max-w-full',
+          isPopup && 'max-h-[42vh] sm:max-h-[46vh] object-contain',
+          isWorkstationLayout && 'max-h-full max-w-full object-contain',
+          constrainHeight &&
+            !isWorkstationLayout &&
+            !isPopup &&
+            'w-full max-w-[min(92vw,520px)] max-h-[32vh] sm:max-h-[38vh] md:max-h-[44vh] object-contain'
+        )}
+        style={{
+          filter: `drop-shadow(0 0 ${12 + progress * 0.25}px rgba(217,70,239,${0.2 + completion * 0.35}))`,
+        }}
+      />
+    </div>
+  );
+
+  if (isWorkstationLayout) {
+    return (
+      <div
+        className="grid h-full min-h-0 w-full mx-auto grid-rows-[auto_1fr_auto] py-3 sm:py-4 md:py-5 text-center"
+        style={{ maxWidth: `min(${cfg.maxW}px, 100%)` }}
+      >
+        <div
+          className={cn(
+            'flex w-full items-end justify-center px-1 sm:px-2 pb-1 sm:pb-1.5',
+            WORKSTATION_EDGE_ROW_MIN_H
+          )}
+        >
+          <p
+            className={cn(
+              'w-full shrink-0 font-headline font-bold uppercase',
+              'text-cyan-100 sm:text-white',
+              'drop-shadow-[0_0_18px_rgba(56,189,248,0.65)]',
+              cfg.titleClass
+            )}
+          >
+            {loaderTitle}
+          </p>
+        </div>
+
+        <div className="relative min-h-0 flex w-full items-center justify-center px-0.5 sm:px-1 py-1 sm:py-2">
+          {helixStage}
+        </div>
+
+        <div
+          className={cn(
+            'flex w-full items-start justify-center px-1 sm:px-2 pt-1 sm:pt-1.5',
+            WORKSTATION_EDGE_ROW_MIN_H
+          )}
+        >
+          {strainsPanel}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center w-full mx-auto px-1 sm:px-2 text-center shrink-0',
+        'flex flex-col items-center w-full mx-auto px-1 sm:px-2 text-center',
+        'justify-center shrink-0',
         constrainHeight ? 'gap-3 sm:gap-4' : cfg.gap
       )}
       style={{ maxWidth: `min(${cfg.maxW}px, 100%)` }}
@@ -431,86 +609,19 @@ export function DNASynthesisLoader({
         {loaderTitle}
       </p>
 
-      <div
-        className={cn(
-          'relative w-full flex justify-center items-center shrink-0',
-          constrainHeight
-            ? 'max-h-[32vh] sm:max-h-[38vh] md:max-h-[44vh]'
-            : 'overflow-visible'
-        )}
-        style={
-          constrainHeight
-            ? undefined
-            : { minHeight: `min(${cfg.canvasH + 12}px, 50vh)` }
-        }
-      >
-        <div
-          ref={logoAnchorRef}
-          className="absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0"
-          style={{
-            width: constrainHeight
-              ? `min(${Math.round(cfg.logo * 0.46)}px, 42vw, 26vh)`
-              : 'min(58%, 260px)',
-            aspectRatio: '1',
-          }}
-          aria-hidden
-        />
-        <LogoMotif logoSize={cfg.logo} constrainHeight={constrainHeight} />
-        <canvas
-          ref={canvasRef}
-          width={cfg.canvasW}
-          height={cfg.canvasH}
-          className={cn(
-            'relative z-10 block w-full max-w-[min(92vw,520px)] h-auto',
-            constrainHeight && 'max-h-[32vh] sm:max-h-[38vh] md:max-h-[44vh] object-contain'
-          )}
-          style={{
-            filter: `drop-shadow(0 0 ${12 + progress * 0.25}px rgba(217,70,239,${0.2 + completion * 0.35}))`,
-          }}
-        />
-      </div>
+      {helixStage}
 
-      {mode === 'synthesize' && activeRuleList.length > 0 && (
-        <div
-          className="w-full mx-auto shrink-0 rounded-xl border border-white/15 bg-black/55 backdrop-blur-sm px-2.5 py-2 sm:px-4 sm:py-3"
-          style={{ maxWidth: `min(${cfg.strainsMaxW}px, 100%)` }}
-        >
-          <p
-            className={cn(
-              'font-bold uppercase tracking-widest text-white/70 flex items-center justify-center gap-1.5 mb-2',
-              cfg.strainsTitle
-            )}
-          >
-            <Hexagon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-cyan-400" /> Active Neural Strains
-          </p>
-          <div className="flex flex-wrap gap-x-2 sm:gap-x-3 gap-y-1.5 justify-center">
-            {activeRuleList.map((rule) => (
-              <div key={rule} className="flex items-center gap-1 sm:gap-1.5">
-                <div
-                  className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shrink-0"
-                  style={{
-                    backgroundColor: RULE_COLORS[rule],
-                    boxShadow: `0 0 6px ${RULE_COLORS[rule]}`,
-                  }}
-                />
-                <span className={cn('font-bold uppercase tracking-wider text-white/55', cfg.strainsLabel)}>
-                  {RULE_LABELS[rule]}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {showStrainsPanel && strainsPanel}
 
       {!hideStatus && (
-      <p
-        className={cn(
-          'font-code uppercase text-white/65 text-center leading-relaxed px-1 sm:px-2 shrink-0',
-          cfg.statusClass
-        )}
-      >
-        {displayStatus}
-      </p>
+        <p
+          className={cn(
+            'font-code uppercase text-white/65 text-center leading-relaxed px-1 sm:px-2 shrink-0',
+            cfg.statusClass
+          )}
+        >
+          {displayStatus}
+        </p>
       )}
     </div>
   );

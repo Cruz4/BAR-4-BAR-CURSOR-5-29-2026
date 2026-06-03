@@ -13,14 +13,16 @@ export const runtime = 'nodejs';
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-/** Safe config check — open in a browser or Stripe Dashboard "Send test webhook". */
+/** Dev-only health check — no secret material in production responses. */
 export async function GET() {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ ok: true });
+  }
   const stripeKey = process.env.STRIPE_SECRET_KEY;
   const secret = endpointSecret;
   return NextResponse.json({
     ok: true,
     hasSecret: Boolean(secret),
-    secretPrefix: secret ? secret.slice(0, 10) : null,
     hasStripeKey: Boolean(stripeKey),
     stripeKeyMode: stripeKey?.startsWith('sk_live_')
       ? 'live'

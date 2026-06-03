@@ -1,5 +1,6 @@
-/* Bar 4 Bar Studio — offline shell (network-first for app code) */
-const CACHE_NAME = 'b4b-static-v3';
+/* Bar 4 Bar Studio — PWA shell + visited routes for offline studio */
+const CACHE_NAME = 'b4b-static-v4';
+const SHELL_CACHE = 'b4b-shell-v4';
 const STATIC_ASSETS = ['/Logo.png', '/B4B_Font.otf', '/YUSRB_font.ttf'];
 
 self.addEventListener('install', (event) => {
@@ -15,7 +16,11 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
+      .then((keys) =>
+        Promise.all(
+          keys.filter((k) => k !== CACHE_NAME && k !== SHELL_CACHE).map((k) => caches.delete(k))
+        )
+      )
       .then(() => self.clients.claim())
   );
 });
@@ -26,6 +31,14 @@ self.addEventListener('message', (event) => {
 
 function isStaticAsset(pathname) {
   return STATIC_ASSETS.includes(pathname);
+}
+
+function isStudioRoute(pathname) {
+  return (
+    pathname === '/' ||
+    pathname.startsWith('/albums/') ||
+    pathname.startsWith('/usage')
+  );
 }
 
 self.addEventListener('fetch', (event) => {
@@ -50,13 +63,37 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // HTML, JS, CSS, and API routes: network-first so deploys show up immediately.
+  if (event.request.mode === 'navigate' && isStudioRoute(url.pathname)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(SHELL_CACHE).then((cache) => {
+              cache.put(event.request, clone);
+              cache.put(url.pathname, clone);
+            });
+          }
+          return response;
+        })
+        .catch(async () => {
+          const cached =
+            (await caches.match(event.request)) ||
+            (await caches.match(url.pathname)) ||
+            (await caches.match('/'));
+          if (cached) return cached;
+          return Response.error();
+        })
+    );
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
         if (response.ok && event.request.mode === 'navigate') {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          caches.open(SHELL_CACHE).then((cache) => cache.put(event.request, clone));
         }
         return response;
       })

@@ -17,27 +17,64 @@ import { StudioLoader } from '@/components/studio-loader';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { clearWhatsNewLoginSession } from '@/lib/whats-new-session';
+import { isBrowserOffline, onNetworkChange } from '@/lib/offline/network';
+import {
+  loadCachedUserProfile,
+  saveCachedUserProfile,
+  type CachedUserProfile,
+} from '@/lib/offline/vault-cache';
+import { isMasterAdminEmail } from '@/lib/master-admin';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   authReady: boolean;
+  offlineAuth: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   authReady: false,
+  offlineAuth: false,
 });
 
 const PROTECTED_ROUTES = ['/usage', '/albums', '/admin', '/studio-progress'];
 const PUBLIC_ROUTES = ['/login', '/pricing'];
-const MASTER_ADMIN_EMAIL = 'plotformaiplan@gmail.com';
+const AUTH_BOOT_TIMEOUT_MS = 4500;
+
+function userFromFirebase(
+  firebaseUser: FirebaseUser,
+  data?: Partial<User> | null,
+  isMaster = false
+): User {
+  return {
+    id: firebaseUser.uid,
+    displayName: firebaseUser.displayName || data?.displayName || 'Anonymous',
+    email: firebaseUser.email || data?.email || '',
+    createdAt: firebaseUser.metadata.creationTime || data?.createdAt || new Date().toISOString(),
+    role: isMaster ? 'admin' : (data?.role || 'artist'),
+    status: data?.status || 'active',
+    subscriptionStatus: data?.subscriptionStatus || 'none',
+    subscriptionTier: data?.subscriptionTier || 'none',
+    trialStartedAt: data?.trialStartedAt ?? null,
+    lyricsTutorialCompletedAt: data?.lyricsTutorialCompletedAt,
+  };
+}
+
+function userFromCachedProfile(
+  firebaseUser: FirebaseUser,
+  cached: CachedUserProfile,
+  isMaster = false
+): User {
+  return userFromFirebase(firebaseUser, cached, isMaster);
+}
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [authReady, setAuthReady] = useState(false);
+  const [offlineAuth, setOfflineAuth] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const router = useRouter();
@@ -45,98 +82,158 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let unsubscribeDoc: (() => void) | null = null;
+    let bootTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const finishLoading = () => {
+      if (bootTimer) {
+        clearTimeout(bootTimer);
+        bootTimer = null;
+      }
+      setLoading(false);
+    };
+
+    const applyCachedOfflineUser = (firebaseUser: FirebaseUser) => {
+      const cached = loadCachedUserProfile(firebaseUser.uid);
+      if (!cached) return false;
+      const isMaster = isMasterAdminEmail(firebaseUser.email);
+      setUser(userFromCachedProfile(firebaseUser, cached, isMaster));
+      setAuthReady(true);
+      setOfflineAuth(true);
+      finishLoading();
+      return true;
+    };
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (unsubscribeDoc) {
         unsubscribeDoc();
         unsubscribeDoc = null;
       }
+      if (bootTimer) {
+        clearTimeout(bootTimer);
+        bootTimer = null;
+      }
 
       if (!firebaseUser) {
         clearWhatsNewLoginSession();
         setUser(null);
         setAuthReady(false);
-        setLoading(false);
+        setOfflineAuth(false);
+        finishLoading();
         return;
       }
 
-      const isMaster = firebaseUser.email === MASTER_ADMIN_EMAIL;
+      const isMaster = isMasterAdminEmail(firebaseUser.email);
+      const offline = isBrowserOffline();
+
+      if (offline) {
+        applyCachedOfflineUser(firebaseUser);
+      }
+
+      bootTimer = setTimeout(() => {
+        if (!auth.currentUser) return;
+        applyCachedOfflineUser(auth.currentUser);
+      }, AUTH_BOOT_TIMEOUT_MS);
 
       try {
-        await firebaseUser.getIdToken();
+        await firebaseUser.getIdToken(false);
+        setOfflineAuth(false);
       } catch (error) {
-        console.error('Auth token error:', error);
+        console.warn('Auth token error:', error);
+        if (offline && applyCachedOfflineUser(firebaseUser)) {
+          return;
+        }
+        if (offline) {
+          setUser(null);
+          setAuthReady(false);
+          finishLoading();
+          return;
+        }
         setUser(null);
         setAuthReady(false);
-        setLoading(false);
+        finishLoading();
         return;
       }
 
       setAuthReady(true);
 
-        const hydrateFromFirebase = () => ({
-          id: firebaseUser.uid,
-          displayName: firebaseUser.displayName || 'Anonymous',
-          email: firebaseUser.email || '',
-          createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
-          role: (isMaster ? 'admin' : 'artist') as User['role'],
-          status: 'active' as const,
-          subscriptionStatus: 'none' as const,
-          subscriptionTier: 'none' as const,
-        });
+      const hydrateFromFirebase = () => userFromFirebase(firebaseUser, null, isMaster);
 
-        unsubscribeDoc = subscribeDocument(
-          doc(db, 'users', firebaseUser.uid),
-          (data) => {
+      unsubscribeDoc = subscribeDocument(
+        doc(db, 'users', firebaseUser.uid),
+        (data) => {
           if (data) {
-              // BLACKLIST ENFORCEMENT
-              if (data.status === 'blocked') {
-                  setIsBlocked(true);
-                  signOut(auth);
-                  setUser(null);
-                  setLoading(false);
-                  return;
-              }
+            if (data.status === 'blocked') {
+              setIsBlocked(true);
+              signOut(auth);
+              setUser(null);
+              finishLoading();
+              return;
+            }
 
-              setIsBlocked(false);
-              setUser({
-                id: firebaseUser.uid,
-                displayName: firebaseUser.displayName || data.displayName || 'Anonymous',
-                email: firebaseUser.email || data.email || '',
-                createdAt: firebaseUser.metadata.creationTime || data.createdAt || new Date().toISOString(),
-                role: isMaster ? 'admin' : (data?.role || 'artist'),
-                status: data?.status || 'active',
-                subscriptionStatus: data?.subscriptionStatus || 'none',
-                subscriptionTier: data?.subscriptionTier || 'none',
-                trialStartedAt: data.trialStartedAt || null,
-                lyricsTutorialCompletedAt: data.lyricsTutorialCompletedAt || undefined,
-              });
+            setIsBlocked(false);
+            const nextUser = userFromFirebase(firebaseUser, data as Partial<User>, isMaster);
+            setUser(nextUser);
+            saveCachedUserProfile({
+              id: nextUser.id,
+              displayName: nextUser.displayName,
+              email: nextUser.email,
+              role: nextUser.role,
+              status: nextUser.status,
+              subscriptionStatus: nextUser.subscriptionStatus,
+              subscriptionTier: nextUser.subscriptionTier,
+              trialStartedAt: nextUser.trialStartedAt ?? null,
+              lyricsTutorialCompletedAt: nextUser.lyricsTutorialCompletedAt,
+            });
           } else {
-              setUser(hydrateFromFirebase());
+            const fallback = hydrateFromFirebase();
+            setUser(fallback);
+            saveCachedUserProfile({
+              id: fallback.id,
+              displayName: fallback.displayName,
+              email: fallback.email,
+              role: fallback.role,
+              status: fallback.status,
+              subscriptionStatus: fallback.subscriptionStatus,
+              subscriptionTier: fallback.subscriptionTier,
+              trialStartedAt: fallback.trialStartedAt ?? null,
+              lyricsTutorialCompletedAt: fallback.lyricsTutorialCompletedAt,
+            });
           }
-          setLoading(false);
-        }, (error) => {
-            console.error("Auth profile listener error:", error);
-            setUser(hydrateFromFirebase());
-            setLoading(false);
-        });
+          finishLoading();
+        },
+        (error) => {
+          console.error('Auth profile listener error:', error);
+          if (applyCachedOfflineUser(firebaseUser)) return;
+          const fallback = hydrateFromFirebase();
+          setUser(fallback);
+          finishLoading();
+        }
+      );
     });
 
     return () => {
       unsubscribeAuth();
       if (unsubscribeDoc) unsubscribeDoc();
+      if (bootTimer) clearTimeout(bootTimer);
     };
+  }, []);
+
+  useEffect(() => {
+    return onNetworkChange((online) => {
+      if (!online || !auth.currentUser) return;
+      setOfflineAuth(false);
+    });
   }, []);
 
   useEffect(() => {
     if (loading) return;
 
     if (isBlocked) {
-        router.push('/login?error=restricted');
-        return;
+      router.push('/login?error=restricted');
+      return;
     }
 
-    const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
+    const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
     const isAuthRoute = PUBLIC_ROUTES.includes(pathname);
     const isHomePage = pathname === '/';
 
@@ -146,6 +243,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (!user && (isProtectedRoute || isHomePage)) {
+      if (isBrowserOffline()) return;
       setIsRedirecting(true);
       router.push('/login');
     } else if (user && isAuthRoute) {
@@ -163,7 +261,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
       setIsRedirecting(false);
     }
-
   }, [user, loading, pathname, router, isBlocked]);
 
   useEffect(() => {
@@ -171,18 +268,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     trackStudioEvent(ANALYTICS_EVENTS.SESSION_START, { path: pathname });
   }, [user?.id, authReady, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const showLoader = loading || isRedirecting;
+  const showLoader = loading || (isRedirecting && !isBrowserOffline());
 
   return (
-    <AuthContext.Provider value={{ user, loading, authReady }}>
+    <AuthContext.Provider value={{ user, loading, authReady, offlineAuth }}>
       {showLoader ? (
         <div className="flex h-screen w-full items-center justify-center">
           <div className="flex flex-col items-center gap-6">
             <StudioLoader size="lg" />
-            <p className="text-xs font-code uppercase tracking-widest text-muted-foreground animate-pulse">Initializing Studio...</p>
+            <p className="text-xs font-code uppercase tracking-widest text-muted-foreground animate-pulse">
+              Initializing Studio...
+            </p>
           </div>
         </div>
-      ) : children}
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 };

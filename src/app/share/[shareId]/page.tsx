@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useContext, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase/client/firebase';
-import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { DataContext } from '@/context/data-context';
 import type { ProjectShare, Album, Track } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -31,6 +31,7 @@ import {
 } from '@/lib/dna-drop';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { recordShareImport } from '@/lib/share-import-client';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -133,7 +134,7 @@ export default function SharedProjectPage() {
             if (share.type === 'album') await mergeData([data as Album], []);
             else await mergeData([], [data as Track]);
 
-            await updateDoc(doc(db, 'shares', shareId), { imports: increment(1) });
+            await recordShareImport(shareId);
 
             toast({
                 title: 'DNA Imported',

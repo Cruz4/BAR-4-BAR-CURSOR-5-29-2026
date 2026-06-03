@@ -181,10 +181,10 @@ export function FloatingInkSpent() {
                                     initial={{ opacity: 0, scale: 0.8, y: 24 }}
                                     animate={{ opacity: [0, 1, 1, 0], scale: [0.8, 1, 1, 0.96], y: [24, 0, 0, -16] }}
                                     transition={{ duration: 2.8, times: [0, 0.15, 0.75, 1] }}
-                                    className="rounded-2xl border border-white/10 bg-black/75 backdrop-blur-xl px-6 py-5 shadow-[0_0_48px_rgba(217,70,239,0.3)]"
+                                    className="rounded-2xl border border-white/10 bg-black/75 backdrop-blur-xl px-5 py-4 shadow-[0_0_32px_rgba(217,70,239,0.25)] max-w-[min(calc(100vw-2rem),360px)] w-full"
                                 >
                                     <DNASynthesisLoader
-                                        compact={false}
+                                        size="popup"
                                         progress={n.dnaProgress ?? 0}
                                         activeRules={n.activeRules}
                                         statusText="Creative Syncing..."

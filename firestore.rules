@@ -18,6 +18,16 @@ service cloud.firestore {
       return isOwner(userId) || isAdmin();
     }
 
+    // Client bootstrap only — privileged billing/admin fields must stay at safe defaults
+    function isSafeUserBootstrap() {
+      let data = request.resource.data;
+      let roleOk = !('role' in data) || data.role == 'artist';
+      let subOk = !('subscriptionStatus' in data) || data.subscriptionStatus == 'none';
+      let tierOk = !('subscriptionTier' in data) || data.subscriptionTier == 'none';
+      let statusOk = !('status' in data) || data.status == 'active';
+      return roleOk && subOk && tierOk && statusOk;
+    }
+
     // Public DNA Drop shares
     match /shares/{shareId} {
       allow read: if true;
@@ -25,15 +35,20 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
     }
 
+    match /referrals/{referralId} {
+      allow read, write: if false;
+    }
+
     // User profile — owner can update except privileged billing fields
     match /users/{userId} {
       allow get: if isOwnerOrAdmin(userId);
       allow list: if isAdmin();
-      allow create: if isOwner(userId);
+      allow create: if isOwner(userId) && isSafeUserBootstrap();
       allow update: if isAdmin()
         || (isOwner(userId)
           && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-            'role', 'subscriptionStatus', 'subscriptionTier', 'status'
+            'role', 'subscriptionStatus', 'subscriptionTier', 'status',
+            'subscriptionId', 'stripeCustomerId', 'referredBy', 'referralCode', 'referralCount'
           ]));
       allow delete: if isOwner(userId) || isAdmin();
 
@@ -45,7 +60,7 @@ service cloud.firestore {
 
       match /usage/{docId} {
         allow read: if isOwnerOrAdmin(userId);
-        allow write: if docId != 'balance' && isOwnerOrAdmin(userId);
+        allow write: if false;
       }
 
       match /usageLogs/{logId} {
@@ -116,9 +131,8 @@ service cloud.firestore {
     }
 
     match /analytics_events/{eventId} {
-      allow create: if request.auth != null;
+      allow create, update, delete: if false;
       allow read: if isAdmin();
-      allow update, delete: if false;
     }
 
     match /studioMetrics/{docId} {

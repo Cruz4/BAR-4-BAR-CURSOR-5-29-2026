@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import type { Track } from '@/lib/types';
 import { useUsage } from '@/context/usage-context';
 import { useInkCosts } from '@/hooks/use-ink-costs';
+import { useTouchInkRunner } from '@/hooks/use-touch-ink-runner';
 import { HighlightedText } from './highlighted-text';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -71,8 +72,9 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   const networkRetryRef = useRef(false);
   const studioFailNotifiedRef = useRef(false);
   const [pickupMode, setPickupMode] = useState<'studio' | 'browser'>('studio');
-  const { deductInk, refundInk } = useUsage();
+  const { refundInk } = useUsage();
   const { getCost, tooltip } = useInkCosts();
+  const { runWithInk } = useTouchInkRunner();
 
   const clearSegmentTimer = useCallback(() => {
     if (segmentTimerRef.current) {
@@ -402,8 +404,8 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   const startListening = useCallback(
     (e?: React.MouseEvent) => {
       const sessionCost = getCost('freestyleTranscription');
-      if (!deductInk(sessionCost, 'freestyleTranscription', e)) return;
-
+      if (
+        !runWithInk('freestyleTranscription', sessionCost, 'freestyleTranscription', e, () => {
       sessionCostRef.current = sessionCost;
       networkRetryRef.current = false;
       studioFailNotifiedRef.current = false;
@@ -424,8 +426,12 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
 
         await startStudioListening();
       })();
+        })
+      ) {
+        return;
+      }
     },
-    [deductInk, getCost, startBrowserListening, startStudioListening]
+    [runWithInk, getCost, startBrowserListening, startStudioListening]
   );
 
   useEffect(() => {

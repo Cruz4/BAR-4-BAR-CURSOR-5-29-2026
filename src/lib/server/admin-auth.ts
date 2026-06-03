@@ -1,8 +1,7 @@
 import 'server-only';
 
 import { getAuth } from '@/lib/firebase/server';
-
-const MASTER_ADMIN_EMAIL = 'plotformaiplan@gmail.com';
+import { isMasterAdminEmail } from '@/lib/server/master-admin';
 
 export class AdminAuthError extends Error {
   constructor(message: string) {
@@ -22,7 +21,7 @@ export async function verifyAdminRequest(req: Request): Promise<{ uid: string; e
   const decoded = await auth.verifyIdToken(token);
   const email = decoded.email || '';
 
-  if (email === MASTER_ADMIN_EMAIL) {
+  if (isMasterAdminEmail(email)) {
     return { uid: decoded.uid, email };
   }
 

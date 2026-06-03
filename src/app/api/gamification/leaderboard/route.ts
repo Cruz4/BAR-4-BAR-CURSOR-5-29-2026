@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getLeaderboardSnapshot, recordGamificationAnalytics } from '@/lib/server/gamification';
+import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 
 export const runtime = 'nodejs';
 
@@ -11,7 +12,12 @@ export async function GET(req: Request) {
     const data = await getLeaderboardSnapshot(weekKey || undefined, userId || undefined);
 
     if (userId) {
-      await recordGamificationAnalytics(userId, 'leaderboard_view', { weekKey: data.weekKey });
+      try {
+        const uid = await verifyCheckoutUser(req, userId);
+        await recordGamificationAnalytics(uid, 'leaderboard_view', { weekKey: data.weekKey });
+      } catch (e) {
+        if (!(e instanceof CheckoutAuthError)) throw e;
+      }
     }
 
     return NextResponse.json(data);

@@ -4,6 +4,8 @@ import { getAuth, getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/ser
 import { estimateAiCost } from '@/lib/billing';
 import { resolveFixedActionCost } from '@/lib/studio-costs';
 import { getStudioCosts } from '@/lib/server/studio-costs';
+import { isMasterAdminEmail } from '@/lib/server/master-admin';
+import { checkRateLimit } from '@/lib/server/rate-limit';
 
 export class AiGateError extends Error {
   constructor(
@@ -24,17 +26,10 @@ export type SecuredAiContext = {
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 30;
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
-function checkRateLimit(uid: string) {
-  const now = Date.now();
-  const entry = rateLimitMap.get(uid);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(uid, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return;
-  }
-  entry.count += 1;
-  if (entry.count > RATE_LIMIT_MAX) {
+function enforceAiRateLimit(uid: string) {
+  const { allowed } = checkRateLimit(`ai:${uid}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS);
+  if (!allowed) {
     throw new AiGateError('Too many AI requests. Please wait a moment.', 'RATE_LIMIT');
   }
 }
@@ -48,7 +43,7 @@ export async function verifyAiToken(idToken: string, claimedUserId: string): Pro
   if (decoded.uid !== claimedUserId) {
     throw new AiGateError('Authentication mismatch.', 'AUTH');
   }
-  if (decoded.email === 'plotformaiplan@gmail.com') return decoded.uid;
+  if (isMasterAdminEmail(decoded.email)) return decoded.uid;
 
   if (hasAdminFirestoreCredentials() || process.env.NODE_ENV === 'production') {
     try {
@@ -153,7 +148,7 @@ export async function runSecuredAiAction<T>(
   userName?: string
 ): Promise<T> {
   const uid = await verifyAiToken(ctx.idToken, ctx.userId);
-  checkRateLimit(uid);
+  enforceAiRateLimit(uid);
 
   const studioCosts = await getStudioCosts();
   const baseCost =
@@ -161,8 +156,14 @@ export async function runSecuredAiAction<T>(
       ? ctx.inkCost
       : resolveFixedActionCost(ctx.actionName, studioCosts, ctx.inkCost);
 
-  const serverInkEnabled =
-    hasAdminFirestoreCredentials() || process.env.NODE_ENV === 'production';
+  if (process.env.NODE_ENV === 'production' && !hasAdminFirestoreCredentials()) {
+    throw new AiGateError(
+      'Studio billing is not configured. Please try again later.',
+      'AUTH'
+    );
+  }
+
+  const serverInkEnabled = hasAdminFirestoreCredentials();
   let finalAmount = 0;
 
   if (serverInkEnabled && baseCost > 0) {

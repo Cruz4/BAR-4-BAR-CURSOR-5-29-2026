@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getStripe, verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 import { getDb } from '@/lib/firebase/server';
+import { getTrustedAppOrigin } from '@/lib/server/trusted-origin';
 
 export const runtime = 'nodejs';
 
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
+    const origin = getTrustedAppOrigin(req);
     const portal = await stripe.billingPortal.sessions.create({
       customer: stripeCustomerId,
       return_url: `${origin}/usage?tab=settings`,

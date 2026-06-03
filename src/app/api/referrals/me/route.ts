@@ -3,6 +3,7 @@ import { getDb } from '@/lib/firebase/server';
 import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 import { ensureReferralCode } from '@/lib/server/referrals';
 import { MAX_REFERRAL_REWARDS, REFERRAL_INK_REWARD, buildReferralLink } from '@/lib/referrals';
+import { getTrustedAppOrigin } from '@/lib/server/trusted-origin';
 
 export const runtime = 'nodejs';
 
@@ -28,7 +29,7 @@ export async function GET(req: Request) {
     const userSnap = await db.collection('users').doc(userId).get();
     const data = userSnap.data() || {};
     const referralCount = (data.referralCount as number) || 0;
-    const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
+    const origin = getTrustedAppOrigin(req);
 
     return NextResponse.json({
       referralCode,

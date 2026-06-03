@@ -161,10 +161,13 @@ export function GenerationSyncAmbient({
     const getWell = () => {
       const measured = attractorRef.current;
       const cx = measured?.cx ?? W * 0.5;
-      const cy = measured?.cy ?? H * (1 - 0.14) * 0.48;
+      const cy = measured?.cy ?? H * 0.5;
       const fadeR = measured?.r ?? Math.min(W * 0.12, H * 0.1, 64);
-      const ringR = measured?.ringR ?? fadeR * 1.05;
-      return { cx, cy, ringR, fadeR };
+      const ringR = measured?.ringR ?? Math.min(W, H) * 0.36;
+      /** Ring centered on logo anchor (square sits in the middle of the circle). */
+      const ringCx = cx;
+      const ringCy = cy;
+      return { cx, cy, ringR, fadeR, ringCx, ringCy };
     };
 
     /** Fade to 0 inside logo well — particles appear to slip behind the helix. */
@@ -387,13 +390,21 @@ export function GenerationSyncAmbient({
         ctx.fill();
       }
 
-      // Large back ring — centered on logo, original scale
+      // Large back ring — fixed stage center; clipped so it does not bleed into header/footer bands
       const ringPulse = 0.55 + 0.45 * Math.sin(t * 1.6);
+      const clipTop = H * 0.06;
+      const clipBottom = H * 0.06;
+      const clipX = W * 0.04;
+      ctx.save();
       ctx.beginPath();
-      ctx.arc(well.cx, well.cy, well.ringR * 1.05, 0, Math.PI * 2);
-      ctx.strokeStyle = hexToRgba(pickColor(colors, 0), 0.04 + completion * 0.07 * ringPulse);
-      ctx.lineWidth = 2;
+      ctx.rect(clipX, clipTop, W - clipX * 2, H - clipTop - clipBottom);
+      ctx.clip();
+      ctx.beginPath();
+      ctx.arc(well.ringCx, well.ringCy, well.ringR, 0, Math.PI * 2);
+      ctx.strokeStyle = hexToRgba(pickColor(colors, 0), 0.06 + completion * 0.1 * ringPulse);
+      ctx.lineWidth = 2.5;
       ctx.stroke();
+      ctx.restore();
 
       frames++;
       if (frames === 2) setCanvasReady(true);
@@ -415,7 +426,7 @@ export function GenerationSyncAmbient({
       }
     : {
         background:
-          'radial-gradient(ellipse 38% 52% at 50% 40%, rgba(6,12,24,0.92) 0%, rgba(6,12,24,0.55) 42%, transparent 58%), radial-gradient(ellipse 48% 68% at 50% 42%, transparent 0%, transparent 34%, rgba(6,12,24,0.45) 58%, rgba(6,12,24,0.88) 100%)',
+          'radial-gradient(ellipse 38% 52% at 50% 45%, rgba(6,12,24,0.92) 0%, rgba(6,12,24,0.55) 42%, transparent 58%), radial-gradient(ellipse 42% 58% at 50% 50%, transparent 0%, transparent 34%, rgba(6,12,24,0.45) 58%, rgba(6,12,24,0.88) 100%)',
       };
 
   return (
@@ -451,7 +462,7 @@ export function GenerationSyncAmbient({
       />
 
       {/* Horizontal telemetry tickers — L→R, aligned with progress bar flow */}
-      <div className="absolute top-[max(0.5rem,env(safe-area-inset-top))] left-0 right-0 h-6 sm:h-7 overflow-hidden opacity-[0.16] mask-fade-x">
+      <div className="absolute top-2 sm:top-3 left-0 right-0 h-6 sm:h-7 overflow-hidden opacity-[0.16] mask-fade-x">
         <div className="generation-sync-telemetry-h absolute inset-y-0 flex items-center whitespace-nowrap font-code text-[7px] sm:text-[8px] uppercase tracking-[0.35em] text-cyan-400/80">
           <span className="pr-16">{telemetryTicker}</span>
           <span className="pr-16" aria-hidden>
@@ -459,7 +470,7 @@ export function GenerationSyncAmbient({
           </span>
         </div>
       </div>
-      <div className="absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] sm:bottom-[calc(6rem+env(safe-area-inset-bottom))] left-0 right-0 h-6 overflow-hidden opacity-[0.12] mask-fade-x">
+      <div className="absolute bottom-3 sm:bottom-4 left-0 right-0 h-6 overflow-hidden opacity-[0.12] mask-fade-x">
         <div className="generation-sync-telemetry-h-reverse absolute inset-y-0 flex items-center whitespace-nowrap font-code text-[7px] sm:text-[8px] uppercase tracking-[0.35em] text-violet-300/70">
           <span className="pr-16">{telemetryTicker}</span>
           <span className="pr-16" aria-hidden>

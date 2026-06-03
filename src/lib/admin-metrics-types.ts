@@ -68,3 +68,14 @@ export type AdminMetricsSnapshot = {
     avgStreakActiveUsers: number;
   };
 };
+
+export type AdminMetricsCacheMeta = {
+  fromCache: boolean;
+  computedAt: string;
+  expiresAt: string;
+  stale: boolean;
+};
+
+export type AdminMetricsResponse = AdminMetricsSnapshot & {
+  cache: AdminMetricsCacheMeta;
+};

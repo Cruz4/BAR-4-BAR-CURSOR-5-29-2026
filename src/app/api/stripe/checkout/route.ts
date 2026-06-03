@@ -4,6 +4,7 @@ import { getCatalogEntry } from '@/lib/stripe-catalog';
 import { getStripe, verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 import { getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
+import { getTrustedAppOrigin } from '@/lib/server/trusted-origin';
 
 export const runtime = 'nodejs';
 
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
 
     const isSubscription = catalogEntry.type === 'subscription';
     const inkAmount = catalogEntry.type === 'one_time' ? catalogEntry.inkAmount : 0;
-    const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
+    const origin = getTrustedAppOrigin(req);
 
     let stripeCustomerId: string | undefined;
     let userData: Record<string, unknown> | undefined;

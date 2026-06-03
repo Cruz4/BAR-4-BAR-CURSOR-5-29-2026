@@ -36,9 +36,6 @@ import Image from 'next/image';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { REFERRAL_INK_REWARD, REFERRAL_STORAGE_KEY, normalizeReferralCode } from '@/lib/referrals';
 import { claimPendingReferral } from '@/components/refer-a-friend-section';
-
-const MASTER_ADMIN_EMAIL = 'plotformaiplan@gmail.com';
-
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -116,10 +113,10 @@ function LoginForm() {
         };
         if (isNew) {
           userData.createdAt = new Date().toISOString();
-          userData.role =
-            firebaseUser.email === MASTER_ADMIN_EMAIL ? 'admin' : 'artist';
-        } else if (firebaseUser.email === MASTER_ADMIN_EMAIL) {
-          userData.role = 'admin';
+          userData.role = 'artist';
+          userData.subscriptionStatus = 'none';
+          userData.subscriptionTier = 'none';
+          userData.status = 'active';
         }
         await setDoc(userRef, userData, { merge: true });
         if (isNew) {

@@ -10,6 +10,22 @@ import { doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch, delete
 import { stripForFirestore } from '@/lib/utils';
 import { countNonEmptyBars } from '@/lib/gamification/bar-count';
 import { postGamificationEvent } from '@/lib/gamification-client';
+import { isBrowserOffline, onNetworkChange } from '@/lib/offline/network';
+import {
+  loadVaultSnapshot,
+  saveVaultSnapshot,
+  warmStudioRoutes,
+} from '@/lib/offline/vault-cache';
+import {
+  clearOutbox,
+  mergeAlbumOutbox,
+  mergeTrackOutbox,
+  outboxCount,
+  pushDeleteAlbumOutbox,
+  pushDeleteTrackOutbox,
+  pushStyleOutbox,
+  readOutbox,
+} from '@/lib/offline/sync-outbox';
 import {
   buildAlbumDropPayload,
   buildTrackDropPayload,
@@ -82,8 +98,11 @@ interface DataContextType {
   styleProfile: StyleProfile | null;
   loading: boolean;
   isCloudSyncActive: boolean;
-  cloudSaveStatus: 'saved' | 'pending' | 'saving';
+  cloudSaveStatus: 'saved' | 'pending' | 'saving' | 'offline';
+  syncPendingCount: number;
+  isOfflineMode: boolean;
   flushCloudNow: () => Promise<void>;
+  syncVaultToCloud: () => Promise<void>;
   addAlbum: (album: Album) => void;
   updateAlbum: (albumId: string, updates: Partial<Album>) => void;
   deleteAlbum: (albumId: string) => void;
@@ -107,7 +126,10 @@ export const DataContext = createContext<DataContextType>({
   loading: true,
   isCloudSyncActive: false,
   cloudSaveStatus: 'saved' as const,
+  syncPendingCount: 0,
+  isOfflineMode: false,
   flushCloudNow: async () => {},
+  syncVaultToCloud: async () => {},
   addAlbum: () => {},
   updateAlbum: () => {},
   deleteAlbum: () => {},
@@ -125,9 +147,6 @@ export const DataContext = createContext<DataContextType>({
   revokeDNA: async () => {},
 });
 
-const ALBUM_STORAGE_KEY = 'bar4bar-albums';
-const STYLE_STORAGE_KEY = 'bar4bar-style';
-
 export const DataProvider = ({ children }: { children: ReactNode }) => {
   const { user, authReady } = useAuth();
   const { toast } = useToast();
@@ -135,7 +154,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isCloudSyncActive, setIsCloudSyncActive] = useState(false);
-  const [cloudSaveStatus, setCloudSaveStatus] = useState<'saved' | 'pending' | 'saving'>('saved');
+  const [cloudSaveStatus, setCloudSaveStatus] = useState<'saved' | 'pending' | 'saving' | 'offline'>('saved');
+  const [syncPendingCount, setSyncPendingCount] = useState(0);
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
 
   useEffect(() => {
     setIsCloudSyncActive(user?.subscriptionStatus === 'active');
@@ -146,6 +167,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const pendingAlbumUpdates = useRef<Record<string, any>>({});
   const syncAlbumTimeout = useRef<NodeJS.Timeout | null>(null);
   const albumsRef = useRef<Album[]>([]);
+  const vaultLoadedUserIdRef = useRef<string | null>(null);
   const prevBarCountsRef = useRef<Record<string, number>>({});
   const prevTrackCompleteRef = useRef<Record<string, boolean>>({});
 
@@ -171,8 +193,43 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     prevTrackCompleteRef.current = {};
   }, [user?.id]);
 
+  useEffect(() => {
+    setIsOfflineMode(isBrowserOffline());
+    return onNetworkChange((online) => {
+      setIsOfflineMode(!online);
+      if (online && user?.id) {
+        setSyncPendingCount(outboxCount(user.id));
+      }
+    });
+  }, [user?.id]);
+
+  const queuePendingToOutbox = useCallback(() => {
+    if (!user) return 0;
+
+    Object.entries(pendingTrackUpdates.current).forEach(([trackId, data]) => {
+      mergeTrackOutbox(user.id, trackId, data.albumId, data.updates);
+    });
+    pendingTrackUpdates.current = {};
+
+    Object.entries(pendingAlbumUpdates.current).forEach(([albumId, data]) => {
+      mergeAlbumOutbox(user.id, albumId, data);
+    });
+    pendingAlbumUpdates.current = {};
+
+    const count = outboxCount(user.id);
+    setSyncPendingCount(count);
+    if (count > 0) {
+      setCloudSaveStatus('offline');
+    }
+    return count;
+  }, [user]);
+
   const performTrackSync = useCallback(async () => {
     if (!user) return;
+    if (isBrowserOffline()) {
+      queuePendingToOutbox();
+      return;
+    }
     if (Object.keys(pendingTrackUpdates.current).length === 0) return;
     setCloudSaveStatus('saving');
     const batch = writeBatch(db);
@@ -222,6 +279,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const performAlbumSync = useCallback(async () => {
     if (!user) return;
+    if (isBrowserOffline()) {
+      queuePendingToOutbox();
+      return;
+    }
     if (Object.keys(pendingAlbumUpdates.current).length === 0) return;
     setCloudSaveStatus('saving');
     const batch = writeBatch(db);
@@ -240,6 +301,45 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user]);
 
+  const flushOutboxReplay = useCallback(async () => {
+    if (!user || isBrowserOffline()) return;
+
+    queuePendingToOutbox();
+    const entries = readOutbox(user.id);
+    if (entries.length === 0) {
+      setSyncPendingCount(0);
+      return;
+    }
+
+    setCloudSaveStatus('saving');
+
+    for (const entry of entries) {
+      if (entry.type === 'track') {
+        await setDoc(
+          doc(db, 'users', user.id, 'albums', entry.albumId, 'tracks', entry.trackId),
+          stripForFirestore({ ...entry.updates, updatedAt: new Date().toISOString() }),
+          { merge: true }
+        );
+      } else if (entry.type === 'album') {
+        await setDoc(
+          doc(db, 'users', user.id, 'albums', entry.albumId),
+          stripForFirestore({ ...entry.updates, updatedAt: new Date().toISOString() }),
+          { merge: true }
+        );
+      } else if (entry.type === 'styleProfile') {
+        await setDoc(doc(db, 'users', user.id, 'styleProfile', 'main'), stripForFirestore(entry.profile));
+      } else if (entry.type === 'deleteTrack') {
+        await deleteDoc(doc(db, 'users', user.id, 'albums', entry.albumId, 'tracks', entry.trackId));
+      } else if (entry.type === 'deleteAlbum') {
+        await deleteDoc(doc(db, 'users', user.id, 'albums', entry.albumId));
+      }
+    }
+
+    clearOutbox(user.id);
+    setSyncPendingCount(0);
+    setCloudSaveStatus('saved');
+  }, [user, queuePendingToOutbox]);
+
   const flushCloudNow = useCallback(async () => {
     if (syncTrackTimeout.current) {
       clearTimeout(syncTrackTimeout.current);
@@ -249,9 +349,44 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       clearTimeout(syncAlbumTimeout.current);
       syncAlbumTimeout.current = null;
     }
-    await Promise.all([performTrackSync(), performAlbumSync()]);
+    if (isBrowserOffline()) {
+      queuePendingToOutbox();
+      return;
+    }
+    await Promise.all([performTrackSync(), performAlbumSync(), flushOutboxReplay()]);
     setCloudSaveStatus('saved');
-  }, [performTrackSync, performAlbumSync]);
+  }, [performTrackSync, performAlbumSync, flushOutboxReplay, queuePendingToOutbox]);
+
+  const syncVaultToCloud = useCallback(async () => {
+    if (!user || isBrowserOffline()) {
+      queuePendingToOutbox();
+      toast({
+        title: 'Still offline',
+        description: 'Changes stay saved on this device until you reconnect.',
+      });
+      return;
+    }
+    try {
+      await flushCloudNow();
+      toast({ title: 'Vault synced', description: 'Your studio is up to date in the cloud.' });
+    } catch (error) {
+      console.error('[syncVaultToCloud]', error);
+      toast({
+        variant: 'destructive',
+        title: 'Sync failed',
+        description: 'Try again when your connection is stable.',
+      });
+    }
+  }, [user, flushCloudNow, queuePendingToOutbox, toast]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    return onNetworkChange((online) => {
+      if (online) {
+        setSyncPendingCount(outboxCount(user.id));
+      }
+    });
+  }, [user?.id]);
 
   useEffect(() => {
     const onHide = () => {
@@ -272,14 +407,52 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [flushCloudNow]);
 
+  const applyLocalVault = useCallback(
+    (parsedAlbums: Album[], parsedStyle: StyleProfile | null) => {
+      let finalAlbums = [...parsedAlbums];
+      if (!finalAlbums.find((a) => a.id === UNASSIGNED_ALBUM_ID)) {
+        finalAlbums.unshift({ ...createUnassignedShell(user!.id), tracks: [] });
+      }
+      setAlbums(finalAlbums);
+      seedTrackProgressBaselines(finalAlbums);
+      if (parsedStyle) setStyleProfile(parsedStyle);
+      setSyncPendingCount(outboxCount(user!.id));
+      if (isBrowserOffline()) {
+        setCloudSaveStatus(outboxCount(user!.id) > 0 ? 'offline' : 'saved');
+      }
+    },
+    [seedTrackProgressBaselines, user?.id]
+  );
+
   useEffect(() => {
     const loadData = async () => {
       if (!user || !authReady) {
         setLoading(false);
+        vaultLoadedUserIdRef.current = null;
         return;
       }
-      setLoading(true);
-      
+
+      const offline = isBrowserOffline();
+      setIsOfflineMode(offline);
+      setSyncPendingCount(outboxCount(user.id));
+
+      const cached = loadVaultSnapshot(user.id);
+      if (cached.albums?.length) {
+        applyLocalVault(cached.albums, cached.styleProfile);
+      }
+
+      if (offline) {
+        setLoading(false);
+        vaultLoadedUserIdRef.current = user.id;
+        return;
+      }
+
+      const isSameUserReload = vaultLoadedUserIdRef.current === user.id;
+      const hasVisibleVault = albumsRef.current.length > 0;
+      if (!isSameUserReload || !hasVisibleVault) {
+        setLoading(true);
+      }
+
       try {
         const firebaseUser = await waitForAuthUser();
         if (!firebaseUser || firebaseUser.uid !== user.id) {
@@ -315,9 +488,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
         // Self-heal: if local backup has loose tracks missing from cloud, push them back up.
         try {
-          const savedLocal = localStorage.getItem(`${ALBUM_STORAGE_KEY}-${user.id}`);
-          if (savedLocal) {
-            const localAlbums = JSON.parse(savedLocal) as Album[];
+          if (cached.albums?.length) {
+            const localAlbums = cached.albums;
             const localLoose = localAlbums.find((a) => a.id === UNASSIGNED_ALBUM_ID)?.tracks ?? [];
             const missingLoose = localLoose.filter((lt) => lt?.id && !looseTracks.some((ct) => ct.id === lt.id));
             if (missingLoose.length > 0) {
@@ -347,6 +519,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         
         setAlbums(finalAlbums);
         seedTrackProgressBaselines(finalAlbums);
+        saveVaultSnapshot(user.id, finalAlbums, styleSnap.exists() ? (styleSnap.data() as StyleProfile) : styleProfile);
+        warmStudioRoutes(user.id, finalAlbums);
+        vaultLoadedUserIdRef.current = user.id;
 
         if (!styleProfile && !styleSnap.exists()) {
           const defaultProfile: StyleProfile = {
@@ -358,27 +533,21 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           };
           setStyleProfile(defaultProfile);
         }
-      } catch (e) { 
-        console.error("Load failed", e);
-        const savedLocal = localStorage.getItem(`${ALBUM_STORAGE_KEY}-${user.id}`);
-        if (savedLocal) {
-          const parsed = JSON.parse(savedLocal) as Album[];
-          setAlbums(parsed);
-          seedTrackProgressBaselines(parsed);
+      } catch (e) {
+        console.error('Load failed', e);
+        if (cached.albums?.length) {
+          applyLocalVault(cached.albums, cached.styleProfile);
         }
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, [user?.id, authReady, seedTrackProgressBaselines]);
+  }, [user?.id, authReady, applyLocalVault, seedTrackProgressBaselines]);
 
   useEffect(() => {
     if (user && !loading) {
-      try { 
-        localStorage.setItem(`${ALBUM_STORAGE_KEY}-${user.id}`, JSON.stringify(albums)); 
-        if (styleProfile) localStorage.setItem(`${STYLE_STORAGE_KEY}-${user.id}`, JSON.stringify(styleProfile));
-      } catch (e) { console.warn("Local storage write failed"); }
+      saveVaultSnapshot(user.id, albums, styleProfile);
     }
   }, [albums, styleProfile, user, loading]);
 
@@ -444,6 +613,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setAlbums(prev => prev.map(a => (a.id === albumId ? { ...a, tracks: a.tracks.map(t => t.id === trackId ? { ...t, ...updates } : t) } : a)));
     if (user) {
       pendingTrackUpdates.current[trackId] = { albumId, updates: { ...(pendingTrackUpdates.current[trackId]?.updates || {}), ...updates } };
+      if (isBrowserOffline()) {
+        const count = mergeTrackOutbox(user.id, trackId, albumId, pendingTrackUpdates.current[trackId].updates);
+        setSyncPendingCount(count);
+        setCloudSaveStatus('offline');
+        return;
+      }
       setCloudSaveStatus('pending');
       if (syncTrackTimeout.current) clearTimeout(syncTrackTimeout.current);
       syncTrackTimeout.current = setTimeout(performTrackSync, 1500);
@@ -454,6 +629,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setAlbums(prev => prev.map(a => (a.id === albumId ? { ...a, ...updates } : a)));
     if (user) {
       pendingAlbumUpdates.current[albumId] = { ...pendingAlbumUpdates.current[albumId], ...updates };
+      if (isBrowserOffline()) {
+        const count = mergeAlbumOutbox(user.id, albumId, pendingAlbumUpdates.current[albumId]);
+        setSyncPendingCount(count);
+        setCloudSaveStatus('offline');
+        return;
+      }
       setCloudSaveStatus('pending');
       if (syncAlbumTimeout.current) clearTimeout(syncAlbumTimeout.current);
       syncAlbumTimeout.current = setTimeout(performAlbumSync, 1500);
@@ -462,12 +643,26 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteAlbum = useCallback((albumId: string) => {
     setAlbums(prev => prev.filter(a => a.id !== albumId));
-    if (user) deleteDoc(doc(db, 'users', user.id, 'albums', albumId));
+    if (!user) return;
+    if (isBrowserOffline()) {
+      const count = pushDeleteAlbumOutbox(user.id, albumId);
+      setSyncPendingCount(count);
+      setCloudSaveStatus('offline');
+      return;
+    }
+    void deleteDoc(doc(db, 'users', user.id, 'albums', albumId));
   }, [user]);
 
   const deleteTrack = useCallback((albumId: string, trackId: string) => {
     setAlbums(prev => prev.map(a => (a.id === albumId ? { ...a, tracks: a.tracks.filter(t => t.id !== trackId) } : a)));
-    if (user) deleteDoc(doc(db, 'users', user.id, 'albums', albumId, 'tracks', trackId));
+    if (!user) return;
+    if (isBrowserOffline()) {
+      const count = pushDeleteTrackOutbox(user.id, albumId, trackId);
+      setSyncPendingCount(count);
+      setCloudSaveStatus('offline');
+      return;
+    }
+    void deleteDoc(doc(db, 'users', user.id, 'albums', albumId, 'tracks', trackId));
   }, [user]);
 
   const getAlbumById = useCallback((id: string) => albums.find(a => a.id === id), [albums]);
@@ -481,7 +676,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       id: styleProfile?.id || `style-${user?.id}`, ownerId: user!.id, history: analysis ? [{ timestamp: new Date().toISOString(), analysis, metrics }, ...(styleProfile?.history || [])].slice(0, 10) : [], trainingRefs: [], updatedAt: new Date().toISOString()
     };
     setStyleProfile(newProfile as any);
-    if (user) setDoc(doc(db, 'users', user.id, 'styleProfile', 'main'), newProfile);
+    if (!user) return;
+    if (isBrowserOffline()) {
+      const count = pushStyleOutbox(user.id, stripForFirestore(newProfile) as Record<string, unknown>);
+      setSyncPendingCount(count);
+      setCloudSaveStatus('offline');
+      return;
+    }
+    void setDoc(doc(db, 'users', user.id, 'styleProfile', 'main'), newProfile);
   }, [styleProfile, user]);
 
   const resolveTrackForDrop = useCallback(
@@ -803,11 +1005,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     setAlbums([freshUnassigned]);
     seedTrackProgressBaselines([freshUnassigned]);
-    try {
-      localStorage.setItem(`${ALBUM_STORAGE_KEY}-${user.id}`, JSON.stringify([freshUnassigned]));
-    } catch {
-      // ignore quota errors
-    }
+    saveVaultSnapshot(user.id, [freshUnassigned], styleProfile);
     setCloudSaveStatus('saved');
   }, [user, flushCloudNow, seedTrackProgressBaselines]);
 
@@ -817,8 +1015,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }, [deleteTrack, addTrack, getTrackById]);
 
   return (
-    <DataContext.Provider value={{ 
-      albums, styleProfile, loading, isCloudSyncActive, cloudSaveStatus, flushCloudNow,
+    <DataContext.Provider value={{
+      albums, styleProfile, loading, isCloudSyncActive, cloudSaveStatus, syncPendingCount, isOfflineMode,
+      flushCloudNow, syncVaultToCloud,
       addAlbum, updateAlbum, deleteAlbum, getAlbumById,
       addTrack, updateTrack, deleteTrack, getTrackById, mergeData, clearVault, moveTrack, updateStyleProfile, dropDNA, updateDNA, revokeDNA
     }}>{children}</DataContext.Provider>

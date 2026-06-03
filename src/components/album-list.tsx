@@ -520,18 +520,17 @@ export function AlbumList() {
       <div className="flex-grow w-full relative min-h-screen selection:bg-primary/30 font-code">
         <VaultChamberAtmosphere />
 
-        {!loading && user && (
-          <div className="hidden xl:block fixed left-2 2xl:left-4 top-[5.25rem] z-30 pointer-events-auto">
-            <VaultStudioProgress variant="sidebar" />
-          </div>
-        )}
-
-        <div
-          className={cn(
-            'container relative z-20 mx-auto px-6 pt-6 pb-10',
-            !loading && user && 'xl:pl-10 2xl:pl-12'
+        <div className="relative z-20 mx-auto flex w-full min-w-0 max-w-[100vw]">
+          {!loading && user && (
+            <aside
+              className="hidden xl:block shrink-0 sticky top-[5.25rem] self-start z-30 pt-6 pb-10 pl-2 2xl:pl-4 pr-1 max-h-[calc(100vh-5.25rem)]"
+              aria-label="Studio progress"
+            >
+              <VaultStudioProgress variant="sidebar" />
+            </aside>
           )}
-        >
+
+          <div className="container relative flex-1 min-w-0 mx-auto px-4 sm:px-6 pt-6 pb-10">
             <header className="mb-8 pb-6 border-b border-white/5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-6">
                 <div className="flex items-center gap-3 shrink-0">
@@ -801,6 +800,7 @@ export function AlbumList() {
             </Button>
           </div>
         )}
+        </div>
       </div>
 
       <CreateItemDialog open={!!createItemType} onOpenChange={(isOpen) => !isOpen && setCreateItemType(null)} type={createItemType || 'Album'} />

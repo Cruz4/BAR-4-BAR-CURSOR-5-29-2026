@@ -22,7 +22,7 @@ import {
   Megaphone,
   Save,
 } from 'lucide-react';
-import type { AdminMetricsSnapshot } from '@/lib/admin-metrics-types';
+import type { AdminMetricsResponse } from '@/lib/admin-metrics-types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -88,7 +88,7 @@ function SignupsChart({ data }: { data: { date: string; count: number }[] }) {
 }
 
 export function AdminMetricsTab() {
-  const [metrics, setMetrics] = useState<AdminMetricsSnapshot | null>(null);
+  const [metrics, setMetrics] = useState<AdminMetricsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adSpend30d, setAdSpend30d] = useState('0');
@@ -96,21 +96,22 @@ export function AdminMetricsTab() {
   const [notes, setNotes] = useState('');
   const [savingMarketing, setSavingMarketing] = useState(false);
 
-  const fetchMetrics = useCallback(async () => {
+  const fetchMetrics = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Sign in required');
       const token = await user.getIdToken();
-      const res = await fetch('/api/admin/metrics', {
+      const qs = forceRefresh ? '?refresh=1' : '';
+      const res = await fetch(`/api/admin/metrics${qs}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || `Failed (${res.status})`);
       }
-      const data = (await res.json()) as AdminMetricsSnapshot;
+      const data = (await res.json()) as AdminMetricsResponse;
       setMetrics(data);
       setAdSpend30d(String(data.acquisition.adSpend30d || 0));
       setAdSpend90d(String(data.acquisition.adSpend90d || 0));
@@ -163,7 +164,7 @@ export function AdminMetricsTab() {
       <Card className="border-red-500/30 bg-red-500/5">
         <CardContent className="py-10 text-center space-y-4">
           <p className="text-red-400 text-sm">{error}</p>
-          <Button variant="outline" onClick={fetchMetrics} className="gap-2">
+          <Button variant="outline" onClick={() => fetchMetrics(true)} className="gap-2">
             <RefreshCw className="h-4 w-4" /> Retry
           </Button>
         </CardContent>
@@ -175,6 +176,12 @@ export function AdminMetricsTab() {
 
   const { funnel, retention, monetization, freeTierPressure, acquisition, gamification } = metrics;
 
+  const cacheLabel = metrics.cache
+    ? `${metrics.cache.fromCache ? 'Cached' : 'Live'} · ${format(new Date(metrics.cache.computedAt), 'MMM d, yyyy · h:mm a')}${
+        metrics.cache.stale ? ' (stale — refreshing in background)' : ''
+      }`
+    : format(new Date(metrics.generatedAt), 'MMM d, yyyy · h:mm a');
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -183,11 +190,17 @@ export function AdminMetricsTab() {
             <BarChart3 className="h-5 w-5 text-primary" /> 90-Day Growth Metrics
           </h2>
           <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
-            Last refreshed {format(new Date(metrics.generatedAt), 'MMM d, yyyy · h:mm a')}
+            {cacheLabel}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchMetrics} disabled={loading} className="gap-2 text-[10px] uppercase tracking-widest">
-          <RefreshCw className={cn('h-3 w-3', loading && 'animate-spin')} /> Refresh
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => fetchMetrics(true)}
+          disabled={loading}
+          className="gap-2 text-[10px] uppercase tracking-widest"
+        >
+          <RefreshCw className={cn('h-3 w-3', loading && 'animate-spin')} /> Recompute
         </Button>
       </div>
 

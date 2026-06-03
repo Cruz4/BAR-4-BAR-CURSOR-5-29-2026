@@ -106,6 +106,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { Switch } from './ui/switch';
 import { useUsage } from '@/context/usage-context';
 import { useInkCosts } from '@/hooks/use-ink-costs';
+import { useTouchInkRunner } from '@/hooks/use-touch-ink-runner';
 import { withAiAuth } from '@/lib/ai-client';
 import { Textarea } from './ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -126,6 +127,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DnaVaultPresetDetails } from '@/components/dna-vault-preset-details';
 import { HighlightedText } from './highlighted-text';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  buildApprovalDraftSnapshot,
+  MAX_APPROVAL_DRAFT_HISTORY,
+  variantsMatch,
+  type ApprovalDraftSnapshot,
+} from '@/lib/approval-draft-history';
+import { withAsyncTimeout } from '@/lib/async-timeout';
+import type { WizardGeneratedVariant } from '@/lib/types';
+
+const SYNTHESIS_TIMEOUT_MS = 180_000;
+const EXTRACT_TIMEOUT_MS = 120_000;
+const RHYME_PREVIEW_TIMEOUT_MS = 25_000;
 
 interface GenerateSongDraftDialogProps {
   open: boolean;
@@ -341,7 +354,9 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   const [syncAttractor, setSyncAttractor] = useState<SyncAttractor | null>(null);
   const { setGenerating } = useUIState();
   const [progress, setProgress] = useState(0);
-  const [step, setStep] = useState<number>(0); 
+  const [step, setStep] = useState<number>(0);
+  const [remixSeedBackConfirmOpen, setRemixSeedBackConfirmOpen] = useState(false);
+  const [approvalDraftHistory, setApprovalDraftHistory] = useState<ApprovalDraftSnapshot[]>([]);
   const { getAlbumById, updateTrack, updateAlbum } = useContext(DataContext);
   const album = getAlbumById(track.albumId);
 
@@ -398,8 +413,9 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   const hardClosedRef = useRef(false);
   const pendingReopenOnCompleteRef = useRef(false);
 
-  const { deductInk, refundInk, addUsageLog } = useUsage();
+  const { refundInk, addUsageLog } = useUsage();
   const { getCost, getEffectiveCost, tooltip, buttonLabel } = useInkCosts();
+  const { runWithInk } = useTouchInkRunner();
 
   useEffect(() => {
     if (track.id !== lastTrackIdRef.current) {
@@ -442,6 +458,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
     setExpandedVaultIdx(null);
     setPreviewRhymeGroups([]);
     setNewHubIntent('');
+    setApprovalDraftHistory([]);
 
     if (track.sections?.length > 0) {
       setHubSections(
@@ -498,8 +515,76 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   const handleHardClose = useCallback(() => {
     hardClosedRef.current = true;
     pendingReopenOnCompleteRef.current = false;
+    setApprovalDraftHistory([]);
     handleDialogOpenChange(false);
   }, [handleDialogOpenChange]);
+
+  const buildApprovalSettingsSummary = useCallback((): string[] => {
+    const tags: string[] = [];
+    if (hubVibeEnabled) tags.push('Vibe');
+    if (inheritAlbum) tags.push('Album DNA');
+    if (inheritTrack) tags.push('Track DNA');
+    if (wizardState.selectedDirections.length > 0) {
+      tags.push(`${wizardState.selectedDirections.length} remix paths`);
+    }
+    if (hubStyleEnabled && hubStyleAnalysis.trim()) tags.push('Style DNA');
+    if (enableGuardrails) tags.push('Guardrails');
+    if (intentsEnabled && hubIntents.length > 0) tags.push(`${hubIntents.length} intents`);
+    if (lyricsAbout.trim()) tags.push('Instructions');
+    const struct = hubStructure.filter((s) => s.enabled).map((s) => s.name);
+    if (struct.length > 0) tags.push(struct.join(' · '));
+    return tags;
+  }, [
+    hubVibeEnabled,
+    inheritAlbum,
+    inheritTrack,
+    wizardState.selectedDirections.length,
+    hubStyleEnabled,
+    hubStyleAnalysis,
+    enableGuardrails,
+    intentsEnabled,
+    hubIntents.length,
+    lyricsAbout,
+    hubStructure,
+  ]);
+
+  const archiveCurrentApprovalDraft = useCallback(() => {
+    const variant = wizardState.generatedVariant;
+    if (!variant) return;
+    const snapshot = buildApprovalDraftSnapshot(
+      variant,
+      previewRhymeGroups,
+      buildApprovalSettingsSummary()
+    );
+    setApprovalDraftHistory((prev) => {
+      if (prev.some((h) => variantsMatch(h.variant, variant))) return prev;
+      return [snapshot, ...prev].slice(0, MAX_APPROVAL_DRAFT_HISTORY);
+    });
+  }, [wizardState.generatedVariant, previewRhymeGroups, buildApprovalSettingsSummary]);
+
+  const restoreApprovalDraft = useCallback(
+    (snapshotId: string) => {
+      const snap = approvalDraftHistory.find((h) => h.id === snapshotId);
+      if (!snap) return;
+      const current = wizardState.generatedVariant;
+      if (current && variantsMatch(current, snap.variant)) return;
+      if (current && !variantsMatch(current, snap.variant)) {
+        archiveCurrentApprovalDraft();
+      }
+      setWizardState((prev) => ({ ...prev, generatedVariant: snap.variant }));
+      setPreviewRhymeGroups(snap.rhymeGroups);
+      toast({
+        title: 'Draft restored',
+        description: 'Previewing an earlier output from this remix session.',
+      });
+    },
+    [
+      approvalDraftHistory,
+      wizardState.generatedVariant,
+      archiveCurrentApprovalDraft,
+      toast,
+    ]
+  );
 
   useEffect(() => {
     if (syncLyricsToggle && track.sections) {
@@ -569,22 +654,57 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   }, [step, hubSeededSections, wizardState.selectedDirections.length, lyricsAbout]);
 
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval> | undefined;
+    let stallTimer: ReturnType<typeof setTimeout> | undefined;
     if (isGenerating) {
         setProgress(0);
         interval = setInterval(() => {
-            setProgress(prev => (prev >= 98 ? 98 : prev + (100 - prev) * 0.08));
+            setProgress((prev) => {
+              if (prev >= 96) return Math.min(96, prev + 0.12);
+              return prev + (100 - prev) * 0.08;
+            });
         }, 300);
+        stallTimer = setTimeout(() => {
+          toast({
+            title: 'Still working…',
+            description:
+              'Large drafts can take a few minutes. If this never finishes, check the network or pause ad blockers for firestore.googleapis.com.',
+          });
+        }, 45_000);
     } else {
-        setProgress(p => p > 0 ? 100 : 0);
+        setProgress((p) => (p > 0 ? 100 : 0));
         const timer = setTimeout(() => setProgress(0), 1200);
         return () => {
-            clearInterval(interval);
+            if (interval) clearInterval(interval);
             clearTimeout(timer);
-        }
+            if (stallTimer) clearTimeout(stallTimer);
+        };
     }
-    return () => clearInterval(interval);
-  }, [isGenerating]);
+    return () => {
+      if (interval) clearInterval(interval);
+      if (stallTimer) clearTimeout(stallTimer);
+    };
+  }, [isGenerating, toast]);
+
+  const loadPreviewRhymeGroups = useCallback(
+    (variant: WizardGeneratedVariant) => {
+      void (async () => {
+        try {
+          const allText = variant.sections.flatMap((s) => s.bars).join('\n');
+          if (!allText.trim()) return;
+          const rhymeRes = await withAsyncTimeout(
+            findRhymes(await withAiAuth({ text: allText, userName: user?.displayName })),
+            RHYME_PREVIEW_TIMEOUT_MS,
+            'Rhyme preview'
+          );
+          setPreviewRhymeGroups(rhymeRes.rhymeGroups);
+        } catch (err) {
+          console.warn('Preview rhyme highlights skipped', err);
+        }
+      })();
+    },
+    [user?.displayName]
+  );
 
   const activeBarsCount = useMemo(() => {
     return hubStructure.filter(s => s.enabled).reduce((acc, s) => acc + s.bars, 0);
@@ -643,11 +763,12 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   };
 
   const handleFullDraftGenerate = async (e: any) => {
-    if (!deductInk(activeDraftBase, 'generateSongDraft', e)) return;
+    runWithInk('generateSongDraft', activeDraftBase, 'generateSongDraft', e, async () => {
     setGeneratingOperation('draft');
     setIsGenerating(true);
     setGenerating(true, 'Synthesizing Studio Draft...');
     try {
+      archiveCurrentApprovalDraft();
       updateTrack(track.albumId, track.id, { 
         specialInstructions: lyricsAbout,
         direction: hubDirection,
@@ -663,40 +784,45 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
         styleEnabled: hubStyleEnabled,
       });
 
-      const result = await generateSongDraft(await withAiAuth({
-        userName: user?.displayName,
-        albumDirection: album?.direction,
-        trackDirection: { ...hubDirection, inheritFromAlbum: inheritAlbum },
-        useAlbumDirection: inheritAlbum,
-        useTrackDirection: inheritTrack,
-        vibe: { ...hubVibe, enabled: hubVibeEnabled },
-        intents: intentsEnabled ? hubIntents : [],
-        styleProfile: { analysis: hubStyleEnabled ? hubStyleAnalysis : '' },
-        sectionTemplate: hubStructure.filter(s => s.enabled).map(s => ({ name: s.name, bars: s.bars })),
-        sectionsToGenerate: hubStructure.filter(s => s.enabled).map(s => s.name),
-        rhymePreset: 'trap-soul',
-        constraints: { maxLineLen },
-        lyricsAbout: lyricsAbout,
-        negativePrompt: enableGuardrails ? negativePrompt : undefined,
-        forbiddenWords: enableGuardrails ? forbiddenWords.split(',').map(w => w.trim()).filter(Boolean) : undefined,
-        mustIncludeWords: enableGuardrails ? mustIncludeWords.split(',').map(w => w.trim()).filter(Boolean) : undefined,
-      }));
+      const result = await withAsyncTimeout(
+        generateSongDraft(
+          await withAiAuth({
+            userName: user?.displayName,
+            albumDirection: album?.direction,
+            trackDirection: { ...hubDirection, inheritFromAlbum: inheritAlbum },
+            useAlbumDirection: inheritAlbum,
+            useTrackDirection: inheritTrack,
+            vibe: { ...hubVibe, enabled: hubVibeEnabled },
+            intents: intentsEnabled ? hubIntents : [],
+            styleProfile: { analysis: hubStyleEnabled ? hubStyleAnalysis : '' },
+            sectionTemplate: hubStructure.filter((s) => s.enabled).map((s) => ({ name: s.name, bars: s.bars })),
+            sectionsToGenerate: hubStructure.filter((s) => s.enabled).map((s) => s.name),
+            rhymePreset: 'trap-soul',
+            constraints: { maxLineLen },
+            lyricsAbout: lyricsAbout,
+            negativePrompt: enableGuardrails ? negativePrompt : undefined,
+            forbiddenWords: enableGuardrails
+              ? forbiddenWords.split(',').map((w) => w.trim()).filter(Boolean)
+              : undefined,
+            mustIncludeWords: enableGuardrails
+              ? mustIncludeWords.split(',').map((w) => w.trim()).filter(Boolean)
+              : undefined,
+          })
+        ),
+        SYNTHESIS_TIMEOUT_MS,
+        'Studio draft'
+      );
 
-      const previewVariant = {
-          title: track.title,
-          sections: result.sections.map(s => ({ name: s.name, bars: s.lines }))
+      const previewVariant: WizardGeneratedVariant = {
+        title: track.title,
+        sections: result.sections.map((s) => ({ name: s.name, bars: s.lines })),
       };
-      
-      setWizardState(prev => ({ ...prev, generatedVariant: previewVariant }));
-      
-      try {
-          const allText = result.sections.flatMap(s => s.lines).join('\n');
-          const rhymeRes = await findRhymes(await withAiAuth({ text: allText, userName: user?.displayName }));
-          setPreviewRhymeGroups(rhymeRes.rhymeGroups);
-      } catch (err) { console.warn("Preview pulse failed", err); }
 
+      setWizardState((prev) => ({ ...prev, generatedVariant: previewVariant }));
       addUsageLog({ flowName: 'generateSongDraft', inkCost: activeDraftCharged, status: 'success' });
+      setProgress(100);
       completeAndMaybeReopen(5);
+      loadPreviewRhymeGroups(previewVariant);
     } catch (e: any) {
       refundInk(activeDraftBase);
       toast({ variant: 'destructive', title: 'Generation Failed', description: e.message });
@@ -704,17 +830,29 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
       setIsGenerating(false);
       setGenerating(false);
     }
+    });
   };
 
   const handleRelayAnalyze = async (sourceText: string, e: any) => {
     const cost = getCost('analyzeRelayAssets');
-    if (!deductInk(cost, 'analyzeRelayAssets', e)) return;
+    runWithInk('analyzeRelayAssets', cost, 'analyzeRelayAssets', e, async () => {
     setGeneratingOperation('extract');
     setIsGenerating(true);
     setGenerating(true, 'Performing DNA Extraction...');
     try {
-        const result = await suggestRelayDirections(await withAiAuth({ lyrics: sourceText, userName: user?.displayName }));
-        setWizardState(prev => ({ ...prev, lyrics: sourceText, analysis: result.analysis, directions: result.directions }));
+        const result = await withAsyncTimeout(
+          suggestRelayDirections(
+            await withAiAuth({ lyrics: sourceText, userName: user?.displayName })
+          ),
+          EXTRACT_TIMEOUT_MS,
+          'DNA extraction'
+        );
+        setWizardState((prev) => ({
+          ...prev,
+          lyrics: sourceText,
+          analysis: result.analysis,
+          directions: result.directions,
+        }));
         if (result.analysis.styleAnalysis?.trim()) {
             setHubStyleAnalysis(result.analysis.styleAnalysis);
             setHubStyleMetrics(result.analysis.styleMetrics ?? DEFAULT_STYLE_METRICS);
@@ -722,6 +860,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
             markHubSeeded('style');
         }
         addUsageLog({ flowName: 'analyzeRelayAssets', inkCost: cost, status: 'success' });
+        setProgress(100);
         completeAndMaybeReopen(2);
     } catch (e: any) { 
         refundInk(cost); 
@@ -730,6 +869,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
         setIsGenerating(false); 
         setGenerating(false); 
     }
+    });
   };
 
   const handleConfirmSaveDNA = (name: string) => {
@@ -920,12 +1060,12 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
 
   const handleRelayDraftSynthesis = async (e: any) => {
     const cost = activeBarsCount * getCost('generateDraftPerBar');
-    if (!deductInk(cost, 'generateRelayDraft', e)) return;
-    
+    runWithInk('generateRelayDraft', cost, 'generateRelayDraft', e, async () => {
     setGeneratingOperation('remix');
     setIsGenerating(true);
     setGenerating(true, 'Synthesizing Neural Draft...');
     try {
+        archiveCurrentApprovalDraft();
         updateTrack(track.albumId, track.id, { 
             direction: hubDirection, 
             specialInstructions: lyricsAbout,
@@ -950,37 +1090,48 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           hubDirection
         );
 
-        const result = await generateRelayDraft(await withAiAuth({
-            analysis: JSON.stringify(wizardState.analysis),
-            direction: remixDirection,
-            styleProfile: hubStyleEnabled && hubStyleAnalysis.trim() ? { analysis: hubStyleAnalysis } : { analysis: '' },
-            distanceFromSource: 'balanced',
-            delivery: 'dynamic',
-            cleanliness: 'standard',
-            intents: intentsEnabled ? hubIntents : [],
-            vibe: { ...hubVibe, enabled: hubVibeEnabled },
-            directionSuite: mergedCreativeDirection,
-            useAlbumDirection: inheritAlbum,
-            useTrackDirection: inheritTrack,
-            albumDirection: inheritAlbum ? album?.direction : undefined,
-            trackDirection: inheritTrack ? hubDirection : undefined,
-            specialInstructions: lyricsAbout,
-            negativePrompt: enableGuardrails ? negativePrompt : undefined,
-            forbiddenWords: enableGuardrails ? forbiddenWords.split(',').map(w => w.trim()).filter(Boolean) : undefined,
-            mustIncludeWords: enableGuardrails ? mustIncludeWords.split(',').map(w => w.trim()).filter(Boolean) : undefined,
-            structure: hubStructure.filter(s => s.enabled).map(s => ({ name: s.name, bars: s.bars })),
-            structureGuide: hubStructureGuide.trim() || undefined,
-            userName: user?.displayName
-        }));
-        setWizardState(prev => ({ ...prev, generatedVariant: result }));
-        try {
-            const allText = result.sections.flatMap(s => s.bars).join('\n');
-            const rhymeRes = await findRhymes(await withAiAuth({ text: allText, userName: user?.displayName }));
-            setPreviewRhymeGroups(rhymeRes.rhymeGroups);
-        } catch (err) { console.warn("Pulse failed", err); }
+        const result = await withAsyncTimeout(
+          generateRelayDraft(
+            await withAiAuth({
+              analysis: JSON.stringify(wizardState.analysis),
+              direction: remixDirection,
+              styleProfile:
+                hubStyleEnabled && hubStyleAnalysis.trim()
+                  ? { analysis: hubStyleAnalysis }
+                  : { analysis: '' },
+              distanceFromSource: 'balanced',
+              delivery: 'dynamic',
+              cleanliness: 'standard',
+              intents: intentsEnabled ? hubIntents : [],
+              vibe: { ...hubVibe, enabled: hubVibeEnabled },
+              directionSuite: mergedCreativeDirection,
+              useAlbumDirection: inheritAlbum,
+              useTrackDirection: inheritTrack,
+              albumDirection: inheritAlbum ? album?.direction : undefined,
+              trackDirection: inheritTrack ? hubDirection : undefined,
+              specialInstructions: lyricsAbout,
+              negativePrompt: enableGuardrails ? negativePrompt : undefined,
+              forbiddenWords: enableGuardrails
+                ? forbiddenWords.split(',').map((w) => w.trim()).filter(Boolean)
+                : undefined,
+              mustIncludeWords: enableGuardrails
+                ? mustIncludeWords.split(',').map((w) => w.trim()).filter(Boolean)
+                : undefined,
+              structure: hubStructure.filter((s) => s.enabled).map((s) => ({ name: s.name, bars: s.bars })),
+              structureGuide: hubStructureGuide.trim() || undefined,
+              userName: user?.displayName,
+            })
+          ),
+          SYNTHESIS_TIMEOUT_MS,
+          'DNA remix draft'
+        );
+        setWizardState((prev) => ({ ...prev, generatedVariant: result }));
         addUsageLog({ flowName: 'generateRelayDraft', inkCost: cost, status: 'success' });
+        setProgress(100);
         completeAndMaybeReopen(5);
+        loadPreviewRhymeGroups(result);
     } catch (e: any) { refundInk(cost); toast({ variant: 'destructive', title: 'Synthesis Failed', description: e.message }); } finally { setIsGenerating(false); setGenerating(false); }
+    });
   };
 
   const handleAddStructureSection = (type: string) => {
@@ -1419,6 +1570,42 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   const synthesisProgressLabel =
     generatingOperation === 'extract' ? 'Profile Scan' : 'Strand Build';
 
+  const analyzeRelayInkCost = Math.round(getEffectiveCost('analyzeRelayAssets'));
+
+  const handleWorkstationBack = useCallback(() => {
+    if (step === 10 && wizardState.analysis) {
+      setStep(3);
+      return;
+    }
+    if (step === 10) {
+      setStep(0);
+      return;
+    }
+    if (step === 3) {
+      setStep(2);
+      return;
+    }
+    if (step === 2 && wizardState.analysis) {
+      setRemixSeedBackConfirmOpen(true);
+      return;
+    }
+    if (step === 2) {
+      setStep(1);
+      return;
+    }
+    if (step === 5) {
+      setStep(10);
+      return;
+    }
+    setStep(0);
+  }, [step, wizardState.analysis]);
+
+  const confirmReturnToRemixSeed = useCallback(() => {
+    setRemixSeedBackConfirmOpen(false);
+    setApprovalDraftHistory([]);
+    setStep(1);
+  }, []);
+
   useLayoutEffect(() => {
     if (!isGenerating) {
       setSyncAttractor(null);
@@ -1431,12 +1618,14 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
       if (!surface || !anchor) return;
       const s = surface.getBoundingClientRect();
       const a = anchor.getBoundingClientRect();
+      const logoSpan = Math.max(a.width, a.height);
+      const surfaceSpan = Math.min(s.width, s.height);
       setSyncAttractor({
         cx: a.left + a.width / 2 - s.left,
         cy: a.top + a.height / 2 - s.top,
-        r: Math.max(a.width, a.height) * 0.5,
-        /** Match logo well — do not scale from full viewport height on phone */
-        ringR: Math.max(a.width, a.height) * 0.52,
+        r: logoSpan * 0.52,
+        /** Ring wraps logo square — sized from logo, centered on anchor */
+        ringR: Math.min(Math.max(logoSpan * 1.62, 128), surfaceSpan * 0.42),
       });
     };
 
@@ -1451,7 +1640,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
       ro.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [isGenerating, progress, synthesisLoaderMode]);
+  }, [isGenerating, progress, synthesisLoaderMode, synthesisActiveRules]);
 
   return (
     <>
@@ -1473,14 +1662,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
               <X className="h-5 w-5" />
             </Button>
             <div className="flex items-center min-w-0 flex-1 pr-[4.5rem] sm:pr-10">
-                {step > 0 && <Button variant="ghost" size="icon" className="h-8 w-8 mr-1 sm:mr-2 rounded-full shrink-0" onClick={() => {
-                    if (step === 10 && wizardState.analysis) setStep(3);
-                    else if (step === 10) setStep(0);
-                    else if (step === 3) setStep(2);
-                    else if (step === 2) setStep(1);
-                    else if (step === 5) setStep(10);
-                    else setStep(0);
-                }}><ArrowLeft className="h-4 w-4"/></Button>}
+                {step > 0 && <Button variant="ghost" size="icon" className="h-8 w-8 mr-1 sm:mr-2 rounded-full shrink-0" onClick={handleWorkstationBack} aria-label="Previous step"><ArrowLeft className="h-4 w-4"/></Button>}
                 <DialogTitle className="font-headline text-sm sm:text-xl font-bold flex items-center gap-2 uppercase tracking-tighter text-foreground min-w-0 truncate">
                     <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary animate-pulse shrink-0" />
                     <span className="truncate">Generation Workstation</span>
@@ -1512,17 +1694,6 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
               className="absolute inset-0 z-[1]"
             />
           )}
-          {isGenerating && (
-            <div ref={syncSurfaceRef} className="absolute inset-0 z-[100]">
-              <GenerationSyncAmbient
-                progress={progress}
-                mode={synthesisLoaderMode}
-                activeRules={synthesisActiveRules}
-                attractor={syncAttractor}
-                className="absolute inset-0"
-              />
-            </div>
-          )}
           <div
             className={cn(
               'generating-overlay absolute inset-0 z-[101] flex flex-col min-h-0 transition-opacity duration-300',
@@ -1530,8 +1701,20 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
             )}
             aria-hidden={!isGenerating}
           >
-            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden studio-scrollbar">
-              <div className="flex min-h-full w-full flex-col items-center justify-center px-3 py-5 sm:px-4 sm:py-6">
+            <div
+              ref={syncSurfaceRef}
+              className="relative flex-1 min-h-0 overflow-hidden isolate"
+            >
+              {isGenerating && (
+                <GenerationSyncAmbient
+                  progress={progress}
+                  mode={synthesisLoaderMode}
+                  activeRules={synthesisActiveRules}
+                  attractor={syncAttractor}
+                  className="absolute inset-0 z-0"
+                />
+              )}
+              <div className="relative z-10 h-full min-h-0 w-full px-2 sm:px-4">
                 <DNASynthesisLoader
                   size="large"
                   constrainHeight
@@ -1543,7 +1726,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                 />
               </div>
             </div>
-            <div className="shrink-0 border-t border-white/10 bg-[hsl(216_48%_6%/0.95)] backdrop-blur-sm px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-4 space-y-2.5 sm:space-y-3">
+            <div className="shrink-0 border-t border-white/10 bg-[hsl(216_48%_6%/0.95)] backdrop-blur-sm px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-4 space-y-2.5 sm:space-y-3 relative z-20">
               <p className="text-[10px] sm:text-[11px] font-code uppercase text-white/70 text-center leading-relaxed tracking-[0.18em] px-1">
                 {getDnaLoaderStatusText(progress, undefined, synthesisLoaderMode)}
               </p>
@@ -2254,18 +2437,21 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                             }
                         `}</style>
                         <div className="max-h-[min(40vh,360px)] lg:max-h-none lg:h-full overflow-y-auto overflow-x-hidden studio-scrollbar overscroll-contain">
-                            <div className="p-3 pt-4 sm:p-6 md:p-12 space-y-6 sm:space-y-12 pb-6 sm:pb-32">
+                            <div className="p-3 pt-4 sm:p-6 sm:pb-8 pb-6">
                                 {wizardState.generatedVariant.sections.map((s, idx) => (
                                     <div key={idx} className="relative">
-                                        <div className="h-10 sm:h-16 md:h-24 flex items-end pb-1 sm:pb-2 pl-[2.75rem] sm:pl-[120px]">
-                                            <h4 className="text-sm sm:text-xl md:text-2xl font-headline font-bold text-sky-400 uppercase leading-none">[{s.name}]</h4>
+                                        <div
+                                            className="flex items-end pl-[2.75rem] sm:pl-[120px]"
+                                            style={{ height: '64px' }}
+                                        >
+                                            <h4 className="text-sm sm:text-xl font-headline font-bold text-sky-400 uppercase leading-none">[{s.name}]</h4>
                                         </div>
                                         <div className="space-y-0">
                                             {s.bars.map((line, lIdx) => (
-                                                <div key={lIdx} className="relative group flex items-start h-auto" style={{ minHeight: '28px' }}>
-                                                    <span className="absolute left-0 sm:left-[50px] font-mono text-muted-foreground/25 w-9 sm:w-10 text-right font-bold text-[9px] sm:text-[10px] leading-[28px] sm:leading-[32px]">{String(lIdx + 1).padStart(2, '0')}</span>
+                                                <div key={lIdx} className="relative group flex items-start min-h-[32px]">
+                                                    <span className="absolute left-0 sm:left-[50px] font-mono text-muted-foreground/25 w-9 sm:w-10 text-right font-bold text-[9px] sm:text-[10px] leading-[32px]">{String(lIdx + 1).padStart(2, '0')}</span>
                                                     <div className="flex-grow flex items-start min-w-0 h-full relative overflow-hidden pl-[2.75rem] sm:pl-[145px]">
-                                                        <p className="font-code font-bold text-[17px] sm:text-[22px] md:text-[24px] leading-[28px] sm:leading-[32px] tracking-tight text-white/90 whitespace-pre-wrap break-words w-full sm:-indent-[25px]">
+                                                        <p className="font-code font-bold text-[17px] sm:text-[22px] md:text-[24px] leading-[32px] tracking-tight text-white/90 whitespace-pre-wrap break-words w-full sm:-indent-[25px]">
                                                             <HighlightedText text={line} rhymeGroups={previewRhymeGroups} />
                                                         </p>
                                                     </div>
@@ -2279,6 +2465,49 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                       </Card>
                   </div>
                   <div className="relative w-full lg:w-[340px] shrink-0 order-2 lg:order-none lg:min-h-0 p-3 sm:p-6 space-y-4 sm:space-y-6 bg-black/50 border-t lg:border-t-0 lg:border-l border-white/10 lg:overflow-y-auto studio-scrollbar z-[2]">
+                      {approvalDraftHistory.length > 0 && (
+                        <div className="space-y-2 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                          <p className="text-[9px] font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1.5">
+                            <Clock className="h-3 w-3 shrink-0" /> Session draft history
+                          </p>
+                          <p className="text-[8px] text-muted-foreground font-code leading-snug">
+                            Earlier outputs from this remix run. Restore to preview — no extra Ink.
+                          </p>
+                          <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto studio-scrollbar pr-0.5">
+                            {approvalDraftHistory.map((snap, idx) => {
+                              const isActive =
+                                wizardState.generatedVariant &&
+                                variantsMatch(wizardState.generatedVariant, snap.variant);
+                              return (
+                                <button
+                                  key={snap.id}
+                                  type="button"
+                                  onClick={() => restoreApprovalDraft(snap.id)}
+                                  className={cn(
+                                    'w-full text-left rounded-md border px-2.5 py-2 transition-colors',
+                                    isActive
+                                      ? 'border-primary/50 bg-primary/10'
+                                      : 'border-white/10 bg-black/30 hover:border-primary/35 hover:bg-primary/5'
+                                  )}
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-[9px] font-bold uppercase text-white">
+                                      Draft {approvalDraftHistory.length - idx}
+                                    </span>
+                                    <span className="text-[8px] font-mono text-muted-foreground shrink-0">
+                                      {format(new Date(snap.savedAt), 'h:mm a')}
+                                    </span>
+                                  </div>
+                                  <p className="text-[8px] text-muted-foreground mt-0.5">
+                                    {snap.barCount} bars · {snap.settingsSummary.slice(0, 3).join(' · ') || 'Default mix'}
+                                  </p>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="space-y-2">
                         <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Context Summary</h4>
                         <p className="text-[9px] text-muted-foreground font-code uppercase">Settings used for this synthesis.</p>
@@ -2327,8 +2556,18 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                           {wizardState.selectedDirections.length > 0 && (
                               <div className="space-y-1.5 p-3 rounded-lg bg-primary/5 border border-primary/10">
                                   <p className="text-[9px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5"><GitBranch className="h-3 w-3" /> Selected Paths</p>
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                      {wizardState.selectedDirections.map(d => <Badge key={d.name} variant="outline" className="text-[8px] h-4 border-primary/30 text-primary truncate max-w-[90px]">{d.name}</Badge>)}
+                                  <div className="flex flex-col gap-1.5 mt-1 min-w-0">
+                                      {wizardState.selectedDirections.map((d) => (
+                                        <div
+                                          key={d.name}
+                                          className="w-full min-w-0 rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-[9px] font-bold text-primary leading-snug break-words"
+                                        >
+                                          <span className="block break-words">{d.name}</span>
+                                          <span className="mt-0.5 block font-mono text-[8px] font-normal text-primary/55">
+                                            {d.weight ?? 50}% influence
+                                          </span>
+                                        </div>
+                                      ))}
                                   </div>
                               </div>
                           )}
@@ -2360,8 +2599,15 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                           {intentsEnabled && hubIntents.length > 0 && (
                               <div className="space-y-1.5 p-3 rounded-lg bg-sky-500/5 border border-sky-500/10">
                                   <p className="text-[9px] font-bold text-sky-500 uppercase tracking-widest flex items-center gap-1.5"><Target className="h-3 w-3" /> Woven Intents</p>
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                      {hubIntents.map(i => <Badge key={i} variant="outline" className="text-[8px] h-4 border-sky-500/30 text-sky-400 truncate max-w-[90px]">{i}</Badge>)}
+                                  <div className="flex flex-col gap-1.5 mt-1 min-w-0">
+                                      {hubIntents.map((i) => (
+                                        <div
+                                          key={i}
+                                          className="w-full min-w-0 rounded-md border border-sky-500/30 bg-sky-500/5 px-2 py-1.5 text-[9px] font-bold text-sky-400 leading-snug break-words"
+                                        >
+                                          {i}
+                                        </div>
+                                      ))}
                                   </div>
                               </div>
                           )}
@@ -2477,6 +2723,41 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           </div>
         </div>
         )}
+      </DialogContent>
+    </Dialog>
+
+    <Dialog open={remixSeedBackConfirmOpen} onOpenChange={setRemixSeedBackConfirmOpen}>
+      <DialogContent
+        overlayClassName="z-[2195] bg-black/85"
+        className="z-[2200] sm:max-w-md bg-card border-2 border-amber-500/30"
+      >
+        <DialogHeader>
+          <DialogTitle className="font-headline text-xl uppercase text-amber-400 flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+            Return to Seed DNA?
+          </DialogTitle>
+          <DialogDescription asChild>
+            <div className="text-sm font-code leading-relaxed text-left text-muted-foreground space-y-2">
+              <p>
+                Back to <strong className="text-foreground">Seed DNA &amp; REMIX</strong> — re-extracting costs{' '}
+                <strong className="text-primary">{analyzeRelayInkCost} Ink</strong>. Draft history on Approval clears.
+              </p>
+              {isPro && (
+                <p className="text-[11px] text-foreground/75 border border-primary/15 rounded-md px-2.5 py-2 bg-primary/5">
+                  Tip: <strong className="text-foreground">Save DNA Profile</strong> (blue button on Analysis) keeps this extraction in your vault.
+                </p>
+              )}
+            </div>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" className="font-bold uppercase text-[10px]" onClick={() => setRemixSeedBackConfirmOpen(false)}>
+            Stay on Analysis
+          </Button>
+          <Button className="font-bold uppercase text-[10px] bg-amber-600 hover:bg-amber-500" onClick={confirmReturnToRemixSeed}>
+            Go to Seed Step
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
 
