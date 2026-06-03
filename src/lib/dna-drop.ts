@@ -1,5 +1,10 @@
 import type { Album, StyleProfile, Track } from '@/lib/types';
 
+/** True when this project has an active public DNA Drop link (shareId persisted on album/track). */
+export function hasActiveDnaDrop(shareId?: string | null): boolean {
+  return typeof shareId === 'string' && shareId.trim().length > 0;
+}
+
 /** Style frozen at drop time — StyleProfile lives on the user, not the track doc. */
 export type DnaDropStyleSnapshot = {
   analysis: string;

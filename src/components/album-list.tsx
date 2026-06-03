@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { DnaDropLiveIndicator } from '@/components/dna-drop-live-indicator';
 import {
   Dialog,
   DialogContent,
@@ -268,9 +269,13 @@ function FreeVisitorVault({
 
       <div className="space-y-6">
         <div className="flex items-center gap-4 border-l-4 border-sky-500 pl-6">
-          <h2 className="text-3xl font-headline font-bold text-white uppercase tracking-tighter flex items-center gap-3">
-            <CassetteTape className="text-sky-500 h-8 w-8" /> Loose Tracks
-          </h2>
+          <Link
+            href="/albums/unassigned"
+            className="text-3xl font-headline font-bold text-white uppercase tracking-tighter flex items-center gap-3 hover:text-sky-300 transition-colors"
+          >
+            <CassetteTape className="text-sky-500 h-8 w-8 shrink-0" />
+            Loose Tracks
+          </Link>
           <Badge variant="outline" className="border-sky-500/30 text-sky-400 font-mono">{sortedLooseTracks.length}/{FREE_TRACK_LIMIT}</Badge>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -283,7 +288,10 @@ function FreeVisitorVault({
                       <CassetteTape className="h-5 w-5 text-sky-400" />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-bold font-headline text-base text-white uppercase truncate">{track.title}</p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="font-bold font-headline text-base text-white uppercase truncate">{track.title}</p>
+                        <DnaDropLiveIndicator shareId={track.shareId} variant="compact" />
+                      </div>
                       <p className="text-[8px] text-sky-400/80 uppercase font-code mt-0.5">Open slot · {track.vibe?.genre}</p>
                     </div>
                   </div>
@@ -316,6 +324,9 @@ function FreeVisitorVault({
 
 const VinylRecord = ({ album }: { album: Album }) => (
     <Link href={`/albums/${album.id}`} className="group relative aspect-square block">
+        <div className="absolute top-3 right-3 z-30 pointer-events-none">
+          <DnaDropLiveIndicator shareId={album.shareId} variant="dot" className="pointer-events-auto" />
+        </div>
         <div className="absolute inset-0 bg-neutral-900 rounded-full flex items-center justify-center transition-all duration-700 group-hover:rotate-[360deg] shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden border-[6px] border-neutral-800"
              style={{
                  backgroundImage: 'repeating-radial-gradient(circle at center, #1a1a1a 0px, #1a1a1a 2px, #111 4px, #111 5px)'
@@ -520,17 +531,8 @@ export function AlbumList() {
       <div className="flex-grow w-full relative min-h-screen selection:bg-primary/30 font-code">
         <VaultChamberAtmosphere />
 
-        <div className="relative z-20 mx-auto flex w-full min-w-0 max-w-[100vw]">
-          {!loading && user && (
-            <aside
-              className="hidden xl:block shrink-0 sticky top-[5.25rem] self-start z-30 pt-6 pb-10 pl-2 2xl:pl-4 pr-1 max-h-[calc(100vh-5.25rem)]"
-              aria-label="Studio progress"
-            >
-              <VaultStudioProgress variant="sidebar" />
-            </aside>
-          )}
-
-          <div className="container relative flex-1 min-w-0 mx-auto px-4 sm:px-6 pt-6 pb-10">
+        <div className="relative z-20 w-full min-w-0 max-w-[100vw] xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,72rem)_minmax(0,1fr)] xl:grid-rows-[auto_auto] xl:items-start">
+          <div className="relative min-w-0 w-full xl:col-start-2 xl:row-start-1 px-4 sm:px-6 pt-6">
             <header className="mb-8 pb-6 border-b border-white/5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-6">
                 <div className="flex items-center gap-3 shrink-0">
@@ -629,7 +631,18 @@ export function AlbumList() {
                 <VaultStudioProgress variant="banner" />
               </div>
             )}
+          </div>
 
+          {!loading && user && (
+            <aside
+              className="hidden xl:flex xl:col-start-1 xl:row-start-2 justify-end items-start self-start pr-2 2xl:pr-3 sticky top-[5.25rem] z-30 pointer-events-none [&>*]:pointer-events-auto"
+              aria-label="Studio progress"
+            >
+              <VaultStudioProgress variant="sidebar" />
+            </aside>
+          )}
+
+          <div className="relative min-w-0 w-full xl:col-start-2 xl:row-start-2 px-4 sm:px-6 pb-10">
             {searchResults ? (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                     <div className="flex items-center justify-between">
@@ -648,8 +661,9 @@ export function AlbumList() {
                                             {res.type === 'album' ? <Music className="h-6 w-6 text-primary" /> : <CassetteTape className="h-6 w-6 text-primary" />}
                                         </div>
                                         <div className="space-y-1 min-w-0">
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2 min-w-0">
                                                 <h4 className="font-bold text-lg text-white font-headline leading-tight uppercase group-hover:text-primary transition-colors truncate">{res.title}</h4>
+                                                <DnaDropLiveIndicator shareId={res.shareId} variant="compact" />
                                                 <Badge variant="outline" className={cn("text-[8px] font-bold uppercase px-1.5 h-4 border-white/10 shrink-0", res.type === 'album' ? 'text-emerald-500' : 'text-sky-500')}>{res.type}</Badge>
                                             </div>
                                             <p className="text-[10px] text-muted-foreground italic font-code line-clamp-1 opacity-60">
@@ -680,13 +694,23 @@ export function AlbumList() {
                             <>
                             <div className="flex items-center justify-between border-l-4 border-primary pl-6">
                                 <div className="flex items-center gap-4">
-                                    <h2 className="text-3xl font-headline font-bold text-white uppercase tracking-tighter flex items-center gap-3">
-                                        <CassetteTape className="text-primary h-8 w-8" /> Loose Tracks
-                                    </h2>
+                                    <Link
+                                      href="/albums/unassigned"
+                                      className="text-3xl font-headline font-bold text-white uppercase tracking-tighter flex items-center gap-3 hover:text-primary transition-colors"
+                                    >
+                                      <CassetteTape className="text-primary h-8 w-8 shrink-0" />
+                                      Loose Tracks
+                                    </Link>
                                     {unassignedTracks.length > 0 && (
                                       <>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-white/5" onClick={() => setLooseTracksMinimized(!looseTracksMinimized)}>
-                                            {looseTracksMinimized ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-10 w-10 min-h-10 min-w-10 rounded-full hover:bg-white/10"
+                                          onClick={() => setLooseTracksMinimized(!looseTracksMinimized)}
+                                          aria-label={looseTracksMinimized ? 'Expand loose tracks' : 'Collapse loose tracks'}
+                                        >
+                                            {looseTracksMinimized ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
                                         </Button>
                                         <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Unassigned Singles & Ideas</p>
                                       </>
@@ -711,7 +735,10 @@ export function AlbumList() {
                                                             <CassetteTape className="h-5 w-5 text-primary" />
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <p className="font-bold font-headline text-base text-white uppercase truncate">{track.title}</p>
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                              <p className="font-bold font-headline text-base text-white uppercase truncate">{track.title}</p>
+                                                              <DnaDropLiveIndicator shareId={track.shareId} variant="compact" />
+                                                            </div>
                                                             <p className="text-[8px] text-muted-foreground uppercase font-code mt-0.5">{track.vibe?.genre} &middot; {track.vibe?.tempoBPM} BPM</p>
                                                         </div>
                                                     </Link>
@@ -785,6 +812,7 @@ export function AlbumList() {
                     </div>
                 </div>
             )}
+          </div>
         </div>
 
         {user && !isEmpty && (
@@ -800,7 +828,6 @@ export function AlbumList() {
             </Button>
           </div>
         )}
-        </div>
       </div>
 
       <CreateItemDialog open={!!createItemType} onOpenChange={(isOpen) => !isOpen && setCreateItemType(null)} type={createItemType || 'Album'} />

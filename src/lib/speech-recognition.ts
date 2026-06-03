@@ -90,8 +90,8 @@ export type AudioSpeechLevel = {
 };
 
 /** Skip API calls when the mic segment is effectively silent (avoids model hallucination). */
-export const MIN_SPEECH_RMS = 0.012;
-export const MIN_SPEECH_PEAK = 0.035;
+export const MIN_SPEECH_RMS = 0.018;
+export const MIN_SPEECH_PEAK = 0.05;
 
 export async function measureAudioSpeechLevel(blob: Blob): Promise<AudioSpeechLevel> {
   if (typeof window === 'undefined') {

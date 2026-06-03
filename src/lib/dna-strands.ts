@@ -366,6 +366,23 @@ export function buildDnaPresetPayload(
   };
 }
 
+export type ArchiveProfileKind = 'DNA' | 'Vibe' | 'Style';
+
+const ARCHIVE_PROFILE_LABEL: Record<ArchiveProfileKind, string> = {
+  DNA: 'DNA Profile',
+  Vibe: 'Vibe Profile',
+  Style: 'Style Profile',
+};
+
+/** Default vault name when archiving from a track (e.g. "Night Shift — DNA Profile"). */
+export function suggestArchiveProfileName(
+  kind: ArchiveProfileKind,
+  sourceTrackTitle?: string | null
+): string {
+  const base = sourceTrackTitle?.trim() || 'Studio';
+  return `${base} — ${ARCHIVE_PROFILE_LABEL[kind]}`;
+}
+
 /** Individual extraction strains for vault display (full fidelity archive). */
 export function getVaultAnalysisStrains(analysis?: Partial<WizardAnalysis> | null) {
   if (!analysis) return [];

@@ -46,7 +46,7 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
   const { user } = useAuth();
   const { summary, rankLabel, loading } = useGamification();
   const isSidebar = variant === 'sidebar';
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(variant !== 'sidebar');
   const initializedRef = useRef(false);
   const xpRingGradientId = useId();
 
@@ -105,6 +105,7 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
             hasRecentEarn && 'border-amber-400/50 shadow-[0_0_36px_rgba(251,191,36,0.35)]'
           )}
           aria-label={`Studio progress: ${rankLabel}, ${summary.xp.toLocaleString()} XP. Click to expand.`}
+          aria-expanded={false}
         >
           <svg
             className="absolute inset-0 h-full w-full -rotate-90"
@@ -152,11 +153,11 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
         </button>
       </TooltipTrigger>
       <TooltipContent side="right" className="max-w-[200px]">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-primary">Studio Progress</p>
-        <p className="text-[10px] text-muted-foreground mt-1">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Studio Progress</p>
+        <p className="text-[11px] text-muted-foreground mt-1">
           {rankLabel} · {summary.xp.toLocaleString()} XP
         </p>
-        <p className="text-[9px] text-muted-foreground/80 mt-0.5">Click to expand</p>
+        <p className="text-[10px] text-muted-foreground/80 mt-0.5">Click to expand</p>
       </TooltipContent>
     </Tooltip>
   );
@@ -165,7 +166,7 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
     <div
       className={cn(
         'flex flex-row items-center justify-between gap-2 cursor-pointer select-none min-w-0 border-b border-white/5',
-        isSidebar ? 'px-2 py-1.5 bg-black/30' : 'px-3 py-2 bg-black/20'
+        isSidebar ? 'px-2.5 py-2 bg-black/30' : 'px-3 py-2 bg-black/20'
       )}
       onClick={() => setExpanded((v) => !v)}
       aria-expanded={expanded}
@@ -180,11 +181,16 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
         />
         <Trophy className="h-3.5 w-3.5 text-amber-400 shrink-0" />
         <div className="min-w-0 flex-1 overflow-hidden">
-          <p className="text-[10px] font-headline uppercase tracking-tight text-white truncate leading-none">
+          <p
+            className={cn(
+              'font-headline uppercase tracking-tight text-white truncate leading-none',
+              isSidebar ? 'text-[11px]' : 'text-[10px]'
+            )}
+          >
             {isSidebar && !expanded ? 'Progress' : 'Studio Progress'}
           </p>
           {!expanded && (
-            <p className="text-[9px] font-normal normal-case tracking-normal text-muted-foreground truncate leading-tight mt-0.5">
+            <p className="text-[10px] font-normal normal-case tracking-normal text-muted-foreground truncate leading-tight mt-0.5">
               {isSidebar
                 ? `${shortRankLabel(rankLabel)} · ${xpShort} XP`
                 : `${rankLabel} · ${summary.xp.toLocaleString()} XP · ${achievementCount}/${ACHIEVEMENTS.length} badges`}
@@ -196,7 +202,10 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
         variant="ghost"
         size="sm"
         asChild
-        className="h-6 px-1.5 text-[8px] font-bold uppercase tracking-wider text-muted-foreground hover:text-sky-200 shrink-0"
+        className={cn(
+          'h-6 px-1.5 font-bold uppercase tracking-wider text-muted-foreground hover:text-sky-200 shrink-0',
+          isSidebar ? 'text-[9px]' : 'text-[8px]'
+        )}
         onClick={(e) => e.stopPropagation()}
       >
         <Link href="/studio-progress">
@@ -219,7 +228,7 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
             <Badge
               variant="outline"
               className={cn(
-                'text-[9px] font-bold uppercase gap-1 px-2 py-0 h-5',
+                isSidebar ? 'text-[10px] font-bold uppercase gap-1 px-2 py-0 h-5' : 'text-[9px] font-bold uppercase gap-1 px-2 py-0 h-5',
                 RANK_BADGE[rank.id] ?? RANK_BADGE.open_mic
               )}
             >
@@ -229,13 +238,18 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
             {summary.currentStreak > 0 && (
               <Badge
                 variant="outline"
-                className="border-orange-500/45 bg-orange-500/12 text-orange-200 text-[9px] font-bold uppercase gap-1 px-2 py-0 h-5 shadow-[0_0_10px_rgba(249,115,22,0.15)]"
+                className={cn(
+                  'border-orange-500/45 bg-orange-500/12 text-orange-200 font-bold uppercase gap-1 px-2 py-0 h-5 shadow-[0_0_10px_rgba(249,115,22,0.15)]',
+                  isSidebar ? 'text-[10px]' : 'text-[9px]'
+                )}
               >
                 <Flame className="h-3 w-3" />
                 {summary.currentStreak}d
               </Badge>
             )}
-            <span className="text-[10px] font-code text-sky-100/90 font-bold">{summary.xp.toLocaleString()} XP</span>
+            <span className={cn('font-code text-sky-100/90 font-bold', isSidebar ? 'text-[11px]' : 'text-[10px]')}>
+              {summary.xp.toLocaleString()} XP
+            </span>
           </div>
           <div className="h-1 rounded-full bg-white/5 overflow-hidden">
             <div
@@ -243,7 +257,7 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
               style={{ width: `${xpPercent}%` }}
             />
           </div>
-          <p className="text-[10px] text-muted-foreground font-code leading-snug break-words">
+          <p className={cn('text-muted-foreground font-code leading-snug break-words', isSidebar ? 'text-[11px]' : 'text-[10px]')}>
             {nextRank ? (
               <>
                 {Math.max(0, next - current).toLocaleString()} XP to{' '}
@@ -256,7 +270,7 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
         </div>
 
         <div className="rounded-lg border border-emerald-500/15 bg-gradient-to-br from-black/40 to-emerald-950/15 px-2.5 py-2 min-w-0 overflow-hidden">
-          <p className="text-[9px] font-bold uppercase tracking-wide text-emerald-200 mb-1.5 leading-snug">
+          <p className={cn('font-bold uppercase tracking-wide text-emerald-200 mb-1.5 leading-snug', isSidebar ? 'text-[10px]' : 'text-[9px]')}>
             <span className="block sm:inline">Weekly goals</span>
             <span className="block sm:inline font-normal normal-case tracking-normal text-slate-300/90 sm:before:content-['·_']">
               Mon reset
@@ -274,10 +288,22 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
                   ) : (
                     <Circle className="h-3 w-3 text-muted-foreground/35 shrink-0" aria-hidden />
                   )}
-                  <p className={cn('text-[10px] font-code leading-snug truncate flex-1 min-w-0', done ? 'text-emerald-300/95' : 'text-white/85')}>
+                  <p
+                    className={cn(
+                      'font-code leading-snug truncate flex-1 min-w-0',
+                      isSidebar ? 'text-[11px]' : 'text-[10px]',
+                      done ? 'text-emerald-300/95' : 'text-white/85'
+                    )}
+                  >
                     {challenge.label}
                   </p>
-                  <span className={cn('text-[9px] font-mono shrink-0 tabular-nums whitespace-nowrap', done ? 'text-emerald-400/80' : 'text-muted-foreground')}>
+                  <span
+                    className={cn(
+                      'font-mono shrink-0 tabular-nums whitespace-nowrap',
+                      isSidebar ? 'text-[10px]' : 'text-[9px]',
+                      done ? 'text-emerald-400/80' : 'text-muted-foreground'
+                    )}
+                  >
                     {progress}/{target}
                   </span>
                 </li>
@@ -288,7 +314,7 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
 
         {isSidebar && (
           <div className="rounded-lg border border-amber-500/15 bg-gradient-to-br from-black/40 to-amber-950/15 px-2.5 py-2 min-w-0 overflow-hidden">
-            <p className="text-[9px] font-bold uppercase tracking-wide text-amber-200 mb-1.5 leading-snug">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-amber-200 mb-1.5 leading-snug">
               Personal milestones
             </p>
             <ul className="space-y-1 min-w-0">
@@ -312,7 +338,7 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
                     )}
                     <p
                       className={cn(
-                        'text-[10px] font-code leading-snug truncate flex-1 min-w-0',
+                        'text-[11px] font-code leading-snug truncate flex-1 min-w-0',
                         done ? 'text-amber-200/95' : 'text-white/85'
                       )}
                     >
@@ -320,7 +346,7 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
                     </p>
                     <span
                       className={cn(
-                        'text-[9px] font-mono shrink-0 tabular-nums whitespace-nowrap',
+                        'text-[10px] font-mono shrink-0 tabular-nums whitespace-nowrap',
                         done ? 'text-amber-400/80' : 'text-muted-foreground'
                       )}
                     >
@@ -340,10 +366,10 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
           )}
         >
           <div className="flex items-center justify-between gap-2 mb-1.5 min-w-0">
-            <p className="text-[9px] font-bold uppercase tracking-wide text-violet-300/90 shrink-0">
+            <p className={cn('font-bold uppercase tracking-wide text-violet-300/90 shrink-0', isSidebar ? 'text-[10px]' : 'text-[9px]')}>
               Achievements
             </p>
-            <span className="text-[9px] font-mono text-violet-200/60 tabular-nums shrink-0 whitespace-nowrap">
+            <span className={cn('font-mono text-violet-200/60 tabular-nums shrink-0 whitespace-nowrap', isSidebar ? 'text-[10px]' : 'text-[9px]')}>
               {achievementCount}/{ACHIEVEMENTS.length}
             </span>
           </div>
@@ -353,7 +379,8 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
                 key={a.id}
                 variant="outline"
                 className={cn(
-                  'inline-flex max-w-full min-w-0 h-auto min-h-5 py-0.5 px-2 text-[8px] font-bold uppercase',
+                  'inline-flex max-w-full min-w-0 h-auto min-h-5 py-0.5 px-2 font-bold uppercase',
+                  isSidebar ? 'text-[9px]' : 'text-[8px]',
                   ACHIEVEMENT_CATEGORY[a.category]
                 )}
                 title={a.description}
@@ -363,7 +390,7 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
               </Badge>
             ))}
             {unlockedBadges.length === 0 && (
-              <p className="text-[10px] text-muted-foreground/80 italic py-0.5 break-words">
+              <p className={cn('text-muted-foreground/80 italic py-0.5 break-words', isSidebar ? 'text-[11px]' : 'text-[10px]')}>
                 Write, generate, and explore — badges unlock as you go.
               </p>
             )}
@@ -372,7 +399,8 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
                 key={`locked-${a.id}`}
                 variant="outline"
                 className={cn(
-                  'inline-flex max-w-full min-w-0 h-auto min-h-5 py-0.5 px-2 text-[8px] font-bold uppercase',
+                  'inline-flex max-w-full min-w-0 h-auto min-h-5 py-0.5 px-2 font-bold uppercase',
+                  isSidebar ? 'text-[9px]' : 'text-[8px]',
                   ACHIEVEMENT_CATEGORY_LOCKED[a.category]
                 )}
                 title={a.description}
@@ -387,18 +415,27 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
   );
 
   const cardClassName = cn(
-    'overflow-hidden mb-0 border rounded-xl shadow-none',
+    'mb-0 border rounded-xl shadow-none shrink-0',
     isSidebar
-      ? 'w-[236px] 2xl:w-[256px] max-h-[calc(100vh-5.75rem)] overflow-y-auto studio-scrollbar border-white/10 bg-black/35'
-      : 'mb-4 border-primary/20 bg-gradient-to-br from-primary/[0.08] via-card/50 to-amber-500/[0.06] shadow-[0_0_32px_rgba(59,130,246,0.08)]'
+      ? 'w-[236px] 2xl:w-[256px] overflow-visible border-white/10 bg-black/35'
+      : 'overflow-hidden mb-4 border-primary/20 bg-gradient-to-br from-primary/[0.08] via-card/50 to-amber-500/[0.06] shadow-[0_0_32px_rgba(59,130,246,0.08)]'
   );
 
   if (isSidebar && !expanded) {
-    return sidebarBubble;
+    return (
+      <div className="mr-40 2xl:mr-48 shrink-0 -translate-y-14 2xl:-translate-y-16">
+        {sidebarBubble}
+      </div>
+    );
   }
 
   return (
-    <Card className={cardClassName}>
+    <Card
+      className={cn(
+        cardClassName,
+        isSidebar && 'animate-in fade-in slide-in-from-left-2 duration-200'
+      )}
+    >
       {headerBlock}
       {bodyBlock}
     </Card>

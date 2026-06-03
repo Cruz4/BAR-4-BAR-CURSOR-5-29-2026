@@ -59,6 +59,7 @@ function userFromFirebase(
     subscriptionTier: data?.subscriptionTier || 'none',
     trialStartedAt: data?.trialStartedAt ?? null,
     lyricsTutorialCompletedAt: data?.lyricsTutorialCompletedAt,
+    studioPrivacyIntroCompletedAt: data?.studioPrivacyIntroCompletedAt,
   };
 }
 

@@ -34,6 +34,7 @@ import {
   MAX_TRANSCRIBE_BLOB_BYTES,
   type BrowserSpeechRecognitionCtor,
 } from '@/lib/speech-recognition';
+import { sanitizeFreestyleTranscript } from '@/lib/freestyle-transcript';
 
 interface FreestylePadProps {
   open: boolean;
@@ -47,8 +48,9 @@ interface FreestylePadProps {
 }
 
 /** Complete WebM segment length (stop/start), not timeslice fragments */
-const STUDIO_SEGMENT_MS = 2500;
-const STUDIO_AUDIO_BITS_PER_SECOND = 32_000;
+const STUDIO_SEGMENT_MS = 4500;
+const STUDIO_AUDIO_BITS_PER_SECOND = 64_000;
+const MIN_CHUNK_BYTES = 1500;
 
 export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, trackVibe, albumTheme, styleProfileSummary, isPro }: FreestylePadProps) {
   const { toast } = useToast();
@@ -69,6 +71,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   const segmentChunksRef = useRef<Blob[]>([]);
   const segmentTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const studioChunkBusyRef = useRef(false);
+  const studioChunkQueueRef = useRef<Array<{ blob: Blob; mimeType: string }>>([]);
   const networkRetryRef = useRef(false);
   const studioFailNotifiedRef = useRef(false);
   const [pickupMode, setPickupMode] = useState<'studio' | 'browser'>('studio');
@@ -86,6 +89,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   const releaseMediaStream = useCallback(() => {
     clearSegmentTimer();
     segmentChunksRef.current = [];
+    studioChunkQueueRef.current = [];
     mediaRecorderRef.current = null;
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     mediaStreamRef.current = null;
@@ -134,55 +138,67 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   }, [isPro, router, stopListening, toast]);
 
   const appendTranscript = useCallback((text: string) => {
-    const trimmed = text.trim();
+    const trimmed = sanitizeFreestyleTranscript(text);
     if (!trimmed) return;
     setTranscript((prev) => (prev ? `${prev.trimEnd()} ${trimmed}` : trimmed));
   }, []);
 
-  const transcribeAudioChunk = useCallback(
-    async (blob: Blob, mimeType: string) => {
-      if (blob.size < 800 || blob.size > MAX_TRANSCRIBE_BLOB_BYTES || studioChunkBusyRef.current) {
-        return;
-      }
+  const drainStudioChunkQueue = useCallback(async () => {
+    if (studioChunkBusyRef.current) return;
 
-      studioChunkBusyRef.current = true;
+    const next = studioChunkQueueRef.current.shift();
+    if (!next) return;
+
+    const { blob, mimeType } = next;
+    if (blob.size < MIN_CHUNK_BYTES || blob.size > MAX_TRANSCRIBE_BLOB_BYTES) {
+      void drainStudioChunkQueue();
+      return;
+    }
+
+    studioChunkBusyRef.current = true;
+    setIsStudioTranscribing(true);
+    try {
       const speechLevel = await measureAudioSpeechLevel(blob);
       if (!hasDetectableSpeech(speechLevel)) {
-        studioChunkBusyRef.current = false;
         return;
       }
-      setIsStudioTranscribing(true);
-      try {
-        const audioBase64 = await blobToBase64(blob);
-        const result = await transcribeFreestyleAudio(
-          await withAiAuth({ audioBase64, mimeType })
-        );
-        appendTranscript(result.transcript);
-      } catch (err) {
-        console.warn('[FreestylePad] studio transcription chunk failed', err);
-        if (!studioFailNotifiedRef.current) {
-          studioFailNotifiedRef.current = true;
-          const raw = err instanceof Error ? err.message : 'Check your connection and try again.';
-          const detail = raw.includes('fetch failed')
-            ? 'Studio could not reach Gemini. Check your internet and GEMINI_API_KEY, then try again.'
-            : raw;
-          toast({
-            variant: 'destructive',
-            title: 'Transcription Unavailable',
-            description: detail.includes('Sign in')
-              ? detail
-              : `${detail} If this keeps happening, confirm GEMINI_API_KEY is set on the server.`,
-          });
-        }
-      } finally {
-        studioChunkBusyRef.current = false;
-        if (listeningRef.current) {
-          setInterimTranscript('Listening…');
-        }
-        setIsStudioTranscribing(false);
+      const audioBase64 = await blobToBase64(blob);
+      const result = await transcribeFreestyleAudio(
+        await withAiAuth({ audioBase64, mimeType })
+      );
+      appendTranscript(result.transcript);
+    } catch (err) {
+      console.warn('[FreestylePad] studio transcription chunk failed', err);
+      if (!studioFailNotifiedRef.current) {
+        studioFailNotifiedRef.current = true;
+        const raw = err instanceof Error ? err.message : 'Check your connection and try again.';
+        const detail = raw.includes('fetch failed')
+          ? 'Studio could not reach Gemini. Check your internet and GEMINI_API_KEY, then try again.'
+          : raw;
+        toast({
+          variant: 'destructive',
+          title: 'Transcription Unavailable',
+          description: detail.includes('Sign in')
+            ? detail
+            : `${detail} If this keeps happening, confirm GEMINI_API_KEY is set on the server.`,
+        });
       }
+    } finally {
+      studioChunkBusyRef.current = false;
+      if (listeningRef.current) {
+        setInterimTranscript('Listening…');
+      }
+      setIsStudioTranscribing(studioChunkQueueRef.current.length > 0);
+      void drainStudioChunkQueue();
+    }
+  }, [appendTranscript, toast]);
+
+  const enqueueStudioChunk = useCallback(
+    (blob: Blob, mimeType: string) => {
+      studioChunkQueueRef.current.push({ blob, mimeType });
+      void drainStudioChunkQueue();
     },
-    [appendTranscript, toast]
+    [drainStudioChunkQueue]
   );
 
   const startStudioListening = useCallback(async () => {
@@ -242,7 +258,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
           if (listeningRef.current) {
             enforceSessionLimit();
           }
-          await transcribeAudioChunk(segmentBlob, mimeType);
+          enqueueStudioChunk(segmentBlob, mimeType);
           if (listeningRef.current && !manualStopRef.current) {
             try {
               recorder.start();
@@ -284,7 +300,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       refundInk(sessionCostRef.current);
       setIsListening(false);
     }
-  }, [enforceSessionLimit, refundInk, stopListening, toast, transcribeAudioChunk]);
+  }, [enforceSessionLimit, refundInk, stopListening, toast, enqueueStudioChunk]);
 
   const startBrowserListening = useCallback(async () => {
     const SpeechRecognitionAPI = getBrowserSpeechRecognition();
@@ -413,13 +429,13 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
 
       // Start mic after ink/emoji paint — awaiting getUserMedia here stalled the float sequence
       void (async () => {
-        const preferBrowserSpeech =
-          process.env.NEXT_PUBLIC_FREESTYLE_BROWSER_SPEECH === '1' &&
+        const forceStudioOnly = process.env.NEXT_PUBLIC_FREESTYLE_STUDIO_ONLY === '1';
+        const canUseBrowserSpeech =
           getBrowserSpeechRecognition() &&
           !isLikelyUnreliableBrowserSpeech() &&
           !(await isCapacitorNativeApp());
 
-        if (preferBrowserSpeech) {
+        if (!forceStudioOnly && canUseBrowserSpeech) {
           await startBrowserListening();
           return;
         }
@@ -455,7 +471,10 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
             FREESTYLE PAD
           </DialogTitle>
           <DialogDescription className="font-code text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-            Studio mic pickup · speaks appear every few seconds {!isPro && '· (30s demo limit)'}
+            {pickupMode === 'browser'
+              ? 'Live speech pickup (Chrome / Edge recommended)'
+              : 'Studio mic pickup · words appear every few seconds'}{' '}
+            {!isPro && '· (30s demo limit)'}
           </DialogDescription>
         </DialogHeader>
 

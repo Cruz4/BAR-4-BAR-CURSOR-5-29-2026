@@ -2,6 +2,7 @@
 
 import { ai, z } from '@/ai/genkit';
 import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
+import { sanitizeFreestyleTranscript } from '@/lib/freestyle-transcript';
 
 export type AiSecuredInput = { idToken: string; userId: string };
 
@@ -20,16 +21,8 @@ export type TranscribeFreestyleOutput = z.infer<typeof TranscribeFreestyleOutput
 
 const TRANSCRIBE_MODEL = 'googleai/gemini-2.5-flash';
 
-const TRANSCRIBE_PROMPT = `You are a verbatim speech-to-text engine.
-
-Listen to the attached audio clip and write ONLY the exact words spoken by a human voice.
-
-Rules (strict):
-- If the clip is silent, empty, muffled, or only background noise: output nothing (zero characters).
-- Do NOT invent, complete, or improvise lyrics, freestyle bars, rap lines, or filler speech.
-- Do NOT describe the audio, the setting, DJs, booths, or what someone "might" be saying.
-- Do NOT use placeholders or examples. No commentary, labels, or quotes around the text.
-- When unsure whether speech is present, output nothing.`;
+const TRANSCRIBE_INSTRUCTION =
+  'Transcribe only the spoken words in this clip. Use an empty transcript when there is no clear speech. Do not invent lyrics or describe the audio.';
 
 function isRetryableTranscribeError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -42,36 +35,11 @@ function isRetryableTranscribeError(error: unknown): boolean {
   );
 }
 
-function sanitizeTranscript(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return '';
-
-  const lower = trimmed.toLowerCase();
-  const silenceMarkers = [
-    '[silence]',
-    '(silence)',
-    'no speech',
-    'no audible speech',
-    'no discernible speech',
-    'no clear speech',
-    'silent audio',
-    'empty audio',
-    'inaudible',
-  ];
-  if (silenceMarkers.some((marker) => lower === marker || lower.startsWith(`${marker}.`))) {
-    return '';
-  }
-
-  return trimmed
-    .replace(/^["'`]+|["'`]+$/g, '')
-    .replace(/^\(.*\)$/s, '')
-    .trim();
-}
-
 async function generateTranscript(mime: string, audioBase64: string): Promise<string> {
-  const { text } = await ai.generate({
+  const response = await ai.generate({
     model: TRANSCRIBE_MODEL,
     config: { temperature: 0 },
+    output: { schema: TranscribeFreestyleOutputSchema },
     prompt: [
       {
         media: {
@@ -79,10 +47,15 @@ async function generateTranscript(mime: string, audioBase64: string): Promise<st
           contentType: mime,
         },
       },
-      { text: TRANSCRIBE_PROMPT },
+      { text: TRANSCRIBE_INSTRUCTION },
     ],
   });
-  return sanitizeTranscript(text || '');
+  const parsed = response.output;
+  const raw =
+    parsed && typeof parsed === 'object' && 'transcript' in parsed
+      ? String((parsed as TranscribeFreestyleOutput).transcript)
+      : response.text || '';
+  return sanitizeFreestyleTranscript(raw);
 }
 
 async function generateTranscriptWithRetry(mime: string, audioBase64: string): Promise<string> {

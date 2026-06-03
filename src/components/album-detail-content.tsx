@@ -13,6 +13,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { DnaDropLiveIndicator } from '@/components/dna-drop-live-indicator';
 import {
   ListMusic,
   PlusCircle,
@@ -536,6 +537,7 @@ function LooseTrackCard({
           {track.title}
         </p>
         <div className="flex flex-wrap items-center gap-2 mt-3">
+          <DnaDropLiveIndicator shareId={track.shareId} variant="badge" />
           <Badge variant="outline" className="h-5 px-2 text-[8px] border-white/10 text-muted-foreground font-code">
             {track.vibe?.genre || 'No genre'}
           </Badge>
@@ -637,18 +639,22 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                         className="text-base sm:text-xl text-muted-foreground bg-transparent border-0 p-0 focus-visible:ring-0 font-code min-h-[60px] resize-none leading-relaxed italic w-full max-w-full break-words" 
                         placeholder="Album concept..."
                     />
-                    <div className="flex items-center gap-4 pt-2">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 pt-2">
                         <span className="text-[10px] font-code text-muted-foreground/60 uppercase">Created {formattedCreationDate}</span>
                         {isUnassignedVault && (
                           <Badge variant="outline" className="text-[8px] border-sky-500/30 text-sky-400 font-mono">
                             {album.tracks?.length ?? 0} loose
                           </Badge>
                         )}
+                        <DnaDropLiveIndicator shareId={album.shareId} variant="badge" />
                     </div>
                 </div>
                 
                 {!isUnassignedVault ? (
                     <div className="relative group shrink-0 w-full sm:w-auto flex justify-center lg:justify-end">
+                        <div className="absolute top-2 right-2 z-20 sm:top-3 sm:right-3">
+                          <DnaDropLiveIndicator shareId={album.shareId} variant="dot" />
+                        </div>
                         <div className="w-40 h-40 sm:w-48 sm:h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8)] border-4 border-white/5 bg-neutral-900 flex flex-col items-center justify-center relative">
                             {album.coverArtUrl ? (
                                 isDataUrl(album.coverArtUrl) ? (
@@ -748,6 +754,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                         <Link href={`/albums/${album.id}/tracks/${track.id}`} className="flex-grow min-w-0">
                                             <p className="font-bold font-headline text-lg sm:text-2xl text-white uppercase tracking-tight group-hover:text-primary transition-colors break-words">{track.title}</p>
                                             <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
+                                                <DnaDropLiveIndicator shareId={track.shareId} variant="compact" />
                                                 <Badge variant="outline" className="h-4 px-1.5 text-[8px] border-white/10 text-muted-foreground font-code">{track.vibe?.genre}</Badge>
                                                 <span className="text-[9px] text-muted-foreground/60 font-code uppercase">{track.vibe?.tempoBPM} BPM</span>
                                             </div>

@@ -16,6 +16,7 @@ import { usePathname } from 'next/navigation';
 import { StudioTips } from './studio-tips';
 import { FloatingInkSpent } from './floating-ink-spent';
 import { WhatsNewDialog } from './whats-new-dialog';
+import { StudioPrivacyIntroDialog } from './studio-privacy-intro-dialog';
 import { CookieConsent } from './cookie-consent';
 import { OfflineBanner } from './offline-banner';
 import { ServiceWorkerRegister } from './service-worker-register';
@@ -44,6 +45,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                   {!isLoginPage && !isPerformPage && !isSharePage && <Header />}
                   <main className="flex-1 overflow-hidden flex flex-col">{children}</main>
                   {!isSharePage && <WhatsNewDialog />}
+                  {!isSharePage && !isLoginPage && <StudioPrivacyIntroDialog />}
                   <CookieConsent />
                   <OfflineBanner />
                   <ServiceWorkerRegister />

@@ -125,6 +125,7 @@ import { WorkstationStepBackground, stepToWorkstationVariant } from '@/component
 import { HubCalibrationAmbient, HUB_INK_KEYS, type HubInkKey } from '@/components/hub-calibration-ambient';
 import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArchivalNamingDialog } from '@/components/archival-naming-dialog';
 import { DnaVaultPresetDetails } from '@/components/dna-vault-preset-details';
 import { HighlightedText } from './highlighted-text';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -882,7 +883,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
 
   const handleConfirmSaveDNA = (name: string) => {
       if (!isPro) {
-        toast({ variant: 'destructive', title: 'Pro Feature', description: 'Archive custom DNA strains with Studio Pro.' });
+        toast({ variant: 'destructive', title: 'Pro Feature', description: 'Archive custom DNA profiles with Studio Pro.' });
         return;
       }
       if (!album || !name.trim() || !wizardState.analysis) return;
@@ -919,10 +920,9 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           setHubStyleEnabled(true);
       }
       toast({
-        title: 'DNA Strain Archived',
-        description: 'Setting, style, motifs, structure guide, and full extraction saved.',
+        title: 'DNA profile archived',
+        description: `"${name.trim()}" saved to your vault with full extraction.`,
       });
-      setSaveNamingOpen(false);
   };
 
   const loadDnaPreset = (preset: DnaPreset) => {
@@ -1053,8 +1053,10 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
       };
       const existing = album.stylePresets || [];
       updateAlbum(album.id, { stylePresets: [...existing, preset] });
-      toast({ title: "Style Strain Archived" });
-      setSaveStyleNamingOpen(false);
+      toast({
+        title: 'Style profile archived',
+        description: `"${name.trim()}" saved to your vault.`,
+      });
   };
 
   const handleAddHubIntent = () => {
@@ -2128,7 +2130,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                                               <div className="flex items-center gap-2 shrink-0">
                                                                 <Tooltip>
                                                                     <TooltipTrigger asChild>
-                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={(e) => { e.stopPropagation(); updateAlbum(album.id, { dnaPresets: album.dnaPresets?.filter((_, idx) => idx !== i) }); toast({ title: "DNA Strain Erased" }); }}><Trash2 className="h-3 w-3" /></Button>
+                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={(e) => { e.stopPropagation(); updateAlbum(album.id, { dnaPresets: album.dnaPresets?.filter((_, idx) => idx !== i) }); toast({ title: 'DNA profile removed' }); }}><Trash2 className="h-3 w-3" /></Button>
                                                                     </TooltipTrigger>
                                                                     <TooltipContent side="left" className="max-w-[200px] text-[10px] leading-snug">{DNA_HUB_TOOLTIPS.vaultDelete}</TooltipContent>
                                                                 </Tooltip>
@@ -2249,7 +2251,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                                             <Button variant="ghost" size="icon" className="h-7 w-7 text-fuchsia-400" onClick={() => { setHubStyleAnalysis(s.analysis); setHubStyleMetrics(s.metrics); markHubSeeded('style'); }}><RefreshCw className="h-3 w-3" /></Button>
                                                           </div>
                                                       </Card>
-                                                  )) : <p className="text-center text-xs uppercase opacity-40 py-6">No Style Strains saved.</p>}
+                                                  )) : <p className="text-center text-xs uppercase opacity-40 py-6">No style profiles saved.</p>}
                                               </div>
                                           )}
                                   </Card>
@@ -2797,43 +2799,21 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
       </DialogContent>
     </Dialog>
 
-    <ArchivalNamingDialog 
-        open={saveNamingOpen} 
-        onOpenChange={setSaveNamingOpen} 
-        onConfirm={(name: string) => handleConfirmSaveDNA(name)} 
-        type="DNA" 
+    <ArchivalNamingDialog
+        open={saveNamingOpen}
+        onOpenChange={setSaveNamingOpen}
+        onConfirm={(name: string) => handleConfirmSaveDNA(name)}
+        type="DNA"
+        sourceTrackTitle={track.title}
     />
-    <ArchivalNamingDialog 
-        open={saveStyleNamingOpen} 
-        onOpenChange={setSaveStyleNamingOpen} 
-        onConfirm={(name: string) => handleConfirmSaveStyle(name)} 
-        type="Style" 
+    <ArchivalNamingDialog
+        open={saveStyleNamingOpen}
+        onOpenChange={setSaveStyleNamingOpen}
+        onConfirm={(name: string) => handleConfirmSaveStyle(name)}
+        type="Style"
+        sourceTrackTitle={track.title}
     />
     </TooltipProvider>
     </>
-  );
-}
-
-function ArchivalNamingDialog({ open, onOpenChange, onConfirm, type }: any) {
-  const [name, setName] = useState('');
-  useEffect(() => { if (open) setName(''); }, [open]);
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-card border-2 z-[3000]">
-        <DialogHeader>
-          <DialogTitle className="font-headline text-2xl flex items-center gap-2">
-            <Save className="text-primary" /> Archive {type} Profile
-          </DialogTitle>
-          <DialogDescription className="text-xs uppercase tracking-tight">Enter a unique name for this {type.toLowerCase()} strain to save it to your vault.</DialogDescription>
-        </DialogHeader>
-        <div className="py-4">
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={`e.g. My ${type} Strain`} className="bg-background/50 font-bold" autoFocus />
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => { onConfirm(name.trim()); }} disabled={!name.trim()} className="px-8 font-bold">Confirm Archive</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }

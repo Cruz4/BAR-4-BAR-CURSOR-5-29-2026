@@ -46,10 +46,20 @@ This document describes how Bar 4 Bar teaches new systems to artists in-app. Sou
 | 40 | Studio Ranks | Insight |
 | 41 | Vibe Vault | Did You Know |
 | 42 | 20-Level Undo | Insight |
-| 43 | Leaderboard Privacy | Did You Know |
+| 43 | Leaderboard & Profile | Did You Know |
 | 44 | Cover Art for Drops | Insight |
 | 45 | Weekly vs Monthly | Did You Know |
 | 46 | Vault Import | Insight |
+
+## Studio visibility intro
+
+- **Component:** `src/components/studio-privacy-intro-dialog.tsx`
+- **When shown:** Once per account (until saved), after the guided tour finishes or on first visit to The Vault (`/`)
+- **Completion:** Sets `studioPrivacyIntroCompletedAt` on the user doc when the artist taps **Save preferences**
+- **Remind me later:** Snoozes for the current browser session only
+- **Controls:** Hide from leaderboard · Public profile page (same toggles as Settings → Studio Profile)
+
+The 9-step lyrics tour stays focused on workflow; visibility is explained in this separate dialog instead of adding a tour step.
 
 ## What's New dialog
 

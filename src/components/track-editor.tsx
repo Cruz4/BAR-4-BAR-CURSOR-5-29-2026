@@ -20,6 +20,7 @@ import React, { useState, useEffect, useMemo, useTransition, useContext, useRef,
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DataContext } from '@/context/data-context';
 import type { Album, Track, Direction, TrackSection, TrackVibe, StyleProfile } from '@/lib/types';
+import { isTrackLocked, isLockedTrackReopenUpdate, TRACK_LOCKED_TOAST } from '@/lib/track-lock';
 import {
   BrainCircuit,
   ChevronDown,
@@ -95,6 +96,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { isProUser } from '@/lib/subscription';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
+import { ArchivalNamingDialog } from '@/components/archival-naming-dialog';
 import { DnaVaultPresetDetails } from '@/components/dna-vault-preset-details';
 import type { DnaPreset } from '@/lib/types';
 import { STRAIN_TARGETS, appendDirectionField, buildDnaPresetFromDirection, DEFAULT_STYLE_METRICS } from '@/lib/dna-strands';
@@ -104,6 +106,7 @@ import {
   PENDING_TOUR_REPLAY_KEY,
   type LyricsTourStep,
 } from '@/lib/studio-onboarding';
+import { queueStudioPrivacyIntro } from '@/lib/studio-privacy-intro';
 import { StudioGuidedTour } from '@/components/studio-guided-tour';
 import { QuestProgress } from '@/components/gamification/quest-progress';
 import { postGamificationEvent } from '@/lib/gamification-client';
@@ -119,11 +122,26 @@ import {
   type CoWriterSections,
   type CoWriterSectionKey,
 } from '@/lib/track-panel-state';
-import { getWorkstationRuleBadges, isIntentsActive, isGuardrailsActive, isStyleActive, isVibeActive, isTrackDnaActive, isAlbumDnaActive } from '@/lib/co-writer-rules';
+import {
+  getWorkstationRuleBadges,
+  getWorkstationRuleBadgeClass,
+  coWriterSectionCardClass,
+  coWriterSectionTitleClass,
+  coWriterSectionAccentClass,
+  coWriterIntentRowClass,
+  isIntentsActive,
+  isIntentsMasterEnabled,
+  isGuardrailsActive,
+  isStyleActive,
+  isVibeActive,
+  isTrackDnaActive,
+  isAlbumDnaActive,
+} from '@/lib/co-writer-rules';
 import { SYSTEM_DNA_PRESETS, SYSTEM_STYLE_PRESETS, SYSTEM_VIBE_PRESETS } from '@/lib/system-presets';
 import { GenerateSongDraftDialog } from './generate-song-draft-dialog';
 import { ExportDialog } from './export-dialog';
 import { ShareDialog } from './share-dialog';
+import { DnaDropLiveIndicator } from './dna-drop-live-indicator';
 import { findRhymes } from '@/ai/flows/find-rhymes';
 import { suggestVibe } from '@/ai/flows/suggest-vibe';
 import { generateNextLine } from '@/ai/flows/generate-next-line';
@@ -161,30 +179,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, Hint } from '
 import { useTouchInkRunner } from '@/hooks/use-touch-ink-runner';
 
 // --- Hoisted Workstation Dialogs ---
-
-function ArchivalNamingDialog({ open, onOpenChange, onConfirm, type }: any) {
-  const [name, setName] = useState('');
-  useEffect(() => { if (open) setName(''); }, [open]);
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-card border-2 z-[3000]">
-        <DialogHeader>
-          <DialogTitle className="font-headline text-2xl flex items-center gap-2">
-            <Save className="text-primary" /> Archive {type}
-          </DialogTitle>
-          <DialogDescription className="text-xs uppercase tracking-tight">Enter a name for this {type.toLowerCase()} preset to save it to your vault.</DialogDescription>
-        </DialogHeader>
-        <div className="py-4">
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={`e.g. My ${type} Preset`} className="bg-background/50 font-bold" autoFocus />
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => { onConfirm(name.trim()); onOpenChange(false); }} disabled={!name.trim()} className="px-8 font-bold">Confirm Archive</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 function EditIntentDialog({ open, onOpenChange, initialValue, onConfirm }: any) {
   const [value, setValue] = useState(initialValue);
@@ -406,7 +400,7 @@ function DNAVaultDialog({ open, onOpenChange, album, updateAlbum, track, onUpdat
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
                                         {isPro && !isSystem(p) && (
-                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={(e) => { e.stopPropagation(); updateAlbum(album.id, { dnaPresets: album.dnaPresets.filter((_:any, idx:number) => idx !== i) }); toast({ title: "DNA Strain Erased" }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={(e) => { e.stopPropagation(); updateAlbum(album.id, { dnaPresets: album.dnaPresets.filter((_:any, idx:number) => idx !== i) }); toast({ title: "DNA profile removed" }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
                                         )}
                                         <Button size="icon" variant="ghost" className="h-7 w-7 text-primary" onClick={(e) => { e.stopPropagation(); onLoadPreset(p); onOpenChange(false); }}><RefreshCw className="h-3.5 w-3.5" /></Button>
                                         {expandedIdx === i ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -579,8 +573,8 @@ function StyleVaultDialog({ open, onOpenChange, album, updateAlbum, onApply, isP
                             <div className="h-40 flex flex-col items-center justify-center text-muted-foreground gap-4 border-2 border-dashed rounded-lg p-6 text-center">
                                 <div className="p-3 rounded-full bg-muted/20"><Fingerprint className="h-8 w-8 opacity-20" /></div>
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest">No Strains Found</p>
-                                    <p className="text-[9px] lowercase italic opacity-60">Archive your latest trained profile to populate the vault.</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest">No style profiles</p>
+                                    <p className="text-[9px] lowercase italic opacity-60">Archive your latest style profile to populate the vault.</p>
                                 </div>
                             </div>
                         )}
@@ -601,7 +595,7 @@ function mobileLyricsPanelClass(active: boolean, edge?: 'left' | 'right') {
   );
 }
 
-function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSectionId, setExportDialogOpen, setShareDialogOpen, onCollapse, leftCollapsed, setGenerateDraftOpen, scratchPadRef, isPro, mobileActive = false }: any) {
+function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSectionId, setExportDialogOpen, setShareDialogOpen, onCollapse, leftCollapsed, setGenerateDraftOpen, scratchPadRef, isPro, mobileActive = false, trackLocked = false }: any) {
   const router = useRouter();
   const { setGenerating } = useUIState();
   const { toast } = useToast();
@@ -610,6 +604,10 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   const { runWithInk } = useTouchInkRunner();
 
   const handleSuggestVibe = async (e: any) => {
+    if (trackLocked) {
+      toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
+      return;
+    }
     const cost = getCost('suggestVibe');
     runWithInk('suggestVibe', cost, 'suggestVibe', e, async () => {
       setGenerating(true, 'Analyzing Sonic Landscape...');
@@ -629,6 +627,10 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   };
 
   const handleGenerateScene = async (e: any) => {
+    if (trackLocked) {
+      toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
+      return;
+    }
     const cost = getCost('generateCoverArt');
     runWithInk('generateCoverArt', cost, 'generateCoverArt', e, async () => {
       setGenerating(true, 'Generating Cinematic DNA...');
@@ -659,6 +661,10 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   };
 
   const handleMoveSection = (id: string, direction: 'up' | 'down') => {
+      if (trackLocked) {
+        toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
+        return;
+      }
       const idx = track.sections.findIndex((s:any) => s.id === id);
       if (idx === -1) return;
       const newSections = [...track.sections];
@@ -692,7 +698,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={() => setGenerateDraftOpen(true)} data-tour="generation-workstation" className="w-full h-20 font-bold uppercase tracking-[0.2em] gap-3 shadow-[0_0_30px_rgba(59,130,246,0.4)] bg-primary text-white border-2 border-white/10 group animate-in fade-in zoom-in duration-1000 hover:scale-[1.02] transition-all">
+                <Button onClick={() => setGenerateDraftOpen(true)} disabled={trackLocked} data-tour="generation-workstation" className="w-full h-20 font-bold uppercase tracking-[0.2em] gap-3 shadow-[0_0_30px_rgba(59,130,246,0.4)] bg-primary text-white border-2 border-white/10 group animate-in fade-in zoom-in duration-1000 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:pointer-events-none">
                     <BrainCircuit className="h-8 w-8 group-hover:animate-pulse" /> 
                     <div className="flex flex-col items-start">
                       <span className="text-xs leading-none">Generation</span>
@@ -713,7 +719,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
               <CardContent className="space-y-4 px-4 pb-4">
                   <div className="space-y-1">
                     <Label className="text-[10px] uppercase font-bold text-sky-400/70 tracking-widest">Title</Label>
-                    <Input value={track.title} onChange={(e) => onUpdateTrack({ title: e.target.value })} className="font-headline border-sky-500/20 bg-background/50 h-9 text-xs" />
+                    <Input value={track.title} onChange={(e) => onUpdateTrack({ title: e.target.value })} disabled={trackLocked} readOnly={trackLocked} className="font-headline border-sky-500/20 bg-background/50 h-9 text-xs disabled:opacity-70" />
                   </div>
                   <div className="space-y-2 pt-1 border-t border-sky-500/15">
                     <div className="flex items-center justify-between gap-2">
@@ -727,11 +733,19 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                             : 'border-sky-500/30 bg-sky-500/5 text-sky-300'
                         )}
                       >
-                        {track.status === 'complete' ? 'Complete' : 'In Progress'}
+                        {track.status === 'complete' ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Lock className="h-2.5 w-2.5 shrink-0" /> Locked
+                          </span>
+                        ) : (
+                          'In Progress'
+                        )}
                       </Badge>
                     </div>
                     <p className="text-[9px] text-muted-foreground leading-snug">
-                      Lock the track when lyrics are finished — counts toward weekly goals and achievements.
+                      {trackLocked
+                        ? 'Locked — lyrics, structure, and Co-Writer are read-only. Export, Performance Mode, and DNA Drop still work. Reopen to edit.'
+                        : 'Lock the track when lyrics are finished — blocks edits and counts toward weekly goals and achievements.'}
                     </p>
                     <Button
                       variant={track.status === 'complete' ? 'outline' : 'default'}
@@ -749,8 +763,8 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                           title: next === 'complete' ? 'Track Locked' : 'Track Reopened',
                           description:
                             next === 'complete'
-                              ? 'Marked complete — weekly progress and XP will update on save.'
-                              : 'Track is back in progress.',
+                              ? 'Track locked — edits are disabled until you reopen.'
+                              : 'Track reopened — you can edit lyrics and settings again.',
                         });
                       }}
                     >
@@ -775,7 +789,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                     )}
                     <Button variant="secondary" size="sm" className="w-full min-w-0 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => setExportDialogOpen(true)}><FileDown className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">Export Track</span></Button>
                     {isPro ? (
-                      <Button variant="secondary" size="sm" data-tour="dna-drop" className="w-full min-w-0 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => setShareDialogOpen(true)}><Globe className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">DNA Drop (Share)</span></Button>
+                      <Button variant="secondary" size="sm" data-tour="dna-drop" className="w-full min-w-0 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => setShareDialogOpen(true)}><Globe className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate flex items-center gap-2 min-w-0">DNA Drop (Share)<DnaDropLiveIndicator shareId={track.shareId} variant="compact" /></span></Button>
                     ) : (
                       <UpgradeTooltip feature="DNA Drop" benefit="Publish a shareable link to your track blueprint for collab and feedback." example="Drop a link so collaborators can import your structure.">
                         <Button variant="secondary" size="sm" className={cn('w-full min-w-0 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2', proLockShell('md'), proLockText())} onClick={() => router.push('/usage?tab=cloud')}><Lock className={cn('mr-2 h-4 w-4 shrink-0', proLockIcon())} /> <span className="truncate">DNA Drop (Share)</span></Button>
@@ -807,9 +821,9 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                              <span className="font-bold text-xs text-white uppercase truncate">{s.type}</span>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-yellow-500" onClick={(e) => { e.stopPropagation(); handleMoveSection(s.id, 'up'); }} disabled={idx === 0}><ArrowUp className="h-3 w-3" /></Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-yellow-500" onClick={(e) => { e.stopPropagation(); handleMoveSection(s.id, 'down'); }} disabled={idx === track.sections.length - 1}><ArrowDown className="h-3 w-3" /></Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500/60 hover:text-red-500 hover:bg-red-500/10" onClick={(e) => { e.stopPropagation(); onUpdateTrack({ sections: track.sections.filter((sec:any) => sec.id !== s.id) }); }}><Trash2 className="h-3 w-3" /></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-yellow-500" onClick={(e) => { e.stopPropagation(); handleMoveSection(s.id, 'up'); }} disabled={trackLocked || idx === 0}><ArrowUp className="h-3 w-3" /></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-yellow-500" onClick={(e) => { e.stopPropagation(); handleMoveSection(s.id, 'down'); }} disabled={trackLocked || idx === track.sections.length - 1}><ArrowDown className="h-3 w-3" /></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500/60 hover:text-red-500 hover:bg-red-500/10" onClick={(e) => { e.stopPropagation(); onUpdateTrack({ sections: track.sections.filter((sec:any) => sec.id !== s.id) }); }} disabled={trackLocked}><Trash2 className="h-3 w-3" /></Button>
                         </div>
                     </div>
                 ))}
@@ -817,7 +831,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
             <div className="p-4 pt-0">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full h-10 border-yellow-500/20 bg-background/40 hover:bg-yellow-500/5 text-yellow-500 font-bold text-xs uppercase gap-2 shadow-inner">
+                        <Button variant="outline" disabled={trackLocked} className="w-full h-10 border-yellow-500/20 bg-background/40 hover:bg-yellow-500/5 text-yellow-500 font-bold text-xs uppercase gap-2 shadow-inner disabled:opacity-50">
                             <PlusCircle className="h-4 w-4" /> Add Section
                         </Button>
                     </DropdownMenuTrigger>
@@ -859,7 +873,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                     </>
                   }
                 >
-                  <Button variant="outline" size="sm" className="w-full h-9 text-[9px] font-bold uppercase border-amber-500/20 hover:bg-amber-500/10 text-amber-600" onClick={(e) => handleSuggestVibe(e)}><RefreshCw className="mr-2 h-3.5 w-3.5"/> {buttonLabel('suggestVibe')}</Button>
+                  <Button variant="outline" size="sm" disabled={trackLocked} className="w-full h-9 text-[9px] font-bold uppercase border-amber-500/20 hover:bg-amber-500/10 text-amber-600 disabled:opacity-50" onClick={(e) => handleSuggestVibe(e)}><RefreshCw className="mr-2 h-3.5 w-3.5"/> {buttonLabel('suggestVibe')}</Button>
                 </Hint>
               </CardContent>
           </Card>
@@ -885,7 +899,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                     </>
                   }
                 >
-                  <Button variant="outline" size="sm" className="w-full h-9 text-[9px] font-bold uppercase border-indigo-500/20 hover:bg-indigo-500/10 text-indigo-400" onClick={(e) => handleGenerateScene(e)}>
+                  <Button variant="outline" size="sm" disabled={trackLocked} className="w-full h-9 text-[9px] font-bold uppercase border-indigo-500/20 hover:bg-indigo-500/10 text-indigo-400 disabled:opacity-50" onClick={(e) => handleGenerateScene(e)}>
                     <Sparkles className="mr-2 h-3.5 w-3.5"/> {buttonLabel('generateCoverArt')}
                   </Button>
                 </Hint>
@@ -931,7 +945,7 @@ function NeuralStripItem({ text, active, color, onClick }: { text: string, activ
 
 // --- Center Panel Component ---
 
-function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false }: any) {
+function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false }: any) {
   const [fontSize, setFontSize] = useState<'xs' | 'sm' | 'md' | 'lg'>('md');
   const lyricsViewportRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -1000,6 +1014,10 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
   } as React.CSSProperties;
 
   const handleDeleteBar = (sId: string, bIdx: number) => {
+      if (trackLocked) {
+        toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
+        return;
+      }
       onUpdateTrack({
           sections: track.sections.map((s: any) => 
               s.id === sId 
@@ -1014,6 +1032,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, sId: string, bIdx: number) => {
+    if (trackLocked) return;
     const target = e.target as HTMLTextAreaElement;
     const { selectionStart, value } = target;
 
@@ -1179,6 +1198,10 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
   }
 
   const handleOpenFreestyle = () => {
+    if (trackLocked) {
+      toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
+      return;
+    }
     if (user?.subscriptionStatus !== 'active') return;
     setFreestyleOpen(true);
   };
@@ -1192,7 +1215,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
               side="bottom"
               content={<p className="text-[10px] font-bold">{tooltip('analyzeStructure')}</p>}
             >
-              <Button variant="outline" size="sm" data-tour="smart-structure" className="h-8 max-md:px-2 max-md:text-[9px] px-3 font-bold text-[10px] md:text-xs uppercase tracking-widest border-border/40 hover:bg-primary/5 text-muted-foreground hover:text-primary shrink-0" onClick={() => setSmartStructureOpen(true)}>
+              <Button variant="outline" size="sm" disabled={trackLocked} data-tour="smart-structure" className="h-8 max-md:px-2 max-md:text-[9px] px-3 font-bold text-[10px] md:text-xs uppercase tracking-widest border-border/40 hover:bg-primary/5 text-muted-foreground hover:text-primary shrink-0 disabled:opacity-50" onClick={() => setSmartStructureOpen(true)}>
                   <span className="max-md:hidden truncate max-w-[10rem]">{buttonLabel('analyzeStructure')}</span>
                   <span className="md:hidden">Paste</span>
               </Button>
@@ -1211,7 +1234,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                       size="icon" 
                       className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary transition-all disabled:opacity-20 shrink-0"
                       onClick={handleUndo}
-                      disabled={!canUndo}
+                      disabled={trackLocked || !canUndo}
                   >
                       <Undo2 className="h-4 w-4" />
                   </Button>
@@ -1221,6 +1244,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                 <Switch 
                   checked={track.rhymeHighlightingEnabled} 
                   onCheckedChange={(c) => onUpdateTrack({ rhymeHighlightingEnabled: c })} 
+                  disabled={trackLocked}
                   className="scale-75 shrink-0"
                 />
                 <div className="w-px h-4 bg-border/40 shrink-0" />
@@ -1239,7 +1263,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                           isRhymeLoading && "animate-pulse"
                       )}
                       onClick={handleRunRhymeScan}
-                      disabled={isRhymeLoading}
+                      disabled={trackLocked || isRhymeLoading}
                   >
                       {isRhymeLoading ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <Target className="h-4 w-4 text-primary" />}
                   </Button>
@@ -1297,9 +1321,9 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                           isSelected ? "opacity-100" : "max-md:opacity-0 max-md:pointer-events-none",
                           !isSelected && "md:opacity-0 md:group-hover:opacity-100"
                         )}>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10" onClick={(e) => handleSharedLineGeneration('next', e, section.id, bar.idx)}><ArrowDown className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10" onClick={(e) => handleSharedLineGeneration('previous', e, section.id, bar.idx)}><ArrowUp className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteBar(section.id, bar.idx)}><Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
+                            <Button variant="ghost" size="icon" disabled={trackLocked} className="h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10" onClick={(e) => handleSharedLineGeneration('next', e, section.id, bar.idx)}><ArrowDown className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
+                            <Button variant="ghost" size="icon" disabled={trackLocked} className="h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10" onClick={(e) => handleSharedLineGeneration('previous', e, section.id, bar.idx)}><ArrowUp className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
+                            <Button variant="ghost" size="icon" disabled={trackLocked} className="h-7 w-7 md:h-8 md:w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteBar(section.id, bar.idx)}><Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
                         </div>
 
                         <div className="flex-grow flex items-start min-w-0 h-full max-md:flex-1 relative overflow-hidden">
@@ -1307,8 +1331,10 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                             id={`bar-input-${section.id}-${bar.idx}`} 
                             value={bar.text} 
                             rows={1}
+                            readOnly={trackLocked}
                             onKeyDown={(e) => handleKeyDown(e, section.id, bar.idx)}
                             onChange={(e: any) => { 
+                                if (trackLocked) return;
                                 const text = e.target.value;
                                 snapBarTextareaHeight(e.target);
                                 onUpdateTrack({
@@ -1345,10 +1371,11 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                 "max-md:pl-1 max-md:pr-12 max-md:indent-0",
                                 "md:pr-24 md:pl-[145px] md:-indent-[25px]",
                                 "antialiased text-rendering-geometric",
+                                trackLocked && "opacity-80 cursor-not-allowed",
                                 fontSizes[fontSize]
                             )} 
                             style={{ minHeight: activeLineHeight, lineHeight: activeLineHeight, fontVariantLigatures: 'none' }}
-                            placeholder="..." 
+                            placeholder={trackLocked ? 'Locked — reopen track to edit' : '...'} 
                             />
                             {track.rhymeHighlightingEnabled && bar.text && (
                             <div className="absolute inset-0 pointer-events-none flex items-start pl-0 max-md:pl-1 md:pl-0 pr-12 md:pr-24 z-0 h-full overflow-hidden">
@@ -1374,9 +1401,9 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
       </div>
 
       <div data-tour="bar-workstation" className={cn("bg-card border-t shadow-[0_-10px_40px_rgba(0,0,0,0.5)] shrink-0 z-[40] relative w-full min-w-0 overflow-hidden", isMinimized ? "h-10" : "h-[115px] max-md:h-auto max-md:max-h-[38dvh] max-md:overflow-y-auto max-md:studio-scrollbar")}>
-        <div className="w-full min-w-0 h-full px-2 md:px-4 lg:px-6 flex flex-col justify-start pt-2 pb-2 gap-1 overflow-hidden">
-            <div className="flex flex-row items-center justify-between gap-2 border-b border-white/5 shrink-0 h-6 min-w-0">
-                <div className="flex items-center gap-1.5 md:gap-2 min-w-0 overflow-hidden">
+        <div className="w-full min-w-0 h-full px-2 md:px-4 lg:px-6 flex flex-col justify-start pt-1.5 pb-2 gap-1 overflow-hidden">
+            <div className="flex flex-row items-center justify-between gap-2 border-b border-white/5 shrink-0 h-7 min-w-0">
+                <div className="flex h-7 items-center gap-1.5 md:gap-2 min-w-0 overflow-hidden">
                     <h4 className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] text-primary flex items-center gap-1 shrink-0 leading-none whitespace-nowrap"><Zap className="h-3 w-3 shrink-0" /> BAR WS</h4>
                     <Hint
                       side="top"
@@ -1391,13 +1418,23 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                     </Hint>
                     <span className="text-muted-foreground font-code text-[8px] md:text-[9px] font-bold tracking-widest uppercase min-w-0 truncate leading-none">{activeBarLabel}</span>
                 </div>
-                <div className="flex items-center gap-1 min-w-0 shrink">
-                    <div className="flex items-center gap-1 overflow-x-auto studio-scrollbar flex-nowrap max-w-[min(52vw,14rem)] md:max-w-[min(40vw,18rem)] lg:max-w-none">
+                <div className="flex h-7 items-center gap-1 min-w-0 shrink">
+                    <div className="flex h-7 items-center justify-center gap-1 overflow-x-auto studio-scrollbar flex-nowrap max-w-[min(52vw,14rem)] md:max-w-[min(40vw,18rem)] lg:max-w-none py-0">
                         {ruleBadges.map(b => (
-                          <Badge key={b.id} variant="outline" className={cn("text-[7px] font-bold uppercase h-4 px-1.5 leading-none whitespace-nowrap shrink-0 max-w-[4.25rem] truncate bg-background/20", b.color, b.id === 'END WITH' && "animate-pulse")}>{b.id}</Badge>
+                          <Badge
+                            key={b.id}
+                            variant="outline"
+                            className={cn(
+                              'text-[7px] font-bold uppercase h-[18px] min-h-[18px] px-1.5 inline-flex items-center justify-center leading-none whitespace-nowrap shrink-0 max-w-[4.25rem] truncate',
+                              getWorkstationRuleBadgeClass(b.id, b.active),
+                              b.id === 'END WITH' && b.active && 'animate-pulse'
+                            )}
+                          >
+                            {b.id}
+                          </Badge>
                         ))}
                     </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0" onClick={() => setIsMinimized(!isMinimized)}>
+                    <Button variant="ghost" size="icon" className="h-7 w-6 text-muted-foreground hover:text-primary shrink-0 -mr-0.5" onClick={() => setIsMinimized(!isMinimized)}>
                         {isMinimized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
                 </div>
@@ -1411,6 +1448,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                     key={i} 
                                     variant="outline" 
                                     className="flex-1 min-w-0 h-14 py-1 px-2 md:px-4 font-bold bg-primary/10 border-primary/40 hover:bg-primary/20 text-white text-left justify-start gap-2 group border-2 shadow-2xl transition-all w-full"
+                                    disabled={trackLocked}
                                     onClick={() => handleAcceptOption(opt.line)}
                                 >
                                     <div className="flex flex-col gap-0.5 shrink-0 border-r border-white/10 pr-2">
@@ -1430,31 +1468,33 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                 placeholder="Tap to edit active line..."
                                 value={activeBarText} 
                                 onKeyDown={handleBarSyncEnter}
+                                readOnly={trackLocked}
                                 onChange={(e: any) => { 
+                                    if (trackLocked) return;
                                     setActiveBarText(e.target.value); 
                                     if (activeGeneratorBar) onUpdateTrack({ sections: track.sections.map((s: any) => s.id === activeGeneratorBar.sectionId ? { ...s, bars: s.bars.map((b: any) => b.idx === activeGeneratorBar.idx ? { ...b, text: e.target.value } : b) } : s) }); 
                                 }} 
-                                className="bg-background/40 border border-white/10 w-full md:flex-1 md:min-w-[5rem] px-3 py-2 font-code font-bold text-sm shadow-inner rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 tracking-tight resize-none h-14 max-h-14 shrink-0 min-w-0" 
+                                className={cn("bg-background/40 border border-white/10 w-full md:flex-1 md:min-w-[5rem] px-3 py-2 font-code font-bold text-sm shadow-inner rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 tracking-tight resize-none h-14 max-h-14 shrink-0 min-w-0", trackLocked && "opacity-70 cursor-not-allowed")}
                             />
                             <div className={cn(
                               "flex flex-row flex-nowrap items-center gap-1.5 shrink-0 min-w-0 max-md:w-full overflow-x-auto studio-scrollbar md:overflow-visible md:max-w-[min(100%,22rem)] lg:max-w-none",
                               !activeGeneratorBar && "max-md:hidden"
                             )}>
                                 <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
-                                  <Button variant="outline" size="sm" aria-label="Generate next line" className="h-10 md:h-14 px-2 md:px-3 font-bold text-[10px] uppercase border-border/40 gap-1 shadow-lg shrink-0" onClick={(e) => handleSharedLineGeneration('next', e)}>
+                                  <Button variant="outline" size="sm" disabled={trackLocked} aria-label="Generate next line" className="h-10 md:h-14 px-2 md:px-3 font-bold text-[10px] uppercase border-border/40 gap-1 shadow-lg shrink-0" onClick={(e) => handleSharedLineGeneration('next', e)}>
                                       <ArrowDown className="h-3.5 w-3.5 text-primary shrink-0" />
                                       <span className="hidden sm:inline truncate">Next</span>
                                   </Button>
                                 </Hint>
                                 <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
-                                  <Button variant="outline" size="sm" aria-label="Generate previous line" className="h-10 md:h-14 px-2 md:px-3 font-bold text-[10px] uppercase border-border/40 gap-1 shadow-lg shrink-0" onClick={(e) => handleSharedLineGeneration('previous', e)}>
+                                  <Button variant="outline" size="sm" disabled={trackLocked} aria-label="Generate previous line" className="h-10 md:h-14 px-2 md:px-3 font-bold text-[10px] uppercase border-border/40 gap-1 shadow-lg shrink-0" onClick={(e) => handleSharedLineGeneration('previous', e)}>
                                       <ArrowUp className="h-3.5 w-3.5 text-primary shrink-0" />
                                       <span className="hidden sm:inline truncate">Prev</span>
                                   </Button>
                                 </Hint>
-                                <Button variant="outline" size="sm" aria-label="Delete line" className="h-10 md:h-14 w-10 md:w-11 font-bold border-red-500/20 text-red-500 bg-red-500/5 hover:bg-red-500/10 shadow-lg shrink-0 px-0" onClick={() => { if(activeGeneratorBar) handleDeleteBar(activeGeneratorBar.sectionId, activeGeneratorBar.idx); }}><Trash2 className="h-4 w-4 mx-auto" /></Button>
+                                <Button variant="outline" size="sm" disabled={trackLocked} aria-label="Delete line" className="h-10 md:h-14 w-10 md:w-11 font-bold border-red-500/20 text-red-500 bg-red-500/5 hover:bg-red-500/10 shadow-lg shrink-0 px-0" onClick={() => { if(activeGeneratorBar) handleDeleteBar(activeGeneratorBar.sectionId, activeGeneratorBar.idx); }}><Trash2 className="h-4 w-4 mx-auto" /></Button>
                                 {user?.subscriptionStatus === 'active' ? (
-                                  <Button variant="secondary" size="sm" aria-label="Freestyle recording" className="h-10 md:h-14 px-2 md:px-4 font-bold text-[10px] uppercase tracking-wide gap-1 bg-primary/20 text-primary border border-primary/20 shadow-lg shrink-0 min-w-0" onClick={handleOpenFreestyle} title={tooltip('freestyleTranscription')}>
+                                  <Button variant="secondary" size="sm" disabled={trackLocked} aria-label="Freestyle recording" className="h-10 md:h-14 px-2 md:px-4 font-bold text-[10px] uppercase tracking-wide gap-1 bg-primary/20 text-primary border border-primary/20 shadow-lg shrink-0 min-w-0" onClick={handleOpenFreestyle} title={tooltip('freestyleTranscription')}>
                                     <Mic className="h-3.5 w-3.5 shrink-0" />
                                     <span className="truncate hidden md:inline">Free</span>
                                   </Button>
@@ -1497,7 +1537,7 @@ function cowriterSectionSubtitle(expanded: boolean) {
   );
 }
 
-function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, improveStyleOpen, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, mobileActive = false }: any) {
+function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, improveStyleOpen, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, mobileActive = false, trackLocked = false }: any) {
   const { tooltip, buttonLabel } = useInkCosts();
   const activeSection = track.sections.find((s:any) => s.id === activeSectionId);
   const { toast } = useToast();
@@ -1578,7 +1618,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
 
   const handleConfirmSaveDNA = (name: string) => {
       if (!isPro) {
-        toast({ variant: 'destructive', title: 'Pro Feature', description: 'Archive custom DNA strains with Studio Pro.' });
+        toast({ variant: 'destructive', title: 'Pro Feature', description: 'Archive custom DNA profiles with Studio Pro.' });
         return;
       }
       if (!album) return;
@@ -1590,7 +1630,10 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
       });
       const existing = album.dnaPresets || [];
       updateAlbum(album.id, { dnaPresets: [...existing, profile] });
-      toast({ title: "DNA Archived", description: `"${name}" saved to vault.` });
+      toast({
+        title: 'DNA profile archived',
+        description: `"${name}" saved to your vault.`,
+      });
       void postGamificationEvent('dna_preset_saved');
   };
 
@@ -1603,8 +1646,14 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
       const preset = { ...track.vibe, name };
       const existing = track.vibePresets || [];
       onUpdateTrack({ vibePresets: [...existing, preset] });
-      toast({ title: "Vibe Preset Saved", description: `"${name}" added to vault.` });
+      toast({ title: 'Vibe profile archived', description: `"${name}" saved to your vault.` });
   };
+
+  const dnaActive = isTrackDnaActive(track);
+  const vibeActive = isVibeActive(track);
+  const intentsMasterOn = isIntentsMasterEnabled(track);
+  const guardActive = isGuardrailsActive(track);
+  const styleActive = isStyleActive(track);
 
   if (rightCollapsed && !mobileActive) {
     return (
@@ -1629,14 +1678,22 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
       </div>
       <div className="flex-grow overflow-y-auto studio-scrollbar">
         <div className="p-4 space-y-4 pb-32 co-writer-body">
-          
+          {trackLocked && (
+            <div className="rounded-lg border border-sky-500/25 bg-sky-500/10 px-3 py-2 flex items-start gap-2">
+              <Lock className="h-3.5 w-3.5 text-sky-300 shrink-0 mt-0.5" />
+              <p className="text-[9px] font-code text-sky-200/90 leading-snug">
+                Co-Writer locked — reopen the track from Track Status to edit DNA, vibe, intents, guardrails, or style.
+              </p>
+            </div>
+          )}
+          <fieldset disabled={trackLocked} className="min-w-0 border-0 p-0 m-0 space-y-4 disabled:[&_button]:pointer-events-none disabled:[&_input]:pointer-events-none disabled:[&_textarea]:pointer-events-none disabled:[&_[role=switch]]:pointer-events-none">
           <Collapsible open={sectionOpen.dna} onOpenChange={(o) => onSectionChange('dna', o)} className="space-y-1">
-            <Card className="border-green-500/30 bg-green-500/5" data-tour="dna-suite">
+            <Card className={coWriterSectionCardClass(dnaActive, 'border-green-500/30 bg-green-500/5')} data-tour="dna-suite">
                 <div className="p-4 flex flex-row items-center justify-between space-y-0">
                     <CollapsibleTrigger asChild>
                         <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 overflow-hidden pr-1">
-                            <CardTitle className="text-sm flex items-center gap-2 text-green-500 font-headline uppercase leading-none truncate"><Dna className="h-4 w-4 shrink-0" /> DNA Suite</CardTitle>
-                            <p className={cn(cowriterSectionSubtitle(sectionOpen.dna), 'text-green-400/80')} title="Creative Direction Questions">
+                            <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none truncate', coWriterSectionTitleClass(dnaActive, 'text-green-500'))}><Dna className="h-4 w-4 shrink-0" /> DNA Suite</CardTitle>
+                            <p className={cn(cowriterSectionSubtitle(sectionOpen.dna), coWriterSectionAccentClass(dnaActive, 'text-green-400/80'))} title="Creative Direction Questions">
                               {sectionOpen.dna ? 'Creative Direction Questions' : 'Creative DNA'}
                             </p>
                         </div>
@@ -1647,7 +1704,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                         ) : (
                           <LockedSaveButton
                             feature="DNA Archive"
-                            benefit="Save your own DNA strains to the vault. Free artists load from 2 system presets."
+                            benefit="Save your own DNA profiles to the vault. Free artists load from 2 system presets."
                             example='Example: save "Chicago Noir DNA" once, load it on every track in the album.'
                           />
                         )}
@@ -1697,12 +1754,12 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           </Collapsible>
 
           <Collapsible open={sectionOpen.vibe} onOpenChange={(o) => onSectionChange('vibe', o)} className="space-y-1">
-            <Card className="border-amber-500/30 bg-amber-500/5">
+            <Card className={coWriterSectionCardClass(vibeActive, 'border-amber-500/30 bg-amber-500/5')}>
                 <div className="p-4 flex flex-row items-center justify-between space-y-0">
                     <CollapsibleTrigger asChild>
                         <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 overflow-hidden pr-1">
-                            <CardTitle className="text-sm flex items-center gap-2 text-amber-500 font-headline uppercase leading-none truncate"><Palette className="h-4 w-4 shrink-0" /> Track Vibe</CardTitle>
-                            <p className={cn(cowriterSectionSubtitle(sectionOpen.vibe), 'text-amber-400/80')} title="Instrumentation & Atmosphere">
+                            <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none truncate', coWriterSectionTitleClass(vibeActive, 'text-amber-500'))}><Palette className="h-4 w-4 shrink-0" /> Track Vibe</CardTitle>
+                            <p className={cn(cowriterSectionSubtitle(sectionOpen.vibe), coWriterSectionAccentClass(vibeActive, 'text-amber-400/80'))} title="Instrumentation & Atmosphere">
                               {sectionOpen.vibe ? 'Instrumentation & Atmosphere' : 'Vibe & Production'}
                             </p>
                         </div>
@@ -1779,7 +1836,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           </Collapsible>
 
           <Collapsible open={sectionOpen.intents} onOpenChange={(o) => onSectionChange('intents', o)} className="space-y-1">
-            <Card className="border-sky-500/30 bg-[#0c1a26] shadow-xl overflow-hidden p-0">
+            <Card className={coWriterSectionCardClass(intentsMasterOn, 'border-sky-500/30 bg-[#0c1a26] shadow-xl overflow-hidden p-0')}>
                 <div className="flex items-center justify-between p-4 pb-2">
                     <TooltipProvider delayDuration={300}>
                       <Tooltip>
@@ -1787,8 +1844,8 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                           <CollapsibleTrigger asChild>
                             <div className="space-y-1 cursor-pointer flex-grow min-w-0 overflow-hidden text-left pr-1">
                               <div className="flex items-center gap-2 min-w-0">
-                                  <Target className="h-5 w-5 text-sky-400 shrink-0" />
-                                  <h3 className="font-headline font-bold text-xl text-sky-400 uppercase tracking-tighter truncate">Intents</h3>
+                                  <Target className={cn('h-5 w-5 shrink-0', coWriterSectionTitleClass(intentsMasterOn, 'text-sky-400'))} />
+                                  <h3 className={cn('font-headline font-bold text-xl uppercase tracking-tighter truncate', coWriterSectionTitleClass(intentsMasterOn, 'text-sky-400'))}>Intents</h3>
                               </div>
                               <p
                                 className={cn(
@@ -1824,10 +1881,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                 const isLocked = track.endWith === intent;
                                 const isChecked = (track.checkedIntents || []).includes(intent);
                                 return (
-                                    <div key={intent} className={cn(
-                                        "flex items-start gap-2 sm:gap-3 p-3 rounded-lg border transition-all group min-w-0 overflow-hidden",
-                                        isLocked ? "bg-sky-500/10 border-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.1)]" : "bg-[#142633] border-white/5 hover:bg-[#1a3040]"
-                                    )}>
+                                    <div key={intent} className={coWriterIntentRowClass(intentsMasterOn, isLocked)}>
                                         <Checkbox 
                                             checked={isChecked || isLocked} 
                                             onCheckedChange={(c) => handleIntentCheck(intent, !!c)} 
@@ -1899,12 +1953,12 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           </Collapsible>
 
           <Collapsible open={sectionOpen.guardrails} onOpenChange={(o) => onSectionChange('guardrails', o)} className="space-y-1">
-            <Card className="border-rose-500/30 bg-rose-500/5">
+            <Card className={coWriterSectionCardClass(guardActive, 'border-rose-500/30 bg-rose-500/5')}>
                 <CollapsibleTrigger asChild>
                     <CardHeader className="p-4 flex-row items-center justify-between cursor-pointer space-y-0">
                         <div className="space-y-0.5 min-w-0 flex-grow pr-1">
-                            <CardTitle className="text-sm flex items-center gap-2 text-rose-500 font-headline uppercase leading-none"><Shield className="h-4 w-4" /> Guardrails</CardTitle>
-                            <p className={cn(cowriterSectionSubtitle(sectionOpen.guardrails), 'text-rose-400/80')} title="Content Restrictions">
+                            <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none', coWriterSectionTitleClass(guardActive, 'text-rose-500'))}><Shield className="h-4 w-4" /> Guardrails</CardTitle>
+                            <p className={cn(cowriterSectionSubtitle(sectionOpen.guardrails), coWriterSectionAccentClass(guardActive, 'text-rose-400/80'))} title="Content Restrictions">
                               Content Restrictions
                             </p>
                         </div>
@@ -1946,14 +2000,14 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           </Collapsible>
 
           <Collapsible open={sectionOpen.coWriter} onOpenChange={(o) => onSectionChange('coWriter', o)} className="space-y-1">
-            <Card className="border-fuchsia-500/30 bg-fuchsia-500/5 shadow-xl">
+            <Card className={coWriterSectionCardClass(styleActive, 'border-fuchsia-500/30 bg-fuchsia-500/5 shadow-xl')}>
                 <div className="p-4 flex flex-row items-center justify-between space-y-0">
                     <CollapsibleTrigger asChild>
                         <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 overflow-hidden pr-1">
                             <div className="flex items-center gap-2">
-                                <CardTitle className="text-sm flex items-center gap-2 text-fuchsia-500 font-headline uppercase leading-none"><BrainCircuit className="h-4 w-4" /> AI Co-Writer</CardTitle>
+                                <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none', coWriterSectionTitleClass(styleActive, 'text-fuchsia-500'))}><BrainCircuit className="h-4 w-4" /> AI Co-Writer</CardTitle>
                             </div>
-                            <p className={cn(cowriterSectionSubtitle(sectionOpen.coWriter), 'text-fuchsia-400/80')} title="Neural Sharpening Tools">
+                            <p className={cn(cowriterSectionSubtitle(sectionOpen.coWriter), coWriterSectionAccentClass(styleActive, 'text-fuchsia-400/80'))} title="Neural Sharpening Tools">
                               {sectionOpen.coWriter ? 'Neural Sharpening Tools' : 'Style & AI Tools'}
                             </p>
                         </div>
@@ -2058,6 +2112,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
             isOpen={sectionOpen.scratchPad}
             onOpenChange={(o) => onSectionChange('scratchPad', o)}
           />
+          </fieldset>
         </div>
       </div>
       
@@ -2094,7 +2149,13 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
       />
       <VibeVaultDialog open={vibeVaultOpen} onOpenChange={setVibeVaultOpen} track={track} onUpdateTrack={onUpdateTrack} onApply={(v: any) => onUpdateTrack({ vibe: v })} isPro={isPro} />
       <StyleVaultDialog open={styleVaultOpen} onOpenChange={setStyleVaultOpen} album={album} updateAlbum={updateAlbum} onApply={(analysis: string, metrics: any) => updateStyleProfile(analysis, metrics)} isPro={isPro} />
-      <ArchivalNamingDialog open={archivalDialog.open} onOpenChange={(o:any) => setArchivalDialog(prev => ({ ...prev, open: o }))} type={archivalDialog.type} onConfirm={archivalDialog.type === 'DNA' ? handleConfirmSaveDNA : handleConfirmSaveVibe} />
+      <ArchivalNamingDialog
+        open={archivalDialog.open}
+        onOpenChange={(o: boolean) => setArchivalDialog((prev) => ({ ...prev, open: o }))}
+        type={archivalDialog.type}
+        sourceTrackTitle={track.title}
+        onConfirm={archivalDialog.type === 'DNA' ? handleConfirmSaveDNA : handleConfirmSaveVibe}
+      />
       <EditIntentDialog open={editIntentDialog.open} onOpenChange={(o:any) => setEditIntentDialog(prev => ({ ...prev, open: o }))} initialValue={editIntentDialog.intent} onConfirm={handleConfirmEditIntent} />
     </div>
   );
@@ -2256,6 +2317,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     if (!skipped) {
       void postGamificationEvent('tour_complete');
     }
+    queueStudioPrivacyIntro();
   }, [user]);
 
   useEffect(() => {
@@ -2266,6 +2328,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   useEffect(() => {
     if (!track) return;
+    if (isTrackLocked(track)) return;
     const hasFlash = track.sections.some(s => s.bars.some(b => b.justGenerated));
     if (hasFlash) {
         const timer = setTimeout(() => {
@@ -2277,15 +2340,25 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         }, 3000);
         return () => clearTimeout(timer);
     }
-  }, [track?.sections, albumId, trackId, updateTrack]);
+  }, [track?.sections, track?.status, albumId, trackId, updateTrack]);
+
+  const trackLocked = track ? isTrackLocked(track) : false;
 
   const handleUpdateTrack = useCallback((updates: Partial<Track>) => {
     if (!track) return;
+    if (isTrackLocked(track) && !isLockedTrackReopenUpdate(updates)) {
+      toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
+      return;
+    }
     if (updates.sections) setSectionsHistory(prev => [track.sections, ...prev].slice(0, 20));
     updateTrack(albumId, trackId, updates);
-  }, [track, albumId, trackId, updateTrack]);
+  }, [track, albumId, trackId, updateTrack, toast]);
 
   const handleUndo = useCallback(() => {
+    if (track && isTrackLocked(track)) {
+      toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
+      return;
+    }
     if (sectionsHistory.length === 0) return;
     const [previousState, ...remainingHistory] = sectionsHistory;
     setSectionsHistory(remainingHistory);
@@ -2295,6 +2368,10 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   const handleRunRhymeScan = async (e: any) => {
     if (!track) return;
+    if (isTrackLocked(track)) {
+      toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
+      return;
+    }
     const cost = getCost('findRhymes');
     runWithInk('findRhymes', cost, 'findRhymes', e, async () => {
       setIsRhymeLoading(true);
@@ -2318,6 +2395,10 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   const handleSharedLineGeneration = async (mode: 'next' | 'previous', e: any, sId?: string, bIdx?: number) => {
     if (!track || !album) return;
+    if (isTrackLocked(track)) {
+      toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
+      return;
+    }
     const sectionId = sId || activeGeneratorBar?.sectionId;
     const barIdx = bIdx || activeGeneratorBar?.idx;
     if (!sectionId || !barIdx) { toast({ variant: 'destructive', title: 'Selection Required' }); return; }
@@ -2368,6 +2449,10 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   const handleAcceptOption = (line: string) => {
     if (!pendingGenCtx || !track) return;
+    if (isTrackLocked(track)) {
+      toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
+      return;
+    }
     const { mode, sId, bIdx } = pendingGenCtx;
     const insertIdx = mode === 'next' ? bIdx + 1 : bIdx;
     const newSections = track.sections.map(s => {
@@ -2404,8 +2489,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       const preset = { name, createdAt: new Date().toISOString(), analysis: styleProfile.history[0].analysis, metrics: styleProfile.history[0].metrics! };
       const existing = album.stylePresets || [];
       updateAlbum(album.id, { stylePresets: [...existing, preset] });
-      toast({ title: "Style DNA Archived" });
-      setSaveStyleNamingOpen(false);
+      toast({ title: 'Style profile archived', description: `"${name}" saved to your vault.` });
   };
 
   if (!track || !album) {
@@ -2423,9 +2507,18 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] max-md:h-[calc(100dvh-3.5rem)] w-full overflow-hidden max-md:pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))]">
       <FreeTierExpectationsBanner isPro={isPro} />
+      {trackLocked && (
+        <div className="shrink-0 border-b border-sky-500/25 bg-sky-500/10 px-4 py-2 flex items-center gap-2 z-30">
+          <Lock className="h-4 w-4 text-sky-300 shrink-0" />
+          <p className="text-[10px] font-code text-sky-100/90 leading-snug">
+            <span className="font-bold uppercase tracking-wide">Track locked.</span>{' '}
+            Lyrics and Co-Writer are read-only. Use <span className="text-sky-200">Reopen Track</span> in the left panel to edit again.
+          </p>
+        </div>
+      )}
       <div className="flex flex-1 min-h-0 overflow-hidden w-full">
-      <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={mobilePanelTab === 'workstation'} />
-      <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} />
+      <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={mobilePanelTab === 'workstation'} trackLocked={trackLocked} />
+      <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={trackLocked} />
       <RightPanel 
         track={track} 
         album={album} 
@@ -2448,22 +2541,29 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         sectionOpen={sectionOpen}
         onSectionChange={handleSectionChange}
         mobileActive={mobilePanelTab === 'cowriter'}
+        trackLocked={trackLocked}
       />
-      <GenerateSongDraftDialog open={generateDraftOpen} onOpenChange={setGenerateDraftOpen} track={track} styleProfile={effectiveStyleProfile} onDraftGenerated={(sections) => handleUpdateTrack({ sections })} />
+      <GenerateSongDraftDialog open={generateDraftOpen} onOpenChange={(open) => { if (open && trackLocked) { toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST }); return; } setGenerateDraftOpen(open); }} track={track} styleProfile={effectiveStyleProfile} onDraftGenerated={(sections) => handleUpdateTrack({ sections })} />
       <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} album={album} tracks={[track]} exportType="track" />
       <ShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} type="track" id={track.id} title={track.title} albumId={album.id} existingShareId={track.shareId} />
-      <FreestylePad open={freestyleOpen} onOpenChange={setFreestyleOpen} onAddFreestyle={(text) => { const lines = text.split('. ').filter(l => l.trim()); const activeS = track.sections.find(s => s.id === activeSectionId) || track.sections[0]; const startIdx = activeS.bars.length + 1; const newBars = lines.map((l, i) => withLineSource({ idx: startIdx + i, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' }, 'written')); handleUpdateTrack({ sections: track.sections.map(s => s.id === activeS.id ? { ...s, bars: [...s.bars, ...newBars] } : s) }); setFreestyleOpen(false); }} disabled={false} trackVibe={track.vibe} albumTheme={album.theme} styleProfileSummary={styleProfile.history[0]?.analysis || ''} isPro={user?.subscriptionStatus === 'active'} />
+      <FreestylePad open={freestyleOpen} onOpenChange={setFreestyleOpen} onAddFreestyle={(text) => { const lines = text.split('. ').filter(l => l.trim()); const activeS = track.sections.find(s => s.id === activeSectionId) || track.sections[0]; const startIdx = activeS.bars.length + 1; const newBars = lines.map((l, i) => withLineSource({ idx: startIdx + i, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' }, 'written')); handleUpdateTrack({ sections: track.sections.map(s => s.id === activeS.id ? { ...s, bars: [...s.bars, ...newBars] } : s) }); setFreestyleOpen(false); }} disabled={trackLocked} trackVibe={track.vibe} albumTheme={album.theme} styleProfileSummary={styleProfile.history[0]?.analysis || ''} isPro={user?.subscriptionStatus === 'active'} />
       <SmartStructureDialog
         open={smartStructureOpen}
-        onOpenChange={setSmartStructureOpen}
+        onOpenChange={(open) => { if (open && trackLocked) { toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST }); return; } setSmartStructureOpen(open); }}
         onApply={(sections: any) => {
           handleUpdateTrack({ sections });
           void postGamificationEvent('smart_structure_used');
         }}
       />
-      <ImproveMyStyleDialog open={improveStyleOpen} onOpenChange={setImproveStyleOpen} track={track} onUpdateStyle={(analysis: string, metrics: any) => updateStyleProfile(analysis, metrics)} />
+      <ImproveMyStyleDialog open={improveStyleOpen} onOpenChange={(open) => { if (open && trackLocked) { toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST }); return; } setImproveStyleOpen(open); }} track={track} onUpdateStyle={(analysis: string, metrics: any) => updateStyleProfile(analysis, metrics)} />
       <StyleVaultDialog open={styleVaultOpen} onOpenChange={setStyleVaultOpen} album={album} updateAlbum={updateAlbum} onApply={(analysis: string, metrics: any) => updateStyleProfile(analysis, metrics)} />
-      <ArchivalNamingDialog open={saveStyleNamingOpen} onOpenChange={setSaveStyleNamingOpen} type="Style" onConfirm={handleConfirmSaveStyle} />
+      <ArchivalNamingDialog
+        open={saveStyleNamingOpen}
+        onOpenChange={setSaveStyleNamingOpen}
+        type="Style"
+        sourceTrackTitle={track.title}
+        onConfirm={handleConfirmSaveStyle}
+      />
       </div>
       <MobileLyricsTabBar active={mobilePanelTab} onChange={setMobilePanelTab} />
       <StudioGuidedTour

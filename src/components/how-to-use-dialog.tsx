@@ -167,6 +167,10 @@ const FAQS = [
       a: "Weekly goals reset every Monday; monthly challenges follow the calendar month. Both track rhyme bars (lines ÷ 2). Open /studio-progress or the Vault sidebar for live counters, rank XP, and leaderboard compare."
     },
     {
+      q: "What shows on the leaderboard and public profile?",
+      a: "The weekly leaderboard shows your display name, rank, XP, bars written (7 days), streak, and tracks completed — never lyrics or vault content. You are listed unless you turn on Hide from leaderboard in Settings → Studio Profile. A public profile page is optional (off by default) and only shares rank, streak, badges, and album cover collage when you enable it."
+    },
+    {
       q: "What is included in a DNA Drop?",
       a: "A DNA Drop is a public snapshot of your saved project — lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when that toggle is on. Album drops also include album DNA presets and album-level motifs."
     },

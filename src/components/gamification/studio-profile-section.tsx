@@ -73,7 +73,7 @@ export function StudioProfileSection() {
           </CardTitle>
           <CardDescription>
             Rank: <strong>{rankLabel}</strong> · {summary.xp.toLocaleString()} XP · Longest streak{' '}
-            {summary.longestStreak}d
+            {summary.longestStreak}d. Lyrics are never published here — only stats you choose to share.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
