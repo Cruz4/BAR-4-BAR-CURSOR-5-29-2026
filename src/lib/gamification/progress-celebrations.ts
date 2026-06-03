@@ -1,5 +1,6 @@
 import type { ChallengeDef, ChallengeScale, ChallengeTier } from '@/lib/gamification/challenges';
 import {
+  getDayKey,
   isChallengeComplete,
   LIFETIME_MILESTONES,
   MONTHLY_CHALLENGES,
@@ -7,6 +8,54 @@ import {
 } from '@/lib/gamification/challenges';
 import { DEFAULT_GAMIFICATION_SUMMARY, type GamificationSummary } from '@/lib/gamification/types';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
+
+type PersonalBestKind = keyof GamificationSummary['personalBests'];
+
+/** Tracks PB values at session/day start so we only toast once per real record beat. */
+export type PersonalBestCelebrationState = {
+  dayKey: string;
+  sessionBaseline: GamificationSummary['personalBests'];
+  celebrated: Record<PersonalBestKind, boolean>;
+};
+
+export function createPersonalBestCelebrationState(
+  summary: GamificationSummary,
+  dayKey = getDayKey()
+): PersonalBestCelebrationState {
+  const sessionBaseline = {
+    ...DEFAULT_GAMIFICATION_SUMMARY.personalBests,
+    ...(summary.personalBests || {}),
+  };
+  return {
+    dayKey,
+    sessionBaseline,
+    celebrated: { barsInDay: false, barsInSession: false, longestStreak: false },
+  };
+}
+
+/** Keep baseline in sync after server pull without re-firing session toasts. */
+export function syncPersonalBestCelebrationState(
+  state: PersonalBestCelebrationState,
+  summary: GamificationSummary,
+  dayKey = getDayKey()
+): void {
+  const pb = {
+    ...DEFAULT_GAMIFICATION_SUMMARY.personalBests,
+    ...(summary.personalBests || {}),
+  };
+  if (state.dayKey !== dayKey) {
+    state.dayKey = dayKey;
+    state.sessionBaseline = { ...pb };
+    state.celebrated = { barsInDay: false, barsInSession: false, longestStreak: false };
+    return;
+  }
+  for (const kind of ['barsInDay', 'barsInSession', 'longestStreak'] as const) {
+    if (pb[kind] > state.sessionBaseline[kind]) {
+      state.sessionBaseline[kind] = pb[kind];
+      state.celebrated[kind] = true;
+    }
+  }
+}
 
 export type ProgressCelebrationItem =
   | {
@@ -120,45 +169,32 @@ function detectStreakMilestones(prev: GamificationSummary, next: GamificationSum
 }
 
 function detectPersonalBests(
-  prev: GamificationSummary,
   next: GamificationSummary,
-  streakMilestoneValues: Set<number>
+  streakMilestoneValues: Set<number>,
+  pbState: PersonalBestCelebrationState
 ): ProgressCelebrationItem[] {
-  const pbPrev = { ...DEFAULT_GAMIFICATION_SUMMARY.personalBests, ...(prev.personalBests || {}) };
   const pbNext = { ...DEFAULT_GAMIFICATION_SUMMARY.personalBests, ...(next.personalBests || {}) };
   const items: ProgressCelebrationItem[] = [];
 
-  if (pbNext.barsInDay > pbPrev.barsInDay) {
-    const copy = PERSONAL_BEST_COPY.barsInDay(pbNext.barsInDay);
+  const maybePush = (kind: PersonalBestKind) => {
+    if (pbState.celebrated[kind]) return;
+    if (pbNext[kind] <= pbState.sessionBaseline[kind]) return;
+    pbState.celebrated[kind] = true;
+    const copy = PERSONAL_BEST_COPY[kind](pbNext[kind]);
     items.push({
       type: 'personal_best',
-      dedupeKey: `pb:barsInDay:${pbNext.barsInDay}`,
-      kind: 'barsInDay',
-      value: pbNext.barsInDay,
+      dedupeKey: `pb:${kind}:${pbState.dayKey}:${pbState.sessionBaseline[kind]}->${pbNext[kind]}`,
+      kind,
+      value: pbNext[kind],
       ...copy,
     });
-  }
+  };
 
-  if (pbNext.barsInSession > pbPrev.barsInSession) {
-    const copy = PERSONAL_BEST_COPY.barsInSession(pbNext.barsInSession);
-    items.push({
-      type: 'personal_best',
-      dedupeKey: `pb:barsInSession:${pbNext.barsInSession}`,
-      kind: 'barsInSession',
-      value: pbNext.barsInSession,
-      ...copy,
-    });
-  }
+  maybePush('barsInDay');
+  maybePush('barsInSession');
 
-  if (pbNext.longestStreak > pbPrev.longestStreak && !streakMilestoneValues.has(pbNext.longestStreak)) {
-    const copy = PERSONAL_BEST_COPY.longestStreak(pbNext.longestStreak);
-    items.push({
-      type: 'personal_best',
-      dedupeKey: `pb:longestStreak:${pbNext.longestStreak}`,
-      kind: 'longestStreak',
-      value: pbNext.longestStreak,
-      ...copy,
-    });
+  if (!streakMilestoneValues.has(pbNext.longestStreak)) {
+    maybePush('longestStreak');
   }
 
   return items;
@@ -167,12 +203,13 @@ function detectPersonalBests(
 export function detectProgressCelebrations(
   prev: GamificationSummary,
   next: GamificationSummary,
-  isPro: boolean
+  isPro: boolean,
+  pbState: PersonalBestCelebrationState
 ): ProgressCelebrationItem[] {
   const challenges = detectChallengeCompletions(prev, next, isPro);
   const streakMilestones = detectStreakMilestones(prev, next);
   const streakValues = new Set(streakMilestones.map((s) => s.streak));
-  const personalBests = detectPersonalBests(prev, next, streakValues);
+  const personalBests = detectPersonalBests(next, streakValues, pbState);
 
   return [...challenges, ...streakMilestones, ...personalBests];
 }

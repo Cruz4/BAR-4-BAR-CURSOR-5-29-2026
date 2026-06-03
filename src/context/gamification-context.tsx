@@ -7,9 +7,13 @@ import { rankFromXp } from '@/lib/gamification/ranks';
 import { getAchievement } from '@/lib/gamification/achievements';
 import { isProUser } from '@/lib/subscription';
 import {
+  createPersonalBestCelebrationState,
   detectProgressCelebrations,
   dispatchProgressCelebrations,
+  syncPersonalBestCelebrationState,
+  type PersonalBestCelebrationState,
 } from '@/lib/gamification/progress-celebrations';
+import { getDayKey } from '@/lib/gamification/challenges';
 import {
   dispatchAchievementUnlocks,
   GAMIFICATION_SUMMARY_PATCH_EVENT,
@@ -44,6 +48,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const listenerReadyRef = useRef(false);
   const prevSummaryRef = useRef<GamificationSummary | null>(null);
   const progressReadyRef = useRef(false);
+  const pbCelebrationRef = useRef<PersonalBestCelebrationState | null>(null);
 
   useEffect(() => {
     if (!user?.id || !authReady) {
@@ -52,6 +57,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       listenerReadyRef.current = false;
       prevSummaryRef.current = null;
       progressReadyRef.current = false;
+      pbCelebrationRef.current = null;
       setLoading(false);
       return;
     }
@@ -98,6 +104,11 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       }
 
       prevUnlocksRef.current = currentIds;
+      if (!pbCelebrationRef.current) {
+        pbCelebrationRef.current = createPersonalBestCelebrationState(data, getDayKey());
+      } else {
+        syncPersonalBestCelebrationState(pbCelebrationRef.current, data, getDayKey());
+      }
       setSummary(data);
       setLoading(false);
     };
@@ -174,12 +185,21 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     const prev = prevSummaryRef.current;
     if (!progressReadyRef.current) {
       progressReadyRef.current = true;
+      if (!pbCelebrationRef.current) {
+        pbCelebrationRef.current = createPersonalBestCelebrationState(summary, getDayKey());
+      }
       prevSummaryRef.current = summary;
       return;
     }
 
-    if (prev) {
-      const celebrations = detectProgressCelebrations(prev, summary, isProUser(user));
+    if (prev && pbCelebrationRef.current) {
+      syncPersonalBestCelebrationState(pbCelebrationRef.current, summary, getDayKey());
+      const celebrations = detectProgressCelebrations(
+        prev,
+        summary,
+        isProUser(user),
+        pbCelebrationRef.current
+      );
       if (celebrations.length) {
         dispatchProgressCelebrations(celebrations);
       }
