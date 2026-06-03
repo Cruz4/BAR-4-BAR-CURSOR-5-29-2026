@@ -9,6 +9,12 @@ import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import { doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch, deleteField } from 'firebase/firestore';
 import { stripForFirestore } from '@/lib/utils';
 import { countNonEmptyBars } from '@/lib/gamification/bar-count';
+import {
+  buildLineBaseline,
+  computeLineCreditDeltas,
+  countLinesWithSource,
+  type LineBaselineEntry,
+} from '@/lib/gamification/line-attribution';
 import { postGamificationEvent } from '@/lib/gamification-client';
 import { isBrowserOffline, onNetworkChange } from '@/lib/offline/network';
 import {
@@ -170,18 +176,22 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const vaultLoadedUserIdRef = useRef<string | null>(null);
   const prevBarCountsRef = useRef<Record<string, number>>({});
   const prevTrackCompleteRef = useRef<Record<string, boolean>>({});
+  const prevLineBaselinesRef = useRef<Record<string, Record<string, LineBaselineEntry>>>({});
 
   const seedTrackProgressBaselines = useCallback((albumList: Album[]) => {
     const barBaselines: Record<string, number> = {};
     const completeBaselines: Record<string, boolean> = {};
+    const lineBaselines: Record<string, Record<string, LineBaselineEntry>> = {};
     for (const album of albumList) {
       for (const track of album.tracks) {
         barBaselines[track.id] = countNonEmptyBars(track.sections);
         completeBaselines[track.id] = track.status === 'complete';
+        lineBaselines[track.id] = buildLineBaseline(track.sections);
       }
     }
     prevBarCountsRef.current = barBaselines;
     prevTrackCompleteRef.current = completeBaselines;
+    prevLineBaselinesRef.current = lineBaselines;
   }, []);
 
   useEffect(() => {
@@ -191,6 +201,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     prevBarCountsRef.current = {};
     prevTrackCompleteRef.current = {};
+    prevLineBaselinesRef.current = {};
   }, [user?.id]);
 
   useEffect(() => {
@@ -257,22 +268,29 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const prevBarCount = prevBarCountsRef.current[trackId] ?? 0;
       prevBarCountsRef.current[trackId] = barCount;
 
+      const prevLineBaseline = prevLineBaselinesRef.current[trackId] ?? {};
+      const { writtenLines, generatedLines } = computeLineCreditDeltas(prevLineBaseline, sections);
+      prevLineBaselinesRef.current[trackId] = buildLineBaseline(sections);
+
       const nextStatus = data.updates?.status ?? track.status;
       const wasComplete = prevTrackCompleteRef.current[trackId] ?? track.status === 'complete';
       const trackComplete = nextStatus === 'complete' && !wasComplete;
       prevTrackCompleteRef.current[trackId] = nextStatus === 'complete';
 
       const delta = Math.max(0, barCount - prevBarCount);
-      if (delta === 0 && !trackComplete) continue;
+      if (delta === 0 && writtenLines === 0 && generatedLines === 0 && !trackComplete) continue;
 
       void postGamificationEvent('track_saved', {
         trackId,
         albumId: data.albumId,
         barCount,
         prevBarCount,
+        writtenLinesDelta: writtenLines,
+        generatedLinesDelta: generatedLines,
         trackComplete,
         albumTrackCount: album?.id !== UNASSIGNED_ALBUM_ID ? (album?.tracks?.length || 0) : 0,
         sessionBarCount: barCount,
+        sessionWrittenLineCount: countLinesWithSource(sections, 'written'),
       });
     }
   }, [user]);
@@ -605,6 +623,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       void setDoc(doc(db, 'users', user.id, 'albums', albumId, 'tracks', id), newTrack, { merge: true });
       prevBarCountsRef.current[id] = countNonEmptyBars(newTrack.sections);
       prevTrackCompleteRef.current[id] = newTrack.status === 'complete';
+      prevLineBaselinesRef.current[id] = buildLineBaseline(newTrack.sections);
     }
     return newTrack;
   }, [user]);

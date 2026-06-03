@@ -120,7 +120,7 @@ const FAQS = [
     },
     {
       q: "Why are Calibration Hub sections collapsed?",
-      a: "Sections start minimized to reduce scrolling. They auto-expand when you ⚡ inject a strain, load a vault preset, select remix paths, or already have content seeded (e.g. Special Instructions text)."
+      a: "Structure opens expanded with the Default preset loaded so you can tune bar counts right away. Other sections stay minimized until you ⚡ inject a strain, load a vault preset, select remix paths, or add Special Instructions."
     },
     {
       q: "What is the Rhyme Pulse?",
@@ -148,7 +148,11 @@ const FAQS = [
     },
     {
       q: "What is a rhyme bar vs a sheet line?",
-      a: "Each row on the lyrics sheet is one line. Studio Progress, weekly goals, monthly challenges, and achievement thresholds count rhyme bars — two non-empty lines equal one rhyme bar (a couplet). AI generation still works line-by-line."
+      a: "Each row on the lyrics sheet is one line. Studio Progress displays rhyme bars — two non-empty lines equal one rhyme bar (a couplet). AI tools still work line-by-line."
+    },
+    {
+      q: "Written bars vs generated lines — what counts for trophies?",
+      a: "Hand-typed lines (and lines you edit after AI suggests them) count toward “write X bars” goals, streaks, and writing achievements. Lines from Generate Next, full drafts, or Smart Structure paste are tracked separately as generated — they earn lighter XP and feed AI-specific milestones (e.g. Next Bar Graduate). Editing an AI line converts it to written credit on the next save."
     },
     {
       q: "What is DNA Drop?",

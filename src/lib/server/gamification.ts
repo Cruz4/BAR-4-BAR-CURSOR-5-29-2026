@@ -19,6 +19,7 @@ import {
 } from '@/lib/gamification/types';
 import type { AdminGamificationRosterEntry } from '@/lib/gamification/admin-roster-types';
 import type { AnalyticsEventName } from '@/lib/analytics-events';
+import { countLinesWithSource } from '@/lib/gamification/line-attribution';
 import { countNonEmptyLines, rhymeBarsToLines } from '@/lib/lyrics-units';
 
 export const MAX_DAILY_XP = 500;
@@ -27,6 +28,7 @@ const EMPTY_VERIFY_CTX: AchievementVerifyContext = {
   tourCompletedVerified: false,
   trackCompleteVerified: false,
   barsOnTrackVerified: 0,
+  writtenLinesOnTrackVerified: 0,
   albumTrackCountVerified: 0,
   lifetimeCompletedTracksVerified: 0,
   qualifyingAlbumCountVerified: 0,
@@ -130,6 +132,10 @@ async function loadTrackVerifyContext(
 
   const track = trackSnap.data() || {};
   const barsOnTrackVerified = countNonEmptyBars(track.sections);
+  const writtenLinesOnTrackVerified = countLinesWithSource(
+    track.sections as Parameters<typeof countLinesWithSource>[0],
+    'written'
+  );
   let albumTrackCountVerified = 0;
 
   if (albumId !== 'unassigned') {
@@ -143,6 +149,7 @@ async function loadTrackVerifyContext(
     trackCompleteVerified:
       track.status === 'complete' && barsOnTrackVerified >= minLines,
     barsOnTrackVerified,
+    writtenLinesOnTrackVerified,
     albumTrackCountVerified,
     lifetimeCompletedTracksVerified: 0,
     qualifyingAlbumCountVerified: 0,
@@ -406,29 +413,35 @@ export async function processGamificationEvent(
   }
 
   if (trigger === 'track_saved') {
-    const barCount = Number(metadata.barCount || 0);
-    const prevBarCount = Number(metadata.prevBarCount || 0);
-    const delta = Math.max(0, barCount - prevBarCount);
-    if (delta > 0) {
-      xpGain += Math.min(delta * 5, 50);
-      summary.barsWrittenToday = (summary.barsWrittenToday || 0) + delta;
-      summary.barsWritten7d = (summary.barsWritten7d || 0) + delta;
-      summary.lifetimeBarsWritten = (summary.lifetimeBarsWritten || 0) + delta;
+    const writtenDelta = Math.max(0, Number(metadata.writtenLinesDelta || 0));
+    const generatedDelta = Math.max(0, Number(metadata.generatedLinesDelta || 0));
+
+    if (writtenDelta > 0) {
+      xpGain += Math.min(writtenDelta * 6, 60);
+      summary.barsWrittenToday = (summary.barsWrittenToday || 0) + writtenDelta;
+      summary.barsWritten7d = (summary.barsWritten7d || 0) + writtenDelta;
+      summary.lifetimeBarsWritten = (summary.lifetimeBarsWritten || 0) + writtenDelta;
       summary.weeklyChallengeProgress = {
         ...summary.weeklyChallengeProgress,
-        barsWeek: (summary.weeklyChallengeProgress.barsWeek || 0) + delta,
+        barsWeek: (summary.weeklyChallengeProgress.barsWeek || 0) + writtenDelta,
       };
       summary.monthlyChallengeProgress = {
         ...summary.monthlyChallengeProgress,
-        barsMonth: (summary.monthlyChallengeProgress.barsMonth || 0) + delta,
+        barsMonth: (summary.monthlyChallengeProgress.barsMonth || 0) + writtenDelta,
       };
       if (summary.barsWrittenToday > (summary.personalBests.barsInDay || 0)) {
         summary.personalBests.barsInDay = summary.barsWrittenToday;
       }
-      const sessionBars = Number(metadata.sessionBarCount || barCount);
-      if (sessionBars > (summary.personalBests.barsInSession || 0)) {
-        summary.personalBests.barsInSession = sessionBars;
-      }
+    }
+
+    if (generatedDelta > 0) {
+      xpGain += Math.min(generatedDelta * 2, 24);
+      summary.lifetimeLinesGenerated = (summary.lifetimeLinesGenerated || 0) + generatedDelta;
+    }
+
+    const sessionWritten = Number(metadata.sessionWrittenLineCount || metadata.sessionBarCount || 0);
+    if (sessionWritten > (summary.personalBests.barsInSession || 0)) {
+      summary.personalBests.barsInSession = sessionWritten;
     }
 
     if (verifyCtx.trackCompleteVerified) {

@@ -101,6 +101,9 @@ export interface Track {
   shareId?: string;
 }
 
+/** How a lyric line was added — used for Studio Progress (written vs AI-generated). */
+export type LineSource = 'written' | 'generated';
+
 export interface Bar {
   idx: number;
   text: string;
@@ -108,6 +111,8 @@ export interface Bar {
   rhymeKey: string;
   syllables: number;
   justGenerated?: boolean;
+  /** Set when the user types or edits; AI flows set `generated`. Mixed bars credit as written if any line is written. */
+  lineSource?: LineSource;
 }
 
 export interface TrackSection {

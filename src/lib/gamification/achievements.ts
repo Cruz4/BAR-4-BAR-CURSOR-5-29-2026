@@ -61,8 +61,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   {
     id: 'streak_3',
     title: '3-Day Streak',
-    description: 'Three consecutive studio days with real bars on the page.',
-    howTo: 'Write on three days in a row (24+ lifetime bars total).',
+    description: 'Three consecutive studio days with hand-written bars on the page.',
+    howTo: 'Type lyrics on three days in a row (24+ lifetime written bars).',
     inkReward: 10,
     xpReward: 40,
     category: 'retention',
@@ -121,8 +121,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   {
     id: 'bars_16_session',
     title: '16-Bar Session',
-    description: 'Wrote 16+ rhyme bars on one track in a session.',
-    howTo: 'Write 32+ non-empty lines on a single track (counts on save).',
+    description: 'Hand-wrote 16+ rhyme bars on one track in a session.',
+    howTo: 'Type 32+ lines yourself on a single track (AI lines do not count).',
     inkReward: 10,
     xpReward: 55,
     category: 'retention',
@@ -171,8 +171,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   {
     id: 'bars_1000',
     title: 'Thousand Bar Club',
-    description: 'Crossed 500 lifetime rhyme bars written in the studio.',
-    howTo: 'Keep writing — only real saved line deltas count.',
+    description: 'Crossed 500 lifetime hand-written rhyme bars in the studio.',
+    howTo: 'Keep typing — AI-generated lines are tracked separately.',
     inkReward: 10,
     xpReward: 75,
     category: 'mastery',

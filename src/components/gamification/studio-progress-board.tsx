@@ -127,7 +127,7 @@ export function StudioProgressBoard() {
             </h1>
             <p className="text-sm text-muted-foreground mt-1 max-w-xl">
               Weekly goals, monthly arcs, lifetime milestones, and trophies — plus how you stack up against the
-              community.
+              community. Writing goals count <strong className="text-foreground/90 font-semibold">hand-typed</strong> lines only; AI-generated lines are tracked separately.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -168,6 +168,14 @@ export function StudioProgressBoard() {
                   ? `${Math.max(0, next - current).toLocaleString()} XP to ${nextRank.label}`
                   : 'Top rank — keep building.'}
               </p>
+              <div className="flex flex-wrap gap-2 pt-1 text-[9px] font-bold uppercase tracking-wide">
+                <span className="rounded border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-emerald-300/90">
+                  Written: {linesToRhymeBars(summary.lifetimeBarsWritten).toLocaleString()} bars
+                </span>
+                <span className="rounded border border-violet-500/25 bg-violet-500/10 px-2 py-0.5 text-violet-300/90">
+                  Generated: {linesToRhymeBars(summary.lifetimeLinesGenerated || 0).toLocaleString()} bars
+                </span>
+              </div>
               <div className="flex flex-wrap gap-1 pt-1">
                 {STUDIO_RANKS.map((r) => (
                   <Badge
@@ -191,7 +199,7 @@ export function StudioProgressBoard() {
             ) : (
               <>
                 <LeaderboardCompareCard
-                  label="Bars (7 days)"
+                  label="Written bars (7 days)"
                   rank={ranks?.barsWritten7d ?? null}
                   value={summary.barsWritten7d}
                   formatValue={linesToRhymeBars}

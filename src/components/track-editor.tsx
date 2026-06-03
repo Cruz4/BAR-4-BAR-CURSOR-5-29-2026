@@ -111,6 +111,7 @@ import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-
 import { MobileLyricsTabBar, type MobileLyricsTab } from '@/components/mobile-lyrics-tab-bar';
 import { UpgradeTooltip } from '@/components/upgrade-tooltip';
 import { LockedSaveButton, ProLockBadge, proLockShell, proLockIcon, proLockText, markBarAnchorGlow } from '@/components/pro-lock';
+import { withLineSource } from '@/lib/gamification/line-attribution';
 import {
   loadTrackUILayout,
   saveTrackUILayout,
@@ -234,6 +235,7 @@ function SmartStructureDialog({ open, onOpenChange, onApply }: any) {
             accepted: true,
             syllables: l.trim().split(' ').length,
             rhymeKey: '?',
+            lineSource: 'generated' as const,
           })),
         }));
         onApply(newSections);
@@ -1028,7 +1030,18 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                     if (b.idx < bIdx) newBars.push(b);
                     else if (b.idx === bIdx) {
                         newBars.push({ ...b, text: textBefore.trim() });
-                        newBars.push({ idx: bIdx + 1, text: textAfter.trim(), accepted: true, syllables: textAfter.trim().split(' ').length, rhymeKey: '?', justGenerated: true });
+                        newBars.push(
+                          withLineSource(
+                            {
+                              idx: bIdx + 1,
+                              text: textAfter.trim(),
+                              accepted: true,
+                              syllables: textAfter.trim().split(' ').length,
+                              rhymeKey: '?',
+                            },
+                            'written'
+                          )
+                        );
                     } else {
                         newBars.push({ ...b, idx: b.idx + 1 });
                     }
@@ -1104,14 +1117,44 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                       sections: [{ 
                         id: nsId, 
                         type: 'verse', 
-                        bars: [{ idx: 1, text: activeBarText.trim(), accepted: true, syllables: activeBarText.trim().split(' ').length, rhymeKey: '?' }] 
+                        bars: [
+                          withLineSource(
+                            {
+                              idx: 1,
+                              text: activeBarText.trim(),
+                              accepted: true,
+                              syllables: activeBarText.trim().split(' ').length,
+                              rhymeKey: '?',
+                            },
+                            'written'
+                          ),
+                        ], 
                       }] 
                   });
                   setActiveGeneratorBar({ sectionId: nsId, idx: 1 });
               } else {
                   const section = track.sections[0];
                   const newIdx = section.bars.length + 1;
-                  const nextSections = track.sections.map((s:any) => s.id === section.id ? { ...s, bars: [...s.bars, { idx: newIdx, text: activeBarText.trim(), accepted: true, syllables: activeBarText.trim().split(' ').length, rhymeKey: '?' }] } : s);
+                  const nextSections = track.sections.map((s:any) =>
+                    s.id === section.id
+                      ? {
+                          ...s,
+                          bars: [
+                            ...s.bars,
+                            withLineSource(
+                              {
+                                idx: newIdx,
+                                text: activeBarText.trim(),
+                                accepted: true,
+                                syllables: activeBarText.trim().split(' ').length,
+                                rhymeKey: '?',
+                              },
+                              'written'
+                            ),
+                          ],
+                        }
+                      : s
+                  );
                   onUpdateTrack({ sections: markBarAnchorGlow(nextSections, section.id, newIdx) });
                   setActiveGeneratorBar({ sectionId: section.id, idx: newIdx });
               }
@@ -1268,7 +1311,28 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                             onChange={(e: any) => { 
                                 const text = e.target.value;
                                 snapBarTextareaHeight(e.target);
-                                onUpdateTrack({ sections: track.sections.map((s: any) => s.id === section.id ? { ...s, bars: s.bars.map((b: any) => b.idx === bar.idx ? { ...b, text, accepted: true, syllables: text.trim().split(' ').length } : b) } : s) });
+                                onUpdateTrack({
+                                  sections: track.sections.map((s: any) =>
+                                    s.id === section.id
+                                      ? {
+                                          ...s,
+                                          bars: s.bars.map((b: any) =>
+                                            b.idx === bar.idx
+                                              ? withLineSource(
+                                                  {
+                                                    ...b,
+                                                    text,
+                                                    accepted: true,
+                                                    syllables: text.trim().split(' ').length,
+                                                  },
+                                                  'written'
+                                                )
+                                              : b
+                                          ),
+                                        }
+                                      : s
+                                  ),
+                                });
                                 setActiveBarText(text); 
                             }} 
                             onFocus={(e: any) => { 
@@ -2287,7 +2351,18 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         if (s.id !== sId) return s;
         const updatedBars = s.bars.map(b => ({ ...b }));
         updatedBars.forEach(b => { if (b.idx >= insertIdx) b.idx += 1; });
-        updatedBars.push({ idx: insertIdx, text: line.trim(), accepted: true, syllables: line.trim().split(' ').length, rhymeKey: '?' });
+        updatedBars.push(
+          withLineSource(
+            {
+              idx: insertIdx,
+              text: line.trim(),
+              accepted: true,
+              syllables: line.trim().split(' ').length,
+              rhymeKey: '?',
+            },
+            'generated'
+          )
+        );
         return { ...s, bars: updatedBars.sort((a, b) => a.idx - b.idx) };
     });
     // Glow the row where the new line landed (insertion slot), not the source bar
@@ -2354,7 +2429,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       <GenerateSongDraftDialog open={generateDraftOpen} onOpenChange={setGenerateDraftOpen} track={track} styleProfile={effectiveStyleProfile} onDraftGenerated={(sections) => handleUpdateTrack({ sections })} />
       <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} album={album} tracks={[track]} exportType="track" />
       <ShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} type="track" id={track.id} title={track.title} albumId={album.id} existingShareId={track.shareId} />
-      <FreestylePad open={freestyleOpen} onOpenChange={setFreestyleOpen} onAddFreestyle={(text) => { const lines = text.split('. ').filter(l => l.trim()); const activeS = track.sections.find(s => s.id === activeSectionId) || track.sections[0]; const startIdx = activeS.bars.length + 1; const newBars = lines.map((l, i) => ({ idx: startIdx + i, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' })); handleUpdateTrack({ sections: track.sections.map(s => s.id === activeS.id ? { ...s, bars: [...s.bars, ...newBars] } : s) }); setFreestyleOpen(false); }} disabled={false} trackVibe={track.vibe} albumTheme={album.theme} styleProfileSummary={styleProfile.history[0]?.analysis || ''} isPro={user?.subscriptionStatus === 'active'} />
+      <FreestylePad open={freestyleOpen} onOpenChange={setFreestyleOpen} onAddFreestyle={(text) => { const lines = text.split('. ').filter(l => l.trim()); const activeS = track.sections.find(s => s.id === activeSectionId) || track.sections[0]; const startIdx = activeS.bars.length + 1; const newBars = lines.map((l, i) => withLineSource({ idx: startIdx + i, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' }, 'written')); handleUpdateTrack({ sections: track.sections.map(s => s.id === activeS.id ? { ...s, bars: [...s.bars, ...newBars] } : s) }); setFreestyleOpen(false); }} disabled={false} trackVibe={track.vibe} albumTheme={album.theme} styleProfileSummary={styleProfile.history[0]?.analysis || ''} isPro={user?.subscriptionStatus === 'active'} />
       <SmartStructureDialog
         open={smartStructureOpen}
         onOpenChange={setSmartStructureOpen}

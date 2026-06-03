@@ -42,6 +42,7 @@ import {
     GitMerge,
     Timer,
     Fingerprint,
+    Waves,
     PlusCircle,
     ChevronDown,
     X,
@@ -209,7 +210,7 @@ type HubSectionKey =
   | 'guardrails';
 
 const DEFAULT_HUB_COLLAPSED: Record<HubSectionKey, boolean> = {
-  structure: true,
+  structure: false,
   vibe: true,
   intents: true,
   creativeDna: true,
@@ -360,7 +361,10 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   const { getAlbumById, updateTrack, updateAlbum } = useContext(DataContext);
   const album = getAlbumById(track.albumId);
 
-  const [hubStructure, setHubSections] = useState<{name: string, bars: number, enabled: boolean}[]>([]);
+  const [hubStructure, setHubSections] = useState<{name: string, bars: number, enabled: boolean}[]>(
+    () => STRUCTURE_PRESETS[0].sections.map((s) => ({ ...s }))
+  );
+  const [structurePresetId, setStructurePresetId] = useState('default');
   const [hubStructureGuide, setHubStructureGuide] = useState('');
   const [lyricsAbout, setLyricsAbout] = useState('');
   const [maxLineLen, setMaxLineLen] = useState(120);
@@ -440,7 +444,8 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
     setLyricsAbout(track.specialInstructions || '');
     setHubStructureGuide('');
     setSyncLyricsToggle(false);
-    setHubCollapsed(DEFAULT_HUB_COLLAPSED);
+    setHubCollapsed({ ...DEFAULT_HUB_COLLAPSED, structure: false });
+    setStructurePresetId('default');
     setHubSeededSections(new Set());
     hubLayoutInitializedRef.current = false;
     setHubDirection(track.direction || {});
@@ -468,8 +473,10 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           enabled: true,
         }))
       );
+      setStructurePresetId('custom');
     } else {
-      setHubSections(STRUCTURE_PRESETS[0].sections);
+      setHubSections(STRUCTURE_PRESETS[0].sections.map((s) => ({ ...s })));
+      setStructurePresetId('default');
     }
   }, [track, styleProfile]);
 
@@ -641,7 +648,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
     if (lyricsAbout.trim()) expanded.add('specialInstructions');
 
     setHubCollapsed({
-      structure: !expanded.has('structure'),
+      structure: false,
       vibe: !expanded.has('vibe'),
       intents: !expanded.has('intents'),
       creativeDna: !expanded.has('creativeDna'),
@@ -738,7 +745,8 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
             accepted: true,
             rhymeKey: '?',
             syllables: l.split(' ').length,
-            justGenerated: true
+            justGenerated: true,
+            lineSource: 'generated' as const,
         }))
     }));
   };
@@ -1135,10 +1143,12 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   };
 
   const handleAddStructureSection = (type: string) => {
+      setStructurePresetId('custom');
       setHubSections(prev => [...prev, { name: type, bars: type === 'Verse' ? 16 : 8, enabled: true }]);
   };
 
   const handleRemoveStructureSection = (idx: number) => {
+      setStructurePresetId('custom');
       setHubSections(prev => prev.filter((_, i) => i !== idx));
   };
 
@@ -1792,14 +1802,25 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                   onToggle={() => toggleHubSection('structure')}
                                   summary={hubSectionSummary.structure}
                                   trailing={
-                                      <Select onValueChange={(val) => {
-                                          const p = STRUCTURE_PRESETS.find(x => x.id === val);
-                                          if (p) setHubSections(p.sections.map(s => ({ ...s })));
-                                      }}>
-                                          <SelectTrigger className="h-8 w-28 text-[8px] font-bold uppercase bg-background/50 border-white/10 shrink-0">
-                                              <SelectValue placeholder="LOAD PRESET" />
+                                      <Select
+                                        value={structurePresetId}
+                                        onValueChange={(val) => {
+                                          const p = STRUCTURE_PRESETS.find((x) => x.id === val);
+                                          if (p) {
+                                            setStructurePresetId(val);
+                                            setHubSections(p.sections.map((s) => ({ ...s })));
+                                          }
+                                        }}
+                                      >
+                                          <SelectTrigger className="h-8 w-28 text-[8px] font-bold uppercase bg-background/50 border-yellow-500/25 shrink-0">
+                                              <SelectValue placeholder="Preset" />
                                           </SelectTrigger>
                                           <SelectContent className="z-[3100]">
+                                              {structurePresetId === 'custom' && (
+                                                <SelectItem value="custom" disabled className="text-[10px] font-bold uppercase opacity-70">
+                                                  Custom
+                                                </SelectItem>
+                                              )}
                                               {STRUCTURE_PRESETS.map(p => (
                                                   <SelectItem key={p.id} value={p.id} className="text-[10px] font-bold uppercase">{p.name}</SelectItem>
                                               ))}
@@ -1814,11 +1835,11 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                               {hubStructure.map((s, idx) => (
                                                   <div key={`${s.name}-${idx}`} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5 group">
                                                       <div className="flex items-center gap-3">
-                                                          <Checkbox checked={s.enabled} onCheckedChange={(c) => setHubSections(prev => prev.map((x, i) => i === idx ? { ...x, enabled: !!c } : x))} />
+                                                          <Checkbox checked={s.enabled} onCheckedChange={(c) => { setStructurePresetId('custom'); setHubSections(prev => prev.map((x, i) => i === idx ? { ...x, enabled: !!c } : x)); }} />
                                                           <span className="font-bold uppercase text-[10px] text-white">{s.name}</span>
                                                       </div>
                                                       <div className="flex items-center gap-2">
-                                                          <Input type="number" value={s.bars} onChange={(e) => setHubSections(prev => prev.map((x, i) => i === idx ? { ...x, bars: parseInt(e.target.value) || 0 } : x))} className="w-10 h-6 text-center font-mono text-[9px] bg-background/50 p-0" />
+                                                          <Input type="number" value={s.bars} onChange={(e) => { setStructurePresetId('custom'); setHubSections(prev => prev.map((x, i) => i === idx ? { ...x, bars: parseInt(e.target.value) || 0 } : x)); }} className="w-10 h-6 text-center font-mono text-[9px] bg-background/50 p-0" />
                                                           <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500/40 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveStructureSection(idx)}>
                                                               <Trash2 className="h-3 w-3" />
                                                           </Button>
@@ -2198,9 +2219,15 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                                           <div className="flex justify-between text-[10px] font-bold uppercase"><span>Vocab</span><span>{hubStyleMetrics.vocabularyScore}%</span></div>
                                                           <Progress value={hubStyleMetrics.vocabularyScore} className="h-1.5 bg-fuchsia-500/10" />
                                                       </div>
-                                                      <div className="space-y-1">
-                                                          <div className="flex justify-between text-[10px] font-bold uppercase"><span>Complexity</span><span>{hubStyleMetrics.rhymeComplexity}%</span></div>
-                                                          <Progress value={hubStyleMetrics.rhymeComplexity} className="h-1.5 bg-fuchsia-500/10" />
+                                                      <div className="space-y-1.5 rounded-lg border border-fuchsia-500/35 bg-fuchsia-500/10 p-2 ring-1 ring-fuchsia-400/25 shadow-[0_0_18px_rgba(217,70,239,0.12)]">
+                                                          <div className="flex items-center justify-between text-[10px] font-bold uppercase text-fuchsia-200">
+                                                            <span className="flex items-center gap-1.5">
+                                                              <Waves className="h-3 w-3 text-fuchsia-400 animate-pulse shrink-0" />
+                                                              Rhyme Pulse
+                                                            </span>
+                                                            <span>{hubStyleMetrics.rhymeComplexity}%</span>
+                                                          </div>
+                                                          <Progress value={hubStyleMetrics.rhymeComplexity} className="h-1.5 bg-fuchsia-500/10 [&>div]:bg-fuchsia-400" />
                                                       </div>
                                                   </div>
                                                   <p className="text-[10px] font-bold uppercase text-fuchsia-500/80">Cadence: {hubStyleMetrics.cadenceMap}</p>
@@ -2437,6 +2464,12 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                             }
                         `}</style>
                         <div className="max-h-[min(40vh,360px)] lg:max-h-none lg:h-full overflow-y-auto overflow-x-hidden studio-scrollbar overscroll-contain">
+                            {previewRhymeGroups.length > 0 && (
+                              <div className="mx-3 mt-3 sm:mx-6 sm:mt-4 flex items-center gap-2 rounded-lg border border-fuchsia-500/35 bg-fuchsia-500/10 px-3 py-2 text-[9px] font-bold uppercase tracking-wide text-fuchsia-200">
+                                <Waves className="h-3.5 w-3.5 text-fuchsia-400 animate-pulse shrink-0" />
+                                Rhyme Pulse highlights active on this preview
+                              </div>
+                            )}
                             <div className="p-3 pt-4 sm:p-6 sm:pb-8 pb-6">
                                 {wizardState.generatedVariant.sections.map((s, idx) => (
                                     <div key={idx} className="relative">

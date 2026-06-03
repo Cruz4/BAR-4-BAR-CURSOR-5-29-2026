@@ -268,7 +268,7 @@ export default function LeaderboardPage() {
               <div className="pointer-events-none absolute top-0 right-0 w-32 h-32 bg-orange-500/10 blur-3xl rounded-full" />
               <CardHeader>
                 <CardTitle className="text-sm uppercase text-amber-200/90 flex items-center gap-2">
-                  <Music className="h-4 w-4 text-orange-400" /> Bars written this week
+                  <Music className="h-4 w-4 text-orange-400" /> Hand-written bars this week
                 </CardTitle>
                 <CardDescription className="text-orange-200/40">
                   Rhyme bars saved this week (2 lines = 1 bar) — hottest writers rise to the top.

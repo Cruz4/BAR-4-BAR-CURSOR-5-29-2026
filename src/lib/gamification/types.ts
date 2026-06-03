@@ -15,8 +15,13 @@ export type GamificationSummary = {
   monthlyChallengeMonthKey: string;
   generateNextLineMonthCount: number;
   tracksCompletedMonthCount: number;
-  /** Lifetime **line** count (historical field name). Display as rhyme bars via linesToRhymeBars(). */
+  /**
+   * Lifetime hand-written **lines** (typed or edited by you — not AI-generated).
+   * Display as rhyme bars via linesToRhymeBars(). Achievements & “write X bars” challenges use this.
+   */
   lifetimeBarsWritten: number;
+  /** Lifetime AI-generated lines (Generate Next, full drafts, Smart Structure paste, etc.). */
+  lifetimeLinesGenerated: number;
   lifetimeTracksCompleted: number;
   lifetimeGenerateNextLine: number;
   lifetimeStudioSessions: number;
@@ -78,6 +83,7 @@ export const DEFAULT_GAMIFICATION_SUMMARY: GamificationSummary = {
   generateNextLineMonthCount: 0,
   tracksCompletedMonthCount: 0,
   lifetimeBarsWritten: 0,
+  lifetimeLinesGenerated: 0,
   lifetimeTracksCompleted: 0,
   lifetimeGenerateNextLine: 0,
   lifetimeStudioSessions: 0,

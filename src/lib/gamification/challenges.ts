@@ -44,7 +44,7 @@ export const WEEKLY_CHALLENGES: ChallengeDef[] = [
   {
     id: 'bars_8',
     label: 'Write 8 bars this week',
-    description: 'Add eight new bars across any tracks before Monday reset.',
+    description: 'Hand-write eight new rhyme bars (typed lines) across any tracks before Monday reset.',
     target: 8,
     scale: 'weekly',
     tier: 'standard',
@@ -74,7 +74,7 @@ export const MONTHLY_CHALLENGES: ChallengeDef[] = [
   {
     id: 'bars_40',
     label: 'Write 40 bars this month',
-    description: 'Sustained writing pace — forty bars before the calendar month ends.',
+    description: 'Sustained hand-writing — forty rhyme bars you typed (not AI-generated) before month end.',
     target: 40,
     scale: 'monthly',
     tier: 'standard',
@@ -113,7 +113,7 @@ export const LIFETIME_MILESTONES: ChallengeDef[] = [
   {
     id: 'life_bars_100',
     label: 'Century Writer',
-    description: 'Write 100 bars across your entire studio career.',
+    description: 'Hand-write 100 rhyme bars across your studio career (AI lines do not count).',
     target: 100,
     scale: 'lifetime',
     tier: 'standard',

@@ -8,6 +8,8 @@ export type AchievementVerifyContext = {
   tourCompletedVerified: boolean;
   trackCompleteVerified: boolean;
   barsOnTrackVerified: number;
+  /** Hand-written non-empty lines on the active track (Firestore). */
+  writtenLinesOnTrackVerified: number;
   albumTrackCountVerified: number;
   /** Completed tracks with min bars — counted from Firestore, not client counters */
   lifetimeCompletedTracksVerified: number;
@@ -54,7 +56,7 @@ export function isAchievementActionVerified(
     case 'bars_16_session':
       return (
         trigger === 'track_saved' &&
-        ctx.barsOnTrackVerified >= rhymeBarsToLines(t.sessionBars)
+        ctx.writtenLinesOnTrackVerified >= rhymeBarsToLines(t.sessionBars)
       );
     case 'album_builder':
       return trigger === 'track_saved' && ctx.albumTrackCountVerified >= t.albumTracks;
