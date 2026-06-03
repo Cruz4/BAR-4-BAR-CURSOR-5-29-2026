@@ -1,4 +1,5 @@
 import type { Album, StyleProfile, Track } from '@/lib/types';
+import { mergeDirection } from '@/lib/utils';
 
 /** True when this project has an active public DNA Drop link (shareId persisted on album/track). */
 export function hasActiveDnaDrop(shareId?: string | null): boolean {
@@ -100,7 +101,7 @@ export function sharedTrackIntents(track: DnaDropTrackPayload | Track): string[]
 export function resolveSharedDirection(project: DnaDropTrackPayload | DnaDropAlbumPayload | Track | Album) {
   const trackPayload = project as DnaDropTrackPayload;
   if (trackPayload.sharedAlbumContext?.direction && trackPayload.direction?.inheritFromAlbum !== false) {
-    return { ...trackPayload.sharedAlbumContext.direction, ...trackPayload.direction };
+    return mergeDirection(trackPayload.sharedAlbumContext.direction, trackPayload.direction);
   }
-  return project.direction;
+  return mergeDirection(undefined, trackPayload.direction ?? project.direction);
 }

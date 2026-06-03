@@ -65,7 +65,7 @@ export function AchievementBadgeCell({
           <p
             className={cn(
               'font-bold uppercase leading-tight line-clamp-2 break-words hyphens-auto',
-              compact ? 'text-[8px]' : roomy ? 'text-[10px]' : 'text-[9px]'
+              compact ? 'text-[8px]' : roomy ? 'text-xs' : 'text-[9px]'
             )}
           >
             {achievement.title}

@@ -337,7 +337,7 @@ function LoginForm() {
                             <Label htmlFor="name" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Artist Name</Label>
                             <div className="relative">
                                 <UserIcon className="absolute left-3 top-3 h-4 w-4 text-primary/60" />
-                                <Input id="name" placeholder="Stage Name" className="pl-10 h-11 bg-black/40 border-white/10 text-white" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+                                <Input id="name" name="name" autoComplete="name" placeholder="Stage Name" className="pl-10 h-11 bg-black/40 border-white/10 text-white" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
                             </div>
                         </div>
                         )}
@@ -345,14 +345,24 @@ function LoginForm() {
                         <Label htmlFor="email" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email Address</Label>
                         <div className="relative">
                             <Mail className="absolute left-3 top-3 h-4 w-4 text-primary/60" />
-                            <Input id="email" type="email" placeholder="artist@studio.com" className="pl-10 h-11 bg-black/40 border-white/10 text-white" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                            <Input id="email" name="email" type="email" autoComplete="email" placeholder="artist@studio.com" className="pl-10 h-11 bg-black/40 border-white/10 text-white" value={email} onChange={(e) => setEmail(e.target.value)} required />
                         </div>
                         </div>
                         <div className="space-y-2">
                         <Label htmlFor="password" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Password</Label>
                         <div className="relative">
                             <Lock className="absolute left-3 top-3 h-4 w-4 text-primary/60" />
-                            <Input id="password" type="password" placeholder="••••••••" className="pl-10 h-11 bg-black/40 border-white/10 text-white" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                            <Input
+                              id="password"
+                              name="password"
+                              type="password"
+                              autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'}
+                              placeholder="••••••••"
+                              className="pl-10 h-11 bg-black/40 border-white/10 text-white"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              required
+                            />
                         </div>
                         </div>
                         {authMode === 'signup' && (

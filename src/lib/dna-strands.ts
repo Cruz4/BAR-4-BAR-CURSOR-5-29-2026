@@ -1,4 +1,5 @@
 import type { Direction, WizardAnalysis, WizardDirection, DnaPreset, StyleMetrics } from '@/lib/types';
+import type { CoWriterSectionKey } from '@/lib/track-panel-state';
 
 export type StrainInjectionTarget =
   | { kind: 'direction'; field: CreativeDirectionField; label?: string }
@@ -35,6 +36,24 @@ export const STRAIN_TARGETS: Record<string, StrainInjectionTarget> = {
   Motifs: { kind: 'intents' },
   Style: { kind: 'style_profile' },
 };
+
+/** Co-Writer panel sections opened when a full DNA profile is loaded. */
+export const COWRITER_SUITE_SECTION_KEYS: CoWriterSectionKey[] = [
+  'dna',
+  'vibe',
+  'intents',
+  'guardrails',
+  'coWriter',
+];
+
+/** Which Co-Writer section to expand when a vault strain is injected. */
+export function coWriterSectionForStrain(strainTitle: string): CoWriterSectionKey {
+  const target = STRAIN_TARGETS[strainTitle];
+  if (!target) return 'dna';
+  if (target.kind === 'intents') return 'intents';
+  if (target.kind === 'style_profile') return 'coWriter';
+  return 'dna';
+}
 
 /** Hover text for ⚡ inject buttons on analysis strain cards. */
 export function getStrainInjectTooltip(strainTitle: string): string {

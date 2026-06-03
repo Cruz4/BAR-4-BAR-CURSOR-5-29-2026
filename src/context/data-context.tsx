@@ -38,6 +38,7 @@ import {
   findTrackInVault,
   type DnaDropTrackPayload,
 } from '@/lib/dna-drop';
+import { canUserAddTrack, FreeTrackLimitError } from '@/lib/subscription';
 
 const UNASSIGNED_ALBUM_ID = 'unassigned';
 
@@ -589,6 +590,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   const addTrack = useCallback((albumId: string, track: Omit<Track, 'id'>): Track => {
+    if (!canUserAddTrack(albums, user)) {
+      throw new FreeTrackLimitError();
+    }
     const id = track.id || `track-${Date.now()}`;
     const newTrack = stripForFirestore({ ...track, id, ownerId: user!.id, albumId }) as Track;
     setAlbums(prev => {
@@ -626,7 +630,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       prevLineBaselinesRef.current[id] = buildLineBaseline(newTrack.sections);
     }
     return newTrack;
-  }, [user]);
+  }, [user, albums]);
 
   const updateTrack = useCallback((albumId: string, trackId: string, updates: Partial<Track>) => {
     setAlbums(prev => prev.map(a => (a.id === albumId ? { ...a, tracks: a.tracks.map(t => t.id === trackId ? { ...t, ...updates } : t) } : a)));

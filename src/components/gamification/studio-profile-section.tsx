@@ -67,24 +67,24 @@ export function StudioProfileSection() {
   return (
     <>
       <Card className="border-white/10 bg-card/60">
-        <CardHeader>
-          <CardTitle className="font-headline flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-primary" /> Studio Profile
+        <CardHeader className="pb-4">
+          <CardTitle className="font-headline text-2xl flex items-center gap-2.5">
+            <Trophy className="h-6 w-6 text-primary" /> Studio Profile
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-sm leading-relaxed">
             Rank: <strong>{rankLabel}</strong> · {summary.xp.toLocaleString()} XP · Longest streak{' '}
             {summary.longestStreak}d. Lyrics are never published here — only stats you choose to share.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <p className="text-[10px] text-muted-foreground -mt-2">
+        <CardContent className="space-y-7">
+          <p className="text-sm text-muted-foreground -mt-2 leading-relaxed">
             Hover any trophy for how to unlock.{' '}
             <Link href="/studio-progress" className="text-primary hover:underline font-bold">
               View full progress board →
             </Link>
           </p>
           <TooltipProvider delayDuration={200}>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {badgeGrid.map((b) => (
                 <AchievementBadgeCell
                   key={b.id}
@@ -92,16 +92,17 @@ export function StudioProfileSection() {
                   unlocked={b.unlocked}
                   lockedPro={b.lockedPro}
                   unlockedAt={unlocked[b.id]}
+                  comfortable
                 />
               ))}
             </div>
           </TooltipProvider>
 
-          <div className="space-y-4 border-t border-white/10 pt-4">
+          <div className="space-y-5 border-t border-white/10 pt-5">
             <div className="flex items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <Label className="text-xs font-bold uppercase">Public profile</Label>
-                <p className="text-[10px] text-muted-foreground">Share rank, streak, and badges — never lyrics.</p>
+              <div className="space-y-1">
+                <Label className="text-sm font-bold uppercase">Public profile</Label>
+                <p className="text-sm text-muted-foreground leading-snug">Share rank, streak, and badges — never lyrics.</p>
               </div>
               <Switch
                 checked={publicProfile}
@@ -113,9 +114,9 @@ export function StudioProfileSection() {
               />
             </div>
             <div className="flex items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <Label className="text-xs font-bold uppercase">Hide from leaderboard</Label>
-                <p className="text-[10px] text-muted-foreground">Opt out of public weekly rankings.</p>
+              <div className="space-y-1">
+                <Label className="text-sm font-bold uppercase">Hide from leaderboard</Label>
+                <p className="text-sm text-muted-foreground leading-snug">Opt out of public weekly rankings.</p>
               </div>
               <Switch
                 checked={leaderboardHidden}
@@ -128,11 +129,10 @@ export function StudioProfileSection() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             <Button
-              size="sm"
               variant="outline"
-              className="gap-2"
+              className="gap-2 h-11 text-sm font-bold"
               onClick={() => {
                 setShareOpen(true);
                 void trackShareCardEvent('share_card_generated');
@@ -141,16 +141,16 @@ export function StudioProfileSection() {
               <Share2 className="h-4 w-4" /> Share achievement card
             </Button>
             {profileUrl && (
-              <Button size="sm" variant="ghost" className="gap-2" asChild>
+              <Button variant="ghost" className="gap-2 h-11 text-sm font-bold" asChild>
                 <Link href={`/profile/${summary.profileSlug}`} target="_blank">
                   <ExternalLink className="h-4 w-4" /> View public profile
                 </Link>
               </Button>
             )}
-            <Button size="sm" variant="ghost" asChild>
+            <Button variant="ghost" className="h-11 text-sm font-bold" asChild>
               <Link href="/studio-progress">Progress board</Link>
             </Button>
-            <Button size="sm" variant="ghost" asChild>
+            <Button variant="ghost" className="h-11 text-sm font-bold" asChild>
               <Link href="/leaderboard">Leaderboard</Link>
             </Button>
           </div>

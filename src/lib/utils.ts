@@ -13,7 +13,10 @@ export function stripForFirestore<T>(value: T): T {
 
 export function mergeDirection(album?: Direction, track?: Track["direction"]): Direction {
   const a = album ?? {};
-  const t = track ?? { inheritFromAlbum: true };
+  const trackDnaOn = track?.enabled ?? true;
+  const t = trackDnaOn
+    ? (track ?? { inheritFromAlbum: true })
+    : { inheritFromAlbum: track?.inheritFromAlbum ?? true };
   const useAlbum = t.inheritFromAlbum !== false;
   return {
     setting_world : t.setting_world  ?? (useAlbum ? a.setting_world  : "") ?? "",

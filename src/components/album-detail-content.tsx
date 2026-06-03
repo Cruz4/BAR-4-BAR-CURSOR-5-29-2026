@@ -88,7 +88,16 @@ import { ShareDialog } from './share-dialog';
 import { TooltipProvider } from './ui/tooltip';
 import { DataContext } from '@/context/data-context';
 import { useAuth } from '@/hooks/use-auth';
-import { isProUser } from '@/lib/subscription';
+import {
+  canUserAddTrack,
+  countUserTracks,
+  FreeTrackLimitError,
+  FREE_TRACK_LIMIT,
+  FREE_TRACK_LIMIT_TOAST,
+  isProUser,
+} from '@/lib/subscription';
+import { trackStudioEvent } from '@/lib/analytics-client';
+import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { format } from 'date-fns';
 import { countRhymeBars } from '@/lib/lyrics-units';
 import { cn } from '@/lib/utils';
@@ -99,7 +108,17 @@ import {
   COVER_ART_MIN_DIMENSION,
 } from '@/lib/cover-art';
 
-function CreateTrackDialog({ open, onOpenChange, albumId }: { open: boolean, onOpenChange: (open: boolean) => void, albumId: string }) {
+function CreateTrackDialog({
+  open,
+  onOpenChange,
+  albumId,
+  albums,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  albumId: string;
+  albums: Album[];
+}) {
     const [title, setTitle] = useState('');
     const [showChoice, setShowChoice] = useState(false);
     const { toast } = useToast();
@@ -110,6 +129,16 @@ function CreateTrackDialog({ open, onOpenChange, albumId }: { open: boolean, onO
 
     const handleCreate = async (mode: 'blank' | 'workstation' = 'blank') => {
         if (!user) return;
+        if (!canUserAddTrack(albums, user)) {
+            trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, {
+              limitType: 'track',
+              count: countUserTracks(albums),
+            });
+            toast(FREE_TRACK_LIMIT_TOAST);
+            router.push('/usage?tab=cloud');
+            onOpenChange(false);
+            return;
+        }
         setIsCreating(true);
         try {
             const newTrack: Omit<Track, 'id'> = {
@@ -127,7 +156,16 @@ function CreateTrackDialog({ open, onOpenChange, albumId }: { open: boolean, onO
             else router.push(`/albums/${albumId}/tracks/${created.id}`);
             onOpenChange(false);
         } catch (e) {
-            toast({ variant: 'destructive', title: 'Creation Failed', description: (e as Error).message });
+            if (e instanceof FreeTrackLimitError) {
+                trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, {
+                  limitType: 'track',
+                  count: countUserTracks(albums),
+                });
+                toast(FREE_TRACK_LIMIT_TOAST);
+                router.push('/usage?tab=cloud');
+            } else {
+                toast({ variant: 'destructive', title: 'Creation Failed', description: (e as Error).message });
+            }
         } finally {
             setIsCreating(false);
             setShowChoice(false);
@@ -557,6 +595,17 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const { user } = useAuth();
   const isPro = isProUser(user);
   const { getAlbumById, updateAlbum, deleteTrack, loading, moveTrack, deleteAlbum, albums } = useContext(DataContext);
+  const totalTrackCount = countUserTracks(albums);
+  const canAddTrack = isPro || totalTrackCount < FREE_TRACK_LIMIT;
+  const openCreateTrack = () => {
+    if (!canAddTrack) {
+      trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, { limitType: 'track', count: totalTrackCount });
+      toast(FREE_TRACK_LIMIT_TOAST);
+      router.push('/usage?tab=cloud');
+      return;
+    }
+    setCreateTrackOpen(true);
+  };
   const [album, setAlbum] = useState<Album | null>(null);
 
   useEffect(() => {
@@ -708,7 +757,11 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 </div>
                             </div>
                             <div className="flex flex-wrap items-center gap-2 w-full md:w-auto md:justify-end shrink-0">
-                                <Button onClick={() => setCreateTrackOpen(true)} className="h-9 px-3 sm:px-6 font-bold text-[10px] uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 flex-1 sm:flex-none min-w-0">
+                                <Button
+                                  onClick={openCreateTrack}
+                                  disabled={!canAddTrack}
+                                  className="h-9 px-3 sm:px-6 font-bold text-[10px] uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 flex-1 sm:flex-none min-w-0"
+                                >
                                     <PlusCircle className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Add Track
                                 </Button>
                                 <Button variant="outline" size="sm" className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-white/10 rounded-xl bg-white/5 flex-1 sm:flex-none min-w-0" onClick={() => setExportDialogOpen(true)}>
@@ -815,7 +868,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                         tracks={album.tracks ?? []}
                         realAlbums={realAlbums}
                         onMoveTrack={handleMoveToAlbum}
-                        onAddTrack={() => setCreateTrackOpen(true)}
+                        onAddTrack={openCreateTrack}
                       />
                     ) : (
                     <>
@@ -870,7 +923,14 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
       
       {strainMixerOpen && <DNAStrainMixerDialog open={strainMixerOpen} onOpenChange={setStrainMixerOpen} album={album} onApply={(dir) => handleAlbumUpdate({ direction: { ...album.direction, ...dir } })} />}
       {editCoverArtDialogOpen && <EditCoverArtDialog album={album} onOpenChange={setEditCoverArtDialogOpen} />}
-      {createTrackOpen && <CreateTrackDialog open={createTrackOpen} onOpenChange={setCreateTrackOpen} albumId={albumId} />}
+      {createTrackOpen && (
+        <CreateTrackDialog
+          open={createTrackOpen}
+          onOpenChange={setCreateTrackOpen}
+          albumId={albumId}
+          albums={albums}
+        />
+      )}
       
       <ExportDialog 
         open={exportDialogOpen} 

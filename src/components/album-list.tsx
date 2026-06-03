@@ -88,7 +88,14 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StudioLoader } from '@/components/studio-loader';
-import { countUserTracks, FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, isProUser } from '@/lib/subscription';
+import {
+  canUserAddTrack,
+  countUserTracks,
+  FREE_ALBUM_LIMIT,
+  FREE_TRACK_LIMIT,
+  FREE_TRACK_LIMIT_TOAST,
+  isProUser,
+} from '@/lib/subscription';
 import { isDataUrl } from '@/lib/cover-art';
 import { postGamificationEvent } from '@/lib/gamification-client';
 import { VaultStudioProgress } from '@/components/gamification/vault-studio-progress';
@@ -131,9 +138,9 @@ function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenC
               onOpenChange(false);
               return;
           }
-          if (type === 'Track' && trackCount >= FREE_TRACK_LIMIT) {
+          if (type === 'Track' && !canUserAddTrack(albums, user)) {
               trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, { limitType: 'track', count: trackCount });
-              toast({ variant: 'destructive', title: 'Track Slots Full', description: 'Free artists can work on 2 tracks at a time. Upgrade for unlimited slots.' });
+              toast(FREE_TRACK_LIMIT_TOAST);
               router.push('/usage?tab=cloud');
               onOpenChange(false);
               return;
@@ -248,16 +255,18 @@ function FreeVisitorVault({
   sortedLooseTracks,
   filteredAlbums,
   realAlbums,
+  totalTrackCount,
   onCreateAlbum,
   onCreateTrack,
 }: {
   sortedLooseTracks: Track[];
   filteredAlbums: Album[];
   realAlbums: Album[];
+  totalTrackCount: number;
   onCreateAlbum: () => void;
   onCreateTrack: () => void;
 }) {
-  const trackSlots = Array.from({ length: FREE_TRACK_LIMIT }, (_, i) => sortedLooseTracks[i] ?? null);
+  const openTrackSlots = Math.max(0, FREE_TRACK_LIMIT - totalTrackCount);
   const album = filteredAlbums[0] ?? null;
 
   return (
@@ -276,11 +285,10 @@ function FreeVisitorVault({
             <CassetteTape className="text-sky-500 h-8 w-8 shrink-0" />
             Loose Tracks
           </Link>
-          <Badge variant="outline" className="border-sky-500/30 text-sky-400 font-mono">{sortedLooseTracks.length}/{FREE_TRACK_LIMIT}</Badge>
+          <Badge variant="outline" className="border-sky-500/30 text-sky-400 font-mono">{totalTrackCount}/{FREE_TRACK_LIMIT}</Badge>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {trackSlots.map((track, i) =>
-            track ? (
+          {sortedLooseTracks.map((track) => (
               <div key={track.id} className="group relative">
                 <Link href={`/albums/unassigned/tracks/${track.id}`} className="block py-4 px-6 rounded-2xl bg-black/40 border-2 border-sky-500/30 hover:border-sky-400/60 hover:bg-sky-500/5 transition-all flex items-center justify-between shadow-[0_0_16px_rgba(56,189,248,0.12)]">
                   <div className="flex items-center gap-4 min-w-0">
@@ -292,16 +300,16 @@ function FreeVisitorVault({
                         <p className="font-bold font-headline text-base text-white uppercase truncate">{track.title}</p>
                         <DnaDropLiveIndicator shareId={track.shareId} variant="compact" />
                       </div>
-                      <p className="text-[8px] text-sky-400/80 uppercase font-code mt-0.5">Open slot · {track.vibe?.genre}</p>
+                      <p className="text-[8px] text-sky-400/80 uppercase font-code mt-0.5">Loose track · {track.vibe?.genre}</p>
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-sky-400 shrink-0" />
                 </Link>
               </div>
-            ) : (
+          ))}
+          {Array.from({ length: openTrackSlots }, (_, i) => (
               <OpenTrackSlot key={`open-track-${i}`} onClick={onCreateTrack} />
-            )
-          )}
+          ))}
           <LockedVaultSlot variant="track" label="Unlimited Tracks" sublabel="Upgrade for no track cap" />
         </div>
       </div>
@@ -682,6 +690,7 @@ export function AlbumList() {
                   sortedLooseTracks={sortedLooseTracks}
                   filteredAlbums={filteredAlbums}
                   realAlbums={realAlbums}
+                  totalTrackCount={trackCount}
                   onCreateAlbum={() => setCreateItemType('Album')}
                   onCreateTrack={() => setCreateItemType('Track')}
                 />

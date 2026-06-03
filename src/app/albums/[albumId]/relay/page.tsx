@@ -52,6 +52,14 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { rebalanceRemixWeights, formatRemixDirectionsWithWeights } from '@/lib/dna-strands';
+import {
+  canUserAddTrack,
+  countUserTracks,
+  FreeTrackLimitError,
+  FREE_TRACK_LIMIT_TOAST,
+} from '@/lib/subscription';
+import { trackStudioEvent } from '@/lib/analytics-client';
+import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { Slider } from '@/components/ui/slider';
 import { StudioLoader } from '@/components/studio-loader';
 
@@ -63,7 +71,7 @@ function RelayWizardContent() {
     const router = useRouter();
     const { user } = useAuth();
     const { toast } = useToast();
-    const { addTrack, getAlbumById } = useContext(DataContext);
+    const { addTrack, getAlbumById, albums } = useContext(DataContext);
     const { deductInk, refundInk, addUsageLog } = useUsage();
     const { getCost, buttonLabel, tooltip, getEffectiveCost } = useInkCosts();
     const relayDraftBase = 20 * getCost('generateRelayDraft');
@@ -201,9 +209,31 @@ function RelayWizardContent() {
             direction: { enabled: true, inheritFromAlbum: true }
         };
 
-        const created = addTrack(albumId, newTrack);
-        toast({ title: 'Workstation Saved', description: `"${newTrack.title}" added to your vault.` });
-        router.push(`/albums/${albumId}/tracks/${created.id}`);
+        if (!canUserAddTrack(albums, user)) {
+            trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, {
+              limitType: 'track',
+              count: countUserTracks(albums),
+            });
+            toast(FREE_TRACK_LIMIT_TOAST);
+            router.push('/usage?tab=cloud');
+            return;
+        }
+        try {
+            const created = addTrack(albumId, newTrack);
+            toast({ title: 'Workstation Saved', description: `"${newTrack.title}" added to your vault.` });
+            router.push(`/albums/${albumId}/tracks/${created.id}`);
+        } catch (e) {
+            if (e instanceof FreeTrackLimitError) {
+                trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, {
+                  limitType: 'track',
+                  count: countUserTracks(albums),
+                });
+                toast(FREE_TRACK_LIMIT_TOAST);
+                router.push('/usage?tab=cloud');
+                return;
+            }
+            throw e;
+        }
     };
 
     return (

@@ -210,6 +210,19 @@ type HubSectionKey =
   | 'style'
   | 'guardrails';
 
+/** Expand every Calibration Hub panel when a full DNA profile is loaded. */
+const CALIBRATION_HUB_SECTION_KEYS: HubSectionKey[] = [
+  'structure',
+  'vibe',
+  'intents',
+  'creativeDna',
+  'specialInstructions',
+  'remix',
+  'dnaStrains',
+  'style',
+  'guardrails',
+];
+
 const DEFAULT_HUB_COLLAPSED: Record<HubSectionKey, boolean> = {
   structure: false,
   vibe: true,
@@ -611,18 +624,51 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
     setHubCollapsed((prev) => ({ ...prev, [key]: false }));
   }, []);
 
-  const toggleHubSection = useCallback((key: HubSectionKey) => {
-    setHubCollapsed((prev) => {
-      const wasCollapsed = prev[key];
-      const next = { ...prev, [key]: !prev[key] };
-      if (wasCollapsed && !next[key]) {
-        if (hubFlashTimeoutRef.current) clearTimeout(hubFlashTimeoutRef.current);
-        setHubFlashKey(key);
-        hubFlashTimeoutRef.current = setTimeout(() => setHubFlashKey(null), 350);
-      }
-      return next;
-    });
+  const flashHubSection = useCallback((key: HubSectionKey) => {
+    if (!HUB_INK_KEYS.includes(key as HubInkKey)) return;
+    if (hubFlashTimeoutRef.current) clearTimeout(hubFlashTimeoutRef.current);
+    setHubFlashKey(key as HubInkKey);
+    hubFlashTimeoutRef.current = setTimeout(() => setHubFlashKey(null), 350);
   }, []);
+
+  const expandHubSection = useCallback(
+    (key: HubSectionKey) => {
+      setHubCollapsed((prev) => {
+        if (!prev[key]) return prev;
+        flashHubSection(key);
+        return { ...prev, [key]: false };
+      });
+    },
+    [flashHubSection]
+  );
+
+  const toggleHubSection = useCallback(
+    (key: HubSectionKey) => {
+      setHubCollapsed((prev) => {
+        const wasCollapsed = prev[key];
+        const next = { ...prev, [key]: !prev[key] };
+        if (wasCollapsed && !next[key]) flashHubSection(key);
+        return next;
+      });
+    },
+    [flashHubSection]
+  );
+
+  const handleStrainTabChange = useCallback(
+    (v: 'insights' | 'vault') => {
+      setStrainTab(v);
+      expandHubSection('dnaStrains');
+    },
+    [expandHubSection]
+  );
+
+  const handleStyleTabChange = useCallback(
+    (v: 'current' | 'vault') => {
+      setStyleTab(v);
+      expandHubSection('style');
+    },
+    [expandHubSection]
+  );
 
   useEffect(() => {
     return () => {
@@ -960,9 +1006,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           setHubStyleEnabled(true);
           markHubSeeded('style');
       }
-      markHubSeeded('creativeDna');
-      if (intents.length) markHubSeeded('intents');
-      if (preset.structureGuide) markHubSeeded('structure');
+      CALIBRATION_HUB_SECTION_KEYS.forEach((key) => markHubSeeded(key));
       toast({ title: "Full DNA Profile Loaded" });
   };
 
@@ -2082,11 +2126,11 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                   onToggle={() => toggleHubSection('dnaStrains')}
                                   summary={wizardState.analysis ? 'Extraction ready' : undefined}
                                   trailing={
-                                      <Tabs value={strainTab} onValueChange={(v:any) => setStrainTab(v)} className="w-fit">
+                                      <Tabs value={strainTab} onValueChange={(v) => handleStrainTabChange(v as 'insights' | 'vault')} className="w-fit">
                                           <TabsList className="h-8 bg-white/5 border-white/10 p-0.5">
                                               <Tooltip>
                                                   <TooltipTrigger asChild>
-                                                      <TabsTrigger value="insights" className="text-[9px] px-3 font-bold">INSIGHTS</TabsTrigger>
+                                                      <TabsTrigger value="insights" className="text-[9px] px-3 font-bold" onClick={() => expandHubSection('dnaStrains')}>INSIGHTS</TabsTrigger>
                                                   </TooltipTrigger>
                                                   <TooltipContent side="bottom" className="max-w-[200px] text-[10px] leading-snug">
                                                       {DNA_HUB_TOOLTIPS.vaultInsightsTab}
@@ -2094,7 +2138,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                               </Tooltip>
                                               <Tooltip>
                                                   <TooltipTrigger asChild>
-                                                      <TabsTrigger value="vault" className="text-[9px] px-3 font-bold">VAULT</TabsTrigger>
+                                                      <TabsTrigger value="vault" className="text-[9px] px-3 font-bold" onClick={() => expandHubSection('dnaStrains')}>VAULT</TabsTrigger>
                                                   </TooltipTrigger>
                                                   <TooltipContent side="bottom" className="max-w-[200px] text-[10px] leading-snug">
                                                       {DNA_HUB_TOOLTIPS.vaultVaultTab}
@@ -2203,10 +2247,10 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                   trailing={
                                       <div className="flex items-center gap-2">
                                         <Switch checked={hubStyleEnabled} onCheckedChange={setHubStyleEnabled} />
-                                        <Tabs value={styleTab} onValueChange={(v:any) => setStyleTab(v)} className="w-fit">
+                                        <Tabs value={styleTab} onValueChange={(v) => handleStyleTabChange(v as 'current' | 'vault')} className="w-fit">
                                           <TabsList className="h-8 bg-white/5 border-white/10 p-0.5">
-                                              <TabsTrigger value="current" className="text-[9px] px-3 font-bold">LATEST</TabsTrigger>
-                                              <TabsTrigger value="vault" className="text-[9px] px-3 font-bold">VAULT</TabsTrigger>
+                                              <TabsTrigger value="current" className="text-[9px] px-3 font-bold" onClick={() => expandHubSection('style')}>LATEST</TabsTrigger>
+                                              <TabsTrigger value="vault" className="text-[9px] px-3 font-bold" onClick={() => expandHubSection('style')}>VAULT</TabsTrigger>
                                           </TabsList>
                                         </Tabs>
                                       </div>

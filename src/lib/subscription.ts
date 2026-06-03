@@ -16,3 +16,26 @@ export function isYearlyPro(user: Pick<User, 'subscriptionStatus' | 'subscriptio
 export function countUserTracks(albums: { id: string; tracks: unknown[] }[]): number {
   return albums.reduce((acc, a) => acc + (a.tracks?.length || 0), 0);
 }
+
+/** Free tier: max tracks across all albums + loose tracks combined. */
+export function canUserAddTrack(
+  albums: { tracks?: unknown[] }[],
+  user: Pick<User, 'subscriptionStatus'> | null | undefined
+): boolean {
+  if (isProUser(user)) return true;
+  return countUserTracks(albums as { id: string; tracks: unknown[] }[]) < FREE_TRACK_LIMIT;
+}
+
+export class FreeTrackLimitError extends Error {
+  constructor() {
+    super('FREE_TRACK_LIMIT');
+    this.name = 'FreeTrackLimitError';
+  }
+}
+
+export const FREE_TRACK_LIMIT_TOAST = {
+  variant: 'destructive' as const,
+  title: 'Track Slots Full',
+  description:
+    'Free artists get 2 tracks total — any track in an album or Loose Tracks counts. Upgrade for unlimited slots.',
+};

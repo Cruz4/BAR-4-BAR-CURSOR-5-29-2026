@@ -99,7 +99,14 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { ArchivalNamingDialog } from '@/components/archival-naming-dialog';
 import { DnaVaultPresetDetails } from '@/components/dna-vault-preset-details';
 import type { DnaPreset } from '@/lib/types';
-import { STRAIN_TARGETS, appendDirectionField, buildDnaPresetFromDirection, DEFAULT_STYLE_METRICS } from '@/lib/dna-strands';
+import {
+  STRAIN_TARGETS,
+  appendDirectionField,
+  buildDnaPresetFromDirection,
+  COWRITER_SUITE_SECTION_KEYS,
+  coWriterSectionForStrain,
+  DEFAULT_STYLE_METRICS,
+} from '@/lib/dna-strands';
 import {
   markLyricsTutorialComplete,
   REPLAY_GUIDED_TOUR_EVENT,
@@ -136,6 +143,7 @@ import {
   isVibeActive,
   isTrackDnaActive,
   isAlbumDnaActive,
+  isInheritFromAlbumOn,
 } from '@/lib/co-writer-rules';
 import { SYSTEM_DNA_PRESETS, SYSTEM_STYLE_PRESETS, SYSTEM_VIBE_PRESETS } from '@/lib/system-presets';
 import { GenerateSongDraftDialog } from './generate-song-draft-dialog';
@@ -363,7 +371,18 @@ function ImproveMyStyleDialog({ open, onOpenChange, track, onUpdateStyle }: any)
   );
 }
 
-function DNAVaultDialog({ open, onOpenChange, album, updateAlbum, track, onUpdateTrack, onLoadPreset, updateStyleProfile, isPro }: any) {
+function DNAVaultDialog({
+  open,
+  onOpenChange,
+  album,
+  updateAlbum,
+  track,
+  onUpdateTrack,
+  onLoadPreset,
+  updateStyleProfile,
+  openCoWriterSections,
+  isPro,
+}: any) {
     const { toast } = useToast();
     const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
     const presets = isPro ? (album?.dnaPresets || []) : SYSTEM_DNA_PRESETS;
@@ -415,6 +434,7 @@ function DNAVaultDialog({ open, onOpenChange, album, updateAlbum, track, onUpdat
                                                 onUpdateTrack({
                                                     direction: { ...(track.direction ?? {}), [field]: value, enabled: true },
                                                 });
+                                                openCoWriterSections?.('dna');
                                                 toast({ title: `${field} loaded` });
                                             }}
                                             onInjectStrain={(title, content) => {
@@ -424,6 +444,7 @@ function DNAVaultDialog({ open, onOpenChange, album, updateAlbum, track, onUpdat
                                                     const text = Array.isArray(content) ? content.join(', ') : content;
                                                     updateStyleProfile?.(text, DEFAULT_STYLE_METRICS);
                                                     onUpdateTrack({ styleEnabled: true });
+                                                    openCoWriterSections?.('coWriter');
                                                     toast({ title: 'Style DNA loaded' });
                                                     return;
                                                 }
@@ -441,6 +462,7 @@ function DNAVaultDialog({ open, onOpenChange, album, updateAlbum, track, onUpdat
                                                         enabled: true,
                                                     },
                                                 });
+                                                openCoWriterSections?.(coWriterSectionForStrain(title));
                                                 toast({ title: `${title} injected` });
                                             }}
                                             onInjectIntents={(intents) => {
@@ -455,11 +477,13 @@ function DNAVaultDialog({ open, onOpenChange, album, updateAlbum, track, onUpdat
                                                         updateAlbum(album.id, { thingsToSay: [...existing, ...novel] });
                                                     }
                                                 }
+                                                openCoWriterSections?.('intents');
                                                 toast({ title: 'Motifs loaded into Intents' });
                                             }}
                                             onInjectStyle={(analysis, metrics) => {
                                                 updateStyleProfile?.(analysis, metrics ?? DEFAULT_STYLE_METRICS);
                                                 onUpdateTrack({ styleEnabled: true });
+                                                openCoWriterSections?.('coWriter');
                                                 toast({ title: 'Style DNA loaded' });
                                             }}
                                         />
@@ -1114,13 +1138,15 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
   }, [activeGeneratorBar, track.sections]);
 
   const ruleBadges = useMemo(() => getWorkstationRuleBadges(track, album), [
-    album?.direction,
-    track.direction,
-    track.vibe,
+    album?.id,
+    album?.direction?.enabled,
+    track.direction?.enabled,
+    track.direction?.inheritFromAlbum,
+    track.vibe?.enabled,
     track.intentsEnabled,
     track.checkedIntents,
     track.endWith,
-    track.guardrails,
+    track.guardrails?.enabled,
     track.styleEnabled,
   ]);
 
@@ -1401,10 +1427,20 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
       </div>
 
       <div data-tour="bar-workstation" className={cn("bg-card border-t shadow-[0_-10px_40px_rgba(0,0,0,0.5)] shrink-0 z-[40] relative w-full min-w-0 overflow-hidden", isMinimized ? "h-10" : "h-[115px] max-md:h-auto max-md:max-h-[38dvh] max-md:overflow-y-auto max-md:studio-scrollbar")}>
-        <div className="w-full min-w-0 h-full px-2 md:px-4 lg:px-6 flex flex-col justify-start pt-1.5 pb-2 gap-1 overflow-hidden">
-            <div className="flex flex-row items-center justify-between gap-2 border-b border-white/5 shrink-0 h-7 min-w-0">
-                <div className="flex h-7 items-center gap-1.5 md:gap-2 min-w-0 overflow-hidden">
-                    <h4 className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] text-primary flex items-center gap-1 shrink-0 leading-none whitespace-nowrap"><Zap className="h-3 w-3 shrink-0" /> BAR WS</h4>
+        <div
+          className={cn(
+            'w-full min-w-0 h-full px-2 md:px-4 lg:px-6 flex flex-col overflow-hidden',
+            isMinimized ? 'justify-center py-0' : 'justify-start pt-1.5 pb-2 gap-1'
+          )}
+        >
+            <div
+              className={cn(
+                'flex flex-row items-center justify-between gap-2 min-w-0 w-full',
+                isMinimized ? 'h-full' : 'shrink-0 min-h-[34px] py-1 border-b border-white/5'
+              )}
+            >
+                <div className="flex items-center gap-1.5 md:gap-2 min-w-0 overflow-hidden">
+                    <h4 className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] text-primary flex items-center gap-1 shrink-0 leading-none whitespace-nowrap"><Zap className="h-3 w-3 shrink-0" /> BAR WORKSTATION</h4>
                     <Hint
                       side="top"
                       className="max-w-[240px] text-[9px] leading-snug"
@@ -1418,23 +1454,23 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                     </Hint>
                     <span className="text-muted-foreground font-code text-[8px] md:text-[9px] font-bold tracking-widest uppercase min-w-0 truncate leading-none">{activeBarLabel}</span>
                 </div>
-                <div className="flex h-7 items-center gap-1 min-w-0 shrink">
-                    <div className="flex h-7 items-center justify-center gap-1 overflow-x-auto studio-scrollbar flex-nowrap max-w-[min(52vw,14rem)] md:max-w-[min(40vw,18rem)] lg:max-w-none py-0">
-                        {ruleBadges.map(b => (
+                <div className="flex items-center gap-1.5 min-w-0 shrink self-center">
+                    <div className="flex items-center justify-center gap-1.5 overflow-x-auto studio-scrollbar flex-nowrap max-w-[min(52vw,14rem)] md:max-w-[min(40vw,18rem)] lg:max-w-none py-px">
+                        {ruleBadges.map((b) => (
                           <Badge
                             key={b.id}
                             variant="outline"
                             className={cn(
-                              'text-[7px] font-bold uppercase h-[18px] min-h-[18px] px-1.5 inline-flex items-center justify-center leading-none whitespace-nowrap shrink-0 max-w-[4.25rem] truncate',
-                              getWorkstationRuleBadgeClass(b.id, b.active),
-                              b.id === 'END WITH' && b.active && 'animate-pulse'
+                              'text-[8px] md:text-[9px] font-bold uppercase h-[20px] px-2 inline-flex items-center justify-center leading-none whitespace-nowrap shrink-0',
+                              getWorkstationRuleBadgeClass(b.id, true),
+                              b.id === 'END WITH' && 'animate-pulse'
                             )}
                           >
                             {b.id}
                           </Badge>
                         ))}
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-6 text-muted-foreground hover:text-primary shrink-0 -mr-0.5" onClick={() => setIsMinimized(!isMinimized)}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary shrink-0 -mr-0.5 self-center" onClick={() => setIsMinimized(!isMinimized)}>
                         {isMinimized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
                 </div>
@@ -1532,12 +1568,12 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
 
 function cowriterSectionSubtitle(expanded: boolean) {
   return cn(
-    'text-[9px] font-bold uppercase tracking-widest',
-    expanded ? 'leading-snug break-words' : 'leading-none truncate'
+    'text-[9px] font-bold uppercase tracking-widest leading-snug',
+    expanded ? 'break-words' : 'whitespace-normal'
   );
 }
 
-function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, improveStyleOpen, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, mobileActive = false, trackLocked = false }: any) {
+function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, improveStyleOpen, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, openCoWriterSections, mobileActive = false, trackLocked = false }: any) {
   const { tooltip, buttonLabel } = useInkCosts();
   const activeSection = track.sections.find((s:any) => s.id === activeSectionId);
   const { toast } = useToast();
@@ -1650,6 +1686,10 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   };
 
   const dnaActive = isTrackDnaActive(track);
+  const inheritFromAlbumOn = isInheritFromAlbumOn(track);
+  const trackDnaFieldsEditable = dnaActive;
+  const dnaSectionLit = dnaActive || inheritFromAlbumOn;
+  const dnaCollapsedInherit = !sectionOpen.dna && inheritFromAlbumOn;
   const vibeActive = isVibeActive(track);
   const intentsMasterOn = isIntentsMasterEnabled(track);
   const guardActive = isGuardrailsActive(track);
@@ -1658,7 +1698,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   if (rightCollapsed && !mobileActive) {
     return (
         <div className={cn("flex flex-col items-center h-full bg-card border-l w-[56px] shrink-0 overflow-hidden py-6 z-30", mobileLyricsPanelClass(mobileActive, 'right'))}>
-            <NeuralStripItem text="DNA" color="#10b981" active={isTrackDnaActive(track) || isAlbumDnaActive(track, album)} onClick={() => onCollapse(false)} />
+            <NeuralStripItem text="DNA" color="#10b981" active={dnaSectionLit || isAlbumDnaActive(track, album)} onClick={() => onCollapse(false)} />
             <NeuralStripItem text="VIBE" color="#f59e0b" active={isVibeActive(track)} onClick={() => onCollapse(false)} />
             <NeuralStripItem text="INTENT" color="#0ea5e9" active={isIntentsActive(track)} onClick={() => onCollapse(false)} />
             <NeuralStripItem text="GUARD" color="#f43f5e" active={isGuardrailsActive(track)} onClick={() => onCollapse(false)} />
@@ -1688,17 +1728,57 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           )}
           <fieldset disabled={trackLocked} className="min-w-0 border-0 p-0 m-0 space-y-4 disabled:[&_button]:pointer-events-none disabled:[&_input]:pointer-events-none disabled:[&_textarea]:pointer-events-none disabled:[&_[role=switch]]:pointer-events-none">
           <Collapsible open={sectionOpen.dna} onOpenChange={(o) => onSectionChange('dna', o)} className="space-y-1">
-            <Card className={coWriterSectionCardClass(dnaActive, 'border-green-500/30 bg-green-500/5')} data-tour="dna-suite">
-                <div className="p-4 flex flex-row items-center justify-between space-y-0">
+            <Card
+              className={cn(
+                coWriterSectionCardClass(dnaSectionLit, 'border-green-500/30 bg-green-500/5'),
+                inheritFromAlbumOn && 'border border-dashed border-emerald-500/35'
+              )}
+              data-tour="dna-suite"
+            >
+                <div className={cn('p-4 flex flex-col gap-2', !sectionOpen.dna && 'pb-3')}>
+                <div className="flex flex-row items-center justify-between space-y-0">
                     <CollapsibleTrigger asChild>
-                        <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 overflow-hidden pr-1">
-                            <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none truncate', coWriterSectionTitleClass(dnaActive, 'text-green-500'))}><Dna className="h-4 w-4 shrink-0" /> DNA Suite</CardTitle>
-                            <p className={cn(cowriterSectionSubtitle(sectionOpen.dna), coWriterSectionAccentClass(dnaActive, 'text-green-400/80'))} title="Creative Direction Questions">
-                              {sectionOpen.dna ? 'Creative Direction Questions' : 'Creative DNA'}
+                        <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 pr-1">
+                            <CardTitle
+                              className={cn(
+                                'text-sm flex items-center gap-2 font-headline uppercase leading-none',
+                                dnaCollapsedInherit
+                                  ? 'text-green-500'
+                                  : coWriterSectionTitleClass(dnaSectionLit, 'text-green-500')
+                              )}
+                            >
+                              <Dna
+                                className={cn(
+                                  'h-4 w-4 shrink-0',
+                                  dnaSectionLit || dnaCollapsedInherit ? 'text-green-500' : 'text-muted-foreground/55'
+                                )}
+                              />
+                              DNA Suite
+                            </CardTitle>
+                            <p
+                              className={cn(
+                                cowriterSectionSubtitle(sectionOpen.dna),
+                                dnaCollapsedInherit
+                                  ? 'text-green-400/90'
+                                  : coWriterSectionAccentClass(dnaSectionLit, 'text-green-400/80')
+                              )}
+                              title={
+                                sectionOpen.dna
+                                  ? 'Creative Direction Questions'
+                                  : inheritFromAlbumOn
+                                    ? 'Inherit From Album is on'
+                                    : 'Track DNA only — album inherit off'
+                              }
+                            >
+                              {sectionOpen.dna
+                                ? 'Creative Direction Questions'
+                                : inheritFromAlbumOn
+                                  ? 'Creative DNA · Inherit from album'
+                                  : 'Track DNA only'}
                             </p>
                         </div>
                     </CollapsibleTrigger>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                         {isPro ? (
                           <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600 hover:bg-green-500/10" onClick={(e) => { e.stopPropagation(); setArchivalDialog({ open: true, type: 'DNA' }); }}><Save className="h-3.5 w-3.5" /></Button>
                         ) : (
@@ -1709,11 +1789,42 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                           />
                         )}
                         <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600 hover:bg-green-500/10" onClick={(e) => { e.stopPropagation(); setDNAVaultOpen(true); }}><FolderOpen className="h-4 w-4" /></Button>
-                        <Switch checked={track.direction?.enabled ?? true} onCheckedChange={handleToggleDNA} />
+                        <Switch
+                          checked={track.direction?.enabled ?? true}
+                          onCheckedChange={handleToggleDNA}
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label="Track DNA enabled"
+                        />
                     </div>
+                </div>
+                {!sectionOpen.dna && (
+                  <div
+                    className={cn(
+                      'flex items-center justify-between gap-2 pt-2 border-t',
+                      inheritFromAlbumOn ? 'border-green-500/25' : 'border-green-500/10'
+                    )}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span
+                      className={cn(
+                        'text-[10px] font-bold uppercase',
+                        inheritFromAlbumOn ? 'text-green-400/95' : 'text-green-300/90'
+                      )}
+                    >
+                      Inherit From Album
+                    </span>
+                    <Switch
+                      checked={track.direction?.inheritFromAlbum ?? true}
+                      onCheckedChange={(c) => onUpdateTrack({ direction: { ...track.direction, inheritFromAlbum: c } })}
+                      className="scale-75"
+                      aria-label="Inherit from album"
+                    />
+                  </div>
+                )}
                 </div>
                 <CollapsibleContent>
                     <CardContent className="space-y-3 px-4 pb-4 font-code">
+                        {sectionOpen.dna && (
                         <div className="flex items-center justify-between py-1 border-b border-green-500/10">
                             <span className="text-[10px] font-bold text-green-300/90 uppercase">Inherit From Album</span>
                             <Switch 
@@ -1722,6 +1833,12 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                 className="scale-75"
                             />
                         </div>
+                        )}
+                        {inheritFromAlbumOn && !trackDnaFieldsEditable && (
+                          <p className="text-[9px] font-bold uppercase text-green-400/55 leading-snug">
+                            Album DNA only — turn on Track DNA to edit Creative Direction Questions for this track.
+                          </p>
+                        )}
                         {[
                             { id: 'setting_world', label: '1. Setting / World', placeholder: 'It takes place in ____.' },
                             { id: 'emotion_core', label: '2. Emotion / Core', placeholder: 'It feels like ____.' },
@@ -1733,15 +1850,22 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                 <Label className="text-[10px] font-bold uppercase text-green-300/85">{f.label}</Label>
                                 <textarea 
                                     placeholder={f.placeholder} 
-                                    className="w-full bg-background/40 border border-green-500/10 rounded-md p-2 text-[12px] text-foreground/90 studio-scrollbar resize-none overflow-hidden focus:outline-none focus:ring-1 focus:ring-green-500/30" 
+                                    disabled={!trackDnaFieldsEditable}
+                                    className={cn(
+                                      'w-full bg-background/40 border border-green-500/10 rounded-md p-2 text-[12px] text-foreground/90 studio-scrollbar resize-none overflow-hidden focus:outline-none focus:ring-1 focus:ring-green-500/30',
+                                      !trackDnaFieldsEditable &&
+                                        'opacity-40 cursor-not-allowed bg-neutral-950/40 border-white/10 text-muted-foreground/70'
+                                    )}
                                     style={{ minHeight: '40px' }}
                                     value={track.direction?.[f.id as keyof Direction] as string || ''}
                                     onChange={(e:any) => {
+                                        if (!trackDnaFieldsEditable) return;
                                         e.target.style.height = 'auto';
                                         e.target.style.height = e.target.scrollHeight + 'px';
                                         handleDNAFieldUpdate(f.id as any, e.target.value);
                                     }}
                                     onFocus={(e:any) => {
+                                        if (!trackDnaFieldsEditable) return;
                                         e.target.style.height = 'auto';
                                         e.target.style.height = e.target.scrollHeight + 'px';
                                     }}
@@ -2142,9 +2266,11 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           if (savedStyle) {
             updateStyleProfile(savedStyle, p.styleMetrics ?? p.analysis?.styleMetrics ?? DEFAULT_STYLE_METRICS);
           }
+          openCoWriterSections?.(COWRITER_SUITE_SECTION_KEYS);
           toast({ title: 'Full DNA Profile Loaded' });
         }}
         updateStyleProfile={updateStyleProfile}
+        openCoWriterSections={openCoWriterSections}
         isPro={isPro}
       />
       <VibeVaultDialog open={vibeVaultOpen} onOpenChange={setVibeVaultOpen} track={track} onUpdateTrack={onUpdateTrack} onApply={(v: any) => onUpdateTrack({ vibe: v })} isPro={isPro} />
@@ -2241,6 +2367,19 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   const handleSectionChange = useCallback((key: CoWriterSectionKey, open: boolean) => {
     setSectionOpen(prev => ({ ...prev, [key]: open }));
+  }, []);
+
+  const openCoWriterSections = useCallback((keys: CoWriterSectionKey | CoWriterSectionKey[]) => {
+    setRightCollapsed(false);
+    setMobilePanelTab('cowriter');
+    const list = Array.isArray(keys) ? keys : [keys];
+    setSectionOpen((prev) => {
+      const next = { ...prev };
+      for (const key of list) {
+        next[key] = true;
+      }
+      return next;
+    });
   }, []);
 
   useEffect(() => {
@@ -2540,6 +2679,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         isPro={isPro}
         sectionOpen={sectionOpen}
         onSectionChange={handleSectionChange}
+        openCoWriterSections={openCoWriterSections}
         mobileActive={mobilePanelTab === 'cowriter'}
         trackLocked={trackLocked}
       />

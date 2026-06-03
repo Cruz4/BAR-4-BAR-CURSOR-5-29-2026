@@ -6,8 +6,13 @@ export function isTrackDnaActive(track: Track): boolean {
   return track.direction?.enabled ?? true;
 }
 
+/** Track toggle: pull album Creative DNA into this track (default on). */
+export function isInheritFromAlbumOn(track: Track): boolean {
+  return track.direction?.inheritFromAlbum !== false;
+}
+
 export function isAlbumDnaActive(track: Track, album?: Album | null): boolean {
-  return track.direction?.inheritFromAlbum !== false && !!album?.direction?.enabled;
+  return isInheritFromAlbumOn(track) && !!album?.direction?.enabled;
 }
 
 export function isVibeActive(track: Track): boolean {
@@ -36,6 +41,8 @@ export function isStyleActive(track: Track): boolean {
 export type WorkstationRuleBadge = { id: string; active: boolean };
 
 const WORKSTATION_BADGE_ACTIVE: Record<string, string> = {
+  INHERIT: 'border-dashed border-emerald-500/55 text-emerald-400 bg-emerald-500/10',
+  'FROM ALBUM': 'border-dashed border-emerald-500/55 text-emerald-400 bg-emerald-500/10',
   'ALBUM DNA': 'border-emerald-500/70 text-emerald-400 bg-emerald-500/10',
   'TRACK DNA': 'border-green-500/70 text-green-400 bg-green-500/10',
   VIBE: 'border-amber-500/70 text-amber-400 bg-amber-500/10',
@@ -83,22 +90,35 @@ export function coWriterIntentRowClass(active: boolean, locked: boolean): string
   );
 }
 
-/** Always lists core rules; inactive ones render grey in the Bar Workstation header. */
+/** Active Co-Writer rules only — shown in the Bar Workstation header when toggled on. */
 export function getWorkstationRuleBadges(track: Track, album?: Album | null): WorkstationRuleBadge[] {
-  const badges: WorkstationRuleBadge[] = [
-    { id: 'TRACK DNA', active: isTrackDnaActive(track) },
-  ];
-  if (album) {
-    badges.push({ id: 'ALBUM DNA', active: isAlbumDnaActive(track, album) });
+  const badges: WorkstationRuleBadge[] = [];
+  const onRealAlbum = !!album && album.id !== 'unassigned';
+
+  if (isInheritFromAlbumOn(track)) {
+    badges.push({ id: 'INHERIT', active: true });
   }
-  badges.push(
-    { id: 'VIBE', active: isVibeActive(track) },
-    { id: 'INTENTS', active: isIntentsActive(track) },
-    { id: 'GUARD', active: isGuardrailsActive(track) },
-    { id: 'STYLE', active: isStyleActive(track) }
-  );
-  if (track.endWith?.trim()) {
-    badges.push({ id: 'END WITH', active: isIntentsActive(track) });
+  if (isTrackDnaActive(track)) {
+    badges.push({ id: 'TRACK DNA', active: true });
   }
+  if (onRealAlbum && isAlbumDnaActive(track, album)) {
+    badges.push({ id: 'ALBUM DNA', active: true });
+  }
+  if (isVibeActive(track)) {
+    badges.push({ id: 'VIBE', active: true });
+  }
+  if (isIntentsActive(track)) {
+    badges.push({ id: 'INTENTS', active: true });
+  }
+  if (track.endWith?.trim() && isIntentsActive(track)) {
+    badges.push({ id: 'END WITH', active: true });
+  }
+  if (isGuardrailsActive(track)) {
+    badges.push({ id: 'GUARD', active: true });
+  }
+  if (isStyleActive(track)) {
+    badges.push({ id: 'STYLE', active: true });
+  }
+
   return badges;
 }

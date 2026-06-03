@@ -387,18 +387,18 @@ function UsagePageContent() {
             </Card>
         </TabsContent>
 
-        <TabsContent value="settings" className="w-full max-w-2xl">
-            <div className="space-y-8">
+        <TabsContent value="settings" className="w-full max-w-3xl">
+            <div className="space-y-10 text-[15px] md:text-base">
                 <StudioProfileSection />
                 {isCloudSyncActive && (
                 <Card className="border-primary/20">
-                    <CardHeader>
-                        <CardTitle className="font-headline text-xl flex items-center gap-2"><CreditCard className="text-primary h-5 w-5"/> Billing & Subscription</CardTitle>
-                        <CardDescription className="text-xs uppercase tracking-tight">Update payment method, invoices, or cancel Pro.</CardDescription>
+                    <CardHeader className="pb-4">
+                        <CardTitle className="font-headline text-2xl flex items-center gap-2.5"><CreditCard className="text-primary h-6 w-6"/> Billing & Subscription</CardTitle>
+                        <CardDescription className="text-sm uppercase tracking-tight">Update payment method, invoices, or cancel Pro.</CardDescription>
                     </CardHeader>
-                    <CardFooter>
+                    <CardFooter className="pt-2">
                         <Button
-                          className="w-full h-11 font-bold uppercase text-[10px]"
+                          className="w-full h-12 font-bold uppercase text-xs md:text-sm"
                           variant="outline"
                           disabled={isCheckingOut}
                           onClick={() => user && openBillingPortal(user.id)}
@@ -409,56 +409,67 @@ function UsagePageContent() {
                 </Card>
                 )}
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="font-headline text-xl flex items-center gap-2"><UserCircle className="text-primary h-5 w-5"/> Artist Profile</CardTitle>
-                        <CardDescription className="text-xs uppercase tracking-tight">Manage your public studio identity.</CardDescription>
+                    <CardHeader className="pb-4">
+                        <CardTitle className="font-headline text-2xl flex items-center gap-2.5"><UserCircle className="text-primary h-6 w-6"/> Artist Profile</CardTitle>
+                        <CardDescription className="text-sm uppercase tracking-tight">Manage your public studio identity.</CardDescription>
                     </CardHeader>
-                    <CardContent><div className="space-y-2"><Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Stage Name</Label><div className="flex gap-2"><Input value={displayNameInput} onChange={(e) => setDisplayNameInput(e.target.value)} className="font-code font-bold h-11" /><Button onClick={() => {}} className="h-11 px-8 font-bold">Save</Button></div></div></CardContent>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <Label className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Stage Name</Label>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <Input value={displayNameInput} onChange={(e) => setDisplayNameInput(e.target.value)} className="font-code font-bold h-12 text-base" />
+                          <Button onClick={() => {}} className="h-12 px-8 font-bold text-sm shrink-0">Save</Button>
+                        </div>
+                      </div>
+                    </CardContent>
                 </Card>
                 <Card className={cn("border-2", !isYearlyUser && "opacity-50")}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="font-headline text-xl">Studio API Bypass (BYO-API)</CardTitle>
-                        {!isYearlyUser && <Badge variant="destructive" className="uppercase tracking-widest text-[10px]">Yearly Pro Only</Badge>}
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <CardTitle className="font-headline text-2xl">Studio API Bypass (BYO-API)</CardTitle>
+                        {!isYearlyUser && <Badge variant="destructive" className="uppercase tracking-widest text-xs shrink-0">Yearly Pro Only</Badge>}
                       </div>
-                      <CardDescription className="text-xs leading-relaxed normal-case tracking-normal text-muted-foreground">
+                      <CardDescription className="text-sm leading-relaxed normal-case tracking-normal text-muted-foreground">
                         Connect your Google AI key for your own API quota and rate limits. Ink still applies — that is the workstation IP fee (DNA flows, guardrails, remix logic), not a second charge for model tokens.
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-5">
                         {customApiKey && (
                         <div className="p-4 bg-accent/5 border border-accent/20 rounded-md">
-                            <p className="text-xs leading-relaxed font-code text-accent font-bold"><Zap className="inline h-3 w-3 mr-1" /> Custom key active — Google bills your API usage; Bar 4 Bar Ink covers studio orchestration only.</p>
+                            <p className="text-sm leading-relaxed font-code text-accent font-bold"><Zap className="inline h-4 w-4 mr-1.5 align-[-2px]" /> Custom key active — Google bills your API usage; Bar 4 Bar Ink covers studio orchestration only.</p>
                         </div>
                         )}
-                        <div className="flex gap-2">
-                            <Input type="password" placeholder="AIza..." value={apiKeyInput} onChange={(e) => setApiKeyInput(e.target.value)} className="font-mono text-sm h-11" />
-                            <Button onClick={() => saveCustomApiKey(apiKeyInput)} className="h-11 px-8 font-bold">Save Key</Button>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <Input type="password" placeholder="AIza..." value={apiKeyInput} onChange={(e) => setApiKeyInput(e.target.value)} className="font-mono text-base h-12" />
+                            <Button onClick={() => saveCustomApiKey(apiKeyInput)} className="h-12 px-8 font-bold text-sm shrink-0">Save Key</Button>
                         </div>
                     </CardContent>
                 </Card>
                 <Card className="border-white/10">
-                    <CardHeader>
-                        <CardTitle className="font-headline text-xl flex items-center gap-2"><Info className="text-primary h-5 w-5"/> Legal &amp; Policies</CardTitle>
-                        <CardDescription className="text-xs uppercase tracking-tight">Terms, privacy, and AI use policies.</CardDescription>
+                    <CardHeader className="pb-4">
+                        <CardTitle className="font-headline text-2xl flex items-center gap-2.5"><Info className="text-primary h-6 w-6"/> Legal &amp; Policies</CardTitle>
+                        <CardDescription className="text-sm uppercase tracking-tight">Terms, privacy, and AI use policies.</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-3 text-sm text-muted-foreground font-code leading-relaxed">
+                    <CardContent className="space-y-4 text-base text-muted-foreground font-code leading-relaxed">
                         <p>Using AI features means you agree to our content policies — including that AI output is assistive, unreviewed, and your responsibility to edit and clear before publishing.</p>
                         <div className="flex flex-wrap gap-3 pt-1">
-                            <Button variant="outline" size="sm" className="h-9 text-[10px] font-bold uppercase" asChild>
+                            <Button variant="outline" className="h-11 px-5 text-xs font-bold uppercase" asChild>
                                 <Link href="/terms">Terms of Service</Link>
                             </Button>
-                            <Button variant="outline" size="sm" className="h-9 text-[10px] font-bold uppercase" asChild>
+                            <Button variant="outline" className="h-11 px-5 text-xs font-bold uppercase" asChild>
                                 <Link href="/privacy">Privacy Policy</Link>
                             </Button>
                         </div>
                     </CardContent>
                 </Card>
                 <Card className="border-red-500/20 bg-red-500/5">
-                    <CardHeader><CardTitle className="font-headline text-xl text-red-500 flex items-center gap-2"><ShieldAlert className="h-5 w-5" /> Danger Zone</CardTitle><CardDescription className="text-xs uppercase tracking-tight text-red-700">Account eradication is permanent.</CardDescription></CardHeader>
+                    <CardHeader className="pb-4">
+                      <CardTitle className="font-headline text-2xl text-red-500 flex items-center gap-2.5"><ShieldAlert className="h-6 w-6" /> Danger Zone</CardTitle>
+                      <CardDescription className="text-sm uppercase tracking-tight text-red-700">Account eradication is permanent.</CardDescription>
+                    </CardHeader>
                     <CardContent>
-                        <p className="text-[10px] text-muted-foreground mb-6 uppercase tracking-wider">Deleting your studio account is permanent. This will erase all concept albums, project DNA, and saved motifs from the vault.</p>
-                        <Button variant="destructive" className="w-full h-12 font-bold uppercase tracking-widest text-[10px]" onClick={() => setDeleteConfirmOpen(true)}><Trash2 className="h-4 w-4" /> Delete Studio Account</Button>
+                        <p className="text-sm text-muted-foreground mb-6 uppercase tracking-wider leading-relaxed">Deleting your studio account is permanent. This will erase all concept albums, project DNA, and saved motifs from the vault.</p>
+                        <Button variant="destructive" className="w-full h-12 font-bold uppercase tracking-widest text-xs md:text-sm" onClick={() => setDeleteConfirmOpen(true)}><Trash2 className="h-5 w-5 mr-2" /> Delete Studio Account</Button>
                     </CardContent>
                 </Card>
             </div>
