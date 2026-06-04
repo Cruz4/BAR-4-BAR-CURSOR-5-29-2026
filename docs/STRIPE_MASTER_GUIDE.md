@@ -11,9 +11,9 @@ If you pay for Ink but the balance doesn't increase, the "Handshake" between Str
 
 ### Step 0: The "Heartbeat" Check
 Open this link in your browser: `https://lyricai-studio-otgxn.web.app/api/stripe/webhook`
-*   **If it shows JSON with "hasSecret: true"**: Your site is live and configured. Look at `secretPrefix`. Does it match the first few characters of the secret in your Stripe Dashboard?
-*   **If it shows "hasSecret: false"**: You have NOT added the `STRIPE_WEBHOOK_SECRET` to Google Cloud.
-*   **If it says "404 Not Found"**: You have not deployed your latest changes. Run `npm run redeploy && firebase deploy`.
+*   **If `ok: true`**: At least one signing secret is loaded. Compare `testPrefix` / `livePrefix` to Stripe Dashboard → Webhooks → **Reveal** (Test vs Live endpoints differ).
+*   **If `ok: false`**: Add `STRIPE_WEBHOOK_SECRET_TEST` (sandbox) and/or `STRIPE_WEBHOOK_SECRET` (live) to `.env`, then `npm run deploy:live`.
+*   **If it says "404 Not Found"**: Deploy latest: `npm run deploy:live`.
 
 ### Step 1: Verify the "Signing Secret" (Most Common Failure)
 There are TWO types of secrets. Using the wrong one will cause a **400 Error**.

@@ -3,6 +3,12 @@ import Stripe from 'stripe';
 import { getDb } from '@/lib/firebase/server';
 import { getStripe } from '@/lib/stripe-server';
 import {
+  constructStripeWebhookEvent,
+  getStripeWebhookSecrets,
+  secretPrefix,
+  webhookSecretHealth,
+} from '@/lib/stripe-webhook-verify';
+import {
   deactivateSubscription,
   fulfillPaidCheckoutSession,
   markWebhookProcessed,
@@ -11,18 +17,13 @@ import {
 
 export const runtime = 'nodejs';
 
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-/** Dev-only health check — no secret material in production responses. */
+/** Health check — prefixes only, never full secrets. */
 export async function GET() {
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ ok: true });
-  }
+  const health = webhookSecretHealth();
   const stripeKey = process.env.STRIPE_SECRET_KEY;
-  const secret = endpointSecret;
   return NextResponse.json({
-    ok: true,
-    hasSecret: Boolean(secret),
+    ok: health.hasLiveSecret || health.hasTestSecret,
+    ...health,
     hasStripeKey: Boolean(stripeKey),
     stripeKeyMode: stripeKey?.startsWith('sk_live_')
       ? 'live'
@@ -30,7 +31,7 @@ export async function GET() {
         ? 'test'
         : 'unknown',
     hint:
-      'Test-mode Stripe webhooks require the test signing secret (whsec_...) from Dashboard → Webhooks → your endpoint → Reveal. Do not use the secret from stripe listen.',
+      'Match livePrefix/testPrefix to Stripe Dashboard → Webhooks → your endpoint → Reveal. Use STRIPE_WEBHOOK_SECRET_TEST for sandbox (b4b-b4b). Do not use stripe listen secrets in production.',
   });
 }
 
@@ -70,8 +71,9 @@ async function resolveSubscriptionUser(
 }
 
 export async function POST(req: Request) {
-  if (!endpointSecret) {
-    console.error('[stripe/webhook] STRIPE_WEBHOOK_SECRET is not configured');
+  const webhookSecrets = getStripeWebhookSecrets();
+  if (webhookSecrets.length === 0) {
+    console.error('[stripe/webhook] No STRIPE_WEBHOOK_SECRET or STRIPE_WEBHOOK_SECRET_TEST configured');
     return NextResponse.json({ error: 'Webhook secret not configured on server.' }, { status: 500 });
   }
 
@@ -91,13 +93,20 @@ export async function POST(req: Request) {
   }
 
   let event: Stripe.Event;
+  let secretUsed: string;
   try {
-    event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
+    const verified = constructStripeWebhookEvent(stripe, body, sig);
+    event = verified.event;
+    secretUsed = verified.secretUsed;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Invalid signature';
+    const health = webhookSecretHealth();
     console.error('[stripe/webhook] signature verification failed', {
       message,
-      secretPrefix: endpointSecret.slice(0, 10),
+      configuredPrefixes: webhookSecrets.map(secretPrefix),
+      hasTestSecret: health.hasTestSecret,
+      hasLiveSecret: health.hasLiveSecret,
+      hint: 'Use signing secret from Stripe Dashboard → Webhooks → endpoint → Reveal (sandbox vs live differ).',
     });
     return NextResponse.json({ error: `Webhook Error: ${message}` }, { status: 400 });
   }
@@ -107,6 +116,13 @@ export async function POST(req: Request) {
   if (!isNew) {
     return NextResponse.json({ received: true, duplicate: true });
   }
+
+  console.info('[stripe/webhook] processing', {
+    type: event.type,
+    eventId: event.id,
+    livemode: event.livemode,
+    secretUsed,
+  });
 
   try {
     switch (event.type) {

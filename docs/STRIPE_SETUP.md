@@ -40,8 +40,26 @@ Local webhook forwarding:
 
 ```bash
 stripe listen --forward-to localhost:9002/api/stripe/webhook
-# Copy the whsec_... from CLI output into .env as STRIPE_WEBHOOK_SECRET for local only
+# CLI whsec_ is for local listen only — do NOT deploy it to Firebase
 ```
+
+### Sandbox webhook (Test mode on production URL)
+
+If Stripe emails **400 signature** errors for `lyricai-studio-otgxn.web.app`:
+
+1. Stripe Dashboard → **Test mode** on → **Developers → Webhooks** → endpoint **`b4b-b4b`** (URL `.../api/stripe/webhook`).
+2. **Reveal** signing secret → set in project root `.env`:
+   ```
+   STRIPE_WEBHOOK_SECRET_TEST=whsec_...
+   ```
+3. Keep `STRIPE_SECRET_KEY=sk_test_...` while testing sandbox checkouts.
+4. Run `npm run stripe:webhook-env` — compare printed prefixes to Dashboard.
+5. Deploy: `npm run deploy:live` (Firebase copies `.env` to Cloud Run).
+6. Stripe → failed event → **Resend** → expect **HTTP 200**.
+
+The server tries **test secret first**, then live (`STRIPE_WEBHOOK_SECRET`). Test and live Dashboard endpoints each have a **different** `whsec_`.
+
+**Heartbeat:** `GET https://lyricai-studio-otgxn.web.app/api/stripe/webhook` returns `hasTestSecret`, `hasLiveSecret`, and `testPrefix` / `livePrefix` (first characters only) — match those to Dashboard **Reveal**.
 
 For Firestore fulfillment locally, add `FIREBASE_SERVICE_ACCOUNT_KEY` (JSON string) to `.env`. After checkout, the app credits Ink on return via `/api/stripe/fulfill-session` (no `stripe listen` required for ink packs). For subscription renewals in production, still configure the live webhook.
 
@@ -99,11 +117,11 @@ Never commit live keys. Set them only in production secrets (below).
    - `invoice.paid`
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
-4. Save and **Reveal** the signing secret → `STRIPE_WEBHOOK_SECRET=whsec_...`
+4. Save and **Reveal** the signing secret → `STRIPE_WEBHOOK_SECRET=whsec_...` (Live mode endpoint)
 
-Use the **Dashboard** signing secret in production — not the secret from `stripe listen` (CLI is local-only).
+Use the **Dashboard** signing secret in production — not the secret from `stripe listen` (CLI is local-only). For sandbox traffic on the same URL, also set `STRIPE_WEBHOOK_SECRET_TEST` from the **Test mode** endpoint.
 
-**Heartbeat check:** open `https://lyricai-studio-otgxn.web.app/api/stripe/webhook` in a browser. You should see JSON with `"hasSecret": true`. If `404`, redeploy. If `hasSecret: false`, the webhook secret is missing in Cloud.
+**Heartbeat check:** open `https://lyricai-studio-otgxn.web.app/api/stripe/webhook` — `ok: true` when at least one secret is set; compare `testPrefix` / `livePrefix` to Dashboard **Reveal**.
 
 ### 5. Customer Portal (billing management)
 
@@ -116,6 +134,7 @@ Set **all** of these on the deployed Firebase/Cloud function (and in `.firebase/
 ```
 STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_WEBHOOK_SECRET_TEST=whsec_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
 NEXT_PUBLIC_APP_URL=https://lyricai-studio-otgxn.web.app
 
@@ -156,7 +175,8 @@ If ink does not update after payment, see `docs/STRIPE_MASTER_GUIDE.md` (signing
 | Variable | Purpose |
 |----------|---------|
 | `STRIPE_SECRET_KEY` | Server API key (`sk_test_` or `sk_live_`) |
-| `STRIPE_WEBHOOK_SECRET` | Webhook signing secret (`whsec_`) |
+| `STRIPE_WEBHOOK_SECRET` | Live webhook signing secret (`whsec_`) |
+| `STRIPE_WEBHOOK_SECRET_TEST` | Sandbox / Test mode webhook signing secret (`whsec_`) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Client key (`pk_test_` or `pk_live_`) |
 | `NEXT_PUBLIC_APP_URL` | Production URL (checkout success/cancel redirects) |
 | `STRIPE_PRICE_*` | Six price IDs (must match the mode of your secret key) |
