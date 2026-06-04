@@ -12,6 +12,13 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import {
+  CelebrationOverlayPortal,
+  CELEBRATION_EMOJI_Z_CLASS,
+  CELEBRATION_MODAL_Z_CLASS,
+  CELEBRATION_OVERLAY_Z_CLASS,
+} from '@/components/gamification/celebration-overlay-portal';
 import {
   PROGRESS_CELEBRATION_EVENT,
   type ProgressCelebrationItem,
@@ -131,6 +138,7 @@ export function ProgressCelebration() {
   const shownKeysRef = useRef(new Set<string>());
   const pointerRef = useRef({ x: 0, y: 0 });
   const emojiTimersRef = useRef<number[]>([]);
+  const dismissButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const onPointer = (e: PointerEvent) => {
@@ -200,55 +208,51 @@ export function ProgressCelebration() {
 
   return (
     <>
-      <div className="pointer-events-none fixed inset-0 z-[249]" aria-hidden>
-        <AnimatePresence>
-          {cursorEmojis.map((item) => (
-            <motion.span
-              key={item.id}
-              className="absolute select-none text-[2.25rem] leading-none drop-shadow-[0_4px_12px_rgba(0,0,0,0.45)]"
-              style={{ left: item.x, top: item.y, translateX: '-50%', translateY: '-50%' }}
-              initial={{ opacity: 0, scale: 0.7, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: -6 }}
-              exit={{ opacity: 0, scale: 1.1, y: -20 }}
-              transition={{ duration: 0.45, ease: 'easeOut' }}
-            >
-              {item.emoji}
-            </motion.span>
-          ))}
-        </AnimatePresence>
-      </div>
+      <CelebrationOverlayPortal>
+        <div className={cn('pointer-events-none fixed inset-0', CELEBRATION_EMOJI_Z_CLASS)} aria-hidden>
+          <AnimatePresence>
+            {cursorEmojis.map((item) => (
+              <motion.span
+                key={item.id}
+                className="absolute select-none text-[2.25rem] leading-none drop-shadow-[0_4px_12px_rgba(0,0,0,0.45)]"
+                style={{ left: item.x, top: item.y, translateX: '-50%', translateY: '-50%' }}
+                initial={{ opacity: 0, scale: 0.7, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: -6 }}
+                exit={{ opacity: 0, scale: 1.1, y: -20 }}
+                transition={{ duration: 0.45, ease: 'easeOut' }}
+              >
+                {item.emoji}
+              </motion.span>
+            ))}
+          </AnimatePresence>
+        </div>
+      </CelebrationOverlayPortal>
 
-      <AnimatePresence>
-        {active && (
-          <motion.div
-            className="fixed inset-0 z-[199] flex items-center justify-center p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="progress-celebration-title"
-          >
-            <motion.button
-              type="button"
-              className="absolute inset-0 bg-black/75"
-              aria-label="Dismiss progress celebration"
-              onClick={dismiss}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            />
-
+      <Dialog open={!!active} onOpenChange={(open) => !open && dismiss()}>
+        <DialogContent
+          overlayClassName={cn(CELEBRATION_OVERLAY_Z_CLASS, 'bg-black/75')}
+          className={cn(
+            CELEBRATION_MODAL_Z_CLASS,
+            'sm:max-w-md gap-0 overflow-hidden rounded-2xl p-0',
+            'bg-gradient-to-b from-background/90 via-background to-background',
+            active ? cardBorderClass(active) : '',
+            '[&>button.absolute]:hidden'
+          )}
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            dismissButtonRef.current?.focus();
+          }}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
+          {active && (
             <motion.div
-              className={cn(
-                'relative w-full max-w-md overflow-hidden rounded-2xl border bg-gradient-to-b from-background/90 via-background to-background',
-                cardBorderClass(active)
-              )}
               initial={{ scale: 0.88, y: 36, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
-              exit={{ scale: 0.94, y: 18, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 280, damping: 24 }}
             >
+              <DialogTitle className="sr-only">
+                {headline(active)}: {active.label}
+              </DialogTitle>
               <div className="relative px-6 pt-8 pb-6 text-center space-y-5">
                 <motion.div
                   className={cn(
@@ -294,6 +298,7 @@ export function ProgressCelebration() {
                 )}
 
                 <Button
+                  ref={dismissButtonRef}
                   size="lg"
                   className={cn(
                     'w-full h-12 font-black uppercase tracking-widest text-xs text-white',
@@ -305,9 +310,9 @@ export function ProgressCelebration() {
                 </Button>
               </div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

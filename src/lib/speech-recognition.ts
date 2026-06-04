@@ -29,8 +29,15 @@ export function getBrowserSpeechRecognition(): BrowserSpeechRecognitionCtor | nu
   return w.SpeechRecognition || w.webkitSpeechRecognition || null;
 }
 
+export function isMobileDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  return /Android|iPhone|iPad|iPod|Mobile|IEMobile|Opera Mini/i.test(ua);
+}
+
 export function isLikelyUnreliableBrowserSpeech(): boolean {
   if (typeof navigator === 'undefined') return true;
+  if (isMobileDevice()) return true;
   const ua = navigator.userAgent;
   if (/Firefox\//i.test(ua)) return true;
   if (/Edg\//i.test(ua)) return false;
@@ -38,6 +45,22 @@ export function isLikelyUnreliableBrowserSpeech(): boolean {
   if (/CriOS\//i.test(ua)) return false;
   if (/Safari\//i.test(ua) && !/Chrome\//i.test(ua)) return true;
   return true;
+}
+
+/** Mic constraints — heavy DSP can zero-out quiet mics on phones and Bluetooth headsets. */
+export function getFreestyleAudioConstraints(): MediaTrackConstraints {
+  if (isMobileDevice()) {
+    return {
+      echoCancellation: true,
+      noiseSuppression: false,
+      autoGainControl: true,
+    };
+  }
+  return {
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true,
+  };
 }
 
 export function speechRecognitionErrorMessage(code: SpeechRecognitionErrorCode): string | null {
@@ -90,8 +113,8 @@ export type AudioSpeechLevel = {
 };
 
 /** Skip API calls when the mic segment is effectively silent (avoids model hallucination). */
-export const MIN_SPEECH_RMS = 0.018;
-export const MIN_SPEECH_PEAK = 0.05;
+export const MIN_SPEECH_RMS = 0.008;
+export const MIN_SPEECH_PEAK = 0.025;
 
 export async function measureAudioSpeechLevel(blob: Blob): Promise<AudioSpeechLevel> {
   if (typeof window === 'undefined') {
@@ -135,8 +158,11 @@ export async function measureAudioSpeechLevel(blob: Blob): Promise<AudioSpeechLe
   }
 }
 
-export function hasDetectableSpeech(level: AudioSpeechLevel): boolean {
-  if (!level.decoded) return false;
+export function hasDetectableSpeech(level: AudioSpeechLevel, blobSizeBytes: number): boolean {
+  // WebM decode often fails in-browser even when Gemini can transcribe the same blob.
+  if (!level.decoded) {
+    return blobSizeBytes >= 2000;
+  }
   return level.rms >= MIN_SPEECH_RMS || level.peak >= MIN_SPEECH_PEAK;
 }
 

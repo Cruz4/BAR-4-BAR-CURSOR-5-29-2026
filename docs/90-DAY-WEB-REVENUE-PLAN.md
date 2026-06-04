@@ -99,7 +99,7 @@ Source of truth in code: `src/lib/studio-tiers.ts`, `src/lib/stripe-catalog.ts`,
 |------|--------|
 | Signup Ink | 300 |
 | Monthly residency Ink | 200 (additive monthly grant) |
-| Projects | 1 album · 2 tracks |
+| Projects | 1 album · 3 tracks |
 | Creative Effects | 3 (Simile, Metaphor, Sound-Alike) |
 | Locked | Performance Mode, Freestyle, full vault I/O, share links |
 | Available | DNA & REMIX, Generation Workstation, PDF export |
@@ -108,7 +108,7 @@ Source of truth in code: `src/lib/studio-tiers.ts`, `src/lib/stripe-catalog.ts`,
 
 | Item | Value |
 |------|--------|
-| Residency Ink | 1,500/mo |
+| Residency Ink | 1,777/mo |
 | Unlocks | Unlimited albums & tracks, all 9 Creative Effects, Performance Mode, Freestyle, vault import/export, shareable DNA Drop links |
 
 ### Pro Yearly — $4.44/mo effective ($53.28/yr billed annually)
@@ -125,9 +125,9 @@ Source of truth in code: `src/lib/studio-tiers.ts`, `src/lib/stripe-catalog.ts`,
 
 | Pack | Ink | Price |
 |------|-----|-------|
-| Session Pack | 280 | $3.44 |
-| Studio Pack | 1,000 | $8.88 |
-| Artist Bundle | 1,800 | $14.44 |
+| Studio Pack | 1,000 | $7.77 |
+| Artist Bundle | 1,800 | $11.11 |
+| Studio Vault | 4,500 | $19.44 |
 | Vault Bundle | 4,000 | (see stripe catalog) |
 
 Yearly Pro gets 50% off at checkout.

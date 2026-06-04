@@ -1,6 +1,6 @@
 /* Bar 4 Bar Studio — PWA shell + visited routes for offline studio */
-const CACHE_NAME = 'b4b-static-v4';
-const SHELL_CACHE = 'b4b-shell-v4';
+const CACHE_NAME = 'b4b-static-v5';
+const SHELL_CACHE = 'b4b-shell-v5';
 const STATIC_ASSETS = ['/Logo.png', '/B4B_Font.otf', '/YUSRB_font.ttf'];
 
 self.addEventListener('install', (event) => {
@@ -68,11 +68,14 @@ self.addEventListener('fetch', (event) => {
       fetch(event.request)
         .then((response) => {
           if (response.ok) {
-            const clone = response.clone();
-            caches.open(SHELL_CACHE).then((cache) => {
-              cache.put(event.request, clone);
-              cache.put(url.pathname, clone);
-            });
+            const forRequest = response.clone();
+            const forPath = response.clone();
+            caches.open(SHELL_CACHE).then((cache) =>
+              Promise.all([
+                cache.put(event.request, forRequest),
+                cache.put(url.pathname, forPath),
+              ])
+            );
           }
           return response;
         })

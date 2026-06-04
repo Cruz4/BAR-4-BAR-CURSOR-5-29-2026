@@ -25,6 +25,7 @@
     "stripe:create-yearly-444": "node scripts/stripe-create-yearly-444.mjs",
     "stripe:create-monthly-777": "node scripts/stripe-create-monthly-777.mjs",
     "stripe:create-live-prices": "node scripts/stripe-create-live-prices.mjs",
+    "stripe:create-ink-packs": "node scripts/stripe-create-ink-packs.mjs",
     "stripe:create-test-yearly-ink-coupon": "node scripts/stripe-create-test-yearly-ink-coupon.mjs",
     "firebase:deploy:rules": "npx firebase deploy --only firestore:rules",
     "firebase:deploy": "npx firebase deploy",

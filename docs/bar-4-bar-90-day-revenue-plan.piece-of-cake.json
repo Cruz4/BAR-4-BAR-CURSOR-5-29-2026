@@ -45,8 +45,8 @@
           "priority": "High",
           "dependencies": ["Lock Core Positioning Statement"],
           "checklist": [
-            "Visitor: 300 signup Ink + 200/mo residency, 1 album, 2 tracks, 3 Creative Effects",
-            "Pro Monthly: $7.77/mo, 1,500 Ink/mo, unlimited projects, full co-writer unlocks",
+            "Visitor: 300 signup Ink + 200/mo residency, 1 album, 3 tracks, 3 Creative Effects",
+            "Pro Monthly: $7.77/mo, 1,777 Ink/mo, unlimited projects, full co-writer unlocks",
             "Pro Yearly: $4.44/mo effective ($53.28/yr), 3,444 Ink/mo, ~43% sub savings vs monthly, 50% off Permanent Ink packs",
             "Push monthly Pro in ads; mention yearly on pricing page and to power users only"
           ]
@@ -406,7 +406,7 @@
             "Cold traffic: Free demo — paste + next bar. Upgrade when 2-track limit or Ink runs low",
             "Warm retarget: Unlock unlimited albums + full co-writer — $7.77/mo for pricing visitors with 3+ AI uses",
             "Heavy users: Yearly pitch — more Ink/mo + 50% off refills when Ink depleted twice in one month",
-            "Free tier limits to reference in ads: 1 album, 2 tracks, 300 signup + 200/mo Ink"
+            "Free tier limits to reference in ads: 1 album, 3 tracks, 300 signup + 200/mo Ink"
           ]
         },
         {
@@ -438,7 +438,7 @@
             "Signups — top of funnel",
             "Activation rate — 1+ AI action (target 40–60% early)",
             "Time to first Generate Next Line — core value moment",
-            "Free limit hits — 2 tracks / low Ink upgrade trigger",
+            "Free limit hits — 3 tracks / low Ink upgrade trigger",
             "Pricing to checkout start to paid — monetization funnel",
             "MRR + ink pack revenue",
             "7-day return rate — stickiness",

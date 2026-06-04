@@ -12,10 +12,10 @@ This replaces older notes about 8,888 Ink, $8.88/mo, or 125 signup Ink.
 | Tier | Price | Residency Ink |
 |------|-------|----------------|
 | Visitor | $0 | **300** signup + **200**/month (additive; can stack up to ~500 in UI pool) |
-| Pro Monthly | $7.77/mo | **1,500**/month (refill sets pool on subscribe + renew) |
+| Pro Monthly | $7.77/mo | **1,777**/month (refill sets pool on subscribe + renew) |
 | Pro Yearly | $53.28/yr ($4.44/mo) | **3,444**/month residency refill |
 
-**Permanent packs (one-time):** Session $3.44 → 280 · Studio $8.88 → 1,000 · Artist $14.44 → 1,800 · Vault $24.44 → 4,000  
+**Permanent packs (one-time):** Studio $7.77 → 1,000 · Artist $11.11 → 1,800 · Vault $19.44 → 4,500  
 **Yearly Pro:** 50% off packs at checkout when `STRIPE_COUPON_YEARLY_INK_50` is configured.
 
 ---

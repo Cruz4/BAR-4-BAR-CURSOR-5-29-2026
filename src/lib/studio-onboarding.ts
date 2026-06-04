@@ -87,7 +87,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
 
 export const FREE_TIER_EXPECTATIONS = {
   headline: 'Free tier — full workflow, system presets',
-  body: 'DNA & REMIX, Generation Workstation, and bar-by-bar AI all work on free Ink. You can load system DNA/Vibe/Style presets. Studio Pro unlocks saving YOUR custom strains, unlimited projects, and cloud sync.',
+  body: 'DNA & REMIX, Generation Workstation, and bar-by-bar AI all work on free Ink (1 album, 3 tracks). You can load system DNA/Vibe/Style presets. Permanent Ink packs can be purchased anytime; Studio Pro unlocks unlimited projects, custom saves, and full vault features.',
   dismissKey: 'b4b-free-tier-expectations-dismissed',
 } as const;
 

@@ -29,7 +29,8 @@ function getFire(): FireFn | null {
     document.body.appendChild(confettiCanvas);
     confettiFire = confetti.create(confettiCanvas, {
       resize: true,
-      useWorker: true,
+      // Off-main-thread worker uses blob: URLs; site CSP has no worker-src, so keep on main thread.
+      useWorker: false,
       disableForReducedMotion: true,
     });
   }

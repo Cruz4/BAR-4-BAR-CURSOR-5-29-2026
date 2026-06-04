@@ -1,7 +1,7 @@
 import type { User } from '@/lib/types';
 
 export const FREE_ALBUM_LIMIT = 1;
-export const FREE_TRACK_LIMIT = 2;
+export const FREE_TRACK_LIMIT = 3;
 export const SIGNUP_INK = 300;
 export const FREE_MONTHLY_RESIDENCY_INK = 200;
 
@@ -40,5 +40,5 @@ export const FREE_TRACK_LIMIT_TOAST = {
   variant: 'destructive' as const,
   title: 'Track Slots Full',
   description:
-    'Free artists get 2 tracks total — any track in an album or Loose Tracks counts. Upgrade for unlimited slots.',
+    'Free artists get 3 tracks total — any track in an album or Loose Tracks counts. Upgrade for unlimited slots.',
 };

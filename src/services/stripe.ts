@@ -7,9 +7,9 @@
 import { useCallback, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/client/firebase';
-import { STRIPE_PRICE_IDS } from '@/lib/stripe-catalog';
+import { STRIPE_PRICE_IDS, type StripePriceKey } from '@/lib/stripe-catalog';
 
-export type StripePriceKey = keyof typeof STRIPE_PRICE_IDS;
+export type { StripePriceKey };
 
 const STRIPE_PRICES = STRIPE_PRICE_IDS;
 
@@ -41,14 +41,11 @@ export function useStripe() {
 
       setIsCheckingOut(true);
       try {
-        const priceId = STRIPE_PRICES[priceKey];
-        if (!priceId) throw new Error('Stripe is not configured.');
-
         const headers = await getAuthHeaders();
         const response = await fetch('/api/stripe/checkout', {
           method: 'POST',
           headers,
-          body: JSON.stringify({ priceId, userId, email }),
+          body: JSON.stringify({ priceKey, userId, email }),
         });
 
         const data = await response.json();

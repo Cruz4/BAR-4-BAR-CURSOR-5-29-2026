@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getCatalogEntry } from '@/lib/stripe-catalog';
+import { getCatalogEntry, resolveStripePriceId } from '@/lib/stripe-catalog';
 import { getStripe, verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 import { getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
@@ -11,10 +11,20 @@ export const runtime = 'nodejs';
 export async function POST(req: Request) {
   try {
     const stripe = getStripe();
-    const { priceId, userId, email } = await req.json();
+    const { priceKey, priceId: clientPriceId, userId, email } = await req.json();
+
+    const priceId =
+      typeof priceKey === 'string' && priceKey.trim()
+        ? resolveStripePriceId(priceKey.trim())
+        : typeof clientPriceId === 'string'
+          ? clientPriceId.trim()
+          : '';
 
     if (!priceId || !userId) {
-      return NextResponse.json({ error: 'Missing priceId or userId' }, { status: 400 });
+      return NextResponse.json(
+        { error: priceKey ? `Unknown or unsupported price key: ${priceKey}` : 'Missing priceKey or userId' },
+        { status: 400 }
+      );
     }
 
     try {

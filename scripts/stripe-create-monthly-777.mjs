@@ -1,5 +1,5 @@
 /**
- * Creates Pro Monthly at $7.77/mo (1,500 residency ink).
+ * Creates Pro Monthly at $7.77/mo (1,777 residency ink).
  * Prints STRIPE_PRICE_PRO_MONTHLY=... for .env
  */
 import { readFileSync, existsSync } from 'fs';
@@ -40,8 +40,8 @@ const price = await stripe.prices.create({
   unit_amount: 777,
   currency: 'usd',
   recurring: { interval: 'month' },
-  nickname: 'Pro Monthly — $7.77/mo · 1,500 residency ink',
-  metadata: { tier: 'monthly', residencyRefill: '1500' },
+  nickname: 'Pro Monthly — $7.77/mo · 1,777 residency ink',
+  metadata: { tier: 'monthly', residencyRefill: '1777' },
 });
 
 console.log('\nPro Monthly price created ($7.77/mo):\n');

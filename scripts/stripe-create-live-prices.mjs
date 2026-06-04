@@ -77,8 +77,8 @@ created.PRO_MONTHLY = await createPrice({
   productName: 'Bar 4 Bar Pro Monthly',
   unitAmount: 777,
   recurring: { interval: 'month' },
-  nickname: 'Pro Monthly — $7.77/mo · 1,500 residency ink',
-  metadata: { tier: 'monthly', residencyRefill: '1500' },
+  nickname: 'Pro Monthly — $7.77/mo · 1,777 residency ink',
+  metadata: { tier: 'monthly', residencyRefill: '1777' },
 });
 
 created.PRO_YEARLY = await createPrice({
@@ -89,32 +89,27 @@ created.PRO_YEARLY = await createPrice({
   metadata: { tier: 'yearly', residencyRefill: '3444' },
 });
 
-created.INK_STARTER = await createPrice({
-  productName: 'Permanent Ink — Session Pack',
-  unitAmount: 344,
-  nickname: 'Session Pack — 280 ink ($3.44)',
-  metadata: { inkAmount: '280', pack: 'INK_STARTER' },
-});
+// Session Pack removed from Ink Store — set STRIPE_PRICE_INK_STARTER in env only for legacy webhook fulfillment.
 
 created.INK_REFILL = await createPrice({
   productName: 'Permanent Ink — Studio Pack',
-  unitAmount: 888,
-  nickname: 'Studio Pack — 1,000 ink ($8.88)',
+  unitAmount: 777,
+  nickname: 'Studio Pack — 1,000 ink ($7.77)',
   metadata: { inkAmount: '1000', pack: 'INK_REFILL' },
 });
 
 created.INK_ARTIST = await createPrice({
   productName: 'Permanent Ink — Artist Bundle',
-  unitAmount: 1444,
-  nickname: 'Artist Bundle — 1,800 ink ($14.44)',
+  unitAmount: 1111,
+  nickname: 'Artist Bundle — 1,800 ink ($11.11)',
   metadata: { inkAmount: '1800', pack: 'INK_ARTIST' },
 });
 
 created.INK_VAULT = await createPrice({
   productName: 'Permanent Ink — Studio Vault',
-  unitAmount: 2444,
-  nickname: 'Studio Vault — 4,000 ink ($24.44)',
-  metadata: { inkAmount: '4000', pack: 'INK_VAULT' },
+  unitAmount: 1944,
+  nickname: 'Studio Vault — 4,500 ink ($19.44)',
+  metadata: { inkAmount: '4500', pack: 'INK_VAULT' },
 });
 
 let couponLine = '';

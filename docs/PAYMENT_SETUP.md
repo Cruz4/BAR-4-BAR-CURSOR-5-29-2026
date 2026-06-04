@@ -1,6 +1,9 @@
 
 # Bar 4 Bar: Quick Payment Checklist
 
+> **Use the full tracked checklist:** [PRE_LAUNCH_CHECKLIST.md](./PRE_LAUNCH_CHECKLIST.md)  
+> Price IDs live in `src/lib/stripe-catalog.ts` (env `STRIPE_PRICE_*`), not `src/services/stripe.ts`.
+
 Follow this checklist to get the Studio economy running.
 
 ## 1. Stripe Dashboard Setup

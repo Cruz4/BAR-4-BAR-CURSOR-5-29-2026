@@ -4,7 +4,7 @@
 Your Ink balance is displayed in the header and on the **Usage & Billing** page.
 
 - **Visitor:** 300 signup Ink + 200 residency Ink per month (can stack; progress bar caps at 500).
-- **Pro Monthly:** 1,500 residency Ink per refill cycle.
+- **Pro Monthly:** 1,777 residency Ink per refill cycle.
 - **Pro Yearly:** 3,444 residency Ink per refill cycle.
 
 ## 2. Rhyme Bars vs Sheet Lines
@@ -15,11 +15,11 @@ Your Ink balance is displayed in the header and on the **Usage & Billing** page.
 See `src/lib/lyrics-units.ts` for conversion helpers.
 
 ## 3. Cloud Sync
-Signed-in artists sync to Firestore. Pro unlocks unlimited albums/tracks and full vault features; Visitors are limited to 1 album and 2 tracks.
+Signed-in artists sync to Firestore. Pro unlocks unlimited albums/tracks and full vault features; Visitors are limited to 1 album and 3 tracks (permanent Ink packs can still be purchased).
 
 ## 4. Cost Reference Table
 
-| Category | Action | Ink Cost | Pro Monthly (~1,500 Ink) |
+| Category | Action | Ink Cost | Pro Monthly (~1,777 Ink) |
 | :--- | :--- | :--- | :--- |
 | **Generation** | Full Studio Draft | 2 per bar | ~750 bars |
 | | Next/Previous Line | 10 | ~150 lines |

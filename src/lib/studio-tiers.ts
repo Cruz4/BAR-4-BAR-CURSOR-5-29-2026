@@ -58,9 +58,77 @@ export function getResidencyProgressPercent(residencyBalance: number, cap: numbe
   return Math.min(100, Math.round((residencyBalance / cap) * 100));
 }
 
+/** Approximate Ink for one full Studio Draft song (Calibration Hub default). */
+export const STUDIO_DRAFT_INK_PER_SONG = 104;
+
 /** Friendly Ink tip — Studio Draft vs line-by-line (shown in onboarding surfaces). */
 export const STUDIO_DRAFT_INK_TIP =
-  'Ink tip: a full default song is about 104 Ink with Studio Draft in the Calibration Hub — line-by-line adds up faster if you use Next/Previous on every bar.';
+  `Ink tip: a full default song is about ${STUDIO_DRAFT_INK_PER_SONG} Ink with Studio Draft in the Calibration Hub — line-by-line adds up faster if you use Next/Previous on every bar.`;
+
+/** Shown above Ink Store pack grid */
+export const INK_STORE_PACK_CONTEXT = `Pro includes monthly residency Ink (${PRO_MONTHLY_INK.toLocaleString()}/mo on ${PRO_MONTHLY_PRICE}); packs are permanent top-ups when your pool runs out.`;
+
+export const INK_PACK_STUDIO_AMOUNT = 1000;
+export const INK_PACK_STUDIO_PRICE = 7.77;
+export const INK_PACK_ARTIST_AMOUNT = 1800;
+export const INK_PACK_ARTIST_PRICE = 11.11;
+export const INK_PACK_VAULT_AMOUNT = 4500;
+export const INK_PACK_VAULT_PRICE = 19.44;
+
+export type InkPackPriceKey = 'INK_REFILL' | 'INK_ARTIST' | 'INK_VAULT';
+
+export type InkPackDefinition = {
+  name: string;
+  ink: number;
+  priceAmount: number;
+  priceKey: InkPackPriceKey;
+  description: string;
+  popular?: boolean;
+  bestValue?: boolean;
+  icon: 'Sparkles' | 'Star' | 'History';
+};
+
+export const INK_PACK_DEFINITIONS: readonly InkPackDefinition[] = [
+  {
+    name: 'Studio Pack',
+    ink: INK_PACK_STUDIO_AMOUNT,
+    priceAmount: INK_PACK_STUDIO_PRICE,
+    priceKey: 'INK_REFILL',
+    description: 'Entry permanent refill — same sticker as one month of Pro, never expires after residency.',
+    popular: true,
+    icon: 'Sparkles',
+  },
+  {
+    name: 'Artist Bundle',
+    ink: INK_PACK_ARTIST_AMOUNT,
+    priceAmount: INK_PACK_ARTIST_PRICE,
+    priceKey: 'INK_ARTIST',
+    description: 'Professional permanent ink for heavy studio weeks.',
+    icon: 'Star',
+  },
+  {
+    name: 'Studio Vault',
+    ink: INK_PACK_VAULT_AMOUNT,
+    priceAmount: INK_PACK_VAULT_PRICE,
+    priceKey: 'INK_VAULT',
+    description: 'Maximum permanent capacity. Best $/ink on packs.',
+    bestValue: true,
+    icon: 'History',
+  },
+] as const;
+
+export function formatInkPackDollars(amount: number): string {
+  return `$${amount.toFixed(2)}`;
+}
+
+/** Vault savings vs buying the same ink via Studio Pack pricing */
+export function getVaultPackSavingsPercent(): number {
+  const studio = INK_PACK_DEFINITIONS[0];
+  const vault = INK_PACK_DEFINITIONS[2];
+  const equivStudioCost = (vault.ink / studio.ink) * studio.priceAmount;
+  if (equivStudioCost <= vault.priceAmount) return 0;
+  return Math.round(((equivStudioCost - vault.priceAmount) / equivStudioCost) * 100);
+}
 
 /** Why Bar 4 Bar vs full-song AI apps (pricing / FAQ). */
 export const COMPETITOR_ANCHOR_COPY =
@@ -99,6 +167,12 @@ export function getProHeadlinePerks(billing: 'monthly' | 'yearly'): readonly str
 }
 
 export const VISITOR_INK_SUMMARY = `${SIGNUP_INK} signup Ink + ${FREE_MONTHLY_RESIDENCY_INK} monthly residency`;
+
+/** Shown on Ink Store for non-Pro artists */
+export const VISITOR_INK_STORE_NOTICE = {
+  headline: 'Visitor studio — permanent Ink available',
+  body: `You can buy permanent Ink and use it on AI tools inside your projects. Visitor limits still apply: ${FREE_ALBUM_LIMIT} album and ${FREE_TRACK_LIMIT} tracks total. Pro unlocks unlimited albums & tracks, custom DNA/Vibe/Style saves, Performance Mode, and full vault features.`,
+} as const;
 
 /** Free tier limits — shown on comparison charts */
 export const VISITOR_FEATURES = [
@@ -174,55 +248,24 @@ export const SEO = {
   url: 'https://lyricai-studio-otgxn.web.app',
 } as const;
 
-/** Ink pack rows for Ink Store (amounts from stripe-catalog) */
+/** Ink pack rows for Ink Store (amounts align with stripe-catalog fulfillment) */
 export function getInkPackRows(isYearlyPro: boolean) {
-  const discount = isYearlyPro ? INK_PACK_YEARLY_DISCOUNT_PERCENT / 100 : 1;
-  const fmt = (n: number) => `$${(n * discount).toFixed(2)}`;
+  const discountMultiplier = isYearlyPro ? 1 - INK_PACK_YEARLY_DISCOUNT_PERCENT / 100 : 1;
   const yearlyLabel = isYearlyPro ? INK_PACK_YEARLY_DISCOUNT_LABEL : null;
-  return [
-    {
-      name: 'Session Pack',
-      ink: 280,
-      originalPrice: '$3.44',
-      price: fmt(3.44),
-      priceKey: 'INK_STARTER' as const,
-      description: 'Quick permanent refill. Never expires — used after residency runs out.',
-      icon: 'Zap' as const,
+  const vaultSavingsPercent = getVaultPackSavingsPercent();
+
+  return INK_PACK_DEFINITIONS.map((pack) => {
+    const discountedAmount = Math.round(pack.priceAmount * discountMultiplier * 100) / 100;
+    return {
+      ...pack,
+      originalPrice: formatInkPackDollars(pack.priceAmount),
+      price: formatInkPackDollars(discountedAmount),
+      priceAmount: pack.priceAmount,
+      discountedPriceAmount: discountedAmount,
+      savingsPercent: pack.bestValue ? vaultSavingsPercent : null,
       discount: yearlyLabel,
-    },
-    {
-      name: 'Studio Pack',
-      ink: 1000,
-      originalPrice: '$8.88',
-      price: fmt(8.88),
-      priceKey: 'INK_REFILL' as const,
-      description: 'Standard permanent refill for active sessions.',
-      popular: true,
-      icon: 'Sparkles' as const,
-      discount: yearlyLabel,
-    },
-    {
-      name: 'Artist Bundle',
-      ink: 1800,
-      originalPrice: '$14.44',
-      price: fmt(14.44),
-      priceKey: 'INK_ARTIST' as const,
-      description: 'Professional permanent ink for heavy studio weeks.',
-      icon: 'Star' as const,
-      discount: yearlyLabel,
-    },
-    {
-      name: 'Studio Vault',
-      ink: 4000,
-      originalPrice: '$24.44',
-      price: fmt(24.44),
-      priceKey: 'INK_VAULT' as const,
-      description: 'Maximum permanent capacity. Best value on packs.',
-      bestValue: true,
-      icon: 'History' as const,
-      discount: yearlyLabel,
-    },
-  ];
+    };
+  });
 }
 
 export function getStudioTierPlans(isCloudSyncActive: boolean, subscriptionTier?: string) {

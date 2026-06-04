@@ -8,7 +8,7 @@
 | Tier | Price | Residency ink/mo |
 |------|-------|------------------|
 | Visitor (free) | $0 | 300 signup + 200/mo refresh |
-| Pro Monthly | $7.77/mo | 1,500 |
+| Pro Monthly | $7.77/mo | 1,777 |
 | Pro Yearly | $4.44/mo ($53.28/yr) | 3,444 |
 
 **Per-action Ink:** see `src/lib/costs.ts` (e.g. Next/Prev Line **10**, Rhyme Pulse **20**, draft **2/bar**, effects **10**). Do not advertise tracks/month in UI.
@@ -17,10 +17,11 @@
 
 | Pack | Price | Ink |
 |------|-------|-----|
-| Session | $3.44 | 280 |
-| Studio | $8.88 | 1,000 |
-| Artist | $14.44 | 1,800 |
-| Vault | $24.44 | 4,000 |
+| Studio | $7.77 | 1,000 |
+| Artist | $11.11 | 1,800 |
+| Vault | $19.44 | 4,500 |
+
+Stripe prices are immutable — after changing amounts, run `npm run stripe:create-ink-packs` (test or live key in `.env`) or `npm run stripe:create-live-prices` for all six prices, then update `STRIPE_PRICE_INK_*` in `.env` and `functions/.env`.
 
 Yearly Pro: **50% off** ink packs at checkout (`STRIPE_COUPON_YEARLY_INK_50`).
 
@@ -151,7 +152,7 @@ NEXT_PUBLIC_APP_URL=https://lyricai-studio-otgxn.web.app
 
 STRIPE_PRICE_PRO_MONTHLY=price_...
 STRIPE_PRICE_PRO_YEARLY=price_...
-STRIPE_PRICE_INK_STARTER=price_...
+# Optional legacy Session Pack (webhook fulfillment only): STRIPE_PRICE_INK_STARTER=price_...
 STRIPE_PRICE_INK_REFILL=price_...
 STRIPE_PRICE_INK_ARTIST=price_...
 STRIPE_PRICE_INK_VAULT=price_...
@@ -174,7 +175,7 @@ firebase deploy
 1. Pricing page shows Pro Yearly **$4.44/mo** ($53.28/yr billed).
 2. Complete a **live** checkout with a real card (or Stripe’s live test card if your account allows it).
 3. Stripe webhook log shows **200** for `checkout.session.completed`.
-4. User profile: `residencyBalance` = **1500** (monthly) or **3444** (yearly); ink packs add permanent balance.
+4. User profile: `residencyBalance` = **1777** (monthly) or **3444** (yearly); ink packs add permanent balance.
 5. Billing portal opens from account settings.
 
 If ink does not update after payment, see `docs/STRIPE_MASTER_GUIDE.md` (signing secret mismatch is the most common cause).

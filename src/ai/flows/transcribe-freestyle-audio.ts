@@ -3,6 +3,12 @@
 import { ai, z } from '@/ai/genkit';
 import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
 import { sanitizeFreestyleTranscript } from '@/lib/freestyle-transcript';
+import {
+  buildFreestyleTranscribePrompt,
+  FREESTYLE_CONTEXT_FIELD_MAX,
+  FREESTYLE_PRIOR_TAIL_CHARS,
+  FREESTYLE_STYLE_CONTEXT_MAX,
+} from '@/lib/freestyle-transcription-context';
 
 export type AiSecuredInput = { idToken: string; userId: string };
 
@@ -11,6 +17,10 @@ const MAX_AUDIO_BASE64_CHARS = 120_000;
 const TranscribeFreestyleInputSchema = z.object({
   audioBase64: z.string().max(MAX_AUDIO_BASE64_CHARS),
   mimeType: z.string().max(80),
+  priorTranscriptTail: z.string().max(FREESTYLE_PRIOR_TAIL_CHARS).optional(),
+  albumTheme: z.string().max(FREESTYLE_CONTEXT_FIELD_MAX).optional(),
+  trackVibeSummary: z.string().max(FREESTYLE_CONTEXT_FIELD_MAX).optional(),
+  styleProfileSummary: z.string().max(FREESTYLE_STYLE_CONTEXT_MAX).optional(),
 });
 export type TranscribeFreestyleInput = z.infer<typeof TranscribeFreestyleInputSchema>;
 
@@ -20,9 +30,6 @@ const TranscribeFreestyleOutputSchema = z.object({
 export type TranscribeFreestyleOutput = z.infer<typeof TranscribeFreestyleOutputSchema>;
 
 const TRANSCRIBE_MODEL = 'googleai/gemini-2.5-flash';
-
-const TRANSCRIBE_INSTRUCTION =
-  'Transcribe only the spoken words in this clip. Use an empty transcript when there is no clear speech. Do not invent lyrics or describe the audio.';
 
 function isRetryableTranscribeError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -35,7 +42,15 @@ function isRetryableTranscribeError(error: unknown): boolean {
   );
 }
 
-async function generateTranscript(mime: string, audioBase64: string): Promise<string> {
+async function generateTranscript(input: TranscribeFreestyleInput): Promise<string> {
+  const mime = input.mimeType.split(';')[0] || 'audio/webm';
+  const instruction = buildFreestyleTranscribePrompt({
+    priorTranscriptTail: input.priorTranscriptTail,
+    albumTheme: input.albumTheme,
+    trackVibeSummary: input.trackVibeSummary,
+    styleProfileSummary: input.styleProfileSummary,
+  });
+
   const response = await ai.generate({
     model: TRANSCRIBE_MODEL,
     config: { temperature: 0 },
@@ -43,11 +58,11 @@ async function generateTranscript(mime: string, audioBase64: string): Promise<st
     prompt: [
       {
         media: {
-          url: `data:${mime};base64,${audioBase64}`,
+          url: `data:${mime};base64,${input.audioBase64}`,
           contentType: mime,
         },
       },
-      { text: TRANSCRIBE_INSTRUCTION },
+      { text: instruction },
     ],
   });
   const parsed = response.output;
@@ -58,12 +73,12 @@ async function generateTranscript(mime: string, audioBase64: string): Promise<st
   return sanitizeFreestyleTranscript(raw);
 }
 
-async function generateTranscriptWithRetry(mime: string, audioBase64: string): Promise<string> {
+async function generateTranscriptWithRetry(input: TranscribeFreestyleInput): Promise<string> {
   const attempts = 3;
   let lastError: unknown;
   for (let i = 0; i < attempts; i += 1) {
     try {
-      return await generateTranscript(mime, audioBase64);
+      return await generateTranscript(input);
     } catch (error) {
       lastError = error;
       if (!isRetryableTranscribeError(error) || i === attempts - 1) break;
@@ -80,8 +95,7 @@ const transcribeFreestyleFlow = ai.defineFlow(
     outputSchema: TranscribeFreestyleOutputSchema,
   },
   async (input) => {
-    const mime = input.mimeType.split(';')[0] || 'audio/webm';
-    const transcript = await generateTranscriptWithRetry(mime, input.audioBase64);
+    const transcript = await generateTranscriptWithRetry(input);
     return { transcript };
   }
 );

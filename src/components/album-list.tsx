@@ -272,7 +272,7 @@ function FreeVisitorVault({
   return (
     <div className="space-y-20 animate-in fade-in duration-700">
       <ProLockBanner>
-        <p className={cn('text-xs', proLockText())}>Visitor Studio · 1 Album · 2 Tracks</p>
+        <p className={cn('text-xs', proLockText())}>Visitor Studio · 1 Album · {FREE_TRACK_LIMIT} Tracks</p>
         <p className="text-[10px] text-muted-foreground mt-1">Everything glowing hot pink is Studio Pro — same look, same upgrade path. Open slots and folder icons are yours; system presets load in the editor.</p>
       </ProLockBanner>
 

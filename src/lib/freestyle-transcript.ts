@@ -55,3 +55,32 @@ export function sanitizeFreestyleTranscript(raw: string): string {
 
   return stripped;
 }
+
+/** Dedupe overlapping words when appending consecutive STT chunks. */
+export function mergeFreestyleTranscriptChunk(prev: string, next: string): string {
+  if (!prev.trim()) return next.trim();
+  if (!next.trim()) return prev.trim();
+
+  const prevWords = prev.trimEnd().split(/\s+/);
+  const nextWords = next.trim().split(/\s+/);
+  const maxOverlap = Math.min(5, prevWords.length, nextWords.length);
+
+  for (let n = maxOverlap; n >= 1; n -= 1) {
+    const tail = prevWords
+      .slice(-n)
+      .join(' ')
+      .toLowerCase()
+      .replace(/[^\w\s']/g, '');
+    const head = nextWords
+      .slice(0, n)
+      .join(' ')
+      .toLowerCase()
+      .replace(/[^\w\s']/g, '');
+    if (tail && tail === head) {
+      const rest = nextWords.slice(n).join(' ');
+      return rest ? `${prev.trimEnd()} ${rest}`.trim() : prev.trimEnd();
+    }
+  }
+
+  return `${prev.trimEnd()} ${next.trim()}`.trim();
+}

@@ -55,7 +55,10 @@ import {
   INK_PACK_YEARLY_DISCOUNT_LABEL,
   STUDIO_DRAFT_INK_TIP,
   COMPETITOR_ANCHOR_COPY,
+  VISITOR_INK_STORE_NOTICE,
+  INK_STORE_PACK_CONTEXT,
 } from '@/lib/studio-tiers';
+import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT } from '@/lib/subscription';
 import { TierPriceSummary } from '@/components/tier-price-summary';
 import { StudioProfileSection } from '@/components/gamification/studio-profile-section';
 import { ReferAFriendSection } from '@/components/refer-a-friend-section';
@@ -145,11 +148,14 @@ function UsagePageContent() {
   const getPricePacks = () =>
     getInkPackRows(isYearlyUser).map((pack) => ({
       ...pack,
-      icon: pack.icon === 'Zap' ? Zap : pack.icon === 'Sparkles' ? Sparkles : pack.icon === 'Star' ? Star : HistoryIcon,
+      icon:
+        pack.icon === 'Sparkles' ? Sparkles : pack.icon === 'Star' ? Star : HistoryIcon,
       discount: isYearlyUser ? INK_PACK_YEARLY_DISCOUNT_LABEL : null,
     }));
 
-  const handleStripeCheckout = (priceKey: 'PRO_MONTHLY' | 'PRO_YEARLY' | 'INK_STARTER' | 'INK_REFILL' | 'INK_ARTIST' | 'INK_VAULT') => {
+  const handleStripeCheckout = (
+    priceKey: 'PRO_MONTHLY' | 'PRO_YEARLY' | 'INK_REFILL' | 'INK_ARTIST' | 'INK_VAULT'
+  ) => {
     if (!user) {
       toast({ variant: 'destructive', title: 'Sign in required', description: 'Log in to purchase or upgrade.' });
       router.push('/login');
@@ -190,7 +196,7 @@ function UsagePageContent() {
                   {isProUser
                     ? isYearlyUser
                       ? 'Yearly Pro residency (3,444/mo refill)'
-                      : 'Monthly Pro residency (1,500/mo refill)'
+                      : 'Monthly Pro residency (1,777/mo refill)'
                     : 'Visitor residency (up to 500 with signup + monthly)'}
                 </p>
             </Card>
@@ -225,6 +231,35 @@ function UsagePageContent() {
         <TabsContent value="buy-ink" className="space-y-8 w-full">
           <ReferAFriendSection />
 
+          {!isProUser && (
+            <div className="border p-6 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg bg-orange-500/5 border-orange-500/25">
+              <div className="flex items-start gap-4 min-w-0">
+                <div className="p-3 rounded-full bg-orange-500/10 shrink-0">
+                  <Info className="h-6 w-6 text-orange-500" />
+                </div>
+                <div className="space-y-1 min-w-0">
+                  <p className="font-bold text-lg uppercase tracking-tight text-orange-600">
+                    {VISITOR_INK_STORE_NOTICE.headline}
+                  </p>
+                  <p className="text-xs text-muted-foreground font-code leading-relaxed">
+                    {VISITOR_INK_STORE_NOTICE.body}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/80 font-code uppercase tracking-wide">
+                    Limits: {FREE_ALBUM_LIMIT} album · {FREE_TRACK_LIMIT} tracks total
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveTab('cloud')}
+                className="shrink-0 font-bold text-[10px] uppercase h-10 px-6 border-orange-500/30"
+              >
+                See Studio Pro
+              </Button>
+            </div>
+          )}
+
           <div className={cn("border p-6 rounded-xl flex items-center justify-between gap-6 shadow-lg", isYearlyUser ? "bg-accent/5 border-accent/20" : "bg-primary/5 border-primary/20")}>
               <div className="flex items-center gap-4">
                   <div className={cn("p-3 rounded-full", isYearlyUser ? "bg-accent/10" : "bg-primary/10")}><TrendingDown className={cn("h-6 w-6", isYearlyUser ? "text-accent" : "text-primary")} /></div>
@@ -236,14 +271,18 @@ function UsagePageContent() {
               {!isYearlyUser && <Button variant="outline" size="sm" onClick={() => setActiveTab('cloud')} className="shrink-0 font-bold text-[10px] uppercase h-10 px-6">Unlock Ink Pack Savings</Button>}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <p className="text-xs text-muted-foreground font-code text-center max-w-2xl mx-auto leading-relaxed">
+            {INK_STORE_PACK_CONTEXT}
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto items-stretch">
             {getPricePacks().map((pack) => (
               <Card 
                 key={pack.name} 
                 className={cn(
-                    "relative flex flex-col transition-all duration-300", 
-                    pack.popular && "border-primary shadow-2xl scale-105 z-10 bg-card/60",
-                    pack.bestValue && "border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.2)] scale-105 z-10 bg-card/60"
+                    "relative flex flex-col h-full transition-all duration-300", 
+                    pack.popular && "border-primary shadow-2xl z-10 bg-card/60",
+                    pack.bestValue && "border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.2)] z-10 bg-card/60"
                 )}
               >
                 {pack.popular && (
@@ -251,9 +290,9 @@ function UsagePageContent() {
                     Most Popular
                   </div>
                 )}
-                {pack.bestValue && (
+                {pack.bestValue && pack.savingsPercent != null && pack.savingsPercent > 0 && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center justify-center whitespace-nowrap px-4 py-1.5 uppercase tracking-widest text-[10px] font-bold bg-emerald-600 text-white shadow-lg rounded-full z-20">
-                    Best Value - Save 25%
+                    Best Value — Save {pack.savingsPercent}%
                   </div>
                 )}
                 <CardHeader className="text-center pt-8">
@@ -268,25 +307,51 @@ function UsagePageContent() {
                     </div>
                     <CardTitle className="font-headline text-lg">{pack.name}</CardTitle>
                 </CardHeader>
-                <CardContent className="text-center flex-grow space-y-4">
-                    <div className="flex items-center justify-center gap-2">
-                        <Droplets className={cn("h-4 w-4", pack.bestValue ? "text-emerald-500" : "text-primary")} />
-                        <span className="text-2xl font-bold font-code">{pack.ink.toLocaleString()}</span>
+                <CardContent className="text-center flex-grow flex flex-col">
+                    <div className="mx-auto w-full max-w-[9rem] flex flex-col items-center gap-1 min-h-[4.5rem]">
+                        <Droplets
+                          className={cn("h-4 w-4", pack.bestValue ? "text-emerald-500" : "text-primary")}
+                          aria-hidden
+                        />
+                        <span className="text-2xl font-bold font-code tabular-nums leading-none">{pack.ink.toLocaleString()}</span>
+                        <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground">Ink</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground font-code uppercase leading-tight min-h-[30px]">{pack.description}</p>
-                    <div className="flex flex-col gap-1">
+                    <p className="text-[10px] text-muted-foreground font-code uppercase leading-tight min-h-[30px] mt-4">{pack.description}</p>
+                    <div className="mx-auto w-full max-w-[9rem] flex flex-col items-center mt-4 min-h-[5.5rem]">
                         {pack.discount ? (
-                            <div className="flex flex-col items-center">
-                                <span className="text-sm text-muted-foreground/50 line-through font-bold">{pack.originalPrice}</span>
-                                <div className={cn("flex items-center gap-1 animate-pulse", pack.bestValue ? "text-emerald-500" : "text-accent")}>
-                                    <TrendingDown className="h-3 w-3"/> 
-                                    <span className="text-2xl font-bold">{pack.price}</span>
-                                </div>
-                                <p className={cn("text-[7px] font-bold uppercase mt-0.5", pack.bestValue ? "text-emerald-600" : "text-accent")}>
-                                    {pack.discount}
-                                </p>
-                            </div>
-                        ) : (<p className="text-2xl font-bold text-foreground">{pack.price}</p>)}
+                          <>
+                            <span className="text-sm text-muted-foreground/50 line-through font-bold tabular-nums leading-none mb-1">
+                              {pack.originalPrice}
+                            </span>
+                            <TrendingDown
+                              className={cn("h-3 w-3 mb-0.5", pack.bestValue ? "text-emerald-500" : "text-accent")}
+                              aria-hidden
+                            />
+                            <span
+                              className={cn(
+                                "text-2xl font-bold font-code tabular-nums leading-none",
+                                pack.bestValue ? "text-emerald-500" : "text-accent"
+                              )}
+                            >
+                              {pack.price}
+                            </span>
+                            <p
+                              className={cn(
+                                "text-[7px] font-bold uppercase mt-1",
+                                pack.bestValue ? "text-emerald-600" : "text-accent"
+                              )}
+                            >
+                              {pack.discount}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <span className="h-3 w-3 mb-0.5" aria-hidden />
+                            <span className="text-2xl font-bold text-foreground font-code tabular-nums leading-none">
+                              {pack.price}
+                            </span>
+                          </>
+                        )}
                     </div>
                 </CardContent>
                 <CardFooter className="px-5 pb-6 pt-2">

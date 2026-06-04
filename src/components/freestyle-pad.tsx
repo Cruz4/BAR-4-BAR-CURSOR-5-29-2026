@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -30,11 +30,18 @@ import {
   isLikelyUnreliableBrowserSpeech,
   measureAudioSpeechLevel,
   pickMediaRecorderMimeType,
+  getFreestyleAudioConstraints,
+  isMobileDevice,
   speechRecognitionErrorMessage,
   MAX_TRANSCRIBE_BLOB_BYTES,
   type BrowserSpeechRecognitionCtor,
 } from '@/lib/speech-recognition';
-import { sanitizeFreestyleTranscript } from '@/lib/freestyle-transcript';
+import {
+  formatTrackVibeForTranscription,
+  FREESTYLE_PRIOR_TAIL_CHARS,
+  truncateFreestyleContextField,
+} from '@/lib/freestyle-transcription-context';
+import { mergeFreestyleTranscriptChunk, sanitizeFreestyleTranscript } from '@/lib/freestyle-transcript';
 
 interface FreestylePadProps {
   open: boolean;
@@ -47,10 +54,12 @@ interface FreestylePadProps {
   isPro: boolean;
 }
 
-/** Complete WebM segment length (stop/start), not timeslice fragments */
-const STUDIO_SEGMENT_MS = 4500;
-const STUDIO_AUDIO_BITS_PER_SECOND = 64_000;
-const MIN_CHUNK_BYTES = 1500;
+/** Complete segment length (stop/start with requestData flush) */
+const STUDIO_SEGMENT_MS = 6500;
+const STUDIO_RECORDER_RESTART_MS = 120;
+const STUDIO_AUDIO_BITS_PER_SECOND = 96_000;
+const MIN_CHUNK_BYTES = 1000;
+const MAX_BROWSER_SPEECH_RESTARTS = 4;
 
 export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, trackVibe, albumTheme, styleProfileSummary, isPro }: FreestylePadProps) {
   const { toast } = useToast();
@@ -71,13 +80,27 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   const segmentChunksRef = useRef<Blob[]>([]);
   const segmentTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const studioChunkBusyRef = useRef(false);
-  const studioChunkQueueRef = useRef<Array<{ blob: Blob; mimeType: string }>>([]);
+  const studioChunkQueueRef = useRef<
+    Array<{ blob: Blob; mimeType: string; priorTranscriptTail: string }>
+  >([]);
+  const transcriptRef = useRef('');
   const networkRetryRef = useRef(false);
   const studioFailNotifiedRef = useRef(false);
+  const silentChunkStreakRef = useRef(0);
+  const browserSpeechRestartRef = useRef(0);
   const [pickupMode, setPickupMode] = useState<'studio' | 'browser'>('studio');
   const { refundInk } = useUsage();
   const { getCost, tooltip } = useInkCosts();
   const { runWithInk } = useTouchInkRunner();
+
+  const transcriptionContext = useMemo(
+    () => ({
+      albumTheme: truncateFreestyleContextField(albumTheme),
+      trackVibeSummary: formatTrackVibeForTranscription(trackVibe),
+      styleProfileSummary: truncateFreestyleContextField(styleProfileSummary, 600),
+    }),
+    [albumTheme, trackVibe, styleProfileSummary]
+  );
 
   const clearSegmentTimer = useCallback(() => {
     if (segmentTimerRef.current) {
@@ -140,7 +163,11 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   const appendTranscript = useCallback((text: string) => {
     const trimmed = sanitizeFreestyleTranscript(text);
     if (!trimmed) return;
-    setTranscript((prev) => (prev ? `${prev.trimEnd()} ${trimmed}` : trimmed));
+    setTranscript((prev) => {
+      const merged = prev ? mergeFreestyleTranscriptChunk(prev, trimmed) : trimmed;
+      transcriptRef.current = merged;
+      return merged;
+    });
   }, []);
 
   const drainStudioChunkQueue = useCallback(async () => {
@@ -149,7 +176,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
     const next = studioChunkQueueRef.current.shift();
     if (!next) return;
 
-    const { blob, mimeType } = next;
+    const { blob, mimeType, priorTranscriptTail } = next;
     if (blob.size < MIN_CHUNK_BYTES || blob.size > MAX_TRANSCRIBE_BLOB_BYTES) {
       void drainStudioChunkQueue();
       return;
@@ -159,12 +186,30 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
     setIsStudioTranscribing(true);
     try {
       const speechLevel = await measureAudioSpeechLevel(blob);
-      if (!hasDetectableSpeech(speechLevel)) {
+      if (!hasDetectableSpeech(speechLevel, blob.size)) {
+        silentChunkStreakRef.current += 1;
+        if (silentChunkStreakRef.current === 3 && !studioFailNotifiedRef.current) {
+          studioFailNotifiedRef.current = true;
+          toast({
+            variant: 'destructive',
+            title: 'No Speech Detected',
+            description:
+              'The mic is open but audio looks silent. Check your input device, speak closer to the mic, or try wired headphones.',
+          });
+        }
         return;
       }
+      silentChunkStreakRef.current = 0;
       const audioBase64 = await blobToBase64(blob);
       const result = await transcribeFreestyleAudio(
-        await withAiAuth({ audioBase64, mimeType })
+        await withAiAuth({
+          audioBase64,
+          mimeType,
+          priorTranscriptTail: priorTranscriptTail || undefined,
+          albumTheme: transcriptionContext.albumTheme || undefined,
+          trackVibeSummary: transcriptionContext.trackVibeSummary || undefined,
+          styleProfileSummary: transcriptionContext.styleProfileSummary || undefined,
+        })
       );
       appendTranscript(result.transcript);
     } catch (err) {
@@ -191,17 +236,44 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       setIsStudioTranscribing(studioChunkQueueRef.current.length > 0);
       void drainStudioChunkQueue();
     }
-  }, [appendTranscript, toast]);
+  }, [appendTranscript, toast, transcriptionContext]);
 
   const enqueueStudioChunk = useCallback(
     (blob: Blob, mimeType: string) => {
-      studioChunkQueueRef.current.push({ blob, mimeType });
+      studioChunkQueueRef.current.push({
+        blob,
+        mimeType,
+        priorTranscriptTail: transcriptRef.current.slice(-FREESTYLE_PRIOR_TAIL_CHARS).trim(),
+      });
       void drainStudioChunkQueue();
     },
     [drainStudioChunkQueue]
   );
 
+  const scheduleStudioRecorderRestart = useCallback((recorder: MediaRecorder) => {
+    if (!listeningRef.current || manualStopRef.current) return;
+    setTimeout(() => {
+      if (!listeningRef.current || manualStopRef.current) return;
+      try {
+        if (recorder.state === 'inactive') {
+          recorder.start();
+        }
+      } catch {
+        /* mobile browsers may reject immediate restart */
+      }
+    }, STUDIO_RECORDER_RESTART_MS);
+  }, []);
+
   const startStudioListening = useCallback(async () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        /* ignore */
+      }
+      recognitionRef.current = null;
+    }
+
     const mimeType = pickMediaRecorderMimeType();
     if (!mimeType) {
       toast({
@@ -217,11 +289,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       const stream =
         mediaStreamRef.current ??
         (await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
+          audio: getFreestyleAudioConstraints(),
         }));
       mediaStreamRef.current = stream;
       studioMimeRef.current = mimeType;
@@ -243,13 +311,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
         const parts = segmentChunksRef.current;
         segmentChunksRef.current = [];
         if (!parts.length) {
-          if (listeningRef.current && !manualStopRef.current) {
-            try {
-              recorder.start();
-            } catch {
-              /* ignore */
-            }
-          }
+          scheduleStudioRecorderRestart(recorder);
           return;
         }
 
@@ -259,13 +321,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
             enforceSessionLimit();
           }
           enqueueStudioChunk(segmentBlob, mimeType);
-          if (listeningRef.current && !manualStopRef.current) {
-            try {
-              recorder.start();
-            } catch {
-              /* ignore */
-            }
-          }
+          scheduleStudioRecorderRestart(recorder);
         })();
       };
 
@@ -282,8 +338,24 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       recorder.start();
       clearSegmentTimer();
       segmentTimerRef.current = setInterval(() => {
-        if (mediaRecorderRef.current?.state === 'recording') {
-          mediaRecorderRef.current.stop();
+        const rec = mediaRecorderRef.current;
+        if (rec?.state === 'recording') {
+          try {
+            if (typeof rec.requestData === 'function') {
+              rec.requestData();
+            }
+          } catch {
+            /* ignore */
+          }
+          setTimeout(() => {
+            if (rec.state === 'recording') {
+              try {
+                rec.stop();
+              } catch {
+                /* ignore */
+              }
+            }
+          }, 40);
         }
       }, STUDIO_SEGMENT_MS);
       listeningRef.current = true;
@@ -300,7 +372,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       refundInk(sessionCostRef.current);
       setIsListening(false);
     }
-  }, [enforceSessionLimit, refundInk, stopListening, toast, enqueueStudioChunk]);
+  }, [enforceSessionLimit, refundInk, scheduleStudioRecorderRestart, stopListening, toast, enqueueStudioChunk]);
 
   const startBrowserListening = useCallback(async () => {
     const SpeechRecognitionAPI = getBrowserSpeechRecognition();
@@ -317,11 +389,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
     try {
       if (!mediaStreamRef.current) {
         mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
+          audio: getFreestyleAudioConstraints(),
         });
       }
     } catch {
@@ -401,12 +469,27 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
 
     recognition.onend = () => {
       if (manualStopRef.current || !listeningRef.current) return;
-      try {
-        recognition.start();
-      } catch {
-        listeningRef.current = false;
-        setIsListening(false);
+      browserSpeechRestartRef.current += 1;
+      if (browserSpeechRestartRef.current > MAX_BROWSER_SPEECH_RESTARTS) {
+        try {
+          recognition.stop();
+        } catch {
+          /* ignore */
+        }
+        recognitionRef.current = null;
+        setInterimTranscript('Switching to studio pickup…');
+        void startStudioListening();
+        return;
       }
+      setTimeout(() => {
+        if (manualStopRef.current || !listeningRef.current) return;
+        try {
+          recognition.start();
+        } catch {
+          recognitionRef.current = null;
+          void startStudioListening();
+        }
+      }, 250);
     };
 
     try {
@@ -425,14 +508,19 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       sessionCostRef.current = sessionCost;
       networkRetryRef.current = false;
       studioFailNotifiedRef.current = false;
+      silentChunkStreakRef.current = 0;
+      browserSpeechRestartRef.current = 0;
       manualStopRef.current = false;
 
       // Start mic after ink/emoji paint — awaiting getUserMedia here stalled the float sequence
       void (async () => {
         const forceStudioOnly = process.env.NEXT_PUBLIC_FREESTYLE_STUDIO_ONLY === '1';
+        const allowBrowserSpeech = process.env.NEXT_PUBLIC_FREESTYLE_BROWSER_SPEECH === '1';
         const canUseBrowserSpeech =
+          allowBrowserSpeech &&
           getBrowserSpeechRecognition() &&
           !isLikelyUnreliableBrowserSpeech() &&
+          !isMobileDevice() &&
           !(await isCapacitorNativeApp());
 
         if (!forceStudioOnly && canUseBrowserSpeech) {
@@ -454,6 +542,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
     if (!open) {
       stopListening();
       setTranscript('');
+      transcriptRef.current = '';
       setInterimTranscript('');
       networkRetryRef.current = false;
     }
@@ -472,8 +561,8 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
           </DialogTitle>
           <DialogDescription className="font-code text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
             {pickupMode === 'browser'
-              ? 'Live speech pickup (Chrome / Edge recommended)'
-              : 'Studio mic pickup · words appear every few seconds'}{' '}
+              ? 'Live speech pickup (experimental)'
+              : 'Studio mic · uses track vibe & style; words every ~6s'}{' '}
             {!isPro && '· (30s demo limit)'}
           </DialogDescription>
         </DialogHeader>
@@ -559,6 +648,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
               variant="ghost"
               onClick={() => {
                 setTranscript('');
+                transcriptRef.current = '';
                 setInterimTranscript('');
               }}
               className="h-11 sm:h-12 px-4 sm:px-6 font-bold text-[10px] sm:text-xs uppercase text-muted-foreground hover:text-red-500 flex-1 sm:flex-none"

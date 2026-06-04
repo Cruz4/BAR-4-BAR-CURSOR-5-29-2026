@@ -19,7 +19,7 @@ if (existsSync(envPath)) {
     if (i === -1) continue;
     const key = t.slice(0, i).trim();
     const val = t.slice(i + 1).trim().replace(/^["']|["']$/g, '');
-    if (!process.env[key]) process.env[key] = val;
+    process.env[key] = val;
   }
 }
 

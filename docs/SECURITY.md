@@ -1,5 +1,7 @@
 # Studio security notes
 
+**Pre-launch tracked checklist:** [PRE_LAUNCH_CHECKLIST.md](./PRE_LAUNCH_CHECKLIST.md)
+
 ## Environment variables
 
 | Variable | Purpose |

@@ -149,27 +149,15 @@ export default function PricingPage() {
   const FAQS = [
     {
       q: 'What is INK?',
-      a: 'Ink is the digital fuel for the Bar 4 Bar Studio logic. Every high-level neural action—from finding complex rhymes to generating full drafts—consumes a specific amount of Ink.',
+      a: 'Ink powers AI tools in the studio—rhyme scans, vibe analysis, Studio Draft, creative effects, and similar actions. Typing your own lyrics, editing bars, saving albums, and moving tracks around does not spend Ink. You only use Ink when you run a billed AI feature.',
     },
     {
       q: 'How is Bar 4 Bar different from Suno or ChatGPT?',
       a: 'Unlike Suno, Udio, or a general chatbot, Bar 4 Bar is a lyric and rhyme workstation: you keep albums, DNA strains, rhyme books, and vault exports. Ink pays for structured drafting and analysis—not finished song audio. Pro is built for writers who want to own the words.',
     },
     {
-      q: 'How can I stretch my Ink while writing?',
-      a: 'Use Studio Draft in the Calibration Hub for full sections (~104 Ink for a typical default song). Next/Previous Line is great for surgical edits but adds up faster if you use it on every bar.',
-    },
-    {
       q: 'What is the difference between Residency and Permanent Ink?',
-      a: 'Residency Ink is provided by your membership and resets monthly—it does not rollover. Permanent Ink is purchased separately, never expires, and is permanent fuel for your workstation.',
-    },
-    {
-      q: 'Who gets the Ink Discounts?',
-      a: 'A 50% discount on Permanent Ink Packs is an exclusive benefit for Yearly Pro members. Monthly Pro members pay standard rates for additional Ink packs.',
-    },
-    {
-      q: 'Is Cloud Sync active on the Free tier?',
-      a: 'Yes. Your work syncs across devices. Free visitors get DNA & REMIX, the Generation Workstation, and PDF/track export — but are limited to one album and two tracks, system vault presets (no custom saves), and three Creative Effects.',
+      a: 'Residency Ink is included with your membership and refills each billing cycle (1,777/mo on Pro Monthly, 3,444/mo on Pro Yearly). Permanent Ink is bought in packs, never expires, and is used after residency runs out.',
     },
     {
       q: 'What is DNA & Remix Mode?',
@@ -184,20 +172,8 @@ export default function PricingPage() {
       a: 'Yes. Bar 4 Bar is built to be your career-long rhyme book. Unlike simple note apps, our Vault allows you to organize unlimited albums and tracks (Pro) in a professional structure.',
     },
     {
-      q: 'What is Studio Roadmap Input?',
-      a: "Yearly Pro members get a direct feedback channel to shape what we build next — feature requests, workflow pain points, and priority votes on the studio roadmap. It's our way of investing in artists who commit for the long haul.",
-    },
-    {
       q: 'How secure is my hardware?',
       a: 'Your lyrics and project DNA are stored in an encrypted cloud environment with real-time backups. We value the privacy of the creative process—your work is yours alone.',
-    },
-    {
-      q: 'Where is Studio Progress?',
-      a: 'The Vault shows a Studio Progress panel (desktop left gutter). Open the full progress board from the header profile menu or at /studio-progress for weekly/monthly goals, rank XP, achievements, and leaderboard compare.',
-    },
-    {
-      q: 'What are achievement share cards?',
-      a: 'In Ink Store → Settings → Studio Profile, tap Share achievement card to export a foil milestone card with your rank, XP, streak, and latest badge — built for social sharing.',
     },
     {
       q: 'How does Refer a Friend work?',

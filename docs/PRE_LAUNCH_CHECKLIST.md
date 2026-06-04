@@ -20,7 +20,7 @@ More detail: [STRIPE_SETUP.md](./STRIPE_SETUP.md) · [SECURITY.md](./SECURITY.md
 | Event | What it does for your app |
 |-------|---------------------------|
 | `checkout.session.completed` | Someone paid — **ink packs** and **first month of Pro** |
-| `invoice.paid` | Pro **renews** each month/year — refills residency Ink (1,500 or 3,444) |
+| `invoice.paid` | Pro **renews** each month/year — refills residency Ink (1,777 or 3,444) |
 | `customer.subscription.updated` | Status changes (e.g. past due, reactivated) |
 | `customer.subscription.deleted` | User **canceled** Pro — app should stop treating them as Pro |
 
@@ -41,12 +41,12 @@ Stripe Dashboard toggle: **Test mode** on. Keys in `.env`: `sk_test_` / `pk_test
 - [ ] All **four** events enabled (see table above)
 - [ ] `STRIPE_WEBHOOK_SECRET_TEST` = Dashboard → Webhooks → **Reveal** (not from `stripe listen`)
 - [ ] Resend an event or pay in test → Stripe shows **HTTP 200**, body `{ "received": true }`
-- [ ] `npm run stripe:verify` — all six prices OK
+- [ ] `npm run stripe:verify` — all six prices OK (ink packs: **777¢ / 1111¢ / 1944¢** — create new prices with `npm run stripe:create-live-prices` if amounts mismatch)
 
 ### Test a real flow on the live site
 
 - [ ] Buy an **ink pack** in test — Stripe opens, Ink balance goes up
-- [ ] Buy **Pro Monthly** in test — account shows Pro, residency Ink (~1,500)
+- [ ] Buy **Pro Monthly** in test — account shows Pro, residency Ink (~1,777)
 - [ ] Billing portal opens (Usage / account settings)
 - [ ] Optional: cancel test sub in portal — app stops showing Pro
 
@@ -69,8 +69,9 @@ Stripe Dashboard toggle: **Test mode** on. Keys in `.env`: `sk_test_` / `pk_test
 ## Part 3 — App behavior (quick pass)
 
 - [ ] Create album + track, lyrics save
-- [ ] Free account: max **1 album**, **2 tracks**
-- [ ] Usage page prices match reality: Pro **$7.77/mo**, Yearly **$4.44/mo** ($53.28/yr), packs **280 / 1k / 1.8k / 4k** Ink
+- [ ] Free account: max **1 album**, **3 tracks**
+- [ ] Usage page prices match reality: Pro **$7.77/mo**, Yearly **$4.44/mo** ($53.28/yr), packs **1k / 1.8k / 4k** Ink
+- [ ] `STRIPE_COUPON_YEARLY_INK_50` set on production (Yearly Pro 50% off packs at Stripe checkout)
 
 ---
 
@@ -129,4 +130,4 @@ Stripe Dashboard toggle: **Test mode** on. Keys in `.env`: `sk_test_` / `pk_test
 
 ---
 
-*Pro Monthly = $7.77/mo + 1,500 residency Ink/mo · Pro Yearly = $53.28/yr + 3,444/mo · See `src/lib/stripe-catalog.ts`.*
+*Pro Monthly = $7.77/mo + 1,777 residency Ink/mo · Pro Yearly = $53.28/yr + 3,444/mo · See `src/lib/stripe-catalog.ts`.*

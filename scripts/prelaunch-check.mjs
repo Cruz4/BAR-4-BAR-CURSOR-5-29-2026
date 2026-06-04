@@ -62,6 +62,9 @@ if (sk.startsWith('sk_test_')) {
 if (!process.env.STRIPE_WEBHOOK_SECRET_TEST?.trim() && sk.startsWith('sk_test_')) {
   console.log('Warning: STRIPE_WEBHOOK_SECRET_TEST not set (sandbox webhooks may fail).');
 }
+if (!process.env.STRIPE_COUPON_YEARLY_INK_50?.trim()) {
+  console.log('Warning: STRIPE_COUPON_YEARLY_INK_50 not set — Yearly Pro ink packs will not auto-discount at Stripe checkout.');
+}
 
 console.log('\nManual blockers still required (see checklist):');
 console.log('  - End-to-end test checkout on production URL');

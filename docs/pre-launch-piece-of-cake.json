@@ -64,7 +64,7 @@
             "Run npm run stripe:verify",
             "Pro Monthly $7.77/mo",
             "Pro Yearly $53.28/yr",
-            "Ink packs: 280 / 1000 / 1800 / 4000 Ink"
+            "Ink packs: 1000 / 1800 / 4500 Ink ($7.77 / $11.11 / $19.44)"
           ]
         },
         {
@@ -111,7 +111,7 @@
         },
         {
           "taskName": "Test Pro subscription checkout (test mode)",
-          "description": "Verify first month Pro activates with correct residency Ink (1500 monthly or 3444 yearly).",
+          "description": "Verify first month Pro activates with correct residency Ink (1777 monthly or 3444 yearly).",
           "priority": "High",
           "dependencies": ["Enable all four Stripe webhook events", "Test ink pack checkout (test mode)"],
           "checklist": [
@@ -206,7 +206,7 @@
         },
         {
           "taskName": "Verify free tier limits",
-          "description": "Free accounts limited to 1 album and 2 tracks.",
+          "description": "Free accounts limited to 1 album and 3 tracks.",
           "priority": "High",
           "dependencies": ["Verify album and track creation"],
           "checklist": [
@@ -216,7 +216,7 @@
         },
         {
           "taskName": "Verify Usage page pricing copy",
-          "description": "Displayed prices match stripe-catalog: Pro $7.77/mo, Yearly $4.44/mo ($53.28/yr), packs 280/1k/1.8k/4k Ink.",
+          "description": "Displayed prices match stripe-catalog: Pro $7.77/mo, Yearly $4.44/mo ($53.28/yr), packs 1k/1.8k/4k Ink.",
           "priority": "Medium",
           "dependencies": ["Verify Stripe price IDs (test mode)"],
           "checklist": [
