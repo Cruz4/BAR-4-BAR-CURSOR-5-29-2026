@@ -152,6 +152,14 @@ export default function PricingPage() {
       a: 'Ink is the digital fuel for the Bar 4 Bar Studio logic. Every high-level neural action—from finding complex rhymes to generating full drafts—consumes a specific amount of Ink.',
     },
     {
+      q: 'How is Bar 4 Bar different from Suno or ChatGPT?',
+      a: 'Unlike Suno, Udio, or a general chatbot, Bar 4 Bar is a lyric and rhyme workstation: you keep albums, DNA strains, rhyme books, and vault exports. Ink pays for structured drafting and analysis—not finished song audio. Pro is built for writers who want to own the words.',
+    },
+    {
+      q: 'How can I stretch my Ink while writing?',
+      a: 'Use Studio Draft in the Calibration Hub for full sections (~104 Ink for a typical default song). Next/Previous Line is great for surgical edits but adds up faster if you use it on every bar.',
+    },
+    {
       q: 'What is the difference between Residency and Permanent Ink?',
       a: 'Residency Ink is provided by your membership and resets monthly—it does not rollover. Permanent Ink is purchased separately, never expires, and is permanent fuel for your workstation.',
     },

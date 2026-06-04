@@ -40,8 +40,8 @@ const price = await stripe.prices.create({
   unit_amount: 5328,
   currency: 'usd',
   recurring: { interval: 'year' },
-  nickname: 'Pro Yearly — $4.44/mo · 2,500 residency ink',
-  metadata: { tier: 'yearly', residencyRefill: '2500' },
+  nickname: 'Pro Yearly — $4.44/mo · 3,444 residency ink',
+  metadata: { tier: 'yearly', residencyRefill: '3444' },
 });
 
 console.log('\nPro Yearly price created ($53.28/yr):\n');

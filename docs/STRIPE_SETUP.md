@@ -1,12 +1,15 @@
 # Stripe go-live checklist (Bar 4 Bar)
 
+**Full tracked pre-launch checklist (ads + live Stripe + QA):** [PRE_LAUNCH_CHECKLIST.md](./PRE_LAUNCH_CHECKLIST.md)  
+**Automated checks:** `npm run prelaunch:check`
+
 ## Pricing model (Suno-calibrated ink economy)
 
 | Tier | Price | Residency ink/mo |
 |------|-------|------------------|
-| Visitor (free) | $0 | 300 signup + 150/mo refresh |
-| Pro Monthly | $7.77/mo | 1,100 |
-| Pro Yearly | $4.44/mo ($53.28/yr) | 2,500 |
+| Visitor (free) | $0 | 300 signup + 200/mo refresh |
+| Pro Monthly | $7.77/mo | 1,500 |
+| Pro Yearly | $4.44/mo ($53.28/yr) | 3,444 |
 
 **Per-action Ink:** see `src/lib/costs.ts` (e.g. Next/Prev Line **10**, Rhyme Pulse **20**, draft **2/bar**, effects **10**). Do not advertise tracks/month in UI.
 
@@ -20,6 +23,8 @@
 | Vault | $24.44 | 4,000 |
 
 Yearly Pro: **50% off** ink packs at checkout (`STRIPE_COUPON_YEARLY_INK_50`).
+
+**Test coupon:** `npm run stripe:create-test-yearly-ink-coupon` (requires `sk_test_...`), then add the printed line to `.env` and `functions/.env` before deploy.
 
 ---
 
@@ -163,7 +168,7 @@ firebase deploy
 1. Pricing page shows Pro Yearly **$4.44/mo** ($53.28/yr billed).
 2. Complete a **live** checkout with a real card (or Stripe’s live test card if your account allows it).
 3. Stripe webhook log shows **200** for `checkout.session.completed`.
-4. User profile: `residencyBalance` = **1100** (monthly) or **2500** (yearly); ink packs add permanent balance.
+4. User profile: `residencyBalance` = **1500** (monthly) or **3444** (yearly); ink packs add permanent balance.
 5. Billing portal opens from account settings.
 
 If ink does not update after payment, see `docs/STRIPE_MASTER_GUIDE.md` (signing secret mismatch is the most common cause).

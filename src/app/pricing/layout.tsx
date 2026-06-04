@@ -3,7 +3,7 @@ import { SEO } from '@/lib/studio-tiers';
 
 export const metadata: Metadata = {
   title: 'Studio Memberships & Pricing',
-  description: `Compare Visitor (free, 300 Ink + 150/mo) vs Studio Pro ($7.77/mo or $4.44/mo yearly). Unlimited projects, custom vault saves, and yearly roadmap input.`,
+  description: `Compare Visitor (free, 300 signup + 200/mo Ink) vs Studio Pro ($7.77/mo or $4.44/mo yearly). Lyric workstation—not full-song AI. Unlimited projects on Pro.`,
   openGraph: {
     title: `Pricing | ${SEO.siteName}`,
     description: SEO.description,

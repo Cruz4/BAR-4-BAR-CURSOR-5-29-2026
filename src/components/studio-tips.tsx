@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { AI_COSTS } from '@/lib/costs';
+import { STUDIO_DRAFT_INK_TIP, COMPETITOR_ANCHOR_COPY } from '@/lib/studio-tiers';
 
 type StudioTip = {
   id: number;
@@ -58,6 +59,8 @@ const STUDIO_TIPS: StudioTip[] = [
   { id: 36, icon: FlaskConical, title: "CREATIVE SYNCING", text: "During full drafts and remix synthesis, the Creative Syncing overlay weaves active DNA, Intents, Style, Vibe, and Special Instructions into one neural pass.", color: "text-cyan-400" },
   { id: 37, kind: 'did-you-know', icon: ScanLine, title: "DNA EXTRACTION", text: "Did you know? DNA & REMIX extraction runs a separate DNA Extraction pass — it maps strains from lyrics without drafting new bars. Archive the profile, then calibrate in the Hub.", color: "text-sky-400" },
   { id: 38, icon: Layers, title: "HUB INSIGHTS TAB", text: "In the Calibration Hub, INSIGHTS shows your latest extraction strains with ⚡ inject buttons. VAULT loads saved album DNA presets — expand entries to cherry-pick individual fields.", color: "text-primary" },
+  { id: 39, kind: 'did-you-know', icon: Lightbulb, title: "SAVE INK ON DRAFTS", text: STUDIO_DRAFT_INK_TIP, color: "text-sky-400" },
+  { id: 40, kind: 'did-you-know', icon: Globe, title: "LYRICS VS FULL SONGS", text: COMPETITOR_ANCHOR_COPY, color: "text-muted-foreground" },
   { id: 39, kind: 'did-you-know', icon: FilePenLine, title: "SPECIAL INSTRUCTIONS", text: "Did you know? Special Instructions in the Hub are a direct creative brief — they are not blended or weighted by remix path percentages.", color: "text-blue-400" },
   { id: 40, icon: Crown, title: "STUDIO RANKS", text: "Earn XP from writing, generating, streaks, and milestones to climb ranks like Headliner and Vault Architect. Track progress on /studio-progress or the Vault sidebar.", color: "text-amber-500" },
   { id: 41, kind: 'did-you-know', icon: Palette, title: "VIBE VAULT", text: "Did you know? Save instrumentation and BPM presets with the folder icon under Track Vibe (Right Panel) — reuse the same sonic palette across every song in the album.", color: "text-amber-600" },

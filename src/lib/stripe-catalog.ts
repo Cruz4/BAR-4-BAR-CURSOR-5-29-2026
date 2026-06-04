@@ -5,8 +5,8 @@
 
 const env = (key: string, fallback: string) => process.env[key]?.trim() || fallback;
 
-export const PRO_MONTHLY_RESIDENCY = 1100;
-export const PRO_YEARLY_RESIDENCY = 2500;
+export const PRO_MONTHLY_RESIDENCY = 1500;
+export const PRO_YEARLY_RESIDENCY = 3444;
 
 export const STRIPE_PRICE_IDS = {
   PRO_MONTHLY: env('STRIPE_PRICE_PRO_MONTHLY', 'price_1TcEHIR1AVjROqp3n5ARXBOo'),

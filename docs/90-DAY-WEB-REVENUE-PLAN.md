@@ -98,7 +98,7 @@ Source of truth in code: `src/lib/studio-tiers.ts`, `src/lib/stripe-catalog.ts`,
 | Item | Value |
 |------|--------|
 | Signup Ink | 300 |
-| Monthly residency Ink | 150 (resets monthly) |
+| Monthly residency Ink | 200 (additive monthly grant) |
 | Projects | 1 album · 2 tracks |
 | Creative Effects | 3 (Simile, Metaphor, Sound-Alike) |
 | Locked | Performance Mode, Freestyle, full vault I/O, share links |
@@ -108,14 +108,14 @@ Source of truth in code: `src/lib/studio-tiers.ts`, `src/lib/stripe-catalog.ts`,
 
 | Item | Value |
 |------|--------|
-| Residency Ink | 1,100/mo |
+| Residency Ink | 1,500/mo |
 | Unlocks | Unlimited albums & tracks, all 9 Creative Effects, Performance Mode, Freestyle, vault import/export, shareable DNA Drop links |
 
 ### Pro Yearly — $4.44/mo effective ($53.28/yr billed annually)
 
 | Item | Value |
 |------|--------|
-| Residency Ink | 2,500/mo |
+| Residency Ink | 3,444/mo |
 | Subscription savings | ~**43%** vs paying $7.77/mo × 12 ($93.24) |
 | Yearly-only perks | **50% off Permanent Ink packs**, BYO Google AI key, Studio Roadmap Input |
 

@@ -1,45 +1,49 @@
-# Bar 4 Bar: Monetization & Owner Protection Deep Dive
+# Bar 4 Bar — Ink economy (current)
 
-This document outlines the high-margin, zero-loss economic architecture of the Bar 4 Bar workstation (5/14/2026 State).
+> **Source of truth:** `src/lib/costs.ts`, `src/lib/subscription.ts`, `src/lib/stripe-catalog.ts`, `src/lib/studio-tiers.ts`  
+> **Payments:** [STRIPE_SETUP.md](./STRIPE_SETUP.md)
 
----
-
-## 1. The "Zero-Loss" Infrastructure
-The application is architected so that the owner (you) never incurs a cost for a user who hasn't paid.
-
-### A. The Free Tier (Local Artist)
-- **Data Storage**: Uses browser `localStorage`. 
-- **Cost to Owner**: **$0.00**. You are not paying for database reads, writes, or storage.
-- **The "Ink" Limit**: Free users start with 125 Ink. Because costs like `findRhymes` are now 10 Ink and `freestyleTranscription` is 12 Ink/min, a free user will consume their entire gift balance quickly.
-- **Data Movement**: Friction of manual movement encourages upgrading to Pro for automated sync.
-
-### B. The Paid Tier (Studio Pro)
-- **Data Storage**: Uses Firebase Firestore (Cloud).
-- **Subscription**: $8.88/mo (The "8-8-8" model).
-- **Net Profit**: After infrastructure and Stripe fees, you profit roughly **$7.10 per user, per month** if they maximize their usage, and ~$8.00 if they don't.
+This replaces older notes about 8,888 Ink, $8.88/mo, or 125 signup Ink.
 
 ---
 
-## 2. Feature-Specific Economic Protection
-Based on the **8,888 Economy**, we have calibrated task costs to protect the studio.
+## Tiers
 
-### The Draft Threshold
-**Calibration**: Drafting now costs **3 Ink per bar**. A standard 216-bar project now costs roughly 648 Ink. A Pro user can generate 40 full songs of this size per month. This provides immense perceived value ($8.88 for 40 songs) while keeping your API bill under $1.50 per user.
+| Tier | Price | Residency Ink |
+|------|-------|----------------|
+| Visitor | $0 | **300** signup + **200**/month (additive; can stack up to ~500 in UI pool) |
+| Pro Monthly | $7.77/mo | **1,500**/month (refill sets pool on subscribe + renew) |
+| Pro Yearly | $53.28/yr ($4.44/mo) | **3,444**/month residency refill |
 
-### The Freestyle Audio Lock
-**Calibration**: Recording costs 12 Ink per minute. This covers the token overhead of real-time transcription while preventing long-duration "mic leaks" from burning your budget.
-
----
-
-## 3. Monetization Summary Table (8,888 Model)
-
-| User Type | Storage | AI Limit (Ink) | Refill Value | Margin |
-| :--- | :--- | :--- | :--- | :--- |
-| **Guest** | Local | 125 (Once) | $0.00 | High |
-| **Pro (Monthly)** | Cloud | 8,888 (Monthly) | $8.88 | **~90%** |
-| **BYO-API Pro** | Cloud | **50% Ink Discount** | Infinite Tokens | **100% (Infinite)** |
+**Permanent packs (one-time):** Session $3.44 → 280 · Studio $8.88 → 1,000 · Artist $14.44 → 1,800 · Vault $24.44 → 4,000  
+**Yearly Pro:** 50% off packs at checkout when `STRIPE_COUPON_YEARLY_INK_50` is configured.
 
 ---
 
-## 4. Owner Safety Guarantee
-By setting the "8,888 Refill" but maintaining the "5 per line" and "10 per pulse" tasks, you ensure that even the most active "Pro" users are massive profit generators. The branding ($8.88 for 8,888 Ink) creates high conversion rates from Local to Pro.
+## Action costs (`costs.ts`)
+
+| Action | Ink |
+|--------|-----|
+| Studio Draft (per bar) | 2 |
+| Next / Previous Line | 10 |
+| Rhyme Pulse | 10 |
+| Train AI on Style | 35 |
+| Analyze Vibe | 20 |
+| Creative Effect | 10 |
+| + Paste Your Lyrics | 8 |
+| DNA Remix (per bar) | 2 |
+| Extract DNA Profile | 10 |
+
+**Ink tip:** Default song structure (~52 bars) ≈ **104 Ink** via Studio Draft; line-by-line on every bar costs roughly **5×** more.
+
+---
+
+## Owner margin
+
+Gemini Flash API cost per action is fractions of a cent (`src/lib/billing.ts`). Subscription + pack pricing is calibrated for high margin at typical usage. Heavy use of `aiVideoDirector` (100) or `aiMusicCowriter` (80) is the main burn risk if those flows grow.
+
+---
+
+## Competitor positioning
+
+Bar 4 Bar is a **lyric workstation** (rhyme book, DNA vault, remix strains)—not Suno/Udio-style full-song generation. Ink funds structured writing tools, not audio renders.

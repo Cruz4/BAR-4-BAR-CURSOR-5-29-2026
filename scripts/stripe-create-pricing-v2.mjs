@@ -52,8 +52,8 @@ created.PRO_MONTHLY = await createPrice({
   productName: 'Bar 4 Bar Pro Monthly',
   unitAmount: 777,
   recurring: { interval: 'month' },
-  nickname: 'Pro Monthly — $7.77/mo · 1,100 residency ink',
-  metadata: { tier: 'monthly', residencyRefill: '1100' },
+  nickname: 'Pro Monthly — $7.77/mo · 1,500 residency ink',
+  metadata: { tier: 'monthly', residencyRefill: '1500' },
 });
 
 created.PRO_YEARLY = await createPrice({

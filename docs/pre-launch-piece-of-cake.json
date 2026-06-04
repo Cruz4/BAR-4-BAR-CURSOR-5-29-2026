@@ -1,0 +1,413 @@
+{
+  "projectName": "Bar 4 Bar — Pre-Launch",
+  "isTimeline": false,
+  "phases": [
+    {
+      "phaseName": "Preparation",
+      "tasks": [
+        {
+          "taskName": "Run prelaunch automated check",
+          "description": "Run npm run prelaunch:check to validate test Stripe keys, webhook secret presence, and all six price IDs in .env.",
+          "priority": "High",
+          "dependencies": [],
+          "checklist": [
+            "Run npm run prelaunch:check in project root",
+            "Confirm all six STRIPE_PRICE_* lines show active in Stripe test mode",
+            "Note: sk_test_ is expected until Part 5 (Go Live)"
+          ]
+        }
+      ]
+    },
+    {
+      "phaseName": "Stripe (Test Mode)",
+      "tasks": [
+        {
+          "taskName": "Configure Stripe webhook endpoint URL",
+          "description": "In Stripe Test mode, set webhook b4b-b4b URL to https://lyricai-studio-otgxn.web.app/api/stripe/webhook",
+          "priority": "High",
+          "dependencies": ["Run prelaunch automated check"],
+          "checklist": [
+            "Stripe Dashboard → Test mode on",
+            "Developers → Webhooks → b4b-b4b",
+            "Confirm endpoint URL matches production path exactly"
+          ]
+        },
+        {
+          "taskName": "Enable all four Stripe webhook events",
+          "description": "Add checkout.session.completed, invoice.paid, customer.subscription.updated, and customer.subscription.deleted. Required for Pro renewals and cancel sync.",
+          "priority": "High",
+          "dependencies": ["Configure Stripe webhook endpoint URL"],
+          "checklist": [
+            "Enable checkout.session.completed (ink + first Pro month)",
+            "Enable invoice.paid (Pro renewal residency Ink refill)",
+            "Enable customer.subscription.updated",
+            "Enable customer.subscription.deleted"
+          ]
+        },
+        {
+          "taskName": "Set STRIPE_WEBHOOK_SECRET_TEST from Dashboard",
+          "description": "Copy signing secret from Dashboard Reveal into .env as STRIPE_WEBHOOK_SECRET_TEST. Do not use stripe listen CLI secret.",
+          "priority": "High",
+          "dependencies": ["Enable all four Stripe webhook events"],
+          "checklist": [
+            "Reveal whsec_ on b4b-b4b endpoint",
+            "Update root .env",
+            "Run npm run stripe:webhook-env and compare prefixes to Dashboard"
+          ]
+        },
+        {
+          "taskName": "Verify Stripe price IDs (test mode)",
+          "description": "Confirm all catalog price IDs exist and match amounts in Stripe test mode.",
+          "priority": "High",
+          "dependencies": ["Run prelaunch automated check"],
+          "checklist": [
+            "Run npm run stripe:verify",
+            "Pro Monthly $7.77/mo",
+            "Pro Yearly $53.28/yr",
+            "Ink packs: 280 / 1000 / 1800 / 4000 Ink"
+          ]
+        },
+        {
+          "taskName": "Sync .env files for deploy",
+          "description": "Ensure root .env and .firebase/lyricai-studio-otgxn/functions/.env have matching Stripe keys and price IDs.",
+          "priority": "High",
+          "dependencies": ["Set STRIPE_WEBHOOK_SECRET_TEST from Dashboard", "Verify Stripe price IDs (test mode)"],
+          "checklist": [
+            "Compare .env and functions/.env Stripe variables",
+            "No malformed price IDs (e.g. trailing _2)"
+          ]
+        },
+        {
+          "taskName": "Deploy to Firebase (test env)",
+          "description": "Deploy app so Cloud Run uses current .env including webhook secrets and prices.",
+          "priority": "High",
+          "dependencies": ["Sync .env files for deploy"],
+          "checklist": [
+            "Run npm run deploy:live",
+            "Confirm deploy completes without function timeout (retry if needed)"
+          ]
+        },
+        {
+          "taskName": "Confirm webhook delivery HTTP 200",
+          "description": "Verify Stripe can POST to webhook with valid signature; expect { received: true }.",
+          "priority": "High",
+          "dependencies": ["Deploy to Firebase (test env)", "Set STRIPE_WEBHOOK_SECRET_TEST from Dashboard"],
+          "checklist": [
+            "Resend a failed event in Stripe Dashboard OR complete new test checkout",
+            "Response status 200",
+            "Optional: GET /api/stripe/webhook shows ok true and hasTestSecret true"
+          ]
+        },
+        {
+          "taskName": "Test ink pack checkout (test mode)",
+          "description": "End-to-end test purchase of permanent Ink on production URL in Stripe test mode.",
+          "priority": "High",
+          "dependencies": ["Confirm webhook delivery HTTP 200", "Verify Stripe price IDs (test mode)"],
+          "checklist": [
+            "Open Usage → buy ink pack",
+            "Stripe Checkout opens (no No such price error)",
+            "After payment, permanent Ink balance increases"
+          ]
+        },
+        {
+          "taskName": "Test Pro subscription checkout (test mode)",
+          "description": "Verify first month Pro activates with correct residency Ink (1500 monthly or 3444 yearly).",
+          "priority": "High",
+          "dependencies": ["Enable all four Stripe webhook events", "Test ink pack checkout (test mode)"],
+          "checklist": [
+            "Subscribe to Pro Monthly or Yearly in test",
+            "Account shows Pro status",
+            "Residency Ink balance matches tier"
+          ]
+        },
+        {
+          "taskName": "Test billing portal (test mode)",
+          "description": "Confirm users can open Stripe Customer Portal from the app.",
+          "priority": "Medium",
+          "dependencies": ["Test Pro subscription checkout (test mode)"],
+          "checklist": [
+            "Open billing portal from Usage or account",
+            "Portal loads without error"
+          ]
+        },
+        {
+          "taskName": "Test cancel subscription in portal (optional)",
+          "description": "Optional: cancel test subscription and confirm app stops treating user as Pro.",
+          "priority": "Low",
+          "dependencies": ["Test billing portal (test mode)"],
+          "checklist": [
+            "Cancel via Customer Portal",
+            "App reflects canceled / non-Pro state"
+          ]
+        }
+      ]
+    },
+    {
+      "phaseName": "Server & Login",
+      "tasks": [
+        {
+          "taskName": "Configure Cloud Function environment variables",
+          "description": "Ensure ssrlyricaistudiootgxn has Gemini key, Stripe keys, and price IDs on Cloud Run (not only local .env).",
+          "priority": "High",
+          "dependencies": ["Deploy to Firebase (test env)"],
+          "checklist": [
+            "GEMINI_API_KEY or GOOGLE_GENAI_API_KEY set",
+            "Stripe test keys and STRIPE_WEBHOOK_SECRET_TEST",
+            "All STRIPE_PRICE_* variables",
+            "NEXT_PUBLIC_APP_URL=https://lyricai-studio-otgxn.web.app"
+          ]
+        },
+        {
+          "taskName": "Verify sign up and login on production",
+          "description": "Auth works on live site including Google and email flows.",
+          "priority": "High",
+          "dependencies": ["Configure Cloud Function environment variables"],
+          "checklist": [
+            "Sign up new test account",
+            "Log out and log back in",
+            "Google popup / email login works"
+          ]
+        },
+        {
+          "taskName": "Verify AI actions and Ink deduction",
+          "description": "Signed-in users can run AI features; Ink deducts correctly.",
+          "priority": "High",
+          "dependencies": ["Verify sign up and login on production"],
+          "checklist": [
+            "Run one paid AI action while signed in",
+            "Confirm Ink balance decreases",
+            "Logged-out users cannot run paid actions"
+          ]
+        },
+        {
+          "taskName": "Deploy Firestore rules if changed",
+          "description": "Push latest firestore.rules to production if modified recently.",
+          "priority": "Medium",
+          "dependencies": ["Deploy to Firebase (test env)"],
+          "checklist": [
+            "Run npm run firebase:deploy:rules if rules changed"
+          ]
+        }
+      ]
+    },
+    {
+      "phaseName": "App QA",
+      "tasks": [
+        {
+          "taskName": "Verify album and track creation",
+          "description": "Core studio flow: create album, add track, write lyrics, cloud save.",
+          "priority": "High",
+          "dependencies": ["Verify sign up and login on production"],
+          "checklist": [
+            "Create album",
+            "Add track and enter lyrics",
+            "Refresh page — data persists"
+          ]
+        },
+        {
+          "taskName": "Verify free tier limits",
+          "description": "Free accounts limited to 1 album and 2 tracks.",
+          "priority": "High",
+          "dependencies": ["Verify album and track creation"],
+          "checklist": [
+            "Attempt third track or second album on free account",
+            "Limit message or block appears"
+          ]
+        },
+        {
+          "taskName": "Verify Usage page pricing copy",
+          "description": "Displayed prices match stripe-catalog: Pro $7.77/mo, Yearly $4.44/mo ($53.28/yr), packs 280/1k/1.8k/4k Ink.",
+          "priority": "Medium",
+          "dependencies": ["Verify Stripe price IDs (test mode)"],
+          "checklist": [
+            "Open Usage / pricing",
+            "Compare to src/lib/stripe-catalog.ts",
+            "No outdated 5000-ink or wrong pack names in ads"
+          ]
+        }
+      ]
+    },
+    {
+      "phaseName": "Legal",
+      "tasks": [
+        {
+          "taskName": "Review terms privacy and cookies pages",
+          "description": "Legal pages live and accurate for AI assistive use and Ink economy before public advertising.",
+          "priority": "High",
+          "dependencies": [],
+          "checklist": [
+            "Read /terms, /privacy, /cookies on production",
+            "Checkout Terms of Service acceptance matches Stripe custom text"
+          ]
+        },
+        {
+          "taskName": "Document paid-but-no-Ink support flow",
+          "description": "Know how to help users: check Stripe webhook 200, Firestore balance, resend event, fulfill-session fallback.",
+          "priority": "Medium",
+          "dependencies": ["Confirm webhook delivery HTTP 200"],
+          "checklist": [
+            "Checklist: Stripe event log → user doc → resend webhook",
+            "Success URL with session_id triggers backup fulfillment"
+          ]
+        }
+      ]
+    },
+    {
+      "phaseName": "Go Live",
+      "tasks": [
+        {
+          "taskName": "Complete test-mode launch readiness",
+          "description": "Gate: all critical test-mode tasks from Stripe, Server, App QA, and Legal phases done before live cutover.",
+          "priority": "High",
+          "dependencies": [
+            "Test Pro subscription checkout (test mode)",
+            "Verify AI actions and Ink deduction",
+            "Verify free tier limits",
+            "Review terms privacy and cookies pages"
+          ],
+          "checklist": [
+            "Part 1 Stripe test items checked",
+            "Part 2 Server & login checked",
+            "Part 3 App QA checked",
+            "Part 4 Legal checked"
+          ]
+        },
+        {
+          "taskName": "Switch Stripe to Live mode",
+          "description": "Begin live cutover in Stripe Dashboard (Live mode toggle).",
+          "priority": "High",
+          "dependencies": ["Complete test-mode launch readiness"],
+          "checklist": [
+            "Stripe Dashboard → Live mode on"
+          ]
+        },
+        {
+          "taskName": "Create live Stripe prices",
+          "description": "Run npm run stripe:create-live-prices and save new live STRIPE_PRICE_* IDs to .env.",
+          "priority": "High",
+          "dependencies": ["Switch Stripe to Live mode"],
+          "checklist": [
+            "Set STRIPE_SECRET_KEY=sk_live_ temporarily for script",
+            "Run npm run stripe:create-live-prices",
+            "Optional: --with-coupon for yearly ink discount",
+            "Run npm run stripe:verify in live mode"
+          ]
+        },
+        {
+          "taskName": "Configure live Stripe API keys",
+          "description": "Set sk_live_ and pk_live_ in .env and Firebase functions .env.",
+          "priority": "High",
+          "dependencies": ["Create live Stripe prices"],
+          "checklist": [
+            "STRIPE_SECRET_KEY=sk_live_...",
+            "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_..."
+          ]
+        },
+        {
+          "taskName": "Configure live webhook and signing secret",
+          "description": "Create or update Live webhook endpoint with live STRIPE_WEBHOOK_SECRET (different whsec_ than test).",
+          "priority": "High",
+          "dependencies": ["Configure live Stripe API keys"],
+          "checklist": [
+            "Live webhook URL: .../api/stripe/webhook",
+            "Reveal live whsec_ → STRIPE_WEBHOOK_SECRET",
+            "Keep STRIPE_WEBHOOK_SECRET_TEST for sandbox only"
+          ]
+        },
+        {
+          "taskName": "Enable four webhook events on live endpoint",
+          "description": "Same four events as test: checkout.session.completed, invoice.paid, subscription updated/deleted.",
+          "priority": "High",
+          "dependencies": ["Configure live webhook and signing secret"],
+          "checklist": [
+            "All four events enabled on Live webhook"
+          ]
+        },
+        {
+          "taskName": "Enable Stripe Customer portal (Live)",
+          "description": "Stripe Settings → Billing → Customer portal enabled for live Pro subscribers.",
+          "priority": "Medium",
+          "dependencies": ["Switch Stripe to Live mode"],
+          "checklist": [
+            "Customer portal enabled in Live mode"
+          ]
+        },
+        {
+          "taskName": "Deploy live configuration",
+          "description": "Deploy with live keys, live prices, and live webhook secret.",
+          "priority": "High",
+          "dependencies": [
+            "Configure live Stripe API keys",
+            "Configure live webhook and signing secret",
+            "Enable four webhook events on live endpoint"
+          ],
+          "checklist": [
+            "Sync .env and functions/.env",
+            "Run npm run deploy:live"
+          ]
+        },
+        {
+          "taskName": "Live smoke test purchase",
+          "description": "One intentional real-money test purchase; confirm webhook 200 and correct Firestore fulfillment.",
+          "priority": "High",
+          "dependencies": ["Deploy live configuration"],
+          "checklist": [
+            "Small live ink pack OR Pro monthly charge",
+            "Stripe webhook shows HTTP 200",
+            "User Ink or Pro status correct in app"
+          ]
+        },
+        {
+          "taskName": "Complete Stripe business verification",
+          "description": "Stripe account identity and payout setup complete if you need to receive payouts.",
+          "priority": "Medium",
+          "dependencies": ["Switch Stripe to Live mode"],
+          "checklist": [
+            "Stripe Dashboard payout / verification complete"
+          ]
+        }
+      ]
+    },
+    {
+      "phaseName": "Post-Launch",
+      "tasks": [
+        {
+          "taskName": "Start advertising",
+          "description": "Begin public marketing after live payment path verified.",
+          "priority": "High",
+          "dependencies": [
+            "Live smoke test purchase",
+            "Review terms privacy and cookies pages",
+            "Verify Usage page pricing copy"
+          ],
+          "checklist": [
+            "Ads and landing copy match current UI and pricing",
+            "Support path ready for paid-but-no-Ink"
+          ]
+        },
+        {
+          "taskName": "Monitor Stripe webhooks daily (first week)",
+          "description": "Check Stripe webhook failure count daily during first week of ads.",
+          "priority": "Medium",
+          "dependencies": ["Start advertising"],
+          "checklist": [
+            "Stripe Dashboard → Webhooks → zero failures",
+            "Optional: spot-check new signups complete first track"
+          ]
+        },
+        {
+          "taskName": "Optional post-launch improvements",
+          "description": "Lower priority: admin metrics cron, custom domain, app stores, audio reference upload.",
+          "priority": "Low",
+          "dependencies": ["Start advertising"],
+          "checklist": [
+            "CRON_SECRET + metrics refresh",
+            "Custom domain + TRUSTED_APP_ORIGINS",
+            "Capacitor / app stores",
+            "Audio → Style DNA feature"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -16,11 +16,11 @@ This document serves as the absolute source of truth for the workstation's desig
 
 ## 2. Professional Logic & Hierarchy
 ### Economic Refill Protocol (2026 State)
-- **Visitor (Free)**: **200 signup Ink** + **100 monthly residency** (resets). **1 album · 2 tracks**. System DNA/Vibe/Style presets (load-only). Three Creative Effects free (Simile, Metaphor, Sound-Alike).
-- **Studio Pro Monthly ($7.77/mo)**: **6,500 Ink** monthly residency refill. Unlimited projects, full vault, all Creative Effects, Performance Mode, Freestyle.
-- **Studio Pro Yearly ($4.44/mo, $53.28/yr)**: **12,000 Ink** monthly residency. **50% permanent Ink pack discount** + BYO-API platform discount.
-- **Permanent Ink Packs**: 1,300 ($2.88) · 5,000 ($8.88) · 8,800 ($14.44) · 18,000 ($28.88) — Yearly Pro pays half.
-- **Task Scaling**: See `src/lib/costs.ts` for live Ink costs per AI action.
+- **Visitor (Free)**: **300 signup Ink** + **200 monthly residency** (additive). **1 album · 2 tracks**. System DNA/Vibe/Style presets (load-only). Three Creative Effects free (Simile, Metaphor, Sound-Alike).
+- **Studio Pro Monthly ($7.77/mo)**: **1,500 Ink** monthly residency refill. Unlimited projects, full vault, all Creative Effects, Performance Mode, Freestyle.
+- **Studio Pro Yearly ($4.44/mo, $53.28/yr)**: **3,444 Ink** monthly residency. **50% permanent Ink pack discount** + BYO-API key (orchestration fee).
+- **Permanent Ink Packs**: 280 ($3.44) · 1,000 ($8.88) · 1,800 ($14.44) · 4,000 ($24.44) — Yearly Pro pays half at checkout.
+- **Task Scaling**: See `src/lib/costs.ts` (e.g. Studio Draft 2/bar, Rhyme Pulse 10, Style Training 35).
 
 ### Generation Workstation (The ∞ Loop)
 - **Compact UI**: Header and Footer reduced by 40% (p-3) to maximize center visibility.

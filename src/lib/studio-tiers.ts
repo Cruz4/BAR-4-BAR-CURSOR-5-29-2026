@@ -6,9 +6,13 @@
 import {
   SIGNUP_INK,
   FREE_MONTHLY_RESIDENCY_INK,
+  FREE_RESIDENCY_POOL_CAP,
   FREE_ALBUM_LIMIT,
   FREE_TRACK_LIMIT,
+  isProUser,
+  isYearlyPro,
 } from '@/lib/subscription';
+import type { User } from '@/lib/types';
 import { PRO_MONTHLY_RESIDENCY, PRO_YEARLY_RESIDENCY } from '@/lib/stripe-catalog';
 
 export const PRO_MONTHLY_PRICE_AMOUNT = 7.77;
@@ -38,6 +42,29 @@ export const INK_PACK_YEARLY_DISCOUNT_LABEL = `${INK_PACK_YEARLY_DISCOUNT_PERCEN
 
 export const PRO_MONTHLY_INK = PRO_MONTHLY_RESIDENCY;
 export const PRO_YEARLY_INK = PRO_YEARLY_RESIDENCY;
+
+/** Residency progress bar denominator (Visitor: 300 signup + 200/mo carryover cap). */
+export function getResidencyPoolCap(
+  user: Pick<User, 'subscriptionStatus' | 'subscriptionTier'> | null | undefined
+): number {
+  if (isProUser(user)) {
+    return isYearlyPro(user) ? PRO_YEARLY_INK : PRO_MONTHLY_INK;
+  }
+  return FREE_RESIDENCY_POOL_CAP;
+}
+
+export function getResidencyProgressPercent(residencyBalance: number, cap: number): number {
+  if (cap <= 0) return 0;
+  return Math.min(100, Math.round((residencyBalance / cap) * 100));
+}
+
+/** Friendly Ink tip — Studio Draft vs line-by-line (shown in onboarding surfaces). */
+export const STUDIO_DRAFT_INK_TIP =
+  'Ink tip: a full default song is about 104 Ink with Studio Draft in the Calibration Hub — line-by-line adds up faster if you use Next/Previous on every bar.';
+
+/** Why Bar 4 Bar vs full-song AI apps (pricing / FAQ). */
+export const COMPETITOR_ANCHOR_COPY =
+  'Unlike Suno or Udio, Bar 4 Bar is a lyric and rhyme workstation — you own the words, DNA strains, and vault; Ink powers drafting and analysis, not finished audio renders.';
 
 export const PRO_FULL_UNLOCK_LINE = 'Full app unlocked — unlimited albums & tracks';
 

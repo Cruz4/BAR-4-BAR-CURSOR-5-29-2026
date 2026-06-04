@@ -127,6 +127,14 @@ const FAQS = [
       a: `The Rhyme Pulse is the round button in the Center Panel top bar. Clicking it initiates a deep phonetic scan of your current sheet for ${AI_COSTS.findRhymes} Ink. It is a one-time scan that updates your highlighting.`
     },
     {
+      q: "How do I save Ink on a full song?",
+      a: "Open the Calibration Hub and run Studio Draft on your sections — a typical default structure is about 104 Ink (2 Ink per bar). Next/Previous Line is perfect for tweaks, but using it on every bar costs more over a full track."
+    },
+    {
+      q: "Is this like Suno or Udio?",
+      a: "No — those tools render full songs. Bar 4 Bar is your rhyme book and DNA workstation: structure, remix strains, rhyme pulse, and vault saves. Ink powers lyric intelligence, not audio generation."
+    },
+    {
       q: "How do I save a Vibe?",
       a: "In the Right Panel under 'Track Vibe', click the folder icon to open the Vibe Vault. You can save your current instrumentation and BPM here for reuse across the project."
     },

@@ -44,7 +44,18 @@ import { db, auth } from '@/lib/firebase/client/firebase';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { updateProfile, deleteUser } from 'firebase/auth';
 import { Progress } from '@/components/ui/progress';
-import { getInkPackRows, getStudioTierPlans, PRO_MONTHLY_INK, PRO_YEARLY_INK, getTierFeatureHighlight, PRO_YEARLY_EXCLUSIVES, INK_PACK_YEARLY_DISCOUNT_SHORT, INK_PACK_YEARLY_DISCOUNT_LABEL } from '@/lib/studio-tiers';
+import {
+  getInkPackRows,
+  getStudioTierPlans,
+  getResidencyPoolCap,
+  getResidencyProgressPercent,
+  getTierFeatureHighlight,
+  PRO_YEARLY_EXCLUSIVES,
+  INK_PACK_YEARLY_DISCOUNT_SHORT,
+  INK_PACK_YEARLY_DISCOUNT_LABEL,
+  STUDIO_DRAFT_INK_TIP,
+  COMPETITOR_ANCHOR_COPY,
+} from '@/lib/studio-tiers';
 import { TierPriceSummary } from '@/components/tier-price-summary';
 import { StudioProfileSection } from '@/components/gamification/studio-profile-section';
 import { ReferAFriendSection } from '@/components/refer-a-friend-section';
@@ -127,6 +138,9 @@ function UsagePageContent() {
   }, [searchParams, toast, router, user?.id, fulfillCheckoutReturn]);
 
   const isYearlyUser = user?.subscriptionTier === 'yearly';
+  const isProUser = user?.subscriptionStatus === 'active';
+  const residencyPoolCap = getResidencyPoolCap(user);
+  const residencyProgress = getResidencyProgressPercent(residencyBalance, residencyPoolCap);
 
   const getPricePacks = () =>
     getInkPackRows(isYearlyUser).map((pack) => ({
@@ -160,13 +174,25 @@ function UsagePageContent() {
             <Badge className={cn("mt-1 uppercase", isCloudSyncActive ? (isYearlyUser ? "bg-accent" : "bg-primary") : "bg-muted text-muted-foreground")}>{isCloudSyncActive ? (isYearlyUser ? 'Yearly Pro' : 'Monthly Pro') : 'Visitor'}</Badge>
           </div>
           <p className="text-muted-foreground font-code">Permanent ink never expires — used after your monthly residency pool runs out.</p>
+          <p className="text-xs text-muted-foreground/90 max-w-2xl leading-relaxed">{COMPETITOR_ANCHOR_COPY}</p>
+          <p className="text-xs text-primary/80 max-w-2xl leading-relaxed flex items-start gap-2">
+            <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            <span>{STUDIO_DRAFT_INK_TIP}</span>
+          </p>
           <div className="flex flex-wrap gap-4 pt-2">
             <Card className="bg-muted/10 border-white/5 p-4 flex flex-col gap-2 min-w-[200px]">
                 <div className="flex justify-between items-center text-[10px] font-bold uppercase text-muted-foreground">
                     <span className="flex items-center gap-1.5"><Clock className="h-3 w-3" /> Residency Ink Pool</span>
                     <span className="font-code text-foreground">{residencyBalance.toLocaleString()}</span>
                 </div>
-                <Progress value={(residencyBalance / (isYearlyUser ? PRO_YEARLY_INK : PRO_MONTHLY_INK)) * 100} className="h-1.5 bg-primary/10" />
+                <Progress value={residencyProgress} className="h-1.5 bg-primary/10" />
+                <p className="text-[8px] text-muted-foreground uppercase">
+                  {isProUser
+                    ? isYearlyUser
+                      ? 'Yearly Pro residency (3,444/mo refill)'
+                      : 'Monthly Pro residency (1,500/mo refill)'
+                    : 'Visitor residency (up to 500 with signup + monthly)'}
+                </p>
             </Card>
             <Card className="bg-muted/10 border-white/5 p-4 flex flex-col gap-2 min-w-[200px]">
                 <div className="flex justify-between items-center text-[10px] font-bold uppercase text-muted-foreground">
@@ -263,17 +289,20 @@ function UsagePageContent() {
                         ) : (<p className="text-2xl font-bold text-foreground">{pack.price}</p>)}
                     </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="px-5 pb-6 pt-2">
                     <Button 
                         className={cn(
-                            "w-full h-10 font-bold shadow-lg text-[10px] uppercase",
+                            "w-full min-h-10 h-auto py-2.5 px-5 sm:px-6 font-bold shadow-lg text-[10px] uppercase tracking-wide gap-2.5 whitespace-normal",
                             pack.bestValue ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""
                         )} 
                         variant={pack.popular ? 'default' : pack.bestValue ? 'default' : 'outline'} 
                         onClick={() => handleStripeCheckout(pack.priceKey)}
                         disabled={isCheckingOut || isProcessingOrder}
                     >
-                        <CreditCard className="mr-2 h-3 w-3" /> {isCheckingOut ? 'Opening Checkout…' : 'Purchase Permanent Ink'}
+                        <CreditCard className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        <span className="text-center leading-snug whitespace-normal">
+                          {isCheckingOut ? 'Opening Checkout…' : 'Purchase Permanent Ink'}
+                        </span>
                     </Button>
                 </CardFooter>
               </Card>

@@ -26,7 +26,7 @@ import { StudioLoader } from '@/components/studio-loader';
 import { BugReportDialog } from './bug-report-dialog';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
-import { PRO_MONTHLY_INK, PRO_YEARLY_INK } from '@/lib/studio-tiers';
+import { getResidencyPoolCap, getResidencyProgressPercent } from '@/lib/studio-tiers';
 import { HowToUseDialog } from './how-to-use-dialog';
 import {
   Popover,
@@ -80,6 +80,8 @@ export function Header() {
   
   const isPro = user?.subscriptionStatus === 'active';
   const isYearly = user?.subscriptionTier === 'yearly';
+  const residencyPoolCap = getResidencyPoolCap(user);
+  const residencyProgress = getResidencyProgressPercent(residencyBalance, residencyPoolCap);
 
   return (
     <>
@@ -157,8 +159,10 @@ export function Header() {
                                     <span className="text-[9px] font-bold uppercase text-muted-foreground flex items-center gap-1.5"><Clock className="h-2.5 w-2.5" /> Residency Ink</span>
                                     <span className="text-xs font-bold font-code">{residencyBalance.toLocaleString()}</span>
                                 </div>
-                                <Progress value={(residencyBalance / (isYearly ? PRO_YEARLY_INK : PRO_MONTHLY_INK)) * 100} className="h-1 bg-primary/10" />
-                                <p className="text-[8px] text-muted-foreground italic uppercase">Monthly Refill Pool - Prioritized</p>
+                                <Progress value={residencyProgress} className="h-1 bg-primary/10" />
+                                <p className="text-[8px] text-muted-foreground italic uppercase">
+                                  {isPro ? 'Monthly residency pool' : 'Visitor pool (300 signup + 200/mo)'}
+                                </p>
                             </div>
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center">

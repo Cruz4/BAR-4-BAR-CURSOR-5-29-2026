@@ -67,7 +67,6 @@ export async function POST(req: Request) {
         ...(userData?.referralCode ? { referralCode: String(userData.referralCode) } : {}),
       },
       automatic_tax: { enabled: false },
-      allow_promotion_codes: true,
       consent_collection: {
         terms_of_service: 'required',
       },
@@ -85,6 +84,7 @@ export async function POST(req: Request) {
     }
 
     if (isSubscription) {
+      sessionParams.allow_promotion_codes = true;
       sessionParams.subscription_data = {
         metadata: {
           userId,
@@ -93,9 +93,13 @@ export async function POST(req: Request) {
       };
     } else {
       sessionParams.customer_creation = stripeCustomerId ? undefined : 'always';
-      const yearlyCoupon = process.env.STRIPE_COUPON_YEARLY_INK_50;
-      if (userData?.subscriptionTier === 'yearly' && userData?.subscriptionStatus === 'active' && yearlyCoupon) {
+      const yearlyCoupon = process.env.STRIPE_COUPON_YEARLY_INK_50?.trim();
+      const qualifiesForYearlyInkDiscount =
+        userData?.subscriptionTier === 'yearly' && userData?.subscriptionStatus === 'active' && Boolean(yearlyCoupon);
+      if (qualifiesForYearlyInkDiscount && yearlyCoupon) {
         sessionParams.discounts = [{ coupon: yearlyCoupon }];
+      } else {
+        sessionParams.allow_promotion_codes = true;
       }
     }
 
