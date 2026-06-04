@@ -1,9 +1,19 @@
 import type { MetadataRoute } from 'next';
-import { SEO } from '@/lib/studio-tiers';
+import { absoluteUrl, SEO } from '@/lib/seo';
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: { userAgent: '*', allow: '/', disallow: ['/admin', '/api/'] },
-    sitemap: `${SEO.url}/sitemap.xml`,
+    rules: {
+      userAgent: '*',
+      allow: '/',
+      disallow: [
+        '/admin',
+        '/api/',
+        '/albums/',
+        '/maintenance',
+      ],
+    },
+    sitemap: absoluteUrl('/sitemap.xml'),
+    host: SEO.url,
   };
 }

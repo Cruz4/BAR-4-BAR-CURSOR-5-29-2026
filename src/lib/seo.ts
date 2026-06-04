@@ -1,0 +1,127 @@
+import type { Metadata } from 'next';
+import { getPublicAppUrl } from '@/lib/app-url';
+
+/** Shared on-page SEO + sitemap/robots (production URL from NEXT_PUBLIC_APP_URL). */
+export const SEO = {
+  siteName: 'Bar 4 Bar Studio',
+  title: 'Bar 4 Bar Studio — AI Rap Lyric Writer & Bar-by-Bar Rhyme Book',
+  description:
+    'AI lyric workstation for rappers and songwriters: paste your verse, keep rhyme scheme, get the next bar, remix DNA strains, and save projects. Free Visitor tier; Studio Pro from $4.44/mo yearly.',
+  keywords: [
+    'bar 4 bar',
+    'bar4bar',
+    'AI lyric writer',
+    'rap lyric writer',
+    'bar by bar songwriting',
+    'rhyme book app',
+    'next bar generator',
+    'songwriting studio',
+    'rap lyrics AI',
+    'lyric workstation',
+    'rhyme scheme helper',
+    'DNA remix lyrics',
+    'creative writing AI',
+  ],
+  url: getPublicAppUrl(),
+  ogImagePath: '/Logo.png',
+  twitterHandle: undefined as string | undefined,
+};
+
+export const PUBLIC_SITEMAP_PATHS: Array<{
+  path: string;
+  changeFrequency: 'weekly' | 'monthly';
+  priority: number;
+}> = [
+  { path: '', changeFrequency: 'weekly', priority: 1 },
+  { path: '/login', changeFrequency: 'weekly', priority: 0.95 },
+  { path: '/pricing', changeFrequency: 'weekly', priority: 0.9 },
+  { path: '/usage', changeFrequency: 'monthly', priority: 0.75 },
+  { path: '/leaderboard', changeFrequency: 'weekly', priority: 0.7 },
+  { path: '/studio-progress', changeFrequency: 'monthly', priority: 0.65 },
+  { path: '/terms', changeFrequency: 'monthly', priority: 0.4 },
+  { path: '/privacy', changeFrequency: 'monthly', priority: 0.4 },
+  { path: '/cookies', changeFrequency: 'monthly', priority: 0.35 },
+];
+
+export function absoluteUrl(path = ''): string {
+  const base = SEO.url.replace(/\/$/, '');
+  if (!path || path === '/') return base;
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+export function buildStructuredDataGraph(): Record<string, unknown>[] {
+  const appUrl = SEO.url;
+  const imageUrl = absoluteUrl(SEO.ogImagePath);
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: SEO.siteName,
+      url: appUrl,
+      description: SEO.description,
+      inLanguage: 'en-US',
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: SEO.siteName,
+      url: appUrl,
+      logo: imageUrl,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: SEO.siteName,
+      url: appUrl,
+      image: imageUrl,
+      applicationCategory: 'MultimediaApplication',
+      operatingSystem: 'Web',
+      description: SEO.description,
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'USD',
+        description: 'Free Visitor tier with optional Studio Pro from $4.44/mo yearly',
+      },
+    },
+  ];
+}
+
+/** Per-route metadata with canonical + Open Graph URL. */
+export function pageMetadata(options: {
+  title: string;
+  description: string;
+  path: string;
+  openGraphTitle?: string;
+}): Metadata {
+  const canonical = absoluteUrl(options.path);
+  const ogTitle = options.openGraphTitle ?? `${options.title} | ${SEO.siteName}`;
+  return {
+    title: options.title,
+    description: options.description,
+    alternates: { canonical },
+    openGraph: {
+      type: 'website',
+      locale: 'en_US',
+      url: canonical,
+      siteName: SEO.siteName,
+      title: ogTitle,
+      description: options.description,
+      images: [
+        {
+          url: SEO.ogImagePath,
+          width: 512,
+          height: 512,
+          alt: `${SEO.siteName} logo`,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ogTitle,
+      description: options.description,
+      images: [SEO.ogImagePath],
+      ...(SEO.twitterHandle ? { site: SEO.twitterHandle } : {}),
+    },
+  };
+}

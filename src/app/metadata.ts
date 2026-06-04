@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { SEO } from '@/lib/studio-tiers';
+import { SEO } from '@/lib/seo';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SEO.url),
@@ -10,13 +10,14 @@ export const metadata: Metadata = {
   description: SEO.description,
   keywords: [...SEO.keywords],
   applicationName: SEO.siteName,
-  authors: [{ name: 'Bar 4 Bar Studio' }],
-  creator: 'Bar 4 Bar Studio',
-  publisher: 'Bar 4 Bar Studio',
+  authors: [{ name: SEO.siteName }],
+  creator: SEO.siteName,
+  publisher: SEO.siteName,
+  category: 'music',
   robots: {
     index: true,
     follow: true,
-    googleBot: { index: true, follow: true },
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large' },
   },
   openGraph: {
     type: 'website',
@@ -25,20 +26,29 @@ export const metadata: Metadata = {
     siteName: SEO.siteName,
     title: SEO.title,
     description: SEO.description,
-    images: [{ url: '/Logo.png', width: 512, height: 512, alt: 'Bar 4 Bar Studio Logo' }],
+    images: [
+      {
+        url: SEO.ogImagePath,
+        width: 512,
+        height: 512,
+        alt: `${SEO.siteName} logo`,
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: SEO.title,
     description: SEO.description,
-    images: ['/Logo.png'],
+    images: [SEO.ogImagePath],
+    ...(SEO.twitterHandle ? { site: SEO.twitterHandle } : {}),
   },
   icons: {
-    icon: '/Logo.png',
-    shortcut: '/Logo.png',
-    apple: '/Logo.png',
+    icon: SEO.ogImagePath,
+    shortcut: SEO.ogImagePath,
+    apple: SEO.ogImagePath,
   },
   alternates: {
     canonical: SEO.url,
   },
+  manifest: '/manifest.webmanifest',
 };

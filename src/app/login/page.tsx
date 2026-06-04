@@ -32,6 +32,7 @@ import { StudioLoader } from '@/components/studio-loader';
 import { cn } from '@/lib/utils';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
+import { captureMarketingRefFromUrl, getStoredMarketingRef } from '@/lib/marketing-attribution';
 import Image from 'next/image';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { REFERRAL_INK_REWARD, REFERRAL_STORAGE_KEY, normalizeReferralCode } from '@/lib/referrals';
@@ -72,6 +73,7 @@ function LoginForm() {
   };
 
   useEffect(() => {
+    captureMarketingRefFromUrl();
     const ref = normalizeReferralCode(searchParams.get('ref'));
     if (ref) {
       try {
@@ -117,10 +119,16 @@ function LoginForm() {
           userData.subscriptionStatus = 'none';
           userData.subscriptionTier = 'none';
           userData.status = 'active';
+          const signupRef = getStoredMarketingRef();
+          if (signupRef) userData.signupAttribution = signupRef;
         }
         await setDoc(userRef, userData, { merge: true });
         if (isNew) {
-          await trackStudioEvent(ANALYTICS_EVENTS.SIGNUP, { method: authMode === 'signup' ? 'email' : 'google' });
+          const signupRef = getStoredMarketingRef();
+          await trackStudioEvent(ANALYTICS_EVENTS.SIGNUP, {
+            method: authMode === 'signup' ? 'email' : 'google',
+            ...(signupRef ? { ref: signupRef } : {}),
+          });
           await applyReferralIfNew(firebaseUser.uid);
         }
         return isNew;

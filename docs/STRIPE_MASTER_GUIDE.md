@@ -10,7 +10,7 @@ This is your **Absolute Source of Truth** for getting paid. Follow these steps t
 If you pay for Ink but the balance doesn't increase, the "Handshake" between Stripe and your server is failing.
 
 ### Step 0: The "Heartbeat" Check
-Open this link in your browser: `https://lyricai-studio-otgxn.web.app/api/stripe/webhook`
+Open this link in your browser: `https://bar4bar.ink/api/stripe/webhook`
 *   **If `ok: true`**: At least one signing secret is loaded. Compare `testPrefix` / `livePrefix` to Stripe Dashboard → Webhooks → **Reveal** (Test vs Live endpoints differ).
 *   **If `ok: false`**: Add `STRIPE_WEBHOOK_SECRET_TEST` (sandbox) and/or `STRIPE_WEBHOOK_SECRET` (live) to `.env`, then `npm run deploy:live`.
 *   **If it says "404 Not Found"**: Deploy latest: `npm run deploy:live`.
@@ -26,7 +26,7 @@ There are TWO types of secrets. Using the wrong one will cause a **400 Error**.
 3.  Scroll down to **"Succeeded"** or **"Failed"** attempts.
 4.  **Click on an event**. It will show you the **Response**:
     *   **400**: Verification failed. Your `STRIPE_WEBHOOK_SECRET` is wrong. Double-check Step 1.
-    *   **404**: Stripe is hitting the wrong URL. Ensure the URL in Stripe is exactly `https://lyricai-studio-otgxn.web.app/api/stripe/webhook`.
+    *   **404**: Stripe is hitting the wrong URL. Ensure the URL in Stripe is exactly `https://bar4bar.ink/api/stripe/webhook`.
     *   **500**: The server crashed. Check the Google Cloud Logs (Step 3).
 
 ### Step 3: View Live Server Logs
@@ -77,7 +77,7 @@ const STRIPE_PRICES = {
 
 1.  **In Stripe**: Go to **Developers** > **Webhooks**.
 2.  **Click "Add endpoint"**.
-3.  **Endpoint URL**: `https://lyricai-studio-otgxn.web.app/api/stripe/webhook`
+3.  **Endpoint URL**: `https://bar4bar.ink/api/stripe/webhook`
 4.  **Select Events**: Choose `checkout.session.completed`.
 5.  **Click "Add events"** then **"Add endpoint"**.
 6.  **Get your Secret**: Click "Reveal" on the **Signing secret**. It starts with `whsec_`.

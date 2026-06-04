@@ -230,23 +230,7 @@ export function getTierFeatureHighlight(
   return 'pro';
 }
 
-export const SEO = {
-  siteName: 'Bar 4 Bar Studio',
-  title: 'Bar 4 Bar Studio | AI Lyric Workstation & Rhyme Book',
-  description:
-    'Professional AI-powered lyric workstation. Write, rhyme, remix, and archive DNA strains. Free tier with 300 Ink; Studio Pro from $4.44/mo yearly with unlimited projects.',
-  keywords: [
-    'AI lyric writer',
-    'rhyme book app',
-    'songwriting studio',
-    'rap lyrics generator',
-    'lyric workstation',
-    'Bar 4 Bar',
-    'DNA remix lyrics',
-    'creative writing AI',
-  ],
-  url: 'https://lyricai-studio-otgxn.web.app',
-} as const;
+export { SEO } from '@/lib/seo';
 
 /** Ink pack rows for Ink Store (amounts align with stripe-catalog fulfillment) */
 export function getInkPackRows(isYearlyPro: boolean) {

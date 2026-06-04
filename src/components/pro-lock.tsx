@@ -9,6 +9,17 @@ import { PRO_LOCK, proLockShell, proLockIcon, proLockText, markBarAnchorGlow } f
 
 export { PRO_LOCK, proLockShell, proLockIcon, proLockText, markBarAnchorGlow };
 
+/** Gold styling for Pro “create new” album / track slots — bright at rest, richer on hover. */
+export const GOLD_CREATE_SLOT = {
+  shell:
+    'border-amber-400/40 bg-amber-500/[0.07] group-hover:border-amber-300/55 group-hover:bg-amber-400/[0.12] group-hover:shadow-[0_0_28px_rgba(251,191,36,0.28)]',
+  inner:
+    'border-amber-400/45 bg-amber-500/[0.1] group-hover:border-amber-300/60 group-hover:bg-amber-400/20',
+  plus: 'text-amber-200/80 group-hover:text-amber-50',
+  title: 'text-amber-100/85 group-hover:text-amber-50',
+  sub: 'text-amber-300/65 group-hover:text-amber-100/90',
+} as const;
+
 export function LockedSaveButton({
   feature,
   benefit,
@@ -99,13 +110,27 @@ export function ProCreateAlbumSlot({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="group relative aspect-square block w-full text-left opacity-50 hover:opacity-100 transition-opacity duration-300"
     >
-      <div className="absolute inset-0 rounded-full border-2 border-dashed border-amber-400/25 bg-amber-500/[0.03] flex flex-col items-center justify-center gap-3 transition-all group-hover:border-amber-300/50 group-hover:bg-amber-400/[0.07] group-hover:shadow-[0_0_28px_rgba(251,191,36,0.2)]">
-        <div className="w-14 h-14 rounded-full border border-dashed border-amber-400/30 bg-amber-500/[0.06] flex items-center justify-center group-hover:border-amber-300/55 group-hover:bg-amber-400/15 transition-all">
-          <span className="text-2xl text-amber-200/45 font-light group-hover:text-amber-200">+</span>
+      <div
+        className={cn(
+          'absolute inset-0 rounded-full border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all',
+          GOLD_CREATE_SLOT.shell
+        )}
+      >
+        <div
+          className={cn(
+            'w-14 h-14 rounded-full border border-dashed flex items-center justify-center transition-all',
+            GOLD_CREATE_SLOT.inner
+          )}
+        >
+          <span className={cn('text-2xl font-light', GOLD_CREATE_SLOT.plus)}>+</span>
         </div>
         <div className="text-center px-4">
-          <p className="font-headline font-bold text-amber-100/45 uppercase text-sm tracking-tight group-hover:text-amber-100/90">New Album</p>
-          <p className="text-[8px] text-amber-300/35 uppercase tracking-widest mt-1 font-bold group-hover:text-amber-200/75">Create concept project</p>
+          <p className={cn('font-headline font-bold uppercase text-sm tracking-tight', GOLD_CREATE_SLOT.title)}>
+            New Album
+          </p>
+          <p className={cn('text-[8px] uppercase tracking-widest mt-1 font-bold', GOLD_CREATE_SLOT.sub)}>
+            Create concept project
+          </p>
         </div>
       </div>
     </button>
@@ -117,14 +142,24 @@ export function ProCreateTrackSlot({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="group w-full py-4 px-6 rounded-2xl border-2 border-dashed border-amber-400/25 bg-amber-500/[0.03] opacity-50 hover:opacity-100 transition-all flex items-center gap-4 text-left hover:border-amber-300/50 hover:bg-amber-400/[0.07] hover:shadow-[0_0_24px_rgba(251,191,36,0.18)]"
+      className={cn(
+        'group w-full py-4 px-6 rounded-2xl border-2 border-dashed opacity-50 hover:opacity-100 transition-all flex items-center gap-4 text-left',
+        GOLD_CREATE_SLOT.shell
+      )}
     >
-      <div className="p-2 rounded-xl border border-dashed border-amber-400/30 bg-amber-500/[0.06] shrink-0 group-hover:border-amber-300/55 group-hover:bg-amber-400/15 transition-all">
-        <span className="text-lg text-amber-200/45 font-light block w-5 h-5 text-center leading-5 group-hover:text-amber-200">+</span>
+      <div
+        className={cn(
+          'p-2 rounded-xl border border-dashed shrink-0 transition-all',
+          GOLD_CREATE_SLOT.inner
+        )}
+      >
+        <span className={cn('text-lg font-light block w-5 h-5 text-center leading-5', GOLD_CREATE_SLOT.plus)}>+</span>
       </div>
       <div>
-        <p className="text-xs font-bold uppercase text-amber-100/45 group-hover:text-amber-100/90">New Loose Track</p>
-        <p className="text-[8px] text-amber-300/35 uppercase tracking-widest font-bold group-hover:text-amber-200/75">Capture a single · tap to create</p>
+        <p className={cn('text-xs font-bold uppercase', GOLD_CREATE_SLOT.title)}>New Loose Track</p>
+        <p className={cn('text-[8px] uppercase tracking-widest font-bold', GOLD_CREATE_SLOT.sub)}>
+          Capture a single · tap to create
+        </p>
       </div>
     </button>
   );

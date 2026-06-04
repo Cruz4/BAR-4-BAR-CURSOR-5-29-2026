@@ -29,6 +29,8 @@ Yearly Pro: **50% off** ink packs at checkout (`STRIPE_COUPON_YEARLY_INK_50`).
 
 ---
 
+**Custom domain:** [CUSTOM_DOMAIN.md](./CUSTOM_DOMAIN.md) (`https://bar4bar.ink`)
+
 ## Cloud Run runtime (SSR function)
 
 Firebase Hosting builds a Cloud Function (`ssrlyricaistudiootgxn`) for Next.js. The project pins **Node.js 22** via `package.json` → `"engines": { "node": "22" }` and `firebase-tools` ≥ 15. After upgrading, redeploy with `npm run deploy:live`. In Google Cloud Console the runtime should show **Node.js 22**, not 20 (Node 20 is deprecated Oct 2026).
@@ -57,7 +59,7 @@ stripe listen --forward-to localhost:9002/api/stripe/webhook
 
 ### Sandbox webhook (Test mode on production URL)
 
-If Stripe emails **400 signature** errors for `lyricai-studio-otgxn.web.app`:
+If Stripe emails **400 signature** errors for your production domain (`bar4bar.ink` or legacy `.web.app`):
 
 1. Stripe Dashboard → **Test mode** on → **Developers → Webhooks** → endpoint **`b4b-b4b`** (URL `.../api/stripe/webhook`).
 2. **Reveal** signing secret → set in project root `.env`:
@@ -71,7 +73,7 @@ If Stripe emails **400 signature** errors for `lyricai-studio-otgxn.web.app`:
 
 The server tries **test secret first**, then live (`STRIPE_WEBHOOK_SECRET`). Test and live Dashboard endpoints each have a **different** `whsec_`.
 
-**Heartbeat:** `GET https://lyricai-studio-otgxn.web.app/api/stripe/webhook` returns `hasTestSecret`, `hasLiveSecret`, and `testPrefix` / `livePrefix` (first characters only) — match those to Dashboard **Reveal**.
+**Heartbeat:** `GET https://bar4bar.ink/api/stripe/webhook` returns `hasTestSecret`, `hasLiveSecret`, and `testPrefix` / `livePrefix` (first characters only) — match those to Dashboard **Reveal**.
 
 For Firestore fulfillment locally, add `FIREBASE_SERVICE_ACCOUNT_KEY` (JSON string) to `.env`. After checkout, the app credits Ink on return via `/api/stripe/fulfill-session` (no `stripe listen` required for ink packs). For subscription renewals in production, still configure the live webhook.
 
@@ -79,7 +81,7 @@ For Firestore fulfillment locally, add `FIREBASE_SERVICE_ACCOUNT_KEY` (JSON stri
 
 ## Go live (production)
 
-Follow these steps in order. Production site: `https://lyricai-studio-otgxn.web.app`.
+Follow these steps in order. Production site: `https://bar4bar.ink`.
 
 ### 1. Switch Stripe to Live mode
 
@@ -122,8 +124,12 @@ Never commit live keys. Set them only in production secrets (below).
 
 ### 4. Live webhook
 
+**Dashboard shows “no webhooks” in Live?** That is normal until you add one. Test-mode endpoints (e.g. `b4b-b4b`) only appear when **Test mode** is ON; they do not copy to Live. You must create a **separate** Live endpoint (new `whsec_`).
+
+**Option A — Dashboard (recommended)**
+
 1. Stripe **Developers → Webhooks → Add endpoint**
-2. **URL:** `https://lyricai-studio-otgxn.web.app/api/stripe/webhook`
+2. **URL:** `https://bar4bar.ink/api/stripe/webhook`
 3. **Events:**
    - `checkout.session.completed`
    - `invoice.paid`
@@ -133,7 +139,16 @@ Never commit live keys. Set them only in production secrets (below).
 
 Use the **Dashboard** signing secret in production — not the secret from `stripe listen` (CLI is local-only). For sandbox traffic on the same URL, also set `STRIPE_WEBHOOK_SECRET_TEST` from the **Test mode** endpoint.
 
-**Heartbeat check:** open `https://lyricai-studio-otgxn.web.app/api/stripe/webhook` — `ok: true` when at least one secret is set; compare `testPrefix` / `livePrefix` to Dashboard **Reveal**.
+**Option B — CLI (after `sk_live_` is saved in `.env`)**
+
+```bash
+npm run stripe:create-live-webhook              # list live endpoints
+npm run stripe:create-live-webhook -- --create  # creates endpoint + updates STRIPE_WEBHOOK_SECRET in .env
+```
+
+Then copy `STRIPE_WEBHOOK_SECRET` into `.firebase/lyricai-studio-otgxn/functions/.env` and deploy.
+
+**Heartbeat check:** open `https://bar4bar.ink/api/stripe/webhook` — `ok: true` when at least one secret is set; compare `testPrefix` / `livePrefix` to Dashboard **Reveal**.
 
 ### 5. Customer Portal (billing management)
 
@@ -148,7 +163,7 @@ STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_WEBHOOK_SECRET_TEST=whsec_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
-NEXT_PUBLIC_APP_URL=https://lyricai-studio-otgxn.web.app
+NEXT_PUBLIC_APP_URL=https://bar4bar.ink
 
 STRIPE_PRICE_PRO_MONTHLY=price_...
 STRIPE_PRICE_PRO_YEARLY=price_...
@@ -203,6 +218,7 @@ If ink does not update after payment, see `docs/STRIPE_MASTER_GUIDE.md` (signing
 | `npm run stripe:create-yearly-444` | Create test Pro Yearly $53.28/yr |
 | `npm run stripe:create-pricing-v2` | Create test catalog (legacy helper) |
 | `npm run stripe:verify` | Validate price IDs against current `STRIPE_SECRET_KEY` |
+| `npm run stripe:create-live-webhook` | List or create **live** webhook for production URL |
 
 ## Source of truth
 

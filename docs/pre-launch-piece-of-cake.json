@@ -23,7 +23,7 @@
       "tasks": [
         {
           "taskName": "Configure Stripe webhook endpoint URL",
-          "description": "In Stripe Test mode, set webhook b4b-b4b URL to https://lyricai-studio-otgxn.web.app/api/stripe/webhook",
+          "description": "In Stripe Test mode, set webhook b4b-b4b URL to https://bar4bar.ink/api/stripe/webhook",
           "priority": "High",
           "dependencies": ["Run prelaunch automated check"],
           "checklist": [
@@ -154,7 +154,7 @@
             "GEMINI_API_KEY or GOOGLE_GENAI_API_KEY set",
             "Stripe test keys and STRIPE_WEBHOOK_SECRET_TEST",
             "All STRIPE_PRICE_* variables",
-            "NEXT_PUBLIC_APP_URL=https://lyricai-studio-otgxn.web.app"
+            "NEXT_PUBLIC_APP_URL=https://bar4bar.ink"
           ]
         },
         {

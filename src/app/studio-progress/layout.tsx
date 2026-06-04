@@ -1,0 +1,12 @@
+import { pageMetadata } from '@/lib/seo';
+
+export const metadata = pageMetadata({
+  title: 'Studio Progress & Achievements',
+  description:
+    'Track your Bar 4 Bar milestones, achievements, and writing streaks as you build bars and grow your lyric vault.',
+  path: '/studio-progress',
+});
+
+export default function StudioProgressLayout({ children }: { children: React.ReactNode }) {
+  return children;
+}

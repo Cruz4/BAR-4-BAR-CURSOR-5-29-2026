@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getStripe, verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
+import { getStripe, verifyCheckoutUser, CheckoutAuthError, resolveStripeCustomerId } from '@/lib/stripe-server';
 import { getDb } from '@/lib/firebase/server';
 import { getTrustedAppOrigin } from '@/lib/server/trusted-origin';
 
@@ -25,7 +25,12 @@ export async function POST(req: Request) {
 
     const db = await getDb();
     const userSnap = await db.collection('users').doc(userId).get();
-    const stripeCustomerId = userSnap.data()?.stripeCustomerId as string | undefined;
+    const stripeCustomerId = await resolveStripeCustomerId(
+      stripe,
+      db,
+      userId,
+      userSnap.data()?.stripeCustomerId as string | undefined
+    );
 
     if (!stripeCustomerId) {
       return NextResponse.json(

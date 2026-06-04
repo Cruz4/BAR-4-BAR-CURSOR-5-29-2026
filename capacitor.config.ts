@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'public',
   server: {
     // Phase 2: load hosted Next.js app (server actions + AI require network)
-    url: process.env.CAPACITOR_SERVER_URL || 'https://lyricai-studio-otgxn.web.app',
+    url: process.env.CAPACITOR_SERVER_URL || 'https://bar4bar.ink',
     cleartext: false,
   },
   plugins: {

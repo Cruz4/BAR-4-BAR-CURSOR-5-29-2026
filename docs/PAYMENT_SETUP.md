@@ -2,6 +2,7 @@
 # Bar 4 Bar: Quick Payment Checklist
 
 > **Use the full tracked checklist:** [PRE_LAUNCH_CHECKLIST.md](./PRE_LAUNCH_CHECKLIST.md)  
+> **Post-launch marketing:** [MARKETING_QUICKSTART.md](./MARKETING_QUICKSTART.md)  
 > Price IDs live in `src/lib/stripe-catalog.ts` (env `STRIPE_PRICE_*`), not `src/services/stripe.ts`.
 
 Follow this checklist to get the Studio economy running.
@@ -12,7 +13,7 @@ Follow this checklist to get the Studio economy running.
 3. [ ] Copy all 5 **Price IDs** into `src/services/stripe.ts`.
 
 ## 2. Webhook Setup
-1. [ ] Create webhook pointing to: `https://lyricai-studio-otgxn.web.app/api/stripe/webhook`
+1. [ ] Create webhook pointing to: `https://bar4bar.ink/api/stripe/webhook`
 2. [ ] Listen for: `checkout.session.completed`.
 3. [ ] Copy the `whsec_...` **Signing Secret**.
 

@@ -2,7 +2,7 @@
 
 Check boxes as you go: `[ ]` → `[x]`.
 
-**Site:** https://lyricai-studio-otgxn.web.app  
+**Site:** https://bar4bar.ink ([CUSTOM_DOMAIN.md](./CUSTOM_DOMAIN.md))  
 **Quick test:** `npm run prelaunch:check` (keys + prices only — not a full launch approval)
 
 More detail: [STRIPE_SETUP.md](./STRIPE_SETUP.md) · [SECURITY.md](./SECURITY.md)
@@ -37,7 +37,7 @@ Stripe Dashboard toggle: **Test mode** on. Keys in `.env`: `sk_test_` / `pk_test
 
 ### Webhook & secrets
 
-- [ ] Webhook URL: `https://lyricai-studio-otgxn.web.app/api/stripe/webhook`
+- [ ] Webhook URL: `https://bar4bar.ink/api/stripe/webhook`
 - [ ] All **four** events enabled (see table above)
 - [ ] `STRIPE_WEBHOOK_SECRET_TEST` = Dashboard → Webhooks → **Reveal** (not from `stripe listen`)
 - [ ] Resend an event or pay in test → Stripe shows **HTTP 200**, body `{ "received": true }`
@@ -60,7 +60,7 @@ Stripe Dashboard toggle: **Test mode** on. Keys in `.env`: `sk_test_` / `pk_test
 ## Part 2 — Server & login (production site)
 
 - [ ] Cloud function `ssrlyricaistudiootgxn` has env vars (Gemini key, Stripe, prices)
-- [ ] Sign up / log in works on https://lyricai-studio-otgxn.web.app
+- [ ] Sign up / log in works on https://bar4bar.ink
 - [ ] AI action works when signed in (Ink deducts)
 - [ ] `npm run firebase:deploy:rules` if you changed Firestore rules lately
 
@@ -100,8 +100,12 @@ Stripe Dashboard toggle: **Test mode** on. Keys in `.env`: `sk_test_` / `pk_test
 
 ## Part 6 — After you start ads (first week)
 
+- [ ] Follow [MARKETING_QUICKSTART.md](./MARKETING_QUICKSTART.md) — Week 1–2 organic Shorts, Week 3–4 Spark Ads ($5–10/day)
+- [ ] Bio links: `?ref=tiktok` / `?ref=ig` (attribution on signup)
 - [ ] Glance at Stripe webhook failures daily (should be none)
-- [ ] Optional: `/admin` metrics, custom domain, app stores — later
+- [ ] Weekly: Admin → **Growth Metrics** — signups, activation %, ad spend notes
+- [ ] YouTube: repost winners + [YOUTUBE_TUTORIAL_SCRIPT.md](./YOUTUBE_TUTORIAL_SCRIPT.md)
+- [ ] App stores later: [APP_STORE_ROADMAP.md](./APP_STORE_ROADMAP.md)
 
 ---
 
@@ -114,7 +118,7 @@ Stripe Dashboard toggle: **Test mode** on. Keys in `.env`: `sk_test_` / `pk_test
 | Verify prices in Stripe | `npm run stripe:verify` |
 | Create live prices | `npm run stripe:create-live-prices` |
 | Deploy | `npm run deploy:live` |
-| Webhook health in browser | https://lyricai-studio-otgxn.web.app/api/stripe/webhook |
+| Webhook health in browser | https://bar4bar.ink/api/stripe/webhook |
 
 ---
 
@@ -127,6 +131,12 @@ Stripe Dashboard toggle: **Test mode** on. Keys in `.env`: `sk_test_` / `pk_test
 | Paid, no Ink | Stripe webhook log; resend event; user return URL triggers backup fulfillment |
 | Pro renews but no Ink refill | Add `invoice.paid` to webhook events |
 | Canceled but still Pro in app | Add `customer.subscription.deleted` (and `.updated`) |
+
+---
+
+## Post-launch roadmap (not blocking go-live)
+
+- **Freestyle / voice STT** — working (~80%+ accuracy). Future: mic picker, editable pad, overlapping chunks, optional dedicated STT API. See [FREESTYLE_STT_ROADMAP.md](./FREESTYLE_STT_ROADMAP.md).
 
 ---
 

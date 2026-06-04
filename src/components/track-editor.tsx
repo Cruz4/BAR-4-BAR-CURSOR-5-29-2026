@@ -20,7 +20,13 @@ import React, { useState, useEffect, useMemo, useTransition, useContext, useRef,
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DataContext } from '@/context/data-context';
 import type { Album, Track, Direction, TrackSection, TrackVibe, StyleProfile } from '@/lib/types';
-import { isTrackLocked, isLockedTrackReopenUpdate, TRACK_LOCKED_TOAST } from '@/lib/track-lock';
+import {
+  isTrackLocked,
+  isLockedTrackReopenUpdate,
+  TRACK_LOCKED_TOAST,
+  TRACK_COMPLETE_TOAST,
+  TRACK_LOCKED_BANNER,
+} from '@/lib/track-lock';
 import {
   BrainCircuit,
   ChevronDown,
@@ -768,7 +774,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                     </div>
                     <p className="text-[9px] text-muted-foreground leading-snug">
                       {trackLocked
-                        ? 'Locked — lyrics, structure, and Co-Writer are read-only. Export, Performance Mode, and DNA Drop still work. Reopen to edit.'
+                        ? "That's a hit!! Track locked — edits off until you reopen. Export, Performance Mode, and DNA Drop still work."
                         : 'Lock the track when lyrics are finished — blocks edits and counts toward weekly goals and achievements.'}
                     </p>
                     <Button
@@ -783,13 +789,14 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                       onClick={() => {
                         const next = track.status === 'complete' ? 'in_progress' : 'complete';
                         onUpdateTrack({ status: next });
-                        toast({
-                          title: next === 'complete' ? 'Track Locked' : 'Track Reopened',
-                          description:
-                            next === 'complete'
-                              ? 'Track locked — edits are disabled until you reopen.'
-                              : 'Track reopened — you can edit lyrics and settings again.',
-                        });
+                        toast(
+                          next === 'complete'
+                            ? TRACK_COMPLETE_TOAST
+                            : {
+                                title: 'Track Reopened',
+                                description: 'You can edit lyrics and settings again.',
+                              }
+                        );
                       }}
                     >
                       {track.status === 'complete' ? (
@@ -2649,10 +2656,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       {trackLocked && (
         <div className="shrink-0 border-b border-sky-500/25 bg-sky-500/10 px-4 py-2 flex items-center gap-2 z-30">
           <Lock className="h-4 w-4 text-sky-300 shrink-0" />
-          <p className="text-[10px] font-code text-sky-100/90 leading-snug">
-            <span className="font-bold uppercase tracking-wide">Track locked.</span>{' '}
-            Lyrics and Co-Writer are read-only. Use <span className="text-sky-200">Reopen Track</span> in the left panel to edit again.
-          </p>
+          <p className="text-[10px] font-code text-sky-100/90 leading-snug">{TRACK_LOCKED_BANNER}</p>
         </div>
       )}
       <div className="flex flex-1 min-h-0 overflow-hidden w-full">

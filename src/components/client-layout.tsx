@@ -23,6 +23,7 @@ import { ServiceWorkerRegister } from './service-worker-register';
 import { StudioPageBackground } from './studio-page-background';
 import { SettingsControlAtmosphere } from './settings-control-atmosphere';
 import { ProductAnalytics } from './product-analytics';
+import { MarketingAttributionCapture } from './marketing-attribution-capture';
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -39,6 +40,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             <GamificationProvider>
             <UIStateProvider>
                 <FirebaseErrorListener />
+                <MarketingAttributionCapture />
                 <ProductAnalytics />
                 {isSettingsRoute ? <SettingsControlAtmosphere /> : <StudioPageBackground />}
                 <div className="relative z-10 flex min-h-screen flex-col flex-1 overflow-hidden">

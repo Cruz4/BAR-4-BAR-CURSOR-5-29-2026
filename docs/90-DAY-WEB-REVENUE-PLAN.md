@@ -1,15 +1,17 @@
 # Bar 4 Bar Studio — 90-Day Web-Only Revenue Plan
 
 **Product:** Bar 4 Bar Studio (AI lyric workstation & rhyme book)  
-**Live URL:** https://lyricai-studio-otgxn.web.app  
+**Live URL:** https://bar4bar.ink — see [CUSTOM_DOMAIN.md](./CUSTOM_DOMAIN.md)  
 **Firebase project:** `lyricai-studio-otgxn`  
 **Scope:** Web-only (PWA on mobile). No native App Store launch in this window.  
 **Last updated:** May 28, 2026
 
 > **Related files:**  
+> - **Week 1 action list:** [MARKETING_QUICKSTART.md](./MARKETING_QUICKSTART.md)  
 > - Piece of Cake import: `docs/bar-4-bar-90-day-revenue-plan.piece-of-cake.json`  
 > - Admin metrics: Admin Panel → **Growth Metrics** tab  
 > - TikTok deep-dive (older): `docs/TIKTOK_STRATEGY.md`  
+> - App stores (Phase 2): [APP_STORE_ROADMAP.md](./APP_STORE_ROADMAP.md)  
 > - Monetization reference: `docs/MONETIZATION.md`
 
 ---

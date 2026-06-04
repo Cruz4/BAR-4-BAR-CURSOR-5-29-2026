@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getCatalogEntry, resolveStripePriceId } from '@/lib/stripe-catalog';
-import { getStripe, verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
+import {
+  getStripe,
+  verifyCheckoutUser,
+  CheckoutAuthError,
+  resolveStripeCustomerId,
+  isStripeMissingCustomerError,
+  clearStaleStripeBillingProfile,
+} from '@/lib/stripe-server';
 import { getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
 import { getTrustedAppOrigin } from '@/lib/server/trusted-origin';
+import { getPublicAppUrl } from '@/lib/app-url';
 
 export const runtime = 'nodejs';
 
@@ -47,12 +55,17 @@ export async function POST(req: Request) {
 
     let stripeCustomerId: string | undefined;
     let userData: Record<string, unknown> | undefined;
+    let db: Awaited<ReturnType<typeof getDb>> | undefined;
     if (hasAdminFirestoreCredentials()) {
       try {
-        const db = await getDb();
+        db = await getDb();
         const userSnap = await db.collection('users').doc(userId).get();
         userData = userSnap.data();
-        stripeCustomerId = userData?.stripeCustomerId as string | undefined;
+        const storedCustomerId = userData?.stripeCustomerId as string | undefined;
+        stripeCustomerId = await resolveStripeCustomerId(stripe, db, userId, storedCustomerId);
+        if (storedCustomerId && !stripeCustomerId && userData) {
+          userData = { ...userData, subscriptionStatus: 'canceled', subscriptionTier: undefined };
+        }
       } catch (dbErr) {
         console.warn('Checkout: could not load user billing profile, continuing as new customer', dbErr);
       }
@@ -82,7 +95,7 @@ export async function POST(req: Request) {
       },
       custom_text: {
         terms_of_service_acceptance: {
-          message: 'I agree to the [Terms of Service](https://lyricai-studio-otgxn.web.app/terms) and [Privacy Policy](https://lyricai-studio-otgxn.web.app/privacy) of Bar 4 Bar Studio.',
+          message: `I agree to the [Terms of Service](${getPublicAppUrl()}/terms) and [Privacy Policy](${getPublicAppUrl()}/privacy) of Bar 4 Bar Studio.`,
         },
       },
     };
@@ -113,7 +126,22 @@ export async function POST(req: Request) {
       }
     }
 
-    const session = await stripe.checkout.sessions.create(sessionParams);
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await stripe.checkout.sessions.create(sessionParams);
+    } catch (createErr) {
+      if (sessionParams.customer && db && isStripeMissingCustomerError(createErr)) {
+        await clearStaleStripeBillingProfile(db, userId);
+        delete sessionParams.customer;
+        if (!isSubscription) {
+          sessionParams.customer_creation = 'always';
+        }
+        if (email) sessionParams.customer_email = email;
+        session = await stripe.checkout.sessions.create(sessionParams);
+      } else {
+        throw createErr;
+      }
+    }
 
     await recordStudioEvent(userId, 'checkout_started', {
       priceId,

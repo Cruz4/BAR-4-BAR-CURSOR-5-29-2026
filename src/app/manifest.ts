@@ -1,10 +1,11 @@
-import type { MetadataRoute } from 'next'
+import type { MetadataRoute } from 'next';
+import { SEO } from '@/lib/seo';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Bar 4 Bar Studio',
+    name: SEO.siteName,
     short_name: 'Bar 4 Bar',
-    description: 'The Professional AI Rhyme Book & Studio Workstation.',
+    description: SEO.description,
     start_url: '/',
     scope: '/',
     display: 'standalone',

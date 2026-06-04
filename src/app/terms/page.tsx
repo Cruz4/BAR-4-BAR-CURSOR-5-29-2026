@@ -1,10 +1,14 @@
 import Link from 'next/link';
 import { LegalFooter } from '@/components/legal-footer';
 
-export const metadata = {
-  title: 'Terms of Service | Bar 4 Bar Studio',
-  description: 'Terms governing use of Bar 4 Bar Studio, Ink currency, AI co-writer features, and user responsibilities.',
-};
+import { pageMetadata } from '@/lib/seo';
+
+export const metadata = pageMetadata({
+  title: 'Terms of Service',
+  description:
+    'Terms governing use of Bar 4 Bar Studio, Ink currency, AI co-writer features, and user responsibilities.',
+  path: '/terms',
+});
 
 export default function TermsPage() {
   return (

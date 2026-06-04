@@ -1,10 +1,13 @@
 import Link from 'next/link';
 import { LegalFooter } from '@/components/legal-footer';
 
-export const metadata = {
-  title: 'Privacy Policy | Bar 4 Bar Studio',
+import { pageMetadata } from '@/lib/seo';
+
+export const metadata = pageMetadata({
+  title: 'Privacy Policy',
   description: 'How Bar 4 Bar Studio collects, uses, and protects your data.',
-};
+  path: '/privacy',
+});
 
 export default function PrivacyPage() {
   return (

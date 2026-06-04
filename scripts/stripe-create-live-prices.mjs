@@ -128,7 +128,7 @@ console.log('# Copy into production env (.firebase/.../functions/.env + Google C
 console.log('STRIPE_SECRET_KEY=sk_live_...');
 console.log('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...');
 console.log('STRIPE_WEBHOOK_SECRET=whsec_...   # from LIVE webhook endpoint in Stripe Dashboard');
-console.log('NEXT_PUBLIC_APP_URL=https://lyricai-studio-otgxn.web.app');
+console.log('NEXT_PUBLIC_APP_URL=https://bar4bar.ink');
 console.log('');
 for (const [key, price] of Object.entries(created)) {
   console.log(`STRIPE_PRICE_${key}=${price.id}`);

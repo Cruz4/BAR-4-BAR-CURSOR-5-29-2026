@@ -177,7 +177,14 @@ function UsagePageContent() {
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <h1 className="text-4xl font-headline font-bold text-primary tracking-tight">Studio Intelligence</h1>
-            <Badge className={cn("mt-1 uppercase", isCloudSyncActive ? (isYearlyUser ? "bg-accent" : "bg-primary") : "bg-muted text-muted-foreground")}>{isCloudSyncActive ? (isYearlyUser ? 'Yearly Pro' : 'Monthly Pro') : 'Visitor'}</Badge>
+            <Badge
+              className={cn(
+                'uppercase justify-center text-center px-3 shrink-0',
+                isCloudSyncActive ? (isYearlyUser ? 'bg-accent' : 'bg-primary') : 'bg-muted text-muted-foreground'
+              )}
+            >
+              {isCloudSyncActive ? (isYearlyUser ? 'Yearly Pro' : 'Monthly Pro') : 'Visitor'}
+            </Badge>
           </div>
           <p className="text-muted-foreground font-code">Permanent ink never expires — used after your monthly residency pool runs out.</p>
           <p className="text-xs text-muted-foreground/90 max-w-2xl leading-relaxed">{COMPETITOR_ANCHOR_COPY}</p>
@@ -209,12 +216,14 @@ function UsagePageContent() {
             </Card>
           </div>
         </div>
-        <Card className="bg-primary/5 border-primary/20 shadow-2xl overflow-hidden group">
-            <CardContent className="p-8 flex items-center gap-6">
-                <div className="bg-primary/10 p-3 rounded-full shadow-inner"><Droplets className="h-10 w-10 text-primary animate-pulse" /></div>
-                <div>
-                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-[0.2em] mb-1">Total Capacity</p>
-                    <p className="text-5xl font-bold font-code text-white tracking-tighter">{inkBalance.toLocaleString()}</p>
+        <Card className="bg-primary/5 border-primary/20 shadow-2xl overflow-hidden group w-fit max-w-full shrink-0 md:ml-auto">
+            <CardContent className="px-5 py-4 flex w-auto items-center justify-center gap-3">
+                <div className="bg-primary/10 p-2 rounded-full shadow-inner shrink-0">
+                  <Droplets className="h-8 w-8 text-primary animate-pulse" />
+                </div>
+                <div className="text-center min-w-0">
+                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-[0.2em] mb-0.5">Total Capacity</p>
+                    <p className="text-5xl font-bold font-code text-white tracking-tighter tabular-nums leading-none">{inkBalance.toLocaleString()}</p>
                 </div>
             </CardContent>
         </Card>

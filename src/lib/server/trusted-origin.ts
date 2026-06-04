@@ -1,4 +1,5 @@
 import 'server-only';
+import { DEFAULT_PUBLIC_APP_URL, LEGACY_FIREBASE_HOSTING_URL } from '@/lib/app-url';
 
 const DEV_ORIGINS = ['http://localhost:9002', 'http://127.0.0.1:9002'];
 
@@ -24,7 +25,8 @@ function buildAllowlist(): string[] {
   if (process.env.NODE_ENV === 'development') {
     list.push(...DEV_ORIGINS);
   }
-  return [...new Set(list)];
+  const merged = [...list, LEGACY_FIREBASE_HOSTING_URL];
+  return [...new Set(merged)];
 }
 
 /** Origins allowed for Stripe redirects and referral links — never trusts arbitrary `Origin` headers. */
@@ -32,7 +34,7 @@ export function getTrustedAppOrigin(req?: Request): string {
   const allowlist = buildAllowlist();
   const fallback =
     allowlist[0] ||
-    (process.env.NODE_ENV === 'development' ? DEV_ORIGINS[0] : 'https://lyricai-studio-otgxn.web.app');
+    (process.env.NODE_ENV === 'development' ? DEV_ORIGINS[0] : DEFAULT_PUBLIC_APP_URL);
 
   if (!req) return fallback;
 

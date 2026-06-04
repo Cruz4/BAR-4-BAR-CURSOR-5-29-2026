@@ -1,13 +1,12 @@
 import type { MetadataRoute } from 'next';
-import { SEO } from '@/lib/studio-tiers';
+import { absoluteUrl, PUBLIC_SITEMAP_PATHS } from '@/lib/seo';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = SEO.url;
-  const routes = ['', '/login', '/pricing', '/usage', '/terms', '/privacy', '/cookies'];
-  return routes.map((path) => ({
-    url: `${base}${path}`,
-    lastModified: new Date(),
-    changeFrequency: path === '' ? 'weekly' : 'monthly',
-    priority: path === '' ? 1 : 0.8,
+  const lastModified = new Date();
+  return PUBLIC_SITEMAP_PATHS.map(({ path, changeFrequency, priority }) => ({
+    url: absoluteUrl(path || '/'),
+    lastModified,
+    changeFrequency,
+    priority,
   }));
 }

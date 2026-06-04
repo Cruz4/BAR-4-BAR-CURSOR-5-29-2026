@@ -22,6 +22,11 @@ import {
   stopCelebrationConfetti,
 } from '@/lib/gamification/celebration-confetti';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/use-auth';
+import {
+  loadSeenAchievementIds,
+  markAchievementsSeen,
+} from '@/lib/gamification/celebration-seen';
 
 type CelebrationItem = GamificationUnlock & { actionXpGain?: number };
 
@@ -33,6 +38,7 @@ type CursorEmojiBurst = {
 };
 
 export function AchievementUnlockCelebration() {
+  const { user } = useAuth();
   const [queue, setQueue] = useState<CelebrationItem[]>([]);
   const [active, setActive] = useState<CelebrationItem | null>(null);
   const [cursorEmojis, setCursorEmojis] = useState<CursorEmojiBurst[]>([]);
@@ -40,6 +46,10 @@ export function AchievementUnlockCelebration() {
   const pointerRef = useRef({ x: 0, y: 0 });
   const emojiTimersRef = useRef<number[]>([]);
   const dismissButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    shownIdsRef.current = user?.id ? loadSeenAchievementIds(user.id) : new Set();
+  }, [user?.id]);
 
   useEffect(() => {
     const onPointer = (e: PointerEvent) => {
@@ -80,18 +90,27 @@ export function AchievementUnlockCelebration() {
     emojiTimersRef.current.push(t1);
   }, []);
 
-  const enqueueUnlocks = useCallback((unlocks: GamificationUnlock[], xpGain = 0) => {
-    const fresh = unlocks.filter((u) => !shownIdsRef.current.has(u.id));
-    if (!fresh.length) return;
+  const enqueueUnlocks = useCallback(
+    (unlocks: GamificationUnlock[], xpGain = 0) => {
+      const fresh = unlocks.filter((u) => !shownIdsRef.current.has(u.id));
+      if (!fresh.length) return;
 
-    fresh.forEach((u) => shownIdsRef.current.add(u.id));
-    const items: CelebrationItem[] = fresh.map((u, i) => ({
-      ...u,
-      actionXpGain: i === 0 ? xpGain : 0,
-    }));
+      fresh.forEach((u) => shownIdsRef.current.add(u.id));
+      if (user?.id) {
+        markAchievementsSeen(
+          user.id,
+          fresh.map((u) => u.id)
+        );
+      }
+      const items: CelebrationItem[] = fresh.map((u, i) => ({
+        ...u,
+        actionXpGain: i === 0 ? xpGain : 0,
+      }));
 
-    setQueue((prev) => [...prev, ...items]);
-  }, []);
+      setQueue((prev) => [...prev, ...items]);
+    },
+    [user?.id]
+  );
 
   useEffect(() => {
     const onUnlock = (e: Event) => {

@@ -17,7 +17,7 @@ This document serves as the absolute source of truth for the workstation's desig
 ## 2. Professional Logic & Hierarchy
 ### Economic Refill Protocol (2026 State)
 - **Visitor (Free)**: **300 signup Ink** + **200 monthly residency** (additive). **1 album · 3 tracks**. System DNA/Vibe/Style presets (load-only). Three Creative Effects free (Simile, Metaphor, Sound-Alike). Permanent Ink packs purchasable; project limits still apply.
-- **Studio Pro Monthly ($7.77/mo)**: **1,777 Ink** monthly residency refill. Unlimited projects, full vault, all Creative Effects, Performance Mode, Freestyle.
+- **Studio Pro Monthly ($7.77/mo)**: **1,777 Ink** monthly residency refill. Unlimited projects, full vault, all Creative Effects, Performance Mode, Freestyle (studio mic + Gemini STT — see [FREESTYLE_STT_ROADMAP.md](./FREESTYLE_STT_ROADMAP.md)).
 - **Studio Pro Yearly ($4.44/mo, $53.28/yr)**: **3,444 Ink** monthly residency. **50% permanent Ink pack discount** + BYO-API key (orchestration fee).
 - **Permanent Ink Packs**: 1,000 ($7.77) · 1,800 ($11.11) · 4,500 ($19.44) — Yearly Pro pays half at checkout.
 - **Task Scaling**: See `src/lib/costs.ts` (e.g. Studio Draft 2/bar, Rhyme Pulse 10, Style Training 35).

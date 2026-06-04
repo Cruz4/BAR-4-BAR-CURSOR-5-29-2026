@@ -27,6 +27,11 @@ import {
 import { SCALE_LABELS, TIER_LABELS } from '@/lib/gamification/challenges';
 import { fireProgressConfetti } from '@/lib/gamification/celebration-confetti';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/use-auth';
+import {
+  loadSeenProgressKeys,
+  markProgressCelebrationsSeen,
+} from '@/lib/gamification/celebration-seen';
 
 function confettiPalette(item: ProgressCelebrationItem): string[] {
   if (item.type === 'challenge') {
@@ -132,6 +137,7 @@ function sublabel(item: ProgressCelebrationItem): string | null {
 type CursorEmojiBurst = { id: string; emoji: string; x: number; y: number };
 
 export function ProgressCelebration() {
+  const { user } = useAuth();
   const [queue, setQueue] = useState<ProgressCelebrationItem[]>([]);
   const [active, setActive] = useState<ProgressCelebrationItem | null>(null);
   const [cursorEmojis, setCursorEmojis] = useState<CursorEmojiBurst[]>([]);
@@ -139,6 +145,10 @@ export function ProgressCelebration() {
   const pointerRef = useRef({ x: 0, y: 0 });
   const emojiTimersRef = useRef<number[]>([]);
   const dismissButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    shownKeysRef.current = user?.id ? loadSeenProgressKeys(user.id) : new Set();
+  }, [user?.id]);
 
   useEffect(() => {
     const onPointer = (e: PointerEvent) => {
@@ -178,12 +188,21 @@ export function ProgressCelebration() {
     emojiTimersRef.current.push(t);
   }, []);
 
-  const enqueueItems = useCallback((items: ProgressCelebrationItem[]) => {
-    const fresh = items.filter((item) => !shownKeysRef.current.has(item.dedupeKey));
-    if (!fresh.length) return;
-    fresh.forEach((item) => shownKeysRef.current.add(item.dedupeKey));
-    setQueue((prev) => [...prev, ...fresh]);
-  }, []);
+  const enqueueItems = useCallback(
+    (items: ProgressCelebrationItem[]) => {
+      const fresh = items.filter((item) => !shownKeysRef.current.has(item.dedupeKey));
+      if (!fresh.length) return;
+      fresh.forEach((item) => shownKeysRef.current.add(item.dedupeKey));
+      if (user?.id) {
+        markProgressCelebrationsSeen(
+          user.id,
+          fresh.map((item) => item.dedupeKey)
+        );
+      }
+      setQueue((prev) => [...prev, ...fresh]);
+    },
+    [user?.id]
+  );
 
   useEffect(() => {
     const onCelebrate = (e: Event) => {

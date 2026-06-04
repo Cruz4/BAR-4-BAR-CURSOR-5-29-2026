@@ -48,7 +48,7 @@ Heavy math (all users, summaries, transaction logs) is **not** run every time yo
 
 ### Daily use
 
-1. Open your live site (e.g. `https://lyricai-studio-otgxn.web.app/admin`).
+1. Open your live site (e.g. `https://bar4bar.ink/admin`).
 2. Sign in as **admin**.
 3. Open the **Metrics** tab.
 4. Click **Recompute** when you want fresh numbers (otherwise cached data loads quickly).
@@ -62,14 +62,14 @@ Cache TTL defaults to **6 hours**. Optional env on your Cloud Function:
 If you want snapshots without clicking Recompute:
 
 1. In **Google Cloud Console**, create a **Cloud Scheduler** job (e.g. every 6 hours).
-2. Target URL: `https://lyricai-studio-otgxn.web.app/api/cron/refresh-metrics`
+2. Target URL: `https://bar4bar.ink/api/cron/refresh-metrics`
 3. Add header: `Authorization: Bearer YOUR_CRON_SECRET`
 4. Set `CRON_SECRET` on the same Cloud Function that runs the app (see `docs/STRIPE_SETUP.md` for where env vars go).
 
 Manual test:
 
 ```bash
-curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://lyricai-studio-otgxn.web.app/api/cron/refresh-metrics
+curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://bar4bar.ink/api/cron/refresh-metrics
 ```
 
 ---
