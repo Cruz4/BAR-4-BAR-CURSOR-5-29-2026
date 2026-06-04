@@ -28,6 +28,12 @@ Yearly Pro: **50% off** ink packs at checkout (`STRIPE_COUPON_YEARLY_INK_50`).
 
 ---
 
+## Cloud Run runtime (SSR function)
+
+Firebase Hosting builds a Cloud Function (`ssrlyricaistudiootgxn`) for Next.js. The project pins **Node.js 22** via `package.json` → `"engines": { "node": "22" }` and `firebase-tools` ≥ 15. After upgrading, redeploy with `npm run deploy:live`. In Google Cloud Console the runtime should show **Node.js 22**, not 20 (Node 20 is deprecated Oct 2026).
+
+---
+
 ## Test mode (local / staging)
 
 Use **test** keys (`sk_test_...`, `pk_test_...`) in `.env`.
