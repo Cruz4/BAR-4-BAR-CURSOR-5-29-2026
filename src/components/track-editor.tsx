@@ -1394,8 +1394,12 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                           isSelected ? "opacity-100" : "max-md:opacity-0 max-md:pointer-events-none",
                           !isSelected && "md:opacity-0 md:group-hover:opacity-100"
                         )}>
-                            <Button variant="ghost" size="icon" disabled={trackLocked} className="h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10" onClick={(e) => handleSharedLineGeneration('next', e, section.id, bar.idx)}><ArrowDown className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
-                            <Button variant="ghost" size="icon" disabled={trackLocked} className="h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10" onClick={(e) => handleSharedLineGeneration('previous', e, section.id, bar.idx)}><ArrowUp className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
+                            <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
+                              <Button variant="ghost" size="icon" disabled={trackLocked} aria-label="Generate next line" className="h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10" onClick={(e) => handleSharedLineGeneration('next', e, section.id, bar.idx)}><ArrowDown className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
+                            </Hint>
+                            <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
+                              <Button variant="ghost" size="icon" disabled={trackLocked} aria-label="Generate previous line" className="h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10" onClick={(e) => handleSharedLineGeneration('previous', e, section.id, bar.idx)}><ArrowUp className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
+                            </Hint>
                             <Button variant="ghost" size="icon" disabled={trackLocked} className="h-7 w-7 md:h-8 md:w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteBar(section.id, bar.idx)}><Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
                         </div>
 
@@ -2289,7 +2293,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                             <Button variant="outline" size="sm" className="flex-1 h-9 font-bold text-[10px] uppercase border-border/40 gap-2 shadow-sm" onClick={(e) => handleSharedLineGeneration('previous', e)} title={tooltip('generateNextLine')}>
                                 <ArrowUp className="h-3 w-3 text-primary" /> PREV
                             </Button>
-                            <Button variant="outline" size="sm" className="flex-1 h-9 font-bold text-[10px] uppercase border-border/40 gap-2 shadow-sm" onClick={(e) => handleSharedLineGeneration('next', e)}>
+                            <Button variant="outline" size="sm" className="flex-1 h-9 font-bold text-[10px] uppercase border-border/40 gap-2 shadow-sm" onClick={(e) => handleSharedLineGeneration('next', e)} title={tooltip('generateNextLine')}>
                                 <ArrowDown className="h-3 w-3 text-primary" /> NEXT
                             </Button>
                         </div>

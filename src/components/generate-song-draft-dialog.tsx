@@ -154,19 +154,31 @@ interface GenerateSongDraftDialogProps {
   onDraftGenerated: (sections: any[]) => void;
 }
 
+const DEFAULT_STRUCTURE_PRESET = {
+  id: 'default',
+  name: 'Default',
+  desc: 'Standard song structure (Intro, 2 Verses, 2 Hooks).',
+  sections: [
+    { name: 'Intro', bars: 4, enabled: true },
+    { name: 'Verse', bars: 16, enabled: true },
+    { name: 'Hook', bars: 8, enabled: true },
+    { name: 'Verse', bars: 16, enabled: true },
+    { name: 'Hook', bars: 8, enabled: true },
+  ],
+} as const;
+
+/** New tracks ship with a single empty Verse line — treat as blank canvas for Hub structure. */
+function isFactoryPlaceholderStructure(sections: Track['sections'] | undefined): boolean {
+  if (!sections?.length) return true;
+  if (sections.length !== 1) return false;
+  const section = sections[0];
+  if ((section.type || '').toLowerCase() !== 'verse') return false;
+  if (section.bars.length !== 1) return false;
+  return !section.bars[0]?.text?.trim();
+}
+
 const STRUCTURE_PRESETS = [
-    { 
-        id: 'default', 
-        name: 'Default', 
-        desc: 'Standard song structure (Intro, 2 Verses, 2 Hooks).',
-        sections: [
-            { name: 'Intro', bars: 4, enabled: true },
-            { name: 'Verse', bars: 16, enabled: true },
-            { name: 'Hook', bars: 8, enabled: true },
-            { name: 'Verse', bars: 16, enabled: true },
-            { name: 'Hook', bars: 8, enabled: true },
-        ]
-    },
+    { ...DEFAULT_STRUCTURE_PRESET, sections: DEFAULT_STRUCTURE_PRESET.sections.map((s) => ({ ...s })) },
     { 
         id: 'extended', 
         name: 'Extended', 
@@ -381,7 +393,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   const isLooseTrack = isLooseTrackAlbum(album);
 
   const [hubStructure, setHubSections] = useState<{name: string, bars: number, enabled: boolean}[]>(
-    () => STRUCTURE_PRESETS[0].sections.map((s) => ({ ...s }))
+    () => DEFAULT_STRUCTURE_PRESET.sections.map((s) => ({ ...s }))
   );
   const [structurePresetId, setStructurePresetId] = useState('default');
   const [hubStructureGuide, setHubStructureGuide] = useState('');
@@ -486,7 +498,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
     setNewHubIntent('');
     setApprovalDraftHistory([]);
 
-    if (track.sections?.length > 0) {
+    if (track.sections?.length > 0 && !isFactoryPlaceholderStructure(track.sections)) {
       setHubSections(
         track.sections.map((s) => ({
           name: s.type,
@@ -496,7 +508,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
       );
       setStructurePresetId('custom');
     } else {
-      setHubSections(STRUCTURE_PRESETS[0].sections.map((s) => ({ ...s })));
+      setHubSections(DEFAULT_STRUCTURE_PRESET.sections.map((s) => ({ ...s })));
       setStructurePresetId('default');
     }
   }, [track, styleProfile]);

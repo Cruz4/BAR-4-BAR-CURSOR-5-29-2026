@@ -56,6 +56,7 @@ import {
   INK_PACK_YEARLY_DISCOUNT_SHORT,
   PRO_MONTHLY_INK,
   PRO_YEARLY_INK,
+  PRO_VS_VISITOR_MONTHLY_INK_MULTIPLIER,
   VISITOR_INK_SUMMARY,
   VISITOR_FEATURES,
   PRO_YEARLY_EXCLUSIVES,
@@ -127,7 +128,7 @@ export default function PricingPage() {
       billedText: isYearly ? `Billed annually (${PRO_YEARLY_BILLED})` : 'Billed monthly',
       description: isYearly
         ? 'Everything in Pro Monthly — plus yearly-only fuel, savings & roadmap input.'
-        : 'Your catalog, your strains, stage tools — plus 9× monthly Ink.',
+        : `Your catalog, your strains, stage tools — plus ~${PRO_VS_VISITOR_MONTHLY_INK_MULTIPLIER}× monthly residency Ink.`,
       membership: 'Professional Member',
       ink: isYearly ? `${PRO_YEARLY_INK.toLocaleString()} Monthly Residency Ink` : `${PRO_MONTHLY_INK.toLocaleString()} Monthly Residency Ink`,
       headlinePerks: getProHeadlinePerks(isYearly ? 'yearly' : 'monthly'),

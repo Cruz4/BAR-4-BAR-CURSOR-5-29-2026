@@ -4,7 +4,7 @@
  * Visitor: 300 signup + 111/mo residency (see subscription.ts).
  */
 export const AI_COSTS = {
-  generateNextLine: 10,
+  generateNextLine: 15,
   generateDraftPerBar: 2,
 
   analyzeRelayAssets: 10,

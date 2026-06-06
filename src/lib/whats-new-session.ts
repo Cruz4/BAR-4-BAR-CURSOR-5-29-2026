@@ -1,4 +1,4 @@
-const WHATS_NEW_VERSION = '0.5.0';
+const WHATS_NEW_VERSION = '0.5.1';
 const SESSION_KEY_PREFIX = 'b4b_whats_new_shown:';
 
 function sessionKey(userId: string) {

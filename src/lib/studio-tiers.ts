@@ -43,6 +43,11 @@ export const INK_PACK_YEARLY_DISCOUNT_LABEL = `${INK_PACK_YEARLY_DISCOUNT_PERCEN
 export const PRO_MONTHLY_INK = PRO_MONTHLY_RESIDENCY;
 export const PRO_YEARLY_INK = PRO_YEARLY_RESIDENCY;
 
+/** Pro Monthly residency refill vs Visitor monthly grant (1,777 ÷ 111 ≈ 16). */
+export const PRO_VS_VISITOR_MONTHLY_INK_MULTIPLIER = Math.round(
+  PRO_MONTHLY_INK / FREE_MONTHLY_RESIDENCY_INK
+);
+
 /** Residency progress bar denominator (Visitor: signup + monthly grant, pool capped). */
 export function getResidencyPoolCap(
   user: Pick<User, 'subscriptionStatus' | 'subscriptionTier'> | null | undefined
@@ -192,7 +197,7 @@ export const PRO_UNLOCKS = [
   'UNLOCK: Freestyle capture — record flows straight into your rhyme book',
   'UNLOCK: Full-studio vault import / export — merge JSON blueprints across devices',
   'UNLOCK: Shareable project links — DNA Drop live links for collab & feedback',
-  `${PRO_MONTHLY_INK.toLocaleString()} monthly residency Ink — ~9× Visitor pool, refreshes each cycle`,
+  `${PRO_MONTHLY_INK.toLocaleString()} monthly residency Ink — ~${PRO_VS_VISITOR_MONTHLY_INK_MULTIPLIER}× Visitor monthly grant, refreshes each cycle`,
 ] as const;
 
 /** Yearly Pro-only perks on top of full Pro unlocks */

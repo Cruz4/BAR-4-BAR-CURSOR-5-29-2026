@@ -1,5 +1,6 @@
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client/firebase';
+import { PRO_VS_VISITOR_MONTHLY_INK_MULTIPLIER } from '@/lib/studio-tiers';
 
 /** Dispatched from Studio Master Manual to replay the lyrics-page guided tour. */
 export const REPLAY_GUIDED_TOUR_EVENT = 'b4b-replay-guided-tour';
@@ -87,7 +88,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
 
 export const FREE_TIER_EXPECTATIONS = {
   headline: 'Visitor — full AI on free Ink',
-  body: 'Generate Next Line, Smart Structure, all 9 Creative Effects, and DNA & REMIX all run on your residency Ink. Load system DNA/Vibe/Style presets anytime. Studio Pro is for power users: custom strain saves, Performance Mode, Freestyle, vault import/export, DNA Drop links, and 9× monthly Ink.',
+  body: `Generate Next Line, Smart Structure, all 9 Creative Effects, and DNA & REMIX all run on your residency Ink. Load system DNA/Vibe/Style presets anytime. Studio Pro is for power users: custom strain saves, Performance Mode, Freestyle, vault import/export, DNA Drop links, and ~${PRO_VS_VISITOR_MONTHLY_INK_MULTIPLIER}× monthly residency Ink.`,
   dismissKey: 'b4b-free-tier-expectations-dismissed',
 } as const;
 

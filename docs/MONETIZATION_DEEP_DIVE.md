@@ -11,7 +11,7 @@ This replaces older notes about 8,888 Ink, $8.88/mo, or 125 signup Ink.
 
 | Tier | Price | Residency Ink |
 |------|-------|----------------|
-| Visitor | $0 | **300** signup + **200**/month (additive; can stack up to ~500 in UI pool) |
+| Visitor | $0 | **300** signup + **111**/month (additive; can stack up to **500** in UI pool) |
 | Pro Monthly | $7.77/mo | **1,777**/month (refill sets pool on subscribe + renew) |
 | Pro Yearly | $53.28/yr ($4.44/mo) | **3,444**/month residency refill |
 

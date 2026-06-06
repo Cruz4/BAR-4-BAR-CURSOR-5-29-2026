@@ -9,21 +9,15 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { 
-  Sparkles, 
-  Zap, 
-  RefreshCw, 
-  ShieldCheck, 
-  CheckCircle2, 
-  Cpu, 
+import {
+  Sparkles,
+  Cpu,
   Rocket,
-  ArrowRight,
-  Trophy,
-  Share2,
   Gift,
   LayoutGrid,
-  Target,
-  BookOpen
+  Lock,
+  Music2,
+  Layers,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -90,24 +84,19 @@ export function WhatsNewDialog() {
       icon: <Rocket className="h-4 w-4" />,
       items: [
         {
-          title: '14 New Studio Tips',
-          desc: '45+ rotating Insights and Did You Knows — DNA Drop, rhyme-bar math, strain inject, ranks, vault scroll, and more.',
+          title: '3-Day Pro Trial',
+          desc: 'New signups get full Studio Pro for 3 days — DNA Vault save, Performance, Freestyle, and more.',
           icon: <Sparkles className="h-3.5 w-3.5" />,
         },
         {
-          title: 'DNA Drop Tour Step',
-          desc: 'Guided tour now covers DNA Vault inject vs load and Pro DNA Drop sharing from the left panel.',
-          icon: <BookOpen className="h-3.5 w-3.5" />,
+          title: 'Calibration Hub',
+          desc: 'Vibe presets for everyone. Free tier gets DNA & Style PRESETS tabs; Pro unlocks Vault save.',
+          icon: <LayoutGrid className="h-3.5 w-3.5" />,
         },
         {
-          title: 'Rhyme Bar Progress',
-          desc: 'Weekly and monthly goals now count rhyme bars (two sheet lines = one bar). Tips and FAQ explain the math.',
-          icon: <Target className="h-3.5 w-3.5" />,
-        },
-        {
-          title: 'Creative Sync Polish',
-          desc: 'Generation and extraction overlays redesigned — horizontal strain tides, larger helix, cleaner ambient field.',
-          icon: <Rocket className="h-3.5 w-3.5" />,
+          title: 'Loose Track DNA',
+          desc: 'Loose tracks keep their own DNA. Album tracks still inherit from the project.',
+          icon: <Music2 className="h-3.5 w-3.5" />,
         },
       ],
     },
@@ -118,52 +107,19 @@ export function WhatsNewDialog() {
       icon: <Cpu className="h-4 w-4" />,
       items: [
         {
-          title: 'DNA Vault UX',
-          desc: 'Wider vault dialog, scrollable expanded presets, and clearer strain inject targets in the Calibration Hub.',
-          icon: <LayoutGrid className="h-3.5 w-3.5" />,
+          title: 'Free Tier Limits',
+          desc: '4 editable tracks on Free. Downgrade? Your 4 newest stay editable; older ones are view-only.',
+          icon: <Layers className="h-3.5 w-3.5" />,
         },
         {
-          title: 'Studio Progress',
-          desc: 'Vault sidebar + full board at /studio-progress — weekly goals, rank XP, milestones, and leaderboard compare.',
-          icon: <Trophy className="h-3.5 w-3.5" />,
-        },
-        {
-          title: 'Achievements & Share Cards',
-          desc: 'Badges unlock as you explore; export foil milestone cards from Studio Profile for social posts.',
-          icon: <Share2 className="h-3.5 w-3.5" />,
+          title: 'Pro Lock Labels',
+          desc: 'Locked Pro tools stay visible with clear Studio Pro labels — no mystery gray buttons.',
+          icon: <Lock className="h-3.5 w-3.5" />,
         },
         {
           title: 'Refer a Friend',
-          desc: 'Ink Store → copy your link. You and each friend get 150 permanent Ink when they join (up to 4 referrals).',
+          desc: 'Ink Store → copy your link. You and each friend get 150 Ink when they join (up to 4).',
           icon: <Gift className="h-3.5 w-3.5" />,
-        },
-      ],
-    },
-    {
-      title: 'Fixes',
-      color: 'text-emerald-500',
-      bgColor: 'bg-emerald-500/5',
-      icon: <ShieldCheck className="h-4 w-4" />,
-      items: [
-        {
-          title: 'Studio Tips',
-          desc: 'Tips show once per lyrics-page visit instead of repeating on every auth refresh.',
-          icon: <Zap className="h-3 w-3" />,
-        },
-        {
-          title: "What's New",
-          desc: 'Upgrade notes show once per login; Escape and backdrop dismiss count properly.',
-          icon: <RefreshCw className="h-3 w-3" />,
-        },
-        {
-          title: 'Vault UX',
-          desc: 'Removed awkward blank zones, empty Loose Tracks section when you have none, and progress text overflow.',
-          icon: <ArrowRight className="h-3 w-3" />,
-        },
-        {
-          title: 'Stripe Referrals',
-          desc: 'Referral signups credit Ink automatically; referred users carry metadata on checkout for tracking.',
-          icon: <Gift className="h-3 w-3" />,
         },
       ],
     },
@@ -177,14 +133,14 @@ export function WhatsNewDialog() {
             <Cpu className="h-16 w-16" />
           </div>
           <div className="flex items-center gap-3 mb-1">
-            <Badge className="bg-primary/20 text-primary border-primary/20 font-code px-2 text-[10px]">Bar 4 Bar v.04</Badge>
+            <Badge className="bg-primary/20 text-primary border-primary/20 font-code px-2 text-[10px]">Bar 4 Bar v.05</Badge>
             <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Studio Upgrade Notes</span>
           </div>
           <DialogTitle className="font-headline text-3xl font-bold tracking-tighter">What's New in the Studio</DialogTitle>
         </DialogHeader>
 
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {CATEGORIES.map((cat) => (
               <div key={cat.title} className="space-y-4">
                 <div className={cn("flex items-center gap-2 border-b pb-2", cat.color, "border-current/10")}>
