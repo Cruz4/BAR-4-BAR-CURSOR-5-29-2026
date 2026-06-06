@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LogOut, LayoutDashboard, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy } from 'lucide-react';
+import { LogOut, LayoutDashboard, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy, Smartphone } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -29,6 +29,7 @@ import { Progress } from './ui/progress';
 import { getResidencyPoolCap, getResidencyProgressPercent } from '@/lib/studio-tiers';
 import { FREE_MONTHLY_RESIDENCY_INK, SIGNUP_INK } from '@/lib/subscription';
 import { HowToUseDialog } from './how-to-use-dialog';
+import { isMobileInstallPlatform, isStandalonePwa, requestPwaInstallPrompt } from '@/lib/pwa-install';
 import {
   Popover,
   PopoverContent,
@@ -45,6 +46,11 @@ export function Header() {
   const { isGenerating, generatingMessage } = useUIState();
   const { inkBalance, residencyBalance, purchasedBalance } = useUsage();
   const [progress, setProgress] = useState(0);
+  const [showPwaInstallMenu, setShowPwaInstallMenu] = useState(false);
+
+  useEffect(() => {
+    setShowPwaInstallMenu(isMobileInstallPlatform() && !isStandalonePwa());
+  }, []);
 
   const albumId = params?.albumId as string;
   const trackId = params?.trackId as string;
@@ -221,6 +227,11 @@ export function Header() {
                       <DropdownMenuItem onClick={() => router.push('/studio-progress')}><Trophy className="mr-2 h-4 w-4 text-amber-400" /><span>Studio Progress</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage')}><Droplets className="mr-2 h-4 w-4" /><span>Ink Store & Settings</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=cloud')}><Star className="mr-2 h-4 w-4 text-pink-400" /><span>Studio Tier</span></DropdownMenuItem>
+                      {showPwaInstallMenu && (
+                        <DropdownMenuItem className="md:hidden" onClick={() => requestPwaInstallPrompt()}>
+                          <Smartphone className="mr-2 h-4 w-4 text-primary" /><span>Add to Home Screen</span>
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       {user.role === 'admin' && (<DropdownMenuItem onClick={() => router.push('/admin')} className="text-primary font-bold"><Shield className="mr-2 h-4 w-4" /><span>Admin Panel</span></DropdownMenuItem>)}
                       <DropdownMenuItem onClick={() => setBugReportOpen(true)} className="text-muted-foreground"><HelpCircle className="mr-2 h-4 w-4" /><span>Report an Issue</span></DropdownMenuItem>

@@ -63,6 +63,7 @@ import { getTrialDaysRemaining, isTrialActive } from '@/lib/trial';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
 import { TierPriceSummary } from '@/components/tier-price-summary';
 import { StudioProfileSection } from '@/components/gamification/studio-profile-section';
+import { PwaInstallGuideCard } from '@/components/pwa-install-prompt';
 import { ReferAFriendSection } from '@/components/refer-a-friend-section';
 import {
   buildLoginPath,
@@ -532,6 +533,7 @@ function UsagePageContent() {
         <TabsContent value="settings" className="w-full max-w-3xl">
             <div className="space-y-10 text-[15px] md:text-base">
                 <StudioProfileSection />
+                <PwaInstallGuideCard />
                 {isCloudSyncActive && (
                 <Card className="border-primary/20">
                     <CardHeader className="pb-4">

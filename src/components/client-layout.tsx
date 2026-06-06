@@ -18,6 +18,7 @@ import { FloatingInkSpent } from './floating-ink-spent';
 import { WhatsNewDialog } from './whats-new-dialog';
 import { StudioPrivacyIntroDialog } from './studio-privacy-intro-dialog';
 import { CookieConsent } from './cookie-consent';
+import { PwaInstallPrompt } from './pwa-install-prompt';
 import { OfflineBanner } from './offline-banner';
 import { ServiceWorkerRegister } from './service-worker-register';
 import { StudioPageBackground } from './studio-page-background';
@@ -51,6 +52,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                   {!isSharePage && <WhatsNewDialog />}
                   {!isSharePage && !isLoginPage && <StudioPrivacyIntroDialog />}
                   <CookieConsent />
+                  {!isSharePage && !isLoginPage && <PwaInstallPrompt />}
                   <OfflineBanner />
                   <ServiceWorkerRegister />
                 </div>
