@@ -59,6 +59,7 @@ function userFromFirebase(
     subscriptionTier: data?.subscriptionTier || 'none',
     trialStartedAt: data?.trialStartedAt ?? null,
     lyricsTutorialCompletedAt: data?.lyricsTutorialCompletedAt,
+    vaultTutorialCompletedAt: data?.vaultTutorialCompletedAt,
     studioPrivacyIntroCompletedAt: data?.studioPrivacyIntroCompletedAt,
   };
 }
@@ -184,6 +185,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               subscriptionTier: nextUser.subscriptionTier,
               trialStartedAt: nextUser.trialStartedAt ?? null,
               lyricsTutorialCompletedAt: nextUser.lyricsTutorialCompletedAt,
+              vaultTutorialCompletedAt: nextUser.vaultTutorialCompletedAt,
             });
           } else {
             const fallback = hydrateFromFirebase();
@@ -198,6 +200,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               subscriptionTier: fallback.subscriptionTier,
               trialStartedAt: fallback.trialStartedAt ?? null,
               lyricsTutorialCompletedAt: fallback.lyricsTutorialCompletedAt,
+              vaultTutorialCompletedAt: fallback.vaultTutorialCompletedAt,
             });
           }
           finishLoading();
@@ -246,7 +249,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!user && (isProtectedRoute || isHomePage)) {
       if (isBrowserOffline()) return;
       setIsRedirecting(true);
-      router.push('/login');
+      const search = typeof window !== 'undefined' ? window.location.search : '';
+      const returnPath = `${pathname}${search}`;
+      const loginUrl =
+        returnPath && returnPath !== '/login'
+          ? `/login?next=${encodeURIComponent(returnPath)}`
+          : '/login';
+      router.push(loginUrl);
     } else if (user && isAuthRoute) {
       const nextParam =
         typeof window !== 'undefined'
@@ -274,13 +283,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AuthContext.Provider value={{ user, loading, authReady, offlineAuth }}>
       {showLoader ? (
-        <div className="flex h-screen w-full items-center justify-center">
-          <div className="flex flex-col items-center gap-6">
-            <StudioLoader size="lg" />
-            <p className="text-xs font-code uppercase tracking-widest text-muted-foreground animate-pulse">
-              Initializing Studio...
-            </p>
-          </div>
+        <div className="flex h-screen w-full items-center justify-center bg-background">
+          <StudioLoader size="lg" />
         </div>
       ) : (
         children

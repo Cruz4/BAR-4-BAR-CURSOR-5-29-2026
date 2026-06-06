@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useContext, useState, useEffect, Suspense } from 'react';
+import React, { useContext, useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useUsage } from '@/context/usage-context';
 import { DataContext } from '@/context/data-context';
@@ -41,8 +41,8 @@ import { Label } from '@/components/ui/label';
 import { useStripe } from '@/services/stripe';
 import { useAuth } from '@/hooks/use-auth';
 import { db, auth } from '@/lib/firebase/client/firebase';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { updateProfile, deleteUser } from 'firebase/auth';
+import { doc, updateDoc } from 'firebase/firestore';
+import { updateProfile, signOut } from 'firebase/auth';
 import { Progress } from '@/components/ui/progress';
 import {
   getInkPackRows,
@@ -64,6 +64,10 @@ import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-
 import { TierPriceSummary } from '@/components/tier-price-summary';
 import { StudioProfileSection } from '@/components/gamification/studio-profile-section';
 import { ReferAFriendSection } from '@/components/refer-a-friend-section';
+import {
+  buildLoginPath,
+  isProCheckoutPriceKey,
+} from '@/lib/checkout-intent';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -91,6 +95,7 @@ function UsagePageContent() {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const checkoutAutoStartedRef = useRef(false);
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -142,6 +147,24 @@ function UsagePageContent() {
     }
   }, [searchParams, toast, router, user?.id, fulfillCheckoutReturn]);
 
+  useEffect(() => {
+    const rawCheckout = searchParams.get('checkout');
+    if (!isProCheckoutPriceKey(rawCheckout) || !user?.id) return;
+    if (searchParams.get('success') === 'true' || searchParams.get('canceled') === 'true') return;
+    if (checkoutAutoStartedRef.current || isCheckingOut) return;
+
+    checkoutAutoStartedRef.current = true;
+    setActiveTab('cloud');
+
+    if (isProUser(user)) {
+      router.replace('/usage?tab=cloud');
+      return;
+    }
+
+    router.replace('/usage?tab=cloud');
+    checkout(rawCheckout, user.id, user.email);
+  }, [searchParams, user, checkout, isCheckingOut, router]);
+
   const isYearlyUser = user?.subscriptionTier === 'yearly';
   const paidPro = isProUser(user);
   const trialActive = isTrialActive(user);
@@ -161,8 +184,11 @@ function UsagePageContent() {
     priceKey: 'PRO_MONTHLY' | 'PRO_YEARLY' | 'INK_REFILL' | 'INK_ARTIST' | 'INK_VAULT'
   ) => {
     if (!user) {
-      toast({ variant: 'destructive', title: 'Sign in required', description: 'Log in to purchase or upgrade.' });
-      router.push('/login');
+      const loginPath =
+        priceKey === 'PRO_MONTHLY' || priceKey === 'PRO_YEARLY'
+          ? buildLoginPath(`/usage?tab=cloud&checkout=${priceKey}`)
+          : buildLoginPath('/usage?tab=buy-ink');
+      router.push(loginPath);
       return;
     }
     checkout(priceKey, user.id, user.email);
@@ -394,9 +420,15 @@ function UsagePageContent() {
         <TabsContent value="cloud" className="w-full">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {getStudioTierPlans(isCloudSyncActive, user?.subscriptionTier).map((plan) => (
-                    <Card key={plan.name} className={cn("border-accent overflow-hidden flex flex-col relative transition-all duration-500 shadow-xl", plan.isCurrent && "ring-4 ring-primary/20")}>
-                        {plan.badge && <Badge className="absolute top-2 right-2 text-[8px] bg-accent">{plan.badge}</Badge>}
-                        <div className={cn("p-6 flex flex-col justify-between text-center border-b min-h-[320px]", plan.name === 'Pro Yearly' ? "bg-accent/10" : plan.name === 'Visitor' ? "bg-muted/10" : "bg-primary/10")}>
+                    <Card key={plan.name} className={cn("border-accent flex flex-col relative transition-all duration-500 shadow-xl", plan.badge ? "overflow-visible" : "overflow-hidden", plan.isCurrent && "ring-4 ring-primary/20")}>
+                        {plan.badge && (
+                          <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 flex max-w-[calc(100%-1.5rem)] justify-center">
+                            <Badge className="whitespace-nowrap text-[8px] uppercase tracking-widest font-bold bg-accent px-4 py-1.5 shadow-lg">
+                              {plan.badge}
+                            </Badge>
+                          </div>
+                        )}
+                        <div className={cn("p-6 flex flex-col justify-between text-center border-b min-h-[320px] overflow-hidden rounded-t-lg", plan.badge && "pt-8", plan.name === 'Pro Yearly' ? "bg-accent/10" : plan.name === 'Visitor' ? "bg-muted/10" : "bg-primary/10")}>
                             <div className="space-y-3">
                               <h3 className="text-2xl font-headline font-bold uppercase">{plan.name}</h3>
                               <div className="flex flex-col items-center">
@@ -597,11 +629,19 @@ function UsagePageContent() {
               <AlertDialogFooter>
                   <AlertDialogCancel className="font-bold">Cancel</AlertDialogCancel>
                   <AlertDialogAction onClick={async () => {
-                      if (!user) return;
+                      if (!user || !auth.currentUser) return;
                       setIsDeletingAccount(true);
                       try {
-                          await deleteDoc(doc(db, 'users', user.id));
-                          await deleteUser(auth.currentUser!);
+                          const token = await auth.currentUser.getIdToken();
+                          const res = await fetch('/api/account/eradicate', {
+                            method: 'POST',
+                            headers: { Authorization: `Bearer ${token}` },
+                          });
+                          const body = await res.json().catch(() => ({}));
+                          if (!res.ok) {
+                            throw new Error(body.error || `Deletion failed (${res.status})`);
+                          }
+                          await signOut(auth);
                           router.push('/login');
                       } catch (e: any) {
                           toast({ variant: 'destructive', title: "Deletion Failed", description: e.message });

@@ -255,7 +255,7 @@ export function AdminAchievementsTab({
                       <TableCell>
                         <Badge
                           variant="outline"
-                          className="text-[7px] h-5 border-amber-500/30 text-amber-300 uppercase whitespace-nowrap"
+                          className="inline-flex w-fit items-center whitespace-nowrap text-[7px] leading-none px-2 py-0.5 border-amber-500/30 text-amber-300 uppercase font-bold tracking-wide"
                         >
                           {rankLabel(row.rankId)}
                         </Badge>

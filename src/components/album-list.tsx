@@ -11,13 +11,12 @@
  * - UPDATE (5/29): Renamed main title to ALBUMS as requested.
  */
 
-import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useContext, useRef, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
     PlusCircle, 
     Music, 
-    BrainCircuit, 
     Sparkles, 
     Download, 
     Trash2, 
@@ -60,7 +59,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { Album, Track } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { DataContext } from '@/context/data-context';
 import { useRouter, usePathname } from 'next/navigation';
 import {
@@ -115,6 +114,14 @@ import {
   proLockText,
 } from '@/components/pro-lock';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
+import { StudioGuidedTour } from '@/components/studio-guided-tour';
+import {
+  VAULT_PAGE_TOUR_STEPS,
+  markVaultTutorialComplete,
+  PENDING_VAULT_TOUR_REPLAY_KEY,
+  REPLAY_VAULT_TOUR_EVENT,
+  type LyricsTourStep,
+} from '@/lib/studio-onboarding';
 import { getEditableAlbumIds, getEditableTrackIds } from '@/lib/tier-limits';
 import type { User } from '@/lib/types';
 import { Lock } from 'lucide-react';
@@ -242,30 +249,6 @@ function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenC
   );
 }
 
-function StudioEmptyState({ onCreateAlbum, onCreateTrack }: { onCreateAlbum: () => void; onCreateTrack: () => void }) {
-    return (
-        <div className="flex flex-col items-center justify-center py-20 px-4">
-            <div className="text-center space-y-4 mb-12">
-                <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto border border-primary/20 shadow-2xl">
-                    <BrainCircuit className="h-12 w-12 text-primary animate-pulse" />
-                </div>
-                <h2 className="text-4xl font-headline font-bold text-white uppercase tracking-tighter">Initialize Studio</h2>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-[0.3em]">Start with a concept album or capture a loose track.</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-3xl">
-                <Card className="group cursor-pointer border-2 hover:border-primary/50 transition-all bg-card/60 shadow-2xl" onClick={onCreateAlbum}>
-                    <CardHeader className="text-center"><Music className="h-8 w-8 text-primary mx-auto mb-4" /><CardTitle className="font-headline text-2xl uppercase">Concept Album</CardTitle></CardHeader>
-                    <CardFooter><Button variant="ghost" className="w-full text-[10px] font-bold uppercase tracking-widest group-hover:text-primary">Create Album <ChevronRight className="ml-2 h-3.5 w-3.5" /></Button></CardFooter>
-                </Card>
-                <Card className="group cursor-pointer border-2 hover:border-primary/50 transition-all bg-card/60 shadow-2xl" onClick={onCreateTrack}>
-                    <CardHeader className="text-center"><CassetteTape className="h-8 w-8 text-primary mx-auto mb-4" /><CardTitle className="font-headline text-2xl uppercase">Loose Track</CardTitle></CardHeader>
-                    <CardFooter><Button variant="ghost" className="w-full text-[10px] font-bold uppercase tracking-widest group-hover:text-primary">Capture Flow <ChevronRight className="ml-2 h-3.5 w-3.5" /></Button></CardFooter>
-                </Card>
-            </div>
-        </div>
-    );
-}
-
 function FreeVisitorVault({
   sortedLooseTracks,
   filteredAlbums,
@@ -302,7 +285,7 @@ function FreeVisitorVault({
       </ProLockBanner>
 
       <div className="space-y-6">
-        <div className="flex items-center gap-4 border-l-4 border-sky-500 pl-6">
+        <div className="flex items-center gap-4 border-l-4 border-sky-500 pl-6" data-tour="vault-loose-tracks">
           <Link
             href="/albums/unassigned"
             className="text-3xl font-headline font-bold text-white uppercase tracking-tighter flex items-center gap-3 hover:text-sky-300 transition-colors"
@@ -359,7 +342,7 @@ function FreeVisitorVault({
         </div>
       </div>
 
-      <div className="space-y-10">
+      <div className="space-y-10" data-tour="vault-collection">
         <div className="flex items-center gap-4 border-l-4 border-emerald-500 pl-6">
           <h2 className="text-3xl font-headline font-bold text-white uppercase tracking-tighter flex items-center gap-3">
             <Music className="text-emerald-500 h-8 w-8" /> YOUR COLLECTION
@@ -454,9 +437,80 @@ export function AlbumList() {
   const [dataToImport, setDataToImport] = useState<any>(null);
   const [trackToDelete, setTrackToDelete] = useState<Track | null>(null);
   const [looseTracksMinimized, setLooseTracksMinimized] = useState(false);
+  const [vaultTourActive, setVaultTourActive] = useState(false);
+  const [vaultTourStep, setVaultTourStep] = useState(0);
+  const vaultTourAutoStartRef = useRef(false);
+
+  const VAULT_TOUR_MOBILE_TOP = useMemo(
+    () => new Set(['vault-header', 'vault-search', 'vault-create', 'vault-progress', 'ink']),
+    []
+  );
+
+  const vaultProgressTourPinned =
+    vaultTourActive && VAULT_PAGE_TOUR_STEPS[vaultTourStep]?.id === 'vault-progress';
 
   const unassignedTracks = getAlbumById('unassigned')?.tracks || [];
   const realAlbums = albums.filter(a => a.id !== 'unassigned');
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(PENDING_VAULT_TOUR_REPLAY_KEY)) {
+        sessionStorage.removeItem(PENDING_VAULT_TOUR_REPLAY_KEY);
+        setVaultTourStep(0);
+        setVaultTourActive(true);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    const onReplay = () => {
+      setVaultTourStep(0);
+      setVaultTourActive(true);
+    };
+    window.addEventListener(REPLAY_VAULT_TOUR_EVENT, onReplay);
+    return () => window.removeEventListener(REPLAY_VAULT_TOUR_EVENT, onReplay);
+  }, []);
+
+  useEffect(() => {
+    if (!user || pathname !== '/' || loading || vaultTourAutoStartRef.current) return;
+    if (user.vaultTutorialCompletedAt) return;
+    vaultTourAutoStartRef.current = true;
+    const t = setTimeout(() => setVaultTourActive(true), 1000);
+    return () => clearTimeout(t);
+  }, [user, pathname, loading]);
+
+  const handleVaultTourBeforeStep = useCallback((step: LyricsTourStep) => {
+    if (step.id === 'vault-loose-tracks') {
+      setLooseTracksMinimized(false);
+    }
+    if (
+      step.id === 'vault-header' ||
+      step.id === 'vault-search' ||
+      step.id === 'vault-create' ||
+      step.id === 'vault-progress'
+    ) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
+
+  const handleVaultTourComplete = useCallback(
+    async (skipped: boolean) => {
+      setVaultTourActive(false);
+      if (user && !user.vaultTutorialCompletedAt) {
+        try {
+          await markVaultTutorialComplete(user.id);
+        } catch (e) {
+          console.warn('Failed to save vault tutorial completion', e);
+        }
+      }
+      if (!skipped) {
+        void postGamificationEvent('tour_complete');
+      }
+    },
+    [user]
+  );
 
   // Login and route transitions can leave the window scrolled mid-page before vault content paints.
   useEffect(() => {
@@ -605,7 +659,7 @@ export function AlbumList() {
 
         <div className="relative z-20 w-full min-w-0 max-w-[100vw] xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,72rem)_minmax(0,1fr)] xl:grid-rows-[auto_auto] xl:items-start">
           <div className="relative min-w-0 w-full xl:col-start-2 xl:row-start-1 px-4 sm:px-6 pt-6">
-            <header className="mb-8 pb-6 border-b border-white/5">
+            <header className="mb-8 pb-6 border-b border-white/5" data-tour="vault-header">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-6">
                 <div className="flex items-center gap-3 shrink-0">
                   <Waves className="h-8 w-8 text-primary shrink-0" />
@@ -620,7 +674,7 @@ export function AlbumList() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 w-full lg:flex-1 lg:justify-end lg:max-w-3xl">
-                    <div className="relative group w-full sm:min-w-[280px] sm:max-w-md sm:flex-1">
+                    <div className="relative group w-full sm:min-w-[280px] sm:max-w-md sm:flex-1" data-tour="vault-search">
                         <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                         <Input 
                             placeholder='Search Vault... use "" for exact' 
@@ -646,7 +700,7 @@ export function AlbumList() {
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button size="sm" className="h-10 px-6 font-bold shadow-[0_0_25px_rgba(59,130,246,0.3)] bg-primary hover:bg-primary/90 text-white rounded-xl uppercase text-[10px] tracking-widest gap-2">
+                            <Button size="sm" data-tour="vault-create" className="h-10 px-6 font-bold shadow-[0_0_25px_rgba(59,130,246,0.3)] bg-primary hover:bg-primary/90 text-white rounded-xl uppercase text-[10px] tracking-widest gap-2">
                                 <PlusCircle className="h-4 w-4" /> Create New
                             </Button>
                         </DropdownMenuTrigger>
@@ -692,7 +746,7 @@ export function AlbumList() {
 
             {!loading && user && (
               <div className="xl:hidden mb-4">
-                <VaultStudioProgress variant="banner" />
+                <VaultStudioProgress variant="banner" tourForceExpanded={vaultProgressTourPinned} />
               </div>
             )}
           </div>
@@ -702,7 +756,7 @@ export function AlbumList() {
               className="hidden xl:flex xl:col-start-1 xl:row-start-2 justify-end items-start self-start pr-2 2xl:pr-3 sticky top-[5.25rem] z-30 pointer-events-none [&>*]:pointer-events-auto"
               aria-label="Studio progress"
             >
-              <VaultStudioProgress variant="sidebar" />
+              <VaultStudioProgress variant="sidebar" tourForceExpanded={vaultProgressTourPinned} />
             </aside>
           )}
 
@@ -752,20 +806,19 @@ export function AlbumList() {
                   albums={albums}
                   user={user}
                 />
-            ) : isEmpty ? (
-                <StudioEmptyState onCreateAlbum={() => setCreateItemType('Album')} onCreateTrack={() => setCreateItemType('Track')} />
             ) : (
                 <div className="space-y-12">
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                        {unassignedTracks.length > 0 && (
-                            <>
-                            <div className="flex items-center justify-between border-l-4 border-primary pl-6">
-                                <div className="flex items-center gap-4">
+                            <div
+                              data-tour="vault-loose-tracks"
+                              className="flex items-center justify-between border-l-4 border-primary pl-6"
+                            >
+                                <div className="flex items-center gap-4 min-w-0">
                                     <Link
                                       href="/albums/unassigned"
-                                      className="text-3xl font-headline font-bold text-white uppercase tracking-tighter flex items-center gap-3 hover:text-primary transition-colors"
+                                      className="text-2xl sm:text-3xl font-headline font-bold text-white uppercase tracking-tighter flex items-center gap-3 hover:text-primary transition-colors"
                                     >
-                                      <CassetteTape className="text-primary h-8 w-8 shrink-0" />
+                                      <CassetteTape className="text-primary h-7 w-7 sm:h-8 sm:w-8 shrink-0" />
                                       Loose Tracks
                                     </Link>
                                     {unassignedTracks.length > 0 && (
@@ -779,13 +832,15 @@ export function AlbumList() {
                                         >
                                             {looseTracksMinimized ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
                                         </Button>
-                                        <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Unassigned Singles & Ideas</p>
+                                        <p className="hidden sm:block text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Unassigned Singles & Ideas</p>
                                       </>
                                     )}
+                                    {unassignedTracks.length === 0 && (
+                                      <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Tap + to capture a single</p>
+                                    )}
                                 </div>
-                                <Badge variant="outline" className="border-primary/20 text-primary font-mono">{unassignedTracks.length}</Badge>
+                                <Badge variant="outline" className="border-primary/20 text-primary font-mono shrink-0">{unassignedTracks.length}</Badge>
                             </div>
-                            
                             <AnimatePresence>
                                 {(!looseTracksMinimized || unassignedTracks.length === 0) && (
                                     <motion.div 
@@ -845,18 +900,14 @@ export function AlbumList() {
                                                     </div>
                                                 </div>
                                             ))}
-                                            {isPro && (
-                                              <ProCreateTrackSlot onClick={() => setCreateItemType('Track')} />
-                                            )}
+                                            <ProCreateTrackSlot onClick={() => setCreateItemType('Track')} />
                                         </div>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
-                            </>
-                        )}
                     </div>
 
-                    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
+                    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200" data-tour="vault-collection">
                         <div className="flex items-center gap-4 border-l-4 border-emerald-500 pl-6">
                             <div>
                                 <h2 className="text-3xl font-headline font-bold text-white uppercase tracking-tighter flex items-center gap-3">
@@ -972,6 +1023,16 @@ export function AlbumList() {
               </AlertDialogFooter>
           </AlertDialogContent>
       </AlertDialog>
+
+      <StudioGuidedTour
+        active={vaultTourActive}
+        stepIndex={vaultTourStep}
+        onStepChange={setVaultTourStep}
+        onComplete={handleVaultTourComplete}
+        onBeforeStep={handleVaultTourBeforeStep}
+        steps={VAULT_PAGE_TOUR_STEPS}
+        mobileTopCardStepIds={VAULT_TOUR_MOBILE_TOP}
+      />
     </TooltipProvider>
   );
 }

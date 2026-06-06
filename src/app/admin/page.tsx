@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase/client/firebase';
-import { collection, query, doc, updateDoc, orderBy, getDoc, limit, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, doc, updateDoc, orderBy, getDoc, limit, setDoc } from 'firebase/firestore';
 import { subscribeQuery } from '@/lib/firebase/client/firestore-subscribe';
 import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import { adminApiFetch } from '@/lib/admin-client';
@@ -28,6 +28,7 @@ import {
     AlertTriangle,
     LineChart,
     Trophy,
+    ArrowUpDown,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { User, SystemLog } from '@/lib/types';
@@ -48,6 +49,7 @@ import { AdminAchievementsTab } from '@/components/admin-achievements-tab';
 import { AdminInviteGateCard } from '@/components/admin-invite-gate-card';
 import type { AdminGamificationRosterEntry } from '@/lib/gamification/admin-roster-types';
 import { format } from 'date-fns';
+import { formatUserJoinDate, userDateSortValue } from '@/lib/user-date';
 import {
   Tooltip,
   TooltipContent,
@@ -57,7 +59,16 @@ import {
 
 type AdminGamificationStats = AdminGamificationRosterEntry;
 
+type RosterSortKey = 'artist' | 'tier' | 'rank' | 'trophies' | 'streak' | 'joined' | 'residency' | 'permanent';
+type SortDir = 'asc' | 'desc';
+
 const TOTAL_ACHIEVEMENTS = ACHIEVEMENTS.length;
+
+const TIER_SORT_ORDER: Record<string, number> = {
+  yearly: 3,
+  monthly: 2,
+  none: 1,
+};
 
 function rankLabel(rankId: RankId | undefined): string {
   return STUDIO_RANKS.find((r) => r.id === (rankId || 'open_mic'))?.label ?? 'Open Mic';
@@ -80,9 +91,44 @@ export default function AdminPage() {
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [resettingGamification, setResettingGamification] = useState<string | null>(null);
   const [gamificationRefreshing, setGamificationRefreshing] = useState(false);
+  const [rosterSort, setRosterSort] = useState<{ key: RosterSortKey; dir: SortDir }>({ key: 'joined', dir: 'desc' });
   const rosterLoadedRef = useRef(false);
   const lastRosterUserIdsRef = useRef('');
   const gamificationFetchRef = useRef<Promise<void> | null>(null);
+
+  const sortedUsers = useMemo(() => {
+    const dir = rosterSort.dir === 'asc' ? 1 : -1;
+    return [...users].sort((a, b) => {
+      const gamA = gamificationStats[a.id];
+      const gamB = gamificationStats[b.id];
+      switch (rosterSort.key) {
+        case 'artist':
+          return dir * (a.displayName || '').localeCompare(b.displayName || '', undefined, { sensitivity: 'base' });
+        case 'tier':
+          return dir * ((TIER_SORT_ORDER[a.subscriptionTier || 'none'] ?? 0) - (TIER_SORT_ORDER[b.subscriptionTier || 'none'] ?? 0));
+        case 'rank':
+          return dir * ((gamA?.xp ?? 0) - (gamB?.xp ?? 0));
+        case 'trophies':
+          return dir * (Object.keys(gamA?.unlockedAchievements || {}).length - Object.keys(gamB?.unlockedAchievements || {}).length);
+        case 'streak':
+          return dir * ((gamA?.currentStreak ?? 0) - (gamB?.currentStreak ?? 0));
+        case 'joined':
+          return dir * (userDateSortValue(a.createdAt) - userDateSortValue(b.createdAt));
+        case 'residency':
+          return dir * ((balances[a.id]?.res || 0) - (balances[b.id]?.res || 0));
+        case 'permanent':
+          return dir * ((balances[a.id]?.pur || 0) - (balances[b.id]?.pur || 0));
+        default:
+          return 0;
+      }
+    });
+  }, [users, gamificationStats, balances, rosterSort]);
+
+  const toggleRosterSort = (key: RosterSortKey) => {
+    setRosterSort((prev) =>
+      prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }
+    );
+  };
 
   const loadGamificationRoster = (force = false) => {
     if (!force && gamificationFetchRef.current) return gamificationFetchRef.current;
@@ -343,10 +389,38 @@ export default function AdminPage() {
   };
 
   const handleDeleteUser = async (targetUser: User) => {
-      if (!confirm(`ERADICATION PROTOCOL: Are you absolutely sure you want to delete ${targetUser.displayName}? This removes their profile and albums from the studio view.`)) return;
+      if (
+        !confirm(
+          `ERADICATION PROTOCOL: Permanently delete ${targetUser.displayName}?\n\nThis removes their Firebase Authentication account and wipes all albums, tracks, ink balances, trophies, DNA Drops, and vault data. If they sign in again they start as a new empty studio.`
+        )
+      ) {
+        return;
+      }
       try {
-          await deleteDoc(doc(db, 'users', targetUser.id));
-          toast({ title: "Artist Scrapped", description: "Identity removed from the roster." });
+          const res = await adminApiFetch('/api/admin/users/eradicate', {
+            method: 'POST',
+            body: JSON.stringify({ targetUserId: targetUser.id }),
+          });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(body.error || `Eradication failed (${res.status})`);
+          }
+          setUsers((prev) => prev.filter((u) => u.id !== targetUser.id));
+          setBlockedUsers((prev) => prev.filter((u) => u.id !== targetUser.id));
+          setBalances((prev) => {
+            const next = { ...prev };
+            delete next[targetUser.id];
+            return next;
+          });
+          setGamificationStats((prev) => {
+            const next = { ...prev };
+            delete next[targetUser.id];
+            return next;
+          });
+          toast({
+            title: 'Identity Eradicated',
+            description: `Removed Auth account and ${body.albumsDeleted ?? 0} albums / ${body.tracksDeleted ?? 0} tracks.`,
+          });
       } catch (e: any) {
           toast({ variant: 'destructive', title: "Eradication Failed", description: e.message });
       }
@@ -389,9 +463,38 @@ export default function AdminPage() {
             <CardHeader className="border-b"><CardTitle className="font-headline text-2xl uppercase">Residency Management</CardTitle></CardHeader>
             <CardContent className="p-0 overflow-x-auto">
               <Table>
-                <TableHeader><TableRow><TableHead>Artist</TableHead><TableHead>Tier</TableHead><TableHead>Rank / XP</TableHead><TableHead>Trophies</TableHead><TableHead>Streak</TableHead><TableHead>Residency Ink</TableHead><TableHead>Permanent Ink</TableHead><TableHead>Manual Calibration</TableHead><TableHead className="text-right">Access</TableHead></TableRow></TableHeader>
+                <TableHeader>
+                  <TableRow>
+                    {([
+                      ['Artist', 'artist'],
+                      ['Tier', 'tier'],
+                      ['Joined', 'joined'],
+                      ['Rank / XP', 'rank'],
+                      ['Trophies', 'trophies'],
+                      ['Streak', 'streak'],
+                      ['Residency Ink', 'residency'],
+                      ['Permanent Ink', 'permanent'],
+                    ] as const).map(([label, key]) => (
+                      <TableHead key={key}>
+                        <button
+                          type="button"
+                          onClick={() => toggleRosterSort(key)}
+                          className={cn(
+                            'inline-flex items-center gap-1 font-bold uppercase text-[9px] tracking-wider hover:text-primary transition-colors',
+                            rosterSort.key === key && 'text-primary'
+                          )}
+                        >
+                          {label}
+                          <ArrowUpDown className="h-3 w-3 opacity-60" />
+                        </button>
+                      </TableHead>
+                    ))}
+                    <TableHead className="font-bold uppercase text-[9px] tracking-wider">Manual Calibration</TableHead>
+                    <TableHead className="text-right font-bold uppercase text-[9px] tracking-wider">Access</TableHead>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
-                  {users.length > 0 ? users.map(u => {
+                  {sortedUsers.length > 0 ? sortedUsers.map(u => {
                     const gam = gamificationStats[u.id];
                     const unlocked = gam?.unlockedAchievements || {};
                     const unlockedCount = Object.keys(unlocked).length;
@@ -413,8 +516,28 @@ export default function AdminPage() {
                           </Select>
                       </TableCell>
                       <TableCell>
+                        {(() => {
+                          const joined = formatUserJoinDate(u.createdAt);
+                          return (
+                            <>
+                              <div className="text-[10px] font-code text-muted-foreground uppercase whitespace-nowrap">
+                                {joined.date}
+                              </div>
+                              {joined.time && (
+                                <p className="text-[8px] text-muted-foreground/70 font-code normal-case">
+                                  {joined.time}
+                                </p>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </TableCell>
+                      <TableCell>
                         <div className="space-y-1">
-                          <Badge variant="outline" className="text-[8px] h-5 border-amber-500/30 text-amber-300 uppercase">
+                          <Badge
+                            variant="outline"
+                            className="inline-flex w-fit items-center whitespace-nowrap text-[8px] leading-none px-2 py-0.5 border-amber-500/30 text-amber-300 uppercase font-bold tracking-wide"
+                          >
                             {rankLabel(gam?.rankId)}
                           </Badge>
                           <div className="flex items-center gap-1.5 font-bold text-xs text-white">
@@ -525,7 +648,7 @@ export default function AdminPage() {
                     </TableRow>
                     );
                   }) : (
-                    <TableRow><TableCell colSpan={9} className="h-32 text-center text-muted-foreground text-[10px] uppercase tracking-[0.4em]">Searching studio roster...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="h-32 text-center text-muted-foreground text-[10px] uppercase tracking-[0.4em]">Searching studio roster...</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>

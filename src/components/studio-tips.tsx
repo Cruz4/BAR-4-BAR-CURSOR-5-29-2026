@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { X, Play, Target, BrainCircuit, Shield, Wand2, Palette, Sparkles, Zap, FolderOpen, ClipboardPaste, ArrowRight, ListRestart, Fingerprint, MonitorPlay, RefreshCw, Link2, FilePenLine, Key, GitBranch, Download, Mic, Settings, Rocket, HelpCircle, MousePointer2, Dna, Clock, Star, Trophy, Share2, Gift, Globe, Lightbulb, Layers, FlaskConical, ScanLine, Undo2, Crown, EyeOff, Image, CalendarRange, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -10,6 +12,16 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { AI_COSTS } from '@/lib/costs';
 import { STUDIO_DRAFT_INK_TIP, COMPETITOR_ANCHOR_COPY } from '@/lib/studio-tiers';
+import {
+  areStudioTipsEnabled,
+  clearTrackSheetNavigation,
+  getTrackSheetVisitCount,
+  hasTipBeenShownThisSession,
+  isTrackEditorPath,
+  markTipShownThisSession,
+  recordTrackSheetEntry,
+  setStudioTipsEnabled,
+} from '@/lib/studio-tips-session';
 
 type StudioTip = {
   id: number;
@@ -71,24 +83,6 @@ const STUDIO_TIPS: StudioTip[] = [
   { id: 46, icon: Upload, title: "VAULT IMPORT", text: "Dashboard → Vault Export downloads a .json backup. Re-import anytime to restore albums, DNA presets, and strains on a new workstation.", color: "text-primary" },
 ];
 
-const TIPS_SESSION_PREFIX = 'b4b_studio_tip_shown:';
-
-function hasTipBeenShownThisSession(path: string): boolean {
-  try {
-    return sessionStorage.getItem(`${TIPS_SESSION_PREFIX}${path}`) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function markTipShownThisSession(path: string): void {
-  try {
-    sessionStorage.setItem(`${TIPS_SESSION_PREFIX}${path}`, '1');
-  } catch {
-    /* ignore */
-  }
-}
-
 export function StudioTips() {
   const pathname = usePathname();
   const { user } = useAuth();
@@ -98,6 +92,7 @@ export function StudioTips() {
   const [progress, setProgress] = useState(0);
   const [showTipsSetting, setShowTipsSetting] = useState(true);
   const scheduledPathRef = useRef<string | null>(null);
+  const [visitCount, setVisitCount] = useState(0);
 
   const duration = 12000;
 
@@ -107,6 +102,15 @@ export function StudioTips() {
     setProgress(0);
     setIsPaused(false);
   }, [pathname]);
+
+  const handleTipsToggle = useCallback(
+    (enabled: boolean) => {
+      setShowTipsSetting(enabled);
+      setStudioTipsEnabled(enabled);
+      if (!enabled) dismissTip();
+    },
+    [dismissTip]
+  );
 
   const getRandomIdx = useCallback((excludeIdx: number) => {
     if (STUDIO_TIPS.length <= 1) return 0;
@@ -120,10 +124,18 @@ export function StudioTips() {
     setProgress(0);
     setIsPaused(false);
     scheduledPathRef.current = null;
+    setShowTipsSetting(areStudioTipsEnabled());
+    clearTrackSheetNavigation(pathname);
+    if (isTrackEditorPath(pathname)) {
+      const visits = recordTrackSheetEntry(pathname);
+      setVisitCount(visits);
+    } else {
+      setVisitCount(0);
+    }
   }, [pathname]);
 
   useEffect(() => {
-    const isTrackEditor = /^\/albums\/[^/]+\/tracks\/[^/]+$/.test(pathname);
+    const isTrackEditor = isTrackEditorPath(pathname);
 
     if (!user || !isTrackEditor) {
       setIsVisible(false);
@@ -135,9 +147,14 @@ export function StudioTips() {
       return;
     }
 
-    const saved = localStorage.getItem('b4b_show_tips');
-    if (saved === 'false') {
+    if (!areStudioTipsEnabled()) {
       setShowTipsSetting(false);
+      return;
+    }
+
+    // First open of a sheet (including right after the one-time guided tour) — no tip.
+    const visits = getTrackSheetVisitCount(pathname);
+    if (visits < 2) {
       return;
     }
 
@@ -154,12 +171,13 @@ export function StudioTips() {
 
     const timer = setTimeout(() => {
       if (hasTipBeenShownThisSession(pathname)) return;
+      if (getTrackSheetVisitCount(pathname) < 2) return;
       markTipShownThisSession(pathname);
       setIsVisible(true);
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, [getRandomIdx, pathname, user?.id, user?.lyricsTutorialCompletedAt]);
+  }, [getRandomIdx, pathname, user?.id, user?.lyricsTutorialCompletedAt, visitCount]);
 
   useEffect(() => {
     if (!isVisible || isPaused) return;
@@ -220,7 +238,19 @@ export function StudioTips() {
                       {currentTip.text}
                     </p>
 
-                    <div className="flex items-center gap-2 pt-4">
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/25 px-3 py-2.5">
+                      <Label htmlFor="studio-tips-toggle" className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground cursor-pointer">
+                        Show tips when I revisit a sheet
+                      </Label>
+                      <Switch
+                        id="studio-tips-toggle"
+                        checked={showTipsSetting}
+                        onCheckedChange={handleTipsToggle}
+                        aria-label="Show studio tips when revisiting a sheet"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2">
                         <Button
                           variant="ghost"
                           className="flex-1 font-bold uppercase tracking-widest text-[9px] h-10 border border-white/10 hover:bg-white/5 text-muted-foreground"

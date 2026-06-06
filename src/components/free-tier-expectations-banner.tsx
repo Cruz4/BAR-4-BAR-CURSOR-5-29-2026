@@ -18,9 +18,12 @@ export function FreeTierExpectationsBanner({ user }: { user: User | null }) {
 
   useEffect(() => {
     if (mode === 'hidden') return;
-    const dismissKey = mode === 'trial' ? PRO_TRIAL_BANNER.dismissKey : FREE_TIER_EXPECTATIONS.dismissKey;
+    if (mode === 'trial') {
+      setVisible(true);
+      return;
+    }
     try {
-      const dismissed = localStorage.getItem(dismissKey);
+      const dismissed = localStorage.getItem(FREE_TIER_EXPECTATIONS.dismissKey);
       setVisible(!dismissed);
     } catch {
       setVisible(true);
@@ -29,10 +32,9 @@ export function FreeTierExpectationsBanner({ user }: { user: User | null }) {
 
   if (mode === 'hidden' || !visible) return null;
 
-  const dismiss = () => {
-    const dismissKey = mode === 'trial' ? PRO_TRIAL_BANNER.dismissKey : FREE_TIER_EXPECTATIONS.dismissKey;
+  const dismissVisitorBanner = () => {
     try {
-      localStorage.setItem(dismissKey, '1');
+      localStorage.setItem(FREE_TIER_EXPECTATIONS.dismissKey, '1');
     } catch {
       /* ignore */
     }
@@ -41,22 +43,22 @@ export function FreeTierExpectationsBanner({ user }: { user: User | null }) {
 
   if (mode === 'trial') {
     return (
-      <div className="shrink-0 border-b border-sky-500/25 bg-sky-500/[0.08] px-4 py-2.5 flex items-start gap-3 z-50">
-        <Timer className="h-4 w-4 text-sky-400 shrink-0 mt-0.5" />
-        <div className="flex-grow min-w-0 space-y-1">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400">
+      <div className="pro-trial-banner-glow shrink-0 px-4 py-2 sm:py-2.5 flex items-center gap-3 z-50">
+        <Timer className="pro-trial-icon-glow h-4 w-4 text-sky-400 shrink-0" aria-hidden />
+        <div className="flex-grow min-w-0 space-y-0.5 sm:space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400 leading-none">
             {PRO_TRIAL_BANNER.headline} — {trialDays} day{trialDays === 1 ? '' : 's'} left
           </p>
-          <p className="text-[11px] text-muted-foreground leading-snug">
-            Full Pro workflow unlocked: custom DNA saves, Performance Mode, Freestyle, vault import/export, and DNA Drop links. Upgrade before trial ends to keep access.
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-snug line-clamp-2 sm:line-clamp-1">
+            Full Pro workflow unlocked — DNA saves, Performance, Freestyle, vault &amp; DNA Drop. Upgrade before trial ends.
           </p>
-          <Link href="/usage?tab=cloud" className="text-[9px] font-bold uppercase text-sky-400 hover:underline">
-            Upgrade to Studio Pro →
-          </Link>
         </div>
-        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground" onClick={dismiss} aria-label="Dismiss">
-          <X className="h-4 w-4" />
-        </Button>
+        <Link
+          href="/usage?tab=cloud"
+          className="text-[9px] sm:text-[10px] font-bold uppercase text-sky-400 hover:text-sky-300 hover:underline shrink-0 whitespace-nowrap self-center"
+        >
+          Upgrade →
+        </Link>
       </div>
     );
   }
@@ -71,7 +73,7 @@ export function FreeTierExpectationsBanner({ user }: { user: User | null }) {
           Compare tiers →
         </Link>
       </div>
-      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground" onClick={dismiss} aria-label="Dismiss">
+      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground" onClick={dismissVisitorBanner} aria-label="Dismiss">
         <X className="h-4 w-4" />
       </Button>
     </div>

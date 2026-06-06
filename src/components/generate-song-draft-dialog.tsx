@@ -152,6 +152,8 @@ interface GenerateSongDraftDialogProps {
   track: Track;
   styleProfile: StyleProfile;
   onDraftGenerated: (sections: any[]) => void;
+  /** True when dialog is closed but a soft-close session or in-flight generation is still active. */
+  onBackgroundSessionActiveChange?: (active: boolean) => void;
 }
 
 const DEFAULT_STRUCTURE_PRESET = {
@@ -374,7 +376,14 @@ function HubSectionShell({
   );
 }
 
-export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfile, onDraftGenerated }: GenerateSongDraftDialogProps) {
+export function GenerateSongDraftDialog({
+  open,
+  onOpenChange,
+  track,
+  styleProfile,
+  onDraftGenerated,
+  onBackgroundSessionActiveChange,
+}: GenerateSongDraftDialogProps) {
   const { user } = useAuth();
   const isPro = isProOrTrial(user);
   const { toast } = useToast();
@@ -437,7 +446,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   const [previewRhymeGroups, setPreviewRhymeGroups] = useState<{ words: string[] }[]>([]);
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [syncLyricsToggle, setSyncLyricsToggle] = useState(false);
-  const [strainTab, setStrainTab] = useState<'insights' | 'presets' | 'vault'>('insights');
+  const [strainTab, setStrainTab] = useState<'insights' | 'presets' | 'vault'>('presets');
   const [styleTab, setStyleTab] = useState<'current' | 'presets' | 'vault'>('current');
   const [saveNamingOpen, setSaveNamingOpen] = useState(false);
   const [saveStyleNamingOpen, setSaveStyleNamingOpen] = useState(false);
@@ -526,6 +535,19 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   useEffect(() => {
     if (isLooseTrack) setInheritAlbum(false);
   }, [isLooseTrack]);
+
+  useEffect(() => {
+    if (!onBackgroundSessionActiveChange) return;
+    if (open) {
+      onBackgroundSessionActiveChange(false);
+      return;
+    }
+    const hasBackgroundSession =
+      sessionReadyRef.current &&
+      !hardClosedRef.current &&
+      (isGenerating || step > 0);
+    onBackgroundSessionActiveChange(hasBackgroundSession);
+  }, [open, isGenerating, step, onBackgroundSessionActiveChange]);
 
   const completeAndMaybeReopen = useCallback((targetStep: number) => {
     setStep(targetStep);
@@ -738,12 +760,12 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
 
     setHubCollapsed({
       structure: false,
-      vibe: !expanded.has('vibe'),
+      vibe: false,
       intents: !expanded.has('intents'),
       creativeDna: !expanded.has('creativeDna'),
       specialInstructions: !expanded.has('specialInstructions'),
       remix: !expanded.has('remix'),
-      dnaStrains: true,
+      dnaStrains: false,
       style: !expanded.has('style'),
       guardrails: !expanded.has('guardrails'),
     });
@@ -2109,6 +2131,8 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                           <div className="space-y-1"><Label className="text-[9px] font-bold uppercase text-amber-700">BPM</Label><Input type="number" placeholder="90" value={hubVibe.tempoBPM} onChange={(e) => setHubVibe(v => ({ ...v, tempoBPM: parseInt(e.target.value) || 90 }))} className="h-8 text-[10px] bg-background/50" /></div>
                                       </div>
                                       <div className="space-y-1"><Label className="text-[9px] font-bold uppercase text-amber-700">Production</Label><Textarea placeholder="e.g. Saturated 808s, airy vocal pads..." value={hubVibe.instrumentation} onChange={(e) => setHubVibe(v => ({ ...v, instrumentation: e.target.value }))} className="h-16 text-[10px] bg-background/50 resize-none" /></div>
+                                      <div className="space-y-1 pt-1 border-t border-amber-500/15">
+                                        <Label className="text-[8px] font-bold uppercase text-amber-600/90">System vibe presets (free)</Label>
                                       <Select onValueChange={(name) => {
                                         const p = SYSTEM_VIBE_PRESETS.find((x) => x.name === name);
                                         if (p) {
@@ -2116,11 +2140,12 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                           markHubSeeded('vibe');
                                         }
                                       }}>
-                                        <SelectTrigger className="h-7 text-[8px] font-bold uppercase"><SelectValue placeholder="Load vibe preset" /></SelectTrigger>
+                                        <SelectTrigger className="h-8 text-[8px] font-bold uppercase"><SelectValue placeholder="Pick a vibe preset…" /></SelectTrigger>
                                         <SelectContent className="z-[3100]">
                                           {SYSTEM_VIBE_PRESETS.map((p) => <SelectItem key={p.name} value={p.name} className="text-[9px] uppercase">{p.name}</SelectItem>)}
                                         </SelectContent>
                                       </Select>
+                                      </div>
                                   </Card>
                               </HubSectionShell>
 
@@ -2238,7 +2263,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                   <Card className="bg-primary/5 border-primary/20 p-4 rounded-xl">
                                       <Label className="text-[9px] font-bold uppercase tracking-widest text-primary/60 mb-2 block">What do you want this song or remix to do?</Label>
                                       <Textarea 
-                                          placeholder="Direct instructions — e.g. start every line with 'But then', flip the POV to a bystander, keep it under 16 bars..." 
+                                          placeholder="e.g. Alternate braggadocio and vulnerability, use ocean imagery, keep hooks under 8 syllables, no filler ad-libs…" 
                                           className="bg-background/40 border-primary/10 min-h-[5rem] h-24 text-xs font-code p-3 resize-none" 
                                           value={lyricsAbout}
                                           onChange={(e) => {

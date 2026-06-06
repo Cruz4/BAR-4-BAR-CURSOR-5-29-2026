@@ -19,6 +19,8 @@ export interface User {
   referralCount?: number;
   /** ISO timestamp — first lyrics-page guided tour completed or skipped */
   lyricsTutorialCompletedAt?: string;
+  /** ISO timestamp — vault-page guided tour completed or skipped */
+  vaultTutorialCompletedAt?: string;
   /** ISO timestamp — leaderboard / public profile intro acknowledged */
   studioPrivacyIntroCompletedAt?: string;
 }

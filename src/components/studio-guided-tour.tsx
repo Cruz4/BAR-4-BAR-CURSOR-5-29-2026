@@ -14,6 +14,8 @@ type StudioGuidedTourProps = {
   onComplete: (skipped: boolean) => void;
   onBeforeStep?: (step: LyricsTourStep) => void;
   steps?: LyricsTourStep[];
+  /** Step ids that should pin the tour card to the top on phone/tablet (targets near bottom chrome). */
+  mobileTopCardStepIds?: Set<string>;
 };
 
 const PAD = 8;
@@ -84,6 +86,7 @@ export function StudioGuidedTour({
   onComplete,
   onBeforeStep,
   steps = LYRICS_PAGE_TOUR_STEPS,
+  mobileTopCardStepIds = MOBILE_TOP_CARD_STEPS,
 }: StudioGuidedTourProps) {
   const step = steps[stepIndex];
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -116,7 +119,22 @@ export function StudioGuidedTour({
       return;
     }
 
-    const el = document.querySelector(step.target);
+    const selectors = step.target.includes(',')
+      ? step.target.split(',').map((s) => s.trim())
+      : [step.target];
+    let el: Element | null = null;
+    for (const selector of selectors) {
+      const candidate = document.querySelector(selector);
+      if (!candidate) continue;
+      const probe = candidate.getBoundingClientRect();
+      if (probe.width > 0 && probe.height > 0) {
+        el = candidate;
+        break;
+      }
+    }
+    if (!el) {
+      el = document.querySelector(selectors[0]);
+    }
     if (!el) {
       clearScrollMargins();
       setRect(null);
@@ -136,7 +154,7 @@ export function StudioGuidedTour({
       if (compact) {
         const bottomCardReserve = MOBILE_CARD_HEIGHT + MOBILE_BOTTOM_CHROME + 20;
         const targetInLowerHalf = next.top > window.innerHeight * 0.42;
-        const forceTop = MOBILE_TOP_CARD_STEPS.has(step.id);
+        const forceTop = mobileTopCardStepIds.has(step.id);
         placement = forceTop || targetInLowerHalf ? 'top' : 'bottom';
         setCardPlacement(placement);
 

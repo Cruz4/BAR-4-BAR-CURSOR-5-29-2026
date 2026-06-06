@@ -126,6 +126,21 @@
     50% { opacity: 0.65; }
   }
 
+  @keyframes workstation-attention {
+    0%, 100% {
+      box-shadow: 0 0 24px rgba(59, 130, 246, 0.4);
+      filter: brightness(1);
+    }
+    50% {
+      box-shadow: 0 0 44px rgba(59, 130, 246, 0.9);
+      filter: brightness(1.1);
+    }
+  }
+
+  .animate-workstation-attention {
+    animation: workstation-attention 1.5s ease-in-out infinite;
+  }
+
   .leaderboard-ember {
     animation: ember-rise 6s ease-out infinite;
     box-shadow: 0 0 12px rgba(251, 191, 36, 0.45);
@@ -637,6 +652,83 @@
   }
   50% {
     filter: drop-shadow(0 0 8px rgba(236, 72, 153, 0.75));
+    opacity: 1;
+  }
+}
+
+@keyframes pro-trial-glow-breathe {
+  0%, 100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 0.82;
+  }
+}
+
+@keyframes pro-trial-icon-breathe {
+  0%, 100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Opacity-only layers — avoids repaint stutter from box-shadow / background tweens */
+.pro-trial-banner-glow {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-color: rgba(56, 189, 248, 0.08);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.28);
+}
+
+.pro-trial-banner-glow::before,
+.pro-trial-banner-glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  will-change: opacity;
+}
+
+.pro-trial-banner-glow::before {
+  background: radial-gradient(ellipse 90% 120% at 50% 100%, rgba(56, 189, 248, 0.45), transparent 68%);
+  animation: pro-trial-glow-breathe 7s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+.pro-trial-banner-glow::after {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(125, 211, 252, 0.08) 55%,
+    rgba(56, 189, 248, 0.18) 100%
+  );
+  animation: pro-trial-glow-breathe 7s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+.pro-trial-banner-glow > * {
+  position: relative;
+  z-index: 1;
+}
+
+.pro-trial-icon-glow {
+  animation: pro-trial-icon-breathe 7s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pro-trial-banner-glow::before,
+  .pro-trial-banner-glow::after,
+  .pro-trial-icon-glow {
+    animation: none;
+  }
+
+  .pro-trial-banner-glow::before,
+  .pro-trial-banner-glow::after {
+    opacity: 0.45;
+  }
+
+  .pro-trial-icon-glow {
     opacity: 1;
   }
 }

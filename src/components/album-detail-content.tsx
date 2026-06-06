@@ -102,7 +102,7 @@ import {
   TIER_LIMIT_ALBUM_BANNER,
   TIER_LIMIT_LOCKED_TOAST,
 } from '@/lib/tier-limits';
-import { LockedProFeatureButton, proLockText } from '@/components/pro-lock';
+import { LockedProFeatureButton, ProCreateTrackSlot, proLockText } from '@/components/pro-lock';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { format } from 'date-fns';
@@ -863,6 +863,9 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                       tierLocked={!editableTrackIds.has(track.id)}
                                     />
                                   ))}
+                                  {isPro && (
+                                    <ProCreateTrackSlot onClick={openCreateTrack} />
+                                  )}
                                 </div>
                               ) : (
                                 <div className="divide-y divide-white/5">
@@ -928,7 +931,11 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 })}
                                 </div>
                               )
-                            ) : (
+                            ) : isUnassignedVault && isPro ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <ProCreateTrackSlot onClick={openCreateTrack} />
+                                    </div>
+                                ) : (
                                     <div className="py-20 text-center flex flex-col items-center gap-6 opacity-30">
                                         <CassetteTape className="h-16 w-16" />
                                         <p className="font-code text-sm uppercase tracking-[0.4em]">No tracks in this blueprint</p>

@@ -18,6 +18,7 @@ export type CachedUserProfile = Pick<
   | 'subscriptionTier'
   | 'trialStartedAt'
   | 'lyricsTutorialCompletedAt'
+  | 'vaultTutorialCompletedAt'
 >;
 
 export function saveVaultSnapshot(userId: string, albums: Album[], styleProfile: StyleProfile | null): void {

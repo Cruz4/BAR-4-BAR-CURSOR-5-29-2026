@@ -1,5 +1,7 @@
 'use client';
 
+import { useCallback, useContext, useMemo } from 'react';
+
 /**
  * @fileOverview MASTER LOCKDOWN (5/14/2026) - Spatial Studio Manual.
  * 
@@ -14,6 +16,7 @@ import {
   VISITOR_FEATURES,
   PRO_UNLOCKS,
   PRO_YEARLY_EXCLUSIVES,
+  STUDIO_DRAFT_INK_PER_SONG,
   getVisitorHeadlinePerks,
   getProMonthlyHeadlinePerks,
   getProYearlyHeadlinePerks,
@@ -65,13 +68,26 @@ import {
   Clock,
   Star,
   Trophy,
-  Lightbulb
+  Lightbulb,
+  FolderOpen,
+  FlaskConical,
+  ScanLine,
+  Link2,
+  GitBranch,
+  Settings,
+  ListRestart,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { AI_COSTS } from '@/lib/costs';
-import { dispatchReplayGuidedTour } from '@/lib/studio-onboarding';
+import {
+  dispatchReplayGuidedTour,
+  dispatchReplayVaultTour,
+  resolveWorkstationTourPath,
+} from '@/lib/studio-onboarding';
+import { DataContext } from '@/context/data-context';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
 import {
   Accordion,
@@ -193,6 +209,32 @@ const FAQS = [
 ];
 
 export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
+  const { albums } = useContext(DataContext);
+  const { toast } = useToast();
+
+  const workstationTourPath = useMemo(
+    () => resolveWorkstationTourPath(albums),
+    [albums]
+  );
+
+  const handleReplayWorkstationTour = useCallback(() => {
+    onOpenChange(false);
+    if (!workstationTourPath) {
+      toast({
+        title: 'No tracks yet',
+        description: 'Create or open a project in the Vault first.',
+      });
+      dispatchReplayVaultTour();
+      return;
+    }
+    dispatchReplayGuidedTour(workstationTourPath);
+  }, [onOpenChange, toast, workstationTourPath]);
+
+  const handleReplayVaultTour = useCallback(() => {
+    onOpenChange(false);
+    dispatchReplayVaultTour();
+  }, [onOpenChange]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden bg-background">
@@ -230,16 +272,25 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </ChapterCard>
                 <ChapterCard icon={<Compass className="text-green-500" />} title="Guided Workstation Tour" colorClass="border-l-green-500">
                   <p>Walk through the lyrics page with spotlight highlights — paste, sheet, bar AI, DNA, DNA Drop (Pro), and Ink. Skippable anytime.</p>
-                  <p className="text-xs text-muted-foreground">Runs automatically the first time you open a track. Replay whenever you need a refresher.</p>
+                  <p className="text-xs text-muted-foreground">Runs automatically the first time you open a track. Replay opens your last worked-on project and starts the tour.</p>
                   <Button
                     type="button"
                     className="font-bold uppercase text-[10px] tracking-widest gap-2"
-                    onClick={() => {
-                      onOpenChange(false);
-                      dispatchReplayGuidedTour();
-                    }}
+                    onClick={handleReplayWorkstationTour}
                   >
-                    <RefreshCw className="h-4 w-4" /> Replay Guided Tour
+                    <RefreshCw className="h-4 w-4" /> Replay Workstation Tour
+                  </Button>
+                </ChapterCard>
+                <ChapterCard icon={<CassetteTape className="text-sky-400" />} title="Guided Vault Tour" colorClass="border-l-sky-500 text-sky-400">
+                  <p>Walk through the Vault with spotlight highlights — header, create project, collection, loose tracks, studio progress, search, and Ink.</p>
+                  <p className="text-xs text-muted-foreground">Runs automatically on your first vault visit. Replay takes you home and starts the tour.</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="font-bold uppercase text-[10px] tracking-widest gap-2 border-sky-500/40 hover:bg-sky-500/10"
+                    onClick={handleReplayVaultTour}
+                  >
+                    <RefreshCw className="h-4 w-4" /> Replay Vault Tour
                   </Button>
                 </ChapterCard>
                 <ChapterCard icon={<Lightbulb className="text-yellow-500" />} title="Studio Insights & Did You Knows" colorClass="border-l-yellow-500 text-yellow-500">
@@ -360,27 +411,140 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </ChapterCard>
 
                 <ChapterCard icon={<Zap className="text-primary" />} title="Way 2: Bar Workstation (Footer)" colorClass="border-l-primary">
-                    <p>Select a line to activate the master workstation. Use the primary triggers to generate **Next** or **Previous** suggestions anchored to your active focus ({AI_COSTS.generateNextLine} Ink).</p>
+                    <p>Select a line to activate the master workstation. Generate <strong>Next</strong> or <strong>Previous</strong> suggestions anchored to your active focus ({AI_COSTS.generateNextLine} Ink each).</p>
+                    <p className="text-xs">Set <strong>End With</strong> to force the next suggestion to land on your punchline. Watch the rule badges light up to see which DNA, Vibes, and Intents are guiding the AI.</p>
                 </ChapterCard>
 
                 <ChapterCard icon={<Sparkles className="text-primary" />} title="Way 3: Co-Writer (Right Panel)" colorClass="border-l-primary">
-                    <p>Access the global co-writer panel for high-level suggestions and **Artist Style Training** while you navigate the sheet.</p>
+                    <p>Access the global co-writer panel for high-level suggestions and <strong>Artist Style Training</strong> while you navigate the sheet.</p>
                 </ChapterCard>
 
-                <div className="pt-8 space-y-4">
-                    <h2 className="text-2xl font-headline font-bold uppercase text-primary border-b-2 border-primary/10 pb-2">Precision Control Tools</h2>
+                <div className="pt-4 space-y-4">
+                    <h2 className="text-2xl font-headline font-bold uppercase text-primary border-b-2 border-primary/10 pb-2">Sheet &amp; Structure</h2>
+                    <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">Center panel — the rhyme book itself.</p>
+                </div>
+
+                <ChapterCard icon={<ClipboardPaste className="text-primary" />} title="Smart Structure" colorClass="border-l-primary">
+                    <p>Click <strong>+ Paste Your Lyrics</strong> in the center top bar. Label sections with <code className="text-primary">[Verse]</code>, <code className="text-primary">[Hook]</code>, etc. on their own lines for automatic splits ({AI_COSTS.analyzeStructure} Ink).</p>
+                </ChapterCard>
+
+                <ChapterCard icon={<Zap className="text-amber-500" />} title="Rhyme Pulse" colorClass="border-l-amber-500 text-amber-500">
+                    <p>The round button in the center top bar runs a one-time deep phonetic scan of your current sheet ({AI_COSTS.findRhymes} Ink). Results update rhyme highlighting across every line.</p>
+                </ChapterCard>
+
+                <ChapterCard icon={<ListRestart className="text-muted-foreground" />} title="Sheet Editing &amp; Undo" colorClass="border-l-muted-foreground">
+                    <ul className="list-disc list-inside space-y-2 text-sm">
+                        <li><strong>Enter</strong> — split a line at the cursor; the workstation handles indexing and hanging indents.</li>
+                        <li><strong>Backspace</strong> at the start of a bar — merge with the line above.</li>
+                        <li><strong>Undo</strong> — center top bar reverts sheet and section changes (up to 20 history steps).</li>
+                    </ul>
+                </ChapterCard>
+
+                <div className="pt-4 space-y-4">
+                    <h2 className="text-2xl font-headline font-bold uppercase text-primary border-b-2 border-primary/10 pb-2">Right Panel Controls</h2>
+                    <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">DNA, vibe, motifs, style, and restrictions.</p>
                 </div>
 
                 <ChapterCard icon={<Dna className="text-green-500" />} title="DNA Suite (Right Panel)" colorClass="border-l-green-500">
-                    <p>The core identity of your track. The AI uses these 5 questions to maintain thematic alignment during generation. If activated, every suggested line will reflect your Setting, Emotion, and Message Truth.</p>
+                    <p>The core identity of your track — five questions (Setting, Emotion, Trigger, Message, Tone). When active, every suggested line reflects your creative DNA.</p>
+                    <p className="text-xs">Track DNA overrides Album DNA for surgical control on a single song. Open the <strong>folder icon</strong> for the DNA Vault, or use DNA &amp; REMIX → Calibration Hub → VAULT.</p>
                 </ChapterCard>
 
                 <ChapterCard icon={<Target className="text-sky-500" />} title="Precision Intents (Right Panel)" colorClass="border-l-sky-500">
-                    <p>Motif management. Use the **Precision Lock (Arrow)** to force the AI to land exactly on that phrase for its next suggestion. This ensures your key punchlines land perfectly on the motif.</p>
+                    <p>Motif management for punchlines and recurring phrases. Hover any intent and click the <strong>Precision Lock arrow</strong> to force the AI to end its next suggestion on that exact phrase.</p>
                 </ChapterCard>
 
                 <ChapterCard icon={<Shield className="text-rose-500" />} title="Guardrails (Right Panel)" colorClass="border-l-rose-500">
-                    <p>Surgical restrictions. The AI checks this section to avoid **Forbidden Words** and surgically integrate **Must-Include Words**.</p>
+                    <p>Surgical restrictions. The AI avoids <strong>Forbidden Words</strong> and integrates <strong>Must-Include Words</strong> during every generation pass.</p>
+                </ChapterCard>
+
+                <ChapterCard icon={<Palette className="text-amber-500" />} title="Track Vibe &amp; Vibe Vault" colorClass="border-l-amber-500 text-amber-500">
+                    <p>Set genre, BPM, feeling tags, and instrumentation in <strong>Track Vibe</strong>. Copy the instrumentation string into Suno, Udio, or similar tools.</p>
+                    <p className="text-xs">Save presets with the <strong>folder icon</strong> under Track Vibe — reuse the same sonic palette across every song in the project.</p>
+                </ChapterCard>
+
+                <ChapterCard icon={<Fingerprint className="text-fuchsia-500" />} title="Style DNA &amp; Training" colorClass="border-l-fuchsia-500 text-fuchsia-500">
+                    <p><strong>Train AI on Style</strong> ({AI_COSTS.improveMyStyle} Ink) teaches the workstation your vocabulary and flow. Style DNA feeds every generation when the toggle is on.</p>
+                    <p className="text-xs">Save style strains to the Style Vault (folder icon) for reuse across tracks.</p>
+                </ChapterCard>
+
+                <ChapterCard icon={<Wand2 className="text-indigo-500" />} title="Creative Effects" colorClass="border-l-indigo-500 text-indigo-400">
+                    <p>Neural sharpening tools in the Right Panel — Simile, Metaphor, and Sound-Alike on every tier; Twist, Image Chain, POV, and more on Studio Pro ({AI_COSTS.runCreativeEffect} Ink each).</p>
+                    <p className="text-xs">Results land in the Scratch Pad for review before you paste into the sheet.</p>
+                </ChapterCard>
+
+                <div className="pt-4 space-y-4">
+                    <h2 className="text-2xl font-headline font-bold uppercase text-primary border-b-2 border-primary/10 pb-2">DNA &amp; Remix Engine</h2>
+                    <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">Generation Workstation → DNA &amp; REMIX.</p>
+                </div>
+
+                <ChapterCard icon={<ScanLine className="text-sky-400" />} title="DNA Extraction" colorClass="border-l-sky-500 text-sky-400">
+                    <p>Runs a separate analysis pass on your lyrics — maps themes, motifs, arc, structure guide, and Style DNA <em>without</em> drafting new bars. Archive the profile, then calibrate in the Hub.</p>
+                    <p className="text-xs">Toggle <strong>Sync Current Lyrics</strong> to import your sheet automatically, or turn it off to remix external concepts.</p>
+                </ChapterCard>
+
+                <ChapterCard icon={<Settings className="text-primary" />} title="Calibration Hub" colorClass="border-l-primary">
+                    <p>The workstation brain (Step 10). Mix DNA strains, Style DNA, Intents, Structure presets, remix paths, and Special Instructions before synthesis.</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                        <li><strong>INSIGHTS</strong> — latest extraction strains with ⚡ inject buttons (one field at a time).</li>
+                        <li><strong>VAULT</strong> — load full saved profiles (↻) or cherry-pick individual strains from expanded entries.</li>
+                        <li><strong>Structure</strong> — opens expanded with the Default preset so you can tune bar counts immediately.</li>
+                    </ul>
+                </ChapterCard>
+
+                <ChapterCard icon={<FilePenLine className="text-blue-400" />} title="Special Instructions" colorClass="border-l-blue-500 text-blue-400">
+                    <p>A direct creative brief in the Calibration Hub — tone, POV, constraints, or scene direction. Treated as a hard rule at synthesis, <em>not</em> blended by remix path percentages.</p>
+                </ChapterCard>
+
+                <ChapterCard icon={<GitBranch className="text-violet-400" />} title="Remix Paths" colorClass="border-l-violet-500 text-violet-400">
+                    <p>Select multiple creative paths in DNA &amp; REMIX. Influence % sliders blend selected forks relative to each other during synthesis — explore narrative branches without rewriting the whole track.</p>
+                </ChapterCard>
+
+                <ChapterCard icon={<FlaskConical className="text-cyan-400" />} title="Creative Syncing" colorClass="border-l-cyan-500 text-cyan-400">
+                    <p>During Studio Draft and remix synthesis, the Creative Syncing overlay weaves active DNA, Intents, Style, Vibe, guardrails, and Special Instructions into one neural pass.</p>
+                </ChapterCard>
+
+                <ChapterCard icon={<FolderOpen className="text-green-500" />} title="DNA Vault &amp; DNA Mixer" colorClass="border-l-green-500">
+                    <p><strong>DNA Vault</strong> — save an extraction from one track and load it into another (Right Panel folder icon or Hub VAULT tab). Keeps album themes tight across songs.</p>
+                    <p className="text-xs"><strong>DNA Mixer</strong> (Album page) — selectively pick individual creative strains from your vault history without loading an entire profile.</p>
+                </ChapterCard>
+
+                <div className="pt-4 space-y-4">
+                    <h2 className="text-2xl font-headline font-bold uppercase text-primary border-b-2 border-primary/10 pb-2">Generation &amp; Capture</h2>
+                    <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">Left panel workstation, drafts, and voice capture.</p>
+                </div>
+
+                <ChapterCard icon={<BrainCircuit className="text-primary" />} title="Generation Workstation &amp; Studio Draft" colorClass="border-l-primary">
+                    <p>Open <strong>Generation Workstation</strong> from the left panel. Run <strong>Studio Draft</strong> in the Calibration Hub to generate full sections — a typical default structure is about {STUDIO_DRAFT_INK_PER_SONG} Ink ({AI_COSTS.generateDraftPerBar} Ink per bar).</p>
+                    <p className="text-xs">Use Next/Previous Line for surgical tweaks; running it on every bar costs more over a full track than a single draft pass.</p>
+                </ChapterCard>
+
+                <ChapterCard icon={<Mic className="text-primary" />} title="Freestyle Pad" colorClass="border-l-primary">
+                    <p>Studio Pro — open from the footer Bar Workstation. Speak your bars; tap <strong>Add to Editor</strong> to drop transcribed lines directly into the active section ({AI_COSTS.freestyleTranscription} Ink per chunk).</p>
+                </ChapterCard>
+
+                <ChapterCard icon={<Volume2 className="text-amber-500" />} title="Vibe Suggester" colorClass="border-l-amber-500 text-amber-500">
+                    <p>Left panel → <strong>Analyze Vibe</strong> reads your lyrics and auto-fills genre, BPM, and instrumentation in Track Vibe ({AI_COSTS.suggestVibe} Ink). Copy the result into external music AIs.</p>
+                </ChapterCard>
+
+                <div className="pt-4 space-y-4">
+                    <h2 className="text-2xl font-headline font-bold uppercase text-primary border-b-2 border-primary/10 pb-2">Export &amp; Share</h2>
+                    <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">Pro workflows for performance and collaboration.</p>
+                </div>
+
+                <ChapterCard icon={<MonitorPlay className="text-sky-400" />} title="Performance Mode" colorClass="border-l-sky-500 text-sky-400">
+                    <p>Studio Pro — left panel Track Status card. Distraction-free teleprompter with rhyme focus for live runs or rehearsal.</p>
+                </ChapterCard>
+
+                <ChapterCard icon={<Link2 className="text-primary" />} title="DNA Drop" colorClass="border-l-primary">
+                    <p>Studio Pro — publish a shareable link from the left panel. Collaborators sign in and import lyrics, structure, Creative DNA, vibe, and related strains. Update snapshot after edits; <strong>Take offline</strong> to revoke the link.</p>
+                </ChapterCard>
+
+                <ChapterCard icon={<NotebookText className="text-muted-foreground" />} title="Export Track &amp; Vault Backup" colorClass="border-l-muted-foreground">
+                    <ul className="list-disc list-inside space-y-2 text-sm">
+                        <li><strong>Export Track</strong> — left panel PDF export anytime.</li>
+                        <li><strong>Vault Export</strong> — Vault dashboard downloads a <code className="text-primary">.json</code> backup; re-import to restore albums, DNA presets, and strains.</li>
+                    </ul>
                 </ChapterCard>
               </TabsContent>
 

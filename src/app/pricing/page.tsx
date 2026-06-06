@@ -69,6 +69,7 @@ import { TierPriceSummary } from '@/components/tier-price-summary';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { useAuth } from '@/hooks/use-auth';
+import { buildLoginPath, buildProCheckoutPath } from '@/lib/checkout-intent';
 
 function proFeatureIcon(text: string) {
   if (text.includes('Roadmap') || text.includes('feedback')) return MessageSquare;
@@ -97,10 +98,21 @@ export default function PricingPage() {
 
   const handleSelectPlan = (tierName: string) => {
     if (tierName !== 'Visitor') {
-      trackStudioEvent(ANALYTICS_EVENTS.UPGRADE_CLICK, { source: 'pricing', tier: tierName });
-      router.push('/usage?tab=cloud');
-    } else {
+      trackStudioEvent(ANALYTICS_EVENTS.UPGRADE_CLICK, {
+        source: 'pricing',
+        tier: tierName,
+        billing: isYearly ? 'yearly' : 'monthly',
+      });
+      const checkoutPath = buildProCheckoutPath(isYearly);
+      if (user) {
+        router.push(checkoutPath);
+      } else {
+        router.push(buildLoginPath(checkoutPath));
+      }
+    } else if (user) {
       router.push('/');
+    } else {
+      router.push('/login');
     }
   };
 

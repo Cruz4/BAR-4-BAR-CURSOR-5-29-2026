@@ -119,6 +119,7 @@ import {
   PENDING_TOUR_REPLAY_KEY,
   type LyricsTourStep,
 } from '@/lib/studio-onboarding';
+import { persistLastWorkedTrack } from '@/lib/studio-tips-session';
 import { queueStudioPrivacyIntro } from '@/lib/studio-privacy-intro';
 import { StudioGuidedTour } from '@/components/studio-guided-tour';
 import { QuestProgress } from '@/components/gamification/quest-progress';
@@ -639,7 +640,7 @@ function mobileLyricsPanelClass(active: boolean, edge?: 'left' | 'right') {
   );
 }
 
-function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSectionId, setExportDialogOpen, setShareDialogOpen, onCollapse, leftCollapsed, setGenerateDraftOpen, scratchPadRef, isPro, mobileActive = false, trackLocked = false, tierLocked = false, completeLocked = false }: any) {
+function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSectionId, setExportDialogOpen, setShareDialogOpen, onCollapse, leftCollapsed, setGenerateDraftOpen, scratchPadRef, isPro, mobileActive = false, trackLocked = false, tierLocked = false, completeLocked = false, workstationAttention = false }: any) {
   const router = useRouter();
   const { setGenerating } = useUIState();
   const { toast } = useToast();
@@ -742,8 +743,17 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={() => setGenerateDraftOpen(true)} disabled={trackLocked} data-tour="generation-workstation" className="w-full h-20 font-bold uppercase tracking-[0.2em] gap-3 shadow-[0_0_30px_rgba(59,130,246,0.4)] bg-primary text-white border-2 border-white/10 group animate-in fade-in zoom-in duration-1000 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:pointer-events-none">
-                    <BrainCircuit className="h-8 w-8 group-hover:animate-pulse" /> 
+                <Button
+                  onClick={() => setGenerateDraftOpen(true)}
+                  disabled={trackLocked}
+                  data-tour="generation-workstation"
+                  aria-label={workstationAttention ? 'Generation Workstation — session in progress, tap to reopen' : 'Open Generation Workstation'}
+                  className={cn(
+                    'w-full h-20 font-bold uppercase tracking-[0.2em] gap-3 shadow-[0_0_30px_rgba(59,130,246,0.4)] bg-primary text-white border-2 border-white/10 group animate-in fade-in zoom-in duration-1000 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:pointer-events-none',
+                    workstationAttention && 'animate-workstation-attention border-primary/70 ring-2 ring-primary/40 ring-offset-2 ring-offset-background'
+                  )}
+                >
+                    <BrainCircuit className={cn('h-8 w-8', workstationAttention ? 'animate-pulse' : 'group-hover:animate-pulse')} /> 
                     <div className="flex flex-col items-start">
                       <span className="text-xs leading-none">Generation</span>
                       <span className="text-lg leading-none mt-1">Workstation</span>
@@ -1839,7 +1849,16 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                             className="h-6 w-6 text-green-600 hover:bg-green-500/10"
                           />
                         )}
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600 hover:bg-green-500/10" onClick={(e) => { e.stopPropagation(); setDNAVaultOpen(true); }}><FolderOpen className="h-4 w-4" /></Button>
+                        <TooltipProvider delayDuration={300}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600 hover:bg-green-500/10" onClick={(e) => { e.stopPropagation(); setDNAVaultOpen(true); }} aria-label={isPro ? 'Open DNA vault' : 'Load DNA system presets'}><FolderOpen className="h-4 w-4" /></Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="max-w-[220px] text-[10px] leading-snug">
+                              {isPro ? 'Load saved DNA profiles from your vault.' : '2 system DNA presets included on Free — tap to load strains or full profiles.'}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <Switch
                           checked={track.direction?.enabled ?? true}
                           onCheckedChange={handleToggleDNA}
@@ -1969,7 +1988,16 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                             className="h-6 w-6 text-amber-600 hover:bg-amber-500/10"
                           />
                         )}
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-amber-600 hover:bg-amber-500/10" onClick={(e) => { e.stopPropagation(); setVibeVaultOpen(true); }}><FolderOpen className="h-4 w-4" /></Button>
+                        <TooltipProvider delayDuration={300}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-amber-600 hover:bg-amber-500/10" onClick={(e) => { e.stopPropagation(); setVibeVaultOpen(true); }} aria-label={isPro ? 'Open vibe vault' : 'Load vibe system presets'}><FolderOpen className="h-4 w-4" /></Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="max-w-[220px] text-[10px] leading-snug">
+                              {isPro ? 'Load saved vibe presets from your vault.' : '2 system vibe presets included on Free — Neo-Classical Ethereal & Dark Cinematic Trap.'}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <Switch checked={track.vibe?.enabled ?? true} onCheckedChange={(c) => onUpdateTrack({ vibe: { ...track.vibe, enabled: c } })} />
                     </div>
                 </div>
@@ -2397,6 +2425,8 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const [activeBarText, setActiveBarText] = useState('');
   
   const [generateDraftOpen, setGenerateDraftOpen] = useState(false);
+  const [workstationBackgroundActive, setWorkstationBackgroundActive] = useState(false);
+  const [pageVisible, setPageVisible] = useState(true);
   const [smartStructureOpen, setSmartStructureOpen] = useState(false);
   const [improveStyleOpen, setImproveStyleOpen] = useState(false);
   const [styleVaultOpen, setStyleVaultOpen] = useState(false);
@@ -2487,6 +2517,21 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   }, [searchParams]);
 
   useEffect(() => {
+    const syncVisibility = () => setPageVisible(document.visibilityState === 'visible');
+    syncVisibility();
+    document.addEventListener('visibilitychange', syncVisibility);
+    return () => document.removeEventListener('visibilitychange', syncVisibility);
+  }, []);
+
+  const workstationAttention = workstationBackgroundActive && !generateDraftOpen && pageVisible;
+
+  useEffect(() => {
+    if (albumId && trackId) {
+      persistLastWorkedTrack(`/albums/${albumId}/tracks/${trackId}`);
+    }
+  }, [albumId, trackId]);
+
+  useEffect(() => {
     try {
       if (sessionStorage.getItem(PENDING_TOUR_REPLAY_KEY)) {
         sessionStorage.removeItem(PENDING_TOUR_REPLAY_KEY);
@@ -2501,10 +2546,15 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   useEffect(() => {
     if (!user || !track || tourAutoStartRef.current) return;
     if (user.lyricsTutorialCompletedAt) return;
+    // User chose Enter Workstation — skip lyrics tour so the generator can open cleanly.
+    if (searchParams.get('openGenerator') === 'true') {
+      tourAutoStartRef.current = true;
+      return;
+    }
     tourAutoStartRef.current = true;
     const t = setTimeout(() => setTourActive(true), 1200);
     return () => clearTimeout(t);
-  }, [user, track]);
+  }, [user, track, searchParams]);
 
   useEffect(() => {
     const onReplay = () => {
@@ -2766,7 +2816,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         </div>
       )}
       <div className="flex flex-1 min-h-0 overflow-hidden w-full">
-      <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={mobilePanelTab === 'workstation'} trackLocked={editsLocked} tierLocked={tierLocked} completeLocked={completeLocked} />
+      <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={mobilePanelTab === 'workstation'} trackLocked={editsLocked} tierLocked={tierLocked} completeLocked={completeLocked} workstationAttention={workstationAttention} />
       <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} />
       <RightPanel 
         track={track} 
@@ -2793,7 +2843,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         mobileActive={mobilePanelTab === 'cowriter'}
         trackLocked={editsLocked}
       />
-      <GenerateSongDraftDialog open={generateDraftOpen} onOpenChange={(open) => { if (open && editsLocked) { toast({ variant: 'destructive', ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST) }); return; } setGenerateDraftOpen(open); }} track={track} styleProfile={effectiveStyleProfile} onDraftGenerated={(sections) => handleUpdateTrack({ sections })} />
+      <GenerateSongDraftDialog open={generateDraftOpen} onOpenChange={(open) => { if (open && editsLocked) { toast({ variant: 'destructive', ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST) }); return; } setGenerateDraftOpen(open); }} track={track} styleProfile={effectiveStyleProfile} onDraftGenerated={(sections) => handleUpdateTrack({ sections })} onBackgroundSessionActiveChange={setWorkstationBackgroundActive} />
       <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} album={album} tracks={[track]} exportType="track" />
       <ShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} type="track" id={track.id} title={track.title} albumId={album.id} existingShareId={track.shareId} />
       <FreestylePad open={freestyleOpen} onOpenChange={setFreestyleOpen} onAddFreestyle={(text) => { const lines = text.split('. ').filter(l => l.trim()); const activeS = track.sections.find(s => s.id === activeSectionId) || track.sections[0]; const startIdx = activeS.bars.length + 1; const newBars = lines.map((l, i) => withLineSource({ idx: startIdx + i, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' }, 'written')); handleUpdateTrack({ sections: track.sections.map(s => s.id === activeS.id ? { ...s, bars: [...s.bars, ...newBars] } : s) }); setFreestyleOpen(false); }} disabled={editsLocked} trackVibe={track.vibe} albumTheme={album.theme} styleProfileSummary={styleProfile.history[0]?.analysis || ''} isPro={isPro} />

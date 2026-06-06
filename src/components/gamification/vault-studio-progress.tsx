@@ -42,13 +42,26 @@ function shortRankLabel(label: string): string {
   return first.length > 8 ? first.slice(0, 7) : first;
 }
 
-export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner' | 'sidebar' }) {
+export function VaultStudioProgress({
+  variant = 'banner',
+  tourForceExpanded = false,
+}: {
+  variant?: 'banner' | 'sidebar';
+  /** Vault guided tour — expand panel so the spotlight covers the full progress card. */
+  tourForceExpanded?: boolean;
+}) {
   const { user } = useAuth();
   const { summary, rankLabel, loading } = useGamification();
   const isSidebar = variant === 'sidebar';
   const [expanded, setExpanded] = useState(variant !== 'sidebar');
   const initializedRef = useRef(false);
   const xpRingGradientId = useId();
+
+  useEffect(() => {
+    if (tourForceExpanded) setExpanded(true);
+  }, [tourForceExpanded]);
+
+  const showExpanded = tourForceExpanded || expanded;
 
   const unlocked = summary?.unlockedAchievements || {};
 
@@ -168,14 +181,16 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
         'flex flex-row items-center justify-between gap-2 cursor-pointer select-none min-w-0 border-b border-white/5',
         isSidebar ? 'px-2.5 py-2 bg-black/30' : 'px-3 py-2 bg-black/20'
       )}
-      onClick={() => setExpanded((v) => !v)}
-      aria-expanded={expanded}
+      onClick={() => {
+        if (!tourForceExpanded) setExpanded((v) => !v);
+      }}
+      aria-expanded={showExpanded}
     >
       <div className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden">
         <ChevronDown
           className={cn(
             'h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200',
-            !expanded && '-rotate-90'
+            !showExpanded && '-rotate-90'
           )}
           aria-hidden
         />
@@ -187,9 +202,9 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
               isSidebar ? 'text-[11px]' : 'text-[10px]'
             )}
           >
-            {isSidebar && !expanded ? 'Progress' : 'Studio Progress'}
+            {isSidebar && !showExpanded ? 'Progress' : 'Studio Progress'}
           </p>
-          {!expanded && (
+          {!showExpanded && (
             <p className="text-[10px] font-normal normal-case tracking-normal text-muted-foreground truncate leading-tight mt-0.5">
               {isSidebar
                 ? `${shortRankLabel(rankLabel)} · ${xpShort} XP`
@@ -216,7 +231,7 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
     </div>
   );
 
-  const bodyBlock = expanded && (
+  const bodyBlock = showExpanded && (
     <div
       className={cn(
         'grid gap-2 px-3 pb-3 pt-2 min-w-0',
@@ -421,9 +436,12 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
       : 'overflow-hidden mb-4 border-primary/20 bg-gradient-to-br from-primary/[0.08] via-card/50 to-amber-500/[0.06] shadow-[0_0_32px_rgba(59,130,246,0.08)]'
   );
 
-  if (isSidebar && !expanded) {
+  if (isSidebar && !showExpanded) {
     return (
-      <div className="mr-40 2xl:mr-48 shrink-0 -translate-y-2 2xl:-translate-y-4">
+      <div
+        className="mr-40 2xl:mr-48 shrink-0 -translate-y-2 2xl:-translate-y-4"
+        data-tour="vault-progress-desktop"
+      >
         {sidebarBubble}
       </div>
     );
@@ -431,9 +449,11 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
 
   return (
     <Card
+      data-tour={isSidebar ? 'vault-progress-desktop' : 'vault-progress-mobile'}
       className={cn(
         cardClassName,
-        isSidebar && 'animate-in fade-in slide-in-from-left-2 duration-200'
+        isSidebar && 'animate-in fade-in slide-in-from-left-2 duration-200',
+        tourForceExpanded && 'ring-2 ring-primary/40 ring-offset-2 ring-offset-background'
       )}
     >
       {headerBlock}

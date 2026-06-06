@@ -38,6 +38,11 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { REFERRAL_INK_REWARD, REFERRAL_STORAGE_KEY, normalizeReferralCode } from '@/lib/referrals';
 import { claimPendingReferral } from '@/components/refer-a-friend-section';
 import { InviteGateLoginBanner } from '@/components/invite-gate-login-banner';
+import {
+  getCheckoutFromPath,
+  getProCheckoutLabel,
+  getSafeNextPath,
+} from '@/lib/checkout-intent';
 
 function LoginForm() {
   const router = useRouter();
@@ -56,7 +61,12 @@ function LoginForm() {
   
   const loginFormRef = useRef<HTMLDivElement>(null);
   const importIntent = searchParams.get('intent') === 'dna-import';
-  const returnPath = searchParams.get('next');
+  const safeNext = getSafeNextPath(searchParams.get('next'));
+  const proCheckoutIntent = getCheckoutFromPath(safeNext);
+
+  useEffect(() => {
+    if (proCheckoutIntent) setAuthMode('signup');
+  }, [proCheckoutIntent]);
 
   // Parallax logic for atmospheric voids
   const yParallax1 = useTransform(scrollY, [0, 1000], [0, 200]);
@@ -157,7 +167,6 @@ function LoginForm() {
           /* ignore */
         }
       }
-      router.push('/');
     } catch (error: any) {
       setIsProcessing(false);
       if (error.code !== 'auth/popup-closed-by-user') {
@@ -315,6 +324,21 @@ function LoginForm() {
               <InviteGateLoginBanner />
             </div>
 
+            {proCheckoutIntent && (
+              <Card className="w-full max-w-md mb-6 border-accent/30 bg-accent/10 backdrop-blur-md relative z-50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-headline uppercase tracking-wide flex items-center gap-2 text-accent">
+                    <Zap className="h-4 w-4" /> Studio Pro Checkout
+                  </CardTitle>
+                  <CardDescription className="text-[11px] font-code leading-relaxed text-left">
+                    Create your account or sign in — you&apos;ll go straight to Stripe for{' '}
+                    <strong className="text-foreground">{getProCheckoutLabel(proCheckoutIntent)}</strong>.
+                    New signups still get the 3-day Pro trial; paid Pro activates when checkout completes.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            )}
+
             {importIntent && (
               <Card className="w-full max-w-md mb-6 border-primary/30 bg-primary/10 backdrop-blur-md relative z-50">
                 <CardHeader className="pb-2">
@@ -323,7 +347,7 @@ function LoginForm() {
                   </CardTitle>
                   <CardDescription className="text-[11px] font-code leading-relaxed text-left">
                     Someone shared a Bar 4 Bar project with you. After you sign in, you&apos;ll return to that DNA Drop and can merge its lyrics, structure, DNA, and vibe into your vault.
-                    {returnPath ? ' Studio Pro is required to import drops from other artists.' : ''}
+                    Studio Pro is required to import drops from other artists.
                   </CardDescription>
                 </CardHeader>
               </Card>
