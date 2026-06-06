@@ -43,9 +43,13 @@ export const metadata: Metadata = {
     ...(SEO.twitterHandle ? { site: SEO.twitterHandle } : {}),
   },
   icons: {
-    icon: SEO.ogImagePath,
-    shortcut: SEO.ogImagePath,
-    apple: SEO.ogImagePath,
+    icon: [
+      { url: SEO.faviconPath, type: 'image/png' },
+      { url: SEO.faviconPath, type: 'image/png', sizes: '192x192' },
+      { url: SEO.faviconPath, type: 'image/png', sizes: '512x512' },
+    ],
+    shortcut: SEO.faviconPath,
+    apple: SEO.faviconPath,
   },
   alternates: {
     canonical: SEO.url,

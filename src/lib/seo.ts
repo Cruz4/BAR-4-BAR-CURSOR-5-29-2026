@@ -23,6 +23,8 @@ export const SEO = {
     'creative writing AI',
   ],
   url: getPublicAppUrl(),
+  /** Tab, PWA, and social preview image (BAR 4 BAR wordmark). */
+  faviconPath: '/Logo.png',
   ogImagePath: '/Logo.png',
   twitterHandle: undefined as string | undefined,
 };

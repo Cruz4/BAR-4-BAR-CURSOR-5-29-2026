@@ -15,13 +15,19 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ['music', 'productivity', 'entertainment'],
     icons: [
       {
-        src: '/Logo.png',
+        src: SEO.faviconPath,
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/Logo.png',
+        src: SEO.faviconPath,
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: SEO.faviconPath,
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',

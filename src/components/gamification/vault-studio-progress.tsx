@@ -423,7 +423,7 @@ export function VaultStudioProgress({ variant = 'banner' }: { variant?: 'banner'
 
   if (isSidebar && !expanded) {
     return (
-      <div className="mr-40 2xl:mr-48 shrink-0 -translate-y-14 2xl:-translate-y-16">
+      <div className="mr-40 2xl:mr-48 shrink-0 -translate-y-2 2xl:-translate-y-4">
         {sidebarBubble}
       </div>
     );
