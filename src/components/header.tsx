@@ -27,6 +27,7 @@ import { BugReportDialog } from './bug-report-dialog';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
 import { getResidencyPoolCap, getResidencyProgressPercent } from '@/lib/studio-tiers';
+import { FREE_MONTHLY_RESIDENCY_INK, SIGNUP_INK } from '@/lib/subscription';
 import { HowToUseDialog } from './how-to-use-dialog';
 import {
   Popover,
@@ -161,7 +162,7 @@ export function Header() {
                                 </div>
                                 <Progress value={residencyProgress} className="h-1 bg-primary/10" />
                                 <p className="text-[8px] text-muted-foreground italic uppercase">
-                                  {isPro ? 'Monthly residency pool' : 'Visitor pool (300 signup + 200/mo)'}
+                                  {isPro ? 'Monthly residency pool' : `Visitor pool (${SIGNUP_INK} signup + ${FREE_MONTHLY_RESIDENCY_INK}/mo)`}
                                 </p>
                             </div>
                             <div className="space-y-2">

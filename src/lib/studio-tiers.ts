@@ -43,7 +43,7 @@ export const INK_PACK_YEARLY_DISCOUNT_LABEL = `${INK_PACK_YEARLY_DISCOUNT_PERCEN
 export const PRO_MONTHLY_INK = PRO_MONTHLY_RESIDENCY;
 export const PRO_YEARLY_INK = PRO_YEARLY_RESIDENCY;
 
-/** Residency progress bar denominator (Visitor: 300 signup + 200/mo carryover cap). */
+/** Residency progress bar denominator (Visitor: signup + monthly grant, pool capped). */
 export function getResidencyPoolCap(
   user: Pick<User, 'subscriptionStatus' | 'subscriptionTier'> | null | undefined
 ): number {
@@ -143,7 +143,7 @@ export function getProMonthlyHeadlinePerks(): readonly string[] {
   return [
     `${PRO_MONTHLY_INK.toLocaleString()} residency Ink every month`,
     PRO_FULL_UNLOCK_LINE,
-    'All Creative Effects, Performance Mode, vault saves & share links',
+    'Custom DNA saves, Performance Mode, Freestyle & DNA Drop share links',
   ];
 }
 
@@ -158,7 +158,7 @@ export function getProYearlyHeadlinePerks(): readonly string[] {
 export function getVisitorHeadlinePerks(): readonly string[] {
   return [
     `${SIGNUP_INK} signup + ${FREE_MONTHLY_RESIDENCY_INK} monthly residency Ink`,
-    `${FREE_ALBUM_LIMIT} album · ${FREE_TRACK_LIMIT} tracks — demo-scale projects`,
+    'Full bar-by-bar AI on Ink — all 9 Creative Effects included',
   ];
 }
 
@@ -170,30 +170,29 @@ export const VISITOR_INK_SUMMARY = `${SIGNUP_INK} signup Ink + ${FREE_MONTHLY_RE
 
 /** Shown on Ink Store for non-Pro artists */
 export const VISITOR_INK_STORE_NOTICE = {
-  headline: 'Visitor studio — permanent Ink available',
-  body: `You can buy permanent Ink and use it on AI tools inside your projects. Visitor limits still apply: ${FREE_ALBUM_LIMIT} album and ${FREE_TRACK_LIMIT} tracks total. Pro unlocks unlimited albums & tracks, custom DNA/Vibe/Style saves, Performance Mode, and full vault features.`,
+  headline: 'Visitor studio — full AI workstation on Ink',
+  body: `Every Ink-priced tool works on free residency and permanent packs — Generate Next Line, Smart Structure, all 9 Creative Effects, and more. Pro unlocks your catalog workflow: custom DNA/Vibe/Style saves, Performance Mode, Freestyle, vault import/export, and DNA Drop share links — plus ${PRO_MONTHLY_INK.toLocaleString()} residency Ink/mo.`,
 } as const;
 
 /** Free tier limits — shown on comparison charts */
 export const VISITOR_FEATURES = [
-  `${SIGNUP_INK} signup Ink + ${FREE_MONTHLY_RESIDENCY_INK} monthly residency (resets monthly)`,
-  `${FREE_ALBUM_LIMIT} album · ${FREE_TRACK_LIMIT} tracks — demo-scale projects only`,
-  'DNA & REMIX + Generation Workstation — available (uses Ink; system vault presets)',
-  'System DNA / Vibe / Style presets — load-only, no custom saves',
-  '3 Creative Effects only: Simile, Metaphor & Sound-Alike',
-  'PDF & track export available · locked: Performance Mode, Freestyle, full vault I/O & share links',
+  `${SIGNUP_INK} signup Ink + ${FREE_MONTHLY_RESIDENCY_INK} monthly residency (pool caps at ${FREE_RESIDENCY_POOL_CAP})`,
+  `${FREE_ALBUM_LIMIT} album · ${FREE_TRACK_LIMIT} tracks — demo-scale projects`,
+  'Full bar-by-bar AI on Ink — Generate Next/Previous, Smart Structure, Studio Draft & Rhyme Pulse',
+  'All 9 Creative Effects — Simile, Metaphor, Twist, POV, Blend & more (10 Ink each)',
+  'System DNA / Vibe / Style presets — load-only, no custom vault saves',
+  'PDF & track export · locked: Performance Mode, Freestyle, vault import/export & DNA Drop links',
 ] as const;
 
 /** Everything Pro unlocks + why it matters vs Visitor */
 export const PRO_UNLOCKS = [
   `UNLOCK: Unlimited albums & tracks — full catalog vs ${FREE_ALBUM_LIMIT} album / ${FREE_TRACK_LIMIT} tracks`,
-  'UNLOCK: Custom DNA / Vibe / Style vault saves — archive your strains, not just load system presets',
-  'UNLOCK: All 9 Creative Effects — Twist, Image Chain, POV, Blend & more (free tier: 3 only)',
+  'UNLOCK: Custom DNA / Vibe / Style vault saves — save your strains, not just load system presets',
   'UNLOCK: Performance Mode — teleprompter + rhyme-focus for rehearsal & stage',
   'UNLOCK: Freestyle capture — record flows straight into your rhyme book',
   'UNLOCK: Full-studio vault import / export — merge JSON blueprints across devices',
   'UNLOCK: Shareable project links — DNA Drop live links for collab & feedback',
-  `${PRO_MONTHLY_INK.toLocaleString()} monthly residency Ink — refreshes each cycle`,
+  `${PRO_MONTHLY_INK.toLocaleString()} monthly residency Ink — ~9× Visitor pool, refreshes each cycle`,
 ] as const;
 
 /** Yearly Pro-only perks on top of full Pro unlocks */
@@ -258,7 +257,7 @@ export function getStudioTierPlans(isCloudSyncActive: boolean, subscriptionTier?
       name: 'Visitor',
       price: '$0',
       period: '',
-      description: 'Entry-level studio demo.',
+      description: 'Full AI lyric workstation on free Ink.',
       headlinePerks: getVisitorHeadlinePerks(),
       billedText: undefined as string | undefined,
       isCurrent: !isCloudSyncActive,

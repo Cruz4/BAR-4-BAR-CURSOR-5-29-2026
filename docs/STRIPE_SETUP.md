@@ -7,7 +7,7 @@
 
 | Tier | Price | Residency ink/mo |
 |------|-------|------------------|
-| Visitor (free) | $0 | 300 signup + 200/mo refresh |
+| Visitor (free) | $0 | 300 signup + 111/mo refresh |
 | Pro Monthly | $7.77/mo | 1,777 |
 | Pro Yearly | $4.44/mo ($53.28/yr) | 3,444 |
 

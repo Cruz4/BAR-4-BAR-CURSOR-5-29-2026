@@ -33,20 +33,22 @@ export const SYSTEM_DNA_PRESETS = [
 
 export const SYSTEM_VIBE_PRESETS = [
   {
-    name: 'Trap-Soul Midnight',
+    name: 'Neo-Classical Ethereal',
     createdAt: 'system',
-    genre: 'Trap-Soul',
-    tempoBPM: 82,
-    feeling: ['moody', 'intimate'],
-    instrumentation: '808 sub, muted keys, airy pads',
+    genre: 'Neo-Classical',
+    tempoBPM: 80,
+    feeling: ['meditative', 'uplifting', 'cinematic'],
+    instrumentation:
+      'Ethereal evolving synth pads, shimmering arpeggiated electric piano (Rhodes-like), delicate solo cello lines with extensive sustain, and deep, resonant sub-bass. Subtle organic textures and field recordings (distant forest ambiance). Production tone: Ultra-wide stereo imaging, pristine high-end clarity, warm analog saturation on lead synths, lush orchestral hall reverb with long decay (4–6s), nuanced multi-band compression for dynamic control across elements, airy atmospheric sweeps, and a gentle, unfolding soundscape. Emphasis on sonic breath and spaciousness, creating a meditative yet uplifting feel with clean transients and an expansive low-end foundation.',
   },
   {
-    name: 'Boom-Bap Classic',
+    name: 'Dark Cinematic Trap',
     createdAt: 'system',
-    genre: 'Boom-Bap',
-    tempoBPM: 92,
-    feeling: ['gritty', 'lyrical'],
-    instrumentation: 'Dusty drums, sample chops, upright bass stabs',
+    genre: 'Cinematic Trap',
+    tempoBPM: 74,
+    feeling: ['ominous', 'hypnotic', 'nocturnal'],
+    instrumentation:
+      'Distorted 808 sub with controlled pitch slides, detuned bell plucks, granular vocal chops buried in the mix, and low-passed orchestral stabs (violas + French horns). Tape-saturated drum loops with tight sidechain pumping, vinyl crackle undercurrent, and reverse cymbal swells into each downbeat. Production tone: Mono-compatible low end, wide upper-mid stereo chorus on leads, dark plate reverb (1.8–2.4s) on melodic layers, parallel distortion on percussion bus, automated filter sweeps on hooks, and a claustrophobic-to-expansive dynamic arc — intimate verse pockets opening into wide, reverb-drenched hook sections with aggressive transient shaping on snares and rimshots.',
   },
 ];
 

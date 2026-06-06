@@ -1,18 +1,26 @@
 import type { Album, Track } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
+export const UNASSIGNED_ALBUM_ID = 'unassigned';
+
+/** Loose / idea-shelf tracks — no concept album blueprint to inherit. */
+export function isLooseTrackAlbum(album?: Pick<Album, 'id'> | null): boolean {
+  return album?.id === UNASSIGNED_ALBUM_ID;
+}
+
 /** Match Co-Writer panel switch UI — undefined toggles default ON where switches use ?? true */
 export function isTrackDnaActive(track: Track): boolean {
   return track.direction?.enabled ?? true;
 }
 
-/** Track toggle: pull album Creative DNA into this track (default on). */
-export function isInheritFromAlbumOn(track: Track): boolean {
+/** Track toggle: pull album Creative DNA into this track (default on for album tracks only). */
+export function isInheritFromAlbumOn(track: Track, album?: Album | null): boolean {
+  if (isLooseTrackAlbum(album) || track.albumId === UNASSIGNED_ALBUM_ID) return false;
   return track.direction?.inheritFromAlbum !== false;
 }
 
 export function isAlbumDnaActive(track: Track, album?: Album | null): boolean {
-  return isInheritFromAlbumOn(track) && !!album?.direction?.enabled;
+  return isInheritFromAlbumOn(track, album) && !!album?.direction?.enabled;
 }
 
 export function isVibeActive(track: Track): boolean {
@@ -93,9 +101,9 @@ export function coWriterIntentRowClass(active: boolean, locked: boolean): string
 /** Active Co-Writer rules only — shown in the Bar Workstation header when toggled on. */
 export function getWorkstationRuleBadges(track: Track, album?: Album | null): WorkstationRuleBadge[] {
   const badges: WorkstationRuleBadge[] = [];
-  const onRealAlbum = !!album && album.id !== 'unassigned';
+  const onRealAlbum = !!album && !isLooseTrackAlbum(album);
 
-  if (isInheritFromAlbumOn(track)) {
+  if (onRealAlbum && isInheritFromAlbumOn(track, album)) {
     badges.push({ id: 'INHERIT', active: true });
   }
   if (isTrackDnaActive(track)) {

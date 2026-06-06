@@ -86,9 +86,14 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
 ];
 
 export const FREE_TIER_EXPECTATIONS = {
-  headline: 'Free tier — full workflow, system presets',
-  body: 'DNA & REMIX, Generation Workstation, and bar-by-bar AI all work on free Ink (1 album, 3 tracks). You can load system DNA/Vibe/Style presets. Permanent Ink packs can be purchased anytime; Studio Pro unlocks unlimited projects, custom saves, and full vault features.',
+  headline: 'Visitor — full AI on free Ink',
+  body: 'Generate Next Line, Smart Structure, all 9 Creative Effects, and DNA & REMIX all run on your residency Ink. Load system DNA/Vibe/Style presets anytime. Studio Pro is for power users: custom strain saves, Performance Mode, Freestyle, vault import/export, DNA Drop links, and 9× monthly Ink.',
   dismissKey: 'b4b-free-tier-expectations-dismissed',
+} as const;
+
+export const PRO_TRIAL_BANNER = {
+  headline: 'Pro trial',
+  dismissKey: 'b4b-pro-trial-banner-dismissed',
 } as const;
 
 export async function markLyricsTutorialComplete(userId: string) {

@@ -3,7 +3,7 @@ export interface User {
   displayName: string;
   email?: string;
   createdAt: string; // ISO 8601 string
-  trialStartedAt?: string; // For 48h hard-lock
+  trialStartedAt?: string | null; // Pro workflow trial start (see TRIAL_DURATION_DAYS)
   albums?: Album[];
   role?: 'admin' | 'artist';
   status?: 'active' | 'blocked';

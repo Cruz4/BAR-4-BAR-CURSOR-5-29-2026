@@ -107,7 +107,7 @@ export default function PricingPage() {
     {
       name: 'Visitor',
       price: '$0',
-      description: 'Entry-level demo — write with system presets and core AI tools.',
+      description: 'Full bar-by-bar AI on free Ink — all Creative Effects included.',
       membership: 'Free Artist',
       ink: VISITOR_INK_SUMMARY,
       headlinePerks: getVisitorHeadlinePerks(),
@@ -127,7 +127,7 @@ export default function PricingPage() {
       billedText: isYearly ? `Billed annually (${PRO_YEARLY_BILLED})` : 'Billed monthly',
       description: isYearly
         ? 'Everything in Pro Monthly — plus yearly-only fuel, savings & roadmap input.'
-        : 'Every limit removed — full professional workstation unlocked.',
+        : 'Your catalog, your strains, stage tools — plus 9× monthly Ink.',
       membership: 'Professional Member',
       ink: isYearly ? `${PRO_YEARLY_INK.toLocaleString()} Monthly Residency Ink` : `${PRO_MONTHLY_INK.toLocaleString()} Monthly Residency Ink`,
       headlinePerks: getProHeadlinePerks(isYearly ? 'yearly' : 'monthly'),

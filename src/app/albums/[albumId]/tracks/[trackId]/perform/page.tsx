@@ -25,7 +25,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/use-auth';
-import { isProUser } from '@/lib/subscription';
+import { isProOrTrial } from '@/lib/subscription';
 import { db } from '@/lib/firebase/client/firebase';
 import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import { doc, getDoc } from 'firebase/firestore';
@@ -53,10 +53,10 @@ export default function PerformancePage() {
 
   useEffect(() => {
     if (!user) return;
-    if (isProUser(user)) return;
+    if (isProOrTrial(user)) return;
     if (isBrowserOffline()) {
       const cached = loadCachedUserProfile(user.id);
-      if (cached && isProUser(cached)) return;
+      if (cached && isProOrTrial(cached)) return;
     }
     router.replace(`/usage?tab=cloud`);
   }, [user, router]);

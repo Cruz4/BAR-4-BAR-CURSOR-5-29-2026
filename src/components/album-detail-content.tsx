@@ -40,7 +40,6 @@ import {
   Move,
   Sparkles,
   Globe,
-  Share2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -94,8 +93,16 @@ import {
   FreeTrackLimitError,
   FREE_TRACK_LIMIT,
   FREE_TRACK_LIMIT_TOAST,
-  isProUser,
+  isProOrTrial,
 } from '@/lib/subscription';
+import {
+  getEditableTrackIds,
+  isAlbumOverTierLimit,
+  isTrackOverTierLimit,
+  TIER_LIMIT_ALBUM_BANNER,
+  TIER_LIMIT_LOCKED_TOAST,
+} from '@/lib/tier-limits';
+import { LockedProFeatureButton, proLockText } from '@/components/pro-lock';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { format } from 'date-fns';
@@ -150,6 +157,10 @@ function CreateTrackDialog({
                 sections: [{ id: `section-${Date.now()}`, type: 'verse', bars: [{ idx: 1, text: '', accepted: true, syllables: 0, rhymeKey: '?' }] }],
                 status: 'in_progress',
                 createdAt: new Date().toISOString(),
+                direction: {
+                  enabled: true,
+                  inheritFromAlbum: albumId !== 'unassigned',
+                },
             };
             const created = addTrack(albumId, newTrack);
             if (mode === 'workstation') router.push(`/albums/${albumId}/tracks/${created.id}?openGenerator=true`);
@@ -522,6 +533,7 @@ function LooseTrackCard({
   realAlbums,
   onMoveTrack,
   onDelete,
+  tierLocked = false,
 }: {
   track: Track;
   index: number;
@@ -529,6 +541,7 @@ function LooseTrackCard({
   realAlbums: Album[];
   onMoveTrack: (trackId: string, targetAlbumId: string) => void;
   onDelete: () => void;
+  tierLocked?: boolean;
 }) {
   const barCount = countRhymeBars(track.sections);
   const sectionCount = track.sections?.length ?? 0;
@@ -537,37 +550,42 @@ function LooseTrackCard({
     <div className="group relative flex flex-col rounded-2xl border border-white/10 bg-gradient-to-br from-black/60 via-black/40 to-primary/[0.06] p-5 hover:border-primary/35 hover:shadow-[0_0_32px_rgba(59,130,246,0.12)] transition-all min-h-[168px]">
       <div className="flex items-start justify-between gap-2 mb-3">
         <span className="font-code text-sm text-primary/70 tabular-nums">{String(index + 1).padStart(2, '0')}</span>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white opacity-70 group-hover:opacity-100">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-card border-white/10 w-48">
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="text-[10px] font-bold uppercase">
-                <Move className="mr-2 h-4 w-4" /> Move To Album
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent className="bg-card border-white/10">
-                  {realAlbums.map((targetAlbum) => (
-                    <DropdownMenuItem
-                      key={targetAlbum.id}
-                      onClick={() => onMoveTrack(track.id, targetAlbum.id)}
-                      className="text-[10px] font-bold uppercase"
-                    >
-                      <PlusCircle className="mr-2 h-3 w-3" /> {targetAlbum.title}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onDelete} className="text-red-500 focus:text-red-500 text-[10px] font-bold uppercase">
-              <Trash2 className="mr-2 h-4 w-4" /> Scrap Asset
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {!tierLocked && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white opacity-70 group-hover:opacity-100">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-card border-white/10 w-48">
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="text-[10px] font-bold uppercase">
+                  <Move className="mr-2 h-4 w-4" /> Move To Album
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="bg-card border-white/10">
+                    {realAlbums.map((targetAlbum) => (
+                      <DropdownMenuItem
+                        key={targetAlbum.id}
+                        onClick={() => onMoveTrack(track.id, targetAlbum.id)}
+                        className="text-[10px] font-bold uppercase"
+                      >
+                        <PlusCircle className="mr-2 h-3 w-3" /> {targetAlbum.title}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onDelete} className="text-red-500 focus:text-red-500 text-[10px] font-bold uppercase">
+                <Trash2 className="mr-2 h-4 w-4" /> Scrap Asset
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        {tierLocked && (
+          <Badge variant="outline" className={cn('text-[7px] px-1.5 h-5', proLockText())}>View only</Badge>
+        )}
       </div>
 
       <Link href={`/albums/${albumId}/tracks/${track.id}`} className="flex flex-col flex-1 min-w-0">
@@ -593,12 +611,18 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
-  const isPro = isProUser(user);
+  const isPro = isProOrTrial(user);
   const { getAlbumById, updateAlbum, deleteTrack, loading, moveTrack, deleteAlbum, albums } = useContext(DataContext);
   const totalTrackCount = countUserTracks(albums);
-  const canAddTrack = isPro || totalTrackCount < FREE_TRACK_LIMIT;
+  const albumTierLocked = isAlbumOverTierLimit(albumId, albums, user);
+  const editableTrackIds = getEditableTrackIds(albums, user);
+  const canAddTrack = canUserAddTrack(albums, user) && !albumTierLocked;
   const openCreateTrack = () => {
-    if (!canAddTrack) {
+    if (albumTierLocked) {
+      toast(TIER_LIMIT_LOCKED_TOAST);
+      return;
+    }
+    if (!canUserAddTrack(albums, user)) {
       trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, { limitType: 'track', count: totalTrackCount });
       toast(FREE_TRACK_LIMIT_TOAST);
       router.push('/usage?tab=cloud');
@@ -623,11 +647,23 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   
-  const handleAlbumUpdate = (updates: Partial<Album>) => { if (album) updateAlbum(album.id, updates); }
-  const handleDirectionUpdate = (field: keyof Direction, value: string) => { if (album) handleAlbumUpdate({ direction: { ...(album.direction || {}), [field]: value } }); };
+  const handleAlbumUpdate = (updates: Partial<Album>) => {
+    if (!album) return;
+    if (albumTierLocked) {
+      toast(TIER_LIMIT_LOCKED_TOAST);
+      return;
+    }
+    updateAlbum(album.id, updates);
+  };
+  const handleDirectionUpdate = (field: keyof Direction, value: string) => {
+    if (album) handleAlbumUpdate({ direction: { ...(album.direction || {}), [field]: value } });
+  };
 
   const handleReorderTrack = (id: string, direction: 'up' | 'down') => {
-      if (!album) return;
+      if (!album || albumTierLocked) {
+        if (albumTierLocked) toast(TIER_LIMIT_LOCKED_TOAST);
+        return;
+      }
       const idx = album.tracks.findIndex(t => t.id === id);
       if (idx === -1) return;
       const newTracks = [...album.tracks];
@@ -638,11 +674,19 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   };
 
   const handleUnassignTrack = (trackId: string) => {
+      if (albumTierLocked || isTrackOverTierLimit(trackId, albumId, albums, user)) {
+        toast(TIER_LIMIT_LOCKED_TOAST);
+        return;
+      }
       moveTrack(trackId, albumId, 'unassigned');
       toast({ title: "Track Unassigned", description: "Moved to Loose Tracks vault." });
   };
 
   const handleMoveToAlbum = (trackId: string, targetAlbumId: string) => {
+    if (albumTierLocked || isTrackOverTierLimit(trackId, albumId, albums, user)) {
+      toast(TIER_LIMIT_LOCKED_TOAST);
+      return;
+    }
     moveTrack(trackId, albumId, targetAlbumId);
     const target = realAlbums.find((a) => a.id === targetAlbumId);
     toast({
@@ -675,17 +719,32 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                 <ChevronLeft className="mr-2 h-4 w-4" /> Collection
             </Button>
 
+            {albumTierLocked && (
+              <div className="mb-6 rounded-xl border border-pink-500/25 bg-pink-500/10 px-4 py-3 flex items-center gap-2">
+                <Lock className="h-4 w-4 text-pink-400 shrink-0" />
+                <p className={cn('text-[10px] font-code leading-snug', proLockText())}>{TIER_LIMIT_ALBUM_BANNER}</p>
+              </div>
+            )}
+
             <div className="flex flex-col lg:flex-row items-start justify-between gap-6 sm:gap-8 mb-8 sm:mb-12">
                 <div className={cn('space-y-3 sm:space-y-4 min-w-0 w-full', isUnassignedVault ? 'lg:max-w-2xl' : 'flex-grow')}>
                     <Input 
                         defaultValue={album.title} 
-                        onBlur={(e) => updateAlbum(album.id, { title: e.target.value })} 
-                        className="text-3xl sm:text-5xl md:text-7xl font-headline font-bold text-white bg-transparent border-0 p-0 focus-visible:ring-0 h-auto tracking-tighter uppercase leading-none w-full max-w-full" 
+                        readOnly={albumTierLocked}
+                        onBlur={(e) => !albumTierLocked && handleAlbumUpdate({ title: e.target.value })} 
+                        className={cn(
+                          'text-3xl sm:text-5xl md:text-7xl font-headline font-bold text-white bg-transparent border-0 p-0 focus-visible:ring-0 h-auto tracking-tighter uppercase leading-none w-full max-w-full',
+                          albumTierLocked && 'opacity-80 cursor-default'
+                        )}
                     />
                     <Textarea 
                         defaultValue={album.theme} 
-                        onBlur={(e) => updateAlbum(album.id, { theme: e.target.value })} 
-                        className="text-base sm:text-xl text-muted-foreground bg-transparent border-0 p-0 focus-visible:ring-0 font-code min-h-[60px] resize-none leading-relaxed italic w-full max-w-full break-words" 
+                        readOnly={albumTierLocked}
+                        onBlur={(e) => !albumTierLocked && handleAlbumUpdate({ theme: e.target.value })} 
+                        className={cn(
+                          'text-base sm:text-xl text-muted-foreground bg-transparent border-0 p-0 focus-visible:ring-0 font-code min-h-[60px] resize-none leading-relaxed italic w-full max-w-full break-words',
+                          albumTierLocked && 'opacity-80 cursor-default'
+                        )}
                         placeholder="Album concept..."
                     />
                     <div className="flex flex-wrap items-center gap-2 sm:gap-4 pt-2">
@@ -718,11 +777,13 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                     <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">1000 x 1000px</p>
                                 </div>
                             )}
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-sm">
-                                <Button variant="secondary" size="sm" onClick={() => setEditCoverArtDialogOpen(true)} className="h-10 px-6 font-bold text-xs rounded-xl shadow-2xl">
-                                    <Pencil className="mr-2 h-4 w-4" /> {album.coverArtUrl ? 'Change Cover' : 'Upload Cover'}
-                                </Button>
-                            </div>
+                            {!albumTierLocked && (
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-sm">
+                                  <Button variant="secondary" size="sm" onClick={() => setEditCoverArtDialogOpen(true)} className="h-10 px-6 font-bold text-xs rounded-xl shadow-2xl">
+                                      <Pencil className="mr-2 h-4 w-4" /> {album.coverArtUrl ? 'Change Cover' : 'Upload Cover'}
+                                  </Button>
+                              </div>
+                            )}
                         </div>
                     </div>
                 ) : (
@@ -773,9 +834,15 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                       <Globe className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> DNA Drop
                                     </Button>
                                   ) : (
-                                    <Button variant="outline" size="sm" className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-white/10 rounded-xl bg-white/5 text-muted-foreground flex-1 sm:flex-none min-w-0" onClick={() => router.push('/usage?tab=cloud')}>
-                                      <Share2 className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> DNA Drop
-                                    </Button>
+                                    <LockedProFeatureButton
+                                      feature="DNA Drop"
+                                      benefit="Publish a shareable link to your album blueprint for collab and feedback."
+                                      icon={Globe}
+                                      iconClassName="text-primary"
+                                      label="DNA Drop"
+                                      variant="outline"
+                                      className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest flex-1 sm:flex-none min-w-0 border-primary/30 bg-primary/5 text-primary"
+                                    />
                                   )
                                 )}
                             </div>
@@ -793,12 +860,15 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                       realAlbums={realAlbums}
                                       onMoveTrack={handleMoveToAlbum}
                                       onDelete={() => setTrackToDelete(track)}
+                                      tierLocked={!editableTrackIds.has(track.id)}
                                     />
                                   ))}
                                 </div>
                               ) : (
                                 <div className="divide-y divide-white/5">
-                                {album.tracks.map((track, index) => (
+                                {album.tracks.map((track, index) => {
+                                  const trackTierLocked = albumTierLocked || !editableTrackIds.has(track.id);
+                                  return (
                                     <div key={track.id} className="group flex flex-col gap-3 sm:flex-row sm:items-center p-4 sm:p-6 hover:bg-primary/5 transition-all min-w-0">
                                         <div className="flex items-start gap-3 sm:gap-0 min-w-0 flex-1 w-full">
                                         <div className="text-muted-foreground font-code text-base sm:text-xl sm:mr-6 w-7 sm:w-8 text-right opacity-60 sm:opacity-30 group-hover:opacity-100 group-hover:text-primary transition-all shrink-0 pt-0.5">
@@ -808,18 +878,22 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                             <p className="font-bold font-headline text-lg sm:text-2xl text-white uppercase tracking-tight group-hover:text-primary transition-colors break-words">{track.title}</p>
                                             <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
                                                 <DnaDropLiveIndicator shareId={track.shareId} variant="compact" />
+                                                {trackTierLocked && (
+                                                  <Badge variant="outline" className={cn('h-4 px-1.5 text-[8px]', proLockText())}>View only</Badge>
+                                                )}
                                                 <Badge variant="outline" className="h-4 px-1.5 text-[8px] border-white/10 text-muted-foreground font-code">{track.vibe?.genre}</Badge>
                                                 <span className="text-[9px] text-muted-foreground/60 font-code uppercase">{track.vibe?.tempoBPM} BPM</span>
                                             </div>
                                         </Link>
                                         </div>
                                         <div className="flex items-center gap-1 justify-end sm:justify-start opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0 pl-10 sm:pl-0">
-                                            {!isUnassignedVault && (
+                                            {!isUnassignedVault && !trackTierLocked && (
                                                 <>
                                                     <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary" onClick={() => handleReorderTrack(track.id, 'up')} disabled={index === 0}><ArrowUp className="h-4 w-4" /></Button>
                                                     <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary" onClick={() => handleReorderTrack(track.id, 'down')} disabled={index === album.tracks.length - 1}><ArrowDown className="h-4 w-4" /></Button>
                                                 </>
                                             )}
+                                            {!trackTierLocked && (
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-white"><MoreVertical className="h-5 w-5" /></Button>
@@ -832,7 +906,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                                                 <DropdownMenuPortal>
                                                                     <DropdownMenuSubContent className="bg-card border-white/10">
                                                                         {realAlbums.map(targetAlbum => (
-                                                                            <DropdownMenuItem key={targetAlbum.id} onClick={() => { moveTrack(track.id, 'unassigned', targetAlbum.id); toast({ title: "Track Assigned", description: `"${track.title}" moved to ${targetAlbum.title}.` }); }} className="text-[10px] font-bold uppercase">
+                                                                            <DropdownMenuItem key={targetAlbum.id} onClick={() => { moveTrack(track.id, 'unassigned', targetAlbum.id); toast({ title: "Track Assigned", description: `"${track.title}" moved to ${targetAlbum.title}. Album DNA inherit is on.` }); }} className="text-[10px] font-bold uppercase">
                                                                                 <PlusCircle className="mr-2 h-3 w-3" /> {targetAlbum.title}
                                                                             </DropdownMenuItem>
                                                                         ))}
@@ -847,9 +921,11 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                                     <DropdownMenuItem onClick={() => setTrackToDelete(track)} className="text-red-500 focus:text-red-500 text-[10px] font-bold uppercase"><Trash2 className="mr-2 h-4 w-4" /> Scrap Asset</DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
+                                            )}
                                         </div>
                                     </div>
-                                ))}
+                                  );
+                                })}
                                 </div>
                               )
                             ) : (
@@ -879,11 +955,11 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                     <CardTitle className="font-headline text-2xl flex items-center gap-3 text-emerald-500 uppercase tracking-tighter"><Compass className="h-6 w-6" /> Album DNA</CardTitle>
                                     <CardDescription className="text-[9px] uppercase font-bold tracking-widest text-emerald-600/60 mt-1">Foundational Alignment</CardDescription>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-10 w-10 text-emerald-600 hover:bg-emerald-500/10 rounded-xl" onClick={() => setStrainMixerOpen(true)}>
+                                <Button variant="ghost" size="icon" className="h-10 w-10 text-emerald-600 hover:bg-emerald-500/10 rounded-xl" onClick={() => setStrainMixerOpen(true)} disabled={albumTierLocked}>
                                     <ArrowRightLeft className="h-5 w-5" />
                                 </Button>
                             </CardHeader>
-                            <CardContent className="px-8 pb-10 space-y-6 font-code">
+                            <CardContent className={cn('px-8 pb-10 space-y-6 font-code', albumTierLocked && 'opacity-70 pointer-events-none')}>
                                 {[
                                     { id: 'setting_world', label: 'WORLD BUILDING', placeholder: 'The setting of this album...' },
                                     { id: 'emotion_core', label: 'EMOTIONAL CORE', placeholder: 'The primary feeling...' },
@@ -896,6 +972,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                             className="bg-background/40 border-emerald-500/10 min-h-[80px] text-xs leading-relaxed focus:border-emerald-500/40" 
                                             value={album.direction?.[f.id as keyof Direction] as string || ''}
                                             onChange={(e) => handleDirectionUpdate(f.id as any, e.target.value)}
+                                            readOnly={albumTierLocked}
                                         />
                                     </div>
                                 ))}
@@ -907,8 +984,12 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                         <div className="pt-8">
                             <Button 
                               variant="ghost" 
-                              className="w-full h-11 text-red-500/40 hover:text-red-500 hover:bg-red-500/5 font-bold uppercase text-[10px] tracking-widest" 
-                              onClick={() => { if(confirm("PERMANENT DATA WIPE: Are you absolutely sure you want to delete this entire album blueprint and all associated tracks? This cannot be undone.")) { deleteAlbum(albumId); router.push('/'); } }}
+                              disabled={albumTierLocked}
+                              className="w-full h-11 text-red-500/40 hover:text-red-500 hover:bg-red-500/5 font-bold uppercase text-[10px] tracking-widest disabled:opacity-40" 
+                              onClick={() => {
+                                if (albumTierLocked) { toast(TIER_LIMIT_LOCKED_TOAST); return; }
+                                if(confirm("PERMANENT DATA WIPE: Are you absolutely sure you want to delete this entire album blueprint and all associated tracks? This cannot be undone.")) { deleteAlbum(albumId); router.push('/'); }
+                              }}
                             >
                                 <Trash2 className="mr-2 h-4 w-4" /> Delete Album
                             </Button>

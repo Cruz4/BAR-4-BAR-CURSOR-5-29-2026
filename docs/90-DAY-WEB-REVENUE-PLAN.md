@@ -100,18 +100,19 @@ Source of truth in code: `src/lib/studio-tiers.ts`, `src/lib/stripe-catalog.ts`,
 | Item | Value |
 |------|--------|
 | Signup Ink | 300 |
-| Monthly residency Ink | 200 (additive monthly grant) |
-| Projects | 1 album · 3 tracks |
-| Creative Effects | 3 (Simile, Metaphor, Sound-Alike) |
-| Locked | Performance Mode, Freestyle, full vault I/O, share links |
-| Available | DNA & REMIX, Generation Workstation, PDF export |
+| Monthly residency Ink | 111 (additive monthly grant) |
+| Projects | 1 album · 4 tracks |
+| Creative Effects | All 9 (10 Ink each) |
+| Locked | Performance Mode, Freestyle, custom DNA saves, vault I/O, share links |
+| Available | Full bar-by-bar AI on Ink, DNA & REMIX, Generation Workstation, PDF export |
+| Trial | 3-day Pro workflow + 400 bonus Ink on signup |
 
 ### Pro Monthly — $7.77/mo
 
 | Item | Value |
 |------|--------|
 | Residency Ink | 1,777/mo |
-| Unlocks | Unlimited albums & tracks, all 9 Creative Effects, Performance Mode, Freestyle, vault import/export, shareable DNA Drop links |
+| Unlocks | Unlimited albums & tracks, custom DNA saves, Performance Mode, Freestyle, vault import/export, shareable DNA Drop links |
 
 ### Pro Yearly — $4.44/mo effective ($53.28/yr billed annually)
 

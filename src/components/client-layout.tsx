@@ -24,6 +24,7 @@ import { StudioPageBackground } from './studio-page-background';
 import { SettingsControlAtmosphere } from './settings-control-atmosphere';
 import { ProductAnalytics } from './product-analytics';
 import { MarketingAttributionCapture } from './marketing-attribution-capture';
+import { InviteGateGuard } from './invite-gate-guard';
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -35,6 +36,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <AuthProvider>
+        <InviteGateGuard>
         <DataProvider>
           <UsageProvider>
             <GamificationProvider>
@@ -62,6 +64,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             </GamificationProvider>
           </UsageProvider>
         </DataProvider>
+        </InviteGateGuard>
       </AuthProvider>
     </ThemeProvider>
   );

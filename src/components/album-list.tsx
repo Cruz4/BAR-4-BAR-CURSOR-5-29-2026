@@ -94,7 +94,7 @@ import {
   FREE_ALBUM_LIMIT,
   FREE_TRACK_LIMIT,
   FREE_TRACK_LIMIT_TOAST,
-  isProUser,
+  isProOrTrial,
 } from '@/lib/subscription';
 import { isDataUrl } from '@/lib/cover-art';
 import { postGamificationEvent } from '@/lib/gamification-client';
@@ -102,7 +102,21 @@ import { VaultStudioProgress } from '@/components/gamification/vault-studio-prog
 import { VaultChamberAtmosphere } from '@/components/vault-chamber-atmosphere';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
-import { LockedVaultSlot, OpenAlbumSlot, OpenTrackSlot, LockedToolbarButton, ProLockBanner, ProCreateAlbumSlot, ProCreateTrackSlot, proLockIcon, proLockText } from '@/components/pro-lock';
+import {
+  LockedVaultSlot,
+  OpenAlbumSlot,
+  OpenTrackSlot,
+  LockedToolbarButton,
+  ProLockBanner,
+  ProCreateAlbumSlot,
+  ProCreateTrackSlot,
+  IconWithLockOverlay,
+  proLockIcon,
+  proLockText,
+} from '@/components/pro-lock';
+import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
+import { getEditableAlbumIds, getEditableTrackIds } from '@/lib/tier-limits';
+import type { User } from '@/lib/types';
 import { Lock } from 'lucide-react';
 
 function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenChange: (open: boolean) => void, type: 'Album' | 'Track' }) {
@@ -125,7 +139,7 @@ function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenC
   };
 
   const handleCreate = async (mode: 'blank' | 'workstation' = 'blank') => {
-      const isPro = isProUser(user);
+      const isPro = isProOrTrial(user);
       const albumCount = albums.filter((a) => a.id !== 'unassigned').length;
       const trackCount = countUserTracks(albums);
 
@@ -173,6 +187,7 @@ function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenC
                 sections: [{ id: `section-${Date.now()}`, type: 'verse', bars: [{ idx: 1, text: '', accepted: true, syllables: 0, rhymeKey: '?' }] }],
                 status: 'in_progress',
                 createdAt: new Date().toISOString(),
+                direction: { enabled: true, inheritFromAlbum: false },
             };
             const created = addTrack('unassigned', { ...newTrack });
             if (mode === 'workstation') router.push(`/albums/unassigned/tracks/${created.id}?openGenerator=true`);
@@ -258,6 +273,8 @@ function FreeVisitorVault({
   totalTrackCount,
   onCreateAlbum,
   onCreateTrack,
+  albums,
+  user,
 }: {
   sortedLooseTracks: Track[];
   filteredAlbums: Album[];
@@ -265,15 +282,23 @@ function FreeVisitorVault({
   totalTrackCount: number;
   onCreateAlbum: () => void;
   onCreateTrack: () => void;
+  albums: Album[];
+  user: User | null;
 }) {
   const openTrackSlots = Math.max(0, FREE_TRACK_LIMIT - totalTrackCount);
-  const album = filteredAlbums[0] ?? null;
+  const editableTrackIds = getEditableTrackIds(albums, user);
+  const editableAlbumIds = getEditableAlbumIds(albums, user);
+  const hasExtraAlbums = realAlbums.length > FREE_ALBUM_LIMIT;
+  const hasExtraTracks = totalTrackCount > FREE_TRACK_LIMIT;
 
   return (
     <div className="space-y-20 animate-in fade-in duration-700">
       <ProLockBanner>
-        <p className={cn('text-xs', proLockText())}>Visitor Studio · 1 Album · {FREE_TRACK_LIMIT} Tracks</p>
-        <p className="text-[10px] text-muted-foreground mt-1">Everything glowing hot pink is Studio Pro — same look, same upgrade path. Open slots and folder icons are yours; system presets load in the editor.</p>
+        <p className={cn('text-xs', proLockText())}>Visitor Studio · {FREE_ALBUM_LIMIT} Album · {FREE_TRACK_LIMIT} Tracks</p>
+        <p className="text-[10px] text-muted-foreground mt-1">
+          Hot pink locks are Studio Pro features. Gray icons with a fuchsia lock are over your free limit — view & export still work, edits need Pro.
+          {(hasExtraAlbums || hasExtraTracks) && ' Your older projects stay in the vault as view-only.'}
+        </p>
       </ProLockBanner>
 
       <div className="space-y-6">
@@ -288,25 +313,45 @@ function FreeVisitorVault({
           <Badge variant="outline" className="border-sky-500/30 text-sky-400 font-mono">{totalTrackCount}/{FREE_TRACK_LIMIT}</Badge>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedLooseTracks.map((track) => (
+          {sortedLooseTracks.map((track) => {
+            const tierLocked = !editableTrackIds.has(track.id);
+            return (
               <div key={track.id} className="group relative">
-                <Link href={`/albums/unassigned/tracks/${track.id}`} className="block py-4 px-6 rounded-2xl bg-black/40 border-2 border-sky-500/30 hover:border-sky-400/60 hover:bg-sky-500/5 transition-all flex items-center justify-between shadow-[0_0_16px_rgba(56,189,248,0.12)]">
+                <Link
+                  href={`/albums/unassigned/tracks/${track.id}`}
+                  className={cn(
+                    'block py-4 px-6 rounded-2xl bg-black/40 border-2 transition-all flex items-center justify-between',
+                    tierLocked
+                      ? 'border-pink-500/25 hover:border-pink-400/40 opacity-85'
+                      : 'border-sky-500/30 hover:border-sky-400/60 hover:bg-sky-500/5 shadow-[0_0_16px_rgba(56,189,248,0.12)]'
+                  )}
+                >
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className="p-2 bg-sky-500/15 rounded-xl border border-sky-500/30">
-                      <CassetteTape className="h-5 w-5 text-sky-400" />
+                    <div className={cn('p-2 rounded-xl border', tierLocked ? 'bg-muted/20 border-pink-500/20' : 'bg-sky-500/15 border-sky-500/30')}>
+                      {tierLocked ? (
+                        <IconWithLockOverlay icon={CassetteTape} size="lg" />
+                      ) : (
+                        <CassetteTape className="h-5 w-5 text-sky-400" />
+                      )}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 min-w-0">
                         <p className="font-bold font-headline text-base text-white uppercase truncate">{track.title}</p>
                         <DnaDropLiveIndicator shareId={track.shareId} variant="compact" />
+                        {tierLocked && (
+                          <Badge variant="outline" className={cn('text-[7px] px-1.5 h-4 shrink-0', proLockText())}>View only</Badge>
+                        )}
                       </div>
-                      <p className="text-[8px] text-sky-400/80 uppercase font-code mt-0.5">Loose track · {track.vibe?.genre}</p>
+                      <p className={cn('text-[8px] uppercase font-code mt-0.5', tierLocked ? 'text-muted-foreground' : 'text-sky-400/80')}>
+                        {tierLocked ? 'Free limit · export OK' : `Loose track · ${track.vibe?.genre}`}
+                      </p>
                     </div>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-sky-400 shrink-0" />
+                  <ChevronRight className={cn('h-4 w-4 shrink-0', tierLocked ? 'text-muted-foreground' : 'text-sky-400')} />
                 </Link>
               </div>
-          ))}
+            );
+          })}
           {Array.from({ length: openTrackSlots }, (_, i) => (
               <OpenTrackSlot key={`open-track-${i}`} onClick={onCreateTrack} />
           ))}
@@ -322,7 +367,14 @@ function FreeVisitorVault({
           <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 font-mono">{realAlbums.length}/{FREE_ALBUM_LIMIT}</Badge>
         </div>
         <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-x-12 gap-y-12 px-2 sm:grid-cols-2 lg:grid-cols-3">
-          {album ? <VinylRecord key={album.id} album={album} /> : <OpenAlbumSlot onClick={onCreateAlbum} />}
+          {filteredAlbums.map((albumItem) => (
+            <VinylRecord
+              key={albumItem.id}
+              album={albumItem}
+              tierLocked={!editableAlbumIds.has(albumItem.id)}
+            />
+          ))}
+          {realAlbums.length < FREE_ALBUM_LIMIT && <OpenAlbumSlot onClick={onCreateAlbum} />}
           <LockedVaultSlot variant="album" label="Unlimited Albums" sublabel="Upgrade for full vault expansion" />
         </div>
       </div>
@@ -330,12 +382,23 @@ function FreeVisitorVault({
   );
 }
 
-const VinylRecord = ({ album }: { album: Album }) => (
-    <Link href={`/albums/${album.id}`} className="group relative aspect-square block">
-        <div className="absolute top-3 right-3 z-30 pointer-events-none">
+const VinylRecord = ({ album, tierLocked = false }: { album: Album; tierLocked?: boolean }) => (
+    <Link href={`/albums/${album.id}`} className={cn('group relative aspect-square block', tierLocked && 'opacity-85')}>
+        <div className="absolute top-3 right-3 z-30 pointer-events-none flex flex-col items-end gap-1">
           <DnaDropLiveIndicator shareId={album.shareId} variant="dot" className="pointer-events-auto" />
+          {tierLocked && (
+            <Badge variant="outline" className={cn('text-[7px] px-1.5 h-4 pointer-events-none', proLockText())}>View only</Badge>
+          )}
         </div>
-        <div className="absolute inset-0 bg-neutral-900 rounded-full flex items-center justify-center transition-all duration-700 group-hover:rotate-[360deg] shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden border-[6px] border-neutral-800"
+        {tierLocked && (
+          <div className="absolute top-4 left-4 z-30 pointer-events-none">
+            <IconWithLockOverlay icon={Music} size="lg" iconClassName="text-muted-foreground/70" />
+          </div>
+        )}
+        <div className={cn(
+          'absolute inset-0 bg-neutral-900 rounded-full flex items-center justify-center transition-all duration-700 shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden border-[6px]',
+          tierLocked ? 'border-pink-500/20 group-hover:rotate-[12deg]' : 'border-neutral-800 group-hover:rotate-[360deg]'
+        )}
              style={{
                  backgroundImage: 'repeating-radial-gradient(circle at center, #1a1a1a 0px, #1a1a1a 2px, #111 4px, #111 5px)'
              }}>
@@ -374,7 +437,7 @@ export function AlbumList() {
   const [createItemType, setCreateItemType] = useState<'Album' | 'Track' | null>(null);
   const { albums, loading, deleteAlbum, deleteTrack, moveTrack, getAlbumById, mergeData, clearVault, isCloudSyncActive } = useContext(DataContext);
   const { user } = useAuth();
-  const isPro = isProUser(user);
+  const isPro = isProOrTrial(user);
   const albumCount = albums.filter((a) => a.id !== 'unassigned').length;
   const trackCount = countUserTracks(albums);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -537,6 +600,7 @@ export function AlbumList() {
   return (
     <TooltipProvider>
       <div className="flex-grow w-full relative min-h-screen selection:bg-primary/30 font-code">
+        <FreeTierExpectationsBanner user={user} />
         <VaultChamberAtmosphere />
 
         <div className="relative z-20 w-full min-w-0 max-w-[100vw] xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,72rem)_minmax(0,1fr)] xl:grid-rows-[auto_auto] xl:items-start">
@@ -607,11 +671,7 @@ export function AlbumList() {
                             <TooltipContent><p className="text-[10px] font-bold">Import Studio Vault</p></TooltipContent>
                           </Tooltip>
                         ) : (
-                          <LockedToolbarButton feature="Vault Import" benefit="Merge backup blueprints into your studio.">
-                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-lg bg-transparent border-0 shadow-none hover:bg-pink-500/10">
-                              <Lock className={proLockIcon('h-4 w-4')} />
-                            </Button>
-                          </LockedToolbarButton>
+                          <LockedToolbarButton feature="Vault Import" benefit="Merge backup blueprints into your studio." icon={Import} />
                         )}
                         {isPro ? (
                           <Tooltip>
@@ -623,11 +683,7 @@ export function AlbumList() {
                             <TooltipContent><p className="text-[10px] font-bold">Export Studio Vault</p></TooltipContent>
                           </Tooltip>
                         ) : (
-                          <LockedToolbarButton feature="Vault Export" benefit="Download your full studio as a portable blueprint.">
-                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-lg bg-transparent border-0 shadow-none hover:bg-pink-500/10">
-                              <Lock className={proLockIcon('h-4 w-4')} />
-                            </Button>
-                          </LockedToolbarButton>
+                          <LockedToolbarButton feature="Vault Export" benefit="Download your full studio as a portable blueprint." icon={Download} />
                         )}
                     </div>
                 </div>
@@ -693,6 +749,8 @@ export function AlbumList() {
                   totalTrackCount={trackCount}
                   onCreateAlbum={() => setCreateItemType('Album')}
                   onCreateTrack={() => setCreateItemType('Track')}
+                  albums={albums}
+                  user={user}
                 />
             ) : isEmpty ? (
                 <StudioEmptyState onCreateAlbum={() => setCreateItemType('Album')} onCreateTrack={() => setCreateItemType('Track')} />
@@ -764,7 +822,7 @@ export function AlbumList() {
                                                                     <DropdownMenuPortal>
                                                                         <DropdownMenuSubContent className="bg-card border-white/10">
                                                                             {realAlbums.map(album => (
-                                                                                <DropdownMenuItem key={album.id} onClick={() => { moveTrack(track.id, 'unassigned', album.id); toast({ title: "Track Assigned", description: `"${track.title}" moved to ${album.title}.` }); }} className="text-[10px] font-bold uppercase">
+                                                                                <DropdownMenuItem key={album.id} onClick={() => { moveTrack(track.id, 'unassigned', album.id); toast({ title: "Track Assigned", description: `"${track.title}" moved to ${album.title}. Album DNA inherit is on.` }); }} className="text-[10px] font-bold uppercase">
                                                                                     <Music className="mr-2 h-3 w-3" /> {album.title}
                                                                                 </DropdownMenuItem>
                                                                             ))}

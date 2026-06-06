@@ -1,15 +1,23 @@
 import type { User } from '@/lib/types';
+import { isTrialActive } from '@/lib/trial';
 
 export const FREE_ALBUM_LIMIT = 1;
-export const FREE_TRACK_LIMIT = 3;
+export const FREE_TRACK_LIMIT = 4;
 export const SIGNUP_INK = 300;
-export const FREE_MONTHLY_RESIDENCY_INK = 200;
+export const FREE_MONTHLY_RESIDENCY_INK = 111;
 
-/** Max residency pool for Visitor progress UI (signup gift + one monthly grant can stack). */
-export const FREE_RESIDENCY_POOL_CAP = SIGNUP_INK + FREE_MONTHLY_RESIDENCY_INK;
+/** Max free residency pool (signup + stacked monthly grants). */
+export const FREE_RESIDENCY_POOL_CAP = 500;
 
 export function isProUser(user: Pick<User, 'subscriptionStatus'> | null | undefined): boolean {
   return user?.subscriptionStatus === 'active';
+}
+
+/** Paid Pro or active signup trial — gates workflow features only. */
+export function isProOrTrial(
+  user: Pick<User, 'subscriptionStatus' | 'trialStartedAt'> | null | undefined
+): boolean {
+  return isProUser(user) || isTrialActive(user);
 }
 
 export function isYearlyPro(user: Pick<User, 'subscriptionStatus' | 'subscriptionTier'> | null | undefined): boolean {
@@ -23,9 +31,9 @@ export function countUserTracks(albums: { id: string; tracks: unknown[] }[]): nu
 /** Free tier: max tracks across all albums + loose tracks combined. */
 export function canUserAddTrack(
   albums: { tracks?: unknown[] }[],
-  user: Pick<User, 'subscriptionStatus'> | null | undefined
+  user: Pick<User, 'subscriptionStatus' | 'trialStartedAt'> | null | undefined
 ): boolean {
-  if (isProUser(user)) return true;
+  if (isProOrTrial(user)) return true;
   return countUserTracks(albums as { id: string; tracks: unknown[] }[]) < FREE_TRACK_LIMIT;
 }
 
@@ -40,5 +48,5 @@ export const FREE_TRACK_LIMIT_TOAST = {
   variant: 'destructive' as const,
   title: 'Track Slots Full',
   description:
-    'Free artists get 3 tracks total — any track in an album or Loose Tracks counts. Upgrade for unlimited slots.',
+    `Free artists get ${FREE_TRACK_LIMIT} tracks total — any track in an album or Loose Tracks counts. Upgrade for unlimited slots.`,
 };

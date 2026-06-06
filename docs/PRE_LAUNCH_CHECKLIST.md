@@ -69,7 +69,7 @@ Stripe Dashboard toggle: **Test mode** on. Keys in `.env`: `sk_test_` / `pk_test
 ## Part 3 — App behavior (quick pass)
 
 - [ ] Create album + track, lyrics save
-- [ ] Free account: max **1 album**, **3 tracks**
+- [ ] Free account: max **1 album**, **4 tracks**
 - [ ] Usage page prices match reality: Pro **$7.77/mo**, Yearly **$4.44/mo** ($53.28/yr), packs **1k / 1.8k / 4k** Ink
 - [ ] `STRIPE_COUPON_YEARLY_INK_50` set on production (Yearly Pro 50% off packs at Stripe checkout)
 

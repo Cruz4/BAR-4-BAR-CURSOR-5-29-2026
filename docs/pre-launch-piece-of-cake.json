@@ -206,7 +206,7 @@
         },
         {
           "taskName": "Verify free tier limits",
-          "description": "Free accounts limited to 1 album and 3 tracks.",
+          "description": "Free accounts limited to 1 album and 4 tracks.",
           "priority": "High",
           "dependencies": ["Verify album and track creation"],
           "checklist": [

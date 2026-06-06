@@ -45,6 +45,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { StudioLoader } from '@/components/studio-loader';
 import { AdminMetricsTab } from '@/components/admin-metrics-tab';
 import { AdminAchievementsTab } from '@/components/admin-achievements-tab';
+import { AdminInviteGateCard } from '@/components/admin-invite-gate-card';
 import type { AdminGamificationRosterEntry } from '@/lib/gamification/admin-roster-types';
 import { format } from 'date-fns';
 import {
@@ -572,7 +573,8 @@ export default function AdminPage() {
             </Card>
         </TabsContent>
 
-        <TabsContent value="config">
+        <TabsContent value="config" className="space-y-8">
+            <AdminInviteGateCard />
             <Card className="bg-card border-2 shadow-2xl">
                 <CardHeader className="border-b"><CardTitle className="font-headline text-2xl uppercase">Global Task Economics</CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-6">

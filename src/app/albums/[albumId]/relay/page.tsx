@@ -206,7 +206,7 @@ function RelayWizardContent() {
             sections,
             status: 'in_progress',
             createdAt: new Date().toISOString(),
-            direction: { enabled: true, inheritFromAlbum: true }
+            direction: { enabled: true, inheritFromAlbum: albumId !== 'unassigned' }
         };
 
         if (!canUserAddTrack(albums, user)) {

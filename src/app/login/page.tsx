@@ -37,6 +37,8 @@ import Image from 'next/image';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { REFERRAL_INK_REWARD, REFERRAL_STORAGE_KEY, normalizeReferralCode } from '@/lib/referrals';
 import { claimPendingReferral } from '@/components/refer-a-friend-section';
+import { InviteGateLoginBanner } from '@/components/invite-gate-login-banner';
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -119,6 +121,7 @@ function LoginForm() {
           userData.subscriptionStatus = 'none';
           userData.subscriptionTier = 'none';
           userData.status = 'active';
+          userData.trialStartedAt = new Date().toISOString();
           const signupRef = getStoredMarketingRef();
           if (signupRef) userData.signupAttribution = signupRef;
         }
@@ -306,6 +309,10 @@ function LoginForm() {
                         <Zap className="w-32 h-32 text-orange-400" />
                     </div>
                 </motion.div>
+            </div>
+
+            <div className="w-full max-w-md relative z-50">
+              <InviteGateLoginBanner />
             </div>
 
             {importIntent && (

@@ -58,7 +58,9 @@ import {
   VISITOR_INK_STORE_NOTICE,
   INK_STORE_PACK_CONTEXT,
 } from '@/lib/studio-tiers';
-import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT } from '@/lib/subscription';
+import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, isProUser } from '@/lib/subscription';
+import { getTrialDaysRemaining, isTrialActive } from '@/lib/trial';
+import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
 import { TierPriceSummary } from '@/components/tier-price-summary';
 import { StudioProfileSection } from '@/components/gamification/studio-profile-section';
 import { ReferAFriendSection } from '@/components/refer-a-friend-section';
@@ -141,7 +143,9 @@ function UsagePageContent() {
   }, [searchParams, toast, router, user?.id, fulfillCheckoutReturn]);
 
   const isYearlyUser = user?.subscriptionTier === 'yearly';
-  const isProUser = user?.subscriptionStatus === 'active';
+  const paidPro = isProUser(user);
+  const trialActive = isTrialActive(user);
+  const trialDays = getTrialDaysRemaining(user);
   const residencyPoolCap = getResidencyPoolCap(user);
   const residencyProgress = getResidencyProgressPercent(residencyBalance, residencyPoolCap);
 
@@ -172,6 +176,7 @@ function UsagePageContent() {
 
   return (
     <div className="relative min-h-[calc(100vh-3.5rem)] overflow-hidden pb-12">
+      <FreeTierExpectationsBanner user={user} />
       <div className="container relative z-10 mx-auto max-w-5xl py-8 px-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
         <div className="space-y-4">
@@ -183,7 +188,7 @@ function UsagePageContent() {
                 isCloudSyncActive ? (isYearlyUser ? 'bg-accent' : 'bg-primary') : 'bg-muted text-muted-foreground'
               )}
             >
-              {isCloudSyncActive ? (isYearlyUser ? 'Yearly Pro' : 'Monthly Pro') : 'Visitor'}
+              {paidPro ? (isYearlyUser ? 'Yearly Pro' : 'Monthly Pro') : trialActive ? `Pro Trial · ${trialDays}d` : 'Visitor'}
             </Badge>
           </div>
           <p className="text-muted-foreground font-code">Permanent ink never expires — used after your monthly residency pool runs out.</p>
@@ -200,11 +205,13 @@ function UsagePageContent() {
                 </div>
                 <Progress value={residencyProgress} className="h-1.5 bg-primary/10" />
                 <p className="text-[8px] text-muted-foreground uppercase">
-                  {isProUser
+                  {paidPro
                     ? isYearlyUser
                       ? 'Yearly Pro residency (3,444/mo refill)'
                       : 'Monthly Pro residency (1,777/mo refill)'
-                    : 'Visitor residency (up to 500 with signup + monthly)'}
+                    : trialActive
+                      ? 'Pro trial — workflow unlocked; Visitor Ink pool still applies'
+                      : 'Visitor residency (up to 500 with signup + monthly)'}
                 </p>
             </Card>
             <Card className="bg-muted/10 border-white/5 p-4 flex flex-col gap-2 min-w-[200px]">
@@ -240,7 +247,7 @@ function UsagePageContent() {
         <TabsContent value="buy-ink" className="space-y-8 w-full">
           <ReferAFriendSection />
 
-          {!isProUser && (
+          {!paidPro && (
             <div className="border p-6 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg bg-orange-500/5 border-orange-500/25">
               <div className="flex items-start gap-4 min-w-0">
                 <div className="p-3 rounded-full bg-orange-500/10 shrink-0">

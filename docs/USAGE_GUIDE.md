@@ -3,7 +3,7 @@
 ## 1. Monitoring Your Balance
 Your Ink balance is displayed in the header and on the **Usage & Billing** page.
 
-- **Visitor:** 300 signup Ink + 200 residency Ink per month (can stack; progress bar caps at 500).
+- **Visitor:** 300 signup Ink + 111 residency Ink per month (pool caps at 500). All Ink-priced AI tools work, including all 9 Creative Effects.
 - **Pro Monthly:** 1,777 residency Ink per refill cycle.
 - **Pro Yearly:** 3,444 residency Ink per refill cycle.
 
@@ -15,7 +15,7 @@ Your Ink balance is displayed in the header and on the **Usage & Billing** page.
 See `src/lib/lyrics-units.ts` for conversion helpers.
 
 ## 3. Cloud Sync
-Signed-in artists sync to Firestore. Pro unlocks unlimited albums/tracks and full vault features; Visitors are limited to 1 album and 3 tracks (permanent Ink packs can still be purchased).
+Signed-in artists sync to Firestore. Visitors get the full AI workstation on Ink (system DNA presets only). Pro unlocks unlimited albums/tracks, custom DNA/Vibe/Style saves, Performance Mode, Freestyle, vault import/export, and DNA Drop share links. New signups receive a 3-day Pro trial with workflow access and 400 bonus Ink.
 
 ## 4. Cost Reference Table
 

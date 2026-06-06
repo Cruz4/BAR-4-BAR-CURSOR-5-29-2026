@@ -47,7 +47,7 @@ export function ArchivalNamingDialog({
       <DialogContent className="sm:max-w-md bg-card border-2 z-[3000]">
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl flex items-center gap-2">
-            <Save className="text-primary" /> Archive {type} Profile
+            <Save className="text-primary" /> Save {type} Profile
           </DialogTitle>
           <DialogDescription className="text-xs uppercase tracking-tight">
             Name this saved {type.toLowerCase()} profile for your album vault.
@@ -77,7 +77,7 @@ export function ArchivalNamingDialog({
             disabled={!name.trim()}
             className="px-8 font-bold"
           >
-            Confirm Archive
+            Confirm Save
           </Button>
         </DialogFooter>
       </DialogContent>

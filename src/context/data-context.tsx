@@ -38,7 +38,7 @@ import {
   findTrackInVault,
   type DnaDropTrackPayload,
 } from '@/lib/dna-drop';
-import { canUserAddTrack, FreeTrackLimitError } from '@/lib/subscription';
+import { canUserAddTrack, FreeTrackLimitError, isProOrTrial } from '@/lib/subscription';
 
 const UNASSIGNED_ALBUM_ID = 'unassigned';
 
@@ -166,8 +166,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [isOfflineMode, setIsOfflineMode] = useState(false);
 
   useEffect(() => {
-    setIsCloudSyncActive(user?.subscriptionStatus === 'active');
-  }, [user?.subscriptionStatus]);
+    setIsCloudSyncActive(isProOrTrial(user));
+  }, [user]);
 
   const pendingTrackUpdates = useRef<Record<string, { albumId: string, updates: any }>>({});
   const syncTrackTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -1034,7 +1034,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const moveTrack = useCallback((tId: string, fromId: string, toId: string) => {
     const { track } = getTrackById(fromId, tId);
-    if (track) { deleteTrack(fromId, tId); addTrack(toId, { ...track, albumId: toId }); }
+    if (!track) return;
+    const movingToAlbum = toId !== UNASSIGNED_ALBUM_ID;
+    const movingFromLoose = fromId === UNASSIGNED_ALBUM_ID;
+    const movingToLoose = toId === UNASSIGNED_ALBUM_ID;
+    const nextDirection = { ...track.direction };
+    if (movingToAlbum && movingFromLoose) {
+      nextDirection.enabled = track.direction?.enabled ?? true;
+      nextDirection.inheritFromAlbum = true;
+    } else if (movingToLoose) {
+      nextDirection.inheritFromAlbum = false;
+    }
+    deleteTrack(fromId, tId);
+    addTrack(toId, { ...track, albumId: toId, direction: nextDirection });
   }, [deleteTrack, addTrack, getTrackById]);
 
   return (

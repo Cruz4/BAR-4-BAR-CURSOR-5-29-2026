@@ -99,7 +99,7 @@ import { StudioLoader } from '@/components/studio-loader';
 import { useInkCosts } from '@/hooks/use-ink-costs';
 import { withAiAuth } from '@/lib/ai-client';
 import { useAuth } from '@/hooks/use-auth';
-import { isProUser } from '@/lib/subscription';
+import { isProOrTrial } from '@/lib/subscription';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { ArchivalNamingDialog } from '@/components/archival-naming-dialog';
@@ -126,7 +126,20 @@ import { postGamificationEvent } from '@/lib/gamification-client';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
 import { MobileLyricsTabBar, type MobileLyricsTab } from '@/components/mobile-lyrics-tab-bar';
 import { UpgradeTooltip } from '@/components/upgrade-tooltip';
-import { LockedSaveButton, ProLockBadge, proLockShell, proLockIcon, proLockText, markBarAnchorGlow } from '@/components/pro-lock';
+import {
+  LockedSaveButton,
+  LockedProFeatureButton,
+  ProLockBadge,
+  proLockShell,
+  proLockIcon,
+  proLockText,
+  markBarAnchorGlow,
+} from '@/components/pro-lock';
+import {
+  isTrackOverTierLimit,
+  TIER_LIMIT_LOCKED_TOAST,
+  TIER_LIMIT_TRACK_BANNER,
+} from '@/lib/tier-limits';
 import { withLineSource } from '@/lib/gamification/line-attribution';
 import {
   loadTrackUILayout,
@@ -150,6 +163,7 @@ import {
   isTrackDnaActive,
   isAlbumDnaActive,
   isInheritFromAlbumOn,
+  isLooseTrackAlbum,
 } from '@/lib/co-writer-rules';
 import { SYSTEM_DNA_PRESETS, SYSTEM_STYLE_PRESETS, SYSTEM_VIBE_PRESETS } from '@/lib/system-presets';
 import { GenerateSongDraftDialog } from './generate-song-draft-dialog';
@@ -501,7 +515,7 @@ function DNAVaultDialog({
                                 <div className="p-3 rounded-full bg-muted/20"><Compass className="h-8 w-8 opacity-20" /></div>
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-bold uppercase tracking-widest">Vault is Empty</p>
-                                    <p className="text-[9px] lowercase italic opacity-60">Archive current direction to build your vault.</p>
+                                    <p className="text-[9px] lowercase italic opacity-60">Save current direction to build your vault.</p>
                                 </div>
                             </div>
                         )}
@@ -553,7 +567,7 @@ function VibeVaultDialog({ open, onOpenChange, track, onUpdateTrack, onApply, is
                                 <div className="p-3 rounded-full bg-muted/20"><Palette className="h-8 w-8 opacity-20" /></div>
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-bold uppercase tracking-widest">No Presets Found</p>
-                                    <p className="text-[9px] lowercase italic opacity-60">Archive your current instrumentation to save vibes.</p>
+                                    <p className="text-[9px] lowercase italic opacity-60">Save your current instrumentation to build your vibe vault.</p>
                                 </div>
                             </div>
                         )}
@@ -604,7 +618,7 @@ function StyleVaultDialog({ open, onOpenChange, album, updateAlbum, onApply, isP
                                 <div className="p-3 rounded-full bg-muted/20"><Fingerprint className="h-8 w-8 opacity-20" /></div>
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-bold uppercase tracking-widest">No style profiles</p>
-                                    <p className="text-[9px] lowercase italic opacity-60">Archive your latest style profile to populate the vault.</p>
+                                    <p className="text-[9px] lowercase italic opacity-60">Save your latest style profile to populate the vault.</p>
                                 </div>
                             </div>
                         )}
@@ -625,7 +639,7 @@ function mobileLyricsPanelClass(active: boolean, edge?: 'left' | 'right') {
   );
 }
 
-function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSectionId, setExportDialogOpen, setShareDialogOpen, onCollapse, leftCollapsed, setGenerateDraftOpen, scratchPadRef, isPro, mobileActive = false, trackLocked = false }: any) {
+function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSectionId, setExportDialogOpen, setShareDialogOpen, onCollapse, leftCollapsed, setGenerateDraftOpen, scratchPadRef, isPro, mobileActive = false, trackLocked = false, tierLocked = false, completeLocked = false }: any) {
   const router = useRouter();
   const { setGenerating } = useUIState();
   const { toast } = useToast();
@@ -773,20 +787,28 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                       </Badge>
                     </div>
                     <p className="text-[9px] text-muted-foreground leading-snug">
-                      {trackLocked
-                        ? "That's a hit!! Track locked — edits off until you reopen. Export, Performance Mode, and DNA Drop still work."
-                        : 'Lock the track when lyrics are finished — blocks edits and counts toward weekly goals and achievements.'}
+                      {tierLocked
+                        ? 'Free tier limit — view & export only. Upgrade Studio Pro to edit again.'
+                        : completeLocked
+                          ? "That's a hit!! Track locked — edits off until you reopen. Export, Performance Mode, and DNA Drop still work."
+                          : 'Lock the track when lyrics are finished — blocks edits and counts toward weekly goals and achievements.'}
                     </p>
                     <Button
                       variant={track.status === 'complete' ? 'outline' : 'default'}
                       size="sm"
+                      disabled={tierLocked}
                       className={cn(
                         'w-full min-w-0 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2',
                         track.status === 'complete'
                           ? 'border-sky-500/30 text-sky-300 hover:bg-sky-500/10'
-                          : 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/30 shadow-[0_0_16px_rgba(16,185,129,0.2)]'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/30 shadow-[0_0_16px_rgba(16,185,129,0.2)]',
+                        tierLocked && 'opacity-50 pointer-events-none'
                       )}
                       onClick={() => {
+                        if (tierLocked) {
+                          toast({ variant: 'destructive', ...TIER_LIMIT_LOCKED_TOAST });
+                          return;
+                        }
                         const next = track.status === 'complete' ? 'in_progress' : 'complete';
                         onUpdateTrack({ status: next });
                         toast(
@@ -814,17 +836,29 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                     {isPro ? (
                       <Button variant="secondary" size="sm" className="w-full min-w-0 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => window.open(`${window.location.pathname}/perform`, '_blank')}><MonitorPlay className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">Performance Mode</span></Button>
                     ) : (
-                      <UpgradeTooltip feature="Performance Mode" benefit="Full-screen teleprompter with scroll-synced lyrics for stage and studio sessions." example="Rehearse hooks without losing your place mid-verse.">
-                        <Button variant="secondary" size="sm" className={cn('w-full min-w-0 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2', proLockShell('md'), proLockText())} onClick={() => router.push('/usage?tab=cloud')}><Lock className={cn('mr-2 h-4 w-4 shrink-0', proLockIcon())} /> <span className="truncate">Performance Mode</span></Button>
-                      </UpgradeTooltip>
+                      <LockedProFeatureButton
+                        feature="Performance Mode"
+                        benefit="Full-screen teleprompter with scroll-synced lyrics for stage and studio sessions."
+                        example="Rehearse hooks without losing your place mid-verse."
+                        icon={MonitorPlay}
+                        iconClassName="text-sky-400"
+                        label="Performance Mode"
+                        className="w-full min-w-0 text-[9px] font-bold h-9 uppercase px-2 bg-sky-500/10 text-sky-400 border border-sky-500/20"
+                      />
                     )}
                     <Button variant="secondary" size="sm" className="w-full min-w-0 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => setExportDialogOpen(true)}><FileDown className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">Export Track</span></Button>
                     {isPro ? (
                       <Button variant="secondary" size="sm" data-tour="dna-drop" className="w-full min-w-0 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => setShareDialogOpen(true)}><Globe className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate flex items-center gap-2 min-w-0">DNA Drop (Share)<DnaDropLiveIndicator shareId={track.shareId} variant="compact" /></span></Button>
                     ) : (
-                      <UpgradeTooltip feature="DNA Drop" benefit="Publish a shareable link to your track blueprint for collab and feedback." example="Drop a link so collaborators can import your structure.">
-                        <Button variant="secondary" size="sm" className={cn('w-full min-w-0 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2', proLockShell('md'), proLockText())} onClick={() => router.push('/usage?tab=cloud')}><Lock className={cn('mr-2 h-4 w-4 shrink-0', proLockIcon())} /> <span className="truncate">DNA Drop (Share)</span></Button>
-                      </UpgradeTooltip>
+                      <LockedProFeatureButton
+                        feature="DNA Drop"
+                        benefit="Publish a shareable link to your track blueprint for collab and feedback."
+                        example="Drop a link so collaborators can import your structure."
+                        icon={Globe}
+                        iconClassName="text-primary"
+                        label={<span className="truncate flex items-center gap-2 min-w-0">DNA Drop (Share)</span>}
+                        className="w-full min-w-0 text-[9px] font-bold h-9 uppercase px-2 bg-primary/10 text-primary border border-primary/20"
+                      />
                     )}
                   </div>
               </CardContent>
@@ -899,7 +933,9 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                   content={
                     <>
                       <p className="text-[10px] font-bold leading-snug">Analyze lyrics → fill Track Vibe fields</p>
-                      <p className="text-[10px] text-muted-foreground leading-snug">Uses your current sheet text to infer genre, BPM, mood, and instrumentation.</p>
+                      <p className="text-[10px] text-muted-foreground leading-snug">
+                        Uses your current sheet text to infer genre, BPM, mood, and instrumentation in the Co-Writer panel. Then copy the Instrumentation field and paste into Suno, Udio, or similar music AI.
+                      </p>
                       <p className="text-[9px] font-mono text-primary">{tooltip('suggestVibe')}</p>
                     </>
                   }
@@ -913,7 +949,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
               <CardHeader className="p-4 pb-2 flex-col items-start gap-1 space-y-0">
                 <CardTitle className="text-sm flex items-center gap-2 text-indigo-400 font-headline uppercase"><Clapperboard className="h-4 w-4" /> Scene Gen</CardTitle>
                 <p className="text-[9px] text-muted-foreground leading-snug font-code normal-case tracking-normal">
-                  Builds a cinematic visual prompt from your lyrics and DNA, then adds it to the Scratch Pad for video or mood boards.
+                  Builds a cinematic visual prompt from your lyrics and DNA, adds it to the Scratch Pad — copy from there into Runway, Kling, Pika, or mood boards.
                 </p>
               </CardHeader>
               <CardContent className="px-4 pb-4 font-code">
@@ -925,7 +961,9 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                   content={
                     <>
                       <p className="text-[10px] font-bold leading-snug">Cinematic scene prompt → Scratch Pad</p>
-                      <p className="text-[10px] text-muted-foreground leading-snug">Combines lyrics, vibe, and direction into a shot list you can reuse in video AI tools.</p>
+                      <p className="text-[10px] text-muted-foreground leading-snug">
+                        Combines lyrics, vibe, and direction into a shot list. After it runs, open the <strong className="text-foreground">Scratch Pad</strong>, copy the generated text, and paste into video AI tools (Runway, Kling, Pika, etc.) or mood boards.
+                      </p>
                       <p className="text-[9px] font-mono text-primary">{tooltip('generateCoverArt')}</p>
                     </>
                   }
@@ -1230,12 +1268,14 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
       }
   }
 
+  const freestyleUnlocked = isProOrTrial(user);
+
   const handleOpenFreestyle = () => {
     if (trackLocked) {
       toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
       return;
     }
-    if (user?.subscriptionStatus !== 'active') return;
+    if (!freestyleUnlocked) return;
     setFreestyleOpen(true);
   };
 
@@ -1433,17 +1473,17 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
         </div>
       </div>
 
-      <div data-tour="bar-workstation" className={cn("bg-card border-t shadow-[0_-10px_40px_rgba(0,0,0,0.5)] shrink-0 z-[40] relative w-full min-w-0 overflow-hidden", isMinimized ? "h-10" : "h-[115px] max-md:h-auto max-md:max-h-[38dvh] max-md:overflow-y-auto max-md:studio-scrollbar")}>
+      <div data-tour="bar-workstation" className={cn("bg-card border-t shadow-[0_-10px_40px_rgba(0,0,0,0.5)] shrink-0 z-[40] relative w-full min-w-0", isMinimized ? "h-10 overflow-hidden" : "min-h-[124px] max-md:max-h-[38dvh] max-md:overflow-y-auto max-md:studio-scrollbar")}>
         <div
           className={cn(
-            'w-full min-w-0 h-full px-2 md:px-4 lg:px-6 flex flex-col overflow-hidden',
-            isMinimized ? 'justify-center py-0' : 'justify-start pt-1.5 pb-2 gap-1'
+            'w-full min-w-0 h-full px-2 md:px-4 lg:px-6 flex flex-col',
+            isMinimized ? 'justify-center py-0 overflow-hidden' : 'justify-start pt-0.5 pb-2.5 gap-0.5'
           )}
         >
             <div
               className={cn(
                 'flex flex-row items-center justify-between gap-2 min-w-0 w-full',
-                isMinimized ? 'h-full' : 'shrink-0 min-h-[34px] py-1 border-b border-white/5'
+                isMinimized ? 'h-full' : 'shrink-0 min-h-[28px] py-0.5 border-b border-white/5'
               )}
             >
                 <div className="flex items-center gap-1.5 md:gap-2 min-w-0 overflow-hidden">
@@ -1483,9 +1523,9 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                 </div>
             </div>
             {!isMinimized && (
-                <div className="flex max-md:flex-col md:flex-row md:items-center gap-2 mt-1 min-h-0 min-w-0 flex-1 overflow-hidden">
+                <div className="flex max-md:flex-col md:flex-row md:items-center gap-2 mt-0.5 min-w-0 flex-1">
                     {generationOptions ? (
-                        <div className="flex-grow flex max-md:flex-col md:flex-row gap-2 animate-in fade-in slide-in-from-bottom-4 min-h-0 min-w-0 py-0.5 w-full overflow-hidden">
+                        <div className="flex-grow flex max-md:flex-col md:flex-row gap-2 animate-in fade-in slide-in-from-bottom-4 min-w-0 py-0.5 w-full">
                             {generationOptions.map((opt, i) => (
                                 <Button 
                                     key={i} 
@@ -1506,7 +1546,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                             </Button>
                         </div>
                     ) : (
-                        <div className="flex max-md:flex-col md:flex-row md:items-center gap-2 min-w-0 w-full flex-1 overflow-hidden">
+                        <div className="flex max-md:flex-col md:flex-row md:items-center gap-2 min-w-0 w-full flex-1">
                             <textarea 
                                 placeholder="Tap to edit active line..."
                                 value={activeBarText} 
@@ -1520,7 +1560,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                 className={cn("bg-background/40 border border-white/10 w-full md:flex-1 md:min-w-[5rem] px-3 py-2 font-code font-bold text-sm shadow-inner rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 tracking-tight resize-none h-14 max-h-14 shrink-0 min-w-0", trackLocked && "opacity-70 cursor-not-allowed")}
                             />
                             <div className={cn(
-                              "flex flex-row flex-nowrap items-center gap-1.5 shrink-0 min-w-0 max-md:w-full overflow-x-auto studio-scrollbar md:overflow-visible md:max-w-[min(100%,22rem)] lg:max-w-none",
+                              "flex flex-row flex-nowrap items-center gap-1.5 shrink-0 min-w-0 max-md:w-full overflow-x-auto studio-scrollbar md:overflow-visible md:max-w-[min(100%,22rem)] lg:max-w-none py-0.5",
                               !activeGeneratorBar && "max-md:hidden"
                             )}>
                                 <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
@@ -1536,29 +1576,21 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                   </Button>
                                 </Hint>
                                 <Button variant="outline" size="sm" disabled={trackLocked} aria-label="Delete line" className="h-10 md:h-14 w-10 md:w-11 font-bold border-red-500/20 text-red-500 bg-red-500/5 hover:bg-red-500/10 shadow-lg shrink-0 px-0" onClick={() => { if(activeGeneratorBar) handleDeleteBar(activeGeneratorBar.sectionId, activeGeneratorBar.idx); }}><Trash2 className="h-4 w-4 mx-auto" /></Button>
-                                {user?.subscriptionStatus === 'active' ? (
+                                {freestyleUnlocked ? (
                                   <Button variant="secondary" size="sm" disabled={trackLocked} aria-label="Freestyle recording" className="h-10 md:h-14 px-2 md:px-4 font-bold text-[10px] uppercase tracking-wide gap-1 bg-primary/20 text-primary border border-primary/20 shadow-lg shrink-0 min-w-0" onClick={handleOpenFreestyle} title={tooltip('freestyleTranscription')}>
                                     <Mic className="h-3.5 w-3.5 shrink-0" />
                                     <span className="truncate hidden md:inline">Free</span>
                                   </Button>
                                 ) : (
-                                  <UpgradeTooltip
+                                  <LockedProFeatureButton
                                     feature="Freestyle Recording"
                                     benefit="Capture voice memos and drop transcribed bars onto your sheet in the flow."
                                     example="Record a 30-second freestyle and paste the bars mid-verse without leaving the workstation."
-                                  >
-                                    <Button
-                                      variant="secondary"
-                                      size="sm"
-                                      type="button"
-                                      aria-label="Freestyle recording — Studio Pro"
-                                      className={cn('h-10 md:h-14 px-2 md:px-4 font-bold text-[10px] uppercase tracking-wide gap-1 shadow-lg shrink-0 min-w-0', proLockShell('md'), proLockText())}
-                                      onClick={(e) => e.preventDefault()}
-                                    >
-                                      <Lock className={cn('h-3.5 w-3.5 shrink-0', proLockIcon())} />
-                                      <span className="truncate hidden md:inline">Free</span>
-                                    </Button>
-                                  </UpgradeTooltip>
+                                    icon={Mic}
+                                    iconClassName="text-primary"
+                                    label={<span className="truncate hidden md:inline">Free</span>}
+                                    className="h-10 md:h-14 px-2 md:px-4 font-bold text-[10px] uppercase tracking-wide shadow-lg shrink-0 min-w-0 bg-primary/20 text-primary border border-primary/20"
+                                  />
                                 )}
                             </div>
                         </div>
@@ -1661,7 +1693,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
 
   const handleConfirmSaveDNA = (name: string) => {
       if (!isPro) {
-        toast({ variant: 'destructive', title: 'Pro Feature', description: 'Archive custom DNA profiles with Studio Pro.' });
+        toast({ variant: 'destructive', title: 'Pro Feature', description: 'Save custom DNA profiles with Studio Pro.' });
         return;
       }
       if (!album) return;
@@ -1674,7 +1706,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
       const existing = album.dnaPresets || [];
       updateAlbum(album.id, { dnaPresets: [...existing, profile] });
       toast({
-        title: 'DNA profile archived',
+        title: 'DNA profile saved',
         description: `"${name}" saved to your vault.`,
       });
       void postGamificationEvent('dna_preset_saved');
@@ -1689,11 +1721,12 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
       const preset = { ...track.vibe, name };
       const existing = track.vibePresets || [];
       onUpdateTrack({ vibePresets: [...existing, preset] });
-      toast({ title: 'Vibe profile archived', description: `"${name}" saved to your vault.` });
+      toast({ title: 'Vibe profile saved', description: `"${name}" saved to your vault.` });
   };
 
+  const isLooseTrack = isLooseTrackAlbum(album);
   const dnaActive = isTrackDnaActive(track);
-  const inheritFromAlbumOn = isInheritFromAlbumOn(track);
+  const inheritFromAlbumOn = isInheritFromAlbumOn(track, album);
   const trackDnaFieldsEditable = dnaActive;
   const dnaSectionLit = dnaActive || inheritFromAlbumOn;
   const dnaCollapsedInherit = !sectionOpen.dna && inheritFromAlbumOn;
@@ -1772,16 +1805,20 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                               title={
                                 sectionOpen.dna
                                   ? 'Creative Direction Questions'
-                                  : inheritFromAlbumOn
-                                    ? 'Inherit From Album is on'
-                                    : 'Track DNA only — album inherit off'
+                                  : isLooseTrack
+                                    ? 'Loose track — track DNA only'
+                                    : inheritFromAlbumOn
+                                      ? 'Inherit From Album is on'
+                                      : 'Track DNA only — album inherit off'
                               }
                             >
                               {sectionOpen.dna
                                 ? 'Creative Direction Questions'
-                                : inheritFromAlbumOn
-                                  ? 'Creative DNA · Inherit from album'
-                                  : 'Track DNA only'}
+                                : isLooseTrack
+                                  ? 'Loose track · Track DNA only'
+                                  : inheritFromAlbumOn
+                                    ? 'Creative DNA · Inherit from album'
+                                    : 'Track DNA only'}
                             </p>
                         </div>
                     </CollapsibleTrigger>
@@ -1790,9 +1827,12 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                           <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600 hover:bg-green-500/10" onClick={(e) => { e.stopPropagation(); setArchivalDialog({ open: true, type: 'DNA' }); }}><Save className="h-3.5 w-3.5" /></Button>
                         ) : (
                           <LockedSaveButton
-                            feature="DNA Archive"
+                            feature="DNA Save"
                             benefit="Save your own DNA profiles to the vault. Free artists load from 2 system presets."
                             example='Example: save "Chicago Noir DNA" once, load it on every track in the album.'
+                            icon={Save}
+                            iconClassName="text-green-600"
+                            className="h-6 w-6 text-green-600 hover:bg-green-500/10"
                           />
                         )}
                         <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600 hover:bg-green-500/10" onClick={(e) => { e.stopPropagation(); setDNAVaultOpen(true); }}><FolderOpen className="h-4 w-4" /></Button>
@@ -1804,7 +1844,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                         />
                     </div>
                 </div>
-                {!sectionOpen.dna && (
+                {!sectionOpen.dna && !isLooseTrack && (
                   <div
                     className={cn(
                       'flex items-center justify-between gap-2 pt-2 border-t',
@@ -1831,7 +1871,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                 </div>
                 <CollapsibleContent>
                     <CardContent className="space-y-3 px-4 pb-4 font-code">
-                        {sectionOpen.dna && (
+                        {sectionOpen.dna && !isLooseTrack && (
                         <div className="flex items-center justify-between py-1 border-b border-green-500/10">
                             <span className="text-[10px] font-bold text-green-300/90 uppercase">Inherit From Album</span>
                             <Switch 
@@ -1840,6 +1880,11 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                 className="scale-75"
                             />
                         </div>
+                        )}
+                        {sectionOpen.dna && isLooseTrack && (
+                          <p className="text-[9px] font-bold uppercase text-green-400/70 leading-snug border-b border-green-500/10 pb-2">
+                            Loose track — no album blueprint. Set Creative DNA on this track only.
+                          </p>
                         )}
                         {inheritFromAlbumOn && !trackDnaFieldsEditable && (
                           <p className="text-[9px] font-bold uppercase text-green-400/55 leading-snug">
@@ -1887,22 +1932,37 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           <Collapsible open={sectionOpen.vibe} onOpenChange={(o) => onSectionChange('vibe', o)} className="space-y-1">
             <Card className={coWriterSectionCardClass(vibeActive, 'border-amber-500/30 bg-amber-500/5')}>
                 <div className="p-4 flex flex-row items-center justify-between space-y-0">
-                    <CollapsibleTrigger asChild>
-                        <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 overflow-hidden pr-1">
-                            <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none truncate', coWriterSectionTitleClass(vibeActive, 'text-amber-500'))}><Palette className="h-4 w-4 shrink-0" /> Track Vibe</CardTitle>
-                            <p className={cn(cowriterSectionSubtitle(sectionOpen.vibe), coWriterSectionAccentClass(vibeActive, 'text-amber-400/80'))} title="Instrumentation & Atmosphere">
-                              {sectionOpen.vibe ? 'Instrumentation & Atmosphere' : 'Vibe & Production'}
-                            </p>
-                        </div>
-                    </CollapsibleTrigger>
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <CollapsibleTrigger asChild>
+                            <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 overflow-hidden pr-1 text-left">
+                              <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none truncate', coWriterSectionTitleClass(vibeActive, 'text-amber-500'))}><Palette className="h-4 w-4 shrink-0" /> Track Vibe</CardTitle>
+                              <p className={cn(cowriterSectionSubtitle(sectionOpen.vibe), coWriterSectionAccentClass(vibeActive, 'text-amber-400/80'))}>
+                                {sectionOpen.vibe ? 'Instrumentation & Atmosphere' : 'Vibe & Production'}
+                              </p>
+                            </div>
+                          </CollapsibleTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="max-w-[280px] space-y-1">
+                          <p className="text-[10px] font-bold leading-snug">Track Vibe → music AI prompts</p>
+                          <p className="text-[10px] text-muted-foreground leading-snug">
+                            Set genre, BPM, and instrumentation here. Hover the Instrumentation field and tap the copy icon, then paste into Suno, Udio, or similar tools as your style / production prompt. Use <strong className="text-foreground">Vibe Suggester</strong> in the Workstation left panel to auto-fill from your lyrics.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <div className="flex items-center gap-1">
                         {isPro ? (
                           <Button variant="ghost" size="icon" className="h-6 w-6 text-amber-600 hover:bg-amber-500/10" onClick={(e) => { e.stopPropagation(); setArchivalDialog({ open: true, type: 'Vibe' }); }}><Save className="h-3.5 w-3.5" /></Button>
                         ) : (
                           <LockedSaveButton
-                            feature="Vibe Archive"
+                            feature="Vibe Save"
                             benefit="Save custom track vibes. Free artists load from 2 system vibe presets."
                             example="Example: save your 90 BPM lofi-hop vibe and reload it on the next song."
+                            icon={Save}
+                            iconClassName="text-amber-600"
+                            className="h-6 w-6 text-amber-600 hover:bg-amber-500/10"
                           />
                         )}
                         <Button variant="ghost" size="icon" className="h-6 w-6 text-amber-600 hover:bg-amber-500/10" onClick={(e) => { e.stopPropagation(); setVibeVaultOpen(true); }}><FolderOpen className="h-4 w-4" /></Button>
@@ -1931,7 +1991,19 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <Label className="text-[10px] font-bold uppercase text-amber-300/85">Instrumentation</Label>
+                            <TooltipProvider delayDuration={300}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Label className="text-[10px] font-bold uppercase text-amber-300/85 cursor-help w-fit">Instrumentation</Label>
+                                </TooltipTrigger>
+                                <TooltipContent side="left" className="max-w-[260px] space-y-1">
+                                  <p className="text-[10px] font-bold leading-snug">Paste into Suno / Udio</p>
+                                  <p className="text-[10px] text-muted-foreground leading-snug">
+                                    This is your production string — copy it and drop it into a music AI&apos;s style or prompt field. Combine with genre + BPM above for best results.
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                             <div className="relative group/instr">
                                 <textarea 
                                     placeholder="Atmospheric pads, 808s..."
@@ -2148,9 +2220,12 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                           <Button variant="ghost" size="icon" className="h-6 w-6 text-fuchsia-500 hover:bg-fuchsia-500/10" onClick={(e) => { e.stopPropagation(); setSaveStyleNamingOpen(true); }}><Save className="h-3.5 w-3.5" /></Button>
                         ) : (
                           <LockedSaveButton
-                            feature="Style DNA Archive"
+                            feature="Style DNA Save"
                             benefit="Save your trained style profile. Free artists load from 2 system style presets."
-                            example="Example: archive your clipped cadence profile after Style Training."
+                            example="Example: save your clipped cadence profile after Style Training."
+                            icon={Save}
+                            iconClassName="text-fuchsia-500"
+                            className="h-6 w-6 text-fuchsia-500 hover:bg-fuchsia-500/10"
                           />
                         )}
                         <Button variant="ghost" size="icon" className="h-6 w-6 text-fuchsia-500 hover:bg-fuchsia-500/10" onClick={(e) => { e.stopPropagation(); setStyleVaultOpen(true); }}><FolderOpen className="h-4 w-4" /></Button>
@@ -2233,7 +2308,6 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
             styleProfile={styleProfile}
             scratchPadRef={scratchPadRef}
             activeSection={activeSection}
-            isPro={isPro}
             isOpen={sectionOpen.creativeEffects}
             onOpenChange={(o) => onSectionChange('creativeEffects', o)}
           />
@@ -2299,10 +2373,10 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
 function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albumId: string }) {
   const { user } = useAuth();
   const router = useRouter();
-  const isPro = isProUser(user);
+  const isPro = isProOrTrial(user);
   const [initTimedOut, setInitTimedOut] = useState(false);
   const { toast } = useToast();
-  const { getTrackById, updateTrack, styleProfile, updateStyleProfile, updateAlbum } = useContext(DataContext);
+  const { getTrackById, updateTrack, styleProfile, updateStyleProfile, updateAlbum, albums } = useContext(DataContext);
   const { setGenerating } = useUIState();
   const { refundInk, addUsageLog, registerAiContext } = useUsage();
   const { getCost } = useInkCosts();
@@ -2488,19 +2562,29 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     }
   }, [track?.sections, track?.status, albumId, trackId, updateTrack]);
 
-  const trackLocked = track ? isTrackLocked(track) : false;
+  const tierLocked = track ? isTrackOverTierLimit(trackId, albumId, albums, user) : false;
+  const completeLocked = track ? isTrackLocked(track) : false;
+  const editsLocked = tierLocked || completeLocked;
 
   const handleUpdateTrack = useCallback((updates: Partial<Track>) => {
     if (!track) return;
+    if (isTrackOverTierLimit(trackId, albumId, albums, user)) {
+      toast({ variant: 'destructive', ...TIER_LIMIT_LOCKED_TOAST });
+      return;
+    }
     if (isTrackLocked(track) && !isLockedTrackReopenUpdate(updates)) {
       toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
       return;
     }
     if (updates.sections) setSectionsHistory(prev => [track.sections, ...prev].slice(0, 20));
     updateTrack(albumId, trackId, updates);
-  }, [track, albumId, trackId, updateTrack, toast]);
+  }, [track, albumId, trackId, albums, user, updateTrack, toast]);
 
   const handleUndo = useCallback(() => {
+    if (track && isTrackOverTierLimit(trackId, albumId, albums, user)) {
+      toast({ variant: 'destructive', ...TIER_LIMIT_LOCKED_TOAST });
+      return;
+    }
     if (track && isTrackLocked(track)) {
       toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
       return;
@@ -2514,6 +2598,10 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   const handleRunRhymeScan = async (e: any) => {
     if (!track) return;
+    if (isTrackOverTierLimit(trackId, albumId, albums, user)) {
+      toast({ variant: 'destructive', ...TIER_LIMIT_LOCKED_TOAST });
+      return;
+    }
     if (isTrackLocked(track)) {
       toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
       return;
@@ -2541,6 +2629,10 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   const handleSharedLineGeneration = async (mode: 'next' | 'previous', e: any, sId?: string, bIdx?: number) => {
     if (!track || !album) return;
+    if (isTrackOverTierLimit(trackId, albumId, albums, user)) {
+      toast({ variant: 'destructive', ...TIER_LIMIT_LOCKED_TOAST });
+      return;
+    }
     if (isTrackLocked(track)) {
       toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
       return;
@@ -2595,6 +2687,10 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   const handleAcceptOption = (line: string) => {
     if (!pendingGenCtx || !track) return;
+    if (isTrackOverTierLimit(trackId, albumId, albums, user)) {
+      toast({ variant: 'destructive', ...TIER_LIMIT_LOCKED_TOAST });
+      return;
+    }
     if (isTrackLocked(track)) {
       toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
       return;
@@ -2628,14 +2724,14 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   const handleConfirmSaveStyle = (name: string) => {
       if (!isPro) {
-        toast({ variant: 'destructive', title: 'Pro Feature', description: 'Archive Style DNA with Studio Pro.' });
+        toast({ variant: 'destructive', title: 'Pro Feature', description: 'Save Style DNA with Studio Pro.' });
         return;
       }
       if (!styleProfile?.history[0] || !album) return;
       const preset = { name, createdAt: new Date().toISOString(), analysis: styleProfile.history[0].analysis, metrics: styleProfile.history[0].metrics! };
       const existing = album.stylePresets || [];
       updateAlbum(album.id, { stylePresets: [...existing, preset] });
-      toast({ title: 'Style profile archived', description: `"${name}" saved to your vault.` });
+      toast({ title: 'Style profile saved', description: `"${name}" saved to your vault.` });
   };
 
   if (!track || !album) {
@@ -2652,16 +2748,22 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] max-md:h-[calc(100dvh-3.5rem)] w-full overflow-hidden max-md:pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))]">
-      <FreeTierExpectationsBanner isPro={isPro} />
-      {trackLocked && (
+      <FreeTierExpectationsBanner user={user} />
+      {tierLocked && (
+        <div className="shrink-0 border-b border-pink-500/25 bg-pink-500/10 px-4 py-2 flex items-center gap-2 z-30">
+          <Lock className={cn('h-4 w-4 shrink-0', proLockIcon())} />
+          <p className={cn('text-[10px] font-code leading-snug', proLockText())}>{TIER_LIMIT_TRACK_BANNER}</p>
+        </div>
+      )}
+      {!tierLocked && completeLocked && (
         <div className="shrink-0 border-b border-sky-500/25 bg-sky-500/10 px-4 py-2 flex items-center gap-2 z-30">
           <Lock className="h-4 w-4 text-sky-300 shrink-0" />
           <p className="text-[10px] font-code text-sky-100/90 leading-snug">{TRACK_LOCKED_BANNER}</p>
         </div>
       )}
       <div className="flex flex-1 min-h-0 overflow-hidden w-full">
-      <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={mobilePanelTab === 'workstation'} trackLocked={trackLocked} />
-      <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={trackLocked} />
+      <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={mobilePanelTab === 'workstation'} trackLocked={editsLocked} tierLocked={tierLocked} completeLocked={completeLocked} />
+      <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} />
       <RightPanel 
         track={track} 
         album={album} 
@@ -2685,21 +2787,21 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         onSectionChange={handleSectionChange}
         openCoWriterSections={openCoWriterSections}
         mobileActive={mobilePanelTab === 'cowriter'}
-        trackLocked={trackLocked}
+        trackLocked={editsLocked}
       />
-      <GenerateSongDraftDialog open={generateDraftOpen} onOpenChange={(open) => { if (open && trackLocked) { toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST }); return; } setGenerateDraftOpen(open); }} track={track} styleProfile={effectiveStyleProfile} onDraftGenerated={(sections) => handleUpdateTrack({ sections })} />
+      <GenerateSongDraftDialog open={generateDraftOpen} onOpenChange={(open) => { if (open && editsLocked) { toast({ variant: 'destructive', ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST) }); return; } setGenerateDraftOpen(open); }} track={track} styleProfile={effectiveStyleProfile} onDraftGenerated={(sections) => handleUpdateTrack({ sections })} />
       <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} album={album} tracks={[track]} exportType="track" />
       <ShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} type="track" id={track.id} title={track.title} albumId={album.id} existingShareId={track.shareId} />
-      <FreestylePad open={freestyleOpen} onOpenChange={setFreestyleOpen} onAddFreestyle={(text) => { const lines = text.split('. ').filter(l => l.trim()); const activeS = track.sections.find(s => s.id === activeSectionId) || track.sections[0]; const startIdx = activeS.bars.length + 1; const newBars = lines.map((l, i) => withLineSource({ idx: startIdx + i, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' }, 'written')); handleUpdateTrack({ sections: track.sections.map(s => s.id === activeS.id ? { ...s, bars: [...s.bars, ...newBars] } : s) }); setFreestyleOpen(false); }} disabled={trackLocked} trackVibe={track.vibe} albumTheme={album.theme} styleProfileSummary={styleProfile.history[0]?.analysis || ''} isPro={user?.subscriptionStatus === 'active'} />
+      <FreestylePad open={freestyleOpen} onOpenChange={setFreestyleOpen} onAddFreestyle={(text) => { const lines = text.split('. ').filter(l => l.trim()); const activeS = track.sections.find(s => s.id === activeSectionId) || track.sections[0]; const startIdx = activeS.bars.length + 1; const newBars = lines.map((l, i) => withLineSource({ idx: startIdx + i, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' }, 'written')); handleUpdateTrack({ sections: track.sections.map(s => s.id === activeS.id ? { ...s, bars: [...s.bars, ...newBars] } : s) }); setFreestyleOpen(false); }} disabled={editsLocked} trackVibe={track.vibe} albumTheme={album.theme} styleProfileSummary={styleProfile.history[0]?.analysis || ''} isPro={isPro} />
       <SmartStructureDialog
         open={smartStructureOpen}
-        onOpenChange={(open) => { if (open && trackLocked) { toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST }); return; } setSmartStructureOpen(open); }}
+        onOpenChange={(open) => { if (open && editsLocked) { toast({ variant: 'destructive', ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST) }); return; } setSmartStructureOpen(open); }}
         onApply={(sections: any) => {
           handleUpdateTrack({ sections });
           void postGamificationEvent('smart_structure_used');
         }}
       />
-      <ImproveMyStyleDialog open={improveStyleOpen} onOpenChange={(open) => { if (open && trackLocked) { toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST }); return; } setImproveStyleOpen(open); }} track={track} onUpdateStyle={(analysis: string, metrics: any) => updateStyleProfile(analysis, metrics)} />
+      <ImproveMyStyleDialog open={improveStyleOpen} onOpenChange={(open) => { if (open && editsLocked) { toast({ variant: 'destructive', ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST) }); return; } setImproveStyleOpen(open); }} track={track} onUpdateStyle={(analysis: string, metrics: any) => updateStyleProfile(analysis, metrics)} />
       <StyleVaultDialog open={styleVaultOpen} onOpenChange={setStyleVaultOpen} album={album} updateAlbum={updateAlbum} onApply={(analysis: string, metrics: any) => updateStyleProfile(analysis, metrics)} />
       <ArchivalNamingDialog
         open={saveStyleNamingOpen}

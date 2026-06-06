@@ -66,7 +66,8 @@ import {
     ArrowDown,
     Trash2,
     ListMusic,
-    Replace
+    Replace,
+    Lock,
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -115,7 +116,10 @@ import { useUIState } from '@/hooks/use-ui-state';
 import { Progress } from './ui/progress';
 import { Slider } from './ui/slider';
 import { useAuth } from '@/hooks/use-auth';
-import { isProUser } from '@/lib/subscription';
+import { isProOrTrial } from '@/lib/subscription';
+import { isLooseTrackAlbum } from '@/lib/co-writer-rules';
+import { LockedSaveButton, ProLockBadge, proLockIcon, proLockShell, proLockText } from '@/components/pro-lock';
+import { UpgradeTooltip } from '@/components/upgrade-tooltip';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
 import { SYSTEM_DNA_PRESETS, SYSTEM_STYLE_PRESETS, SYSTEM_VIBE_PRESETS } from '@/lib/system-presets';
 import { DNASynthesisLoader, getDnaLoaderStatusText, type SynthesisLoaderMode } from '@/components/dna-synthesis-loader';
@@ -360,7 +364,7 @@ function HubSectionShell({
 
 export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfile, onDraftGenerated }: GenerateSongDraftDialogProps) {
   const { user } = useAuth();
-  const isPro = isProUser(user);
+  const isPro = isProOrTrial(user);
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatingOperation, setGeneratingOperation] = useState<'extract' | 'draft' | 'remix'>('draft');
@@ -374,6 +378,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   const [approvalDraftHistory, setApprovalDraftHistory] = useState<ApprovalDraftSnapshot[]>([]);
   const { getAlbumById, updateTrack, updateAlbum } = useContext(DataContext);
   const album = getAlbumById(track.albumId);
+  const isLooseTrack = isLooseTrackAlbum(album);
 
   const [hubStructure, setHubSections] = useState<{name: string, bars: number, enabled: boolean}[]>(
     () => STRUCTURE_PRESETS[0].sections.map((s) => ({ ...s }))
@@ -393,7 +398,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   const [hubVibe, setHubVibe] = useState<Track['vibe']>(track.vibe);
   const [hubVibeEnabled, setHubVibeEnabled] = useState(track.vibe?.enabled ?? true);
   
-  const [inheritAlbum, setInheritAlbum] = useState(true);
+  const [inheritAlbum, setInheritAlbum] = useState(() => !isLooseTrackAlbum(getAlbumById(track.albumId)));
   const [inheritTrack, setInheritTrack] = useState(true);
   const [enableGuardrails, setEnableGuardrails] = useState(true);
   const [negativePrompt, setNegativePrompt] = useState('');
@@ -420,11 +425,11 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   const [previewRhymeGroups, setPreviewRhymeGroups] = useState<{ words: string[] }[]>([]);
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [syncLyricsToggle, setSyncLyricsToggle] = useState(false);
-  const [strainTab, setStrainTab] = useState<'insights' | 'vault'>('insights');
-  const [styleTab, setStyleTab] = useState<'current' | 'vault'>('current');
+  const [strainTab, setStrainTab] = useState<'insights' | 'presets' | 'vault'>('insights');
+  const [styleTab, setStyleTab] = useState<'current' | 'presets' | 'vault'>('current');
   const [saveNamingOpen, setSaveNamingOpen] = useState(false);
   const [saveStyleNamingOpen, setSaveStyleNamingOpen] = useState(false);
-  const [expandedVaultIdx, setExpandedVaultIdx] = useState<number | null>(null);
+  const [expandedDnaPresetKey, setExpandedDnaPresetKey] = useState<string | null>(null);
 
   const lastTrackIdRef = useRef(track.id);
   const sessionReadyRef = useRef(false);
@@ -463,6 +468,8 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
     setHubSeededSections(new Set());
     hubLayoutInitializedRef.current = false;
     setHubDirection(track.direction || {});
+    const loose = track.albumId === 'unassigned';
+    setInheritAlbum(!loose && track.direction?.inheritFromAlbum !== false);
     setHubVibe(track.vibe);
     setHubVibeEnabled(track.vibe?.enabled ?? true);
     setHubIntents(track.checkedIntents || []);
@@ -474,7 +481,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
     setHubStyleEnabled(track.styleEnabled === true);
     setHubStyleAnalysis(styleProfile?.history[0]?.analysis || '');
     setHubStyleMetrics(styleProfile?.history[0]?.metrics || { vocabularyScore: 50, rhymeComplexity: 50, cadenceMap: 'Neutral' });
-    setExpandedVaultIdx(null);
+    setExpandedDnaPresetKey(null);
     setPreviewRhymeGroups([]);
     setNewHubIntent('');
     setApprovalDraftHistory([]);
@@ -503,6 +510,10 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
       pendingReopenOnCompleteRef.current = false;
     }
   }, [open, initializeSessionFromTrack]);
+
+  useEffect(() => {
+    if (isLooseTrack) setInheritAlbum(false);
+  }, [isLooseTrack]);
 
   const completeAndMaybeReopen = useCallback((targetStep: number) => {
     setStep(targetStep);
@@ -655,20 +666,39 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
   );
 
   const handleStrainTabChange = useCallback(
-    (v: 'insights' | 'vault') => {
+    (v: 'insights' | 'presets' | 'vault') => {
+      if (v === 'vault' && !isPro) {
+        toast({
+          title: 'Studio Pro Vault',
+          description: 'Saving custom DNA profiles is Pro-only. Use Presets or Insights and tap ⚡ to inject strains.',
+        });
+        return;
+      }
       setStrainTab(v);
       expandHubSection('dnaStrains');
     },
-    [expandHubSection]
+    [expandHubSection, isPro, toast]
   );
 
   const handleStyleTabChange = useCallback(
-    (v: 'current' | 'vault') => {
+    (v: 'current' | 'presets' | 'vault') => {
+      if (v === 'vault' && !isPro) {
+        toast({
+          title: 'Studio Pro Vault',
+          description: 'Saving custom Style DNA is Pro-only. Use Presets or Latest for this draft.',
+        });
+        return;
+      }
       setStyleTab(v);
       expandHubSection('style');
     },
-    [expandHubSection]
+    [expandHubSection, isPro, toast]
   );
+
+  useEffect(() => {
+    if (!isPro && strainTab === 'vault') setStrainTab('presets');
+    if (!isPro && styleTab === 'vault') setStyleTab('presets');
+  }, [isPro, strainTab, styleTab]);
 
   useEffect(() => {
     return () => {
@@ -929,7 +959,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
 
   const handleConfirmSaveDNA = (name: string) => {
       if (!isPro) {
-        toast({ variant: 'destructive', title: 'Pro Feature', description: 'Archive custom DNA profiles with Studio Pro.' });
+        toast({ variant: 'destructive', title: 'Pro Feature', description: 'Save custom DNA profiles with Studio Pro.' });
         return;
       }
       if (!album || !name.trim() || !wizardState.analysis) return;
@@ -966,7 +996,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
           setHubStyleEnabled(true);
       }
       toast({
-        title: 'DNA profile archived',
+        title: 'DNA profile saved',
         description: `"${name.trim()}" saved to your vault with full extraction.`,
       });
   };
@@ -1083,9 +1113,119 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
       toast({ title: `DNA Part Injected: ${title}` });
   };
 
+  const renderHubDnaPresetList = useCallback(
+    (presets: DnaPreset[], options: { deletable: boolean; keyPrefix: string }) => {
+      if (!presets.length) {
+        return <p className="text-center text-[9px] uppercase opacity-40 py-10">No presets available.</p>;
+      }
+      return (
+        <div className="space-y-3">
+          {presets.map((p, i) => {
+            const key = `${options.keyPrefix}-${i}`;
+            const isExpanded = expandedDnaPresetKey === key;
+            return (
+              <Card key={key} className="bg-background/40 border-white/5 overflow-hidden flex flex-col transition-all">
+                <div
+                  className="p-3 flex items-center justify-between cursor-pointer hover:bg-white/5"
+                  onClick={() => setExpandedDnaPresetKey(isExpanded ? null : key)}
+                >
+                  <div className="min-w-0 flex-grow pr-4">
+                    <p className="text-xs font-bold text-primary truncate uppercase">{p.name}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase">{p.sourceTrackTitle || 'Studio Preset'}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {options.deletable && album && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-red-500/40 hover:text-red-500"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateAlbum(album.id, { dnaPresets: album.dnaPresets?.filter((_, idx) => idx !== i) });
+                              toast({ title: 'DNA profile removed' });
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="max-w-[200px] text-[10px] leading-snug">{DNA_HUB_TOOLTIPS.vaultDelete}</TooltipContent>
+                      </Tooltip>
+                    )}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={(e) => { e.stopPropagation(); loadDnaPreset(p); }}>
+                          <RefreshCw className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="max-w-[220px] text-[10px] leading-snug">{DNA_HUB_TOOLTIPS.vaultFullLoad}</TooltipContent>
+                    </Tooltip>
+                    {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  </div>
+                </div>
+                {isExpanded && (
+                  <div className="p-3 bg-black/40 border-t border-white/5 animate-in slide-in-from-top-2 duration-300">
+                    <DnaVaultPresetDetails
+                      preset={p}
+                      onInjectMappingField={(field, value) => {
+                        if (!value) return;
+                        setHubDirection((prev) => ({ ...prev, [field]: value }));
+                        markHubSeeded('creativeDna');
+                        toast({ title: `${field} loaded` });
+                      }}
+                      onInjectStrain={(title, content) => {
+                        const target = STRAIN_TARGETS[title];
+                        if (target) handleInjectStrain(title, content, target);
+                      }}
+                      onInjectIntents={(intents) => {
+                        setHubIntents(intents);
+                        setIntentsEnabled(true);
+                        markHubSeeded('intents');
+                        if (album) {
+                          const existing = album.thingsToSay || [];
+                          const novel = intents.filter((m) => !existing.includes(m));
+                          if (novel.length) {
+                            updateAlbum(album.id, { thingsToSay: [...existing, ...novel] });
+                          }
+                        }
+                        toast({ title: 'Motifs loaded into Intents' });
+                      }}
+                      onInjectStructureGuide={(guide) => {
+                        setHubStructureGuide(guide);
+                        markHubSeeded('structure');
+                        toast({ title: 'Structure guide loaded' });
+                      }}
+                      onInjectStyle={(analysis, metrics) => {
+                        setHubStyleAnalysis(analysis);
+                        setHubStyleMetrics(metrics ?? DEFAULT_STYLE_METRICS);
+                        setHubStyleEnabled(true);
+                        markHubSeeded('style');
+                        toast({ title: 'Style DNA loaded' });
+                      }}
+                    />
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      );
+    },
+    [
+      album,
+      expandedDnaPresetKey,
+      handleInjectStrain,
+      loadDnaPreset,
+      markHubSeeded,
+      toast,
+      updateAlbum,
+    ]
+  );
+
   const handleConfirmSaveStyle = (name: string) => {
       if (!isPro) {
-        toast({ variant: 'destructive', title: 'Pro Feature', description: 'Archive custom Style DNA with Studio Pro.' });
+        toast({ variant: 'destructive', title: 'Pro Feature', description: 'Save custom Style DNA with Studio Pro.' });
         return;
       }
       if (!hubStyleAnalysis || !album || !name.trim()) return;
@@ -1098,7 +1238,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
       const existing = album.stylePresets || [];
       updateAlbum(album.id, { stylePresets: [...existing, preset] });
       toast({
-        title: 'Style profile archived',
+        title: 'Style profile saved',
         description: `"${name.trim()}" saved to your vault.`,
       });
   };
@@ -1829,7 +1969,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                         <BrainCircuit className="relative h-20 w-16 sm:h-24 sm:w-20 text-sky-400 group-hover:animate-pulse" />
                         <div className="relative text-center space-y-2 sm:space-y-3 px-2">
                             <h4 className="font-headline text-2xl sm:text-4xl font-bold uppercase text-white">DNA & REMIX</h4>
-                            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-widest leading-relaxed max-w-[320px] mx-auto">Extract and Archive strains to seed your next synthesis loop.</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-widest leading-relaxed max-w-[320px] mx-auto">Extract and save strains to seed your next synthesis loop.</p>
                         </div>
                     </Card>
                 </div>
@@ -1957,17 +2097,18 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                           <div className="space-y-1"><Label className="text-[9px] font-bold uppercase text-amber-700">BPM</Label><Input type="number" placeholder="90" value={hubVibe.tempoBPM} onChange={(e) => setHubVibe(v => ({ ...v, tempoBPM: parseInt(e.target.value) || 90 }))} className="h-8 text-[10px] bg-background/50" /></div>
                                       </div>
                                       <div className="space-y-1"><Label className="text-[9px] font-bold uppercase text-amber-700">Production</Label><Textarea placeholder="e.g. Saturated 808s, airy vocal pads..." value={hubVibe.instrumentation} onChange={(e) => setHubVibe(v => ({ ...v, instrumentation: e.target.value }))} className="h-16 text-[10px] bg-background/50 resize-none" /></div>
-                                      {!isPro && (
-                                        <Select onValueChange={(name) => {
-                                          const p = SYSTEM_VIBE_PRESETS.find((x) => x.name === name);
-                                          if (p) setHubVibe({ genre: p.genre, tempoBPM: p.tempoBPM, feeling: p.feeling, instrumentation: p.instrumentation, enabled: true });
-                                        }}>
-                                          <SelectTrigger className="h-7 text-[8px] font-bold uppercase"><SelectValue placeholder="Load system vibe preset" /></SelectTrigger>
-                                          <SelectContent className="z-[3100]">
-                                            {SYSTEM_VIBE_PRESETS.map((p) => <SelectItem key={p.name} value={p.name} className="text-[9px] uppercase">{p.name}</SelectItem>)}
-                                          </SelectContent>
-                                        </Select>
-                                      )}
+                                      <Select onValueChange={(name) => {
+                                        const p = SYSTEM_VIBE_PRESETS.find((x) => x.name === name);
+                                        if (p) {
+                                          setHubVibe({ genre: p.genre, tempoBPM: p.tempoBPM, feeling: p.feeling, instrumentation: p.instrumentation, enabled: true });
+                                          markHubSeeded('vibe');
+                                        }
+                                      }}>
+                                        <SelectTrigger className="h-7 text-[8px] font-bold uppercase"><SelectValue placeholder="Load vibe preset" /></SelectTrigger>
+                                        <SelectContent className="z-[3100]">
+                                          {SYSTEM_VIBE_PRESETS.map((p) => <SelectItem key={p.name} value={p.name} className="text-[9px] uppercase">{p.name}</SelectItem>)}
+                                        </SelectContent>
+                                      </Select>
                                   </Card>
                               </HubSectionShell>
 
@@ -2025,6 +2166,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                   summary={hubSectionSummary.creativeDna}
                                   trailing={
                                       <div className="flex items-center gap-3">
+                                          {!isLooseTrack && (
                                           <Tooltip>
                                               <TooltipTrigger asChild>
                                                   <div className="flex items-center gap-2 cursor-help">
@@ -2036,6 +2178,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                                   {DNA_HUB_TOOLTIPS.inheritAlbum}
                                               </TooltipContent>
                                           </Tooltip>
+                                          )}
                                           <Tooltip>
                                               <TooltipTrigger asChild>
                                                   <div className="flex items-center gap-2 cursor-help">
@@ -2126,7 +2269,7 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                   onToggle={() => toggleHubSection('dnaStrains')}
                                   summary={wizardState.analysis ? 'Extraction ready' : undefined}
                                   trailing={
-                                      <Tabs value={strainTab} onValueChange={(v) => handleStrainTabChange(v as 'insights' | 'vault')} className="w-fit">
+                                      <Tabs value={strainTab} onValueChange={(v) => handleStrainTabChange(v as 'insights' | 'presets' | 'vault')} className="w-fit">
                                           <TabsList className="h-8 bg-white/5 border-white/10 p-0.5">
                                               <Tooltip>
                                                   <TooltipTrigger asChild>
@@ -2138,12 +2281,37 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                               </Tooltip>
                                               <Tooltip>
                                                   <TooltipTrigger asChild>
-                                                      <TabsTrigger value="vault" className="text-[9px] px-3 font-bold" onClick={() => expandHubSection('dnaStrains')}>VAULT</TabsTrigger>
+                                                      <TabsTrigger value="presets" className="text-[9px] px-3 font-bold" onClick={() => expandHubSection('dnaStrains')}>PRESETS</TabsTrigger>
                                                   </TooltipTrigger>
                                                   <TooltipContent side="bottom" className="max-w-[200px] text-[10px] leading-snug">
-                                                      {DNA_HUB_TOOLTIPS.vaultVaultTab}
+                                                      {DNA_HUB_TOOLTIPS.vaultPresetsTab}
                                                   </TooltipContent>
                                               </Tooltip>
+                                              {isPro ? (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <TabsTrigger value="vault" className="text-[9px] px-3 font-bold" onClick={() => expandHubSection('dnaStrains')}>VAULT</TabsTrigger>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="bottom" className="max-w-[200px] text-[10px] leading-snug">
+                                                        {DNA_HUB_TOOLTIPS.vaultVaultTab}
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                              ) : (
+                                                <UpgradeTooltip
+                                                  feature="DNA Strains Vault"
+                                                  benefit="Save and reload your custom DNA profiles across any track in your catalog."
+                                                  example="Save an extraction once, then load it into every remix without re-analyzing."
+                                                >
+                                                  <TabsTrigger
+                                                    value="vault"
+                                                    disabled
+                                                    className="text-[9px] px-3 font-bold cursor-not-allowed border border-dashed border-pink-500/35"
+                                                    onClick={(e) => e.preventDefault()}
+                                                  >
+                                                    VAULT
+                                                  </TabsTrigger>
+                                                </UpgradeTooltip>
+                                              )}
                                           </TabsList>
                                       </Tabs>
                                   }
@@ -2159,79 +2327,19 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                                       <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground px-4">No recent DNA extracted.</p>
                                                   </div>
                                               )
-                                          ) : (
-                                              <div className="space-y-3">
-                                                  {album?.dnaPresets && album.dnaPresets.length > 0 ? album.dnaPresets.map((p, i) => (
-                                                      <Card key={i} className="bg-background/40 border-white/5 overflow-hidden flex flex-col transition-all">
-                                                          <div 
-                                                            className="p-3 flex items-center justify-between cursor-pointer hover:bg-white/5"
-                                                            onClick={() => setExpandedVaultIdx(expandedVaultIdx === i ? null : i)}
-                                                          >
-                                                              <div className="min-w-0 flex-grow pr-4">
-                                                                  <p className="text-xs font-bold text-primary truncate uppercase">{p.name}</p>
-                                                                  <p className="text-[10px] text-muted-foreground uppercase">{p.sourceTrackTitle}</p>
-                                                              </div>
-                                                              <div className="flex items-center gap-2 shrink-0">
-                                                                <Tooltip>
-                                                                    <TooltipTrigger asChild>
-                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={(e) => { e.stopPropagation(); updateAlbum(album.id, { dnaPresets: album.dnaPresets?.filter((_, idx) => idx !== i) }); toast({ title: 'DNA profile removed' }); }}><Trash2 className="h-3 w-3" /></Button>
-                                                                    </TooltipTrigger>
-                                                                    <TooltipContent side="left" className="max-w-[200px] text-[10px] leading-snug">{DNA_HUB_TOOLTIPS.vaultDelete}</TooltipContent>
-                                                                </Tooltip>
-                                                                <Tooltip>
-                                                                    <TooltipTrigger asChild>
-                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={(e) => { e.stopPropagation(); loadDnaPreset(p); }}><RefreshCw className="h-3 w-3" /></Button>
-                                                                    </TooltipTrigger>
-                                                                    <TooltipContent side="left" className="max-w-[220px] text-[10px] leading-snug">{DNA_HUB_TOOLTIPS.vaultFullLoad}</TooltipContent>
-                                                                </Tooltip>
-                                                                {expandedVaultIdx === i ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                                                              </div>
-                                                          </div>
-                                                          {expandedVaultIdx === i && (
-                                                              <div className="p-3 bg-black/40 border-t border-white/5 animate-in slide-in-from-top-2 duration-300">
-                                                                  <DnaVaultPresetDetails
-                                                                      preset={p}
-                                                                      onInjectMappingField={(field, value) => {
-                                                                          if (!value) return;
-                                                                          setHubDirection((prev) => ({ ...prev, [field]: value }));
-                                                                          markHubSeeded('creativeDna');
-                                                                          toast({ title: `${field} loaded` });
-                                                                      }}
-                                                                      onInjectStrain={(title, content) => {
-                                                                          const target = STRAIN_TARGETS[title];
-                                                                          if (target) handleInjectStrain(title, content, target);
-                                                                      }}
-                                                                      onInjectIntents={(intents) => {
-                                                                          setHubIntents(intents);
-                                                                          setIntentsEnabled(true);
-                                                                          markHubSeeded('intents');
-                                                                          if (album) {
-                                                                              const existing = album.thingsToSay || [];
-                                                                              const novel = intents.filter((m) => !existing.includes(m));
-                                                                              if (novel.length) {
-                                                                                  updateAlbum(album.id, { thingsToSay: [...existing, ...novel] });
-                                                                              }
-                                                                          }
-                                                                          toast({ title: 'Motifs loaded into Intents' });
-                                                                      }}
-                                                                      onInjectStructureGuide={(guide) => {
-                                                                          setHubStructureGuide(guide);
-                                                                          markHubSeeded('structure');
-                                                                          toast({ title: 'Structure guide loaded' });
-                                                                      }}
-                                                                      onInjectStyle={(analysis, metrics) => {
-                                                                          setHubStyleAnalysis(analysis);
-                                                                          setHubStyleMetrics(metrics ?? DEFAULT_STYLE_METRICS);
-                                                                          setHubStyleEnabled(true);
-                                                                          markHubSeeded('style');
-                                                                          toast({ title: 'Style DNA loaded' });
-                                                                      }}
-                                                                  />
-                                                              </div>
-                                                          )}
-                                                      </Card>
-                                                  )) : <p className="text-center text-[9px] uppercase opacity-40 py-10">Vault is empty.</p>}
+                                          ) : strainTab === 'presets' ? (
+                                              renderHubDnaPresetList(SYSTEM_DNA_PRESETS as DnaPreset[], { deletable: false, keyPrefix: 'sys' })
+                                          ) : !isPro ? (
+                                              <div className={cn('flex flex-col items-center justify-center text-center p-8 gap-3 border-2 border-dashed rounded-lg min-h-[180px]', proLockShell('md'))}>
+                                                <Lock className={proLockIcon('h-8 w-8')} />
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-foreground">DNA Strains Vault — Studio Pro</p>
+                                                <p className="text-[10px] text-muted-foreground leading-relaxed max-w-[240px]">
+                                                  Saving custom profiles is Pro-only. Use <strong className="text-foreground">Presets</strong> or <strong className="text-foreground">Insights</strong> and tap <Zap className="inline h-3 w-3 text-primary align-[-2px]" /> to inject strains.
+                                                </p>
+                                                <ProLockBadge label="Pro" />
                                               </div>
+                                          ) : (
+                                              renderHubDnaPresetList(album?.dnaPresets ?? [], { deletable: true, keyPrefix: 'vault' })
                                           )}
                                       </div>
                                   </Card>
@@ -2247,10 +2355,28 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                   trailing={
                                       <div className="flex items-center gap-2">
                                         <Switch checked={hubStyleEnabled} onCheckedChange={setHubStyleEnabled} />
-                                        <Tabs value={styleTab} onValueChange={(v) => handleStyleTabChange(v as 'current' | 'vault')} className="w-fit">
+                                        <Tabs value={styleTab} onValueChange={(v) => handleStyleTabChange(v as 'current' | 'presets' | 'vault')} className="w-fit">
                                           <TabsList className="h-8 bg-white/5 border-white/10 p-0.5">
                                               <TabsTrigger value="current" className="text-[9px] px-3 font-bold" onClick={() => expandHubSection('style')}>LATEST</TabsTrigger>
-                                              <TabsTrigger value="vault" className="text-[9px] px-3 font-bold" onClick={() => expandHubSection('style')}>VAULT</TabsTrigger>
+                                              <TabsTrigger value="presets" className="text-[9px] px-3 font-bold" onClick={() => expandHubSection('style')}>PRESETS</TabsTrigger>
+                                              {isPro ? (
+                                                <TabsTrigger value="vault" className="text-[9px] px-3 font-bold" onClick={() => expandHubSection('style')}>VAULT</TabsTrigger>
+                                              ) : (
+                                                <UpgradeTooltip
+                                                  feature="Style DNA Vault"
+                                                  benefit="Save cadence and vocabulary profiles to reuse across tracks."
+                                                  example="Save your flow DNA once and load it into every new draft."
+                                                >
+                                                  <TabsTrigger
+                                                    value="vault"
+                                                    disabled
+                                                    className="text-[9px] px-3 font-bold cursor-not-allowed border border-dashed border-pink-500/35"
+                                                    onClick={(e) => e.preventDefault()}
+                                                  >
+                                                    VAULT
+                                                  </TabsTrigger>
+                                                </UpgradeTooltip>
+                                              )}
                                           </TabsList>
                                         </Tabs>
                                       </div>
@@ -2261,7 +2387,11 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                               <div className="p-3 bg-background/40 border border-fuchsia-500/10 rounded-lg space-y-3">
                                                   <div className="flex justify-between items-center text-[10px] font-bold uppercase text-fuchsia-700">
                                                       <span>Active Profiling</span>
-                                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSaveStyleNamingOpen(true)}><Save className="h-3.5 w-3.5" /></Button>
+                                                      {isPro ? (
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSaveStyleNamingOpen(true)}><Save className="h-3.5 w-3.5" /></Button>
+                                                      ) : (
+                                                        <LockedSaveButton feature="Style DNA Save" benefit="Save cadence and vocabulary profiles to your vault." size="sm" icon={Save} iconClassName="text-fuchsia-500" className="h-7 w-7 text-fuchsia-500 hover:bg-fuchsia-500/10" />
+                                                      )}
                                                   </div>
                                                   <div className="grid grid-cols-2 gap-3">
                                                       <div className="space-y-1">
@@ -2281,6 +2411,40 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                                                   </div>
                                                   <p className="text-[10px] font-bold uppercase text-fuchsia-500/80">Cadence: {hubStyleMetrics.cadenceMap}</p>
                                                   <p className="text-xs text-foreground/90 italic leading-relaxed whitespace-pre-wrap break-words">"{hubStyleAnalysis || 'No style extracted yet — run DNA extraction or load a preset.'}"</p>
+                                              </div>
+                                          ) : styleTab === 'presets' ? (
+                                              <div className="space-y-2 max-h-[min(18vh,160px)] overflow-y-auto studio-scrollbar pr-1">
+                                                  {SYSTEM_STYLE_PRESETS.map((s, i) => (
+                                                      <Card key={i} className="bg-background/40 border-white/5 p-2.5 flex items-center justify-between shadow-lg">
+                                                          <div className="min-w-0">
+                                                              <p className="text-xs font-bold text-fuchsia-400 truncate uppercase">{s.name}</p>
+                                                              <p className="text-[10px] text-muted-foreground uppercase">{s.metrics.cadenceMap}</p>
+                                                          </div>
+                                                          <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7 text-fuchsia-400 shrink-0"
+                                                            onClick={() => {
+                                                              setHubStyleAnalysis(s.analysis);
+                                                              setHubStyleMetrics(s.metrics);
+                                                              setHubStyleEnabled(true);
+                                                              markHubSeeded('style');
+                                                              toast({ title: 'Style preset loaded' });
+                                                            }}
+                                                          >
+                                                            <RefreshCw className="h-3 w-3" />
+                                                          </Button>
+                                                      </Card>
+                                                  ))}
+                                              </div>
+                                          ) : !isPro ? (
+                                              <div className={cn('flex flex-col items-center justify-center text-center p-6 gap-3 border-2 border-dashed rounded-lg min-h-[120px]', proLockShell('md'))}>
+                                                <Lock className={proLockIcon('h-7 w-7')} />
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-foreground">Style DNA Vault — Studio Pro</p>
+                                                <p className="text-[10px] text-muted-foreground leading-relaxed max-w-[220px]">
+                                                  Use <strong className="text-foreground">Presets</strong> or <strong className="text-foreground">Latest</strong> for this draft. Saving custom profiles requires Pro.
+                                                </p>
+                                                <ProLockBadge label="Pro" />
                                               </div>
                                           ) : (
                                               <div className="space-y-2 max-h-[min(18vh,160px)] overflow-y-auto studio-scrollbar pr-1">
@@ -2390,15 +2554,22 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
             <ScrollArea className="flex-grow p-8 studio-scrollbar relative">
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-emerald-500/10 to-transparent" aria-hidden />
                 <div className="relative max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 text-foreground pb-12">
-                    <div className="flex justify-between items-center bg-primary/10 p-4 rounded-xl border border-primary/20">
-                        <div className="flex items-center gap-3 text-primary">
-                            <Sparkles className="h-5 w-5" />
-                            <p className="text-xs font-bold uppercase tracking-widest">Neural Extraction Complete. Archive profile to reuse strains.</p>
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-primary/10 p-4 rounded-xl border border-primary/20">
+                        <div className="flex items-start gap-3 text-primary min-w-0">
+                            <Sparkles className="h-5 w-5 shrink-0 mt-0.5" />
+                            <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wide leading-relaxed">
+                              Your lyrics, decoded. Tap <Zap className="inline h-3.5 w-3.5 align-[-2px] mx-0.5" /> on any strain to load it into this remix — then hit Define Paths.
+                              {!isPro && (
+                                <span className="block mt-1 text-[10px] font-code normal-case tracking-normal text-primary/80">
+                                  Saving to your vault is Pro-only; everything here still works for this DNA / remix session.
+                                </span>
+                              )}
+                            </p>
                         </div>
                         {isPro ? (
                           <Tooltip>
                               <TooltipTrigger asChild>
-                                  <Button variant="default" size="sm" className="font-bold uppercase text-[10px] h-9 px-6 shadow-lg gap-2" onClick={() => setSaveNamingOpen(true)}>
+                                  <Button variant="default" size="sm" className="font-bold uppercase text-[10px] h-9 px-6 shadow-lg gap-2 shrink-0" onClick={() => setSaveNamingOpen(true)}>
                                     <Save className="h-4 w-4" /> Save DNA Profile
                                   </Button>
                               </TooltipTrigger>
@@ -2407,7 +2578,9 @@ export function GenerateSongDraftDialog({ open, onOpenChange, track, styleProfil
                               </TooltipContent>
                           </Tooltip>
                         ) : (
-                          <Badge variant="outline" className="text-[8px] uppercase border-primary/30 text-primary">Pro required to archive custom DNA</Badge>
+                          <Badge variant="outline" className="text-[8px] uppercase border-primary/30 text-primary shrink-0 self-start sm:self-center">
+                            Save to vault — Pro
+                          </Badge>
                         )}
                     </div>
                     {renderAnalysisStrainLayout(wizardState.analysis)}

@@ -1,6 +1,6 @@
 /* Bar 4 Bar Studio — PWA shell + visited routes for offline studio */
-const CACHE_NAME = 'b4b-static-v5';
-const SHELL_CACHE = 'b4b-shell-v5';
+const CACHE_NAME = 'b4b-static-v7';
+const SHELL_CACHE = 'b4b-shell-v7';
 const STATIC_ASSETS = ['/Logo.png', '/B4B_Font.otf', '/YUSRB_font.ttf'];
 
 self.addEventListener('install', (event) => {
@@ -45,6 +45,15 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+
+  // Never intercept API, auth, or manifest — avoids breaking invite gate + RSC
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname === '/manifest.webmanifest' ||
+    url.pathname === '/sw.js'
+  ) {
+    return;
+  }
 
   if (isStaticAsset(url.pathname)) {
     event.respondWith(

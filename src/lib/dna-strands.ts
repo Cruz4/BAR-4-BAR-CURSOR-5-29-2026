@@ -82,11 +82,12 @@ export const DNA_HUB_TOOLTIPS = {
     'Load entire saved profile — Creative DNA, motifs, structure guide, Style DNA, and extraction archive.',
   vaultDelete: 'Delete this saved DNA profile from your album vault.',
   vaultInsightsTab: 'Current extraction from your latest analyze step.',
-  vaultVaultTab: 'Saved album DNA profiles — full load or partial inject.',
+  vaultPresetsTab: 'Studio DNA suites — load full profiles or inject individual strains.',
+  vaultVaultTab: 'Your saved album DNA profiles — full load or partial inject (Pro).',
   remixInfluence:
     'Relative weight among selected remix paths only — not vs Special Instructions or DNA.',
   saveDnaProfile:
-    'Archive full extraction, hub mapping, structure guide, motifs, and Style DNA for reuse on any track.',
+    'Save full extraction, hub mapping, structure guide, motifs, and Style DNA for reuse on any track.',
   reMatrixIdeas: 'Regenerate remix path options without re-analyzing source lyrics.',
   inheritAlbum: 'Pull album-level Creative DNA into this synthesis when enabled.',
   inheritTrack: "Pull this track's saved DNA fields into the hub when enabled.",

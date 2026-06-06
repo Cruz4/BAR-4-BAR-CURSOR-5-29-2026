@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,83 @@ import { UpgradeTooltip } from '@/components/upgrade-tooltip';
 import { PRO_LOCK, proLockShell, proLockIcon, proLockText, markBarAnchorGlow } from '@/lib/pro-lock';
 
 export { PRO_LOCK, proLockShell, proLockIcon, proLockText, markBarAnchorGlow };
+
+/** Gray icon + centered lock — tier-limit vault cards (not action buttons). */
+export function IconWithLockOverlay({
+  icon: Icon,
+  iconClassName,
+  size = 'md',
+}: {
+  icon: LucideIcon;
+  iconClassName?: string;
+  size?: 'sm' | 'md' | 'lg';
+}) {
+  const dim = size === 'sm' ? 'h-3.5 w-3.5' : size === 'lg' ? 'h-5 w-5' : 'h-4 w-4';
+  const lockDim = size === 'sm' ? 'h-3 w-3' : size === 'lg' ? 'h-4 w-4' : 'h-3.5 w-3.5';
+  return (
+    <span className="relative inline-flex h-full w-full items-center justify-center shrink-0">
+      <Icon className={cn(dim, 'text-muted-foreground/45', iconClassName)} aria-hidden />
+      <Lock
+        className={cn(
+          'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none',
+          lockDim,
+          proLockIcon()
+        )}
+        aria-hidden
+      />
+    </span>
+  );
+}
+
+/** Subtle dashed border — locked affordance without stacking icons. */
+const lockedActionShell = 'border border-dashed border-pink-500/35';
+
+export function LockedProFeatureButton({
+  feature,
+  benefit,
+  example,
+  icon: Icon,
+  label,
+  className,
+  iconClassName,
+  variant = 'secondary',
+  size = 'sm',
+}: {
+  feature: string;
+  benefit: string;
+  example?: string;
+  icon: LucideIcon;
+  label: React.ReactNode;
+  className?: string;
+  iconClassName?: string;
+  variant?: 'secondary' | 'outline' | 'ghost';
+  size?: 'sm' | 'default' | 'icon';
+}) {
+  return (
+    <UpgradeTooltip feature={feature} benefit={benefit} example={example}>
+      <Button
+        variant={variant}
+        size={size}
+        type="button"
+        className={cn(
+          'relative min-w-0 cursor-not-allowed',
+          size !== 'icon' && 'justify-start leading-none gap-0',
+          lockedActionShell,
+          className
+        )}
+        onClick={(e) => e.preventDefault()}
+      >
+        <Icon className={cn('h-4 w-4 shrink-0 mr-2', iconClassName)} aria-hidden />
+        {size !== 'icon' && (
+          <>
+            <span className="truncate min-w-0 flex-1 text-left">{label}</span>
+            <Lock className={cn('h-3 w-3 shrink-0 ml-1.5', proLockIcon())} aria-hidden />
+          </>
+        )}
+      </Button>
+    </UpgradeTooltip>
+  );
+}
 
 /** Gold styling for Pro “create new” album / track slots — bright at rest, richer on hover. */
 export const GOLD_CREATE_SLOT = {
@@ -26,20 +104,24 @@ export function LockedSaveButton({
   example,
   className,
   size = 'sm',
+  icon: Icon = Lock,
+  iconClassName,
 }: {
   feature: string;
   benefit: string;
   example?: string;
   className?: string;
   size?: 'sm' | 'md';
+  icon?: LucideIcon;
+  iconClassName?: string;
 }) {
   const dim = size === 'sm' ? 'h-7 w-7' : 'h-9 w-9';
-  const icon = size === 'sm' ? 'h-4 w-4' : 'h-4 w-4';
+  const iconDim = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4';
   return (
     <UpgradeTooltip
       feature={feature}
       benefit={benefit}
-      example={example ?? `Example: archive "${feature}" on this track and reuse it on every song in the album.`}
+      example={example ?? `Example: save "${feature}" on this track and reuse it on every song in the album.`}
     >
       <Button
         variant="ghost"
@@ -47,14 +129,13 @@ export function LockedSaveButton({
         type="button"
         className={cn(
           dim,
-          proLockShell('sm'),
-          PRO_LOCK.color,
-          'cursor-not-allowed hover:bg-pink-500/20',
+          lockedActionShell,
+          'flex items-center justify-center p-0 cursor-not-allowed',
           className
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        <Lock className={cn(icon, proLockIcon())} />
+        <Icon className={cn(iconDim, iconClassName)} aria-hidden />
       </Button>
     </UpgradeTooltip>
   );
@@ -211,12 +292,14 @@ export function LockedToolbarButton({
   feature,
   benefit,
   example,
-  children,
+  icon: Icon,
+  buttonClassName,
 }: {
   feature: string;
   benefit: string;
   example?: string;
-  children: React.ReactNode;
+  icon: LucideIcon;
+  buttonClassName?: string;
 }) {
   return (
     <UpgradeTooltip
@@ -224,9 +307,19 @@ export function LockedToolbarButton({
       benefit={benefit}
       example={example ?? 'Upgrade to Studio Pro to unlock this vault action.'}
     >
-      <div className={cn('inline-flex items-center justify-center rounded-xl p-[2px]', proLockShell('sm'))}>
-        {children}
-      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        type="button"
+        className={cn(
+          'h-10 w-10 border border-white/5 bg-black/40 rounded-xl flex items-center justify-center p-0 cursor-not-allowed',
+          lockedActionShell,
+          buttonClassName
+        )}
+        onClick={(e) => e.preventDefault()}
+      >
+        <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
+      </Button>
     </UpgradeTooltip>
   );
 }

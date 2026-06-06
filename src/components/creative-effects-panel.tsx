@@ -1,14 +1,13 @@
 'use client';
 
 import React, { useState, useTransition, useRef } from 'react';
-import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { Wand2, ChevronsUpDown, Lock, Sparkles } from 'lucide-react';
+import { Wand2, ChevronsUpDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn, mergeDirection } from '@/lib/utils';
 
@@ -30,9 +29,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { withAiAuth } from '@/lib/ai-client';
 import { useAuth } from '@/hooks/use-auth';
 import { StudioLoader } from './studio-loader';
-import { ProLockBadge, proLockShell, proLockIcon, proLockText } from '@/components/pro-lock';
-
-export const FREE_CREATIVE_TOOLS: CreativeTool[] = ['simile', 'metaphor', 'sound-alike'];
 
 interface CreativeEffectsPanelProps {
   track: Track;
@@ -40,7 +36,6 @@ interface CreativeEffectsPanelProps {
   styleProfile: StyleProfile;
   scratchPadRef: React.RefObject<{ addEffectResult: (result: ScratchPadEffectResult) => void; }>;
   activeSection: TrackSection | null | undefined;
-  isPro?: boolean;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
@@ -105,11 +100,9 @@ const TOOL_CONFIG: Record<CreativeTool, { label: string; description: string; ho
   },
 };
 
-function isToolFree(tool: CreativeTool, isPro?: boolean) {
-  return isPro || FREE_CREATIVE_TOOLS.includes(tool);
-}
+const ALL_CREATIVE_TOOLS = Object.keys(TOOL_CONFIG) as CreativeTool[];
 
-export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef, activeSection, isPro = false, isOpen: controlledOpen, onOpenChange }: CreativeEffectsPanelProps) {
+export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef, activeSection, isOpen: controlledOpen, onOpenChange }: CreativeEffectsPanelProps) {
   const [selectedTool, setSelectedTool] = useState<CreativeTool>('simile');
   const [isGenerating, startGeneration] = useTransition();
   const { user } = useAuth();
@@ -122,9 +115,6 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
   const { refundInk, addUsageLog } = useUsage();
   const { getCost, buttonLabel, tooltip } = useInkCosts();
   const { runWithInk } = useTouchInkRunner();
-
-  const proTools = (Object.keys(TOOL_CONFIG) as CreativeTool[]).filter(t => !FREE_CREATIVE_TOOLS.includes(t));
-  const selectedIsLocked = !isToolFree(selectedTool, isPro);
 
   const formStateRef = useRef<Record<string, any>>({
     'simile': { subject: '' },
@@ -143,10 +133,6 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
   };
 
   const handleRunEffect = (e: any) => {
-    if (selectedIsLocked) {
-      toast({ variant: 'destructive', title: 'Studio Pro Required', description: 'Upgrade to unlock all Creative Effects.' });
-      return;
-    }
     const cost = getCost('runCreativeEffect');
     runWithInk(`runCreativeEffect-${selectedTool}`, cost, 'runCreativeEffect', e, () => {
       const currentToolInputs = formStateRef.current[selectedTool];
@@ -207,16 +193,16 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
       <div key={key}>
         <Label htmlFor={`${tool}-${key}`} className="text-[11px] font-bold uppercase text-indigo-100/95">{inputConfig.label}</Label>
         {inputConfig.type === 'text' && (
-          <Input id={`${tool}-${key}`} defaultValue={formStateRef.current[tool][key]} onChange={(e) => handleInputChange(tool, key, e.target.value)} className="h-8 bg-background/50 text-[12px] text-foreground/90 placeholder:text-muted-foreground/75" disabled={selectedIsLocked} />
+          <Input id={`${tool}-${key}`} defaultValue={formStateRef.current[tool][key]} onChange={(e) => handleInputChange(tool, key, e.target.value)} className="h-8 bg-background/50 text-[12px] text-foreground/90 placeholder:text-muted-foreground/75" />
         )}
         {inputConfig.type === 'slider' && (
           <div className="flex items-center gap-4 py-1">
-             <Slider id={`${tool}-${key}`} defaultValue={[formStateRef.current[tool][key]]} min={inputConfig.min} max={inputConfig.max} step={inputConfig.step} onValueChange={(value) => handleInputChange(tool, key, value[0])} disabled={selectedIsLocked} />
+             <Slider id={`${tool}-${key}`} defaultValue={[formStateRef.current[tool][key]]} min={inputConfig.min} max={inputConfig.max} step={inputConfig.step} onValueChange={(value) => handleInputChange(tool, key, value[0])} />
             <span className="text-[12px] font-mono w-8 text-foreground/90">{formStateRef.current[tool][key].toFixed(1)}</span>
           </div>
         )}
         {inputConfig.type === 'select' && (
-           <Select defaultValue={formStateRef.current[tool][key]} onValueChange={(value) => handleInputChange(tool, key, value)} disabled={selectedIsLocked}>
+           <Select defaultValue={formStateRef.current[tool][key]} onValueChange={(value) => handleInputChange(tool, key, value)}>
                 <SelectTrigger className="h-8 bg-background/50 text-[12px] text-foreground/90"><SelectValue /></SelectTrigger>
                 <SelectContent>
                     {inputConfig.options.map((opt: string) => (
@@ -234,20 +220,15 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
         <Card data-creative-effects className="bg-indigo-500/10 dark:bg-indigo-500/5 border-indigo-200/50">
         <CollapsibleTrigger asChild>
             <CardHeader className="flex-row items-center justify-between cursor-pointer p-4 md:p-6">
-                <div className="flex flex-col text-left w-full min-w-0 pr-1">
-                    <CardTitle className="font-headline text-lg flex items-center gap-2 uppercase tracking-widest text-indigo-700 dark:text-indigo-400">
+                <div className="flex flex-col w-full min-w-0 pr-1">
+                    <CardTitle className="font-headline text-lg flex items-center gap-2 uppercase tracking-widest text-indigo-700 dark:text-indigo-400 text-left">
                       <Wand2 className="h-5 w-5 shrink-0"/> Creative Effects
                     </CardTitle>
-                    {!isPro && (
-                      <div className="w-full flex justify-center mt-2 mb-1">
-                        <ProLockBadge label="3 Free · Pro+" />
-                      </div>
-                    )}
                     <CardDescription
-                      className={cn('font-code tracking-wider', effectsSubtitleClass(isOpen))}
+                      className={cn('font-code tracking-wider text-left pl-7', effectsSubtitleClass(isOpen))}
                       title="Specialized Lyrical Tools"
                     >
-                      {isOpen ? 'Specialized Lyrical Tools' : 'Lyrical Tools'}
+                      {isOpen ? 'All 9 tools — Ink per run' : 'Lyrical Tools'}
                     </CardDescription>
                 </div>
                 <Button variant="ghost" size="icon" className="h-6 w-6"><ChevronsUpDown className="h-4 w-4" /></Button>
@@ -260,14 +241,14 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
                 <Select value={selectedTool} onValueChange={(value) => setSelectedTool(value as CreativeTool)}>
                     <SelectTrigger className="bg-background/50 h-9 text-[12px] text-foreground/90"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                        {(isPro ? Object.keys(TOOL_CONFIG) : FREE_CREATIVE_TOOLS).map((key) => (
-                        <SelectItem key={key} value={key} className="text-[12px]">{TOOL_CONFIG[key as CreativeTool].label}</SelectItem>
+                        {ALL_CREATIVE_TOOLS.map((key) => (
+                        <SelectItem key={key} value={key} className="text-[12px]">{TOOL_CONFIG[key].label}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
             </div>
             
-            <div className={cn("space-y-3 p-3 bg-background/50 rounded-lg border border-indigo-500/20", selectedIsLocked && "opacity-60 pointer-events-none")}>
+            <div className="space-y-3 p-3 bg-background/50 rounded-lg border border-indigo-500/20">
                 <div className="space-y-2">
                     {renderInputs(selectedTool)}
                 </div>
@@ -277,61 +258,22 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
                 </div>
             </div>
             
-            <div className={cn(selectedIsLocked && "opacity-60 pointer-events-none")}>
+            <div>
                 <Label htmlFor="effect-end-with" className="text-[11px] font-bold uppercase text-indigo-100/90">End With (Optional)</Label>
-                <Input id="effect-end-with" placeholder="e.g., the moonlight" value={endWith} onChange={(e) => setEndWith(e.target.value)} className="h-9 bg-background/50 text-[12px] text-foreground/90 placeholder:text-muted-foreground/75" disabled={selectedIsLocked} />
+                <Input id="effect-end-with" placeholder="e.g., the moonlight" value={endWith} onChange={(e) => setEndWith(e.target.value)} className="h-9 bg-background/50 text-[12px] text-foreground/90 placeholder:text-muted-foreground/75" />
             </div>
 
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={(e) => handleRunEffect(e)} disabled={isGenerating || selectedIsLocked} size="lg" className="w-full font-bold bg-indigo-600 hover:bg-indigo-700 shadow-md">
-                      {isGenerating ? <StudioLoader size="sm" /> : selectedIsLocked ? <Lock className="mr-2 h-4 w-4" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                      {selectedIsLocked ? 'Upgrade to Run' : buttonLabel('runCreativeEffect')}
+                  <Button onClick={(e) => handleRunEffect(e)} disabled={isGenerating} size="lg" className="w-full font-bold bg-indigo-600 hover:bg-indigo-700 shadow-md">
+                      {isGenerating ? <StudioLoader size="sm" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                      {buttonLabel('runCreativeEffect')}
                   </Button>
                 </TooltipTrigger>
-                {!selectedIsLocked && (
-                  <TooltipContent><p className="text-[10px] font-bold">{tooltip('runCreativeEffect')}</p></TooltipContent>
-                )}
+                <TooltipContent><p className="text-[10px] font-bold">{tooltip('runCreativeEffect')}</p></TooltipContent>
               </Tooltip>
             </TooltipProvider>
-
-            {!isPro && proTools.length > 0 && (
-              <div className="space-y-3 pt-2 border-t border-indigo-500/20">
-                <div className="flex items-center gap-2">
-                  <Sparkles className={cn('h-4 w-4', proLockIcon())} />
-                  <p className={proLockText('text-[10px]')}>Studio Pro Effects</p>
-                </div>
-                <p className="text-[9px] text-muted-foreground leading-relaxed">Free artists get Simile, Metaphor, and Sound-Alike. Upgrade to unlock the full lyrical toolkit.</p>
-                <div className="space-y-2">
-                  {proTools.map((tool) => {
-                    const config = TOOL_CONFIG[tool];
-                    return (
-                      <div
-                        key={tool}
-                        className={cn(
-                          'p-3 rounded-lg border border-dashed space-y-1.5',
-                          proLockShell('md')
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Lock className={proLockIcon('h-3.5 w-3.5 shrink-0')} />
-                          <p className="text-xs font-bold text-foreground">{config.label}</p>
-                          <ProLockBadge label="Pro" className="ml-auto" />
-                        </div>
-                        <p className="text-[10px] text-muted-foreground leading-relaxed pl-5">{config.description}</p>
-                        <p className="text-[9px] text-muted-foreground/70 italic pl-5">{config.howTo}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-                <Button asChild size="sm" className={cn('w-full font-bold text-[10px] uppercase border-0', proLockShell('md'), proLockText())}>
-                  <Link href="/usage?tab=cloud">
-                    <Sparkles className={cn('mr-2 h-3.5 w-3.5', proLockIcon())} /> Upgrade to Studio Pro
-                  </Link>
-                </Button>
-              </div>
-            )}
             </CardContent>
         </CollapsibleContent>
         </Card>
