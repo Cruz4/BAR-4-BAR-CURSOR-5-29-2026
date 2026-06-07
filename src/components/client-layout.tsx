@@ -32,6 +32,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isLoginPage = pathname === '/login';
   const isPerformPage = pathname.endsWith('/perform');
   const isSharePage = pathname.startsWith('/share/');
+  const isMarketingCapture = pathname.startsWith('/marketing/capture');
   const isSettingsRoute = pathname === '/usage' || pathname.startsWith('/usage/') || pathname === '/admin';
 
   return (
@@ -45,19 +46,19 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
                 <FirebaseErrorListener />
                 <MarketingAttributionCapture />
                 <ProductAnalytics />
-                {isSettingsRoute ? <SettingsControlAtmosphere /> : <StudioPageBackground />}
+                {isMarketingCapture ? null : isSettingsRoute ? <SettingsControlAtmosphere /> : <StudioPageBackground />}
                 <div className="relative z-10 flex min-h-screen flex-col flex-1 overflow-hidden">
-                  {!isLoginPage && !isPerformPage && !isSharePage && <Header />}
+                  {!isLoginPage && !isPerformPage && !isSharePage && !isMarketingCapture && <Header />}
                   <main className="flex-1 overflow-hidden flex flex-col">{children}</main>
-                  {!isSharePage && <WhatsNewDialog />}
-                  {!isSharePage && !isLoginPage && <StudioPrivacyIntroDialog />}
-                  <CookieConsent />
-                  {!isSharePage && !isLoginPage && <PwaInstallPrompt />}
+                  {!isSharePage && !isMarketingCapture && <WhatsNewDialog />}
+                  {!isSharePage && !isLoginPage && !isMarketingCapture && <StudioPrivacyIntroDialog />}
+                  {!isMarketingCapture && <CookieConsent />}
+                  {!isSharePage && !isLoginPage && !isMarketingCapture && <PwaInstallPrompt />}
                   <OfflineBanner />
                   <ServiceWorkerRegister />
                 </div>
                 {/* Portaled overlays — must sit outside z-10 wrapper or they render behind Dialog greyout */}
-                {!isSharePage && <StudioTips />}
+                {!isSharePage && !isMarketingCapture && <StudioTips />}
                 <FloatingInkSpent />
                 <Toaster />
                 <AchievementUnlockCelebration />

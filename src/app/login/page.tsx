@@ -20,7 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Sparkles, BrainCircuit, ArrowRight, Mail, Lock, User as UserIcon, LogIn, Coffee, Gift, Music, NotebookPen, Waves, Clapperboard, Zap, Target, Import } from 'lucide-react';
+import { Sparkles, ArrowRight, Mail, Lock, User as UserIcon, LogIn, Coffee, Gift, Zap, Import } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -33,8 +33,7 @@ import { cn } from '@/lib/utils';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { captureMarketingRefFromUrl, getStoredMarketingRef } from '@/lib/marketing-attribution';
-import Image from 'next/image';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { REFERRAL_INK_REWARD, REFERRAL_STORAGE_KEY, normalizeReferralCode } from '@/lib/referrals';
 import { claimPendingReferral } from '@/components/refer-a-friend-section';
 import { InviteGateLoginBanner } from '@/components/invite-gate-login-banner';
@@ -43,22 +42,20 @@ import {
   getProCheckoutLabel,
   getSafeNextPath,
 } from '@/lib/checkout-intent';
+import { LandingShowcase } from '@/components/marketing/landing-showcase';
+import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmosphere';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { scrollY } = useScroll();
-  
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  
   const loginFormRef = useRef<HTMLDivElement>(null);
   const importIntent = searchParams.get('intent') === 'dna-import';
   const safeNext = getSafeNextPath(searchParams.get('next'));
@@ -67,18 +64,6 @@ function LoginForm() {
   useEffect(() => {
     if (proCheckoutIntent) setAuthMode('signup');
   }, [proCheckoutIntent]);
-
-  // Parallax logic for atmospheric voids
-  const yParallax1 = useTransform(scrollY, [0, 1000], [0, 200]);
-  const yParallax2 = useTransform(scrollY, [0, 1000], [0, -150]);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
 
   const scrollToLogin = () => {
     loginFormRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -203,8 +188,9 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen flex flex-col selection:bg-primary/30 overflow-x-hidden relative">
-      {/* FIXED HEADER - ABSOLUTELY CENTERED BRANDING */}
-      <header className="fixed top-0 left-0 right-0 h-16 border-b border-white/5 bg-background/70 backdrop-blur-xl z-[200] grid grid-cols-[1fr_auto_1fr] items-center px-3 sm:px-6 shadow-2xl gap-2">
+      <LoginStudioAtmosphere />
+
+      <header className="fixed top-0 left-0 right-0 h-16 border-b border-white/[0.06] bg-background/40 backdrop-blur-xl z-[200] grid grid-cols-[1fr_auto_1fr] items-center px-3 sm:px-6 gap-2">
           <div aria-hidden className="min-w-0" />
 
           <div className="flex items-center justify-center gap-2 sm:gap-4 min-w-0 max-w-[min(100%,14rem)] sm:max-w-none">
@@ -214,30 +200,20 @@ function LoginForm() {
               <h1 className="hidden sm:block text-lg sm:text-2xl font-headline font-bold text-white tracking-tighter uppercase truncate">Bar 4 Bar</h1>
           </div>
 
-          <div className="flex justify-end min-w-0">
-          <Button onClick={scrollToLogin} className="bg-primary hover:bg-primary/90 text-white font-bold h-9 px-3 sm:px-5 gap-1.5 sm:gap-2 rounded-md shadow-lg shrink-0 transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm">
+          <nav className="flex items-center justify-end gap-2 sm:gap-4 min-w-0">
+            <a href="#features" className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Features</a>
+            <a href="#how-it-works" className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">How it works</a>
+            <Link href="/pricing" className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Pricing</Link>
+            <Button onClick={scrollToLogin} className="bg-primary hover:bg-primary/90 text-white font-bold h-9 px-3 sm:px-5 gap-1.5 sm:gap-2 rounded-md shadow-lg shrink-0 transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm">
               <LogIn className="h-4 w-4 shrink-0" /> <span className="truncate">Login</span>
-          </Button>
-          </div>
+            </Button>
+          </nav>
       </header>
 
       <main className="flex-grow flex flex-col mt-16 relative z-10">
         {/* HERO SECTION */}
-        <section className="relative min-h-[95vh] flex flex-col items-center justify-center text-center px-4 overflow-hidden">
-            <div className="absolute inset-0 -z-10">
-                <Image 
-                  src="/Bar 4 Bar background.png" 
-                  alt="Studio Background" 
-                  fill
-                  priority
-                  quality={100}
-                  className="object-cover opacity-90 blur-[1px] scale-105"
-                  sizes="100vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
-            </div>
-            
-            <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in zoom-in duration-1000 relative z-50">
+        <section className="relative min-h-[92vh] flex flex-col items-center justify-center text-center px-4">
+            <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in zoom-in duration-1000 relative z-10">
                 <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-md border border-orange-500/40 px-6 py-2 rounded-full shadow-2xl">
                     <Sparkles className="h-4 w-4 text-orange-500 animate-pulse" />
                     <span className="text-[11px] font-bold uppercase tracking-[0.3em] text-orange-500">Professional Lyrical Workspace</span>
@@ -283,44 +259,12 @@ function LoginForm() {
                 </div>
             </div>
 
-            {/* NEURAL TRANSITION: DEEP RADIAL BLEND */}
-            <div className="absolute bottom-0 left-0 w-full h-48 bg-gradient-to-t from-background to-transparent z-40 pointer-events-none" />
         </section>
 
-        {/* COMMAND DECK SECTION */}
-        <section ref={loginFormRef} className="relative py-32 px-4 flex flex-col justify-center items-center overflow-hidden">
-            {/* ATMOSPHERIC DEPTH LAYERS */}
-            <div className="absolute inset-0 z-0 opacity-40 pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
-                <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-sky-500/5 rounded-full blur-[100px]" />
-            </div>
+        <LandingShowcase />
 
-            {/* REACTIVE PARALLAX VOIDS - WITH FEATHERED FADE */}
-            <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden" style={{ maskImage: 'linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)' }}>
-                <motion.div 
-                    style={{ y: yParallax1, x: (mousePos.x - 1000) * 0.03 }} 
-                    className="absolute top-[10%] left-[5%] opacity-15"
-                >
-                    <div className="flex flex-col gap-24 items-center">
-                        <Waves className="w-64 h-64 text-primary" />
-                        <BrainCircuit className="w-32 h-32 text-sky-400 rotate-12" />
-                        <NotebookPen className="w-48 h-48 text-primary -rotate-12" />
-                    </div>
-                </motion.div>
-
-                <motion.div 
-                    style={{ y: yParallax2, x: (mousePos.x - 1000) * -0.03 }} 
-                    className="absolute top-[15%] right-[5%] opacity-15"
-                >
-                    <div className="flex flex-col gap-24 items-center">
-                        <Clapperboard className="w-64 h-64 text-primary rotate-12" />
-                        <Music className="w-40 h-40 text-sky-500 -rotate-12" />
-                        <Zap className="w-32 h-32 text-orange-400" />
-                    </div>
-                </motion.div>
-            </div>
-
-            <div className="w-full max-w-md relative z-50">
+        <section ref={loginFormRef} className="relative py-28 px-4 flex flex-col justify-center items-center">
+            <div className="w-full max-w-md relative z-10">
               <InviteGateLoginBanner />
             </div>
 
@@ -353,7 +297,7 @@ function LoginForm() {
               </Card>
             )}
 
-            <Card className="w-full max-w-md border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.8)] bg-[#0c121d]/80 backdrop-blur-3xl overflow-hidden relative z-50 transition-all duration-700 hover:border-primary/20">
+            <Card className="w-full max-w-md border-primary/15 shadow-[0_0_80px_rgba(59,130,246,0.12)] bg-[#0c121d]/55 backdrop-blur-2xl overflow-hidden relative z-10 transition-all duration-700 hover:border-primary/30">
                 <CardHeader className="text-center bg-white/5 p-0">
                     <div className="mx-auto w-full h-44 bg-black flex items-center justify-center border-b border-white/10 p-12">
                         <img src="/Logo.png" alt="Logo" className="h-full w-full object-contain" />
@@ -431,79 +375,11 @@ function LoginForm() {
                 </CardContent>
             </Card>
 
-            {/* SOFT BLEND TRANSITION TO BADGES */}
-            <div className="absolute bottom-0 left-0 w-full h-48 bg-gradient-to-t from-background to-transparent z-40 pointer-events-none" />
         </section>
 
-        {/* FEATURE DEEP-DIVE - REFERENCE IMAGE SYNC */}
-        <section className="py-32 px-4 relative overflow-hidden">
-            <div className="container mx-auto max-w-7xl relative z-10">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {/* Card 1: ALBUM DNA */}
-                    <Card className="bg-[#0c121d]/60 backdrop-blur-xl border-white/5 p-8 flex flex-col gap-6 shadow-2xl group min-h-[400px] transition-all hover:-translate-y-2 hover:border-sky-500/30 hover:shadow-sky-500/10">
-                        <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-sky-500/10 text-sky-500 group-hover:bg-sky-500 group-hover:text-white transition-all shadow-inner">
-                            <Music className="h-8 w-8" />
-                        </div>
-                        <div className="space-y-4">
-                            <h2 className="text-3xl font-headline font-bold text-white uppercase leading-none">Album DNA</h2>
-                            <p className="font-code text-sm text-muted-foreground leading-relaxed">
-                                Set the creative direction for <span className="bg-sky-500/10 text-sky-400 px-1 rounded-sm font-bold">entire projects</span>. Guide the <span className="bg-sky-500/10 text-sky-400 px-1 rounded-sm font-bold">AI co-writer</span> with specific worlds, emotions, and <span className="bg-sky-500/10 text-sky-400 px-1 rounded-sm font-bold">thematic triggers</span>.
-                            </p>
-                        </div>
-                        <div className="absolute -bottom-1 left-0 w-full h-1 bg-sky-500/20 group-hover:bg-sky-500 transition-colors" />
-                    </Card>
-
-                    {/* Card 2: MASTER THE CRAFT */}
-                    <Card className="bg-[#0c121d]/60 backdrop-blur-xl border-white/5 p-8 flex flex-col gap-6 shadow-2xl group min-h-[400px] transition-all hover:-translate-y-2 hover:border-purple-500/30 hover:shadow-purple-500/10">
-                        <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-purple-500/10 text-purple-500 group-hover:bg-purple-500 group-hover:text-white transition-all shadow-inner">
-                            <BrainCircuit className="h-8 w-8" />
-                        </div>
-                        <div className="space-y-4">
-                            <h2 className="text-3xl font-headline font-bold text-white uppercase leading-none">Master the Craft</h2>
-                            <p className="font-code text-sm text-muted-foreground leading-relaxed">
-                                Go beyond basic rhyming. Learn hidden gems of <span className="bg-purple-500/10 text-purple-400 px-1 rounded-sm font-bold">song structure</span>, <span className="bg-purple-500/10 text-purple-400 px-1 rounded-sm font-bold">complex rhyme schemes</span>, and professional <span className="bg-purple-500/10 text-purple-400 px-1 rounded-sm font-bold">cadence building</span> while you write.
-                            </p>
-                        </div>
-                        <div className="absolute -bottom-1 left-0 w-full h-1 bg-purple-500/20 group-hover:bg-purple-500 transition-colors" />
-                    </Card>
-
-                    {/* Card 3: PROFESSIONAL VAULT */}
-                    <Card className="bg-[#0c121d]/60 backdrop-blur-xl border-white/5 p-8 flex flex-col gap-6 shadow-2xl group min-h-[400px] transition-all hover:-translate-y-2 hover:border-amber-500/30 hover:shadow-amber-500/10">
-                        <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-all shadow-inner">
-                            <NotebookPen className="h-8 w-8" />
-                        </div>
-                        <div className="space-y-4">
-                            <h2 className="text-3xl font-headline font-bold text-white uppercase leading-none">Professional Vault</h2>
-                            <p className="font-code text-sm text-muted-foreground leading-relaxed">
-                                Your <span className="bg-amber-500/10 text-amber-400 px-1 rounded-sm font-bold">digital notebook</span> for perfection. <span className="bg-amber-500/10 text-amber-400 px-1 rounded-sm font-bold">Import, organize, and sharpen</span> your lyrics in an environment designed to turn <span className="bg-amber-500/10 text-amber-400 px-1 rounded-sm font-bold">raw ideas into masters</span>.
-                            </p>
-                        </div>
-                        <div className="absolute -bottom-1 left-0 w-full h-1 bg-amber-500/20 group-hover:bg-amber-500 transition-colors" />
-                    </Card>
-
-                    {/* Card 4: PRECISION PUNCHLINES */}
-                    <Card className="bg-[#0c121d]/60 backdrop-blur-xl border-white/5 p-8 flex flex-col gap-6 shadow-2xl group min-h-[400px] transition-all hover:-translate-y-2 hover:border-rose-500/30 hover:shadow-rose-500/10">
-                        <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-rose-500/10 text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-all shadow-inner">
-                            <Target className="h-8 w-8" />
-                        </div>
-                        <div className="space-y-4">
-                            <h2 className="text-3xl font-headline font-bold text-white uppercase leading-none">Precision Punchlines</h2>
-                            <p className="font-code text-sm text-muted-foreground leading-relaxed">
-                                Build <span className="bg-rose-500/10 text-rose-400 px-1 rounded-sm font-bold">surgical rhyme schemes</span> with <span className="bg-rose-500/10 text-rose-400 px-1 rounded-sm font-bold">Intent Control</span>. Force AI suggestions to end on your motifs. Usable for <span className="bg-rose-500/10 text-rose-400 px-1 rounded-sm font-bold">any creative writing project</span>.
-                            </p>
-                        </div>
-                        <div className="absolute -bottom-1 left-0 w-full h-1 bg-rose-500/20 group-hover:bg-rose-500 transition-colors" />
-                    </Card>
-                </div>
-            </div>
-
-            {/* SOFT BLEND TO BLACK FOOTER */}
-            <div className="absolute bottom-0 left-0 w-full h-64 bg-gradient-to-t from-black via-black/80 to-transparent z-40 pointer-events-none" />
-        </section>
       </main>
-      
-      {/* SLEEK PURE BLACK FOOTER */}
-      <footer className="py-20 bg-black border-t border-white/5 flex flex-col items-center gap-10 relative z-[200]">
+
+      <footer className="py-20 relative z-10">
           <div className="flex flex-col items-center gap-4">
               <div className="bg-white p-3 rounded-2xl shadow-2xl">
                 <img src="/Logo.png" alt="B4B" className="h-10 w-10" />

@@ -42,6 +42,7 @@ export function normalizeInviteCode(code: string): string {
 export function isInviteGateExemptPath(pathname: string): boolean {
   if (!pathname || pathname === '/') return false;
   if (pathname.startsWith('/share/')) return true;
+  if (pathname.startsWith('/marketing/capture')) return true;
   if (pathname.startsWith('/api/')) return true;
   return false;
 }

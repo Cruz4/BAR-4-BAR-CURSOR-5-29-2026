@@ -8,6 +8,7 @@ type TierPriceSummaryProps = {
   variant?: 'default' | 'pro' | 'yearly' | 'visitor';
   className?: string;
   align?: 'left' | 'center';
+  size?: 'sm' | 'md';
 };
 
 export function TierPriceSummary({
@@ -15,6 +16,7 @@ export function TierPriceSummary({
   variant = 'default',
   className,
   align = 'left',
+  size = 'sm',
 }: TierPriceSummaryProps) {
   const iconClass =
     variant === 'yearly'
@@ -44,11 +46,12 @@ export function TierPriceSummary({
         <li
           key={line}
           className={cn(
-            'flex items-start gap-2 text-[10px] font-code leading-snug',
+            'flex items-start gap-2.5 font-code leading-relaxed',
+            size === 'md' ? 'text-[13px]' : 'text-[10px] leading-snug',
             align === 'center' && 'justify-center'
           )}
         >
-          <Check className={cn('h-3 w-3 mt-0.5 shrink-0', iconClass)} />
+          <Check className={cn('mt-0.5 shrink-0', size === 'md' ? 'h-3.5 w-3.5' : 'h-3 w-3', iconClass)} />
           <span className={textClass}>{line}</span>
         </li>
       ))}

@@ -17,7 +17,7 @@
     "coverArtUrl": "https://picsum.photos/seed/monolith/800/800",
     "direction": {
       "enabled": true,
-      "setting_world": "An ancient, untouched redwood forest at the edge of a jagged cliff.",
+      "setting_world": "An ancient coastal grove at the edge of a jagged cliff.",
       "emotion_core": "Stark reverence and the cold peace of survival.",
       "trigger_moment": "The shifting of the tectonic plates beneath the valley floor.",
       "message_truth": "Growth happens in the silence between the storms.",
@@ -27,7 +27,7 @@
       {
         "name": "Ancient Growth Strain",
         "createdAt": "2026-05-14T03:25:00.000Z",
-        "sourceTrackTitle": "The Great Redwood",
+        "sourceTrackTitle": "Stone Circuit",
         "analysis": {
           "themes": ["Longevity", "Nature's Persistence", "Time"],
           "motifs": ["Roots", "Bark", "Mist", "Sunlight"],
@@ -57,10 +57,10 @@
     ],
     "tracks": [
       {
-        "id": "track-redwood-001",
+        "id": "track-stone-circuit-001",
         "albumId": "album-earthen-monolith-2026",
         "ownerId": "demo-user-id",
-        "title": "THE GREAT REDWOOD",
+        "title": "STONE CIRCUIT",
         "vibe": {
           "enabled": true,
           "genre": "Ambient Cinematic Folk",

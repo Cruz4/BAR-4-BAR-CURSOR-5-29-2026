@@ -7,16 +7,23 @@ import { VaultSpeakerRippleBackground } from '@/components/vault-sound-pulse';
 /**
  * Vault chamber atmosphere — moiré drift + floor lift + center speaker ripples (21s cycle).
  */
-export function VaultChamberAtmosphere({ className }: { className?: string }) {
+export function VaultChamberAtmosphere({
+  className,
+  unmasked = false,
+}: {
+  className?: string;
+  unmasked?: boolean;
+}) {
   return (
     <div
       className={cn(
-        'pointer-events-none fixed inset-0 z-[1] overflow-hidden vault-chamber',
+        'pointer-events-none fixed inset-0 z-[1] vault-chamber',
+        unmasked ? 'overflow-visible' : 'overflow-hidden',
         className
       )}
       aria-hidden
     >
-      <VaultSpeakerRippleBackground />
+      <VaultSpeakerRippleBackground unmasked={unmasked} />
 
       <div className="vault-chamber-moire-a absolute inset-[-12%]" />
       <div className="vault-chamber-moire-b absolute inset-[-12%]" />

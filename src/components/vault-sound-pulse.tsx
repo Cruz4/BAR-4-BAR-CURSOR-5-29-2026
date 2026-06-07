@@ -9,11 +9,18 @@ const RIPPLE_COUNT = 4;
  * Full-page speaker ripples from center — 21s loop:
  * beat @ 0s → +3s → +6s → +9s → +3s (restart)
  */
-export function VaultSpeakerRippleBackground({ className }: { className?: string }) {
+export function VaultSpeakerRippleBackground({
+  className,
+  unmasked = false,
+}: {
+  className?: string;
+  unmasked?: boolean;
+}) {
   return (
     <div
       className={cn(
-        'pointer-events-none absolute inset-0 overflow-hidden vault-speaker-ripple-stage',
+        'pointer-events-none absolute inset-0 overflow-visible',
+        !unmasked && 'vault-speaker-ripple-stage overflow-hidden',
         className
       )}
       aria-hidden

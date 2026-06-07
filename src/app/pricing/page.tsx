@@ -199,17 +199,24 @@ export default function PricingPage() {
       <div className="fixed inset-0 z-0">
         <img src="/Bar 4 Bar background.png" alt="Studio Background" className="w-full h-full object-cover opacity-20 blur-[1px] scale-105" />
       </div>
-      
-      <div className="container relative z-10 mx-auto max-w-5xl py-12 px-4">
+
+      <header className="fixed top-0 left-0 right-0 h-14 border-b border-white/5 bg-background/75 backdrop-blur-xl z-[200] flex items-center px-4 sm:px-6">
         <Link href="/">
-          <Button variant="ghost" size="sm" className="mb-6 font-code text-muted-foreground hover:text-primary transition-all group">
+          <Button variant="ghost" size="sm" className="font-code text-muted-foreground hover:text-primary transition-all group -ml-2">
             <ArrowLeft className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Back to Studio
           </Button>
         </Link>
-
-        <div className="text-center mb-12 space-y-4">
-          <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-5xl md:text-7xl font-headline font-bold text-white tracking-tighter uppercase">Studio Memberships</motion.h1>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="text-base md:text-lg text-muted-foreground font-code uppercase tracking-[0.2em] font-bold">From Demo Room to Professional Suite.</motion.p>
+        <div className="flex-1 flex justify-center pointer-events-none">
+          <span className="font-headline text-xs sm:text-sm font-bold uppercase tracking-[0.25em] text-white/90">
+            Studio Memberships
+          </span>
+        </div>
+        <div className="w-[7.5rem] sm:w-[9.5rem]" aria-hidden />
+      </header>
+      
+      <div className="container relative z-10 mx-auto max-w-5xl pt-20 pb-12 px-4">
+        <div className="text-center mb-10 space-y-3">
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-sm md:text-base text-muted-foreground font-code uppercase tracking-[0.2em] font-bold">From Demo Room to Professional Suite.</motion.p>
           
           <div className="flex flex-col items-center gap-4 pt-12">
             <div className="relative flex items-center justify-center bg-black/40 backdrop-blur-xl border border-white/10 p-1.5 rounded-full px-8 shadow-2xl">
@@ -241,9 +248,9 @@ export default function PricingPage() {
               <CardHeader className="pb-4 space-y-3">
                 <div className="flex items-center justify-between gap-3">
                     <CardTitle className="font-headline text-3xl text-white tracking-tight shrink-0">{tier.name}</CardTitle>
-                    <Badge variant="outline" className="text-[8px] uppercase tracking-widest font-bold px-2 py-0.5 shrink-0">{tier.membership}</Badge>
+                    <Badge variant="outline" className="text-[10px] uppercase tracking-widest font-bold px-2.5 py-0.5 shrink-0">{tier.membership}</Badge>
                 </div>
-                <CardDescription className="font-code text-xs text-muted-foreground/80 leading-relaxed">{tier.description}</CardDescription>
+                <CardDescription className="font-code text-sm text-foreground/75 leading-relaxed">{tier.description}</CardDescription>
                 <div className="space-y-1 pt-1">
                   <div className="flex items-baseline gap-2">
                     <span className={cn(
@@ -258,7 +265,7 @@ export default function PricingPage() {
                   </div>
                   {tier.billedText && (
                       <p className={cn(
-                          "text-[9px] font-bold uppercase tracking-widest",
+                          "text-[11px] font-bold uppercase tracking-widest",
                           tier.name === 'Studio Pro' && !isYearly ? "text-primary/60" : "text-accent/60"
                       )}>
                           {tier.billedText}
@@ -269,6 +276,7 @@ export default function PricingPage() {
                   <TierPriceSummary
                     lines={tier.headlinePerks}
                     variant={tier.name === 'Studio Pro' ? (isYearly ? 'yearly' : 'pro') : 'visitor'}
+                    size="md"
                     className="pt-3 border-t border-white/10"
                   />
                 )}
@@ -277,7 +285,7 @@ export default function PricingPage() {
               <CardContent className="space-y-6 flex-grow flex flex-col">
                 <div className={cn("flex items-center gap-3 p-4 rounded-xl border border-dashed", tier.popular && isYearly ? "bg-accent/10 border-accent/20" : "bg-white/5 border-white/10")}>
                   <div className={cn("p-2 rounded-lg shadow-inner", tier.popular && isYearly ? "bg-accent text-white" : "bg-muted text-muted-foreground")}><Droplets className="h-4 w-4 fill-current animate-pulse"/></div>
-                  <div><p className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Studio Capacity</p><p className="text-sm font-bold font-code text-white">{tier.ink}</p></div>
+                  <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Studio Capacity</p><p className="text-base font-bold font-code text-white">{tier.ink}</p></div>
                 </div>
 
                 <div className="space-y-3 flex-grow">
@@ -290,22 +298,22 @@ export default function PricingPage() {
                     return (
                     <React.Fragment key={idx}>
                       {isFirstYearlyExclusive && (
-                        <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-accent pt-3 mt-1 border-t border-accent/25">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent pt-3 mt-1 border-t border-accent/25">
                           Yearly Exclusives — fuel, savings & roadmap input
                         </p>
                       )}
                     <div className={cn(
-                      "flex items-start gap-3 text-[11px] font-code group/item rounded-lg px-2 py-1.5 -mx-2 transition-colors",
+                      "flex items-start gap-3 text-[13px] font-code group/item rounded-lg px-2.5 py-2 -mx-2 transition-colors",
                       feature.highlight === 'yearly' && "bg-accent/10 border border-accent/20",
                       feature.highlight === 'pro' && tier.name === 'Studio Pro' && "bg-primary/5 border border-primary/15"
                     )}>
                       <div className={cn(
                         "mt-0.5 p-0.5 rounded-sm shrink-0",
                         feature.icon === Lock ? "opacity-30" : feature.highlight === 'yearly' ? "text-accent" : feature.highlight === 'pro' ? "text-primary" : "text-current"
-                      )}><feature.icon className="h-3.5 w-3.5" /></div>
+                      )}><feature.icon className="h-4 w-4" /></div>
                       <span className={cn(
-                        "transition-colors leading-tight",
-                        feature.icon === Lock ? "text-muted-foreground/40 italic" : "text-muted-foreground group-hover/item:text-white",
+                        "transition-colors leading-relaxed",
+                        feature.icon === Lock ? "text-muted-foreground/50 italic" : "text-foreground/80 group-hover/item:text-white",
                         feature.highlight === 'yearly' && "text-accent font-bold",
                         feature.highlight === 'pro' && "text-primary font-semibold"
                       )}>{feature.text}</span>
