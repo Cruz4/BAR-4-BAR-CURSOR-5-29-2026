@@ -53,3 +53,21 @@ export function marketingLink(path = '', ref: 'tiktok' | 'ig' | 'yt' | 'youtube'
   const p = path.startsWith('/') ? path : path ? `/${path}` : '';
   return `${base}${p}?ref=${ref}`;
 }
+
+const REF_LABELS: Record<string, string> = {
+  tiktok: 'TikTok',
+  ig: 'Instagram',
+  instagram: 'Instagram',
+  yt: 'YouTube',
+  youtube: 'YouTube',
+  reddit: 'Reddit',
+  bio: 'Bio link',
+  spark: 'Spark',
+  organic: 'Organic / direct',
+};
+
+/** Human label for admin metrics and campaign links. */
+export function marketingRefLabel(ref: string): string {
+  const key = ref.trim().toLowerCase();
+  return REF_LABELS[key] || ref;
+}

@@ -1,5 +1,24 @@
 export type DailyCount = { date: string; count: number };
 
+export type SignupAttributionRow = {
+  ref: string;
+  label: string;
+  signupsTotal: number;
+  signupsLast7Days: number;
+  signupsLast30Days: number;
+  signupsLast90Days: number;
+  activated: number;
+  activationRatePercent: number;
+  proActive: number;
+  shareOfSignupsPercent: number;
+};
+
+export type SignupAttributionStats = {
+  taggedSignups: number;
+  organicSignups: number;
+  byRef: SignupAttributionRow[];
+};
+
 export type AdminMetricsSnapshot = {
   generatedAt: string;
   funnel: {
@@ -51,6 +70,7 @@ export type AdminMetricsSnapshot = {
     costPerActivatedUser: number | null;
     notes: string;
   };
+  signupAttribution: SignupAttributionStats;
   recentEvents: Array<{
     timestamp: string;
     event: string;

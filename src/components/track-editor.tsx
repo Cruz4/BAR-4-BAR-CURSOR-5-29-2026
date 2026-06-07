@@ -89,6 +89,15 @@ import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreativeEffectsPanel } from './creative-effects-panel';
 import { ScratchPad } from './scratch-pad';
+import { DraftChest } from './draft-chest';
+import {
+  appendSectionsToSheet,
+  mergeChestEntries,
+  replaceSheetWithSections,
+  snapshotsToChestEntries,
+} from '@/lib/draft-chest';
+import type { ApprovalDraftSnapshot } from '@/lib/approval-draft-history';
+import type { DraftChestEntry } from '@/lib/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useUIState } from '@/hooks/use-ui-state';
@@ -858,7 +867,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                     )}
                     <Button variant="secondary" size="sm" className="w-full min-w-0 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => setExportDialogOpen(true)}><FileDown className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">Export Track</span></Button>
                     {isPro ? (
-                      <Button variant="secondary" size="sm" data-tour="dna-drop" className="w-full min-w-0 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => setShareDialogOpen(true)}><Globe className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate flex items-center gap-2 min-w-0">DNA Drop (Share)<DnaDropLiveIndicator shareId={track.shareId} variant="compact" /></span></Button>
+                      <Button variant="secondary" size="sm" data-tour="dna-drop" className="w-full min-w-0 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-[9px] font-bold h-9 uppercase justify-start leading-none pl-2 pr-2.5 overflow-visible" onClick={() => setShareDialogOpen(true)}><Globe className="mr-2 h-4 w-4 shrink-0" /> <span className="flex items-center justify-between gap-2 min-w-0 flex-1 overflow-visible"><span className="truncate min-w-0">DNA Drop (Share)</span><DnaDropLiveIndicator shareId={track.shareId} variant="compact" /></span></Button>
                     ) : (
                       <LockedProFeatureButton
                         feature="DNA Drop"
@@ -1024,7 +1033,7 @@ function NeuralStripItem({ text, active, color, onClick }: { text: string, activ
 
 // --- Center Panel Component ---
 
-function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false }: any) {
+function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false }: any) {
   const [fontSize, setFontSize] = useState<'xs' | 'sm' | 'md' | 'lg'>('md');
   const lyricsViewportRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -1555,7 +1564,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                     <span className="text-xs md:text-sm leading-tight tracking-tight flex-1 min-w-0 break-words line-clamp-2">{opt.line}</span>
                                 </Button>
                             ))}
-                            <Button variant="ghost" size="icon" onClick={() => setGenerationOptions(null)} className="h-10 w-10 md:h-14 md:w-10 shrink-0 text-muted-foreground hover:text-red-500 bg-white/5 border border-white/10 rounded-lg">
+                            <Button variant="ghost" size="icon" onClick={handleDismissGenerationOptions} className="h-10 w-10 md:h-14 md:w-10 shrink-0 text-muted-foreground hover:text-red-500 bg-white/5 border border-white/10 rounded-lg">
                                 <X className="h-5 w-5" />
                             </Button>
                         </div>
@@ -1626,7 +1635,7 @@ function cowriterSectionSubtitle(expanded: boolean) {
   );
 }
 
-function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, improveStyleOpen, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, openCoWriterSections, mobileActive = false, trackLocked = false }: any) {
+function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, improveStyleOpen, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, openCoWriterSections, onApplyChestEntry, mobileActive = false, trackLocked = false }: any) {
   const { tooltip, buttonLabel } = useInkCosts();
   const activeSection = track.sections.find((s:any) => s.id === activeSectionId);
   const { toast } = useToast();
@@ -2349,6 +2358,15 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
             isOpen={sectionOpen.scratchPad}
             onOpenChange={(o) => onSectionChange('scratchPad', o)}
           />
+
+          <DraftChest
+            entries={track.draftChest ?? []}
+            disabled={trackLocked}
+            isOpen={sectionOpen.draftChest}
+            onOpenChange={(o) => onSectionChange('draftChest', o)}
+            onChange={(entries) => onUpdateTrack({ draftChest: entries })}
+            onApplyEntry={onApplyChestEntry}
+          />
           </fieldset>
         </div>
       </div>
@@ -2739,6 +2757,89 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     });
   };
 
+  const handleDismissGenerationOptions = useCallback(() => {
+    setGenerationOptions(null);
+    setPendingGenCtx(null);
+  }, []);
+
+  const handleApplyChestEntry = useCallback(
+    (entry: DraftChestEntry, action: 'append' | 'replace') => {
+      if (!track || entry.kind !== 'sheet' || !entry.sections?.length) return;
+      if (isTrackOverTierLimit(trackId, albumId, albums, user)) {
+        toast({ variant: 'destructive', ...TIER_LIMIT_LOCKED_TOAST });
+        return;
+      }
+      if (isTrackLocked(track)) {
+        toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
+        return;
+      }
+
+      const sections =
+        action === 'append'
+          ? appendSectionsToSheet(track.sections, entry.sections)
+          : replaceSheetWithSections(entry.sections);
+      handleUpdateTrack({ sections });
+      toast({
+        title: action === 'append' ? 'Draft appended' : 'Sheet replaced',
+        description:
+          action === 'append'
+            ? 'Chest draft added to the bottom of your page.'
+            : 'Current lyrics replaced with the chest draft.',
+      });
+    },
+    [track, trackId, albumId, albums, user, handleUpdateTrack, toast]
+  );
+
+  const handleStashApprovalDraftsToChest = useCallback(
+    (snapshots: ApprovalDraftSnapshot[], options?: { silent?: boolean }) => {
+      if (!track || !snapshots.length) return;
+      const entries = snapshotsToChestEntries(snapshots);
+      const merged = mergeChestEntries(track.draftChest, entries);
+      if (merged.length === (track.draftChest?.length ?? 0)) return;
+      handleUpdateTrack({ draftChest: merged, approvalDraftBacklog: [] });
+      handleSectionChange('draftChest', true);
+      if (!options?.silent) {
+        const added = merged.length - (track.draftChest?.length ?? 0);
+        toast({
+          title: 'Unused drafts saved',
+          description: `${added} draft${added === 1 ? '' : 's'} moved to Draft Chest under Scratch Pad.`,
+        });
+      }
+    },
+    [track, handleUpdateTrack, handleSectionChange, toast]
+  );
+
+  useEffect(() => {
+    if (!track?.approvalDraftBacklog?.length) return;
+    if (generateDraftOpen || workstationBackgroundActive) return;
+    const entries = snapshotsToChestEntries(track.approvalDraftBacklog);
+    if (!entries.length) return;
+    const merged = mergeChestEntries(track.draftChest, entries);
+    if (merged.length === (track.draftChest?.length ?? 0)) {
+      updateTrack(albumId, trackId, { approvalDraftBacklog: [] });
+      return;
+    }
+    const added = merged.length - (track.draftChest?.length ?? 0);
+    handleUpdateTrack({ draftChest: merged, approvalDraftBacklog: [] });
+    handleSectionChange('draftChest', true);
+    toast({
+      title: 'Drafts recovered',
+      description: `${added} studio draft${added === 1 ? '' : 's'} restored to your Draft Chest.`,
+    });
+  }, [
+    track?.approvalDraftBacklog,
+    track?.draftChest,
+    track?.id,
+    generateDraftOpen,
+    workstationBackgroundActive,
+    albumId,
+    trackId,
+    handleUpdateTrack,
+    handleSectionChange,
+    updateTrack,
+    toast,
+  ]);
+
   const handleAcceptOption = (line: string) => {
     if (!pendingGenCtx || !track) return;
     if (isTrackOverTierLimit(trackId, albumId, albums, user)) {
@@ -2817,7 +2918,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       )}
       <div className="flex flex-1 min-h-0 overflow-hidden w-full">
       <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={mobilePanelTab === 'workstation'} trackLocked={editsLocked} tierLocked={tierLocked} completeLocked={completeLocked} workstationAttention={workstationAttention} />
-      <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} />
+      <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleDismissGenerationOptions={handleDismissGenerationOptions} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} />
       <RightPanel 
         track={track} 
         album={album} 
@@ -2840,10 +2941,11 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         sectionOpen={sectionOpen}
         onSectionChange={handleSectionChange}
         openCoWriterSections={openCoWriterSections}
+        onApplyChestEntry={handleApplyChestEntry}
         mobileActive={mobilePanelTab === 'cowriter'}
         trackLocked={editsLocked}
       />
-      <GenerateSongDraftDialog open={generateDraftOpen} onOpenChange={(open) => { if (open && editsLocked) { toast({ variant: 'destructive', ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST) }); return; } setGenerateDraftOpen(open); }} track={track} styleProfile={effectiveStyleProfile} onDraftGenerated={(sections) => handleUpdateTrack({ sections })} onBackgroundSessionActiveChange={setWorkstationBackgroundActive} />
+      <GenerateSongDraftDialog open={generateDraftOpen} onOpenChange={(open) => { if (open && editsLocked) { toast({ variant: 'destructive', ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST) }); return; } setGenerateDraftOpen(open); }} track={track} styleProfile={effectiveStyleProfile} onDraftGenerated={(sections) => handleUpdateTrack({ sections })} onStashApprovalDraftsToChest={handleStashApprovalDraftsToChest} onBackgroundSessionActiveChange={setWorkstationBackgroundActive} />
       <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} album={album} tracks={[track]} exportType="track" />
       <ShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} type="track" id={track.id} title={track.title} albumId={album.id} existingShareId={track.shareId} />
       <FreestylePad open={freestyleOpen} onOpenChange={setFreestyleOpen} onAddFreestyle={(text) => { const lines = text.split('. ').filter(l => l.trim()); const activeS = track.sections.find(s => s.id === activeSectionId) || track.sections[0]; const startIdx = activeS.bars.length + 1; const newBars = lines.map((l, i) => withLineSource({ idx: startIdx + i, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' }, 'written')); handleUpdateTrack({ sections: track.sections.map(s => s.id === activeS.id ? { ...s, bars: [...s.bars, ...newBars] } : s) }); setFreestyleOpen(false); }} disabled={editsLocked} trackVibe={track.vibe} albumTheme={album.theme} styleProfileSummary={styleProfile.history[0]?.analysis || ''} isPro={isPro} />

@@ -44,6 +44,9 @@ import {
 } from '@/lib/checkout-intent';
 import { LandingShowcase } from '@/components/marketing/landing-showcase';
 import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmosphere';
+import { MARKETING_FEATURE_BANDS, MARKETING_HOW_IT_WORKS } from '@/lib/marketing-features';
+
+const LOGIN_SCROLL_HEADER_OFFSET = 72;
 
 function LoginForm() {
   const router = useRouter();
@@ -66,8 +69,42 @@ function LoginForm() {
   }, [proCheckoutIntent]);
 
   const scrollToLogin = () => {
-    loginFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = loginFormRef.current;
+    if (!el) return;
+
+    const targetTop = () => el.getBoundingClientRect().top + window.scrollY - LOGIN_SCROLL_HEADER_OFFSET;
+
+    const align = (behavior: ScrollBehavior = 'smooth') => {
+      window.scrollTo({ top: Math.max(0, targetTop()), behavior });
+    };
+
+    align('smooth');
+
+    const correctIfDrifted = () => {
+      const top = targetTop();
+      if (Math.abs(window.scrollY - top) > 40) {
+        align(Math.abs(window.scrollY - top) > 240 ? 'auto' : 'smooth');
+      }
+    };
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(correctIfDrifted);
+    });
+    window.setTimeout(correctIfDrifted, 500);
+    window.setTimeout(correctIfDrifted, 1100);
   };
+
+  useEffect(() => {
+    const urls = new Set([
+      '/marketing/hero-workstation.png',
+      ...MARKETING_FEATURE_BANDS.map((band) => band.mediaSrc),
+      ...MARKETING_HOW_IT_WORKS.map((step) => step.media),
+    ]);
+    for (const src of urls) {
+      const img = new Image();
+      img.src = src;
+    }
+  }, []);
 
   useEffect(() => {
     captureMarketingRefFromUrl();
@@ -263,7 +300,11 @@ function LoginForm() {
 
         <LandingShowcase />
 
-        <section ref={loginFormRef} className="relative py-28 px-4 flex flex-col justify-center items-center">
+        <section
+          id="login"
+          ref={loginFormRef}
+          className="relative py-28 px-4 flex flex-col justify-center items-center scroll-mt-[4.5rem]"
+        >
             <div className="w-full max-w-md relative z-10">
               <InviteGateLoginBanner />
             </div>

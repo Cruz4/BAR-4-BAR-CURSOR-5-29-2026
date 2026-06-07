@@ -135,6 +135,8 @@ import { HighlightedText } from './highlighted-text';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   buildApprovalDraftSnapshot,
+  buildPersistedApprovalBacklog,
+  collectUnusedApprovalSnapshots,
   MAX_APPROVAL_DRAFT_HISTORY,
   variantsMatch,
   type ApprovalDraftSnapshot,
@@ -152,6 +154,11 @@ interface GenerateSongDraftDialogProps {
   track: Track;
   styleProfile: StyleProfile;
   onDraftGenerated: (sections: any[]) => void;
+  /** Auto-stash unused DNA/REMIX approval drafts into Draft Chest. */
+  onStashApprovalDraftsToChest?: (
+    snapshots: ApprovalDraftSnapshot[],
+    options?: { silent?: boolean }
+  ) => void;
   /** True when dialog is closed but a soft-close session or in-flight generation is still active. */
   onBackgroundSessionActiveChange?: (active: boolean) => void;
 }
@@ -382,6 +389,7 @@ export function GenerateSongDraftDialog({
   track,
   styleProfile,
   onDraftGenerated,
+  onStashApprovalDraftsToChest,
   onBackgroundSessionActiveChange,
 }: GenerateSongDraftDialogProps) {
   const { user } = useAuth();
@@ -579,11 +587,42 @@ export function GenerateSongDraftDialog({
   }, [isGenerating, onOpenChange]);
 
   const handleHardClose = useCallback(() => {
+    if (step === 5 && wizardState.generatedVariant) {
+      flushUnusedApprovalDraftsToChest(null);
+    }
     hardClosedRef.current = true;
     pendingReopenOnCompleteRef.current = false;
-    setApprovalDraftHistory([]);
+    clearApprovalDraftSession();
     handleDialogOpenChange(false);
-  }, [handleDialogOpenChange]);
+  }, [
+    step,
+    wizardState.generatedVariant,
+    flushUnusedApprovalDraftsToChest,
+    clearApprovalDraftSession,
+    handleDialogOpenChange,
+  ]);
+
+  useEffect(() => {
+    if (step !== 5 || !wizardState.generatedVariant) return;
+    const backlog = buildPersistedApprovalBacklog(
+      approvalDraftHistory,
+      wizardState.generatedVariant,
+      previewRhymeGroups,
+      buildApprovalSettingsSummary(),
+      approvalDraftSource
+    );
+    updateTrack(track.albumId, track.id, { approvalDraftBacklog: backlog });
+  }, [
+    step,
+    approvalDraftHistory,
+    wizardState.generatedVariant,
+    previewRhymeGroups,
+    buildApprovalSettingsSummary,
+    approvalDraftSource,
+    track.albumId,
+    track.id,
+    updateTrack,
+  ]);
 
   const buildApprovalSettingsSummary = useCallback((): string[] => {
     const tags: string[] = [];
@@ -614,19 +653,56 @@ export function GenerateSongDraftDialog({
     hubStructure,
   ]);
 
-  const archiveCurrentApprovalDraft = useCallback(() => {
+  const approvalDraftSource = wizardState.analysis ? 'remix' : 'full-draft';
+
+  const buildCurrentApprovalSnapshot = useCallback((): ApprovalDraftSnapshot | null => {
     const variant = wizardState.generatedVariant;
-    if (!variant) return;
-    const snapshot = buildApprovalDraftSnapshot(
+    if (!variant) return null;
+    return buildApprovalDraftSnapshot(
       variant,
       previewRhymeGroups,
-      buildApprovalSettingsSummary()
+      buildApprovalSettingsSummary(),
+      approvalDraftSource
     );
+  }, [
+    wizardState.generatedVariant,
+    previewRhymeGroups,
+    buildApprovalSettingsSummary,
+    approvalDraftSource,
+  ]);
+
+  const archiveCurrentApprovalDraft = useCallback(() => {
+    const snapshot = buildCurrentApprovalSnapshot();
+    if (!snapshot) return;
     setApprovalDraftHistory((prev) => {
-      if (prev.some((h) => variantsMatch(h.variant, variant))) return prev;
+      if (prev.some((h) => variantsMatch(h.variant, snapshot.variant))) return prev;
       return [snapshot, ...prev].slice(0, MAX_APPROVAL_DRAFT_HISTORY);
     });
-  }, [wizardState.generatedVariant, previewRhymeGroups, buildApprovalSettingsSummary]);
+  }, [buildCurrentApprovalSnapshot]);
+
+  const flushUnusedApprovalDraftsToChest = useCallback(
+    (usedVariant?: WizardGeneratedVariant | null) => {
+      if (!onStashApprovalDraftsToChest) return;
+      const currentSnapshot = buildCurrentApprovalSnapshot();
+      const unused = collectUnusedApprovalSnapshots(
+        approvalDraftHistory,
+        currentSnapshot,
+        usedVariant
+      );
+      if (!unused.length) return;
+      onStashApprovalDraftsToChest(unused, { silent: !!usedVariant });
+    },
+    [
+      onStashApprovalDraftsToChest,
+      buildCurrentApprovalSnapshot,
+      approvalDraftHistory,
+    ]
+  );
+
+  const clearApprovalDraftSession = useCallback(() => {
+    setApprovalDraftHistory([]);
+    updateTrack(track.albumId, track.id, { approvalDraftBacklog: [] });
+  }, [track.albumId, track.id, updateTrack]);
 
   const restoreApprovalDraft = useCallback(
     (snapshotId: string) => {
@@ -864,6 +940,8 @@ export function GenerateSongDraftDialog({
 
   const handleApplyGeneratedDraft = (mode: 'append' | 'replace') => {
     if (!wizardState.generatedVariant) return;
+    const appliedVariant = wizardState.generatedVariant;
+    flushUnusedApprovalDraftsToChest(appliedVariant);
     const newSections = buildDraftSections();
     const sections =
       mode === 'append'
@@ -878,6 +956,7 @@ export function GenerateSongDraftDialog({
           : 'Previous lyrics on this track were replaced.',
     });
     hardClosedRef.current = true;
+    clearApprovalDraftSession();
     handleDialogOpenChange(false);
   };
 

@@ -1,5 +1,8 @@
 /** Landing page feature bands — copy + asset paths. */
 
+/** Capture viewport ratio — reserves space before lazy assets decode (prevents scroll drift). */
+export const MARKETING_MEDIA_ASPECT = 1400 / 1000;
+
 export type MarketingMediaType = 'image' | 'gif';
 
 export type MarketingFeatureBand = {

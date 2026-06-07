@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { MARKETING_HOW_IT_WORKS } from '@/lib/marketing-features';
+import { MARKETING_HOW_IT_WORKS, MARKETING_MEDIA_ASPECT } from '@/lib/marketing-features';
 
 export function HowItWorksSection() {
   return (
@@ -21,14 +21,19 @@ export function HowItWorksSection() {
               className="rounded-2xl overflow-hidden border border-white/[0.06] bg-white/[0.02] backdrop-blur-md"
             >
               <div className="p-3 sm:p-4">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={item.media}
-                  alt={item.title}
-                  className="w-full h-auto block rounded-xl"
-                  loading="lazy"
-                  decoding="async"
-                />
+                <div
+                  className="relative w-full rounded-xl overflow-hidden bg-black/25"
+                  style={{ aspectRatio: String(MARKETING_MEDIA_ASPECT) }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={item.media}
+                    alt={item.title}
+                    className="absolute inset-0 w-full h-full object-contain object-center block"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
               </div>
               <div className="px-6 sm:px-8 pb-8 pt-2 space-y-2 max-w-2xl">
                 <p className="text-sm font-bold text-primary uppercase tracking-widest">{item.step}</p>

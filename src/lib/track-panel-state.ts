@@ -5,7 +5,8 @@ export type CoWriterSectionKey =
   | 'guardrails'
   | 'coWriter'
   | 'creativeEffects'
-  | 'scratchPad';
+  | 'scratchPad'
+  | 'draftChest';
 
 export type CoWriterSections = Record<CoWriterSectionKey, boolean>;
 
@@ -23,6 +24,7 @@ export const DEFAULT_SECTIONS_CLOSED: CoWriterSections = {
   coWriter: false,
   creativeEffects: false,
   scratchPad: false,
+  draftChest: false,
 };
 
 export const DEFAULT_TRACK_UI: TrackUILayout = {

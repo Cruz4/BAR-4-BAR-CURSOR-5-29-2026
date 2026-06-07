@@ -43,13 +43,13 @@ export function DnaDropLiveIndicator({
     ) : variant === 'compact' ? (
       <span
         className={cn(
-          'inline-flex items-center gap-1 rounded-full border border-emerald-500/35 bg-emerald-500/10 px-1.5 py-0.5 shrink-0',
+          'inline-flex items-center gap-1 rounded-full border border-emerald-500/35 bg-emerald-500/10 pl-1.5 pr-2 py-0.5 shrink-0 overflow-visible [&_svg]:!size-3',
           className
         )}
         aria-label="DNA Drop is live"
       >
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-        <Globe className="h-3 w-3 text-emerald-400" />
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+        <Globe className="h-3 w-3 shrink-0 text-emerald-400" />
       </span>
     ) : (
       <Badge

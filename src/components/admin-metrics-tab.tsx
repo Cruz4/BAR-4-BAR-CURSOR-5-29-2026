@@ -21,6 +21,7 @@ import {
   ArrowRight,
   Megaphone,
   Save,
+  Link2,
 } from 'lucide-react';
 import type { AdminMetricsResponse } from '@/lib/admin-metrics-types';
 import { format } from 'date-fns';
@@ -174,7 +175,9 @@ export function AdminMetricsTab() {
 
   if (!metrics) return null;
 
-  const { funnel, retention, monetization, freeTierPressure, acquisition, gamification } = metrics;
+  const { funnel, retention, monetization, freeTierPressure, acquisition, gamification, signupAttribution } =
+    metrics;
+  const attribution = signupAttribution ?? { taggedSignups: 0, organicSignups: 0, byRef: [] };
 
   const cacheLabel = metrics.cache
     ? `${metrics.cache.fromCache ? 'Cached' : 'Live'} · ${format(new Date(metrics.cache.computedAt), 'MMM d, yyyy · h:mm a')}${
@@ -221,6 +224,97 @@ export function AdminMetricsTab() {
           </CardHeader>
           <CardContent>
             <SignupsChart data={funnel.signupsByDay} />
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Signup link attribution */}
+      <section>
+        <h3 className="text-[10px] font-bold uppercase tracking-[0.35em] text-muted-foreground mb-4 flex items-center gap-2">
+          <Link2 className="h-3 w-3" /> Signup link refs (?ref=)
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+          <MetricCard
+            label="Tagged signups"
+            value={attribution.taggedSignups}
+            sub="Arrived with ?ref= on landing"
+            accent="text-sky-400"
+          />
+          <MetricCard
+            label="Organic / direct"
+            value={attribution.organicSignups}
+            sub="No ref captured at signup"
+          />
+          <MetricCard
+            label="Tracked sources"
+            value={attribution.byRef.filter((row) => row.ref !== 'organic').length}
+            sub="Distinct ref values"
+          />
+        </div>
+        <Card className="bg-card/40 border-white/10">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm uppercase tracking-widest">Signups by referral link</CardTitle>
+            <CardDescription className="text-[10px]">
+              From <span className="font-mono">bar4bar.ink?ref=tiktok</span>,{' '}
+              <span className="font-mono">?ref=ig</span>, etc. — stored on user at signup.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ref</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">7d</TableHead>
+                  <TableHead className="text-right">30d</TableHead>
+                  <TableHead className="text-right">90d</TableHead>
+                  <TableHead className="text-right">Activated</TableHead>
+                  <TableHead className="text-right">Act %</TableHead>
+                  <TableHead className="text-right">Pro</TableHead>
+                  <TableHead className="text-right">Share</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {attribution.byRef.length > 0 ? (
+                  attribution.byRef.map((row) => (
+                    <TableRow key={row.ref} className="border-white/5">
+                      <TableCell>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-bold uppercase">{row.label}</span>
+                          {row.ref !== 'organic' && (
+                            <span className="text-[10px] font-mono text-muted-foreground">?ref={row.ref}</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">{row.signupsTotal}</TableCell>
+                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                        {row.signupsLast7Days}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                        {row.signupsLast30Days}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                        {row.signupsLast90Days}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">{row.activated}</TableCell>
+                      <TableCell className="text-right font-mono text-xs text-emerald-400">
+                        {row.activationRatePercent}%
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm text-primary">{row.proActive}</TableCell>
+                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                        {row.shareOfSignupsPercent}%
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={9} className="h-20 text-center text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+                      No signup attribution yet — share tagged links like ?ref=tiktok
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </section>

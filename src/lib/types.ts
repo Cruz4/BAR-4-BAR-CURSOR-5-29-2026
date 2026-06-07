@@ -17,6 +17,8 @@ export interface User {
   referredBy?: string;
   /** Successful referrals credited (max 4) */
   referralCount?: number;
+  /** First-touch ?ref= from marketing links (tiktok, ig, yt, etc.) */
+  signupAttribution?: string;
   /** ISO timestamp — first lyrics-page guided tour completed or skipped */
   lyricsTutorialCompletedAt?: string;
   /** ISO timestamp — vault-page guided tour completed or skipped */
@@ -100,6 +102,10 @@ export interface Track {
   rhymeGroups?: Array<{ words: string[] }>;
   rhymeHighlightingEnabled?: boolean;
   relayData?: WizardState;
+  /** Stashed full song drafts (DNA & REMIX) — Draft Chest under Scratch Pad. */
+  draftChest?: DraftChestEntry[];
+  /** Persisted DNA/REMIX approval outputs for recovery into Draft Chest (cleared after migrate). */
+  approvalDraftBacklog?: import('@/lib/approval-draft-history').ApprovalDraftSnapshot[];
   suggestedTitlesHistory?: string[][];
   isPublic?: boolean;
   shareId?: string;
@@ -238,6 +244,20 @@ export interface WizardDirection {
   /** 0–100: how strongly this remix pivot should influence synthesis. */
   weight?: number;
 }
+
+export type DraftChestSource = 'full-draft' | 'remix';
+
+export type DraftChestEntry = {
+  id: string;
+  kind: 'sheet';
+  sections: TrackSection[];
+  source: DraftChestSource;
+  label: string;
+  savedAt: string;
+  meta?: {
+    lineCount?: number;
+  };
+};
 
 export interface WizardGeneratedVariant {
   title: string;

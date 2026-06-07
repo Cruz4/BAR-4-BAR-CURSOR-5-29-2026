@@ -6,7 +6,13 @@ import {
   PRO_YEARLY_PRICE_AMOUNT,
 } from '@/lib/studio-tiers';
 import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, SIGNUP_INK, FREE_MONTHLY_RESIDENCY_INK } from '@/lib/subscription';
-import type { AdminMetricsSnapshot, DailyCount } from '@/lib/admin-metrics-types';
+import type {
+  AdminMetricsSnapshot,
+  DailyCount,
+  SignupAttributionRow,
+  SignupAttributionStats,
+} from '@/lib/admin-metrics-types';
+import { marketingRefLabel, normalizeMarketingRef } from '@/lib/marketing-attribution';
 
 export type { AdminMetricsSnapshot, DailyCount } from '@/lib/admin-metrics-types';
 
@@ -94,6 +100,35 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
   let activeProMonthly = 0;
   let activeProYearly = 0;
 
+  type AttributionBucket = {
+    signupsTotal: number;
+    signupsLast7Days: number;
+    signupsLast30Days: number;
+    signupsLast90Days: number;
+    activated: number;
+    proActive: number;
+  };
+  const attributionByRef = new Map<string, AttributionBucket>();
+
+  const bumpAttribution = (refKey: string, patch: Partial<AttributionBucket>) => {
+    const existing = attributionByRef.get(refKey) || {
+      signupsTotal: 0,
+      signupsLast7Days: 0,
+      signupsLast30Days: 0,
+      signupsLast90Days: 0,
+      activated: 0,
+      proActive: 0,
+    };
+    attributionByRef.set(refKey, {
+      signupsTotal: existing.signupsTotal + (patch.signupsTotal || 0),
+      signupsLast7Days: existing.signupsLast7Days + (patch.signupsLast7Days || 0),
+      signupsLast30Days: existing.signupsLast30Days + (patch.signupsLast30Days || 0),
+      signupsLast90Days: existing.signupsLast90Days + (patch.signupsLast90Days || 0),
+      activated: existing.activated + (patch.activated || 0),
+      proActive: existing.proActive + (patch.proActive || 0),
+    });
+  };
+
   const summarySnaps = await Promise.all(
     users.map((u) => db.doc(`users/${u.id}/analytics/summary`).get())
   );
@@ -108,11 +143,26 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
       null;
     if (createdAt) signupDates.push(createdAt);
 
+    const rawAttribution =
+      typeof (u as { signupAttribution?: unknown }).signupAttribution === 'string'
+        ? (u as { signupAttribution: string }).signupAttribution
+        : null;
+    const refKey = rawAttribution?.trim()
+      ? normalizeMarketingRef(rawAttribution) || rawAttribution.trim().toLowerCase()
+      : 'organic';
+    bumpAttribution(refKey, {
+      signupsTotal: 1,
+      signupsLast7Days: createdAt && createdAt >= d7 ? 1 : 0,
+      signupsLast30Days: createdAt && createdAt >= d30 ? 1 : 0,
+      signupsLast90Days: createdAt && createdAt >= d90 ? 1 : 0,
+    });
+
     const firstAiAt = parseDate(summary.firstAiAt);
     if (firstAiAt && createdAt) {
       activatedUsers += 1;
       totalHoursToFirstAi += hoursBetween(createdAt, firstAiAt);
       firstAiCount += 1;
+      bumpAttribution(refKey, { activated: 1 });
     }
 
     const firstLineAt = parseDate(summary.firstGenerateNextLineAt);
@@ -147,6 +197,7 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
     if (u.subscriptionStatus === 'active') {
       if (u.subscriptionTier === 'yearly') activeProYearly += 1;
       else activeProMonthly += 1;
+      bumpAttribution(refKey, { proActive: 1 });
     }
 
     if (!u.subscriptionStatus || u.subscriptionStatus !== 'active') {
@@ -248,6 +299,39 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
       ? Math.round(((activeProMonthly + activeProYearly) / totalSignups) * 1000) / 10
       : 0;
 
+  const totalSignupsForAttribution = users.length;
+  const attributionRows: SignupAttributionRow[] = Array.from(attributionByRef.entries())
+    .map(([ref, bucket]) => ({
+      ref,
+      label: marketingRefLabel(ref),
+      signupsTotal: bucket.signupsTotal,
+      signupsLast7Days: bucket.signupsLast7Days,
+      signupsLast30Days: bucket.signupsLast30Days,
+      signupsLast90Days: bucket.signupsLast90Days,
+      activated: bucket.activated,
+      activationRatePercent:
+        bucket.signupsTotal > 0
+          ? Math.round((bucket.activated / bucket.signupsTotal) * 1000) / 10
+          : 0,
+      proActive: bucket.proActive,
+      shareOfSignupsPercent:
+        totalSignupsForAttribution > 0
+          ? Math.round((bucket.signupsTotal / totalSignupsForAttribution) * 1000) / 10
+          : 0,
+    }))
+    .sort((a, b) => {
+      if (a.ref === 'organic') return 1;
+      if (b.ref === 'organic') return -1;
+      return b.signupsTotal - a.signupsTotal;
+    });
+
+  const organicSignups = attributionByRef.get('organic')?.signupsTotal || 0;
+  const signupAttribution: SignupAttributionStats = {
+    taggedSignups: totalSignupsForAttribution - organicSignups,
+    organicSignups,
+    byRef: attributionRows,
+  };
+
   const recentEvents = eventsSnap.docs.slice(0, 25).map((doc) => {
     const data = doc.data();
     return {
@@ -317,6 +401,7 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
           : null,
       notes,
     },
+    signupAttribution,
     recentEvents,
     gamification: {
       usersWithAchievements,
@@ -376,6 +461,7 @@ function emptyMetrics(notes: string): AdminMetricsSnapshot {
       upgradeClickEvents: 0,
     },
     acquisition: { adSpend30d: 0, adSpend90d: 0, costPerSignup: null, costPerActivatedUser: null, notes },
+    signupAttribution: { taggedSignups: 0, organicSignups: 0, byRef: [] },
     recentEvents: [],
     gamification: {
       usersWithAchievements: 0,

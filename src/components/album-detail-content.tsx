@@ -201,13 +201,23 @@ function CreateTrackDialog({
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-6">
-                        <Button variant="outline" className="h-40 flex flex-col gap-3 p-6" onClick={() => handleCreate('blank')}>
-                            <NotebookPen className="h-8 w-8 text-muted-foreground" />
-                            <div className="text-center"><p className="font-bold uppercase tracking-widest text-xs">Blank Station</p></div>
+                        <Button variant="outline" className="min-h-[11rem] h-auto flex flex-col gap-2.5 p-5" onClick={() => handleCreate('blank')}>
+                            <NotebookPen className="h-8 w-8 text-muted-foreground shrink-0" />
+                            <div className="text-center space-y-1.5">
+                              <p className="font-bold uppercase tracking-widest text-xs">Blank Station</p>
+                              <p className="text-[10px] font-code text-muted-foreground leading-snug normal-case tracking-normal">
+                                Empty lyrics sheet — write and structure bars yourself.
+                              </p>
+                            </div>
                         </Button>
-                        <Button className="h-40 flex flex-col gap-3 p-6 bg-primary/5 border-primary/20" onClick={() => handleCreate('workstation')}>
-                            <Sparkles className="h-8 w-8 text-primary" />
-                            <div className="text-center"><p className="font-bold uppercase tracking-widest text-xs">Enter Workstation</p></div>
+                        <Button className="min-h-[11rem] h-auto flex flex-col gap-2.5 p-5 bg-primary/5 border-primary/20" onClick={() => handleCreate('workstation')}>
+                            <Sparkles className="h-8 w-8 text-primary shrink-0" />
+                            <div className="text-center space-y-1.5">
+                              <p className="font-bold uppercase tracking-widest text-xs">Enter Workstation</p>
+                              <p className="text-[10px] font-code text-muted-foreground leading-snug normal-case tracking-normal">
+                                Opens DNA &amp; REMIX to generate a full draft, then edit on the sheet.
+                              </p>
+                            </div>
                         </Button>
                     </div>
                 )}
