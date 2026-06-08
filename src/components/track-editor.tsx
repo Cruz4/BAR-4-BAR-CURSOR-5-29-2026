@@ -1710,10 +1710,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   const [archivalDialog, setArchivalDialog] = useState<{ open: boolean, type: 'DNA' | 'Vibe' }>({ open: false, type: 'DNA' });
   const [editIntentDialog, setEditIntentDialog] = useState<{ open: boolean, intent: string }>({ open: false, intent: '' });
   const [newIntent, setNewIntent] = useState('');
-  const [dnaSuitePresetIdx, setDnaSuitePresetIdx] = useState(0);
-
   const currentMetrics = styleProfile?.history[0]?.metrics;
-  const dnaVaultPresets = useMemo(() => mergeDnaVaultPresets(album?.dnaPresets, isPro), [album?.dnaPresets, isPro]);
   const dnaInjectHandlers = useMemo(
     () =>
       createCoWriterDnaInjectHandlers({
@@ -1727,7 +1724,6 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
       }),
     [track, album, onUpdateTrack, updateAlbum, updateStyleProfile, openCoWriterSections, toast]
   );
-  const dnaSuitePreset = dnaVaultPresets[dnaSuitePresetIdx] ?? dnaVaultPresets[0];
 
   const handleToggleDNA = (enabled: boolean) => {
     onUpdateTrack({ direction: { ...track.direction, enabled } });
@@ -2043,44 +2039,6 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                 />
                             </div>
                         ))}
-                        {dnaVaultPresets.length > 0 && (
-                          <div className="space-y-2.5 pt-3 border-t border-green-500/15">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-[9px] font-bold uppercase text-green-400/80">Vault Profiles & Extraction Strains</p>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 text-[8px] px-2 uppercase font-bold text-green-500 hover:bg-green-500/10"
-                                onClick={() => setDNAVaultOpen(true)}
-                              >
-                                Open Vault
-                              </Button>
-                            </div>
-                            <p className="text-[9px] text-muted-foreground leading-snug">
-                              Extraction strains — motifs, structure, style, and narrative DNA. Tap ⚡ to inject into Intents, Style, DNA, or instructions.
-                            </p>
-                            {dnaVaultPresets.length > 1 && (
-                              <select
-                                className="w-full bg-background/50 border border-green-500/20 rounded-md px-2 py-1.5 text-[10px] font-bold uppercase text-foreground"
-                                value={dnaSuitePresetIdx}
-                                onChange={(e) => setDnaSuitePresetIdx(Number(e.target.value))}
-                                aria-label="Select DNA vault profile"
-                              >
-                                {dnaVaultPresets.map((p, idx) => (
-                                  <option key={`${p.name}-${p.createdAt}-${idx}`} value={idx}>
-                                    {p.name}{isSystemPreset(p.createdAt) ? ' (System)' : ''}
-                                  </option>
-                                ))}
-                              </select>
-                            )}
-                            {dnaSuitePreset && (
-                              <div className="max-h-[min(42vh,320px)] overflow-y-auto studio-scrollbar rounded-lg border border-green-500/10 bg-black/20 p-2">
-                                <DnaVaultPresetDetails compact preset={dnaSuitePreset} {...dnaInjectHandlers} />
-                              </div>
-                            )}
-                          </div>
-                        )}
                     </CardContent>
                 </CollapsibleContent>
             </Card>
