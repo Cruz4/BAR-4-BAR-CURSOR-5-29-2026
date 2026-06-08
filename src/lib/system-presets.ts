@@ -1,4 +1,38 @@
+import type { DnaPreset } from '@/lib/types';
+import type { TrackVibe } from '@/lib/types';
+
 /** Professional system strains available to free-tier artists (load-only). */
+
+export function isSystemPreset(createdAt?: string | null): boolean {
+  return createdAt === 'system';
+}
+
+/** Pro artists see studio presets plus their saved vault entries. */
+export function mergeDnaVaultPresets(custom: DnaPreset[] | undefined, isPro: boolean): DnaPreset[] {
+  if (!isPro) return SYSTEM_DNA_PRESETS as DnaPreset[];
+  const user = (custom ?? []).filter((p) => !isSystemPreset(p.createdAt));
+  return [...SYSTEM_DNA_PRESETS, ...user] as DnaPreset[];
+}
+
+export function mergeVibeVaultPresets(
+  custom: Array<TrackVibe & { createdAt?: string }> | undefined,
+  isPro: boolean
+): Array<TrackVibe & { createdAt?: string }> {
+  if (!isPro) return SYSTEM_VIBE_PRESETS;
+  const user = (custom ?? []).filter((p) => !isSystemPreset(p.createdAt));
+  return [...SYSTEM_VIBE_PRESETS, ...user];
+}
+
+export type StyleVaultPreset = (typeof SYSTEM_STYLE_PRESETS)[number];
+
+export function mergeStyleVaultPresets(
+  custom: StyleVaultPreset[] | undefined,
+  isPro: boolean
+): StyleVaultPreset[] {
+  if (!isPro) return SYSTEM_STYLE_PRESETS;
+  const user = (custom ?? []).filter((p) => !isSystemPreset(p.createdAt));
+  return [...SYSTEM_STYLE_PRESETS, ...user];
+}
 
 export const SYSTEM_DNA_PRESETS = [
   {

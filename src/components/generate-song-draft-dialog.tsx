@@ -586,44 +586,6 @@ export function GenerateSongDraftDialog({
     onOpenChange(false);
   }, [isGenerating, onOpenChange]);
 
-  const handleHardClose = useCallback(() => {
-    if (step === 5 && wizardState.generatedVariant) {
-      flushUnusedApprovalDraftsToChest(null);
-    }
-    hardClosedRef.current = true;
-    pendingReopenOnCompleteRef.current = false;
-    clearApprovalDraftSession();
-    handleDialogOpenChange(false);
-  }, [
-    step,
-    wizardState.generatedVariant,
-    flushUnusedApprovalDraftsToChest,
-    clearApprovalDraftSession,
-    handleDialogOpenChange,
-  ]);
-
-  useEffect(() => {
-    if (step !== 5 || !wizardState.generatedVariant) return;
-    const backlog = buildPersistedApprovalBacklog(
-      approvalDraftHistory,
-      wizardState.generatedVariant,
-      previewRhymeGroups,
-      buildApprovalSettingsSummary(),
-      approvalDraftSource
-    );
-    updateTrack(track.albumId, track.id, { approvalDraftBacklog: backlog });
-  }, [
-    step,
-    approvalDraftHistory,
-    wizardState.generatedVariant,
-    previewRhymeGroups,
-    buildApprovalSettingsSummary,
-    approvalDraftSource,
-    track.albumId,
-    track.id,
-    updateTrack,
-  ]);
-
   const buildApprovalSettingsSummary = useCallback((): string[] => {
     const tags: string[] = [];
     if (hubVibeEnabled) tags.push('Vibe');
@@ -703,6 +665,44 @@ export function GenerateSongDraftDialog({
     setApprovalDraftHistory([]);
     updateTrack(track.albumId, track.id, { approvalDraftBacklog: [] });
   }, [track.albumId, track.id, updateTrack]);
+
+  const handleHardClose = useCallback(() => {
+    if (step === 5 && wizardState.generatedVariant) {
+      flushUnusedApprovalDraftsToChest(null);
+    }
+    hardClosedRef.current = true;
+    pendingReopenOnCompleteRef.current = false;
+    clearApprovalDraftSession();
+    handleDialogOpenChange(false);
+  }, [
+    step,
+    wizardState.generatedVariant,
+    flushUnusedApprovalDraftsToChest,
+    clearApprovalDraftSession,
+    handleDialogOpenChange,
+  ]);
+
+  useEffect(() => {
+    if (step !== 5 || !wizardState.generatedVariant) return;
+    const backlog = buildPersistedApprovalBacklog(
+      approvalDraftHistory,
+      wizardState.generatedVariant,
+      previewRhymeGroups,
+      buildApprovalSettingsSummary(),
+      approvalDraftSource
+    );
+    updateTrack(track.albumId, track.id, { approvalDraftBacklog: backlog });
+  }, [
+    step,
+    approvalDraftHistory,
+    wizardState.generatedVariant,
+    previewRhymeGroups,
+    buildApprovalSettingsSummary,
+    approvalDraftSource,
+    track.albumId,
+    track.id,
+    updateTrack,
+  ]);
 
   const restoreApprovalDraft = useCallback(
     (snapshotId: string) => {

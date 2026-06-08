@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { SEO } from '@/lib/seo';
+import { absoluteUrl, SEO } from '@/lib/seo';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SEO.url),
@@ -28,9 +28,9 @@ export const metadata: Metadata = {
     description: SEO.description,
     images: [
       {
-        url: SEO.ogImagePath,
-        width: 512,
-        height: 512,
+        url: absoluteUrl(SEO.ogImagePath),
+        width: 1024,
+        height: 1024,
         alt: `${SEO.siteName} logo`,
       },
     ],
@@ -39,17 +39,18 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: SEO.title,
     description: SEO.description,
-    images: [SEO.ogImagePath],
+    images: [absoluteUrl(SEO.ogImagePath)],
     ...(SEO.twitterHandle ? { site: SEO.twitterHandle } : {}),
   },
   icons: {
     icon: [
-      { url: SEO.faviconPath, type: 'image/png' },
-      { url: SEO.faviconPath, type: 'image/png', sizes: '192x192' },
-      { url: SEO.faviconPath, type: 'image/png', sizes: '512x512' },
+      { url: SEO.faviconIcoPath, sizes: 'any' },
+      { url: absoluteUrl(SEO.faviconPath), type: 'image/png', sizes: '32x32' },
+      { url: absoluteUrl(SEO.faviconPath), type: 'image/png', sizes: '192x192' },
+      { url: absoluteUrl(SEO.faviconPath), type: 'image/png', sizes: '512x512' },
     ],
-    shortcut: SEO.faviconPath,
-    apple: SEO.faviconPath,
+    shortcut: SEO.faviconIcoPath,
+    apple: absoluteUrl(SEO.faviconPath),
   },
   alternates: {
     canonical: SEO.url,

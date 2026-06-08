@@ -175,7 +175,12 @@ import {
   isInheritFromAlbumOn,
   isLooseTrackAlbum,
 } from '@/lib/co-writer-rules';
-import { SYSTEM_DNA_PRESETS, SYSTEM_STYLE_PRESETS, SYSTEM_VIBE_PRESETS } from '@/lib/system-presets';
+import {
+  isSystemPreset,
+  mergeDnaVaultPresets,
+  mergeStyleVaultPresets,
+  mergeVibeVaultPresets,
+} from '@/lib/system-presets';
 import { GenerateSongDraftDialog } from './generate-song-draft-dialog';
 import { ExportDialog } from './export-dialog';
 import { ShareDialog } from './share-dialog';
@@ -401,6 +406,116 @@ function ImproveMyStyleDialog({ open, onOpenChange, track, onUpdateStyle }: any)
   );
 }
 
+type CoWriterDnaInjectHandlers = ReturnType<typeof createCoWriterDnaInjectHandlers>;
+
+function createCoWriterDnaInjectHandlers(deps: {
+  track: Track;
+  album: Album | null | undefined;
+  onUpdateTrack: (u: Partial<Track>) => void;
+  updateAlbum?: (id: string, u: Partial<Album>) => void;
+  updateStyleProfile?: (analysis: string, metrics?: import('@/lib/types').StyleMetrics) => void;
+  openCoWriterSections?: (key: CoWriterSectionKey | CoWriterSectionKey[]) => void;
+  toast: (t: { title: string; description?: string; variant?: 'destructive' }) => void;
+}) {
+  const { track, album, onUpdateTrack, updateAlbum, updateStyleProfile, openCoWriterSections, toast } = deps;
+
+  const onInjectMappingField = (field: keyof Direction, value: string | undefined) => {
+    if (!value) return;
+    onUpdateTrack({
+      direction: { ...(track.direction ?? {}), [field]: value, enabled: true },
+    });
+    openCoWriterSections?.('dna');
+    toast({ title: `${field} loaded` });
+  };
+
+  const onInjectStrain = (title: string, content: string | string[]) => {
+    const target = STRAIN_TARGETS[title];
+    if (!target) return;
+
+    if (target.kind === 'intents') {
+      const motifs = Array.isArray(content) ? content : [content];
+      onUpdateTrack({
+        checkedIntents: [...new Set([...(track.checkedIntents ?? []), ...motifs])],
+        intentsEnabled: true,
+      });
+      if (album) {
+        const existing = album.thingsToSay || [];
+        const novel = motifs.filter((m) => !existing.includes(m));
+        if (novel.length) {
+          updateAlbum?.(album.id, { thingsToSay: [...existing, ...novel] });
+        }
+      }
+      openCoWriterSections?.('intents');
+      toast({ title: `Motifs injected (${motifs.length})` });
+      return;
+    }
+
+    if (target.kind === 'structure_guide') {
+      const text = Array.isArray(content) ? content.join(', ') : content;
+      const tagged = `[Structure] ${text}`;
+      const prev = track.specialInstructions?.trim() ?? '';
+      const next = prev.includes(text) ? prev : prev ? `${prev}\n${tagged}` : tagged;
+      onUpdateTrack({ specialInstructions: next });
+      openCoWriterSections?.('coWriter');
+      toast({ title: 'Structure guide injected' });
+      return;
+    }
+
+    if (target.kind === 'style_profile') {
+      const text = Array.isArray(content) ? content.join(', ') : content;
+      updateStyleProfile?.(text, DEFAULT_STYLE_METRICS);
+      onUpdateTrack({ styleEnabled: true });
+      openCoWriterSections?.('coWriter');
+      toast({ title: 'Style DNA loaded' });
+      return;
+    }
+
+    const text = Array.isArray(content) ? content.join(', ') : content;
+    onUpdateTrack({
+      direction: {
+        ...(track.direction ?? {}),
+        ...appendDirectionField(track.direction ?? {}, target.field, target.label, text),
+        enabled: true,
+      },
+    });
+    openCoWriterSections?.(coWriterSectionForStrain(title));
+    toast({ title: `${title} injected` });
+  };
+
+  const onInjectIntents = (intents: string[]) => {
+    onUpdateTrack({
+      checkedIntents: intents,
+      intentsEnabled: true,
+    });
+    if (album) {
+      const existing = album.thingsToSay || [];
+      const novel = intents.filter((m) => !existing.includes(m));
+      if (novel.length) {
+        updateAlbum?.(album.id, { thingsToSay: [...existing, ...novel] });
+      }
+    }
+    openCoWriterSections?.('intents');
+    toast({ title: 'Motifs loaded into Intents' });
+  };
+
+  const onInjectStructureGuide = (guide: string) => {
+    const prev = track.specialInstructions?.trim() ?? '';
+    const next = prev && !prev.includes(guide.trim()) ? `${prev}\n${guide}` : prev || guide;
+    onUpdateTrack({ specialInstructions: next });
+    openCoWriterSections?.('coWriter');
+    toast({ title: 'Structure guide loaded' });
+  };
+
+  const onInjectStyle = (analysis: string, metrics?: import('@/lib/types').StyleMetrics) => {
+    updateStyleProfile?.(analysis, metrics ?? DEFAULT_STYLE_METRICS);
+    onUpdateTrack({ styleEnabled: true });
+    openCoWriterSections?.('coWriter');
+    toast({ title: 'Style DNA loaded' });
+  };
+
+  return { onInjectMappingField, onInjectStrain, onInjectIntents, onInjectStructureGuide, onInjectStyle };
+}
+
 function DNAVaultDialog({
   open,
   onOpenChange,
@@ -409,14 +524,22 @@ function DNAVaultDialog({
   track,
   onUpdateTrack,
   onLoadPreset,
-  updateStyleProfile,
-  openCoWriterSections,
+  injectHandlers,
   isPro,
-}: any) {
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  album: Album | null | undefined;
+  updateAlbum: (id: string, u: Partial<Album>) => void;
+  track: Track;
+  onUpdateTrack: (u: Partial<Track>) => void;
+  onLoadPreset: (preset: DnaPreset) => void;
+  injectHandlers: CoWriterDnaInjectHandlers;
+  isPro: boolean;
+}) {
     const { toast } = useToast();
     const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
-    const presets = isPro ? (album?.dnaPresets || []) : SYSTEM_DNA_PRESETS;
-    const isSystem = (p: any) => p.createdAt === 'system';
+    const presets = useMemo(() => mergeDnaVaultPresets(album?.dnaPresets, isPro), [album?.dnaPresets, isPro]);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -426,7 +549,7 @@ function DNAVaultDialog({
                         <FolderOpen className="h-6 w-6" /> DNA Vault
                     </DialogTitle>
                     <DialogDescription className="text-xs uppercase tracking-tight">
-                        {isPro ? 'Selectively load creative strains or full profiles from your history.' : 'Load system DNA strains — pick individual fields or apply full profiles.'}
+                        {isPro ? 'Studio presets plus your saved vault — load strains or full profiles.' : 'Load system DNA strains — pick individual fields or apply full profiles.'}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="mt-4 min-h-0 flex-1 overflow-y-auto studio-scrollbar pr-2 max-h-[min(calc(92vh-7.5rem),660px)]">
@@ -441,15 +564,23 @@ function DNAVaultDialog({
                                     <div className="min-w-0 flex-grow pr-4">
                                         <div className="flex items-center gap-2">
                                             <p className="text-xs font-bold text-white uppercase truncate">{p.name}</p>
-                                            {(!isPro || isSystem(p)) && (
+                                            {isSystemPreset(p.createdAt) && (
                                                 <ProLockBadge label="System" />
                                             )}
                                         </div>
                                         <p className="text-[9px] text-muted-foreground font-code mt-0.5">Source: {p.sourceTrackTitle || 'Studio Preset'}</p>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
-                                        {isPro && !isSystem(p) && (
-                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={(e) => { e.stopPropagation(); updateAlbum(album.id, { dnaPresets: album.dnaPresets.filter((_:any, idx:number) => idx !== i) }); toast({ title: "DNA profile removed" }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                                        {isPro && !isSystemPreset(p.createdAt) && album && (
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={(e) => {
+                                              e.stopPropagation();
+                                              updateAlbum(album.id, {
+                                                dnaPresets: (album.dnaPresets ?? []).filter(
+                                                  (x) => !(x.name === p.name && x.createdAt === p.createdAt)
+                                                ),
+                                              });
+                                              toast({ title: 'DNA profile removed' });
+                                            }}><Trash2 className="h-3.5 w-3.5" /></Button>
                                         )}
                                         <Button size="icon" variant="ghost" className="h-7 w-7 text-primary" onClick={(e) => { e.stopPropagation(); onLoadPreset(p); onOpenChange(false); }}><RefreshCw className="h-3.5 w-3.5" /></Button>
                                         {expandedIdx === i ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -459,63 +590,7 @@ function DNAVaultDialog({
                                     <div className="p-3 bg-black/40 border-t border-white/5 animate-in slide-in-from-top-2 duration-300">
                                         <DnaVaultPresetDetails
                                             preset={p}
-                                            onInjectMappingField={(field, value) => {
-                                                if (!value) return;
-                                                onUpdateTrack({
-                                                    direction: { ...(track.direction ?? {}), [field]: value, enabled: true },
-                                                });
-                                                openCoWriterSections?.('dna');
-                                                toast({ title: `${field} loaded` });
-                                            }}
-                                            onInjectStrain={(title, content) => {
-                                                const target = STRAIN_TARGETS[title];
-                                                if (!target) return;
-                                                if (target.kind === 'style_profile') {
-                                                    const text = Array.isArray(content) ? content.join(', ') : content;
-                                                    updateStyleProfile?.(text, DEFAULT_STYLE_METRICS);
-                                                    onUpdateTrack({ styleEnabled: true });
-                                                    openCoWriterSections?.('coWriter');
-                                                    toast({ title: 'Style DNA loaded' });
-                                                    return;
-                                                }
-                                                if (target.kind !== 'direction') return;
-                                                const text = Array.isArray(content) ? content.join(', ') : content;
-                                                onUpdateTrack({
-                                                    direction: {
-                                                        ...(track.direction ?? {}),
-                                                        ...appendDirectionField(
-                                                            track.direction ?? {},
-                                                            target.field,
-                                                            target.label,
-                                                            text
-                                                        ),
-                                                        enabled: true,
-                                                    },
-                                                });
-                                                openCoWriterSections?.(coWriterSectionForStrain(title));
-                                                toast({ title: `${title} injected` });
-                                            }}
-                                            onInjectIntents={(intents) => {
-                                                onUpdateTrack({
-                                                    checkedIntents: intents,
-                                                    intentsEnabled: true,
-                                                });
-                                                if (album) {
-                                                    const existing = album.thingsToSay || [];
-                                                    const novel = intents.filter((m: string) => !existing.includes(m));
-                                                    if (novel.length) {
-                                                        updateAlbum(album.id, { thingsToSay: [...existing, ...novel] });
-                                                    }
-                                                }
-                                                openCoWriterSections?.('intents');
-                                                toast({ title: 'Motifs loaded into Intents' });
-                                            }}
-                                            onInjectStyle={(analysis, metrics) => {
-                                                updateStyleProfile?.(analysis, metrics ?? DEFAULT_STYLE_METRICS);
-                                                onUpdateTrack({ styleEnabled: true });
-                                                openCoWriterSections?.('coWriter');
-                                                toast({ title: 'Style DNA loaded' });
-                                            }}
+                                            {...injectHandlers}
                                         />
                                     </div>
                                 )}
@@ -539,7 +614,7 @@ function DNAVaultDialog({
 
 function VibeVaultDialog({ open, onOpenChange, track, onUpdateTrack, onApply, isPro }: any) {
     const { toast } = useToast();
-    const presets = isPro ? (track.vibePresets || []) : SYSTEM_VIBE_PRESETS;
+    const presets = useMemo(() => mergeVibeVaultPresets(track.vibePresets, isPro), [track.vibePresets, isPro]);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -549,7 +624,7 @@ function VibeVaultDialog({ open, onOpenChange, track, onUpdateTrack, onApply, is
                         <FolderOpen className="h-6 w-6" /> Vibe Vault
                     </DialogTitle>
                     <DialogDescription className="text-xs uppercase tracking-tight">
-                        {isPro ? 'Access saved instrumentation and atmospheric presets.' : 'Choose from 2 professional system vibe presets.'}
+                        {isPro ? 'Studio presets plus your saved vibes — load instrumentation and atmosphere.' : 'Choose from 2 professional system vibe presets.'}
                     </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="h-[300px] mt-4">
@@ -559,15 +634,23 @@ function VibeVaultDialog({ open, onOpenChange, track, onUpdateTrack, onApply, is
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2">
                                         <p className="text-xs font-bold text-white uppercase truncate">{v.name || 'Unnamed Preset'}</p>
-                                        {!isPro && (
+                                        {isSystemPreset(v.createdAt) && (
                                             <ProLockBadge label="System" />
                                         )}
                                     </div>
                                     <p className="text-[9px] text-muted-foreground font-code mt-0.5">{v.genre} | {v.tempoBPM} BPM</p>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
-                                    {isPro && (
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={() => { onUpdateTrack({ vibePresets: track.vibePresets.filter((_:any, idx:number) => idx !== i) }); toast({ title: "Vibe Preset Erased" }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                                    {isPro && !isSystemPreset(v.createdAt) && (
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={() => {
+                                          onUpdateTrack({
+                                            vibePresets: (track.vibePresets ?? []).filter(
+                                              (p: TrackVibe & { createdAt?: string }) =>
+                                                !(p.name === v.name && p.createdAt === v.createdAt)
+                                            ),
+                                          });
+                                          toast({ title: 'Vibe Preset Erased' });
+                                        }}><Trash2 className="h-3.5 w-3.5" /></Button>
                                     )}
                                     <Button size="sm" variant="secondary" className="h-7 text-[9px] font-bold px-3" onClick={() => { onApply({ ...v, enabled: true }); onOpenChange(false); toast({ title: "Vibe Loaded" }); }}>LOAD</Button>
                                 </div>
@@ -590,7 +673,7 @@ function VibeVaultDialog({ open, onOpenChange, track, onUpdateTrack, onApply, is
 
 function StyleVaultDialog({ open, onOpenChange, album, updateAlbum, onApply, isPro }: any) {
     const { toast } = useToast();
-    const presets = isPro ? (album?.stylePresets || []) : SYSTEM_STYLE_PRESETS;
+    const presets = useMemo(() => mergeStyleVaultPresets(album?.stylePresets, isPro), [album?.stylePresets, isPro]);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -600,7 +683,7 @@ function StyleVaultDialog({ open, onOpenChange, album, updateAlbum, onApply, isP
                         <FolderOpen className="h-6 w-6" /> Style Vault
                     </DialogTitle>
                     <DialogDescription className="text-xs uppercase tracking-tight">
-                        {isPro ? 'Load historical artist DNA and cadence profiles.' : 'Choose from 2 professional style DNA presets.'}
+                        {isPro ? 'Studio presets plus your saved style DNA — load cadence profiles.' : 'Choose from 2 professional style DNA presets.'}
                     </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="h-[300px] mt-4">
@@ -610,15 +693,22 @@ function StyleVaultDialog({ open, onOpenChange, album, updateAlbum, onApply, isP
                                 <div className="min-w-0 pr-2">
                                     <div className="flex items-center gap-2">
                                         <p className="text-xs font-bold text-white uppercase truncate">{s.name}</p>
-                                        {!isPro && (
+                                        {isSystemPreset(s.createdAt) && (
                                             <ProLockBadge label="System" />
                                         )}
                                     </div>
                                     <p className="text-[9px] text-muted-foreground font-code mt-0.5 line-clamp-2 italic">"{s.analysis}"</p>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
-                                    {isPro && (
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={() => { updateAlbum(album.id, { stylePresets: album.stylePresets.filter((_:any, idx:number) => idx !== i) }); toast({ title: "Style DNA Erased" }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                                    {isPro && !isSystemPreset(s.createdAt) && album && (
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={() => {
+                                          updateAlbum(album.id, {
+                                            stylePresets: (album.stylePresets ?? []).filter(
+                                              (x) => !(x.name === s.name && x.createdAt === s.createdAt)
+                                            ),
+                                          });
+                                          toast({ title: 'Style DNA Erased' });
+                                        }}><Trash2 className="h-3.5 w-3.5" /></Button>
                                     )}
                                     <Button size="sm" variant="secondary" className="h-7 text-[9px] font-bold px-3" onClick={() => { onApply(s.analysis, s.metrics); onOpenChange(false); toast({ title: "Style DNA Applied" }); }}>LOAD</Button>
                                 </div>
@@ -1644,8 +1734,24 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   const [archivalDialog, setArchivalDialog] = useState<{ open: boolean, type: 'DNA' | 'Vibe' }>({ open: false, type: 'DNA' });
   const [editIntentDialog, setEditIntentDialog] = useState<{ open: boolean, intent: string }>({ open: false, intent: '' });
   const [newIntent, setNewIntent] = useState('');
+  const [dnaSuitePresetIdx, setDnaSuitePresetIdx] = useState(0);
 
   const currentMetrics = styleProfile?.history[0]?.metrics;
+  const dnaVaultPresets = useMemo(() => mergeDnaVaultPresets(album?.dnaPresets, isPro), [album?.dnaPresets, isPro]);
+  const dnaInjectHandlers = useMemo(
+    () =>
+      createCoWriterDnaInjectHandlers({
+        track,
+        album,
+        onUpdateTrack,
+        updateAlbum,
+        updateStyleProfile,
+        openCoWriterSections,
+        toast,
+      }),
+    [track, album, onUpdateTrack, updateAlbum, updateStyleProfile, openCoWriterSections, toast]
+  );
+  const dnaSuitePreset = dnaVaultPresets[dnaSuitePresetIdx] ?? dnaVaultPresets[0];
 
   const handleToggleDNA = (enabled: boolean) => {
     onUpdateTrack({ direction: { ...track.direction, enabled } });
@@ -1726,6 +1832,11 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           direction: track.direction ?? { enabled: true },
           intents: track.checkedIntents,
       });
+      const styleEntry = styleProfile?.history?.[0];
+      if (styleEntry?.analysis?.trim()) {
+        profile.styleAnalysis = styleEntry.analysis;
+        profile.styleMetrics = styleEntry.metrics ?? DEFAULT_STYLE_METRICS;
+      }
       const existing = album.dnaPresets || [];
       updateAlbum(album.id, { dnaPresets: [...existing, profile] });
       toast({
@@ -1741,7 +1852,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
         return;
       }
       if (!track.vibe) return;
-      const preset = { ...track.vibe, name };
+      const preset = { ...track.vibe, name, createdAt: new Date().toISOString() };
       const existing = track.vibePresets || [];
       onUpdateTrack({ vibePresets: [...existing, preset] });
       toast({ title: 'Vibe profile saved', description: `"${name}" saved to your vault.` });
@@ -1956,6 +2067,44 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                 />
                             </div>
                         ))}
+                        {dnaVaultPresets.length > 0 && (
+                          <div className="space-y-2.5 pt-3 border-t border-green-500/15">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[9px] font-bold uppercase text-green-400/80">Vault Profiles & Extraction Strains</p>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-[8px] px-2 uppercase font-bold text-green-500 hover:bg-green-500/10"
+                                onClick={() => setDNAVaultOpen(true)}
+                              >
+                                Open Vault
+                              </Button>
+                            </div>
+                            <p className="text-[9px] text-muted-foreground leading-snug">
+                              Full extraction archive — themes, motifs, style, structure, and mapped Creative DNA. Tap ⚡ to inject into the matching co-writer section.
+                            </p>
+                            {dnaVaultPresets.length > 1 && (
+                              <select
+                                className="w-full bg-background/50 border border-green-500/20 rounded-md px-2 py-1.5 text-[10px] font-bold uppercase text-foreground"
+                                value={dnaSuitePresetIdx}
+                                onChange={(e) => setDnaSuitePresetIdx(Number(e.target.value))}
+                                aria-label="Select DNA vault profile"
+                              >
+                                {dnaVaultPresets.map((p, idx) => (
+                                  <option key={`${p.name}-${p.createdAt}-${idx}`} value={idx}>
+                                    {p.name}{isSystemPreset(p.createdAt) ? ' (System)' : ''}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                            {dnaSuitePreset && (
+                              <div className="max-h-[min(42vh,320px)] overflow-y-auto studio-scrollbar rounded-lg border border-green-500/10 bg-black/20 p-2">
+                                <DnaVaultPresetDetails compact preset={dnaSuitePreset} {...dnaInjectHandlers} />
+                              </div>
+                            )}
+                          </div>
+                        )}
                     </CardContent>
                 </CollapsibleContent>
             </Card>
@@ -2385,6 +2534,15 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
             checkedIntents: intents,
             intentsEnabled: intents.length > 0,
             styleEnabled: !!(p.styleAnalysis?.trim() || p.analysis?.styleAnalysis?.trim()),
+            ...(p.structureGuide?.trim()
+              ? {
+                  specialInstructions: (() => {
+                    const prev = track.specialInstructions?.trim() ?? '';
+                    const guide = p.structureGuide!.trim();
+                    return prev && !prev.includes(guide) ? `${prev}\n${guide}` : prev || guide;
+                  })(),
+                }
+              : {}),
           });
           if (album && intents.length) {
             const existing = album.thingsToSay || [];
@@ -2400,8 +2558,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           openCoWriterSections?.(COWRITER_SUITE_SECTION_KEYS);
           toast({ title: 'Full DNA Profile Loaded' });
         }}
-        updateStyleProfile={updateStyleProfile}
-        openCoWriterSections={openCoWriterSections}
+        injectHandlers={dnaInjectHandlers}
         isPro={isPro}
       />
       <VibeVaultDialog open={vibeVaultOpen} onOpenChange={setVibeVaultOpen} track={track} onUpdateTrack={onUpdateTrack} onApply={(v: any) => onUpdateTrack({ vibe: v })} isPro={isPro} />

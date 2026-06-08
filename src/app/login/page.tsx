@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, Suspense, useEffect } from 'react';
+import React, { useState, useRef, Suspense, useEffect, useCallback } from 'react';
 import { 
   GoogleAuthProvider, 
   signInWithPopup,
@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Sparkles, ArrowRight, Mail, Lock, User as UserIcon, LogIn, Coffee, Gift, Zap, Import } from 'lucide-react';
+import { BUY_ME_COFFEE_URL, SUPPORT_MAILTO } from '@/lib/support';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -46,8 +47,6 @@ import { LandingShowcase } from '@/components/marketing/landing-showcase';
 import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmosphere';
 import { MARKETING_FEATURE_BANDS, MARKETING_HOW_IT_WORKS } from '@/lib/marketing-features';
 
-const LOGIN_SCROLL_HEADER_OFFSET = 72;
-
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -59,7 +58,7 @@ function LoginForm() {
   const [displayName, setDisplayName] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const loginFormRef = useRef<HTMLDivElement>(null);
+  const loginCardRef = useRef<HTMLDivElement>(null);
   const importIntent = searchParams.get('intent') === 'dna-import';
   const safeNext = getSafeNextPath(searchParams.get('next'));
   const proCheckoutIntent = getCheckoutFromPath(safeNext);
@@ -68,31 +67,37 @@ function LoginForm() {
     if (proCheckoutIntent) setAuthMode('signup');
   }, [proCheckoutIntent]);
 
-  const scrollToLogin = () => {
-    const el = loginFormRef.current;
+  const scrollToLogin = useCallback(() => {
+    const el = loginCardRef.current;
     if (!el) return;
 
-    const targetTop = () => el.getBoundingClientRect().top + window.scrollY - LOGIN_SCROLL_HEADER_OFFSET;
-
     const align = (behavior: ScrollBehavior = 'smooth') => {
-      window.scrollTo({ top: Math.max(0, targetTop()), behavior });
+      el.scrollIntoView({ behavior, block: 'center', inline: 'nearest' });
     };
 
     align('smooth');
 
     const correctIfDrifted = () => {
-      const top = targetTop();
-      if (Math.abs(window.scrollY - top) > 40) {
-        align(Math.abs(window.scrollY - top) > 240 ? 'auto' : 'smooth');
+      const rect = el.getBoundingClientRect();
+      const viewportCenter = window.innerHeight / 2;
+      const cardCenter = rect.top + rect.height / 2;
+      if (Math.abs(cardCenter - viewportCenter) > 48) {
+        align(Math.abs(cardCenter - viewportCenter) > 200 ? 'auto' : 'smooth');
       }
     };
 
     requestAnimationFrame(() => {
       requestAnimationFrame(correctIfDrifted);
     });
-    window.setTimeout(correctIfDrifted, 500);
-    window.setTimeout(correctIfDrifted, 1100);
-  };
+    window.setTimeout(correctIfDrifted, 450);
+    window.setTimeout(correctIfDrifted, 1000);
+  }, []);
+
+  useEffect(() => {
+    if (window.location.hash !== '#login') return;
+    const timer = window.setTimeout(() => scrollToLogin(), 120);
+    return () => window.clearTimeout(timer);
+  }, [scrollToLogin]);
 
   useEffect(() => {
     const urls = new Set([
@@ -302,7 +307,6 @@ function LoginForm() {
 
         <section
           id="login"
-          ref={loginFormRef}
           className="relative py-28 px-4 flex flex-col justify-center items-center scroll-mt-[4.5rem]"
         >
             <div className="w-full max-w-md relative z-10">
@@ -338,7 +342,10 @@ function LoginForm() {
               </Card>
             )}
 
-            <Card className="w-full max-w-md border-primary/15 shadow-[0_0_80px_rgba(59,130,246,0.12)] bg-[#0c121d]/55 backdrop-blur-2xl overflow-hidden relative z-10 transition-all duration-700 hover:border-primary/30">
+            <Card
+              ref={loginCardRef}
+              className="w-full max-w-md border-primary/15 shadow-[0_0_80px_rgba(59,130,246,0.12)] bg-[#0c121d]/55 backdrop-blur-2xl overflow-hidden relative z-10 transition-all duration-700 hover:border-primary/30 scroll-mt-24"
+            >
                 <CardHeader className="text-center bg-white/5 p-0">
                     <div className="mx-auto w-full h-44 bg-black flex items-center justify-center border-b border-white/10 p-12">
                         <img src="/Logo.png" alt="Logo" className="h-full w-full object-contain" />
@@ -420,25 +427,30 @@ function LoginForm() {
 
       </main>
 
-      <footer className="py-20 relative z-10">
+      <footer className="py-20 px-4 relative z-10 flex flex-col items-center gap-12">
           <div className="flex flex-col items-center gap-4">
               <div className="bg-white p-3 rounded-2xl shadow-2xl">
                 <img src="/Logo.png" alt="B4B" className="h-10 w-10" />
               </div>
-              <p className="text-[11px] text-muted-foreground font-code text-center uppercase tracking-[0.5em] mt-4 opacity-50">BAR 4 BAR BY JORDIE CRUZ</p>
+              <p className="text-[11px] text-muted-foreground font-code text-center uppercase tracking-[0.5em] opacity-50">BAR 4 BAR BY JORDIE CRUZ</p>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-12">
-              <a href="https://buymeacoffee.com/b4bdev" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground hover:text-primary transition-all uppercase tracking-widest group">
+          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-6">
+              <a href={SUPPORT_MAILTO} className="flex items-center gap-2.5 text-[10px] font-bold text-muted-foreground hover:text-primary transition-all uppercase tracking-widest group">
+                  <div className="p-2 rounded-full bg-white/5 group-hover:bg-primary/20"><Mail className="h-4 w-4" /></div>
+                  Contact Support
+              </a>
+              <a href={BUY_ME_COFFEE_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[10px] font-bold text-muted-foreground hover:text-primary transition-all uppercase tracking-widest group">
                   <div className="p-2 rounded-full bg-white/5 group-hover:bg-primary/20"><Coffee className="h-4 w-4" /></div>
                   Buy Me A Coffee
               </a>
-              <Link href="/usage?tab=buy-ink" className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground hover:text-primary transition-all uppercase tracking-widest group">
+              <Link href="/usage?tab=buy-ink" className="flex items-center gap-2.5 text-[10px] font-bold text-muted-foreground hover:text-primary transition-all uppercase tracking-widest group">
                   <div className="p-2 rounded-full bg-white/5 group-hover:bg-primary/20"><Gift className="h-4 w-4" /></div>
                   Refer A Friend
               </Link>
           </div>
-          <LegalFooter className="opacity-60" />
+
+          <LegalFooter className="opacity-60 pt-2 border-t border-white/5 w-full max-w-xl" />
       </footer>
     </div>
   );

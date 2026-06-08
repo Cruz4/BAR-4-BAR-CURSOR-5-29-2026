@@ -23,8 +23,9 @@ export const SEO = {
     'creative writing AI',
   ],
   url: getPublicAppUrl(),
-  /** Tab, PWA, and social preview image (BAR 4 BAR wordmark). */
+  /** Tab, PWA, Google site icon, and social preview (BAR 4 BAR logo). */
   faviconPath: '/Logo.png',
+  faviconIcoPath: '/favicon.ico',
   ogImagePath: '/Logo.png',
   twitterHandle: undefined as string | undefined,
 };
@@ -69,6 +70,15 @@ export function buildStructuredDataGraph(): Record<string, unknown>[] {
       name: SEO.siteName,
       url: appUrl,
       logo: imageUrl,
+      email: 'bar4bar.support@gmail.com',
+      contactPoint: [
+        {
+          '@type': 'ContactPoint',
+          contactType: 'customer support',
+          email: 'bar4bar.support@gmail.com',
+          availableLanguage: ['English'],
+        },
+      ],
     },
     {
       '@context': 'https://schema.org',

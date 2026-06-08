@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { LegalFooter } from '@/components/legal-footer';
-
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '@/lib/support';
 import { pageMetadata } from '@/lib/seo';
 
 export const metadata = pageMetadata({
@@ -54,7 +54,7 @@ export default function PrivacyPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-white uppercase tracking-wide">6. Your Rights</h2>
-            <p>Depending on your region, you may have rights to access, correct, export, or delete personal data. Contact us at <a href="mailto:support@bar4bar.studio" className="text-primary hover:underline">support@bar4bar.studio</a>. EU/UK users may lodge complaints with their supervisory authority.</p>
+            <p>Depending on your region, you may have rights to access, correct, export, or delete personal data. Contact us at <a href={SUPPORT_MAILTO} className="text-primary hover:underline">{SUPPORT_EMAIL}</a>. EU/UK users may lodge complaints with their supervisory authority.</p>
           </section>
 
           <section className="space-y-3">

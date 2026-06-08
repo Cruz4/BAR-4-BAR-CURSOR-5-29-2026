@@ -15,6 +15,12 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ['music', 'productivity', 'entertainment'],
     icons: [
       {
+        src: SEO.faviconIcoPath,
+        sizes: '48x48',
+        type: 'image/x-icon',
+        purpose: 'any',
+      },
+      {
         src: SEO.faviconPath,
         sizes: '192x192',
         type: 'image/png',

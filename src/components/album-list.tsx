@@ -234,20 +234,27 @@ function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenC
             </>
         ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-6">
-                <Button variant="outline" className="min-h-[11rem] h-auto flex flex-col gap-2.5 p-5" onClick={() => handleCreate('blank')}>
+                <Button
+                  variant="outline"
+                  className="min-h-[11rem] h-auto w-full min-w-0 whitespace-normal flex flex-col items-center justify-center gap-2.5 p-5 text-center"
+                  onClick={() => handleCreate('blank')}
+                >
                     <NotebookPen className="h-8 w-8 text-muted-foreground shrink-0" />
-                    <div className="text-center space-y-1.5">
+                    <div className="w-full min-w-0 space-y-1.5 px-1">
                       <p className="font-bold uppercase tracking-widest text-xs">Blank Station</p>
-                      <p className="text-[10px] font-code text-muted-foreground leading-snug normal-case tracking-normal">
+                      <p className="text-[10px] font-code text-muted-foreground leading-snug normal-case tracking-normal break-words text-balance">
                         Empty lyrics sheet — write and structure bars yourself.
                       </p>
                     </div>
                 </Button>
-                <Button className="min-h-[11rem] h-auto flex flex-col gap-2.5 p-5 bg-primary/5 border-primary/20" onClick={() => handleCreate('workstation')}>
+                <Button
+                  className="min-h-[11rem] h-auto w-full min-w-0 whitespace-normal flex flex-col items-center justify-center gap-2.5 p-5 text-center bg-primary/5 border-primary/20"
+                  onClick={() => handleCreate('workstation')}
+                >
                     <Sparkles className="h-8 w-8 text-primary shrink-0" />
-                    <div className="text-center space-y-1.5">
+                    <div className="w-full min-w-0 space-y-1.5 px-1">
                       <p className="font-bold uppercase tracking-widest text-xs">Enter Workstation</p>
-                      <p className="text-[10px] font-code text-muted-foreground leading-snug normal-case tracking-normal">
+                      <p className="text-[10px] font-code text-muted-foreground leading-snug normal-case tracking-normal break-words text-balance">
                         Opens DNA &amp; REMIX to generate a full draft, then edit on the sheet.
                       </p>
                     </div>

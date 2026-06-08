@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { LegalFooter } from '@/components/legal-footer';
-
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '@/lib/support';
 import { pageMetadata } from '@/lib/seo';
 
 export const metadata = pageMetadata({
@@ -39,7 +39,7 @@ export default function CookiesPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-white uppercase tracking-wide">Contact</h2>
-            <p>Questions: <a href="mailto:support@bar4bar.studio" className="text-primary hover:underline">support@bar4bar.studio</a>. See also our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.</p>
+            <p>Questions: <a href={SUPPORT_MAILTO} className="text-primary hover:underline">{SUPPORT_EMAIL}</a>. See also our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.</p>
           </section>
         </article>
 

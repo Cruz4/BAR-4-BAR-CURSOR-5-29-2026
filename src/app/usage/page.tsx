@@ -30,8 +30,12 @@ import {
     Battery,
     Info,
     X,
-    Trash2
+    Trash2,
+    Mail,
+    Coffee,
+    LifeBuoy,
 } from 'lucide-react';
+import { BUY_ME_COFFEE_URL, SUPPORT_EMAIL, SUPPORT_MAILTO } from '@/lib/support';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -586,6 +590,31 @@ function UsagePageContent() {
                         <div className="flex flex-col sm:flex-row gap-3">
                             <Input type="password" placeholder="AIza..." value={apiKeyInput} onChange={(e) => setApiKeyInput(e.target.value)} className="font-mono text-base h-12" />
                             <Button onClick={() => saveCustomApiKey(apiKeyInput)} className="h-12 px-8 font-bold text-sm shrink-0">Save Key</Button>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="border-primary/20">
+                    <CardHeader className="pb-4">
+                        <CardTitle className="font-headline text-2xl flex items-center gap-2.5"><LifeBuoy className="text-primary h-6 w-6"/> Support</CardTitle>
+                        <CardDescription className="text-sm uppercase tracking-tight">Help, feedback, and optional tips.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4 text-sm text-muted-foreground font-code leading-relaxed">
+                        <p>
+                          For bugs, billing questions, or account help, email{' '}
+                          <a href={SUPPORT_MAILTO} className="text-primary hover:underline">{SUPPORT_EMAIL}</a>.
+                          We typically respond within a few business days.
+                        </p>
+                        <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-1">
+                            <Button variant="outline" className="h-11 px-5 text-xs font-bold uppercase gap-2" asChild>
+                                <a href={SUPPORT_MAILTO}>
+                                  <Mail className="h-4 w-4" /> Email Support
+                                </a>
+                            </Button>
+                            <Button variant="outline" className="h-11 px-5 text-xs font-bold uppercase gap-2" asChild>
+                                <a href={BUY_ME_COFFEE_URL} target="_blank" rel="noopener noreferrer">
+                                  <Coffee className="h-4 w-4" /> Buy Me A Coffee
+                                </a>
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
