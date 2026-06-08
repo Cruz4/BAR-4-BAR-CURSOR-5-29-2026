@@ -6,6 +6,12 @@ import { resolveFixedActionCost } from '@/lib/studio-costs';
 import { getStudioCosts } from '@/lib/server/studio-costs';
 import { isMasterAdminEmail } from '@/lib/server/master-admin';
 import { checkRateLimit } from '@/lib/server/rate-limit';
+import {
+  applyByoInkDiscount,
+  isValidGoogleApiKey,
+  isYearlyProFromData,
+} from '@/lib/byo-api';
+import { runWithGenkitContext } from '@/lib/server/genkit-request';
 
 export class AiGateError extends Error {
   constructor(
@@ -22,6 +28,7 @@ export type SecuredAiContext = {
   userId: string;
   actionName: string;
   inkCost: number;
+  customApiKey?: string;
 };
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -142,6 +149,33 @@ export async function refundInkTransaction(uid: string, amount: number): Promise
   });
 }
 
+async function resolveByoApiKey(
+  uid: string,
+  customApiKey?: string
+): Promise<string | undefined> {
+  const trimmed = customApiKey?.trim();
+  if (!trimmed) return undefined;
+  if (!isValidGoogleApiKey(trimmed)) {
+    throw new AiGateError('Invalid Google AI API key format.', 'AUTH');
+  }
+
+  if (!hasAdminFirestoreCredentials()) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[BYO] dev mode: Yearly Pro verification skipped');
+      return trimmed;
+    }
+    throw new AiGateError('Studio billing is not configured. BYO-API is unavailable.', 'AUTH');
+  }
+
+  const db = await getDb();
+  const userSnap = await db.doc(`users/${uid}`).get();
+  if (!isYearlyProFromData(userSnap.data())) {
+    throw new AiGateError('BYO API key requires an active Yearly Pro membership.', 'AUTH');
+  }
+
+  return trimmed;
+}
+
 export async function runSecuredAiAction<T>(
   ctx: SecuredAiContext,
   fn: () => Promise<T>,
@@ -149,12 +183,14 @@ export async function runSecuredAiAction<T>(
 ): Promise<T> {
   const uid = await verifyAiToken(ctx.idToken, ctx.userId);
   enforceAiRateLimit(uid);
+  const byoApiKey = await resolveByoApiKey(uid, ctx.customApiKey);
 
   const studioCosts = await getStudioCosts();
   const baseCost =
     ctx.actionName === 'generateSongDraft' || ctx.actionName === 'generateRelayDraft'
       ? ctx.inkCost
       : resolveFixedActionCost(ctx.actionName, studioCosts, ctx.inkCost);
+  const chargedCost = byoApiKey ? applyByoInkDiscount(baseCost) : baseCost;
 
   if (process.env.NODE_ENV === 'production' && !hasAdminFirestoreCredentials()) {
     throw new AiGateError(
@@ -166,9 +202,9 @@ export async function runSecuredAiAction<T>(
   const serverInkEnabled = hasAdminFirestoreCredentials();
   let finalAmount = 0;
 
-  if (serverInkEnabled && baseCost > 0) {
+  if (serverInkEnabled && chargedCost > 0) {
     try {
-      const deducted = await deductInkTransaction(uid, baseCost, ctx.actionName, userName);
+      const deducted = await deductInkTransaction(uid, chargedCost, ctx.actionName, userName);
       finalAmount = deducted.finalAmount;
     } catch (error) {
       if (error instanceof AiGateError) throw error;
@@ -183,7 +219,7 @@ export async function runSecuredAiAction<T>(
   }
 
   try {
-    return await fn();
+    return await runWithGenkitContext(byoApiKey, fn);
   } catch (error) {
     if (serverInkEnabled && finalAmount > 0) {
       await refundInkTransaction(uid, finalAmount).catch(() => undefined);
@@ -193,9 +229,9 @@ export async function runSecuredAiAction<T>(
 }
 
 /** Strip auth fields before passing to Genkit flows */
-export function stripAiAuth<T extends { idToken?: string; userId?: string }>(
+export function stripAiAuth<T extends { idToken?: string; userId?: string; customApiKey?: string }>(
   input: T
-): Omit<T, 'idToken' | 'userId'> {
-  const { idToken: _t, userId: _u, ...rest } = input;
+): Omit<T, 'idToken' | 'userId' | 'customApiKey'> {
+  const { idToken: _t, userId: _u, customApiKey: _k, ...rest } = input;
   return rest;
 }

@@ -1,5 +1,22 @@
-import type { DnaPreset } from '@/lib/types';
+import { buildDnaPresetPayload } from '@/lib/dna-strands';
+import type { DnaPreset, WizardAnalysis } from '@/lib/types';
 import type { TrackVibe } from '@/lib/types';
+
+function buildSystemDnaPreset(
+  analysis: WizardAnalysis,
+  options: {
+    name: string;
+    sourceTrackTitle?: string;
+    structure?: Array<{ name: string; bars: number; enabled: boolean }>;
+  }
+): DnaPreset {
+  const preset = buildDnaPresetPayload(analysis, {
+    name: options.name,
+    sourceTrackTitle: options.sourceTrackTitle ?? 'Studio Preset',
+    hubStructure: options.structure,
+  });
+  return { ...preset, createdAt: 'system' };
+}
 
 /** Professional system strains available to free-tier artists (load-only). */
 
@@ -9,9 +26,9 @@ export function isSystemPreset(createdAt?: string | null): boolean {
 
 /** Pro artists see studio presets plus their saved vault entries. */
 export function mergeDnaVaultPresets(custom: DnaPreset[] | undefined, isPro: boolean): DnaPreset[] {
-  if (!isPro) return SYSTEM_DNA_PRESETS as DnaPreset[];
+  if (!isPro) return SYSTEM_DNA_PRESETS;
   const user = (custom ?? []).filter((p) => !isSystemPreset(p.createdAt));
-  return [...SYSTEM_DNA_PRESETS, ...user] as DnaPreset[];
+  return [...SYSTEM_DNA_PRESETS, ...user];
 }
 
 export function mergeVibeVaultPresets(
@@ -34,35 +51,68 @@ export function mergeStyleVaultPresets(
   return [...SYSTEM_STYLE_PRESETS, ...user];
 }
 
-export const SYSTEM_DNA_PRESETS = [
-  {
-    name: 'Midnight Concept',
-    createdAt: 'system',
-    sourceTrackTitle: 'Studio Preset',
-    analysis: { themes: ['nocturnal', 'introspection'], emotionalTone: { primaryEmotion: 'melancholy' } },
-    mapping: {
-      enabled: true,
-      setting_world: 'City after hours — neon, rain, empty streets',
-      emotion_core: 'Restless hope beneath fatigue',
-      trigger_moment: 'A text that never gets answered',
-      message_truth: 'Growth costs what comfort used to give',
-      tone_palette: 'Cinematic, sparse, honest',
+/** Full-fidelity studio presets — same shape as a saved DNA extraction vault profile. */
+export const SYSTEM_DNA_PRESETS: DnaPreset[] = [
+  buildSystemDnaPreset(
+    {
+      themes: ['nocturnal city', 'introspection', 'isolation', 'late-night clarity'],
+      motifs: ['neon rain', 'empty streets', 'unread texts', 'last train', 'window glow'],
+      emotionalTone: {
+        primaryEmotion: 'Melancholy',
+        secondaryEmotion: 'Restless hope',
+        valence: 35,
+        intensity: 52,
+      },
+      emotionalShift:
+        'Fatigue and distance open the track; a single unanswered message sharpens the emotional turn.',
+      narrativeArc:
+        'After-hours drift → trigger moment of silence → resolve into honest growth over comfort.',
+      structure: 'Sparse verse pockets into a wide, cinematic hook — dynamic opens on the chorus.',
+      pov: 'First Person',
+      tense: 'Present Tense',
+      voiceStyle: 'Cinematic, sparse, confessional — concrete images, restrained adjectives.',
+      whatMakesItWork:
+        'City texture carries emotion; small details (rain, glow, silence) do the heavy lifting.',
+      styleAnalysis:
+        'Image-first lines, long vowel sounds, internal rhyme in pockets, hook widens the stereo field.',
+      styleMetrics: {
+        vocabularyScore: 68,
+        rhymeComplexity: 61,
+        cadenceMap: 'Cinematic Sparse',
+      },
     },
-  },
-  {
-    name: 'Victory Lap',
-    createdAt: 'system',
-    sourceTrackTitle: 'Studio Preset',
-    analysis: { themes: ['triumph', 'momentum'], emotionalTone: { primaryEmotion: 'confidence' } },
-    mapping: {
-      enabled: true,
-      setting_world: 'Studio booth / arena tunnel',
-      emotion_core: 'Earned swagger',
-      trigger_moment: 'First crowd singing your hook back',
-      message_truth: 'The grind was the price of the moment',
-      tone_palette: 'Anthemic, punchy, declarative',
+    { name: 'Midnight Concept', sourceTrackTitle: 'Studio Preset' }
+  ),
+  buildSystemDnaPreset(
+    {
+      themes: ['triumph', 'momentum', 'earned confidence', 'crowd energy'],
+      motifs: ['arena tunnel', 'hook sing-back', '808 knock', 'victory lap', 'studio booth'],
+      emotionalTone: {
+        primaryEmotion: 'Confidence',
+        secondaryEmotion: 'Swagger',
+        valence: 82,
+        intensity: 74,
+      },
+      emotionalShift:
+        'Tunnel tension builds → first crowd sing-back flips the record into full anthem mode.',
+      narrativeArc:
+        'Grind and proof → crowd validation turning point → declarative victory resolution.',
+      structure: 'Hook-forward: chantable chorus every 8 bars with punchy declarative verses.',
+      pov: 'First Person',
+      tense: 'Present Tense',
+      voiceStyle: 'Anthemic, punchy, declarative — short lines built for crowd repetition.',
+      whatMakesItWork:
+        'Earned swagger lands because verses show the grind before the hook releases it.',
+      styleAnalysis:
+        'Short declarative bars, chantable hooks, straight cadence, emotional clarity over density.',
+      styleMetrics: {
+        vocabularyScore: 55,
+        rhymeComplexity: 48,
+        cadenceMap: 'Straight',
+      },
     },
-  },
+    { name: 'Victory Lap', sourceTrackTitle: 'Studio Preset' }
+  ),
 ];
 
 export const SYSTEM_VIBE_PRESETS = [

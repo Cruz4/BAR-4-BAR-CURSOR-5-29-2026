@@ -17,8 +17,7 @@ import type { ActiveRules } from '@/components/dna-synthesis-loader';
 import type { Album, StyleProfile, Track } from '@/lib/types';
 import { INK_PACK_YEARLY_DISCOUNT_PERCENT } from '@/lib/studio-tiers';
 import { isProUser, isYearlyPro } from '@/lib/subscription';
-
-const API_KEY_STORAGE_KEY = 'bar4bar-custom-api-key';
+import { API_KEY_STORAGE_KEY, isValidGoogleApiKey } from '@/lib/byo-api';
 
 export type AiSpendContext = {
   track: Track;
@@ -249,17 +248,23 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
 
   const saveCustomApiKey = useCallback((key: string | null) => {
     if (!user) return;
+    const trimmed = key?.trim() || null;
     const isYearly = user.subscriptionTier === 'yearly';
-    if (!isYearly && key) {
+    if (!isYearly && trimmed) {
         toast({ variant: 'destructive', title: "Yearly Pro Required", description: "BYO API key is an exclusive benefit for Yearly Pro members." });
         return;
     }
-    setCustomApiKey(key);
-    if (key) {
-        localStorage.setItem(`${API_KEY_STORAGE_KEY}-${user.id}`, key);
-        toast({ title: "Custom API Key Saved", description: "Your Google key runs the model calls — Ink covers Bar 4 Bar workstation IP (prompts, DNA flow, guardrails), not double-billing for tokens." });
+    if (trimmed && !isValidGoogleApiKey(trimmed)) {
+        toast({ variant: 'destructive', title: 'Invalid API Key', description: 'Enter a valid Google AI key (starts with AIza…).' });
+        return;
+    }
+    setCustomApiKey(trimmed);
+    if (trimmed) {
+        localStorage.setItem(`${API_KEY_STORAGE_KEY}-${user.id}`, trimmed);
+        toast({ title: "BYO-API Active", description: "Your Google key runs model calls. Ink is charged at 50% off for all AI actions — workstation orchestration only." });
     } else {
         localStorage.removeItem(`${API_KEY_STORAGE_KEY}-${user.id}`);
+        toast({ title: 'BYO-API Cleared', description: 'Studio will use Bar 4 Bar model access again. Standard Ink rates apply.' });
     }
   }, [user, toast]);
 

@@ -13,11 +13,11 @@
 
 import { ai, z } from '@/ai/genkit';
 import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
+import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
 import { computeRelayDraftInkCostFromRates } from '@/lib/studio-costs';
 import { getStudioCosts } from '@/lib/server/studio-costs';
 import { AI_COSTS } from '@/lib/costs';
-
-export type AiSecuredInput = { idToken: string; userId: string };
+import type { AiSecuredInput } from '@/lib/ai-secured';
 
 // --- Phase 1 Schemas ---
 
@@ -69,13 +69,13 @@ const GeneratedVariantSchema = z.object({
 
 export async function suggestRelayDirections(input: { lyrics: string, userId?: string, userName?: string } & AiSecuredInput) {
   return runSecuredAiAction(
-    { idToken: input.idToken, userId: input.userId, actionName: 'analyzeRelayAssets', inkCost: AI_COSTS.analyzeRelayAssets },
+    { idToken: input.idToken, userId: input.userId, actionName: 'analyzeRelayAssets', inkCost: AI_COSTS.analyzeRelayAssets, customApiKey: input.customApiKey },
     async () => {
       try {
         const sanitizedLyrics = (input.lyrics || '').slice(0, 8000);
         if (sanitizedLyrics.trim().length < 5) throw new Error("Lyrical input too short.");
         
-        const response = await suggestDirectionsPrompt({ lyrics: sanitizedLyrics });
+        const response = await suggestDirectionsPrompt({ lyrics: sanitizedLyrics }, getGenkitPromptOptions());
         
         if (!response || !response.output) {
           throw new Error("Neural analysis returned no data.");
@@ -165,7 +165,7 @@ export async function generateRelayDraft(input: {
   const costs = await getStudioCosts();
   const inkCost = computeRelayDraftInkCostFromRates(input.structure, costs.generateRelayDraft);
   return runSecuredAiAction(
-    { idToken: input.idToken, userId: input.userId, actionName: 'generateRelayDraft', inkCost },
+    { idToken: input.idToken, userId: input.userId, actionName: 'generateRelayDraft', inkCost, customApiKey: input.customApiKey },
     async () => {
       try {
         const styleAnalysis = (input.styleProfile?.analysis || '').trim();
@@ -184,7 +184,7 @@ export async function generateRelayDraft(input: {
           specialInstructions: input.specialInstructions || 'N/A',
           structureStr: input.structure ? JSON.stringify(input.structure) : undefined,
           structureGuide: input.structureGuide?.trim() || undefined
-        });
+        }, getGenkitPromptOptions());
         if (!response || !response.output) throw new Error("Synthesis failed.");
         return response.output;
       } catch (error: any) { 

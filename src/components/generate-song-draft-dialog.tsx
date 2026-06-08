@@ -1032,7 +1032,7 @@ export function GenerateSongDraftDialog({
   };
 
   const handleRelayAnalyze = async (sourceText: string, e: any) => {
-    const cost = getCost('analyzeRelayAssets');
+    const cost = getEffectiveCost('analyzeRelayAssets');
     runWithInk('analyzeRelayAssets', cost, 'analyzeRelayAssets', e, async () => {
     setGeneratingOperation('extract');
     setIsGenerating(true);
@@ -1133,8 +1133,10 @@ export function GenerateSongDraftDialog({
       if (preset.structure?.length) {
           setHubSections(preset.structure.map((s: { name: string; bars: number; enabled: boolean }) => ({ ...s })));
       }
-      if (preset.structureGuide) {
+      if (preset.structureGuide?.trim()) {
           setHubStructureGuide(preset.structureGuide);
+      } else if (preset.analysis?.structure?.trim()) {
+          setHubStructureGuide(`[Structure] ${preset.analysis.structure.trim()}`);
       }
       if (preset.analysis) {
           setWizardState((prev) => ({
@@ -1290,24 +1292,6 @@ export function GenerateSongDraftDialog({
                       onInjectStrain={(title, content) => {
                         const target = STRAIN_TARGETS[title];
                         if (target) handleInjectStrain(title, content, target);
-                      }}
-                      onInjectIntents={(intents) => {
-                        setHubIntents(intents);
-                        setIntentsEnabled(true);
-                        markHubSeeded('intents');
-                        if (album) {
-                          const existing = album.thingsToSay || [];
-                          const novel = intents.filter((m) => !existing.includes(m));
-                          if (novel.length) {
-                            updateAlbum(album.id, { thingsToSay: [...existing, ...novel] });
-                          }
-                        }
-                        toast({ title: 'Motifs loaded into Intents' });
-                      }}
-                      onInjectStructureGuide={(guide) => {
-                        setHubStructureGuide(guide);
-                        markHubSeeded('structure');
-                        toast({ title: 'Structure guide loaded' });
                       }}
                       onInjectStyle={(analysis, metrics) => {
                         setHubStyleAnalysis(analysis);

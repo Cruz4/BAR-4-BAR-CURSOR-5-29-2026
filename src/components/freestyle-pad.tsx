@@ -90,7 +90,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   const browserSpeechRestartRef = useRef(0);
   const [pickupMode, setPickupMode] = useState<'studio' | 'browser'>('studio');
   const { refundInk } = useUsage();
-  const { getCost, tooltip } = useInkCosts();
+  const { getEffectiveCost, tooltip } = useInkCosts();
   const { runWithInk } = useTouchInkRunner();
 
   const transcriptionContext = useMemo(
@@ -502,7 +502,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
 
   const startListening = useCallback(
     (e?: React.MouseEvent) => {
-      const sessionCost = getCost('freestyleTranscription');
+      const sessionCost = getEffectiveCost('freestyleTranscription');
       if (
         !runWithInk('freestyleTranscription', sessionCost, 'freestyleTranscription', e, () => {
       sessionCostRef.current = sessionCost;
@@ -535,7 +535,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
         return;
       }
     },
-    [runWithInk, getCost, startBrowserListening, startStudioListening]
+    [runWithInk, getEffectiveCost, startBrowserListening, startStudioListening]
   );
 
   useEffect(() => {

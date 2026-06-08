@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export async function POST(req: Request) {
   try {
     const stripe = getStripe();
-    const { userId } = await req.json();
+    const { userId, returnTab } = await req.json();
 
     if (!userId) {
       return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
@@ -40,9 +40,10 @@ export async function POST(req: Request) {
     }
 
     const origin = getTrustedAppOrigin(req);
+    const tab = returnTab === 'cloud' ? 'cloud' : 'settings';
     const portal = await stripe.billingPortal.sessions.create({
       customer: stripeCustomerId,
-      return_url: `${origin}/usage?tab=settings`,
+      return_url: `${origin}/usage?tab=${tab}`,
     });
 
     return NextResponse.json({ url: portal.url });

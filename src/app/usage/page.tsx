@@ -62,6 +62,7 @@ import {
   VISITOR_INK_STORE_NOTICE,
   INK_STORE_PACK_CONTEXT,
 } from '@/lib/studio-tiers';
+import { BYO_API_INK_DISCOUNT_PERCENT } from '@/lib/byo-api';
 import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, isProUser } from '@/lib/subscription';
 import { getTrialDaysRemaining, isTrialActive } from '@/lib/trial';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
@@ -96,6 +97,10 @@ function UsagePageContent() {
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   
   const [apiKeyInput, setApiKeyInput] = useState(customApiKey || '');
+
+  useEffect(() => {
+    setApiKeyInput(customApiKey || '');
+  }, [customApiKey]);
   const [displayNameInput, setDisplayNameInput] = useState(user?.displayName || '');
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -422,7 +427,30 @@ function UsagePageContent() {
           </div>
         </TabsContent>
         
-        <TabsContent value="cloud" className="w-full">
+        <TabsContent value="cloud" className="w-full space-y-8">
+            {paidPro && user && (
+              <Card className="border-primary/20 bg-card/50">
+                <CardHeader className="pb-4">
+                  <CardTitle className="font-headline text-xl flex items-center gap-2.5">
+                    <CreditCard className="text-primary h-5 w-5" />
+                    Billing &amp; Subscription
+                  </CardTitle>
+                  <CardDescription className="text-xs uppercase tracking-tight">
+                    Update payment method, view invoices, switch plans, or cancel Pro in Stripe.
+                  </CardDescription>
+                </CardHeader>
+                <CardFooter className="pt-0">
+                  <Button
+                    className="w-full sm:w-auto h-11 font-bold uppercase text-xs md:text-sm"
+                    variant="outline"
+                    disabled={isCheckingOut}
+                    onClick={() => openBillingPortal(user.id, 'cloud')}
+                  >
+                    {isCheckingOut ? 'Opening Stripe…' : 'Manage Stripe Account'}
+                  </Button>
+                </CardFooter>
+              </Card>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {getStudioTierPlans(isCloudSyncActive, user?.subscriptionTier).map((plan) => (
                     <Card key={plan.name} className={cn("border-accent flex flex-col relative transition-all duration-500 shadow-xl", plan.badge ? "overflow-visible" : "overflow-hidden", plan.isCurrent && "ring-4 ring-primary/20")}>
@@ -578,19 +606,48 @@ function UsagePageContent() {
                         {!isYearlyUser && <Badge variant="destructive" className="uppercase tracking-widest text-xs shrink-0">Yearly Pro Only</Badge>}
                       </div>
                       <CardDescription className="text-sm leading-relaxed normal-case tracking-normal text-muted-foreground">
-                        Connect your Google AI key for your own API quota and rate limits. Ink still applies — that is the workstation IP fee (DNA flows, guardrails, remix logic), not a second charge for model tokens.
+                        Connect your Google AI key for your own API quota and rate limits. Google bills tokens on your account; Bar 4 Bar Ink is the workstation orchestration fee (DNA flows, guardrails, remix logic) at {BYO_API_INK_DISCOUNT_PERCENT}% off while BYO is active.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-5">
-                        {customApiKey && (
-                        <div className="p-4 bg-accent/5 border border-accent/20 rounded-md">
-                            <p className="text-sm leading-relaxed font-code text-accent font-bold"><Zap className="inline h-4 w-4 mr-1.5 align-[-2px]" /> Custom key active — Google bills your API usage; Bar 4 Bar Ink covers studio orchestration only.</p>
+                        {customApiKey && isYearlyUser && (
+                        <div className="p-4 bg-accent/5 border border-accent/20 rounded-md space-y-1">
+                            <p className="text-sm leading-relaxed font-code text-accent font-bold"><Zap className="inline h-4 w-4 mr-1.5 align-[-2px]" /> BYO-API active — {BYO_API_INK_DISCOUNT_PERCENT}% off all AI Ink costs.</p>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">Key stays in this browser only (never stored on Bar 4 Bar servers).</p>
                         </div>
                         )}
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <Input type="password" placeholder="AIza..." value={apiKeyInput} onChange={(e) => setApiKeyInput(e.target.value)} className="font-mono text-base h-12" />
-                            <Button onClick={() => saveCustomApiKey(apiKeyInput)} className="h-12 px-8 font-bold text-sm shrink-0">Save Key</Button>
-                        </div>
+                        <form
+                          className="flex flex-col sm:flex-row gap-3"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            if (isYearlyUser) saveCustomApiKey(apiKeyInput);
+                          }}
+                        >
+                            <Input
+                              type="password"
+                              autoComplete="current-password"
+                              placeholder="AIza..."
+                              value={apiKeyInput}
+                              onChange={(e) => setApiKeyInput(e.target.value)}
+                              disabled={!isYearlyUser}
+                              className="font-mono text-base h-12"
+                            />
+                            <Button type="submit" disabled={!isYearlyUser} className="h-12 px-8 font-bold text-sm shrink-0">Save Key</Button>
+                            {customApiKey && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                disabled={!isYearlyUser}
+                                className="h-12 px-6 font-bold text-sm shrink-0"
+                                onClick={() => {
+                                  setApiKeyInput('');
+                                  saveCustomApiKey(null);
+                                }}
+                              >
+                                Clear
+                              </Button>
+                            )}
+                        </form>
                     </CardContent>
                 </Card>
                 <Card className="border-primary/20">

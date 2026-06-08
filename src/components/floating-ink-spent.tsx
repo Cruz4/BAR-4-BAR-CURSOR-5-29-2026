@@ -17,9 +17,10 @@ function inkAnchorY(actionName: string | undefined, pressY: number): number {
   return pressY;
 }
 
-/** Skip full-screen DNA/logo loader (ink + emoji sequence still runs) */
+/** Skip popup DNA card when the action already has its own loader (e.g. Generation Workstation). */
 const SKIP_DNA_OVERLAY_ACTIONS = new Set([
   'generateSongDraft',
+  'generateDraftPerBar',
   'analyzeRelayAssets',
   'generateRelayDraft',
   'freestyleTranscription',

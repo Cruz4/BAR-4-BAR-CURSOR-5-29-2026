@@ -2,6 +2,8 @@
 
 import { ai, z } from '@/ai/genkit';
 import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
+import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
+import type { AiSecuredInput } from '@/lib/ai-secured';
 import { sanitizeFreestyleTranscript } from '@/lib/freestyle-transcript';
 import {
   buildFreestyleTranscribePrompt,
@@ -9,8 +11,6 @@ import {
   FREESTYLE_PRIOR_TAIL_CHARS,
   FREESTYLE_STYLE_CONTEXT_MAX,
 } from '@/lib/freestyle-transcription-context';
-
-export type AiSecuredInput = { idToken: string; userId: string };
 
 const MAX_AUDIO_BASE64_CHARS = 120_000;
 
@@ -51,9 +51,10 @@ async function generateTranscript(input: TranscribeFreestyleInput): Promise<stri
     styleProfileSummary: input.styleProfileSummary,
   });
 
+  const byoOpts = getGenkitPromptOptions();
   const response = await ai.generate({
     model: TRANSCRIBE_MODEL,
-    config: { temperature: 0 },
+    config: { temperature: 0, ...byoOpts.config },
     output: { schema: TranscribeFreestyleOutputSchema },
     prompt: [
       {
@@ -111,6 +112,7 @@ export async function transcribeFreestyleAudio(
       userId: input.userId,
       actionName: 'freestyleTranscriptionChunk',
       inkCost: 0,
+      customApiKey: input.customApiKey,
     },
     () => transcribeFreestyleFlow(flowInput)
   );

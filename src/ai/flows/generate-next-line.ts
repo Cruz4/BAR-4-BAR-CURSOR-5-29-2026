@@ -13,9 +13,9 @@
 import { ai, z } from '@/ai/genkit';
 import { DirectionSchema } from './types';
 import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
+import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
 import { AI_COSTS } from '@/lib/costs';
-
-export type AiSecuredInput = { idToken: string; userId: string };
+import type { AiSecuredInput } from '@/lib/ai-secured';
 
 const GenerateNextLineInputSchema = z.object({
   userId: z.string().optional(),
@@ -82,7 +82,7 @@ export async function generateNextLine(input: GenerateNextLineInput & AiSecuredI
   try {
     const flowInput = normalizeGenerateNextLineInput(stripAiAuth(input));
     return await runSecuredAiAction(
-      { idToken: input.idToken, userId: input.userId, actionName: 'generateNextLine', inkCost: AI_COSTS.generateNextLine },
+      { idToken: input.idToken, userId: input.userId, actionName: 'generateNextLine', inkCost: AI_COSTS.generateNextLine, customApiKey: input.customApiKey },
       () => generateNextLineFlow(flowInput),
       input.userName
     );
@@ -150,7 +150,7 @@ const generateNextLineFlow = ai.defineFlow(
     outputSchema: GenerateNextLineFlowOutputSchema,
   },
   async input => {
-    const response = await nextLinePrompt(input);
+    const response = await nextLinePrompt(input, getGenkitPromptOptions());
     if (!response || !response.output) return [];
     return response.output.slice(0, 2);
   }

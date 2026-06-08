@@ -10,9 +10,9 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
+import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
 import { AI_COSTS } from '@/lib/costs';
-
-export type AiSecuredInput = { idToken: string; userId: string };
+import type { AiSecuredInput } from '@/lib/ai-secured';
 
 const ImproveMyStyleInputSchema = z.object({
   userId: z.string().optional(),
@@ -35,7 +35,7 @@ export async function improveMyStyle(input: ImproveMyStyleInput & AiSecuredInput
   if (!input.lyrics || input.lyrics.trim().length < 10) throw new Error("Insufficient context.");
   const flowInput = stripAiAuth(input);
   return runSecuredAiAction(
-    { idToken: input.idToken, userId: input.userId, actionName: 'improveMyStyle', inkCost: AI_COSTS.improveMyStyle },
+    { idToken: input.idToken, userId: input.userId, actionName: 'improveMyStyle', inkCost: AI_COSTS.improveMyStyle, customApiKey: input.customApiKey },
     () => improveMyStyleFlow(flowInput),
     input.userName
   );
@@ -76,7 +76,7 @@ const improveMyStyleFlow = ai.defineFlow(
     outputSchema: ImproveMyStyleOutputSchema,
   },
   async input => {
-    const {output} = await styleLearningPrompt(input);
+    const {output} = await styleLearningPrompt(input, getGenkitPromptOptions());
     if (!output) throw new Error("Analysis failed.");
     return output;
   }

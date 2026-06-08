@@ -11,10 +11,10 @@ import { ai, z } from '@/ai/genkit';
 import { DirectionSchema } from './types';
 import { mergeDirection } from '@/lib/utils';
 import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
+import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
 import { computeDraftInkCostFromRates } from '@/lib/studio-costs';
 import { getStudioCosts } from '@/lib/server/studio-costs';
-
-export type AiSecuredInput = { idToken: string; userId: string };
+import type { AiSecuredInput } from '@/lib/ai-secured';
 
 const StyleProfileSchema = z.object({
   analysis: z.string().describe('A concise summary of the lyrical style analysis.'),
@@ -96,7 +96,7 @@ export async function generateSongDraft(input: GenerateDraftInput & AiSecuredInp
       costs.generateDraftPerBar
     );
     return await runSecuredAiAction(
-      { idToken: input.idToken, userId: input.userId, actionName: 'generateSongDraft', inkCost },
+      { idToken: input.idToken, userId: input.userId, actionName: 'generateSongDraft', inkCost, customApiKey: input.customApiKey },
       () => generateDraftFlow(flowInput),
       input.userName
     );
@@ -185,7 +185,7 @@ const generateDraftFlow = ai.defineFlow(
       intentsString: JSON.stringify(input.intents || []),
     };
     
-    const { output } = await draftPrompt(promptInput);
+    const { output } = await draftPrompt(promptInput, getGenkitPromptOptions());
     if (!output) throw new Error("No output from drafting engine.");
     return output;
   }

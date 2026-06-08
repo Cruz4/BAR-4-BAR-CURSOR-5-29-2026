@@ -27,7 +27,36 @@ import { ProductAnalytics } from './product-analytics';
 import { MarketingAttributionCapture } from './marketing-attribution-capture';
 import { InviteGateGuard } from './invite-gate-guard';
 
+const CHUNK_RELOAD_KEY = 'b4b_chunk_reload_at';
+
+/** Recover once when webpack chunks time out after a dev rebuild or deploy. */
+function useChunkLoadRecovery() {
+  React.useEffect(() => {
+    const reloadOnce = () => {
+      const last = sessionStorage.getItem(CHUNK_RELOAD_KEY);
+      const now = Date.now();
+      if (last && now - Number(last) < 10_000) return;
+      sessionStorage.setItem(CHUNK_RELOAD_KEY, String(now));
+      window.location.reload();
+    };
+
+    const onRejection = (event: PromiseRejectionEvent) => {
+      const message = String(
+        (event.reason as { message?: string } | undefined)?.message ?? event.reason ?? ''
+      );
+      if (message.includes('ChunkLoadError') || message.includes('Loading chunk')) {
+        event.preventDefault();
+        reloadOnce();
+      }
+    };
+
+    window.addEventListener('unhandledrejection', onRejection);
+    return () => window.removeEventListener('unhandledrejection', onRejection);
+  }, []);
+}
+
 export function ClientLayout({ children }: { children: React.ReactNode }) {
+  useChunkLoadRecovery();
   const pathname = usePathname();
   const isLoginPage = pathname === '/login';
   const isPerformPage = pathname.endsWith('/perform');

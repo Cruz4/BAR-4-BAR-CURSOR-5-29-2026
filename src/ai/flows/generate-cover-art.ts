@@ -8,9 +8,9 @@
 import { ai, z } from '@/ai/genkit';
 import { DirectionSchema } from './types';
 import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
+import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
 import { AI_COSTS } from '@/lib/costs';
-
-export type AiSecuredInput = { idToken: string; userId: string };
+import type { AiSecuredInput } from '@/lib/ai-secured';
 
 const GenerateCoverArtInputSchema = z.object({
   userId: z.string().optional(),
@@ -38,7 +38,7 @@ export type GenerateCoverArtOutput = z.infer<typeof GenerateCoverArtOutputSchema
 export async function generateCoverArt(input: GenerateCoverArtInput & AiSecuredInput): Promise<GenerateCoverArtOutput> {
   const flowInput = stripAiAuth(input);
   return runSecuredAiAction(
-    { idToken: input.idToken, userId: input.userId, actionName: 'generateCoverArt', inkCost: AI_COSTS.generateCoverArt },
+    { idToken: input.idToken, userId: input.userId, actionName: 'generateCoverArt', inkCost: AI_COSTS.generateCoverArt, customApiKey: input.customApiKey },
     () => generateCoverArtFlow(flowInput),
     input.userName
   );
@@ -91,7 +91,7 @@ const generateCoverArtFlow = ai.defineFlow(
         ...input,
         // Summarize lyrics to fit context window if they are too long
         lyrics: input.lyrics.slice(0, 3000)
-    });
+    }, getGenkitPromptOptions());
 
     const descriptivePrompt = response.output;
 

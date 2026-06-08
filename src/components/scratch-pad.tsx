@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { NotebookText, Trash2, Wand2, ChevronsUpDown } from 'lucide-react';
+import { NotebookText, Trash2, Wand2, ChevronsUpDown, Copy, Check } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import type { CreativeTool } from '@/ai/flows/creative-effects';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -29,6 +29,8 @@ const ScratchPad = forwardRef<{ addEffectResult: (result: ScratchPadEffectResult
   const [text, setText] = useState('');
   const [effectResults, setEffectResults] = useState<ScratchPadEffectResult[]>([]);
   const [internalOpen, setInternalOpen] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const { toast } = useToast();
   const isOpen = controlledOpen ?? internalOpen;
   const setIsOpen = onOpenChange ?? setInternalOpen;
 
@@ -94,9 +96,22 @@ const ScratchPad = forwardRef<{ addEffectResult: (result: ScratchPadEffectResult
       .join(', ');
   };
 
+  const handleCopyLine = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      toast({ title: 'Copied to clipboard' });
+      window.setTimeout(() => {
+        setCopiedKey((current) => (current === key ? null : current));
+      }, 1600);
+    } catch {
+      toast({ variant: 'destructive', title: 'Copy failed' });
+    }
+  };
+
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className="bg-muted/30 border-border/50">
+      <Card className="bg-muted/30 border-border/50 min-w-0 overflow-hidden">
         <CollapsibleTrigger asChild>
           <CardHeader className="cursor-pointer p-4 md:p-6">
             <div className="flex justify-between items-center">
@@ -135,39 +150,85 @@ const ScratchPad = forwardRef<{ addEffectResult: (result: ScratchPadEffectResult
           </CardHeader>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <CardContent className="p-4 md:p-6 md:pt-0">
-            <ScrollArea className="h-96 w-full">
-              <div className="space-y-4">
+          <CardContent className="p-4 md:p-6 md:pt-0 min-w-0">
+            <div className="h-96 w-full min-w-0 overflow-y-auto studio-scrollbar pr-1">
+              <div className="w-full min-w-0 max-w-full space-y-4">
                 <Textarea
                   value={text}
                   onChange={handleTextChange}
                   placeholder="Jot down rough ideas here. Saves automatically."
-                  className="h-48 min-h-[12rem] w-full resize-none font-code tracking-wider text-xs bg-background/50"
+                  className="h-48 min-h-[12rem] w-full min-w-0 resize-none font-code tracking-wider text-xs bg-background/50"
                 />
-                {effectResults.length > 0 && <div className="border-t border-dashed pt-4 space-y-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Analysis History</p>
-                  {effectResults.map((result, index) => (
-                    <div key={index} className="group p-3 rounded-lg bg-background/50 border border-border">
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2">
-                            <Wand2 className="h-3.5 w-3.5 text-indigo-500"/>
-                            <p className="text-xs font-bold capitalize font-headline">{result.tool}</p>
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteEffect(index)}>
+                {effectResults.length > 0 && (
+                  <div className="border-t border-dashed pt-4 space-y-4 min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Analysis History</p>
+                    {effectResults.map((result, index) => (
+                      <div
+                        key={index}
+                        className="group min-w-0 w-full p-3 rounded-lg bg-background/50 border border-border overflow-hidden"
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-2 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Wand2 className="h-3.5 w-3.5 shrink-0 text-indigo-500" />
+                            <p className="text-xs font-bold capitalize font-headline truncate">{result.tool}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleDeleteEffect(index)}
+                          >
                             <Trash2 className="h-3 w-3 text-destructive" />
-                        </Button>
+                          </Button>
+                        </div>
+                        <p className="text-[9px] text-muted-foreground font-code mb-2 break-words whitespace-pre-wrap leading-relaxed [overflow-wrap:anywhere]">
+                          Inputs: {formatInputs(result.inputs)}
+                        </p>
+                        <div className="space-y-1.5 min-w-0">
+                          {result.outputs.map((line, lineIndex) => {
+                            const copyKey = `${index}-${lineIndex}`;
+                            const copied = copiedKey === copyKey;
+                            return (
+                              <div
+                                key={lineIndex}
+                                className="group/line flex items-start gap-1 min-w-0 rounded border border-transparent hover:border-border hover:bg-muted/60 transition-colors pl-2 pr-0.5 py-1.5"
+                              >
+                                <p className="flex-1 min-w-0 text-xs font-code break-words whitespace-pre-wrap leading-relaxed [overflow-wrap:anywhere] select-text">
+                                  {line}
+                                </p>
+                                <TooltipProvider delayDuration={300}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 shrink-0 mt-0.5 text-muted-foreground hover:text-primary opacity-70 group-hover/line:opacity-100"
+                                        onClick={() => void handleCopyLine(line, copyKey)}
+                                        aria-label="Copy result"
+                                      >
+                                        {copied ? (
+                                          <Check className="h-3 w-3 text-green-500" />
+                                        ) : (
+                                          <Copy className="h-3 w-3" />
+                                        )}
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left" className="text-xs">
+                                      Copy line
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <p className="text-[9px] text-muted-foreground font-code mb-2 truncate">Inputs: {formatInputs(result.inputs)}</p>
-                      <div className="space-y-1">
-                        {result.outputs.map((line, lineIndex) => (
-                          <p key={lineIndex} className="text-xs font-code p-1.5 rounded hover:bg-muted cursor-pointer transition-colors border border-transparent hover:border-border">{line}</p>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>}
+                    ))}
+                  </div>
+                )}
               </div>
-            </ScrollArea>
+            </div>
           </CardContent>
         </CollapsibleContent>
       </Card>

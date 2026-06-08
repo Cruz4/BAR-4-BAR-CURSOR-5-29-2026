@@ -9,9 +9,9 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
+import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
 import { AI_COSTS } from '@/lib/costs';
-
-export type AiSecuredInput = { idToken: string; userId: string };
+import type { AiSecuredInput } from '@/lib/ai-secured';
 
 const SuggestVibeInputSchema = z.object({
   userId: z.string().optional(),
@@ -36,7 +36,7 @@ export type SuggestVibeOutput = z.infer<typeof SuggestVibeOutputSchema>;
 export async function suggestVibe(input: SuggestVibeInput & AiSecuredInput): Promise<SuggestVibeOutput> {
   const flowInput = stripAiAuth(input);
   return runSecuredAiAction(
-    { idToken: input.idToken, userId: input.userId, actionName: 'suggestVibe', inkCost: AI_COSTS.suggestVibe },
+    { idToken: input.idToken, userId: input.userId, actionName: 'suggestVibe', inkCost: AI_COSTS.suggestVibe, customApiKey: input.customApiKey },
     () => suggestVibeFlow(flowInput),
     input.userName
   );
@@ -78,7 +78,7 @@ const suggestVibeFlow = ai.defineFlow(
     outputSchema: SuggestVibeOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const {output} = await prompt(input, getGenkitPromptOptions());
     return output!;
   }
 );

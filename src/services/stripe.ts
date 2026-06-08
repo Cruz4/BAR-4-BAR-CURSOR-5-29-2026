@@ -79,14 +79,14 @@ export function useStripe() {
   );
 
   const openBillingPortal = useCallback(
-    async (userId: string) => {
+    async (userId: string, returnTab: 'cloud' | 'settings' = 'settings') => {
       setIsCheckingOut(true);
       try {
         const headers = await getAuthHeaders();
         const response = await fetch('/api/stripe/portal', {
           method: 'POST',
           headers,
-          body: JSON.stringify({ userId }),
+          body: JSON.stringify({ userId, returnTab }),
         });
         const data = await response.json();
         if (!response.ok || data.error) throw new Error(data.error || 'Could not open billing portal');

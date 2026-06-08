@@ -115,7 +115,7 @@ function RelayWizardContent() {
 
     // Step 1: Analyze
     const handleAnalyze = async () => {
-        const cost = getCost('analyzeRelayAssets');
+        const cost = getEffectiveCost('analyzeRelayAssets');
         if (!deductInk(cost, 'analyzeRelayAssets')) return;
 
         setIsProcessing(true);

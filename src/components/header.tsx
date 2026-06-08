@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LogOut, LayoutDashboard, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy, Smartphone } from 'lucide-react';
+import { LogOut, LayoutDashboard, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy, Smartphone, Key } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -28,6 +28,7 @@ import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
 import { getResidencyPoolCap, getResidencyProgressPercent } from '@/lib/studio-tiers';
 import { FREE_MONTHLY_RESIDENCY_INK, SIGNUP_INK } from '@/lib/subscription';
+import { BYO_API_INK_DISCOUNT_PERCENT, isByoInkDiscountActive } from '@/lib/byo-api';
 import { HowToUseDialog } from './how-to-use-dialog';
 import { isMobileInstallPlatform, isStandalonePwa, requestPwaInstallPrompt } from '@/lib/pwa-install';
 import {
@@ -44,7 +45,7 @@ export function Header() {
   const [bugReportOpen, setBugReportOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const { isGenerating, generatingMessage } = useUIState();
-  const { inkBalance, residencyBalance, purchasedBalance } = useUsage();
+  const { inkBalance, residencyBalance, purchasedBalance, customApiKey } = useUsage();
   const [progress, setProgress] = useState(0);
   const [showPwaInstallMenu, setShowPwaInstallMenu] = useState(false);
 
@@ -87,6 +88,7 @@ export function Header() {
   
   const isPro = user?.subscriptionStatus === 'active';
   const isYearly = user?.subscriptionTier === 'yearly';
+  const byoActive = isByoInkDiscountActive(user, customApiKey);
   const residencyPoolCap = getResidencyPoolCap(user);
   const residencyProgress = getResidencyProgressPercent(residencyBalance, residencyPoolCap);
 
@@ -149,6 +151,25 @@ export function Header() {
                     <TooltipContent><p>Studio Manual</p></TooltipContent>
                 </Tooltip>
 
+                {byoActive && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="hidden sm:inline-flex h-8 md:h-9 gap-1.5 font-code px-2 md:px-2.5 border-accent/40 text-accent hover:bg-accent/10 transition-all"
+                        onClick={() => router.push('/usage?tab=settings')}
+                      >
+                        <Key className="h-3.5 w-3.5 shrink-0" />
+                        <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider">BYO</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>BYO-API active — {BYO_API_INK_DISCOUNT_PERCENT}% off AI Ink. Google bills your tokens.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" data-tour="ink-balance" className="h-8 md:h-9 gap-1.5 md:gap-2 font-code px-2 md:px-3 border-primary/20 hover:bg-primary/5 transition-all">
@@ -161,6 +182,14 @@ export function Header() {
                             <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2"><Zap className="h-3 w-3" /> Studio Capacity Deck</h4>
                         </div>
                         <div className="p-4 space-y-4">
+                            {byoActive && (
+                              <div className="rounded-md border border-accent/25 bg-accent/10 px-3 py-2">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-accent flex items-center gap-1.5">
+                                  <Key className="h-3 w-3 shrink-0" /> BYO-API · {BYO_API_INK_DISCOUNT_PERCENT}% Ink savings
+                                </p>
+                                <p className="text-[8px] text-muted-foreground mt-1 leading-snug">Your Google key runs model calls; Ink is the workstation fee only.</p>
+                              </div>
+                            )}
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center">
                                     <span className="text-[9px] font-bold uppercase text-muted-foreground flex items-center gap-1.5"><Clock className="h-2.5 w-2.5" /> Residency Ink</span>

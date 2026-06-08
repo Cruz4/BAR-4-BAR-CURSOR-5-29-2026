@@ -253,11 +253,11 @@ function SmartStructureDialog({ open, onOpenChange, onApply }: any) {
   const { toast } = useToast();
   const { deductInk, refundInk, addUsageLog } = useUsage();
   const { setGenerating } = useUIState();
-  const { getCost, buttonLabel, tooltip } = useInkCosts();
+  const { getEffectiveCost, buttonLabel, tooltip } = useInkCosts();
   const { runWithInk } = useTouchInkRunner();
 
   const handleAnalyze = async (e: any) => {
-    const cost = getCost('analyzeStructure');
+    const cost = getEffectiveCost('analyzeStructure');
     runWithInk('analyzeStructure', cost, 'analyzeStructure', e, async () => {
       setIsProcessing(true);
       setGenerating(true, 'Deconstructing Neural Structure...');
@@ -350,11 +350,11 @@ function ImproveMyStyleDialog({ open, onOpenChange, track, onUpdateStyle }: any)
   const { toast } = useToast();
   const { refundInk, addUsageLog } = useUsage();
   const { setGenerating } = useUIState();
-  const { getCost, buttonLabel, tooltip } = useInkCosts();
+  const { getEffectiveCost, buttonLabel, tooltip } = useInkCosts();
   const { runWithInk } = useTouchInkRunner();
 
   const handleTrain = async (e: any) => {
-    const cost = getCost('improveMyStyle');
+    const cost = getEffectiveCost('improveMyStyle');
     runWithInk('improveMyStyle', cost, 'improveMyStyle', e, async () => {
       setIsProcessing(true);
       setGenerating(true, 'Learning Artist DNA...');
@@ -482,30 +482,6 @@ function createCoWriterDnaInjectHandlers(deps: {
     toast({ title: `${title} injected` });
   };
 
-  const onInjectIntents = (intents: string[]) => {
-    onUpdateTrack({
-      checkedIntents: intents,
-      intentsEnabled: true,
-    });
-    if (album) {
-      const existing = album.thingsToSay || [];
-      const novel = intents.filter((m) => !existing.includes(m));
-      if (novel.length) {
-        updateAlbum?.(album.id, { thingsToSay: [...existing, ...novel] });
-      }
-    }
-    openCoWriterSections?.('intents');
-    toast({ title: 'Motifs loaded into Intents' });
-  };
-
-  const onInjectStructureGuide = (guide: string) => {
-    const prev = track.specialInstructions?.trim() ?? '';
-    const next = prev && !prev.includes(guide.trim()) ? `${prev}\n${guide}` : prev || guide;
-    onUpdateTrack({ specialInstructions: next });
-    openCoWriterSections?.('coWriter');
-    toast({ title: 'Structure guide loaded' });
-  };
-
   const onInjectStyle = (analysis: string, metrics?: import('@/lib/types').StyleMetrics) => {
     updateStyleProfile?.(analysis, metrics ?? DEFAULT_STYLE_METRICS);
     onUpdateTrack({ styleEnabled: true });
@@ -513,7 +489,7 @@ function createCoWriterDnaInjectHandlers(deps: {
     toast({ title: 'Style DNA loaded' });
   };
 
-  return { onInjectMappingField, onInjectStrain, onInjectIntents, onInjectStructureGuide, onInjectStyle };
+  return { onInjectMappingField, onInjectStrain, onInjectStyle };
 }
 
 function DNAVaultDialog({
@@ -744,7 +720,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   const { setGenerating } = useUIState();
   const { toast } = useToast();
   const { refundInk, addUsageLog } = useUsage();
-  const { getCost, tooltip, buttonLabel } = useInkCosts();
+  const { getEffectiveCost, tooltip, buttonLabel } = useInkCosts();
   const { runWithInk } = useTouchInkRunner();
 
   const handleSuggestVibe = async (e: any) => {
@@ -752,7 +728,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
       toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
       return;
     }
-    const cost = getCost('suggestVibe');
+    const cost = getEffectiveCost('suggestVibe');
     runWithInk('suggestVibe', cost, 'suggestVibe', e, async () => {
       setGenerating(true, 'Analyzing Sonic Landscape...');
       try {
@@ -775,7 +751,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
       toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
       return;
     }
-    const cost = getCost('generateCoverArt');
+    const cost = getEffectiveCost('generateCoverArt');
     runWithInk('generateCoverArt', cost, 'generateCoverArt', e, async () => {
       setGenerating(true, 'Generating Cinematic DNA...');
       try {
@@ -2082,7 +2058,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                               </Button>
                             </div>
                             <p className="text-[9px] text-muted-foreground leading-snug">
-                              Full extraction archive — themes, motifs, style, structure, and mapped Creative DNA. Tap ⚡ to inject into the matching co-writer section.
+                              Extraction strains — motifs, structure, style, and narrative DNA. Tap ⚡ to inject into Intents, Style, DNA, or instructions.
                             </p>
                             {dnaVaultPresets.length > 1 && (
                               <select
@@ -2534,15 +2510,17 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
             checkedIntents: intents,
             intentsEnabled: intents.length > 0,
             styleEnabled: !!(p.styleAnalysis?.trim() || p.analysis?.styleAnalysis?.trim()),
-            ...(p.structureGuide?.trim()
-              ? {
-                  specialInstructions: (() => {
-                    const prev = track.specialInstructions?.trim() ?? '';
-                    const guide = p.structureGuide!.trim();
-                    return prev && !prev.includes(guide) ? `${prev}\n${guide}` : prev || guide;
-                  })(),
-                }
-              : {}),
+            ...(() => {
+              const guide =
+                p.structureGuide?.trim() ||
+                (p.analysis?.structure?.trim() ? `[Structure] ${p.analysis.structure.trim()}` : '');
+              if (!guide) return {};
+              const prev = track.specialInstructions?.trim() ?? '';
+              return {
+                specialInstructions:
+                  prev && !prev.includes(guide) ? `${prev}\n${guide}` : prev || guide,
+              };
+            })(),
           });
           if (album && intents.length) {
             const existing = album.thingsToSay || [];
@@ -2586,7 +2564,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const { getTrackById, updateTrack, styleProfile, updateStyleProfile, updateAlbum, albums } = useContext(DataContext);
   const { setGenerating } = useUIState();
   const { refundInk, addUsageLog, registerAiContext } = useUsage();
-  const { getCost } = useInkCosts();
+  const { getEffectiveCost } = useInkCosts();
   const { runWithInk } = useTouchInkRunner();
   const searchParams = useSearchParams();
 
@@ -2835,7 +2813,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
       return;
     }
-    const cost = getCost('findRhymes');
+    const cost = getEffectiveCost('findRhymes');
     runWithInk('findRhymes', cost, 'findRhymes', e, async () => {
       setIsRhymeLoading(true);
       setGenerating(true, 'Initializing Rhyme Pulse...');
@@ -2869,7 +2847,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     const sectionId = sId || activeGeneratorBar?.sectionId;
     const barIdx = bIdx || activeGeneratorBar?.idx;
     if (!sectionId || !barIdx) { toast({ variant: 'destructive', title: 'Selection Required' }); return; }
-    const cost = getCost('generateNextLine');
+    const cost = getEffectiveCost('generateNextLine');
     const inkKey = `generateNextLine-${mode}-${sectionId}-${barIdx}`;
     runWithInk(inkKey, cost, 'generateNextLine', e, async () => {
       setGenerating(true, 'Neural Synthesis Active...');

@@ -403,8 +403,24 @@ export function suggestArchiveProfileName(
   return `${base} — ${ARCHIVE_PROFILE_LABEL[kind]}`;
 }
 
-/** Individual extraction strains for vault display (full fidelity archive). */
-export function getVaultAnalysisStrains(analysis?: Partial<WizardAnalysis> | null) {
+export type VaultStrainRow = { title: string; content: string | string[] };
+
+const VAULT_STRAIN_ORDER = [
+  'Themes',
+  'Motifs',
+  'Emotion',
+  'Shift',
+  'Arc',
+  'Structure',
+  'POV',
+  'Tense',
+  'Technical Fingerprint',
+  'What Makes It Work',
+  'Style',
+] as const;
+
+/** Individual extraction strains from analysis only (no saved hub duplicates). */
+export function getVaultAnalysisStrains(analysis?: Partial<WizardAnalysis> | null): VaultStrainRow[] {
   if (!analysis) return [];
 
   const emotion = [analysis.emotionalTone?.primaryEmotion, analysis.emotionalTone?.secondaryEmotion]
@@ -423,7 +439,40 @@ export function getVaultAnalysisStrains(analysis?: Partial<WizardAnalysis> | nul
     { title: 'Technical Fingerprint', content: analysis.voiceStyle?.trim() || null },
     { title: 'What Makes It Work', content: analysis.whatMakesItWork?.trim() || null },
     { title: 'Style', content: analysis.styleAnalysis?.trim() || null },
-  ].filter((s) => s.content && (!(Array.isArray(s.content)) || s.content.length > 0));
+  ].filter((s): s is VaultStrainRow => !!s.content && (!(Array.isArray(s.content)) || s.content.length > 0));
+}
+
+/** Vault UI strains — merges saved intents/style once; never repeats structureGuide blob. */
+export function getVaultPresetStrains(preset: DnaPreset): VaultStrainRow[] {
+  const motifs = [
+    ...new Set([...(preset.intents ?? []), ...(preset.analysis?.motifs ?? [])]),
+  ].filter(Boolean);
+
+  const styleText =
+    preset.styleAnalysis?.trim() || preset.analysis?.styleAnalysis?.trim() || '';
+
+  const byTitle = new Map<string, VaultStrainRow>(
+    getVaultAnalysisStrains(preset.analysis).map((s) => [s.title, s])
+  );
+
+  if (motifs.length) {
+    byTitle.set('Motifs', { title: 'Motifs', content: motifs });
+  }
+
+  const structure = preset.analysis?.structure?.trim();
+  if (structure) {
+    byTitle.set('Structure', { title: 'Structure', content: structure });
+  } else {
+    byTitle.delete('Structure');
+  }
+
+  if (styleText) {
+    byTitle.set('Style', { title: 'Style', content: styleText });
+  }
+
+  return VAULT_STRAIN_ORDER.map((title) => byTitle.get(title)).filter(
+    (s): s is VaultStrainRow => !!s?.content
+  );
 }
 
 export const MAPPING_FIELD_LABELS: Record<keyof Direction, string> = {

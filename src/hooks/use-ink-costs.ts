@@ -7,8 +7,14 @@ import { subscribeDocument } from '@/lib/firebase/client/firestore-subscribe';
 import { mergeStudioCosts, type StudioCosts } from '@/lib/studio-costs';
 import type { InkActionKey } from '@/lib/ink-labels';
 import { inkButtonLabel, inkTooltip } from '@/lib/ink-labels';
+import { useUsage } from '@/context/usage-context';
+import { useAuth } from '@/hooks/use-auth';
+import { applyByoInkDiscount, BYO_API_INK_DISCOUNT_PERCENT, isByoInkDiscountActive } from '@/lib/byo-api';
 
 export function useInkCosts() {
+  const { customApiKey } = useUsage();
+  const { user } = useAuth();
+  const byoActive = isByoInkDiscountActive(user, customApiKey);
   const [costs, setCosts] = useState<StudioCosts>(() => mergeStudioCosts());
 
   useEffect(() => {
@@ -28,19 +34,22 @@ export function useInkCosts() {
     [costs]
   );
 
-  /** Same as getCost — no discount on AI action spend (Yearly Pro ink-store discount is checkout-only). */
+  /** Applies BYO-API platform discount (50% off Ink) when Yearly Pro has a saved Google key. */
   const getEffectiveCost = useCallback(
     (action: InkActionKey, overrideBase?: number) => {
       const base = overrideBase ?? costs[action];
-      return Math.max(1, Math.ceil(base));
+      return byoActive ? applyByoInkDiscount(base) : Math.max(1, Math.ceil(base));
     },
-    [costs]
+    [costs, byoActive]
   );
 
   const tooltip = useCallback(
-    (action: InkActionKey, overrideBase?: number) =>
-      inkTooltip(action, getEffectiveCost(action, overrideBase)),
-    [getEffectiveCost]
+    (action: InkActionKey, overrideBase?: number) => {
+      const amount = getEffectiveCost(action, overrideBase);
+      const base = inkTooltip(action, amount);
+      return byoActive ? `${base} · BYO ${BYO_API_INK_DISCOUNT_PERCENT}% off` : base;
+    },
+    [getEffectiveCost, byoActive]
   );
 
   const buttonLabel = useCallback(
@@ -49,5 +58,5 @@ export function useInkCosts() {
     [getEffectiveCost]
   );
 
-  return { costs, getCost, getEffectiveCost, tooltip, buttonLabel };
+  return { costs, getCost, getEffectiveCost, tooltip, buttonLabel, byoActive };
 }

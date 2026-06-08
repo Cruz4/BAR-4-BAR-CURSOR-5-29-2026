@@ -8,9 +8,9 @@
 import { ai, z } from '@/ai/genkit';
 import { DirectionSchema } from './types';
 import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
+import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
 import { AI_COSTS } from '@/lib/costs';
-
-export type AiSecuredInput = { idToken: string; userId: string };
+import type { AiSecuredInput } from '@/lib/ai-secured';
 
 // Define tool-specific input schemas
 const SimileInputSchema = z.object({ subject: z.string() });
@@ -124,7 +124,7 @@ export type CreativeEffectsOutput = z.infer<typeof CreativeEffectsOutputSchema>;
 export async function runCreativeEffect(input: CreativeEffectsInput & AiSecuredInput): Promise<CreativeEffectsOutput> {
     const flowInput = normalizeCreativeEffectsInput(stripAiAuth(input));
     return runSecuredAiAction(
-      { idToken: input.idToken, userId: input.userId, actionName: 'runCreativeEffect', inkCost: AI_COSTS.runCreativeEffect },
+      { idToken: input.idToken, userId: input.userId, actionName: 'runCreativeEffect', inkCost: AI_COSTS.runCreativeEffect, customApiKey: input.customApiKey },
       () => creativeEffectsFlow(flowInput),
       input.userName
     );
@@ -257,7 +257,7 @@ const creativeEffectsFlow = ai.defineFlow(
             isMetaphor: input.toolRequest.tool === 'metaphor',
         };
 
-        const { output } = await effectsPrompt(promptInput);
+        const { output } = await effectsPrompt(promptInput, getGenkitPromptOptions());
         return output!;
     }
 );

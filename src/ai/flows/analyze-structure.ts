@@ -7,9 +7,9 @@
 
 import { ai, z } from '@/ai/genkit';
 import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
+import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
 import { AI_COSTS } from '@/lib/costs';
-
-export type AiSecuredInput = { idToken: string; userId: string };
+import type { AiSecuredInput } from '@/lib/ai-secured';
 
 const AnalyzeStructureInputSchema = z.object({
   text: z.string().describe('The raw lyrical text to structure.'),
@@ -30,7 +30,7 @@ export type AnalyzeStructureOutput = z.infer<typeof AnalyzeStructureOutputSchema
 export async function analyzeStructure(input: { text: string } & AiSecuredInput) {
   const flowInput = stripAiAuth(input);
   return runSecuredAiAction(
-    { idToken: input.idToken, userId: input.userId, actionName: 'analyzeStructure', inkCost: AI_COSTS.analyzeStructure },
+    { idToken: input.idToken, userId: input.userId, actionName: 'analyzeStructure', inkCost: AI_COSTS.analyzeStructure, customApiKey: input.customApiKey },
     () => analyzeStructureFlow(flowInput)
   );
 }
@@ -59,7 +59,7 @@ const analyzeStructureFlow = ai.defineFlow(
     outputSchema: AnalyzeStructureOutputSchema,
   },
   async input => {
-    const { output } = await structurePrompt(input);
+    const { output } = await structurePrompt(input, getGenkitPromptOptions());
     if (!output) throw new Error("Structural analysis failed.");
     return output;
   }

@@ -9,9 +9,9 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
+import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
 import { AI_COSTS } from '@/lib/costs';
-
-export type AiSecuredInput = { idToken: string; userId: string };
+import type { AiSecuredInput } from '@/lib/ai-secured';
 
 const FindRhymesInputSchema = z.object({
   userId: z.string().optional(),
@@ -36,7 +36,7 @@ export async function findRhymes(input: FindRhymesInput & AiSecuredInput): Promi
   }
   const flowInput = stripAiAuth(input);
   return runSecuredAiAction(
-    { idToken: input.idToken, userId: input.userId, actionName: 'findRhymes', inkCost: AI_COSTS.findRhymes },
+    { idToken: input.idToken, userId: input.userId, actionName: 'findRhymes', inkCost: AI_COSTS.findRhymes, customApiKey: input.customApiKey },
     () => findRhymesFlow({ ...flowInput, text: textToAnalyze }),
     input.userName
   );
@@ -74,7 +74,7 @@ const findRhymesFlow = ai.defineFlow(
     outputSchema: FindRhymesOutputSchema,
   },
   async input => {
-    const {output} = await findRhymesPrompt(input);
+    const {output} = await findRhymesPrompt(input, getGenkitPromptOptions());
     return output!;
   }
 );

@@ -113,7 +113,7 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
   const setIsOpen = onOpenChange ?? setInternalOpen;
   const [endWith, setEndWith] = useState('');
   const { refundInk, addUsageLog } = useUsage();
-  const { getCost, buttonLabel, tooltip } = useInkCosts();
+  const { getEffectiveCost, buttonLabel, tooltip } = useInkCosts();
   const { runWithInk } = useTouchInkRunner();
 
   const formStateRef = useRef<Record<string, any>>({
@@ -133,7 +133,7 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
   };
 
   const handleRunEffect = (e: any) => {
-    const cost = getCost('runCreativeEffect');
+    const cost = getEffectiveCost('runCreativeEffect');
     runWithInk(`runCreativeEffect-${selectedTool}`, cost, 'runCreativeEffect', e, () => {
       const currentToolInputs = formStateRef.current[selectedTool];
 

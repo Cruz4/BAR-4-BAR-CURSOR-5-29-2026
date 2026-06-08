@@ -67,6 +67,16 @@ const nextConfig = {
     'firebase-admin/auth',
     'firebase-admin/firestore',
   ],
+  webpack: (config, { dev, isServer }) => {
+    // Windows paths with special characters can miss file events; polling stabilizes dev HMR.
+    if (dev && !isServer) {
+      config.watchOptions = {
+        poll: 1000,
+        aggregateTimeout: 300,
+      };
+    }
+    return config;
+  },
 };
 
 module.exports = nextConfig;

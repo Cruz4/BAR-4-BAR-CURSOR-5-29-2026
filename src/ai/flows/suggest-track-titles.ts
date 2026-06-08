@@ -9,9 +9,9 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { DirectionSchema } from './types';
 import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
+import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
 import { AI_COSTS } from '@/lib/costs';
-
-export type AiSecuredInput = { idToken: string; userId: string };
+import type { AiSecuredInput } from '@/lib/ai-secured';
 
 const SuggestTrackTitlesInputSchema = z.object({
   userId: z.string().optional(),
@@ -40,7 +40,7 @@ export type SuggestTrackTitlesOutput = z.infer<typeof SuggestTrackTitlesOutputSc
 export async function suggestTrackTitles(input: SuggestTrackTitlesInput & AiSecuredInput): Promise<SuggestTrackTitlesOutput> {
   const flowInput = stripAiAuth(input);
   return runSecuredAiAction(
-    { idToken: input.idToken, userId: input.userId, actionName: 'suggestTrackTitles', inkCost: AI_COSTS.suggestTrackTitles },
+    { idToken: input.idToken, userId: input.userId, actionName: 'suggestTrackTitles', inkCost: AI_COSTS.suggestTrackTitles, customApiKey: input.customApiKey },
     () => suggestTrackTitlesFlow(flowInput),
     input.userName
   );
@@ -85,7 +85,7 @@ const suggestTrackTitlesFlow = ai.defineFlow(
     outputSchema: SuggestTrackTitlesOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const {output} = await prompt(input, getGenkitPromptOptions());
     return output!;
   }
 );
