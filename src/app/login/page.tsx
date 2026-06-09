@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, Suspense, useEffect, useCallback } from 'react';
+import React, { useState, Suspense, useEffect } from 'react';
 import { 
   GoogleAuthProvider, 
   signInWithPopup,
@@ -20,7 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Sparkles, ArrowRight, Mail, Lock, User as UserIcon, LogIn, Coffee, Gift, Zap, Import } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, Zap, Import } from 'lucide-react';
 import { BUY_ME_COFFEE_URL, SUPPORT_MAILTO } from '@/lib/support';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
@@ -34,7 +34,6 @@ import { cn } from '@/lib/utils';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { captureMarketingRefFromUrl, getStoredMarketingRef } from '@/lib/marketing-attribution';
-import { motion } from 'framer-motion';
 import { REFERRAL_INK_REWARD, REFERRAL_STORAGE_KEY, normalizeReferralCode } from '@/lib/referrals';
 import { claimPendingReferral } from '@/components/refer-a-friend-section';
 import { InviteGateLoginBanner } from '@/components/invite-gate-login-banner';
@@ -43,9 +42,7 @@ import {
   getProCheckoutLabel,
   getSafeNextPath,
 } from '@/lib/checkout-intent';
-import { LandingShowcase } from '@/components/marketing/landing-showcase';
 import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmosphere';
-import { MARKETING_FEATURE_BANDS } from '@/lib/marketing-features';
 
 function LoginForm() {
   const router = useRouter();
@@ -58,7 +55,6 @@ function LoginForm() {
   const [displayName, setDisplayName] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const loginCardRef = useRef<HTMLDivElement>(null);
   const importIntent = searchParams.get('intent') === 'dna-import';
   const safeNext = getSafeNextPath(searchParams.get('next'));
   const proCheckoutIntent = getCheckoutFromPath(safeNext);
@@ -66,49 +62,6 @@ function LoginForm() {
   useEffect(() => {
     if (proCheckoutIntent) setAuthMode('signup');
   }, [proCheckoutIntent]);
-
-  const scrollToLogin = useCallback(() => {
-    const el = loginCardRef.current;
-    if (!el) return;
-
-    const align = (behavior: ScrollBehavior = 'smooth') => {
-      el.scrollIntoView({ behavior, block: 'center', inline: 'nearest' });
-    };
-
-    align('smooth');
-
-    const correctIfDrifted = () => {
-      const rect = el.getBoundingClientRect();
-      const viewportCenter = window.innerHeight / 2;
-      const cardCenter = rect.top + rect.height / 2;
-      if (Math.abs(cardCenter - viewportCenter) > 48) {
-        align(Math.abs(cardCenter - viewportCenter) > 200 ? 'auto' : 'smooth');
-      }
-    };
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(correctIfDrifted);
-    });
-    window.setTimeout(correctIfDrifted, 450);
-    window.setTimeout(correctIfDrifted, 1000);
-  }, []);
-
-  useEffect(() => {
-    if (window.location.hash !== '#login') return;
-    const timer = window.setTimeout(() => scrollToLogin(), 120);
-    return () => window.clearTimeout(timer);
-  }, [scrollToLogin]);
-
-  useEffect(() => {
-    const urls = new Set([
-      '/marketing/hero-workstation.png',
-      ...MARKETING_FEATURE_BANDS.map((band) => band.mediaSrc),
-    ]);
-    for (const src of urls) {
-      const img = new Image();
-      img.src = src;
-    }
-  }, []);
 
   useEffect(() => {
     captureMarketingRefFromUrl();
@@ -232,87 +185,38 @@ function LoginForm() {
       <LoginStudioAtmosphere />
 
       <header className="fixed top-0 left-0 right-0 h-16 border-b border-white/[0.06] bg-background/40 backdrop-blur-xl z-[200] grid grid-cols-[1fr_auto_1fr] items-center px-3 sm:px-6 gap-2">
-          <div aria-hidden className="min-w-0" />
+          <nav className="flex items-center justify-start min-w-0">
+            <Link
+              href="/"
+              className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
+            >
+              ← Home
+            </Link>
+          </nav>
 
-          <div className="flex items-center justify-center gap-2 sm:gap-4 min-w-0 max-w-[min(100%,14rem)] sm:max-w-none">
+          <Link href="/" className="flex items-center justify-center gap-2 sm:gap-4 min-w-0 max-w-[min(100%,14rem)] sm:max-w-none">
               <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white rounded-xl overflow-hidden flex items-center justify-center p-1.5 shadow-2xl shrink-0">
                   <img src="/Logo.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
-              <h1 className="hidden sm:block text-lg sm:text-2xl font-headline font-bold text-white tracking-tighter uppercase truncate">Bar 4 Bar</h1>
-          </div>
+              <span className="hidden sm:block text-lg sm:text-2xl font-headline font-bold text-white tracking-tighter uppercase truncate">Bar 4 Bar</span>
+          </Link>
 
           <nav className="flex items-center justify-end gap-2 sm:gap-4 min-w-0">
-            <a href="#features" className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Features</a>
+            <Link href="/#features" className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Features</Link>
             <Link href="/pricing" className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Pricing</Link>
-            <Button onClick={scrollToLogin} className="bg-primary hover:bg-primary/90 text-white font-bold h-9 px-3 sm:px-5 gap-1.5 sm:gap-2 rounded-md shadow-lg shrink-0 transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm">
-              <LogIn className="h-4 w-4 shrink-0" /> <span className="truncate">Login</span>
-            </Button>
           </nav>
       </header>
 
-      <main className="flex-grow flex flex-col mt-16 relative z-10">
-        {/* HERO SECTION */}
-        <section className="relative min-h-[92vh] flex flex-col items-center justify-center text-center px-4">
-            <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in zoom-in duration-1000 relative z-10">
-                <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-md border border-orange-500/40 px-6 py-2 rounded-full shadow-2xl">
-                    <Sparkles className="h-4 w-4 text-orange-500 animate-pulse" />
-                    <span className="text-[11px] font-bold uppercase tracking-[0.3em] text-orange-500">Professional Lyrical Workspace</span>
-                </div>
-
-                <div className="space-y-4">
-                    <motion.div whileHover={{ scale: 1.02 }} className="cursor-default">
-                        <h2 className="text-7xl md:text-9xl font-headline font-bold text-white tracking-tight drop-shadow-[0_10px_25px_rgba(0,0,0,0.9)]">
-                            BAR 4 BAR
-                        </h2>
-                    </motion.div>
-                    <div className="flex items-center justify-center gap-6">
-                        <h3 className="text-xl md:text-5xl font-headline font-bold text-white tracking-widest uppercase">
-                            YOUR <span className="text-primary animate-pulse">ULTIMATE</span> STUDIO RHYME BOOK.
-                        </h3>
-                        <motion.span animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 4, repeat: Infinity }} className="text-4xl md:text-6xl drop-shadow-lg">🤖</motion.span>
-                    </div>
-                </div>
-
-                <p className="text-sm md:text-xl text-white font-body font-medium leading-relaxed max-w-3xl mx-auto px-6 tracking-wide drop-shadow-lg">
-                    The power-user workstation for <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">musicians and lyricists</span>. Organize <span className="bg-sky-500/20 text-sky-400 px-1 rounded-sm font-bold italic underline decoration-primary/40 underline-offset-8">concept albums</span>, train the AI on your <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">unique style</span>, and <span className="text-sky-400 font-bold">master your craft</span>.
-                </p>
-
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4 relative z-50 -mt-6">
-                    <Button 
-                        onClick={scrollToLogin} 
-                        size="lg" 
-                        className="h-16 px-12 text-lg font-bold bg-primary hover:bg-primary/90 rounded-full shadow-[0_0_40px_rgba(59,130,246,0.5)] min-w-[260px] group transition-all relative overflow-hidden"
-                    >
-                        <span className="relative z-10 flex items-center gap-2">
-                           Enter the Studio <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
-                        </span>
-                    </Button>
-                    <Link href="/pricing" className="relative z-50">
-                        <Button 
-                            variant="outline" 
-                            size="lg" 
-                            className="h-16 px-12 text-lg font-bold bg-black/40 hover:bg-black/60 border-white/20 text-white rounded-full min-w-[260px] backdrop-blur-md transition-all hover:scale-105"
-                        >
-                            View Studio Tiers
-                        </Button>
-                    </Link>
-                </div>
-            </div>
-
-        </section>
-
-        <LandingShowcase />
-
+      <main className="flex-grow flex flex-col mt-16 relative z-10 min-h-[calc(100vh-4rem)]">
         <section
           id="login"
-          className="relative py-28 px-4 flex flex-col justify-center items-center scroll-mt-[4.5rem]"
+          className="flex-1 px-4 py-5 sm:py-6 flex items-center justify-center"
         >
-            <div className="w-full max-w-md relative z-10">
-              <InviteGateLoginBanner />
-            </div>
+          <div className="w-full max-w-5xl relative z-10 space-y-4">
+            <InviteGateLoginBanner />
 
             {proCheckoutIntent && (
-              <Card className="w-full max-w-md mb-6 border-accent/30 bg-accent/10 backdrop-blur-md relative z-50">
+              <Card className="w-full border-accent/30 bg-accent/10 backdrop-blur-md relative z-50">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-headline uppercase tracking-wide flex items-center gap-2 text-accent">
                     <Zap className="h-4 w-4" /> Studio Pro Checkout
@@ -327,7 +231,7 @@ function LoginForm() {
             )}
 
             {importIntent && (
-              <Card className="w-full max-w-md mb-6 border-primary/30 bg-primary/10 backdrop-blur-md relative z-50">
+              <Card className="w-full border-primary/30 bg-primary/10 backdrop-blur-md relative z-50">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-headline uppercase tracking-wide flex items-center gap-2 text-primary">
                     <Import className="h-4 w-4" /> DNA Drop — Import Setup
@@ -340,116 +244,176 @@ function LoginForm() {
               </Card>
             )}
 
-            <Card
-              ref={loginCardRef}
-              className="w-full max-w-md border-primary/15 shadow-[0_0_80px_rgba(59,130,246,0.12)] bg-[#0c121d]/55 backdrop-blur-2xl overflow-hidden relative z-10 transition-all duration-700 hover:border-primary/30 scroll-mt-24"
-            >
-                <CardHeader className="text-center bg-white/5 p-0">
-                    <div className="mx-auto w-full h-44 bg-black flex items-center justify-center border-b border-white/10 p-12">
-                        <img src="/Logo.png" alt="Logo" className="h-full w-full object-contain" />
-                    </div>
-                    <div className="py-8 px-6">
-                        <CardTitle className="font-headline text-4xl text-white uppercase">Initialize Session</CardTitle>
-                        <CardDescription className="text-[10px] uppercase tracking-[0.3em] mt-2 text-primary font-bold">Studio Access Required</CardDescription>
-                    </div>
-                </CardHeader>
-                <CardContent className="pt-8">
-                    <Tabs value={authMode} onValueChange={(v) => setAuthMode(v as any)} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-8 bg-black/40 border border-white/5 p-1">
-                        <TabsTrigger value="signin" className="font-bold data-[state=active]:bg-primary">Sign In</TabsTrigger>
-                        <TabsTrigger value="signup" className="font-bold data-[state=active]:bg-primary">Sign Up</TabsTrigger>
+            <Card className="w-full border-primary/15 shadow-[0_0_80px_rgba(59,130,246,0.12)] bg-[#0c121d]/55 backdrop-blur-2xl overflow-hidden relative z-10 transition-all duration-700 hover:border-primary/30">
+              <div className="grid md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] gap-0">
+                <div className="flex flex-col justify-center gap-4 p-6 sm:p-8 border-b md:border-b-0 md:border-r border-white/10 bg-white/[0.03] text-center md:text-left">
+                  <div className="mx-auto md:mx-0 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-2xl flex items-center justify-center p-3 shadow-2xl shrink-0">
+                    <img src="/Logo.png" alt="Bar 4 Bar logo" className="w-full h-full object-contain" />
+                  </div>
+                  <div className="space-y-2">
+                    <h2 className="font-headline text-2xl sm:text-3xl lg:text-4xl font-bold uppercase text-white tracking-tight leading-tight">
+                      Enter the Studio
+                    </h2>
+                    <p className="text-[10px] sm:text-xs font-code text-muted-foreground uppercase tracking-widest">
+                      Free 300 Ink on signup — no card required
+                    </p>
+                  </div>
+                  <div className="hidden sm:block space-y-1 pt-1">
+                    <p className="font-headline text-lg font-bold uppercase text-primary/90">Initialize Session</p>
+                    <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground font-bold">
+                      Studio Access Required
+                    </p>
+                  </div>
+                </div>
+
+                <CardContent className="p-5 sm:p-6 lg:p-7 flex flex-col justify-center">
+                  <Tabs value={authMode} onValueChange={(v) => setAuthMode(v as any)} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-4 bg-black/40 border border-white/5 p-1 h-10">
+                      <TabsTrigger value="signin" className="font-bold text-sm data-[state=active]:bg-primary">
+                        Sign In
+                      </TabsTrigger>
+                      <TabsTrigger value="signup" className="font-bold text-sm data-[state=active]:bg-primary">
+                        Sign Up
+                      </TabsTrigger>
                     </TabsList>
-                    
-                    <form onSubmit={handleEmailAuth} className="space-y-4">
-                        {authMode === 'signup' && (
-                        <div className="space-y-2">
-                            <Label htmlFor="name" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Artist Name</Label>
-                            <div className="relative">
-                                <UserIcon className="absolute left-3 top-3 h-4 w-4 text-primary/60" />
-                                <Input id="name" name="name" autoComplete="name" placeholder="Stage Name" className="pl-10 h-11 bg-black/40 border-white/10 text-white" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-                            </div>
-                        </div>
+
+                    <form onSubmit={handleEmailAuth} className="space-y-3">
+                      <div
+                        className={cn(
+                          'grid gap-3',
+                          authMode === 'signup' ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'
                         )}
-                        <div className="space-y-2">
-                        <Label htmlFor="email" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email Address</Label>
-                        <div className="relative">
-                            <Mail className="absolute left-3 top-3 h-4 w-4 text-primary/60" />
-                            <Input id="email" name="email" type="email" autoComplete="email" placeholder="artist@studio.com" className="pl-10 h-11 bg-black/40 border-white/10 text-white" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                      >
+                        {authMode === 'signup' && (
+                          <div className="space-y-1.5 sm:col-span-2">
+                            <Label htmlFor="name" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                              Artist Name
+                            </Label>
+                            <div className="relative">
+                              <UserIcon className="absolute left-3 top-2.5 h-4 w-4 text-primary/60" />
+                              <Input
+                                id="name"
+                                name="name"
+                                autoComplete="name"
+                                placeholder="Stage Name"
+                                className="pl-10 h-10 bg-black/40 border-white/10 text-white"
+                                value={displayName}
+                                onChange={(e) => setDisplayName(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        )}
+                        <div className="space-y-1.5">
+                          <Label htmlFor="email" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            Email Address
+                          </Label>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-2.5 h-4 w-4 text-primary/60" />
+                            <Input
+                              id="email"
+                              name="email"
+                              type="email"
+                              autoComplete="email"
+                              placeholder="artist@studio.com"
+                              className="pl-10 h-10 bg-black/40 border-white/10 text-white"
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              required
+                            />
+                          </div>
                         </div>
-                        </div>
-                        <div className="space-y-2">
-                        <Label htmlFor="password" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Password</Label>
-                        <div className="relative">
-                            <Lock className="absolute left-3 top-3 h-4 w-4 text-primary/60" />
+                        <div className="space-y-1.5">
+                          <Label htmlFor="password" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            Password
+                          </Label>
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-2.5 h-4 w-4 text-primary/60" />
                             <Input
                               id="password"
                               name="password"
                               type="password"
                               autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'}
                               placeholder="••••••••"
-                              className="pl-10 h-11 bg-black/40 border-white/10 text-white"
+                              className="pl-10 h-10 bg-black/40 border-white/10 text-white"
                               value={password}
                               onChange={(e) => setPassword(e.target.value)}
                               required
                             />
-                        </div>
-                        </div>
-                        {authMode === 'signup' && (
-                          <div className="flex items-start gap-3 pt-2">
-                            <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(c) => setTermsAccepted(!!c)} />
-                            <Label htmlFor="terms" className="text-[10px] text-muted-foreground leading-relaxed cursor-pointer">
-                              I agree to the <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link> (including AI use &amp; content policies) and{' '}
-                              <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
-                            </Label>
                           </div>
-                        )}
-                        <Button type="submit" className="w-full h-12 text-base font-bold shadow-xl transition-all hover:scale-[1.02] bg-primary hover:bg-primary/90" disabled={isProcessing || (authMode === 'signup' && !termsAccepted)}>
-                        {isProcessing ? <StudioLoader size="sm" className="mr-2" /> : (authMode === 'signin' ? 'Enter Studio' : 'Create Account')}
+                        </div>
+                      </div>
+
+                      {authMode === 'signup' && (
+                        <div className="flex items-start gap-2.5 pt-0.5">
+                          <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(c) => setTermsAccepted(!!c)} />
+                          <Label htmlFor="terms" className="text-[10px] text-muted-foreground leading-relaxed cursor-pointer">
+                            I agree to the <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link> (including AI use &amp; content policies) and{' '}
+                            <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+                          </Label>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <Button
+                          type="submit"
+                          className="w-full h-10 text-sm font-bold shadow-xl bg-primary hover:bg-primary/90 sm:col-span-2"
+                          disabled={isProcessing || (authMode === 'signup' && !termsAccepted)}
+                        >
+                          {isProcessing ? (
+                            <StudioLoader size="sm" className="mr-2" />
+                          ) : authMode === 'signin' ? (
+                            'Enter Studio'
+                          ) : (
+                            'Create Account'
+                          )}
                         </Button>
+
+                        <div className="relative sm:col-span-2 my-0.5">
+                          <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t border-white/10" />
+                          </div>
+                          <div className="relative flex justify-center text-[10px] uppercase">
+                            <span className="bg-[#0c121d] px-3 text-muted-foreground font-code">Or continue with</span>
+                          </div>
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          type="button"
+                          className="w-full h-10 text-sm font-bold bg-black/40 border-white/10 text-white hover:bg-white/5 sm:col-span-2"
+                          onClick={handleGoogleSignIn}
+                          disabled={isProcessing}
+                        >
+                          <svg className="mr-2 h-4 w-4 shrink-0" viewBox="0 0 488 512">
+                            <path
+                              fill="currentColor"
+                              d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"
+                            />
+                          </svg>
+                          Google Artist Login
+                        </Button>
+                      </div>
                     </form>
-                    </Tabs>
-
-                    <div className="relative my-8">
-                        <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/10" /></div>
-                        <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#0c121d] px-4 text-muted-foreground font-code">Or continue with</span></div>
-                    </div>
-
-                    <Button variant="outline" className="w-full h-12 font-bold bg-black/40 border-white/10 text-white hover:bg-white/5" onClick={handleGoogleSignIn} disabled={isProcessing}>
-                        <svg className="mr-3 h-5 w-5" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path></svg>
-                        Google Artist Login
-                    </Button>
+                  </Tabs>
                 </CardContent>
+              </div>
             </Card>
 
-        </section>
-
-      </main>
-
-      <footer className="py-20 px-4 relative z-10 flex flex-col items-center gap-12">
-          <div className="flex flex-col items-center gap-4">
-              <div className="bg-white p-3 rounded-2xl shadow-2xl">
-                <img src="/Logo.png" alt="B4B" className="h-10 w-10" />
-              </div>
-              <p className="text-[11px] text-muted-foreground font-code text-center uppercase tracking-[0.5em] opacity-50">BAR 4 BAR BY JORDIE CRUZ</p>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-6">
-              <a href={SUPPORT_MAILTO} className="flex items-center gap-2.5 text-[10px] font-bold text-muted-foreground hover:text-primary transition-all uppercase tracking-widest group">
-                  <div className="p-2 rounded-full bg-white/5 group-hover:bg-primary/20"><Mail className="h-4 w-4" /></div>
-                  Contact Support
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              <a href={SUPPORT_MAILTO} className="hover:text-primary transition-colors">
+                Contact Support
               </a>
-              <a href={BUY_ME_COFFEE_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-[10px] font-bold text-muted-foreground hover:text-primary transition-all uppercase tracking-widest group">
-                  <div className="p-2 rounded-full bg-white/5 group-hover:bg-primary/20"><Coffee className="h-4 w-4" /></div>
-                  Buy Me A Coffee
+              <a href={BUY_ME_COFFEE_URL} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                Buy Me A Coffee
               </a>
-              <Link href="/usage?tab=buy-ink" className="flex items-center gap-2.5 text-[10px] font-bold text-muted-foreground hover:text-primary transition-all uppercase tracking-widest group">
-                  <div className="p-2 rounded-full bg-white/5 group-hover:bg-primary/20"><Gift className="h-4 w-4" /></div>
-                  Refer A Friend
+              <Link href="/usage?tab=buy-ink" className="hover:text-primary transition-colors">
+                Refer A Friend
               </Link>
+            </div>
+            <LegalFooter className="opacity-50 text-center" />
           </div>
-
-          <LegalFooter className="opacity-60 pt-2 border-t border-white/5 w-full max-w-xl" />
-      </footer>
+        </section>
+      </main>
     </div>
   );
 }
