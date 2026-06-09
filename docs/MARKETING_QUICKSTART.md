@@ -20,10 +20,10 @@
 
 | Channel | Link |
 |---------|------|
-| TikTok bio | `https://bar4bar.ink?ref=tiktok` |
-| Instagram bio | `https://bar4bar.ink?ref=ig` |
-| YouTube description | `https://bar4bar.ink?ref=yt` |
-| Reddit posts | `https://bar4bar.ink?ref=reddit` |
+| TikTok bio / Promote | `https://bar4bar.ink/login?mode=signup&ref=tiktok` |
+| Instagram bio | `https://bar4bar.ink/login?mode=signup&ref=ig` |
+| YouTube description | `https://bar4bar.ink/login?mode=signup&ref=yt` |
+| Reddit posts | `https://bar4bar.ink/login?mode=signup&ref=reddit` |
 
 Signups store `ref` in analytics (Admin → Growth Metrics). Pin comment: **“300 Ink free — link in bio.”**
 
@@ -72,7 +72,7 @@ Signups store `ref` in analytics (Admin → Growth Metrics). Pin comment: **“3
 | Platform | TikTok Ads → **Spark Ads** on winning organic post |
 | Budget | $5/day × 14 days (~$70); cap month at $150–300 |
 | Audience | Interests: songwriting, rap, music production, independent artist · 18–34 · US |
-| Landing URL | `https://bar4bar.ink?ref=tiktok` |
+| Promote URL | `https://bar4bar.ink/login?mode=signup&ref=tiktok` |
 | Creative | Boost the **same** organic video — do not shoot new ads yet |
 
 ### Weekly review

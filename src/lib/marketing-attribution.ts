@@ -1,4 +1,7 @@
 import { getPublicAppUrl } from '@/lib/app-url';
+import { buildLoginUrl } from '@/lib/login-links';
+
+export type SocialMarketingRef = 'tiktok' | 'ig' | 'instagram' | 'yt' | 'youtube' | 'reddit' | 'bio' | 'spark';
 
 /** Captures ?ref= from ad links (tiktok, ig, yt) for signup analytics. */
 
@@ -48,10 +51,17 @@ export function getStoredMarketingRef(): string | null {
   }
 }
 
-export function marketingLink(path = '', ref: 'tiktok' | 'ig' | 'yt' | 'youtube' | 'reddit'): string {
-  const base = getPublicAppUrl();
-  const p = path.startsWith('/') ? path : path ? `/${path}` : '';
-  return `${base}${p}?ref=${ref}`;
+/** Social / ad link — opens signup tab directly (TikTok Promote, bio links, etc.). */
+export function marketingLink(ref: SocialMarketingRef): string {
+  const base = getPublicAppUrl().replace(/\/$/, '');
+  const path = buildLoginUrl({ mode: 'signup', marketingRef: ref });
+  return `${base}${path}`;
+}
+
+/** True when URL has a known social/ad ?ref= tag. */
+export function isSocialMarketingRef(raw: string | null | undefined): boolean {
+  const ref = normalizeMarketingRef(raw);
+  return ref !== null && ALLOWED_REFS.has(ref);
 }
 
 const REF_LABELS: Record<string, string> = {

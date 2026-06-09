@@ -3,6 +3,7 @@
 import React, { Suspense } from 'react';
 import { AlbumList } from '@/components/album-list';
 import { PublicHomeLanding } from '@/components/marketing/public-home-landing';
+import { SocialRefSignupRedirect } from '@/components/marketing/social-ref-signup-redirect';
 import { useAuth } from '@/hooks/use-auth';
 import { StudioLoader } from '@/components/studio-loader';
 
@@ -18,7 +19,9 @@ export function HomePage() {
         </div>
       }
     >
-      <PublicHomeLanding />
+      <SocialRefSignupRedirect>
+        <PublicHomeLanding />
+      </SocialRefSignupRedirect>
     </Suspense>
   );
 }

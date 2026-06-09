@@ -462,6 +462,9 @@ function LoginForm() {
             </Card>
 
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              <Link href="/#features" className="hover:text-primary transition-colors">
+                Explore features
+              </Link>
               <a href={SUPPORT_MAILTO} className="hover:text-primary transition-colors">
                 Contact Support
               </a>

@@ -268,8 +268,9 @@ export function AdminMetricsTab() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm uppercase tracking-widest">Funnel by referral link</CardTitle>
             <CardDescription className="text-[10px]">
-              Landing hits vs signups from <span className="font-mono">bar4bar.ink?ref=tiktok</span>,{' '}
-              <span className="font-mono">?ref=ig</span>, etc. Use the same URL in TikTok Promote.
+              Landing hits vs signups from{' '}
+              <span className="font-mono">bar4bar.ink/login?mode=signup&amp;ref=tiktok</span>, etc.
+              Use that URL in TikTok Promote and bios.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0 overflow-x-auto">
