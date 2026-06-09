@@ -12,6 +12,13 @@ const REDIRECT_INTENT_KEY = 'b4b_google_auth_intent';
 
 export type GoogleAuthIntent = 'signin' | 'signup';
 
+/** Always show Google’s account chooser instead of silently reusing the browser session. */
+export function createGoogleAuthProvider(): GoogleAuthProvider {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  return provider;
+}
+
 /** In-app browsers (TikTok, IG, etc.) and mobile often block auth popups. */
 export function shouldUseGoogleRedirect(): boolean {
   if (typeof window === 'undefined') return false;
@@ -78,7 +85,7 @@ export async function completeGoogleRedirectSignIn(auth: Auth): Promise<{
 }
 
 export async function startGoogleSignIn(auth: Auth, intent: GoogleAuthIntent): Promise<UserCredential | null> {
-  const provider = new GoogleAuthProvider();
+  const provider = createGoogleAuthProvider();
   if (shouldUseGoogleRedirect()) {
     markGoogleRedirectPending(intent);
     await signInWithRedirect(auth, provider);

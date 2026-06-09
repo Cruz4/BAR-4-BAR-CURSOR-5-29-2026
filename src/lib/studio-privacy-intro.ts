@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase/client/firebase';
 export const PENDING_STUDIO_PRIVACY_INTRO_KEY = 'b4b-pending-studio-privacy-intro';
 const SNOOZE_STUDIO_PRIVACY_INTRO_KEY = 'b4b-privacy-intro-snoozed';
 const VAULT_TOUR_ACTIVE_KEY = 'b4b-vault-tour-active';
+const STUDIO_PRIVACY_INTRO_OPEN_KEY = 'b4b-privacy-intro-open';
 
 /** Fired when vault tour ends and privacy intro may open. */
 export const STUDIO_PRIVACY_INTRO_ELIGIBLE_EVENT = 'b4b-privacy-intro-eligible';
@@ -26,6 +27,34 @@ export function isVaultTourRunning(): boolean {
   } catch {
     return false;
   }
+}
+
+export function setStudioPrivacyIntroOpen(open: boolean) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (open) sessionStorage.setItem(STUDIO_PRIVACY_INTRO_OPEN_KEY, '1');
+    else sessionStorage.removeItem(STUDIO_PRIVACY_INTRO_OPEN_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isStudioPrivacyIntroOpen(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return sessionStorage.getItem(STUDIO_PRIVACY_INTRO_OPEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** True while vault tour or privacy intro is in progress — block other modals. */
+export function isStudioOnboardingBusy(): boolean {
+  return (
+    isVaultTourRunning() ||
+    hasPendingStudioPrivacyIntro() ||
+    isStudioPrivacyIntroOpen()
+  );
 }
 
 export function hasPendingStudioPrivacyIntro(): boolean {

@@ -46,6 +46,7 @@ import {
   hasGoogleRedirectPending,
   startGoogleSignIn,
 } from '@/lib/google-auth-client';
+import { getTrialDurationLabel } from '@/lib/trial';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -286,7 +287,7 @@ function LoginForm() {
                   <CardDescription className="text-[11px] font-code leading-relaxed text-left">
                     Create your account or sign in — you&apos;ll go straight to Stripe for{' '}
                     <strong className="text-foreground">{getProCheckoutLabel(proCheckoutIntent)}</strong>.
-                    New signups still get the 3-day Pro trial; paid Pro activates when checkout completes.
+                    New signups still get the {getTrialDurationLabel()} Pro trial; paid Pro activates when checkout completes.
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -308,23 +309,42 @@ function LoginForm() {
 
             <Card className="w-full border-primary/15 shadow-[0_0_80px_rgba(59,130,246,0.12)] bg-[#0c121d]/55 backdrop-blur-2xl overflow-hidden relative z-10 transition-all duration-700 hover:border-primary/30">
               <div className="grid md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] gap-0">
-                <div className="flex flex-col justify-center gap-4 p-6 sm:p-8 border-b md:border-b-0 md:border-r border-white/10 bg-white/[0.03] text-center md:text-left">
-                  <div className="mx-auto md:mx-0 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-2xl flex items-center justify-center p-3 shadow-2xl shrink-0">
-                    <img src="/Logo.png" alt="Bar 4 Bar logo" className="w-full h-full object-contain" />
-                  </div>
-                  <div className="space-y-2">
-                    <h2 className="font-headline text-2xl sm:text-3xl lg:text-4xl font-bold uppercase text-white tracking-tight leading-tight">
-                      Enter the Studio
-                    </h2>
-                    <p className="text-[10px] sm:text-xs font-code text-muted-foreground uppercase tracking-widest">
-                      Free 300 Ink on signup — no card required
-                    </p>
-                  </div>
-                  <div className="hidden sm:block space-y-1 pt-1">
-                    <p className="font-headline text-lg font-bold uppercase text-primary/90">Initialize Session</p>
-                    <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground font-bold">
-                      Studio Access Required
-                    </p>
+                <div className="relative flex flex-col items-center justify-center gap-5 p-6 sm:p-8 border-b md:border-b-0 md:border-r border-white/10 text-center overflow-hidden">
+                  <div
+                    className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/12 via-transparent to-orange-500/8"
+                    aria-hidden
+                  />
+                  <div
+                    className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_38%,rgba(59,130,246,0.22)_0%,transparent_72%)]"
+                    aria-hidden
+                  />
+                  <div className="relative z-10 flex flex-col items-center gap-5 w-full">
+                    <div className="relative flex items-center justify-center">
+                      <div
+                        className="absolute inset-0 rounded-3xl bg-primary/25 blur-2xl scale-110"
+                        aria-hidden
+                      />
+                      <div className="relative w-[7.5rem] h-[7.5rem] sm:w-36 sm:h-36 bg-white rounded-3xl flex items-center justify-center p-4 sm:p-5 shadow-[0_0_48px_rgba(59,130,246,0.35)] border border-primary/20 ring-1 ring-white/10">
+                        <img src="/Logo.png" alt="Bar 4 Bar logo" className="w-full h-full object-contain" />
+                      </div>
+                    </div>
+                    <div className="space-y-2.5 max-w-[16rem]">
+                      <p className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/35 bg-orange-500/10 px-3 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.28em] text-orange-400">
+                        AI Notebook
+                      </p>
+                      <h2 className="font-headline text-2xl sm:text-3xl lg:text-[2.1rem] font-bold uppercase text-white tracking-tight leading-tight">
+                        Enter the Studio
+                      </h2>
+                      <p className="text-[10px] sm:text-xs font-code text-primary/80 uppercase tracking-widest">
+                        Free 300 Ink on signup — no card required
+                      </p>
+                    </div>
+                    <div className="hidden sm:flex flex-col items-center gap-1 pt-1 w-full border-t border-white/10 pt-4 max-w-[14rem]">
+                      <p className="font-headline text-base font-bold uppercase text-primary">Initialize Session</p>
+                      <p className="text-[9px] uppercase tracking-[0.32em] text-muted-foreground font-bold">
+                        Studio Access Required
+                      </p>
+                    </div>
                   </div>
                 </div>
 

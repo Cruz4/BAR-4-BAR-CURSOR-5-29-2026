@@ -441,7 +441,7 @@ const VinylRecord = ({ album, tierLocked = false }: { album: Album; tierLocked?:
 export function AlbumList() {
   const [createItemType, setCreateItemType] = useState<'Album' | 'Track' | null>(null);
   const { albums, loading, deleteAlbum, deleteTrack, moveTrack, getAlbumById, mergeData, clearVault, isCloudSyncActive } = useContext(DataContext);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const isPro = isProOrTrial(user);
   const albumCount = albums.filter((a) => a.id !== 'unassigned').length;
   const trackCount = countUserTracks(albums);
@@ -496,8 +496,12 @@ export function AlbumList() {
   }, []);
 
   useEffect(() => {
-    if (!user || pathname !== '/' || loading || vaultTourAutoStartRef.current) return;
+    if (!user || pathname !== '/' || loading || authLoading || vaultTourAutoStartRef.current) return;
     if (user.vaultTutorialCompletedAt) return;
+    const accountAgeMs = Date.now() - new Date(user.createdAt).getTime();
+    const isLikelyNewSignup = accountAgeMs >= 0 && accountAgeMs < 30 * 60 * 1000;
+    if (isLikelyNewSignup && !isProOrTrial(user)) return;
+
     vaultTourAutoStartRef.current = true;
     setVaultTourRunning(true);
     let activated = false;
@@ -509,7 +513,7 @@ export function AlbumList() {
       clearTimeout(t);
       if (!activated) setVaultTourRunning(false);
     };
-  }, [user, pathname, loading]);
+  }, [user, pathname, loading, authLoading]);
 
   useEffect(() => {
     setVaultTourRunning(vaultTourActive);

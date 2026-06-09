@@ -25,6 +25,7 @@ import {
   isStudioPrivacyIntroSnoozed,
   isVaultTourRunning,
   markStudioPrivacyIntroComplete,
+  setStudioPrivacyIntroOpen,
   snoozeStudioPrivacyIntro,
   STUDIO_PRIVACY_INTRO_ELIGIBLE_EVENT,
 } from '@/lib/studio-privacy-intro';
@@ -39,6 +40,11 @@ export function StudioPrivacyIntroDialog() {
   const [leaderboardHidden, setLeaderboardHidden] = useState(false);
   const [saving, setSaving] = useState(false);
   const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setStudioPrivacyIntroOpen(open);
+    return () => setStudioPrivacyIntroOpen(false);
+  }, [open]);
 
   useEffect(() => {
     setPublicProfile(summary.publicProfile);

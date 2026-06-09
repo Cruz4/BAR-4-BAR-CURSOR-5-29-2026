@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,8 @@ import {
   markWhatsNewDismissed,
   markWhatsNewShownThisLogin,
 } from '@/lib/whats-new-session';
+import { isStudioOnboardingBusy } from '@/lib/studio-privacy-intro';
+import { getTrialDurationTitle, TRIAL_DURATION_DAYS } from '@/lib/trial';
 
 function isVaultLanding(pathname: string | null): boolean {
   if (!pathname) return false;
@@ -33,42 +35,53 @@ function isVaultLanding(pathname: string | null): boolean {
   return pathname.startsWith('/albums/') && !pathname.includes('/tracks/');
 }
 
-const WHATS_NEW_ITEMS = [
-  {
-    title: '3-Day Pro Trial',
-    desc: 'New signups get full Studio Pro for 3 days — DNA Vault save, Performance, Freestyle, and more.',
-    icon: Sparkles,
-    color: 'text-primary',
-    bgColor: 'bg-primary/5',
-  },
-  {
-    title: 'Calibration Hub',
-    desc: 'Vibe presets for everyone. Free tier gets DNA & Style PRESETS tabs; Pro unlocks Vault save.',
-    icon: LayoutGrid,
-    color: 'text-sky-400',
-    bgColor: 'bg-sky-500/5',
-  },
-  {
-    title: 'Loose Track DNA',
-    desc: 'Loose tracks keep their own DNA. Album tracks still inherit from the project.',
-    icon: Music2,
-    color: 'text-emerald-400',
-    bgColor: 'bg-emerald-500/5',
-  },
-  {
-    title: 'Refer a Friend',
-    desc: 'Ink Store → copy your link. You and each friend get 150 Ink when they join (up to 4).',
-    icon: Gift,
-    color: 'text-amber-400',
-    bgColor: 'bg-amber-500/5',
-  },
-] as const;
+function isBrandNewStudioAccount(createdAt: string | undefined): boolean {
+  if (!createdAt) return false;
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) return false;
+  return Date.now() - created.getTime() < 7 * 24 * 60 * 60 * 1000;
+}
 
 export function WhatsNewDialog() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const { user, authReady, loading } = useAuth();
   const scheduledRef = useRef(false);
+
+  const whatsNewItems = useMemo(
+    () =>
+      [
+        {
+          title: getTrialDurationTitle(),
+          desc: `New signups get full Studio Pro for ${TRIAL_DURATION_DAYS} days — DNA Vault save, Performance, Freestyle, and more.`,
+          icon: Sparkles,
+          color: 'text-primary',
+          bgColor: 'bg-primary/5',
+        },
+        {
+          title: 'Calibration Hub',
+          desc: 'Vibe presets for everyone. Free tier gets DNA & Style PRESETS tabs; Pro unlocks Vault save.',
+          icon: LayoutGrid,
+          color: 'text-sky-400',
+          bgColor: 'bg-sky-500/5',
+        },
+        {
+          title: 'Loose Track DNA',
+          desc: 'Loose tracks keep their own DNA. Album tracks still inherit from the project.',
+          icon: Music2,
+          color: 'text-emerald-400',
+          bgColor: 'bg-emerald-500/5',
+        },
+        {
+          title: 'Refer a Friend',
+          desc: 'Ink Store → copy your link. You and each friend get 150 Ink when they join (up to 4).',
+          icon: Gift,
+          color: 'text-amber-400',
+          bgColor: 'bg-amber-500/5',
+        },
+      ] as const,
+    []
+  );
 
   const dismiss = useCallback(() => {
     if (user?.id) {
@@ -96,8 +109,10 @@ export function WhatsNewDialog() {
   useEffect(() => {
     if (!user?.id || !authReady || loading) return;
     if (!isVaultLanding(pathname)) return;
-    // New signups get the vault guided tour first — not this dialog.
     if (!user.vaultTutorialCompletedAt) return;
+    if (!user.studioPrivacyIntroCompletedAt) return;
+    if (isBrandNewStudioAccount(user.createdAt)) return;
+    if (isStudioOnboardingBusy()) return;
     if (hasDismissedWhatsNew(user.id)) return;
     if (hasWhatsNewBeenShownThisLogin(user.id) || scheduledRef.current) return;
 
@@ -105,13 +120,24 @@ export function WhatsNewDialog() {
     const timer = setTimeout(() => {
       if (!user?.id || hasDismissedWhatsNew(user.id)) return;
       if (!user.vaultTutorialCompletedAt) return;
+      if (!user.studioPrivacyIntroCompletedAt) return;
+      if (isBrandNewStudioAccount(user.createdAt)) return;
+      if (isStudioOnboardingBusy()) return;
       if (hasWhatsNewBeenShownThisLogin(user.id)) return;
       markWhatsNewShownThisLogin(user.id);
       setOpen(true);
-    }, 1200);
+    }, 2000);
 
     return () => clearTimeout(timer);
-  }, [pathname, user?.id, user?.vaultTutorialCompletedAt, authReady, loading]);
+  }, [
+    pathname,
+    user?.id,
+    user?.vaultTutorialCompletedAt,
+    user?.studioPrivacyIntroCompletedAt,
+    user?.createdAt,
+    authReady,
+    loading,
+  ]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -134,7 +160,7 @@ export function WhatsNewDialog() {
 
         <div className="p-4 sm:p-6 overflow-y-auto studio-scrollbar">
           <ul className="space-y-2.5 sm:space-y-3">
-            {WHATS_NEW_ITEMS.map((item) => {
+            {whatsNewItems.map((item) => {
               const Icon = item.icon;
               return (
                 <li

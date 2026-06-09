@@ -15,7 +15,8 @@ import { registerFirestoreBlockedClientHint } from '@/lib/firebase/client/firest
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAJX5uEhA_8SFvXGEnboud6i3VETJcfWVg',
-  authDomain: 'lyricai-studio-otgxn.firebaseapp.com',
+  authDomain:
+    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? 'bar4bar.ink',
   projectId: 'lyricai-studio-otgxn',
   storageBucket: 'lyricai-studio-otgxn.firebasestorage.app',
   messagingSenderId: '603155091344',

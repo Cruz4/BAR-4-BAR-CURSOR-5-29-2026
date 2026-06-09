@@ -5,7 +5,7 @@ import { getPublicAppUrl } from '@/lib/app-url';
 export const SEO = {
   siteName: 'Bar 4 Bar DNA Notebook',
   /** Browser tab + PWA name — short, no repeated pitch phrases. */
-  title: 'BAR 4 BAR -- AI DNA Notebook for writers',
+  title: 'BAR 4 BAR -- AI DNA Notebook for Writers',
   /** Open Graph / structured data — one clear line for search & shares. */
   titleLong: 'Bar 4 Bar DNA Notebook — AI Rhyme & Creative DNA Workstation',
   description:

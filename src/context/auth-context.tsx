@@ -42,6 +42,10 @@ export const AuthContext = createContext<AuthContextType>({
 const PROTECTED_ROUTES = ['/usage', '/albums', '/admin', '/studio-progress'];
 const PUBLIC_ROUTES = ['/login', '/pricing'];
 const AUTH_BOOT_TIMEOUT_MS = 4500;
+/** Hold loader briefly when Firestore profile doc is not ready yet (avoids free-tier flash). */
+const PROFILE_DOC_WAIT_MS = 3000;
+/** New Firebase accounts get optimistic trial until profile doc arrives. */
+const NEW_ACCOUNT_TRIAL_GRACE_MS = 30 * 60 * 1000;
 
 function userFromFirebase(
   firebaseUser: FirebaseUser,
@@ -62,6 +66,24 @@ function userFromFirebase(
     vaultTutorialCompletedAt: data?.vaultTutorialCompletedAt,
     studioPrivacyIntroCompletedAt: data?.studioPrivacyIntroCompletedAt,
   };
+}
+
+function userWithOptimisticTrial(
+  firebaseUser: FirebaseUser,
+  data: Partial<User> | null | undefined,
+  isMaster: boolean
+): User {
+  const user = userFromFirebase(firebaseUser, data, isMaster);
+  if (user.trialStartedAt || isMaster || user.subscriptionStatus === 'active') {
+    return user;
+  }
+  const created = firebaseUser.metadata.creationTime;
+  if (!created) return user;
+  const ageMs = Date.now() - new Date(created).getTime();
+  if (ageMs >= 0 && ageMs < NEW_ACCOUNT_TRIAL_GRACE_MS) {
+    return { ...user, trialStartedAt: created };
+  }
+  return user;
 }
 
 function userFromCachedProfile(
@@ -85,6 +107,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let unsubscribeDoc: (() => void) | null = null;
     let bootTimer: ReturnType<typeof setTimeout> | null = null;
+    let profileWaitTimer: ReturnType<typeof setTimeout> | null = null;
 
     const finishLoading = () => {
       if (bootTimer) {
@@ -113,6 +136,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (bootTimer) {
         clearTimeout(bootTimer);
         bootTimer = null;
+      }
+      if (profileWaitTimer) {
+        clearTimeout(profileWaitTimer);
+        profileWaitTimer = null;
       }
 
       if (!firebaseUser) {
@@ -158,7 +185,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setAuthReady(true);
 
-      const hydrateFromFirebase = () => userFromFirebase(firebaseUser, null, isMaster);
+      const cacheUserProfile = (nextUser: User) => {
+        saveCachedUserProfile({
+          id: nextUser.id,
+          displayName: nextUser.displayName,
+          email: nextUser.email,
+          role: nextUser.role,
+          status: nextUser.status,
+          subscriptionStatus: nextUser.subscriptionStatus,
+          subscriptionTier: nextUser.subscriptionTier,
+          trialStartedAt: nextUser.trialStartedAt ?? null,
+          lyricsTutorialCompletedAt: nextUser.lyricsTutorialCompletedAt,
+          vaultTutorialCompletedAt: nextUser.vaultTutorialCompletedAt,
+        });
+      };
+
+      const settleProfile = (nextUser: User, hasFirestoreDoc: boolean) => {
+        setUser(nextUser);
+        cacheUserProfile(nextUser);
+        if (hasFirestoreDoc) {
+          if (profileWaitTimer) {
+            clearTimeout(profileWaitTimer);
+            profileWaitTimer = null;
+          }
+          finishLoading();
+          return;
+        }
+        if (!profileWaitTimer) {
+          profileWaitTimer = setTimeout(() => {
+            profileWaitTimer = null;
+            finishLoading();
+          }, PROFILE_DOC_WAIT_MS);
+        }
+      };
 
       unsubscribeDoc = subscribeDocument(
         doc(db, 'users', firebaseUser.uid),
@@ -173,44 +232,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
 
             setIsBlocked(false);
-            const nextUser = userFromFirebase(firebaseUser, data as Partial<User>, isMaster);
-            setUser(nextUser);
-            saveCachedUserProfile({
-              id: nextUser.id,
-              displayName: nextUser.displayName,
-              email: nextUser.email,
-              role: nextUser.role,
-              status: nextUser.status,
-              subscriptionStatus: nextUser.subscriptionStatus,
-              subscriptionTier: nextUser.subscriptionTier,
-              trialStartedAt: nextUser.trialStartedAt ?? null,
-              lyricsTutorialCompletedAt: nextUser.lyricsTutorialCompletedAt,
-              vaultTutorialCompletedAt: nextUser.vaultTutorialCompletedAt,
-            });
+            const nextUser = userWithOptimisticTrial(
+              firebaseUser,
+              data as Partial<User>,
+              isMaster
+            );
+            settleProfile(nextUser, true);
           } else {
-            const fallback = hydrateFromFirebase();
-            setUser(fallback);
-            saveCachedUserProfile({
-              id: fallback.id,
-              displayName: fallback.displayName,
-              email: fallback.email,
-              role: fallback.role,
-              status: fallback.status,
-              subscriptionStatus: fallback.subscriptionStatus,
-              subscriptionTier: fallback.subscriptionTier,
-              trialStartedAt: fallback.trialStartedAt ?? null,
-              lyricsTutorialCompletedAt: fallback.lyricsTutorialCompletedAt,
-              vaultTutorialCompletedAt: fallback.vaultTutorialCompletedAt,
-            });
+            const fallback = userWithOptimisticTrial(firebaseUser, null, isMaster);
+            settleProfile(fallback, false);
           }
-          finishLoading();
         },
         (error) => {
           console.error('Auth profile listener error:', error);
           if (applyCachedOfflineUser(firebaseUser)) return;
-          const fallback = hydrateFromFirebase();
-          setUser(fallback);
-          finishLoading();
+          const fallback = userWithOptimisticTrial(firebaseUser, null, isMaster);
+          settleProfile(fallback, false);
         }
       );
     });
@@ -219,6 +256,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       unsubscribeAuth();
       if (unsubscribeDoc) unsubscribeDoc();
       if (bootTimer) clearTimeout(bootTimer);
+      if (profileWaitTimer) clearTimeout(profileWaitTimer);
     };
   }, []);
 

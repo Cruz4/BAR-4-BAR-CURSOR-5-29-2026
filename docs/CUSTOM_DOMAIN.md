@@ -40,6 +40,65 @@ Add:
 
 Without this, **Google/email login fails** on the custom domain.
 
+### 2b. Custom auth domain (Google popup shows `bar4bar.ink` instead of `firebaseapp.com`)
+
+By default, Google sign-in runs through `lyricai-studio-otgxn.firebaseapp.com/__/auth/handler`. You can move that to **your domain** so users see `bar4bar.ink` during login.
+
+**Prerequisites:** `bar4bar.ink` must already be **Connected** under Firebase Hosting → Domains (section 1).
+
+#### Step A — Firebase Console
+
+1. Open [Authentication → Settings → Authorized domains](https://console.firebase.google.com/project/lyricai-studio-otgxn/authentication/settings).
+2. Confirm **`bar4bar.ink`** is in the list (add it if missing).
+3. Open [Hosting → Domains](https://console.firebase.google.com/project/lyricai-studio-otgxn/hosting/sites) and confirm `bar4bar.ink` status is **Connected** with a valid SSL certificate.
+
+Firebase serves the auth handler at `https://bar4bar.ink/__/auth/handler` once your app uses that domain as `authDomain` (Step C below). No separate “enable custom auth domain” toggle is required beyond Hosting + authorized domains.
+
+#### Step B — Google Cloud OAuth client
+
+1. Open [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials?project=lyricai-studio-otgxn).
+2. Under **OAuth 2.0 Client IDs**, open the **Web client** used by Firebase (often named “Web client (auto created by Google Service)”).
+3. **Authorized JavaScript origins** — add if missing:
+   - `https://bar4bar.ink`
+   - `https://www.bar4bar.ink` (only if you use www)
+4. **Authorized redirect URIs** — add:
+   - `https://bar4bar.ink/__/auth/handler`
+   - Keep existing `https://lyricai-studio-otgxn.firebaseapp.com/__/auth/handler` until you’ve verified login on `.ink` (safe fallback).
+5. Save.
+
+#### Step C — App env + redeploy (when you choose to go live)
+
+In **root `.env`** and **`.firebase/lyricai-studio-otgxn/functions/.env`**:
+
+```
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=bar4bar.ink
+```
+
+The client config in [`src/lib/firebase/client/firebase.ts`](../src/lib/firebase/client/firebase.ts) reads this variable. Until you set it, the app keeps using `lyricai-studio-otgxn.firebaseapp.com`.
+
+Then build and deploy when you’re ready:
+
+```bash
+npm run build
+npx firebase deploy --only hosting,functions
+```
+
+#### Step D — Verify
+
+1. Hard-refresh `https://bar4bar.ink/login` (or use an incognito window).
+2. Click **Google Sign In** — you should get the **account chooser** (see account-picker note below).
+3. During auth, the handler URL should show **`bar4bar.ink/__/auth/handler`**, not `firebaseapp.com`.
+4. If you get `redirect_uri_mismatch`, double-check Step B redirect URIs exactly match (no trailing slash).
+
+| Symptom | Fix |
+|---------|-----|
+| Popup still shows `firebaseapp.com` | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` not set or not redeployed |
+| `redirect_uri_mismatch` | Add `https://bar4bar.ink/__/auth/handler` in Google Cloud OAuth client |
+| Auth works on `.web.app` but not `.ink` | Add `bar4bar.ink` to Firebase Authorized domains |
+| SSL / handler 404 | Wait for Hosting SSL; confirm domain is Connected |
+
+**Account picker:** The app sends `prompt=select_account` to Google so users always see “Choose an account” instead of auto-signing into the last Gmail session in the browser.
+
 ### 3. Environment variables (then redeploy)
 
 In **root `.env`** and **`.firebase/lyricai-studio-otgxn/functions/.env`**:
@@ -47,6 +106,8 @@ In **root `.env`** and **`.firebase/lyricai-studio-otgxn/functions/.env`**:
 ```
 NEXT_PUBLIC_APP_URL=https://bar4bar.ink
 TRUSTED_APP_ORIGINS=https://bar4bar.ink
+# Optional — after section 2b OAuth setup:
+# NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=bar4bar.ink
 ```
 
 Then:
