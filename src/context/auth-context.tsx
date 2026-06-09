@@ -239,14 +239,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
     const isAuthRoute = PUBLIC_ROUTES.includes(pathname);
-    const isHomePage = pathname === '/';
 
     if (pathname.startsWith('/admin') && user?.role !== 'admin') {
       router.push('/');
       return;
     }
 
-    if (!user && (isProtectedRoute || isHomePage)) {
+    if (!user && isProtectedRoute) {
       if (isBrowserOffline()) return;
       setIsRedirecting(true);
       const search = typeof window !== 'undefined' ? window.location.search : '';

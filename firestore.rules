@@ -138,5 +138,9 @@ service cloud.firestore {
     match /studioMetrics/{docId} {
       allow read, write: if isAdmin();
     }
+
+    match /studio_admin_alerts/{alertId} {
+      allow read, write: if false;
+    }
   }
 }

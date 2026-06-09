@@ -4,7 +4,6 @@ import './globals.css';
 import { ClientLayout } from '@/components/client-layout';
 export { metadata } from './metadata';
 import { absoluteUrl, buildStructuredDataGraph, SEO } from '@/lib/seo';
-import { AdSenseScript } from '@/components/adsense-script';
 
 export default function RootLayout({
   children,
@@ -20,7 +19,6 @@ export default function RootLayout({
         <link rel="icon" href={SEO.faviconIcoPath} sizes="any" />
         <link rel="icon" href={absoluteUrl(SEO.faviconPath)} type="image/png" sizes="1024x1024" />
         <link rel="apple-touch-icon" href={absoluteUrl(SEO.faviconPath)} />
-        <AdSenseScript />
         {buildStructuredDataGraph().map((node, index) => (
           <script
             key={index}

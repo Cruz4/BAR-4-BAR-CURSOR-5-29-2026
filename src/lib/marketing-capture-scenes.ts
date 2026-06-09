@@ -13,6 +13,7 @@ export type MarketingStillScene =
 
 export type MarketingGifScene =
   | 'gif-dna-remix'
+  | 'gif-strain-vault'
   | 'gif-co-writer-next-line'
   | 'gif-rhyme-pulse';
 
@@ -32,6 +33,7 @@ export const MARKETING_STILL_SCENES: MarketingStillScene[] = [
 
 export const MARKETING_GIF_SCENES: MarketingGifScene[] = [
   'gif-dna-remix',
+  'gif-strain-vault',
   'gif-co-writer-next-line',
   'gif-rhyme-pulse',
 ];

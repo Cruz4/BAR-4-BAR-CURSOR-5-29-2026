@@ -45,7 +45,7 @@ import {
 } from '@/lib/checkout-intent';
 import { LandingShowcase } from '@/components/marketing/landing-showcase';
 import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmosphere';
-import { MARKETING_FEATURE_BANDS, MARKETING_HOW_IT_WORKS } from '@/lib/marketing-features';
+import { MARKETING_FEATURE_BANDS } from '@/lib/marketing-features';
 
 function LoginForm() {
   const router = useRouter();
@@ -103,7 +103,6 @@ function LoginForm() {
     const urls = new Set([
       '/marketing/hero-workstation.png',
       ...MARKETING_FEATURE_BANDS.map((band) => band.mediaSrc),
-      ...MARKETING_HOW_IT_WORKS.map((step) => step.media),
     ]);
     for (const src of urls) {
       const img = new Image();
@@ -244,7 +243,6 @@ function LoginForm() {
 
           <nav className="flex items-center justify-end gap-2 sm:gap-4 min-w-0">
             <a href="#features" className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Features</a>
-            <a href="#how-it-works" className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">How it works</a>
             <Link href="/pricing" className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Pricing</Link>
             <Button onClick={scrollToLogin} className="bg-primary hover:bg-primary/90 text-white font-bold h-9 px-3 sm:px-5 gap-1.5 sm:gap-2 rounded-md shadow-lg shrink-0 transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm">
               <LogIn className="h-4 w-4 shrink-0" /> <span className="truncate">Login</span>

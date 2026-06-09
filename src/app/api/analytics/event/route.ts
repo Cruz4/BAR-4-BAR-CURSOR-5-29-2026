@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
+import { enqueueAdminAlert } from '@/lib/server/admin-alerts';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
 import type { AnalyticsEventName } from '@/lib/analytics-events';
 import { checkRateLimit } from '@/lib/server/rate-limit';
@@ -51,6 +52,21 @@ export async function POST(req: Request) {
     }
 
     await recordStudioEvent(uid, event, metadata || {}, userName);
+
+    if (event === 'signup') {
+      const auth = await import('@/lib/firebase/server').then((m) => m.getAuth());
+      const userRecord = await auth.getUser(uid).catch(() => null);
+      const ref = typeof metadata?.ref === 'string' ? metadata.ref : null;
+      const method = typeof metadata?.method === 'string' ? metadata.method : null;
+      await enqueueAdminAlert({
+        kind: 'signup',
+        userId: uid,
+        userEmail: userRecord?.email || null,
+        ref,
+        method,
+      });
+    }
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[analytics/event]', err);

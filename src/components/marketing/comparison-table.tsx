@@ -8,7 +8,7 @@ export function ComparisonTable() {
   const { otherLabel, b4bLabel, rows } = MARKETING_COMPARISON;
 
   return (
-    <section className="py-16 px-4 relative z-10">
+    <section className="py-10 px-4 relative z-10">
       <div className="container mx-auto max-w-3xl">
         <h3 className="font-headline text-2xl md:text-3xl font-bold uppercase text-center mb-8 tracking-tight">
           Other AI vs. Bar 4 Bar

@@ -141,6 +141,19 @@
     animation: workstation-attention 1.5s ease-in-out infinite;
   }
 
+  @keyframes reopen-attention {
+    0%, 100% {
+      box-shadow: 0 0 14px rgba(251, 191, 36, 0.35);
+    }
+    50% {
+      box-shadow: 0 0 28px rgba(251, 191, 36, 0.65);
+    }
+  }
+
+  .animate-reopen-attention {
+    animation: reopen-attention 1.8s ease-in-out infinite;
+  }
+
   .leaderboard-ember {
     animation: ember-rise 6s ease-out infinite;
     box-shadow: 0 0 12px rgba(251, 191, 36, 0.45);

@@ -35,12 +35,10 @@ export const PUBLIC_SITEMAP_PATHS: Array<{
   changeFrequency: 'weekly' | 'monthly';
   priority: number;
 }> = [
-  { path: '', changeFrequency: 'weekly', priority: 1 },
-  { path: '/login', changeFrequency: 'weekly', priority: 0.95 },
+  { path: '/login', changeFrequency: 'weekly', priority: 1 },
+  { path: '', changeFrequency: 'weekly', priority: 0.95 },
   { path: '/pricing', changeFrequency: 'weekly', priority: 0.9 },
-  { path: '/usage', changeFrequency: 'monthly', priority: 0.75 },
   { path: '/leaderboard', changeFrequency: 'weekly', priority: 0.7 },
-  { path: '/studio-progress', changeFrequency: 'monthly', priority: 0.65 },
   { path: '/terms', changeFrequency: 'monthly', priority: 0.4 },
   { path: '/privacy', changeFrequency: 'monthly', priority: 0.4 },
   { path: '/cookies', changeFrequency: 'monthly', priority: 0.35 },

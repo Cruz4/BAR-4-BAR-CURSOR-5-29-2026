@@ -21,7 +21,8 @@ const BASE_URL = process.env.MARKETING_CAPTURE_URL || 'http://localhost:9002';
 const FRAMES_PER_STEP = 12;
 
 const GIF_SCENES = [
-  { scene: 'gif-dna-remix', file: 'gif-dna-remix.gif', steps: 5, stepMs: 2600, holdSteps: 2 },
+  { scene: 'gif-dna-remix', file: 'gif-dna-remix.gif', steps: 6, stepMs: 2400, holdSteps: 2 },
+  { scene: 'gif-strain-vault', file: 'gif-strain-vault.gif', steps: 5, stepMs: 2400, holdSteps: 2 },
   { scene: 'gif-co-writer-next-line', file: 'gif-co-writer-next-line.gif', steps: 5, stepMs: 1800, holdSteps: 3 },
   { scene: 'gif-rhyme-pulse', file: 'gif-rhyme-pulse.gif', steps: 5, stepMs: 2200, holdSteps: 2 },
 ];
@@ -100,7 +101,7 @@ async function main() {
 
   const browser = await chromium.launch();
   const context = await browser.newContext({
-    viewport: { width: 1400, height: 920 },
+    viewport: { width: 1280, height: 900 },
     deviceScaleFactor: 3,
   });
   const page = await context.newPage();

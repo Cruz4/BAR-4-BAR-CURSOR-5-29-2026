@@ -25,7 +25,6 @@ import {
   isLockedTrackReopenUpdate,
   TRACK_LOCKED_TOAST,
   TRACK_COMPLETE_TOAST,
-  TRACK_LOCKED_BANNER,
 } from '@/lib/track-lock';
 import {
   BrainCircuit,
@@ -841,7 +840,15 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
             </Tooltip>
           </TooltipProvider>
 
-          <Card className="border-sky-500/30 bg-sky-500/5 shadow-sm overflow-hidden" data-tour="track-status">
+          <Card
+            className={cn(
+              'shadow-sm overflow-hidden transition-colors',
+              completeLocked
+                ? 'border-amber-500/45 bg-amber-500/10 ring-1 ring-amber-400/25'
+                : 'border-sky-500/30 bg-sky-500/5'
+            )}
+            data-tour="track-status"
+          >
               <CardHeader className="p-4 h-12 flex-row items-center justify-between">
                   <CardTitle className="text-sm flex items-center gap-2 text-sky-400 font-headline uppercase"><FilePenLine className="h-4 w-4" /> Track Status</CardTitle>
               </CardHeader>
@@ -871,22 +878,28 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                         )}
                       </Badge>
                     </div>
-                    <p className="text-[9px] text-muted-foreground leading-snug">
+                    <p
+                      className={cn(
+                        'text-[9px] leading-snug',
+                        completeLocked ? 'text-amber-100/90 font-medium' : 'text-muted-foreground'
+                      )}
+                    >
                       {tierLocked
                         ? 'Free tier limit — view & export only. Upgrade Studio Pro to edit again.'
                         : completeLocked
-                          ? "That's a hit!! Track locked — edits off until you reopen. Export, Performance Mode, and DNA Drop still work."
+                          ? "Track is locked. Tap Reopen Track below to edit lyrics and Co-Writer again. Export, Performance, and DNA Drop still work."
                           : 'Lock the track when lyrics are finished — blocks edits and counts toward weekly goals and achievements.'}
                     </p>
                     <Button
-                      variant={track.status === 'complete' ? 'outline' : 'default'}
+                      variant={track.status === 'complete' ? 'default' : 'default'}
                       size="sm"
                       disabled={tierLocked}
+                      data-tour="reopen-track"
                       className={cn(
-                        'w-full min-w-0 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2',
+                        'w-full min-w-0 font-bold uppercase leading-none px-3',
                         track.status === 'complete'
-                          ? 'border-sky-500/30 text-sky-300 hover:bg-sky-500/10'
-                          : 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/30 shadow-[0_0_16px_rgba(16,185,129,0.2)]',
+                          ? 'h-10 text-[10px] bg-amber-500 hover:bg-amber-400 text-amber-950 border-2 border-amber-300/50 shadow-[0_0_20px_rgba(251,191,36,0.35)] animate-reopen-attention justify-center gap-2'
+                          : 'h-9 text-[9px] bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/30 shadow-[0_0_16px_rgba(16,185,129,0.2)] justify-start',
                         tierLocked && 'opacity-50 pointer-events-none'
                       )}
                       onClick={() => {
@@ -908,7 +921,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                     >
                       {track.status === 'complete' ? (
                         <>
-                          <Pencil className="mr-2 h-4 w-4" /> Reopen Track
+                          <Pencil className="h-4 w-4 shrink-0" /> Reopen Track
                         </>
                       ) : (
                         <>
@@ -1701,7 +1714,7 @@ function cowriterSectionSubtitle(expanded: boolean) {
   );
 }
 
-function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, improveStyleOpen, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, openCoWriterSections, onApplyChestEntry, mobileActive = false, trackLocked = false }: any) {
+function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, improveStyleOpen, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, openCoWriterSections, onApplyChestEntry, mobileActive = false, trackLocked = false, completeLocked = false }: any) {
   const { tooltip, buttonLabel } = useInkCosts();
   const activeSection = track.sections.find((s:any) => s.id === activeSectionId);
   const { toast } = useToast();
@@ -1864,11 +1877,12 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
       </div>
       <div className="flex-grow overflow-y-auto studio-scrollbar">
         <div className="p-4 space-y-4 pb-32 co-writer-body">
-          {trackLocked && (
-            <div className="rounded-lg border border-sky-500/25 bg-sky-500/10 px-3 py-2 flex items-start gap-2">
-              <Lock className="h-3.5 w-3.5 text-sky-300 shrink-0 mt-0.5" />
-              <p className="text-[9px] font-code text-sky-200/90 leading-snug">
-                Co-Writer locked — reopen the track from Track Status to edit DNA, vibe, intents, guardrails, or style.
+          {completeLocked && (
+            <div className="rounded-lg border-2 border-amber-500/40 bg-amber-500/15 px-3 py-2.5 flex items-start gap-2.5">
+              <Lock className="h-4 w-4 text-amber-300 shrink-0 mt-0.5" />
+              <p className="text-[10px] font-code text-amber-50/95 leading-snug">
+                <span className="font-bold uppercase tracking-wide text-amber-200">Co-Writer locked.</span>{' '}
+                Use <span className="font-bold text-amber-300">Reopen Track</span> in the left panel Track Status section, or the banner button at the top.
               </p>
             </div>
           )}
@@ -3004,9 +3018,28 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         </div>
       )}
       {!tierLocked && completeLocked && (
-        <div className="shrink-0 border-b border-sky-500/25 bg-sky-500/10 px-4 py-2 flex items-center gap-2 z-30">
-          <Lock className="h-4 w-4 text-sky-300 shrink-0" />
-          <p className="text-[10px] font-code text-sky-100/90 leading-snug">{TRACK_LOCKED_BANNER}</p>
+        <div className="shrink-0 border-b border-amber-500/35 bg-amber-500/15 px-3 md:px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 z-30">
+          <div className="flex items-start gap-2 min-w-0 flex-1">
+            <Lock className="h-4 w-4 text-amber-300 shrink-0 mt-0.5" />
+            <p className="text-[10px] md:text-[11px] font-code text-amber-50/95 leading-snug">
+              <span className="font-bold text-amber-200">Track locked.</span> Lyrics and Co-Writer are read-only until you reopen.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            data-tour="reopen-track-banner"
+            className="shrink-0 h-9 px-4 text-[10px] font-bold uppercase tracking-wide bg-amber-500 hover:bg-amber-400 text-amber-950 border-2 border-amber-300/50 shadow-[0_0_18px_rgba(251,191,36,0.4)] animate-reopen-attention gap-2"
+            onClick={() => {
+              handleUpdateTrack({ status: 'in_progress' });
+              toast({
+                title: 'Track Reopened',
+                description: 'You can edit lyrics and Co-Writer settings again.',
+              });
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Reopen Track
+          </Button>
         </div>
       )}
       <div className="flex flex-1 min-h-0 overflow-hidden w-full">
@@ -3037,6 +3070,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         onApplyChestEntry={handleApplyChestEntry}
         mobileActive={mobilePanelTab === 'cowriter'}
         trackLocked={editsLocked}
+        completeLocked={completeLocked}
       />
       <GenerateSongDraftDialog open={generateDraftOpen} onOpenChange={(open) => { if (open && editsLocked) { toast({ variant: 'destructive', ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST) }); return; } setGenerateDraftOpen(open); }} track={track} styleProfile={effectiveStyleProfile} onDraftGenerated={(sections) => handleUpdateTrack({ sections })} onStashApprovalDraftsToChest={handleStashApprovalDraftsToChest} onBackgroundSessionActiveChange={setWorkstationBackgroundActive} />
       <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} album={album} tracks={[track]} exportType="track" />

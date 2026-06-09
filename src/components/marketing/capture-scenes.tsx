@@ -36,13 +36,14 @@ import {
   GifCoWriterScene,
   GifDnaRemixScene,
   GifRhymePulseScene,
+  GifStrainVaultScene,
 } from '@/components/marketing/gif-capture-scenes';
 
 /** HD product panel — no marketing copy, cropped for feature bands. */
 function UiCapture({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <div
-      className={cn('w-[1320px] bg-[#05080f] text-foreground flex items-center justify-center px-6 py-8', className)}
+      className={cn('w-[1000px] bg-[#05080f] text-foreground flex items-center justify-center px-5 py-6', className)}
       data-marketing-capture-ready="true"
     >
       <div
@@ -55,11 +56,11 @@ function UiCapture({ children, className }: { children: React.ReactNode; classNa
   );
 }
 
-/** Full-frame hero — real workstation layout, safe padding so nothing clips. */
+/** Full-frame hero — wide workstation layout, minimal side gutter. */
 function HeroCapture({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="w-[1280px] bg-[#05080f] text-foreground px-6 py-8"
+      className="w-[1240px] bg-[#05080f] text-foreground px-3 py-5"
       data-marketing-capture-ready="true"
       data-marketing-capture-full="true"
     >
@@ -607,6 +608,7 @@ const STILL_SCENE_MAP: Record<MarketingCaptureScene, React.ComponentType | undef
   'how-step-workstation': HowStepWorkstationScene,
   'how-step-progress': HowStepProgressScene,
   'gif-dna-remix': GifDnaRemixScene,
+  'gif-strain-vault': GifStrainVaultScene,
   'gif-co-writer-next-line': GifCoWriterScene,
   'gif-rhyme-pulse': GifRhymePulseScene,
 };

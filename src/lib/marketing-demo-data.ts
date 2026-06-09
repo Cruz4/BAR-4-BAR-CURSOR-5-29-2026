@@ -1,4 +1,4 @@
-import type { Album, Track } from '@/lib/types';
+import type { Album, Track, WizardAnalysis } from '@/lib/types';
 import demoJson from '../../public/demo-bar-4-bar-file.json';
 
 const baseAlbums = demoJson as Album[];
@@ -77,6 +77,45 @@ export const MARKETING_DEMO_ALBUMS: Album[] = [
 
 export const MARKETING_PRIMARY_ALBUM = MARKETING_DEMO_ALBUMS[0];
 export const MARKETING_PRIMARY_TRACK = MARKETING_PRIMARY_ALBUM.tracks?.[0] as Track;
+
+/** Rich strain decode output — matches real Calibration Hub cards. */
+export const MARKETING_WIZARD_ANALYSIS: WizardAnalysis = {
+  themes: ['Coastal permanence', 'Organic resilience', 'Geological time'],
+  motifs: ['Mist veil', 'Timber skin', 'Granite heart', 'Riverbed drought'],
+  emotionalTone: {
+    primaryEmotion: 'Stark reverence',
+    secondaryEmotion: 'Cold peace',
+    valence: 0.35,
+    intensity: 0.72,
+  },
+  emotionalShift: 'Stillness fractures into a low hymn — the stone learns to sing.',
+  narrativeArc: 'Witness → endurance → quiet transformation at the cliff edge.',
+  structure: 'Verse-led with a widening bridge; end-weighted closure.',
+  pov: 'First-person witness anchored in the monolith.',
+  tense: 'Present with flash-memory intrusions',
+  voiceStyle: 'Sparse imagery, concrete nouns, geological patience.',
+  whatMakesItWork: 'Concrete nature metaphors carry emotional weight without preaching.',
+  styleAnalysis: 'Monosyllabic anchors on bar ends; internal rhyme webs across couplets.',
+  styleMetrics: {
+    vocabularyScore: 78,
+    rhymeComplexity: 64,
+    cadenceMap: '4-4-5-4 swing',
+  },
+};
+
+export const MARKETING_SEED_LYRICS =
+  'The mist rolls in like a ghost from the shore\nMy skin is timber, my heart is solid stone\nI\'ve watched empires crumble while I stood alone\nThe riverbed is dry, the granite starts to sing';
+
+export const MARKETING_VAULT_PRESETS = [
+  { name: 'EARTHEN MONOLITH — Full DNA', source: 'STONE CIRCUIT' },
+  { name: 'Coastal Stillness Strain', source: 'Rough notes extract' },
+  { name: 'Timber / Stone Motif Pack', source: 'Motifs only' },
+] as const;
+
+export const MARKETING_REMIX_PATHS = [
+  { label: 'Hope through erosion', influence: 62 },
+  { label: 'Tension in the canopy', influence: 38 },
+] as const;
 
 /** Co-writer marketing — both rhyme with bar ending in "sing"; distinct end words (rings vs bring). */
 export const MARKETING_CO_WRITER_OPTIONS = [

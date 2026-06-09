@@ -11,7 +11,7 @@ const STATS = [
 
 export function SocialProofBar() {
   return (
-    <section className="py-10 px-4 relative z-10">
+    <section className="py-6 px-4 relative z-10">
       <div className="container mx-auto max-w-5xl">
         <p className="text-center text-xs font-bold uppercase tracking-[0.35em] text-muted-foreground/80 mb-7">
           Built for writers who show up bar after bar

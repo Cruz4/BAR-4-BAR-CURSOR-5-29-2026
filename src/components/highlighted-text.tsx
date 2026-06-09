@@ -56,7 +56,7 @@ export function HighlightedText({ text, rhymeGroups, transparent = false }: { te
                             style={{ 
                                 backgroundColor: highlightColor,
                                 display: 'inline',
-                                padding: '0',
+                                padding: '1px 4px',
                                 margin: '0',
                                 color: transparent ? 'transparent' : 'white',
                                 borderRadius: '2px',

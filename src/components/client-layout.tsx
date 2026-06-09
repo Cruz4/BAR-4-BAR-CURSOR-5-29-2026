@@ -25,7 +25,10 @@ import { StudioPageBackground } from './studio-page-background';
 import { SettingsControlAtmosphere } from './settings-control-atmosphere';
 import { ProductAnalytics } from './product-analytics';
 import { MarketingAttributionCapture } from './marketing-attribution-capture';
+import { AdminAlertListener } from './admin-alert-listener';
 import { InviteGateGuard } from './invite-gate-guard';
+import { AdSenseRouteLoader } from './adsense-route-loader';
+import { useAuth } from '@/hooks/use-auth';
 
 const CHUNK_RELOAD_KEY = 'b4b_chunk_reload_at';
 
@@ -55,48 +58,65 @@ function useChunkLoadRecovery() {
   }, []);
 }
 
-export function ClientLayout({ children }: { children: React.ReactNode }) {
-  useChunkLoadRecovery();
+function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { user } = useAuth();
   const isLoginPage = pathname === '/login';
+  const isPublicHome = pathname === '/' && !user;
+  const isMarketingShell = isLoginPage || isPublicHome;
   const isPerformPage = pathname.endsWith('/perform');
   const isSharePage = pathname.startsWith('/share/');
   const isMarketingCapture = pathname.startsWith('/marketing/capture');
   const isSettingsRoute = pathname === '/usage' || pathname.startsWith('/usage/') || pathname === '/admin';
+  const showAppHeader =
+    !isMarketingShell && !isPerformPage && !isSharePage && !isMarketingCapture;
+
+  return (
+    <InviteGateGuard>
+      <DataProvider>
+        <UsageProvider>
+          <GamificationProvider>
+            <UIStateProvider>
+              <AdSenseRouteLoader />
+              <FirebaseErrorListener />
+              <MarketingAttributionCapture />
+              <AdminAlertListener />
+              <ProductAnalytics />
+              {isMarketingCapture || isMarketingShell ? null : isSettingsRoute ? (
+                <SettingsControlAtmosphere />
+              ) : (
+                <StudioPageBackground />
+              )}
+              <div className="relative z-10 flex min-h-screen flex-col flex-1 overflow-hidden">
+                {showAppHeader && <Header />}
+                <main className="flex-1 overflow-hidden flex flex-col">{children}</main>
+                {!isSharePage && !isMarketingCapture && <WhatsNewDialog />}
+                {!isSharePage && !isMarketingShell && !isMarketingCapture && <StudioPrivacyIntroDialog />}
+                {!isMarketingCapture && <CookieConsent />}
+                {!isSharePage && !isMarketingShell && !isMarketingCapture && <PwaInstallPrompt />}
+                <OfflineBanner />
+                <ServiceWorkerRegister />
+              </div>
+              {!isSharePage && !isMarketingCapture && <StudioTips />}
+              <FloatingInkSpent />
+              <Toaster />
+              <AchievementUnlockCelebration />
+              <ProgressCelebration />
+            </UIStateProvider>
+          </GamificationProvider>
+        </UsageProvider>
+      </DataProvider>
+    </InviteGateGuard>
+  );
+}
+
+export function ClientLayout({ children }: { children: React.ReactNode }) {
+  useChunkLoadRecovery();
 
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <AuthProvider>
-        <InviteGateGuard>
-        <DataProvider>
-          <UsageProvider>
-            <GamificationProvider>
-            <UIStateProvider>
-                <FirebaseErrorListener />
-                <MarketingAttributionCapture />
-                <ProductAnalytics />
-                {isMarketingCapture ? null : isSettingsRoute ? <SettingsControlAtmosphere /> : <StudioPageBackground />}
-                <div className="relative z-10 flex min-h-screen flex-col flex-1 overflow-hidden">
-                  {!isLoginPage && !isPerformPage && !isSharePage && !isMarketingCapture && <Header />}
-                  <main className="flex-1 overflow-hidden flex flex-col">{children}</main>
-                  {!isSharePage && !isMarketingCapture && <WhatsNewDialog />}
-                  {!isSharePage && !isLoginPage && !isMarketingCapture && <StudioPrivacyIntroDialog />}
-                  {!isMarketingCapture && <CookieConsent />}
-                  {!isSharePage && !isLoginPage && !isMarketingCapture && <PwaInstallPrompt />}
-                  <OfflineBanner />
-                  <ServiceWorkerRegister />
-                </div>
-                {/* Portaled overlays — must sit outside z-10 wrapper or they render behind Dialog greyout */}
-                {!isSharePage && !isMarketingCapture && <StudioTips />}
-                <FloatingInkSpent />
-                <Toaster />
-                <AchievementUnlockCelebration />
-                <ProgressCelebration />
-            </UIStateProvider>
-            </GamificationProvider>
-          </UsageProvider>
-        </DataProvider>
-        </InviteGateGuard>
+        <AppShell>{children}</AppShell>
       </AuthProvider>
     </ThemeProvider>
   );
