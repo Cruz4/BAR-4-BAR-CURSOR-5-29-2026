@@ -41,10 +41,17 @@ service cloud.firestore {
 
     // User profile — owner can update except privileged billing fields
     match /users/{userId} {
-      allow get: if isOwnerOrAdmin(userId);
+      allow read: if isOwnerOrAdmin(userId);
       allow list: if isAdmin();
       allow create: if isOwner(userId) && isSafeUserBootstrap();
       allow update: if isAdmin()
+        || (isOwner(userId)
+          && !('status' in resource.data)
+          && request.resource.data.status == 'active'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'displayName', 'email', 'photoURL', 'lastLogin',
+            'trialStartedAt', 'signupAttribution', 'createdAt'
+          ]))
         || (isOwner(userId)
           && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
             'role', 'subscriptionStatus', 'subscriptionTier', 'status',

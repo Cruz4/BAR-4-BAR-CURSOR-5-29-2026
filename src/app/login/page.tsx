@@ -104,39 +104,53 @@ function LoginForm() {
 
   const syncUserProfile = useCallback(async (
     firebaseUser: any,
-    isNewSignup = false,
+    _isNewSignup = false,
     signupMethod: 'email' | 'google' = 'google'
   ) => {
     try {
         const userRef = doc(db, 'users', firebaseUser.uid);
         const existing = await getDoc(userRef);
-        const isNew = isNewSignup || !existing.exists();
-        const userData: Record<string, unknown> = {
+        const isNew = !existing.exists();
+        const signupRef = getStoredMarketingRef();
+        const profileBase = {
           displayName: firebaseUser.displayName || displayName || 'Anonymous Artist',
           email: firebaseUser.email,
           photoURL: firebaseUser.photoURL || null,
           lastLogin: serverTimestamp(),
         };
+
         if (isNew) {
-          userData.createdAt = new Date().toISOString();
-          userData.role = 'artist';
-          userData.subscriptionStatus = 'none';
-          userData.subscriptionTier = 'none';
-          userData.status = 'active';
-          userData.trialStartedAt = new Date().toISOString();
-          const signupRef = getStoredMarketingRef();
-          if (signupRef) userData.signupAttribution = signupRef;
-        }
-        await setDoc(userRef, userData, { merge: true });
-        if (isNew) {
-          const signupRef = getStoredMarketingRef();
+          await setDoc(userRef, {
+            ...profileBase,
+            createdAt: new Date().toISOString(),
+            role: 'artist',
+            subscriptionStatus: 'none',
+            subscriptionTier: 'none',
+            status: 'active',
+            trialStartedAt: new Date().toISOString(),
+            ...(signupRef ? { signupAttribution: signupRef } : {}),
+          });
           await trackStudioEvent(ANALYTICS_EVENTS.SIGNUP, {
             method: signupMethod,
             ...(signupRef ? { ref: signupRef } : {}),
           });
           await applyReferralIfNew(firebaseUser.uid);
+          return true;
         }
-        return isNew;
+
+        const existingData = existing.data() || {};
+        const patch: Record<string, unknown> = { ...profileBase };
+        if (signupRef && !existingData.signupAttribution) {
+          patch.signupAttribution = signupRef;
+        }
+        if (!existingData.trialStartedAt) {
+          patch.trialStartedAt = new Date().toISOString();
+        }
+        if (!existingData.status) {
+          patch.status = 'active';
+        }
+        await setDoc(userRef, patch, { merge: true });
+        return false;
     } catch (e) {
       console.error("Profile sync failed", e);
     }

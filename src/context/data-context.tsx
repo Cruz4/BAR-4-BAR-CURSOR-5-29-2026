@@ -488,7 +488,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             role: 'artist',
             subscriptionStatus: 'none',
             subscriptionTier: 'none',
-          }, { merge: true });
+            status: 'active',
+            trialStartedAt: new Date().toISOString(),
+          });
         }
 
         // Universal Residency: Cloud Sync enabled for ALL users (Visitor and Pro)
