@@ -122,6 +122,11 @@ import {
   REPLAY_VAULT_TOUR_EVENT,
   type LyricsTourStep,
 } from '@/lib/studio-onboarding';
+import {
+  dispatchStudioPrivacyIntroEligible,
+  queueStudioPrivacyIntro,
+  setVaultTourRunning,
+} from '@/lib/studio-privacy-intro';
 import { getEditableAlbumIds, getEditableTrackIds } from '@/lib/tier-limits';
 import type { User } from '@/lib/types';
 import { Lock } from 'lucide-react';
@@ -494,9 +499,23 @@ export function AlbumList() {
     if (!user || pathname !== '/' || loading || vaultTourAutoStartRef.current) return;
     if (user.vaultTutorialCompletedAt) return;
     vaultTourAutoStartRef.current = true;
-    const t = setTimeout(() => setVaultTourActive(true), 1000);
-    return () => clearTimeout(t);
+    setVaultTourRunning(true);
+    let activated = false;
+    const t = setTimeout(() => {
+      activated = true;
+      setVaultTourActive(true);
+    }, 1000);
+    return () => {
+      clearTimeout(t);
+      if (!activated) setVaultTourRunning(false);
+    };
   }, [user, pathname, loading]);
+
+  useEffect(() => {
+    setVaultTourRunning(vaultTourActive);
+    if (!vaultTourActive) return;
+    return () => setVaultTourRunning(false);
+  }, [vaultTourActive]);
 
   const handleVaultTourBeforeStep = useCallback((step: LyricsTourStep) => {
     if (step.id === 'vault-loose-tracks') {
@@ -515,6 +534,7 @@ export function AlbumList() {
   const handleVaultTourComplete = useCallback(
     async (skipped: boolean) => {
       setVaultTourActive(false);
+      setVaultTourRunning(false);
       if (user && !user.vaultTutorialCompletedAt) {
         try {
           await markVaultTutorialComplete(user.id);
@@ -524,6 +544,10 @@ export function AlbumList() {
       }
       if (!skipped) {
         void postGamificationEvent('tour_complete');
+      }
+      if (user && !user.studioPrivacyIntroCompletedAt) {
+        queueStudioPrivacyIntro();
+        window.setTimeout(() => dispatchStudioPrivacyIntroEligible(), 400);
       }
     },
     [user]

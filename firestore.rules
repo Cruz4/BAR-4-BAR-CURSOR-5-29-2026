@@ -142,5 +142,9 @@ service cloud.firestore {
     match /studio_admin_alerts/{alertId} {
       allow read, write: if false;
     }
+
+    match /studio_landing_hits/{hitId} {
+      allow read, write: if false;
+    }
   }
 }

@@ -3,10 +3,15 @@ export type DailyCount = { date: string; count: number };
 export type SignupAttributionRow = {
   ref: string;
   label: string;
+  landingHitsTotal: number;
+  landingHitsLast7Days: number;
+  landingHitsLast30Days: number;
+  landingHitsLast90Days: number;
   signupsTotal: number;
   signupsLast7Days: number;
   signupsLast30Days: number;
   signupsLast90Days: number;
+  signupConversionRatePercent: number;
   activated: number;
   activationRatePercent: number;
   proActive: number;
@@ -16,6 +21,8 @@ export type SignupAttributionRow = {
 export type SignupAttributionStats = {
   taggedSignups: number;
   organicSignups: number;
+  totalLandingHits: number;
+  landingHitsLast30Days: number;
   byRef: SignupAttributionRow[];
 };
 

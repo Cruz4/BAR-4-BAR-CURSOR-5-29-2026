@@ -5,7 +5,7 @@ export const metadata = pageMetadata({
   description:
     'Compare Visitor (free Ink) vs Studio Pro ($7.77/mo or $4.44/mo yearly). AI bar-by-bar lyric workstation—not full-song generation. Unlimited vault projects on Pro.',
   path: '/pricing',
-  openGraphTitle: 'Pricing — Bar 4 Bar Studio',
+  openGraphTitle: 'Pricing — Bar 4 Bar DNA Notebook',
 });
 
 export default function PricingLayout({ children }: { children: React.ReactNode }) {

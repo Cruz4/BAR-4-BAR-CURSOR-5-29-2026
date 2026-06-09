@@ -128,7 +128,7 @@ import {
   type LyricsTourStep,
 } from '@/lib/studio-onboarding';
 import { persistLastWorkedTrack } from '@/lib/studio-tips-session';
-import { queueStudioPrivacyIntro } from '@/lib/studio-privacy-intro';
+import { dispatchStudioPrivacyIntroEligible, queueStudioPrivacyIntro } from '@/lib/studio-privacy-intro';
 import { StudioGuidedTour } from '@/components/studio-guided-tour';
 import { QuestProgress } from '@/components/gamification/quest-progress';
 import { postGamificationEvent } from '@/lib/gamification-client';
@@ -2717,6 +2717,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       void postGamificationEvent('tour_complete');
     }
     queueStudioPrivacyIntro();
+    window.setTimeout(() => dispatchStudioPrivacyIntroEligible(), 400);
   }, [user]);
 
   useEffect(() => {

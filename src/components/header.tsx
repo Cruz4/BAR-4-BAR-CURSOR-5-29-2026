@@ -112,7 +112,7 @@ export function Header() {
                     </div>
                     <div className="flex min-w-0 flex-col text-left">
                         <span className="truncate font-bold font-headline text-base sm:text-lg md:text-xl leading-none tracking-tight">Bar 4 Bar</span>
-                        <p className="hidden sm:block text-[7px] md:text-[8px] text-muted-foreground font-tagline -mt-0.5 uppercase tracking-widest opacity-70 truncate">Studio Rhyme Book</p>
+                        <p className="hidden sm:block text-[7px] md:text-[8px] text-muted-foreground font-tagline -mt-0.5 uppercase tracking-widest opacity-70 truncate">AI NOTEBOOK</p>
                     </div>
                 </Link>
             </div>

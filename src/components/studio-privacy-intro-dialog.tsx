@@ -21,9 +21,12 @@ import { patchGamificationSettings } from '@/lib/gamification-client';
 import { useToast } from '@/hooks/use-toast';
 import {
   consumePendingStudioPrivacyIntro,
+  hasPendingStudioPrivacyIntro,
   isStudioPrivacyIntroSnoozed,
+  isVaultTourRunning,
   markStudioPrivacyIntroComplete,
   snoozeStudioPrivacyIntro,
+  STUDIO_PRIVACY_INTRO_ELIGIBLE_EVENT,
 } from '@/lib/studio-privacy-intro';
 
 export function StudioPrivacyIntroDialog() {
@@ -35,7 +38,7 @@ export function StudioPrivacyIntroDialog() {
   const [publicProfile, setPublicProfile] = useState(false);
   const [leaderboardHidden, setLeaderboardHidden] = useState(false);
   const [saving, setSaving] = useState(false);
-  const scheduledRef = useRef(false);
+  const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setPublicProfile(summary.publicProfile);
@@ -57,29 +60,49 @@ export function StudioPrivacyIntroDialog() {
     setOpen(false);
   }, []);
 
-  useEffect(() => {
-    scheduledRef.current = false;
-    setOpen(false);
-  }, [pathname, user?.id]);
+  const clearOpenTimer = useCallback(() => {
+    if (openTimerRef.current) {
+      clearTimeout(openTimerRef.current);
+      openTimerRef.current = null;
+    }
+  }, []);
 
-  useEffect(() => {
+  const schedulePrivacyIntro = useCallback(() => {
+    clearOpenTimer();
+
     if (isStudioPrivacyIntroSnoozed()) return;
     if (!user?.id || user.studioPrivacyIntroCompletedAt || gamificationLoading) return;
     if (pathname === '/login' || pathname.startsWith('/share/')) return;
+    if (!hasPendingStudioPrivacyIntro()) return;
+    if (isVaultTourRunning()) return;
 
-    const pending = consumePendingStudioPrivacyIntro();
-    const onVaultHome = pathname === '/';
-    if (!pending && !onVaultHome) return;
-    if (scheduledRef.current) return;
+    openTimerRef.current = setTimeout(() => {
+      openTimerRef.current = null;
+      if (isStudioPrivacyIntroSnoozed()) return;
+      if (!user?.id || user.studioPrivacyIntroCompletedAt) return;
+      if (!hasPendingStudioPrivacyIntro()) return;
+      if (isVaultTourRunning()) return;
 
-    scheduledRef.current = true;
-    const timer = setTimeout(() => {
-      if (user.studioPrivacyIntroCompletedAt) return;
+      consumePendingStudioPrivacyIntro();
       setOpen(true);
-    }, pending ? 600 : 2200);
+    }, 500);
+  }, [clearOpenTimer, gamificationLoading, pathname, user?.id, user?.studioPrivacyIntroCompletedAt]);
 
-    return () => clearTimeout(timer);
-  }, [gamificationLoading, pathname, user?.id, user?.studioPrivacyIntroCompletedAt]);
+  useEffect(() => {
+    setOpen(false);
+    clearOpenTimer();
+  }, [pathname, user?.id, clearOpenTimer]);
+
+  useEffect(() => {
+    schedulePrivacyIntro();
+    return clearOpenTimer;
+  }, [schedulePrivacyIntro, clearOpenTimer]);
+
+  useEffect(() => {
+    const onEligible = () => schedulePrivacyIntro();
+    window.addEventListener(STUDIO_PRIVACY_INTRO_ELIGIBLE_EVENT, onEligible);
+    return () => window.removeEventListener(STUDIO_PRIVACY_INTRO_ELIGIBLE_EVENT, onEligible);
+  }, [schedulePrivacyIntro]);
 
   const handleSave = async () => {
     setSaving(true);

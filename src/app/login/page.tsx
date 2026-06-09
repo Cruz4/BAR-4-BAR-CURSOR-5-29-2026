@@ -1,16 +1,14 @@
 'use client';
 
-import React, { useState, Suspense, useEffect } from 'react';
+import React, { useState, Suspense, useEffect, useCallback } from 'react';
 import { 
-  GoogleAuthProvider, 
-  signInWithPopup,
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   updateProfile
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/client/firebase';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -43,13 +41,20 @@ import {
   getSafeNextPath,
 } from '@/lib/checkout-intent';
 import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmosphere';
+import {
+  completeGoogleRedirectSignIn,
+  hasGoogleRedirectPending,
+  startGoogleSignIn,
+} from '@/lib/google-auth-client';
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const signupFromUrl = searchParams.get('mode') === 'signup';
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>(() =>
+    searchParams.get('mode') === 'signup' ? 'signup' : 'signin'
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -64,6 +69,10 @@ function LoginForm() {
   }, [proCheckoutIntent]);
 
   useEffect(() => {
+    if (signupFromUrl) setAuthMode('signup');
+  }, [signupFromUrl]);
+
+  useEffect(() => {
     captureMarketingRefFromUrl();
     const ref = normalizeReferralCode(searchParams.get('ref'));
     if (ref) {
@@ -75,7 +84,7 @@ function LoginForm() {
     }
   }, [searchParams]);
 
-  const applyReferralIfNew = async (userId: string) => {
+  const applyReferralIfNew = useCallback(async (userId: string) => {
     try {
       const stored = sessionStorage.getItem(REFERRAL_STORAGE_KEY);
       const code = normalizeReferralCode(stored);
@@ -91,9 +100,13 @@ function LoginForm() {
     } catch (e) {
       console.warn('Referral claim failed', e);
     }
-  };
+  }, [toast]);
 
-  const syncUserProfile = async (firebaseUser: any, isNewSignup = false) => {
+  const syncUserProfile = useCallback(async (
+    firebaseUser: any,
+    isNewSignup = false,
+    signupMethod: 'email' | 'google' = 'google'
+  ) => {
     try {
         const userRef = doc(db, 'users', firebaseUser.uid);
         const existing = await getDoc(userRef);
@@ -118,7 +131,7 @@ function LoginForm() {
         if (isNew) {
           const signupRef = getStoredMarketingRef();
           await trackStudioEvent(ANALYTICS_EVENTS.SIGNUP, {
-            method: authMode === 'signup' ? 'email' : 'google',
+            method: signupMethod,
             ...(signupRef ? { ref: signupRef } : {}),
           });
           await applyReferralIfNew(firebaseUser.uid);
@@ -127,7 +140,42 @@ function LoginForm() {
     } catch (e) {
       console.error("Profile sync failed", e);
     }
-  };
+  }, [applyReferralIfNew, displayName]);
+
+  useEffect(() => {
+    if (user) return;
+    let cancelled = false;
+
+    (async () => {
+      if (hasGoogleRedirectPending()) setIsProcessing(true);
+      try {
+        const { credential, intent } = await completeGoogleRedirectSignIn(auth);
+        if (cancelled || !credential) {
+          if (!cancelled) setIsProcessing(false);
+          return;
+        }
+        const isNew = await syncUserProfile(credential.user, intent === 'signup');
+        if (!isNew) {
+          try {
+            sessionStorage.removeItem(REFERRAL_STORAGE_KEY);
+          } catch {
+            /* ignore */
+          }
+        }
+      } catch (error: unknown) {
+        if (!cancelled) {
+          setIsProcessing(false);
+          const message =
+            error instanceof Error ? error.message : 'Google sign-in could not be completed.';
+          toast({ variant: 'destructive', title: 'Sign-in Error', description: message });
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, syncUserProfile, toast]);
 
   const handleGoogleSignIn = async () => {
     if (authMode === 'signup' && !termsAccepted) {
@@ -135,10 +183,10 @@ function LoginForm() {
       return;
     }
     setIsProcessing(true);
-    const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      const isNew = await syncUserProfile(result.user);
+      const result = await startGoogleSignIn(auth, authMode);
+      if (!result) return;
+      const isNew = await syncUserProfile(result.user, authMode === 'signup');
       if (!isNew) {
         try {
           sessionStorage.removeItem(REFERRAL_STORAGE_KEY);
@@ -166,10 +214,10 @@ function LoginForm() {
       if (authMode === 'signup') {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         if (displayName) await updateProfile(userCredential.user, { displayName });
-        await syncUserProfile(userCredential.user, true);
+        await syncUserProfile(userCredential.user, true, 'email');
       } else {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        await syncUserProfile(userCredential.user);
+        await syncUserProfile(userCredential.user, false, 'email');
       }
       toast({ title: "Success", description: "Studio session authorized." });
     } catch (error: any) {
@@ -390,7 +438,7 @@ function LoginForm() {
                               d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"
                             />
                           </svg>
-                          Google Artist Login
+                          Google {authMode === 'signup' ? 'Sign Up' : 'Sign In'}
                         </Button>
                       </div>
                     </form>

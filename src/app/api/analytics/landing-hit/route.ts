@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { normalizeMarketingRef } from '@/lib/marketing-attribution';
 import { enqueueAdminAlert } from '@/lib/server/admin-alerts';
+import { recordLandingHit } from '@/lib/server/record-landing-hit';
 import { checkRateLimit } from '@/lib/server/rate-limit';
 
 export const runtime = 'nodejs';
@@ -34,6 +35,7 @@ export async function POST(req: Request) {
     }
 
     await enqueueAdminAlert({ kind: 'landing_hit', ref, path });
+    await recordLandingHit(ref, path);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[analytics/landing-hit]', err);

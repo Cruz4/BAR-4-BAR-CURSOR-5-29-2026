@@ -63,11 +63,12 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
   const d30 = daysAgo(30);
   const d90 = daysAgo(90);
 
-  const [usersSnap, eventsSnap, logsSnap, marketingSnap] = await Promise.all([
+  const [usersSnap, eventsSnap, logsSnap, marketingSnap, landingHitsSnap] = await Promise.all([
     db.collection('users').get(),
     db.collection('analytics_events').orderBy('timestamp', 'desc').limit(500).get(),
     db.collection('system').doc('logs').collection('entries').orderBy('timestamp', 'desc').limit(1000).get(),
     db.doc('studioMetrics/marketing').get(),
+    db.collection('studio_landing_hits').where('timestamp', '>=', d90.toISOString()).get(),
   ]);
 
   const marketing = marketingSnap.data() || {};
@@ -100,6 +101,29 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
   let activeProMonthly = 0;
   let activeProYearly = 0;
 
+  type LandingBucket = {
+    hitsTotal: number;
+    hitsLast7Days: number;
+    hitsLast30Days: number;
+    hitsLast90Days: number;
+  };
+  const landingByRef = new Map<string, LandingBucket>();
+
+  const bumpLanding = (refKey: string, patch: Partial<LandingBucket>) => {
+    const existing = landingByRef.get(refKey) || {
+      hitsTotal: 0,
+      hitsLast7Days: 0,
+      hitsLast30Days: 0,
+      hitsLast90Days: 0,
+    };
+    landingByRef.set(refKey, {
+      hitsTotal: existing.hitsTotal + (patch.hitsTotal || 0),
+      hitsLast7Days: existing.hitsLast7Days + (patch.hitsLast7Days || 0),
+      hitsLast30Days: existing.hitsLast30Days + (patch.hitsLast30Days || 0),
+      hitsLast90Days: existing.hitsLast90Days + (patch.hitsLast90Days || 0),
+    });
+  };
+
   type AttributionBucket = {
     signupsTotal: number;
     signupsLast7Days: number;
@@ -128,6 +152,21 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
       proActive: existing.proActive + (patch.proActive || 0),
     });
   };
+
+  for (const hitDoc of landingHitsSnap.docs) {
+    const data = hitDoc.data();
+    const refRaw = typeof data.ref === 'string' ? data.ref : null;
+    const refKey = refRaw ? normalizeMarketingRef(refRaw) || refRaw.trim().toLowerCase() : null;
+    if (!refKey) continue;
+    const hitAt = parseDate(data.timestamp);
+    if (!hitAt) continue;
+    bumpLanding(refKey, {
+      hitsTotal: 1,
+      hitsLast7Days: hitAt >= d7 ? 1 : 0,
+      hitsLast30Days: hitAt >= d30 ? 1 : 0,
+      hitsLast90Days: hitAt >= d90 ? 1 : 0,
+    });
+  }
 
   const summarySnaps = await Promise.all(
     users.map((u) => db.doc(`users/${u.id}/analytics/summary`).get())
@@ -300,35 +339,74 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
       : 0;
 
   const totalSignupsForAttribution = users.length;
-  const attributionRows: SignupAttributionRow[] = Array.from(attributionByRef.entries())
-    .map(([ref, bucket]) => ({
-      ref,
-      label: marketingRefLabel(ref),
-      signupsTotal: bucket.signupsTotal,
-      signupsLast7Days: bucket.signupsLast7Days,
-      signupsLast30Days: bucket.signupsLast30Days,
-      signupsLast90Days: bucket.signupsLast90Days,
-      activated: bucket.activated,
-      activationRatePercent:
-        bucket.signupsTotal > 0
-          ? Math.round((bucket.activated / bucket.signupsTotal) * 1000) / 10
-          : 0,
-      proActive: bucket.proActive,
-      shareOfSignupsPercent:
-        totalSignupsForAttribution > 0
-          ? Math.round((bucket.signupsTotal / totalSignupsForAttribution) * 1000) / 10
-          : 0,
-    }))
+  const allRefKeys = new Set<string>([
+    ...attributionByRef.keys(),
+    ...landingByRef.keys(),
+  ]);
+
+  const attributionRows: SignupAttributionRow[] = Array.from(allRefKeys)
+    .map((ref) => {
+      const bucket = attributionByRef.get(ref) || {
+        signupsTotal: 0,
+        signupsLast7Days: 0,
+        signupsLast30Days: 0,
+        signupsLast90Days: 0,
+        activated: 0,
+        proActive: 0,
+      };
+      const landing = landingByRef.get(ref) || {
+        hitsTotal: 0,
+        hitsLast7Days: 0,
+        hitsLast30Days: 0,
+        hitsLast90Days: 0,
+      };
+      return {
+        ref,
+        label: marketingRefLabel(ref),
+        landingHitsTotal: landing.hitsTotal,
+        landingHitsLast7Days: landing.hitsLast7Days,
+        landingHitsLast30Days: landing.hitsLast30Days,
+        landingHitsLast90Days: landing.hitsLast90Days,
+        signupsTotal: bucket.signupsTotal,
+        signupsLast7Days: bucket.signupsLast7Days,
+        signupsLast30Days: bucket.signupsLast30Days,
+        signupsLast90Days: bucket.signupsLast90Days,
+        signupConversionRatePercent:
+          landing.hitsTotal > 0
+            ? Math.round((bucket.signupsTotal / landing.hitsTotal) * 1000) / 10
+            : 0,
+        activated: bucket.activated,
+        activationRatePercent:
+          bucket.signupsTotal > 0
+            ? Math.round((bucket.activated / bucket.signupsTotal) * 1000) / 10
+            : 0,
+        proActive: bucket.proActive,
+        shareOfSignupsPercent:
+          totalSignupsForAttribution > 0
+            ? Math.round((bucket.signupsTotal / totalSignupsForAttribution) * 1000) / 10
+            : 0,
+      };
+    })
     .sort((a, b) => {
       if (a.ref === 'organic') return 1;
       if (b.ref === 'organic') return -1;
-      return b.signupsTotal - a.signupsTotal;
+      const aScore = Math.max(a.landingHitsTotal, a.signupsTotal);
+      const bScore = Math.max(b.landingHitsTotal, b.signupsTotal);
+      return bScore - aScore;
     });
 
   const organicSignups = attributionByRef.get('organic')?.signupsTotal || 0;
+  let totalLandingHits = 0;
+  let landingHitsLast30Days = 0;
+  for (const landing of landingByRef.values()) {
+    totalLandingHits += landing.hitsTotal;
+    landingHitsLast30Days += landing.hitsLast30Days;
+  }
   const signupAttribution: SignupAttributionStats = {
     taggedSignups: totalSignupsForAttribution - organicSignups,
     organicSignups,
+    totalLandingHits,
+    landingHitsLast30Days,
     byRef: attributionRows,
   };
 
@@ -461,7 +539,7 @@ function emptyMetrics(notes: string): AdminMetricsSnapshot {
       upgradeClickEvents: 0,
     },
     acquisition: { adSpend30d: 0, adSpend90d: 0, costPerSignup: null, costPerActivatedUser: null, notes },
-    signupAttribution: { taggedSignups: 0, organicSignups: 0, byRef: [] },
+    signupAttribution: { taggedSignups: 0, organicSignups: 0, totalLandingHits: 0, landingHitsLast30Days: 0, byRef: [] },
     recentEvents: [],
     gamification: {
       usersWithAchievements: 0,

@@ -3,24 +3,27 @@ import { getPublicAppUrl } from '@/lib/app-url';
 
 /** Shared on-page SEO + sitemap/robots (production URL from NEXT_PUBLIC_APP_URL). */
 export const SEO = {
-  siteName: 'Bar 4 Bar Studio',
-  title: 'Bar 4 Bar Studio — AI Rap Lyric Writer & Bar-by-Bar Rhyme Book',
+  siteName: 'Bar 4 Bar DNA Notebook',
+  /** Browser tab + PWA name — short, no repeated pitch phrases. */
+  title: 'BAR 4 BAR -- AI DNA Notebook for writers',
+  /** Open Graph / structured data — one clear line for search & shares. */
+  titleLong: 'Bar 4 Bar DNA Notebook — AI Rhyme & Creative DNA Workstation',
   description:
-    'AI lyric workstation for rappers and songwriters: paste your verse, keep rhyme scheme, get the next bar, remix DNA strains, and save projects. Free Visitor tier; Studio Pro from $4.44/mo yearly.',
+    'Smart rhyme notebook for musicians, lyricists, and poets: bar-by-bar AI co-writing, creative DNA strains, vault presets, album blueprints, and rhyme scheme tools. Free tier; Studio Pro available.',
   keywords: [
     'bar 4 bar',
     'bar4bar',
-    'AI lyric writer',
-    'rap lyric writer',
+    'DNA notebook',
+    'AI rhyme book',
+    'lyric notebook',
     'bar by bar songwriting',
     'rhyme book app',
-    'next bar generator',
     'songwriting studio',
-    'rap lyrics AI',
     'lyric workstation',
     'rhyme scheme helper',
-    'DNA remix lyrics',
-    'creative writing AI',
+    'creative DNA lyrics',
+    'poetry writing app',
+    'concept album songwriting',
   ],
   url: getPublicAppUrl(),
   /** Tab, PWA, Google site icon, and social preview (BAR 4 BAR logo). */

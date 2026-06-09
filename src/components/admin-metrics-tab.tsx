@@ -177,7 +177,13 @@ export function AdminMetricsTab() {
 
   const { funnel, retention, monetization, freeTierPressure, acquisition, gamification, signupAttribution } =
     metrics;
-  const attribution = signupAttribution ?? { taggedSignups: 0, organicSignups: 0, byRef: [] };
+  const attribution = signupAttribution ?? {
+    taggedSignups: 0,
+    organicSignups: 0,
+    totalLandingHits: 0,
+    landingHitsLast30Days: 0,
+    byRef: [],
+  };
 
   const cacheLabel = metrics.cache
     ? `${metrics.cache.fromCache ? 'Cached' : 'Live'} · ${format(new Date(metrics.cache.computedAt), 'MMM d, yyyy · h:mm a')}${
@@ -233,11 +239,23 @@ export function AdminMetricsTab() {
         <h3 className="text-[10px] font-bold uppercase tracking-[0.35em] text-muted-foreground mb-4 flex items-center gap-2">
           <Link2 className="h-3 w-3" /> Signup link refs (?ref=)
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <MetricCard
+            label="Landing hits (90d)"
+            value={attribution.totalLandingHits}
+            sub="Tagged ?ref= visits"
+            accent="text-amber-400"
+          />
+          <MetricCard
+            label="Landing hits (30d)"
+            value={attribution.landingHitsLast30Days}
+            sub="Recent ad / bio traffic"
+            accent="text-amber-400"
+          />
           <MetricCard
             label="Tagged signups"
             value={attribution.taggedSignups}
-            sub="Arrived with ?ref= on landing"
+            sub="Arrived with ?ref= at signup"
             accent="text-sky-400"
           />
           <MetricCard
@@ -245,33 +263,27 @@ export function AdminMetricsTab() {
             value={attribution.organicSignups}
             sub="No ref captured at signup"
           />
-          <MetricCard
-            label="Tracked sources"
-            value={attribution.byRef.filter((row) => row.ref !== 'organic').length}
-            sub="Distinct ref values"
-          />
         </div>
         <Card className="bg-card/40 border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm uppercase tracking-widest">Signups by referral link</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-widest">Funnel by referral link</CardTitle>
             <CardDescription className="text-[10px]">
-              From <span className="font-mono">bar4bar.ink?ref=tiktok</span>,{' '}
-              <span className="font-mono">?ref=ig</span>, etc. — stored on user at signup.
+              Landing hits vs signups from <span className="font-mono">bar4bar.ink?ref=tiktok</span>,{' '}
+              <span className="font-mono">?ref=ig</span>, etc. Use the same URL in TikTok Promote.
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Ref</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">7d</TableHead>
-                  <TableHead className="text-right">30d</TableHead>
-                  <TableHead className="text-right">90d</TableHead>
+                  <TableHead className="text-right">Landings</TableHead>
+                  <TableHead className="text-right">Land 30d</TableHead>
+                  <TableHead className="text-right">Signups</TableHead>
+                  <TableHead className="text-right">Conv %</TableHead>
                   <TableHead className="text-right">Activated</TableHead>
                   <TableHead className="text-right">Act %</TableHead>
                   <TableHead className="text-right">Pro</TableHead>
-                  <TableHead className="text-right">Share</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -286,30 +298,27 @@ export function AdminMetricsTab() {
                           )}
                         </div>
                       </TableCell>
+                      <TableCell className="text-right font-mono text-sm text-amber-400/90">
+                        {row.landingHitsTotal}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                        {row.landingHitsLast30Days}
+                      </TableCell>
                       <TableCell className="text-right font-mono text-sm">{row.signupsTotal}</TableCell>
-                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                        {row.signupsLast7Days}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                        {row.signupsLast30Days}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                        {row.signupsLast90Days}
+                      <TableCell className="text-right font-mono text-xs text-sky-400">
+                        {row.landingHitsTotal > 0 ? `${row.signupConversionRatePercent}%` : '—'}
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm">{row.activated}</TableCell>
                       <TableCell className="text-right font-mono text-xs text-emerald-400">
-                        {row.activationRatePercent}%
+                        {row.signupsTotal > 0 ? `${row.activationRatePercent}%` : '—'}
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm text-primary">{row.proActive}</TableCell>
-                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                        {row.shareOfSignupsPercent}%
-                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-20 text-center text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-                      No signup attribution yet — share tagged links like ?ref=tiktok
+                    <TableCell colSpan={8} className="h-20 text-center text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+                      No ref traffic yet — use Promote URL <span className="font-mono">?ref=tiktok</span>
                     </TableCell>
                   </TableRow>
                 )}

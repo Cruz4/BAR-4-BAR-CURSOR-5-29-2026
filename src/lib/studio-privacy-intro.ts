@@ -4,6 +4,43 @@ import { db } from '@/lib/firebase/client/firebase';
 /** Set when the guided tour finishes — show privacy intro on next screen. */
 export const PENDING_STUDIO_PRIVACY_INTRO_KEY = 'b4b-pending-studio-privacy-intro';
 const SNOOZE_STUDIO_PRIVACY_INTRO_KEY = 'b4b-privacy-intro-snoozed';
+const VAULT_TOUR_ACTIVE_KEY = 'b4b-vault-tour-active';
+
+/** Fired when vault tour ends and privacy intro may open. */
+export const STUDIO_PRIVACY_INTRO_ELIGIBLE_EVENT = 'b4b-privacy-intro-eligible';
+
+export function setVaultTourRunning(running: boolean) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (running) sessionStorage.setItem(VAULT_TOUR_ACTIVE_KEY, '1');
+    else sessionStorage.removeItem(VAULT_TOUR_ACTIVE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isVaultTourRunning(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return sessionStorage.getItem(VAULT_TOUR_ACTIVE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function hasPendingStudioPrivacyIntro(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return sessionStorage.getItem(PENDING_STUDIO_PRIVACY_INTRO_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function dispatchStudioPrivacyIntroEligible() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(STUDIO_PRIVACY_INTRO_ELIGIBLE_EVENT));
+}
 
 export function snoozeStudioPrivacyIntro() {
   if (typeof window === 'undefined') return;

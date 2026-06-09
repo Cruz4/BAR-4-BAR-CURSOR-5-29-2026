@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: SEO.url,
     siteName: SEO.siteName,
-    title: SEO.title,
+    title: SEO.titleLong,
     description: SEO.description,
     images: [
       {
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: SEO.title,
+    title: SEO.titleLong,
     description: SEO.description,
     images: [absoluteUrl(SEO.ogImagePath)],
     ...(SEO.twitterHandle ? { site: SEO.twitterHandle } : {}),

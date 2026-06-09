@@ -3,11 +3,12 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowRight, LogIn, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LegalFooter } from '@/components/legal-footer';
 import { LandingShowcase } from '@/components/marketing/landing-showcase';
 import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmosphere';
+import { LandingSignInLink, LandingSignupLink } from '@/components/marketing/landing-signup-link';
 
 /** Public marketing surface for anonymous visitors on `/` (no auth form — CTA to `/login`). */
 export function PublicHomeLanding() {
@@ -40,13 +41,16 @@ export function PublicHomeLanding() {
           >
             Pricing
           </Link>
+          <LandingSignInLink className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
+            Sign in
+          </LandingSignInLink>
           <Button
             asChild
             className="bg-primary hover:bg-primary/90 text-white font-bold h-9 px-3 sm:px-5 gap-1.5 sm:gap-2 rounded-md shadow-lg shrink-0 transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm"
           >
-            <Link href="/login">
-              <LogIn className="h-4 w-4 shrink-0" /> <span className="truncate">Login</span>
-            </Link>
+            <LandingSignupLink>
+              <span className="truncate">Create free account</span>
+            </LandingSignupLink>
           </Button>
         </nav>
       </header>
@@ -99,11 +103,11 @@ export function PublicHomeLanding() {
                 size="lg"
                 className="h-16 px-12 text-lg font-bold bg-primary hover:bg-primary/90 rounded-full shadow-[0_0_40px_rgba(59,130,246,0.5)] min-w-[260px] group transition-all"
               >
-                <Link href="/login">
+                <LandingSignupLink>
                   <span className="flex items-center gap-2">
-                    Enter the Studio <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
+                    Create free account <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
                   </span>
-                </Link>
+                </LandingSignupLink>
               </Button>
               <Link href="/pricing" className="relative z-50">
                 <Button
@@ -129,8 +133,12 @@ export function PublicHomeLanding() {
               Free 300 Ink on signup — no credit card required.
             </p>
             <Button asChild size="lg" className="h-12 px-8 font-bold rounded-full">
-              <Link href="/login">Create free account</Link>
+              <LandingSignupLink>Create free account</LandingSignupLink>
             </Button>
+            <p className="text-[10px] text-muted-foreground">
+              Already have an account?{' '}
+              <LandingSignInLink className="text-primary font-bold hover:underline">Sign in</LandingSignInLink>
+            </p>
           </div>
         </section>
       </main>

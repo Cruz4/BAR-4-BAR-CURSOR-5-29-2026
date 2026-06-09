@@ -74,9 +74,15 @@ Checkout success/cancel URLs come from `NEXT_PUBLIC_APP_URL` after redeploy — 
 
 ### 6. Marketing & bio links
 
-Update TikTok / Instagram / YouTube bios to:
+Use this as your **TikTok Promote / bio URL** (landing first, then signup CTAs):
 
-- `https://bar4bar.ink?ref=tiktok` (etc.)
+- `https://bar4bar.ink?ref=tiktok`
+
+Visitors see the product landing page; **Create free account** goes to `/login?mode=signup&ref=tiktok`. Google sign-in uses redirect flow in TikTok’s in-app browser.
+
+Also works for other channels: `?ref=ig`, `?ref=yt`, etc.
+
+Admin **Metrics → Funnel by referral link** shows landing hits vs signups per ref.
 
 See [MARKETING_QUICKSTART.md](./MARKETING_QUICKSTART.md).
 
