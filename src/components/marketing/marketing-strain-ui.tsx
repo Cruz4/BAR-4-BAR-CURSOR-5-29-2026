@@ -16,12 +16,13 @@ import { cn } from '@/lib/utils';
 import { getStrainDestinationTheme } from '@/lib/dna-strands';
 import type { WizardAnalysis } from '@/lib/types';
 
-export function MarketingDestinationPill({ title }: { title: string }) {
+export function MarketingDestinationPill({ title, legible }: { title: string; legible?: boolean }) {
   const theme = getStrainDestinationTheme(title);
   return (
     <span
       className={cn(
-        'inline-flex text-[9px] font-bold uppercase tracking-[0.14em] px-2 py-0.5 rounded-full border',
+        'inline-flex font-bold uppercase px-2 py-0.5 rounded-full border',
+        legible ? 'text-[11px] tracking-[0.12em]' : 'text-[9px] tracking-[0.14em]',
         theme.badgeBg,
         theme.badgeBorder,
         theme.pill
@@ -65,11 +66,13 @@ export function MarketingBadgeStrainCard({
   badges,
   icon: Icon,
   highlight,
+  legible,
 }: {
   title: string;
   badges: string[];
   icon: React.ComponentType<{ className?: string }>;
   highlight?: boolean;
+  legible?: boolean;
 }) {
   const theme = getStrainDestinationTheme(title);
   return (
@@ -85,9 +88,17 @@ export function MarketingBadgeStrainCard({
         <div className="space-y-1.5 min-w-0">
           <div className={cn('flex items-center gap-2', theme.icon)}>
             <Icon className="h-4 w-4 shrink-0" />
-            <h5 className={cn('text-[11px] font-bold uppercase tracking-[0.18em]', theme.title)}>{title}</h5>
+            <h5
+              className={cn(
+                'font-bold uppercase',
+                legible ? 'text-sm tracking-[0.14em]' : 'text-[11px] tracking-[0.18em]',
+                theme.title
+              )}
+            >
+              {title}
+            </h5>
           </div>
-          <MarketingDestinationPill title={title} />
+          <MarketingDestinationPill title={title} legible={legible} />
         </div>
         <MarketingInjectButton title={title} pulse={highlight} />
       </div>
@@ -96,7 +107,13 @@ export function MarketingBadgeStrainCard({
           <Badge
             key={badge}
             variant="outline"
-            className={cn('text-[10px] font-bold uppercase py-1 px-2.5', theme.badgeBg, theme.badgeBorder, theme.badgeText)}
+            className={cn(
+              'font-bold uppercase py-1 px-2.5',
+              legible ? 'text-xs' : 'text-[10px]',
+              theme.badgeBg,
+              theme.badgeBorder,
+              theme.badgeText
+            )}
           >
             {badge}
           </Badge>
@@ -111,11 +128,13 @@ export function MarketingExpandedStrainCard({
   content,
   icon: Icon,
   highlight,
+  legible,
 }: {
   title: string;
   content: string;
   icon: React.ComponentType<{ className?: string }>;
   highlight?: boolean;
+  legible?: boolean;
 }) {
   const theme = getStrainDestinationTheme(title);
   return (
@@ -131,20 +150,34 @@ export function MarketingExpandedStrainCard({
         <div className="space-y-1.5 min-w-0">
           <div className={cn('flex items-center gap-2', theme.icon)}>
             <Icon className="h-4 w-4 shrink-0" />
-            <h5 className={cn('text-[11px] font-bold uppercase tracking-[0.18em]', theme.title)}>{title}</h5>
+            <h5
+              className={cn(
+                'font-bold uppercase',
+                legible ? 'text-sm tracking-[0.14em]' : 'text-[11px] tracking-[0.18em]',
+                theme.title
+              )}
+            >
+              {title}
+            </h5>
           </div>
-          <MarketingDestinationPill title={title} />
+          <MarketingDestinationPill title={title} legible={legible} />
         </div>
         <MarketingInjectButton title={title} pulse={highlight} />
       </div>
-      <p className={cn('text-sm font-code font-bold italic leading-relaxed', theme.title, 'opacity-90')}>
+      <p
+        className={cn(
+          'font-code font-bold italic leading-relaxed opacity-90',
+          legible ? 'text-base' : 'text-sm',
+          theme.title
+        )}
+      >
         &ldquo;{content}&rdquo;
       </p>
     </Card>
   );
 }
 
-export function MarketingStyleStrainCard({ analysis }: { analysis: WizardAnalysis }) {
+export function MarketingStyleStrainCard({ analysis, legible }: { analysis: WizardAnalysis; legible?: boolean }) {
   const theme = getStrainDestinationTheme('Style');
   const metrics = analysis.styleMetrics!;
   return (
@@ -153,23 +186,41 @@ export function MarketingStyleStrainCard({ analysis }: { analysis: WizardAnalysi
         <div className="space-y-1.5 min-w-0">
           <div className={cn('flex items-center gap-2', theme.icon)}>
             <Fingerprint className="h-4 w-4 shrink-0" />
-            <h5 className={cn('text-[11px] font-bold uppercase tracking-[0.18em]', theme.title)}>Style</h5>
+            <h5
+              className={cn(
+                'font-bold uppercase',
+                legible ? 'text-sm tracking-[0.14em]' : 'text-[11px] tracking-[0.18em]',
+                theme.title
+              )}
+            >
+              Style
+            </h5>
           </div>
-          <MarketingDestinationPill title="Style" />
+          <MarketingDestinationPill title="Style" legible={legible} />
         </div>
         <MarketingInjectButton title="Style" />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <p className={cn('text-[9px] font-bold uppercase', theme.pill)}>Vocab · {metrics.vocabularyScore}</p>
+          <p className={cn('font-bold uppercase', legible ? 'text-[11px]' : 'text-[9px]', theme.pill)}>
+            Vocab · {metrics.vocabularyScore}
+          </p>
           <Progress value={metrics.vocabularyScore} className="h-1.5 bg-fuchsia-500/10" />
         </div>
         <div className="space-y-1">
-          <p className={cn('text-[9px] font-bold uppercase', theme.pill)}>Rhyme · {metrics.rhymeComplexity}</p>
+          <p className={cn('font-bold uppercase', legible ? 'text-[11px]' : 'text-[9px]', theme.pill)}>
+            Rhyme · {metrics.rhymeComplexity}
+          </p>
           <Progress value={metrics.rhymeComplexity} className="h-1.5 bg-fuchsia-500/10" />
         </div>
       </div>
-      <p className={cn('text-sm font-code font-bold italic leading-relaxed opacity-90', theme.title)}>
+      <p
+        className={cn(
+          'font-code font-bold italic leading-relaxed opacity-90',
+          legible ? 'text-base' : 'text-sm',
+          theme.title
+        )}
+      >
         &ldquo;{analysis.styleAnalysis}&rdquo;
       </p>
     </Card>
@@ -180,9 +231,12 @@ export function MarketingStyleStrainCard({ analysis }: { analysis: WizardAnalysi
 export function MarketingDecodedStrainGrid({
   analysis,
   highlightTitle,
+  legible,
 }: {
   analysis: WizardAnalysis;
   highlightTitle?: string;
+  /** Larger type for GIF capture routes — does not affect landing screenshots. */
+  legible?: boolean;
 }) {
   const emotion = [analysis.emotionalTone.primaryEmotion, analysis.emotionalTone.secondaryEmotion]
     .filter(Boolean)
@@ -196,12 +250,14 @@ export function MarketingDecodedStrainGrid({
           badges={analysis.themes}
           icon={Link2}
           highlight={highlightTitle === 'Themes'}
+          legible={legible}
         />
         <MarketingBadgeStrainCard
           title="Motifs"
           badges={analysis.motifs}
           icon={Target}
           highlight={highlightTitle === 'Motifs'}
+          legible={legible}
         />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
@@ -211,6 +267,7 @@ export function MarketingDecodedStrainGrid({
             content={analysis.emotionalShift}
             icon={ArrowRightLeft}
             highlight={highlightTitle === 'Shift'}
+            legible={legible}
           />
         </div>
         <div className="md:col-span-5">
@@ -219,10 +276,11 @@ export function MarketingDecodedStrainGrid({
             content={emotion}
             icon={Compass}
             highlight={highlightTitle === 'Emotion'}
+            legible={legible}
           />
         </div>
       </div>
-      <MarketingStyleStrainCard analysis={analysis} />
+      <MarketingStyleStrainCard analysis={analysis} legible={legible} />
     </div>
   );
 }

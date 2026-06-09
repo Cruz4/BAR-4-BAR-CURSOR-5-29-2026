@@ -7,9 +7,81 @@ import {
   type MarketingFeatureBand,
   type ShowcaseLayout,
 } from '@/lib/marketing-features';
-import { MARKETING_BAND_THEMES } from '@/lib/marketing-band-themes';
+import { MARKETING_BAND_THEMES, type MarketingBandTheme } from '@/lib/marketing-band-themes';
 import { MarketingMediaFrame } from '@/components/marketing/marketing-media-frame';
 import { StrainPipelineStrip } from '@/components/marketing/strain-pipeline-strip';
+
+const FEATURE_TITLE_CLASS =
+  'relative z-[1] font-headline text-2xl md:text-[2.35rem] font-bold uppercase leading-[1.08] tracking-tight overflow-visible';
+
+/** Brush font + bg-clip-text is unreliable — accent parts use solid colors from theme. */
+function FeatureTitle({
+  theme,
+  bandId,
+  align,
+  isCenter,
+}: {
+  theme: MarketingBandTheme;
+  bandId: string;
+  align: 'left' | 'right' | 'center';
+  isCenter: boolean;
+}) {
+  const alignClass = cn(
+    isCenter && 'text-center',
+    align === 'right' && 'lg:text-right',
+    align === 'left' && 'text-left'
+  );
+
+  const partClass = (i: number) =>
+    cn('inline-block shrink-0 pb-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]', theme.titlePartColors[i]);
+
+  if (theme.titleParts.length === 2) {
+    return (
+      <h3
+        className={cn(
+          FEATURE_TITLE_CLASS,
+          alignClass,
+          'flex flex-wrap items-baseline gap-x-2 gap-y-0.5',
+          isCenter && 'justify-center',
+          align === 'right' && 'lg:justify-end',
+          align === 'left' && 'justify-start'
+        )}
+      >
+        <span className={partClass(0)}>{theme.titleParts[0]}</span>
+        <span className={partClass(1)}>{theme.titleParts[1]}</span>
+      </h3>
+    );
+  }
+
+  if (theme.titleParts.length === 3) {
+    return (
+      <h3
+        className={cn(
+          FEATURE_TITLE_CLASS,
+          alignClass,
+          'flex flex-wrap items-baseline gap-x-2 gap-y-0.5',
+          isCenter && 'justify-center',
+          align === 'right' && 'lg:justify-end',
+          align === 'left' && 'justify-start'
+        )}
+      >
+        <span className={partClass(0)}>{theme.titleParts[0]}</span>
+        <span className={partClass(1)}>{theme.titleParts[1]}</span>
+        <span className={partClass(2)}>{theme.titleParts[2]}</span>
+      </h3>
+    );
+  }
+
+  return (
+    <h3 className={cn(FEATURE_TITLE_CLASS, alignClass)}>
+      {theme.titleParts.map((part, i) => (
+        <span key={`${bandId}-title-${i}`} className={partClass(i)}>
+          {part}
+        </span>
+      ))}
+    </h3>
+  );
+}
 
 function FeatureCopy({
   band,
@@ -69,24 +141,7 @@ function FeatureCopy({
         </p>
       </div>
 
-      <h3
-        className={cn(
-          'relative z-[1] font-headline text-2xl md:text-[2.35rem] font-bold uppercase leading-[1.08] tracking-tight',
-          'flex flex-wrap items-baseline gap-x-2 gap-y-1',
-          isCenter && 'justify-center',
-          align === 'right' && 'lg:justify-end',
-          align === 'left' && 'justify-start'
-        )}
-      >
-        {theme.titleParts.map((part, i) => (
-          <span
-            key={`${band.id}-title-${i}`}
-            className={cn('inline-block shrink-0 pb-0.5', theme.titlePartColors[i])}
-          >
-            {part}
-          </span>
-        ))}
-      </h3>
+      <FeatureTitle theme={theme} bandId={band.id} align={align} isCenter={isCenter} />
 
       <p
         className={cn(
@@ -165,7 +220,9 @@ function FeatureRow({
         reverse && 'lg:[&>*:first-child]:order-2 lg:[&>*:last-child]:order-1'
       )}
     >
-      <FeatureCopy band={band} index={index} align={reverse ? 'right' : 'left'} />
+      <div className="min-w-0 overflow-visible">
+        <FeatureCopy band={band} index={index} align={reverse ? 'right' : 'left'} />
+      </div>
       <MarketingMediaFrame
         src={band.mediaSrc}
         alt={band.mediaAlt}

@@ -11,7 +11,6 @@ import {
   FolderOpen,
   RefreshCw,
   Save,
-  Sparkles,
   Target,
   Zap,
   X,
@@ -84,7 +83,7 @@ function HubTab({ label, active, done }: { label: string; active?: boolean; done
   return (
     <span
       className={cn(
-        'text-[10px] font-bold uppercase px-3 py-1.5 rounded-full border whitespace-nowrap',
+        'text-xs font-bold uppercase px-3 py-1.5 rounded-full border whitespace-nowrap',
         done && 'border-primary/30 bg-primary/10 text-primary/75',
         active && 'bg-primary/20 border-primary/50 text-primary shadow-[0_0_20px_rgba(59,130,246,0.15)]',
         !active && !done && 'border-white/10 text-muted-foreground'
@@ -95,6 +94,75 @@ function HubTab({ label, active, done }: { label: string; active?: boolean; done
   );
 }
 
+type GifTitlePart = { text: string; className?: string; gradient?: string };
+
+function GifGradientTitle({
+  parts,
+  size = 'header',
+  className,
+}: {
+  parts: GifTitlePart[];
+  size?: 'header' | 'section';
+  className?: string;
+}) {
+  const sizeClass =
+    size === 'header'
+      ? 'text-[1.35rem] font-headline font-bold uppercase tracking-[0.1em] leading-tight'
+      : 'text-lg font-headline font-bold uppercase tracking-wide leading-tight';
+
+  return (
+    <span className={cn('inline-flex flex-wrap items-baseline gap-x-1.5', sizeClass, className)}>
+      {parts.map((part, i) => (
+        <span
+          key={`${part.text}-${i}`}
+          className={cn(
+            'drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]',
+            part.gradient
+              ? cn('text-transparent bg-clip-text bg-gradient-to-r', part.gradient)
+              : part.className ?? 'text-white'
+          )}
+        >
+          {part.text}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function GifSceneHeader({
+  icon: Icon,
+  iconClass,
+  titleParts,
+  badge,
+  badgeClass,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  iconClass: string;
+  titleParts: GifTitlePart[];
+  badge: string;
+  badgeClass: string;
+}) {
+  return (
+    <div className="px-5 py-3.5 border-b border-white/10 flex items-center justify-between bg-black/40 shrink-0">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <Icon className={cn('h-6 w-6 shrink-0', iconClass)} />
+        <GifGradientTitle parts={titleParts} />
+      </div>
+      <Badge variant="outline" className={cn('text-[11px] uppercase px-2.5 shrink-0 font-bold', badgeClass)}>
+        {badge}
+      </Badge>
+    </div>
+  );
+}
+
+function GifSectionTitle({ parts, className }: { parts: GifTitlePart[]; className?: string }) {
+  return (
+    <p className={className}>
+      <GifGradientTitle parts={parts} size="section" />
+    </p>
+  );
+}
+
 /** DNA & REMIX — paste → decode (real strain cards) → paths → draft */
 function GifDnaRemixSceneInner() {
   const step = useMarketingGifStep(GIF_DNA_REMIX_STEPS, GIF_STEP_MS);
@@ -102,19 +170,25 @@ function GifDnaRemixSceneInner() {
 
   return (
     <GifChrome step={step}>
-      <div className="px-5 py-3.5 border-b border-white/10 flex items-center justify-between bg-black/40 shrink-0">
-        <div className="flex items-center gap-2.5">
-          <BrainCircuit className="h-5 w-5 text-sky-400" />
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-sky-400">Calibration Hub</span>
-        </div>
-        <Badge variant="outline" className="text-[10px] uppercase border-violet-500/40 text-violet-200 px-2.5">
-          DNA & Remix
-        </Badge>
-      </div>
+      <GifSceneHeader
+        icon={BrainCircuit}
+        iconClass="text-sky-400"
+        titleParts={[
+          { text: 'Calibration', className: 'text-sky-100' },
+          { text: 'Hub', gradient: 'from-sky-300 to-primary' },
+        ]}
+        badge="DNA & Remix"
+        badgeClass="border-violet-500/40 text-violet-100"
+      />
 
       <div className="p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-lg font-headline font-bold uppercase text-primary">Seed DNA & Remix</h3>
+          <GifSectionTitle
+            parts={[
+              { text: 'Seed DNA', className: 'text-primary/90' },
+              { text: '& Remix', gradient: 'from-sky-300 to-violet-300' },
+            ]}
+          />
           <div className="flex flex-wrap gap-1.5">
             <HubTab label="Rough notes" active={step <= 1} done={step > 1} />
             <HubTab label="Strains" active={step === 2} done={step > 2} />
@@ -125,13 +199,13 @@ function GifDnaRemixSceneInner() {
 
         {step <= 1 && (
           <div className="rounded-xl border-2 border-primary/25 bg-background/30 p-4 min-h-[140px]">
-            <p className="text-[10px] uppercase font-bold text-muted-foreground mb-2 tracking-widest">Seed lyrics</p>
+            <p className="text-xs uppercase font-bold text-zinc-300 mb-2 tracking-widest">Seed lyrics</p>
             {step === 0 ? (
-              <p className="italic text-muted-foreground/75 text-sm font-code">Paste rough lyrics or notes to extract strains…</p>
+              <p className="italic text-zinc-400/90 text-base font-code">Paste rough lyrics or notes to extract strains…</p>
             ) : (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-                <p className="whitespace-pre-wrap text-sm font-code leading-relaxed text-foreground">{MARKETING_SEED_LYRICS}</p>
-                <div className="flex items-center gap-2 text-xs font-bold uppercase text-primary">
+                <p className="whitespace-pre-wrap text-base font-code leading-relaxed text-zinc-100">{MARKETING_SEED_LYRICS}</p>
+                <div className="flex items-center gap-2 text-sm font-bold uppercase text-primary">
                   <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                   Decoding strains…
                 </div>
@@ -142,21 +216,24 @@ function GifDnaRemixSceneInner() {
 
         {step === 2 && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-            <MarketingDecodedStrainGrid analysis={analysis} highlightTitle="Motifs" />
+            <MarketingDecodedStrainGrid analysis={analysis} highlightTitle="Motifs" legible />
           </motion.div>
         )}
 
         {step === 3 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-            <p className="text-xs font-bold uppercase text-primary flex items-center gap-2">
-              <Sparkles className="h-4 w-4" /> Remix paths — blend influence
-            </p>
+            <GifSectionTitle
+              parts={[
+                { text: 'Remix paths', className: 'text-primary/90' },
+                { text: '— blend influence', gradient: 'from-violet-300 to-sky-300' },
+              ]}
+            />
             <div className="grid grid-cols-2 gap-3">
               {MARKETING_REMIX_PATHS.map((path, i) => (
                 <Card key={path.label} className={cn('p-4 border', i === 0 ? 'border-primary/45 bg-primary/10' : 'border-white/10')}>
-                  <p className="text-sm font-code font-bold leading-snug">{path.label}</p>
+                  <p className="text-base font-code font-bold leading-snug text-zinc-100">{path.label}</p>
                   <div className="mt-3 space-y-1">
-                    <div className="flex justify-between text-[9px] font-bold uppercase text-muted-foreground">
+                    <div className="flex justify-between text-[11px] font-bold uppercase text-zinc-400">
                       <span>Influence</span>
                       <span className="text-primary">{path.influence}%</span>
                     </div>
@@ -170,10 +247,10 @@ function GifDnaRemixSceneInner() {
 
         {step === 4 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4">
-            <p className="text-xs font-bold uppercase text-cyan-300 flex items-center gap-2 mb-2">
+            <p className="text-sm font-bold uppercase text-cyan-200 flex items-center gap-2 mb-2">
               <RefreshCw className="h-4 w-4 animate-spin" /> Creative syncing…
             </p>
-            <p className="text-sm font-code text-cyan-100/85 leading-relaxed">
+            <p className="text-base font-code text-cyan-50/90 leading-relaxed">
               Weaving DNA, motifs, remix paths, and guardrails into one neural pass.
             </p>
           </motion.div>
@@ -183,14 +260,21 @@ function GifDnaRemixSceneInner() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <Card className="border-emerald-500/35 bg-emerald-500/10">
               <CardHeader className="pb-2 px-4 pt-4">
-                <CardTitle className="text-base uppercase font-headline text-emerald-400 flex items-center gap-2">
-                  <Check className="h-5 w-5" /> Studio draft ready
+                <CardTitle className="text-lg uppercase font-headline flex items-center gap-2">
+                  <Check className="h-5 w-5 text-emerald-400" />
+                  <GifGradientTitle
+                    parts={[
+                      { text: 'Studio draft', className: 'text-emerald-100' },
+                      { text: 'ready', gradient: 'from-emerald-300 to-green-400' },
+                    ]}
+                    size="section"
+                  />
                 </CardTitle>
               </CardHeader>
-              <CardContent className="font-code text-sm leading-relaxed text-foreground/90 px-4 pb-4 space-y-2">
+              <CardContent className="font-code text-base leading-relaxed text-zinc-100 px-4 pb-4 space-y-2">
                 <p>Mist lifts — timber skin, stone heart still holding the shore.</p>
                 <p>Roots dig where the river forgot to run; granite learns the hymn of rain.</p>
-                <p className="text-emerald-300/80 text-xs uppercase tracking-widest pt-1">4 bars · rhyme scheme preserved</p>
+                <p className="text-emerald-200/90 text-xs uppercase tracking-widest pt-1">4 bars · rhyme scheme preserved</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -215,21 +299,22 @@ function GifStrainVaultSceneInner() {
 
   return (
     <GifChrome step={step}>
-      <div className="px-5 py-3.5 border-b border-white/10 flex items-center justify-between bg-black/40">
-        <div className="flex items-center gap-2.5">
-          <FolderOpen className="h-5 w-5 text-green-500" />
-          <span className="text-sm font-bold uppercase tracking-[0.18em] text-green-400">DNA Vault & Mixer</span>
-        </div>
-        <Badge variant="outline" className="text-[10px] uppercase border-green-500/35 text-green-300 px-2.5">
-          Pro workflow
-        </Badge>
-      </div>
+      <GifSceneHeader
+        icon={FolderOpen}
+        iconClass="text-green-500"
+        titleParts={[
+          { text: 'DNA Vault', className: 'text-emerald-100' },
+          { text: '& Mixer', gradient: 'from-emerald-300 to-green-400' },
+        ]}
+        badge="Pro workflow"
+        badgeClass="border-green-500/35 text-green-100"
+      />
 
       <div className="p-5 space-y-4">
         {step === 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <p className="text-xs font-bold uppercase tracking-widest text-zinc-300 mb-3">Decoded — tap ⚡ to inject</p>
-            <MarketingDecodedStrainGrid analysis={analysis} highlightTitle="Themes" />
+            <p className="text-sm font-bold uppercase tracking-widest text-zinc-200 mb-3">Decoded — tap ⚡ to inject</p>
+            <MarketingDecodedStrainGrid analysis={analysis} highlightTitle="Themes" legible />
           </motion.div>
         )}
 
@@ -238,11 +323,16 @@ function GifStrainVaultSceneInner() {
             <div className="flex items-center gap-3">
               <Save className="h-6 w-6 text-green-400" />
               <div>
-                <p className="text-base font-headline font-bold uppercase text-green-300">Save to DNA Vault</p>
-                <p className="text-sm font-code text-zinc-300">EARTHEN MONOLITH — full strain extract</p>
+                <GifSectionTitle
+                  parts={[
+                    { text: 'Save to', className: 'text-green-100' },
+                    { text: 'DNA Vault', gradient: 'from-emerald-300 to-green-400' },
+                  ]}
+                />
+                <p className="text-base font-code text-zinc-200 mt-1">EARTHEN MONOLITH — full strain extract</p>
               </div>
             </div>
-            <Button className="w-full font-bold uppercase text-xs h-10 gap-2">
+            <Button className="w-full font-bold uppercase text-sm h-11 gap-2">
               <Save className="h-4 w-4" /> Archive strains
             </Button>
           </motion.div>
@@ -250,7 +340,13 @@ function GifStrainVaultSceneInner() {
 
         {step === 2 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-green-400 mb-2">Vault presets</p>
+            <GifSectionTitle
+              parts={[
+                { text: 'Vault', className: 'text-green-100' },
+                { text: 'presets', gradient: 'from-emerald-300 to-green-400' },
+              ]}
+              className="mb-2"
+            />
             {MARKETING_VAULT_PRESETS.map((preset, i) => (
               <div
                 key={preset.name}
@@ -260,10 +356,10 @@ function GifStrainVaultSceneInner() {
                 )}
               >
                 <div>
-                  <p className="text-base font-bold font-code text-zinc-100">{preset.name}</p>
-                  <p className="text-xs uppercase text-zinc-400 tracking-wide">{preset.source}</p>
+                  <p className="text-lg font-bold font-code text-zinc-50">{preset.name}</p>
+                  <p className="text-sm uppercase text-zinc-300 tracking-wide">{preset.source}</p>
                 </div>
-                <Button variant="outline" size="sm" className="text-[10px] font-bold uppercase h-8">
+                <Button variant="outline" size="sm" className="text-xs font-bold uppercase h-9">
                   Load
                 </Button>
               </div>
@@ -273,7 +369,12 @@ function GifStrainVaultSceneInner() {
 
         {step === 3 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-            <p className="text-sm font-bold uppercase text-emerald-400">Album DNA Mixer — pick strains per field</p>
+            <GifSectionTitle
+              parts={[
+                { text: 'Album DNA Mixer', className: 'text-emerald-100' },
+                { text: '— pick strains', gradient: 'from-emerald-300 to-green-400' },
+              ]}
+            />
             {[
               { field: 'Setting / World', strain: 'Coastal permanence · mist veil' },
               { field: 'Emotion / Core', strain: 'Stark reverence / cold peace' },
@@ -281,10 +382,10 @@ function GifStrainVaultSceneInner() {
             ].map((row, i) => (
               <div key={row.field} className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">{row.field}</span>
-                  <Badge variant="outline" className="text-[10px] uppercase border-emerald-500/30">Vault strain</Badge>
+                  <span className="text-sm font-bold uppercase tracking-widest text-emerald-300">{row.field}</span>
+                  <Badge variant="outline" className="text-xs uppercase border-emerald-500/30 font-bold">Vault strain</Badge>
                 </div>
-                <p className={cn('text-[17px] font-code rounded-lg border p-3.5 text-zinc-100', i === 1 ? 'border-primary/35 bg-primary/10' : 'border-white/10 bg-black/25')}>
+                <p className={cn('text-lg font-code rounded-lg border p-3.5 text-zinc-50', i === 1 ? 'border-primary/35 bg-primary/10' : 'border-white/10 bg-black/25')}>
                   {row.strain}
                 </p>
               </div>
@@ -294,14 +395,20 @@ function GifStrainVaultSceneInner() {
 
         {step === 4 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-green-500/40 bg-green-500/10 p-5">
-            <p className="text-sm font-bold uppercase text-green-300 mb-4 flex items-center gap-2">
-              <Check className="h-5 w-5" /> Strains slotted into Creative DNA
-            </p>
+            <div className="mb-4 flex items-center gap-2">
+              <Check className="h-5 w-5 text-green-400 shrink-0" />
+              <GifSectionTitle
+                parts={[
+                  { text: 'Strains slotted into', className: 'text-green-100' },
+                  { text: 'Creative DNA', gradient: 'from-emerald-300 to-green-400' },
+                ]}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-3 font-code">
               {['Setting', 'Emotion', 'Trigger', 'Truth', 'Tone'].map((f) => (
-                <div key={f} className="rounded-lg border border-green-500/30 bg-black/35 px-3.5 py-3 text-green-50">
-                  <span className="text-xs font-bold uppercase text-green-400 block mb-1">{f}</span>
-                  <span className="text-[17px] font-semibold">Loaded</span>
+                <div key={f} className="rounded-lg border border-green-500/35 bg-black/40 px-3.5 py-3.5 text-green-50">
+                  <span className="text-sm font-bold uppercase text-emerald-300 block mb-1.5">{f}</span>
+                  <span className="text-xl font-bold text-zinc-50">Loaded</span>
                 </div>
               ))}
             </div>
@@ -358,8 +465,12 @@ function GifCoWriterSceneInner() {
   return (
     <GifChrome step={step}>
       <div className="px-5 pt-4 pb-3 border-b border-white/8 shrink-0">
-        <p className="text-sm font-code text-zinc-400 uppercase tracking-widest">{track.title}</p>
-        <h2 className="font-headline text-[2rem] font-bold uppercase text-white">VERSE</h2>
+        <p className="text-sm font-code text-zinc-300 uppercase tracking-widest">{track.title}</p>
+        <GifGradientTitle
+          parts={[{ text: 'VERSE', gradient: 'from-sky-200 via-primary to-sky-400' }]}
+          size="header"
+          className="text-[2rem] mt-0.5"
+        />
       </div>
 
       <div className="px-5 py-3.5 space-y-2.5">
@@ -391,9 +502,15 @@ function GifCoWriterSceneInner() {
 
       <div className="bg-card border-t border-white/10 px-5 py-4 shrink-0">
         <div className="flex items-center justify-between pb-2 mb-3">
-          <h4 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
-            <Zap className="h-4 w-4" /> Bar Workstation
-          </h4>
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4 text-primary" />
+            <GifSectionTitle
+              parts={[
+                { text: 'Bar', className: 'text-primary/90' },
+                { text: 'Workstation', gradient: 'from-sky-300 to-primary' },
+              ]}
+            />
+          </div>
         </div>
         {showOptions ? (
           <div className="flex gap-3 items-stretch">
@@ -447,9 +564,21 @@ function GifRhymePulseSceneInner() {
 
   return (
     <GifChrome step={step}>
-      <div className="px-5 py-3 border-b border-white/8 flex items-center justify-between gap-3 bg-black/40">
-        <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">Lyrics sheet</span>
-        <span className="text-xs font-bold uppercase tracking-widest text-sky-300">Rhyme Pulse</span>
+      <div className="px-5 py-3.5 border-b border-white/8 flex items-center justify-between gap-3 bg-black/40">
+        <GifGradientTitle
+          parts={[
+            { text: 'Lyrics', className: 'text-zinc-200' },
+            { text: 'sheet', gradient: 'from-zinc-300 to-sky-200' },
+          ]}
+          size="section"
+        />
+        <GifGradientTitle
+          parts={[
+            { text: 'Rhyme', className: 'text-sky-100' },
+            { text: 'Pulse', gradient: 'from-sky-300 to-primary' },
+          ]}
+          size="section"
+        />
         <Button variant="outline" size="sm" className={cn('rounded-full h-9 w-9 p-0 border-primary/50', isScanning && 'animate-pulse')}>
           {isScanning ? <RefreshCw className="h-4 w-4 text-primary animate-spin" /> : <Target className="h-4 w-4 text-primary" />}
         </Button>
@@ -464,7 +593,7 @@ function GifRhymePulseSceneInner() {
         ))}
       </div>
       {showRhymes && (
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-5 pb-4 text-xs font-bold uppercase text-sky-300 tracking-widest">
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-5 pb-4 text-sm font-bold uppercase text-sky-200 tracking-widest">
           Rhyme groups updated
         </motion.p>
       )}
