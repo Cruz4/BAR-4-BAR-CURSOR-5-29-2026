@@ -23,6 +23,10 @@ export interface User {
   lyricsTutorialCompletedAt?: string;
   /** ISO timestamp — vault-page guided tour completed or skipped */
   vaultTutorialCompletedAt?: string;
+  /** ISO timestamp — saved first custom DNA strain during Pro trial quest */
+  proTrialWinCompletedAt?: string;
+  /** ISO timestamp — user skipped the Pro trial win quest */
+  proTrialWinDismissedAt?: string;
   /** ISO timestamp — leaderboard / public profile intro acknowledged */
   studioPrivacyIntroCompletedAt?: string;
 }

@@ -28,6 +28,7 @@ import { MarketingAttributionCapture } from './marketing-attribution-capture';
 import { AdminAlertListener } from './admin-alert-listener';
 import { InviteGateGuard } from './invite-gate-guard';
 import { AdSenseRouteLoader } from './adsense-route-loader';
+import { ProTrialWinQuestStrip } from './pro-trial-win-quest-strip';
 import { useAuth } from '@/hooks/use-auth';
 
 const CHUNK_RELOAD_KEY = 'b4b_chunk_reload_at';
@@ -89,6 +90,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               )}
               <div className="relative z-10 flex min-h-screen flex-col flex-1 overflow-hidden">
                 {showAppHeader && <Header />}
+                {showAppHeader && <ProTrialWinQuestStrip />}
                 <main className="flex-1 overflow-hidden flex flex-col">{children}</main>
                 {!isSharePage && !isMarketingCapture && <WhatsNewDialog />}
                 {!isSharePage && !isMarketingShell && !isMarketingCapture && <StudioPrivacyIntroDialog />}

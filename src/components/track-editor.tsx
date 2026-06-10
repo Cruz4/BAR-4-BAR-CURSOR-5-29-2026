@@ -132,6 +132,8 @@ import { dispatchStudioPrivacyIntroEligible, queueStudioPrivacyIntro } from '@/l
 import { StudioGuidedTour } from '@/components/studio-guided-tour';
 import { QuestProgress } from '@/components/gamification/quest-progress';
 import { postGamificationEvent } from '@/lib/gamification-client';
+import { recordProTrialVaultSave } from '@/lib/pro-trial-quest-client';
+import { isTrialActive } from '@/lib/trial';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
 import { MobileLyricsTabBar, type MobileLyricsTab } from '@/components/mobile-lyrics-tab-bar';
 import { UpgradeTooltip } from '@/components/upgrade-tooltip';
@@ -1715,6 +1717,7 @@ function cowriterSectionSubtitle(expanded: boolean) {
 }
 
 function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, improveStyleOpen, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, openCoWriterSections, onApplyChestEntry, mobileActive = false, trackLocked = false, completeLocked = false }: any) {
+  const { user } = useAuth();
   const { tooltip, buttonLabel } = useInkCosts();
   const activeSection = track.sections.find((s:any) => s.id === activeSectionId);
   const { toast } = useToast();
@@ -1829,6 +1832,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
         description: `"${name}" saved to your vault.`,
       });
       void postGamificationEvent('dna_preset_saved');
+      if (user?.id) void recordProTrialVaultSave(user.id, isTrialActive(user));
   };
 
   const handleConfirmSaveVibe = (name: string) => {
@@ -2640,6 +2644,13 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         setGenerateDraftOpen(true);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (searchParams.get('proQuest') !== 'dna' || !track) return;
+    setRightCollapsed(false);
+    setMobilePanelTab('cowriter');
+    handleSectionChange('dna', true);
+  }, [searchParams, track, handleSectionChange]);
 
   useEffect(() => {
     const syncVisibility = () => setPageVisible(document.visibilityState === 'visible');
