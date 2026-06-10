@@ -120,11 +120,15 @@ const FAQS = [
     },
     {
       q: "Where is the DNA Vault?",
-      a: "The DNA Vault lives in two places: the Right Panel under DNA Suite (folder icon), and inside DNA & REMIX → Calibration Hub → DNA Strains → VAULT tab. Both load saved profiles into your current track or remix session."
+      a: "Save extractions on DNA & REMIX → Analysis Step with Save DNA Profile (Pro). Load saved profiles from DNA & REMIX → Calibration Hub → DNA Strains → VAULT, or the DNA Suite folder icon in the right panel. Both paths load full profiles or let you cherry-pick individual strains."
+    },
+    {
+      q: "How do I save a DNA profile from extraction?",
+      a: "Generation Workstation → DNA & REMIX → paste lyrics, a poem, or ideas (or toggle Sync Current Lyrics) → run extraction. On Analysis Step, Save DNA Profile archives the entire extraction. Use ⚡ on strain cards to inject parts into this remix only. DNA Suite is where you can also type your own five questions or edit fields after you load or extract."
     },
     {
       q: "What is the difference between ⚡ inject and loading a DNA Profile?",
-      a: "⚡ on an analysis strain appends that strain to its hub target (Creative DNA fields, Intents, Structure guide, or Style DNA). The vault ↻ button loads the entire saved profile at once. Partial ⚡ buttons inside an expanded vault entry load one strain only."
+      a: "On Analysis Step or in the Hub INSIGHTS tab, ⚡ on a strain appends that one field (Creative DNA, Intents, Structure guide, or Style DNA). Save DNA Profile or the vault ↻ button stores or loads the entire extraction at once. Expanded vault entries also offer partial ⚡ loads per strain."
     },
     {
       q: "Where do analysis strains go in the Calibration Hub?",
@@ -184,7 +188,7 @@ const FAQS = [
     },
     {
       q: "What happens during Creative Syncing vs DNA Extraction?",
-      a: "Creative Syncing runs during full drafts and remix synthesis — it weaves your active Hub rules into new lyrics. DNA Extraction is a separate analysis pass that maps strains from existing text without generating bars; archive the profile, then calibrate in the Hub."
+      a: "DNA Extraction (Seed → Analysis Step) maps strains from pasted or synced text without drafting new bars — Save DNA Profile archives the full result; ⚡ injects individual parts. Creative Syncing runs during full drafts and remix synthesis — it weaves active Hub rules into new lyrics."
     },
     {
       q: "How do weekly and monthly challenges differ?",
@@ -379,14 +383,14 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                             <div className="font-bold text-primary text-2xl">01</div>
                             <div>
                                 <p className="font-bold text-foreground text-sm uppercase">EXTRACT DNA</p>
-                                <p className="text-xs">Use <strong>DNA & REMIX</strong> (Workstation) to pull analytical strains from current lyrics or rough notes.</p>
+                                <p className="text-xs">Open <strong>DNA &amp; REMIX</strong> in the Generation Workstation. Paste lyrics, a poem, or ideas — or toggle <strong>Sync Current Lyrics</strong> — then run extraction to reach Analysis Step.</p>
                             </div>
                         </div>
                         <div className="flex gap-4 p-4 bg-primary/5 rounded-xl border border-primary/10">
                             <div className="font-bold text-primary text-2xl">02</div>
                             <div>
                                 <p className="font-bold text-foreground text-sm uppercase">ARCHIVE STRAINS</p>
-                                <p className="text-xs">Save your extraction as a <strong>DNA Profile</strong>. It archives the full extraction (themes, motifs, arc, structure guide, Style DNA, and mapped Creative DNA fields) for reuse on any track.</p>
+                                <p className="text-xs">On <strong>Analysis Step</strong>, tap <strong>Save DNA Profile</strong> to archive the full extraction (themes, motifs, arc, structure guide, Style DNA, and mapped Creative DNA). Use <strong>⚡</strong> on individual strain cards when you only want parts in this remix session.</p>
                             </div>
                         </div>
                         <div className="flex gap-4 p-4 bg-primary/5 rounded-xl border border-primary/10">
@@ -446,8 +450,8 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </div>
 
                 <ChapterCard icon={<Dna className="text-green-500" />} title="DNA Suite (Right Panel)" colorClass="border-l-green-500">
-                    <p>The core identity of your track — five questions (Setting, Emotion, Trigger, Message, Tone). When active, every suggested line reflects your creative DNA.</p>
-                    <p className="text-xs">Track DNA overrides Album DNA for surgical control on a single song. Open the <strong>folder icon</strong> for the DNA Vault, or use DNA &amp; REMIX → Calibration Hub → VAULT.</p>
+                    <p>The five Creative Direction questions (Setting, Emotion, Trigger, Message, Tone) — type your own DNA here or refine fields after you load or extract a profile.</p>
+                    <p className="text-xs">Primary save path: <strong>DNA &amp; REMIX → Analysis Step → Save DNA Profile</strong>. DNA Suite + the <strong>folder icon</strong> is where you browse vault saves, load full profiles (↻), or edit mapped fields by hand. Hub VAULT tab works the same during a remix.</p>
                 </ChapterCard>
 
                 <ChapterCard icon={<Target className="text-sky-500" />} title="Precision Intents (Right Panel)" colorClass="border-l-sky-500">
@@ -478,9 +482,23 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">Generation Workstation → DNA &amp; REMIX.</p>
                 </div>
 
-                <ChapterCard icon={<ScanLine className="text-sky-400" />} title="DNA Extraction" colorClass="border-l-sky-500 text-sky-400">
-                    <p>Runs a separate analysis pass on your lyrics — maps themes, motifs, arc, structure guide, and Style DNA <em>without</em> drafting new bars. Archive the profile, then calibrate in the Hub.</p>
-                    <p className="text-xs">Toggle <strong>Sync Current Lyrics</strong> to import your sheet automatically, or turn it off to remix external concepts.</p>
+                <ChapterCard icon={<ScanLine className="text-sky-400" />} title="Seed DNA &amp; REMIX" colorClass="border-l-sky-500 text-sky-400">
+                    <p>Step 1 of DNA &amp; REMIX. Paste lyrics, a poem, rough ideas, or inspiration — or turn on <strong>Sync Current Lyrics</strong> to pull from your sheet. Run extraction to open Analysis Step.</p>
+                    <p className="text-xs">This pass maps analytical strains <em>without</em> drafting new bars. You can re-matrix remix paths later without re-pasting source text once extraction is saved.</p>
+                </ChapterCard>
+
+                <ChapterCard icon={<Sparkles className="text-emerald-400" />} title="Analysis Step — Save &amp; Inject" colorClass="border-l-emerald-500 text-emerald-400">
+                    <p>Step 2 decodes your source into color-coded strain cards (Themes, Motifs, Emotion, Structure, Style, and more).</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                        <li><strong>Save DNA Profile</strong> (Pro) — archives the <em>entire</em> extraction to your vault for any track.</li>
+                        <li><strong>⚡ on a strain</strong> — injects just that part into the Calibration Hub for this remix (Creative DNA fields, Intents, Structure guide, or Style DNA).</li>
+                        <li><strong>Define Paths</strong> — optional remix forks with influence sliders before Calibration Hub.</li>
+                    </ul>
+                    <p className="text-xs">Edit or type DNA manually anytime in DNA Suite after you load or extract — the vault and Suite stay in sync with the same profile shape.</p>
+                </ChapterCard>
+
+                <ChapterCard icon={<ScanLine className="text-sky-400" />} title="DNA Extraction (Overview)" colorClass="border-l-sky-500/60 text-sky-400/90">
+                    <p>The full flow: <strong>Seed</strong> (paste or sync) → <strong>Analysis Step</strong> (save full profile or ⚡ parts) → <strong>Remix Paths</strong> (optional) → <strong>Calibration Hub</strong> → synthesis.</p>
                 </ChapterCard>
 
                 <ChapterCard icon={<Settings className="text-primary" />} title="Calibration Hub" colorClass="border-l-primary">
@@ -505,7 +523,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </ChapterCard>
 
                 <ChapterCard icon={<FolderOpen className="text-green-500" />} title="DNA Vault &amp; DNA Mixer" colorClass="border-l-green-500">
-                    <p><strong>DNA Vault</strong> — save an extraction from one track and load it into another (Right Panel folder icon or Hub VAULT tab). Keeps album themes tight across songs.</p>
+                    <p><strong>Save:</strong> DNA &amp; REMIX → Analysis Step → <strong>Save DNA Profile</strong> (Pro). <strong>Load:</strong> Calibration Hub VAULT tab or DNA Suite folder icon — full profile (↻) or partial ⚡ per strain.</p>
                     <p className="text-xs"><strong>DNA Mixer</strong> (Album page) — selectively pick individual creative strains from your vault history without loading an entire profile.</p>
                 </ChapterCard>
 
@@ -570,7 +588,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                         <AccordionItem value="right">
                             <AccordionTrigger className="font-bold text-xs uppercase">Right Panel: Co-Writer</AccordionTrigger>
                             <AccordionContent className="text-xs space-y-2">
-                                <p>• <strong>DNA Suite:</strong> Access the 5 Questions and the <strong>DNA Vault Folder</strong>. Also available in DNA & REMIX → Calibration Hub → VAULT.</p>
+                                <p>• <strong>DNA Suite:</strong> Five Creative Direction questions — type your own or edit after load/extract. <strong>Folder icon</strong> opens the vault. Primary extraction save: DNA &amp; REMIX → Analysis Step.</p>
                                 <p>• <strong>Intents:</strong> Motif management with the <strong>Precision Lock Arrow</strong>.</p>
                                 <p>• <strong>AI Co-Writer:</strong> Neural sharpening tools and Artist Style training.</p>
                             </AccordionContent>

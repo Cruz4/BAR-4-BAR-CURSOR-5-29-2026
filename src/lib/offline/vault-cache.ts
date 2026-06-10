@@ -17,6 +17,7 @@ export type CachedUserProfile = Pick<
   | 'subscriptionStatus'
   | 'subscriptionTier'
   | 'trialStartedAt'
+  | 'returningIdentity'
   | 'lyricsTutorialCompletedAt'
   | 'vaultTutorialCompletedAt'
 >;

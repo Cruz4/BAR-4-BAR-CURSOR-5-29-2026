@@ -27,7 +27,8 @@ export interface User {
   proTrialWinCompletedAt?: string;
   /** ISO timestamp — user skipped the Pro trial win quest */
   proTrialWinDismissedAt?: string;
-  /** A/B arm for trial Ink grant (`control` = 400, `h1_zero` = 0). */
+  /** True when this email already consumed one-time welcome Ink / trial (set server-side). */
+  returningIdentity?: boolean;
   trialInkAbVariant?: 'control' | 'h1_zero';
   /** ISO timestamp — leaderboard / public profile intro acknowledged */
   studioPrivacyIntroCompletedAt?: string;

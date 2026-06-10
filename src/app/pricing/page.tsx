@@ -56,7 +56,6 @@ import {
   INK_PACK_YEARLY_DISCOUNT_SHORT,
   PRO_MONTHLY_INK,
   PRO_YEARLY_INK,
-  PRO_VS_VISITOR_MONTHLY_INK_MULTIPLIER,
   VISITOR_INK_SUMMARY,
   VISITOR_FEATURES,
   PRO_YEARLY_EXCLUSIVES,
@@ -120,7 +119,7 @@ export default function PricingPage() {
     {
       name: 'Visitor',
       price: '$0',
-      description: 'Full bar-by-bar AI on free Ink — all Creative Effects included.',
+      description: 'Full lyric workstation on welcome Ink — bar-by-bar AI and all Creative Effects included.',
       membership: 'Free Artist',
       ink: VISITOR_INK_SUMMARY,
       headlinePerks: getVisitorHeadlinePerks(),
@@ -139,10 +138,12 @@ export default function PricingPage() {
       period: '/mo',
       billedText: isYearly ? `Billed annually (${PRO_YEARLY_BILLED})` : 'Billed monthly',
       description: isYearly
-        ? 'Everything in Pro Monthly — plus yearly-only fuel, savings & roadmap input.'
-        : `Your catalog, your strains, stage tools — plus ~${PRO_VS_VISITOR_MONTHLY_INK_MULTIPLIER}× monthly residency Ink.`,
+        ? 'Unlimited catalog, vault saves, Performance & DNA Drop — plus yearly fuel, savings & roadmap input.'
+        : 'Unlimited catalog, vault saves, Performance & DNA Drop — your studio, not just more tokens.',
       membership: 'Professional Member',
-      ink: isYearly ? `${PRO_YEARLY_INK.toLocaleString()} Monthly Residency Ink` : `${PRO_MONTHLY_INK.toLocaleString()} Monthly Residency Ink`,
+      ink: isYearly
+        ? `${PRO_YEARLY_INK.toLocaleString()} residency Ink/mo included`
+        : `${PRO_MONTHLY_INK.toLocaleString()} residency Ink/mo included`,
       headlinePerks: getProHeadlinePerks(isYearly ? 'yearly' : 'monthly'),
       features: [
         { text: PRO_YEARLY_SAVINGS_BADGE, icon: TrendingDown, highlight: isYearly ? 'yearly' : 'none', hide: !isYearly },
@@ -166,7 +167,7 @@ export default function PricingPage() {
     },
     {
       q: 'How is Bar 4 Bar different from Suno or ChatGPT?',
-      a: 'Unlike Suno, Udio, or a general chatbot, Bar 4 Bar is a lyric and rhyme workstation: you keep albums, DNA strains, rhyme books, and vault exports. Ink pays for structured drafting and analysis—not finished song audio. Pro is built for writers who want to own the words.',
+      a: 'Unlike Suno, Udio, or a general chatbot, Bar 4 Bar is a lyric and rhyme workstation: DNA strains, section maps, rhyme pulse, and vault exports stay in your project. Copy-pasting to ChatGPT loses that context — here every generation already knows your track. Pro unlocks the catalog workflow (vault saves, unlimited slots, Performance Mode); Ink powers AI inside the studio.',
     },
     {
       q: 'What is the difference between Residency and Permanent Ink?',

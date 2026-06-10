@@ -62,6 +62,7 @@ function userFromFirebase(
     subscriptionStatus: data?.subscriptionStatus || 'none',
     subscriptionTier: data?.subscriptionTier || 'none',
     trialStartedAt: data?.trialStartedAt ?? null,
+    returningIdentity: data?.returningIdentity === true,
     lyricsTutorialCompletedAt: data?.lyricsTutorialCompletedAt,
     vaultTutorialCompletedAt: data?.vaultTutorialCompletedAt,
     proTrialWinCompletedAt: data?.proTrialWinCompletedAt,
@@ -76,7 +77,12 @@ function userWithOptimisticTrial(
   isMaster: boolean
 ): User {
   const user = userFromFirebase(firebaseUser, data, isMaster);
-  if (user.trialStartedAt || isMaster || user.subscriptionStatus === 'active') {
+  if (
+    user.trialStartedAt ||
+    isMaster ||
+    user.subscriptionStatus === 'active' ||
+    user.returningIdentity
+  ) {
     return user;
   }
   const created = firebaseUser.metadata.creationTime;
@@ -197,6 +203,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           subscriptionStatus: nextUser.subscriptionStatus,
           subscriptionTier: nextUser.subscriptionTier,
           trialStartedAt: nextUser.trialStartedAt ?? null,
+          returningIdentity: nextUser.returningIdentity,
           lyricsTutorialCompletedAt: nextUser.lyricsTutorialCompletedAt,
           vaultTutorialCompletedAt: nextUser.vaultTutorialCompletedAt,
           proTrialWinCompletedAt: nextUser.proTrialWinCompletedAt,

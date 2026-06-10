@@ -88,22 +88,31 @@ export function buildInkLedgerDocument(
   const label = getInkLedgerLabel(entry.reason, entry);
   const timestamp = new Date().toISOString();
 
-  return {
+  const doc: Record<string, unknown> = {
     timestamp,
     ledgerType: entry.type,
     pool: entry.pool,
     amount,
     reason: entry.reason,
     label,
-    action: entry.action,
-    details: entry.details,
-    flowName: entry.action,
     inkUsed: entry.type === 'debit' ? amount : 0,
     inkCost: entry.type === 'debit' ? amount : 0,
     type: entry.reason === 'ai_spend' ? 'ai_request' : 'ink_ledger',
-    userId: extras.userId,
     userName: extras.userName ?? null,
   };
+
+  if (entry.action) {
+    doc.action = entry.action;
+    doc.flowName = entry.action;
+  }
+  if (entry.details) {
+    doc.details = entry.details;
+  }
+  if (extras.userId) {
+    doc.userId = extras.userId;
+  }
+
+  return doc;
 }
 
 /** Map Firestore usageLogs doc → display row (ledger + legacy). */

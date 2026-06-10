@@ -282,7 +282,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     id: 'vault_strain',
     title: 'Vault Strain',
     description: 'Saved a custom DNA strain to your vault.',
-    howTo: 'Co-Writer → Creative DNA → Archive strain (Pro).',
+    howTo: 'Workstation → DNA & REMIX → Analysis Step → Save DNA Profile (Pro). DNA Suite also saves manual profiles.',
     inkReward: 0,
     xpReward: 35,
     proOnly: true,

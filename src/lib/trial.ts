@@ -1,6 +1,6 @@
 import type { User } from '@/lib/types';
 
-/** Pro trial length — full workflow + trial Ink for new signups. */
+/** Pro trial length — full workflow for new signups (no bonus trial Ink). */
 export const TRIAL_DURATION_DAYS = 2;
 
 export function getTrialDurationLabel(): string {
@@ -11,14 +11,8 @@ export function getTrialDurationTitle(): string {
   return `${TRIAL_DURATION_DAYS}-Day Pro Trial`;
 }
 
-/** Control arm: one-time Ink during Pro trial (`trialInkBalance`; expires when trial ends). */
-export { TRIAL_INK_GRANT_CONTROL as TRIAL_INK_GRANT } from '@/lib/trial-ink-ab';
-export {
-  assignTrialInkAbVariant,
-  getTrialInkAbMode,
-  getTrialInkGrantForVariant,
-  TRIAL_INK_GRANT_H1_ZERO,
-} from '@/lib/trial-ink-ab';
+export { TRIAL_INK_GRANT } from '@/lib/trial-ink-ab';
+export { getTrialInkGrantForVariant } from '@/lib/trial-ink-ab';
 
 export function isTrialActive(
   user: Pick<User, 'trialStartedAt'> | null | undefined

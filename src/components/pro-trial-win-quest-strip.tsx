@@ -2,6 +2,7 @@
 
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { CheckCircle2, Circle, Dna, Timer, X } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { DataContext } from '@/context/data-context';
@@ -10,17 +11,20 @@ import { getTrialDaysRemaining, isTrialActive } from '@/lib/trial';
 import {
   PRO_TRIAL_WIN_EVENT,
   PRO_TRIAL_WIN_QUEST,
+  PRO_TRIAL_QUEST_OPEN_GENERATOR,
   shouldShowProTrialWinQuest,
   isProTrialWinComplete,
 } from '@/lib/pro-trial-quest';
 import { dismissProTrialWinQuest } from '@/lib/pro-trial-quest-client';
 import { resolveWorkstationTourPath } from '@/lib/studio-onboarding';
+import { appendQuery } from '@/lib/workstation-path';
 import { cn } from '@/lib/utils';
 import { trackUpgradeClick } from '@/lib/conversion-analytics';
 
 export function ProTrialWinQuestStrip() {
+  const router = useRouter();
   const { user } = useAuth();
-  const { albums } = useContext(DataContext);
+  const { albums, loading: vaultLoading } = useContext(DataContext);
   const [winComplete, setWinComplete] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
@@ -40,16 +44,19 @@ export function ProTrialWinQuestStrip() {
   }, []);
 
   const goToDnaSave = useCallback(() => {
+    if (vaultLoading) return;
     const path = resolveWorkstationTourPath(albums);
     if (path) {
-      window.location.assign(`${path}?proQuest=dna`);
+      router.push(appendQuery(path, { openGenerator: PRO_TRIAL_QUEST_OPEN_GENERATOR }));
       return;
     }
     const createEl = document.querySelector('[data-tour="vault-create"]');
     if (createEl) {
       createEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
     }
-  }, [albums]);
+    router.push('/');
+  }, [albums, router, vaultLoading]);
 
   const handleDismiss = useCallback(async () => {
     if (!user) return;
@@ -71,7 +78,7 @@ export function ProTrialWinQuestStrip() {
         <p className="text-[10px] sm:text-[11px] font-code text-emerald-100/90 flex-grow min-w-0">
           <span className="font-bold uppercase tracking-widest text-emerald-400">Pro trial quest complete</span>
           {' — '}
-          Your DNA strain is in the vault. Upgrade before trial ends to keep saving custom profiles.
+          {PRO_TRIAL_WIN_QUEST.completeSummary}
         </p>
         <Link
           href="/usage?tab=cloud"
@@ -119,12 +126,14 @@ export function ProTrialWinQuestStrip() {
         <button
           type="button"
           onClick={goToDnaSave}
+          disabled={vaultLoading}
           className={cn(
             'text-[9px] sm:text-[10px] font-bold uppercase px-3 py-1.5 rounded-md',
-            'bg-sky-500/20 border border-sky-500/40 text-sky-300 hover:bg-sky-500/30 hover:text-sky-200 transition-colors'
+            'bg-sky-500/20 border border-sky-500/40 text-sky-300 hover:bg-sky-500/30 hover:text-sky-200 transition-colors',
+            vaultLoading && 'opacity-50 cursor-not-allowed hover:bg-sky-500/20 hover:text-sky-300'
           )}
         >
-          {PRO_TRIAL_WIN_QUEST.cta}
+          {vaultLoading ? 'Loading vault…' : PRO_TRIAL_WIN_QUEST.cta}
         </button>
         <Link
           href="/usage?tab=cloud"

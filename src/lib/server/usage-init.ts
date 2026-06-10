@@ -10,9 +10,18 @@ import {
 } from '@/lib/subscription';
 import { inkBalanceFirestorePatch, normalizeInkPools, totalInkBalance } from '@/lib/ink-balance';
 import { isTrialActive } from '@/lib/trial';
-import { getTrialInkGrantForVariant } from '@/lib/trial-ink-ab';
+import { TRIAL_INK_GRANT } from '@/lib/trial-ink-ab';
+import {
+  isEligibleForFreeMonthlyGrant,
+  isLikelyErroneousSignupMonthGrant,
+} from '@/lib/ink-grants';
 import { recordInkLedgerEntries } from '@/lib/server/ink-ledger';
 import type { InkLedgerWrite } from '@/lib/ink-ledger';
+import { isMasterAdminEmail } from '@/lib/server/master-admin';
+import {
+  loadIdentityEntitlements,
+  reserveSignupEntitlements,
+} from '@/lib/server/identity-registry';
 
 /** Server-side balance bootstrap — requires FIREBASE_SERVICE_ACCOUNT_KEY locally. */
 export async function initializeUserUsage(idToken: string, userId: string): Promise<void> {
@@ -24,31 +33,73 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
   const decoded = await auth.verifyIdToken(idToken);
   if (decoded.uid !== userId) return;
 
+  const userEmail = decoded.email?.trim() || '';
+  const bypassIdentityRegistry = isMasterAdminEmail(userEmail);
+
   const db = await getDb();
   const balanceRef = db.doc(`users/${userId}/usage/balance`);
   const userRef = db.doc(`users/${userId}`);
   const [snap, userSnap] = await Promise.all([balanceRef.get(), userRef.get()]);
   const userData = userSnap.data();
   const trialActive = isTrialActive(userData as { trialStartedAt?: string | null });
-  const trialInkGrant = getTrialInkGrantForVariant(
-    (userData as { trialInkAbVariant?: string })?.trialInkAbVariant
-  );
+  const trialInkGrant = TRIAL_INK_GRANT;
+  const userCreatedAt = (userData as { createdAt?: string })?.createdAt;
 
   if (!snap.exists) {
-    const trialInk = trialActive ? trialInkGrant : 0;
+    let residencyInk = SIGNUP_INK;
+    let trialInk = trialActive ? trialInkGrant : 0;
+    let returningIdentity = false;
+    let signupGrantSkipped = false;
+
+    if (!bypassIdentityRegistry && userEmail) {
+      const reserved = await reserveSignupEntitlements(db, userEmail, userId, {
+        welcomeInkAmount: SIGNUP_INK,
+        trialInkAmount: trialInkGrant,
+        wantsTrial: trialActive,
+      });
+      residencyInk = reserved.welcomeInk;
+      trialInk = reserved.trialInk;
+      returningIdentity = reserved.returningIdentity;
+      signupGrantSkipped = residencyInk === 0;
+    } else if (!bypassIdentityRegistry && !userEmail) {
+      // No email on token — cannot fingerprint; grant normally.
+    }
+
+    const grantTrialWorkflow = trialActive && trialInk > 0;
+    const userPatch: Record<string, unknown> = {
+      updatedAt: new Date().toISOString(),
+    };
+    if (returningIdentity) {
+      userPatch.returningIdentity = true;
+      if (!grantTrialWorkflow) {
+        userPatch.trialStartedAt = null;
+      }
+    }
+
+    if (Object.keys(userPatch).length > 1) {
+      await userRef.set(userPatch, { merge: true });
+    }
+
     await balanceRef.set({
       ...inkBalanceFirestorePatch({
-        residencyBalance: SIGNUP_INK,
+        residencyBalance: residencyInk,
         trialInkBalance: trialInk,
         purchasedBalance: SIGNUP_PERMANENT_INK,
       }),
       signupGranted: true,
-      trialInkGranted: trialActive,
+      signupGrantSkipped,
+      trialInkGranted: grantTrialWorkflow,
     });
 
-    const signupLedger: InkLedgerWrite[] = [
-      { type: 'credit', pool: 'residency', amount: SIGNUP_INK, reason: 'signup_residency' },
-    ];
+    const signupLedger: InkLedgerWrite[] = [];
+    if (residencyInk > 0) {
+      signupLedger.push({
+        type: 'credit',
+        pool: 'residency',
+        amount: residencyInk,
+        reason: 'signup_residency',
+      });
+    }
     if (SIGNUP_PERMANENT_INK > 0) {
       signupLedger.push({
         type: 'credit',
@@ -60,12 +111,51 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
     if (trialInk > 0) {
       signupLedger.push({ type: 'credit', pool: 'trial', amount: trialInk, reason: 'trial_ink' });
     }
-    await recordInkLedgerEntries(db, userId, signupLedger);
+    if (signupLedger.length > 0) {
+      await recordInkLedgerEntries(db, userId, signupLedger);
+    }
     return;
   }
 
   const monthKey = new Date().toISOString().slice(0, 7);
   let data = snap.data()!;
+
+  let pools = normalizeInkPools(data);
+
+  if (
+    !data.signupMonthMonthlyCorrected &&
+    isLikelyErroneousSignupMonthGrant(pools.residencyBalance, userCreatedAt, monthKey)
+  ) {
+    const excess = pools.residencyBalance - SIGNUP_INK;
+    pools = { ...pools, residencyBalance: SIGNUP_INK };
+    await balanceRef.set(
+      inkBalanceFirestorePatch(pools, { signupMonthMonthlyCorrected: true }),
+      { merge: true }
+    );
+    await recordInkLedgerEntries(db, userId, [
+      {
+        type: 'debit',
+        pool: 'residency',
+        amount: excess,
+        reason: 'monthly_residency',
+        details: 'signup_month_correction',
+      },
+    ]);
+    data = { ...data, residencyBalance: SIGNUP_INK, signupMonthMonthlyCorrected: true };
+  }
+
+  if (trialActive && TRIAL_INK_GRANT === 0 && pools.trialInkBalance > 0) {
+    const expiredTrial = pools.trialInkBalance;
+    pools = { ...pools, trialInkBalance: 0 };
+    await balanceRef.set(
+      inkBalanceFirestorePatch(pools, { legacyTrialInkClearedAt: new Date().toISOString() }),
+      { merge: true }
+    );
+    await recordInkLedgerEntries(db, userId, [
+      { type: 'debit', pool: 'trial', amount: expiredTrial, reason: 'trial_ink_expired' },
+    ]);
+    data = { ...data, trialInkBalance: 0, balance: totalInkBalance(pools) };
+  }
 
   if (!trialActive && (data.trialInkBalance || 0) > 0) {
     const pools = normalizeInkPools(data);
@@ -84,50 +174,57 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
   }
 
   if (trialActive && !data.trialInkGranted) {
-    const pools = normalizeInkPools(data);
-    const nextTrial = pools.trialInkBalance + trialInkGrant;
-    await balanceRef.set(
-      inkBalanceFirestorePatch(
-        { ...pools, trialInkBalance: nextTrial },
-        { trialInkGranted: true }
-      ),
-      { merge: true }
-    );
-    if (trialInkGrant > 0) {
+    let canGrantTrialInk = true;
+    if (!bypassIdentityRegistry && userEmail) {
+      const entitlements = await loadIdentityEntitlements(db, userEmail);
+      canGrantTrialInk = entitlements.trialEligible;
+      if (!canGrantTrialInk) {
+        await userRef.set(
+          {
+            returningIdentity: true,
+            trialStartedAt: null,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      }
+    }
+
+    if (canGrantTrialInk && trialInkGrant > 0) {
+      const pools = normalizeInkPools(data);
+      const nextTrial = pools.trialInkBalance + trialInkGrant;
+      await balanceRef.set(
+        inkBalanceFirestorePatch(
+          { ...pools, trialInkBalance: nextTrial },
+          { trialInkGranted: true }
+        ),
+        { merge: true }
+      );
       await recordInkLedgerEntries(db, userId, [
         { type: 'credit', pool: 'trial', amount: trialInkGrant, reason: 'trial_ink' },
       ]);
+      if (!bypassIdentityRegistry && userEmail) {
+        await reserveSignupEntitlements(db, userEmail, userId, {
+          welcomeInkAmount: 0,
+          trialInkAmount: trialInkGrant,
+          wantsTrial: true,
+        });
+      }
+      data = { ...data, trialInkBalance: nextTrial, trialInkGranted: true };
+    } else if (!canGrantTrialInk) {
+      await balanceRef.set({ trialInkGranted: false, updatedAt: new Date().toISOString() }, { merge: true });
+      data = { ...data, trialInkGranted: false };
     }
-    data = { ...data, trialInkBalance: nextTrial, trialInkGranted: true };
   }
 
   if (
     !isProUser(userData as { subscriptionStatus?: string }) &&
     data.lastFreeResidencyGrant !== monthKey
   ) {
-    const pools = normalizeInkPools(data);
-    const nextResidency = Math.min(
-      FREE_RESIDENCY_POOL_CAP,
-      pools.residencyBalance + FREE_MONTHLY_RESIDENCY_INK
-    );
-    const grantDelta = nextResidency - pools.residencyBalance;
-    if (grantDelta > 0) {
-      await balanceRef.set(
-        inkBalanceFirestorePatch({ ...pools, residencyBalance: nextResidency }, {
-          lastFreeResidencyGrant: monthKey,
-        }),
-        { merge: true }
-      );
-      await recordInkLedgerEntries(db, userId, [
-        {
-          type: 'credit',
-          pool: 'residency',
-          amount: grantDelta,
-          reason: 'monthly_residency',
-          details: monthKey,
-        },
-      ]);
-    } else {
+    pools = normalizeInkPools(data);
+    const eligible = isEligibleForFreeMonthlyGrant(userCreatedAt, monthKey);
+
+    if (!eligible) {
       await balanceRef.set(
         {
           lastFreeResidencyGrant: monthKey,
@@ -135,6 +232,89 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
         },
         { merge: true }
       );
+    } else {
+      const nextResidency = Math.min(
+        FREE_RESIDENCY_POOL_CAP,
+        pools.residencyBalance + FREE_MONTHLY_RESIDENCY_INK
+      );
+      const grantDelta = nextResidency - pools.residencyBalance;
+      if (grantDelta > 0) {
+        await balanceRef.set(
+          inkBalanceFirestorePatch({ ...pools, residencyBalance: nextResidency }, {
+            lastFreeResidencyGrant: monthKey,
+          }),
+          { merge: true }
+        );
+        await recordInkLedgerEntries(db, userId, [
+          {
+            type: 'credit',
+            pool: 'residency',
+            amount: grantDelta,
+            reason: 'monthly_residency',
+            details: monthKey,
+          },
+        ]);
+      } else {
+        await balanceRef.set(
+          {
+            lastFreeResidencyGrant: monthKey,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      }
     }
+  }
+
+  if (data.signupGranted && !data.inkLedgerBackfilled) {
+    const pools = normalizeInkPools(data);
+    const backfill: InkLedgerWrite[] = [
+      {
+        type: 'credit',
+        pool: 'residency',
+        amount: SIGNUP_INK,
+        reason: 'signup_residency',
+        details: 'Opening balance',
+      },
+    ];
+
+    if (SIGNUP_PERMANENT_INK > 0 && pools.purchasedBalance >= SIGNUP_PERMANENT_INK) {
+      backfill.push({
+        type: 'credit',
+        pool: 'permanent',
+        amount: SIGNUP_PERMANENT_INK,
+        reason: 'signup_permanent',
+        details: 'Opening balance',
+      });
+    }
+
+    if (pools.trialInkBalance > 0) {
+      backfill.push({
+        type: 'credit',
+        pool: 'trial',
+        amount: pools.trialInkBalance,
+        reason: 'trial_ink',
+        details: 'Opening balance',
+      });
+    }
+
+    if (
+      data.lastFreeResidencyGrant &&
+      isEligibleForFreeMonthlyGrant(userCreatedAt, String(data.lastFreeResidencyGrant))
+    ) {
+      backfill.push({
+        type: 'credit',
+        pool: 'residency',
+        amount: FREE_MONTHLY_RESIDENCY_INK,
+        reason: 'monthly_residency',
+        details: String(data.lastFreeResidencyGrant),
+      });
+    }
+
+    await recordInkLedgerEntries(db, userId, backfill);
+    await balanceRef.set(
+      { inkLedgerBackfilled: true, updatedAt: new Date().toISOString() },
+      { merge: true }
+    );
   }
 }

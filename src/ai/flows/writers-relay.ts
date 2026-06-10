@@ -18,6 +18,7 @@ import { computeRelayDraftInkCostFromRates } from '@/lib/studio-costs';
 import { getStudioCosts } from '@/lib/server/studio-costs';
 import { AI_COSTS } from '@/lib/costs';
 import type { AiSecuredInput } from '@/lib/ai-secured';
+import { normalizeRelayDirections } from '@/lib/dna-strands';
 
 // --- Phase 1 Schemas ---
 
@@ -86,7 +87,12 @@ export async function suggestRelayDirections(input: { lyrics: string, userId?: s
           throw new Error("DNA Extraction failed to produce analytical strains.");
         }
 
-        return result;
+        const directions = normalizeRelayDirections(result.directions, result.analysis);
+        if (!result.directions?.length && directions.length) {
+          console.warn('[RELAY ANALYZE] Model returned no directions; using fallback pivots from analysis.');
+        }
+
+        return { analysis: result.analysis, directions };
       } catch (error: any) { 
         console.error("[RELAY ANALYZE ERROR]", error);
         throw new Error(`DNA Extraction Error: ${error.message || "The neural engine encountered an internal sync issue."}`); 
@@ -134,7 +140,7 @@ Examples:
 
 Each pivot should have a punchy Name and a 2-sentence Description explaining how it flips the source material creatively.
 
-Return STRICT JSON.`,
+Return STRICT JSON with two top-level keys: "analysis" (object) and "directions" (array of 8–12 objects). Every directions item MUST include "name" and "description". The directions array MUST NOT be empty.`,
 });
 
 // --- Flow 2: Phase 2 Synthesis ---

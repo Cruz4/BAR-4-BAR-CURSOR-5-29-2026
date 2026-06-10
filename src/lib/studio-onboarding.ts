@@ -1,11 +1,12 @@
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client/firebase';
-import { PRO_VS_VISITOR_MONTHLY_INK_MULTIPLIER } from '@/lib/studio-tiers';
+import { getVisitorInkGrantSummary } from '@/lib/ink-grants';
 import type { Album } from '@/lib/types';
 import {
   getLastWorkedTrackPath,
   isTrackEditorPath,
 } from '@/lib/studio-tips-session';
+import { resolveWorkstationTrackPath } from '@/lib/workstation-path';
 
 /** Dispatched from Studio Master Manual to replay the lyrics-page guided tour. */
 export const REPLAY_GUIDED_TOUR_EVENT = 'b4b-replay-guided-tour';
@@ -23,22 +24,9 @@ function isCurrentPath(path: string): boolean {
   return normalizePath(window.location.pathname) === normalizePath(path);
 }
 
-/** Last opened track, or the first loose track / album track if none saved yet. */
+/** Last opened track (if still in vault), or the first loose / album track. */
 export function resolveWorkstationTourPath(albums: Album[]): string | null {
-  const last = getLastWorkedTrackPath();
-  if (last) return last;
-
-  const unassigned = albums.find((a) => a.id === 'unassigned');
-  if (unassigned?.tracks?.[0]) {
-    return `/albums/unassigned/tracks/${unassigned.tracks[0].id}`;
-  }
-
-  for (const album of albums) {
-    if (album.id === 'unassigned' || !album.tracks?.length) continue;
-    return `/albums/${album.id}/tracks/${album.tracks[0].id}`;
-  }
-
-  return null;
+  return resolveWorkstationTrackPath(albums);
 }
 
 export function dispatchReplayVaultTour() {
@@ -120,8 +108,8 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
     id: 'dna',
     target: '[data-tour="dna-suite"]',
     title: 'Creative DNA',
-    body: 'Five direction questions keep every suggestion on-theme. Use the folder icon to open the DNA Vault — expand a preset to ⚡ inject one strain or ↻ load the full profile.',
-    example: 'Free = system presets. Pro = archive YOUR extractions to the vault.',
+    body: 'Extract in DNA & REMIX (paste or Sync Current Lyrics), then Save DNA Profile on Analysis Step. DNA Suite here is where you type the five questions yourself or edit after you load or extract.',
+    example: 'Pro trial quest: Workstation → DNA & REMIX → extract → Save DNA Profile. Folder icon loads vault saves anytime.',
   },
   {
     id: 'dna-drop',
@@ -145,8 +133,8 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
 ];
 
 export const FREE_TIER_EXPECTATIONS = {
-  headline: 'Visitor — full AI on free Ink',
-  body: `Generate Next Line, Smart Structure, all 9 Creative Effects, and DNA & REMIX all run on your residency Ink. Load system DNA/Vibe/Style presets anytime. Studio Pro is for power users: custom strain saves, Performance Mode, Freestyle, vault import/export, DNA Drop links, and ~${PRO_VS_VISITOR_MONTHLY_INK_MULTIPLIER}× monthly residency Ink.`,
+  headline: 'Visitor — full lyric workstation',
+  body: `Generate Next Line, Smart Structure, all 9 Creative Effects, and DNA & REMIX run on your Ink (${getVisitorInkGrantSummary()}). Load system DNA/Vibe/Style presets anytime. Studio Pro keeps your catalog: custom strain saves, unlimited slots, Performance Mode, Freestyle, vault import/export, and DNA Drop links.`,
   dismissKey: 'b4b-free-tier-expectations-dismissed',
 } as const;
 

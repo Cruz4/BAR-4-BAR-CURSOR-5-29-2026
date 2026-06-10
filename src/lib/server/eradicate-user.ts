@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { CollectionReference, DocumentReference, Firestore } from 'firebase-admin/firestore';
 import { getAuth, getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
+import { writeIdentityTombstone } from '@/lib/server/identity-registry';
 
 const BATCH_SIZE = 400;
 
@@ -134,6 +135,31 @@ export async function eradicateUserIdentity(
 
   const userData = userSnap.data() || {};
   const displayName = String(userData.displayName || 'Artist');
+
+  let userEmail = String(userData.email || '').trim();
+  if (!userEmail) {
+    try {
+      const auth = await getAuth();
+      const authUser = await auth.getUser(trimmedId);
+      userEmail = String(authUser.email || '').trim();
+    } catch {
+      /* auth user may already be gone in admin eradicate */
+    }
+  }
+
+  const balanceSnap = await db.doc(`users/${trimmedId}/usage/balance`).get();
+  const balanceData = balanceSnap.data() || {};
+  const hadWelcomeInk =
+    balanceData.signupGranted === true ||
+    (typeof balanceData.residencyBalance === 'number' && balanceData.residencyBalance > 0);
+  const hadTrial =
+    Boolean(userData.trialStartedAt) ||
+    balanceData.trialInkGranted === true ||
+    (typeof balanceData.trialInkBalance === 'number' && balanceData.trialInkBalance > 0);
+
+  if (userEmail) {
+    await writeIdentityTombstone(db, userEmail, trimmedId, { hadWelcomeInk, hadTrial });
+  }
 
   const { albums, tracks } = await deleteUserAlbums(trimmedId, db);
 

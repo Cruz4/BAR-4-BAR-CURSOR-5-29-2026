@@ -16,6 +16,7 @@ import { usePathname } from 'next/navigation';
 import { StudioTips } from './studio-tips';
 import { FloatingInkSpent } from './floating-ink-spent';
 import { WhatsNewDialog } from './whats-new-dialog';
+import { WelcomeInkDialog } from './welcome-ink-dialog';
 import { StudioPrivacyIntroDialog } from './studio-privacy-intro-dialog';
 import { CookieConsent } from './cookie-consent';
 import { PwaInstallPrompt } from './pwa-install-prompt';
@@ -93,6 +94,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 {showAppHeader && <ProTrialWinQuestStrip />}
                 <main className="flex-1 overflow-hidden flex flex-col">{children}</main>
                 {!isSharePage && !isMarketingCapture && <WhatsNewDialog />}
+                {!isSharePage && !isMarketingShell && !isMarketingCapture && <WelcomeInkDialog />}
                 {!isSharePage && !isMarketingShell && !isMarketingCapture && <StudioPrivacyIntroDialog />}
                 {!isMarketingCapture && <CookieConsent />}
                 {!isSharePage && !isMarketingShell && !isMarketingCapture && <PwaInstallPrompt />}

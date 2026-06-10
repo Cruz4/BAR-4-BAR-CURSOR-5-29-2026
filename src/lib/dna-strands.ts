@@ -87,7 +87,11 @@ export const DNA_HUB_TOOLTIPS = {
   remixInfluence:
     'Relative weight among selected remix paths only — not vs Special Instructions or DNA.',
   saveDnaProfile:
-    'Save full extraction, hub mapping, structure guide, motifs, and Style DNA for reuse on any track.',
+    'Save the entire extraction — themes, motifs, arc, structure guide, Style DNA, and mapped Creative DNA — to your vault for any track. Use ⚡ on individual strain cards first if you only want parts in this remix session.',
+  analysisStepIntro:
+    'Analysis Step decodes your source text into strain cards. Save DNA Profile archives the full extraction; ⚡ injects one strain into the Calibration Hub (Creative DNA, Intents, Structure, or Style). Edit or type manually anytime in DNA Suite after you load or extract.',
+  seedDnaRemix:
+    'Paste lyrics, a poem, rough ideas, or inspiration — or turn on Sync Current Lyrics to pull from your sheet. Then run extraction to reach Analysis Step.',
   reMatrixIdeas: 'Regenerate remix path options without re-analyzing source lyrics.',
   inheritAlbum: 'Pull album-level Creative DNA into this synthesis when enabled.',
   inheritTrack: "Pull this track's saved DNA fields into the hub when enabled.",
@@ -489,6 +493,97 @@ export const CREATIVE_DNA_FIELDS: Array<{ key: keyof Direction; label: string }>
   { key: 'message_truth', label: 'Message / Truth' },
   { key: 'tone_palette', label: 'Tone / Palette' },
 ];
+
+const FALLBACK_RELAY_PIVOTS: Array<{ name: string; description: string }> = [
+  {
+    name: 'POV Shift — The Observer',
+    description: 'Witness the scene from outside the main voice — distance and detail replace immersion.',
+  },
+  {
+    name: 'Tense Shift — Nostalgic Past',
+    description: 'Retell the same DNA through memory — hindsight adds weight and regret.',
+  },
+  {
+    name: 'Outcome Shift — The Epiphany',
+    description: 'Keep the setup, change what the speaker realizes at the turn.',
+  },
+  {
+    name: 'Imagery Palette — Gritty Realism',
+    description: 'Double down on concrete sensory detail pulled from the extraction.',
+  },
+  {
+    name: 'POV Shift — Second Person',
+    description: 'Address the listener directly while keeping the core motifs intact.',
+  },
+  {
+    name: 'Scale Shift — Intimate Close-Up',
+    description: 'Zoom into one moment from the source and expand it bar by bar.',
+  },
+];
+
+type RelayDirectionLike = {
+  name?: string;
+  description?: string;
+  title?: string;
+  desc?: string;
+  summary?: string;
+  pivot?: string;
+};
+
+/** Normalize API remix paths and synthesize theme-based fallbacks when the model omits directions. */
+export function normalizeRelayDirections(
+  directions: RelayDirectionLike[] | null | undefined,
+  analysis?: Partial<WizardAnalysis> | null
+): WizardDirection[] {
+  const fromApi = (directions ?? [])
+    .map((d) => ({
+      name: String(d.name ?? d.title ?? d.pivot ?? '').trim(),
+      description:
+        String(d.description ?? d.desc ?? d.summary ?? '').trim() ||
+        'A fresh creative pivot on your source material.',
+    }))
+    .filter((d) => d.name.length > 0);
+
+  if (fromApi.length > 0) return fromApi;
+
+  return buildFallbackRelayDirections(analysis);
+}
+
+export function buildFallbackRelayDirections(
+  analysis?: Partial<WizardAnalysis> | null
+): WizardDirection[] {
+  const themes = (analysis?.themes ?? []).filter(Boolean).slice(0, 6);
+  const themePivots = themes.map((theme) => ({
+    name: `Theme Pivot — ${theme}`,
+    description: `Reframe the source through "${theme}" — new imagery and angle, same DNA core.`,
+  }));
+
+  const emotion = [
+    analysis?.emotionalTone?.primaryEmotion,
+    analysis?.emotionalTone?.secondaryEmotion,
+  ]
+    .filter(Boolean)
+    .join(' / ');
+  const moodPivot = emotion
+    ? [
+        {
+          name: `Mood Pivot — ${emotion}`,
+          description: `Push the ${emotion} tone harder — amplify valence and intensity from the extraction.`,
+        },
+      ]
+    : [];
+
+  const combined = [...themePivots, ...moodPivot, ...FALLBACK_RELAY_PIVOTS];
+  const seen = new Set<string>();
+  const out: WizardDirection[] = [];
+  for (const d of combined) {
+    if (seen.has(d.name)) continue;
+    seen.add(d.name);
+    out.push(d);
+    if (out.length >= 12) break;
+  }
+  return out.length >= 3 ? out : [...FALLBACK_RELAY_PIVOTS];
+}
 
 export function rebalanceRemixWeights(directions: WizardDirection[]): WizardDirection[] {
   if (directions.length === 0) return directions;

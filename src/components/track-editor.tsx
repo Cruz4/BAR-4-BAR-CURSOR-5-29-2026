@@ -47,7 +47,6 @@ import {
   RefreshCw,
   Zap,
   PanelLeftClose,
-  PanelRightClose,
   PanelLeft,
   PanelRight,
   Sparkles,
@@ -128,6 +127,12 @@ import {
   type LyricsTourStep,
 } from '@/lib/studio-onboarding';
 import { persistLastWorkedTrack } from '@/lib/studio-tips-session';
+import {
+  appendQuery,
+  clearStaleLastWorkedTrackPath,
+  resolveWorkstationTrackPath,
+  trackExistsInVault,
+} from '@/lib/workstation-path';
 import { dispatchStudioPrivacyIntroEligible, queueStudioPrivacyIntro } from '@/lib/studio-privacy-intro';
 import { StudioGuidedTour } from '@/components/studio-guided-tour';
 import { QuestProgress } from '@/components/gamification/quest-progress';
@@ -136,6 +141,7 @@ import { recordProTrialVaultSave } from '@/lib/pro-trial-quest-client';
 import { isTrialActive } from '@/lib/trial';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
 import { MobileLyricsTabBar, type MobileLyricsTab } from '@/components/mobile-lyrics-tab-bar';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { UpgradeTooltip } from '@/components/upgrade-tooltip';
 import {
   LockedSaveButton,
@@ -1873,11 +1879,18 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   return (
     <div className={cn("flex flex-col h-full bg-card border-l relative overflow-hidden w-[340px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'right'))}>
       <div className={cn("flex items-center justify-between p-4 border-b shrink-0 h-14", mobileActive && "justify-center")}>
-        {!mobileActive && (
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onCollapse(true)}><PanelRightClose className="h-4 w-4" /></Button>
-        )}
         <h3 className="font-headline font-bold text-xs uppercase tracking-widest text-muted-foreground">Co-Writer Panel</h3>
-        {mobileActive && <span className="w-8 shrink-0 md:hidden" aria-hidden />}
+        {!mobileActive && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-primary"
+            onClick={() => onCollapse(true)}
+            aria-label="Minimize Co-Writer panel"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        )}
       </div>
       <div className="flex-grow overflow-y-auto studio-scrollbar">
         <div className="p-4 space-y-4 pb-32 co-writer-body">
@@ -2537,13 +2550,14 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const isPro = isProOrTrial(user);
   const [initTimedOut, setInitTimedOut] = useState(false);
   const { toast } = useToast();
-  const { getTrackById, updateTrack, styleProfile, updateStyleProfile, updateAlbum, albums } = useContext(DataContext);
+  const { getTrackById, updateTrack, styleProfile, updateStyleProfile, updateAlbum, albums, loading: vaultLoading } = useContext(DataContext);
   const { setGenerating } = useUIState();
   const { refundInk, addUsageLog, registerAiContext } = useUsage();
   const { getEffectiveCost } = useInkCosts();
   const { runWithInk } = useTouchInkRunner();
   const searchParams = useSearchParams();
 
+  const isMobileLayout = useIsMobile();
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const [mobilePanelTab, setMobilePanelTab] = useState<MobileLyricsTab>('lyrics');
@@ -2554,6 +2568,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const [activeBarText, setActiveBarText] = useState('');
   
   const [generateDraftOpen, setGenerateDraftOpen] = useState(false);
+  const [generatorInitialMode, setGeneratorInitialMode] = useState<'select' | 'remix'>('select');
   const [workstationBackgroundActive, setWorkstationBackgroundActive] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
   const [smartStructureOpen, setSmartStructureOpen] = useState(false);
@@ -2634,23 +2649,55 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   }, [track, album, effectiveStyleProfile, registerAiContext]);
 
   useEffect(() => {
+    if (vaultLoading) {
+      setInitTimedOut(false);
+      return;
+    }
+    if (track && album) {
+      setInitTimedOut(false);
+      return;
+    }
+
+    const currentPath = `/albums/${albumId}/tracks/${trackId}`;
+    if (!trackExistsInVault(albums, currentPath)) {
+      clearStaleLastWorkedTrackPath();
+      const fallback = resolveWorkstationTrackPath(albums);
+      const openGenerator = searchParams.get('openGenerator');
+      if (fallback) {
+        const dest =
+          openGenerator === 'remix'
+            ? appendQuery(fallback, { openGenerator: 'remix' })
+            : fallback;
+        router.replace(dest);
+        return;
+      }
+      router.replace('/');
+      return;
+    }
+
     setInitTimedOut(false);
-    const t = setTimeout(() => setInitTimedOut(true), 8000);
+    const t = setTimeout(() => setInitTimedOut(true), 12000);
     return () => clearTimeout(t);
-  }, [albumId, trackId]);
+  }, [albumId, trackId, vaultLoading, track, album, albums, router, searchParams]);
 
   useEffect(() => {
-    if (searchParams.get('openGenerator') === 'true') {
-        setGenerateDraftOpen(true);
+    const openGenerator = searchParams.get('openGenerator');
+    if (openGenerator === 'remix') {
+      setGeneratorInitialMode('remix');
+      setGenerateDraftOpen(true);
+      return;
+    }
+    if (openGenerator === 'true') {
+      setGeneratorInitialMode('select');
+      setGenerateDraftOpen(true);
     }
   }, [searchParams]);
 
   useEffect(() => {
     if (searchParams.get('proQuest') !== 'dna' || !track) return;
-    setRightCollapsed(false);
-    setMobilePanelTab('cowriter');
-    handleSectionChange('dna', true);
-  }, [searchParams, track, handleSectionChange]);
+    setGeneratorInitialMode('remix');
+    setGenerateDraftOpen(true);
+  }, [searchParams, track]);
 
   useEffect(() => {
     const syncVisibility = () => setPageVisible(document.visibilityState === 'visible');
@@ -3011,9 +3058,17 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   if (!track || !album) {
     if (initTimedOut) {
       return (
-        <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center gap-4 px-6 text-center">
+        <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center gap-4 px-6 text-center max-w-md mx-auto">
           <p className="text-sm text-muted-foreground font-code uppercase tracking-widest">Workstation could not initialize.</p>
-          <Button className="font-bold uppercase text-xs" onClick={() => router.push('/')}>Return to Vault</Button>
+          <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
+            This track may have been removed or your vault is still syncing. Open another track from the vault or create a new one.
+          </p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            <Button className="font-bold uppercase text-xs" onClick={() => router.push('/')}>Return to Vault</Button>
+            <Button variant="outline" className="font-bold uppercase text-xs" onClick={() => router.push('/?create=track')}>
+              Create Track
+            </Button>
+          </div>
         </div>
       );
     }
@@ -3055,8 +3110,8 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         </div>
       )}
       <div className="flex flex-1 min-h-0 overflow-hidden w-full">
-      <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={mobilePanelTab === 'workstation'} trackLocked={editsLocked} tierLocked={tierLocked} completeLocked={completeLocked} workstationAttention={workstationAttention} />
-      <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleDismissGenerationOptions={handleDismissGenerationOptions} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} />
+      <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={isMobileLayout && mobilePanelTab === 'workstation'} trackLocked={editsLocked} tierLocked={tierLocked} completeLocked={completeLocked} workstationAttention={workstationAttention} />
+      <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleDismissGenerationOptions={handleDismissGenerationOptions} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={isMobileLayout && mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} />
       <RightPanel 
         track={track} 
         album={album} 
@@ -3080,11 +3135,11 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         onSectionChange={handleSectionChange}
         openCoWriterSections={openCoWriterSections}
         onApplyChestEntry={handleApplyChestEntry}
-        mobileActive={mobilePanelTab === 'cowriter'}
+        mobileActive={isMobileLayout && mobilePanelTab === 'cowriter'}
         trackLocked={editsLocked}
         completeLocked={completeLocked}
       />
-      <GenerateSongDraftDialog open={generateDraftOpen} onOpenChange={(open) => { if (open && editsLocked) { toast({ variant: 'destructive', ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST) }); return; } setGenerateDraftOpen(open); }} track={track} styleProfile={effectiveStyleProfile} onDraftGenerated={(sections) => handleUpdateTrack({ sections })} onStashApprovalDraftsToChest={handleStashApprovalDraftsToChest} onBackgroundSessionActiveChange={setWorkstationBackgroundActive} />
+      <GenerateSongDraftDialog open={generateDraftOpen} onOpenChange={(open) => { if (open && editsLocked) { toast({ variant: 'destructive', ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST) }); return; } if (!open) setGeneratorInitialMode('select'); setGenerateDraftOpen(open); }} track={track} styleProfile={effectiveStyleProfile} onDraftGenerated={(sections) => handleUpdateTrack({ sections })} onStashApprovalDraftsToChest={handleStashApprovalDraftsToChest} onBackgroundSessionActiveChange={setWorkstationBackgroundActive} initialWorkstationMode={generatorInitialMode} />
       <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} album={album} tracks={[track]} exportType="track" />
       <ShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} type="track" id={track.id} title={track.title} albumId={album.id} existingShareId={track.shareId} />
       <FreestylePad open={freestyleOpen} onOpenChange={setFreestyleOpen} onAddFreestyle={(text) => { const lines = text.split('. ').filter(l => l.trim()); const activeS = track.sections.find(s => s.id === activeSectionId) || track.sections[0]; const startIdx = activeS.bars.length + 1; const newBars = lines.map((l, i) => withLineSource({ idx: startIdx + i, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' }, 'written')); handleUpdateTrack({ sections: track.sections.map(s => s.id === activeS.id ? { ...s, bars: [...s.bars, ...newBars] } : s) }); setFreestyleOpen(false); }} disabled={editsLocked} trackVibe={track.vibe} albumTheme={album.theme} styleProfileSummary={styleProfile.history[0]?.analysis || ''} isPro={isPro} />

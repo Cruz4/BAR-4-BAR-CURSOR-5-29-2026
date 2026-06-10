@@ -15,9 +15,9 @@ import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import { computeActiveRules } from '@/lib/active-rules';
 import type { ActiveRules } from '@/components/dna-synthesis-loader';
 import type { Album, StyleProfile, Track } from '@/lib/types';
-import { INK_PACK_YEARLY_DISCOUNT_PERCENT } from '@/lib/studio-tiers';
 import { isProUser, isYearlyPro } from '@/lib/subscription';
 import { trackLowInkHit, trackUpgradeClick } from '@/lib/conversion-analytics';
+import { formatFreeMonthlyRefillLabel } from '@/lib/ink-grants';
 import { totalInkBalance } from '@/lib/ink-balance';
 import { API_KEY_STORAGE_KEY, isValidGoogleApiKey } from '@/lib/byo-api';
 
@@ -177,21 +177,26 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
 
         toast({
           variant: 'destructive',
-          title: 'Ink Reserve Low',
+          title: 'Not enough Ink',
           description: (
             <span className="flex flex-col gap-2 text-sm">
               <span>
-                You need {finalAmount} Ink for this action.
-                {!isPro
-                  ? ' Upgrade for monthly residency refills, or buy a permanent Ink pack.'
-                  : ' Refill residency or buy permanent Ink packs.'}
+                You need {finalAmount} Ink — you have {inkBalance.toLocaleString()}.
               </span>
-              {isPro && !isYearly && (
-                <span className="text-[11px] text-white/75 leading-snug">
-                  Yearly Pro includes {INK_PACK_YEARLY_DISCOUNT_PERCENT}% off permanent Ink packs — best value if you run out often.
+              {!isPro && user.createdAt && (
+                <span className="text-[11px] text-white/70 leading-snug">
+                  {formatFreeMonthlyRefillLabel(user.createdAt)}.
                 </span>
               )}
               <span className="flex gap-2 flex-wrap pt-0.5">
+                <Button asChild size="sm" className="h-8 text-[10px] font-bold uppercase bg-primary text-white hover:bg-primary/90">
+                  <Link
+                    href="/usage?tab=buy-ink"
+                    onClick={() => trackUpgradeClick('low_ink', { actionName, cta: 'ink_pack' })}
+                  >
+                    {isYearly ? 'Buy Ink Packs' : 'Buy Ink Pack'}
+                  </Link>
+                </Button>
                 {!isPro && (
                   <Button
                     asChild
@@ -201,9 +206,9 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
                   >
                     <Link
                       href="/usage?tab=cloud"
-                      onClick={() => trackUpgradeClick('low_ink', { actionName })}
+                      onClick={() => trackUpgradeClick('low_ink', { actionName, cta: 'upgrade' })}
                     >
-                      Upgrade Studio
+                      Keep My Vault (Pro)
                     </Link>
                   </Button>
                 )}
@@ -217,15 +222,10 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
                     <Link href="/usage?tab=cloud">Upgrade to Yearly</Link>
                   </Button>
                 )}
-                <Button asChild size="sm" className="h-8 text-[10px] font-bold uppercase bg-primary text-white hover:bg-primary/90">
-                  <Link href="/usage?tab=buy-ink">
-                    {isYearly ? 'Buy Ink Packs' : 'Buy Ink'}
-                  </Link>
-                </Button>
               </span>
             </span>
           ),
-          duration: 9000,
+          duration: 7000,
         });
         return false;
     }

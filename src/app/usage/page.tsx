@@ -73,6 +73,7 @@ import { BYO_API_INK_DISCOUNT_PERCENT } from '@/lib/byo-api';
 import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, isProUser } from '@/lib/subscription';
 import { getTrialDaysRemaining, isTrialActive } from '@/lib/trial';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
+import { InkRefillCountdown } from '@/components/ink-refill-countdown';
 import { TierPriceSummary } from '@/components/tier-price-summary';
 import { StudioProfileSection } from '@/components/gamification/studio-profile-section';
 import { PwaInstallGuideCard } from '@/components/pwa-install-prompt';
@@ -271,9 +272,10 @@ function UsagePageContent() {
                       ? 'Yearly Pro residency (3,444/mo refill)'
                       : 'Monthly Pro residency (1,777/mo refill)'
                     : trialActive
-                      ? 'Pro trial — workflow unlocked; Visitor Ink pool still applies'
-                      : 'Visitor residency (up to 500 with signup + monthly)'}
+                      ? 'Pro trial — workflow unlocked; welcome + monthly Visitor Ink still applies'
+                      : '300 welcome Ink · +111/mo from month two (pool caps at 500)'}
                 </p>
+                {!paidPro && <InkRefillCountdown className="text-[8px] uppercase" />}
             </Card>
             {trialInkBalance > 0 && (
               <Card className="bg-muted/10 border-sky-500/20 p-4 flex flex-col gap-2 min-w-[200px]">

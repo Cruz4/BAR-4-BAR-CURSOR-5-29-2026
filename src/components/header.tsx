@@ -27,6 +27,7 @@ import { BugReportDialog } from './bug-report-dialog';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
 import { getResidencyPoolCap, getResidencyProgressPercent } from '@/lib/studio-tiers';
+import { InkRefillCountdown } from '@/components/ink-refill-countdown';
 import { FREE_MONTHLY_RESIDENCY_INK, SIGNUP_INK } from '@/lib/subscription';
 import { BYO_API_INK_DISCOUNT_PERCENT, isByoInkDiscountActive } from '@/lib/byo-api';
 import { HowToUseDialog } from './how-to-use-dialog';
@@ -197,8 +198,11 @@ export function Header() {
                                 </div>
                                 <Progress value={residencyProgress} className="h-1 bg-primary/10" />
                                 <p className="text-[8px] text-muted-foreground italic uppercase">
-                                  {isPro ? 'Monthly residency pool' : `Visitor pool (${SIGNUP_INK} signup + ${FREE_MONTHLY_RESIDENCY_INK}/mo)`}
+                                  {isPro ? 'Monthly residency pool' : `Visitor pool (${SIGNUP_INK} welcome · +${FREE_MONTHLY_RESIDENCY_INK}/mo from month two)`}
                                 </p>
+                                {!isPro && user && (
+                                  <InkRefillCountdown compact className="italic uppercase" />
+                                )}
                             </div>
                             {trialInkBalance > 0 && (
                               <div className="space-y-2">

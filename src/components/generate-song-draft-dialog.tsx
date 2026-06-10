@@ -9,6 +9,7 @@
  */
 
 import React, { useState, useContext, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Track, Album, StyleProfile, WizardState, Direction, TrackSection, Bar, WizardAnalysis, StyleAnalysis, DnaPreset } from '@/lib/types';
 import {
@@ -93,6 +94,8 @@ import {
   buildDnaPresetPayload,
   CREATIVE_DNA_FIELDS,
   normalizeWizardAnalysis,
+  normalizeRelayDirections,
+  buildFallbackRelayDirections,
   DEFAULT_STYLE_METRICS,
   rebalanceRemixWeights,
   formatRemixDirectionsWithWeights,
@@ -151,12 +154,24 @@ const SYNTHESIS_TIMEOUT_MS = 180_000;
 const EXTRACT_TIMEOUT_MS = 120_000;
 const RHYME_PREVIEW_TIMEOUT_MS = 25_000;
 
+function workstationStepBadgeLabel(step: number): string {
+  if (step === 0) return 'Mode Select';
+  if (step === 1) return 'Seed DNA & REMIX';
+  if (step === 2) return 'Analysis — Save & Inject';
+  if (step === 3) return 'Remix Paths';
+  if (step === 5) return 'Approval Step';
+  if (step === 10) return 'Calibration Hub';
+  return 'DNA & REMIX';
+}
+
 interface GenerateSongDraftDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   track: Track;
   styleProfile: StyleProfile;
   onDraftGenerated: (sections: any[]) => void;
+  /** Start on DNA & REMIX seed step instead of mode select. */
+  initialWorkstationMode?: 'select' | 'remix';
   /** Auto-stash unused DNA/REMIX approval drafts into Draft Chest. */
   onStashApprovalDraftsToChest?: (
     snapshots: ApprovalDraftSnapshot[],
@@ -394,6 +409,7 @@ export function GenerateSongDraftDialog({
   onDraftGenerated,
   onStashApprovalDraftsToChest,
   onBackgroundSessionActiveChange,
+  initialWorkstationMode = 'select',
 }: GenerateSongDraftDialogProps) {
   const { user } = useAuth();
   const isPro = isProOrTrial(user);
@@ -468,7 +484,7 @@ export function GenerateSongDraftDialog({
   const hardClosedRef = useRef(false);
   const pendingReopenOnCompleteRef = useRef(false);
 
-  const { refundInk, addUsageLog } = useUsage();
+  const { refundInk, addUsageLog, inkBalance } = useUsage();
   const { getCost, getEffectiveCost, tooltip, buttonLabel } = useInkCosts();
   const { runWithInk } = useTouchInkRunner();
 
@@ -537,11 +553,23 @@ export function GenerateSongDraftDialog({
     if (!open) return;
     if (!sessionReadyRef.current || hardClosedRef.current) {
       initializeSessionFromTrack();
+      if (initialWorkstationMode === 'remix') {
+        setStep(1);
+      }
       sessionReadyRef.current = true;
       hardClosedRef.current = false;
       pendingReopenOnCompleteRef.current = false;
     }
-  }, [open, initializeSessionFromTrack]);
+  }, [open, initializeSessionFromTrack, initialWorkstationMode]);
+
+  useEffect(() => {
+    if (step !== 3 || !wizardState.analysis) return;
+    if ((wizardState.directions?.length ?? 0) > 0) return;
+    setWizardState((prev) => ({
+      ...prev,
+      directions: buildFallbackRelayDirections(prev.analysis),
+    }));
+  }, [step, wizardState.analysis, wizardState.directions?.length]);
 
   useEffect(() => {
     if (isLooseTrack) setInheritAlbum(false);
@@ -1052,7 +1080,7 @@ export function GenerateSongDraftDialog({
           ...prev,
           lyrics: sourceText,
           analysis: result.analysis,
-          directions: result.directions,
+          directions: normalizeRelayDirections(result.directions, result.analysis),
         }));
         if (result.analysis.styleAnalysis?.trim()) {
             setHubStyleAnalysis(result.analysis.styleAnalysis);
@@ -1969,16 +1997,34 @@ export function GenerateSongDraftDialog({
                     <span className="truncate">Generation Workstation</span>
                 </DialogTitle>
                 <DialogDescription className="sr-only">Step-by-step neural synthesis and calibration.</DialogDescription>
-                <Badge
-                  variant="outline"
-                  className="sm:hidden ml-auto shrink-0 h-4 px-1.5 text-[7px] font-bold uppercase tracking-widest border-primary/20 text-primary whitespace-nowrap"
-                >
-                  {step === 0 ? 'Mode Select' : step === 10 ? 'Calibration Hub' : step === 5 ? 'Approval Step' : 'Analysis Step'}
-                </Badge>
+                <div className="flex items-center gap-2 ml-auto shrink-0 sm:hidden">
+                  <Link
+                    href="/usage?tab=buy-ink"
+                    className="inline-flex items-center gap-1 rounded-md border border-primary/25 bg-primary/10 px-1.5 py-0.5 font-code text-[9px] font-bold text-primary hover:bg-primary/15 transition-colors"
+                    title="Current Ink balance"
+                  >
+                    <Droplets className="h-3 w-3 shrink-0" />
+                    {inkBalance.toLocaleString()}
+                  </Link>
+                  <Badge
+                    variant="outline"
+                    className="h-4 px-1.5 text-[7px] font-bold uppercase tracking-widest border-primary/20 text-primary whitespace-nowrap"
+                  >
+                    {workstationStepBadgeLabel(step)}
+                  </Badge>
+                </div>
             </div>
-            <div className="hidden sm:flex items-center gap-4 pr-12 shrink-0">
+            <div className="hidden sm:flex items-center gap-2 pr-12 shrink-0">
+                <Link
+                  href="/usage?tab=buy-ink"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-primary/25 bg-primary/10 px-2.5 py-1 font-code text-[10px] font-bold text-primary hover:bg-primary/15 transition-colors"
+                  title="Current Ink balance"
+                >
+                  <Droplets className="h-3.5 w-3.5 shrink-0" />
+                  {inkBalance.toLocaleString()} Ink
+                </Link>
                 <Badge variant="outline" className="h-5 px-2 text-[9px] font-bold uppercase tracking-widest border-primary/20 text-primary">
-                    {step === 0 ? 'Mode Select' : step === 10 ? 'Calibration Hub' : step === 5 ? 'Approval Step' : 'Analysis Step'}
+                    {workstationStepBadgeLabel(step)}
                 </Badge>
             </div>
         </DialogHeader>
@@ -2071,7 +2117,7 @@ export function GenerateSongDraftDialog({
                         <BrainCircuit className="relative h-20 w-16 sm:h-24 sm:w-20 text-sky-400 group-hover:animate-pulse" />
                         <div className="relative text-center space-y-2 sm:space-y-3 px-2">
                             <h4 className="font-headline text-2xl sm:text-4xl font-bold uppercase text-white">DNA & REMIX</h4>
-                            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-widest leading-relaxed max-w-[320px] mx-auto">Extract and save strains to seed your next synthesis loop.</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-widest leading-relaxed max-w-[320px] mx-auto">Extract from pasted text or your sheet — save the full profile or inject strains on Analysis Step.</p>
                         </div>
                     </Card>
                 </div>
@@ -2620,9 +2666,14 @@ export function GenerateSongDraftDialog({
             <div className="flex flex-col h-full min-h-0 p-4 sm:p-6 md:p-8 gap-3 sm:gap-4 overflow-hidden animate-in fade-in slide-in-from-bottom-4 relative">
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-sky-500/10 to-transparent" aria-hidden />
                 <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
-                    <h3 className="text-lg sm:text-xl font-headline font-bold uppercase flex items-center gap-2 text-primary">
-                      <NotebookPen className="h-5 w-5 sm:h-6 sm:w-6 shrink-0"/> Seed DNA & REMIX
-                    </h3>
+                    <div className="min-w-0">
+                      <h3 className="text-lg sm:text-xl font-headline font-bold uppercase flex items-center gap-2 text-primary">
+                        <NotebookPen className="h-5 w-5 sm:h-6 sm:w-6 shrink-0"/> Seed DNA & REMIX
+                      </h3>
+                      <p className="mt-1 text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-widest leading-snug max-w-xl">
+                        {DNA_HUB_TOOLTIPS.seedDnaRemix}
+                      </p>
+                    </div>
                     <div className="flex items-center gap-3 bg-primary/5 px-3 sm:px-4 py-2 rounded-lg border border-primary/20 self-start sm:self-auto">
                         <Label htmlFor="sync-lyrics" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-primary/80">Sync Current Lyrics</Label>
                         <Switch id="sync-lyrics" checked={syncLyricsToggle} onCheckedChange={setSyncLyricsToggle} />
@@ -2631,7 +2682,7 @@ export function GenerateSongDraftDialog({
 
                 <div className="relative flex flex-1 min-h-0 flex-col md:flex-row rounded-xl border-2 border-primary/25 overflow-hidden bg-background/30 shadow-[inset_0_0_60px_rgba(56,189,248,0.04)]">
                   <Textarea
-                    placeholder="Paste lyrics or rough notes to extract analytical strains..."
+                    placeholder="Paste lyrics, a poem, rough ideas, or inspiration…"
                     className="flex-1 min-h-[200px] md:min-h-0 font-code text-sm sm:text-base md:text-lg bg-background/40 border-0 rounded-none p-4 sm:p-5 md:p-6 resize-none focus-visible:ring-0 focus-visible:ring-offset-0 md:max-w-[58%] lg:max-w-[55%]"
                     value={wizardState.lyrics}
                     onChange={(e) => {
@@ -2659,17 +2710,27 @@ export function GenerateSongDraftDialog({
             <ScrollArea className="flex-grow p-8 studio-scrollbar relative">
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-emerald-500/10 to-transparent" aria-hidden />
                 <div className="relative max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 text-foreground pb-12">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-primary/10 p-4 rounded-xl border border-primary/20">
-                        <div className="flex items-start gap-3 text-primary min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 bg-primary/10 p-4 rounded-xl border border-primary/20">
+                        <div className="flex items-start gap-3 text-primary min-w-0 flex-grow">
                             <Sparkles className="h-5 w-5 shrink-0 mt-0.5" />
-                            <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wide leading-relaxed">
-                              Your lyrics, decoded. Tap <Zap className="inline h-3.5 w-3.5 align-[-2px] mx-0.5" /> on any strain to load it into this remix — then hit Define Paths.
+                            <div className="space-y-2 min-w-0">
+                              <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wide leading-relaxed">
+                                Analysis Step — your source text, decoded into strains.
+                              </p>
+                              <p className="text-[10px] sm:text-[11px] font-code normal-case tracking-normal text-primary/85 leading-relaxed">
+                                {DNA_HUB_TOOLTIPS.analysisStepIntro}
+                              </p>
+                              <ul className="text-[10px] font-code normal-case tracking-normal text-primary/80 leading-relaxed space-y-1 list-disc list-inside">
+                                <li><strong className="text-primary">Save DNA Profile</strong> — archives the entire extraction to your vault (Pro).</li>
+                                <li><strong className="text-primary">⚡ on a strain</strong> — injects just that part into this remix (Creative DNA, Intents, Structure, or Style).</li>
+                                <li>Then <strong className="text-primary">Define Paths</strong> for remix forks, or skip straight to Calibration Hub.</li>
+                              </ul>
                               {!isPro && (
-                                <span className="block mt-1 text-[10px] font-code normal-case tracking-normal text-primary/80">
-                                  Saving to your vault is Pro-only; everything here still works for this DNA / remix session.
+                                <span className="block text-[10px] font-code normal-case tracking-normal text-primary/75 pt-1">
+                                  Saving to your vault is Pro-only; extraction, ⚡ inject, and remix still work this session.
                                 </span>
                               )}
-                            </p>
+                            </div>
                         </div>
                         {isPro ? (
                           <Tooltip>
@@ -2718,7 +2779,23 @@ export function GenerateSongDraftDialog({
                 </div>
                 <ScrollArea className="relative flex-grow min-h-0 border border-white/10 rounded-xl bg-black/40 studio-scrollbar">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-                        {(wizardState.directions || []).map((dir, idx) => {
+                        {(wizardState.directions || []).length === 0 ? (
+                          <div className="col-span-full flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
+                            <p className="text-sm font-code text-muted-foreground max-w-md leading-relaxed">
+                              Remix paths did not load. Tap <strong className="text-primary">Re-Matrix Ideas</strong> to regenerate paths from your extraction, or continue to Calibration — paths are optional.
+                            </p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="font-bold uppercase text-[10px]"
+                              disabled={isGenerating}
+                              onClick={(e) => handleRelayAnalyze(wizardState.lyrics, e)}
+                            >
+                              Re-Matrix Ideas
+                            </Button>
+                          </div>
+                        ) : (
+                        (wizardState.directions || []).map((dir, idx) => {
                             const isSelected = wizardState.selectedDirections.some(d => d.name === dir.name);
                             return (
                                 <Card 
@@ -2762,7 +2839,8 @@ export function GenerateSongDraftDialog({
                                     )}
                                 </Card>
                             );
-                        })}
+                        })
+                        )}
                     </div>
                 </ScrollArea>
             </div>
@@ -3021,8 +3099,11 @@ export function GenerateSongDraftDialog({
         </div>
 
         {(step === 1 || step === 2 || step === 3 || step === 5 || step === 10) && !isGenerating && (
-        <div className="shrink-0 flex flex-col p-3 sm:p-4 border-t border-white/5 bg-[#050505] gap-3 relative z-[60] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
+        <div className="workstation-action-deck shrink-0 relative flex flex-col p-3 sm:p-4 gap-3 z-[60] pb-[max(0.75rem,env(safe-area-inset-bottom))] overflow-hidden border-t border-primary/25 bg-gradient-to-t from-[hsl(216_48%_5%/0.98)] via-[hsl(216_46%_8%/0.94)] to-[hsl(216_44%_11%/0.9)] backdrop-blur-xl shadow-[0_-12px_40px_rgba(59,130,246,0.12),inset_0_1px_0_rgba(255,255,255,0.06)]">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" aria-hidden />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_140%_at_50%_100%,rgba(59,130,246,0.14),transparent_58%)]" aria-hidden />
+          <div className="pointer-events-none absolute inset-0 opacity-[0.35] bg-[linear-gradient(105deg,transparent_40%,rgba(255,255,255,0.03)_50%,transparent_60%)]" aria-hidden />
+          <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 min-w-0 w-full sm:w-auto">
                   {(step === 1 || step === 10) && (
                     <div className="flex items-center gap-2.5 bg-primary/10 px-4 sm:px-6 py-1.5 rounded-full border border-primary/40 shadow-[0_0_15px_rgba(59,130,246,0.2)] self-start shrink-0">

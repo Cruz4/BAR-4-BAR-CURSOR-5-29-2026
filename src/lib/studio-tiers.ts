@@ -14,6 +14,7 @@ import {
 } from '@/lib/subscription';
 import type { User } from '@/lib/types';
 import { PRO_MONTHLY_RESIDENCY, PRO_YEARLY_RESIDENCY } from '@/lib/stripe-catalog';
+import { getVisitorInkGrantSummary } from '@/lib/ink-grants';
 
 export const PRO_MONTHLY_PRICE_AMOUNT = 7.77;
 export const PRO_YEARLY_PRICE_AMOUNT = 4.44;
@@ -146,14 +147,16 @@ export const PRO_YEARLY_INCLUDES_LINE = 'Everything in Pro Monthly included';
 /** Short perk lines shown directly under tier price (also kept in full feature lists below) */
 export function getProMonthlyHeadlinePerks(): readonly string[] {
   return [
-    `${PRO_MONTHLY_INK.toLocaleString()} residency Ink every month`,
     PRO_FULL_UNLOCK_LINE,
-    'Custom DNA saves, Performance Mode, Freestyle & DNA Drop share links',
+    'Custom DNA vault saves, Performance Mode, Freestyle & DNA Drop links',
+    `${PRO_MONTHLY_INK.toLocaleString()} residency Ink every month`,
   ];
 }
 
 export function getProYearlyHeadlinePerks(): readonly string[] {
   return [
+    PRO_FULL_UNLOCK_LINE,
+    'Custom DNA vault saves, Performance Mode, Freestyle & DNA Drop links',
     `${PRO_YEARLY_INK.toLocaleString()} residency Ink every month`,
     INK_PACK_YEARLY_DISCOUNT_SHORT,
     `Best price — ${PRO_YEARLY_PRICE}/mo effective (${PRO_YEARLY_BILLED}/year · save ${PRO_YEARLY_SUBSCRIPTION_SAVINGS_PERCENT}% vs ${PRO_MONTHLY_PRICE}/mo)`,
@@ -162,8 +165,8 @@ export function getProYearlyHeadlinePerks(): readonly string[] {
 
 export function getVisitorHeadlinePerks(): readonly string[] {
   return [
-    `${SIGNUP_INK} signup + ${FREE_MONTHLY_RESIDENCY_INK} monthly residency Ink`,
-    'Full bar-by-bar AI on Ink — all 9 Creative Effects included',
+    getVisitorInkGrantSummary(),
+    'Full bar-by-bar AI workstation — all 9 Creative Effects included',
   ];
 }
 
@@ -171,17 +174,17 @@ export function getProHeadlinePerks(billing: 'monthly' | 'yearly'): readonly str
   return billing === 'yearly' ? getProYearlyHeadlinePerks() : getProMonthlyHeadlinePerks();
 }
 
-export const VISITOR_INK_SUMMARY = `${SIGNUP_INK} signup Ink + ${FREE_MONTHLY_RESIDENCY_INK} monthly residency`;
+export const VISITOR_INK_SUMMARY = getVisitorInkGrantSummary();
 
 /** Shown on Ink Store for non-Pro artists */
 export const VISITOR_INK_STORE_NOTICE = {
-  headline: 'Visitor studio — full AI workstation on Ink',
-  body: `Every Ink-priced tool works on free residency and permanent packs — Generate Next Line, Smart Structure, all 9 Creative Effects, and more. Pro unlocks your catalog workflow: custom DNA/Vibe/Style saves, Performance Mode, Freestyle, vault import/export, and DNA Drop share links — plus ${PRO_MONTHLY_INK.toLocaleString()} residency Ink/mo.`,
+  headline: 'Visitor studio — full AI lyric workstation',
+  body: `Every Ink-priced tool works on welcome + monthly residency Ink and permanent packs — Generate Next Line, Smart Structure, all 9 Creative Effects, and more. Pro unlocks your catalog workflow: custom DNA/Vibe/Style saves, Performance Mode, Freestyle, vault import/export, and DNA Drop share links — plus ${PRO_MONTHLY_INK.toLocaleString()} residency Ink/mo.`,
 } as const;
 
 /** Free tier limits — shown on comparison charts */
 export const VISITOR_FEATURES = [
-  `${SIGNUP_INK} signup Ink + ${FREE_MONTHLY_RESIDENCY_INK} monthly residency (pool caps at ${FREE_RESIDENCY_POOL_CAP})`,
+  `${SIGNUP_INK} welcome Ink on signup · +${FREE_MONTHLY_RESIDENCY_INK}/mo from month two (pool caps at ${FREE_RESIDENCY_POOL_CAP})`,
   `${FREE_ALBUM_LIMIT} album · ${FREE_TRACK_LIMIT} tracks — demo-scale projects`,
   'Full bar-by-bar AI on Ink — Generate Next/Previous, Smart Structure, Studio Draft & Rhyme Pulse',
   'All 9 Creative Effects — Simile, Metaphor, Twist, POV, Blend & more (10 Ink each)',
@@ -197,7 +200,7 @@ export const PRO_UNLOCKS = [
   'UNLOCK: Freestyle capture — record flows straight into your rhyme book',
   'UNLOCK: Full-studio vault import / export — merge JSON blueprints across devices',
   'UNLOCK: Shareable project links — DNA Drop live links for collab & feedback',
-  `${PRO_MONTHLY_INK.toLocaleString()} monthly residency Ink — ~${PRO_VS_VISITOR_MONTHLY_INK_MULTIPLIER}× Visitor monthly grant, refreshes each cycle`,
+  `${PRO_MONTHLY_INK.toLocaleString()} monthly residency Ink — refreshes each billing cycle`,
 ] as const;
 
 /** Yearly Pro-only perks on top of full Pro unlocks */
