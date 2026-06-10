@@ -11,7 +11,7 @@ export function getTrialDurationTitle(): string {
   return `${TRIAL_DURATION_DAYS}-Day Pro Trial`;
 }
 
-/** One-time Ink grant during trial (separate from signup residency). */
+/** One-time Ink during Pro trial — stored in `trialInkBalance`; expires when trial ends. */
 export const TRIAL_INK_GRANT = 400;
 
 export function isTrialActive(

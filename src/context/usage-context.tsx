@@ -17,6 +17,7 @@ import type { ActiveRules } from '@/components/dna-synthesis-loader';
 import type { Album, StyleProfile, Track } from '@/lib/types';
 import { INK_PACK_YEARLY_DISCOUNT_PERCENT } from '@/lib/studio-tiers';
 import { isProUser, isYearlyPro } from '@/lib/subscription';
+import { totalInkBalance } from '@/lib/ink-balance';
 import { API_KEY_STORAGE_KEY, isValidGoogleApiKey } from '@/lib/byo-api';
 
 export type AiSpendContext = {
@@ -29,6 +30,7 @@ interface UsageContextType {
   usageHistory: any[];
   inkBalance: number;
   residencyBalance: number;
+  trialInkBalance: number;
   purchasedBalance: number;
   loading: boolean;
   customApiKey: string | null;
@@ -58,6 +60,7 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
   const [usageHistory, setUsageHistory] = useState<any[]>([]);
   const [inkBalance, setInkBalance] = useState<number>(0);
   const [residencyBalance, setResidencyBalance] = useState<number>(0);
+  const [trialInkBalance, setTrialInkBalance] = useState<number>(0);
   const [purchasedBalance, setPurchasedBalance] = useState<number>(0);
   const [customApiKey, setCustomApiKey] = useState<string | null>(null);
   const [lastSpent, setLastSpent] = useState<{ amount: number; pressX: number; pressY: number; currentX: number; currentY: number; activeRules?: ActiveRules; actionName?: string } | null>(null);
@@ -121,12 +124,15 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
         (data) => {
         if (data) {
           const res = data.residencyBalance || 0;
+          const trial = data.trialInkBalance || 0;
           const pur = data.purchasedBalance || 0;
           setResidencyBalance(res);
+          setTrialInkBalance(trial);
           setPurchasedBalance(pur);
-          setInkBalance(res + pur);
+          setInkBalance(totalInkBalance({ residencyBalance: res, trialInkBalance: trial, purchasedBalance: pur }));
         } else {
           setResidencyBalance(0);
+          setTrialInkBalance(0);
           setPurchasedBalance(0);
           setInkBalance(0);
         }
@@ -236,7 +242,7 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
 
     // Ink is deducted server-side only (runSecuredAiAction). Client shows preview animation + balance check.
     return true;
-  }, [inkBalance, residencyBalance, purchasedBalance, customApiKey, user, toast, mousePos]);
+  }, [inkBalance, residencyBalance, trialInkBalance, purchasedBalance, customApiKey, user, toast, mousePos]);
 
   const refundInk = useCallback((_amount: number, _reason: string = 'AI Error') => {
     // Refunds are handled server-side in runSecuredAiAction when AI fails after ink deduction.
@@ -270,7 +276,7 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <UsageContext.Provider value={{
-      usageHistory, inkBalance, residencyBalance, purchasedBalance, loading, customApiKey, lastSpent, mousePos,
+      usageHistory, inkBalance, residencyBalance, trialInkBalance, purchasedBalance, loading, customApiKey, lastSpent, mousePos,
       addUsageLog, deductInk, refundInk, addInk, saveCustomApiKey, registerAiContext,
     }}>
       {children}

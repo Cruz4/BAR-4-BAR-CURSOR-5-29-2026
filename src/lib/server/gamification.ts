@@ -2,6 +2,7 @@ import 'server-only';
 
 import { FieldValue } from 'firebase-admin/firestore';
 import { getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
+import { inkBalanceFirestorePatch, normalizeInkPools } from '@/lib/ink-balance';
 import { getAchievement, ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { getDayKey, getMonthKey, getWeekKey } from '@/lib/gamification/challenges';
 import { rankFromXp } from '@/lib/gamification/ranks';
@@ -102,17 +103,10 @@ async function grantBonusInk(uid: string, amount: number): Promise<number> {
   const balanceRef = db.doc(`users/${uid}/usage/balance`);
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(balanceRef);
-    const data = snap.data() || { residencyBalance: 0, purchasedBalance: 0 };
-    const pur = (data.purchasedBalance || 0) + amount;
-    tx.set(
-      balanceRef,
-      {
-        purchasedBalance: pur,
-        balance: (data.residencyBalance || 0) + pur,
-        updatedAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
+    const data = snap.data() || {};
+    const pools = normalizeInkPools(data);
+    const next = { ...pools, purchasedBalance: pools.purchasedBalance + amount };
+    tx.set(balanceRef, inkBalanceFirestorePatch(next), { merge: true });
   });
 
   return amount;

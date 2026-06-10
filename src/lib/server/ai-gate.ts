@@ -12,6 +12,7 @@ import {
   isYearlyProFromData,
 } from '@/lib/byo-api';
 import { runWithGenkitContext } from '@/lib/server/genkit-request';
+import { deductFromInkPools, inkBalanceFirestorePatch, normalizeInkPools, totalInkBalance } from '@/lib/ink-balance';
 
 export class AiGateError extends Error {
   constructor(
@@ -79,35 +80,17 @@ export async function deductInkTransaction(
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(balanceRef);
-    const data = snap.data() || { residencyBalance: 0, purchasedBalance: 0 };
-    const res = data.residencyBalance || 0;
-    const pur = data.purchasedBalance || 0;
-    const total = res + pur;
+    const data = snap.data() || {};
+    const pools = normalizeInkPools(data);
+    const total = totalInkBalance(pools);
 
     if (total < finalAmount) {
       throw new AiGateError('Insufficient Ink balance.', 'INSUFFICIENT_INK');
     }
 
-    let newRes = res;
-    let newPur = pur;
-    if (res >= finalAmount) {
-      newRes -= finalAmount;
-    } else {
-      const deficit = finalAmount - res;
-      newRes = 0;
-      newPur -= deficit;
-    }
+    const nextPools = deductFromInkPools(pools, finalAmount);
 
-    tx.set(
-      balanceRef,
-      {
-        residencyBalance: newRes,
-        purchasedBalance: newPur,
-        balance: newRes + newPur,
-        updatedAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
+    tx.set(balanceRef, inkBalanceFirestorePatch(nextPools), { merge: true });
   });
 
   const logsRef = db.collection('system').doc('logs').collection('entries');
@@ -136,14 +119,11 @@ export async function refundInkTransaction(uid: string, amount: number): Promise
     const snap = await tx.get(balanceRef);
     if (!snap.exists) return;
     const data = snap.data()!;
-    const res = (data.residencyBalance || 0) + amount;
+    const pools = normalizeInkPools(data);
+    const nextRes = pools.residencyBalance + amount;
     tx.set(
       balanceRef,
-      {
-        residencyBalance: res,
-        balance: res + (data.purchasedBalance || 0),
-        updatedAt: new Date().toISOString(),
-      },
+      inkBalanceFirestorePatch({ ...pools, residencyBalance: nextRes }),
       { merge: true }
     );
   });

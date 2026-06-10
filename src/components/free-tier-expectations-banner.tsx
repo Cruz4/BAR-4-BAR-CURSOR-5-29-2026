@@ -50,7 +50,7 @@ export function FreeTierExpectationsBanner({ user }: { user: User | null }) {
             {PRO_TRIAL_BANNER.headline} — {trialDays} day{trialDays === 1 ? '' : 's'} left
           </p>
           <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-snug line-clamp-2 sm:line-clamp-1">
-            Full Pro workflow unlocked — DNA saves, Performance, Freestyle, vault &amp; DNA Drop. Upgrade before trial ends.
+            Full Pro workflow unlocked — DNA saves, Performance, Freestyle, vault &amp; DNA Drop. Trial Ink expires when the trial ends.
           </p>
         </div>
         <Link

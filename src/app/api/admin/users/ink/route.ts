@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyAdminRequest, AdminAuthError } from '@/lib/server/admin-auth';
 import { getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
+import { inkBalanceFirestorePatch, normalizeInkPools } from '@/lib/ink-balance';
 
 export const runtime = 'nodejs';
 
@@ -37,26 +38,18 @@ export async function POST(req: Request) {
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(balanceRef);
-    const data = snap.data() || { residencyBalance: 0, purchasedBalance: 0 };
-    const res =
-      type === 'res' ? (data.residencyBalance || 0) + amount : data.residencyBalance || 0;
-    const pur =
-      type === 'pur' ? (data.purchasedBalance || 0) + amount : data.purchasedBalance || 0;
+    const data = snap.data() || {};
+    const pools = normalizeInkPools(data);
+    const next =
+      type === 'res'
+        ? { ...pools, residencyBalance: pools.residencyBalance + amount }
+        : { ...pools, purchasedBalance: pools.purchasedBalance + amount };
 
-    if (res < 0 || pur < 0) {
+    if (next.residencyBalance < 0 || next.purchasedBalance < 0) {
       throw new Error('Ink balance cannot go below zero.');
     }
 
-    tx.set(
-      balanceRef,
-      {
-        residencyBalance: res,
-        purchasedBalance: pur,
-        balance: res + pur,
-        updatedAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
+    tx.set(balanceRef, inkBalanceFirestorePatch(next), { merge: true });
   });
 
   await db.collection('system/logs/entries').add({

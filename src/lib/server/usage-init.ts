@@ -7,6 +7,7 @@ import {
   SIGNUP_INK,
   isProUser,
 } from '@/lib/subscription';
+import { inkBalanceFirestorePatch, normalizeInkPools, totalInkBalance } from '@/lib/ink-balance';
 import { TRIAL_INK_GRANT, isTrialActive } from '@/lib/trial';
 
 /** Server-side balance bootstrap — requires FIREBASE_SERVICE_ACCOUNT_KEY locally. */
@@ -29,48 +30,60 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
   if (!snap.exists) {
     const trialInk = trialActive ? TRIAL_INK_GRANT : 0;
     await balanceRef.set({
-      residencyBalance: SIGNUP_INK,
-      purchasedBalance: trialInk,
-      balance: SIGNUP_INK + trialInk,
+      ...inkBalanceFirestorePatch({
+        residencyBalance: SIGNUP_INK,
+        trialInkBalance: trialInk,
+        purchasedBalance: 0,
+      }),
       signupGranted: true,
       trialInkGranted: trialActive,
-      updatedAt: new Date().toISOString(),
     });
     return;
   }
 
   const monthKey = new Date().toISOString().slice(0, 7);
-  const data = snap.data()!;
+  let data = snap.data()!;
 
-  if (trialActive && !data.trialInkGranted) {
+  if (!trialActive && (data.trialInkBalance || 0) > 0) {
+    const pools = normalizeInkPools(data);
     await balanceRef.set(
-      {
-        purchasedBalance: (data.purchasedBalance || 0) + TRIAL_INK_GRANT,
-        balance: (data.balance || 0) + TRIAL_INK_GRANT,
-        trialInkGranted: true,
-        updatedAt: new Date().toISOString(),
-      },
+      inkBalanceFirestorePatch(
+        { ...pools, trialInkBalance: 0 },
+        { trialInkExpiredAt: new Date().toISOString() }
+      ),
       { merge: true }
     );
+    data = { ...data, trialInkBalance: 0, balance: totalInkBalance({ ...data, trialInkBalance: 0 }) };
+  }
+
+  if (trialActive && !data.trialInkGranted) {
+    const pools = normalizeInkPools(data);
+    const nextTrial = pools.trialInkBalance + TRIAL_INK_GRANT;
+    await balanceRef.set(
+      inkBalanceFirestorePatch(
+        { ...pools, trialInkBalance: nextTrial },
+        { trialInkGranted: true }
+      ),
+      { merge: true }
+    );
+    data = { ...data, trialInkBalance: nextTrial, trialInkGranted: true };
   }
 
   if (
     !isProUser(userData as { subscriptionStatus?: string }) &&
     data.lastFreeResidencyGrant !== monthKey
   ) {
+    const pools = normalizeInkPools(data);
     const nextResidency = Math.min(
       FREE_RESIDENCY_POOL_CAP,
-      (data.residencyBalance || 0) + FREE_MONTHLY_RESIDENCY_INK
+      pools.residencyBalance + FREE_MONTHLY_RESIDENCY_INK
     );
-    const grantDelta = nextResidency - (data.residencyBalance || 0);
+    const grantDelta = nextResidency - pools.residencyBalance;
     if (grantDelta > 0) {
       await balanceRef.set(
-        {
-          residencyBalance: nextResidency,
-          balance: (data.balance || 0) + grantDelta,
+        inkBalanceFirestorePatch({ ...pools, residencyBalance: nextResidency }, {
           lastFreeResidencyGrant: monthKey,
-          updatedAt: new Date().toISOString(),
-        },
+        }),
         { merge: true }
       );
     } else {

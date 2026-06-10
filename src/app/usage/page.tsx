@@ -27,6 +27,7 @@ import {
     Settings as SettingsIcon, 
     ChevronRight,
     Clock,
+    Timer,
     Battery,
     Info,
     X,
@@ -86,7 +87,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 function UsagePageContent() {
-  const { usageHistory, inkBalance, residencyBalance, purchasedBalance, loading, customApiKey, saveCustomApiKey } = useUsage();
+  const { usageHistory, inkBalance, residencyBalance, trialInkBalance, purchasedBalance, loading, customApiKey, saveCustomApiKey } = useUsage();
   const { isCloudSyncActive } = useContext(DataContext);
   const { user } = useAuth();
   const { checkout, fulfillCheckoutReturn, openBillingPortal, isCheckingOut } = useStripe();
@@ -250,6 +251,22 @@ function UsagePageContent() {
                       : 'Visitor residency (up to 500 with signup + monthly)'}
                 </p>
             </Card>
+            {trialInkBalance > 0 && (
+              <Card className="bg-muted/10 border-sky-500/20 p-4 flex flex-col gap-2 min-w-[200px]">
+                <div className="flex justify-between items-center text-[10px] font-bold uppercase text-muted-foreground">
+                  <span className="flex items-center gap-1.5"><Timer className="h-3 w-3 text-sky-400" /> Trial Ink</span>
+                  <span className="font-code text-sky-400">{trialInkBalance.toLocaleString()}</span>
+                </div>
+                <div className="h-1.5 w-full bg-sky-500/20 rounded-full">
+                  <div className="h-full bg-sky-400 rounded-full" style={{ width: '100%' }} />
+                </div>
+                <p className="text-[8px] text-muted-foreground uppercase">
+                  {trialActive
+                    ? `Pro trial bonus — expires in ${trialDays ?? 0} day${trialDays === 1 ? '' : 's'}`
+                    : 'Trial bonus — expires when Pro trial ends'}
+                </p>
+              </Card>
+            )}
             <Card className="bg-muted/10 border-white/5 p-4 flex flex-col gap-2 min-w-[200px]">
                 <div className="flex justify-between items-center text-[10px] font-bold uppercase text-muted-foreground">
                     <span className="flex items-center gap-1.5"><Star className="h-3 w-3" /> Permanent Balance</span>

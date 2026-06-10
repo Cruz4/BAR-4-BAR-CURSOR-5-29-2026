@@ -6,6 +6,7 @@ import {
   PRO_YEARLY_PRICE_AMOUNT,
 } from '@/lib/studio-tiers';
 import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, SIGNUP_INK, FREE_MONTHLY_RESIDENCY_INK } from '@/lib/subscription';
+import { totalInkBalance } from '@/lib/ink-balance';
 import type {
   AdminMetricsSnapshot,
   DailyCount,
@@ -252,7 +253,7 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
 
       const balSnap = await db.doc(`users/${u.id}/usage/balance`).get();
       const bal = balSnap.data();
-      const totalInk = (bal?.residencyBalance || 0) + (bal?.purchasedBalance || 0);
+      const totalInk = totalInkBalance(bal || {});
       const lowThreshold = Math.min(50, Math.floor((SIGNUP_INK + FREE_MONTHLY_RESIDENCY_INK) * 0.15));
       if (totalInk <= lowThreshold) usersLowInk += 1;
     }

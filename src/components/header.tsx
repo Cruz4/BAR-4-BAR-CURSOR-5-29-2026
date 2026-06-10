@@ -45,7 +45,7 @@ export function Header() {
   const [bugReportOpen, setBugReportOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const { isGenerating, generatingMessage } = useUIState();
-  const { inkBalance, residencyBalance, purchasedBalance, customApiKey } = useUsage();
+  const { inkBalance, residencyBalance, trialInkBalance, purchasedBalance, customApiKey } = useUsage();
   const [progress, setProgress] = useState(0);
   const [showPwaInstallMenu, setShowPwaInstallMenu] = useState(false);
 
@@ -200,6 +200,20 @@ export function Header() {
                                   {isPro ? 'Monthly residency pool' : `Visitor pool (${SIGNUP_INK} signup + ${FREE_MONTHLY_RESIDENCY_INK}/mo)`}
                                 </p>
                             </div>
+                            {trialInkBalance > 0 && (
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-[9px] font-bold uppercase text-muted-foreground flex items-center gap-1.5">
+                                    <Timer className="h-2.5 w-2.5" /> Trial Ink
+                                  </span>
+                                  <span className="text-xs font-bold font-code text-sky-400">{trialInkBalance.toLocaleString()}</span>
+                                </div>
+                                <div className="h-1 w-full bg-sky-500/20 rounded-full">
+                                  <div className="h-full bg-sky-400 rounded-full" style={{ width: '100%' }} />
+                                </div>
+                                <p className="text-[8px] text-muted-foreground italic uppercase">Expires when Pro trial ends</p>
+                              </div>
+                            )}
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center">
                                     <span className="text-[9px] font-bold uppercase text-muted-foreground flex items-center gap-1.5"><Star className="h-2.5 w-2.5" /> Permanent Ink</span>
