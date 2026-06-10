@@ -69,6 +69,24 @@ export type AdminMetricsSnapshot = {
     usersLowInk: number;
     freeLimitHitEvents: number;
     upgradeClickEvents: number;
+    lowInkHitEvents: number;
+    inkDepletionEvents: number;
+    /** Users who completed the Pro trial DNA vault quest */
+    trialQuestCompleteEvents: number;
+    usersInkDepleted: number;
+    inkDepletedChurned30d: number;
+    upgradeClicksByTrigger: {
+      slot_limit: number;
+      low_ink: number;
+      trial_quest: number;
+      pricing: number;
+      ink_depletion: number;
+      other: number;
+    };
+    freeLimitHitsByType: {
+      album: number;
+      track: number;
+    };
   };
   acquisition: {
     adSpend30d: number;

@@ -17,6 +17,7 @@ import type { ActiveRules } from '@/components/dna-synthesis-loader';
 import type { Album, StyleProfile, Track } from '@/lib/types';
 import { INK_PACK_YEARLY_DISCOUNT_PERCENT } from '@/lib/studio-tiers';
 import { isProUser, isYearlyPro } from '@/lib/subscription';
+import { trackLowInkHit, trackUpgradeClick } from '@/lib/conversion-analytics';
 import { totalInkBalance } from '@/lib/ink-balance';
 import { API_KEY_STORAGE_KEY, isValidGoogleApiKey } from '@/lib/byo-api';
 
@@ -172,6 +173,7 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
     if (inkBalance < finalAmount) {
         const isPro = isProUser(user);
         const isYearly = isYearlyPro(user);
+        trackLowInkHit(actionName, finalAmount, inkBalance);
 
         toast({
           variant: 'destructive',
@@ -197,7 +199,12 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
                     variant="outline"
                     className="h-8 text-[10px] font-bold uppercase border-white/35 text-white hover:bg-white/10 hover:text-white"
                   >
-                    <Link href="/usage?tab=cloud">Upgrade Studio</Link>
+                    <Link
+                      href="/usage?tab=cloud"
+                      onClick={() => trackUpgradeClick('low_ink', { actionName })}
+                    >
+                      Upgrade Studio
+                    </Link>
                   </Button>
                 )}
                 {isPro && !isYearly && (

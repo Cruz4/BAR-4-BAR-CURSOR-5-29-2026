@@ -11,8 +11,14 @@ export function getTrialDurationTitle(): string {
   return `${TRIAL_DURATION_DAYS}-Day Pro Trial`;
 }
 
-/** One-time Ink during Pro trial — stored in `trialInkBalance`; expires when trial ends. */
-export const TRIAL_INK_GRANT = 400;
+/** Control arm: one-time Ink during Pro trial (`trialInkBalance`; expires when trial ends). */
+export { TRIAL_INK_GRANT_CONTROL as TRIAL_INK_GRANT } from '@/lib/trial-ink-ab';
+export {
+  assignTrialInkAbVariant,
+  getTrialInkAbMode,
+  getTrialInkGrantForVariant,
+  TRIAL_INK_GRANT_H1_ZERO,
+} from '@/lib/trial-ink-ab';
 
 export function isTrialActive(
   user: Pick<User, 'trialStartedAt'> | null | undefined

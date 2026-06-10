@@ -101,6 +101,7 @@ import { VaultStudioProgress } from '@/components/gamification/vault-studio-prog
 import { VaultChamberAtmosphere } from '@/components/vault-chamber-atmosphere';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
+import { trackUpgradeClick } from '@/lib/conversion-analytics';
 import {
   LockedVaultSlot,
   OpenAlbumSlot,
@@ -158,6 +159,7 @@ function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenC
       if (!isPro) {
           if (type === 'Album' && albumCount >= FREE_ALBUM_LIMIT) {
               trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, { limitType: 'album', count: albumCount });
+              trackUpgradeClick('slot_limit', { limitType: 'album', count: albumCount });
               void postGamificationEvent('album_limit_hit');
               toast({ variant: 'destructive', title: 'Album Slot Locked', description: 'Free artists get 1 concept album. Upgrade for unlimited projects.' });
               router.push('/usage?tab=cloud');
@@ -166,6 +168,7 @@ function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenC
           }
           if (type === 'Track' && !canUserAddTrack(albums, user)) {
               trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, { limitType: 'track', count: trackCount });
+              trackUpgradeClick('slot_limit', { limitType: 'track', count: trackCount });
               toast(FREE_TRACK_LIMIT_TOAST);
               router.push('/usage?tab=cloud');
               onOpenChange(false);

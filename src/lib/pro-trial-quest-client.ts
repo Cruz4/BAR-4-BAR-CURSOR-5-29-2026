@@ -2,6 +2,8 @@
 
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client/firebase';
+import { trackStudioEvent } from '@/lib/analytics-client';
+import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { dispatchProTrialWinComplete } from '@/lib/pro-trial-quest';
 
 export async function markProTrialWinComplete(userId: string): Promise<void> {
@@ -10,6 +12,7 @@ export async function markProTrialWinComplete(userId: string): Promise<void> {
     { proTrialWinCompletedAt: new Date().toISOString() },
     { merge: true }
   );
+  void trackStudioEvent(ANALYTICS_EVENTS.TRIAL_QUEST_COMPLETE, { quest: 'pro_trial_dna_vault' });
   dispatchProTrialWinComplete();
 }
 

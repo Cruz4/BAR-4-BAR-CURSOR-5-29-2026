@@ -78,6 +78,34 @@ export async function recordStudioEvent(
     if (event === 'free_limit_hit') {
       updates.freeLimitHits = (existing.freeLimitHits || 0) + 1;
       updates.lastFreeLimitHitAt = timestamp;
+      const limitType = String(metadata.limitType || 'unknown');
+      updates[`freeLimitHits_${limitType}`] =
+        (Number(existing[`freeLimitHits_${limitType}`]) || 0) + 1;
+    }
+
+    if (event === 'low_ink_hit') {
+      updates.lowInkHits = (existing.lowInkHits || 0) + 1;
+      updates.lastLowInkHitAt = timestamp;
+    }
+
+    if (event === 'ink_depletion') {
+      updates.inkDepletions = (existing.inkDepletions || 0) + 1;
+      if (!existing.inkDepletedAt) updates.inkDepletedAt = timestamp;
+      updates.lastInkDepletedAt = timestamp;
+    }
+
+    if (event === 'trial_quest_complete') {
+      updates.trialQuestCompletes = (existing.trialQuestCompletes || 0) + 1;
+      if (!existing.trialQuestCompletedAt) updates.trialQuestCompletedAt = timestamp;
+    }
+
+    if (event === 'upgrade_click') {
+      updates.upgradeClicks = (existing.upgradeClicks || 0) + 1;
+      const trigger = String(metadata.trigger || 'other');
+      updates[`upgradeClicks_${trigger}`] =
+        (Number(existing[`upgradeClicks_${trigger}`]) || 0) + 1;
+      updates.lastUpgradeClickAt = timestamp;
+      updates.lastUpgradeClickTrigger = trigger;
     }
 
     if (event === 'signup' && !existing.signupAt) {

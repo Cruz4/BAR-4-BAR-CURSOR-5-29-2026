@@ -60,6 +60,7 @@ import {
 } from '@/lib/subscription';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
+import { trackUpgradeClick } from '@/lib/conversion-analytics';
 import { Slider } from '@/components/ui/slider';
 import { StudioLoader } from '@/components/studio-loader';
 
@@ -210,10 +211,12 @@ function RelayWizardContent() {
         };
 
         if (!canUserAddTrack(albums, user)) {
+            const trackCount = countUserTracks(albums);
             trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, {
               limitType: 'track',
-              count: countUserTracks(albums),
+              count: trackCount,
             });
+            trackUpgradeClick('slot_limit', { limitType: 'track', count: trackCount });
             toast(FREE_TRACK_LIMIT_TOAST);
             router.push('/usage?tab=cloud');
             return;
@@ -224,10 +227,12 @@ function RelayWizardContent() {
             router.push(`/albums/${albumId}/tracks/${created.id}`);
         } catch (e) {
             if (e instanceof FreeTrackLimitError) {
+                const trackCount = countUserTracks(albums);
                 trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, {
                   limitType: 'track',
-                  count: countUserTracks(albums),
+                  count: trackCount,
                 });
+                trackUpgradeClick('slot_limit', { limitType: 'track', count: trackCount });
                 toast(FREE_TRACK_LIMIT_TOAST);
                 router.push('/usage?tab=cloud');
                 return;

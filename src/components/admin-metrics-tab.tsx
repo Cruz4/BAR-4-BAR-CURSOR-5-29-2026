@@ -440,9 +440,20 @@ export function AdminMetricsTab() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <MetricCard label="At album limit" value={freeTierPressure.usersAtAlbumLimit} sub={`${1} album free`} />
           <MetricCard label="At track limit" value={freeTierPressure.usersAtTrackLimit} sub={`${2} tracks free`} />
-          <MetricCard label="Low ink" value={freeTierPressure.usersLowInk} sub="Near empty balance" accent="text-orange-400" />
-          <MetricCard label="Limit hit events" value={freeTierPressure.freeLimitHitEvents} />
-          <MetricCard label="Upgrade clicks" value={freeTierPressure.upgradeClickEvents} />
+          <MetricCard label="Low ink (balance)" value={freeTierPressure.usersLowInk} sub="Near empty balance" accent="text-orange-400" />
+          <MetricCard label="Low ink hits" value={freeTierPressure.lowInkHitEvents} sub="Blocked AI actions" accent="text-orange-400" />
+          <MetricCard label="Ink depleted" value={freeTierPressure.usersInkDepleted} sub={`${freeTierPressure.inkDepletedChurned30d} churned 30d`} />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3">
+          <MetricCard label="Slot limit hits" value={freeTierPressure.freeLimitHitEvents} sub={`Album ${freeTierPressure.freeLimitHitsByType.album} · Track ${freeTierPressure.freeLimitHitsByType.track}`} />
+          <MetricCard label="Trial quest done" value={freeTierPressure.trialQuestCompleteEvents} sub="DNA vault save" accent="text-sky-400" />
+          <MetricCard label="Depletion events" value={freeTierPressure.inkDepletionEvents} sub="Balance hit zero" />
+          <MetricCard label="Upgrade clicks" value={freeTierPressure.upgradeClickEvents} sub="Recent events" />
+          <MetricCard
+            label="Clicks: slot / ink"
+            value={`${freeTierPressure.upgradeClicksByTrigger.slot_limit} / ${freeTierPressure.upgradeClicksByTrigger.low_ink}`}
+            sub={`Quest ${freeTierPressure.upgradeClicksByTrigger.trial_quest} · Pricing ${freeTierPressure.upgradeClicksByTrigger.pricing}`}
+          />
         </div>
       </section>
 

@@ -8,7 +8,8 @@ import {
   isProUser,
 } from '@/lib/subscription';
 import { inkBalanceFirestorePatch, normalizeInkPools, totalInkBalance } from '@/lib/ink-balance';
-import { TRIAL_INK_GRANT, isTrialActive } from '@/lib/trial';
+import { isTrialActive } from '@/lib/trial';
+import { getTrialInkGrantForVariant } from '@/lib/trial-ink-ab';
 
 /** Server-side balance bootstrap — requires FIREBASE_SERVICE_ACCOUNT_KEY locally. */
 export async function initializeUserUsage(idToken: string, userId: string): Promise<void> {
@@ -26,9 +27,12 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
   const [snap, userSnap] = await Promise.all([balanceRef.get(), userRef.get()]);
   const userData = userSnap.data();
   const trialActive = isTrialActive(userData as { trialStartedAt?: string | null });
+  const trialInkGrant = getTrialInkGrantForVariant(
+    (userData as { trialInkAbVariant?: string })?.trialInkAbVariant
+  );
 
   if (!snap.exists) {
-    const trialInk = trialActive ? TRIAL_INK_GRANT : 0;
+    const trialInk = trialActive ? trialInkGrant : 0;
     await balanceRef.set({
       ...inkBalanceFirestorePatch({
         residencyBalance: SIGNUP_INK,
@@ -58,7 +62,7 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
 
   if (trialActive && !data.trialInkGranted) {
     const pools = normalizeInkPools(data);
-    const nextTrial = pools.trialInkBalance + TRIAL_INK_GRANT;
+    const nextTrial = pools.trialInkBalance + trialInkGrant;
     await balanceRef.set(
       inkBalanceFirestorePatch(
         { ...pools, trialInkBalance: nextTrial },

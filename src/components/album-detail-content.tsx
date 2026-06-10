@@ -105,6 +105,7 @@ import {
 import { LockedProFeatureButton, ProCreateTrackSlot, proLockText } from '@/components/pro-lock';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
+import { trackUpgradeClick } from '@/lib/conversion-analytics';
 import { format } from 'date-fns';
 import { countRhymeBars } from '@/lib/lyrics-units';
 import { cn } from '@/lib/utils';
@@ -137,10 +138,12 @@ function CreateTrackDialog({
     const handleCreate = async (mode: 'blank' | 'workstation' = 'blank') => {
         if (!user) return;
         if (!canUserAddTrack(albums, user)) {
+            const trackCount = countUserTracks(albums);
             trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, {
               limitType: 'track',
-              count: countUserTracks(albums),
+              count: trackCount,
             });
+            trackUpgradeClick('slot_limit', { limitType: 'track', count: trackCount });
             toast(FREE_TRACK_LIMIT_TOAST);
             router.push('/usage?tab=cloud');
             onOpenChange(false);
@@ -168,10 +171,12 @@ function CreateTrackDialog({
             onOpenChange(false);
         } catch (e) {
             if (e instanceof FreeTrackLimitError) {
+                const trackCount = countUserTracks(albums);
                 trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, {
                   limitType: 'track',
-                  count: countUserTracks(albums),
+                  count: trackCount,
                 });
+                trackUpgradeClick('slot_limit', { limitType: 'track', count: trackCount });
                 toast(FREE_TRACK_LIMIT_TOAST);
                 router.push('/usage?tab=cloud');
             } else {
@@ -641,6 +646,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
     }
     if (!canUserAddTrack(albums, user)) {
       trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, { limitType: 'track', count: totalTrackCount });
+      trackUpgradeClick('slot_limit', { limitType: 'track', count: totalTrackCount });
       toast(FREE_TRACK_LIMIT_TOAST);
       router.push('/usage?tab=cloud');
       return;

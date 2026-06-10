@@ -31,6 +31,7 @@ import { StudioLoader } from '@/components/studio-loader';
 import { cn } from '@/lib/utils';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
+import { assignTrialInkAbVariant } from '@/lib/trial-ink-ab';
 import { captureMarketingRefFromUrl, getStoredMarketingRef } from '@/lib/marketing-attribution';
 import { REFERRAL_INK_REWARD, REFERRAL_STORAGE_KEY, normalizeReferralCode } from '@/lib/referrals';
 import { claimPendingReferral } from '@/components/refer-a-friend-section';
@@ -121,6 +122,7 @@ function LoginForm() {
         };
 
         if (isNew) {
+          const trialInkAbVariant = assignTrialInkAbVariant(firebaseUser.uid);
           await setDoc(userRef, {
             ...profileBase,
             createdAt: new Date().toISOString(),
@@ -129,6 +131,7 @@ function LoginForm() {
             subscriptionTier: 'none',
             status: 'active',
             trialStartedAt: new Date().toISOString(),
+            trialInkAbVariant,
             ...(signupRef ? { signupAttribution: signupRef } : {}),
           });
           await trackStudioEvent(ANALYTICS_EVENTS.SIGNUP, {

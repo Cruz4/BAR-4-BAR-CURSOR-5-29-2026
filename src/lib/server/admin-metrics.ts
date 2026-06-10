@@ -99,6 +99,20 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
   let usersLowInk = 0;
   let freeLimitHitEvents = 0;
   let upgradeClickEvents = 0;
+  let lowInkHitEvents = 0;
+  let inkDepletionEvents = 0;
+  let usersTrialQuestComplete = 0;
+  let usersInkDepleted = 0;
+  let inkDepletedChurned30d = 0;
+  const upgradeClicksByTrigger = {
+    slot_limit: 0,
+    low_ink: 0,
+    trial_quest: 0,
+    pricing: 0,
+    ink_depletion: 0,
+    other: 0,
+  };
+  const freeLimitHitsByType = { album: 0, track: 0 };
   let activeProMonthly = 0;
   let activeProYearly = 0;
 
@@ -216,6 +230,22 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
     checkoutStarts += Number(summary.checkoutStarts || 0);
     checkoutCompletions += Number(summary.checkoutCompletions || 0);
     freeLimitHitEvents += Number(summary.freeLimitHits || 0);
+    lowInkHitEvents += Number(summary.lowInkHits || 0);
+    inkDepletionEvents += Number(summary.inkDepletions || 0);
+    if ((u as { proTrialWinCompletedAt?: string }).proTrialWinCompletedAt) {
+      usersTrialQuestComplete += 1;
+    }
+
+    const inkDepletedAt = parseDate(summary.inkDepletedAt);
+    if (inkDepletedAt && (!u.subscriptionStatus || u.subscriptionStatus !== 'active')) {
+      usersInkDepleted += 1;
+      const depletedDay = inkDepletedAt.toISOString().slice(0, 10);
+      const sessionDates: string[] = summary.sessionDates || [];
+      const returnedAfterDepletion = sessionDates.some((day) => day > depletedDay);
+      const lastActive = parseDate(summary.lastActiveAt);
+      const inactive30d = !lastActive || lastActive < d30;
+      if (!returnedAfterDepletion && inactive30d) inkDepletedChurned30d += 1;
+    }
 
     const lastActive = parseDate(summary.lastActiveAt);
     if (lastActive) {
@@ -261,7 +291,23 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
 
   for (const doc of eventsSnap.docs) {
     const data = doc.data();
-    if (data.event === 'upgrade_click') upgradeClickEvents += 1;
+    const ev = String(data.event || '');
+    const metadata = (data.metadata as Record<string, unknown>) || {};
+
+    if (ev === 'upgrade_click') {
+      upgradeClickEvents += 1;
+      const trigger = String(metadata.trigger || 'other');
+      if (trigger in upgradeClicksByTrigger) {
+        upgradeClicksByTrigger[trigger as keyof typeof upgradeClicksByTrigger] += 1;
+      } else {
+        upgradeClicksByTrigger.other += 1;
+      }
+    }
+    if (ev === 'free_limit_hit') {
+      const limitType = String(metadata.limitType || '');
+      if (limitType === 'album') freeLimitHitsByType.album += 1;
+      if (limitType === 'track') freeLimitHitsByType.track += 1;
+    }
   }
 
   let achievementUnlockEvents = 0;
@@ -469,6 +515,13 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
       usersLowInk,
       freeLimitHitEvents,
       upgradeClickEvents,
+      lowInkHitEvents,
+      inkDepletionEvents,
+      trialQuestCompleteEvents: usersTrialQuestComplete,
+      usersInkDepleted,
+      inkDepletedChurned30d,
+      upgradeClicksByTrigger,
+      freeLimitHitsByType,
     },
     acquisition: {
       adSpend30d,
@@ -538,6 +591,20 @@ function emptyMetrics(notes: string): AdminMetricsSnapshot {
       usersLowInk: 0,
       freeLimitHitEvents: 0,
       upgradeClickEvents: 0,
+      lowInkHitEvents: 0,
+      inkDepletionEvents: 0,
+      trialQuestCompleteEvents: 0,
+      usersInkDepleted: 0,
+      inkDepletedChurned30d: 0,
+      upgradeClicksByTrigger: {
+        slot_limit: 0,
+        low_ink: 0,
+        trial_quest: 0,
+        pricing: 0,
+        ink_depletion: 0,
+        other: 0,
+      },
+      freeLimitHitsByType: { album: 0, track: 0 },
     },
     acquisition: { adSpend30d: 0, adSpend90d: 0, costPerSignup: null, costPerActivatedUser: null, notes },
     signupAttribution: { taggedSignups: 0, organicSignups: 0, totalLandingHits: 0, landingHitsLast30Days: 0, byRef: [] },

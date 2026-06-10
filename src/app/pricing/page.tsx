@@ -68,6 +68,7 @@ import {
 import { TierPriceSummary } from '@/components/tier-price-summary';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
+import { trackUpgradeClick } from '@/lib/conversion-analytics';
 import { useAuth } from '@/hooks/use-auth';
 import { buildLoginPath, buildProCheckoutPath } from '@/lib/checkout-intent';
 
@@ -98,8 +99,7 @@ export default function PricingPage() {
 
   const handleSelectPlan = (tierName: string) => {
     if (tierName !== 'Visitor') {
-      trackStudioEvent(ANALYTICS_EVENTS.UPGRADE_CLICK, {
-        source: 'pricing',
+      trackUpgradeClick('pricing', {
         tier: tierName,
         billing: isYearly ? 'yearly' : 'monthly',
       });

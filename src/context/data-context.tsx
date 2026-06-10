@@ -481,6 +481,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         const userRef = doc(db, 'users', user.id);
         const userSnap = await getDoc(userRef);
         if (!userSnap.exists()) {
+          const { assignTrialInkAbVariant } = await import('@/lib/trial-ink-ab');
           await setDoc(userRef, {
             displayName: firebaseUser.displayName || 'Anonymous Artist',
             email: firebaseUser.email || '',
@@ -490,6 +491,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             subscriptionTier: 'none',
             status: 'active',
             trialStartedAt: new Date().toISOString(),
+            trialInkAbVariant: assignTrialInkAbVariant(user.id),
           });
         }
 

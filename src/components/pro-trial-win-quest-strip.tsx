@@ -16,6 +16,7 @@ import {
 import { dismissProTrialWinQuest } from '@/lib/pro-trial-quest-client';
 import { resolveWorkstationTourPath } from '@/lib/studio-onboarding';
 import { cn } from '@/lib/utils';
+import { trackUpgradeClick } from '@/lib/conversion-analytics';
 
 export function ProTrialWinQuestStrip() {
   const { user } = useAuth();
@@ -74,6 +75,7 @@ export function ProTrialWinQuestStrip() {
         </p>
         <Link
           href="/usage?tab=cloud"
+          onClick={() => trackUpgradeClick('trial_quest', { questState: 'complete' })}
           className="text-[9px] font-bold uppercase text-emerald-400 hover:text-emerald-300 hover:underline shrink-0 whitespace-nowrap"
         >
           Upgrade →
@@ -126,6 +128,7 @@ export function ProTrialWinQuestStrip() {
         </button>
         <Link
           href="/usage?tab=cloud"
+          onClick={() => trackUpgradeClick('trial_quest', { questState: 'active' })}
           className="text-[9px] font-bold uppercase text-sky-400/80 hover:text-sky-300 hover:underline whitespace-nowrap"
         >
           Upgrade

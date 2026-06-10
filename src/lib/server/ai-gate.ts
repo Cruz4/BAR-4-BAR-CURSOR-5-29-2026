@@ -78,20 +78,38 @@ export async function deductInkTransaction(
   const balanceRef = db.doc(`users/${uid}/usage/balance`);
   const finalAmount = Math.max(1, Math.ceil(amount));
 
+  let depletedAfterSpend = false;
+  let insufficientInk = false;
+  let balanceBefore = 0;
+
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(balanceRef);
     const data = snap.data() || {};
     const pools = normalizeInkPools(data);
     const total = totalInkBalance(pools);
+    balanceBefore = total;
 
     if (total < finalAmount) {
-      throw new AiGateError('Insufficient Ink balance.', 'INSUFFICIENT_INK');
+      insufficientInk = true;
+      return;
     }
 
     const nextPools = deductFromInkPools(pools, finalAmount);
+    depletedAfterSpend = totalInkBalance(nextPools) === 0;
 
     tx.set(balanceRef, inkBalanceFirestorePatch(nextPools), { merge: true });
   });
+
+  if (insufficientInk) {
+    const { recordStudioEvent } = await import('@/lib/server/studio-analytics');
+    await recordStudioEvent(
+      uid,
+      'low_ink_hit',
+      { actionName, inkNeeded: finalAmount, inkBalance: balanceBefore },
+      userName
+    );
+    throw new AiGateError('Insufficient Ink balance.', 'INSUFFICIENT_INK');
+  }
 
   const logsRef = db.collection('system').doc('logs').collection('entries');
   const logEntry = {
@@ -108,6 +126,9 @@ export async function deductInkTransaction(
 
   const { recordStudioEvent } = await import('@/lib/server/studio-analytics');
   await recordStudioEvent(uid, 'ai_action', { actionName }, userName);
+  if (depletedAfterSpend) {
+    await recordStudioEvent(uid, 'ink_depletion', { actionName }, userName);
+  }
 
   return { finalAmount };
 }
