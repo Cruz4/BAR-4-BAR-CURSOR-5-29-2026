@@ -4,8 +4,10 @@ import { getPublicAppUrl } from '@/lib/app-url';
 /** Shared on-page SEO + sitemap/robots (production URL from NEXT_PUBLIC_APP_URL). */
 export const SEO = {
   siteName: 'Bar 4 Bar DNA Notebook',
-  /** Browser tab + PWA name — short, no repeated pitch phrases. */
-  title: 'BAR 4 BAR -- AI DNA Notebook for Writers',
+  /** Installed PWA / browser tab — keep short; Windows prepends manifest name to `<title>`. */
+  appName: 'Bar 4 Bar',
+  /** Default document title (tab + PWA window suffix). Match appName to avoid duplicate title bar text. */
+  title: 'Bar 4 Bar',
   /** Open Graph / structured data — one clear line for search & shares. */
   titleLong: 'Bar 4 Bar DNA Notebook — AI Rhyme & Creative DNA Workstation',
   description:

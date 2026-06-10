@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   },
   description: SEO.description,
   keywords: [...SEO.keywords],
-  applicationName: SEO.siteName,
+  applicationName: SEO.appName,
   authors: [{ name: SEO.siteName }],
   creator: SEO.siteName,
   publisher: SEO.siteName,

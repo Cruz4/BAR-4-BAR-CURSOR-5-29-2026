@@ -3,8 +3,8 @@ import { SEO } from '@/lib/seo';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: SEO.siteName,
-    short_name: 'Bar 4 Bar',
+    name: SEO.appName,
+    short_name: SEO.appName,
     description: SEO.description,
     start_url: '/',
     scope: '/',
