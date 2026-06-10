@@ -4,6 +4,8 @@ import { isTrialActive } from '@/lib/trial';
 export const FREE_ALBUM_LIMIT = 1;
 export const FREE_TRACK_LIMIT = 4;
 export const SIGNUP_INK = 300;
+/** Optional permanent Ink at signup (0 = residency-only welcome grant). */
+export const SIGNUP_PERMANENT_INK = 0;
 export const FREE_MONTHLY_RESIDENCY_INK = 111;
 
 /** Max free residency pool (signup + stacked monthly grants). */

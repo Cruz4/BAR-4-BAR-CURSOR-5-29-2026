@@ -4,6 +4,8 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { calculateNetRevenue } from '@/lib/billing';
 import { getResidencyRefillForTier } from '@/lib/stripe-catalog';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
+import { recordInkLedgerEntries } from '@/lib/server/ink-ledger';
+import { normalizeInkPools } from '@/lib/ink-balance';
 
 export type FulfillmentMetadata = {
   userId: string;
@@ -23,6 +25,8 @@ export async function fulfillCheckoutSession(
   const usageRef = userRef.collection('usage').doc('balance');
   const systemLogRef = db.collection('system').doc('logs').collection('entries').doc();
   const amountTotal = amountTotalCents / 100;
+  const balanceBeforeSnap = await usageRef.get();
+  const poolsBefore = normalizeInkPools(balanceBeforeSnap.data() || {});
 
   const batch = db.batch();
   const inkAmount = parseInt(metadata.inkAmount || '0', 10);
@@ -77,6 +81,34 @@ export async function fulfillCheckoutSession(
 
   await batch.commit();
 
+  const ledgerEntries = [];
+  if (inkAmount > 0) {
+    ledgerEntries.push({
+      type: 'credit' as const,
+      pool: 'permanent' as const,
+      amount: inkAmount,
+      reason: 'ink_pack_purchase' as const,
+      details: `Gross: $${amountTotal.toFixed(2)}`,
+    });
+  }
+  if (metadata.type === 'subscription') {
+    const tier = metadata.subscriptionTier === 'yearly' ? 'yearly' : 'monthly';
+    const refillAmount = getResidencyRefillForTier(tier);
+    const residencyCredit = Math.max(0, refillAmount - poolsBefore.residencyBalance);
+    if (residencyCredit > 0) {
+      ledgerEntries.push({
+        type: 'credit' as const,
+        pool: 'residency' as const,
+        amount: residencyCredit,
+        reason: 'pro_residency_refill' as const,
+        details: tier === 'yearly' ? 'Yearly Pro' : 'Monthly Pro',
+      });
+    }
+  }
+  if (ledgerEntries.length > 0) {
+    await recordInkLedgerEntries(db, userId, ledgerEntries);
+  }
+
   await recordStudioEvent(userId, 'checkout_completed', {
     type: metadata.type || 'one_time',
     tier: metadata.subscriptionTier || null,
@@ -91,14 +123,29 @@ export async function refillProResidency(
   tier: 'monthly' | 'yearly'
 ) {
   const usageRef = db.collection('users').doc(userId).collection('usage').doc('balance');
+  const beforeSnap = await usageRef.get();
+  const poolsBefore = normalizeInkPools(beforeSnap.data() || {});
+  const refillAmount = getResidencyRefillForTier(tier);
   await usageRef.set(
     {
-      residencyBalance: getResidencyRefillForTier(tier),
+      residencyBalance: refillAmount,
       lastRewardReason: 'pro_refill',
       updatedAt: FieldValue.serverTimestamp(),
     },
     { merge: true }
   );
+  const residencyCredit = Math.max(0, refillAmount - poolsBefore.residencyBalance);
+  if (residencyCredit > 0) {
+    await recordInkLedgerEntries(db, userId, [
+      {
+        type: 'credit',
+        pool: 'residency',
+        amount: residencyCredit,
+        reason: 'pro_residency_refill',
+        details: tier === 'yearly' ? 'Yearly Pro renewal' : 'Monthly Pro renewal',
+      },
+    ]);
+  }
 }
 
 export async function deactivateSubscription(db: Firestore, userId: string) {

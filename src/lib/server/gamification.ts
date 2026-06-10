@@ -96,7 +96,11 @@ function resetBonusMonth(summary: GamificationSummary, monthKey: string): Gamifi
   return { ...summary, bonusInkMonthKey: monthKey, bonusInkGrantedThisMonth: 0 };
 }
 
-async function grantBonusInk(uid: string, amount: number): Promise<number> {
+async function grantBonusInk(
+  uid: string,
+  amount: number,
+  details?: string
+): Promise<number> {
   if (amount <= 0) return 0;
 
   const db = await getDb();
@@ -107,6 +111,15 @@ async function grantBonusInk(uid: string, amount: number): Promise<number> {
     const pools = normalizeInkPools(data);
     const next = { ...pools, purchasedBalance: pools.purchasedBalance + amount };
     tx.set(balanceRef, inkBalanceFirestorePatch(next), { merge: true });
+  });
+
+  const { recordInkLedgerEntry } = await import('@/lib/server/ink-ledger');
+  await recordInkLedgerEntry(db, uid, {
+    type: 'credit',
+    pool: 'permanent',
+    amount,
+    reason: 'achievement_bonus',
+    details,
   });
 
   return amount;
@@ -474,7 +487,7 @@ export async function processGamificationEvent(
       def?.inkReward &&
       canUnlockAchievement(u.id, analytics, verifyCtx, summary, trigger)
     ) {
-      await grantBonusInk(userId, def.inkReward);
+      await grantBonusInk(userId, def.inkReward, def.title);
     }
     await recordGamificationAnalytics(userId, 'achievement_unlocked', { achievementId: u.id }, displayName);
   }

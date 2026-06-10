@@ -12,7 +12,14 @@ import {
   isYearlyProFromData,
 } from '@/lib/byo-api';
 import { runWithGenkitContext } from '@/lib/server/genkit-request';
-import { deductFromInkPools, inkBalanceFirestorePatch, normalizeInkPools, totalInkBalance } from '@/lib/ink-balance';
+import {
+  computeInkSpendBreakdown,
+  deductFromInkPools,
+  inkBalanceFirestorePatch,
+  normalizeInkPools,
+  totalInkBalance,
+} from '@/lib/ink-balance';
+import { recordInkLedgerEntries } from '@/lib/server/ink-ledger';
 
 export class AiGateError extends Error {
   constructor(
@@ -81,6 +88,7 @@ export async function deductInkTransaction(
   let depletedAfterSpend = false;
   let insufficientInk = false;
   let balanceBefore = 0;
+  let spendBreakdown: ReturnType<typeof computeInkSpendBreakdown> = [];
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(balanceRef);
@@ -94,6 +102,7 @@ export async function deductInkTransaction(
       return;
     }
 
+    spendBreakdown = computeInkSpendBreakdown(pools, finalAmount);
     const nextPools = deductFromInkPools(pools, finalAmount);
     depletedAfterSpend = totalInkBalance(nextPools) === 0;
 
@@ -122,7 +131,19 @@ export async function deductInkTransaction(
     type: 'ai_request',
   };
   await logsRef.add(logEntry);
-  await db.collection('users').doc(uid).collection('usageLogs').add(logEntry);
+
+  await recordInkLedgerEntries(
+    db,
+    uid,
+    spendBreakdown.map((line) => ({
+      type: 'debit' as const,
+      pool: line.pool,
+      amount: line.amount,
+      reason: 'ai_spend' as const,
+      action: actionName,
+    })),
+    userName
+  );
 
   const { recordStudioEvent } = await import('@/lib/server/studio-analytics');
   await recordStudioEvent(uid, 'ai_action', { actionName }, userName);
@@ -136,18 +157,22 @@ export async function deductInkTransaction(
 export async function refundInkTransaction(uid: string, amount: number): Promise<void> {
   const db = await getDb();
   const balanceRef = db.doc(`users/${uid}/usage/balance`);
+  const refundAmount = Math.max(1, Math.ceil(amount));
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(balanceRef);
     if (!snap.exists) return;
     const data = snap.data()!;
     const pools = normalizeInkPools(data);
-    const nextRes = pools.residencyBalance + amount;
+    const nextRes = pools.residencyBalance + refundAmount;
     tx.set(
       balanceRef,
       inkBalanceFirestorePatch({ ...pools, residencyBalance: nextRes }),
       { merge: true }
     );
   });
+  await recordInkLedgerEntries(db, uid, [
+    { type: 'credit', pool: 'residency', amount: refundAmount, reason: 'ai_refund' },
+  ]);
 }
 
 async function resolveByoApiKey(

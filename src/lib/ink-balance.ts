@@ -1,3 +1,5 @@
+import type { InkPool } from '@/lib/ink-ledger';
+
 /** Residency + trial + permanent Ink pools (Firestore `users/{uid}/usage/balance`). */
 
 export type InkBalanceData = {
@@ -45,6 +47,22 @@ export function deductFromInkPools(data: InkBalanceData, amount: number): InkPoo
 
   purchasedBalance = Math.max(0, purchasedBalance - remaining);
   return { residencyBalance, trialInkBalance, purchasedBalance };
+}
+
+/** How much each pool contributed to a spend (for ledger history lines). */
+export function computeInkSpendBreakdown(
+  before: InkPools,
+  amount: number
+): Array<{ pool: InkPool; amount: number }> {
+  const after = deductFromInkPools(before, amount);
+  const items: Array<{ pool: InkPool; amount: number }> = [];
+  const res = before.residencyBalance - after.residencyBalance;
+  const trial = before.trialInkBalance - after.trialInkBalance;
+  const pur = before.purchasedBalance - after.purchasedBalance;
+  if (res > 0) items.push({ pool: 'residency', amount: res });
+  if (trial > 0) items.push({ pool: 'trial', amount: trial });
+  if (pur > 0) items.push({ pool: 'permanent', amount: pur });
+  return items;
 }
 
 export function inkBalanceFirestorePatch(pools: InkPools, extra: Record<string, unknown> = {}) {

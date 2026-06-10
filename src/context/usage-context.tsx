@@ -145,7 +145,7 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
       });
 
       const logsRef = collection(db, 'users', user.id, 'usageLogs');
-      const q = query(logsRef, orderBy('timestamp', 'desc'), limit(50));
+      const q = query(logsRef, orderBy('timestamp', 'desc'), limit(100));
       unsubLogs = subscribeQuery(q, (logs) => {
           setUsageHistory(logs);
       }, (error) => {

@@ -2,6 +2,7 @@ import 'server-only';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { Firestore } from 'firebase-admin/firestore';
 import { REFERRAL_INK_REWARD, MAX_REFERRAL_REWARDS } from '@/lib/referrals';
+import { buildInkLedgerDocument } from '@/lib/ink-ledger';
 
 function referralCodeFromUserId(userId: string): string {
   return userId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase().padEnd(8, '0');
@@ -116,6 +117,28 @@ export async function claimReferralReward(
 
   grantInk(newUserId, 'referral_welcome');
   grantInk(referrerId, 'referral_bonus');
+
+  const welcomeLogRef = db.collection('users').doc(newUserId).collection('usageLogs').doc();
+  batch.set(
+    welcomeLogRef,
+    buildInkLedgerDocument({
+      type: 'credit',
+      pool: 'permanent',
+      amount: inkGrant,
+      reason: 'referral_welcome',
+    }, { userId: newUserId })
+  );
+  const bonusLogRef = db.collection('users').doc(referrerId).collection('usageLogs').doc();
+  batch.set(
+    bonusLogRef,
+    buildInkLedgerDocument({
+      type: 'credit',
+      pool: 'permanent',
+      amount: inkGrant,
+      reason: 'referral_bonus',
+      details: `Referred ${newUserId}`,
+    }, { userId: referrerId })
+  );
 
   batch.set(db.collection('system').doc('logs').collection('entries').doc(), {
     timestamp: new Date().toISOString(),

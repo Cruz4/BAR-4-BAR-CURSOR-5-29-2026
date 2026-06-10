@@ -40,6 +40,12 @@ import { BUY_ME_COFFEE_URL, SUPPORT_EMAIL, SUPPORT_MAILTO } from '@/lib/support'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import {
+  INK_POOL_LABELS,
+  inkHistoryAmountDisplay,
+  parseInkHistoryLog,
+  type InkPool,
+} from '@/lib/ink-ledger';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -85,6 +91,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+
+function InkPoolBadge({ pool }: { pool: InkPool | 'unknown' }) {
+  const label = pool === 'unknown' ? 'Mixed' : INK_POOL_LABELS[pool];
+  const className =
+    pool === 'residency'
+      ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10'
+      : pool === 'trial'
+        ? 'border-sky-500/30 text-sky-400 bg-sky-500/10'
+        : pool === 'permanent'
+          ? 'border-orange-500/30 text-orange-400 bg-orange-500/10'
+          : 'border-white/15 text-muted-foreground bg-white/5';
+
+  return (
+    <Badge variant="outline" className={cn('text-[8px] font-bold uppercase tracking-wider', className)}>
+      {label}
+    </Badge>
+  );
+}
 
 function UsagePageContent() {
   const { usageHistory, inkBalance, residencyBalance, trialInkBalance, purchasedBalance, loading, customApiKey, saveCustomApiKey } = useUsage();
@@ -544,8 +568,10 @@ function UsagePageContent() {
         <TabsContent value="history" className="w-full">
             <Card className="bg-card/50 border-white/10 shadow-2xl">
                 <CardHeader>
-                    <CardTitle className="font-headline text-2xl uppercase flex items-center gap-2"><HistoryIcon className="text-primary h-6 w-6" /> Residency History</CardTitle>
-                    <CardDescription className="text-xs uppercase tracking-tight">Recent Ink transactions and neural synthesis logs.</CardDescription>
+                    <CardTitle className="font-headline text-2xl uppercase flex items-center gap-2"><HistoryIcon className="text-primary h-6 w-6" /> Ink History</CardTitle>
+                    <CardDescription className="text-xs uppercase tracking-tight">
+                      Credits and spends across residency, trial, and permanent Ink — purchases, grants, and AI usage.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>
@@ -553,26 +579,48 @@ function UsagePageContent() {
                             <TableRow className="border-white/5 hover:bg-transparent">
                                 <TableHead className="text-[10px] font-bold uppercase">Timestamp</TableHead>
                                 <TableHead className="text-[10px] font-bold uppercase">Operation</TableHead>
-                                <TableHead className="text-[10px] font-bold uppercase text-right">Ink Spent</TableHead>
+                                <TableHead className="text-[10px] font-bold uppercase">Pool</TableHead>
+                                <TableHead className="text-[10px] font-bold uppercase text-right">Ink</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {usageHistory.length > 0 ? usageHistory.map((log) => (
-                                <TableRow key={log.id} className="border-white/5 hover:bg-white/5">
-                                    <TableCell className="text-[10px] font-code text-muted-foreground">{getSafeTimestamp(log.timestamp)}</TableCell>
+                            {(() => {
+                              const rows = usageHistory
+                                .map((log) => parseInkHistoryLog(log))
+                                .filter((row): row is NonNullable<typeof row> => row !== null);
+                              return rows.length > 0 ? rows.map((row) => (
+                                <TableRow key={row.id} className="border-white/5 hover:bg-white/5">
+                                    <TableCell className="text-[10px] font-code text-muted-foreground whitespace-nowrap">
+                                      {getSafeTimestamp(row.timestamp)}
+                                    </TableCell>
                                     <TableCell>
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-xs text-white uppercase">{log.action || log.flowName}</span>
-                                            {log.details && <span className="text-[9px] text-muted-foreground truncate max-w-[300px]">{log.details}</span>}
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="font-bold text-xs text-white uppercase">{row.label}</span>
+                                            {row.details && (
+                                              <span className="text-[9px] text-muted-foreground truncate max-w-[280px]">{row.details}</span>
+                                            )}
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-right font-code font-bold text-primary">-{log.inkUsed || log.inkCost}</TableCell>
+                                    <TableCell>
+                                      <InkPoolBadge pool={row.pool} />
+                                    </TableCell>
+                                    <TableCell
+                                      className={cn(
+                                        'text-right font-code font-bold',
+                                        row.type === 'credit' ? 'text-emerald-400' : 'text-primary'
+                                      )}
+                                    >
+                                      {inkHistoryAmountDisplay(row.type, row.amount)}
+                                    </TableCell>
                                 </TableRow>
-                            )) : (
+                              )) : (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="h-32 text-center text-muted-foreground font-code text-sm opacity-50 uppercase tracking-[0.4em]">No transaction records found.</TableCell>
+                                    <TableCell colSpan={4} className="h-32 text-center text-muted-foreground font-code text-sm opacity-50 uppercase tracking-[0.4em]">
+                                      No ink transactions yet.
+                                    </TableCell>
                                 </TableRow>
-                            )}
+                              );
+                            })()}
                         </TableBody>
                     </Table>
                 </CardContent>

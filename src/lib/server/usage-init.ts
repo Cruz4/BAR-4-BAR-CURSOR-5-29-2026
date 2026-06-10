@@ -5,11 +5,14 @@ import {
   FREE_MONTHLY_RESIDENCY_INK,
   FREE_RESIDENCY_POOL_CAP,
   SIGNUP_INK,
+  SIGNUP_PERMANENT_INK,
   isProUser,
 } from '@/lib/subscription';
 import { inkBalanceFirestorePatch, normalizeInkPools, totalInkBalance } from '@/lib/ink-balance';
 import { isTrialActive } from '@/lib/trial';
 import { getTrialInkGrantForVariant } from '@/lib/trial-ink-ab';
+import { recordInkLedgerEntries } from '@/lib/server/ink-ledger';
+import type { InkLedgerWrite } from '@/lib/ink-ledger';
 
 /** Server-side balance bootstrap — requires FIREBASE_SERVICE_ACCOUNT_KEY locally. */
 export async function initializeUserUsage(idToken: string, userId: string): Promise<void> {
@@ -37,11 +40,27 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
       ...inkBalanceFirestorePatch({
         residencyBalance: SIGNUP_INK,
         trialInkBalance: trialInk,
-        purchasedBalance: 0,
+        purchasedBalance: SIGNUP_PERMANENT_INK,
       }),
       signupGranted: true,
       trialInkGranted: trialActive,
     });
+
+    const signupLedger: InkLedgerWrite[] = [
+      { type: 'credit', pool: 'residency', amount: SIGNUP_INK, reason: 'signup_residency' },
+    ];
+    if (SIGNUP_PERMANENT_INK > 0) {
+      signupLedger.push({
+        type: 'credit',
+        pool: 'permanent',
+        amount: SIGNUP_PERMANENT_INK,
+        reason: 'signup_permanent',
+      });
+    }
+    if (trialInk > 0) {
+      signupLedger.push({ type: 'credit', pool: 'trial', amount: trialInk, reason: 'trial_ink' });
+    }
+    await recordInkLedgerEntries(db, userId, signupLedger);
     return;
   }
 
@@ -50,6 +69,7 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
 
   if (!trialActive && (data.trialInkBalance || 0) > 0) {
     const pools = normalizeInkPools(data);
+    const expiredTrial = pools.trialInkBalance;
     await balanceRef.set(
       inkBalanceFirestorePatch(
         { ...pools, trialInkBalance: 0 },
@@ -57,6 +77,9 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
       ),
       { merge: true }
     );
+    await recordInkLedgerEntries(db, userId, [
+      { type: 'debit', pool: 'trial', amount: expiredTrial, reason: 'trial_ink_expired' },
+    ]);
     data = { ...data, trialInkBalance: 0, balance: totalInkBalance({ ...data, trialInkBalance: 0 }) };
   }
 
@@ -70,6 +93,11 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
       ),
       { merge: true }
     );
+    if (trialInkGrant > 0) {
+      await recordInkLedgerEntries(db, userId, [
+        { type: 'credit', pool: 'trial', amount: trialInkGrant, reason: 'trial_ink' },
+      ]);
+    }
     data = { ...data, trialInkBalance: nextTrial, trialInkGranted: true };
   }
 
@@ -90,6 +118,15 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
         }),
         { merge: true }
       );
+      await recordInkLedgerEntries(db, userId, [
+        {
+          type: 'credit',
+          pool: 'residency',
+          amount: grantDelta,
+          reason: 'monthly_residency',
+          details: monthKey,
+        },
+      ]);
     } else {
       await balanceRef.set(
         {

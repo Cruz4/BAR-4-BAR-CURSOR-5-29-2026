@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyAdminRequest, AdminAuthError } from '@/lib/server/admin-auth';
 import { getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
 import { inkBalanceFirestorePatch, normalizeInkPools } from '@/lib/ink-balance';
+import { recordInkLedgerEntry } from '@/lib/server/ink-ledger';
 
 export const runtime = 'nodejs';
 
@@ -60,6 +61,17 @@ export async function POST(req: Request) {
     timestamp: new Date().toISOString(),
     details: `${amount > 0 ? '+' : ''}${amount} ${type === 'res' ? 'residency' : 'permanent'} ink`,
   });
+
+  const absAmount = Math.abs(amount);
+  if (absAmount > 0) {
+    await recordInkLedgerEntry(db, targetUserId, {
+      type: amount > 0 ? 'credit' : 'debit',
+      pool: type === 'res' ? 'residency' : 'permanent',
+      amount: absAmount,
+      reason: type === 'res' ? 'admin_adjust_residency' : 'admin_adjust_permanent',
+      details: `By ${admin.email}`,
+    });
+  }
 
   return NextResponse.json({ ok: true, field, amount });
 }
