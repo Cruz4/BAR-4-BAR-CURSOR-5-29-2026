@@ -97,18 +97,6 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
       await userRef.set(userPatch, { merge: true });
     }
 
-    await balanceRef.set({
-      ...inkBalanceFirestorePatch({
-        residencyBalance: residencyInk,
-        trialInkBalance: trialInk,
-        purchasedBalance: SIGNUP_PERMANENT_INK,
-      }),
-      signupGranted: true,
-      signupGrantSkipped,
-      signupResidencyGranted: residencyInk,
-      trialInkGranted: grantTrialWorkflow,
-    });
-
     const signupLedger: InkLedgerWrite[] = [];
     if (residencyInk > 0) {
       signupLedger.push({
@@ -129,6 +117,20 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
     if (trialInk > 0) {
       signupLedger.push({ type: 'credit', pool: 'trial', amount: trialInk, reason: 'trial_ink' });
     }
+    await balanceRef.set({
+      ...inkBalanceFirestorePatch({
+        residencyBalance: residencyInk,
+        trialInkBalance: trialInk,
+        purchasedBalance: SIGNUP_PERMANENT_INK,
+      }),
+      signupGranted: true,
+      signupGrantSkipped,
+      signupResidencyGranted: residencyInk,
+      trialInkGranted: grantTrialWorkflow,
+      // Ledger written below — skip legacy "Opening balance" backfill on the next init.
+      inkLedgerBackfilled: signupLedger.length > 0,
+    });
+
     if (signupLedger.length > 0) {
       await recordInkLedgerEntries(db, userId, signupLedger);
     }
@@ -350,7 +352,8 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
     const pools = normalizeInkPools(data);
     const backfill: InkLedgerWrite[] = [];
 
-    if (!data.signupGrantSkipped) {
+    // Legacy accounts only — live signup and welcome reconciliation already log credits.
+    if (!data.signupGrantSkipped && !data.welcomeInkReconciled) {
       const signupAmount =
         typeof data.signupResidencyGranted === 'number' && data.signupResidencyGranted > 0
           ? data.signupResidencyGranted
