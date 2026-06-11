@@ -45,7 +45,22 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
   const userData = userSnap.data();
   const trialActive = false;
   const trialInkGrant = TRIAL_INK_GRANT;
-  const userCreatedAt = (userData as { createdAt?: string })?.createdAt;
+
+  let userCreatedAt = (userData as { createdAt?: string })?.createdAt;
+  if (!userCreatedAt) {
+    try {
+      const userRecord = await auth.getUser(userId);
+      userCreatedAt = userRecord.metadata.creationTime;
+      if (userCreatedAt) {
+        await userRef.set(
+          { createdAt: userCreatedAt, updatedAt: new Date().toISOString() },
+          { merge: true }
+        );
+      }
+    } catch {
+      // Auth lookup failed — monthly eligibility stays conservative (no grant).
+    }
+  }
 
   if (!snap.exists) {
     let residencyInk = SIGNUP_INK;
@@ -90,6 +105,7 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
       }),
       signupGranted: true,
       signupGrantSkipped,
+      signupResidencyGranted: residencyInk,
       trialInkGranted: grantTrialWorkflow,
     });
 
@@ -149,8 +165,7 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
   const erroneousSignupMonthly = isErroneousSignupMonthMonthlyOnly(
     pools.residencyBalance,
     userCreatedAt,
-    monthKey,
-    data.lastFreeResidencyGrant as string | undefined
+    monthKey
   );
   const missingWelcomeOnly =
     pools.residencyBalance === 0 &&
@@ -336,10 +351,14 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
     const backfill: InkLedgerWrite[] = [];
 
     if (!data.signupGrantSkipped) {
+      const signupAmount =
+        typeof data.signupResidencyGranted === 'number' && data.signupResidencyGranted > 0
+          ? data.signupResidencyGranted
+          : SIGNUP_INK;
       backfill.push({
         type: 'credit',
         pool: 'residency',
-        amount: SIGNUP_INK,
+        amount: signupAmount,
         reason: 'signup_residency',
         details: 'Opening balance',
       });

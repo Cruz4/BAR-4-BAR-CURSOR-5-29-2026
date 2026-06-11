@@ -41,7 +41,8 @@ export const AuthContext = createContext<AuthContextType>({
 });
 
 const PROTECTED_ROUTES = ['/usage', '/albums', '/admin', '/studio-progress'];
-const PUBLIC_ROUTES = ['/login', '/pricing'];
+/** Routes that bounce authenticated users away (login only — pricing stays open). */
+const LOGGED_IN_BOUNCE_ROUTES = ['/login'];
 const AUTH_BOOT_TIMEOUT_MS = 4500;
 /** Hold loader briefly when Firestore profile doc is not ready yet (avoids free-tier flash). */
 const PROFILE_DOC_WAIT_MS = 3000;
@@ -262,7 +263,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
-    const isAuthRoute = PUBLIC_ROUTES.includes(pathname);
+    const shouldBounceLoggedInUser = LOGGED_IN_BOUNCE_ROUTES.includes(pathname);
 
     if (pathname.startsWith('/admin') && user?.role !== 'admin') {
       router.push('/');
@@ -279,7 +280,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           ? `/login?next=${encodeURIComponent(returnPath)}`
           : '/login';
       router.push(loginUrl);
-    } else if (user && isAuthRoute) {
+    } else if (user && shouldBounceLoggedInUser) {
       const nextParam =
         typeof window !== 'undefined'
           ? new URLSearchParams(window.location.search).get('next')

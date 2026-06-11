@@ -57,7 +57,8 @@ export function isEligibleForFreeMonthlyGrant(
   monthKey: string
 ): boolean {
   const first = getFirstFreeMonthlyGrantMonthKey(createdAt);
-  if (!first) return true;
+  if (!first) return false;
+  if (isSignupMonth(createdAt, monthKey)) return false;
   return monthKey >= first;
 }
 
@@ -88,14 +89,13 @@ export function isLikelyErroneousSignupMonthGrant(
  * Signup month received only the monthly-sized grant (e.g. 111) without welcome ink.
  * Monthly residency is meant to start calendar month two.
  */
+/** Signup month balance matches monthly drip only — welcome ink never landed (or was fully reversed). */
 export function isErroneousSignupMonthMonthlyOnly(
   residencyBalance: number,
   createdAt: string | null | undefined,
-  monthKey: string,
-  lastFreeResidencyGrant: string | null | undefined
+  monthKey: string
 ): boolean {
   if (!isSignupMonth(createdAt, monthKey)) return false;
-  if (lastFreeResidencyGrant !== monthKey) return false;
   return (
     residencyBalance > 0 &&
     residencyBalance <= FREE_MONTHLY_RESIDENCY_INK + 5 &&

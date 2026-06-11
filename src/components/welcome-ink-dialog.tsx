@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { useUsage } from '@/context/usage-context';
-import { SIGNUP_INK, FREE_MONTHLY_RESIDENCY_INK } from '@/lib/subscription';
+import { FREE_MONTHLY_RESIDENCY_INK } from '@/lib/subscription';
 import { expectedSignupResidencyInk, isEligibleForFreeMonthlyGrant } from '@/lib/ink-grants';
 import { getProCheckoutCtaLine, getVisitorResidencyPoolCapLine } from '@/lib/studio-tiers';
 import { INK_POOL_LABELS, getInkLedgerLabel } from '@/lib/ink-ledger';
@@ -45,13 +45,22 @@ export function WelcomeInkDialog() {
     if (!user) return [];
 
     const monthKey = new Date().toISOString().slice(0, 7);
-    const lines: GrantLine[] = [
-      {
+    const expectedAfterSignup = expectedSignupResidencyInk() + purchasedBalance;
+    const monthlyTopUp = residencyBalance - expectedAfterSignup - trialInkBalance;
+    const welcomeAmount =
+      isEligibleForFreeMonthlyGrant(user.createdAt, monthKey) &&
+      monthlyTopUp >= FREE_MONTHLY_RESIDENCY_INK - 5
+        ? expectedSignupResidencyInk()
+        : Math.max(0, residencyBalance - trialInkBalance - purchasedBalance);
+
+    const lines: GrantLine[] = [];
+    if (welcomeAmount > 0) {
+      lines.push({
         pool: 'residency',
-        amount: SIGNUP_INK,
+        amount: welcomeAmount,
         label: getInkLedgerLabel('signup_residency'),
-      },
-    ];
+      });
+    }
 
     if (purchasedBalance > 0) {
       lines.push({
@@ -69,8 +78,6 @@ export function WelcomeInkDialog() {
       });
     }
 
-    const expectedAfterSignup = expectedSignupResidencyInk() + purchasedBalance;
-    const monthlyTopUp = residencyBalance - expectedAfterSignup - trialInkBalance;
     if (
       isEligibleForFreeMonthlyGrant(user.createdAt, monthKey) &&
       monthlyTopUp >= FREE_MONTHLY_RESIDENCY_INK - 5

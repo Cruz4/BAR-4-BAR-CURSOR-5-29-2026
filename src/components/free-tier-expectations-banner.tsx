@@ -40,7 +40,7 @@ export function FreeTierExpectationsBanner({ user }: { user: User | null }) {
       <div className="flex-grow min-w-0 space-y-1">
         <p className="text-[10px] font-bold uppercase tracking-widest text-orange-600">{FREE_TIER_EXPECTATIONS.headline}</p>
         <p className="text-[11px] text-muted-foreground leading-snug">{FREE_TIER_EXPECTATIONS.body}</p>
-        <Link href="/pricing" className="text-[9px] font-bold uppercase text-orange-600 hover:underline">
+        <Link href="/usage?tab=cloud" className="text-[9px] font-bold uppercase text-orange-600 hover:underline">
           Compare tiers →
         </Link>
       </div>

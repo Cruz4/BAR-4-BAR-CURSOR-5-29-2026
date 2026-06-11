@@ -2580,6 +2580,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const [generateDraftOpen, setGenerateDraftOpen] = useState(false);
   const [generatorInitialMode, setGeneratorInitialMode] = useState<'select' | 'remix'>('select');
   const openRemixHandledRef = useRef(false);
+  const openGeneratorHandledRef = useRef(false);
   const [workstationBackgroundActive, setWorkstationBackgroundActive] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
   const [smartStructureOpen, setSmartStructureOpen] = useState(false);
@@ -2691,27 +2692,29 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     return () => clearTimeout(t);
   }, [albumId, trackId, vaultLoading, track, album, albums, router, searchParams]);
 
+  const clearWorkstationOpenParams = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (!params.has('openGenerator') && !params.has('proQuest')) return;
+    params.delete('openGenerator');
+    params.delete('proQuest');
+    const qs = params.toString();
+    const clean = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    router.replace(clean);
+  }, [router, searchParams]);
+
   const openRemixWorkstation = useCallback(() => {
     if (!track || !album) return false;
     setGeneratorInitialMode('remix');
     setGenerateDraftOpen(true);
     openRemixHandledRef.current = true;
-
-    const params = new URLSearchParams(searchParams.toString());
-    if (params.has('openGenerator') || params.has('proQuest')) {
-      params.delete('openGenerator');
-      params.delete('proQuest');
-      const qs = params.toString();
-      const clean = qs
-        ? `${window.location.pathname}?${qs}`
-        : window.location.pathname;
-      router.replace(clean);
-    }
+    openGeneratorHandledRef.current = true;
+    clearWorkstationOpenParams();
     return true;
-  }, [track, album, router, searchParams]);
+  }, [track, album, clearWorkstationOpenParams]);
 
   useEffect(() => {
     openRemixHandledRef.current = false;
+    openGeneratorHandledRef.current = false;
   }, [albumId, trackId]);
 
   useEffect(() => {
@@ -2728,11 +2731,13 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     }
 
     const openGenerator = searchParams.get('openGenerator');
-    if (openGenerator === 'true') {
+    if (openGenerator === 'true' && !openGeneratorHandledRef.current) {
+      openGeneratorHandledRef.current = true;
       setGeneratorInitialMode('select');
       setGenerateDraftOpen(true);
+      clearWorkstationOpenParams();
     }
-  }, [vaultLoading, track, album, searchParams, openRemixWorkstation]);
+  }, [vaultLoading, track, album, searchParams, openRemixWorkstation, clearWorkstationOpenParams]);
 
   useEffect(() => {
     const onOpenRemix = () => {
@@ -3192,7 +3197,26 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         trackLocked={editsLocked}
         completeLocked={completeLocked}
       />
-      <GenerateSongDraftDialog open={generateDraftOpen} onOpenChange={(open) => { if (open && editsLocked) { toast({ variant: 'destructive', ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST) }); return; } if (!open) setGeneratorInitialMode('select'); setGenerateDraftOpen(open); }} track={track} styleProfile={effectiveStyleProfile} onDraftGenerated={(sections) => handleUpdateTrack({ sections })} onStashApprovalDraftsToChest={handleStashApprovalDraftsToChest} onBackgroundSessionActiveChange={setWorkstationBackgroundActive} initialWorkstationMode={generatorInitialMode} />
+      <GenerateSongDraftDialog
+        open={generateDraftOpen}
+        onOpenChange={(open) => {
+          if (open && editsLocked) {
+            toast({ variant: 'destructive', ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST) });
+            return;
+          }
+          if (!open) {
+            setGeneratorInitialMode('select');
+            clearWorkstationOpenParams();
+          }
+          setGenerateDraftOpen(open);
+        }}
+        track={track}
+        styleProfile={effectiveStyleProfile}
+        onDraftGenerated={(sections) => handleUpdateTrack({ sections })}
+        onStashApprovalDraftsToChest={handleStashApprovalDraftsToChest}
+        onBackgroundSessionActiveChange={setWorkstationBackgroundActive}
+        initialWorkstationMode={generatorInitialMode}
+      />
       <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} album={album} tracks={[track]} exportType="track" />
       <ShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} type="track" id={track.id} title={track.title} albumId={album.id} existingShareId={track.shareId} />
       <FreestylePad open={freestyleOpen} onOpenChange={setFreestyleOpen} onAddFreestyle={(text) => { const lines = text.split('. ').filter(l => l.trim()); const activeS = track.sections.find(s => s.id === activeSectionId) || track.sections[0]; const startIdx = activeS.bars.length + 1; const newBars = lines.map((l, i) => withLineSource({ idx: startIdx + i, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' }, 'written')); handleUpdateTrack({ sections: track.sections.map(s => s.id === activeS.id ? { ...s, bars: [...s.bars, ...newBars] } : s) }); setFreestyleOpen(false); }} disabled={editsLocked} trackVibe={track.vibe} albumTheme={album.theme} styleProfileSummary={styleProfile.history[0]?.analysis || ''} isPro={isPro} />
