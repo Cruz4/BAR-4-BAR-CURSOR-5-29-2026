@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const result = await eradicateUserIdentity(targetUserId, admin.email);
+    const result = await eradicateUserIdentity(targetUserId, admin.email, { mode: 'admin' });
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Eradication failed';

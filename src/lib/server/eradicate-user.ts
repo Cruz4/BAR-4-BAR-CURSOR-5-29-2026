@@ -2,7 +2,10 @@ import 'server-only';
 
 import type { CollectionReference, DocumentReference, Firestore } from 'firebase-admin/firestore';
 import { getAuth, getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
-import { writeIdentityTombstone } from '@/lib/server/identity-registry';
+import {
+  clearIdentityRegistry,
+  writeIdentityTombstone,
+} from '@/lib/server/identity-registry';
 
 const BATCH_SIZE = 400;
 
@@ -100,6 +103,16 @@ async function deleteReferralRecords(userId: string, db: Firestore): Promise<num
   return refs.size;
 }
 
+export type EradicateMode = 'admin' | 'self';
+
+export type EradicateUserOptions = {
+  /**
+   * admin — full wipe; email registry cleared so they can return as a brand-new artist.
+   * self — tombstone written so welcome Ink cannot be farmed on re-signup.
+   */
+  mode?: EradicateMode;
+};
+
 export type EradicateUserResult = {
   userId: string;
   authDeleted: boolean;
@@ -107,7 +120,29 @@ export type EradicateUserResult = {
   tracksDeleted: number;
   sharesDeleted: number;
   publicProfilesDeleted: number;
+  identityRegistryCleared: boolean;
+  analyticsEventsDeleted: number;
 };
+
+async function deleteAnalyticsEventsForUser(userId: string, db: Firestore): Promise<number> {
+  let deleted = 0;
+  // Paginate — analytics_events can be large for active users.
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const snap = await db
+      .collection('analytics_events')
+      .where('userId', '==', userId)
+      .limit(BATCH_SIZE)
+      .get();
+    if (snap.empty) break;
+    const batch = db.batch();
+    snap.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+    deleted += snap.size;
+    if (snap.size < BATCH_SIZE) break;
+  }
+  return deleted;
+}
 
 /**
  * Full identity eradication — equivalent to deleting the user in Firebase Auth Console
@@ -115,8 +150,10 @@ export type EradicateUserResult = {
  */
 export async function eradicateUserIdentity(
   targetUserId: string,
-  actorEmail: string
+  actorEmail: string,
+  options: EradicateUserOptions = {}
 ): Promise<EradicateUserResult> {
+  const mode: EradicateMode = options.mode ?? 'self';
   if (!hasAdminFirestoreCredentials()) {
     throw new Error('Admin credentials required');
   }
@@ -157,9 +194,17 @@ export async function eradicateUserIdentity(
     balanceData.trialInkGranted === true ||
     (typeof balanceData.trialInkBalance === 'number' && balanceData.trialInkBalance > 0);
 
+  let identityRegistryCleared = false;
   if (userEmail) {
-    await writeIdentityTombstone(db, userEmail, trimmedId, { hadWelcomeInk, hadTrial });
+    if (mode === 'admin') {
+      identityRegistryCleared = await clearIdentityRegistry(db, userEmail);
+    } else {
+      await writeIdentityTombstone(db, userEmail, trimmedId, { hadWelcomeInk, hadTrial });
+    }
   }
+
+  const analyticsEventsDeleted =
+    mode === 'admin' ? await deleteAnalyticsEventsForUser(trimmedId, db) : 0;
 
   const { albums, tracks } = await deleteUserAlbums(trimmedId, db);
 
@@ -194,7 +239,7 @@ export async function eradicateUserIdentity(
     userId: trimmedId,
     userName: actorEmail,
     timestamp: new Date().toISOString(),
-    details: `Eradicated ${displayName}: ${albums} albums, ${tracks} tracks, auth=${authDeleted}`,
+    details: `Eradicated ${displayName} (${mode}): ${albums} albums, ${tracks} tracks, auth=${authDeleted}, registryCleared=${identityRegistryCleared}, analytics=${analyticsEventsDeleted}`,
   });
 
   return {
@@ -204,5 +249,7 @@ export async function eradicateUserIdentity(
     tracksDeleted: tracks,
     sharesDeleted,
     publicProfilesDeleted,
+    identityRegistryCleared,
+    analyticsEventsDeleted,
   };
 }

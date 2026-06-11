@@ -135,7 +135,21 @@ export async function reserveSignupEntitlements(
   });
 }
 
-/** Persist entitlement consumption when an account is self-deleted or eradicated. */
+/** Admin eradicate — remove registry record so the email can claim welcome perks again. */
+export async function clearIdentityRegistry(
+  db: Firestore,
+  email: string
+): Promise<boolean> {
+  if (!email.trim()) return false;
+  const emailHash = hashIdentityEmail(email);
+  const ref = registryRef(db, emailHash);
+  const snap = await ref.get();
+  if (!snap.exists) return false;
+  await ref.delete();
+  return true;
+}
+
+/** Persist entitlement consumption when a user self-deletes their account. */
 export async function writeIdentityTombstone(
   db: Firestore,
   email: string,

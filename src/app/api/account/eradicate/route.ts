@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const result = await eradicateUserIdentity(uid, email);
+    const result = await eradicateUserIdentity(uid, email, { mode: 'self' });
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Deletion failed';
