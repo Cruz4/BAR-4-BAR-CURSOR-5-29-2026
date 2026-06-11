@@ -16,7 +16,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useUsage } from '@/context/usage-context';
 import { SIGNUP_INK, FREE_MONTHLY_RESIDENCY_INK } from '@/lib/subscription';
 import { expectedSignupResidencyInk, isEligibleForFreeMonthlyGrant } from '@/lib/ink-grants';
-import { getStripeTrialCheckoutCtaLine, getVisitorResidencyPoolCapLine } from '@/lib/studio-tiers';
+import { getProCheckoutCtaLine, getVisitorResidencyPoolCapLine } from '@/lib/studio-tiers';
 import { INK_POOL_LABELS, getInkLedgerLabel } from '@/lib/ink-ledger';
 import {
   hasSeenWelcomeInk,
@@ -138,9 +138,9 @@ export function WelcomeInkDialog() {
             <span>
               Welcome Ink powers AI in the demo studio. Want full Pro workflow?{' '}
               <Link href="/pricing" className="font-bold text-sky-300 hover:underline" onClick={dismiss}>
-                {getStripeTrialCheckoutCtaLine()}
+                {getProCheckoutCtaLine('yearly')}
               </Link>
-              {' '}(card required).
+              .
             </span>
           </p>
 

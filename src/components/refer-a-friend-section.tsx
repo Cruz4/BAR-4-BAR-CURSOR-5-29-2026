@@ -58,7 +58,7 @@ export function ReferAFriendSection({ className }: { className?: string }) {
       setCopied(true);
       toast({
         title: 'Referral link copied',
-        description: `You and your friend each get ${REFERRAL_INK_REWARD} permanent Ink when they join.`,
+        description: `You and your friend each get ${REFERRAL_INK_REWARD} Ink when they join (residency pool on Visitor; permanent on Pro).`,
       });
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -82,7 +82,7 @@ export function ReferAFriendSection({ className }: { className?: string }) {
             <div>
               <CardTitle className="font-headline text-lg uppercase tracking-tight">Refer a Friend</CardTitle>
               <CardDescription className="text-xs font-code mt-1">
-                {REFERRAL_INK_REWARD} permanent Ink for you and {REFERRAL_INK_REWARD} for them — up to {MAX_REFERRAL_REWARDS} friends.
+                {REFERRAL_INK_REWARD} Ink each (residency on Visitor, permanent on Pro) — up to {MAX_REFERRAL_REWARDS} friends.
               </CardDescription>
             </div>
           </div>

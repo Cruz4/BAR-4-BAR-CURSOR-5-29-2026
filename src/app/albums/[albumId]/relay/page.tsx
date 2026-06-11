@@ -218,7 +218,6 @@ function RelayWizardContent() {
             });
             trackUpgradeClick('slot_limit', { limitType: 'track', count: trackCount });
             toast(FREE_TRACK_LIMIT_TOAST);
-            router.push('/usage?tab=cloud');
             return;
         }
         try {
@@ -234,7 +233,6 @@ function RelayWizardContent() {
                 });
                 trackUpgradeClick('slot_limit', { limitType: 'track', count: trackCount });
                 toast(FREE_TRACK_LIMIT_TOAST);
-                router.push('/usage?tab=cloud');
                 return;
             }
             throw e;

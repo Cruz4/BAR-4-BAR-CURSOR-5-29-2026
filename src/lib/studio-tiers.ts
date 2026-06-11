@@ -16,11 +16,6 @@ import type { User } from '@/lib/types';
 import { PRO_MONTHLY_RESIDENCY, PRO_YEARLY_RESIDENCY } from '@/lib/stripe-catalog';
 import { getVisitorInkGrantSummary } from '@/lib/ink-grants';
 import { MAX_REFERRAL_REWARDS, REFERRAL_INK_REWARD } from '@/lib/referrals';
-import {
-  getStripeTrialDurationLabel,
-  getStripeTrialMarketingLine,
-  getStripeTrialTitle,
-} from '@/lib/trial';
 
 export const PRO_MONTHLY_PRICE_AMOUNT = 7.77;
 export const PRO_YEARLY_PRICE_AMOUNT = 4.44;
@@ -169,11 +164,12 @@ export function getProYearlyHeadlinePerks(): readonly string[] {
   ];
 }
 
+/** Visitor positioning — AI tools included; catalog workflow is Pro */
+export const VISITOR_AI_POSITIONING =
+  'Full bar-by-bar AI on Ink — demo-scale catalog (presets only, no custom vault saves)';
+
 export function getVisitorHeadlinePerks(): readonly string[] {
-  return [
-    getVisitorInkGrantSummary(),
-    'Full bar-by-bar AI workstation — all 9 Creative Effects included',
-  ];
+  return [getVisitorInkGrantSummary(), `${VISITOR_AI_POSITIONING} — all 9 Creative Effects included`];
 }
 
 export function getProHeadlinePerks(billing: 'monthly' | 'yearly'): readonly string[] {
@@ -190,17 +186,22 @@ export function getVisitorResidencyPoolCapLine(): string {
   return `${getVisitorInkGrantSummary()} — pool caps at ${FREE_RESIDENCY_POOL_CAP}.`;
 }
 
-/** Pro trial workflow unlock — shared across marketing and welcome surfaces */
-export const PRO_TRIAL_WORKFLOW_DETAIL = 'unlimited projects, vault saves & full workflow';
+/** Pro catalog workflow — shared across marketing surfaces */
+export const PRO_WORKFLOW_DETAIL = 'unlimited projects, vault saves, export & full workflow';
 
-/** Top-of-funnel — Stripe Pro trial (card required). */
-export function getProTrialMarketingLine(): string {
-  return `${getStripeTrialMarketingLine()} — ${PRO_TRIAL_WORKFLOW_DETAIL}`;
+/** Top-of-funnel — pay-now Pro positioning */
+export function getProMarketingLine(): string {
+  return `Go Pro — ${PRO_WORKFLOW_DETAIL}`;
 }
 
-/** Hero / pricing — Try Pro with Stripe trial */
+/** @deprecated Stripe trial removed — use getProCheckoutCtaLine */
 export function getStripeTrialCheckoutCtaLine(): string {
-  return `Try Pro ${getStripeTrialDurationLabel()} free`;
+  return getProCheckoutCtaLine('yearly');
+}
+
+/** Pricing / welcome — immediate Pro checkout */
+export function getProCheckoutCtaLine(billing: 'monthly' | 'yearly' = 'yearly'): string {
+  return billing === 'yearly' ? `Go Pro Yearly — ${PRO_YEARLY_PRICE}/mo` : `Go Pro Monthly — ${PRO_MONTHLY_PRICE}/mo`;
 }
 
 /** Direct Pro checkout CTA — yearly default (matches pricing page). */
@@ -234,7 +235,7 @@ export function getSignupInkMarketingLine(
 ): string {
   switch (variant) {
     case 'landing':
-      return `Free ${SIGNUP_INK} Ink to try the workstation — no credit card required.`;
+      return `Free ${SIGNUP_INK} Ink to try AI tools — no credit card required.`;
     case 'showcase':
       return `Free ${SIGNUP_INK} Ink to try AI tools — no credit card. Initialize your session below.`;
     case 'social':
@@ -242,13 +243,13 @@ export function getSignupInkMarketingLine(
     case 'footnote':
       return `${SIGNUP_INK} welcome Ink included — full residency details on Pricing & Usage`;
     default:
-      return `Free ${SIGNUP_INK} Ink to try the workstation — no card required`;
+      return `Free ${SIGNUP_INK} Ink to try AI tools — no card required`;
   }
 }
 
-/** Login / landing subline — free demo + optional Stripe trial */
+/** Login / landing subline — free demo, pay when ready for Pro */
 export function getTopFunnelSignupSubline(): string {
-  return `${getSignupInkMarketingLine('login')} · ${getStripeTrialTitle()} available at checkout`;
+  return `${getSignupInkMarketingLine('login')} · Pro unlocks export, vault saves & unlimited catalog`;
 }
 
 /** Header ink dropdown — Visitor residency pool label */
@@ -270,13 +271,13 @@ export function getResidencyVsPermanentFaqAnswer(): string {
 
 /** Pricing FAQ — refer a friend */
 export function getReferralFaqAnswer(): string {
-  return `Copy your link from Ink Store → Refer a Friend. When a new artist signs up through it, you each get ${REFERRAL_INK_REWARD} permanent Ink (referrers earn up to ${MAX_REFERRAL_REWARDS} bonuses). Bonuses apply automatically at signup and are tracked on Stripe checkout when they upgrade.`;
+  return `Copy your link from Ink Store → Refer a Friend. When a new artist signs up through it, you each get ${REFERRAL_INK_REWARD} Ink (referrers earn up to ${MAX_REFERRAL_REWARDS} bonuses). On Visitor, referral Ink stacks in your residency pool (capped at ${FREE_RESIDENCY_POOL_CAP}); Pro members receive permanent Ink. One welcome bonus per email — returning identities after self-delete do not re-earn referral welcome Ink.`;
 }
 
 /** Shown on Ink Store for non-Pro artists */
 export const VISITOR_INK_STORE_NOTICE = {
-  headline: 'Visitor studio — full AI lyric workstation',
-  body: `Every Ink-priced tool works on welcome + monthly residency Ink and permanent packs — Generate Next Line, Smart Structure, all 9 Creative Effects, and more. Pro unlocks your catalog workflow: custom DNA/Vibe/Style saves, Performance Mode, Freestyle, vault import/export, and DNA Drop share links — plus ${PRO_MONTHLY_INK.toLocaleString()} residency Ink/mo.`,
+  headline: 'Visitor — AI lyric tools on Ink',
+  body: `Every Ink-priced AI tool works on welcome + monthly residency Ink and permanent packs — Generate Next Line, Smart Structure, all 9 Creative Effects, and more. Custom DNA/Vibe/Style vault saves, Performance Mode, Freestyle, vault import/export, and DNA Drop links are Pro — plus ${PRO_MONTHLY_INK.toLocaleString()} residency Ink/mo on Pro.`,
 } as const;
 
 /** Free tier limits — shown on comparison charts */
@@ -285,8 +286,8 @@ export const VISITOR_FEATURES = [
   `${FREE_ALBUM_LIMIT} album · ${FREE_TRACK_LIMIT} tracks — demo-scale projects`,
   'Full bar-by-bar AI on Ink — Generate Next/Previous, Smart Structure, Studio Draft & Rhyme Pulse',
   'All 9 Creative Effects — Simile, Metaphor, Twist, POV, Blend & more (10 Ink each)',
-  'System DNA / Vibe / Style presets — load-only, no custom vault saves',
-  'PDF & track export · locked: Performance Mode, Freestyle, vault import/export & DNA Drop links',
+  'System presets only — custom DNA/Vibe/Style vault saves are Pro',
+  'Locked: PDF/TXT/JSON export, Performance Mode, Freestyle, vault import/export & DNA Drop links',
 ] as const;
 
 /** Everything Pro unlocks + why it matters vs Visitor */

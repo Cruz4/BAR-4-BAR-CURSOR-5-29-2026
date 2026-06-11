@@ -12,7 +12,6 @@ import {
   getFreeSignupCtaLine,
   getProIntentBilledDetail,
   getProIntentInkDetail,
-  getStripeTrialCheckoutCtaLine,
   PRO_MONTHLY_PRICE,
   PRO_YEARLY_PRICE,
   PRO_YEARLY_SUBSCRIPTION_SAVINGS_PERCENT,
@@ -21,13 +20,12 @@ import {
 const HERO_BTN =
   'h-14 sm:h-16 min-w-[260px] w-full sm:w-[260px] px-8 text-base sm:text-lg font-bold rounded-full';
 
-/** Hero CTA row — toggle above, free demo + trial + pay-now buttons. */
+/** Hero CTA row — toggle above, free demo + pay-now Pro. */
 export function LandingHeroCtAs() {
   const [isYearly, setIsYearly] = useState(true);
   const billing = isYearly ? 'yearly' : 'monthly';
   const proPrice = isYearly ? PRO_YEARLY_PRICE : PRO_MONTHLY_PRICE;
-  const trialCheckoutHref = buildLoginPath(buildProCheckoutPath(isYearly));
-  const payNowCheckoutHref = buildLoginPath(buildProCheckoutPath(isYearly, { skipTrial: true }));
+  const payNowCheckoutHref = buildLoginPath(buildProCheckoutPath(isYearly));
 
   return (
     <div className="flex flex-col items-center gap-4 pt-4 relative z-50 w-full max-w-3xl mx-auto">
@@ -78,15 +76,6 @@ export function LandingHeroCtAs() {
         <Button
           asChild
           size="lg"
-          variant="outline"
-          className={`${HERO_BTN} border-primary/40 text-primary hover:bg-primary/10 transition-all`}
-        >
-          <Link href={trialCheckoutHref}>{getStripeTrialCheckoutCtaLine()}</Link>
-        </Button>
-
-        <Button
-          asChild
-          size="lg"
           className={`${HERO_BTN} bg-accent hover:bg-accent/90 text-accent-foreground shadow-[0_0_32px_rgba(251,191,36,0.25)] transition-all hover:scale-[1.02]`}
         >
           <Link href={payNowCheckoutHref}>Go Pro — {proPrice}/mo</Link>
@@ -94,7 +83,7 @@ export function LandingHeroCtAs() {
       </div>
 
       <p className="text-[9px] sm:text-[10px] text-muted-foreground/80 font-code uppercase tracking-wide text-center">
-        {getProIntentInkDetail(billing)} · {getProIntentBilledDetail(billing)} · card required for trial
+        {getProIntentInkDetail(billing)} · {getProIntentBilledDetail(billing)} · card required
       </p>
 
       <Link href="/pricing">

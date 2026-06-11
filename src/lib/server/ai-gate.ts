@@ -42,6 +42,25 @@ export type SecuredAiContext = {
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 30;
 
+/** High-cost / studio-grade AI — Pro catalog workflow only. */
+const PRO_ONLY_AI_ACTIONS = new Set([
+  'generateCoverArt',
+  'improveMyStyle',
+  'aiVideoDirector',
+  'aiMusicCowriter',
+]);
+
+async function enforceProOnlyAiAction(uid: string, actionName: string): Promise<void> {
+  if (!PRO_ONLY_AI_ACTIONS.has(actionName)) return;
+  if (!hasAdminFirestoreCredentials()) return;
+
+  const db = await getDb();
+  const userSnap = await db.doc(`users/${uid}`).get();
+  if (userSnap.data()?.subscriptionStatus !== 'active') {
+    throw new AiGateError('This AI tool requires Studio Pro.', 'AUTH');
+  }
+}
+
 function enforceAiRateLimit(uid: string) {
   const { allowed } = checkRateLimit(`ai:${uid}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS);
   if (!allowed) {
@@ -209,6 +228,7 @@ export async function runSecuredAiAction<T>(
 ): Promise<T> {
   const uid = await verifyAiToken(ctx.idToken, ctx.userId);
   enforceAiRateLimit(uid);
+  await enforceProOnlyAiAction(uid, ctx.actionName);
   const byoApiKey = await resolveByoApiKey(uid, ctx.customApiKey);
 
   const studioCosts = await getStudioCosts();

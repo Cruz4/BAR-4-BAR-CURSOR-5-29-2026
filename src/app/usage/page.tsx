@@ -199,8 +199,7 @@ function UsagePageContent() {
     }
 
     router.replace('/usage?tab=cloud');
-    const withTrial = searchParams.get('trial') !== '0';
-    checkout(rawCheckout, user.id, user.email, { withTrial });
+    checkout(rawCheckout, user.id, user.email, { withTrial: false });
   }, [searchParams, user, checkout, isCheckingOut, router]);
 
   const isYearlyUser = user?.subscriptionTier === 'yearly';
@@ -217,24 +216,17 @@ function UsagePageContent() {
     }));
 
   const handleStripeCheckout = (
-    priceKey: 'PRO_MONTHLY' | 'PRO_YEARLY' | 'INK_REFILL' | 'INK_ARTIST' | 'INK_VAULT',
-    options?: { withTrial?: boolean }
+    priceKey: 'PRO_MONTHLY' | 'PRO_YEARLY' | 'INK_REFILL' | 'INK_ARTIST' | 'INK_VAULT'
   ) => {
     if (!user) {
-      const trialParam =
-        priceKey === 'PRO_MONTHLY' || priceKey === 'PRO_YEARLY'
-          ? options?.withTrial === false
-            ? '&trial=0'
-            : '&trial=1'
-          : '';
       const loginPath =
         priceKey === 'PRO_MONTHLY' || priceKey === 'PRO_YEARLY'
-          ? buildLoginPath(`/usage?tab=cloud&checkout=${priceKey}${trialParam}`)
+          ? buildLoginPath(`/usage?tab=cloud&checkout=${priceKey}`)
           : buildLoginPath('/usage?tab=buy-ink');
       router.push(loginPath);
       return;
     }
-    checkout(priceKey, user.id, user.email, options);
+    checkout(priceKey, user.id, user.email, { withTrial: false });
   };
 
   const getSafeTimestamp = (timestamp: string | undefined) => {
@@ -493,9 +485,9 @@ function UsagePageContent() {
                 </CardFooter>
               </Card>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
                 {getStudioTierPlans(isCloudSyncActive, user?.subscriptionTier).map((plan) => (
-                    <Card key={plan.name} className={cn("border-accent flex flex-col relative transition-all duration-500 shadow-xl", plan.badge ? "overflow-visible" : "overflow-hidden", plan.isCurrent && "ring-4 ring-primary/20")}>
+                    <Card key={plan.name} className={cn("border-accent flex flex-col h-full relative transition-all duration-500 shadow-xl", plan.badge ? "overflow-visible" : "overflow-hidden", plan.isCurrent && "ring-4 ring-primary/20")}>
                         {plan.badge && (
                           <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 flex max-w-[calc(100%-1.5rem)] justify-center">
                             <Badge className="whitespace-nowrap text-[8px] uppercase tracking-widest font-bold bg-accent px-4 py-1.5 shadow-lg">
@@ -503,8 +495,8 @@ function UsagePageContent() {
                             </Badge>
                           </div>
                         )}
-                        <div className={cn("p-6 flex flex-col justify-between text-center border-b min-h-[320px] overflow-hidden rounded-t-lg", plan.badge && "pt-8", plan.name === 'Pro Yearly' ? "bg-accent/10" : plan.name === 'Visitor' ? "bg-muted/10" : "bg-primary/10")}>
-                            <div className="space-y-3">
+                        <div className={cn("p-6 flex flex-col flex-1 text-center border-b min-h-[400px] overflow-hidden rounded-t-lg", plan.badge && "pt-8", plan.name === 'Pro Yearly' ? "bg-accent/10" : plan.name === 'Visitor' ? "bg-muted/10" : "bg-primary/10")}>
+                            <div className="space-y-3 shrink-0">
                               <h3 className="text-2xl font-headline font-bold uppercase">{plan.name}</h3>
                               <div className="flex flex-col items-center">
                                   <div><span className={cn("text-5xl font-bold text-white", plan.name === 'Pro Yearly' && "text-accent drop-shadow-[0_0_12px_rgba(244,63,94,0.5)]")}>{plan.price}</span><span className="text-muted-foreground font-code ml-1">{plan.period}</span></div>
@@ -517,15 +509,15 @@ function UsagePageContent() {
                                     </p>
                                   )}
                               </div>
-                              <TierPriceSummary
-                                lines={plan.headlinePerks}
-                                variant={plan.name === 'Pro Yearly' ? 'yearly' : plan.name === 'Visitor' ? 'visitor' : 'pro'}
-                                align="center"
-                                className="px-1"
-                              />
                             </div>
+                            <TierPriceSummary
+                              lines={plan.headlinePerks}
+                              variant={plan.name === 'Pro Yearly' ? 'yearly' : plan.name === 'Visitor' ? 'visitor' : 'pro'}
+                              align="center"
+                              className="px-1 flex-1 mt-4 min-h-[140px]"
+                            />
                             <Button
-                              className={cn("w-full shadow-lg h-12 text-sm font-bold uppercase", plan.isCurrent ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground")}
+                              className={cn("w-full shadow-lg h-12 text-sm font-bold uppercase mt-6 shrink-0", plan.isCurrent ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground")}
                               disabled={plan.isCurrent || isCheckingOut || !plan.priceKey}
                               onClick={() => plan.priceKey && handleStripeCheckout(plan.priceKey)}
                             >

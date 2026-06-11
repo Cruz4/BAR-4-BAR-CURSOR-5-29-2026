@@ -4,7 +4,7 @@ export const PRO_CHECKOUT_KEYS = ['PRO_MONTHLY', 'PRO_YEARLY'] as const;
 export type ProCheckoutPriceKey = (typeof PRO_CHECKOUT_KEYS)[number];
 
 export type ProCheckoutOptions = {
-  /** Skip Stripe trial — charge immediately */
+  /** @deprecated Stripe trial removed — always charges immediately */
   skipTrial?: boolean;
 };
 
@@ -12,10 +12,9 @@ export function isProCheckoutPriceKey(key: string | null | undefined): key is Pr
   return key === 'PRO_MONTHLY' || key === 'PRO_YEARLY';
 }
 
-export function buildProCheckoutPath(isYearly: boolean, options?: ProCheckoutOptions): string {
+export function buildProCheckoutPath(isYearly: boolean, _options?: ProCheckoutOptions): string {
   const checkout: ProCheckoutPriceKey = isYearly ? 'PRO_YEARLY' : 'PRO_MONTHLY';
-  const trialParam = options?.skipTrial ? '0' : '1';
-  return `/usage?tab=cloud&checkout=${checkout}&trial=${trialParam}`;
+  return `/usage?tab=cloud&checkout=${checkout}`;
 }
 
 export function getSafeNextPath(next: string | null | undefined, fallback = '/'): string {
@@ -41,10 +40,9 @@ export function getCheckoutFromPath(path: string): StripePriceKey | null {
   return isProCheckoutPriceKey(checkout) ? checkout : null;
 }
 
-/** Whether Pro checkout should include Stripe trial_period_days (default true). */
-export function getCheckoutTrialFromPath(path: string): boolean {
-  const url = parsePathUrl(path);
-  return url?.searchParams.get('trial') !== '0';
+/** Stripe trial removed — Pro checkout always charges immediately. */
+export function getCheckoutTrialFromPath(_path: string): boolean {
+  return false;
 }
 
 export function getProCheckoutLabel(priceKey: ProCheckoutPriceKey): string {

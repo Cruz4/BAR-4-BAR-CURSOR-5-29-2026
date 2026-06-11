@@ -65,8 +65,9 @@ import {
   getVisitorHeadlinePerks,
   getResidencyVsPermanentFaqAnswer,
   getReferralFaqAnswer,
-  getStripeTrialCheckoutCtaLine,
+  getProCheckoutCtaLine,
 } from '@/lib/studio-tiers';
+import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, SIGNUP_INK } from '@/lib/subscription';
 import { TierPriceSummary } from '@/components/tier-price-summary';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
@@ -99,14 +100,14 @@ export default function PricingPage() {
     trackStudioEvent(ANALYTICS_EVENTS.PRICING_VIEW, { path: '/pricing' });
   }, []);
 
-  const handleSelectPlan = (tierName: string, options?: { skipTrial?: boolean }) => {
+  const handleSelectPlan = (tierName: string) => {
     if (tierName !== 'Visitor') {
       trackUpgradeClick('pricing', {
         tier: tierName,
         billing: isYearly ? 'yearly' : 'monthly',
-        skipTrial: options?.skipTrial === true,
+        skipTrial: true,
       });
-      const checkoutPath = buildProCheckoutPath(isYearly, options);
+      const checkoutPath = buildProCheckoutPath(isYearly);
       if (user) {
         router.push(checkoutPath);
       } else {
@@ -123,7 +124,7 @@ export default function PricingPage() {
     {
       name: 'Visitor',
       price: '$0',
-      description: 'Full lyric workstation on welcome Ink — bar-by-bar AI and all Creative Effects included.',
+      description: `Full AI lyric tools on ${SIGNUP_INK} welcome Ink — ${FREE_ALBUM_LIMIT} album, ${FREE_TRACK_LIMIT} tracks demo catalog; custom vault saves are Pro.`,
       membership: 'Free Artist',
       ink: VISITOR_INK_SUMMARY,
       headlinePerks: getVisitorHeadlinePerks(),
@@ -158,7 +159,7 @@ export default function PricingPage() {
           hide: false,
         })),
       ],
-      cta: getStripeTrialCheckoutCtaLine(),
+      cta: getProCheckoutCtaLine(isYearly ? 'yearly' : 'monthly'),
       variant: 'default' as const,
       popular: true
     }
@@ -329,19 +330,10 @@ export default function PricingPage() {
                 </div>
               </CardContent>
 
-              <CardFooter className="pt-6 pb-8 flex flex-col gap-2">
+              <CardFooter className="pt-6 pb-8">
                 <Button className={cn("w-full h-12 text-sm font-bold shadow-xl rounded-lg group/btn", tier.popular && isYearly ? "bg-accent text-white hover:bg-accent/90" : "bg-white/5 text-white border border-white/10 hover:bg-white/10")} onClick={() => handleSelectPlan(tier.name)}>
                   {tier.cta}<ChevronRight className="ml-1 h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
                 </Button>
-                {tier.name === 'Studio Pro' && (
-                  <button
-                    type="button"
-                    className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
-                    onClick={() => handleSelectPlan(tier.name, { skipTrial: true })}
-                  >
-                    Subscribe now (no trial)
-                  </button>
-                )}
               </CardFooter>
             </Card>
           ))}

@@ -32,7 +32,7 @@ export function useStripe() {
       priceKey: StripePriceKey,
       userId: string,
       email?: string,
-      options?: { withTrial?: boolean }
+      _options?: { withTrial?: boolean }
     ) => {
       const isPreview = typeof window !== 'undefined' && window.location.hostname.includes('cloudworkstations.dev');
 
@@ -54,7 +54,7 @@ export function useStripe() {
             priceKey,
             userId,
             email,
-            withTrial: options?.withTrial ?? true,
+            withTrial: false,
           }),
         });
 

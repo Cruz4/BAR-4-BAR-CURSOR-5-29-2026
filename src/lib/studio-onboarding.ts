@@ -135,7 +135,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
 
 export const FREE_TIER_EXPECTATIONS = {
   headline: 'Visitor — demo-scale studio',
-  body: `Free accounts are demo-scale: ${FREE_ALBUM_LIMIT} album, ${FREE_TRACK_LIMIT} tracks, load-only DNA/Vibe/Style presets, and locked Performance Mode, Freestyle, vault import/export & DNA Drop links. AI tools run on your Ink (${getVisitorInkGrantSummary()}). Studio Pro unlocks your catalog: custom strain saves, unlimited slots, and the full feature set.`,
+  body: `Free demo: ${FREE_ALBUM_LIMIT} album, ${FREE_TRACK_LIMIT} tracks. AI tools run on your Ink (${getVisitorInkGrantSummary()}); catalog workflow (custom vault saves, Performance, Freestyle, import/export, DNA Drop links) is Pro. Load-only DNA/Vibe/Style presets on free.`,
   dismissKey: 'b4b-free-tier-expectations-dismissed',
 } as const;
 

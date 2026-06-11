@@ -1,16 +1,19 @@
-/** Stripe subscription trial length — card required; no automatic signup trial. */
-export const STRIPE_PRO_TRIAL_DAYS = 3;
+/** @deprecated Stripe subscription trial removed — Pro is pay-now only. */
+export const STRIPE_PRO_TRIAL_DAYS = 0;
 
+/** @deprecated */
 export function getStripeTrialDurationLabel(): string {
-  return `${STRIPE_PRO_TRIAL_DAYS}-day`;
+  return '0-day';
 }
 
+/** @deprecated */
 export function getStripeTrialTitle(): string {
-  return `${STRIPE_PRO_TRIAL_DAYS}-Day Pro Trial`;
+  return 'Pro Membership';
 }
 
+/** @deprecated */
 export function getStripeTrialMarketingLine(): string {
-  return `Try Pro free ${STRIPE_PRO_TRIAL_DAYS} days — card required`;
+  return 'Go Pro — pay at checkout';
 }
 
 /** @deprecated Use STRIPE_PRO_TRIAL_DAYS */
@@ -29,7 +32,7 @@ export function getTrialDurationTitle(): string {
 export { TRIAL_INK_GRANT } from '@/lib/trial-ink-ab';
 export { getTrialInkGrantForVariant } from '@/lib/trial-ink-ab';
 
-/** Internal signup trial removed — Pro access is paid or Stripe trial only. */
+/** Internal signup trial removed — Pro access is paid only. */
 export function isTrialActive(): boolean {
   return false;
 }

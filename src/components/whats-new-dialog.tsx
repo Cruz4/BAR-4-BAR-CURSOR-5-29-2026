@@ -27,7 +27,8 @@ import {
   markWhatsNewShownThisLogin,
 } from '@/lib/whats-new-session';
 import { isStudioOnboardingBusy } from '@/lib/studio-privacy-intro';
-import { getStripeTrialTitle, STRIPE_PRO_TRIAL_DAYS } from '@/lib/trial';
+import { SIGNUP_INK } from '@/lib/subscription';
+import { getProCheckoutCtaLine } from '@/lib/studio-tiers';
 
 function isVaultLanding(pathname: string | null): boolean {
   if (!pathname) return false;
@@ -52,8 +53,8 @@ export function WhatsNewDialog() {
     () =>
       [
         {
-          title: getStripeTrialTitle(),
-          desc: `Try full Studio Pro for ${STRIPE_PRO_TRIAL_DAYS} days at checkout (card required) — DNA Vault save, Performance, Freestyle, and more.`,
+          title: `${SIGNUP_INK} welcome Ink demo`,
+          desc: `Free artists get ${SIGNUP_INK} Ink to try AI tools on a demo catalog. ${getProCheckoutCtaLine('yearly')} for export, vault saves, and unlimited projects.`,
           icon: Sparkles,
           color: 'text-primary',
           bgColor: 'bg-primary/5',

@@ -2,11 +2,11 @@
 
 import React from 'react';
 import { Droplets, Smartphone, Sparkles } from 'lucide-react';
-import { getProTrialMarketingLine, getSignupInkMarketingLine } from '@/lib/studio-tiers';
+import { getProMarketingLine, getSignupInkMarketingLine } from '@/lib/studio-tiers';
 
 export function SocialProofBar() {
   const stats = [
-    { icon: Sparkles, label: getProTrialMarketingLine() },
+    { icon: Sparkles, label: getProMarketingLine() },
     { icon: Droplets, label: getSignupInkMarketingLine('social') },
     { icon: Smartphone, label: 'Install to home screen — no app store' },
   ] as const;

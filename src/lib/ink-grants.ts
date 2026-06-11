@@ -73,7 +73,7 @@ export function expectedSignupResidencyInk(): number {
   return SIGNUP_INK;
 }
 
-/** Detect erroneous signup-month monthly bump (300 + 111) that was never spent down. */
+/** Detect erroneous signup-month monthly bump (welcome + monthly) that was never spent down. */
 export function isLikelyErroneousSignupMonthGrant(
   residencyBalance: number,
   createdAt: string | null | undefined,

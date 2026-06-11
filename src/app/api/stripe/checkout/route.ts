@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getCatalogEntry, resolveStripePriceId } from '@/lib/stripe-catalog';
-import { STRIPE_PRO_TRIAL_DAYS } from '@/lib/trial';
 import {
   getStripe,
   verifyCheckoutUser,
@@ -20,7 +19,7 @@ export const runtime = 'nodejs';
 export async function POST(req: Request) {
   try {
     const stripe = getStripe();
-    const { priceKey, priceId: clientPriceId, userId, email, withTrial = true } = await req.json();
+    const { priceKey, priceId: clientPriceId, userId, email } = await req.json();
 
     const priceId =
       typeof priceKey === 'string' && priceKey.trim()
@@ -115,10 +114,7 @@ export async function POST(req: Request) {
           subscriptionTier: catalogEntry.tier,
         },
       };
-      const alreadyPro = userData?.subscriptionStatus === 'active';
-      if (withTrial !== false && !alreadyPro) {
-        sessionParams.subscription_data!.trial_period_days = STRIPE_PRO_TRIAL_DAYS;
-      }
+      // No Stripe trial — free demo + pay-now Pro only.
     } else {
       sessionParams.customer_creation = stripeCustomerId ? undefined : 'always';
       const yearlyCoupon = process.env.STRIPE_COUPON_YEARLY_INK_50?.trim();

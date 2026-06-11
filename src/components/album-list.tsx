@@ -91,10 +91,12 @@ import {
   canUserAddTrack,
   countUserTracks,
   FREE_ALBUM_LIMIT,
+  FREE_ALBUM_LIMIT_TOAST,
   FREE_TRACK_LIMIT,
   FREE_TRACK_LIMIT_TOAST,
   isProOrTrial,
 } from '@/lib/subscription';
+import { getVisitorInkGrantSummary } from '@/lib/ink-grants';
 import { isDataUrl } from '@/lib/cover-art';
 import { postGamificationEvent } from '@/lib/gamification-client';
 import { VaultStudioProgress } from '@/components/gamification/vault-studio-progress';
@@ -115,6 +117,7 @@ import {
   proLockText,
 } from '@/components/pro-lock';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
+import { canExportVault, EXPORT_PRO_TOAST, IMPORT_PRO_TOAST } from '@/lib/tier-limits';
 import { StudioGuidedTour } from '@/components/studio-guided-tour';
 import {
   VAULT_PAGE_TOUR_STEPS,
@@ -161,8 +164,7 @@ function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenC
               trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, { limitType: 'album', count: albumCount });
               trackUpgradeClick('slot_limit', { limitType: 'album', count: albumCount });
               void postGamificationEvent('album_limit_hit');
-              toast({ variant: 'destructive', title: 'Album Slot Locked', description: 'Free artists get 1 concept album. Upgrade for unlimited projects.' });
-              router.push('/usage?tab=cloud');
+              toast(FREE_ALBUM_LIMIT_TOAST);
               onOpenChange(false);
               return;
           }
@@ -170,7 +172,6 @@ function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenC
               trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, { limitType: 'track', count: trackCount });
               trackUpgradeClick('slot_limit', { limitType: 'track', count: trackCount });
               toast(FREE_TRACK_LIMIT_TOAST);
-              router.push('/usage?tab=cloud');
               onOpenChange(false);
               return;
           }
@@ -304,9 +305,18 @@ function FreeVisitorVault({
       <ProLockBanner>
         <p className={cn('text-xs', proLockText())}>Visitor Studio · {FREE_ALBUM_LIMIT} Album · {FREE_TRACK_LIMIT} Tracks</p>
         <p className="text-[10px] text-muted-foreground mt-1">
-          Hot pink locks are Studio Pro features. Gray icons with a fuchsia lock are over your free limit — view & export still work, edits need Pro.
+          Hot pink locks are Studio Pro features. Fuchsia locks mean over your demo limit — view still works, export & edits need Pro.
           {(hasExtraAlbums || hasExtraTracks) && ' Your older projects stay in the vault as view-only.'}
         </p>
+        <p className="text-[10px] text-muted-foreground/90 mt-1.5">{getVisitorInkGrantSummary()}</p>
+        {openTrackSlots === 1 && (
+          <p className="text-[10px] text-sky-400/90 mt-1">1 free track slot left · Pro = unlimited</p>
+        )}
+        {openTrackSlots === 0 && !hasExtraTracks && (
+          <p className="text-[10px] text-amber-400/90 mt-1">
+            Both demo slots in use — next track needs Pro or replace an existing one
+          </p>
+        )}
       </ProLockBanner>
 
       <div className="space-y-6">
@@ -644,6 +654,10 @@ export function AlbumList() {
   const isEmpty = realAlbums.length === 0 && unassignedTracks.length === 0;
 
   const handleExport = () => {
+    if (!canExportVault(user)) {
+      toast(EXPORT_PRO_TOAST);
+      return;
+    }
     const dataStr = JSON.stringify(albums, null, 2);
     const dataBlob = new Blob([dataStr], {type: "application/json"});
     const url = URL.createObjectURL(dataBlob);
@@ -655,6 +669,12 @@ export function AlbumList() {
 
   const handleImportMerge = async () => {
     if (!dataToImport) return;
+    if (!canExportVault(user)) {
+      toast(IMPORT_PRO_TOAST);
+      setShowImportConfirm(false);
+      setDataToImport(null);
+      return;
+    }
     setIsImporting(true);
     try {
       let albumsPayload: Album[] = [];
@@ -1000,6 +1020,11 @@ export function AlbumList() {
       
       <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={(e) => {
           const file = e.target.files?.[0]; if(!file) return;
+          if (!canExportVault(user)) {
+            toast(IMPORT_PRO_TOAST);
+            e.target.value = '';
+            return;
+          }
           const reader = new FileReader(); reader.onload = (ev) => { try { setDataToImport(JSON.parse(ev.target?.result as string)); setShowImportConfirm(true); } catch(err) { toast({ variant: 'destructive', title: 'Import Failed', description: 'Invalid studio blueprint file.' }); } }; reader.readAsText(file);
       }} />
 

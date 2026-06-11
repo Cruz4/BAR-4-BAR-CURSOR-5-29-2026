@@ -3,9 +3,16 @@ import { FieldValue } from 'firebase-admin/firestore';
 import type { Firestore } from 'firebase-admin/firestore';
 import { REFERRAL_INK_REWARD, MAX_REFERRAL_REWARDS } from '@/lib/referrals';
 import { buildInkLedgerDocument } from '@/lib/ink-ledger';
+import { FREE_RESIDENCY_POOL_CAP } from '@/lib/subscription';
+import { inkBalanceFirestorePatch, normalizeInkPools } from '@/lib/ink-balance';
+import { loadIdentityEntitlements } from '@/lib/server/identity-registry';
 
 function referralCodeFromUserId(userId: string): string {
   return userId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase().padEnd(8, '0');
+}
+
+function isProFromUserData(data: Record<string, unknown> | undefined): boolean {
+  return data?.subscriptionStatus === 'active';
 }
 
 export async function ensureReferralCode(db: Firestore, userId: string): Promise<string> {
@@ -35,7 +42,69 @@ export type ReferralClaimResult =
   | { ok: true; rewarded: false; reason: string }
   | { ok: false; error: string };
 
-/** Idempotent — grants 150 permanent Ink to both parties once per valid referral. */
+type ReferralInkGrant = {
+  pool: 'residency' | 'permanent';
+  amount: number;
+};
+
+async function resolveReferralInkGrant(
+  db: Firestore,
+  userId: string,
+  userData: Record<string, unknown> | undefined
+): Promise<ReferralInkGrant> {
+  if (isProFromUserData(userData)) {
+    return { pool: 'permanent', amount: REFERRAL_INK_REWARD };
+  }
+
+  const usageRef = db.collection('users').doc(userId).collection('usage').doc('balance');
+  const balanceSnap = await usageRef.get();
+  const pools = normalizeInkPools(balanceSnap.data());
+  const headroom = Math.max(0, FREE_RESIDENCY_POOL_CAP - pools.residencyBalance);
+  return { pool: 'residency', amount: Math.min(REFERRAL_INK_REWARD, headroom) };
+}
+
+async function applyReferralInkGrant(
+  db: Firestore,
+  userId: string,
+  grant: ReferralInkGrant,
+  reason: string
+): Promise<void> {
+  if (grant.amount <= 0) return;
+
+  const usageRef = db.collection('users').doc(userId).collection('usage').doc('balance');
+
+  if (grant.pool === 'permanent') {
+    await usageRef.set(
+      {
+        purchasedBalance: FieldValue.increment(grant.amount),
+        balance: FieldValue.increment(grant.amount),
+        lastRewardReason: reason,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    return;
+  }
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(usageRef);
+    const pools = normalizeInkPools(snap.data());
+    const nextResidency = Math.min(FREE_RESIDENCY_POOL_CAP, pools.residencyBalance + grant.amount);
+    const delta = nextResidency - pools.residencyBalance;
+    if (delta <= 0) return;
+
+    tx.set(
+      usageRef,
+      inkBalanceFirestorePatch(
+        { ...pools, residencyBalance: nextResidency },
+        { lastRewardReason: reason, updatedAt: new Date().toISOString() }
+      ),
+      { merge: true }
+    );
+  });
+}
+
+/** Idempotent — grants referral Ink once per valid referral (residency-capped for Visitor). */
 export async function claimReferralReward(
   db: Firestore,
   newUserId: string,
@@ -76,14 +145,25 @@ export async function claimReferralReward(
     return { ok: true, rewarded: false, reason: 'already_recorded' };
   }
 
+  const newUserEmail = (newUserData.email as string | undefined) || null;
+  const identity = await loadIdentityEntitlements(db, newUserEmail);
+  const grantNewUserWelcome = identity.welcomeInkEligible;
+
+  const newUserGrant = grantNewUserWelcome
+    ? await resolveReferralInkGrant(db, newUserId, newUserData)
+    : { pool: 'residency' as const, amount: 0 };
+  const referrerGrant = await resolveReferralInkGrant(db, referrerId, referrerDoc.data());
+
   const batch = db.batch();
-  const inkGrant = REFERRAL_INK_REWARD;
+  const inkGrantedTotal = newUserGrant.amount + referrerGrant.amount;
 
   batch.set(referralRecordRef, {
     referrerId,
     referredUserId: newUserId,
     referralCode,
-    inkGranted: inkGrant,
+    inkGranted: inkGrantedTotal,
+    newUserInkGranted: newUserGrant.amount,
+    referrerInkGranted: referrerGrant.amount,
     createdAt: FieldValue.serverTimestamp(),
     source: 'signup',
   });
@@ -101,55 +181,50 @@ export async function claimReferralReward(
     referralCount: FieldValue.increment(1),
   });
 
-  const grantInk = (userId: string, reason: string) => {
-    const usageRef = db.collection('users').doc(userId).collection('usage').doc('balance');
-    batch.set(
-      usageRef,
-      {
-        purchasedBalance: FieldValue.increment(inkGrant),
-        balance: FieldValue.increment(inkGrant),
-        lastRewardReason: reason,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
+  await batch.commit();
+
+  if (newUserGrant.amount > 0) {
+    await applyReferralInkGrant(db, newUserId, newUserGrant, 'referral_welcome');
+    const welcomeLogRef = db.collection('users').doc(newUserId).collection('usageLogs').doc();
+    await welcomeLogRef.set(
+      buildInkLedgerDocument(
+        {
+          type: 'credit',
+          pool: newUserGrant.pool === 'residency' ? 'residency' : 'permanent',
+          amount: newUserGrant.amount,
+          reason: 'referral_welcome',
+        },
+        { userId: newUserId }
+      )
     );
-  };
+  }
 
-  grantInk(newUserId, 'referral_welcome');
-  grantInk(referrerId, 'referral_bonus');
+  if (referrerGrant.amount > 0) {
+    await applyReferralInkGrant(db, referrerId, referrerGrant, 'referral_bonus');
+    const bonusLogRef = db.collection('users').doc(referrerId).collection('usageLogs').doc();
+    await bonusLogRef.set(
+      buildInkLedgerDocument(
+        {
+          type: 'credit',
+          pool: referrerGrant.pool === 'residency' ? 'residency' : 'permanent',
+          amount: referrerGrant.amount,
+          reason: 'referral_bonus',
+          details: `Referred ${newUserId}`,
+        },
+        { userId: referrerId }
+      )
+    );
+  }
 
-  const welcomeLogRef = db.collection('users').doc(newUserId).collection('usageLogs').doc();
-  batch.set(
-    welcomeLogRef,
-    buildInkLedgerDocument({
-      type: 'credit',
-      pool: 'permanent',
-      amount: inkGrant,
-      reason: 'referral_welcome',
-    }, { userId: newUserId })
-  );
-  const bonusLogRef = db.collection('users').doc(referrerId).collection('usageLogs').doc();
-  batch.set(
-    bonusLogRef,
-    buildInkLedgerDocument({
-      type: 'credit',
-      pool: 'permanent',
-      amount: inkGrant,
-      reason: 'referral_bonus',
-      details: `Referred ${newUserId}`,
-    }, { userId: referrerId })
-  );
-
-  batch.set(db.collection('system').doc('logs').collection('entries').doc(), {
+  await db.collection('system').doc('logs').collection('entries').add({
     timestamp: new Date().toISOString(),
     userId: referrerId,
     action: 'Referral Bonus',
     usdCost: 0,
     inkUsed: 0,
     type: 'referral',
-    details: `Referral ${newUserId} — ${inkGrant} Ink each`,
+    details: `Referral ${newUserId} — new user ${newUserGrant.amount} · referrer ${referrerGrant.amount} Ink`,
   });
 
-  await batch.commit();
   return { ok: true, rewarded: true, referrerId };
 }

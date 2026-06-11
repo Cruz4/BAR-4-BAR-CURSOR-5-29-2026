@@ -13,7 +13,7 @@ import { LandingSignInLink, LandingSignupLink } from '@/components/marketing/lan
 import { ProBillingCheckoutCta, proCheckoutHeaderHref } from '@/components/marketing/pro-billing-checkout-cta';
 import {
   getFreeSignupCtaLine,
-  getProTrialMarketingLine,
+  getProMarketingLine,
   getSignupInkMarketingLine,
 } from '@/lib/studio-tiers';
 
@@ -122,7 +122,7 @@ export function PublicHomeLanding() {
               Ready to write your next bar?
             </h3>
             <p className="font-code text-xs md:text-sm text-primary/80">
-              {getProTrialMarketingLine()}
+              {getProMarketingLine()}
             </p>
             <p className="font-code text-[10px] md:text-xs text-muted-foreground">
               {getSignupInkMarketingLine('footnote')}

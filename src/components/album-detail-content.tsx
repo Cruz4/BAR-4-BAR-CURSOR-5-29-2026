@@ -101,6 +101,8 @@ import {
   isTrackOverTierLimit,
   TIER_LIMIT_ALBUM_BANNER,
   TIER_LIMIT_LOCKED_TOAST,
+  canExportVault,
+  EXPORT_PRO_TOAST,
 } from '@/lib/tier-limits';
 import { LockedProFeatureButton, ProCreateTrackSlot, proLockText } from '@/components/pro-lock';
 import { trackStudioEvent } from '@/lib/analytics-client';
@@ -145,7 +147,6 @@ function CreateTrackDialog({
             });
             trackUpgradeClick('slot_limit', { limitType: 'track', count: trackCount });
             toast(FREE_TRACK_LIMIT_TOAST);
-            router.push('/usage?tab=cloud');
             onOpenChange(false);
             return;
         }
@@ -178,7 +179,6 @@ function CreateTrackDialog({
                 });
                 trackUpgradeClick('slot_limit', { limitType: 'track', count: trackCount });
                 toast(FREE_TRACK_LIMIT_TOAST);
-                router.push('/usage?tab=cloud');
             } else {
                 toast({ variant: 'destructive', title: 'Creation Failed', description: (e as Error).message });
             }
@@ -648,7 +648,6 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
       trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, { limitType: 'track', count: totalTrackCount });
       trackUpgradeClick('slot_limit', { limitType: 'track', count: totalTrackCount });
       toast(FREE_TRACK_LIMIT_TOAST);
-      router.push('/usage?tab=cloud');
       return;
     }
     setCreateTrackOpen(true);
@@ -848,7 +847,18 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 >
                                     <PlusCircle className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Add Track
                                 </Button>
-                                <Button variant="outline" size="sm" className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-white/10 rounded-xl bg-white/5 flex-1 sm:flex-none min-w-0" onClick={() => setExportDialogOpen(true)}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-white/10 rounded-xl bg-white/5 flex-1 sm:flex-none min-w-0"
+                                  onClick={() => {
+                                    if (!canExportVault(user)) {
+                                      toast(EXPORT_PRO_TOAST);
+                                      return;
+                                    }
+                                    setExportDialogOpen(true);
+                                  }}
+                                >
                                     <FileDown className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Export
                                 </Button>
                                 {!isUnassignedVault && (

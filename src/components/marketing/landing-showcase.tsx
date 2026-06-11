@@ -5,7 +5,7 @@ import { SocialProofBar } from '@/components/marketing/social-proof-bar';
 import { FeatureShowcaseSection } from '@/components/marketing/feature-showcase-section';
 import { ComparisonTable } from '@/components/marketing/comparison-table';
 import { MarketingMediaFrame } from '@/components/marketing/marketing-media-frame';
-import { getProTrialMarketingLine, getSignupInkMarketingLine } from '@/lib/studio-tiers';
+import { getProMarketingLine, getSignupInkMarketingLine } from '@/lib/studio-tiers';
 
 type LandingShowcaseProps = {
   /** Login page shows a scroll hint above the auth form; home page uses its own CTA. */
@@ -40,7 +40,7 @@ export function LandingShowcase({ showClosingCta = true }: LandingShowcaseProps)
               Ready to chase the next bar?
             </h3>
             <p className="font-code text-xs md:text-sm text-primary/80">
-              {getProTrialMarketingLine()}
+              {getProMarketingLine()}
             </p>
             <p className="font-code text-[10px] md:text-xs text-muted-foreground/90">
               {getSignupInkMarketingLine('showcase')}

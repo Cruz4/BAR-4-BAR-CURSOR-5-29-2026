@@ -35,6 +35,7 @@ import { captureMarketingRefFromUrl, getStoredMarketingRef } from '@/lib/marketi
 import { REFERRAL_INK_REWARD, REFERRAL_STORAGE_KEY, normalizeReferralCode } from '@/lib/referrals';
 import { claimPendingReferral } from '@/components/refer-a-friend-section';
 import { getTopFunnelSignupSubline } from '@/lib/studio-tiers';
+import { getVisitorInkGrantSummary } from '@/lib/ink-grants';
 import { InviteGateLoginBanner } from '@/components/invite-gate-login-banner';
 import {
   ProBillingCheckoutCta,
@@ -51,7 +52,6 @@ import {
   hasGoogleRedirectPending,
   startGoogleSignIn,
 } from '@/lib/google-auth-client';
-import { getStripeTrialDurationLabel } from '@/lib/trial';
 import { markFreshSignup } from '@/lib/post-login-redirect';
 
 function LoginForm() {
@@ -291,7 +291,7 @@ function LoginForm() {
                   <CardDescription className="text-[11px] font-code leading-relaxed text-left">
                     Create your account or sign in — you&apos;ll go straight to Stripe for{' '}
                     <strong className="text-foreground">{getProCheckoutLabel(proCheckoutIntent)}</strong>.
-                    Optional {getStripeTrialDurationLabel()} Pro trial at checkout (card required). Pro activates when Stripe completes.
+                    Card required — Pro activates when Stripe checkout completes.
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -373,6 +373,12 @@ function LoginForm() {
                         Sign Up
                       </TabsTrigger>
                     </TabsList>
+
+                    {authMode === 'signup' && (
+                      <p className="text-[10px] text-muted-foreground font-code mb-3 leading-relaxed">
+                        {getVisitorInkGrantSummary()}
+                      </p>
+                    )}
 
                     <form onSubmit={handleEmailAuth} className="space-y-3">
                       <div
