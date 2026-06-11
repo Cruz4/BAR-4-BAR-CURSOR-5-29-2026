@@ -34,7 +34,12 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { captureMarketingRefFromUrl, getStoredMarketingRef } from '@/lib/marketing-attribution';
 import { REFERRAL_INK_REWARD, REFERRAL_STORAGE_KEY, normalizeReferralCode } from '@/lib/referrals';
 import { claimPendingReferral } from '@/components/refer-a-friend-section';
+import { getTopFunnelSignupSubline } from '@/lib/studio-tiers';
 import { InviteGateLoginBanner } from '@/components/invite-gate-login-banner';
+import {
+  ProBillingCheckoutCta,
+  proCheckoutHeaderHref,
+} from '@/components/marketing/pro-billing-checkout-cta';
 import {
   getCheckoutFromPath,
   getProCheckoutLabel,
@@ -46,7 +51,8 @@ import {
   hasGoogleRedirectPending,
   startGoogleSignIn,
 } from '@/lib/google-auth-client';
-import { getTrialDurationLabel } from '@/lib/trial';
+import { getStripeTrialDurationLabel } from '@/lib/trial';
+import { markFreshSignup } from '@/lib/post-login-redirect';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -128,7 +134,6 @@ function LoginForm() {
             subscriptionStatus: 'none',
             subscriptionTier: 'none',
             status: 'active',
-            trialStartedAt: new Date().toISOString(),
             ...(signupRef ? { signupAttribution: signupRef } : {}),
           });
           await trackStudioEvent(ANALYTICS_EVENTS.SIGNUP, {
@@ -136,6 +141,7 @@ function LoginForm() {
             ...(signupRef ? { ref: signupRef } : {}),
           });
           await applyReferralIfNew(firebaseUser.uid);
+          markFreshSignup();
           return true;
         }
 
@@ -143,9 +149,6 @@ function LoginForm() {
         const patch: Record<string, unknown> = { ...profileBase };
         if (signupRef && !existingData.signupAttribution) {
           patch.signupAttribution = signupRef;
-        }
-        if (!existingData.trialStartedAt) {
-          patch.trialStartedAt = new Date().toISOString();
         }
         if (!existingData.status) {
           patch.status = 'active';
@@ -267,6 +270,7 @@ function LoginForm() {
           <nav className="flex items-center justify-end gap-2 sm:gap-4 min-w-0">
             <Link href="/#features" className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Features</Link>
             <Link href="/pricing" className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Pricing</Link>
+            <Link href={proCheckoutHeaderHref()} className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-accent hover:text-accent/80 transition-colors">Go Pro</Link>
           </nav>
       </header>
 
@@ -287,8 +291,19 @@ function LoginForm() {
                   <CardDescription className="text-[11px] font-code leading-relaxed text-left">
                     Create your account or sign in — you&apos;ll go straight to Stripe for{' '}
                     <strong className="text-foreground">{getProCheckoutLabel(proCheckoutIntent)}</strong>.
-                    New signups still get the {getTrialDurationLabel()} Pro trial; paid Pro activates when checkout completes.
+                    Optional {getStripeTrialDurationLabel()} Pro trial at checkout (card required). Pro activates when Stripe completes.
                   </CardDescription>
+                </CardHeader>
+              </Card>
+            )}
+
+            {!proCheckoutIntent && !importIntent && (
+              <Card className="w-full border-accent/25 bg-accent/5 backdrop-blur-md relative z-50">
+                <CardHeader className="pb-2 space-y-3">
+                  <CardTitle className="text-sm font-headline uppercase tracking-wide flex items-center gap-2 text-accent">
+                    <Zap className="h-4 w-4" /> Want full access now?
+                  </CardTitle>
+                  <ProBillingCheckoutCta variant="card" />
                 </CardHeader>
               </Card>
             )}
@@ -335,8 +350,8 @@ function LoginForm() {
                       <h2 className="font-headline text-2xl sm:text-3xl lg:text-[2.1rem] font-bold uppercase text-white tracking-tight leading-tight">
                         Enter the Studio
                       </h2>
-                      <p className="text-[10px] sm:text-xs font-code text-primary/80 uppercase tracking-widest">
-                        Free 300 Ink on signup — no card required
+                      <p className="text-[10px] sm:text-xs font-code text-primary/80 uppercase tracking-widest leading-relaxed">
+                        {getTopFunnelSignupSubline()}
                       </p>
                     </div>
                     <div className="hidden sm:flex flex-col items-center gap-1 pt-1 w-full border-t border-white/10 pt-4 max-w-[14rem]">
@@ -491,7 +506,7 @@ function LoginForm() {
               <a href={BUY_ME_COFFEE_URL} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
                 Buy Me A Coffee
               </a>
-              <Link href="/usage?tab=buy-ink" className="hover:text-primary transition-colors">
+              <Link href="/login?mode=signup" className="hover:text-primary transition-colors">
                 Refer A Friend
               </Link>
             </div>

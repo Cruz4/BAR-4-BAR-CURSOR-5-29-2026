@@ -15,8 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { useUsage } from '@/context/usage-context';
 import { SIGNUP_INK, FREE_MONTHLY_RESIDENCY_INK } from '@/lib/subscription';
-import { expectedSignupResidencyInk, isEligibleForFreeMonthlyGrant, getVisitorInkGrantSummary } from '@/lib/ink-grants';
-import { getTrialDurationTitle, isTrialActive } from '@/lib/trial';
+import { expectedSignupResidencyInk, isEligibleForFreeMonthlyGrant } from '@/lib/ink-grants';
+import { getStripeTrialCheckoutCtaLine, getVisitorResidencyPoolCapLine } from '@/lib/studio-tiers';
 import { INK_POOL_LABELS, getInkLedgerLabel } from '@/lib/ink-ledger';
 import {
   hasSeenWelcomeInk,
@@ -133,8 +133,19 @@ export function WelcomeInkDialog() {
         </DialogHeader>
 
         <div className="space-y-3">
+          <p className="text-xs text-sky-300/95 flex items-start gap-2 leading-relaxed">
+            <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-sky-400" />
+            <span>
+              Welcome Ink powers AI in the demo studio. Want full Pro workflow?{' '}
+              <Link href="/pricing" className="font-bold text-sky-300 hover:underline" onClick={dismiss}>
+                {getStripeTrialCheckoutCtaLine()}
+              </Link>
+              {' '}(card required).
+            </span>
+          </p>
+
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Here&apos;s what was added to your account. Full line-by-line history lives in{' '}
+            Ink added to your account — full history in{' '}
             <Link href="/usage?tab=history" className="text-primary hover:underline" onClick={dismiss}>
               Usage → History
             </Link>
@@ -178,18 +189,9 @@ export function WelcomeInkDialog() {
             </p>
           </div>
 
-          {isTrialActive(user) && (
-            <p className="text-[10px] text-sky-300/90 flex items-start gap-2">
-              <Sparkles className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-              <span>
-                <span className="font-bold">{getTrialDurationTitle()}</span> — vault save, Performance Mode, and Pro workflow are unlocked. Your welcome residency Ink powers AI during the trial.
-              </span>
-            </p>
-          )}
-
           <p className="text-[10px] text-muted-foreground flex items-center gap-2">
             <Timer className="h-3.5 w-3.5 shrink-0" />
-            {getVisitorInkGrantSummary()} — pool caps at 500.
+            {getVisitorResidencyPoolCapLine()}
           </p>
         </div>
 

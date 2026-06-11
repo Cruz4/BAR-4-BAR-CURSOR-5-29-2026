@@ -28,7 +28,12 @@ export function useStripe() {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const checkout = useCallback(
-    async (priceKey: StripePriceKey, userId: string, email?: string) => {
+    async (
+      priceKey: StripePriceKey,
+      userId: string,
+      email?: string,
+      options?: { withTrial?: boolean }
+    ) => {
       const isPreview = typeof window !== 'undefined' && window.location.hostname.includes('cloudworkstations.dev');
 
       if (isPreview) {
@@ -45,7 +50,12 @@ export function useStripe() {
         const response = await fetch('/api/stripe/checkout', {
           method: 'POST',
           headers,
-          body: JSON.stringify({ priceKey, userId, email }),
+          body: JSON.stringify({
+            priceKey,
+            userId,
+            email,
+            withTrial: options?.withTrial ?? true,
+          }),
         });
 
         const data = await response.json();

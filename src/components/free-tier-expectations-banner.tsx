@@ -5,15 +5,13 @@ import { X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FREE_TIER_EXPECTATIONS } from '@/lib/studio-onboarding';
 import { isProUser } from '@/lib/subscription';
-import { isTrialActive } from '@/lib/trial';
 import type { User } from '@/lib/types';
 import Link from 'next/link';
 
 export function FreeTierExpectationsBanner({ user }: { user: User | null }) {
   const [visible, setVisible] = useState(false);
   const paidPro = isProUser(user);
-  const trialActive = isTrialActive(user);
-  const mode: 'hidden' | 'visitor' = paidPro || trialActive ? 'hidden' : 'visitor';
+  const mode: 'hidden' | 'visitor' = paidPro ? 'hidden' : 'visitor';
 
   useEffect(() => {
     if (mode === 'hidden') return;

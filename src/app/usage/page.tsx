@@ -68,10 +68,11 @@ import {
   COMPETITOR_ANCHOR_COPY,
   VISITOR_INK_STORE_NOTICE,
   INK_STORE_PACK_CONTEXT,
+  VISITOR_RESIDENCY_POOL_CAPTION,
+  getProResidencyRefillCaption,
 } from '@/lib/studio-tiers';
 import { BYO_API_INK_DISCOUNT_PERCENT } from '@/lib/byo-api';
 import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, isProUser } from '@/lib/subscription';
-import { getTrialDaysRemaining, isTrialActive } from '@/lib/trial';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
 import { InkRefillCountdown } from '@/components/ink-refill-countdown';
 import { TierPriceSummary } from '@/components/tier-price-summary';
@@ -198,13 +199,12 @@ function UsagePageContent() {
     }
 
     router.replace('/usage?tab=cloud');
-    checkout(rawCheckout, user.id, user.email);
+    const withTrial = searchParams.get('trial') !== '0';
+    checkout(rawCheckout, user.id, user.email, { withTrial });
   }, [searchParams, user, checkout, isCheckingOut, router]);
 
   const isYearlyUser = user?.subscriptionTier === 'yearly';
   const paidPro = isProUser(user);
-  const trialActive = isTrialActive(user);
-  const trialDays = getTrialDaysRemaining(user);
   const residencyPoolCap = getResidencyPoolCap(user);
   const residencyProgress = getResidencyProgressPercent(residencyBalance, residencyPoolCap);
 
@@ -217,17 +217,24 @@ function UsagePageContent() {
     }));
 
   const handleStripeCheckout = (
-    priceKey: 'PRO_MONTHLY' | 'PRO_YEARLY' | 'INK_REFILL' | 'INK_ARTIST' | 'INK_VAULT'
+    priceKey: 'PRO_MONTHLY' | 'PRO_YEARLY' | 'INK_REFILL' | 'INK_ARTIST' | 'INK_VAULT',
+    options?: { withTrial?: boolean }
   ) => {
     if (!user) {
+      const trialParam =
+        priceKey === 'PRO_MONTHLY' || priceKey === 'PRO_YEARLY'
+          ? options?.withTrial === false
+            ? '&trial=0'
+            : '&trial=1'
+          : '';
       const loginPath =
         priceKey === 'PRO_MONTHLY' || priceKey === 'PRO_YEARLY'
-          ? buildLoginPath(`/usage?tab=cloud&checkout=${priceKey}`)
+          ? buildLoginPath(`/usage?tab=cloud&checkout=${priceKey}${trialParam}`)
           : buildLoginPath('/usage?tab=buy-ink');
       router.push(loginPath);
       return;
     }
-    checkout(priceKey, user.id, user.email);
+    checkout(priceKey, user.id, user.email, options);
   };
 
   const getSafeTimestamp = (timestamp: string | undefined) => {
@@ -250,7 +257,7 @@ function UsagePageContent() {
                 isCloudSyncActive ? (isYearlyUser ? 'bg-accent' : 'bg-primary') : 'bg-muted text-muted-foreground'
               )}
             >
-              {paidPro ? (isYearlyUser ? 'Yearly Pro' : 'Monthly Pro') : trialActive ? `Pro Trial · ${trialDays}d` : 'Visitor'}
+              {paidPro ? (isYearlyUser ? 'Yearly Pro' : 'Monthly Pro') : 'Visitor'}
             </Badge>
           </div>
           <p className="text-muted-foreground font-code">Permanent ink never expires — used after your monthly residency pool runs out.</p>
@@ -267,13 +274,7 @@ function UsagePageContent() {
                 </div>
                 <Progress value={residencyProgress} className="h-1.5 bg-primary/10" />
                 <p className="text-[8px] text-muted-foreground uppercase">
-                  {paidPro
-                    ? isYearlyUser
-                      ? 'Yearly Pro residency (3,444/mo refill)'
-                      : 'Monthly Pro residency (1,777/mo refill)'
-                    : trialActive
-                      ? 'Pro trial — workflow unlocked; welcome + monthly Visitor Ink still applies'
-                      : '300 welcome Ink · +111/mo from month two (pool caps at 500)'}
+                  {paidPro ? getProResidencyRefillCaption(isYearlyUser) : VISITOR_RESIDENCY_POOL_CAPTION}
                 </p>
                 {!paidPro && <InkRefillCountdown className="text-[8px] uppercase" />}
             </Card>
@@ -287,9 +288,7 @@ function UsagePageContent() {
                   <div className="h-full bg-sky-400 rounded-full" style={{ width: '100%' }} />
                 </div>
                 <p className="text-[8px] text-muted-foreground uppercase">
-                  {trialActive
-                    ? `Pro trial bonus — expires in ${trialDays ?? 0} day${trialDays === 1 ? '' : 's'}`
-                    : 'Trial bonus — expires when Pro trial ends'}
+                  Legacy trial bonus — no longer granted
                 </p>
               </Card>
             )}

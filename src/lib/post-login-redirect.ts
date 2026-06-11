@@ -1,0 +1,47 @@
+import { getCheckoutFromPath, getSafeNextPath } from '@/lib/checkout-intent';
+
+const FRESH_SIGNUP_KEY = 'b4b_fresh_signup';
+
+export function markFreshSignup(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(FRESH_SIGNUP_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+}
+
+export function consumeFreshSignup(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const fresh = sessionStorage.getItem(FRESH_SIGNUP_KEY) === '1';
+    if (fresh) sessionStorage.removeItem(FRESH_SIGNUP_KEY);
+    return fresh;
+  } catch {
+    return false;
+  }
+}
+
+function parseNextPath(next: string): { pathname: string; search: string } {
+  const [pathname, search = ''] = next.split('?');
+  return { pathname, search: search ? `?${search}` : '' };
+}
+
+/** Fresh signups start in the vault unless they chose Pro checkout or a share import. */
+export function resolvePostLoginPath(nextParam: string | null | undefined): string {
+  const safeNext = getSafeNextPath(nextParam);
+  const isFreshSignup = consumeFreshSignup();
+
+  if (!isFreshSignup) return safeNext;
+
+  const { pathname } = parseNextPath(safeNext);
+
+  if (pathname.startsWith('/share/')) return safeNext;
+  if (getCheckoutFromPath(safeNext)) return safeNext;
+
+  if (pathname === '/usage' || pathname.startsWith('/usage/')) {
+    return '/';
+  }
+
+  return safeNext;
+}

@@ -1,5 +1,4 @@
 import type { User } from '@/lib/types';
-import { isTrialActive } from '@/lib/trial';
 
 export const FREE_ALBUM_LIMIT = 1;
 export const FREE_TRACK_LIMIT = 4;
@@ -15,11 +14,11 @@ export function isProUser(user: Pick<User, 'subscriptionStatus'> | null | undefi
   return user?.subscriptionStatus === 'active';
 }
 
-/** Paid Pro or active signup trial — gates workflow features only. */
+/** Paid Pro (including Stripe trialing mapped to active). */
 export function isProOrTrial(
-  user: Pick<User, 'subscriptionStatus' | 'trialStartedAt'> | null | undefined
+  user: Pick<User, 'subscriptionStatus'> | null | undefined
 ): boolean {
-  return isProUser(user) || isTrialActive(user);
+  return isProUser(user);
 }
 
 export function isYearlyPro(user: Pick<User, 'subscriptionStatus' | 'subscriptionTier'> | null | undefined): boolean {
@@ -33,7 +32,7 @@ export function countUserTracks(albums: { id: string; tracks: unknown[] }[]): nu
 /** Free tier: max tracks across all albums + loose tracks combined. */
 export function canUserAddTrack(
   albums: { tracks?: unknown[] }[],
-  user: Pick<User, 'subscriptionStatus' | 'trialStartedAt'> | null | undefined
+  user: Pick<User, 'subscriptionStatus'> | null | undefined
 ): boolean {
   if (isProOrTrial(user)) return true;
   return countUserTracks(albums as { id: string; tracks: unknown[] }[]) < FREE_TRACK_LIMIT;

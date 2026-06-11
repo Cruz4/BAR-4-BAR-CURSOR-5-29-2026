@@ -1,4 +1,4 @@
-import type { Album } from '@/lib/types';
+import type { Album, Track } from '@/lib/types';
 import {
   getLastWorkedTrackPath,
   isTrackEditorPath,
@@ -64,4 +64,86 @@ export function appendQuery(path: string, query: Record<string, string>): string
 
 export function isTrackEditorPathValid(path: string | null | undefined): path is string {
   return Boolean(path && isTrackEditorPath(path.split('?')[0]));
+}
+
+export const PENDING_OPEN_GENERATOR_REMIX_KEY = 'b4b-pending-open-generator-remix';
+export const OPEN_GENERATOR_REMIX_EVENT = 'b4b-open-generator-remix';
+
+function normalizePathname(path: string): string {
+  const base = path.split('?')[0].split('#')[0];
+  return base.endsWith('/') && base.length > 1 ? base.slice(0, -1) : base;
+}
+
+export function isCurrentTrackPath(path: string): boolean {
+  if (typeof window === 'undefined') return false;
+  return normalizePathname(window.location.pathname) === normalizePathname(path);
+}
+
+export function markPendingOpenGeneratorRemix(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(PENDING_OPEN_GENERATOR_REMIX_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+}
+
+export function consumePendingOpenGeneratorRemix(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (sessionStorage.getItem(PENDING_OPEN_GENERATOR_REMIX_KEY) !== '1') return false;
+    sessionStorage.removeItem(PENDING_OPEN_GENERATOR_REMIX_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function hasPendingOpenGeneratorRemix(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return sessionStorage.getItem(PENDING_OPEN_GENERATOR_REMIX_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function dispatchOpenGeneratorRemix(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(OPEN_GENERATOR_REMIX_EVENT));
+}
+
+/** Navigate to a track and open DNA & REMIX — works even when already on that track. */
+export function requestOpenRemixWorkstation(
+  trackPath: string,
+  router: { push: (url: string) => void }
+): void {
+  const base = trackPath.split('?')[0];
+  const dest = appendQuery(base, { openGenerator: 'remix' });
+  markPendingOpenGeneratorRemix();
+  if (isCurrentTrackPath(base)) {
+    dispatchOpenGeneratorRemix();
+  }
+  router.push(dest);
+}
+
+/** Default loose track shell for quest / quick-start navigation. */
+export function buildDefaultLooseTrack(ownerId: string, title = 'New Track'): Omit<Track, 'id'> {
+  return {
+    albumId: 'unassigned',
+    ownerId,
+    title,
+    vibe: { genre: 'Lofi-Hop', tempoBPM: 90, feeling: ['new idea'] },
+    intentRefs: [],
+    sections: [
+      {
+        id: `section-${Date.now()}`,
+        type: 'verse',
+        bars: [{ idx: 1, text: '', accepted: true, syllables: 0, rhymeKey: '?' }],
+      },
+    ],
+    status: 'in_progress',
+    createdAt: new Date().toISOString(),
+    direction: { enabled: true, inheritFromAlbum: false },
+  };
 }

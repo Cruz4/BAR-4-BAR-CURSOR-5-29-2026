@@ -15,6 +15,12 @@ import {
 import type { User } from '@/lib/types';
 import { PRO_MONTHLY_RESIDENCY, PRO_YEARLY_RESIDENCY } from '@/lib/stripe-catalog';
 import { getVisitorInkGrantSummary } from '@/lib/ink-grants';
+import { MAX_REFERRAL_REWARDS, REFERRAL_INK_REWARD } from '@/lib/referrals';
+import {
+  getStripeTrialDurationLabel,
+  getStripeTrialMarketingLine,
+  getStripeTrialTitle,
+} from '@/lib/trial';
 
 export const PRO_MONTHLY_PRICE_AMOUNT = 7.77;
 export const PRO_YEARLY_PRICE_AMOUNT = 4.44;
@@ -176,6 +182,97 @@ export function getProHeadlinePerks(billing: 'monthly' | 'yearly'): readonly str
 
 export const VISITOR_INK_SUMMARY = getVisitorInkGrantSummary();
 
+/** Usage / tier cards — Visitor residency pool subcaption */
+export const VISITOR_RESIDENCY_POOL_CAPTION = `${SIGNUP_INK} welcome Ink · +${FREE_MONTHLY_RESIDENCY_INK}/mo from month two (pool caps at ${FREE_RESIDENCY_POOL_CAP})`;
+
+/** Welcome dialog — grant summary with pool cap */
+export function getVisitorResidencyPoolCapLine(): string {
+  return `${getVisitorInkGrantSummary()} — pool caps at ${FREE_RESIDENCY_POOL_CAP}.`;
+}
+
+/** Pro trial workflow unlock — shared across marketing and welcome surfaces */
+export const PRO_TRIAL_WORKFLOW_DETAIL = 'unlimited projects, vault saves & full workflow';
+
+/** Top-of-funnel — Stripe Pro trial (card required). */
+export function getProTrialMarketingLine(): string {
+  return `${getStripeTrialMarketingLine()} — ${PRO_TRIAL_WORKFLOW_DETAIL}`;
+}
+
+/** Hero / pricing — Try Pro with Stripe trial */
+export function getStripeTrialCheckoutCtaLine(): string {
+  return `Try Pro ${getStripeTrialDurationLabel()} free`;
+}
+
+/** Direct Pro checkout CTA — yearly default (matches pricing page). */
+export function getProIntentCtaLine(billing: 'monthly' | 'yearly' = 'yearly'): string {
+  if (billing === 'yearly') {
+    return `Go Pro Yearly — ${PRO_YEARLY_PRICE}/mo`;
+  }
+  return `Go Pro Monthly — ${PRO_MONTHLY_PRICE}/mo`;
+}
+
+export function getProIntentInkDetail(billing: 'monthly' | 'yearly'): string {
+  const ink = billing === 'yearly' ? PRO_YEARLY_INK : PRO_MONTHLY_INK;
+  return `${ink.toLocaleString()} residency Ink/mo`;
+}
+
+export function getProIntentBilledDetail(billing: 'monthly' | 'yearly'): string {
+  if (billing === 'yearly') {
+    return `${PRO_YEARLY_BILLED}/year billed annually`;
+  }
+  return 'billed monthly';
+}
+
+/** Free signup hero CTA */
+export function getFreeSignupCtaLine(): string {
+  return 'Start free demo';
+}
+
+/** Marketing signup CTAs — welcome Ink only (no +111/mo at top of funnel) */
+export function getSignupInkMarketingLine(
+  variant: 'login' | 'landing' | 'showcase' | 'social' | 'footnote' = 'login'
+): string {
+  switch (variant) {
+    case 'landing':
+      return `Free ${SIGNUP_INK} Ink to try the workstation — no credit card required.`;
+    case 'showcase':
+      return `Free ${SIGNUP_INK} Ink to try AI tools — no credit card. Initialize your session below.`;
+    case 'social':
+      return `${SIGNUP_INK} free Ink to try AI tools`;
+    case 'footnote':
+      return `${SIGNUP_INK} welcome Ink included — full residency details on Pricing & Usage`;
+    default:
+      return `Free ${SIGNUP_INK} Ink to try the workstation — no card required`;
+  }
+}
+
+/** Login / landing subline — free demo + optional Stripe trial */
+export function getTopFunnelSignupSubline(): string {
+  return `${getSignupInkMarketingLine('login')} · ${getStripeTrialTitle()} available at checkout`;
+}
+
+/** Header ink dropdown — Visitor residency pool label */
+export function getVisitorPoolHeaderCaption(): string {
+  return `Visitor pool (${SIGNUP_INK} welcome · +${FREE_MONTHLY_RESIDENCY_INK}/mo from month two)`;
+}
+
+/** Usage page — Pro residency refill subcaption */
+export function getProResidencyRefillCaption(isYearly: boolean): string {
+  const ink = isYearly ? PRO_YEARLY_INK : PRO_MONTHLY_INK;
+  const tier = isYearly ? 'Yearly' : 'Monthly';
+  return `${tier} Pro residency (${ink.toLocaleString()}/mo refill)`;
+}
+
+/** Pricing FAQ — residency vs permanent Ink */
+export function getResidencyVsPermanentFaqAnswer(): string {
+  return `Residency Ink is included with your membership and refills each billing cycle (${PRO_MONTHLY_INK.toLocaleString()}/mo on Pro Monthly, ${PRO_YEARLY_INK.toLocaleString()}/mo on Pro Yearly). Permanent Ink is bought in packs, never expires, and is used after residency runs out.`;
+}
+
+/** Pricing FAQ — refer a friend */
+export function getReferralFaqAnswer(): string {
+  return `Copy your link from Ink Store → Refer a Friend. When a new artist signs up through it, you each get ${REFERRAL_INK_REWARD} permanent Ink (referrers earn up to ${MAX_REFERRAL_REWARDS} bonuses). Bonuses apply automatically at signup and are tracked on Stripe checkout when they upgrade.`;
+}
+
 /** Shown on Ink Store for non-Pro artists */
 export const VISITOR_INK_STORE_NOTICE = {
   headline: 'Visitor studio — full AI lyric workstation',
@@ -184,7 +281,7 @@ export const VISITOR_INK_STORE_NOTICE = {
 
 /** Free tier limits — shown on comparison charts */
 export const VISITOR_FEATURES = [
-  `${SIGNUP_INK} welcome Ink on signup · +${FREE_MONTHLY_RESIDENCY_INK}/mo from month two (pool caps at ${FREE_RESIDENCY_POOL_CAP})`,
+  VISITOR_RESIDENCY_POOL_CAPTION,
   `${FREE_ALBUM_LIMIT} album · ${FREE_TRACK_LIMIT} tracks — demo-scale projects`,
   'Full bar-by-bar AI on Ink — Generate Next/Previous, Smart Structure, Studio Draft & Rhyme Pulse',
   'All 9 Creative Effects — Simile, Metaphor, Twist, POV, Blend & more (10 Ink each)',

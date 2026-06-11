@@ -49,6 +49,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   PanelRight,
+  PanelRightClose,
   Sparkles,
   Clapperboard,
   Save,
@@ -70,7 +71,6 @@ import {
   NotebookPen,
   Copy,
   LayoutGrid,
-  ChevronRight,
   Fingerprint,
   HelpCircle,
   Info,
@@ -130,6 +130,10 @@ import { persistLastWorkedTrack } from '@/lib/studio-tips-session';
 import {
   appendQuery,
   clearStaleLastWorkedTrackPath,
+  consumePendingOpenGeneratorRemix,
+  hasPendingOpenGeneratorRemix,
+  markPendingOpenGeneratorRemix,
+  OPEN_GENERATOR_REMIX_EVENT,
   resolveWorkstationTrackPath,
   trackExistsInVault,
 } from '@/lib/workstation-path';
@@ -137,8 +141,6 @@ import { dispatchStudioPrivacyIntroEligible, queueStudioPrivacyIntro } from '@/l
 import { StudioGuidedTour } from '@/components/studio-guided-tour';
 import { QuestProgress } from '@/components/gamification/quest-progress';
 import { postGamificationEvent } from '@/lib/gamification-client';
-import { recordProTrialVaultSave } from '@/lib/pro-trial-quest-client';
-import { isTrialActive } from '@/lib/trial';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
 import { MobileLyricsTabBar, type MobileLyricsTab } from '@/components/mobile-lyrics-tab-bar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -1838,7 +1840,6 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
         description: `"${name}" saved to your vault.`,
       });
       void postGamificationEvent('dna_preset_saved');
-      if (user?.id) void recordProTrialVaultSave(user.id, isTrialActive(user));
   };
 
   const handleConfirmSaveVibe = (name: string) => {
@@ -1884,11 +1885,11 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-primary"
+            className="h-8 w-8"
             onClick={() => onCollapse(true)}
             aria-label="Minimize Co-Writer panel"
           >
-            <ChevronRight className="h-4 w-4" />
+            <PanelRightClose className="h-4 w-4" />
           </Button>
         )}
       </div>
@@ -2227,9 +2228,18 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1 shrink-0">
                         <Switch checked={track.intentsEnabled ?? (track.checkedIntents?.length > 0)} onCheckedChange={(c) => onUpdateTrack({ intentsEnabled: c })} />
-                        <CollapsibleTrigger asChild><ChevronDown className="h-4 w-4 text-sky-500/40 cursor-pointer" /></CollapsibleTrigger>
+                        <CollapsibleTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-primary shrink-0 -mr-0.5 self-center"
+                            aria-label={sectionOpen.intents ? 'Collapse Intents' : 'Expand Intents'}
+                          >
+                            {sectionOpen.intents ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          </Button>
+                        </CollapsibleTrigger>
                     </div>
                 </div>
                 <CollapsibleContent>
@@ -2569,6 +2579,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   
   const [generateDraftOpen, setGenerateDraftOpen] = useState(false);
   const [generatorInitialMode, setGeneratorInitialMode] = useState<'select' | 'remix'>('select');
+  const openRemixHandledRef = useRef(false);
   const [workstationBackgroundActive, setWorkstationBackgroundActive] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
   const [smartStructureOpen, setSmartStructureOpen] = useState(false);
@@ -2680,24 +2691,60 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     return () => clearTimeout(t);
   }, [albumId, trackId, vaultLoading, track, album, albums, router, searchParams]);
 
+  const openRemixWorkstation = useCallback(() => {
+    if (!track || !album) return false;
+    setGeneratorInitialMode('remix');
+    setGenerateDraftOpen(true);
+    openRemixHandledRef.current = true;
+
+    const params = new URLSearchParams(searchParams.toString());
+    if (params.has('openGenerator') || params.has('proQuest')) {
+      params.delete('openGenerator');
+      params.delete('proQuest');
+      const qs = params.toString();
+      const clean = qs
+        ? `${window.location.pathname}?${qs}`
+        : window.location.pathname;
+      router.replace(clean);
+    }
+    return true;
+  }, [track, album, router, searchParams]);
+
   useEffect(() => {
-    const openGenerator = searchParams.get('openGenerator');
-    if (openGenerator === 'remix') {
-      setGeneratorInitialMode('remix');
-      setGenerateDraftOpen(true);
+    openRemixHandledRef.current = false;
+  }, [albumId, trackId]);
+
+  useEffect(() => {
+    if (vaultLoading || !track || !album) return;
+
+    const fromUrl =
+      searchParams.get('openGenerator') === 'remix' ||
+      searchParams.get('proQuest') === 'dna';
+    const fromPending = consumePendingOpenGeneratorRemix();
+
+    if (fromUrl || fromPending) {
+      openRemixWorkstation();
       return;
     }
+
+    const openGenerator = searchParams.get('openGenerator');
     if (openGenerator === 'true') {
       setGeneratorInitialMode('select');
       setGenerateDraftOpen(true);
     }
-  }, [searchParams]);
+  }, [vaultLoading, track, album, searchParams, openRemixWorkstation]);
 
   useEffect(() => {
-    if (searchParams.get('proQuest') !== 'dna' || !track) return;
-    setGeneratorInitialMode('remix');
-    setGenerateDraftOpen(true);
-  }, [searchParams, track]);
+    const onOpenRemix = () => {
+      if (vaultLoading || !track || !album) {
+        markPendingOpenGeneratorRemix();
+        return;
+      }
+      openRemixWorkstation();
+    };
+    window.addEventListener(OPEN_GENERATOR_REMIX_EVENT, onOpenRemix);
+    return () => window.removeEventListener(OPEN_GENERATOR_REMIX_EVENT, onOpenRemix);
+  }, [vaultLoading, track, album, openRemixWorkstation]);
 
   useEffect(() => {
     const syncVisibility = () => setPageVisible(document.visibilityState === 'visible');
@@ -2729,8 +2776,14 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   useEffect(() => {
     if (!user || !track || tourAutoStartRef.current) return;
     if (user.lyricsTutorialCompletedAt) return;
-    // User chose Enter Workstation — skip lyrics tour so the generator can open cleanly.
-    if (searchParams.get('openGenerator') === 'true') {
+    // User chose Enter Workstation or Pro trial quest — skip lyrics tour so the generator can open cleanly.
+    if (
+      searchParams.get('openGenerator') === 'true' ||
+      searchParams.get('openGenerator') === 'remix' ||
+      searchParams.get('proQuest') === 'dna' ||
+      hasPendingOpenGeneratorRemix() ||
+      openRemixHandledRef.current
+    ) {
       tourAutoStartRef.current = true;
       return;
     }

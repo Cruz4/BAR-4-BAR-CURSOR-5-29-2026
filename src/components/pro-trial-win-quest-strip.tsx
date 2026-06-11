@@ -2,6 +2,7 @@
 
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { flushSync } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, Circle, Dna, Timer, X } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
@@ -11,26 +12,31 @@ import { getTrialDaysRemaining, isTrialActive } from '@/lib/trial';
 import {
   PRO_TRIAL_WIN_EVENT,
   PRO_TRIAL_WIN_QUEST,
-  PRO_TRIAL_QUEST_OPEN_GENERATOR,
   shouldShowProTrialWinQuest,
   isProTrialWinComplete,
 } from '@/lib/pro-trial-quest';
 import { dismissProTrialWinQuest } from '@/lib/pro-trial-quest-client';
 import { resolveWorkstationTourPath } from '@/lib/studio-onboarding';
-import { appendQuery } from '@/lib/workstation-path';
+import {
+  buildDefaultLooseTrack,
+  requestOpenRemixWorkstation,
+} from '@/lib/workstation-path';
 import { cn } from '@/lib/utils';
 import { trackUpgradeClick } from '@/lib/conversion-analytics';
+import { canUserAddTrack, FREE_TRACK_LIMIT_TOAST } from '@/lib/subscription';
+import { useToast } from '@/hooks/use-toast';
 
 export function ProTrialWinQuestStrip() {
   const router = useRouter();
+  const { toast } = useToast();
   const { user } = useAuth();
-  const { albums, loading: vaultLoading } = useContext(DataContext);
+  const { albums, loading: vaultLoading, addTrack } = useContext(DataContext);
   const [winComplete, setWinComplete] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   const paidPro = isProUser(user);
-  const trialActive = isTrialActive(user);
-  const trialDays = getTrialDaysRemaining(user);
+  const trialActive = isTrialActive();
+  const trialDays = getTrialDaysRemaining();
   const questDone = winComplete || isProTrialWinComplete(user);
 
   useEffect(() => {
@@ -44,19 +50,34 @@ export function ProTrialWinQuestStrip() {
   }, []);
 
   const goToDnaSave = useCallback(() => {
-    if (vaultLoading) return;
-    const path = resolveWorkstationTourPath(albums);
-    if (path) {
-      router.push(appendQuery(path, { openGenerator: PRO_TRIAL_QUEST_OPEN_GENERATOR }));
-      return;
+    if (vaultLoading || !user) return;
+
+    let path = resolveWorkstationTourPath(albums);
+
+    if (!path) {
+      if (!canUserAddTrack(albums, user)) {
+        toast(FREE_TRACK_LIMIT_TOAST);
+        router.push('/usage?tab=cloud');
+        return;
+      }
+      try {
+        let created;
+        flushSync(() => {
+          created = addTrack('unassigned', buildDefaultLooseTrack(user.id));
+        });
+        path = `/albums/unassigned/tracks/${created!.id}`;
+      } catch (e) {
+        toast({
+          variant: 'destructive',
+          title: 'Could not create track',
+          description: e instanceof Error ? e.message : 'Try Create New on the vault.',
+        });
+        return;
+      }
     }
-    const createEl = document.querySelector('[data-tour="vault-create"]');
-    if (createEl) {
-      createEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-    router.push('/');
-  }, [albums, router, vaultLoading]);
+
+    requestOpenRemixWorkstation(path, router);
+  }, [addTrack, albums, router, toast, user, vaultLoading]);
 
   const handleDismiss = useCallback(async () => {
     if (!user) return;

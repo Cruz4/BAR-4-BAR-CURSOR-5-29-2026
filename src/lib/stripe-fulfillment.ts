@@ -190,7 +190,10 @@ export async function fulfillPaidCheckoutSession(
     customer?: string | { id: string } | null;
   }
 ): Promise<{ fulfilled: boolean; duplicate: boolean; inkAmount: number }> {
-  if (session.payment_status !== 'paid' && session.status !== 'complete') {
+  const isFulfilled =
+    session.status === 'complete' &&
+    (session.payment_status === 'paid' || session.payment_status === 'no_payment_required');
+  if (!isFulfilled) {
     throw new Error('Checkout session is not paid yet.');
   }
 

@@ -23,7 +23,7 @@ export function shouldShowProTrialWinQuest(user: Pick<
   'subscriptionStatus' | 'trialStartedAt' | 'proTrialWinCompletedAt' | 'proTrialWinDismissedAt'
 > | null | undefined): boolean {
   if (!user || isProUser(user)) return false;
-  if (!isTrialActive(user)) return false;
+  if (!isTrialActive()) return false;
   if (user.proTrialWinCompletedAt || user.proTrialWinDismissedAt) return false;
   return true;
 }

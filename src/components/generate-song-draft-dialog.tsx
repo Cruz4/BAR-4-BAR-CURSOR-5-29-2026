@@ -120,9 +120,7 @@ import { Progress } from './ui/progress';
 import { Slider } from './ui/slider';
 import { useAuth } from '@/hooks/use-auth';
 import { isProOrTrial } from '@/lib/subscription';
-import { isTrialActive } from '@/lib/trial';
 import { postGamificationEvent } from '@/lib/gamification-client';
-import { recordProTrialVaultSave } from '@/lib/pro-trial-quest-client';
 import { isLooseTrackAlbum } from '@/lib/co-writer-rules';
 import { LockedSaveButton, ProLockBadge, proLockIcon, proLockShell, proLockText } from '@/components/pro-lock';
 import { UpgradeTooltip } from '@/components/upgrade-tooltip';
@@ -1144,7 +1142,6 @@ export function GenerateSongDraftDialog({
         description: `"${name.trim()}" saved to your vault with full extraction.`,
       });
       void postGamificationEvent('dna_preset_saved');
-      if (user?.id) void recordProTrialVaultSave(user.id, isTrialActive(user));
   };
 
   const loadDnaPreset = (preset: DnaPreset) => {

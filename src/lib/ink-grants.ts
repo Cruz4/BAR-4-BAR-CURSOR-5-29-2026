@@ -83,3 +83,34 @@ export function isLikelyErroneousSignupMonthGrant(
   const expectedBump = SIGNUP_INK + FREE_MONTHLY_RESIDENCY_INK;
   return residencyBalance >= expectedBump - 2;
 }
+
+/**
+ * Signup month received only the monthly-sized grant (e.g. 111) without welcome ink.
+ * Monthly residency is meant to start calendar month two.
+ */
+export function isErroneousSignupMonthMonthlyOnly(
+  residencyBalance: number,
+  createdAt: string | null | undefined,
+  monthKey: string,
+  lastFreeResidencyGrant: string | null | undefined
+): boolean {
+  if (!isSignupMonth(createdAt, monthKey)) return false;
+  if (lastFreeResidencyGrant !== monthKey) return false;
+  return (
+    residencyBalance > 0 &&
+    residencyBalance <= FREE_MONTHLY_RESIDENCY_INK + 5 &&
+    residencyBalance < SIGNUP_INK - 5
+  );
+}
+
+/** Visitor should still have welcome ink in the signup month when it was never granted. */
+export function missingSignupWelcomeInk(
+  residencyBalance: number,
+  createdAt: string | null | undefined,
+  monthKey: string,
+  signupGrantSkipped?: boolean
+): boolean {
+  if (signupGrantSkipped) return false;
+  if (!isSignupMonth(createdAt, monthKey)) return false;
+  return residencyBalance < SIGNUP_INK - 5;
+}

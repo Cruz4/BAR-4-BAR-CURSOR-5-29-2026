@@ -481,6 +481,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         const userRef = doc(db, 'users', user.id);
         const userSnap = await getDoc(userRef);
         if (!userSnap.exists()) {
+          const { markFreshSignup } = await import('@/lib/post-login-redirect');
           await setDoc(userRef, {
             displayName: firebaseUser.displayName || 'Anonymous Artist',
             email: firebaseUser.email || '',
@@ -489,8 +490,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             subscriptionStatus: 'none',
             subscriptionTier: 'none',
             status: 'active',
-            trialStartedAt: new Date().toISOString(),
           });
+          markFreshSignup();
         }
 
         // Universal Residency: Cloud Sync enabled for ALL users (Visitor and Pro)

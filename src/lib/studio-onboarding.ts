@@ -1,6 +1,7 @@
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client/firebase';
 import { getVisitorInkGrantSummary } from '@/lib/ink-grants';
+import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT } from '@/lib/subscription';
 import type { Album } from '@/lib/types';
 import {
   getLastWorkedTrackPath,
@@ -133,8 +134,8 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
 ];
 
 export const FREE_TIER_EXPECTATIONS = {
-  headline: 'Visitor — full lyric workstation',
-  body: `Generate Next Line, Smart Structure, all 9 Creative Effects, and DNA & REMIX run on your Ink (${getVisitorInkGrantSummary()}). Load system DNA/Vibe/Style presets anytime. Studio Pro keeps your catalog: custom strain saves, unlimited slots, Performance Mode, Freestyle, vault import/export, and DNA Drop links.`,
+  headline: 'Visitor — demo-scale studio',
+  body: `Free accounts are demo-scale: ${FREE_ALBUM_LIMIT} album, ${FREE_TRACK_LIMIT} tracks, load-only DNA/Vibe/Style presets, and locked Performance Mode, Freestyle, vault import/export & DNA Drop links. AI tools run on your Ink (${getVisitorInkGrantSummary()}). Studio Pro unlocks your catalog: custom strain saves, unlimited slots, and the full feature set.`,
   dismissKey: 'b4b-free-tier-expectations-dismissed',
 } as const;
 

@@ -26,9 +26,8 @@ import { StudioLoader } from '@/components/studio-loader';
 import { BugReportDialog } from './bug-report-dialog';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
-import { getResidencyPoolCap, getResidencyProgressPercent } from '@/lib/studio-tiers';
+import { getResidencyPoolCap, getResidencyProgressPercent, getVisitorPoolHeaderCaption } from '@/lib/studio-tiers';
 import { InkRefillCountdown } from '@/components/ink-refill-countdown';
-import { FREE_MONTHLY_RESIDENCY_INK, SIGNUP_INK } from '@/lib/subscription';
 import { BYO_API_INK_DISCOUNT_PERCENT, isByoInkDiscountActive } from '@/lib/byo-api';
 import { HowToUseDialog } from './how-to-use-dialog';
 import { isMobileInstallPlatform, isStandalonePwa, requestPwaInstallPrompt } from '@/lib/pwa-install';
@@ -198,7 +197,7 @@ export function Header() {
                                 </div>
                                 <Progress value={residencyProgress} className="h-1 bg-primary/10" />
                                 <p className="text-[8px] text-muted-foreground italic uppercase">
-                                  {isPro ? 'Monthly residency pool' : `Visitor pool (${SIGNUP_INK} welcome · +${FREE_MONTHLY_RESIDENCY_INK}/mo from month two)`}
+                                  {isPro ? 'Monthly residency pool' : getVisitorPoolHeaderCaption()}
                                 </p>
                                 {!isPro && user && (
                                   <InkRefillCountdown compact className="italic uppercase" />
@@ -215,7 +214,7 @@ export function Header() {
                                 <div className="h-1 w-full bg-sky-500/20 rounded-full">
                                   <div className="h-full bg-sky-400 rounded-full" style={{ width: '100%' }} />
                                 </div>
-                                <p className="text-[8px] text-muted-foreground italic uppercase">Expires when Pro trial ends</p>
+                                <p className="text-[8px] text-muted-foreground italic uppercase">Legacy trial bonus</p>
                               </div>
                             )}
                             <div className="space-y-2">

@@ -3,7 +3,7 @@ export interface User {
   displayName: string;
   email?: string;
   createdAt: string; // ISO 8601 string
-  trialStartedAt?: string | null; // Pro workflow trial start (see TRIAL_DURATION_DAYS)
+  trialStartedAt?: string | null; // Legacy internal trial — no longer set on signup
   albums?: Album[];
   role?: 'admin' | 'artist';
   status?: 'active' | 'blocked';

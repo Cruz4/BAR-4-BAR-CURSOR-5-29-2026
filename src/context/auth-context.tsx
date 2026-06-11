@@ -24,6 +24,7 @@ import {
   type CachedUserProfile,
 } from '@/lib/offline/vault-cache';
 import { isMasterAdminEmail } from '@/lib/master-admin';
+import { resolvePostLoginPath } from '@/lib/post-login-redirect';
 
 interface AuthContextType {
   user: User | null;
@@ -44,9 +45,6 @@ const PUBLIC_ROUTES = ['/login', '/pricing'];
 const AUTH_BOOT_TIMEOUT_MS = 4500;
 /** Hold loader briefly when Firestore profile doc is not ready yet (avoids free-tier flash). */
 const PROFILE_DOC_WAIT_MS = 3000;
-/** New Firebase accounts get optimistic trial until profile doc arrives. */
-const NEW_ACCOUNT_TRIAL_GRACE_MS = 30 * 60 * 1000;
-
 function userFromFirebase(
   firebaseUser: FirebaseUser,
   data?: Partial<User> | null,
@@ -69,29 +67,6 @@ function userFromFirebase(
     proTrialWinDismissedAt: data?.proTrialWinDismissedAt,
     studioPrivacyIntroCompletedAt: data?.studioPrivacyIntroCompletedAt,
   };
-}
-
-function userWithOptimisticTrial(
-  firebaseUser: FirebaseUser,
-  data: Partial<User> | null | undefined,
-  isMaster: boolean
-): User {
-  const user = userFromFirebase(firebaseUser, data, isMaster);
-  if (
-    user.trialStartedAt ||
-    isMaster ||
-    user.subscriptionStatus === 'active' ||
-    user.returningIdentity
-  ) {
-    return user;
-  }
-  const created = firebaseUser.metadata.creationTime;
-  if (!created) return user;
-  const ageMs = Date.now() - new Date(created).getTime();
-  if (ageMs >= 0 && ageMs < NEW_ACCOUNT_TRIAL_GRACE_MS) {
-    return { ...user, trialStartedAt: created };
-  }
-  return user;
 }
 
 function userFromCachedProfile(
@@ -243,21 +218,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
 
             setIsBlocked(false);
-            const nextUser = userWithOptimisticTrial(
+            const nextUser = userFromFirebase(
               firebaseUser,
               data as Partial<User>,
               isMaster
             );
             settleProfile(nextUser, true);
           } else {
-            const fallback = userWithOptimisticTrial(firebaseUser, null, isMaster);
+            const fallback = userFromFirebase(firebaseUser, null, isMaster);
             settleProfile(fallback, false);
           }
         },
         (error) => {
           console.error('Auth profile listener error:', error);
           if (applyCachedOfflineUser(firebaseUser)) return;
-          const fallback = userWithOptimisticTrial(firebaseUser, null, isMaster);
+          const fallback = userFromFirebase(firebaseUser, null, isMaster);
           settleProfile(fallback, false);
         }
       );
@@ -309,11 +284,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         typeof window !== 'undefined'
           ? new URLSearchParams(window.location.search).get('next')
           : null;
-      const safeNext =
-        nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : '/';
+      const destination = resolvePostLoginPath(nextParam);
       const timer = setTimeout(() => {
         setIsRedirecting(true);
-        router.push(safeNext);
+        router.push(destination);
       }, 500);
       return () => clearTimeout(timer);
     } else {

@@ -3,12 +3,19 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LegalFooter } from '@/components/legal-footer';
 import { LandingShowcase } from '@/components/marketing/landing-showcase';
 import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmosphere';
+import { LandingHeroCtAs } from '@/components/marketing/landing-hero-ctas';
 import { LandingSignInLink, LandingSignupLink } from '@/components/marketing/landing-signup-link';
+import { ProBillingCheckoutCta, proCheckoutHeaderHref } from '@/components/marketing/pro-billing-checkout-cta';
+import {
+  getFreeSignupCtaLine,
+  getProTrialMarketingLine,
+  getSignupInkMarketingLine,
+} from '@/lib/studio-tiers';
 
 /** Public marketing surface for anonymous visitors on `/` (no auth form — CTA to `/login`). */
 export function PublicHomeLanding() {
@@ -40,6 +47,12 @@ export function PublicHomeLanding() {
             className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
           >
             Pricing
+          </Link>
+          <Link
+            href={proCheckoutHeaderHref()}
+            className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-accent hover:text-accent/80 transition-colors"
+          >
+            Go Pro
           </Link>
           <LandingSignInLink className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
             Sign in
@@ -97,28 +110,7 @@ export function PublicHomeLanding() {
               <span className="text-sky-400 font-bold">master your craft</span>.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4 relative z-50">
-              <Button
-                asChild
-                size="lg"
-                className="h-16 px-12 text-lg font-bold bg-primary hover:bg-primary/90 rounded-full shadow-[0_0_40px_rgba(59,130,246,0.5)] min-w-[260px] group transition-all"
-              >
-                <LandingSignupLink>
-                  <span className="flex items-center gap-2">
-                    Create free account <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
-                  </span>
-                </LandingSignupLink>
-              </Button>
-              <Link href="/pricing" className="relative z-50">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="h-16 px-12 text-lg font-bold bg-black/40 hover:bg-black/60 border-white/20 text-white rounded-full min-w-[260px] backdrop-blur-md transition-all hover:scale-105"
-                >
-                  View Studio Tiers
-                </Button>
-              </Link>
-            </div>
+            <LandingHeroCtAs />
           </div>
         </section>
 
@@ -129,12 +121,18 @@ export function PublicHomeLanding() {
             <h3 className="font-headline text-xl md:text-2xl font-bold uppercase text-white">
               Ready to write your next bar?
             </h3>
-            <p className="font-code text-xs md:text-sm text-muted-foreground">
-              Free 300 Ink on signup — no credit card required.
+            <p className="font-code text-xs md:text-sm text-primary/80">
+              {getProTrialMarketingLine()}
             </p>
-            <Button asChild size="lg" className="h-12 px-8 font-bold rounded-full">
-              <LandingSignupLink>Create free account</LandingSignupLink>
-            </Button>
+            <p className="font-code text-[10px] md:text-xs text-muted-foreground">
+              {getSignupInkMarketingLine('footnote')}
+            </p>
+            <div className="flex flex-col items-center justify-center gap-4 pt-1">
+              <Button asChild size="lg" className="h-12 px-8 font-bold rounded-full">
+                <LandingSignupLink>{getFreeSignupCtaLine()}</LandingSignupLink>
+              </Button>
+              <ProBillingCheckoutCta variant="compact" />
+            </div>
             <p className="text-[10px] text-muted-foreground">
               Already have an account?{' '}
               <LandingSignInLink className="text-primary font-bold hover:underline">Sign in</LandingSignInLink>

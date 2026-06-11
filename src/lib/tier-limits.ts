@@ -6,7 +6,7 @@ import {
 } from '@/lib/subscription';
 
 type AlbumLike = { id: string; createdAt?: string; tracks?: Track[] };
-type UserLike = Pick<User, 'subscriptionStatus' | 'trialStartedAt'> | null | undefined;
+type UserLike = Pick<User, 'subscriptionStatus'> | null | undefined;
 
 function byCreatedAtAsc<T extends { createdAt?: string }>(a: T, b: T): number {
   const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;

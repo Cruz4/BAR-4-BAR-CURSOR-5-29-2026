@@ -9,11 +9,13 @@ import {
   isProUser,
 } from '@/lib/subscription';
 import { inkBalanceFirestorePatch, normalizeInkPools, totalInkBalance } from '@/lib/ink-balance';
-import { isTrialActive } from '@/lib/trial';
 import { TRIAL_INK_GRANT } from '@/lib/trial-ink-ab';
 import {
   isEligibleForFreeMonthlyGrant,
+  isErroneousSignupMonthMonthlyOnly,
   isLikelyErroneousSignupMonthGrant,
+  isSignupMonth,
+  missingSignupWelcomeInk,
 } from '@/lib/ink-grants';
 import { recordInkLedgerEntries } from '@/lib/server/ink-ledger';
 import type { InkLedgerWrite } from '@/lib/ink-ledger';
@@ -41,7 +43,7 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
   const userRef = db.doc(`users/${userId}`);
   const [snap, userSnap] = await Promise.all([balanceRef.get(), userRef.get()]);
   const userData = userSnap.data();
-  const trialActive = isTrialActive(userData as { trialStartedAt?: string | null });
+  const trialActive = false;
   const trialInkGrant = TRIAL_INK_GRANT;
   const userCreatedAt = (userData as { createdAt?: string })?.createdAt;
 
@@ -142,6 +144,69 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
       },
     ]);
     data = { ...data, residencyBalance: SIGNUP_INK, signupMonthMonthlyCorrected: true };
+  }
+
+  const erroneousSignupMonthly = isErroneousSignupMonthMonthlyOnly(
+    pools.residencyBalance,
+    userCreatedAt,
+    monthKey,
+    data.lastFreeResidencyGrant as string | undefined
+  );
+  const missingWelcomeOnly =
+    pools.residencyBalance === 0 &&
+    isSignupMonth(userCreatedAt, monthKey) &&
+    missingSignupWelcomeInk(pools.residencyBalance, userCreatedAt, monthKey, data.signupGrantSkipped);
+
+  if (
+    !data.welcomeInkReconciled &&
+    !data.signupGrantSkipped &&
+    (erroneousSignupMonthly || missingWelcomeOnly)
+  ) {
+    const erroneousMonthly = erroneousSignupMonthly;
+    const previousBalance = pools.residencyBalance;
+    const ledger: InkLedgerWrite[] = [];
+
+    if (erroneousMonthly && previousBalance > 0) {
+      ledger.push({
+        type: 'debit',
+        pool: 'residency',
+        amount: previousBalance,
+        reason: 'monthly_residency',
+        details: 'signup_month_reversal',
+      });
+    }
+
+    const welcomeCredit = erroneousMonthly
+      ? SIGNUP_INK
+      : SIGNUP_INK - previousBalance;
+
+    if (welcomeCredit > 0) {
+      ledger.push({
+        type: 'credit',
+        pool: 'residency',
+        amount: welcomeCredit,
+        reason: 'signup_residency',
+        details: erroneousMonthly ? 'welcome_correction' : 'welcome_grant',
+      });
+    }
+
+    pools = { ...pools, residencyBalance: SIGNUP_INK };
+    await balanceRef.set(
+      inkBalanceFirestorePatch(pools, {
+        welcomeInkReconciled: true,
+        ...(erroneousMonthly ? { lastFreeResidencyGrant: null } : {}),
+      }),
+      { merge: true }
+    );
+    if (ledger.length > 0) {
+      await recordInkLedgerEntries(db, userId, ledger);
+    }
+    data = {
+      ...data,
+      residencyBalance: SIGNUP_INK,
+      welcomeInkReconciled: true,
+      ...(erroneousMonthly ? { lastFreeResidencyGrant: null } : {}),
+    };
   }
 
   if (trialActive && TRIAL_INK_GRANT === 0 && pools.trialInkBalance > 0) {
@@ -268,15 +333,17 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
 
   if (data.signupGranted && !data.inkLedgerBackfilled) {
     const pools = normalizeInkPools(data);
-    const backfill: InkLedgerWrite[] = [
-      {
+    const backfill: InkLedgerWrite[] = [];
+
+    if (!data.signupGrantSkipped) {
+      backfill.push({
         type: 'credit',
         pool: 'residency',
         amount: SIGNUP_INK,
         reason: 'signup_residency',
         details: 'Opening balance',
-      },
-    ];
+      });
+    }
 
     if (SIGNUP_PERMANENT_INK > 0 && pools.purchasedBalance >= SIGNUP_PERMANENT_INK) {
       backfill.push({
@@ -298,20 +365,26 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
       });
     }
 
+    const lastGrantMonth = data.lastFreeResidencyGrant
+      ? String(data.lastFreeResidencyGrant)
+      : null;
     if (
-      data.lastFreeResidencyGrant &&
-      isEligibleForFreeMonthlyGrant(userCreatedAt, String(data.lastFreeResidencyGrant))
+      lastGrantMonth &&
+      isEligibleForFreeMonthlyGrant(userCreatedAt, lastGrantMonth) &&
+      !isSignupMonth(userCreatedAt, lastGrantMonth)
     ) {
       backfill.push({
         type: 'credit',
         pool: 'residency',
         amount: FREE_MONTHLY_RESIDENCY_INK,
         reason: 'monthly_residency',
-        details: String(data.lastFreeResidencyGrant),
+        details: lastGrantMonth,
       });
     }
 
-    await recordInkLedgerEntries(db, userId, backfill);
+    if (backfill.length > 0) {
+      await recordInkLedgerEntries(db, userId, backfill);
+    }
     await balanceRef.set(
       { inkLedgerBackfilled: true, updatedAt: new Date().toISOString() },
       { merge: true }

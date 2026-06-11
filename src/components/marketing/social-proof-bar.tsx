@@ -2,12 +2,12 @@
 
 import React from 'react';
 import { Droplets, Smartphone, Sparkles } from 'lucide-react';
-import { getTrialDurationLabel } from '@/lib/trial';
+import { getProTrialMarketingLine, getSignupInkMarketingLine } from '@/lib/studio-tiers';
 
 export function SocialProofBar() {
   const stats = [
-    { icon: Droplets, label: '300 free Ink on signup' },
-    { icon: Sparkles, label: `${getTrialDurationLabel()} Pro trial included` },
+    { icon: Sparkles, label: getProTrialMarketingLine() },
+    { icon: Droplets, label: getSignupInkMarketingLine('social') },
     { icon: Smartphone, label: 'Install to home screen — no app store' },
   ] as const;
 

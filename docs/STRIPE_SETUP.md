@@ -25,6 +25,8 @@ Stripe prices are immutable — after changing amounts, run `npm run stripe:crea
 
 Yearly Pro: **50% off** ink packs at checkout (`STRIPE_COUPON_YEARLY_INK_50`).
 
+**Pro subscription trial:** New Pro checkouts default to a **3-day Stripe trial** (`trial_period_days` in `/api/stripe/checkout`, constant `STRIPE_PRO_TRIAL_DAYS` in `src/lib/trial.ts`). Card required; fulfillment accepts `payment_status: no_payment_required`. Skip trial with `?trial=0` on checkout URLs or `withTrial: false` in the API body. Free signup is Visitor-only — no automatic internal trial.
+
 **Test coupon:** `npm run stripe:create-test-yearly-ink-coupon` (requires `sk_test_...`), then add the printed line to `.env` and `functions/.env` before deploy.
 
 ---

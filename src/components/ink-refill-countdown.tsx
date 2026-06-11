@@ -2,7 +2,7 @@
 
 import { Timer } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { isProUser } from '@/lib/subscription';
+import { FREE_MONTHLY_RESIDENCY_INK, isProUser } from '@/lib/subscription';
 import {
   formatFreeMonthlyRefillLabel,
   getDaysUntilFreeMonthlyGrant,
@@ -37,7 +37,7 @@ export function InkRefillCountdown({ className, compact = false }: InkRefillCoun
       <span>
         {compact ? (
           <>
-            +111 Ink in {days === 0 ? 'soon' : `${days}d`}
+            +{FREE_MONTHLY_RESIDENCY_INK} Ink in {days === 0 ? 'soon' : `${days}d`}
           </>
         ) : (
           label
