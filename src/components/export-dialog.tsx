@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useRef, useTransition, useState } from 'react';
+import Link from 'next/link';
 import type { Album, Track } from '@/lib/types';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -16,7 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Download, FileText, Loader, FileJson } from 'lucide-react';
+import { Download, FileText, Loader, FileJson, Lock } from 'lucide-react';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 
@@ -26,6 +27,8 @@ interface ExportDialogProps {
   album: Album;
   tracks: Track[]; 
   exportType?: 'album' | 'track';
+  /** When false, preview only — downloads locked behind Pro upgrade. */
+  allowDownload?: boolean;
 }
 
 interface ExportOptions {
@@ -116,7 +119,14 @@ function formatLyricsForTxt(album: Album, tracks: Track[], options: ExportOption
   return output;
 }
 
-export function ExportDialog({ open, onOpenChange, album, tracks, exportType = 'album' }: ExportDialogProps) {
+export function ExportDialog({
+  open,
+  onOpenChange,
+  album,
+  tracks,
+  exportType = 'album',
+  allowDownload = true,
+}: ExportDialogProps) {
   const previewRef = useRef<HTMLDivElement>(null);
   const [isPending, startTransition] = useTransition();
   const [exportOptions, setExportOptions] = useState<ExportOptions>({
@@ -129,7 +139,15 @@ export function ExportDialog({ open, onOpenChange, album, tracks, exportType = '
     setExportOptions(prev => ({...prev, [option]: value}));
   }
 
+  const handleLockedDownload = () => {
+    onOpenChange(false);
+  };
+
   const handleDownloadPdf = () => {
+    if (!allowDownload) {
+      handleLockedDownload();
+      return;
+    }
     startTransition(async () => {
         const input = previewRef.current;
         if (!input) return;
@@ -152,6 +170,10 @@ export function ExportDialog({ open, onOpenChange, album, tracks, exportType = '
   };
 
   const handleDownloadTxt = () => {
+    if (!allowDownload) {
+      handleLockedDownload();
+      return;
+    }
      startTransition(() => {
         const textContent = formatLyricsForTxt(album, tracks, exportOptions, exportType);
         const blob = new Blob([textContent], { type: 'text/plain' });
@@ -166,6 +188,10 @@ export function ExportDialog({ open, onOpenChange, album, tracks, exportType = '
   };
 
   const handleDownloadJson = () => {
+    if (!allowDownload) {
+      handleLockedDownload();
+      return;
+    }
     startTransition(() => {
         const dataToExport = exportType === 'album' ? album : tracks[0];
         const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
@@ -180,14 +206,37 @@ export function ExportDialog({ open, onOpenChange, album, tracks, exportType = '
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
-        <DialogHeader><DialogTitle className="font-headline">{exportType === 'album' ? `Export Album: "${album.title}"` : `Export Track: "${tracks?.[0]?.title}"`}</DialogTitle><DialogDescription>Choose your preferred format. Use `.json` for a re-importable backup.</DialogDescription></DialogHeader>
+        <DialogHeader>
+          <DialogTitle className="font-headline">
+            {allowDownload
+              ? exportType === 'album'
+                ? `Export Album: "${album.title}"`
+                : `Export Track: "${tracks?.[0]?.title}"`
+              : `Preview Export: "${tracks?.[0]?.title || album.title}"`}
+          </DialogTitle>
+          <DialogDescription>
+            {allowDownload
+              ? 'Choose your preferred format. Use `.json` for a re-importable backup.'
+              : 'Preview your export layout. Downloads unlock with Studio Pro — your lyrics stay saved in the demo vault.'}
+          </DialogDescription>
+        </DialogHeader>
         <div className="flex items-center space-x-4 pb-4 border-b">
             <h4 className="text-sm font-medium">Include:</h4>
             {exportType === 'album' && <div className="flex items-center space-x-2"><Checkbox id="in" checked={exportOptions.includeTrackNumbers} onCheckedChange={(c) => handleOptionChange('includeTrackNumbers', !!c)} /><Label htmlFor="in">Numbers</Label></div>}
             <div className="flex items-center space-x-2"><Checkbox id="it" checked={exportOptions.includeTrackTitles} onCheckedChange={(c) => handleOptionChange('includeTrackTitles', !!c)} /><Label htmlFor="it">Titles</Label></div>
             <div className="flex items-center space-x-2"><Checkbox id="ish" checked={exportOptions.includeSectionHeaders} onCheckedChange={(c) => handleOptionChange('includeSectionHeaders', !!c)} /><Label htmlFor="ish">Sections</Label></div>
         </div>
-        <div className="flex-grow min-h-0 bg-gray-300 p-4">
+        <div className="flex-grow min-h-0 bg-gray-300 p-4 relative">
+          {!allowDownload && (
+            <div
+              className="pointer-events-none absolute inset-4 z-10 flex items-center justify-center rounded-md"
+              aria-hidden
+            >
+              <span className="rotate-[-24deg] text-4xl font-black uppercase tracking-widest text-black/10 select-none">
+                Pro Preview
+              </span>
+            </div>
+          )}
           <ScrollArea className="h-full rounded-md border bg-white shadow-lg">
             <div ref={previewRef} style={{ width: '210mm' }}>
               <div id="pdf-preview-content" className="prose prose-sm max-w-none bg-white text-black p-8 font-sans">
@@ -225,10 +274,21 @@ export function ExportDialog({ open, onOpenChange, album, tracks, exportType = '
             </div>
           </ScrollArea>
         </div>
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={handleDownloadJson} disabled={isPending}>{isPending ? <Loader className="animate-spin mr-2"/> : <FileJson className="mr-2" />} JSON</Button>
-          <Button variant="outline" onClick={handleDownloadTxt} disabled={isPending}>{isPending ? <Loader className="animate-spin mr-2"/> : <FileText className="mr-2" />} TXT</Button>
-          <Button onClick={handleDownloadPdf} disabled={isPending}>{isPending ? <Loader className="animate-spin mr-2"/> : <Download className="mr-2" />} PDF</Button>
+        <DialogFooter className="gap-2 flex-wrap">
+          {allowDownload ? (
+            <>
+              <Button variant="outline" onClick={handleDownloadJson} disabled={isPending}>{isPending ? <Loader className="animate-spin mr-2"/> : <FileJson className="mr-2" />} JSON</Button>
+              <Button variant="outline" onClick={handleDownloadTxt} disabled={isPending}>{isPending ? <Loader className="animate-spin mr-2"/> : <FileText className="mr-2" />} TXT</Button>
+              <Button onClick={handleDownloadPdf} disabled={isPending}>{isPending ? <Loader className="animate-spin mr-2"/> : <Download className="mr-2" />} PDF</Button>
+            </>
+          ) : (
+            <Button asChild className="w-full sm:w-auto font-bold uppercase text-[10px] tracking-widest">
+              <Link href="/usage?tab=cloud" onClick={() => onOpenChange(false)}>
+                <Lock className="mr-2 h-4 w-4" />
+                Export this track — Go Pro
+              </Link>
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

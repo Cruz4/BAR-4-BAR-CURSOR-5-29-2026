@@ -4,6 +4,7 @@ import { getAuth, getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/ser
 import {
   FREE_MONTHLY_RESIDENCY_INK,
   FREE_RESIDENCY_POOL_CAP,
+  PRO_FEATURE_PREVIEW_DAYS,
   SIGNUP_INK,
   SIGNUP_PERMANENT_INK,
   isProUser,
@@ -22,8 +23,29 @@ import type { InkLedgerWrite } from '@/lib/ink-ledger';
 import { isMasterAdminEmail } from '@/lib/server/master-admin';
 import {
   loadIdentityEntitlements,
+  reserveProFeaturePreview,
   reserveSignupEntitlements,
 } from '@/lib/server/identity-registry';
+
+function computeProFeaturePreviewExpiresAt(days = PRO_FEATURE_PREVIEW_DAYS): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString();
+}
+
+async function grantProFeaturePreview(
+  db: Awaited<ReturnType<typeof getDb>>,
+  userEmail: string,
+  userId: string,
+  bypassIdentityRegistry: boolean
+): Promise<string | null> {
+  if (bypassIdentityRegistry) {
+    return computeProFeaturePreviewExpiresAt();
+  }
+  if (!userEmail) return computeProFeaturePreviewExpiresAt();
+  const reserved = await reserveProFeaturePreview(db, userEmail, userId);
+  return reserved ? computeProFeaturePreviewExpiresAt() : null;
+}
 
 /** Server-side balance bootstrap — requires FIREBASE_SERVICE_ACCOUNT_KEY locally. */
 export async function initializeUserUsage(idToken: string, userId: string): Promise<void> {
@@ -36,6 +58,7 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
   if (decoded.uid !== userId) return;
 
   const userEmail = decoded.email?.trim() || '';
+  const emailVerified = decoded.email_verified === true;
   const bypassIdentityRegistry = isMasterAdminEmail(userEmail);
 
   const db = await getDb();
@@ -68,7 +91,11 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
     let returningIdentity = false;
     let signupGrantSkipped = false;
 
-    if (!bypassIdentityRegistry && userEmail) {
+    if (!emailVerified) {
+      residencyInk = 0;
+      trialInk = 0;
+      signupGrantSkipped = true;
+    } else if (!bypassIdentityRegistry && userEmail) {
       const reserved = await reserveSignupEntitlements(db, userEmail, userId, {
         welcomeInkAmount: SIGNUP_INK,
         trialInkAmount: trialInkGrant,
@@ -86,10 +113,24 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
     const userPatch: Record<string, unknown> = {
       updatedAt: new Date().toISOString(),
     };
+    if (!emailVerified) {
+      userPatch.pendingWelcomeInk = true;
+    }
     if (returningIdentity) {
       userPatch.returningIdentity = true;
       if (!grantTrialWorkflow) {
         userPatch.trialStartedAt = null;
+      }
+    }
+    if (emailVerified && residencyInk > 0 && !returningIdentity) {
+      const previewExpiresAt = await grantProFeaturePreview(
+        db,
+        userEmail,
+        userId,
+        bypassIdentityRegistry
+      );
+      if (previewExpiresAt) {
+        userPatch.proFeaturePreviewExpiresAt = previewExpiresAt;
       }
     }
 
@@ -139,6 +180,79 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
 
   const monthKey = new Date().toISOString().slice(0, 7);
   let data = snap.data()!;
+
+  if (
+    emailVerified &&
+    (userData as { pendingWelcomeInk?: boolean })?.pendingWelcomeInk &&
+    !data.welcomeInkReconciled
+  ) {
+    let residencyInk = SIGNUP_INK;
+    let returningIdentity = false;
+
+    if (!bypassIdentityRegistry && userEmail) {
+      const reserved = await reserveSignupEntitlements(db, userEmail, userId, {
+        welcomeInkAmount: SIGNUP_INK,
+        trialInkAmount: 0,
+        wantsTrial: false,
+      });
+      residencyInk = reserved.welcomeInk;
+      returningIdentity = reserved.returningIdentity;
+    }
+
+    const pools = normalizeInkPools(data);
+    const ledger: InkLedgerWrite[] = [];
+    if (residencyInk > 0) {
+      const nextResidency = Math.min(FREE_RESIDENCY_POOL_CAP, pools.residencyBalance + residencyInk);
+      const grantDelta = nextResidency - pools.residencyBalance;
+      if (grantDelta > 0) {
+        ledger.push({
+          type: 'credit',
+          pool: 'residency',
+          amount: grantDelta,
+          reason: 'signup_residency',
+          details: 'email_verified',
+        });
+      }
+      const nextPools = { ...pools, residencyBalance: nextResidency };
+      await balanceRef.set(
+        inkBalanceFirestorePatch(nextPools, {
+          welcomeInkReconciled: true,
+          signupGrantSkipped: false,
+          signupResidencyGranted: grantDelta,
+        }),
+        { merge: true }
+      );
+      data = {
+        ...data,
+        residencyBalance: nextResidency,
+        welcomeInkReconciled: true,
+        signupGrantSkipped: false,
+      };
+      if (ledger.length > 0) {
+        await recordInkLedgerEntries(db, userId, ledger);
+      }
+    }
+
+    const userPatch: Record<string, unknown> = {
+      pendingWelcomeInk: false,
+      updatedAt: new Date().toISOString(),
+    };
+    if (returningIdentity) {
+      userPatch.returningIdentity = true;
+    }
+    if (residencyInk > 0 && !returningIdentity && !(userData as { proFeaturePreviewExpiresAt?: string })?.proFeaturePreviewExpiresAt) {
+      const previewExpiresAt = await grantProFeaturePreview(
+        db,
+        userEmail,
+        userId,
+        bypassIdentityRegistry
+      );
+      if (previewExpiresAt) {
+        userPatch.proFeaturePreviewExpiresAt = previewExpiresAt;
+      }
+    }
+    await userRef.set(userPatch, { merge: true });
+  }
 
   let pools = normalizeInkPools(data);
 

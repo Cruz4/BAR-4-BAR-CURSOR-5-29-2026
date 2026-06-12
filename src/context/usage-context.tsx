@@ -20,6 +20,7 @@ import { trackLowInkHit, trackUpgradeClick } from '@/lib/conversion-analytics';
 import { formatFreeMonthlyRefillLabel } from '@/lib/ink-grants';
 import { totalInkBalance } from '@/lib/ink-balance';
 import { API_KEY_STORAGE_KEY, isValidGoogleApiKey } from '@/lib/byo-api';
+import { ZeroInkDialog } from '@/components/zero-ink-dialog';
 
 export type AiSpendContext = {
   track: Track;
@@ -70,6 +71,9 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
   
   const hasInitializedRef = useRef(false);
   const aiContextRef = useRef<AiSpendContext | null>(null);
+  const [zeroInkOpen, setZeroInkOpen] = useState(false);
+  const [zeroInkAction, setZeroInkAction] = useState<string | undefined>();
+  const zeroInkShownRef = useRef(false);
 
   const registerAiContext = useCallback((ctx: AiSpendContext | null) => {
     aiContextRef.current = ctx;
@@ -171,62 +175,19 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
     const finalAmount = Math.max(1, Math.ceil(amount));
 
     if (inkBalance < finalAmount) {
-        const isPro = isProUser(user);
-        const isYearly = isYearlyPro(user);
         trackLowInkHit(actionName, finalAmount, inkBalance);
-
-        toast({
-          variant: 'destructive',
-          title: 'Not enough Ink',
-          description: (
-            <span className="flex flex-col gap-2 text-sm">
-              <span>
-                You need {finalAmount} Ink — you have {inkBalance.toLocaleString()}.
-              </span>
-              {!isPro && user.createdAt && (
-                <span className="text-[11px] text-white/70 leading-snug">
-                  {formatFreeMonthlyRefillLabel(user.createdAt)}.
-                </span>
-              )}
-              <span className="flex gap-2 flex-wrap pt-0.5">
-                <Button asChild size="sm" className="h-8 text-[10px] font-bold uppercase bg-primary text-white hover:bg-primary/90">
-                  <Link
-                    href="/usage?tab=buy-ink"
-                    onClick={() => trackUpgradeClick('low_ink', { actionName, cta: 'ink_pack' })}
-                  >
-                    {isYearly ? 'Buy Ink Packs' : 'Buy Ink Pack'}
-                  </Link>
-                </Button>
-                {!isPro && (
-                  <Button
-                    asChild
-                    size="sm"
-                    variant="outline"
-                    className="h-8 text-[10px] font-bold uppercase border-white/35 text-white hover:bg-white/10 hover:text-white"
-                  >
-                    <Link
-                      href="/usage?tab=cloud"
-                      onClick={() => trackUpgradeClick('low_ink', { actionName, cta: 'upgrade' })}
-                    >
-                      Keep My Vault (Pro)
-                    </Link>
-                  </Button>
-                )}
-                {isPro && !isYearly && (
-                  <Button
-                    asChild
-                    size="sm"
-                    variant="outline"
-                    className="h-8 text-[10px] font-bold uppercase border-white/35 text-white hover:bg-white/10 hover:text-white"
-                  >
-                    <Link href="/usage?tab=cloud">Upgrade to Yearly</Link>
-                  </Button>
-                )}
-              </span>
-            </span>
-          ),
-          duration: 7000,
-        });
+        setZeroInkAction(actionName);
+        if (!zeroInkShownRef.current) {
+          zeroInkShownRef.current = true;
+          setZeroInkOpen(true);
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Not enough Ink',
+            description: `You need ${finalAmount} Ink — you have ${inkBalance.toLocaleString()}.`,
+            duration: 5000,
+          });
+        }
         return false;
     }
     
@@ -281,12 +242,25 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, toast]);
 
+  useEffect(() => {
+    if (inkBalance > 0) {
+      zeroInkShownRef.current = false;
+    }
+  }, [inkBalance]);
+
   return (
     <UsageContext.Provider value={{
       usageHistory, inkBalance, residencyBalance, trialInkBalance, purchasedBalance, loading, customApiKey, lastSpent, mousePos,
       addUsageLog, deductInk, refundInk, addInk, saveCustomApiKey, registerAiContext,
     }}>
       {children}
+      <ZeroInkDialog
+        open={zeroInkOpen}
+        onOpenChange={setZeroInkOpen}
+        user={user}
+        inkBalance={inkBalance}
+        actionName={zeroInkAction}
+      />
     </UsageContext.Provider>
   );
 };

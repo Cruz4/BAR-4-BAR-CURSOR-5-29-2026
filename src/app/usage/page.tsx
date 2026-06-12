@@ -70,8 +70,9 @@ import {
   INK_STORE_PACK_CONTEXT,
   VISITOR_RESIDENCY_POOL_CAPTION,
   getProResidencyRefillCaption,
+  VISITOR_INK_PACK_NOTICE,
+  PRO_GATED_INK_PACK_KEYS,
 } from '@/lib/studio-tiers';
-import { BYO_API_INK_DISCOUNT_PERCENT } from '@/lib/byo-api';
 import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, isProUser } from '@/lib/subscription';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
 import { InkRefillCountdown } from '@/components/ink-refill-countdown';
@@ -113,7 +114,7 @@ function InkPoolBadge({ pool }: { pool: InkPool | 'unknown' }) {
 }
 
 function UsagePageContent() {
-  const { usageHistory, inkBalance, residencyBalance, trialInkBalance, purchasedBalance, loading, customApiKey, saveCustomApiKey } = useUsage();
+  const { usageHistory, inkBalance, residencyBalance, trialInkBalance, purchasedBalance, loading } = useUsage();
   const { isCloudSyncActive } = useContext(DataContext);
   const { user } = useAuth();
   const { checkout, fulfillCheckoutReturn, openBillingPortal, isCheckingOut } = useStripe();
@@ -123,11 +124,6 @@ function UsagePageContent() {
   const [activeTab, setActiveTab] = useState('buy-ink');
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   
-  const [apiKeyInput, setApiKeyInput] = useState(customApiKey || '');
-
-  useEffect(() => {
-    setApiKeyInput(customApiKey || '');
-  }, [customApiKey]);
   const [displayNameInput, setDisplayNameInput] = useState(user?.displayName || '');
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -360,15 +356,23 @@ function UsagePageContent() {
           <p className="text-xs text-muted-foreground font-code text-center max-w-2xl mx-auto leading-relaxed">
             {INK_STORE_PACK_CONTEXT}
           </p>
+          {!paidPro && (
+            <p className="text-[10px] text-amber-400/90 font-code text-center max-w-2xl mx-auto leading-relaxed">
+              {VISITOR_INK_PACK_NOTICE}
+            </p>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto items-stretch">
-            {getPricePacks().map((pack) => (
+            {getPricePacks().map((pack) => {
+              const packLocked = !paidPro && PRO_GATED_INK_PACK_KEYS.has(pack.priceKey);
+              return (
               <Card 
                 key={pack.name} 
                 className={cn(
                     "relative flex flex-col h-full transition-all duration-300", 
                     pack.popular && "border-primary shadow-2xl z-10 bg-card/60",
-                    pack.bestValue && "border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.2)] z-10 bg-card/60"
+                    pack.bestValue && "border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.2)] z-10 bg-card/60",
+                    packLocked && "opacity-75"
                 )}
               >
                 {pack.popular && (
@@ -447,17 +451,22 @@ function UsagePageContent() {
                             pack.bestValue ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""
                         )} 
                         variant={pack.popular ? 'default' : pack.bestValue ? 'default' : 'outline'} 
-                        onClick={() => handleStripeCheckout(pack.priceKey)}
+                        onClick={() => packLocked ? setActiveTab('cloud') : handleStripeCheckout(pack.priceKey)}
                         disabled={isCheckingOut || isProcessingOrder}
                     >
                         <CreditCard className="h-3.5 w-3.5 shrink-0" aria-hidden />
                         <span className="text-center leading-snug whitespace-normal">
-                          {isCheckingOut ? 'Opening Checkout…' : 'Purchase Permanent Ink'}
+                          {packLocked
+                            ? 'Go Pro to unlock bulk packs'
+                            : isCheckingOut
+                              ? 'Opening Checkout…'
+                              : 'Purchase Permanent Ink'}
                         </span>
                     </Button>
                 </CardFooter>
               </Card>
-            ))}
+            );
+            })}
           </div>
         </TabsContent>
         
@@ -655,57 +664,6 @@ function UsagePageContent() {
                           <Button onClick={() => {}} className="h-12 px-8 font-bold text-sm shrink-0">Save</Button>
                         </div>
                       </div>
-                    </CardContent>
-                </Card>
-                <Card className={cn("border-2", !isYearlyUser && "opacity-50")}>
-                    <CardHeader className="pb-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <CardTitle className="font-headline text-2xl">Studio API Bypass (BYO-API)</CardTitle>
-                        {!isYearlyUser && <Badge variant="destructive" className="uppercase tracking-widest text-xs shrink-0">Yearly Pro Only</Badge>}
-                      </div>
-                      <CardDescription className="text-sm leading-relaxed normal-case tracking-normal text-muted-foreground">
-                        Connect your Google AI key for your own API quota and rate limits. Google bills tokens on your account; Bar 4 Bar Ink is the workstation orchestration fee (DNA flows, guardrails, remix logic) at {BYO_API_INK_DISCOUNT_PERCENT}% off while BYO is active.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-5">
-                        {customApiKey && isYearlyUser && (
-                        <div className="p-4 bg-accent/5 border border-accent/20 rounded-md space-y-1">
-                            <p className="text-sm leading-relaxed font-code text-accent font-bold"><Zap className="inline h-4 w-4 mr-1.5 align-[-2px]" /> BYO-API active — {BYO_API_INK_DISCOUNT_PERCENT}% off all AI Ink costs.</p>
-                            <p className="text-[11px] text-muted-foreground leading-relaxed">Key stays in this browser only (never stored on Bar 4 Bar servers).</p>
-                        </div>
-                        )}
-                        <form
-                          className="flex flex-col sm:flex-row gap-3"
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            if (isYearlyUser) saveCustomApiKey(apiKeyInput);
-                          }}
-                        >
-                            <Input
-                              type="password"
-                              autoComplete="current-password"
-                              placeholder="AIza..."
-                              value={apiKeyInput}
-                              onChange={(e) => setApiKeyInput(e.target.value)}
-                              disabled={!isYearlyUser}
-                              className="font-mono text-base h-12"
-                            />
-                            <Button type="submit" disabled={!isYearlyUser} className="h-12 px-8 font-bold text-sm shrink-0">Save Key</Button>
-                            {customApiKey && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                disabled={!isYearlyUser}
-                                className="h-12 px-6 font-bold text-sm shrink-0"
-                                onClick={() => {
-                                  setApiKeyInput('');
-                                  saveCustomApiKey(null);
-                                }}
-                              >
-                                Clear
-                              </Button>
-                            )}
-                        </form>
                     </CardContent>
                 </Card>
                 <Card className="border-primary/20">

@@ -11,6 +11,8 @@ export type IdentityRegistryDoc = {
   welcomeInkGrantedToUid?: string | null;
   trialGrantedAt?: string | null;
   trialGrantedToUid?: string | null;
+  proFeaturePreviewGrantedAt?: string | null;
+  proFeaturePreviewGrantedToUid?: string | null;
   lastDeletedAt?: string | null;
   lastDeletedUid?: string | null;
   deleteCount?: number;
@@ -21,6 +23,7 @@ export type IdentityEntitlements = {
   emailHash: string | null;
   welcomeInkEligible: boolean;
   trialEligible: boolean;
+  proFeaturePreviewEligible: boolean;
 };
 
 export type SignupEntitlementReservation = {
@@ -58,7 +61,12 @@ export async function loadIdentityEntitlements(
   email: string | null | undefined
 ): Promise<IdentityEntitlements> {
   if (!email?.trim()) {
-    return { emailHash: null, welcomeInkEligible: true, trialEligible: true };
+    return {
+      emailHash: null,
+      welcomeInkEligible: true,
+      trialEligible: true,
+      proFeaturePreviewEligible: true,
+    };
   }
 
   const emailHash = hashIdentityEmail(email);
@@ -69,7 +77,49 @@ export async function loadIdentityEntitlements(
     emailHash,
     welcomeInkEligible: !data?.welcomeInkGrantedAt,
     trialEligible: !data?.trialGrantedAt,
+    proFeaturePreviewEligible: !data?.proFeaturePreviewGrantedAt,
   };
+}
+
+/** Atomically reserve one Pro feature preview window per email. */
+export async function reserveProFeaturePreview(
+  db: Firestore,
+  email: string,
+  userId: string
+): Promise<boolean> {
+  if (!email.trim()) return true;
+
+  const emailHash = hashIdentityEmail(email);
+  const ref = registryRef(db, emailHash);
+  const now = new Date().toISOString();
+
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const existing = snap.data() as IdentityRegistryDoc | undefined;
+    if (existing?.proFeaturePreviewGrantedAt) return false;
+
+    const patch: IdentityRegistryDoc = {
+      emailHash,
+      updatedAt: now,
+      proFeaturePreviewGrantedAt: now,
+      proFeaturePreviewGrantedToUid: userId,
+    };
+
+    if (existing?.welcomeInkGrantedAt) {
+      patch.welcomeInkGrantedAt = existing.welcomeInkGrantedAt;
+      patch.welcomeInkGrantedToUid = existing.welcomeInkGrantedToUid ?? null;
+    }
+    if (existing?.trialGrantedAt) {
+      patch.trialGrantedAt = existing.trialGrantedAt;
+      patch.trialGrantedToUid = existing.trialGrantedToUid ?? null;
+    }
+    if (existing?.lastDeletedAt) patch.lastDeletedAt = existing.lastDeletedAt;
+    if (existing?.lastDeletedUid) patch.lastDeletedUid = existing.lastDeletedUid;
+    if (typeof existing?.deleteCount === 'number') patch.deleteCount = existing.deleteCount;
+
+    tx.set(ref, patch, { merge: true });
+    return true;
+  });
 }
 
 /**

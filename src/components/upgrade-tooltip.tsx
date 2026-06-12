@@ -10,11 +10,21 @@ interface UpgradeTooltipProps {
   feature: string;
   benefit: string;
   example?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
   children: React.ReactNode;
   side?: 'top' | 'bottom' | 'left' | 'right';
 }
 
-export function UpgradeTooltip({ feature, benefit, example, children, side = 'top' }: UpgradeTooltipProps) {
+export function UpgradeTooltip({
+  feature,
+  benefit,
+  example,
+  ctaLabel = 'Upgrade Studio',
+  ctaHref = '/usage?tab=cloud',
+  children,
+  side = 'top',
+}: UpgradeTooltipProps) {
   return (
     <Hint
       side={side}
@@ -35,7 +45,7 @@ export function UpgradeTooltip({ feature, benefit, example, children, side = 'to
             <p className="text-[10px] text-muted-foreground italic border-l-2 border-pink-400/40 pl-2">{example}</p>
           )}
           <Button asChild size="sm" className="w-full h-8 text-[9px] font-bold uppercase tracking-widest mt-1 bg-pink-600 hover:bg-pink-500">
-            <Link href="/usage?tab=cloud">Upgrade Studio</Link>
+            <Link href={ctaHref}>{ctaLabel}</Link>
           </Button>
         </div>
       }

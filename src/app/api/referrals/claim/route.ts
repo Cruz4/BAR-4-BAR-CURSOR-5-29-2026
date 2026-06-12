@@ -3,6 +3,7 @@ import { getDb } from '@/lib/firebase/server';
 import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 import { claimReferralReward, ensureReferralCode } from '@/lib/server/referrals';
 import { normalizeReferralCode } from '@/lib/referrals';
+import { isReferralIpAllowed, recordReferralIpClaim, resolveClientIp } from '@/lib/server/referral-ip-window';
 
 export const runtime = 'nodejs';
 
@@ -28,8 +29,22 @@ export async function POST(req: Request) {
     }
 
     const db = await getDb();
+    const clientIp = resolveClientIp(req);
+    const ipAllowed = await isReferralIpAllowed(db, clientIp);
+    if (!ipAllowed) {
+      return NextResponse.json({
+        ok: true,
+        rewarded: false,
+        reason: 'ip_rate_limited',
+      });
+    }
+
     await ensureReferralCode(db, userId);
     const result = await claimReferralReward(db, userId, referralCode);
+
+    if (result.ok && result.rewarded) {
+      await recordReferralIpClaim(db, clientIp);
+    }
 
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: 400 });

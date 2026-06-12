@@ -345,7 +345,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                                 ))}
                             </ul>
                             <p className="text-[10px] font-bold uppercase tracking-widest text-accent pt-2 border-t border-accent/20">Yearly Pro Exclusives</p>
-                            <p className="text-[10px] text-accent/90 leading-snug pb-2">BYO Google AI key: you pay Google for tokens; Ink is the workstation IP fee (prompts, DNA, guardrails) — not double billing.</p>
+                            <p className="text-[10px] text-accent/90 leading-snug pb-2">Bulk Ink packs (Artist Bundle & Studio Vault) unlock with Studio Pro — Visitor artists start with the Studio Pack.</p>
                             <ul className="text-[11px] space-y-1.5 text-accent font-semibold">
                                 {PRO_YEARLY_EXCLUSIVES.map((f) => (
                                   <li key={f} className="flex gap-2"><span className="shrink-0">◆</span><span>{f}</span></li>

@@ -32,6 +32,12 @@ export interface User {
   trialInkAbVariant?: 'control' | 'h1_zero';
   /** ISO timestamp — leaderboard / public profile intro acknowledged */
   studioPrivacyIntroCompletedAt?: string;
+  /** ISO timestamp — Pro workflow preview expires (export, unlimited tracks, etc.). */
+  proFeaturePreviewExpiresAt?: string | null;
+  /** Welcome Ink deferred until Firebase email is verified. */
+  pendingWelcomeInk?: boolean;
+  /** ISO timestamp — first meaningful activation (e.g. Studio Draft complete). */
+  activatedAt?: string | null;
 }
 
 export type Direction = {

@@ -67,6 +67,9 @@ function userFromFirebase(
     proTrialWinCompletedAt: data?.proTrialWinCompletedAt,
     proTrialWinDismissedAt: data?.proTrialWinDismissedAt,
     studioPrivacyIntroCompletedAt: data?.studioPrivacyIntroCompletedAt,
+    proFeaturePreviewExpiresAt: data?.proFeaturePreviewExpiresAt ?? null,
+    pendingWelcomeInk: data?.pendingWelcomeInk,
+    activatedAt: data?.activatedAt ?? null,
   };
 }
 
@@ -184,6 +187,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           vaultTutorialCompletedAt: nextUser.vaultTutorialCompletedAt,
           proTrialWinCompletedAt: nextUser.proTrialWinCompletedAt,
           proTrialWinDismissedAt: nextUser.proTrialWinDismissedAt,
+          proFeaturePreviewExpiresAt: nextUser.proFeaturePreviewExpiresAt ?? null,
+          pendingWelcomeInk: nextUser.pendingWelcomeInk,
+          activatedAt: nextUser.activatedAt ?? null,
         });
       };
 

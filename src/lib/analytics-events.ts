@@ -19,6 +19,7 @@ export const ANALYTICS_EVENTS = {
   SHARE_CARD_GENERATED: 'share_card_generated',
   SHARE_CARD_OPENED: 'share_card_opened',
   LEADERBOARD_VIEW: 'leaderboard_view',
+  USER_ACTIVATED: 'user_activated',
 } as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS];

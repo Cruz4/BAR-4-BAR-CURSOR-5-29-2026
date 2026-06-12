@@ -20,10 +20,17 @@ type StudioGuidedTourProps = {
 
 const PAD = 8;
 const MOBILE_BREAKPOINT = 768;
-const MOBILE_CARD_HEIGHT = 220;
+const TOUR_CARD_HEIGHT_ESTIMATE = 280;
 /** Tab bar + quest progress floating above it on mobile */
 const MOBILE_BOTTOM_CHROME = 148;
-const MOBILE_TOP_CARD_STEPS = new Set(['bar-workstation', 'generation', 'save', 'dna-drop']);
+/** Steps whose targets sit low on the page — pin the tour card to the top so actions stay visible. */
+const TOP_CARD_STEP_IDS = new Set([
+  'bar-workstation',
+  'generation',
+  'save',
+  'dna',
+  'dna-drop',
+]);
 
 function useCompactViewport() {
   const [compact, setCompact] = useState(false);
@@ -86,7 +93,7 @@ export function StudioGuidedTour({
   onComplete,
   onBeforeStep,
   steps = LYRICS_PAGE_TOUR_STEPS,
-  mobileTopCardStepIds = MOBILE_TOP_CARD_STEPS,
+  mobileTopCardStepIds = TOP_CARD_STEP_IDS,
 }: StudioGuidedTourProps) {
   const step = steps[stepIndex];
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -150,27 +157,43 @@ export function StudioGuidedTour({
       const next = htmlEl.getBoundingClientRect();
       if (next.width === 0 && next.height === 0) return;
 
+      const bottomCardReserve = compact
+        ? TOUR_CARD_HEIGHT_ESTIMATE + MOBILE_BOTTOM_CHROME + 20
+        : TOUR_CARD_HEIGHT_ESTIMATE + 32;
+      const spaceBelow = window.innerHeight - next.bottom;
+      const spaceAbove = next.top;
+      const targetInLowerHalf = next.top > window.innerHeight * 0.42;
+      const forceTop = mobileTopCardStepIds.has(step.id);
+
       let placement: 'top' | 'bottom' = 'bottom';
+      if (forceTop || targetInLowerHalf) {
+        placement = 'top';
+      } else if (spaceBelow < bottomCardReserve + 16 && spaceAbove >= TOUR_CARD_HEIGHT_ESTIMATE + 16) {
+        placement = 'top';
+      } else if (spaceBelow < TOUR_CARD_HEIGHT_ESTIMATE + 16) {
+        placement = 'top';
+      }
+      setCardPlacement(placement);
+
+      const topReserve = placement === 'top' ? TOUR_CARD_HEIGHT_ESTIMATE + 88 : 72;
+      const bottomReserve = compact
+        ? placement === 'bottom'
+          ? bottomCardReserve
+          : MOBILE_BOTTOM_CHROME + 24
+        : placement === 'bottom'
+          ? TOUR_CARD_HEIGHT_ESTIMATE + 24
+          : 24;
+
       if (compact) {
-        const bottomCardReserve = MOBILE_CARD_HEIGHT + MOBILE_BOTTOM_CHROME + 20;
-        const targetInLowerHalf = next.top > window.innerHeight * 0.42;
-        const forceTop = mobileTopCardStepIds.has(step.id);
-        placement = forceTop || targetInLowerHalf ? 'top' : 'bottom';
-        setCardPlacement(placement);
-
-        const topReserve = placement === 'top' ? MOBILE_CARD_HEIGHT + 88 : 72;
-        const bottomReserve =
-          placement === 'bottom' ? bottomCardReserve : MOBILE_BOTTOM_CHROME + 24;
-
         scrollTargetVisible(htmlEl, topReserve, bottomReserve, placement === 'top');
-
         window.setTimeout(() => {
           setRect(htmlEl.getBoundingClientRect());
         }, placement === 'top' ? 320 : 280);
       } else {
-        setCardPlacement('bottom');
-        htmlEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        setRect(next);
+        scrollTargetVisible(htmlEl, topReserve, bottomReserve, placement === 'top');
+        window.setTimeout(() => {
+          setRect(htmlEl.getBoundingClientRect());
+        }, 280);
       }
     };
 
@@ -212,18 +235,19 @@ export function StudioGuidedTour({
   let cardTop: number | undefined;
   let cardLeft: number | undefined;
 
-  if (!isCompact && rect) {
-    const cardHeight = 220;
-    const cardWidth = Math.min(300, window.innerWidth - 32);
+  if (!isCompact && rect && cardPlacement === 'bottom') {
+    const cardHeight = TOUR_CARD_HEIGHT_ESTIMATE;
+    const cardWidth = Math.min(340, window.innerWidth - 32);
     const spaceBelow = window.innerHeight - rect.bottom;
     const spaceAbove = rect.top;
+    const maxTop = window.innerHeight - cardHeight - 16;
 
     if (spaceBelow >= cardHeight + 24) {
-      cardTop = rect.bottom + 16;
+      cardTop = Math.min(rect.bottom + 16, maxTop);
     } else if (spaceAbove >= cardHeight + 24) {
-      cardTop = rect.top - cardHeight - 16;
+      cardTop = Math.max(16, rect.top - cardHeight - 16);
     } else {
-      cardTop = Math.min(rect.bottom + 16, window.innerHeight - cardHeight - 16);
+      cardTop = Math.max(16, maxTop);
     }
 
     cardLeft = Math.max(16, Math.min(rect.left, window.innerWidth - cardWidth - 16));
@@ -253,12 +277,18 @@ export function StudioGuidedTour({
             ? cardPlacement === 'top'
               ? 'left-4 right-4 top-[max(4.25rem,env(safe-area-inset-top))] slide-in-from-top-2'
               : 'left-4 right-4 bottom-[max(calc(3.75rem+env(safe-area-inset-bottom)),1rem)] slide-in-from-bottom-2'
-            : 'w-[min(300px,calc(100vw-32px))] slide-in-from-bottom-2'
+            : cardPlacement === 'top'
+              ? 'left-4 right-4 top-[max(4.25rem,env(safe-area-inset-top))] w-[min(380px,calc(100vw-32px))] slide-in-from-top-2'
+              : 'w-[min(340px,calc(100vw-32px))] slide-in-from-bottom-2'
         )}
-        style={isCompact ? undefined : { top: cardTop ?? 80, left: cardLeft ?? 16 }}
+        style={
+          isCompact || cardPlacement === 'top'
+            ? undefined
+            : { top: cardTop ?? 80, left: cardLeft ?? 16 }
+        }
       >
-        <div className="rounded-xl border border-primary/30 bg-card shadow-[0_0_40px_rgba(59,130,246,0.25)] p-4 space-y-3">
-          <div className="flex items-start justify-between gap-2">
+        <div className="rounded-xl border border-primary/30 bg-card shadow-[0_0_40px_rgba(59,130,246,0.25)] flex flex-col max-h-[min(70dvh,calc(100dvh-5.5rem))] overflow-hidden">
+          <div className="flex items-start justify-between gap-2 px-4 pt-4 shrink-0">
             <div className="space-y-1 min-w-0">
               <p className="text-[9px] font-bold uppercase tracking-widest text-primary">
                 Guided tour · {stepIndex + 1} / {steps.length}
@@ -276,13 +306,15 @@ export function StudioGuidedTour({
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">{step.body}</p>
-          {step.example && (
-            <p className="text-[10px] text-muted-foreground/90 italic border-l-2 border-primary/30 pl-2 leading-snug">
-              {step.example}
-            </p>
-          )}
-          <div className="flex items-center justify-between gap-2 pt-1">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 space-y-3">
+            <p className="text-xs text-muted-foreground leading-relaxed">{step.body}</p>
+            {step.example && (
+              <p className="text-[10px] text-muted-foreground/90 italic border-l-2 border-primary/30 pl-2 leading-snug">
+                {step.example}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-white/10 shrink-0 bg-card">
             <Button
               type="button"
               variant="ghost"

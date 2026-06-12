@@ -125,7 +125,14 @@ export async function deductInkTransaction(
     const nextPools = deductFromInkPools(pools, finalAmount);
     depletedAfterSpend = totalInkBalance(nextPools) === 0;
 
-    tx.set(balanceRef, inkBalanceFirestorePatch(nextPools), { merge: true });
+    const prevSpent = typeof data.lifetimeInkSpent === 'number' ? data.lifetimeInkSpent : 0;
+    tx.set(
+      balanceRef,
+      inkBalanceFirestorePatch(nextPools, {
+        lifetimeInkSpent: prevSpent + finalAmount,
+      }),
+      { merge: true }
+    );
   });
 
   if (insufficientInk) {
@@ -168,6 +175,13 @@ export async function deductInkTransaction(
   await recordStudioEvent(uid, 'ai_action', { actionName }, userName);
   if (depletedAfterSpend) {
     await recordStudioEvent(uid, 'ink_depletion', { actionName }, userName);
+  }
+
+  try {
+    const { fulfillPendingReferralRewards } = await import('@/lib/server/referrals');
+    await fulfillPendingReferralRewards(db, uid);
+  } catch (referralErr) {
+    console.warn('[ai-gate] referral fulfillment check failed', referralErr);
   }
 
   return { finalAmount };

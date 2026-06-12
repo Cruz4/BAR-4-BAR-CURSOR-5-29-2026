@@ -203,7 +203,7 @@ function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenC
                 sections: [{ id: `section-${Date.now()}`, type: 'verse', bars: [{ idx: 1, text: '', accepted: true, syllables: 0, rhymeKey: '?' }] }],
                 status: 'in_progress',
                 createdAt: new Date().toISOString(),
-                direction: { enabled: true, inheritFromAlbum: false },
+                direction: { enabled: false, inheritFromAlbum: false },
             };
             const created = addTrack('unassigned', { ...newTrack });
             if (mode === 'workstation') router.push(`/albums/unassigned/tracks/${created.id}?openGenerator=true`);
@@ -305,7 +305,7 @@ function FreeVisitorVault({
       <ProLockBanner>
         <p className={cn('text-xs', proLockText())}>Visitor Studio · {FREE_ALBUM_LIMIT} Album · {FREE_TRACK_LIMIT} Tracks</p>
         <p className="text-[10px] text-muted-foreground mt-1">
-          Hot pink locks are Studio Pro features. Fuchsia locks mean over your demo limit — view still works, export & edits need Pro.
+          Hot pink locks are Studio Pro features. Fuchsia locks mean over your demo limit — view still works; edits and export need Pro.
           {(hasExtraAlbums || hasExtraTracks) && ' Your older projects stay in the vault as view-only.'}
         </p>
         <p className="text-[10px] text-muted-foreground/90 mt-1.5">{getVisitorInkGrantSummary()}</p>
@@ -361,7 +361,7 @@ function FreeVisitorVault({
                         )}
                       </div>
                       <p className={cn('text-[8px] uppercase font-code mt-0.5', tierLocked ? 'text-muted-foreground' : 'text-sky-400/80')}>
-                        {tierLocked ? 'Free limit · export OK' : `Loose track · ${track.vibe?.genre}`}
+                        {tierLocked ? 'Free limit · view only · export is Pro' : `Loose track · ${track.vibe?.genre}`}
                       </p>
                     </div>
                   </div>
@@ -373,7 +373,16 @@ function FreeVisitorVault({
           {Array.from({ length: openTrackSlots }, (_, i) => (
               <OpenTrackSlot key={`open-track-${i}`} onClick={onCreateTrack} />
           ))}
-          <LockedVaultSlot variant="track" label="Unlimited Tracks" sublabel="Upgrade for no track cap" />
+          {totalTrackCount < FREE_TRACK_LIMIT && (
+            <LockedVaultSlot
+              variant="track"
+              label="Track 3 — Pro"
+              sublabel="Upgrade for unlimited tracks"
+            />
+          )}
+          {totalTrackCount >= FREE_TRACK_LIMIT && (
+            <LockedVaultSlot variant="track" label="Unlimited Tracks" sublabel="Upgrade for no track cap" />
+          )}
         </div>
       </div>
 

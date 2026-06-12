@@ -44,6 +44,8 @@ export function LockedProFeatureButton({
   feature,
   benefit,
   example,
+  ctaLabel,
+  ctaHref,
   icon: Icon,
   label,
   className,
@@ -54,6 +56,8 @@ export function LockedProFeatureButton({
   feature: string;
   benefit: string;
   example?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
   icon: LucideIcon;
   label: React.ReactNode;
   className?: string;
@@ -62,7 +66,7 @@ export function LockedProFeatureButton({
   size?: 'sm' | 'default' | 'icon';
 }) {
   return (
-    <UpgradeTooltip feature={feature} benefit={benefit} example={example}>
+    <UpgradeTooltip feature={feature} benefit={benefit} example={example} ctaLabel={ctaLabel} ctaHref={ctaHref}>
       <Button
         variant={variant}
         size={size}

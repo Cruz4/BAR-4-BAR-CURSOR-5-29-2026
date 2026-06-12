@@ -144,6 +144,6 @@ export function buildDefaultLooseTrack(ownerId: string, title = 'New Track'): Om
     ],
     status: 'in_progress',
     createdAt: new Date().toISOString(),
-    direction: { enabled: true, inheritFromAlbum: false },
+    direction: { enabled: false, inheritFromAlbum: false },
   };
 }

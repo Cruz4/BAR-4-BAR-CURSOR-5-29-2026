@@ -28,6 +28,8 @@ import { ProductAnalytics } from './product-analytics';
 import { MarketingAttributionCapture } from './marketing-attribution-capture';
 import { AdminAlertListener } from './admin-alert-listener';
 import { InviteGateGuard } from './invite-gate-guard';
+import { ProFeaturePreviewBanner } from './pro-feature-preview-banner';
+import { EmailVerificationBanner } from './email-verification-banner';
 import { AdSenseRouteLoader } from './adsense-route-loader';
 import { useAuth } from '@/hooks/use-auth';
 
@@ -90,6 +92,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
               )}
               <div className="relative z-10 flex min-h-screen flex-col flex-1 overflow-hidden">
                 {showAppHeader && <Header />}
+                {showAppHeader && <EmailVerificationBanner />}
+                {showAppHeader && <ProFeaturePreviewBanner />}
                 <main className="flex-1 overflow-hidden flex flex-col">{children}</main>
                 {!isSharePage && !isMarketingCapture && <WhatsNewDialog />}
                 {!isSharePage && !isMarketingShell && !isMarketingCapture && <WelcomeInkDialog />}

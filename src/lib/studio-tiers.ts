@@ -77,10 +77,16 @@ export const INK_STORE_PACK_CONTEXT = `Pro includes monthly residency Ink (${PRO
 
 export const INK_PACK_STUDIO_AMOUNT = 1000;
 export const INK_PACK_STUDIO_PRICE = 7.77;
-export const INK_PACK_ARTIST_AMOUNT = 1800;
-export const INK_PACK_ARTIST_PRICE = 11.11;
-export const INK_PACK_VAULT_AMOUNT = 4500;
-export const INK_PACK_VAULT_PRICE = 19.44;
+export const INK_PACK_ARTIST_AMOUNT = 2500;
+export const INK_PACK_ARTIST_PRICE = 17.77;
+export const INK_PACK_VAULT_AMOUNT = 5000;
+export const INK_PACK_VAULT_PRICE = 34.44;
+
+/** Visitor artists may purchase Studio Pack only — bulk packs require Pro. */
+export const VISITOR_INK_PACK_NOTICE =
+  'Visitor artists can buy the Studio Pack. Go Pro to unlock Artist Bundle and Studio Vault bulk packs.';
+
+export const PRO_GATED_INK_PACK_KEYS = new Set<InkPackPriceKey>(['INK_ARTIST', 'INK_VAULT']);
 
 export type InkPackPriceKey = 'INK_REFILL' | 'INK_ARTIST' | 'INK_VAULT';
 
@@ -110,7 +116,7 @@ export const INK_PACK_DEFINITIONS: readonly InkPackDefinition[] = [
     ink: INK_PACK_ARTIST_AMOUNT,
     priceAmount: INK_PACK_ARTIST_PRICE,
     priceKey: 'INK_ARTIST',
-    description: 'Professional permanent ink for heavy studio weeks.',
+    description: 'Pro artists — professional permanent ink for heavy studio weeks.',
     icon: 'Star',
   },
   {
@@ -118,7 +124,7 @@ export const INK_PACK_DEFINITIONS: readonly InkPackDefinition[] = [
     ink: INK_PACK_VAULT_AMOUNT,
     priceAmount: INK_PACK_VAULT_PRICE,
     priceKey: 'INK_VAULT',
-    description: 'Maximum permanent capacity. Best $/ink on packs.',
+    description: 'Pro artists — maximum permanent capacity. Best $/ink on packs.',
     bestValue: true,
     icon: 'History',
   },
@@ -271,7 +277,7 @@ export function getResidencyVsPermanentFaqAnswer(): string {
 
 /** Pricing FAQ — refer a friend */
 export function getReferralFaqAnswer(): string {
-  return `Copy your link from Ink Store → Refer a Friend. When a new artist signs up through it, you each get ${REFERRAL_INK_REWARD} Ink (referrers earn up to ${MAX_REFERRAL_REWARDS} bonuses). On Visitor, referral Ink stacks in your residency pool (capped at ${FREE_RESIDENCY_POOL_CAP}); Pro members receive permanent Ink. One welcome bonus per email — returning identities after self-delete do not re-earn referral welcome Ink.`;
+  return `Copy your link from Ink Store → Refer a Friend. When a new artist signs up through it, you each get ${REFERRAL_INK_REWARD} Ink (referrers earn up to ${MAX_REFERRAL_REWARDS} bonuses). Referrer bonuses credit after your friend spends 50 Ink on AI tools. On Visitor, referral Ink stacks in your residency pool (capped at ${FREE_RESIDENCY_POOL_CAP}); Pro members receive permanent Ink. One welcome bonus per email — returning identities after self-delete do not re-earn referral welcome Ink.`;
 }
 
 /** Shown on Ink Store for non-Pro artists */
@@ -305,7 +311,7 @@ export const PRO_UNLOCKS = [
 export const PRO_YEARLY_EXCLUSIVES = [
   `${PRO_YEARLY_INK.toLocaleString()} residency Ink/mo — upgraded from ${PRO_MONTHLY_INK.toLocaleString()} on monthly Pro`,
   `${INK_PACK_YEARLY_DISCOUNT_SHORT} — forever, not a limited promo`,
-  'BYO Google AI key — your API quota for model calls; Ink covers workstation orchestration (not double token billing)',
+  'Bulk Ink packs (Artist Bundle & Studio Vault) — Visitor artists are limited to Studio Pack',
   'Studio Roadmap Input — direct feature feedback & vote on what we ship next (yearly only)',
   `Best price: ${PRO_YEARLY_BILLED}/yr (${PRO_YEARLY_PRICE}/mo effective · save $${PRO_YEARLY_ANNUAL_SAVINGS_DOLLARS.toFixed(2)}/yr vs monthly · ${PRO_YEARLY_SUBSCRIPTION_SAVINGS_PERCENT}% off)`,
 ] as const;

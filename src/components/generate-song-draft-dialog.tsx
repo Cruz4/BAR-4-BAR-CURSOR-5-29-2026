@@ -121,7 +121,14 @@ import { Slider } from './ui/slider';
 import { useAuth } from '@/hooks/use-auth';
 import { isProOrTrial } from '@/lib/subscription';
 import { postGamificationEvent } from '@/lib/gamification-client';
-import { isLooseTrackAlbum } from '@/lib/co-writer-rules';
+import { claimMilestone } from '@/lib/milestones-client';
+import {
+  directionWithSyncedEnabled,
+  guardrailsWithSyncedEnabled,
+  isGuardrailsToggleOn,
+  isLooseTrackAlbum,
+  isTrackDnaToggleOn,
+} from '@/lib/co-writer-rules';
 import { LockedSaveButton, ProLockBadge, proLockIcon, proLockShell, proLockText } from '@/components/pro-lock';
 import { UpgradeTooltip } from '@/components/upgrade-tooltip';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
@@ -516,11 +523,12 @@ export function GenerateSongDraftDialog({
     setHubDirection(track.direction || {});
     const loose = track.albumId === 'unassigned';
     setInheritAlbum(!loose && track.direction?.inheritFromAlbum !== false);
+    setInheritTrack(isTrackDnaToggleOn(track));
     setHubVibe(track.vibe);
     setHubVibeEnabled(track.vibe?.enabled ?? true);
     setHubIntents(track.checkedIntents || []);
     setIntentsEnabled(track.intentsEnabled ?? ((track.checkedIntents?.length ?? 0) > 0));
-    setEnableGuardrails(track.guardrails?.enabled ?? true);
+    setEnableGuardrails(isGuardrailsToggleOn(track));
     setNegativePrompt(track.guardrails?.negativePrompt ?? '');
     setForbiddenWords((track.guardrails?.forbiddenWords || []).join(', '));
     setMustIncludeWords((track.guardrails?.mustIncludeWords || []).join(', '));
@@ -998,16 +1006,19 @@ export function GenerateSongDraftDialog({
       archiveCurrentApprovalDraft();
       updateTrack(track.albumId, track.id, { 
         specialInstructions: lyricsAbout,
-        direction: hubDirection,
+        direction: directionWithSyncedEnabled(
+          { ...hubDirection, inheritFromAlbum: inheritAlbum },
+          inheritTrack
+        ),
         vibe: { ...hubVibe, enabled: hubVibeEnabled },
         checkedIntents: hubIntents,
         intentsEnabled: intentsEnabled,
-        guardrails: {
-            enabled: enableGuardrails,
-            negativePrompt,
-            forbiddenWords: forbiddenWords.split(',').map(w => w.trim()).filter(Boolean),
-            mustIncludeWords: mustIncludeWords.split(',').map(w => w.trim()).filter(Boolean)
-        },
+        guardrails: guardrailsWithSyncedEnabled(track.guardrails, {
+          enabled: enableGuardrails,
+          negativePrompt,
+          forbiddenWords: forbiddenWords.split(',').map((w) => w.trim()).filter(Boolean),
+          mustIncludeWords: mustIncludeWords.split(',').map((w) => w.trim()).filter(Boolean),
+        }),
         styleEnabled: hubStyleEnabled,
       });
 
@@ -1047,6 +1058,9 @@ export function GenerateSongDraftDialog({
 
       setWizardState((prev) => ({ ...prev, generatedVariant: previewVariant }));
       addUsageLog({ flowName: 'generateSongDraft', inkCost: activeDraftCharged, status: 'success' });
+      if (user?.id) {
+        void claimMilestone(user.id, 'studio_draft_complete', user.displayName);
+      }
       setProgress(100);
       completeAndMaybeReopen(5);
       loadPreviewRhymeGroups(previewVariant);
@@ -1391,17 +1405,20 @@ export function GenerateSongDraftDialog({
     try {
         archiveCurrentApprovalDraft();
         updateTrack(track.albumId, track.id, { 
-            direction: hubDirection, 
+            direction: directionWithSyncedEnabled(
+              { ...hubDirection, inheritFromAlbum: inheritAlbum },
+              inheritTrack
+            ),
             specialInstructions: lyricsAbout,
             vibe: { ...hubVibe, enabled: hubVibeEnabled },
             checkedIntents: hubIntents,
             intentsEnabled: intentsEnabled,
-            guardrails: {
-                enabled: enableGuardrails,
-                negativePrompt,
-                forbiddenWords: forbiddenWords.split(',').map(w => w.trim()).filter(Boolean),
-                mustIncludeWords: mustIncludeWords.split(',').map(w => w.trim()).filter(Boolean)
-            },
+            guardrails: guardrailsWithSyncedEnabled(track.guardrails, {
+              enabled: enableGuardrails,
+              negativePrompt,
+              forbiddenWords: forbiddenWords.split(',').map((w) => w.trim()).filter(Boolean),
+              mustIncludeWords: mustIncludeWords.split(',').map((w) => w.trim()).filter(Boolean),
+            }),
             styleEnabled: hubStyleEnabled,
         });
 

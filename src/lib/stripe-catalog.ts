@@ -23,6 +23,19 @@ export const LEGACY_STRIPE_PRICE_INK_STARTER = env(
   'price_1TcDYkR1AVjROqp3bbps3bS5'
 );
 
+/** Legacy Artist/Vault packs — fulfill historical checkouts at old ink amounts */
+export const LEGACY_STRIPE_PRICE_INK_ARTIST = env(
+  'STRIPE_PRICE_INK_ARTIST_LEGACY',
+  'price_1TcDYlR1AVjROqp3Rt3UjuTN'
+);
+export const LEGACY_STRIPE_PRICE_INK_VAULT = env(
+  'STRIPE_PRICE_INK_VAULT_LEGACY',
+  'price_1TcDYmR1AVjROqp3S0hy1WOd'
+);
+
+/** Ink pack price keys gated behind active Pro subscription */
+export const PRO_GATED_INK_PACK_KEYS = new Set(['INK_ARTIST', 'INK_VAULT']);
+
 type CatalogEntry =
   | { type: 'subscription'; tier: 'monthly' | 'yearly'; residencyRefill: number }
   | { type: 'one_time'; inkAmount: number };
@@ -39,13 +52,23 @@ const ACTIVE_CATALOG: Record<string, CatalogEntry> = {
     residencyRefill: PRO_YEARLY_RESIDENCY,
   },
   [STRIPE_PRICE_IDS.INK_REFILL]: { type: 'one_time', inkAmount: 1000 },
-  [STRIPE_PRICE_IDS.INK_ARTIST]: { type: 'one_time', inkAmount: 1800 },
-  [STRIPE_PRICE_IDS.INK_VAULT]: { type: 'one_time', inkAmount: 4500 },
+  [STRIPE_PRICE_IDS.INK_ARTIST]: { type: 'one_time', inkAmount: 2500 },
+  [STRIPE_PRICE_IDS.INK_VAULT]: { type: 'one_time', inkAmount: 5000 },
 };
 
-const LEGACY_CATALOG: Record<string, CatalogEntry> = LEGACY_STRIPE_PRICE_INK_STARTER
-  ? { [LEGACY_STRIPE_PRICE_INK_STARTER]: { type: 'one_time', inkAmount: 280 } }
-  : {};
+const LEGACY_CATALOG: Record<string, CatalogEntry> = {
+  ...(LEGACY_STRIPE_PRICE_INK_STARTER
+    ? { [LEGACY_STRIPE_PRICE_INK_STARTER]: { type: 'one_time', inkAmount: 280 } }
+    : {}),
+  ...(LEGACY_STRIPE_PRICE_INK_ARTIST &&
+  LEGACY_STRIPE_PRICE_INK_ARTIST !== STRIPE_PRICE_IDS.INK_ARTIST
+    ? { [LEGACY_STRIPE_PRICE_INK_ARTIST]: { type: 'one_time', inkAmount: 1800 } }
+    : {}),
+  ...(LEGACY_STRIPE_PRICE_INK_VAULT &&
+  LEGACY_STRIPE_PRICE_INK_VAULT !== STRIPE_PRICE_IDS.INK_VAULT
+    ? { [LEGACY_STRIPE_PRICE_INK_VAULT]: { type: 'one_time', inkAmount: 4500 } }
+    : {}),
+};
 
 export const STRIPE_PRICE_CATALOG: Record<string, CatalogEntry> = {
   ...ACTIVE_CATALOG,
@@ -69,4 +92,8 @@ export type StripePriceKey = keyof typeof STRIPE_PRICE_IDS;
 export function resolveStripePriceId(priceKey: string): string | undefined {
   if (!(priceKey in STRIPE_PRICE_IDS)) return undefined;
   return STRIPE_PRICE_IDS[priceKey as StripePriceKey];
+}
+
+export function isProGatedInkPackKey(priceKey: string): boolean {
+  return PRO_GATED_INK_PACK_KEYS.has(priceKey as StripePriceKey);
 }

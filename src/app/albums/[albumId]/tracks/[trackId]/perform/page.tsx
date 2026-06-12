@@ -2,7 +2,7 @@
 
 import React, { useMemo, useContext, useEffect, useState, useRef } from 'react';
 import { DataContext } from '@/context/data-context';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { 
     ChevronLeft, 
@@ -43,23 +43,34 @@ const SCROLL_SPEED_PX: Record<number, number> = {
 
 export default function PerformancePage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const albumId = params.albumId as string;
   const trackId = params.trackId as string;
+  const previewSeconds = Number(searchParams.get('preview') || '0');
+  const isPreviewMode = previewSeconds > 0;
   const { getTrackById, updateTrack, loading: dataLoading, albums } = useContext(DataContext);
   const router = useRouter();
   const { user, authReady } = useAuth();
   const [resolvedTrack, setResolvedTrack] = useState<Track | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [previewExpired, setPreviewExpired] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     if (isProOrTrial(user)) return;
+    if (isPreviewMode) {
+      const timer = window.setTimeout(() => {
+        setPreviewExpired(true);
+        router.replace('/usage?tab=cloud');
+      }, previewSeconds * 1000);
+      return () => window.clearTimeout(timer);
+    }
     if (isBrowserOffline()) {
       const cached = loadCachedUserProfile(user.id);
       if (cached && isProOrTrial(cached)) return;
     }
     router.replace(`/usage?tab=cloud`);
-  }, [user, router]);
+  }, [user, router, isPreviewMode, previewSeconds]);
   
   const contextTrack = useMemo(
     () => getTrackById(albumId, trackId).track,

@@ -7,8 +7,11 @@ import { useRouter } from 'next/navigation';
 import { CheckCircle2, Circle, Dna, Timer, X } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { DataContext } from '@/context/data-context';
-import { isProUser } from '@/lib/subscription';
-import { getTrialDaysRemaining, isTrialActive } from '@/lib/trial';
+import {
+  getProFeaturePreviewHoursRemaining,
+  isProFeaturePreviewActive,
+  isProUser,
+} from '@/lib/subscription';
 import {
   PRO_TRIAL_WIN_EVENT,
   PRO_TRIAL_WIN_QUEST,
@@ -35,8 +38,8 @@ export function ProTrialWinQuestStrip() {
   const [dismissed, setDismissed] = useState(false);
 
   const paidPro = isProUser(user);
-  const trialActive = isTrialActive();
-  const trialDays = getTrialDaysRemaining();
+  const previewActive = isProFeaturePreviewActive(user);
+  const previewHours = getProFeaturePreviewHoursRemaining(user);
   const questDone = winComplete || isProTrialWinComplete(user);
 
   useEffect(() => {
@@ -97,7 +100,7 @@ export function ProTrialWinQuestStrip() {
       <div className="shrink-0 border-b border-emerald-500/25 bg-emerald-500/[0.08] px-4 py-2 flex items-center gap-3 z-50">
         <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" aria-hidden />
         <p className="text-[10px] sm:text-[11px] font-code text-emerald-100/90 flex-grow min-w-0">
-          <span className="font-bold uppercase tracking-widest text-emerald-400">Pro trial quest complete</span>
+          <span className="font-bold uppercase tracking-widest text-emerald-400">Pro preview quest complete</span>
           {' — '}
           {PRO_TRIAL_WIN_QUEST.completeSummary}
         </p>
@@ -129,10 +132,14 @@ export function ProTrialWinQuestStrip() {
         <div className="space-y-1 min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400 leading-none flex items-center gap-2 flex-wrap">
             <span>{PRO_TRIAL_WIN_QUEST.title}</span>
-            <span className="inline-flex items-center gap-1 text-sky-300/90 font-code normal-case tracking-normal">
-              <Timer className="h-3 w-3" />
-              {trialDays} day{trialDays === 1 ? '' : 's'} left on Pro
-            </span>
+            {previewActive && (
+              <span className="inline-flex items-center gap-1 text-sky-300/90 font-code normal-case tracking-normal">
+                <Timer className="h-3 w-3" />
+                {previewHours === null || previewHours <= 1
+                  ? 'under 1h left on Pro preview'
+                  : `${previewHours}h left on Pro preview`}
+              </span>
+            )}
           </p>
           <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-snug flex items-start gap-2">
             <Circle className="h-3 w-3 shrink-0 mt-0.5 text-sky-400" aria-hidden />

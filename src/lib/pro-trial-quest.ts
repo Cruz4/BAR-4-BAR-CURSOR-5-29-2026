@@ -1,29 +1,28 @@
 import type { User } from '@/lib/types';
-import { isProUser } from '@/lib/subscription';
-import { isTrialActive } from '@/lib/trial';
+import { isProUser, isProFeaturePreviewActive } from '@/lib/subscription';
 
-/** Fired client-side when user saves a custom DNA profile during trial. */
+/** Fired client-side when user saves a custom DNA profile during Pro preview. */
 export const PRO_TRIAL_WIN_EVENT = 'b4b-pro-trial-win';
 
 /** Opens Generation Workstation directly on DNA & REMIX seed step. */
 export const PRO_TRIAL_QUEST_OPEN_GENERATOR = 'remix';
 
 export const PRO_TRIAL_WIN_QUEST = {
-  title: 'Pro trial quest',
+  title: 'Pro preview quest',
   task: 'Save your first DNA extraction to the vault',
   hint:
     'Generation Workstation → DNA & REMIX → paste lyrics, a poem, or ideas (or toggle Sync Current Lyrics) → run extraction → on Analysis Step tap Save DNA Profile. DNA Suite in the right panel is also where you can type your own or edit after you load or extract.',
   cta: 'Open DNA & REMIX',
   completeSummary:
-    'Your extraction is in the vault. Upgrade before trial ends to keep saving custom profiles.',
+    'Your extraction is in the vault. Upgrade before your Pro preview ends to keep saving custom profiles.',
 } as const;
 
 export function shouldShowProTrialWinQuest(user: Pick<
   User,
-  'subscriptionStatus' | 'trialStartedAt' | 'proTrialWinCompletedAt' | 'proTrialWinDismissedAt'
+  'subscriptionStatus' | 'proFeaturePreviewExpiresAt' | 'proTrialWinCompletedAt' | 'proTrialWinDismissedAt'
 > | null | undefined): boolean {
   if (!user || isProUser(user)) return false;
-  if (!isTrialActive()) return false;
+  if (!isProFeaturePreviewActive(user)) return false;
   if (user.proTrialWinCompletedAt || user.proTrialWinDismissedAt) return false;
   return true;
 }

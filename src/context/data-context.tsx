@@ -1043,7 +1043,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const movingToLoose = toId === UNASSIGNED_ALBUM_ID;
     const nextDirection = { ...track.direction };
     if (movingToAlbum && movingFromLoose) {
-      nextDirection.enabled = track.direction?.enabled ?? true;
+      nextDirection.enabled = track.direction?.enabled === true;
       nextDirection.inheritFromAlbum = true;
     } else if (movingToLoose) {
       nextDirection.inheritFromAlbum = false;

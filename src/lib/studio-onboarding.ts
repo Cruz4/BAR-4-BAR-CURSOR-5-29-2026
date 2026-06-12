@@ -129,7 +129,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
     id: 'save',
     target: '[data-tour="track-status"]',
     title: 'Save & export',
-    body: 'Your track saves as you edit. Export PDF anytime. Cloud sync across devices is included with Studio Pro.',
+    body: 'Your track saves as you edit. Export PDF with Studio Pro — your work auto-saves in the demo vault.',
   },
 ];
 
@@ -140,7 +140,7 @@ export const FREE_TIER_EXPECTATIONS = {
 } as const;
 
 export const PRO_TRIAL_BANNER = {
-  headline: 'Pro trial',
+  headline: 'Pro preview',
   dismissKey: 'b4b-pro-trial-banner-dismissed',
 } as const;
 

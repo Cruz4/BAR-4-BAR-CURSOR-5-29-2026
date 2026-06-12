@@ -1,4 +1,5 @@
-import type { Album, Track } from '@/lib/types';
+import { CREATIVE_DNA_FIELDS } from '@/lib/dna-strands';
+import type { Album, Direction, Track } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export const UNASSIGNED_ALBUM_ID = 'unassigned';
@@ -8,9 +9,67 @@ export function isLooseTrackAlbum(album?: Pick<Album, 'id'> | null): boolean {
   return album?.id === UNASSIGNED_ALBUM_ID;
 }
 
-/** Match Co-Writer panel switch UI — undefined toggles default ON where switches use ?? true */
+export function hasCreativeDnaContent(direction?: Partial<Direction> | null): boolean {
+  if (!direction) return false;
+  return CREATIVE_DNA_FIELDS.some(({ key }) => String(direction[key] ?? '').trim().length > 0);
+}
+
+export function hasGuardrailsContent(guardrails?: Track['guardrails'] | null): boolean {
+  if (!guardrails) return false;
+  if (guardrails.negativePrompt?.trim()) return true;
+  if ((guardrails.forbiddenWords?.length ?? 0) > 0) return true;
+  if ((guardrails.mustIncludeWords?.length ?? 0) > 0) return true;
+  return false;
+}
+
+/** Co-Writer DNA switch — on only when at least one Creative DNA field has text and not explicitly disabled. */
+export function isTrackDnaToggleOn(track: Track): boolean {
+  if (!hasCreativeDnaContent(track.direction)) return false;
+  return track.direction?.enabled !== false;
+}
+
 export function isTrackDnaActive(track: Track): boolean {
-  return track.direction?.enabled ?? true;
+  return isTrackDnaToggleOn(track);
+}
+
+export function directionWithSyncedEnabled(
+  direction: Partial<Direction> | null | undefined,
+  explicitEnabled?: boolean
+): Partial<Direction> {
+  const next = { ...(direction ?? {}) };
+  if (!hasCreativeDnaContent(next)) {
+    next.enabled = false;
+    return next;
+  }
+  if (explicitEnabled === false) {
+    next.enabled = false;
+  } else if (explicitEnabled === true) {
+    next.enabled = true;
+  } else if (next.enabled !== false) {
+    next.enabled = true;
+  }
+  return next;
+}
+
+export function guardrailsWithSyncedEnabled(
+  guardrails: Track['guardrails'] | null | undefined,
+  patch: Partial<NonNullable<Track['guardrails']>> = {}
+): NonNullable<Track['guardrails']> {
+  const merged: NonNullable<Track['guardrails']> = {
+    enabled: guardrails?.enabled ?? false,
+    negativePrompt: guardrails?.negativePrompt,
+    forbiddenWords: guardrails?.forbiddenWords,
+    mustIncludeWords: guardrails?.mustIncludeWords,
+    ...patch,
+  };
+  if (!hasGuardrailsContent(merged)) {
+    merged.enabled = false;
+  } else if (patch.enabled === false) {
+    merged.enabled = false;
+  } else if (patch.enabled === true || guardrails?.enabled !== false) {
+    merged.enabled = true;
+  }
+  return merged;
 }
 
 /** Track toggle: pull album Creative DNA into this track (default on for album tracks only). */
@@ -38,8 +97,14 @@ export function isIntentsActive(track: Track): boolean {
   return isIntentsMasterEnabled(track) && hasIntents;
 }
 
+/** Co-Writer guardrails switch — on only when a restriction field has content and not explicitly disabled. */
+export function isGuardrailsToggleOn(track: Track): boolean {
+  if (!hasGuardrailsContent(track.guardrails)) return false;
+  return track.guardrails?.enabled !== false;
+}
+
 export function isGuardrailsActive(track: Track): boolean {
-  return track.guardrails?.enabled ?? true;
+  return isGuardrailsToggleOn(track);
 }
 
 export function isStyleActive(track: Track): boolean {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getCatalogEntry, resolveStripePriceId } from '@/lib/stripe-catalog';
+import { getCatalogEntry, isProGatedInkPackKey, resolveStripePriceId } from '@/lib/stripe-catalog';
 import {
   getStripe,
   verifyCheckoutUser,
@@ -72,6 +72,20 @@ export async function POST(req: Request) {
     } else if (process.env.NODE_ENV === 'development') {
       console.info(
         'Checkout: skipping Firestore (no FIREBASE_SERVICE_ACCOUNT_KEY). Stripe session will still open; webhook fulfillment needs credentials locally.'
+      );
+    }
+
+    if (
+      typeof priceKey === 'string' &&
+      isProGatedInkPackKey(priceKey.trim()) &&
+      userData?.subscriptionStatus !== 'active'
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Artist Bundle and Studio Vault packs require an active Studio Pro membership. Visitor artists can purchase the Studio Pack, or upgrade to Pro first.',
+        },
+        { status: 403 }
       );
     }
 
