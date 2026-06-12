@@ -100,16 +100,16 @@ created.INK_REFILL = await createPrice({
 
 created.INK_ARTIST = await createPrice({
   productName: 'Permanent Ink — Artist Bundle',
-  unitAmount: 1111,
-  nickname: 'Artist Bundle — 1,800 ink ($11.11)',
-  metadata: { inkAmount: '1800', pack: 'INK_ARTIST' },
+  unitAmount: 1777,
+  nickname: 'Artist Bundle — 2,500 ink ($17.77)',
+  metadata: { inkAmount: '2500', pack: 'INK_ARTIST' },
 });
 
 created.INK_VAULT = await createPrice({
   productName: 'Permanent Ink — Studio Vault',
-  unitAmount: 1944,
-  nickname: 'Studio Vault — 4,500 ink ($19.44)',
-  metadata: { inkAmount: '4500', pack: 'INK_VAULT' },
+  unitAmount: 3444,
+  nickname: 'Studio Vault — 5,000 ink ($34.44)',
+  metadata: { inkAmount: '5000', pack: 'INK_VAULT' },
 });
 
 let couponLine = '';
@@ -134,5 +134,9 @@ for (const [key, price] of Object.entries(created)) {
   console.log(`STRIPE_PRICE_${key}=${price.id}`);
 }
 if (couponLine) console.log(couponLine);
+console.log('\n# Yearly Pro checkout (50% off list prices above):');
+console.log('#   Studio Pack $3.89 · Artist Bundle $8.89 · Studio Vault $17.22');
+console.log('\n# If replacing repriced Artist/Vault packs, move old price IDs to:');
+console.log('#   STRIPE_PRICE_INK_ARTIST_LEGACY=...  STRIPE_PRICE_INK_VAULT_LEGACY=...');
 console.log('\nThen run: npm run stripe:verify');
 console.log('Deploy: npm run build && firebase deploy\n');

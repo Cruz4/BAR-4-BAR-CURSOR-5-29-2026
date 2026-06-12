@@ -83,9 +83,12 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { suggestRelayDirections, generateRelayDraft } from '@/ai/flows/writers-relay';
-import { generateSongDraft } from '@/ai/flows/generate-song-draft';
-import { findRhymes } from '@/ai/flows/find-rhymes';
+import {
+  lazyFindRhymes,
+  lazyGenerateRelayDraft,
+  lazyGenerateSongDraft,
+  lazySuggestRelayDirections,
+} from '@/lib/lazy-ai-flows';
 import { mergeDirection, cn, stripForFirestore, resolveWorkstationDirection, hasDirectionContent } from '@/lib/utils';
 import {
   STRAIN_TARGETS,
@@ -125,6 +128,8 @@ import { claimMilestone } from '@/lib/milestones-client';
 import {
   directionWithSyncedEnabled,
   guardrailsWithSyncedEnabled,
+  hasCreativeDnaContent,
+  hasGuardrailsStringsContent,
   isGuardrailsToggleOn,
   isLooseTrackAlbum,
   isTrackDnaToggleOn,
@@ -924,7 +929,7 @@ export function GenerateSongDraftDialog({
           const allText = variant.sections.flatMap((s) => s.bars).join('\n');
           if (!allText.trim()) return;
           const rhymeRes = await withAsyncTimeout(
-            findRhymes(await withAiAuth({ text: allText, userName: user?.displayName })),
+            lazyFindRhymes(await withAiAuth({ text: allText, userName: user?.displayName })),
             RHYME_PREVIEW_TIMEOUT_MS,
             'Rhyme preview'
           );
@@ -1023,7 +1028,7 @@ export function GenerateSongDraftDialog({
       });
 
       const result = await withAsyncTimeout(
-        generateSongDraft(
+        lazyGenerateSongDraft(
           await withAiAuth({
             userName: user?.displayName,
             albumDirection: album?.direction,
@@ -1082,7 +1087,7 @@ export function GenerateSongDraftDialog({
     setGenerating(true, 'Performing DNA Extraction...');
     try {
         const result = await withAsyncTimeout(
-          suggestRelayDirections(
+          lazySuggestRelayDirections(
             await withAiAuth({ lyrics: sourceText, userName: user?.displayName })
           ),
           EXTRACT_TIMEOUT_MS,
@@ -1432,7 +1437,7 @@ export function GenerateSongDraftDialog({
         );
 
         const result = await withAsyncTimeout(
-          generateRelayDraft(
+          lazyGenerateRelayDraft(
             await withAiAuth({
               analysis: JSON.stringify(wizardState.analysis),
               direction: remixDirection,
@@ -2372,7 +2377,13 @@ export function GenerateSongDraftDialog({
                                               <HubCreativeDnaTextarea
                                                   placeholder={f.placeholder}
                                                   value={(hubDirection[f.id as keyof Direction] as string) || ''}
-                                                  onChange={(next) => setHubDirection(prev => ({ ...prev, [f.id]: next }))}
+                                                  onChange={(next) => {
+                                                    setHubDirection((prev) => {
+                                                      const updated = { ...prev, [f.id]: next };
+                                                      setInheritTrack(hasCreativeDnaContent(updated));
+                                                      return updated;
+                                                    });
+                                                  }}
                                               />
                                           </div>
                                       ))}
@@ -2639,13 +2650,17 @@ export function GenerateSongDraftDialog({
                                   summary={hubSectionSummary.guardrails}
                                   trailing={<Switch checked={enableGuardrails} onCheckedChange={setEnableGuardrails} />}
                               >
-                                  <Card className={cn("bg-rose-500/5 border-rose-500/20 p-3 rounded-xl space-y-3 transition-opacity", !enableGuardrails && "opacity-50 pointer-events-none")}>
+                                  <Card className={cn("bg-rose-500/5 border-rose-500/20 p-3 rounded-xl space-y-3 transition-opacity", !enableGuardrails && "opacity-60")}>
                                       <div className="space-y-1">
                                         <Label className="text-[9px] font-bold uppercase text-rose-800">Negative Prompt</Label>
                                         <Input 
                                           placeholder="e.g. Avoid violence, generic love cliches..." 
                                           value={negativePrompt} 
-                                          onChange={(e) => setNegativePrompt(e.target.value)} 
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            setNegativePrompt(val);
+                                            setEnableGuardrails(hasGuardrailsStringsContent(val, forbiddenWords, mustIncludeWords));
+                                          }} 
                                           className="h-8 text-[10px] bg-background/50 border-rose-500/10" 
                                         />
                                       </div>
@@ -2654,7 +2669,11 @@ export function GenerateSongDraftDialog({
                                         <Input 
                                           placeholder="e.g. list, words, to, avoid, separated, by, commas" 
                                           value={forbiddenWords} 
-                                          onChange={(e) => setForbiddenWords(e.target.value)} 
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            setForbiddenWords(val);
+                                            setEnableGuardrails(hasGuardrailsStringsContent(negativePrompt, val, mustIncludeWords));
+                                          }} 
                                           className="h-8 text-[10px] bg-background/50 border-rose-500/10" 
                                         />
                                       </div>
@@ -2663,7 +2682,11 @@ export function GenerateSongDraftDialog({
                                         <Input 
                                           placeholder="e.g. exact phrase to weave in" 
                                           value={mustIncludeWords} 
-                                          onChange={(e) => setMustIncludeWords(e.target.value)} 
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            setMustIncludeWords(val);
+                                            setEnableGuardrails(hasGuardrailsStringsContent(negativePrompt, forbiddenWords, val));
+                                          }} 
                                           className="h-8 text-[10px] bg-background/50 border-rose-500/10" 
                                         />
                                       </div>

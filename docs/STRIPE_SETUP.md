@@ -15,15 +15,15 @@
 
 **Permanent ink packs** (one-time, never expire):
 
-| Pack | Price | Ink |
-|------|-------|-----|
-| Studio | $7.77 | 1,000 |
-| Artist | $11.11 | 1,800 |
-| Vault | $19.44 | 4,500 |
+| Pack | Price | Ink | Yearly Pro (50% off) |
+|------|-------|-----|----------------------|
+| Studio | $7.77 | 1,000 | $3.89 |
+| Artist | $17.77 | 2,500 | $8.89 |
+| Vault | $34.44 | 5,000 | $17.22 |
 
-Stripe prices are immutable — after changing amounts, run `npm run stripe:create-ink-packs` (test or live key in `.env`) or `npm run stripe:create-live-prices` for all six prices, then update `STRIPE_PRICE_INK_*` in `.env` and `functions/.env`.
+Stripe prices are immutable — after changing amounts, run `npm run stripe:create-ink-packs` (test or live key in `.env`) or `npm run stripe:create-live-prices` for all six prices, then update `STRIPE_PRICE_INK_*` in `.env` and `functions/.env`. Move superseded Artist/Vault IDs to `STRIPE_PRICE_INK_ARTIST_LEGACY` / `STRIPE_PRICE_INK_VAULT_LEGACY` so old checkouts still fulfill.
 
-Yearly Pro: **50% off** ink packs at checkout (`STRIPE_COUPON_YEARLY_INK_50`).
+Yearly Pro: **50% off** ink packs at checkout (`STRIPE_COUPON_YEARLY_INK_50` — percent coupon, works on any pack list price).
 
 **Pro subscription trial:** New Pro checkouts default to a **3-day Stripe trial** (`trial_period_days` in `/api/stripe/checkout`, constant `STRIPE_PRO_TRIAL_DAYS` in `src/lib/trial.ts`). Card required; fulfillment accepts `payment_status: no_payment_required`. Skip trial with `?trial=0` on checkout URLs or `withTrial: false` in the API body. Free signup is Visitor-only — no automatic internal trial.
 

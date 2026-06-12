@@ -32,8 +32,8 @@ const PRICES = {
   PRO_MONTHLY: { id: env('STRIPE_PRICE_PRO_MONTHLY', 'price_1TcEHIR1AVjROqp3n5ARXBOo'), expect: 'recurring', amount: 777 },
   PRO_YEARLY: { id: env('STRIPE_PRICE_PRO_YEARLY', 'price_1TcDtcR1AVjROqp3yy51oUYx'), expect: 'recurring', amount: 5328 },
   INK_REFILL: { id: env('STRIPE_PRICE_INK_REFILL', 'price_1TcDYlR1AVjROqp3dVwsVof0'), expect: 'one_time', amount: 777 },
-  INK_ARTIST: { id: env('STRIPE_PRICE_INK_ARTIST', 'price_1TcDYlR1AVjROqp3Rt3UjuTN'), expect: 'one_time', amount: 1111 },
-  INK_VAULT: { id: env('STRIPE_PRICE_INK_VAULT', 'price_1TcDYmR1AVjROqp3S0hy1WOd'), expect: 'one_time', amount: 1944 },
+  INK_ARTIST: { id: env('STRIPE_PRICE_INK_ARTIST', 'price_1TcDYlR1AVjROqp3Rt3UjuTN'), expect: 'one_time', amount: 1777 },
+  INK_VAULT: { id: env('STRIPE_PRICE_INK_VAULT', 'price_1TcDYmR1AVjROqp3S0hy1WOd'), expect: 'one_time', amount: 3444 },
 };
 
 const key = process.env.STRIPE_SECRET_KEY;

@@ -134,6 +134,28 @@ export function formatInkPackDollars(amount: number): string {
   return `$${amount.toFixed(2)}`;
 }
 
+/** Round Yearly Pro ink-pack discount to cents (matches Stripe percent_off checkout). */
+export function applyYearlyInkPackDiscount(priceAmount: number): number {
+  const multiplier = 1 - INK_PACK_YEARLY_DISCOUNT_PERCENT / 100;
+  return Math.round(priceAmount * multiplier * 100) / 100;
+}
+
+/** Stripe `unit_amount` in cents — keep scripts/verify in sync with pack list prices. */
+export const STRIPE_UNIT_AMOUNTS_CENTS = {
+  PRO_MONTHLY: Math.round(PRO_MONTHLY_PRICE_AMOUNT * 100),
+  PRO_YEARLY: Math.round(PRO_YEARLY_BILLED_AMOUNT * 100),
+  INK_REFILL: Math.round(INK_PACK_STUDIO_PRICE * 100),
+  INK_ARTIST: Math.round(INK_PACK_ARTIST_PRICE * 100),
+  INK_VAULT: Math.round(INK_PACK_VAULT_PRICE * 100),
+} as const;
+
+export function getYearlyProInkPackCheckoutSummary(): string {
+  return INK_PACK_DEFINITIONS.map((pack) => {
+    const discounted = applyYearlyInkPackDiscount(pack.priceAmount);
+    return `${pack.name} ${formatInkPackDollars(discounted)}`;
+  }).join(' · ');
+}
+
 /** Vault savings vs buying the same ink via Studio Pack pricing */
 export function getVaultPackSavingsPercent(): number {
   const studio = INK_PACK_DEFINITIONS[0];
@@ -345,12 +367,13 @@ export { SEO } from '@/lib/seo';
 
 /** Ink pack rows for Ink Store (amounts align with stripe-catalog fulfillment) */
 export function getInkPackRows(isYearlyPro: boolean) {
-  const discountMultiplier = isYearlyPro ? 1 - INK_PACK_YEARLY_DISCOUNT_PERCENT / 100 : 1;
   const yearlyLabel = isYearlyPro ? INK_PACK_YEARLY_DISCOUNT_LABEL : null;
   const vaultSavingsPercent = getVaultPackSavingsPercent();
 
   return INK_PACK_DEFINITIONS.map((pack) => {
-    const discountedAmount = Math.round(pack.priceAmount * discountMultiplier * 100) / 100;
+    const discountedAmount = isYearlyPro
+      ? applyYearlyInkPackDiscount(pack.priceAmount)
+      : pack.priceAmount;
     return {
       ...pack,
       originalPrice: formatInkPackDollars(pack.priceAmount),

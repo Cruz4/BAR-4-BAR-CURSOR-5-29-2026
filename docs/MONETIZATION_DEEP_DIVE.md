@@ -15,8 +15,8 @@ This replaces older notes about 8,888 Ink, $8.88/mo, or 125 signup Ink.
 | Pro Monthly | $7.77/mo | **1,777**/month (refill sets pool on subscribe + renew) |
 | Pro Yearly | $53.28/yr ($4.44/mo) | **3,444**/month residency refill |
 
-**Permanent packs (one-time):** Studio $7.77 → 1,000 · Artist $11.11 → 1,800 · Vault $19.44 → 4,500  
-**Yearly Pro:** 50% off packs at checkout when `STRIPE_COUPON_YEARLY_INK_50` is configured.
+**Permanent packs (one-time):** Studio $7.77 → 1,000 · Artist $17.77 → 2,500 · Vault $34.44 → 5,000  
+**Yearly Pro:** 50% off packs at checkout → Studio **$3.89** · Artist **$8.89** · Vault **$17.22** (requires `STRIPE_COUPON_YEARLY_INK_50` + matching Stripe price IDs).
 
 ---
 

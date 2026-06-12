@@ -1,5 +1,18 @@
-import type { Album, StyleProfile, Track } from '@/lib/types';
-import { mergeDirection } from '@/lib/utils';
+import type { Album, Direction, StyleProfile, Track } from '@/lib/types';
+import { CREATIVE_DNA_FIELDS } from '@/lib/dna-strands';
+import {
+  guardrailsWithSyncedEnabled,
+  directionWithSyncedEnabled,
+  isAlbumDnaActive,
+  isGuardrailsActive,
+  isInheritFromAlbumOn,
+  isIntentsActive,
+  isLooseTrackAlbum,
+  isStyleActive,
+  isTrackDnaActive,
+  isVibeActive,
+} from '@/lib/co-writer-rules';
+import { hasDirectionContent, mergeDirection } from '@/lib/utils';
 
 /** True when this project has an active public DNA Drop link (shareId persisted on album/track). */
 export function hasActiveDnaDrop(shareId?: string | null): boolean {
@@ -36,34 +49,134 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-function styleSnapshot(styleProfile: StyleProfile | null | undefined, enabled: boolean | undefined): DnaDropStyleSnapshot | undefined {
-  if (!enabled) return undefined;
+function styleSnapshot(
+  styleProfile: StyleProfile | null | undefined
+): DnaDropStyleSnapshot | undefined {
   const latest = styleProfile?.history?.[0];
   if (!latest?.analysis?.trim()) return undefined;
-  return {
-    analysis: latest.analysis.trim(),
-    metrics: latest.metrics,
-  };
+  const snapshot: DnaDropStyleSnapshot = { analysis: latest.analysis.trim() };
+  if (latest.metrics) snapshot.metrics = latest.metrics;
+  return snapshot;
 }
 
-function enrichTrack(
+function stripDirectionFields(direction?: Partial<Direction> | null): Partial<Direction> {
+  const next: Partial<Direction> = { ...(direction ?? {}) };
+  for (const { key } of CREATIVE_DNA_FIELDS) {
+    next[key] = '';
+  }
+  next.enabled = false;
+  return next;
+}
+
+function stripWorkstationOnlyFields(payload: DnaDropTrackPayload) {
+  delete payload.relayData;
+  delete payload.draftChest;
+  delete payload.approvalDraftBacklog;
+  delete payload.suggestedTitlesHistory;
+  delete payload.vibePresets;
+}
+
+/** Keep only Co-Writer / workstation rules that are toggled on at snapshot time. */
+function sanitizeTrackForSnapshot(
   track: Track,
   styleProfile: StyleProfile | null | undefined,
   album?: Album
 ): DnaDropTrackPayload {
   const payload = clone(track) as DnaDropTrackPayload;
-  const sharedStyle = styleSnapshot(styleProfile, track.styleEnabled);
-  if (sharedStyle) payload.sharedStyle = sharedStyle;
+  stripWorkstationOnlyFields(payload);
 
-  if (album && album.id !== 'unassigned') {
-    payload.sharedAlbumContext = {
-      title: album.title,
-      theme: album.theme,
-      direction: album.direction,
-      thingsToSay: album.thingsToSay,
+  const styleOn = isStyleActive(track);
+  payload.styleEnabled = styleOn;
+  if (styleOn) {
+    const sharedStyle = styleSnapshot(styleProfile);
+    if (sharedStyle) payload.sharedStyle = sharedStyle;
+  } else {
+    delete payload.sharedStyle;
+  }
+
+  if (isIntentsActive(track)) {
+    payload.intentsEnabled = true;
+    payload.checkedIntents = [...(track.checkedIntents ?? [])];
+    payload.intentRefs = payload.checkedIntents;
+    if (!track.endWith?.trim() || !payload.checkedIntents.includes(track.endWith)) {
+      payload.endWith = null;
+    }
+  } else {
+    payload.intentsEnabled = false;
+    payload.checkedIntents = [];
+    payload.intentRefs = [];
+    payload.endWith = null;
+  }
+
+  if (isGuardrailsActive(track)) {
+    payload.guardrails = guardrailsWithSyncedEnabled(track.guardrails, { enabled: true });
+  } else {
+    payload.guardrails = { enabled: false };
+  }
+
+  const inheritAlbum = isInheritFromAlbumOn(track, album);
+  if (isTrackDnaActive(track)) {
+    payload.direction = directionWithSyncedEnabled(
+      { ...(track.direction ?? {}), inheritFromAlbum: inheritAlbum },
+      true
+    );
+  } else {
+    payload.direction = {
+      ...stripDirectionFields(track.direction),
+      inheritFromAlbum: inheritAlbum,
+      enabled: false,
     };
   }
 
+  if (isVibeActive(track)) {
+    payload.vibe = { ...track.vibe, enabled: true };
+  } else {
+    payload.vibe = {
+      genre: track.vibe?.genre ?? 'General',
+      tempoBPM: track.vibe?.tempoBPM ?? 90,
+      feeling: [],
+      enabled: false,
+    };
+  }
+
+  const instructions = track.specialInstructions?.trim();
+  if (instructions) payload.specialInstructions = instructions;
+  else delete payload.specialInstructions;
+
+  if (album && !isLooseTrackAlbum(album)) {
+    const ctx: DnaDropAlbumContext = {
+      title: album.title,
+      theme: album.theme,
+    };
+    if (isAlbumDnaActive(track, album) && album.direction?.enabled) {
+      ctx.direction = album.direction;
+    }
+    if (isIntentsActive(track) && payload.checkedIntents?.length) {
+      ctx.thingsToSay = payload.checkedIntents;
+    }
+    payload.sharedAlbumContext = ctx;
+  } else {
+    delete payload.sharedAlbumContext;
+  }
+
+  return payload;
+}
+
+function sanitizeAlbumForSnapshot(
+  album: Album,
+  styleProfile: StyleProfile | null | undefined
+): DnaDropAlbumPayload {
+  const payload = clone(album) as DnaDropAlbumPayload;
+  delete payload.dnaPresets;
+  delete payload.stylePresets;
+
+  if (album.direction?.enabled) {
+    payload.direction = album.direction;
+  } else {
+    payload.direction = { ...stripDirectionFields(album.direction), enabled: false };
+  }
+
+  payload.tracks = (album.tracks ?? []).map((t) => sanitizeTrackForSnapshot(t, styleProfile, album));
   return payload;
 }
 
@@ -80,28 +193,39 @@ export function buildTrackDropPayload(
   album: Album | undefined,
   styleProfile: StyleProfile | null | undefined
 ): DnaDropTrackPayload {
-  return enrichTrack(track, styleProfile, album);
+  return sanitizeTrackForSnapshot(track, styleProfile, album);
 }
 
 export function buildAlbumDropPayload(
   album: Album,
   styleProfile: StyleProfile | null | undefined
 ): DnaDropAlbumPayload {
-  const payload = clone(album) as DnaDropAlbumPayload;
-  payload.tracks = (album.tracks ?? []).map((t) => enrichTrack(t, styleProfile, album));
-  return payload;
+  return sanitizeAlbumForSnapshot(album, styleProfile);
 }
 
-/** Intents shown on a shared track — checked beats legacy intentRefs. */
+/** Intents shown on a shared track — only motifs that were active at snapshot time. */
 export function sharedTrackIntents(track: DnaDropTrackPayload | Track): string[] {
+  if (!isIntentsActive(track)) return [];
   if (track.checkedIntents?.length) return track.checkedIntents;
   return track.intentRefs ?? [];
 }
 
-export function resolveSharedDirection(project: DnaDropTrackPayload | DnaDropAlbumPayload | Track | Album) {
-  const trackPayload = project as DnaDropTrackPayload;
-  if (trackPayload.sharedAlbumContext?.direction && trackPayload.direction?.inheritFromAlbum !== false) {
-    return mergeDirection(trackPayload.sharedAlbumContext.direction, trackPayload.direction);
+export function resolveSharedDirection(
+  project: DnaDropTrackPayload | DnaDropAlbumPayload | Track | Album
+): Direction | undefined {
+  const albumPayload = project as DnaDropAlbumPayload;
+  if (Array.isArray(albumPayload.tracks)) {
+    const merged = mergeDirection(albumPayload.direction, undefined);
+    return hasDirectionContent(merged) ? merged : undefined;
   }
-  return mergeDirection(undefined, trackPayload.direction ?? project.direction);
+
+  const trackPayload = project as DnaDropTrackPayload;
+  const albumDirection =
+    trackPayload.sharedAlbumContext?.direction &&
+    trackPayload.direction?.inheritFromAlbum !== false
+      ? trackPayload.sharedAlbumContext.direction
+      : undefined;
+  const trackDirection = isTrackDnaActive(trackPayload) ? trackPayload.direction : undefined;
+  const merged = mergeDirection(albumDirection, trackDirection);
+  return hasDirectionContent(merged) ? merged : undefined;
 }

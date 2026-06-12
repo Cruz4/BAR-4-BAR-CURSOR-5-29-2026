@@ -11,6 +11,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/client/firebase';
 import { doc } from 'firebase/firestore';
 import { subscribeDocument } from '@/lib/firebase/client/firestore-subscribe';
+import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import { useRouter, usePathname } from 'next/navigation';
 import type { User } from '@/lib/types';
 import { StudioLoader } from '@/components/studio-loader';
@@ -171,6 +172,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       setAuthReady(true);
+
+      const readyUser = await waitForAuthUser();
+      if (!readyUser || readyUser.uid !== firebaseUser.uid) {
+        finishLoading();
+        return;
+      }
 
       const cacheUserProfile = (nextUser: User) => {
         saveCachedUserProfile({

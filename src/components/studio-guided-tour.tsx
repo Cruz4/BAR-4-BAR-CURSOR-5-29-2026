@@ -21,6 +21,8 @@ type StudioGuidedTourProps = {
 const PAD = 8;
 const MOBILE_BREAKPOINT = 768;
 const TOUR_CARD_HEIGHT_ESTIMATE = 280;
+/** Ignore sub-pixel drift so scroll listeners do not fight the spotlight. */
+const SCROLL_DEADBAND_PX = 16;
 /** Tab bar + quest progress floating above it on mobile */
 const MOBILE_BOTTOM_CHROME = 148;
 /** Steps whose targets sit low on the page — pin the tour card to the top so actions stay visible. */
@@ -31,6 +33,8 @@ const TOP_CARD_STEP_IDS = new Set([
   'dna',
   'dna-drop',
 ]);
+/** Sticky/fixed targets — auto-scroll fights the spotlight and causes jitter. */
+const NO_AUTO_SCROLL_STEP_IDS = new Set(['vault-progress']);
 
 function useCompactViewport() {
   const [compact, setCompact] = useState(false);
@@ -68,22 +72,107 @@ function scrollTargetVisible(
   if (parent) {
     const elRect = el.getBoundingClientRect();
     const maxBottom = window.innerHeight - bottomReserve;
-    if (elRect.top < topReserve) {
-      parent.scrollBy({ top: elRect.top - topReserve - 8, behavior: 'smooth' });
-    } else if (elRect.bottom > maxBottom) {
-      parent.scrollBy({ top: elRect.bottom - maxBottom + 8, behavior: 'smooth' });
+    if (elRect.top < topReserve - SCROLL_DEADBAND_PX) {
+      parent.scrollBy({ top: elRect.top - topReserve - 8, behavior: 'auto' });
+    } else if (elRect.bottom > maxBottom + SCROLL_DEADBAND_PX) {
+      parent.scrollBy({ top: elRect.bottom - maxBottom + 8, behavior: 'auto' });
     }
     return;
   }
 
-  el.scrollIntoView({ block: preferEnd ? 'end' : 'start', behavior: 'smooth' });
   const elRect = el.getBoundingClientRect();
   const maxBottom = window.innerHeight - bottomReserve;
-  if (elRect.bottom > maxBottom) {
-    window.scrollBy({ top: elRect.bottom - maxBottom + 8, behavior: 'smooth' });
-  } else if (elRect.top < topReserve) {
-    window.scrollBy({ top: elRect.top - topReserve - 8, behavior: 'smooth' });
+  const needsScroll =
+    elRect.top < topReserve - SCROLL_DEADBAND_PX || elRect.bottom > maxBottom + SCROLL_DEADBAND_PX;
+  if (!needsScroll) return;
+
+  el.scrollIntoView({ block: preferEnd ? 'end' : 'start', behavior: 'auto' });
+  const after = el.getBoundingClientRect();
+  if (after.bottom > maxBottom + SCROLL_DEADBAND_PX) {
+    window.scrollBy({ top: after.bottom - maxBottom + 8, behavior: 'auto' });
+  } else if (after.top < topReserve - SCROLL_DEADBAND_PX) {
+    window.scrollBy({ top: after.top - topReserve - 8, behavior: 'auto' });
   }
+}
+
+function tourCardOverlapsTarget(
+  cardTop: number,
+  cardLeft: number,
+  cardWidth: number,
+  cardHeight: number,
+  targetRect: DOMRect
+) {
+  const gap = PAD + 8;
+  return !(
+    cardLeft + cardWidth + gap < targetRect.left ||
+    cardLeft > targetRect.right + gap ||
+    cardTop + cardHeight + gap < targetRect.top ||
+    cardTop > targetRect.bottom + gap
+  );
+}
+
+function computeDesktopTourCardPosition(
+  targetRect: DOMRect,
+  placement: 'top' | 'bottom',
+  cardWidth: number,
+  cardHeight: number
+): { top: number; left: number } {
+  const margin = 16;
+  const headerReserve = 72;
+  const maxTop = window.innerHeight - cardHeight - margin;
+  const maxLeft = window.innerWidth - cardWidth - margin;
+
+  const targetOnLeftRail = targetRect.right < window.innerWidth * 0.38;
+  const targetOnRightRail = targetRect.left > window.innerWidth * 0.62;
+
+  const candidates: { top: number; left: number }[] = [];
+
+  if (targetOnLeftRail) {
+    candidates.push({
+      left: Math.min(Math.max(margin, targetRect.right + margin + PAD), maxLeft),
+      top: Math.max(headerReserve, Math.min(targetRect.top, maxTop)),
+    });
+    candidates.push({
+      left: Math.max(margin, Math.min(targetRect.left, maxLeft)),
+      top: Math.min(targetRect.bottom + margin + PAD, maxTop),
+    });
+  }
+
+  if (targetOnRightRail) {
+    candidates.push({
+      left: Math.max(margin, targetRect.left - cardWidth - margin - PAD),
+      top: Math.max(headerReserve, Math.min(targetRect.top, maxTop)),
+    });
+  }
+
+  if (placement === 'bottom') {
+    candidates.push({
+      left: Math.max(margin, Math.min(targetRect.left, maxLeft)),
+      top: Math.min(targetRect.bottom + margin + PAD, maxTop),
+    });
+  }
+
+  if (placement === 'top') {
+    candidates.push({
+      left: Math.max(margin, Math.min(targetRect.left, maxLeft)),
+      top: Math.max(headerReserve, targetRect.top - cardHeight - margin - PAD),
+    });
+  }
+
+  candidates.push({
+    left: Math.max(margin, window.innerWidth - cardWidth - margin),
+    top: headerReserve,
+  });
+
+  for (const candidate of candidates) {
+    if (
+      !tourCardOverlapsTarget(candidate.top, candidate.left, cardWidth, cardHeight, targetRect)
+    ) {
+      return candidate;
+    }
+  }
+
+  return candidates[0] ?? { top: headerReserve, left: margin };
 }
 
 export function StudioGuidedTour({
@@ -102,6 +191,8 @@ export function StudioGuidedTour({
   const isCompact = useCompactViewport();
   const scrollStyledElRef = useRef<HTMLElement | null>(null);
   const measureTimersRef = useRef<number[]>([]);
+  const hasAutoScrolledRef = useRef(false);
+  const targetElRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -119,12 +210,8 @@ export function StudioGuidedTour({
     measureTimersRef.current = [];
   }, []);
 
-  const measureTarget = useCallback(() => {
-    if (!active || !step) {
-      clearScrollMargins();
-      setRect(null);
-      return;
-    }
+  const resolveTargetEl = useCallback((): HTMLElement | null => {
+    if (!step) return null;
 
     const selectors = step.target.includes(',')
       ? step.target.split(',').map((s) => s.trim())
@@ -142,28 +229,22 @@ export function StudioGuidedTour({
     if (!el) {
       el = document.querySelector(selectors[0]);
     }
-    if (!el) {
-      clearScrollMargins();
-      setRect(null);
-      return;
-    }
+    return el ? (el as HTMLElement) : null;
+  }, [step]);
 
-    clearScrollMargins();
-
-    const compact = window.innerWidth < MOBILE_BREAKPOINT;
-    const htmlEl = el as HTMLElement;
-
-    const capture = () => {
+  const captureRect = useCallback(
+    (htmlEl: HTMLElement, shouldScroll: boolean) => {
       const next = htmlEl.getBoundingClientRect();
       if (next.width === 0 && next.height === 0) return;
 
+      const compact = window.innerWidth < MOBILE_BREAKPOINT;
       const bottomCardReserve = compact
         ? TOUR_CARD_HEIGHT_ESTIMATE + MOBILE_BOTTOM_CHROME + 20
         : TOUR_CARD_HEIGHT_ESTIMATE + 32;
       const spaceBelow = window.innerHeight - next.bottom;
       const spaceAbove = next.top;
       const targetInLowerHalf = next.top > window.innerHeight * 0.42;
-      const forceTop = mobileTopCardStepIds.has(step.id);
+      const forceTop = compact && mobileTopCardStepIds.has(step!.id);
 
       let placement: 'top' | 'bottom' = 'bottom';
       if (forceTop || targetInLowerHalf) {
@@ -184,49 +265,91 @@ export function StudioGuidedTour({
           ? TOUR_CARD_HEIGHT_ESTIMATE + 24
           : 24;
 
-      if (compact) {
+      const allowAutoScroll = shouldScroll && !hasAutoScrolledRef.current && !NO_AUTO_SCROLL_STEP_IDS.has(step!.id);
+      if (allowAutoScroll) {
         scrollTargetVisible(htmlEl, topReserve, bottomReserve, placement === 'top');
-        window.setTimeout(() => {
-          setRect(htmlEl.getBoundingClientRect());
-        }, placement === 'top' ? 320 : 280);
-      } else {
-        scrollTargetVisible(htmlEl, topReserve, bottomReserve, placement === 'top');
-        window.setTimeout(() => {
-          setRect(htmlEl.getBoundingClientRect());
-        }, 280);
+        hasAutoScrolledRef.current = true;
+      } else if (shouldScroll) {
+        hasAutoScrolledRef.current = true;
       }
-    };
 
-    if (compact) {
-      scrollStyledElRef.current = htmlEl;
+      setRect(htmlEl.getBoundingClientRect());
+    },
+    [mobileTopCardStepIds, step]
+  );
+
+  const measureTarget = useCallback(
+    (shouldScroll: boolean) => {
+      if (!active || !step) {
+        clearScrollMargins();
+        targetElRef.current = null;
+        setRect(null);
+        return;
+      }
+
+      const htmlEl = resolveTargetEl();
+      if (!htmlEl) {
+        clearScrollMargins();
+        targetElRef.current = null;
+        setRect(null);
+        return;
+      }
+
+      clearScrollMargins();
+      targetElRef.current = htmlEl;
+
+      const compact = window.innerWidth < MOBILE_BREAKPOINT;
+      if (compact) {
+        scrollStyledElRef.current = htmlEl;
+      }
+
+      const runCapture = (scroll: boolean) => {
+        const el = targetElRef.current;
+        if (!el || !el.isConnected) return;
+        captureRect(el, scroll);
+      };
+
+      requestAnimationFrame(() => runCapture(shouldScroll));
+      if (shouldScroll) {
+        measureTimersRef.current.push(window.setTimeout(() => runCapture(false), 180));
+        measureTimersRef.current.push(window.setTimeout(() => runCapture(false), 420));
+      }
+    },
+    [active, step, clearScrollMargins, resolveTargetEl, captureRect]
+  );
+
+  const updateTargetRect = useCallback(() => {
+    const el = targetElRef.current;
+    if (!el || !el.isConnected) {
+      measureTarget(false);
+      return;
     }
-
-    requestAnimationFrame(capture);
-    measureTimersRef.current.push(window.setTimeout(capture, 180));
-    measureTimersRef.current.push(window.setTimeout(capture, 420));
-  }, [active, step, clearScrollMargins]);
+    captureRect(el, false);
+  }, [captureRect, measureTarget]);
 
   useLayoutEffect(() => {
     clearMeasureTimers();
+    hasAutoScrolledRef.current = false;
     if (!active || !step) {
       clearScrollMargins();
+      targetElRef.current = null;
       setRect(null);
       return;
     }
 
     onBeforeStep?.(step);
-    measureTarget();
+    measureTarget(true);
 
-    const onResize = () => measureTarget();
-    window.addEventListener('resize', onResize);
-    window.addEventListener('scroll', onResize, true);
+    window.addEventListener('resize', updateTargetRect);
+    window.addEventListener('scroll', updateTargetRect, true);
     return () => {
       clearMeasureTimers();
       clearScrollMargins();
-      window.removeEventListener('resize', onResize);
-      window.removeEventListener('scroll', onResize, true);
+      targetElRef.current = null;
+      window.removeEventListener('resize', updateTargetRect);
+      window.removeEventListener('scroll', updateTargetRect, true);
     };
-  }, [active, stepIndex, step, onBeforeStep, measureTarget, clearMeasureTimers, clearScrollMargins]);
+  }, [active, stepIndex, step, onBeforeStep, measureTarget, updateTargetRect, clearMeasureTimers, clearScrollMargins]);
 
   if (!mounted || !active || !step) return null;
 
@@ -235,22 +358,12 @@ export function StudioGuidedTour({
   let cardTop: number | undefined;
   let cardLeft: number | undefined;
 
-  if (!isCompact && rect && cardPlacement === 'bottom') {
+  if (!isCompact && rect) {
     const cardHeight = TOUR_CARD_HEIGHT_ESTIMATE;
     const cardWidth = Math.min(340, window.innerWidth - 32);
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    const maxTop = window.innerHeight - cardHeight - 16;
-
-    if (spaceBelow >= cardHeight + 24) {
-      cardTop = Math.min(rect.bottom + 16, maxTop);
-    } else if (spaceAbove >= cardHeight + 24) {
-      cardTop = Math.max(16, rect.top - cardHeight - 16);
-    } else {
-      cardTop = Math.max(16, maxTop);
-    }
-
-    cardLeft = Math.max(16, Math.min(rect.left, window.innerWidth - cardWidth - 16));
+    const pos = computeDesktopTourCardPosition(rect, cardPlacement, cardWidth, cardHeight);
+    cardTop = pos.top;
+    cardLeft = pos.left;
   }
 
   return createPortal(
@@ -277,15 +390,9 @@ export function StudioGuidedTour({
             ? cardPlacement === 'top'
               ? 'left-4 right-4 top-[max(4.25rem,env(safe-area-inset-top))] slide-in-from-top-2'
               : 'left-4 right-4 bottom-[max(calc(3.75rem+env(safe-area-inset-bottom)),1rem)] slide-in-from-bottom-2'
-            : cardPlacement === 'top'
-              ? 'left-4 right-4 top-[max(4.25rem,env(safe-area-inset-top))] w-[min(380px,calc(100vw-32px))] slide-in-from-top-2'
-              : 'w-[min(340px,calc(100vw-32px))] slide-in-from-bottom-2'
+            : 'w-[min(340px,calc(100vw-32px))] slide-in-from-bottom-2'
         )}
-        style={
-          isCompact || cardPlacement === 'top'
-            ? undefined
-            : { top: cardTop ?? 80, left: cardLeft ?? 16 }
-        }
+        style={isCompact ? undefined : { top: cardTop ?? 80, left: cardLeft ?? 16 }}
       >
         <div className="rounded-xl border border-primary/30 bg-card shadow-[0_0_40px_rgba(59,130,246,0.25)] flex flex-col max-h-[min(70dvh,calc(100dvh-5.5rem))] overflow-hidden">
           <div className="flex items-start justify-between gap-2 px-4 pt-4 shrink-0">

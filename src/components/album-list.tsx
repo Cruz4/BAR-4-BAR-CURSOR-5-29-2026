@@ -550,10 +550,9 @@ export function AlbumList() {
     if (
       step.id === 'vault-header' ||
       step.id === 'vault-search' ||
-      step.id === 'vault-create' ||
-      step.id === 'vault-progress'
+      step.id === 'vault-create'
     ) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'auto' });
     }
   }, []);
 

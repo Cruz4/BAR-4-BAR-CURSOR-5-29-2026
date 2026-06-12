@@ -22,6 +22,19 @@ export function hasGuardrailsContent(guardrails?: Track['guardrails'] | null): b
   return false;
 }
 
+/** Hub / form strings before comma-splitting into guardrails arrays. */
+export function hasGuardrailsStringsContent(
+  negativePrompt = '',
+  forbiddenCsv = '',
+  mustIncludeCsv = ''
+): boolean {
+  return hasGuardrailsContent({
+    negativePrompt,
+    forbiddenWords: forbiddenCsv.split(',').map((w) => w.trim()).filter(Boolean),
+    mustIncludeWords: mustIncludeCsv.split(',').map((w) => w.trim()).filter(Boolean),
+  });
+}
+
 /** Co-Writer DNA switch — on only when at least one Creative DNA field has text and not explicitly disabled. */
 export function isTrackDnaToggleOn(track: Track): boolean {
   if (!hasCreativeDnaContent(track.direction)) return false;
@@ -62,11 +75,18 @@ export function guardrailsWithSyncedEnabled(
     mustIncludeWords: guardrails?.mustIncludeWords,
     ...patch,
   };
+  const contentFieldsTouched =
+    'negativePrompt' in patch || 'forbiddenWords' in patch || 'mustIncludeWords' in patch;
+
   if (!hasGuardrailsContent(merged)) {
     merged.enabled = false;
   } else if (patch.enabled === false) {
     merged.enabled = false;
-  } else if (patch.enabled === true || guardrails?.enabled !== false) {
+  } else if (patch.enabled === true) {
+    merged.enabled = true;
+  } else if (contentFieldsTouched) {
+    merged.enabled = true;
+  } else if (guardrails?.enabled !== false) {
     merged.enabled = true;
   }
   return merged;

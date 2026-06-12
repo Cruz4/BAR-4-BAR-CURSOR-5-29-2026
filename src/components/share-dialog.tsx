@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useContext, useEffect } from 'react';
-import Link from 'next/link';
 import {
   Dialog,
   DialogContent,
@@ -25,8 +24,6 @@ interface ShareDialogProps {
   title: string;
   albumId?: string;
   existingShareId?: string;
-  /** Read-only mock — publish requires Pro. */
-  previewOnly?: boolean;
 }
 
 export function ShareDialog({
@@ -37,7 +34,6 @@ export function ShareDialog({
   title,
   albumId,
   existingShareId,
-  previewOnly = false,
 }: ShareDialogProps) {
   const { dropDNA, updateDNA, revokeDNA, isCloudSyncActive } = useContext(DataContext);
   const { toast } = useToast();
@@ -136,42 +132,14 @@ export function ShareDialog({
         </DialogHeader>
 
         <div className="py-4 space-y-5">
-          {previewOnly ? (
-            <div className="space-y-4 text-center px-2">
-              <div className="p-5 bg-primary/5 border border-primary/20 rounded-xl space-y-3 text-left">
-                <Sparkles className="h-9 w-9 text-primary mx-auto animate-pulse" />
-                <h3 className="font-headline text-lg font-bold uppercase text-center">DNA Drop preview</h3>
-                <p className="text-[11px] text-muted-foreground font-code leading-relaxed">
-                  This is how a live DNA Drop link would look for <span className="text-foreground">{title}</span> —
-                  collaborators import your saved structure, DNA, vibe, and guardrails into their vault.
-                </p>
-                <div className="flex gap-2 pt-2">
-                  <Input
-                    readOnly
-                    value={`${typeof window !== 'undefined' ? window.location.origin : 'https://bar4bar.ink'}/share/preview-${id.slice(0, 8)}`}
-                    className="font-code text-xs bg-background/50 h-10 opacity-60"
-                  />
-                </div>
-                <p className="text-[10px] text-muted-foreground/80 italic border-t border-white/5 pt-2">
-                  Publishing a real link is Pro — preview ends here.
-                </p>
-              </div>
-              <Button asChild className="w-full h-12 text-sm font-bold shadow-xl gap-2">
-                <Link href="/usage?tab=cloud" onClick={() => onOpenChange(false)}>
-                  <Share2 className="h-4 w-4" />
-                  Publish DNA Drop — Go Pro
-                </Link>
-              </Button>
-            </div>
-          ) : !shareId ? (
+          {!shareId ? (
             <div className="space-y-4 text-center px-2">
               <div className="p-5 bg-primary/5 border border-primary/20 rounded-xl space-y-3 text-left">
                 <Sparkles className="h-9 w-9 text-primary mx-auto animate-pulse" />
                 <h3 className="font-headline text-lg font-bold uppercase text-center">Ready to go live?</h3>
                 <p className="text-[11px] text-muted-foreground font-code leading-relaxed">
-                  Publishes a snapshot of everything saved on this {type === 'album' ? 'album' : 'track'}:
-                  lyrics &amp; structure, Creative DNA, checked intents, vibe, guardrails, special instructions,
-                  and Style DNA when that toggle is on.
+                  Publishes a snapshot of lyrics &amp; structure plus only the rules that are toggled on right now —
+                  Creative DNA, intents, vibe, guardrails, special instructions, and Style DNA when active.
                 </p>
                 <p className="text-[10px] text-muted-foreground/80 italic border-t border-white/5 pt-2">
                   Not live-synced — press Update after you change anything you want reflected on the link.
@@ -202,7 +170,7 @@ export function ShareDialog({
                 </div>
                 <p className="text-[10px] text-muted-foreground leading-relaxed">
                   The link stays the same. Use <strong className="text-foreground">Update snapshot</strong> after you
-                  edit lyrics, DNA, intents, vibe, style, or structure — otherwise visitors keep seeing the last
+                  edit lyrics, toggles, DNA, intents, vibe, style, or structure — otherwise visitors keep seeing the last
                   published version. Old links you posted elsewhere do not auto-update until you refresh.
                 </p>
               </div>

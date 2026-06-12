@@ -187,6 +187,7 @@ import {
   isInheritFromAlbumOn,
   isLooseTrackAlbum,
   directionWithSyncedEnabled,
+  hasCreativeDnaContent,
   guardrailsWithSyncedEnabled,
 } from '@/lib/co-writer-rules';
 import {
@@ -199,12 +200,14 @@ import { GenerateSongDraftDialog } from './generate-song-draft-dialog';
 import { ExportDialog } from './export-dialog';
 import { ShareDialog } from './share-dialog';
 import { DnaDropLiveIndicator } from './dna-drop-live-indicator';
-import { findRhymes } from '@/ai/flows/find-rhymes';
-import { suggestVibe } from '@/ai/flows/suggest-vibe';
-import { generateNextLine } from '@/ai/flows/generate-next-line';
-import { improveMyStyle } from '@/ai/flows/improve-my-style';
-import { analyzeStructure } from '@/ai/flows/analyze-structure';
-import { generateCoverArt } from '@/ai/flows/generate-cover-art';
+import {
+  lazyAnalyzeStructure,
+  lazyFindRhymes,
+  lazyGenerateCoverArt,
+  lazyGenerateNextLine,
+  lazyImproveMyStyle,
+  lazySuggestVibe,
+} from '@/lib/lazy-ai-flows';
 import { FreestylePad } from '@/components/freestyle-pad';
 import {
   Dialog,
@@ -276,7 +279,7 @@ function SmartStructureDialog({ open, onOpenChange, onApply }: any) {
       setIsProcessing(true);
       setGenerating(true, 'Deconstructing Neural Structure...');
       try {
-        const res = await analyzeStructure(await withAiAuth({ text: inputText }));
+        const res = await lazyAnalyzeStructure(await withAiAuth({ text: inputText }));
         const newSections = res.sections.map((s: any, i: number) => ({
           id: `smart-${Date.now()}-${i}`,
           type: s.type,
@@ -375,7 +378,7 @@ function ImproveMyStyleDialog({ open, onOpenChange, track, onUpdateStyle }: any)
       try {
         const allText = track.sections.flatMap((s: any) => s.bars.map((b: any) => b.text)).join('\n');
         if (allText.length < 50) throw new Error('Need more lyrical data to train effectively.');
-        const res = await improveMyStyle(await withAiAuth({ lyrics: allText }));
+        const res = await lazyImproveMyStyle(await withAiAuth({ lyrics: allText }));
         onUpdateStyle(res.analysis, res.metrics);
         addUsageLog({ flowName: 'improveMyStyle', inkCost: cost, status: 'success' });
         toast({ title: 'Style Profile Updated', description: 'The AI co-writer has learned your unique flow pattern.' });
@@ -748,7 +751,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
       setGenerating(true, 'Analyzing Sonic Landscape...');
       try {
         const fullLyrics = track.sections.flatMap((s: any) => s.bars.map((b: any) => b.text)).join('\n');
-        const res = await suggestVibe(await withAiAuth({ lyrics: fullLyrics }));
+        const res = await lazySuggestVibe(await withAiAuth({ lyrics: fullLyrics }));
         onUpdateTrack({ vibe: { ...track.vibe, ...res, enabled: true } });
         addUsageLog({ flowName: 'suggestVibe', inkCost: cost, status: 'success' });
         toast({ title: 'Vibe Generated' });
@@ -771,7 +774,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
       setGenerating(true, 'Generating Cinematic DNA...');
       try {
         const fullLyrics = track.sections.flatMap((s: any) => s.bars.map((b: any) => b.text)).join('\n');
-        const res = await generateCoverArt(
+        const res = await lazyGenerateCoverArt(
           await withAiAuth({
             lyrics: fullLyrics,
             vibe: track.vibe,
@@ -956,7 +959,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                       <LockedProFeatureButton
                         feature="Performance Mode"
                         benefit="Full-screen teleprompter with scroll-synced lyrics for stage and studio sessions."
-                        example="Try a 30-second preview, then upgrade for full rehearsal mode."
+                        example="Rehearse hooks without losing your place mid-verse."
                         ctaLabel="Unlock Performance — Go Pro"
                         icon={MonitorPlay}
                         iconClassName="text-sky-400"
@@ -964,42 +967,20 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                         className="w-full min-w-0 text-[9px] font-bold h-9 uppercase px-2 bg-sky-500/10 text-sky-400 border border-sky-500/20"
                       />
                     )}
-                    {!isPro && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="w-full min-w-0 bg-sky-500/5 hover:bg-sky-500/10 text-sky-300/80 border border-sky-500/15 text-[8px] font-bold h-8 uppercase justify-start leading-none px-2"
-                        onClick={() => window.open(`${window.location.pathname}/perform?preview=30`, '_blank')}
-                      >
-                        <MonitorPlay className="mr-2 h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">Preview Performance (30s)</span>
-                      </Button>
-                    )}
                     <Button variant="secondary" size="sm" className="w-full min-w-0 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => setExportDialogOpen(true)}><FileDown className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">{isPro ? 'Export Track' : 'Preview Export'}</span></Button>
                     {isPro ? (
                       <Button variant="secondary" size="sm" data-tour="dna-drop" className="w-full min-w-0 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-[9px] font-bold h-9 uppercase justify-start leading-none pl-2 pr-2.5 overflow-visible" onClick={() => setShareDialogOpen(true)}><Globe className="mr-2 h-4 w-4 shrink-0" /> <span className="flex items-center justify-between gap-2 min-w-0 flex-1 overflow-visible"><span className="truncate min-w-0">DNA Drop (Share)</span><DnaDropLiveIndicator shareId={track.shareId} variant="compact" /></span></Button>
                     ) : (
-                      <>
-                        <LockedProFeatureButton
-                          feature="DNA Drop"
-                          benefit="Publish a shareable link to your track blueprint for collab and feedback."
-                          example="Preview the share flow, then upgrade to publish live links."
-                          ctaLabel="Publish DNA Drop — Go Pro"
-                          icon={Globe}
-                          iconClassName="text-primary"
-                          label={<span className="truncate flex items-center gap-2 min-w-0">DNA Drop (Share)</span>}
-                          className="w-full min-w-0 text-[9px] font-bold h-9 uppercase px-2 bg-primary/10 text-primary border border-primary/20"
-                        />
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="w-full min-w-0 bg-primary/5 hover:bg-primary/10 text-primary/80 border border-primary/15 text-[8px] font-bold h-8 uppercase justify-start leading-none px-2"
-                          onClick={() => setShareDialogOpen(true)}
-                        >
-                          <Globe className="mr-2 h-3.5 w-3.5 shrink-0" />
-                          <span className="truncate">Preview DNA Drop</span>
-                        </Button>
-                      </>
+                      <LockedProFeatureButton
+                        feature="DNA Drop"
+                        benefit="Publish a shareable link to your track blueprint for collab and feedback."
+                        example="Drop a link so collaborators can import your structure."
+                        ctaLabel="Publish DNA Drop — Go Pro"
+                        icon={Globe}
+                        iconClassName="text-primary"
+                        label={<span className="truncate flex items-center gap-2 min-w-0">DNA Drop (Share)</span>}
+                        className="w-full min-w-0 text-[9px] font-bold h-9 uppercase px-2 bg-primary/10 text-primary border border-primary/20"
+                      />
                     )}
                   </div>
               </CardContent>
@@ -1792,10 +1773,11 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   };
 
   const handleDNAFieldUpdate = (field: keyof Direction, value: string) => {
+    const merged = { ...(track.direction || {}), [field]: value };
     onUpdateTrack({
       direction: directionWithSyncedEnabled(
-        { ...(track.direction || {}), [field]: value },
-        track.direction?.enabled
+        merged,
+        hasCreativeDnaContent(merged) ? true : false
       ),
     });
   };
@@ -1906,7 +1888,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   const isLooseTrack = isLooseTrackAlbum(album);
   const dnaActive = isTrackDnaActive(track);
   const inheritFromAlbumOn = isInheritFromAlbumOn(track, album);
-  const trackDnaFieldsEditable = inheritFromAlbumOn ? isTrackDnaToggleOn(track) : true;
+  const trackDnaFieldsEditable = true;
   const dnaSectionLit = dnaActive || inheritFromAlbumOn;
   const dnaCollapsedInherit = !sectionOpen.dna && inheritFromAlbumOn;
   const vibeActive = isVibeActive(track);
@@ -2082,9 +2064,9 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                             Loose track — no album blueprint. Set Creative DNA on this track only.
                           </p>
                         )}
-                        {inheritFromAlbumOn && !trackDnaFieldsEditable && (
+                        {inheritFromAlbumOn && !isTrackDnaToggleOn(track) && (
                           <p className="text-[9px] font-bold uppercase text-green-400/55 leading-snug">
-                            Album DNA only — turn on Track DNA to edit Creative Direction Questions for this track.
+                            Track DNA is off for AI — type in any field to turn it on, or use the switch.
                           </p>
                         )}
                         {[
@@ -2393,8 +2375,8 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                             <Textarea 
                                 placeholder="e.g. violence, generic love cliches..." 
                                 className="text-[11px] text-foreground/90 bg-background/50 border-rose-500/10 min-h-[40px]" 
-                                defaultValue={track.guardrails?.negativePrompt}
-                                onBlur={(e) => handleGuardrailsPatch({ negativePrompt: e.target.value })}
+                                value={track.guardrails?.negativePrompt ?? ''}
+                                onChange={(e) => handleGuardrailsPatch({ negativePrompt: e.target.value })}
                             />
                         </div>
                         <div className="space-y-1">
@@ -2402,8 +2384,8 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                             <Input 
                                 placeholder="Must be separated by comma" 
                                 className="h-8 text-[11px] text-foreground/90 bg-background/50 border-rose-500/10" 
-                                defaultValue={(track.guardrails?.forbiddenWords || []).join(', ')}
-                                onBlur={(e) =>
+                                value={(track.guardrails?.forbiddenWords || []).join(', ')}
+                                onChange={(e) =>
                                   handleGuardrailsPatch({
                                     forbiddenWords: e.target.value.split(',').map((w) => w.trim()).filter(Boolean),
                                   })
@@ -2415,8 +2397,8 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                             <Input 
                                 placeholder="Must include specific phrase" 
                                 className="h-8 text-[11px] text-foreground/90 bg-background/50 border-rose-500/10" 
-                                defaultValue={(track.guardrails?.mustIncludeWords || []).join(', ')}
-                                onBlur={(e) =>
+                                value={(track.guardrails?.mustIncludeWords || []).join(', ')}
+                                onChange={(e) =>
                                   handleGuardrailsPatch({
                                     mustIncludeWords: e.target.value.split(',').map((w) => w.trim()).filter(Boolean),
                                   })
@@ -2969,7 +2951,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       setGenerating(true, 'Initializing Rhyme Pulse...');
       try {
         const fullLyrics = track.sections.flatMap((s) => s.bars.map((b) => b.text)).join('\n');
-        const res = await findRhymes(await withAiAuth({ text: fullLyrics, userName: user?.displayName }));
+        const res = await lazyFindRhymes(await withAiAuth({ text: fullLyrics, userName: user?.displayName }));
         handleUpdateTrack({ rhymeGroups: res.rhymeGroups });
         addUsageLog({ flowName: 'findRhymes', inkCost: cost, status: 'success' });
         toast({ title: 'Rhyme Pulse Complete' });
@@ -3008,7 +2990,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         const targetLine = section.bars.find((b) => b.idx === barIdx)?.text || '';
         if (mode === 'next') priorLines.push(targetLine);
         else nextLines.unshift(targetLine);
-        const res = await generateNextLine(
+        const res = await lazyGenerateNextLine(
           await withAiAuth({
             userName: user?.displayName,
             priorLines,
@@ -3279,7 +3261,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         initialWorkstationMode={generatorInitialMode}
       />
       <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} album={album} tracks={[track]} exportType="track" allowDownload={isPro} />
-      <ShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} type="track" id={track.id} title={track.title} albumId={album.id} existingShareId={track.shareId} previewOnly={!isPro} />
+      <ShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} type="track" id={track.id} title={track.title} albumId={album.id} existingShareId={track.shareId} />
       <FreestylePad open={freestyleOpen} onOpenChange={setFreestyleOpen} onAddFreestyle={(text) => { const lines = text.split('. ').filter(l => l.trim()); const activeS = track.sections.find(s => s.id === activeSectionId) || track.sections[0]; const startIdx = activeS.bars.length + 1; const newBars = lines.map((l, i) => withLineSource({ idx: startIdx + i, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' }, 'written')); handleUpdateTrack({ sections: track.sections.map(s => s.id === activeS.id ? { ...s, bars: [...s.bars, ...newBars] } : s) }); setFreestyleOpen(false); }} disabled={editsLocked} trackVibe={track.vibe} albumTheme={album.theme} styleProfileSummary={styleProfile.history[0]?.analysis || ''} isPro={isPro} />
       <SmartStructureDialog
         open={smartStructureOpen}

@@ -18,7 +18,8 @@ function effectsSubtitleClass(expanded: boolean) {
   );
 }
 import type { Album, StyleProfile, Track, TrackSection } from '@/lib/types';
-import { runCreativeEffect, type CreativeTool, type CreativeEffectsInput } from '@/ai/flows/creative-effects';
+import type { CreativeTool, CreativeEffectsInput } from '@/ai/flows/creative-effects';
+import { lazyRunCreativeEffect } from '@/lib/lazy-ai-flows';
 import { useUIState } from '@/hooks/use-ui-state';
 import type { ScratchPadEffectResult } from './scratch-pad';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
@@ -161,7 +162,7 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
           toolRequest: { tool: selectedTool, inputs: currentToolInputs as any },
         };
 
-        const result = await runCreativeEffect(await withAiAuth(input));
+        const result = await lazyRunCreativeEffect(await withAiAuth(input));
 
         if (!result.options || result.options.length === 0) throw new Error('The AI did not return any suggestions.');
         

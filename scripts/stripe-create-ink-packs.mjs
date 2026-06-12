@@ -1,5 +1,5 @@
 /**
- * Creates the three permanent ink pack prices ($7.77 / $11.11 / $19.44).
+ * Creates the three permanent ink pack prices ($7.77 / $17.77 / $34.44).
  * Works in test (sk_test_) or live (sk_live_) — uses STRIPE_SECRET_KEY from .env.
  *
  * Usage: npm run stripe:create-ink-packs
@@ -63,16 +63,16 @@ created.INK_REFILL = await createPrice({
 
 created.INK_ARTIST = await createPrice({
   productName: 'Permanent Ink — Artist Bundle',
-  unitAmount: 1111,
-  nickname: 'Artist Bundle — 1,800 ink ($11.11)',
-  metadata: { inkAmount: '1800', pack: 'INK_ARTIST' },
+  unitAmount: 1777,
+  nickname: 'Artist Bundle — 2,500 ink ($17.77)',
+  metadata: { inkAmount: '2500', pack: 'INK_ARTIST' },
 });
 
 created.INK_VAULT = await createPrice({
   productName: 'Permanent Ink — Studio Vault',
-  unitAmount: 1944,
-  nickname: 'Studio Vault — 4,500 ink ($19.44)',
-  metadata: { inkAmount: '4500', pack: 'INK_VAULT' },
+  unitAmount: 3444,
+  nickname: 'Studio Vault — 5,000 ink ($34.44)',
+  metadata: { inkAmount: '5000', pack: 'INK_VAULT' },
 });
 
 const mode = secretKey.startsWith('sk_live_') ? 'LIVE' : 'TEST';
@@ -80,4 +80,5 @@ console.log(`\n# Ink packs created (${mode} mode) — paste into .env and functi
 for (const [key, price] of Object.entries(created)) {
   console.log(`STRIPE_PRICE_${key}=${price.id}`);
 }
-console.log('\nThen run: npm run stripe:verify\n');
+console.log('\n# Yearly Pro at checkout (50% off): Studio $3.89 · Artist $8.89 · Vault $17.22');
+console.log('Then run: npm run stripe:verify\n');

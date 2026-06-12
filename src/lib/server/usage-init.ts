@@ -66,6 +66,17 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
   const userRef = db.doc(`users/${userId}`);
   const [snap, userSnap] = await Promise.all([balanceRef.get(), userRef.get()]);
   const userData = userSnap.data();
+
+  if (bypassIdentityRegistry) {
+    await userRef.set(
+      {
+        role: 'admin',
+        ...(userEmail ? { email: userEmail } : {}),
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  }
   const trialActive = false;
   const trialInkGrant = TRIAL_INK_GRANT;
 

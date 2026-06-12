@@ -781,7 +781,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     async (type: 'album' | 'track', id: string, shareId: string, options?: { albumId?: string }): Promise<string> => {
       if (!user) throw new Error('Artist Session Required.');
       const albumId = options?.albumId;
-      const data = buildDropPayload(type, id, albumId);
+      const data = stripForFirestore(buildDropPayload(type, id, albumId));
       const now = new Date().toISOString();
       const shareRef = doc(db, 'shares', shareId);
       const existing = await getDoc(shareRef);
@@ -829,7 +829,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const shareId = Math.random().toString(36).substring(2, 12).toUpperCase();
-      const data = buildDropPayload(type, id, albumId);
+      const data = stripForFirestore(buildDropPayload(type, id, albumId));
       const now = new Date().toISOString();
 
       await setDoc(doc(db, 'shares', shareId), {

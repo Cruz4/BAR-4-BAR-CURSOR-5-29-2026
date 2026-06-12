@@ -21,7 +21,7 @@ import { HighlightedText } from './highlighted-text';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { withAiAuth } from '@/lib/ai-client';
-import { transcribeFreestyleAudio } from '@/ai/flows/transcribe-freestyle-audio';
+import { lazyTranscribeFreestyleAudio } from '@/lib/lazy-ai-flows';
 import {
   blobToBase64,
   getBrowserSpeechRecognition,
@@ -201,7 +201,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       }
       silentChunkStreakRef.current = 0;
       const audioBase64 = await blobToBase64(blob);
-      const result = await transcribeFreestyleAudio(
+      const result = await lazyTranscribeFreestyleAudio(
         await withAiAuth({
           audioBase64,
           mimeType,

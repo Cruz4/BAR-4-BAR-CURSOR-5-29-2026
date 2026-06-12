@@ -75,16 +75,16 @@ created.INK_REFILL = await createPrice({
 
 created.INK_ARTIST = await createPrice({
   productName: 'Permanent Ink — Artist Bundle',
-  unitAmount: 1111,
-  nickname: 'Artist Bundle — 1,800 ink ($11.11)',
-  metadata: { inkAmount: '1800', pack: 'INK_ARTIST' },
+  unitAmount: 1777,
+  nickname: 'Artist Bundle — 2,500 ink ($17.77)',
+  metadata: { inkAmount: '2500', pack: 'INK_ARTIST' },
 });
 
 created.INK_VAULT = await createPrice({
   productName: 'Permanent Ink — Studio Vault',
-  unitAmount: 1944,
-  nickname: 'Studio Vault — 4,500 ink ($19.44)',
-  metadata: { inkAmount: '4500', pack: 'INK_VAULT' },
+  unitAmount: 3444,
+  nickname: 'Studio Vault — 5,000 ink ($34.44)',
+  metadata: { inkAmount: '5000', pack: 'INK_VAULT' },
 });
 
 console.log('\n# Add to .env (Growth ↔ Balanced pricing v2)\n');

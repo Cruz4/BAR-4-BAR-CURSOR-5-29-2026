@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase/client/firebase';
 import { collection, query, doc, updateDoc, orderBy, getDoc, limit, setDoc } from 'firebase/firestore';
 import { subscribeQuery } from '@/lib/firebase/client/firestore-subscribe';
 import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
+import { initUserUsageAction } from '@/lib/server/usage-actions';
 import { adminApiFetch } from '@/lib/admin-client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -172,6 +173,18 @@ export default function AdminPage() {
       const firebaseUser = await waitForAuthUser();
       if (cancelled || !firebaseUser || firebaseUser.uid !== user.id) {
         if (!cancelled && !rosterLoadedRef.current) setRosterLoading(false);
+        return;
+      }
+
+      try {
+        const idToken = await firebaseUser.getIdToken(false);
+        await initUserUsageAction(idToken, user.id);
+      } catch (err) {
+        console.warn('[admin] profile bootstrap skipped:', err);
+      }
+
+      if (cancelled) {
+        if (!rosterLoadedRef.current) setRosterLoading(false);
         return;
       }
 

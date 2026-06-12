@@ -64,6 +64,7 @@ import {
   PRO_YEARLY_EXCLUSIVES,
   INK_PACK_YEARLY_DISCOUNT_SHORT,
   INK_PACK_YEARLY_DISCOUNT_LABEL,
+  getYearlyProInkPackCheckoutSummary,
   STUDIO_DRAFT_INK_TIP,
   COMPETITOR_ANCHOR_COPY,
   VISITOR_INK_STORE_NOTICE,
@@ -347,7 +348,10 @@ function UsagePageContent() {
                   <div className={cn("p-3 rounded-full", isYearlyUser ? "bg-accent/10" : "bg-primary/10")}><TrendingDown className={cn("h-6 w-6", isYearlyUser ? "text-accent" : "text-primary")} /></div>
                   <div>
                       <p className="font-bold text-lg uppercase tracking-tight">Yearly Pro Ink Store Discount</p>
-                      <p className="text-xs text-muted-foreground font-code">Yearly Pro members receive a permanent {INK_PACK_YEARLY_DISCOUNT_SHORT} at checkout.</p>
+                      <p className="text-xs text-muted-foreground font-code">
+                        Yearly Pro members receive a permanent {INK_PACK_YEARLY_DISCOUNT_SHORT} at checkout
+                        {isYearlyUser ? ` — ${getYearlyProInkPackCheckoutSummary()}` : '.'}
+                      </p>
                   </div>
               </div>
               {!isYearlyUser && <Button variant="outline" size="sm" onClick={() => setActiveTab('cloud')} className="shrink-0 font-bold text-[10px] uppercase h-10 px-6">Unlock Ink Pack Savings</Button>}
