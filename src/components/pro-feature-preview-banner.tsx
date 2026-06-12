@@ -48,7 +48,7 @@ export function ProFeaturePreviewBanner({ className }: { className?: string }) {
       <p className="text-[10px] sm:text-[11px] font-code text-pink-100/90 flex-grow min-w-0">
         <span className="font-bold uppercase tracking-widest text-pink-300">Pro preview · {timeLabel}</span>
         {' — '}
-        Export, unlimited tracks, Performance &amp; DNA Drop unlocked. Ink unchanged.
+        Vault saves, export, unlimited tracks, Performance &amp; DNA Drop unlocked. Ink unchanged.
       </p>
       <Link
         href="/usage?tab=cloud"

@@ -29,6 +29,7 @@ import { MarketingAttributionCapture } from './marketing-attribution-capture';
 import { AdminAlertListener } from './admin-alert-listener';
 import { InviteGateGuard } from './invite-gate-guard';
 import { ProFeaturePreviewBanner } from './pro-feature-preview-banner';
+import { ProTrialWinQuestStrip } from './pro-trial-win-quest-strip';
 import { EmailVerificationBanner } from './email-verification-banner';
 import { AdSenseRouteLoader } from './adsense-route-loader';
 import { useAuth } from '@/hooks/use-auth';
@@ -94,6 +95,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 {showAppHeader && <Header />}
                 {showAppHeader && <EmailVerificationBanner />}
                 {showAppHeader && <ProFeaturePreviewBanner />}
+                {showAppHeader && <ProTrialWinQuestStrip />}
                 <main className="flex-1 overflow-hidden flex flex-col">{children}</main>
                 {!isSharePage && !isMarketingCapture && <WhatsNewDialog />}
                 {!isSharePage && !isMarketingShell && !isMarketingCapture && <WelcomeInkDialog />}

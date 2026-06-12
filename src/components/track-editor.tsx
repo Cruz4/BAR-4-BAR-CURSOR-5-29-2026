@@ -106,7 +106,8 @@ import { StudioLoader } from '@/components/studio-loader';
 import { useInkCosts } from '@/hooks/use-ink-costs';
 import { withAiAuth } from '@/lib/ai-client';
 import { useAuth } from '@/hooks/use-auth';
-import { isProOrTrial } from '@/lib/subscription';
+import { isProFeaturePreviewActive, isProOrTrial } from '@/lib/subscription';
+import { recordProTrialVaultSave } from '@/lib/pro-trial-quest-client';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { ArchivalNamingDialog } from '@/components/archival-naming-dialog';
@@ -1871,6 +1872,9 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
         description: `"${name}" saved to your vault.`,
       });
       void postGamificationEvent('dna_preset_saved');
+      if (user?.id) {
+        void recordProTrialVaultSave(user.id, isProFeaturePreviewActive(user));
+      }
   };
 
   const handleConfirmSaveVibe = (name: string) => {
