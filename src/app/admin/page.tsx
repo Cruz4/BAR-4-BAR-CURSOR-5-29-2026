@@ -404,7 +404,7 @@ export default function AdminPage() {
   const handleDeleteUser = async (targetUser: User) => {
       if (
         !confirm(
-          `ERADICATION PROTOCOL: Permanently delete ${targetUser.displayName}?\n\nThis removes their Firebase Authentication account and wipes all albums, tracks, ink balances, trophies, DNA Drops, and vault data. They are cleared from the identity registry — if they sign in again they start completely fresh (welcome Ink and full onboarding), unlike self-delete which blocks perk farming.`
+          `ERADICATION PROTOCOL: Permanently delete ${targetUser.displayName}?\n\nThis removes their Firebase Authentication account and wipes all albums, tracks, ink balances, trophies, DNA Drops, and vault data. Any active Studio Pro subscription in Stripe will be cancelled. They are cleared from the identity registry — if they sign in again they start completely fresh (welcome Ink and full onboarding), unlike self-delete which blocks perk farming.`
         )
       ) {
         return;
@@ -432,7 +432,7 @@ export default function AdminPage() {
           });
           toast({
             title: 'Identity Eradicated',
-            description: `Removed Auth account and ${body.albumsDeleted ?? 0} albums / ${body.tracksDeleted ?? 0} tracks.`,
+            description: `Removed Auth account and ${body.albumsDeleted ?? 0} albums / ${body.tracksDeleted ?? 0} tracks${body.stripeSubscriptionsCanceled ? ` · ${body.stripeSubscriptionsCanceled} Stripe sub(s) cancelled` : ''}.`,
           });
       } catch (e: any) {
           toast({ variant: 'destructive', title: "Eradication Failed", description: e.message });

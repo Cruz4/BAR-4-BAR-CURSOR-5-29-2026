@@ -718,7 +718,12 @@ function UsagePageContent() {
                       <CardDescription className="text-sm uppercase tracking-tight text-red-700">Account eradication is permanent.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-sm text-muted-foreground mb-6 uppercase tracking-wider leading-relaxed">Deleting your studio account is permanent. This will erase all concept albums, project DNA, and saved motifs from the vault.</p>
+                        <p className="text-sm text-muted-foreground mb-4 uppercase tracking-wider leading-relaxed">Deleting your studio account is permanent. This will erase all concept albums, project DNA, and saved motifs from the vault.</p>
+                        {paidPro && (
+                          <p className="text-sm text-amber-400/90 mb-4 font-code normal-case tracking-normal leading-relaxed border border-amber-500/25 bg-amber-500/10 rounded-lg px-3 py-2">
+                            Active Pro subscription detected — we&apos;ll cancel billing in Stripe when you confirm deletion.
+                          </p>
+                        )}
                         <Button variant="destructive" className="w-full h-12 font-bold uppercase tracking-widest text-xs md:text-sm" onClick={() => setDeleteConfirmOpen(true)}><Trash2 className="h-5 w-5 mr-2" /> Delete Studio Account</Button>
                     </CardContent>
                 </Card>
@@ -730,8 +735,21 @@ function UsagePageContent() {
           <AlertDialogContent className="bg-card border-2">
               <AlertDialogHeader>
                   <AlertDialogTitle className="font-headline text-2xl text-red-500 uppercase">Confirm Data Wipe?</AlertDialogTitle>
-                  <AlertDialogDescription className="text-sm font-code">
-                      This will permanently delete your Bar 4 Bar account and all associated discographies. This action is absolute and cannot be undone.
+                  <AlertDialogDescription asChild>
+                      <div className="text-sm font-code space-y-3 text-muted-foreground">
+                        <p>
+                          This will permanently delete your Bar 4 Bar account and all associated discographies. This action is absolute and cannot be undone.
+                        </p>
+                        {paidPro ? (
+                          <p className="text-amber-400/95 border border-amber-500/25 bg-amber-500/10 rounded-md px-3 py-2 normal-case tracking-normal leading-relaxed">
+                            Active Pro subscription detected — we&apos;ll cancel billing with your account. You will not be charged again after deletion completes.
+                          </p>
+                        ) : (
+                          <p className="normal-case tracking-normal leading-relaxed">
+                            If you have Studio Pro, your subscription is cancelled in Stripe when you confirm — not only when you delete vault data separately.
+                          </p>
+                        )}
+                      </div>
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

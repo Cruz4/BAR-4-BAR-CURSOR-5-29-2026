@@ -6,6 +6,7 @@ import {
   clearIdentityRegistry,
   writeIdentityTombstone,
 } from '@/lib/server/identity-registry';
+import { cancelActiveStripeBillingForUser } from '@/lib/server/cancel-user-stripe-billing';
 
 const BATCH_SIZE = 400;
 
@@ -122,6 +123,7 @@ export type EradicateUserResult = {
   publicProfilesDeleted: number;
   identityRegistryCleared: boolean;
   analyticsEventsDeleted: number;
+  stripeSubscriptionsCanceled: number;
 };
 
 async function deleteAnalyticsEventsForUser(userId: string, db: Firestore): Promise<number> {
@@ -172,6 +174,8 @@ export async function eradicateUserIdentity(
 
   const userData = userSnap.data() || {};
   const displayName = String(userData.displayName || 'Artist');
+
+  const stripeBillingCancel = await cancelActiveStripeBillingForUser(trimmedId, userData);
 
   let userEmail = String(userData.email || '').trim();
   if (!userEmail) {
@@ -239,7 +243,7 @@ export async function eradicateUserIdentity(
     userId: trimmedId,
     userName: actorEmail,
     timestamp: new Date().toISOString(),
-    details: `Eradicated ${displayName} (${mode}): ${albums} albums, ${tracks} tracks, auth=${authDeleted}, registryCleared=${identityRegistryCleared}, analytics=${analyticsEventsDeleted}`,
+    details: `Eradicated ${displayName} (${mode}): ${albums} albums, ${tracks} tracks, auth=${authDeleted}, registryCleared=${identityRegistryCleared}, analytics=${analyticsEventsDeleted}, stripeCanceled=${stripeBillingCancel.canceledSubscriptionIds.length}`,
   });
 
   return {
@@ -251,5 +255,6 @@ export async function eradicateUserIdentity(
     publicProfilesDeleted,
     identityRegistryCleared,
     analyticsEventsDeleted,
+    stripeSubscriptionsCanceled: stripeBillingCancel.canceledSubscriptionIds.length,
   };
 }

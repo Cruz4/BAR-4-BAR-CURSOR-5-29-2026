@@ -89,7 +89,7 @@ export default function TermsPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-white uppercase tracking-wide">11. Termination</h2>
-            <p>You may delete your account at any time in Settings. We may terminate or suspend your account, or discontinue the Service in whole or in part, for violations of these Terms or for operational reasons described in Section 8. Upon termination, cloud data may be deleted per our Privacy Policy.</p>
+            <p>You may delete your account at any time in Settings. If you have an active Studio Pro subscription, confirming account deletion also cancels your Stripe subscription so billing stops. We may terminate or suspend your account, or discontinue the Service in whole or in part, for violations of these Terms or for operational reasons described in Section 8. Upon termination, cloud data may be deleted per our Privacy Policy.</p>
           </section>
 
           <section className="space-y-3">
