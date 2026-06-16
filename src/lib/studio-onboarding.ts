@@ -66,6 +66,8 @@ export function dispatchReplayGuidedTour(trackPath?: string | null): boolean {
 export type LyricsTourStep = {
   id: string;
   target: string;
+  /** Smaller highlight on phone — avoids full-panel spotlights that fight the tour card. */
+  mobileTarget?: string;
   title: string;
   body: string;
   example?: string;
@@ -82,6 +84,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'sheet',
     target: '[data-tour="lyrics-sheet"]',
+    mobileTarget: '[data-tour="lyrics-sheet-focus"]',
     title: 'Your rhyme book',
     body: 'Write line-by-line on the sheet. Two lines = one rhyme bar for Studio Progress and challenges. Click any line to activate the Bar Workstation below.',
     example: 'Think in couplets — each line is its own row, but goals count pairs.',
@@ -108,6 +111,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'dna',
     target: '[data-tour="dna-suite"]',
+    mobileTarget: '[data-tour="dna-suite-header"]',
     title: 'Creative DNA',
     body: 'Extract in DNA & REMIX (paste or Sync Current Lyrics), then Save DNA Profile on Analysis Step. DNA Suite here is where you type the five questions yourself or edit after you load or extract.',
     example: 'Pro trial quest: Workstation → DNA & REMIX → extract → Save DNA Profile. Folder icon loads vault saves anytime.',

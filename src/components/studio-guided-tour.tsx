@@ -14,8 +14,6 @@ type StudioGuidedTourProps = {
   onComplete: (skipped: boolean) => void;
   onBeforeStep?: (step: LyricsTourStep) => void;
   steps?: LyricsTourStep[];
-  /** Step ids that should pin the tour card to the top on phone/tablet (targets near bottom chrome). */
-  mobileTopCardStepIds?: Set<string>;
 };
 
 const PAD = 8;
@@ -25,18 +23,16 @@ const TOUR_CARD_HEIGHT_ESTIMATE = 280;
 const SCROLL_DEADBAND_PX = 16;
 /** Mobile tab bar + safe area (quest rail hidden on phone during tour). */
 const MOBILE_BOTTOM_CHROME = 88;
+/** App header + pinned top tour card on phone. */
+const MOBILE_HEADER_RESERVE = 68;
 /** Keep highlighted targets below the pinned top tour card on phone. */
-const MOBILE_TOP_CLEARANCE = TOUR_CARD_HEIGHT_ESTIMATE + 96;
-/** Steps whose targets sit low on the page — pin the tour card to the top so actions stay visible. */
-const TOP_CARD_STEP_IDS = new Set([
-  'bar-workstation',
-  'generation',
-  'save',
-  'dna',
-  'dna-drop',
-]);
+const MOBILE_TOP_CLEARANCE = MOBILE_HEADER_RESERVE + TOUR_CARD_HEIGHT_ESTIMATE + 24;
+/** Max spotlight height on phone when the target element is taller than the safe band. */
+const MOBILE_MAX_SPOTLIGHT_VH = 0.24;
 /** Sticky/fixed targets — auto-scroll fights the spotlight and causes jitter. */
 const NO_AUTO_SCROLL_STEP_IDS = new Set(['vault-progress']);
+/** Tab/panel switches need extra time before the target is visible on phone. */
+const PANEL_SWITCH_STEP_IDS = new Set(['generation', 'dna', 'dna-drop', 'save']);
 
 function useCompactViewport() {
   const [compact, setCompact] = useState(false);
@@ -62,6 +58,45 @@ function getScrollParent(el: HTMLElement): HTMLElement | null {
     node = node.parentElement;
   }
   return null;
+}
+
+function computeMobileCardPlacement(targetRect: DOMRect): 'top' | 'bottom' {
+  const vh = window.innerHeight;
+  const cardH = TOUR_CARD_HEIGHT_ESTIMATE;
+  const topBandBottom = MOBILE_HEADER_RESERVE + cardH + 32;
+  const bottomBandTop = vh - MOBILE_BOTTOM_CHROME - cardH - 32;
+  const targetCenter = targetRect.top + targetRect.height / 2;
+
+  if (targetRect.top < topBandBottom) return 'bottom';
+  if (targetRect.bottom > bottomBandTop) return 'top';
+  return targetCenter < (topBandBottom + bottomBandTop) / 2 ? 'bottom' : 'top';
+}
+
+function clampMobileSpotlightRect(rect: DOMRect): DOMRect {
+  const maxH = window.innerHeight * MOBILE_MAX_SPOTLIGHT_VH;
+  if (rect.height <= maxH) return rect;
+  return new DOMRect(rect.x, rect.y, rect.width, maxH);
+}
+
+function scrollTargetIntoMobileSafeBand(el: HTMLElement, placement: 'top' | 'bottom') {
+  const vh = window.innerHeight;
+  const cardH = TOUR_CARD_HEIGHT_ESTIMATE;
+  const topClear = placement === 'top' ? MOBILE_TOP_CLEARANCE : MOBILE_HEADER_RESERVE + 16;
+  const bottomClear =
+    placement === 'bottom' ? MOBILE_BOTTOM_CHROME + cardH + 24 : MOBILE_BOTTOM_CHROME + 16;
+  const idealCenter = (topClear + vh - bottomClear) / 2;
+  const rect = el.getBoundingClientRect();
+  const elCenter = rect.top + Math.min(rect.height, vh * MOBILE_MAX_SPOTLIGHT_VH) / 2;
+  const delta = elCenter - idealCenter;
+
+  if (Math.abs(delta) < SCROLL_DEADBAND_PX) return;
+
+  const parent = getScrollParent(el);
+  if (parent) {
+    parent.scrollBy({ top: delta, behavior: 'auto' });
+    return;
+  }
+  window.scrollBy({ top: delta, behavior: 'auto' });
 }
 
 function scrollTargetVisible(
@@ -184,7 +219,6 @@ export function StudioGuidedTour({
   onComplete,
   onBeforeStep,
   steps = LYRICS_PAGE_TOUR_STEPS,
-  mobileTopCardStepIds = TOP_CARD_STEP_IDS,
 }: StudioGuidedTourProps) {
   const step = steps[stepIndex];
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -215,23 +249,35 @@ export function StudioGuidedTour({
   const resolveTargetEl = useCallback((): HTMLElement | null => {
     if (!step) return null;
 
-    const selectors = step.target.includes(',')
-      ? step.target.split(',').map((s) => s.trim())
-      : [step.target];
-    let el: Element | null = null;
-    for (const selector of selectors) {
-      const candidate = document.querySelector(selector);
-      if (!candidate) continue;
-      const probe = candidate.getBoundingClientRect();
-      if (probe.width > 0 && probe.height > 0) {
-        el = candidate;
-        break;
+    const compact = window.innerWidth < MOBILE_BREAKPOINT;
+    const primary =
+      compact && step.mobileTarget
+        ? step.mobileTarget
+        : step.target;
+    const selectors = primary.includes(',')
+      ? primary.split(',').map((s) => s.trim())
+      : [primary];
+    const fallbacks =
+      compact && step.mobileTarget
+        ? step.target.includes(',')
+          ? step.target.split(',').map((s) => s.trim())
+          : [step.target]
+        : [];
+
+    const trySelectors = (list: string[]) => {
+      for (const selector of list) {
+        const candidate = document.querySelector(selector);
+        if (!candidate) continue;
+        const probe = candidate.getBoundingClientRect();
+        if (probe.width > 0 && probe.height > 0) {
+          return candidate as HTMLElement;
+        }
       }
-    }
-    if (!el) {
-      el = document.querySelector(selectors[0]);
-    }
-    return el ? (el as HTMLElement) : null;
+      const first = list[0] ? document.querySelector(list[0]) : null;
+      return first ? (first as HTMLElement) : null;
+    };
+
+    return trySelectors(selectors) ?? trySelectors(fallbacks);
   }, [step]);
 
   const captureRect = useCallback(
@@ -246,16 +292,14 @@ export function StudioGuidedTour({
       const spaceBelow = window.innerHeight - next.bottom;
       const spaceAbove = next.top;
       const targetInLowerHalf = next.top > window.innerHeight * 0.42;
-      const forceTop = compact && mobileTopCardStepIds.has(step!.id);
 
-      let placement: 'top' | 'bottom' = 'bottom';
-      if (forceTop || targetInLowerHalf) {
-        placement = 'top';
-      } else if (spaceBelow < bottomCardReserve + 16 && spaceAbove >= TOUR_CARD_HEIGHT_ESTIMATE + 16) {
-        placement = 'top';
-      } else if (spaceBelow < TOUR_CARD_HEIGHT_ESTIMATE + 16) {
-        placement = 'top';
-      }
+      const placement: 'top' | 'bottom' = compact
+        ? computeMobileCardPlacement(next)
+        : spaceBelow < bottomCardReserve + 16 && spaceAbove >= TOUR_CARD_HEIGHT_ESTIMATE + 16
+          ? 'top'
+          : spaceBelow < TOUR_CARD_HEIGHT_ESTIMATE + 16 || targetInLowerHalf
+            ? 'top'
+            : 'bottom';
       setCardPlacement(placement);
 
       const topReserve = compact && placement === 'top' ? MOBILE_TOP_CLEARANCE : placement === 'top' ? TOUR_CARD_HEIGHT_ESTIMATE + 88 : 72;
@@ -269,19 +313,22 @@ export function StudioGuidedTour({
 
       const allowAutoScroll = shouldScroll && !hasAutoScrolledRef.current && !NO_AUTO_SCROLL_STEP_IDS.has(step!.id);
       if (allowAutoScroll) {
-        if (compact && placement === 'top') {
-          htmlEl.style.scrollMarginTop = `${MOBILE_TOP_CLEARANCE}px`;
-          htmlEl.style.scrollMarginBottom = `${MOBILE_BOTTOM_CHROME + 20}px`;
+        if (compact) {
+          htmlEl.style.scrollMarginTop = `${placement === 'top' ? MOBILE_TOP_CLEARANCE : MOBILE_HEADER_RESERVE + 16}px`;
+          htmlEl.style.scrollMarginBottom = `${placement === 'bottom' ? bottomCardReserve : MOBILE_BOTTOM_CHROME + 16}px`;
+          scrollTargetIntoMobileSafeBand(htmlEl, placement);
+        } else {
+          scrollTargetVisible(htmlEl, topReserve, bottomReserve, placement === 'top');
         }
-        scrollTargetVisible(htmlEl, topReserve, bottomReserve, placement === 'top');
         hasAutoScrolledRef.current = true;
       } else if (shouldScroll) {
         hasAutoScrolledRef.current = true;
       }
 
-      setRect(htmlEl.getBoundingClientRect());
+      const spotlight = htmlEl.getBoundingClientRect();
+      setRect(compact ? clampMobileSpotlightRect(spotlight) : spotlight);
     },
-    [mobileTopCardStepIds, step]
+    [step]
   );
 
   const measureTarget = useCallback(
@@ -298,6 +345,23 @@ export function StudioGuidedTour({
         clearScrollMargins();
         targetElRef.current = null;
         setRect(null);
+        const panelSwitchMissing = PANEL_SWITCH_STEP_IDS.has(step!.id);
+        if (panelSwitchMissing && shouldScroll) {
+          measureTimersRef.current.push(
+            window.setTimeout(() => {
+              const el = resolveTargetEl();
+              if (!el) return;
+              clearScrollMargins();
+              targetElRef.current = el;
+              if (window.innerWidth < MOBILE_BREAKPOINT) {
+                scrollStyledElRef.current = el;
+              }
+              hasAutoScrolledRef.current = false;
+              captureRect(el, true);
+              measureTimersRef.current.push(window.setTimeout(() => captureRect(el, false), 420));
+            }, 280)
+          );
+        }
         return;
       }
 
@@ -307,23 +371,34 @@ export function StudioGuidedTour({
       const compact = window.innerWidth < MOBILE_BREAKPOINT;
       if (compact) {
         scrollStyledElRef.current = htmlEl;
-        const forceTop = mobileTopCardStepIds.has(step!.id);
-        if (forceTop) {
-          htmlEl.style.scrollMarginTop = `${MOBILE_TOP_CLEARANCE}px`;
-          htmlEl.style.scrollMarginBottom = `${MOBILE_BOTTOM_CHROME + 20}px`;
-        }
       }
 
+      const panelSwitch = PANEL_SWITCH_STEP_IDS.has(step!.id);
+
       const runCapture = (scroll: boolean) => {
-        const el = targetElRef.current;
+        let el = targetElRef.current;
+        if (!el || !el.isConnected || (panelSwitch && el.getBoundingClientRect().width === 0)) {
+          el = resolveTargetEl();
+          if (el) targetElRef.current = el;
+        }
         if (!el || !el.isConnected) return;
         captureRect(el, scroll);
       };
 
-      requestAnimationFrame(() => runCapture(shouldScroll));
+      requestAnimationFrame(() => runCapture(shouldScroll && !panelSwitch));
       if (shouldScroll) {
-        measureTimersRef.current.push(window.setTimeout(() => runCapture(false), 180));
-        measureTimersRef.current.push(window.setTimeout(() => runCapture(false), 420));
+        if (panelSwitch) {
+          measureTimersRef.current.push(
+            window.setTimeout(() => {
+              hasAutoScrolledRef.current = false;
+              runCapture(true);
+            }, 260)
+          );
+        }
+        const delays = panelSwitch ? [480, 720] : [180, 420];
+        delays.forEach((ms) => {
+          measureTimersRef.current.push(window.setTimeout(() => runCapture(false), ms));
+        });
       }
     },
     [active, step, clearScrollMargins, resolveTargetEl, captureRect]

@@ -1486,7 +1486,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
       <div id="lyrics-viewport" ref={lyricsViewportRef} data-tour="lyrics-sheet" className="flex-1 relative overflow-x-hidden overflow-y-auto min-h-0 studio-scrollbar max-md:[--lyrics-gutter:2rem]" style={notebookStyle}>
         <div className="w-full max-full pb-12">
           {!track.sections || track.sections.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-[400px] text-center gap-6 animate-in fade-in zoom-in duration-1000">
+              <div data-tour="lyrics-sheet-focus" className="flex flex-col items-center justify-center h-[400px] text-center gap-6 animate-in fade-in zoom-in duration-1000">
                   <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20 shadow-2xl">
                       <NotebookPen className="h-10 w-10 text-primary animate-pulse" />
                   </div>
@@ -1496,9 +1496,14 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                   </div>
               </div>
           ) : (
-            (track.sections || []).map((section: any) => (
+            (track.sections || []).map((section: any, sectionIdx: number) => (
                 <div key={section.id} className="relative">
-                <div id={`section-header-${section.id}`} style={{ height: `calc(${activeLineHeight} * 2)` }} className="flex items-end pl-[120px] max-md:pl-[2rem]">
+                <div
+                  id={`section-header-${section.id}`}
+                  data-tour={sectionIdx === 0 ? 'lyrics-sheet-focus' : undefined}
+                  style={{ height: `calc(${activeLineHeight} * 2)` }}
+                  className="flex items-end pl-[120px] max-md:pl-[2rem]"
+                >
                     <h3 className="text-lg md:text-2xl font-headline font-bold text-sky-400 uppercase leading-none">[{section.type}]</h3>
                 </div>
                 {(section.bars || []).map((bar: any) => {
@@ -1949,7 +1954,10 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
               data-tour="dna-suite"
             >
                 <div className={cn('p-4 flex flex-col gap-2', !sectionOpen.dna && 'pb-3')}>
-                <div className="flex flex-row items-center justify-between space-y-0">
+                <div
+                  data-tour="dna-suite-header"
+                  className="flex flex-row items-center justify-between space-y-0"
+                >
                     <CollapsibleTrigger asChild>
                         <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 pr-1">
                             <CardTitle
@@ -2854,26 +2862,13 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   }, []);
 
   const handleTourBeforeStep = useCallback((step: LyricsTourStep) => {
-    const scrollTourTarget = (selector: string) => {
-      window.setTimeout(() => {
-        const el = document.querySelector(selector) as HTMLElement | null;
-        if (!el) return;
-        el.style.scrollMarginTop = '300px';
-        el.style.scrollMarginBottom = '108px';
-        el.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-      }, 160);
-    };
-
     if (step.id === 'dna') {
       setRightCollapsed(false);
       setMobilePanelTab('cowriter');
       handleSectionChange('dna', true);
-      scrollTourTarget('[data-tour="dna-suite"]');
     } else if (step.id === 'generation' || step.id === 'save' || step.id === 'dna-drop') {
       setLeftCollapsed(false);
       setMobilePanelTab('workstation');
-      if (step.id === 'generation') scrollTourTarget('[data-tour="generation-workstation"]');
-      if (step.id === 'dna-drop') scrollTourTarget('[data-tour="dna-drop"]');
     } else if (['paste', 'sheet', 'bar-workstation', 'rhyme-pulse'].includes(step.id)) {
       setMobilePanelTab('lyrics');
       if (step.id === 'bar-workstation') setIsMinimized(false);
