@@ -23,8 +23,10 @@ const MOBILE_BREAKPOINT = 768;
 const TOUR_CARD_HEIGHT_ESTIMATE = 280;
 /** Ignore sub-pixel drift so scroll listeners do not fight the spotlight. */
 const SCROLL_DEADBAND_PX = 16;
-/** Tab bar + quest progress floating above it on mobile */
-const MOBILE_BOTTOM_CHROME = 148;
+/** Mobile tab bar + safe area (quest rail hidden on phone during tour). */
+const MOBILE_BOTTOM_CHROME = 88;
+/** Keep highlighted targets below the pinned top tour card on phone. */
+const MOBILE_TOP_CLEARANCE = TOUR_CARD_HEIGHT_ESTIMATE + 96;
 /** Steps whose targets sit low on the page — pin the tour card to the top so actions stay visible. */
 const TOP_CARD_STEP_IDS = new Set([
   'bar-workstation',
@@ -256,17 +258,21 @@ export function StudioGuidedTour({
       }
       setCardPlacement(placement);
 
-      const topReserve = placement === 'top' ? TOUR_CARD_HEIGHT_ESTIMATE + 88 : 72;
+      const topReserve = compact && placement === 'top' ? MOBILE_TOP_CLEARANCE : placement === 'top' ? TOUR_CARD_HEIGHT_ESTIMATE + 88 : 72;
       const bottomReserve = compact
         ? placement === 'bottom'
           ? bottomCardReserve
-          : MOBILE_BOTTOM_CHROME + 24
+          : MOBILE_BOTTOM_CHROME + 16
         : placement === 'bottom'
           ? TOUR_CARD_HEIGHT_ESTIMATE + 24
           : 24;
 
       const allowAutoScroll = shouldScroll && !hasAutoScrolledRef.current && !NO_AUTO_SCROLL_STEP_IDS.has(step!.id);
       if (allowAutoScroll) {
+        if (compact && placement === 'top') {
+          htmlEl.style.scrollMarginTop = `${MOBILE_TOP_CLEARANCE}px`;
+          htmlEl.style.scrollMarginBottom = `${MOBILE_BOTTOM_CHROME + 20}px`;
+        }
         scrollTargetVisible(htmlEl, topReserve, bottomReserve, placement === 'top');
         hasAutoScrolledRef.current = true;
       } else if (shouldScroll) {
@@ -301,6 +307,11 @@ export function StudioGuidedTour({
       const compact = window.innerWidth < MOBILE_BREAKPOINT;
       if (compact) {
         scrollStyledElRef.current = htmlEl;
+        const forceTop = mobileTopCardStepIds.has(step!.id);
+        if (forceTop) {
+          htmlEl.style.scrollMarginTop = `${MOBILE_TOP_CLEARANCE}px`;
+          htmlEl.style.scrollMarginBottom = `${MOBILE_BOTTOM_CHROME + 20}px`;
+        }
       }
 
       const runCapture = (scroll: boolean) => {
@@ -394,7 +405,7 @@ export function StudioGuidedTour({
         )}
         style={isCompact ? undefined : { top: cardTop ?? 80, left: cardLeft ?? 16 }}
       >
-        <div className="rounded-xl border border-primary/30 bg-card shadow-[0_0_40px_rgba(59,130,246,0.25)] flex flex-col max-h-[min(70dvh,calc(100dvh-5.5rem))] overflow-hidden">
+        <div className="rounded-xl border border-primary/30 bg-card shadow-[0_0_40px_rgba(59,130,246,0.25)] flex flex-col max-h-[min(58dvh,calc(100dvh-11rem))] overflow-hidden">
           <div className="flex items-start justify-between gap-2 px-4 pt-4 shrink-0">
             <div className="space-y-1 min-w-0">
               <p className="text-[9px] font-bold uppercase tracking-widest text-primary">

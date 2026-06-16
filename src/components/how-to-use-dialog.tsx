@@ -241,17 +241,17 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden bg-background">
-        <DialogHeader className="p-8 pb-4 border-b bg-background/80 backdrop-blur-md">
-            <DialogTitle className="font-headline text-4xl flex items-center gap-3 font-bold">
-                <BookOpen className="w-10 h-10 text-primary" /> Studio Master Manual
+      <DialogContent className="max-w-5xl w-[calc(100vw-1rem)] sm:w-full h-[min(90dvh,100vh)] max-h-[90dvh] flex flex-col p-0 overflow-hidden bg-background">
+        <DialogHeader className="p-4 sm:p-8 pb-4 border-b bg-background/80 backdrop-blur-md shrink-0">
+            <DialogTitle className="font-headline text-2xl sm:text-4xl flex items-center gap-3 font-bold">
+                <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-primary shrink-0" /> Studio Master Manual
             </DialogTitle>
             <DialogDescription className="font-tagline uppercase tracking-[0.3em] text-[10px] text-muted-foreground">Bar4Bar_v3</DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="tiering" className="flex-grow flex flex-col min-h-0">
-          <div className="px-8 border-b bg-muted/10">
-            <TabsList className="bg-transparent h-12 gap-8 overflow-x-auto justify-start">
+          <div className="px-4 sm:px-8 border-b bg-muted/10 shrink-0">
+            <TabsList className="bg-transparent h-11 sm:h-12 gap-4 sm:gap-8 overflow-x-auto justify-start w-full max-w-full flex-nowrap scrollbar-none">
               <TabsTrigger value="start-here" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Start Here</TabsTrigger>
               <TabsTrigger value="tiering" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Studio Tiers</TabsTrigger>
               <TabsTrigger value="loop" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">The ∞ Loop</TabsTrigger>
@@ -261,7 +261,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
             </TabsList>
           </div>
 
-          <ScrollArea className="flex-grow p-8">
+          <ScrollArea className="flex-grow p-4 sm:p-8 min-h-0">
             <div className="max-w-4xl mx-auto space-y-12 pb-12">
 
               <TabsContent value="start-here" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">

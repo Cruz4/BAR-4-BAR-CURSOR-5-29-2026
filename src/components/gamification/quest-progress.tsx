@@ -10,6 +10,8 @@ type QuestProgressProps = {
   tourActive: boolean;
   tourCompleted: boolean;
   className?: string;
+  /** Hide on phone during tour — tour card + spotlight need the bottom band. */
+  hideOnMobile?: boolean;
 };
 
 export function QuestProgress({
@@ -17,11 +19,18 @@ export function QuestProgress({
   tourActive,
   tourCompleted,
   className,
+  hideOnMobile = false,
 }: QuestProgressProps) {
   if (!tourActive && !tourCompleted) return null;
 
   return (
-    <div className={cn('rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2', className)}>
+    <div
+      className={cn(
+        'rounded-lg border border-primary/20 bg-card/95 backdrop-blur-md p-3 space-y-2 shadow-lg',
+        hideOnMobile && 'max-md:hidden',
+        className
+      )}
+    >
       <p className="text-[9px] font-bold uppercase tracking-widest text-primary">Studio Quest — Tour Chain</p>
       <ul className="space-y-1 max-h-32 overflow-y-auto studio-scrollbar">
         {LYRICS_PAGE_TOUR_STEPS.map((step, i) => {

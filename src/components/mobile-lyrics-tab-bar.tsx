@@ -14,12 +14,17 @@ const TABS: { id: MobileLyricsTab; label: string; shortLabel: string; icon: type
 interface MobileLyricsTabBarProps {
   active: MobileLyricsTab;
   onChange: (tab: MobileLyricsTab) => void;
+  /** Keep tabs above guided-tour overlay on phone. */
+  tourElevated?: boolean;
 }
 
-export function MobileLyricsTabBar({ active, onChange }: MobileLyricsTabBarProps) {
+export function MobileLyricsTabBar({ active, onChange, tourElevated = false }: MobileLyricsTabBarProps) {
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 pb-[env(safe-area-inset-bottom,0px)]"
+      className={cn(
+        'md:hidden fixed bottom-0 left-0 right-0 border-t border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 pb-[env(safe-area-inset-bottom,0px)]',
+        tourElevated ? 'z-[6010] pointer-events-auto shadow-[0_-8px_32px_rgba(0,0,0,0.45)]' : 'z-50'
+      )}
       aria-label="Lyrics studio panels"
     >
       <div className="grid grid-cols-3 h-14">

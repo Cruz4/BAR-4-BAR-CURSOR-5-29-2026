@@ -733,7 +733,7 @@ function mobileLyricsPanelClass(active: boolean, edge?: 'left' | 'right') {
   );
 }
 
-function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSectionId, setExportDialogOpen, setShareDialogOpen, onCollapse, leftCollapsed, setGenerateDraftOpen, scratchPadRef, isPro, mobileActive = false, trackLocked = false, tierLocked = false, completeLocked = false, workstationAttention = false }: any) {
+function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSectionId, setExportDialogOpen, setShareDialogOpen, onCollapse, leftCollapsed, setGenerateDraftOpen, scratchPadRef, isPro, mobileActive = false, trackLocked = false, tierLocked = false, completeLocked = false, workstationAttention = false, tourMobilePad = false }: any) {
   const { user } = useAuth();
   const router = useRouter();
   const { setGenerating } = useUIState();
@@ -833,7 +833,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
         )}
       </div>
       <div className="flex-grow overflow-y-auto studio-scrollbar">
-        <div className="p-4 space-y-6 pb-24">
+        <div className={cn('p-4 space-y-6', tourMobilePad ? 'pb-28' : 'pb-24')}>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -1739,7 +1739,7 @@ function cowriterSectionSubtitle(expanded: boolean) {
   );
 }
 
-function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, improveStyleOpen, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, openCoWriterSections, onApplyChestEntry, mobileActive = false, trackLocked = false, completeLocked = false }: any) {
+function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, improveStyleOpen, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, openCoWriterSections, onApplyChestEntry, mobileActive = false, trackLocked = false, completeLocked = false, tourMobilePad = false }: any) {
   const { user } = useAuth();
   const { tooltip, buttonLabel } = useInkCosts();
   const activeSection = track.sections.find((s:any) => s.id === activeSectionId);
@@ -1929,7 +1929,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
         )}
       </div>
       <div className="flex-grow overflow-y-auto studio-scrollbar">
-        <div className="p-4 space-y-4 pb-32 co-writer-body">
+        <div className={cn('p-4 space-y-4 co-writer-body', tourMobilePad ? 'pb-36' : 'pb-32')}>
           {completeLocked && (
             <div className="rounded-lg border-2 border-amber-500/40 bg-amber-500/15 px-3 py-2.5 flex items-start gap-2.5">
               <Lock className="h-4 w-4 text-amber-300 shrink-0 mt-0.5" />
@@ -2854,13 +2854,26 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   }, []);
 
   const handleTourBeforeStep = useCallback((step: LyricsTourStep) => {
+    const scrollTourTarget = (selector: string) => {
+      window.setTimeout(() => {
+        const el = document.querySelector(selector) as HTMLElement | null;
+        if (!el) return;
+        el.style.scrollMarginTop = '300px';
+        el.style.scrollMarginBottom = '108px';
+        el.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+      }, 160);
+    };
+
     if (step.id === 'dna') {
       setRightCollapsed(false);
       setMobilePanelTab('cowriter');
       handleSectionChange('dna', true);
+      scrollTourTarget('[data-tour="dna-suite"]');
     } else if (step.id === 'generation' || step.id === 'save' || step.id === 'dna-drop') {
       setLeftCollapsed(false);
       setMobilePanelTab('workstation');
+      if (step.id === 'generation') scrollTourTarget('[data-tour="generation-workstation"]');
+      if (step.id === 'dna-drop') scrollTourTarget('[data-tour="dna-drop"]');
     } else if (['paste', 'sheet', 'bar-workstation', 'rhyme-pulse'].includes(step.id)) {
       setMobilePanelTab('lyrics');
       if (step.id === 'bar-workstation') setIsMinimized(false);
@@ -3215,7 +3228,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         </div>
       )}
       <div className="flex flex-1 min-h-0 overflow-hidden w-full">
-      <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={isMobileLayout && mobilePanelTab === 'workstation'} trackLocked={editsLocked} tierLocked={tierLocked} completeLocked={completeLocked} workstationAttention={workstationAttention} />
+      <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={isMobileLayout && mobilePanelTab === 'workstation'} trackLocked={editsLocked} tierLocked={tierLocked} completeLocked={completeLocked} workstationAttention={workstationAttention} tourMobilePad={tourActive && isMobileLayout} />
       <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleDismissGenerationOptions={handleDismissGenerationOptions} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={isMobileLayout && mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} />
       <RightPanel 
         track={track} 
@@ -3243,6 +3256,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         mobileActive={isMobileLayout && mobilePanelTab === 'cowriter'}
         trackLocked={editsLocked}
         completeLocked={completeLocked}
+        tourMobilePad={tourActive && isMobileLayout}
       />
       <GenerateSongDraftDialog
         open={generateDraftOpen}
@@ -3285,7 +3299,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         onConfirm={handleConfirmSaveStyle}
       />
       </div>
-      <MobileLyricsTabBar active={mobilePanelTab} onChange={setMobilePanelTab} />
+      <MobileLyricsTabBar active={mobilePanelTab} onChange={setMobilePanelTab} tourElevated={tourActive} />
       <StudioGuidedTour
         active={tourActive}
         stepIndex={tourStep}
@@ -3294,11 +3308,12 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         onBeforeStep={handleTourBeforeStep}
       />
       {tourActive && (
-        <div className="fixed bottom-24 max-md:bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px))] left-4 max-md:left-2 max-md:right-2 max-md:w-auto z-[5999] w-64 pointer-events-auto">
+        <div className="fixed bottom-24 max-md:hidden left-4 z-[5999] w-64 pointer-events-auto">
           <QuestProgress
             tourStepIndex={tourStep}
             tourActive={tourActive}
             tourCompleted={Boolean(user?.lyricsTutorialCompletedAt)}
+            hideOnMobile
           />
         </div>
       )}
