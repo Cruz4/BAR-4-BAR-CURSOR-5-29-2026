@@ -70,7 +70,6 @@ export default function PrivacyPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-white uppercase tracking-wide">9. Changes</h2>
             <p>We may update this policy. Material changes will be posted here with an updated date.</p>
-            <p className="text-xs italic border border-white/10 rounded-lg p-4">Have a lawyer review this policy before commercial launch in regulated markets.</p>
           </section>
         </article>
 

@@ -96,7 +96,6 @@ export default function TermsPage() {
             <h2 className="text-lg font-bold text-white uppercase tracking-wide">12. Contact &amp; Updates</h2>
             <p>Questions: <a href={SUPPORT_MAILTO} className="text-primary hover:underline">{SUPPORT_EMAIL}</a>. We may update these Terms; material changes will be reflected by the &quot;Last updated&quot; date at the top of this page. Continued use after changes constitutes acceptance.</p>
             <p>In-app features, Ink pricing, tier perks, and studio tools may change at any time without updating the &quot;Last updated&quot; date above — only revisions to this Terms document use that date.</p>
-            <p className="text-xs italic border border-white/10 rounded-lg p-4">This document is provided for operational transparency and should be reviewed by qualified legal counsel before a commercial launch.</p>
           </section>
         </article>
 
