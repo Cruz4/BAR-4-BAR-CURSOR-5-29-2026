@@ -38,6 +38,10 @@ export interface User {
   pendingWelcomeInk?: boolean;
   /** ISO timestamp — first meaningful activation (e.g. Studio Draft complete). */
   activatedAt?: string | null;
+  /** Free tier: user-pinned track ids (max 2) after Pro downgrade — rotation fills empty slots. */
+  freeEditableTrackIds?: string[];
+  /** ISO timestamp — user completed the post-downgrade “pick 2 tracks” flow. */
+  freeEditableSelectionAt?: string;
 }
 
 export type Direction = {

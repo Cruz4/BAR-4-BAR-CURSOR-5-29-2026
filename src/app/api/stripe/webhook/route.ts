@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { FieldValue } from 'firebase-admin/firestore';
 import { getDb } from '@/lib/firebase/server';
 import { getStripe } from '@/lib/stripe-server';
 import {
@@ -165,6 +166,8 @@ export async function POST(req: Request) {
             subscriptionTier: tier,
             subscriptionId: subscription.id,
             updatedAt: new Date().toISOString(),
+            freeEditableTrackIds: FieldValue.delete(),
+            freeEditableSelectionAt: FieldValue.delete(),
           });
         } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
           await deactivateSubscription(db, userId);

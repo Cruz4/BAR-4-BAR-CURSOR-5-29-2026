@@ -320,7 +320,7 @@ export const VISITOR_FEATURES = [
 
 /** Everything Pro unlocks + why it matters vs Visitor */
 export const PRO_UNLOCKS = [
-  `UNLOCK: Unlimited albums & tracks — full catalog vs ${FREE_ALBUM_LIMIT} album / ${FREE_TRACK_LIMIT} tracks`,
+  `UNLOCK: Unlimited albums & tracks — no ${FREE_ALBUM_LIMIT} album / ${FREE_TRACK_LIMIT} track edit cap`,
   'UNLOCK: Custom DNA / Vibe / Style vault saves — save your strains, not just load system presets',
   'UNLOCK: Performance Mode — teleprompter + rhyme-focus for rehearsal & stage',
   'UNLOCK: Freestyle capture — record flows straight into your rhyme book',

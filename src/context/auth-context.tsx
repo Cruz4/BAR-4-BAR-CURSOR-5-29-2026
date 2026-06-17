@@ -71,6 +71,8 @@ function userFromFirebase(
     proFeaturePreviewExpiresAt: data?.proFeaturePreviewExpiresAt ?? null,
     pendingWelcomeInk: data?.pendingWelcomeInk,
     activatedAt: data?.activatedAt ?? null,
+    freeEditableTrackIds: data?.freeEditableTrackIds,
+    freeEditableSelectionAt: data?.freeEditableSelectionAt,
   };
 }
 
@@ -197,6 +199,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           proFeaturePreviewExpiresAt: nextUser.proFeaturePreviewExpiresAt ?? null,
           pendingWelcomeInk: nextUser.pendingWelcomeInk,
           activatedAt: nextUser.activatedAt ?? null,
+          freeEditableTrackIds: nextUser.freeEditableTrackIds,
+          freeEditableSelectionAt: nextUser.freeEditableSelectionAt,
         });
       };
 

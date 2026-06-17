@@ -96,7 +96,6 @@ import {
   FREE_TRACK_LIMIT_TOAST,
   isProOrTrial,
 } from '@/lib/subscription';
-import { getVisitorInkGrantSummary } from '@/lib/ink-grants';
 import { isDataUrl } from '@/lib/cover-art';
 import { postGamificationEvent } from '@/lib/gamification-client';
 import { VaultStudioProgress } from '@/components/gamification/vault-studio-progress';
@@ -109,7 +108,6 @@ import {
   OpenAlbumSlot,
   OpenTrackSlot,
   LockedToolbarButton,
-  ProLockBanner,
   ProCreateAlbumSlot,
   ProCreateTrackSlot,
   IconWithLockOverlay,
@@ -131,9 +129,10 @@ import {
   queueStudioPrivacyIntro,
   setVaultTourRunning,
 } from '@/lib/studio-privacy-intro';
-import { getEditableAlbumIds, getEditableTrackIds } from '@/lib/tier-limits';
+import { getEditableAlbumIds, getEditableTrackIds, needsFreeEditableTrackPicker } from '@/lib/tier-limits';
 import type { User } from '@/lib/types';
-import { Lock } from 'lucide-react';
+import { VisitorVaultBanner } from '@/components/visitor-vault-banner';
+import { DowngradeTrackPickerDialog } from '@/components/downgrade-track-picker-dialog';
 
 function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenChange: (open: boolean) => void, type: 'Album' | 'Track' }) {
   const [title, setTitle] = useState('');
@@ -284,6 +283,8 @@ function FreeVisitorVault({
   onCreateTrack,
   albums,
   user,
+  moveTrack,
+  onDeleteTrack,
 }: {
   sortedLooseTracks: Track[];
   filteredAlbums: Album[];
@@ -293,31 +294,25 @@ function FreeVisitorVault({
   onCreateTrack: () => void;
   albums: Album[];
   user: User | null;
+  moveTrack: (trackId: string, fromAlbumId: string, toAlbumId: string) => void;
+  onDeleteTrack: (track: Track) => void;
 }) {
+  const { toast } = useToast();
   const openTrackSlots = Math.max(0, FREE_TRACK_LIMIT - totalTrackCount);
   const editableTrackIds = getEditableTrackIds(albums, user);
   const editableAlbumIds = getEditableAlbumIds(albums, user);
   const hasExtraAlbums = realAlbums.length > FREE_ALBUM_LIMIT;
   const hasExtraTracks = totalTrackCount > FREE_TRACK_LIMIT;
+  const editableLooseCount = sortedLooseTracks.filter((t) => editableTrackIds.has(t.id)).length;
 
   return (
     <div className="space-y-20 animate-in fade-in duration-700">
-      <ProLockBanner>
-        <p className={cn('text-xs', proLockText())}>Visitor Studio · {FREE_ALBUM_LIMIT} Album · {FREE_TRACK_LIMIT} Tracks</p>
-        <p className="text-[10px] text-muted-foreground mt-1">
-          Hot pink locks are Studio Pro features. Fuchsia locks mean over your demo limit — view still works; edits and export need Pro.
-          {(hasExtraAlbums || hasExtraTracks) && ' Your older projects stay in the vault as view-only.'}
-        </p>
-        <p className="text-[10px] text-muted-foreground/90 mt-1.5">{getVisitorInkGrantSummary()}</p>
-        {openTrackSlots === 1 && (
-          <p className="text-[10px] text-sky-400/90 mt-1">1 free track slot left · Pro = unlimited</p>
-        )}
-        {openTrackSlots === 0 && !hasExtraTracks && (
-          <p className="text-[10px] text-amber-400/90 mt-1">
-            Both demo slots in use — next track needs Pro or replace an existing one
-          </p>
-        )}
-      </ProLockBanner>
+      <VisitorVaultBanner
+        user={user}
+        albums={albums}
+        openTrackSlots={openTrackSlots}
+        hasExtraAlbums={hasExtraAlbums}
+      />
 
       <div className="space-y-6">
         <div className="flex items-center gap-4 border-l-4 border-sky-500 pl-6" data-tour="vault-loose-tracks">
@@ -328,45 +323,103 @@ function FreeVisitorVault({
             <CassetteTape className="text-sky-500 h-8 w-8 shrink-0" />
             Loose Tracks
           </Link>
-          <Badge variant="outline" className="border-sky-500/30 text-sky-400 font-mono">{totalTrackCount}/{FREE_TRACK_LIMIT}</Badge>
+          <Badge variant="outline" className="border-sky-500/30 text-sky-400 font-mono">
+            {hasExtraTracks
+              ? `${totalTrackCount} saved · ${editableLooseCount} editable here`
+              : `${totalTrackCount}/${FREE_TRACK_LIMIT}`}
+          </Badge>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedLooseTracks.map((track) => {
             const tierLocked = !editableTrackIds.has(track.id);
             return (
-              <div key={track.id} className="group relative">
+              <div
+                key={track.id}
+                className={cn(
+                  'group flex items-center gap-2 py-4 pl-6 pr-3 rounded-2xl bg-black/40 border-2 transition-all shadow-xl',
+                  tierLocked
+                    ? 'border-pink-500/25 hover:border-pink-400/40'
+                    : 'border-sky-500/30 hover:border-sky-400/60 hover:bg-sky-500/5'
+                )}
+              >
                 <Link
                   href={`/albums/unassigned/tracks/${track.id}`}
                   className={cn(
-                    'block py-4 px-6 rounded-2xl bg-black/40 border-2 transition-all flex items-center justify-between',
-                    tierLocked
-                      ? 'border-pink-500/25 hover:border-pink-400/40 opacity-85'
-                      : 'border-sky-500/30 hover:border-sky-400/60 hover:bg-sky-500/5 shadow-[0_0_16px_rgba(56,189,248,0.12)]'
+                    'flex items-center gap-4 min-w-0 flex-1',
+                    tierLocked ? 'opacity-90' : ''
                   )}
                 >
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className={cn('p-2 rounded-xl border', tierLocked ? 'bg-muted/20 border-pink-500/20' : 'bg-sky-500/15 border-sky-500/30')}>
-                      {tierLocked ? (
-                        <IconWithLockOverlay icon={CassetteTape} size="lg" />
-                      ) : (
-                        <CassetteTape className="h-5 w-5 text-sky-400" />
+                  <div className={cn('p-2 rounded-xl border shrink-0', tierLocked ? 'bg-muted/20 border-pink-500/20' : 'bg-sky-500/15 border-sky-500/30')}>
+                    {tierLocked ? (
+                      <IconWithLockOverlay icon={CassetteTape} size="lg" />
+                    ) : (
+                      <CassetteTape className="h-5 w-5 text-sky-400" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="font-bold font-headline text-base text-white uppercase truncate">{track.title}</p>
+                      <DnaDropLiveIndicator shareId={track.shareId} variant="compact" />
+                      {tierLocked && (
+                        <Badge variant="outline" className={cn('text-[7px] px-1.5 h-4 shrink-0', proLockText())}>View only</Badge>
                       )}
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <p className="font-bold font-headline text-base text-white uppercase truncate">{track.title}</p>
-                        <DnaDropLiveIndicator shareId={track.shareId} variant="compact" />
-                        {tierLocked && (
-                          <Badge variant="outline" className={cn('text-[7px] px-1.5 h-4 shrink-0', proLockText())}>View only</Badge>
-                        )}
-                      </div>
-                      <p className={cn('text-[8px] uppercase font-code mt-0.5', tierLocked ? 'text-muted-foreground' : 'text-sky-400/80')}>
-                        {tierLocked ? 'Free limit · view only · export is Pro' : `Loose track · ${track.vibe?.genre}`}
-                      </p>
-                    </div>
+                    <p className={cn('text-[8px] uppercase font-code mt-0.5', tierLocked ? 'text-muted-foreground' : 'text-sky-400/80')}>
+                      {tierLocked ? 'View-only · lyrics saved' : `Loose track · ${track.vibe?.genre}`}
+                    </p>
                   </div>
-                  <ChevronRight className={cn('h-4 w-4 shrink-0', tierLocked ? 'text-muted-foreground' : 'text-sky-400')} />
                 </Link>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  {!tierLocked && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-white">
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 bg-card border-white/10">
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger className="text-[10px] font-bold uppercase">
+                            <Move className="mr-2 h-4 w-4" /> Move To Album
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuPortal>
+                            <DropdownMenuSubContent className="bg-card border-white/10">
+                              {realAlbums.map((album) => (
+                                <DropdownMenuItem
+                                  key={album.id}
+                                  onClick={() => {
+                                    moveTrack(track.id, 'unassigned', album.id);
+                                    toast({
+                                      title: 'Track Assigned',
+                                      description: `"${track.title}" moved to ${album.title}. Album DNA inherit is on.`,
+                                    });
+                                  }}
+                                  className="text-[10px] font-bold uppercase"
+                                >
+                                  <Music className="mr-2 h-3 w-3" /> {album.title}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuPortal>
+                        </DropdownMenuSub>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => onDeleteTrack(track)}
+                          className="text-red-500 focus:text-red-500 text-[10px] font-bold uppercase"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Scrap Track
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                  <Link
+                    href={`/albums/unassigned/tracks/${track.id}`}
+                    className="p-1.5 text-muted-foreground group-hover:text-sky-400 transition-all"
+                    aria-label={`Open ${track.title}`}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </div>
               </div>
             );
           })}
@@ -377,11 +430,11 @@ function FreeVisitorVault({
             <LockedVaultSlot
               variant="track"
               label="Track 3 — Pro"
-              sublabel="Upgrade for unlimited tracks"
+              sublabel="Go Pro for unlimited tracks"
             />
           )}
           {totalTrackCount >= FREE_TRACK_LIMIT && (
-            <LockedVaultSlot variant="track" label="Unlimited Tracks" sublabel="Upgrade for no track cap" />
+            <LockedVaultSlot variant="track" label="Unlimited Tracks" sublabel="Go Pro for no track cap" />
           )}
         </div>
       </div>
@@ -402,7 +455,7 @@ function FreeVisitorVault({
             />
           ))}
           {realAlbums.length < FREE_ALBUM_LIMIT && <OpenAlbumSlot onClick={onCreateAlbum} />}
-          <LockedVaultSlot variant="album" label="Unlimited Albums" sublabel="Upgrade for full vault expansion" />
+          <LockedVaultSlot variant="album" label="Unlimited Albums" sublabel="Go Pro for unlimited albums" />
         </div>
       </div>
     </div>
@@ -492,6 +545,9 @@ export function AlbumList() {
 
   const vaultProgressTourPinned =
     vaultTourActive && VAULT_PAGE_TOUR_STEPS[vaultTourStep]?.id === 'vault-progress';
+
+  const showDowngradePicker =
+    !authLoading && !loading && user != null && needsFreeEditableTrackPicker(user, albums);
 
   const unassignedTracks = getAlbumById('unassigned')?.tracks || [];
   const realAlbums = albums.filter(a => a.id !== 'unassigned');
@@ -881,6 +937,8 @@ export function AlbumList() {
                   onCreateTrack={() => setCreateItemType('Track')}
                   albums={albums}
                   user={user}
+                  moveTrack={moveTrack}
+                  onDeleteTrack={setTrackToDelete}
                 />
             ) : (
                 <div className="space-y-12">
@@ -1100,10 +1158,19 @@ export function AlbumList() {
               </AlertDialogHeader>
               <AlertDialogFooter>
                   <AlertDialogCancel className="font-bold">Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => { if(trackToDelete) { deleteTrack('unassigned', trackToDelete.id); setTrackToDelete(null); toast({ title: "Track Scrapped" }); } }} className="bg-red-600 hover:bg-red-700 font-bold">Scrap Asset</AlertDialogAction>
+                  <AlertDialogAction onClick={() => { if(trackToDelete) { deleteTrack(trackToDelete.albumId || 'unassigned', trackToDelete.id); setTrackToDelete(null); toast({ title: "Track Scrapped" }); } }} className="bg-red-600 hover:bg-red-700 font-bold">Scrap Asset</AlertDialogAction>
               </AlertDialogFooter>
           </AlertDialogContent>
       </AlertDialog>
+
+      {user && (
+        <DowngradeTrackPickerDialog
+          open={showDowngradePicker}
+          albums={albums}
+          userId={user.id}
+          onComplete={() => {}}
+        />
+      )}
 
       <StudioGuidedTour
         active={vaultTourActive}

@@ -35,6 +35,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { BrandLockup } from '@/components/brand-lockup';
+import { BRAND_ARIA_LABEL } from '@/lib/brand';
 
 export function Header() {
   const { user, loading } = useAuth();
@@ -104,14 +106,8 @@ export function Header() {
       <div className="relative h-14 w-full px-2 sm:px-4 md:px-6">
             {/* Logo centered — above side columns so clicks reach home / vault */}
             <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-[4.75rem] sm:px-24 md:px-32">
-                <Link href="/" className="pointer-events-auto flex min-w-0 max-w-full items-center gap-2 text-center group" aria-label="Back to The Vault">
-                    <div className="bg-black rounded-xl group-hover:scale-110 transition-transform duration-300 shrink-0 border border-primary/20 w-9 h-9 sm:w-11 sm:h-11 overflow-hidden flex items-center justify-center p-0.5">
-                        <img src="/Logo.png" alt="Bar 4 Bar" className="h-full w-full object-contain" />
-                    </div>
-                    <div className="flex min-w-0 flex-col text-left">
-                        <span className="truncate font-bold font-headline text-base sm:text-lg md:text-xl leading-none tracking-tight">Bar 4 Bar</span>
-                        <p className="hidden sm:block text-[7px] md:text-[8px] text-muted-foreground font-tagline -mt-0.5 uppercase tracking-widest opacity-70 truncate">AI NOTEBOOK</p>
-                    </div>
+                <Link href="/" className="pointer-events-auto min-w-0 max-w-full group" aria-label={BRAND_ARIA_LABEL}>
+                    <BrandLockup variant="app" />
                 </Link>
             </div>
 

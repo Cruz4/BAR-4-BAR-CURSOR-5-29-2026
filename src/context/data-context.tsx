@@ -39,6 +39,8 @@ import {
   type DnaDropTrackPayload,
 } from '@/lib/dna-drop';
 import { canUserAddTrack, FreeTrackLimitError, isProOrTrial } from '@/lib/subscription';
+import { computeRotatedFreeEditableTrackIds } from '@/lib/tier-limits';
+import { persistFreeEditableTrackIds } from '@/lib/free-editable-tracks';
 
 const UNASSIGNED_ALBUM_ID = 'unassigned';
 
@@ -680,7 +682,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   const deleteTrack = useCallback((albumId: string, trackId: string) => {
-    setAlbums(prev => prev.map(a => (a.id === albumId ? { ...a, tracks: a.tracks.filter(t => t.id !== trackId) } : a)));
+    setAlbums((prev) => {
+      const next = prev.map((a) =>
+        a.id === albumId ? { ...a, tracks: a.tracks.filter((t) => t.id !== trackId) } : a
+      );
+      if (user && !isProOrTrial(user) && user.freeEditableSelectionAt) {
+        const nextIds = computeRotatedFreeEditableTrackIds(user, next, trackId);
+        if (nextIds) {
+          void persistFreeEditableTrackIds(user.id, nextIds);
+        }
+      }
+      return next;
+    });
     if (!user) return;
     if (isBrowserOffline()) {
       const count = pushDeleteTrackOutbox(user.id, albumId, trackId);
@@ -1037,7 +1050,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const moveTrack = useCallback((tId: string, fromId: string, toId: string) => {
     const { track } = getTrackById(fromId, tId);
-    if (!track) return;
+    if (!track || fromId === toId) return;
+
     const movingToAlbum = toId !== UNASSIGNED_ALBUM_ID;
     const movingFromLoose = fromId === UNASSIGNED_ALBUM_ID;
     const movingToLoose = toId === UNASSIGNED_ALBUM_ID;
@@ -1048,9 +1062,47 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     } else if (movingToLoose) {
       nextDirection.inheritFromAlbum = false;
     }
-    deleteTrack(fromId, tId);
-    addTrack(toId, { ...track, albumId: toId, direction: nextDirection });
-  }, [deleteTrack, addTrack, getTrackById]);
+
+    const movedTrack = stripForFirestore({
+      ...track,
+      albumId: toId,
+      direction: nextDirection,
+    }) as Track;
+
+    setAlbums((prev) =>
+      prev.map((a) => {
+        if (a.id === fromId) {
+          return { ...a, tracks: a.tracks.filter((t) => t.id !== tId) };
+        }
+        if (a.id === toId) {
+          return { ...a, tracks: [...a.tracks, movedTrack] };
+        }
+        return a;
+      })
+    );
+
+    if (!user) return;
+
+    if (isBrowserOffline()) {
+      pushDeleteTrackOutbox(user.id, fromId, tId);
+      const count = mergeTrackOutbox(user.id, tId, toId, movedTrack as Record<string, unknown>);
+      setSyncPendingCount(count);
+      setCloudSaveStatus('offline');
+      return;
+    }
+
+    void (async () => {
+      if (toId === UNASSIGNED_ALBUM_ID) {
+        await setDoc(
+          doc(db, 'users', user.id, 'albums', UNASSIGNED_ALBUM_ID),
+          stripForFirestore({ ...createUnassignedShell(user.id), updatedAt: new Date().toISOString() }),
+          { merge: true }
+        );
+      }
+      await setDoc(doc(db, 'users', user.id, 'albums', toId, 'tracks', tId), movedTrack, { merge: true });
+      await deleteDoc(doc(db, 'users', user.id, 'albums', fromId, 'tracks', tId));
+    })();
+  }, [getTrackById, user]);
 
   return (
     <DataContext.Provider value={{

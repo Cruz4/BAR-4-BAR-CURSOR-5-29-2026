@@ -51,6 +51,8 @@ export async function fulfillCheckoutSession(
       subscriptionStatus: 'active',
       subscriptionTier: tier,
       updatedAt: FieldValue.serverTimestamp(),
+      freeEditableTrackIds: FieldValue.delete(),
+      freeEditableSelectionAt: FieldValue.delete(),
     };
     if (extras?.subscriptionId) userUpdate.subscriptionId = extras.subscriptionId;
     if (extras?.stripeCustomerId) userUpdate.stripeCustomerId = extras.stripeCustomerId;

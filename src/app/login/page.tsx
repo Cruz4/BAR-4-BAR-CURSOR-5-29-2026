@@ -41,6 +41,7 @@ import {
   ProBillingCheckoutCta,
   proCheckoutHeaderHref,
 } from '@/components/marketing/pro-billing-checkout-cta';
+import { BrandLockup } from '@/components/brand-lockup';
 import {
   getCheckoutFromPath,
   getProCheckoutLabel,
@@ -260,12 +261,7 @@ function LoginForm() {
             </Link>
           </nav>
 
-          <Link href="/" className="flex items-center justify-center gap-2 sm:gap-4 min-w-0 max-w-[min(100%,14rem)] sm:max-w-none">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white rounded-xl overflow-hidden flex items-center justify-center p-1.5 shadow-2xl shrink-0">
-                  <img src="/Logo.png" alt="Logo" className="w-full h-full object-contain" />
-              </div>
-              <span className="hidden sm:block text-lg sm:text-2xl font-headline font-bold text-white tracking-tighter uppercase truncate">Bar 4 Bar</span>
-          </Link>
+          <BrandLockup variant="marketing" linkHref="/" className="justify-center max-w-[min(100%,14rem)] sm:max-w-none" />
 
           <nav className="flex items-center justify-end gap-2 sm:gap-4 min-w-0">
             <Link href="/#features" className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Features</Link>

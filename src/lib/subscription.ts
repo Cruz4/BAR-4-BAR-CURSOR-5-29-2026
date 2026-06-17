@@ -76,7 +76,7 @@ export class FreeTrackLimitError extends Error {
 export const FREE_TRACK_LIMIT_TOAST = {
   variant: 'default' as const,
   title: 'Demo track slots full',
-  description: `You've used your ${FREE_TRACK_LIMIT} free track slots. Your lyrics are safe — view anytime. Go Pro for unlimited slots, export, and custom vault saves.`,
+  description: `You've used your ${FREE_TRACK_LIMIT} free track slots. Your lyrics stay saved — view anytime. Go Pro for unlimited editing, export, and full co-writer workflow.`,
 };
 
 export const FREE_ALBUM_LIMIT_TOAST = {

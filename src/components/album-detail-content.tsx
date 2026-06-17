@@ -99,11 +99,15 @@ import {
   getEditableTrackIds,
   isAlbumOverTierLimit,
   isTrackOverTierLimit,
-  TIER_LIMIT_ALBUM_BANNER,
   TIER_LIMIT_LOCKED_TOAST,
   canExportVault,
   EXPORT_PRO_TOAST,
+  isDowngradedProVault,
+  needsFreeEditableTrackPicker,
 } from '@/lib/tier-limits';
+import { getAlbumLimitBanner } from '@/lib/free-vault-copy';
+import { VisitorVaultBanner } from '@/components/visitor-vault-banner';
+import { DowngradeTrackPickerDialog } from '@/components/downgrade-track-picker-dialog';
 import { LockedProFeatureButton, ProCreateTrackSlot, proLockText } from '@/components/pro-lock';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
@@ -725,6 +729,8 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
 
   const isUnassignedVault = album?.id === 'unassigned';
   const realAlbums = albums.filter(a => a.id !== 'unassigned');
+  const showDowngradePicker =
+    !loading && user != null && needsFreeEditableTrackPicker(user, albums);
 
   if (loading || !album) return <div className="flex h-screen items-center justify-center"><Loader className="animate-spin h-8 w-8 text-primary" /></div>;
 
@@ -744,7 +750,15 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
             {albumTierLocked && (
               <div className="mb-6 rounded-xl border border-pink-500/25 bg-pink-500/10 px-4 py-3 flex items-center gap-2">
                 <Lock className="h-4 w-4 text-pink-400 shrink-0" />
-                <p className={cn('text-[10px] font-code leading-snug', proLockText())}>{TIER_LIMIT_ALBUM_BANNER}</p>
+                <p className={cn('text-[10px] font-code leading-snug', proLockText())}>
+                  {getAlbumLimitBanner(user, albums)}
+                </p>
+              </div>
+            )}
+
+            {isUnassignedVault && !isPro && isDowngradedProVault(user, albums) && (
+              <div className="mb-6">
+                <VisitorVaultBanner user={user} albums={albums} />
               </div>
             )}
 
@@ -1083,6 +1097,15 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
               </AlertDialogFooter>
           </AlertDialogContent>
       </AlertDialog>
+
+      {user && showDowngradePicker && (
+        <DowngradeTrackPickerDialog
+          open
+          albums={albums}
+          userId={user.id}
+          onComplete={() => {}}
+        />
+      )}
     </TooltipProvider>
   );
 }

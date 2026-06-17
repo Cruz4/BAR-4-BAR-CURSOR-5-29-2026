@@ -16,6 +16,7 @@ import {
   getProMarketingLine,
   getSignupInkMarketingLine,
 } from '@/lib/studio-tiers';
+import { BrandLockup } from '@/components/brand-lockup';
 
 /** Public marketing surface for anonymous visitors on `/` (no auth form — CTA to `/login`). */
 export function PublicHomeLanding() {
@@ -26,14 +27,7 @@ export function PublicHomeLanding() {
       <header className="fixed top-0 left-0 right-0 h-16 border-b border-white/[0.06] bg-background/40 backdrop-blur-xl z-[200] grid grid-cols-[1fr_auto_1fr] items-center px-3 sm:px-6 gap-2">
         <div aria-hidden className="min-w-0" />
 
-        <div className="flex items-center justify-center gap-2 sm:gap-4 min-w-0 max-w-[min(100%,14rem)] sm:max-w-none">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white rounded-xl overflow-hidden flex items-center justify-center p-1.5 shadow-2xl shrink-0">
-            <img src="/Logo.png" alt="Bar 4 Bar logo" className="w-full h-full object-contain" />
-          </div>
-          <h1 className="hidden sm:block text-lg sm:text-2xl font-headline font-bold text-white tracking-tighter uppercase truncate">
-            Bar 4 Bar
-          </h1>
-        </div>
+        <BrandLockup variant="marketing" titleTag="h1" linkHref="/" className="justify-center max-w-[min(100%,14rem)] sm:max-w-none" />
 
         <nav className="flex items-center justify-end gap-2 sm:gap-4 min-w-0">
           <a

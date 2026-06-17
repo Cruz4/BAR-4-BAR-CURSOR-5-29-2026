@@ -159,8 +159,8 @@ import {
 import {
   isTrackOverTierLimit,
   TIER_LIMIT_LOCKED_TOAST,
-  TIER_LIMIT_TRACK_BANNER,
 } from '@/lib/tier-limits';
+import { getTrackLimitBanner } from '@/lib/free-vault-copy';
 import { withLineSource } from '@/lib/gamification/line-attribution';
 import {
   loadTrackUILayout,
@@ -2914,6 +2914,10 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   }, [track?.sections, track?.status, albumId, trackId, updateTrack]);
 
   const tierLocked = track ? isTrackOverTierLimit(trackId, albumId, albums, user) : false;
+  const tierLimitBanner = useMemo(
+    () => getTrackLimitBanner(user, albums),
+    [user, albums]
+  );
   const completeLocked = track ? isTrackLocked(track) : false;
   const editsLocked = tierLocked || completeLocked;
 
@@ -3194,7 +3198,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       {tierLocked && (
         <div className="shrink-0 border-b border-pink-500/25 bg-pink-500/10 px-4 py-2 flex items-center gap-2 z-30">
           <Lock className={cn('h-4 w-4 shrink-0', proLockIcon())} />
-          <p className={cn('text-[10px] font-code leading-snug', proLockText())}>{TIER_LIMIT_TRACK_BANNER}</p>
+          <p className={cn('text-[10px] font-code leading-snug', proLockText())}>{tierLimitBanner}</p>
         </div>
       )}
       {!tierLocked && completeLocked && (
