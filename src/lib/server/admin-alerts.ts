@@ -14,6 +14,7 @@ type EnqueueInput = {
   userEmail?: string | null;
   userId?: string | null;
   method?: string | null;
+  detail?: string | null;
 };
 
 function buildMessage(input: EnqueueInput): string {
@@ -24,9 +25,19 @@ function buildMessage(input: EnqueueInput): string {
     const method = input.method ? ` (${input.method})` : '';
     return `${who} signed up${via}${method}`;
   }
+  if (input.kind === 'pricing_view') {
+    const who = input.userEmail || 'Visitor';
+    const via = refLabel ? ` (${refLabel})` : '';
+    return `${who} opened Pricing${via}`;
+  }
+  if (input.kind === 'checkout_started') {
+    const who = input.userEmail || 'Artist';
+    const detail = input.detail ? ` — ${input.detail}` : '';
+    return `${who} started checkout${detail}`;
+  }
   const page = input.path || '/';
   const via = refLabel ? ` from ${refLabel}` : '';
-  return `Landing hit${via} on ${page}`;
+  return `Page visit${via} on ${page}`;
 }
 
 export async function enqueueAdminAlert(input: EnqueueInput): Promise<void> {
@@ -40,6 +51,7 @@ export async function enqueueAdminAlert(input: EnqueueInput): Promise<void> {
     userEmail: input.userEmail,
     userId: input.userId,
     method: input.method,
+    detail: input.detail,
   });
 
   if (!hasAdminFirestoreCredentials()) return;
@@ -54,6 +66,7 @@ export async function enqueueAdminAlert(input: EnqueueInput): Promise<void> {
       userEmail: input.userEmail || null,
       userId: input.userId || null,
       method: input.method || null,
+      detail: input.detail || null,
       timestamp,
     });
   } catch (error) {
@@ -86,6 +99,7 @@ export async function listAdminAlertsSince(since: string): Promise<AdminAlert[]>
       userEmail: data.userEmail ?? null,
       userId: data.userId ?? null,
       method: data.method ?? null,
+      detail: data.detail ?? null,
     };
   });
 }

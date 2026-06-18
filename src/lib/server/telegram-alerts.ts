@@ -10,6 +10,14 @@ type TelegramAlertInput = {
   userEmail?: string | null;
   userId?: string | null;
   method?: string | null;
+  detail?: string | null;
+};
+
+const KIND_HEADLINE: Record<AdminAlertKind, string> = {
+  signup: '🆕 New signup',
+  landing_hit: '👀 Page visit',
+  pricing_view: '💰 Pricing page',
+  checkout_started: '🛒 Checkout started',
 };
 
 function telegramConfigured(): boolean {
@@ -20,15 +28,10 @@ function telegramConfigured(): boolean {
 }
 
 function formatTelegramText(input: TelegramAlertInput): string {
-  const lines: string[] = [];
-  if (input.kind === 'signup') {
-    lines.push('🆕 New signup');
-  } else {
-    lines.push('🔗 Ref / landing hit');
-  }
-  lines.push(input.message);
+  const lines: string[] = [KIND_HEADLINE[input.kind], input.message];
   if (input.ref) lines.push(`ref: ${input.ref}`);
   if (input.path) lines.push(`path: ${input.path}`);
+  if (input.detail) lines.push(input.detail);
   if (input.userId) lines.push(`uid: ${input.userId.slice(0, 12)}…`);
   return lines.join('\n');
 }

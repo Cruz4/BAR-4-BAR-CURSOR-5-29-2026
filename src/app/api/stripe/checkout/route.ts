@@ -11,10 +11,24 @@ import {
 } from '@/lib/stripe-server';
 import { getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
+import { enqueueAdminAlert } from '@/lib/server/admin-alerts';
 import { getTrustedAppOrigin } from '@/lib/server/trusted-origin';
 import { getPublicAppUrl } from '@/lib/app-url';
 
 export const runtime = 'nodejs';
+
+function checkoutAlertDetail(
+  catalogEntry: NonNullable<ReturnType<typeof getCatalogEntry>>,
+  priceKey?: string
+): string {
+  if (catalogEntry.type === 'subscription') {
+    return catalogEntry.tier === 'yearly' ? 'Studio Pro Yearly' : 'Studio Pro Monthly';
+  }
+  if (typeof priceKey === 'string' && priceKey.trim()) {
+    return priceKey.trim().replace(/_/g, ' ');
+  }
+  return `Ink pack (${catalogEntry.inkAmount} Ink)`;
+}
 
 export async function POST(req: Request) {
   try {
@@ -163,6 +177,16 @@ export async function POST(req: Request) {
       type: isSubscription ? 'subscription' : 'one_time',
       tier: isSubscription ? catalogEntry.tier : null,
     }, email);
+
+    const signupAttribution =
+      typeof userData?.signupAttribution === 'string' ? userData.signupAttribution : null;
+    await enqueueAdminAlert({
+      kind: 'checkout_started',
+      userId,
+      userEmail: email || null,
+      ref: signupAttribution,
+      detail: checkoutAlertDetail(catalogEntry, typeof priceKey === 'string' ? priceKey : undefined),
+    });
 
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (err: unknown) {

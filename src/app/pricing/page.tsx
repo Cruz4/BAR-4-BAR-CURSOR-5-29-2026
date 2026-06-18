@@ -74,6 +74,7 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { trackUpgradeClick } from '@/lib/conversion-analytics';
 import { useAuth } from '@/hooks/use-auth';
 import { buildLoginPath, buildProCheckoutPath } from '@/lib/checkout-intent';
+import { getStoredMarketingRef } from '@/lib/marketing-attribution';
 
 function proFeatureIcon(text: string) {
   if (text.includes('Roadmap') || text.includes('feedback')) return MessageSquare;
@@ -97,8 +98,13 @@ export default function PricingPage() {
   const { user } = useAuth();
 
   useEffect(() => {
-    trackStudioEvent(ANALYTICS_EVENTS.PRICING_VIEW, { path: '/pricing' });
-  }, []);
+    if (!user) return;
+    const ref = getStoredMarketingRef();
+    void trackStudioEvent(ANALYTICS_EVENTS.PRICING_VIEW, {
+      path: '/pricing',
+      ...(ref ? { ref } : {}),
+    });
+  }, [user]);
 
   const handleSelectPlan = (tierName: string) => {
     if (tierName !== 'Visitor') {

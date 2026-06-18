@@ -5,10 +5,13 @@ import { normalizeMarketingRef } from '@/lib/marketing-attribution';
 
 const COLLECTION = 'studio_landing_hits';
 
-/** Persist a tagged landing visit for admin funnel metrics (server-only). */
+/** Persist a tagged or organic landing visit for admin funnel metrics (server-only). */
 export async function recordLandingHit(ref: string, path: string): Promise<void> {
   if (!hasAdminFirestoreCredentials()) return;
-  const normalizedRef = normalizeMarketingRef(ref);
+  const normalizedRef =
+    ref.trim().toLowerCase() === 'organic'
+      ? 'organic'
+      : normalizeMarketingRef(ref);
   if (!normalizedRef) return;
 
   try {

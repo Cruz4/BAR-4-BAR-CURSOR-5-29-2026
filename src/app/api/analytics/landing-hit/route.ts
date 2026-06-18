@@ -7,7 +7,8 @@ import { checkRateLimit } from '@/lib/server/rate-limit';
 export const runtime = 'nodejs';
 
 const WINDOW_MS = 5 * 60_000;
-const MAX_PER_WINDOW = 8;
+const MAX_PER_WINDOW = 12;
+const VISIT_ALERT_PATHS = new Set(['/', '/pricing']);
 
 function clientIp(req: Request): string {
   const forwarded = req.headers.get('x-forwarded-for');
@@ -18,18 +19,24 @@ function clientIp(req: Request): string {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const ref = normalizeMarketingRef(typeof body?.ref === 'string' ? body.ref : null);
-    if (!ref) {
-      return NextResponse.json({ error: 'Missing ref' }, { status: 400 });
-    }
-
     const path =
       typeof body?.path === 'string' && body.path.startsWith('/')
         ? body.path.slice(0, 120)
         : '/';
 
+    if (!VISIT_ALERT_PATHS.has(path)) {
+      return NextResponse.json({ error: 'Unsupported path' }, { status: 400 });
+    }
+
+    const rawRef = typeof body?.ref === 'string' ? body.ref.trim().toLowerCase() : '';
+    let ref =
+      rawRef === 'organic'
+        ? 'organic'
+        : normalizeMarketingRef(typeof body?.ref === 'string' ? body.ref : null);
+    if (!ref) ref = 'organic';
+
     const ip = clientIp(req);
-    const { allowed } = checkRateLimit(`landing-hit:${ip}:${ref}`, MAX_PER_WINDOW, WINDOW_MS);
+    const { allowed } = checkRateLimit(`landing-hit:${ip}:${ref}:${path}`, MAX_PER_WINDOW, WINDOW_MS);
     if (!allowed) {
       return NextResponse.json({ ok: true, throttled: true });
     }

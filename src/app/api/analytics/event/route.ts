@@ -56,17 +56,31 @@ export async function POST(req: Request) {
 
     await recordStudioEvent(uid, event, metadata || {}, userName);
 
+    const auth = await import('@/lib/firebase/server').then((m) => m.getAuth());
+    const userRecord = await auth.getUser(uid).catch(() => null);
+    const userEmail = userRecord?.email || null;
+
     if (event === 'signup') {
-      const auth = await import('@/lib/firebase/server').then((m) => m.getAuth());
-      const userRecord = await auth.getUser(uid).catch(() => null);
       const ref = typeof metadata?.ref === 'string' ? metadata.ref : null;
       const method = typeof metadata?.method === 'string' ? metadata.method : null;
       await enqueueAdminAlert({
         kind: 'signup',
         userId: uid,
-        userEmail: userRecord?.email || null,
+        userEmail,
         ref,
         method,
+      });
+    }
+
+    if (event === 'pricing_view') {
+      const ref = typeof metadata?.ref === 'string' ? metadata.ref : null;
+      const path = typeof metadata?.path === 'string' ? metadata.path : '/pricing';
+      await enqueueAdminAlert({
+        kind: 'pricing_view',
+        userId: uid,
+        userEmail,
+        ref,
+        path,
       });
     }
 
