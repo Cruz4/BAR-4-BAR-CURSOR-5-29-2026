@@ -3,6 +3,7 @@ import 'server-only';
 import { getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
 import { marketingRefLabel } from '@/lib/marketing-attribution';
 import type { AdminAlert, AdminAlertKind } from '@/lib/admin-alerts';
+import { sendTelegramAdminAlert } from '@/lib/server/telegram-alerts';
 
 const COLLECTION = 'studio_admin_alerts';
 
@@ -29,13 +30,25 @@ function buildMessage(input: EnqueueInput): string {
 }
 
 export async function enqueueAdminAlert(input: EnqueueInput): Promise<void> {
+  const message = buildMessage(input);
+
+  void sendTelegramAdminAlert({
+    kind: input.kind,
+    message,
+    ref: input.ref,
+    path: input.path,
+    userEmail: input.userEmail,
+    userId: input.userId,
+    method: input.method,
+  });
+
   if (!hasAdminFirestoreCredentials()) return;
   try {
     const db = await getDb();
     const timestamp = new Date().toISOString();
     await db.collection(COLLECTION).add({
       kind: input.kind,
-      message: buildMessage(input),
+      message,
       ref: input.ref || null,
       path: input.path || null,
       userEmail: input.userEmail || null,
