@@ -29,16 +29,18 @@ export async function reportLandingHitIfNeeded(pathname: string): Promise<void> 
     const ref = resolveRef(urlRef);
     const dedupeKey = `${SENT_PREFIX}${ref}:${path}`;
     if (sessionStorage.getItem(dedupeKey)) return;
-    sessionStorage.setItem(dedupeKey, '1');
 
     const res = await fetch('/api/analytics/landing-hit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ref, path }),
     });
-    if (!res.ok) {
-      sessionStorage.removeItem(dedupeKey);
-    }
+    if (!res.ok) return;
+
+    const data = (await res.json().catch(() => null)) as { ok?: boolean; throttled?: boolean } | null;
+    if (!data?.ok || data.throttled) return;
+
+    sessionStorage.setItem(dedupeKey, '1');
   } catch {
     // Non-blocking
   }

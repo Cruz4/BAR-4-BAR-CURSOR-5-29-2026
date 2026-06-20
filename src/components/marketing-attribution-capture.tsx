@@ -9,13 +9,15 @@ import { useAuth } from '@/hooks/use-auth';
 /** Persists ?ref= from landing URLs for signup attribution + admin landing alerts. */
 export function MarketingAttributionCapture() {
   const pathname = usePathname();
-  const { authReady, loading } = useAuth();
+  const { loading } = useAuth();
 
   useEffect(() => {
     captureMarketingRefFromUrl();
-    if (!authReady || loading) return;
+    // Wait for auth state to resolve (logged in or not). authReady is only true when
+    // signed in — using it blocked all anonymous landing/ref visit alerts.
+    if (loading) return;
     void reportLandingHitIfNeeded(pathname || '/');
-  }, [pathname, authReady, loading]);
+  }, [pathname, loading]);
 
   return null;
 }
