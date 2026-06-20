@@ -119,7 +119,7 @@ export function StudioPrivacyIntroDialog() {
         displayName: user?.displayName,
       });
       await finishIntro();
-      toast({ title: 'Visibility saved', description: 'Change anytime in Settings → Studio Profile.' });
+      toast({ title: 'Visibility saved', description: 'Change anytime in Studio Progress → Sharing & visibility.' });
     } catch {
       toast({ variant: 'destructive', title: 'Could not save visibility settings' });
     } finally {
@@ -186,8 +186,8 @@ export function StudioPrivacyIntroDialog() {
 
         <p className="text-[10px] text-muted-foreground">
           You can change these anytime under{' '}
-          <Link href="/usage?tab=settings" className="text-primary font-bold hover:underline">
-            Ink Store → Settings → Studio Profile
+          <Link href="/studio-progress#sharing-visibility" className="text-primary font-bold hover:underline">
+            Studio Progress → Sharing &amp; visibility
           </Link>
           .
         </p>

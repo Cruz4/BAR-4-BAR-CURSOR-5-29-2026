@@ -910,6 +910,15 @@
     animation: spin-slow 8s linear infinite;
   }
 
+  @keyframes foil-shimmer {
+    0% { background-position: 200% center; }
+    100% { background-position: -200% center; }
+  }
+  .foil-shimmer-border {
+    background-size: 200% auto;
+    animation: foil-shimmer 4s linear infinite;
+  }
+
   @keyframes brand-glow {
     0%, 100% { text-shadow: 0 0 5px rgba(59, 130, 246, 0); color: currentColor; }
     50% { text-shadow: 0 0 15px rgba(59, 130, 246, 0.6); color: hsl(217, 91%, 60%); }

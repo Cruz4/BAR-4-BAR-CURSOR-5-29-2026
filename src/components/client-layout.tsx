@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { Header } from '@/components/header';
 import { AuthProvider } from '@/context/auth-context';
@@ -48,8 +49,18 @@ function useChunkLoadRecovery() {
     };
 
     const onRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      if (reason instanceof Event) {
+        const benignInstall =
+          reason.type === 'beforeinstallprompt' || reason.type === 'appinstalled';
+        if (benignInstall) {
+          event.preventDefault();
+          return;
+        }
+      }
+
       const message = String(
-        (event.reason as { message?: string } | undefined)?.message ?? event.reason ?? ''
+        (reason as { message?: string } | undefined)?.message ?? reason ?? ''
       );
       if (message.includes('ChunkLoadError') || message.includes('Loading chunk')) {
         event.preventDefault();
@@ -70,10 +81,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const isMarketingShell = isLoginPage || isPublicHome;
   const isPerformPage = pathname.endsWith('/perform');
   const isSharePage = pathname.startsWith('/share/');
+  const isPublicProfilePage = pathname.startsWith('/profile/');
   const isMarketingCapture = pathname.startsWith('/marketing/capture');
   const isSettingsRoute = pathname === '/usage' || pathname.startsWith('/usage/') || pathname === '/admin';
   const showAppHeader =
-    !isMarketingShell && !isPerformPage && !isSharePage && !isMarketingCapture;
+    !isMarketingShell && !isPerformPage && !isSharePage && !isPublicProfilePage && !isMarketingCapture;
 
   return (
     <InviteGateGuard>
@@ -96,17 +108,24 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 {showAppHeader && <EmailVerificationBanner />}
                 {showAppHeader && <ProFeaturePreviewBanner />}
                 {showAppHeader && <ProTrialWinQuestStrip />}
-                <main className="flex-1 overflow-hidden flex flex-col">{children}</main>
-                {!isSharePage && !isMarketingCapture && <WhatsNewDialog />}
-                {!isSharePage && !isMarketingShell && !isMarketingCapture && <WelcomeInkDialog />}
-                {!isSharePage && !isMarketingShell && !isMarketingCapture && <StudioPrivacyIntroDialog />}
+                <main
+                  className={cn(
+                    'flex-1 flex flex-col',
+                    isPublicProfilePage || isSharePage ? 'overflow-y-auto' : 'overflow-hidden'
+                  )}
+                >
+                  {children}
+                </main>
+                {!isSharePage && !isPublicProfilePage && !isMarketingCapture && <WhatsNewDialog />}
+                {!isSharePage && !isPublicProfilePage && !isMarketingShell && !isMarketingCapture && <WelcomeInkDialog />}
+                {!isSharePage && !isPublicProfilePage && !isMarketingShell && !isMarketingCapture && <StudioPrivacyIntroDialog />}
                 {!isMarketingCapture && <CookieConsent />}
-                {!isSharePage && !isMarketingShell && !isMarketingCapture && <PwaInstallPrompt />}
+                {!isSharePage && !isPublicProfilePage && !isMarketingShell && !isMarketingCapture && <PwaInstallPrompt />}
                 <OfflineBanner />
                 <ServiceWorkerRegister />
               </div>
-              {!isSharePage && !isMarketingCapture && <StudioTips />}
-              <FloatingInkSpent />
+              {!isSharePage && !isPublicProfilePage && !isMarketingCapture && <StudioTips />}
+              {!isSharePage && !isPublicProfilePage && <FloatingInkSpent />}
               <Toaster />
               <AchievementUnlockCelebration />
               <ProgressCelebration />

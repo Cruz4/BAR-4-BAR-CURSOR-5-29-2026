@@ -168,7 +168,7 @@ const FAQS = [
     },
     {
       q: "How do achievements and share cards work?",
-      a: "Badges unlock automatically as you hit studio milestones (writing, generating, streaks, and more). Go to Ink Store → Settings → Studio Profile to see your trophy grid with tooltips. Tap Share achievement card to download a foil milestone card you can post anywhere."
+      a: "Badges unlock automatically as you hit studio milestones (writing, generating, streaks, and more). Open Studio Progress to see your trophy grid with tooltips. Tap Share achievement card (under Sharing & visibility) to download a foil milestone card you can post anywhere."
     },
     {
       q: "How does Refer a Friend work?",
@@ -196,7 +196,7 @@ const FAQS = [
     },
     {
       q: "What shows on the leaderboard and public profile?",
-      a: "The weekly leaderboard shows your display name, rank, XP, bars written (7 days), streak, and tracks completed — never lyrics or vault content. You are listed unless you turn on Hide from leaderboard in Settings → Studio Profile. A public profile page is optional (off by default) and only shares rank, streak, badges, and album cover collage when you enable it."
+      a: "The weekly leaderboard shows your display name, rank, XP, bars written (7 days), streak, and tracks completed — never lyrics or vault content. You are listed unless you turn on Hide from leaderboard in Studio Progress → Sharing & visibility. A public profile page is optional (off by default) and only shares rank, streak, badges, and album cover collage when you enable it."
     },
     {
       q: "What is included in a DNA Drop?",
@@ -305,8 +305,8 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                   <ul className="list-disc list-inside space-y-2 text-sm">
                     <li><strong>Studio Progress</strong> — Vault sidebar or header menu → weekly goals, rank XP, personal milestones.</li>
                     <li><strong>Full board</strong> — <code className="text-primary">/studio-progress</code> for monthly/lifetime challenges and leaderboard compare.</li>
-                    <li><strong>Achievements</strong> — Ink Store → Settings → Studio Profile (hover badges for unlock details).</li>
-                    <li><strong>Share card</strong> — same profile section → Share achievement card for a foil export of your latest milestone.</li>
+                    <li><strong>Achievements</strong> — Studio Progress → Studio trophies (hover badges for unlock details).</li>
+                    <li><strong>Share card</strong> — Studio Progress → Sharing &amp; visibility → Share achievement card for a foil export of your latest milestone.</li>
                     <li><strong>Refer a Friend</strong> — Ink Store → copy link; 150 permanent Ink each, up to 4 referrals.</li>
                   </ul>
                 </ChapterCard>

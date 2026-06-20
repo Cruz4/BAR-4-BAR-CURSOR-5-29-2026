@@ -54,6 +54,7 @@ import {
   startGoogleSignIn,
 } from '@/lib/google-auth-client';
 import { markFreshSignup } from '@/lib/post-login-redirect';
+import { sendSignupVerificationEmail } from '@/lib/email-verification-client';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -234,11 +235,25 @@ function LoginForm() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         if (displayName) await updateProfile(userCredential.user, { displayName });
         await syncUserProfile(userCredential.user, true, 'email');
+        try {
+          await sendSignupVerificationEmail(userCredential.user);
+          toast({
+            title: 'Account created',
+            description:
+              'Check your inbox for a verification link. Welcome Ink unlocks after you verify (abuse protection).',
+          });
+        } catch {
+          toast({
+            title: 'Account created',
+            description:
+              'We could not send the verification email yet — use Resend from the banner after you sign in.',
+          });
+        }
       } else {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         await syncUserProfile(userCredential.user, false, 'email');
+        toast({ title: 'Success', description: 'Studio session authorized.' });
       }
-      toast({ title: "Success", description: "Studio session authorized." });
     } catch (error: any) {
       setIsProcessing(false);
       toast({ variant: 'destructive', title: 'Authentication Failed', description: error.message });

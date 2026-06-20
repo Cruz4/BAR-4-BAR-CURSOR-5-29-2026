@@ -316,7 +316,7 @@ export default function LeaderboardPage() {
         </Tabs>
 
         <p className="text-[10px] text-orange-200/35 text-center font-code">
-          Opt out anytime in Settings → Studio Profile → Hide from leaderboard. Names link to public profiles when enabled.
+          Opt out anytime in Studio Progress → Sharing &amp; visibility → Hide from leaderboard. Names link to public profiles when enabled.
         </p>
       </div>
     </div>

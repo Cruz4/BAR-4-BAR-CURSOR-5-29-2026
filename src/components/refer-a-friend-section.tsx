@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Gift, Copy, Check, Sparkles } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/client/firebase';
@@ -22,7 +23,7 @@ type ReferralInfo = {
 };
 
 export function ReferAFriendSection({ className }: { className?: string }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [info, setInfo] = useState<ReferralInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,7 +67,38 @@ export function ReferAFriendSection({ className }: { className?: string }) {
     }
   };
 
-  if (!user || loading) return null;
+  if (!user || authLoading || loading) {
+    return (
+      <Card
+        className={cn(
+          'border-primary/20 bg-gradient-to-br from-primary/[0.06] via-card/40 to-violet-500/[0.05] overflow-hidden',
+          className
+        )}
+        aria-busy="true"
+        aria-label="Loading referral section"
+      >
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <Skeleton className="h-9 w-9 shrink-0 rounded-xl" />
+              <div className="space-y-2 min-w-0 flex-1">
+                <Skeleton className="h-5 w-36" />
+                <Skeleton className="h-3 w-full max-w-md" />
+              </div>
+            </div>
+            <Skeleton className="h-5 w-10 shrink-0 rounded-full" />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Skeleton className="h-10 flex-1 rounded-md" />
+            <Skeleton className="h-10 w-24 shrink-0 rounded-md" />
+          </div>
+          <Skeleton className="h-3 w-64" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   const remaining = info?.remaining ?? MAX_REFERRAL_REWARDS;
   const exhausted = remaining <= 0;

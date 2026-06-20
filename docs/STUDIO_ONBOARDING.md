@@ -57,7 +57,7 @@ This document describes how Bar 4 Bar teaches new systems to artists in-app. Sou
 - **When shown:** Once per account (until saved), after the guided tour finishes or on first visit to The Vault (`/`)
 - **Completion:** Sets `studioPrivacyIntroCompletedAt` on the user doc when the artist taps **Save preferences**
 - **Remind me later:** Snoozes for the current browser session only
-- **Controls:** Hide from leaderboard · Public profile page (same toggles as Settings → Studio Profile)
+- **Controls:** Hide from leaderboard · Public profile page (Studio Progress → Sharing & visibility)
 
 The 9-step lyrics tour stays focused on workflow; visibility is explained in this separate dialog instead of adding a tour step.
 

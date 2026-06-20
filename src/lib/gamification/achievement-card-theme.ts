@@ -43,6 +43,16 @@ const CATEGORY_THEMES: Record<AchievementDef['category'], Omit<AchievementCardTh
     foil: 'linear-gradient(135deg, rgba(244,114,182,0.55), rgba(168,85,247,0.25), rgba(56,189,248,0.15))',
     categoryLabel: 'Studio Pro',
   },
+  mastery: {
+    gradientFrom: '#312e81',
+    gradientVia: '#120f2e',
+    gradientTo: '#030208',
+    accent: '#a78bfa',
+    accentSoft: 'rgba(167, 139, 250, 0.16)',
+    glow: 'rgba(167, 139, 250, 0.45)',
+    foil: 'linear-gradient(135deg, rgba(167,139,250,0.55), rgba(99,102,241,0.25), rgba(251,191,36,0.2))',
+    categoryLabel: 'Mastery',
+  },
 };
 
 const ACHIEVEMENT_WATERMARKS: Record<string, string> = {
@@ -59,7 +69,23 @@ const ACHIEVEMENT_WATERMARKS: Record<string, string> = {
   vault_strain: '⧬',
   share_drop: '↗',
   second_album: '+',
+  ai_trinity: '△',
+  flame_14: '◇◇',
+  flame_60: '◆◆◆',
+  session_veteran: '◷',
+  night_shift: '☾',
+  graveyard_shift: '☽',
+  track_64_deep: '▤▤',
+  track_100_deep: '▥▥▥',
+  bars_1000: '1K',
+  bars_2500: '2.5K',
+  next_line_50: '50',
+  next_line_200: '200',
 };
+
+export function achievementCardBackgroundColor(theme: AchievementCardTheme): string {
+  return theme.gradientTo;
+}
 
 export function getAchievementCardTheme(achievement?: AchievementDef | null): AchievementCardTheme {
   const base = achievement

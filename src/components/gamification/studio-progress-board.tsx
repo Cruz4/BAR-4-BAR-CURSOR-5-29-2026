@@ -13,6 +13,7 @@ import {
 } from '@/lib/gamification/challenges';
 import { rankFromXp, STUDIO_RANKS, xpProgressInRank } from '@/lib/gamification/ranks';
 import { AchievementBadgeCell } from '@/components/gamification/achievement-badge-cell';
+import { StudioSharingSection } from '@/components/gamification/studio-profile-section';
 import { ChallengeSection, LeaderboardCompareCard } from '@/components/gamification/challenge-row';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -111,7 +112,7 @@ export function StudioProgressBoard() {
   const hidden = summary.leaderboardHidden;
 
   return (
-    <TooltipProvider delayDuration={200}>
+    <TooltipProvider delayDuration={280} disableHoverableContent={false}>
       <div className="space-y-7 pb-12">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -130,14 +131,9 @@ export function StudioProgressBoard() {
               community. Writing goals count <strong className="text-foreground/90 font-semibold">hand-typed</strong> lines only; AI-generated lines are tracked separately.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" className="text-xs font-bold uppercase" asChild>
-              <Link href="/leaderboard">Full leaderboard</Link>
-            </Button>
-            <Button variant="ghost" className="text-xs font-bold uppercase" asChild>
-              <Link href="/usage?tab=settings">Profile settings</Link>
-            </Button>
-          </div>
+          <Button variant="outline" className="text-xs font-bold uppercase" asChild>
+            <Link href="/leaderboard">Full leaderboard</Link>
+          </Button>
         </div>
 
         <Card className="border-primary/20 bg-gradient-to-br from-primary/[0.08] via-card/50 to-violet-500/[0.06]">
@@ -273,12 +269,12 @@ export function StudioProgressBoard() {
               <div className="min-w-0 overflow-hidden">
                 <h2 className="text-base font-headline font-bold uppercase tracking-tight">Studio trophies</h2>
                 <p className="text-[11px] text-muted-foreground leading-snug break-words">
-                  Hover any badge for how to unlock · {achievementCount}/{ACHIEVEMENTS.length} earned
+                  Hover any badge for the full foil card, unlock tips, and share/download · {achievementCount}/{ACHIEVEMENTS.length} earned
                 </p>
               </div>
             </div>
             <Badge variant="outline" className="text-[10px] shrink-0 max-w-full truncate">
-              Activation · Retention · Pro
+              Activation · Retention · Pro · Mastery
             </Badge>
           </div>
           <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 min-w-0">
@@ -301,7 +297,10 @@ export function StudioProgressBoard() {
               <Flame className="h-3.5 w-3.5 text-amber-400" /> Retention — streaks & sessions
             </span>
             <span className="flex items-center gap-1.5">
-              <Share2 className="h-3.5 w-3.5 text-fuchsia-400" /> Pro — vault & sharing
+              <Share2 className="h-3.5 w-3.5 text-fuchsia-400" /> Pro — vault &amp; sharing
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-violet-400" /> Mastery — deep studio runs
             </span>
             <span className="flex items-center gap-1.5">
               <Music className="h-3.5 w-3.5 text-primary" /> Ink rewards on select badges
@@ -309,10 +308,12 @@ export function StudioProgressBoard() {
           </div>
         </section>
 
+        <StudioSharingSection />
+
         {hidden && (
           <p className="text-[11px] text-center text-muted-foreground italic">
-            You are hidden from the public leaderboard. Rankings above are only visible to you until you opt in under
-            Settings → Studio Profile.
+            You are hidden from the public leaderboard. Rankings above are only visible to you until you turn off Hide
+            from leaderboard in Sharing &amp; visibility above.
           </p>
         )}
       </div>

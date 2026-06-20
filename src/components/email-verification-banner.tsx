@@ -2,8 +2,8 @@
 
 import { useCallback, useState } from 'react';
 import { Mail, Loader } from 'lucide-react';
-import { sendEmailVerification } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client/firebase';
+import { sendSignupVerificationEmail } from '@/lib/email-verification-client';
 import { useAuth } from '@/hooks/use-auth';
 import { useUsage } from '@/context/usage-context';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ export function EmailVerificationBanner({ className }: { className?: string }) {
     if (!firebaseUser || firebaseUser.emailVerified) return;
     setSending(true);
     try {
-      await sendEmailVerification(firebaseUser);
+      await sendSignupVerificationEmail(firebaseUser);
       toast({
         title: 'Verification email sent',
         description: 'Check your inbox, then refresh this page after you verify.',

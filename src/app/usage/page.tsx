@@ -53,7 +53,7 @@ import { useStripe } from '@/services/stripe';
 import { useAuth } from '@/hooks/use-auth';
 import { db, auth } from '@/lib/firebase/client/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { updateProfile, signOut } from 'firebase/auth';
+import { updateProfile } from 'firebase/auth';
 import { Progress } from '@/components/ui/progress';
 import {
   getInkPackRows,
@@ -78,23 +78,13 @@ import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, isProUser } from '@/lib/subscriptio
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
 import { InkRefillCountdown } from '@/components/ink-refill-countdown';
 import { TierPriceSummary } from '@/components/tier-price-summary';
-import { StudioProfileSection } from '@/components/gamification/studio-profile-section';
 import { PwaInstallGuideCard } from '@/components/pwa-install-prompt';
 import { ReferAFriendSection } from '@/components/refer-a-friend-section';
+import { DeleteAccountDialog } from '@/components/delete-account-dialog';
 import {
   buildLoginPath,
   isProCheckoutPriceKey,
 } from '@/lib/checkout-intent';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 
 function InkPoolBadge({ pool }: { pool: InkPool | 'unknown' }) {
   const label = pool === 'unknown' ? 'Mixed' : INK_POOL_LABELS[pool];
@@ -128,7 +118,6 @@ function UsagePageContent() {
   const [displayNameInput, setDisplayNameInput] = useState(user?.displayName || '');
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const checkoutAutoStartedRef = useRef(false);
 
   useEffect(() => {
@@ -635,7 +624,6 @@ function UsagePageContent() {
 
         <TabsContent value="settings" className="w-full max-w-3xl">
             <div className="space-y-10 text-[15px] md:text-base">
-                <StudioProfileSection />
                 <PwaInstallGuideCard />
                 {isCloudSyncActive && (
                 <Card className="border-primary/20">
@@ -731,55 +719,7 @@ function UsagePageContent() {
         </TabsContent>
       </Tabs>
 
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-          <AlertDialogContent className="bg-card border-2">
-              <AlertDialogHeader>
-                  <AlertDialogTitle className="font-headline text-2xl text-red-500 uppercase">Confirm Data Wipe?</AlertDialogTitle>
-                  <AlertDialogDescription asChild>
-                      <div className="text-sm font-code space-y-3 text-muted-foreground">
-                        <p>
-                          This will permanently delete your Bar 4 Bar account and all associated discographies. This action is absolute and cannot be undone.
-                        </p>
-                        {paidPro ? (
-                          <p className="text-amber-400/95 border border-amber-500/25 bg-amber-500/10 rounded-md px-3 py-2 normal-case tracking-normal leading-relaxed">
-                            Active Pro subscription detected — we&apos;ll cancel billing with your account. You will not be charged again after deletion completes.
-                          </p>
-                        ) : (
-                          <p className="normal-case tracking-normal leading-relaxed">
-                            If you have Studio Pro, your subscription is cancelled in Stripe when you confirm — not only when you delete vault data separately.
-                          </p>
-                        )}
-                      </div>
-                  </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                  <AlertDialogCancel className="font-bold">Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={async () => {
-                      if (!user || !auth.currentUser) return;
-                      setIsDeletingAccount(true);
-                      try {
-                          const token = await auth.currentUser.getIdToken();
-                          const res = await fetch('/api/account/eradicate', {
-                            method: 'POST',
-                            headers: { Authorization: `Bearer ${token}` },
-                          });
-                          const body = await res.json().catch(() => ({}));
-                          if (!res.ok) {
-                            throw new Error(body.error || `Deletion failed (${res.status})`);
-                          }
-                          await signOut(auth);
-                          router.push('/login');
-                      } catch (e: any) {
-                          toast({ variant: 'destructive', title: "Deletion Failed", description: e.message });
-                      } finally {
-                          setIsDeletingAccount(false);
-                      }
-                  }} className="bg-red-600 hover:bg-red-700 font-bold" disabled={isDeletingAccount}>
-                      {isDeletingAccount ? "Wiping Hardware..." : "Yes, Delete Account"}
-                  </AlertDialogAction>
-              </AlertDialogFooter>
-          </AlertDialogContent>
-      </AlertDialog>
+      <DeleteAccountDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen} />
       </div>
     </div>
   );

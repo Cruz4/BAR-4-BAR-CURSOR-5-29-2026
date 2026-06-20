@@ -25,29 +25,76 @@ type BeforeInstallPromptEvent = Event & {
 function InstallSteps({ platform }: { platform: MobileInstallPlatform }) {
   if (platform === 'ios') {
     return (
-      <ol className="list-decimal list-inside space-y-1.5 text-[11px] text-muted-foreground font-code leading-relaxed">
+      <ol className="list-decimal list-inside space-y-2 text-[11px] text-muted-foreground font-code leading-relaxed">
+        <li>
+          On your <strong className="text-foreground">iPhone</strong>, open <strong className="text-foreground">Safari</strong> — not Chrome, Instagram, or TikTok (install only works in Safari).
+        </li>
+        <li>
+          Go to <strong className="text-foreground">bar4bar.ink</strong> and sign in to your studio.
+        </li>
         <li>
           Tap <Share className="inline h-3.5 w-3.5 align-[-2px] text-primary" aria-hidden />{' '}
-          <strong className="text-foreground">Share</strong> in Safari&apos;s bottom bar
+          <strong className="text-foreground">Share</strong> in Safari&apos;s bottom toolbar (square with an arrow pointing up).
         </li>
         <li>
-          Scroll and choose <strong className="text-foreground">Add to Home Screen</strong>
+          Scroll the share sheet and tap <strong className="text-foreground">Add to Home Screen</strong> (you may need to tap <strong className="text-foreground">More</strong> first).
         </li>
-        <li>Tap <strong className="text-foreground">Add</strong> — open from your home screen for full-screen studio</li>
+        <li>
+          Tap <strong className="text-foreground">Add</strong> in the top right — launch Bar 4 Bar from your home screen icon for full-screen studio mode.
+        </li>
       </ol>
     );
   }
 
   return (
-    <ol className="list-decimal list-inside space-y-1.5 text-[11px] text-muted-foreground font-code leading-relaxed">
+    <ol className="list-decimal list-inside space-y-2 text-[11px] text-muted-foreground font-code leading-relaxed">
       <li>
-        Tap <strong className="text-foreground">Install app</strong> below if Chrome offers it
+        On your <strong className="text-foreground">Android phone</strong>, open <strong className="text-foreground">Chrome</strong> (Samsung Internet works too).
       </li>
       <li>
-        Or open the <strong className="text-foreground">⋮ menu</strong> → Install app / Add to Home screen
+        Go to <strong className="text-foreground">bar4bar.ink</strong> and sign in to your studio.
       </li>
-      <li>Launch from your home screen for the full-screen Bar 4 Bar experience</li>
+      <li>
+        If Chrome shows an <strong className="text-foreground">Install app</strong> banner at the bottom, tap it — or open the <strong className="text-foreground">⋮ menu</strong> (top right).
+      </li>
+      <li>
+        Choose <strong className="text-foreground">Install app</strong> or <strong className="text-foreground">Add to Home screen</strong>, then confirm.
+      </li>
+      <li>
+        Open Bar 4 Bar from your home screen or app drawer for the full-screen studio experience.
+      </li>
     </ol>
+  );
+}
+
+function PlatformInstallGuide({
+  platform,
+  title,
+}: {
+  platform: MobileInstallPlatform;
+  title: string;
+}) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-black/20 p-4 space-y-3">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-primary">{title}</p>
+      <InstallSteps platform={platform} />
+    </div>
+  );
+}
+
+function DesktopInstallGuides() {
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground font-code leading-relaxed">
+        Install Bar 4 Bar on your phone for a full-screen studio — no App Store or Play Store download. Use your{' '}
+        <strong className="text-foreground">actual phone</strong> (these steps do not work from a desktop browser).
+      </p>
+      <PlatformInstallGuide platform="ios" title="iPhone — Safari" />
+      <PlatformInstallGuide platform="android" title="Android — Chrome" />
+      <p className="text-[10px] text-muted-foreground/80 font-code leading-relaxed">
+        Already on your phone? Tap your profile avatar (top right) → <strong className="text-foreground">Add to Home Screen</strong> to open this guide as a quick reminder.
+      </p>
+    </div>
   );
 }
 
@@ -89,11 +136,16 @@ export function PwaInstallGuideCard() {
       </CardHeader>
       <CardContent className="space-y-4">
         {platform ? (
-          <InstallSteps platform={platform} />
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground font-code leading-relaxed">
+              {platform === 'ios'
+                ? 'You are on iPhone — follow these Safari steps on this device:'
+                : 'You are on Android — follow these Chrome steps on this device:'}
+            </p>
+            <InstallSteps platform={platform} />
+          </div>
         ) : (
-          <p className="text-sm text-muted-foreground font-code leading-relaxed">
-            Open <strong className="text-foreground">bar4bar.ink</strong> in Safari (iPhone) or Chrome (Android), then use the steps below from your profile menu → Add to Home Screen.
-          </p>
+          <DesktopInstallGuides />
         )}
         {isMobile && (
           <Button
@@ -101,7 +153,7 @@ export function PwaInstallGuideCard() {
             className="w-full h-11 font-bold uppercase text-[10px] tracking-widest gap-2"
             onClick={() => requestPwaInstallPrompt()}
           >
-            <Download className="h-4 w-4" /> Show Install Guide
+            <Download className="h-4 w-4" /> Open Floating Install Guide
           </Button>
         )}
       </CardContent>
@@ -161,6 +213,8 @@ export function PwaInstallPrompt() {
 
   useEffect(() => {
     const handler = (e: Event) => {
+      // Only defer on Android — desktop/iOS do not use the Chrome install prompt API.
+      if (getMobileInstallPlatform() !== 'android') return;
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
@@ -170,15 +224,14 @@ export function PwaInstallPrompt() {
 
   const handleAndroidInstall = async () => {
     if (!deferredPrompt) return;
+    const prompt = deferredPrompt;
+    setDeferredPrompt(null);
     try {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
+      const { outcome } = await prompt.prompt();
       if (outcome === 'accepted') markPwaInstalled();
       hide(outcome === 'accepted');
     } catch {
-      /* ignore */
-    } finally {
-      setDeferredPrompt(null);
+      hide(false);
     }
   };
 
@@ -201,7 +254,11 @@ export function PwaInstallPrompt() {
                 Add to Home Screen
               </p>
               <p className="text-[10px] text-muted-foreground mt-0.5">
-                {forced ? 'Install guide' : 'Full-screen studio on your phone'}
+                {forced
+                  ? platform === 'ios'
+                    ? 'Safari → Share → Add to Home Screen'
+                    : 'Chrome → Install app or ⋮ menu'
+                  : 'Full-screen studio on your phone'}
               </p>
             </div>
           </div>
