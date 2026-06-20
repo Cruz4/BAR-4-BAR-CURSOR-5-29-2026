@@ -6,15 +6,11 @@ import { useGamification } from '@/context/gamification-context';
 import { useAuth } from '@/hooks/use-auth';
 import { isProUser } from '@/lib/subscription';
 import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
-import {
-  LIFETIME_MILESTONES,
-  MONTHLY_CHALLENGES,
-  WEEKLY_CHALLENGES,
-} from '@/lib/gamification/challenges';
 import { rankFromXp, STUDIO_RANKS, xpProgressInRank } from '@/lib/gamification/ranks';
 import { AchievementBadgeCell } from '@/components/gamification/achievement-badge-cell';
+import { ChallengeGoalsPanel } from '@/components/gamification/challenge-goals-panel';
 import { StudioSharingSection } from '@/components/gamification/studio-profile-section';
-import { ChallengeSection, LeaderboardCompareCard } from '@/components/gamification/challenge-row';
+import { LeaderboardCompareCard } from '@/components/gamification/challenge-row';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,12 +19,8 @@ import { StudioLoader } from '@/components/studio-loader';
 import { cn } from '@/lib/utils';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
 import {
-  Calendar,
-  CalendarRange,
   ChevronLeft,
   Flame,
-  Infinity,
-  Music,
   Share2,
   Sparkles,
   Trophy,
@@ -229,55 +221,22 @@ export function StudioProgressBoard() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <ChallengeSection
-            title="Weekly goals"
-            subtitle="Resets every Monday (UTC)"
-            icon={<Calendar className="h-5 w-5 text-emerald-400" />}
-            challenges={WEEKLY_CHALLENGES}
-            summary={summary}
-            isPro={isPro}
-            accentClass="border-emerald-500/20"
-            comfortable
-          />
-          <ChallengeSection
-            title="Monthly challenges"
-            subtitle="Resets on the 1st of each month"
-            icon={<CalendarRange className="h-5 w-5 text-violet-400" />}
-            challenges={MONTHLY_CHALLENGES}
-            summary={summary}
-            isPro={isPro}
-            accentClass="border-violet-500/20"
-            comfortable
-          />
-          <ChallengeSection
-            title="Lifetime milestones"
-            subtitle="Grand achievements — no reset"
-            icon={<Infinity className="h-5 w-5 text-amber-400" />}
-            challenges={LIFETIME_MILESTONES}
-            summary={summary}
-            isPro={isPro}
-            accentClass="border-amber-500/20"
-            comfortable
-          />
-        </div>
-
         <section className="rounded-xl border border-violet-500/20 bg-card/40 overflow-hidden min-w-0">
-          <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3.5 border-b border-white/5 bg-black/20 min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 border-b border-white/5 bg-black/20 min-w-0">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <Sparkles className="h-5 w-5 text-violet-300 shrink-0" />
               <div className="min-w-0 overflow-hidden">
-                <h2 className="text-base font-headline font-bold uppercase tracking-tight">Studio trophies</h2>
-                <p className="text-[11px] text-muted-foreground leading-snug break-words">
-                  Hover any badge for the full foil card, unlock tips, and share/download · {achievementCount}/{ACHIEVEMENTS.length} earned
+                <h2 className="text-lg font-headline font-bold uppercase tracking-tight">Studio trophies</h2>
+                <p className="text-xs text-muted-foreground leading-snug break-words mt-0.5">
+                  Green border + Done = unlocked · dashed border + Locked = still earning · hover for details and share
                 </p>
               </div>
             </div>
-            <Badge variant="outline" className="text-[10px] shrink-0 max-w-full truncate">
-              Activation · Retention · Pro · Mastery
+            <Badge variant="outline" className="text-xs shrink-0 font-mono">
+              {achievementCount}/{ACHIEVEMENTS.length} earned
             </Badge>
           </div>
-          <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 min-w-0">
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 min-w-0">
             {badgeGrid.map((b) => (
               <AchievementBadgeCell
                 key={b.id}
@@ -285,28 +244,32 @@ export function StudioProgressBoard() {
                 unlocked={b.unlocked}
                 lockedPro={b.lockedPro}
                 unlockedAt={b.unlockedAt}
-                comfortable
               />
             ))}
           </div>
-          <div className="px-4 pb-4 flex flex-wrap gap-4 text-[11px] text-muted-foreground border-t border-white/5 pt-3.5 mx-4 mb-4">
+          <div className="px-4 pb-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground border-t border-white/5 pt-3.5 mx-4 mb-4">
             <span className="flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5 text-sky-400" /> Activation — first wins
+              <span className="h-2.5 w-2.5 rounded-sm border-2 border-emerald-500/70 bg-emerald-950/40" /> Unlocked
             </span>
             <span className="flex items-center gap-1.5">
-              <Flame className="h-3.5 w-3.5 text-amber-400" /> Retention — streaks & sessions
+              <span className="h-2.5 w-2.5 rounded-sm border border-dashed border-white/30 bg-black/40" /> Locked
             </span>
             <span className="flex items-center gap-1.5">
-              <Share2 className="h-3.5 w-3.5 text-fuchsia-400" /> Pro — vault &amp; sharing
+              <Zap className="h-3.5 w-3.5 text-sky-400" /> Activation
             </span>
             <span className="flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-violet-400" /> Mastery — deep studio runs
+              <Flame className="h-3.5 w-3.5 text-amber-400" /> Retention
             </span>
             <span className="flex items-center gap-1.5">
-              <Music className="h-3.5 w-3.5 text-primary" /> Ink rewards on select badges
+              <Share2 className="h-3.5 w-3.5 text-fuchsia-400" /> Pro
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-violet-400" /> Mastery
             </span>
           </div>
         </section>
+
+        <ChallengeGoalsPanel summary={summary} isPro={isPro} />
 
         <StudioSharingSection />
 

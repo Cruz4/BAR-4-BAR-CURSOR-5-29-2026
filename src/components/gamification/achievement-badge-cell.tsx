@@ -9,30 +9,51 @@ import {
   buildAchievementShareText,
   downloadAchievementCardPng,
 } from '@/lib/gamification/achievement-card-export';
-import { getAchievementCardTheme, formatUnlockDate } from '@/lib/gamification/achievement-card-theme';
+import { formatUnlockDate } from '@/lib/gamification/achievement-card-theme';
 import { achievementIcon } from '@/lib/gamification/achievement-icons';
 import { isAchievementStarter, type AchievementDef } from '@/lib/gamification/achievements';
 import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Copy, Download, Lock } from 'lucide-react';
+import { CheckCircle2, Copy, Download, Lock } from 'lucide-react';
 
 type AchievementBadgeCellProps = {
   achievement: AchievementDef;
   unlocked: boolean;
   lockedPro: boolean;
   unlockedAt?: string;
-  compact?: boolean;
-  comfortable?: boolean;
   className?: string;
 };
 
-const CATEGORY_PILL: Record<AchievementDef['category'], string> = {
-  activation: 'border-sky-500/35 bg-sky-500/12 text-sky-300',
-  retention: 'border-amber-500/35 bg-amber-500/12 text-amber-300',
-  conversion: 'border-fuchsia-500/35 bg-fuchsia-500/12 text-fuchsia-300',
-  mastery: 'border-violet-500/35 bg-violet-500/12 text-violet-300',
+const CATEGORY_CELL: Record<
+  AchievementDef['category'],
+  { border: string; bg: string; icon: string; label: string }
+> = {
+  activation: {
+    border: 'border-sky-500/50',
+    bg: 'bg-sky-950/40',
+    icon: 'text-sky-400',
+    label: 'border-sky-500/30 bg-sky-500/15 text-sky-300',
+  },
+  retention: {
+    border: 'border-amber-500/50',
+    bg: 'bg-amber-950/35',
+    icon: 'text-amber-400',
+    label: 'border-amber-500/30 bg-amber-500/15 text-amber-300',
+  },
+  conversion: {
+    border: 'border-fuchsia-500/50',
+    bg: 'bg-fuchsia-950/35',
+    icon: 'text-fuchsia-400',
+    label: 'border-fuchsia-500/30 bg-fuchsia-500/15 text-fuchsia-300',
+  },
+  mastery: {
+    border: 'border-violet-500/50',
+    bg: 'bg-violet-950/35',
+    icon: 'text-violet-400',
+    label: 'border-violet-500/30 bg-violet-500/15 text-violet-300',
+  },
 };
 
 export function AchievementBadgeCell({
@@ -40,8 +61,6 @@ export function AchievementBadgeCell({
   unlocked,
   lockedPro,
   unlockedAt,
-  compact = false,
-  comfortable = false,
   className,
 }: AchievementBadgeCellProps) {
   const { user } = useAuth();
@@ -51,18 +70,17 @@ export function AchievementBadgeCell({
   const [exporting, setExporting] = useState(false);
 
   const starter = isAchievementStarter(achievement.id);
-  const roomy = comfortable && !compact;
-  const theme = getAchievementCardTheme(achievement);
+  const cat = CATEGORY_CELL[achievement.category];
   const Icon = achievementIcon(achievement.icon);
   const displayName = user?.displayName || 'Studio Artist';
   const xp = summary.xp;
   const streak = summary.currentStreak;
 
   const statusLabel = unlocked
-    ? 'Unlocked'
+    ? `Unlocked ${formatUnlockDate(unlockedAt)}`
     : lockedPro
       ? 'Studio Pro required'
-      : 'Locked — keep writing';
+      : 'Not unlocked yet';
 
   const copySummary = async () => {
     const text = buildAchievementShareText(achievement, displayName, rankLabel, xp, streak, unlockedAt);
@@ -88,192 +106,150 @@ export function AchievementBadgeCell({
   };
 
   return (
-    <Tooltip delayDuration={250}>
+    <Tooltip delayDuration={200}>
       <TooltipTrigger asChild>
         <div
           className={cn(
-            'group relative rounded-lg border text-center cursor-help transition-all min-w-0 overflow-hidden',
-            roomy ? 'p-2.5' : compact ? 'p-1.5' : 'p-2',
+            'relative rounded-xl border-2 p-3 min-h-[108px] flex flex-col gap-2 cursor-help transition-all',
             unlocked
-              ? 'hover:scale-[1.02] hover:shadow-lg'
-              : 'opacity-75 hover:opacity-95',
+              ? cn('border-emerald-500/70 bg-emerald-950/30 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.15)]', cat.bg)
+              : lockedPro
+                ? 'border-dashed border-orange-500/40 bg-black/50 opacity-90'
+                : 'border-dashed border-white/25 bg-black/45 opacity-80',
             className
           )}
-          style={{
-            borderColor: unlocked ? `${theme.accent}44` : 'rgba(255,255,255,0.08)',
-            background: unlocked
-              ? `linear-gradient(145deg, ${theme.accentSoft} 0%, rgba(2,6,23,0.55) 100%)`
-              : 'rgba(255,255,255,0.03)',
-            boxShadow: unlocked ? `0 0 0 1px ${theme.accent}22` : undefined,
-          }}
         >
+          {unlocked && (
+            <div className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-0.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="text-[9px] font-bold uppercase text-emerald-300">Done</span>
+            </div>
+          )}
+
+          {!unlocked && (
+            <div className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-black/50 border border-white/15 px-1.5 py-0.5">
+              <Lock className="h-3 w-3 text-muted-foreground" />
+              <span className="text-[9px] font-bold uppercase text-muted-foreground">
+                {lockedPro ? 'Pro' : 'Locked'}
+              </span>
+            </div>
+          )}
+
           <div
-            className="absolute left-0 top-0 bottom-0 w-1 rounded-l-lg"
-            style={{ backgroundColor: theme.accent, opacity: unlocked ? 1 : 0.45 }}
-            aria-hidden
-          />
-          <div
-            className="pointer-events-none absolute -right-2 -top-3 text-lg font-headline font-bold opacity-[0.12] select-none"
-            style={{ color: theme.accent }}
-            aria-hidden
+            className={cn(
+              'flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2',
+              unlocked ? cat.border : 'border-white/20',
+              unlocked ? 'bg-black/30' : 'bg-black/50'
+            )}
           >
-            {theme.watermark}
+            <Icon
+              className={cn('h-5 w-5', unlocked ? cat.icon : 'text-muted-foreground/60')}
+              strokeWidth={2}
+            />
           </div>
 
-          <div className="relative space-y-1.5">
-            <div
-              className={cn(
-                'mx-auto flex items-center justify-center rounded-lg border',
-                compact ? 'h-7 w-7' : roomy ? 'h-10 w-10' : 'h-8 w-8'
-              )}
-              style={{
-                borderColor: `${theme.accent}44`,
-                backgroundColor: theme.accentSoft,
-                boxShadow: unlocked ? `0 0 16px ${theme.glow}` : undefined,
-              }}
-            >
-              {lockedPro && !unlocked ? (
-                <Lock
-                  className={cn(
-                    'text-muted-foreground',
-                    compact ? 'h-3.5 w-3.5' : roomy ? 'h-5 w-5' : 'h-4 w-4'
-                  )}
-                />
-              ) : (
-                <Icon
-                  className={cn(
-                    compact ? 'h-3.5 w-3.5' : roomy ? 'h-5 w-5' : 'h-4 w-4'
-                  )}
-                  style={{ color: unlocked ? theme.accent : 'rgba(255,255,255,0.45)' }}
-                />
-              )}
-            </div>
+          <p
+            className={cn(
+              'font-bold uppercase leading-snug pr-14',
+              unlocked ? 'text-sm text-white' : 'text-sm text-muted-foreground'
+            )}
+          >
+            {achievement.title}
+          </p>
 
-            <p
-              className={cn(
-                'font-bold uppercase leading-tight line-clamp-2 break-words hyphens-auto',
-                compact ? 'text-[8px]' : roomy ? 'text-xs' : 'text-[9px]',
-                unlocked ? 'text-white' : 'text-muted-foreground'
-              )}
-            >
-              {achievement.title}
-            </p>
-
-            <div className="flex flex-wrap items-center justify-center gap-1">
-              <Badge
-                variant="outline"
-                className={cn(
-                  'text-[6px] h-4 px-1 uppercase tracking-wider border',
-                  CATEGORY_PILL[achievement.category]
-                )}
-              >
-                {theme.categoryLabel}
-              </Badge>
-              {starter && !unlocked && !lockedPro && (
-                <Badge variant="secondary" className={cn(roomy ? 'text-[7px] h-4' : 'text-[6px] h-3.5')}>
-                  Starter
-                </Badge>
-              )}
-              {lockedPro && !unlocked && (
-                <Badge variant="outline" className={cn(roomy ? 'text-[7px] h-4' : 'text-[6px] h-3.5')}>
-                  Pro
-                </Badge>
-              )}
-              {unlocked && achievement.inkReward > 0 && (
-                <Badge
-                  variant="outline"
-                  className="text-[6px] h-4 border-orange-500/30 text-orange-300"
-                >
-                  +{achievement.inkReward}
-                </Badge>
-              )}
-            </div>
-          </div>
+          <Badge variant="outline" className={cn('text-[9px] h-5 w-fit uppercase', cat.label)}>
+            {achievement.category}
+          </Badge>
         </div>
       </TooltipTrigger>
 
       <TooltipContent
         side="top"
         align="center"
-        sideOffset={10}
-        collisionPadding={20}
-        className="p-0 border-0 bg-transparent shadow-none max-w-[min(calc(100vw-1.5rem),340px)] pointer-events-auto z-[2300]"
+        sideOffset={8}
+        collisionPadding={16}
+        className="max-w-[min(calc(100vw-2rem),22rem)] p-4 space-y-3 pointer-events-auto z-[2300]"
       >
-        <div className="rounded-xl border border-white/10 bg-[#0a1018]/98 backdrop-blur-md p-2.5 space-y-2.5 shadow-2xl">
-          <AchievementFoilCard
-            ref={cardRef}
-            achievement={achievement}
-            displayName={displayName}
-            rankLabel={rankLabel}
-            xp={xp}
-            streak={streak}
-            unlockedAt={unlockedAt}
-            locked={!unlocked}
-            lockedPro={lockedPro}
-            compact
-            showStats={unlocked}
-          />
-
-          <div className="px-1 space-y-2">
-            <div className="flex flex-wrap gap-1.5">
-              <Badge variant="outline" className={cn('text-[9px] h-5 capitalize border', CATEGORY_PILL[achievement.category])}>
-                {achievement.category}
-              </Badge>
-              {starter && (
-                <Badge variant="secondary" className="text-[9px] h-5">
-                  Starter
-                </Badge>
-              )}
-              {achievement.inkReward > 0 && (
-                <Badge variant="outline" className="text-[9px] h-5 border-orange-500/30 text-orange-300">
-                  +{achievement.inkReward} Ink
-                </Badge>
-              )}
-              <Badge variant="outline" className="text-[9px] h-5 border-white/15">
-                +{achievement.xpReward} XP
-              </Badge>
-            </div>
-
-            <p className="text-[10px] font-code">
-              {unlocked ? (
-                <span className="text-emerald-400">Unlocked {formatUnlockDate(unlockedAt)}</span>
-              ) : (
-                <span className="text-amber-200/80">{statusLabel}</span>
-              )}
-            </p>
-
-            {!unlocked && achievement.howTo && (
-              <p className="text-[10px] text-sky-200/90 leading-snug border-t border-white/10 pt-2">
-                <span className="font-bold uppercase text-[9px] text-sky-300/80">How: </span>
-                {achievement.howTo}
-              </p>
-            )}
-
-            {unlocked && (
-              <div className="flex gap-2 pt-1 border-t border-white/10">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 h-8 text-[9px] font-bold uppercase tracking-wider"
-                  onClick={() => void copySummary()}
-                >
-                  <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="flex-1 h-8 text-[9px] font-bold uppercase tracking-wider"
-                  disabled={exporting}
-                  onClick={() => void downloadPng()}
-                >
-                  <Download className="h-3.5 w-3.5 mr-1.5" />
-                  {exporting ? 'Saving…' : 'PNG'}
-                </Button>
-              </div>
-            )}
-          </div>
+        <div className="space-y-1">
+          <p className="text-sm font-headline font-bold uppercase leading-tight text-foreground">
+            {achievement.title}
+          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed">{achievement.description}</p>
         </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          <Badge variant="outline" className={cn('text-[10px] h-5 capitalize', cat.label)}>
+            {achievement.category}
+          </Badge>
+          {starter && (
+            <Badge variant="secondary" className="text-[10px] h-5">
+              Starter
+            </Badge>
+          )}
+          {achievement.inkReward > 0 && (
+            <Badge variant="outline" className="text-[10px] h-5 border-orange-500/35 text-orange-300">
+              +{achievement.inkReward} Ink
+            </Badge>
+          )}
+          <Badge variant="outline" className="text-[10px] h-5">
+            +{achievement.xpReward} XP
+          </Badge>
+        </div>
+
+        <p
+          className={cn(
+            'text-xs font-code font-bold',
+            unlocked ? 'text-emerald-400' : 'text-amber-200/90'
+          )}
+        >
+          {statusLabel}
+        </p>
+
+        {!unlocked && achievement.howTo && (
+          <p className="text-xs text-sky-100/90 leading-relaxed border-t border-white/10 pt-2">
+            <span className="font-bold uppercase text-[10px] text-sky-300 block mb-1">How to unlock</span>
+            {achievement.howTo}
+          </p>
+        )}
+
+        {unlocked && (
+          <div className="flex gap-2 pt-1 border-t border-white/10">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="flex-1 h-9 text-[10px] font-bold uppercase"
+              onClick={() => void copySummary()}
+            >
+              <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="flex-1 h-9 text-[10px] font-bold uppercase"
+              disabled={exporting}
+              onClick={() => void downloadPng()}
+            >
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+              {exporting ? 'Saving…' : 'PNG'}
+            </Button>
+          </div>
+        )}
+
+        {unlocked && (
+          <div className="fixed -left-[9999px] top-0 w-[320px] pointer-events-none" aria-hidden>
+            <AchievementFoilCard
+              ref={cardRef}
+              achievement={achievement}
+              displayName={displayName}
+              rankLabel={rankLabel}
+              xp={xp}
+              streak={streak}
+              unlockedAt={unlockedAt}
+              compact
+            />
+          </div>
+        )}
       </TooltipContent>
     </Tooltip>
   );
