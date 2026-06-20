@@ -22,9 +22,13 @@ const KIND_HEADLINE: Record<AdminAlertKind, string> = {
 
 function telegramConfigured(): boolean {
   if (process.env.TELEGRAM_ALERTS_ENABLED === 'false') return false;
-  return Boolean(
+  const ok = Boolean(
     process.env.TELEGRAM_BOT_TOKEN?.trim() && process.env.TELEGRAM_CHAT_ID?.trim()
   );
+  if (!ok) {
+    console.warn('[telegram-alerts] TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set');
+  }
+  return ok;
 }
 
 function formatTelegramText(input: TelegramAlertInput): string {

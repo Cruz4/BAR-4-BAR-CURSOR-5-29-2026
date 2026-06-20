@@ -43,7 +43,7 @@ function buildMessage(input: EnqueueInput): string {
 export async function enqueueAdminAlert(input: EnqueueInput): Promise<void> {
   const message = buildMessage(input);
 
-  void sendTelegramAdminAlert({
+  await sendTelegramAdminAlert({
     kind: input.kind,
     message,
     ref: input.ref,

@@ -6,9 +6,7 @@ import { getStoredMarketingRef, normalizeMarketingRef } from '@/lib/marketing-at
 const SENT_PREFIX = 'b4b_landing_hit_sent:';
 const ALERT_PATHS = new Set(['/', '/pricing']);
 
-function resolveRef(): string {
-  const params = new URLSearchParams(window.location.search);
-  const urlRef = normalizeMarketingRef(params.get('ref'));
+function resolveRef(urlRef: string | null): string {
   return urlRef || getStoredMarketingRef() || 'organic';
 }
 
@@ -19,20 +17,28 @@ export async function reportLandingHitIfNeeded(pathname: string): Promise<void> 
     const path = pathname || window.location.pathname || '/';
     if (!ALERT_PATHS.has(path)) return;
 
+    const params = new URLSearchParams(window.location.search);
+    const urlRef = normalizeMarketingRef(params.get('ref'));
     const user = auth.currentUser;
-    if (path === '/' && user) return;
+
+    // Logged-in vault home: skip organic noise; still alert on explicit ?ref= links.
+    if (path === '/' && user && !urlRef) return;
+    // Logged-in pricing is reported via analytics pricing_view.
     if (path === '/pricing' && user) return;
 
-    const ref = resolveRef();
+    const ref = resolveRef(urlRef);
     const dedupeKey = `${SENT_PREFIX}${ref}:${path}`;
     if (sessionStorage.getItem(dedupeKey)) return;
     sessionStorage.setItem(dedupeKey, '1');
 
-    await fetch('/api/analytics/landing-hit', {
+    const res = await fetch('/api/analytics/landing-hit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ref, path }),
     });
+    if (!res.ok) {
+      sessionStorage.removeItem(dedupeKey);
+    }
   } catch {
     // Non-blocking
   }
