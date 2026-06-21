@@ -534,6 +534,7 @@ export function AlbumList() {
   const [dataToImport, setDataToImport] = useState<any>(null);
   const [trackToDelete, setTrackToDelete] = useState<Track | null>(null);
   const [looseTracksMinimized, setLooseTracksMinimized] = useState(false);
+  const [downgradePickerDone, setDowngradePickerDone] = useState(false);
   const [vaultTourActive, setVaultTourActive] = useState(false);
   const [vaultTourStep, setVaultTourStep] = useState(0);
   const vaultTourAutoStartRef = useRef(false);
@@ -547,7 +548,17 @@ export function AlbumList() {
     vaultTourActive && VAULT_PAGE_TOUR_STEPS[vaultTourStep]?.id === 'vault-progress';
 
   const showDowngradePicker =
-    !authLoading && !loading && user != null && needsFreeEditableTrackPicker(user, albums);
+    !downgradePickerDone &&
+    !authLoading &&
+    !loading &&
+    user != null &&
+    needsFreeEditableTrackPicker(user, albums);
+
+  useEffect(() => {
+    if (user && isProOrTrial(user)) {
+      setDowngradePickerDone(false);
+    }
+  }, [user?.subscriptionStatus, user?.proFeaturePreviewExpiresAt, user?.trialStartedAt]);
 
   const unassignedTracks = getAlbumById('unassigned')?.tracks || [];
   const realAlbums = albums.filter(a => a.id !== 'unassigned');
@@ -1168,7 +1179,7 @@ export function AlbumList() {
           open={showDowngradePicker}
           albums={albums}
           userId={user.id}
-          onComplete={() => {}}
+          onComplete={() => setDowngradePickerDone(true)}
         />
       )}
 

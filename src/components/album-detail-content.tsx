@@ -670,6 +670,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const [strainMixerOpen, setStrainMixerOpen] = useState(false);
   const [createTrackOpen, setCreateTrackOpen] = useState(false);
   const [trackToDelete, setTrackToDelete] = useState<Track | null>(null);
+  const [downgradePickerDone, setDowngradePickerDone] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   
@@ -730,7 +731,13 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const isUnassignedVault = album?.id === 'unassigned';
   const realAlbums = albums.filter(a => a.id !== 'unassigned');
   const showDowngradePicker =
-    !loading && user != null && needsFreeEditableTrackPicker(user, albums);
+    !downgradePickerDone && !loading && user != null && needsFreeEditableTrackPicker(user, albums);
+
+  useEffect(() => {
+    if (user && isProOrTrial(user)) {
+      setDowngradePickerDone(false);
+    }
+  }, [user?.subscriptionStatus, user?.proFeaturePreviewExpiresAt, user?.trialStartedAt]);
 
   if (loading || !album) return <div className="flex h-screen items-center justify-center"><Loader className="animate-spin h-8 w-8 text-primary" /></div>;
 
@@ -1103,7 +1110,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
           open
           albums={albums}
           userId={user.id}
-          onComplete={() => {}}
+          onComplete={() => setDowngradePickerDone(true)}
         />
       )}
     </TooltipProvider>

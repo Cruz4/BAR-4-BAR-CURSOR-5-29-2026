@@ -66,11 +66,12 @@ export function DowngradeTrackPickerDialog({
         description: `You can edit ${FREE_TRACK_LIMIT} tracks at a time. Scrap one to rotate another in.`,
       });
       onComplete();
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Check your connection and try again.';
       toast({
         variant: 'destructive',
         title: 'Could not save selection',
-        description: 'Check your connection and try again.',
+        description: message,
       });
     } finally {
       setSaving(false);

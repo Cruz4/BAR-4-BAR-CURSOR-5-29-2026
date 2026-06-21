@@ -50,12 +50,20 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    function isOwnerFreeEditableUpdate(userId) {
+      let keys = request.resource.data.diff(resource.data).affectedKeys();
+      return isOwner(userId)
+        && (keys.hasOnly(['freeEditableTrackIds'])
+          || keys.hasOnly(['freeEditableTrackIds', 'freeEditableSelectionAt']));
+    }
+
     // User profile — owner can update except privileged billing fields
     match /users/{userId} {
       allow read: if isOwnerOrAdmin(userId);
       allow list: if isAdmin();
       allow create: if isOwner(userId) && isSafeUserBootstrap();
       allow update: if isAdmin()
+        || isOwnerFreeEditableUpdate(userId)
         || (isOwner(userId)
           && !('status' in resource.data)
           && request.resource.data.status == 'active'
