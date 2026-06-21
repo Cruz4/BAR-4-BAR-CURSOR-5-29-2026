@@ -26,6 +26,49 @@ function Barcode({ accent }: { accent: string }) {
   );
 }
 
+/** SVG pill — html2canvas mis-measures HTML text baselines in rounded badges. */
+function CategoryBadge({ label, accent, accentSoft }: { label: string; accent: string; accentSoft: string }) {
+  const text = label.toUpperCase();
+  const height = 24;
+  const width = Math.max(58, Math.ceil(text.length * 5.1 + 18));
+
+  return (
+    <svg
+      data-achievement-pill
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      className="shrink-0 self-start overflow-visible"
+      role="img"
+      aria-label={text}
+    >
+      <rect
+        x={0.5}
+        y={0.5}
+        width={width - 1}
+        height={height - 1}
+        rx={height / 2}
+        fill={accentSoft}
+        stroke={accent}
+        strokeOpacity={0.33}
+        strokeWidth={1}
+      />
+      <text
+        x={width / 2}
+        y={height / 2}
+        fill={accent}
+        fontSize={8}
+        fontWeight={700}
+        fontFamily="Inter, system-ui, sans-serif"
+        textAnchor="middle"
+        dominantBaseline="central"
+      >
+        {text}
+      </text>
+    </svg>
+  );
+}
+
 export type AchievementFoilCardProps = {
   achievement?: AchievementDef | null;
   displayName: string;
@@ -116,36 +159,7 @@ export const AchievementFoilCard = React.forwardRef<HTMLDivElement, AchievementF
                   {achievement ? (locked ? 'Locked Trophy' : 'Studio Milestone') : 'Studio Status'}
                 </p>
               </div>
-              <span
-                data-achievement-pill
-                className="shrink-0 self-start rounded-full border font-body font-bold uppercase"
-                style={{
-                  display: 'inline-grid',
-                  placeItems: 'center',
-                  boxSizing: 'border-box',
-                  height: 24,
-                  paddingLeft: 10,
-                  paddingRight: 10,
-                  letterSpacing: 0,
-                  textAlign: 'center',
-                  whiteSpace: 'nowrap',
-                  color: theme.accent,
-                  borderColor: `${theme.accent}55`,
-                  backgroundColor: theme.accentSoft,
-                }}
-              >
-                <span
-                  data-achievement-pill-text
-                  style={{
-                    display: 'block',
-                    fontSize: 8,
-                    lineHeight: 1,
-                    transform: 'translateY(0.5px)',
-                  }}
-                >
-                  {theme.categoryLabel}
-                </span>
-              </span>
+              <CategoryBadge label={theme.categoryLabel} accent={theme.accent} accentSoft={theme.accentSoft} />
             </div>
 
             <div className={cn('flex flex-col items-center text-center space-y-2 w-full', compact ? 'py-0' : 'py-1')}>
