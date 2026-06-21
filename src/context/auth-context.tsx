@@ -54,7 +54,7 @@ function userFromFirebase(
 ): User {
   return {
     id: firebaseUser.uid,
-    displayName: firebaseUser.displayName || data?.displayName || 'Anonymous',
+    displayName: data?.displayName || firebaseUser.displayName || 'Anonymous',
     email: firebaseUser.email || data?.email || '',
     createdAt: firebaseUser.metadata.creationTime || data?.createdAt || new Date().toISOString(),
     role: isMaster ? 'admin' : (data?.role || 'artist'),

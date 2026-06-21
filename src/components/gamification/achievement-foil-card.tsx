@@ -101,7 +101,7 @@ export const AchievementFoilCard = React.forwardRef<HTMLDivElement, AchievementF
 
         <div className="relative p-[3px] rounded-2xl" style={{ background: theme.foil }}>
           <div
-            className={cn('rounded-[13px] space-y-4', compact ? 'p-3.5' : 'p-5')}
+            className={cn('rounded-[13px] space-y-4', compact ? 'p-3.5 pb-4' : 'p-5 pb-6')}
             style={{ backgroundColor: 'rgba(2, 6, 23, 0.72)' }}
           >
             <div className="flex items-start justify-between gap-2">
@@ -147,10 +147,10 @@ export const AchievementFoilCard = React.forwardRef<HTMLDivElement, AchievementF
               <div className="space-y-1 max-w-[260px]">
                 <h3
                   className={cn(
-                    'font-headline font-bold uppercase tracking-tight leading-none text-white',
+                    'font-headline font-bold uppercase tracking-tight text-white',
                     compact ? 'text-lg' : 'text-2xl'
                   )}
-                  style={{ textShadow: `0 0 24px ${theme.glow}` }}
+                  style={{ textShadow: `0 0 24px ${theme.glow}`, lineHeight: 1.2 }}
                 >
                   {achievement?.title || 'Studio Artist'}
                 </h3>
@@ -169,36 +169,67 @@ export const AchievementFoilCard = React.forwardRef<HTMLDivElement, AchievementF
                 ].map((stat) => (
                   <div
                     key={stat.label}
-                    className="rounded-lg border px-1.5 py-1.5 text-center"
+                    className="flex min-h-[54px] flex-col items-center justify-center rounded-lg border px-2 py-2 text-center"
                     style={{ borderColor: `${theme.accent}33`, backgroundColor: theme.accentSoft }}
                   >
-                    <p className="text-[7px] uppercase tracking-widest text-white/45 font-bold">{stat.label}</p>
-                    <p className="text-[10px] font-bold text-white mt-0.5 truncate">{stat.value}</p>
+                    <p
+                      className="text-[7px] font-bold uppercase tracking-widest text-white/45"
+                      style={{ lineHeight: 1.2 }}
+                    >
+                      {stat.label}
+                    </p>
+                    <p
+                      className="mt-1 w-full text-center text-[10px] font-bold text-white font-body"
+                      style={{ lineHeight: 1.35, overflow: 'visible' }}
+                    >
+                      {stat.value}
+                    </p>
                   </div>
                 ))}
               </div>
             )}
 
-            <div className="border-t border-dashed pt-3 space-y-2" style={{ borderColor: `${theme.accent}44` }}>
+            <div className="border-t border-dashed pt-3 pb-1 space-y-2.5" style={{ borderColor: `${theme.accent}44` }}>
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-[8px] uppercase tracking-[0.25em] text-white/40 font-bold">Artist</p>
-                  <p className="text-xs font-headline font-bold uppercase text-white truncate">{displayName}</p>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="text-[8px] font-bold uppercase tracking-[0.25em] text-white/40"
+                    style={{ lineHeight: 1.2 }}
+                  >
+                    Artist
+                  </p>
+                  <p
+                    className="mt-1 text-xs font-bold text-white font-body break-words"
+                    style={{ lineHeight: 1.35, overflow: 'visible' }}
+                  >
+                    {displayName}
+                  </p>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-[8px] uppercase tracking-[0.25em] text-white/40 font-bold">
+                <div className="shrink-0 text-right">
+                  <p
+                    className="text-[8px] font-bold uppercase tracking-[0.25em] text-white/40"
+                    style={{ lineHeight: 1.2 }}
+                  >
                     {achievement && !locked ? 'Unlocked' : 'Status'}
                   </p>
-                  <p className="text-[10px] font-code text-white/75">
+                  <p
+                    className="mt-1 text-[10px] font-code text-white/75"
+                    style={{ lineHeight: 1.35, overflow: 'visible' }}
+                  >
                     {achievement && !locked ? formatUnlockDate(unlockedAt) : locked ? 'Not yet' : rankLabel}
                   </p>
                 </div>
               </div>
-              <div className="flex items-end justify-between gap-3">
+              <div className="flex items-end justify-between gap-3 pt-0.5">
                 <Barcode accent={theme.accent} />
-                <div className="text-right min-w-0">
-                  <p className="text-[8px] font-mono text-white/45">bar4bar.ink</p>
-                  <p className="text-[9px] font-mono font-bold truncate" style={{ color: theme.accent }}>
+                <div className="min-w-0 text-right">
+                  <p className="text-[8px] font-mono text-white/45" style={{ lineHeight: 1.3 }}>
+                    bar4bar.ink
+                  </p>
+                  <p
+                    className="mt-0.5 text-[9px] font-mono font-bold break-all"
+                    style={{ color: theme.accent, lineHeight: 1.35, overflow: 'visible' }}
+                  >
                     {serial}
                   </p>
                 </div>

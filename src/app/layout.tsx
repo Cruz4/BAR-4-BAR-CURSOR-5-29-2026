@@ -13,6 +13,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var k='b4b_chunk_reload_at';function r(){var l=sessionStorage.getItem(k),n=Date.now();if(l&&n-Number(l)<1e4)return;sessionStorage.setItem(k,String(n));location.reload()}window.addEventListener('unhandledrejection',function(e){var m=String((e.reason&&e.reason.message)||e.reason||'');if(m.indexOf('ChunkLoadError')>-1||m.indexOf('Loading chunk')>-1){e.preventDefault();r()}});window.addEventListener('error',function(e){var m=String(e.message||'');if(m.indexOf('ChunkLoadError')>-1||m.indexOf('Loading chunk')>-1)r()})})();`,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=Inter:wght@400;500;700&family=Architects+Daughter&display=swap" rel="stylesheet" />

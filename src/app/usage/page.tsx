@@ -85,6 +85,7 @@ import {
   buildLoginPath,
   isProCheckoutPriceKey,
 } from '@/lib/checkout-intent';
+import { patchGamificationSettings } from '@/lib/gamification-client';
 
 function InkPoolBadge({ pool }: { pool: InkPool | 'unknown' }) {
   const label = pool === 'unknown' ? 'Mixed' : INK_POOL_LABELS[pool];
@@ -169,6 +170,41 @@ function UsagePageContent() {
       router.replace('/usage?tab=buy-ink');
     }
   }, [searchParams, toast, router, user?.id, fulfillCheckoutReturn]);
+
+  useEffect(() => {
+    setDisplayNameInput(user?.displayName || '');
+  }, [user?.displayName]);
+
+  const handleSaveDisplayName = async () => {
+    const trimmed = displayNameInput.trim();
+    if (!trimmed) {
+      toast({ variant: 'destructive', title: 'Stage name required', description: 'Enter a display name before saving.' });
+      return;
+    }
+    if (!user?.id || !auth.currentUser) {
+      toast({ variant: 'destructive', title: 'Not signed in', description: 'Sign in again to update your profile.' });
+      return;
+    }
+    if (trimmed === (user.displayName || '').trim()) {
+      toast({ title: 'No changes', description: 'Your stage name is already set to that.' });
+      return;
+    }
+
+    setIsUpdatingProfile(true);
+    try {
+      await updateProfile(auth.currentUser, { displayName: trimmed });
+      await auth.currentUser.reload();
+      await updateDoc(doc(db, 'users', user.id), { displayName: trimmed });
+      await patchGamificationSettings({ displayName: trimmed });
+      setDisplayNameInput(trimmed);
+      toast({ title: 'Stage name saved', description: 'Your public studio identity has been updated.' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Could not save stage name';
+      toast({ variant: 'destructive', title: 'Save failed', description: message });
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
 
   useEffect(() => {
     const rawCheckout = searchParams.get('checkout');
@@ -652,8 +688,22 @@ function UsagePageContent() {
                       <div className="space-y-3">
                         <Label className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Stage Name</Label>
                         <div className="flex flex-col sm:flex-row gap-3">
-                          <Input value={displayNameInput} onChange={(e) => setDisplayNameInput(e.target.value)} className="font-code font-bold h-12 text-base" />
-                          <Button onClick={() => {}} className="h-12 px-8 font-bold text-sm shrink-0">Save</Button>
+                          <Input
+                            value={displayNameInput}
+                            onChange={(e) => setDisplayNameInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') void handleSaveDisplayName();
+                            }}
+                            className="font-code font-bold h-12 text-base"
+                            disabled={isUpdatingProfile}
+                          />
+                          <Button
+                            onClick={() => void handleSaveDisplayName()}
+                            disabled={isUpdatingProfile || !displayNameInput.trim()}
+                            className="h-12 px-8 font-bold text-sm shrink-0"
+                          >
+                            {isUpdatingProfile ? <Loader className="h-4 w-4 animate-spin" /> : 'Save'}
+                          </Button>
                         </div>
                       </div>
                     </CardContent>

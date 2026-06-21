@@ -237,7 +237,10 @@ export function AchievementBadgeCell({
         )}
 
         {unlocked && (
-          <div className="fixed -left-[9999px] top-0 w-[320px] pointer-events-none" aria-hidden>
+          <div
+            className="pointer-events-none fixed left-0 top-0 -z-50 w-[320px] opacity-0"
+            aria-hidden
+          >
             <AchievementFoilCard
               ref={cardRef}
               achievement={achievement}

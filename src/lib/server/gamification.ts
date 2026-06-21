@@ -559,6 +559,10 @@ export async function updateGamificationSettings(
   summary.updatedAt = new Date().toISOString();
   await db.doc(`users/${userId}/gamification/summary`).set(summary, { merge: true });
 
+  if (settings.displayName) {
+    await db.doc(`users/${userId}`).set({ displayName: settings.displayName }, { merge: true });
+  }
+
   const userSnap = await db.doc(`users/${userId}`).get();
   const displayName = settings.displayName || userSnap.data()?.displayName || 'Artist';
   await syncPublicProfile(userId, summary, displayName);
