@@ -118,17 +118,33 @@ export const AchievementFoilCard = React.forwardRef<HTMLDivElement, AchievementF
               </div>
               <span
                 data-achievement-pill
-                className="inline-flex shrink-0 items-center justify-center self-start rounded-full border px-2.5 py-1 text-[8px] font-bold uppercase"
+                className="shrink-0 self-start rounded-full border font-body font-bold uppercase"
                 style={{
+                  display: 'inline-grid',
+                  placeItems: 'center',
+                  boxSizing: 'border-box',
+                  height: 24,
+                  paddingLeft: 10,
+                  paddingRight: 10,
+                  letterSpacing: 0,
+                  textAlign: 'center',
+                  whiteSpace: 'nowrap',
                   color: theme.accent,
                   borderColor: `${theme.accent}55`,
                   backgroundColor: theme.accentSoft,
-                  lineHeight: 1,
-                  letterSpacing: '0.06em',
-                  minHeight: 20,
                 }}
               >
-                {theme.categoryLabel}
+                <span
+                  data-achievement-pill-text
+                  style={{
+                    display: 'block',
+                    fontSize: 8,
+                    lineHeight: 1,
+                    transform: 'translateY(0.5px)',
+                  }}
+                >
+                  {theme.categoryLabel}
+                </span>
               </span>
             </div>
 
@@ -237,12 +253,13 @@ export const AchievementFoilCard = React.forwardRef<HTMLDivElement, AchievementF
               </div>
               <div className="flex items-end justify-between gap-3 pt-0.5">
                 <Barcode accent={theme.accent} />
-                <div className="min-w-0 text-right">
+                <div className="shrink-0 text-right overflow-visible">
                   <p className="text-[8px] font-mono text-white/45" style={{ lineHeight: 1.3 }}>
                     bar4bar.ink
                   </p>
                   <p
-                    className="mt-0.5 text-[9px] font-mono font-bold break-all"
+                    data-achievement-serial
+                    className="mt-0.5 text-[8px] font-mono font-bold whitespace-nowrap"
                     style={{ color: theme.accent, lineHeight: 1.35, overflow: 'visible' }}
                   >
                     {serial}

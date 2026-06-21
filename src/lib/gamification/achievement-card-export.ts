@@ -29,13 +29,22 @@ function prepareAchievementCardClone(clonedEl: HTMLElement) {
 
   clonedEl.querySelectorAll('[data-achievement-pill]').forEach((node) => {
     const el = node as HTMLElement;
-    el.style.display = 'inline-flex';
-    el.style.alignItems = 'center';
-    el.style.justifyContent = 'center';
-    el.style.lineHeight = '1';
-    el.style.letterSpacing = '0.06em';
-    el.style.paddingTop = '4px';
-    el.style.paddingBottom = '4px';
+    el.style.display = 'inline-grid';
+    el.style.placeItems = 'center';
+    el.style.boxSizing = 'border-box';
+    el.style.height = '24px';
+    el.style.padding = '0 10px';
+    el.style.letterSpacing = '0';
+    el.style.textAlign = 'center';
+    el.style.fontFamily = 'Inter, system-ui, sans-serif';
+
+    const label = el.querySelector('[data-achievement-pill-text]') as HTMLElement | null;
+    if (label) {
+      label.style.display = 'block';
+      label.style.fontSize = '8px';
+      label.style.lineHeight = '1';
+      label.style.transform = 'translateY(1px)';
+    }
   });
 
   clonedEl.querySelectorAll('[data-achievement-desc]').forEach((node) => {
@@ -50,6 +59,7 @@ function prepareAchievementCardClone(clonedEl: HTMLElement) {
 
   clonedEl.querySelectorAll('p, h3, span').forEach((node) => {
     const el = node as HTMLElement;
+    if (el.dataset.achievementPill || el.dataset.achievementPillText) return;
     el.style.overflow = 'visible';
     el.style.textOverflow = 'clip';
     if (!el.dataset.achievementDesc) {
