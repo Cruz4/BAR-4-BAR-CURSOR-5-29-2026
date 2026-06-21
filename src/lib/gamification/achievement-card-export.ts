@@ -24,11 +24,37 @@ export function buildAchievementShareText(
 function prepareAchievementCardClone(clonedEl: HTMLElement) {
   clonedEl.style.overflow = 'visible';
 
+  const inner = clonedEl.querySelector('[data-achievement-inner]') as HTMLElement | null;
+  if (inner) inner.style.overflow = 'visible';
+
+  clonedEl.querySelectorAll('[data-achievement-pill]').forEach((node) => {
+    const el = node as HTMLElement;
+    el.style.display = 'inline-flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
+    el.style.lineHeight = '1';
+    el.style.letterSpacing = '0.06em';
+    el.style.paddingTop = '4px';
+    el.style.paddingBottom = '4px';
+  });
+
+  clonedEl.querySelectorAll('[data-achievement-desc]').forEach((node) => {
+    const el = node as HTMLElement;
+    el.style.overflow = 'visible';
+    el.style.whiteSpace = 'normal';
+    el.style.wordWrap = 'break-word';
+    el.style.width = '100%';
+    el.style.maxWidth = '100%';
+    el.style.lineHeight = '1.45';
+  });
+
   clonedEl.querySelectorAll('p, h3, span').forEach((node) => {
     const el = node as HTMLElement;
     el.style.overflow = 'visible';
     el.style.textOverflow = 'clip';
-    el.style.lineHeight = '1.35';
+    if (!el.dataset.achievementDesc) {
+      el.style.lineHeight = el.style.lineHeight || '1.35';
+    }
   });
 }
 
@@ -40,13 +66,17 @@ export async function downloadAchievementCardPng(
   await document.fonts.ready;
 
   const html2canvas = (await import('html2canvas')).default;
+  const width = cardEl.offsetWidth;
+  const height = Math.max(cardEl.scrollHeight, cardEl.offsetHeight);
   const canvas = await html2canvas(cardEl, {
     backgroundColor: achievementCardBackgroundColor(theme),
     scale: 2,
     useCORS: true,
     logging: false,
-    windowWidth: cardEl.scrollWidth,
-    windowHeight: cardEl.scrollHeight,
+    width,
+    height,
+    windowWidth: width,
+    windowHeight: height,
     scrollX: 0,
     scrollY: 0,
     onclone: (_doc, clonedEl) => {

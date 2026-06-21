@@ -65,8 +65,9 @@ export const AchievementFoilCard = React.forwardRef<HTMLDivElement, AchievementF
     return (
       <div
         ref={ref}
+        data-achievement-card-root
         className={cn(
-          'relative overflow-hidden rounded-2xl text-left shadow-[0_16px_48px_rgba(0,0,0,0.45)]',
+          'relative overflow-visible rounded-2xl text-left shadow-[0_16px_48px_rgba(0,0,0,0.45)]',
           dimmed && 'opacity-90',
           className
         )}
@@ -99,13 +100,14 @@ export const AchievementFoilCard = React.forwardRef<HTMLDivElement, AchievementF
           </div>
         )}
 
-        <div className="relative p-[3px] rounded-2xl" style={{ background: theme.foil }}>
+        <div className="relative overflow-hidden rounded-2xl p-[3px]" style={{ background: theme.foil }}>
           <div
+            data-achievement-inner
             className={cn('rounded-[13px] space-y-4', compact ? 'p-3.5 pb-4' : 'p-5 pb-6')}
             style={{ backgroundColor: 'rgba(2, 6, 23, 0.72)' }}
           >
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-[8px] font-bold uppercase tracking-[0.35em] text-white/50">Bar 4 Bar Studio</p>
                 <p
                   className="text-[10px] font-bold uppercase tracking-widest mt-1"
@@ -115,18 +117,22 @@ export const AchievementFoilCard = React.forwardRef<HTMLDivElement, AchievementF
                 </p>
               </div>
               <span
-                className="shrink-0 rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider border"
+                data-achievement-pill
+                className="inline-flex shrink-0 items-center justify-center self-start rounded-full border px-2.5 py-1 text-[8px] font-bold uppercase"
                 style={{
                   color: theme.accent,
                   borderColor: `${theme.accent}55`,
                   backgroundColor: theme.accentSoft,
+                  lineHeight: 1,
+                  letterSpacing: '0.06em',
+                  minHeight: 20,
                 }}
               >
                 {theme.categoryLabel}
               </span>
             </div>
 
-            <div className={cn('flex flex-col items-center text-center space-y-2', compact ? 'py-0' : 'py-1')}>
+            <div className={cn('flex flex-col items-center text-center space-y-2 w-full', compact ? 'py-0' : 'py-1')}>
               <div
                 className={cn(
                   'relative flex items-center justify-center rounded-full border-2',
@@ -144,7 +150,7 @@ export const AchievementFoilCard = React.forwardRef<HTMLDivElement, AchievementF
                   strokeWidth={1.75}
                 />
               </div>
-              <div className="space-y-1 max-w-[260px]">
+              <div className="w-full space-y-1 px-0.5">
                 <h3
                   className={cn(
                     'font-headline font-bold uppercase tracking-tight text-white',
@@ -154,7 +160,16 @@ export const AchievementFoilCard = React.forwardRef<HTMLDivElement, AchievementF
                 >
                   {achievement?.title || 'Studio Artist'}
                 </h3>
-                <p className={cn('text-white/65 font-code leading-snug', compact ? 'text-[10px]' : 'text-[11px]')}>
+                <p
+                  data-achievement-desc
+                  className={cn('w-full text-center text-white/65 font-code', compact ? 'text-[9px]' : 'text-[11px]')}
+                  style={{
+                    lineHeight: 1.45,
+                    whiteSpace: 'normal',
+                    overflow: 'visible',
+                    wordBreak: 'break-word',
+                  }}
+                >
                   {achievement?.description || 'Building rank, streak, and studio milestones.'}
                 </p>
               </div>

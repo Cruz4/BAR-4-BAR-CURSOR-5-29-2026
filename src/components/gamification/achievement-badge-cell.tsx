@@ -238,7 +238,7 @@ export function AchievementBadgeCell({
 
         {unlocked && (
           <div
-            className="pointer-events-none fixed left-0 top-0 -z-50 w-[320px] opacity-0"
+            className="pointer-events-none fixed left-0 top-0 -z-50 w-[360px] opacity-0"
             aria-hidden
           >
             <AchievementFoilCard
