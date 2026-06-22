@@ -1,0 +1,1089 @@
+[
+  {
+    "id": "album-neon-after-hours",
+    "ownerId": "import-placeholder",
+    "title": "NEON AFTER HOURS",
+    "theme": "City lights, late sessions, and bars that refuse to sleep.",
+    "message": "The booth is the only place the clock stops.",
+    "thingsToSay": [
+      "Glass on the console",
+      "Taxi steam at 3am",
+      "Voicemail full of demos"
+    ],
+    "createdAt": "2026-06-01T10:00:00.000Z",
+    "direction": {
+      "enabled": true,
+      "setting_world": "A downtown studio with pink neon leaking through the blinds.",
+      "emotion_core": "Restless focus after the world clocks out.",
+      "trigger_moment": "The last train rattles past the block.",
+      "message_truth": "Discipline is love with a metronome.",
+      "tone_palette": "Magenta, asphalt grey, and cigarette amber."
+    },
+    "tracks": [
+      {
+        "id": "track-neon-01",
+        "albumId": "album-neon-after-hours",
+        "ownerId": "import-placeholder",
+        "title": "BOOTH LIGHT",
+        "status": "complete",
+        "createdAt": "2026-06-01T12:00:00.000Z",
+        "vibe": {
+          "enabled": true,
+          "genre": "Boom Bap",
+          "tempoBPM": 88,
+          "feeling": [
+            "gritty",
+            "focused"
+          ],
+          "instrumentation": "Drums, bass, sparse keys."
+        },
+        "intentRefs": [],
+        "intentsEnabled": false,
+        "sections": [
+          {
+            "id": "sec-neon-01-v",
+            "type": "verse",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "Pink light on the faders, coffee going cold again",
+                "accepted": true,
+                "syllables": 9,
+                "rhymeKey": "again",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "I write the same four bars until they sound like friends",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "friends",
+                "lineSource": "written"
+              },
+              {
+                "idx": 3,
+                "text": "The city hums a bassline through the vent and wall",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "wall",
+                "lineSource": "written"
+              },
+              {
+                "idx": 4,
+                "text": "I treat the silence like a sample I can stall",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "stall",
+                "lineSource": "written"
+              }
+            ]
+          },
+          {
+            "id": "sec-neon-01-h",
+            "type": "hook",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "After hours, after doubt, after all the noise",
+                "accepted": true,
+                "syllables": 8,
+                "rhymeKey": "noise",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "I find the one true line and treat it like a choice",
+                "accepted": true,
+                "syllables": 12,
+                "rhymeKey": "choice",
+                "lineSource": "written"
+              }
+            ]
+          }
+        ],
+        "rhymeHighlightingEnabled": true
+      },
+      {
+        "id": "track-neon-02",
+        "albumId": "album-neon-after-hours",
+        "ownerId": "import-placeholder",
+        "title": "TAXI STEAM",
+        "status": "in_progress",
+        "createdAt": "2026-06-01T12:00:00.000Z",
+        "vibe": {
+          "enabled": true,
+          "genre": "Lo-Fi Hip-Hop",
+          "tempoBPM": 78,
+          "feeling": [
+            "focused",
+            "nocturnal"
+          ],
+          "instrumentation": "Drums, bass, sparse keys."
+        },
+        "intentRefs": [],
+        "intentsEnabled": false,
+        "sections": [
+          {
+            "id": "sec-neon-02-v",
+            "type": "verse",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "Yellow cab steam on the glass like a cheap effect",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "effect",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "I pocket every hook I almost wrote but never kept",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "kept",
+                "lineSource": "written"
+              },
+              {
+                "idx": 3,
+                "text": "The meter runs on minutes I cannot get back",
+                "accepted": true,
+                "syllables": 9,
+                "rhymeKey": "back",
+                "lineSource": "written"
+              },
+              {
+                "idx": 4,
+                "text": "So I turn the pain to cadence on a worn-out track",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "track",
+                "lineSource": "written"
+              }
+            ]
+          }
+        ],
+        "rhymeHighlightingEnabled": true
+      },
+      {
+        "id": "track-neon-03",
+        "albumId": "album-neon-after-hours",
+        "ownerId": "import-placeholder",
+        "title": "VOICEMAIL DEMO",
+        "status": "in_progress",
+        "createdAt": "2026-06-01T12:00:00.000Z",
+        "vibe": {
+          "enabled": true,
+          "genre": "Hip-Hop",
+          "tempoBPM": 92,
+          "feeling": [
+            "focused",
+            "nocturnal"
+          ],
+          "instrumentation": "Drums, bass, sparse keys."
+        },
+        "intentRefs": [],
+        "intentsEnabled": false,
+        "sections": [
+          {
+            "id": "sec-neon-03-v",
+            "type": "verse",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "My inbox full of maybes and a beat I never finished",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "finished",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "I loop the same eight bars until the doubt diminished",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "diminished",
+                "lineSource": "written"
+              },
+              {
+                "idx": 3,
+                "text": "The neon flickers once and paints the wall electric blue",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "blue",
+                "lineSource": "written"
+              },
+              {
+                "idx": 4,
+                "text": "I press record and tell the truth I never meant to",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "to",
+                "lineSource": "written"
+              }
+            ]
+          }
+        ],
+        "rhymeHighlightingEnabled": true
+      },
+      {
+        "id": "track-neon-04",
+        "albumId": "album-neon-after-hours",
+        "ownerId": "import-placeholder",
+        "title": "LAST TRAIN",
+        "status": "in_progress",
+        "createdAt": "2026-06-01T12:00:00.000Z",
+        "vibe": {
+          "enabled": true,
+          "genre": "Hip-Hop",
+          "tempoBPM": 92,
+          "feeling": [
+            "focused",
+            "nocturnal"
+          ],
+          "instrumentation": "Drums, bass, sparse keys."
+        },
+        "intentRefs": [],
+        "intentsEnabled": false,
+        "sections": [
+          {
+            "id": "sec-neon-04-v",
+            "type": "verse",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "Steel wheels scream goodbye through the tunnel under town",
+                "accepted": true,
+                "syllables": 9,
+                "rhymeKey": "town",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "I pack my notes in pockets till the morning comes around",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "around",
+                "lineSource": "written"
+              },
+              {
+                "idx": 3,
+                "text": "The booth still smells like incense and ambition mixed with fear",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "fear",
+                "lineSource": "written"
+              },
+              {
+                "idx": 4,
+                "text": "I leave one verse unfinished just to prove I was here",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "here",
+                "lineSource": "written"
+              }
+            ]
+          }
+        ],
+        "rhymeHighlightingEnabled": true
+      }
+    ]
+  },
+  {
+    "id": "album-iron-district",
+    "ownerId": "import-placeholder",
+    "title": "IRON DISTRICT",
+    "theme": "Industrial grit, warehouse shows, and rusted ambition.",
+    "message": "Pressure makes the bars honest.",
+    "thingsToSay": [
+      "Chain-link skyline",
+      "Welding sparks at midnight"
+    ],
+    "createdAt": "2026-06-02T10:00:00.000Z",
+    "direction": {
+      "enabled": true,
+      "setting_world": "Abandoned factory floors converted to underground stages.",
+      "emotion_core": "Aggressive clarity under fluorescent hum.",
+      "trigger_moment": "The generator coughs alive for one more set.",
+      "message_truth": "Scars are just stories with better percussion.",
+      "tone_palette": "Rust orange, oil black, and steel blue."
+    },
+    "tracks": [
+      {
+        "id": "track-iron-01",
+        "albumId": "album-iron-district",
+        "ownerId": "import-placeholder",
+        "title": "WELD SPARK",
+        "status": "complete",
+        "createdAt": "2026-06-01T12:00:00.000Z",
+        "vibe": {
+          "enabled": true,
+          "genre": "Industrial Hip-Hop",
+          "tempoBPM": 96,
+          "feeling": [
+            "aggressive",
+            "raw"
+          ],
+          "instrumentation": "Drums, bass, sparse keys."
+        },
+        "intentRefs": [],
+        "intentsEnabled": false,
+        "sections": [
+          {
+            "id": "sec-iron-01-v",
+            "type": "verse",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "Sparks rain down like confetti on the concrete floor",
+                "accepted": true,
+                "syllables": 9,
+                "rhymeKey": "floor",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "I spit bars heavy enough to bend a steel door",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "door",
+                "lineSource": "written"
+              },
+              {
+                "idx": 3,
+                "text": "The crowd is small but hungry, every head a mic check",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "check",
+                "lineSource": "written"
+              },
+              {
+                "idx": 4,
+                "text": "I bleed the blueprint through a verse they won't forget",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "forget",
+                "lineSource": "written"
+              }
+            ]
+          }
+        ],
+        "rhymeHighlightingEnabled": true
+      },
+      {
+        "id": "track-iron-02",
+        "albumId": "album-iron-district",
+        "ownerId": "import-placeholder",
+        "title": "CHAIN LINK",
+        "status": "in_progress",
+        "createdAt": "2026-06-01T12:00:00.000Z",
+        "vibe": {
+          "enabled": true,
+          "genre": "Hip-Hop",
+          "tempoBPM": 92,
+          "feeling": [
+            "focused",
+            "nocturnal"
+          ],
+          "instrumentation": "Drums, bass, sparse keys."
+        },
+        "intentRefs": [],
+        "intentsEnabled": false,
+        "sections": [
+          {
+            "id": "sec-iron-02-v",
+            "type": "verse",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "Chain-link horizon cutting sky into a grid",
+                "accepted": true,
+                "syllables": 7,
+                "rhymeKey": "grid",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "I learned to rhyme in alleys where the brave kids hid",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "hid",
+                "lineSource": "written"
+              },
+              {
+                "idx": 3,
+                "text": "The bass hits like a piston in a chest of doubt",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "doubt",
+                "lineSource": "written"
+              },
+              {
+                "idx": 4,
+                "text": "I write until the factory lights finally go out",
+                "accepted": true,
+                "syllables": 9,
+                "rhymeKey": "out",
+                "lineSource": "written"
+              }
+            ]
+          }
+        ],
+        "rhymeHighlightingEnabled": true
+      },
+      {
+        "id": "track-iron-03",
+        "albumId": "album-iron-district",
+        "ownerId": "import-placeholder",
+        "title": "GENERATOR",
+        "status": "in_progress",
+        "createdAt": "2026-06-01T12:00:00.000Z",
+        "vibe": {
+          "enabled": true,
+          "genre": "Hip-Hop",
+          "tempoBPM": 92,
+          "feeling": [
+            "focused",
+            "nocturnal"
+          ],
+          "instrumentation": "Drums, bass, sparse keys."
+        },
+        "intentRefs": [],
+        "intentsEnabled": false,
+        "sections": [
+          {
+            "id": "sec-iron-03-v",
+            "type": "verse",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "Generator coughs and coughs but never lets us down",
+                "accepted": true,
+                "syllables": 9,
+                "rhymeKey": "down",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "We run the set on faith and one extension cord in town",
+                "accepted": true,
+                "syllables": 12,
+                "rhymeKey": "town",
+                "lineSource": "written"
+              },
+              {
+                "idx": 3,
+                "text": "The reverb lives inside a tank we found abandoned",
+                "accepted": true,
+                "syllables": 9,
+                "rhymeKey": "abandoned",
+                "lineSource": "written"
+              },
+              {
+                "idx": 4,
+                "text": "I leave my tag in lyrics sharper than a brand did",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "brand did",
+                "lineSource": "written"
+              }
+            ]
+          }
+        ],
+        "rhymeHighlightingEnabled": true
+      },
+      {
+        "id": "track-iron-04",
+        "albumId": "album-iron-district",
+        "ownerId": "import-placeholder",
+        "title": "RUST HYMN",
+        "status": "in_progress",
+        "createdAt": "2026-06-01T12:00:00.000Z",
+        "vibe": {
+          "enabled": true,
+          "genre": "Hip-Hop",
+          "tempoBPM": 92,
+          "feeling": [
+            "focused",
+            "nocturnal"
+          ],
+          "instrumentation": "Drums, bass, sparse keys."
+        },
+        "intentRefs": [],
+        "intentsEnabled": false,
+        "sections": [
+          {
+            "id": "sec-iron-04-v",
+            "type": "verse",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "Rust eats the railing but it cannot eat my will",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "will",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "I stack syllables like girders on a windowsill",
+                "accepted": true,
+                "syllables": 8,
+                "rhymeKey": "sill",
+                "lineSource": "written"
+              },
+              {
+                "idx": 3,
+                "text": "The district sleeps in oil stains and broken neon signs",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "signs",
+                "lineSource": "written"
+              },
+              {
+                "idx": 4,
+                "text": "I carve my name in rhythm between the power lines",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "lines",
+                "lineSource": "written"
+              }
+            ]
+          }
+        ],
+        "rhymeHighlightingEnabled": true
+      }
+    ]
+  },
+  {
+    "id": "album-coastal-static",
+    "ownerId": "import-placeholder",
+    "title": "COASTAL STATIC",
+    "theme": "Salt air, tape hiss, and memories washed in reverb.",
+    "message": "Some truths only arrive at low tide.",
+    "thingsToSay": [
+      "Boardwalk static",
+      "Fog horn at dawn"
+    ],
+    "createdAt": "2026-06-03T10:00:00.000Z",
+    "direction": {
+      "enabled": true,
+      "setting_world": "A cliffside shack studio above a crashing shoreline.",
+      "emotion_core": "Melancholy washed clean by wind.",
+      "trigger_moment": "The first gull cry before sunrise.",
+      "message_truth": "Let go or be dragged by your own tide.",
+      "tone_palette": "Sea foam, driftwood grey, and horizon gold."
+    },
+    "tracks": [
+      {
+        "id": "track-coast-01",
+        "albumId": "album-coastal-static",
+        "ownerId": "import-placeholder",
+        "title": "LOW TIDE",
+        "status": "complete",
+        "createdAt": "2026-06-01T12:00:00.000Z",
+        "vibe": {
+          "enabled": true,
+          "genre": "Coastal Folk Rap",
+          "tempoBPM": 72,
+          "feeling": [
+            "reflective",
+            "windy"
+          ],
+          "instrumentation": "Drums, bass, sparse keys."
+        },
+        "intentRefs": [],
+        "intentsEnabled": false,
+        "sections": [
+          {
+            "id": "sec-coast-01-v",
+            "type": "verse",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "Low tide exposes secrets that the high tide hides",
+                "accepted": true,
+                "syllables": 9,
+                "rhymeKey": "hides",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "I walk the wet sand writing bars the ocean tries",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "tries",
+                "lineSource": "written"
+              },
+              {
+                "idx": 3,
+                "text": "To wash away before I memorize the line",
+                "accepted": true,
+                "syllables": 8,
+                "rhymeKey": "line",
+                "lineSource": "written"
+              },
+              {
+                "idx": 4,
+                "text": "I keep the sharpest ones and let the rest resign",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "resign",
+                "lineSource": "written"
+              }
+            ]
+          }
+        ],
+        "rhymeHighlightingEnabled": true
+      },
+      {
+        "id": "track-coast-02",
+        "albumId": "album-coastal-static",
+        "ownerId": "import-placeholder",
+        "title": "FOG HORN",
+        "status": "in_progress",
+        "createdAt": "2026-06-01T12:00:00.000Z",
+        "vibe": {
+          "enabled": true,
+          "genre": "Hip-Hop",
+          "tempoBPM": 92,
+          "feeling": [
+            "focused",
+            "nocturnal"
+          ],
+          "instrumentation": "Drums, bass, sparse keys."
+        },
+        "intentRefs": [],
+        "intentsEnabled": false,
+        "sections": [
+          {
+            "id": "sec-coast-02-v",
+            "type": "verse",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "Fog horn moans a warning only locals understand",
+                "accepted": true,
+                "syllables": 8,
+                "rhymeKey": "understand",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "I tape the hiss and call it percussion in my hand",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "hand",
+                "lineSource": "written"
+              },
+              {
+                "idx": 3,
+                "text": "The cliff edge teaches balance or a brutal fall",
+                "accepted": true,
+                "syllables": 9,
+                "rhymeKey": "fall",
+                "lineSource": "written"
+              },
+              {
+                "idx": 4,
+                "text": "I write with one foot grounded, one foot free of all",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "all",
+                "lineSource": "written"
+              }
+            ]
+          }
+        ],
+        "rhymeHighlightingEnabled": true
+      },
+      {
+        "id": "track-coast-03",
+        "albumId": "album-coastal-static",
+        "ownerId": "import-placeholder",
+        "title": "BOARDWALK",
+        "status": "in_progress",
+        "createdAt": "2026-06-01T12:00:00.000Z",
+        "vibe": {
+          "enabled": true,
+          "genre": "Hip-Hop",
+          "tempoBPM": 92,
+          "feeling": [
+            "focused",
+            "nocturnal"
+          ],
+          "instrumentation": "Drums, bass, sparse keys."
+        },
+        "intentRefs": [],
+        "intentsEnabled": false,
+        "sections": [
+          {
+            "id": "sec-coast-03-v",
+            "type": "verse",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "Boardwalk closed for season but the static still remains",
+                "accepted": true,
+                "syllables": 9,
+                "rhymeKey": "remains",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "I sample childhood summers mixed with present-day pains",
+                "accepted": true,
+                "syllables": 8,
+                "rhymeKey": "pains",
+                "lineSource": "written"
+              },
+              {
+                "idx": 3,
+                "text": "The arcade lights are ghosts behind a metal gate",
+                "accepted": true,
+                "syllables": 9,
+                "rhymeKey": "gate",
+                "lineSource": "written"
+              },
+              {
+                "idx": 4,
+                "text": "I rhyme my way back home before it gets too late",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "late",
+                "lineSource": "written"
+              }
+            ]
+          }
+        ],
+        "rhymeHighlightingEnabled": true
+      },
+      {
+        "id": "track-coast-04",
+        "albumId": "album-coastal-static",
+        "ownerId": "import-placeholder",
+        "title": "SALT LINE",
+        "status": "in_progress",
+        "createdAt": "2026-06-01T12:00:00.000Z",
+        "vibe": {
+          "enabled": true,
+          "genre": "Hip-Hop",
+          "tempoBPM": 92,
+          "feeling": [
+            "focused",
+            "nocturnal"
+          ],
+          "instrumentation": "Drums, bass, sparse keys."
+        },
+        "intentRefs": [],
+        "intentsEnabled": false,
+        "sections": [
+          {
+            "id": "sec-coast-04-v",
+            "type": "verse",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "Salt line on my lips from shouting at the sea",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "sea",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "I treat each wave collapse like someone answering me",
+                "accepted": true,
+                "syllables": 9,
+                "rhymeKey": "me",
+                "lineSource": "written"
+              },
+              {
+                "idx": 3,
+                "text": "The horizon draws a bar I never quite can cross",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "cross",
+                "lineSource": "written"
+              },
+              {
+                "idx": 4,
+                "text": "I write until the sun decides to take its loss",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "loss",
+                "lineSource": "written"
+              }
+            ]
+          }
+        ],
+        "rhymeHighlightingEnabled": true
+      }
+    ]
+  },
+  {
+    "id": "album-velvet-circuit",
+    "ownerId": "import-placeholder",
+    "title": "VELVET CIRCUIT",
+    "theme": "Late-night soul circuits, analog warmth, and velvet confidence.",
+    "message": "Smooth is not soft — it is controlled fire.",
+    "thingsToSay": [
+      "Tube amp glow",
+      "Silk over sub-bass"
+    ],
+    "createdAt": "2026-06-04T10:00:00.000Z",
+    "direction": {
+      "enabled": true,
+      "setting_world": "A velvet-draped listening room wired to vintage amps.",
+      "emotion_core": "Controlled heat beneath polished delivery.",
+      "trigger_moment": "The needle drops on side A of a forgotten LP.",
+      "message_truth": "Elegance is discipline wearing perfume.",
+      "tone_palette": "Burgundy, brass gold, and midnight violet."
+    },
+    "tracks": [
+      {
+        "id": "track-velvet-01",
+        "albumId": "album-velvet-circuit",
+        "ownerId": "import-placeholder",
+        "title": "TUBE GLOW",
+        "status": "complete",
+        "createdAt": "2026-06-01T12:00:00.000Z",
+        "vibe": {
+          "enabled": true,
+          "genre": "Soul Hip-Hop",
+          "tempoBPM": 84,
+          "feeling": [
+            "smooth",
+            "confident"
+          ],
+          "instrumentation": "Drums, bass, sparse keys."
+        },
+        "intentRefs": [],
+        "intentsEnabled": false,
+        "sections": [
+          {
+            "id": "sec-velvet-01-v",
+            "type": "verse",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "Tube glow paints the corner where the good ideas wait",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "wait",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "I pour a measured cadence like a sommelier of fate",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "fate",
+                "lineSource": "written"
+              },
+              {
+                "idx": 3,
+                "text": "The sub-bass sits beneath a silk-lined vocal tone",
+                "accepted": true,
+                "syllables": 8,
+                "rhymeKey": "tone",
+                "lineSource": "written"
+              },
+              {
+                "idx": 4,
+                "text": "I make the complicated sound like it was always known",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "known",
+                "lineSource": "written"
+              }
+            ]
+          }
+        ],
+        "rhymeHighlightingEnabled": true
+      },
+      {
+        "id": "track-velvet-02",
+        "albumId": "album-velvet-circuit",
+        "ownerId": "import-placeholder",
+        "title": "SIDE A",
+        "status": "in_progress",
+        "createdAt": "2026-06-01T12:00:00.000Z",
+        "vibe": {
+          "enabled": true,
+          "genre": "Hip-Hop",
+          "tempoBPM": 92,
+          "feeling": [
+            "focused",
+            "nocturnal"
+          ],
+          "instrumentation": "Drums, bass, sparse keys."
+        },
+        "intentRefs": [],
+        "intentsEnabled": false,
+        "sections": [
+          {
+            "id": "sec-velvet-02-v",
+            "type": "verse",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "Side A starts with crackle like a door to somewhere old",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "old",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "I sample grace from records that were never sold",
+                "accepted": true,
+                "syllables": 9,
+                "rhymeKey": "sold",
+                "lineSource": "written"
+              },
+              {
+                "idx": 3,
+                "text": "The circuit hums a blessing through the copper and the cloth",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "cloth",
+                "lineSource": "written"
+              },
+              {
+                "idx": 4,
+                "text": "I write a verse that fits the room like tailored broth",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "broth",
+                "lineSource": "written"
+              }
+            ]
+          }
+        ],
+        "rhymeHighlightingEnabled": true
+      },
+      {
+        "id": "track-velvet-03",
+        "albumId": "album-velvet-circuit",
+        "ownerId": "import-placeholder",
+        "title": "COPPER LINE",
+        "status": "in_progress",
+        "createdAt": "2026-06-01T12:00:00.000Z",
+        "vibe": {
+          "enabled": true,
+          "genre": "Hip-Hop",
+          "tempoBPM": 92,
+          "feeling": [
+            "focused",
+            "nocturnal"
+          ],
+          "instrumentation": "Drums, bass, sparse keys."
+        },
+        "intentRefs": [],
+        "intentsEnabled": false,
+        "sections": [
+          {
+            "id": "sec-velvet-03-v",
+            "type": "verse",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "Copper line from heart to mic, no signal lost in transit",
+                "accepted": true,
+                "syllables": 11,
+                "rhymeKey": "transit",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "I polish every metaphor until the listener can grab it",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "grab it",
+                "lineSource": "written"
+              },
+              {
+                "idx": 3,
+                "text": "The velvet deadens echo but it amplifies intent",
+                "accepted": true,
+                "syllables": 8,
+                "rhymeKey": "intent",
+                "lineSource": "written"
+              },
+              {
+                "idx": 4,
+                "text": "I leave the session knowing exactly what I meant",
+                "accepted": true,
+                "syllables": 9,
+                "rhymeKey": "meant",
+                "lineSource": "written"
+              }
+            ]
+          }
+        ],
+        "rhymeHighlightingEnabled": true
+      },
+      {
+        "id": "track-velvet-04",
+        "albumId": "album-velvet-circuit",
+        "ownerId": "import-placeholder",
+        "title": "MIDNIGHT VIOLET",
+        "status": "in_progress",
+        "createdAt": "2026-06-01T12:00:00.000Z",
+        "vibe": {
+          "enabled": true,
+          "genre": "Hip-Hop",
+          "tempoBPM": 92,
+          "feeling": [
+            "focused",
+            "nocturnal"
+          ],
+          "instrumentation": "Drums, bass, sparse keys."
+        },
+        "intentRefs": [],
+        "intentsEnabled": false,
+        "sections": [
+          {
+            "id": "sec-velvet-04-v",
+            "type": "verse",
+            "bars": [
+              {
+                "idx": 1,
+                "text": "Midnight violet drapes the booth in quiet royalty",
+                "accepted": true,
+                "syllables": 8,
+                "rhymeKey": "royalty",
+                "lineSource": "written"
+              },
+              {
+                "idx": 2,
+                "text": "I stack internal rhymes with unapologetic loyalty",
+                "accepted": true,
+                "syllables": 7,
+                "rhymeKey": "loyalty",
+                "lineSource": "written"
+              },
+              {
+                "idx": 3,
+                "text": "The circuit closes when the last bar lands precise",
+                "accepted": true,
+                "syllables": 9,
+                "rhymeKey": "precise",
+                "lineSource": "written"
+              },
+              {
+                "idx": 4,
+                "text": "I dim the lights and let the mix become advice",
+                "accepted": true,
+                "syllables": 10,
+                "rhymeKey": "advice",
+                "lineSource": "written"
+              }
+            ]
+          }
+        ],
+        "rhymeHighlightingEnabled": true
+      }
+    ]
+  }
+]

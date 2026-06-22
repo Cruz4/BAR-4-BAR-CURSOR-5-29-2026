@@ -34,6 +34,11 @@ const NO_AUTO_SCROLL_STEP_IDS = new Set(['vault-progress']);
 /** Tab/panel switches need extra time before the target is visible on phone. */
 const PANEL_SWITCH_STEP_IDS = new Set(['generation', 'dna', 'dna-drop', 'save']);
 
+function panelSwitchMeasureDelays(stepId: string): number[] {
+  if (stepId === 'dna-drop') return [360, 560, 820, 1080];
+  return [260, 480, 720];
+}
+
 function useCompactViewport() {
   const [compact, setCompact] = useState(false);
 
@@ -318,7 +323,9 @@ export function StudioGuidedTour({
           htmlEl.style.scrollMarginBottom = `${placement === 'bottom' ? bottomCardReserve : MOBILE_BOTTOM_CHROME + 16}px`;
           scrollTargetIntoMobileSafeBand(htmlEl, placement);
         } else {
-          scrollTargetVisible(htmlEl, topReserve, bottomReserve, placement === 'top');
+          const preferEndScroll =
+            step!.id === 'dna-drop' || (step!.id === 'save' ? false : placement === 'top');
+          scrollTargetVisible(htmlEl, topReserve, bottomReserve, preferEndScroll);
         }
         hasAutoScrolledRef.current = true;
       } else if (shouldScroll) {
@@ -359,7 +366,7 @@ export function StudioGuidedTour({
               hasAutoScrolledRef.current = false;
               captureRect(el, true);
               measureTimersRef.current.push(window.setTimeout(() => captureRect(el, false), 420));
-            }, 280)
+            }, step!.id === 'dna-drop' ? 360 : 280)
           );
         }
         return;
@@ -392,10 +399,10 @@ export function StudioGuidedTour({
             window.setTimeout(() => {
               hasAutoScrolledRef.current = false;
               runCapture(true);
-            }, 260)
+            }, step!.id === 'dna-drop' ? 360 : 260)
           );
         }
-        const delays = panelSwitch ? [480, 720] : [180, 420];
+        const delays = panelSwitch ? panelSwitchMeasureDelays(step!.id) : [180, 420];
         delays.forEach((ms) => {
           measureTimersRef.current.push(window.setTimeout(() => runCapture(false), ms));
         });

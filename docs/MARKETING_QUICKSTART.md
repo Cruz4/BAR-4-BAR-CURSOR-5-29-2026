@@ -3,6 +3,7 @@
 **Live URL:** https://bar4bar.ink  
 **Full playbook:** [90-DAY-WEB-REVENUE-PLAN.md](./90-DAY-WEB-REVENUE-PLAN.md)  
 **TikTok style:** [TIKTOK_STRATEGY.md](./TIKTOK_STRATEGY.md)  
+**Explainer video (demo vault + 90s script):** [EXPLAINER_VIDEO_RECORDING_GUIDE.md](./EXPLAINER_VIDEO_RECORDING_GUIDE.md)  
 **App stores (later):** [APP_STORE_ROADMAP.md](./APP_STORE_ROADMAP.md)
 
 ---

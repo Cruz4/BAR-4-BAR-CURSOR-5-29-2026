@@ -18,6 +18,7 @@ import { useUsage } from '@/context/usage-context';
 import { useInkCosts } from '@/hooks/use-ink-costs';
 import { useTouchInkRunner } from '@/hooks/use-touch-ink-runner';
 import { HighlightedText } from './highlighted-text';
+import { FreestyleMicLevelVisualizer } from './freestyle-mic-level';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { withAiAuth } from '@/lib/ai-client';
@@ -55,7 +56,7 @@ interface FreestylePadProps {
 }
 
 /** Complete segment length (stop/start with requestData flush) */
-const STUDIO_SEGMENT_MS = 6500;
+const STUDIO_SEGMENT_MS = 2800;
 const STUDIO_RECORDER_RESTART_MS = 120;
 const STUDIO_AUDIO_BITS_PER_SECOND = 96_000;
 const MIN_CHUNK_BYTES = 1000;
@@ -68,6 +69,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   const [isStudioTranscribing, setIsStudioTranscribing] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [interimTranscript, setInterimTranscript] = useState('');
+  const [recordingElapsedSec, setRecordingElapsedSec] = useState(0);
   const [rhymeGroups, setRhymeGroups] = useState<{ words: string[] }[]>([]);
   const recognitionRef = useRef<InstanceType<BrowserSpeechRecognitionCtor> | null>(null);
   const listeningRef = useRef(false);
@@ -81,14 +83,16 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   const segmentTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const studioChunkBusyRef = useRef(false);
   const studioChunkQueueRef = useRef<
-    Array<{ blob: Blob; mimeType: string; priorTranscriptTail: string }>
+    Array<{ blob: Blob; mimeType: string; priorTranscriptTail: string; sessionId: number }>
   >([]);
+  const recordingSessionRef = useRef(0);
   const transcriptRef = useRef('');
   const networkRetryRef = useRef(false);
   const studioFailNotifiedRef = useRef(false);
   const silentChunkStreakRef = useRef(0);
   const browserSpeechRestartRef = useRef(0);
   const [pickupMode, setPickupMode] = useState<'studio' | 'browser'>('studio');
+  const [micStream, setMicStream] = useState<MediaStream | null>(null);
   const { refundInk } = useUsage();
   const { getEffectiveCost, tooltip } = useInkCosts();
   const { runWithInk } = useTouchInkRunner();
@@ -112,18 +116,24 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   const releaseMediaStream = useCallback(() => {
     clearSegmentTimer();
     segmentChunksRef.current = [];
-    studioChunkQueueRef.current = [];
     mediaRecorderRef.current = null;
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     mediaStreamRef.current = null;
+    setMicStream(null);
   }, [clearSegmentTimer]);
+
+  const discardStaleStudioWork = useCallback(() => {
+    recordingSessionRef.current += 1;
+    studioChunkQueueRef.current = [];
+    studioChunkBusyRef.current = false;
+    setIsStudioTranscribing(false);
+  }, []);
 
   const stopListening = useCallback(() => {
     manualStopRef.current = true;
     listeningRef.current = false;
     setIsListening(false);
-    setIsStudioTranscribing(false);
-    setInterimTranscript('');
+    setRecordingElapsedSec(0);
     recordingStartTimeRef.current = null;
 
     if (recognitionRef.current) {
@@ -137,6 +147,9 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
 
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try {
+        if (typeof mediaRecorderRef.current.requestData === 'function') {
+          mediaRecorderRef.current.requestData();
+        }
         mediaRecorderRef.current.stop();
       } catch {
         /* already stopped */
@@ -144,6 +157,11 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
     }
 
     releaseMediaStream();
+
+    const stillProcessing =
+      studioChunkBusyRef.current || studioChunkQueueRef.current.length > 0;
+    setInterimTranscript(stillProcessing ? 'Transcribing your last clip…' : '');
+    setIsStudioTranscribing(stillProcessing);
   }, [releaseMediaStream]);
 
   const enforceSessionLimit = useCallback(() => {
@@ -176,7 +194,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
     const next = studioChunkQueueRef.current.shift();
     if (!next) return;
 
-    const { blob, mimeType, priorTranscriptTail } = next;
+    const { blob, mimeType, priorTranscriptTail, sessionId } = next;
     if (blob.size < MIN_CHUNK_BYTES || blob.size > MAX_TRANSCRIBE_BLOB_BYTES) {
       void drainStudioChunkQueue();
       return;
@@ -186,6 +204,9 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
     setIsStudioTranscribing(true);
     try {
       const speechLevel = await measureAudioSpeechLevel(blob);
+      if (sessionId !== recordingSessionRef.current) {
+        return;
+      }
       if (!hasDetectableSpeech(speechLevel, blob.size)) {
         silentChunkStreakRef.current += 1;
         if (silentChunkStreakRef.current === 3 && !studioFailNotifiedRef.current) {
@@ -211,6 +232,9 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
           styleProfileSummary: transcriptionContext.styleProfileSummary || undefined,
         })
       );
+      if (sessionId !== recordingSessionRef.current) {
+        return;
+      }
       appendTranscript(result.transcript);
     } catch (err) {
       console.warn('[FreestylePad] studio transcription chunk failed', err);
@@ -230,20 +254,27 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       }
     } finally {
       studioChunkBusyRef.current = false;
+      const queuePending = studioChunkQueueRef.current.length > 0;
       if (listeningRef.current) {
-        setInterimTranscript('Listening…');
+        setInterimTranscript('Listening… keep rapping');
+      } else if (queuePending || studioChunkBusyRef.current) {
+        setInterimTranscript('Transcribing your last clip…');
+      } else {
+        setInterimTranscript('');
       }
-      setIsStudioTranscribing(studioChunkQueueRef.current.length > 0);
+      setIsStudioTranscribing(queuePending);
       void drainStudioChunkQueue();
     }
   }, [appendTranscript, toast, transcriptionContext]);
 
   const enqueueStudioChunk = useCallback(
     (blob: Blob, mimeType: string) => {
+      const sessionId = recordingSessionRef.current;
       studioChunkQueueRef.current.push({
         blob,
         mimeType,
         priorTranscriptTail: transcriptRef.current.slice(-FREESTYLE_PRIOR_TAIL_CHARS).trim(),
+        sessionId,
       });
       void drainStudioChunkQueue();
     },
@@ -292,6 +323,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
           audio: getFreestyleAudioConstraints(),
         }));
       mediaStreamRef.current = stream;
+      setMicStream(stream);
       studioMimeRef.current = mimeType;
 
       const recorder = new MediaRecorder(stream, {
@@ -361,7 +393,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       listeningRef.current = true;
       setPickupMode('studio');
       setIsListening(true);
-      setInterimTranscript('Listening…');
+      setInterimTranscript('Recording… first words in ~3 sec');
       recordingStartTimeRef.current = Date.now();
     } catch {
       toast({
@@ -392,6 +424,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
           audio: getFreestyleAudioConstraints(),
         });
       }
+      setMicStream(mediaStreamRef.current);
     } catch {
       toast({
         variant: 'destructive',
@@ -511,6 +544,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       silentChunkStreakRef.current = 0;
       browserSpeechRestartRef.current = 0;
       manualStopRef.current = false;
+      discardStaleStudioWork();
 
       // Start mic after ink/emoji paint — awaiting getUserMedia here stalled the float sequence
       void (async () => {
@@ -535,18 +569,29 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
         return;
       }
     },
-    [runWithInk, getEffectiveCost, startBrowserListening, startStudioListening]
+    [runWithInk, getEffectiveCost, startBrowserListening, startStudioListening, discardStaleStudioWork]
   );
+
+  useEffect(() => {
+    if (!isListening) return;
+    const started = recordingStartTimeRef.current ?? Date.now();
+    const tick = () => setRecordingElapsedSec(Math.max(0, Math.floor((Date.now() - started) / 1000)));
+    tick();
+    const id = window.setInterval(tick, 500);
+    return () => window.clearInterval(id);
+  }, [isListening]);
 
   useEffect(() => {
     if (!open) {
       stopListening();
+      discardStaleStudioWork();
       setTranscript('');
       transcriptRef.current = '';
       setInterimTranscript('');
+      setRecordingElapsedSec(0);
       networkRetryRef.current = false;
     }
-  }, [open, stopListening]);
+  }, [open, stopListening, discardStaleStudioWork]);
 
   const lines = transcript.split('. ').filter((l) => l.trim().length > 0);
   const liveLine = interimTranscript.trim();
@@ -562,13 +607,18 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
           <DialogDescription className="font-code text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
             {pickupMode === 'browser'
               ? 'Live speech pickup (experimental)'
-              : 'Studio mic · uses track vibe & style; words every ~6s'}{' '}
+              : 'Studio mic · words appear every ~3s while you rap'}{' '}
             {!isPro && '· (30s demo limit)'}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-grow rounded-xl border-2 border-dashed border-white/10 bg-black/20 p-8 flex flex-col gap-6 overflow-hidden relative">
-          <div className="flex-grow overflow-y-auto studio-scrollbar space-y-4">
+        <div className="flex-grow rounded-xl border-2 border-dashed border-white/10 bg-black/20 p-4 md:p-8 flex flex-col gap-4 md:gap-6 overflow-hidden relative">
+          {isListening && (
+            <div className="shrink-0 rounded-xl border border-primary/25 bg-black/50 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+              <FreestyleMicLevelVisualizer stream={micStream} active={isListening} />
+            </div>
+          )}
+          <div className="flex-grow overflow-y-auto studio-scrollbar space-y-4 min-h-0">
             {lines.map((line, index) => (
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
@@ -580,12 +630,32 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
               </motion.div>
             ))}
             {liveLine && (
-              <div className="font-code font-bold text-xl md:text-2xl tracking-tight text-primary/60 italic animate-pulse">
+              <div className="font-code font-bold text-xl md:text-2xl tracking-tight text-primary/80 italic animate-pulse border-l-2 border-primary/40 pl-4">
                 {liveLine}
-                {isStudioTranscribing ? '' : '...'}
+                {isListening && !liveLine.includes('Transcribing') ? '…' : ''}
               </div>
             )}
-            {!transcript && !liveLine && (
+            {isListening && !transcript && (
+              <div className="rounded-xl border border-primary/25 bg-primary/5 px-5 py-4 text-center space-y-2">
+                <p className="font-headline text-lg font-bold text-primary uppercase tracking-wide">
+                  Recording {recordingElapsedSec > 0 ? `${recordingElapsedSec}s` : '…'}
+                </p>
+                <p className="font-code text-[11px] uppercase tracking-widest text-muted-foreground">
+                  {pickupMode === 'studio'
+                    ? 'Watch the bars above — when they light up green, the mic hears you. Words land in ~3s.'
+                    : 'Speak clearly — words appear as you rap'}
+                </p>
+              </div>
+            )}
+            {!isListening && isStudioTranscribing && !transcript && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-center">
+                <p className="font-code text-sm uppercase tracking-widest text-amber-200/90 flex items-center justify-center gap-2">
+                  <Loader className="h-4 w-4 animate-spin shrink-0" />
+                  Transcribing your clip…
+                </p>
+              </div>
+            )}
+            {!transcript && !liveLine && !isListening && !isStudioTranscribing && (
               <div className="h-full flex flex-col items-center justify-center text-center gap-6 opacity-30">
                 <Volume2 className="h-16 w-16 text-muted-foreground animate-bounce" />
                 <p className="font-code text-sm uppercase tracking-[0.3em]">Tap the mic to catch the flow</p>
@@ -647,6 +717,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
             <Button
               variant="ghost"
               onClick={() => {
+                discardStaleStudioWork();
                 setTranscript('');
                 transcriptRef.current = '';
                 setInterimTranscript('');
@@ -660,7 +731,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
                 const final = (transcript + ' ' + interimTranscript).trim();
                 if (final) onAddFreestyle(final);
               }}
-              disabled={(!transcript && !interimTranscript) || isListening}
+              disabled={(!transcript && !interimTranscript) || isListening || isStudioTranscribing}
               className="h-11 sm:h-12 px-4 sm:px-8 font-bold shadow-xl gap-1.5 sm:gap-2 text-[10px] sm:text-sm uppercase tracking-widest flex-1 sm:flex-none min-w-0"
             >
               <PlusCircle className="h-4 w-4 shrink-0" /> <span className="truncate">Add to Editor</span>

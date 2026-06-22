@@ -140,7 +140,6 @@ import {
 } from '@/lib/workstation-path';
 import { dispatchStudioPrivacyIntroEligible, queueStudioPrivacyIntro } from '@/lib/studio-privacy-intro';
 import { StudioGuidedTour } from '@/components/studio-guided-tour';
-import { QuestProgress } from '@/components/gamification/quest-progress';
 import { postGamificationEvent } from '@/lib/gamification-client';
 import { claimMilestone } from '@/lib/milestones-client';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
@@ -969,8 +968,9 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                       />
                     )}
                     <Button variant="secondary" size="sm" className="w-full min-w-0 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => setExportDialogOpen(true)}><FileDown className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">{isPro ? 'Export Track' : 'Preview Export'}</span></Button>
+                    <div data-tour="dna-drop" className="w-full min-w-0">
                     {isPro ? (
-                      <Button variant="secondary" size="sm" data-tour="dna-drop" className="w-full min-w-0 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-[9px] font-bold h-9 uppercase justify-start leading-none pl-2 pr-2.5 overflow-visible" onClick={() => setShareDialogOpen(true)}><Globe className="mr-2 h-4 w-4 shrink-0" /> <span className="flex items-center justify-between gap-2 min-w-0 flex-1 overflow-visible"><span className="truncate min-w-0">DNA Drop (Share)</span><DnaDropLiveIndicator shareId={track.shareId} variant="compact" /></span></Button>
+                      <Button variant="secondary" size="sm" className="w-full min-w-0 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-[9px] font-bold h-9 uppercase justify-start leading-none pl-2 pr-2.5 overflow-visible" onClick={() => setShareDialogOpen(true)}><Globe className="mr-2 h-4 w-4 shrink-0" /> <span className="flex items-center justify-between gap-2 min-w-0 flex-1 overflow-visible"><span className="truncate min-w-0">DNA Drop (Share)</span><DnaDropLiveIndicator shareId={track.shareId} variant="compact" /></span></Button>
                     ) : (
                       <LockedProFeatureButton
                         feature="DNA Drop"
@@ -983,6 +983,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                         className="w-full min-w-0 text-[9px] font-bold h-9 uppercase px-2 bg-primary/10 text-primary border border-primary/20"
                       />
                     )}
+                    </div>
                   </div>
               </CardContent>
           </Card>
@@ -2869,6 +2870,17 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     } else if (step.id === 'generation' || step.id === 'save' || step.id === 'dna-drop') {
       setLeftCollapsed(false);
       setMobilePanelTab('workstation');
+      if (step.id === 'dna-drop' || step.id === 'save') {
+        window.setTimeout(() => {
+          const selector =
+            step.id === 'save' ? '[data-tour="track-status"]' : '[data-tour="dna-drop"]';
+          document.querySelector(selector)?.scrollIntoView({
+            block: 'center',
+            inline: 'nearest',
+            behavior: 'auto',
+          });
+        }, 360);
+      }
     } else if (['paste', 'sheet', 'bar-workstation', 'rhyme-pulse'].includes(step.id)) {
       setMobilePanelTab('lyrics');
       if (step.id === 'bar-workstation') setIsMinimized(false);
@@ -3306,16 +3318,6 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         onComplete={handleTourComplete}
         onBeforeStep={handleTourBeforeStep}
       />
-      {tourActive && (
-        <div className="fixed bottom-24 max-md:hidden left-4 z-[5999] w-64 pointer-events-auto">
-          <QuestProgress
-            tourStepIndex={tourStep}
-            tourActive={tourActive}
-            tourCompleted={Boolean(user?.lyricsTutorialCompletedAt)}
-            hideOnMobile
-          />
-        </div>
-      )}
     </div>
   );
 }

@@ -23,6 +23,7 @@
     "marketing:capture": "node scripts/capture-marketing-screenshots.mjs",
     "marketing:gifs": "node scripts/capture-marketing-gifs.mjs",
     "marketing:assets": "npm run marketing:capture && npm run marketing:gifs",
+    "sample-data:marketing-vault": "node scripts/generate-marketing-demo-vault.mjs",
     "deploy:live": "npm run stripe:webhook-sync-test && npm run stripe:webhook-env && npm run build && npm run firebase:deploy && npm run firebase:deploy:rules",
     "stripe:create-pricing-v2": "node scripts/stripe-create-pricing-v2.mjs",
     "stripe:create-yearly-444": "node scripts/stripe-create-yearly-444.mjs",
