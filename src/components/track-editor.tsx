@@ -1138,7 +1138,7 @@ function NeuralStripItem({ text, active, color, onClick }: { text: string, activ
 
 // --- Center Panel Component ---
 
-function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false }: any) {
+function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, rhymePulseArmed = false, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false }: any) {
   const [fontSize, setFontSize] = useState<'xs' | 'sm' | 'md' | 'lg'>('md');
   const lyricsViewportRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -1451,19 +1451,26 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                   side="bottom"
                   content={<p className="text-[10px] font-bold">{tooltip('findRhymes')}</p>}
                 >
-                  <div data-tour="rhyme-pulse" className="inline-flex shrink-0">
+                  <div data-tour="rhyme-pulse" className="relative inline-flex shrink-0">
                   <Button 
                       variant="outline" 
                       size="sm" 
                       className={cn(
                           "rounded-full h-8 w-8 p-0 transition-all active:scale-90 bg-background border-primary/40 hover:bg-primary/5 group shadow-lg flex items-center justify-center shrink-0",
-                          isRhymeLoading && "animate-pulse"
+                          isRhymeLoading && "animate-pulse",
+                          rhymePulseArmed && "border-primary ring-2 ring-primary/60 ring-offset-2 ring-offset-background scale-95"
                       )}
                       onClick={handleRunRhymeScan}
                       disabled={trackLocked || isRhymeLoading}
+                      aria-label={rhymePulseArmed ? 'Tap again to confirm Rhyme Pulse' : 'Rhyme Pulse'}
                   >
                       {isRhymeLoading ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <Target className="h-4 w-4 text-primary" />}
                   </Button>
+                  {rhymePulseArmed && (
+                    <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap font-code text-[7px] font-bold uppercase tracking-widest text-primary pointer-events-none">
+                      Tap again
+                    </span>
+                  )}
                   </div>
                 </Hint>
                 <Badge variant="outline" className="h-4 px-1.5 text-[7px] font-bold border-primary/20 text-primary shrink-0 leading-none whitespace-nowrap">{getEffectiveCost('findRhymes')} INK</Badge>
@@ -2620,7 +2627,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const { setGenerating } = useUIState();
   const { refundInk, addUsageLog, registerAiContext } = useUsage();
   const { getEffectiveCost } = useInkCosts();
-  const { runWithInk } = useTouchInkRunner();
+  const { runWithInk, isArmed } = useTouchInkRunner();
   const searchParams = useSearchParams();
 
   const isMobileLayout = useIsMobile();
@@ -3240,7 +3247,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       )}
       <div className="flex flex-1 min-h-0 overflow-hidden w-full">
       <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={isMobileLayout && mobilePanelTab === 'workstation'} trackLocked={editsLocked} tierLocked={tierLocked} completeLocked={completeLocked} workstationAttention={workstationAttention} tourMobilePad={tourActive && isMobileLayout} />
-      <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleDismissGenerationOptions={handleDismissGenerationOptions} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={isMobileLayout && mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} />
+      <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} rhymePulseArmed={isArmed('findRhymes')} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleDismissGenerationOptions={handleDismissGenerationOptions} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={isMobileLayout && mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} />
       <RightPanel 
         track={track} 
         album={album} 
