@@ -967,7 +967,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                         className="w-full min-w-0 text-[9px] font-bold h-9 uppercase px-2 bg-sky-500/10 text-sky-400 border border-sky-500/20"
                       />
                     )}
-                    <Button variant="secondary" size="sm" className="w-full min-w-0 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => setExportDialogOpen(true)}><FileDown className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">{isPro ? 'Export Track' : 'Preview Export'}</span></Button>
+                    <Button variant="secondary" size="sm" data-tour="track-export" className="w-full min-w-0 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => setExportDialogOpen(true)}><FileDown className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">{isPro ? 'Export Track' : 'Preview Export'}</span></Button>
                     <div data-tour="dna-drop" className="w-full min-w-0">
                     {isPro ? (
                       <Button variant="secondary" size="sm" className="w-full min-w-0 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-[9px] font-bold h-9 uppercase justify-start leading-none pl-2 pr-2.5 overflow-visible" onClick={() => setShareDialogOpen(true)}><Globe className="mr-2 h-4 w-4 shrink-0" /> <span className="flex items-center justify-between gap-2 min-w-0 flex-1 overflow-visible"><span className="truncate min-w-0">DNA Drop (Share)</span><DnaDropLiveIndicator shareId={track.shareId} variant="compact" /></span></Button>
@@ -2874,23 +2874,29 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       setRightCollapsed(false);
       setMobilePanelTab('cowriter');
       handleSectionChange('dna', true);
+    } else if (['paste', 'sheet', 'bar-workstation', 'rhyme-pulse'].includes(step.id)) {
+      setMobilePanelTab('lyrics');
+      if (step.id === 'bar-workstation') setIsMinimized(false);
+      if (step.id === 'sheet') {
+        window.setTimeout(() => {
+          const viewport = document.querySelector('[data-tour="lyrics-sheet"]') as HTMLElement | null;
+          viewport?.scrollTo({ top: 0, behavior: 'auto' });
+        }, 280);
+      }
     } else if (step.id === 'generation' || step.id === 'save' || step.id === 'dna-drop') {
       setLeftCollapsed(false);
       setMobilePanelTab('workstation');
       if (step.id === 'dna-drop' || step.id === 'save') {
         window.setTimeout(() => {
           const selector =
-            step.id === 'save' ? '[data-tour="track-status"]' : '[data-tour="dna-drop"]';
+            step.id === 'save' ? '[data-tour="track-export"]' : '[data-tour="dna-drop"]';
           document.querySelector(selector)?.scrollIntoView({
             block: 'center',
             inline: 'nearest',
             behavior: 'auto',
           });
-        }, 360);
+        }, step.id === 'save' ? 420 : 360);
       }
-    } else if (['paste', 'sheet', 'bar-workstation', 'rhyme-pulse'].includes(step.id)) {
-      setMobilePanelTab('lyrics');
-      if (step.id === 'bar-workstation') setIsMinimized(false);
     }
   }, [handleSectionChange]);
 

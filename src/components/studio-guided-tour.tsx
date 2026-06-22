@@ -29,6 +29,9 @@ const MOBILE_HEADER_RESERVE = 68;
 const MOBILE_TOP_CLEARANCE = MOBILE_HEADER_RESERVE + TOUR_CARD_HEIGHT_ESTIMATE + 24;
 /** Max spotlight height on phone when the target element is taller than the safe band. */
 const MOBILE_MAX_SPOTLIGHT_VH = 0.24;
+const MOBILE_SPOTLIGHT_VH_BY_STEP: Record<string, number> = {
+  sheet: 0.52,
+};
 /** Sticky/fixed targets — auto-scroll fights the spotlight and causes jitter. */
 const NO_AUTO_SCROLL_STEP_IDS = new Set(['vault-progress']);
 /** Tab/panel switches need extra time before the target is visible on phone. */
@@ -36,6 +39,7 @@ const PANEL_SWITCH_STEP_IDS = new Set(['generation', 'dna', 'dna-drop', 'save'])
 
 function panelSwitchMeasureDelays(stepId: string): number[] {
   if (stepId === 'dna-drop') return [360, 560, 820, 1080];
+  if (stepId === 'save') return [320, 520, 760, 1000];
   return [260, 480, 720];
 }
 
@@ -77,8 +81,9 @@ function computeMobileCardPlacement(targetRect: DOMRect): 'top' | 'bottom' {
   return targetCenter < (topBandBottom + bottomBandTop) / 2 ? 'bottom' : 'top';
 }
 
-function clampMobileSpotlightRect(rect: DOMRect): DOMRect {
-  const maxH = window.innerHeight * MOBILE_MAX_SPOTLIGHT_VH;
+function clampMobileSpotlightRect(rect: DOMRect, stepId?: string): DOMRect {
+  const maxVh = stepId ? (MOBILE_SPOTLIGHT_VH_BY_STEP[stepId] ?? MOBILE_MAX_SPOTLIGHT_VH) : MOBILE_MAX_SPOTLIGHT_VH;
+  const maxH = window.innerHeight * maxVh;
   if (rect.height <= maxH) return rect;
   return new DOMRect(rect.x, rect.y, rect.width, maxH);
 }
@@ -333,7 +338,7 @@ export function StudioGuidedTour({
       }
 
       const spotlight = htmlEl.getBoundingClientRect();
-      setRect(compact ? clampMobileSpotlightRect(spotlight) : spotlight);
+      setRect(compact ? clampMobileSpotlightRect(spotlight, step!.id) : spotlight);
     },
     [step]
   );

@@ -84,7 +84,6 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'sheet',
     target: '[data-tour="lyrics-sheet"]',
-    mobileTarget: '[data-tour="lyrics-sheet-focus"]',
     title: 'Your rhyme book',
     body: 'Write line-by-line on the sheet. Two lines = one rhyme bar for Studio Progress and challenges. Click any line to activate the Bar Workstation below.',
     example: 'Think in couplets — each line is its own row, but goals count pairs.',
@@ -132,6 +131,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'save',
     target: '[data-tour="track-status"]',
+    mobileTarget: '[data-tour="track-export"]',
     title: 'Save & export',
     body: 'Your track saves as you edit. Export PDF with Studio Pro — your work auto-saves in the demo vault.',
   },
