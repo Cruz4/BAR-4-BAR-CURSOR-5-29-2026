@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { Mail, Loader } from 'lucide-react';
 import { auth } from '@/lib/firebase/client/firebase';
 import { sendSignupVerificationEmail } from '@/lib/email-verification-client';
+import { syncUserUsageBootstrap } from '@/lib/init-user-usage-client';
 import { useAuth } from '@/hooks/use-auth';
 import { useUsage } from '@/context/usage-context';
 import { Button } from '@/components/ui/button';
@@ -50,9 +51,10 @@ export function EmailVerificationBanner({ className }: { className?: string }) {
     if (!firebaseUser) return;
     await firebaseUser.reload();
     if (firebaseUser.emailVerified) {
+      await syncUserUsageBootstrap(true);
       toast({
         title: 'Email verified',
-        description: `Welcome Ink (${SIGNUP_INK}) will load on your next session sync.`,
+        description: `Welcome Ink (${SIGNUP_INK}) is syncing to your account.`,
       });
       window.location.reload();
     } else {

@@ -1,5 +1,6 @@
 'use server';
 
+import { hasAdminFirestoreCredentials } from '@/lib/firebase/server';
 import { initializeUserUsage } from '@/lib/server/usage-init';
 
 export async function initUserUsageAction(
@@ -7,6 +8,10 @@ export async function initUserUsageAction(
   userId: string
 ): Promise<{ ok: boolean }> {
   try {
+    if (!hasAdminFirestoreCredentials()) {
+      console.error('[initUserUsageAction] Admin Firestore credentials missing');
+      return { ok: false };
+    }
     await initializeUserUsage(idToken, userId);
     return { ok: true };
   } catch (error) {

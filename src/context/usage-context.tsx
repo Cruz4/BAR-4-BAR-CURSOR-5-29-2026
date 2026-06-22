@@ -4,13 +4,12 @@ import React, { createContext, useState, useEffect, ReactNode, useCallback, useC
 import type { AIUsageLog } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/firebase/client/firebase';
+import { db, auth } from '@/lib/firebase/client/firebase';
 import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
 import { subscribeDocument, subscribeQuery } from '@/lib/firebase/client/firestore-subscribe';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { initUserUsageAction } from '@/lib/server/usage-actions';
-import { getAiAuth } from '@/lib/ai-client';
+import { syncUserUsageBootstrap } from '@/lib/init-user-usage-client';
 import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import { computeActiveRules } from '@/lib/active-rules';
 import type { ActiveRules } from '@/components/dna-synthesis-loader';
@@ -118,9 +117,8 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
       const firebaseUser = await waitForAuthUser();
       if (cancelled || !firebaseUser || firebaseUser.uid !== user.id) return;
 
-      getAiAuth()
-        .then(({ idToken, userId }) => initUserUsageAction(idToken, userId))
-        .catch((e) => console.warn('Usage init skipped:', e));
+      const forceRefresh = firebaseUser.emailVerified === true;
+      syncUserUsageBootstrap(forceRefresh).catch((e) => console.warn('Usage init skipped:', e));
 
       if (cancelled) return;
 
@@ -247,6 +245,20 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
       zeroInkShownRef.current = false;
     }
   }, [inkBalance]);
+
+  /** Retry welcome Ink bootstrap when verified users still show zero after first sync. */
+  useEffect(() => {
+    if (!user || loading || inkBalance > 0) return;
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) return;
+    if (!firebaseUser.emailVerified && !user.pendingWelcomeInk) return;
+
+    const retryTimer = window.setTimeout(() => {
+      syncUserUsageBootstrap(true).catch((e) => console.warn('Usage init retry skipped:', e));
+    }, 2500);
+
+    return () => window.clearTimeout(retryTimer);
+  }, [user, loading, inkBalance]);
 
   return (
     <UsageContext.Provider value={{

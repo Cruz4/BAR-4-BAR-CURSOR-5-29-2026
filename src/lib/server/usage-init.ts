@@ -50,6 +50,7 @@ async function grantProFeaturePreview(
 /** Server-side balance bootstrap — requires FIREBASE_SERVICE_ACCOUNT_KEY locally. */
 export async function initializeUserUsage(idToken: string, userId: string): Promise<void> {
   if (!hasAdminFirestoreCredentials()) {
+    console.error('[usage-init] Admin Firestore credentials missing — skipping welcome Ink bootstrap');
     return;
   }
 
@@ -57,8 +58,18 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
   const decoded = await auth.verifyIdToken(idToken);
   if (decoded.uid !== userId) return;
 
-  const userEmail = decoded.email?.trim() || '';
-  const emailVerified = decoded.email_verified === true;
+  let authEmailVerified = decoded.email_verified === true;
+  let userRecordEmail = '';
+  try {
+    const userRecord = await auth.getUser(userId);
+    authEmailVerified = authEmailVerified || userRecord.emailVerified === true;
+    userRecordEmail = userRecord.email?.trim() || '';
+  } catch {
+    // Keep token claim when Admin lookup fails.
+  }
+
+  const userEmail = decoded.email?.trim() || userRecordEmail;
+  const emailVerified = authEmailVerified;
   const bypassIdentityRegistry = isMasterAdminEmail(userEmail);
 
   const db = await getDb();
@@ -194,8 +205,9 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
 
   if (
     emailVerified &&
-    (userData as { pendingWelcomeInk?: boolean })?.pendingWelcomeInk &&
-    !data.welcomeInkReconciled
+    !data.welcomeInkReconciled &&
+    ((userData as { pendingWelcomeInk?: boolean })?.pendingWelcomeInk ||
+      (data.signupGrantSkipped && normalizeInkPools(data).residencyBalance < SIGNUP_INK - 5))
   ) {
     let residencyInk = SIGNUP_INK;
     let returningIdentity = false;
