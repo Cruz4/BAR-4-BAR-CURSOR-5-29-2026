@@ -2209,16 +2209,16 @@ export function GenerateSongDraftDialog({
                                           </div>
                                       </ScrollArea>
                                       {hubStructureGuide.trim() && (
-                                          <div className="mt-3 p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
-                                              <div className="flex items-center justify-between gap-2 mb-1">
-                                                  <p className="text-[8px] font-bold uppercase text-yellow-600">Extracted Structure Guide</p>
+                                          <div className="mt-3 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/35">
+                                              <div className="flex items-center justify-between gap-2 mb-1.5">
+                                                  <p className="text-[9px] font-bold uppercase tracking-wide text-yellow-300">Extracted Structure Guide</p>
                                                   <Tooltip>
                                                       <TooltipTrigger asChild>
                                                           <Button
                                                               type="button"
                                                               variant="ghost"
                                                               size="icon"
-                                                              className="h-6 w-6 text-yellow-600/60 hover:text-red-500 hover:bg-red-500/10 shrink-0"
+                                                              className="h-6 w-6 text-yellow-400/80 hover:text-red-400 hover:bg-red-500/10 shrink-0"
                                                               onClick={() => {
                                                                   setHubStructureGuide('');
                                                                   toast({ title: 'Structure guide removed' });
@@ -2233,7 +2233,7 @@ export function GenerateSongDraftDialog({
                                                       </TooltipContent>
                                                   </Tooltip>
                                               </div>
-                                              <p className="text-[9px] text-muted-foreground font-code italic leading-relaxed whitespace-pre-wrap">{hubStructureGuide}</p>
+                                              <p className="text-[10px] sm:text-[11px] text-yellow-50/95 font-code leading-relaxed whitespace-pre-wrap">{hubStructureGuide}</p>
                                           </div>
                                       )}
                                       <div className="pt-3 border-t border-white/5">
