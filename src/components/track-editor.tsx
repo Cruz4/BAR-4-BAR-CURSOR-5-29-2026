@@ -1519,7 +1519,13 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                 {(section.bars || []).map((bar: any) => {
                     const isSelected = activeGeneratorBar?.sectionId === section.id && activeGeneratorBar?.idx === bar.idx;
                     return (
-                        <div key={`${section.id}-${bar.idx}`} className={cn("group relative flex max-md:flex-row md:block items-start transition-colors max-md:px-1", isSelected && "bg-primary/10", bar.justGenerated && "animate-line-glow")}>
+                        <div
+                          key={`${section.id}-${bar.idx}`}
+                          className={cn(
+                          "group relative flex max-md:flex-row md:block items-start transition-colors max-md:px-1 max-md:pb-1",
+                          isSelected && "bg-primary/10",
+                          bar.justGenerated && "animate-line-glow"
+                        )}>
                         <span className={cn(
                           "font-mono text-muted-foreground/40 text-right font-bold shrink-0 z-10",
                           "max-md:relative max-md:w-7 max-md:mr-0.5 max-md:text-[10px]",
@@ -1528,7 +1534,8 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                         )} style={{ lineHeight: activeLineHeight }}>{String(bar.idx).padStart(2, '0')}</span>
                         
                         <div className={cn(
-                          "absolute right-1 md:right-4 top-0 h-full flex items-center gap-0.5 transition-opacity z-20",
+                          "absolute right-1 md:right-4 md:top-0 md:h-full flex gap-0.5 transition-opacity z-20",
+                          "max-md:top-1 max-md:bottom-auto max-md:h-auto max-md:items-end",
                           isSelected ? "opacity-100" : "max-md:opacity-0 max-md:pointer-events-none",
                           !isSelected && "md:opacity-0 md:group-hover:opacity-100"
                         )}>
@@ -1716,7 +1723,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                             </Button>
                         </div>
                     ) : (
-                        <div className="flex max-md:flex-col md:flex-row md:items-center gap-2 min-w-0 w-full flex-1">
+                        <div className="flex max-md:flex-col md:flex-row md:items-center gap-2 min-w-0 w-full flex-1 max-md:overflow-visible">
                             <textarea 
                                 placeholder="Tap to edit active line..."
                                 value={activeBarText} 
@@ -1730,7 +1737,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                 className={cn("bg-background/40 border border-white/10 w-full md:flex-1 md:min-w-[5rem] px-3 py-2 font-code font-bold text-sm shadow-inner rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 tracking-tight resize-none h-14 max-h-14 shrink-0 min-w-0", trackLocked && "opacity-70 cursor-not-allowed")}
                             />
                             <div className={cn(
-                              "flex flex-row flex-nowrap items-center gap-1.5 shrink-0 min-w-0 max-md:w-full overflow-x-auto studio-scrollbar md:overflow-visible md:max-w-[min(100%,22rem)] lg:max-w-none py-0.5 max-md:pt-5",
+                              "flex flex-row flex-nowrap items-end gap-1.5 shrink-0 min-w-0 max-md:w-full max-md:overflow-x-auto studio-scrollbar md:overflow-visible md:max-w-[min(100%,22rem)] lg:max-w-none py-0.5 max-md:py-1",
                               !activeGeneratorBar && "max-md:hidden"
                             )}>
                                 <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
