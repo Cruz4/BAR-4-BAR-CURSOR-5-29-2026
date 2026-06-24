@@ -17,6 +17,7 @@ import type { Track } from '@/lib/types';
 import { useUsage } from '@/context/usage-context';
 import { useInkCosts } from '@/hooks/use-ink-costs';
 import { useTouchInkRunner } from '@/hooks/use-touch-ink-runner';
+import { InkArmAffordance, inkArmedButtonClass } from '@/components/ui/ink-arm-affordance';
 import { HighlightedText } from './highlighted-text';
 import { FreestyleMicLevelVisualizer } from './freestyle-mic-level';
 import { useRouter } from 'next/navigation';
@@ -95,7 +96,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   const [micStream, setMicStream] = useState<MediaStream | null>(null);
   const { refundInk } = useUsage();
   const { getEffectiveCost, tooltip } = useInkCosts();
-  const { runWithInk } = useTouchInkRunner();
+  const { runWithInk, isArmed } = useTouchInkRunner();
 
   const transcriptionContext = useMemo(
     () => ({
@@ -686,16 +687,20 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
 
         <DialogFooter className="gap-3 sm:gap-6 flex-col sm:flex-row justify-between items-stretch sm:items-center pt-4 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <InkArmAffordance armed={isArmed('freestyleTranscription')}>
             <Button
               onClick={(e) => (isListening ? stopListening() : startListening(e))}
               size="icon"
               className={cn(
                 'w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-[0_0_40px_rgba(59,130,246,0.3)] transition-all active:scale-95 border-4 border-white/5 shrink-0',
-                isListening ? 'bg-red-600 hover:bg-red-700 shadow-red-600/20' : 'bg-primary hover:bg-primary/90'
+                isListening ? 'bg-red-600 hover:bg-red-700 shadow-red-600/20' : 'bg-primary hover:bg-primary/90',
+                inkArmedButtonClass(isArmed('freestyleTranscription'))
               )}
+              aria-label={isArmed('freestyleTranscription') ? 'Tap again to confirm freestyle session' : 'Start freestyle recording'}
             >
               {isListening ? <Square className="h-7 w-7 sm:h-8 sm:w-8 fill-current" /> : <Mic className="h-7 w-7 sm:h-8 sm:w-8" />}
             </Button>
+            </InkArmAffordance>
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase text-muted-foreground">Session Status</p>
               <p className="text-xs sm:text-sm font-bold text-foreground uppercase truncate">

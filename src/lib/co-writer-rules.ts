@@ -171,12 +171,29 @@ export function coWriterSectionAccentClass(active: boolean, activeColor: string)
 }
 
 /** Intent motif rows inside the Intents card */
-export function coWriterIntentRowClass(active: boolean, locked: boolean): string {
+export function coWriterIntentRowClass(
+  active: boolean,
+  locked: boolean,
+  checked: boolean = false
+): string {
+  const base =
+    'flex items-start gap-2 sm:gap-3 p-3 rounded-lg border transition-all group min-w-0 overflow-hidden';
   if (locked) {
-    return 'bg-sky-500/10 border-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.1)]';
+    return cn(
+      base,
+      'bg-sky-500/10 border-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.1)]'
+    );
+  }
+  if (checked) {
+    return cn(
+      base,
+      active
+        ? 'bg-[#142633] border-sky-500/20 hover:bg-[#1a3040]'
+        : 'bg-neutral-900/50 border-sky-500/15 opacity-75 grayscale-[0.2] hover:bg-neutral-900/55'
+    );
   }
   return cn(
-    'flex items-start gap-2 sm:gap-3 p-3 rounded-lg border transition-all group min-w-0 overflow-hidden',
+    base,
     active
       ? 'bg-[#142633] border-white/5 hover:bg-[#1a3040]'
       : 'bg-neutral-900/50 border-white/10 opacity-60 grayscale-[0.35] hover:bg-neutral-900/50'

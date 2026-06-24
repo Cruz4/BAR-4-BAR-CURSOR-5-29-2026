@@ -236,6 +236,7 @@ import { linesToRhymeBars } from '@/lib/lyrics-units';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, Hint } from '@/components/ui/tooltip';
+import { InkArmAffordance, inkArmedButtonClass } from '@/components/ui/ink-arm-affordance';
 import { useTouchInkRunner } from '@/hooks/use-touch-ink-runner';
 
 // --- Hoisted Workstation Dialogs ---
@@ -1138,7 +1139,11 @@ function NeuralStripItem({ text, active, color, onClick }: { text: string, activ
 
 // --- Center Panel Component ---
 
-function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, rhymePulseArmed = false, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false }: any) {
+function lineGenInkKey(mode: 'next' | 'previous', sectionId: string, barIdx: number): string {
+  return `generateNextLine-${mode}-${sectionId}-${barIdx}`;
+}
+
+function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, rhymePulseArmed = false, isInkArmed, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false }: any) {
   const [fontSize, setFontSize] = useState<'xs' | 'sm' | 'md' | 'lg'>('md');
   const lyricsViewportRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -1452,13 +1457,14 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                   content={<p className="text-[10px] font-bold">{tooltip('findRhymes')}</p>}
                 >
                   <div data-tour="rhyme-pulse" className="relative inline-flex shrink-0">
+                  <InkArmAffordance armed={rhymePulseArmed}>
                   <Button 
                       variant="outline" 
                       size="sm" 
                       className={cn(
                           "rounded-full h-8 w-8 p-0 transition-all active:scale-90 bg-background border-primary/40 hover:bg-primary/5 group shadow-lg flex items-center justify-center shrink-0",
                           isRhymeLoading && "animate-pulse",
-                          rhymePulseArmed && "border-primary ring-2 ring-primary/60 ring-offset-2 ring-offset-background scale-95"
+                          inkArmedButtonClass(rhymePulseArmed)
                       )}
                       onClick={handleRunRhymeScan}
                       disabled={trackLocked || isRhymeLoading}
@@ -1466,11 +1472,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                   >
                       {isRhymeLoading ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <Target className="h-4 w-4 text-primary" />}
                   </Button>
-                  {rhymePulseArmed && (
-                    <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap font-code text-[7px] font-bold uppercase tracking-widest text-primary pointer-events-none">
-                      Tap again
-                    </span>
-                  )}
+                  </InkArmAffordance>
                   </div>
                 </Hint>
                 <Badge variant="outline" className="h-4 px-1.5 text-[7px] font-bold border-primary/20 text-primary shrink-0 leading-none whitespace-nowrap">{getEffectiveCost('findRhymes')} INK</Badge>
@@ -1531,10 +1533,38 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                           !isSelected && "md:opacity-0 md:group-hover:opacity-100"
                         )}>
                             <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
-                              <Button variant="ghost" size="icon" disabled={trackLocked} aria-label="Generate next line" className="h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10" onClick={(e) => handleSharedLineGeneration('next', e, section.id, bar.idx)}><ArrowDown className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
+                              <InkArmAffordance armed={isInkArmed?.(lineGenInkKey('next', section.id, bar.idx))}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={trackLocked}
+                                  aria-label={isInkArmed?.(lineGenInkKey('next', section.id, bar.idx)) ? 'Tap again to confirm next line' : 'Generate next line'}
+                                  className={cn(
+                                    'h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10',
+                                    inkArmedButtonClass(!!isInkArmed?.(lineGenInkKey('next', section.id, bar.idx)))
+                                  )}
+                                  onClick={(e) => handleSharedLineGeneration('next', e, section.id, bar.idx)}
+                                >
+                                  <ArrowDown className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                                </Button>
+                              </InkArmAffordance>
                             </Hint>
                             <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
-                              <Button variant="ghost" size="icon" disabled={trackLocked} aria-label="Generate previous line" className="h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10" onClick={(e) => handleSharedLineGeneration('previous', e, section.id, bar.idx)}><ArrowUp className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
+                              <InkArmAffordance armed={isInkArmed?.(lineGenInkKey('previous', section.id, bar.idx))}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={trackLocked}
+                                  aria-label={isInkArmed?.(lineGenInkKey('previous', section.id, bar.idx)) ? 'Tap again to confirm previous line' : 'Generate previous line'}
+                                  className={cn(
+                                    'h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10',
+                                    inkArmedButtonClass(!!isInkArmed?.(lineGenInkKey('previous', section.id, bar.idx)))
+                                  )}
+                                  onClick={(e) => handleSharedLineGeneration('previous', e, section.id, bar.idx)}
+                                >
+                                  <ArrowUp className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                                </Button>
+                              </InkArmAffordance>
                             </Hint>
                             <Button variant="ghost" size="icon" disabled={trackLocked} className="h-7 w-7 md:h-8 md:w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteBar(section.id, bar.idx)}><Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
                         </div>
@@ -1700,20 +1730,82 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                 className={cn("bg-background/40 border border-white/10 w-full md:flex-1 md:min-w-[5rem] px-3 py-2 font-code font-bold text-sm shadow-inner rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 tracking-tight resize-none h-14 max-h-14 shrink-0 min-w-0", trackLocked && "opacity-70 cursor-not-allowed")}
                             />
                             <div className={cn(
-                              "flex flex-row flex-nowrap items-center gap-1.5 shrink-0 min-w-0 max-md:w-full overflow-x-auto studio-scrollbar md:overflow-visible md:max-w-[min(100%,22rem)] lg:max-w-none py-0.5",
+                              "flex flex-row flex-nowrap items-center gap-1.5 shrink-0 min-w-0 max-md:w-full overflow-x-auto studio-scrollbar md:overflow-visible md:max-w-[min(100%,22rem)] lg:max-w-none py-0.5 max-md:pt-5",
                               !activeGeneratorBar && "max-md:hidden"
                             )}>
                                 <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
-                                  <Button variant="outline" size="sm" disabled={trackLocked} aria-label="Generate next line" className="h-10 md:h-14 px-2 md:px-3 font-bold text-[10px] uppercase border-border/40 gap-1 shadow-lg shrink-0" onClick={(e) => handleSharedLineGeneration('next', e)}>
+                                  <InkArmAffordance
+                                    armed={
+                                      !!activeGeneratorBar &&
+                                      !!isInkArmed?.(
+                                        lineGenInkKey('next', activeGeneratorBar.sectionId, activeGeneratorBar.idx)
+                                      )
+                                    }
+                                  >
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={trackLocked}
+                                      aria-label={
+                                        activeGeneratorBar &&
+                                        isInkArmed?.(
+                                          lineGenInkKey('next', activeGeneratorBar.sectionId, activeGeneratorBar.idx)
+                                        )
+                                          ? 'Tap again to confirm next line'
+                                          : 'Generate next line'
+                                      }
+                                      className={cn(
+                                        'h-10 md:h-14 px-2 md:px-3 font-bold text-[10px] uppercase border-border/40 gap-1 shadow-lg shrink-0',
+                                        inkArmedButtonClass(
+                                          !!activeGeneratorBar &&
+                                            !!isInkArmed?.(
+                                              lineGenInkKey('next', activeGeneratorBar.sectionId, activeGeneratorBar.idx)
+                                            )
+                                        )
+                                      )}
+                                      onClick={(e) => handleSharedLineGeneration('next', e)}
+                                    >
                                       <ArrowDown className="h-3.5 w-3.5 text-primary shrink-0" />
                                       <span className="hidden sm:inline truncate">Next</span>
-                                  </Button>
+                                    </Button>
+                                  </InkArmAffordance>
                                 </Hint>
                                 <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
-                                  <Button variant="outline" size="sm" disabled={trackLocked} aria-label="Generate previous line" className="h-10 md:h-14 px-2 md:px-3 font-bold text-[10px] uppercase border-border/40 gap-1 shadow-lg shrink-0" onClick={(e) => handleSharedLineGeneration('previous', e)}>
+                                  <InkArmAffordance
+                                    armed={
+                                      !!activeGeneratorBar &&
+                                      !!isInkArmed?.(
+                                        lineGenInkKey('previous', activeGeneratorBar.sectionId, activeGeneratorBar.idx)
+                                      )
+                                    }
+                                  >
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={trackLocked}
+                                      aria-label={
+                                        activeGeneratorBar &&
+                                        isInkArmed?.(
+                                          lineGenInkKey('previous', activeGeneratorBar.sectionId, activeGeneratorBar.idx)
+                                        )
+                                          ? 'Tap again to confirm previous line'
+                                          : 'Generate previous line'
+                                      }
+                                      className={cn(
+                                        'h-10 md:h-14 px-2 md:px-3 font-bold text-[10px] uppercase border-border/40 gap-1 shadow-lg shrink-0',
+                                        inkArmedButtonClass(
+                                          !!activeGeneratorBar &&
+                                            !!isInkArmed?.(
+                                              lineGenInkKey('previous', activeGeneratorBar.sectionId, activeGeneratorBar.idx)
+                                            )
+                                        )
+                                      )}
+                                      onClick={(e) => handleSharedLineGeneration('previous', e)}
+                                    >
                                       <ArrowUp className="h-3.5 w-3.5 text-primary shrink-0" />
                                       <span className="hidden sm:inline truncate">Prev</span>
-                                  </Button>
+                                    </Button>
+                                  </InkArmAffordance>
                                 </Hint>
                                 <Button variant="outline" size="sm" disabled={trackLocked} aria-label="Delete line" className="h-10 md:h-14 w-10 md:w-11 font-bold border-red-500/20 text-red-500 bg-red-500/5 hover:bg-red-500/10 shadow-lg shrink-0 px-0" onClick={() => { if(activeGeneratorBar) handleDeleteBar(activeGeneratorBar.sectionId, activeGeneratorBar.idx); }}><Trash2 className="h-4 w-4 mx-auto" /></Button>
                                 {freestyleUnlocked ? (
@@ -1752,7 +1844,7 @@ function cowriterSectionSubtitle(expanded: boolean) {
   );
 }
 
-function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, improveStyleOpen, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, openCoWriterSections, onApplyChestEntry, mobileActive = false, trackLocked = false, completeLocked = false, tourMobilePad = false }: any) {
+function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, improveStyleOpen, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, openCoWriterSections, onApplyChestEntry, mobileActive = false, trackLocked = false, completeLocked = false, tourMobilePad = false, isInkArmed, activeGeneratorBar }: any) {
   const { user } = useAuth();
   const { tooltip, buttonLabel } = useInkCosts();
   const activeSection = track.sections.find((s:any) => s.id === activeSectionId);
@@ -2299,17 +2391,29 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                             {(album?.thingsToSay || []).map((intent: string) => {
                                 const isLocked = track.endWith === intent;
                                 const isChecked = (track.checkedIntents || []).includes(intent);
+                                const isActiveForTrack = isChecked || isLocked;
+                                const intentCheckbox = (
+                                  <Checkbox
+                                    checked={isActiveForTrack}
+                                    onCheckedChange={(c) => handleIntentCheck(intent, !!c)}
+                                    className="border-sky-500 data-[state=checked]:bg-sky-500 shrink-0 mt-0.5 self-center"
+                                  />
+                                );
                                 return (
-                                    <div key={intent} className={coWriterIntentRowClass(intentsMasterOn, isLocked)}>
-                                        <Checkbox 
-                                            checked={isChecked || isLocked} 
-                                            onCheckedChange={(c) => handleIntentCheck(intent, !!c)} 
-                                            className="border-sky-500 data-[state=checked]:bg-sky-500 shrink-0 mt-0.5"
-                                        />
+                                    <div
+                                      key={intent}
+                                      className={coWriterIntentRowClass(intentsMasterOn, isLocked, isChecked)}
+                                    >
+                                        {!isActiveForTrack && intentCheckbox}
                                         <span className={cn(
                                             "text-xs font-code flex-1 min-w-0 whitespace-normal break-words leading-snug",
-                                            isLocked ? "text-sky-300 font-bold" : "text-foreground/85"
+                                            isLocked ? "text-sky-300 font-bold" : isChecked ? "text-foreground/90" : "text-foreground/85"
                                         )}>{intent}</span>
+                                        {isLocked && (
+                                          <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-sky-400 shrink-0 self-center whitespace-nowrap">
+                                            End in
+                                          </span>
+                                        )}
                                         <TooltipProvider delayDuration={300}>
                                             <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 flex-none self-start sm:self-center">
                                                 <Tooltip>
@@ -2352,6 +2456,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                                 </Tooltip>
                                             </div>
                                         </TooltipProvider>
+                                        {isActiveForTrack && intentCheckbox}
                                     </div>
                                 );
                             })}
@@ -2514,12 +2619,60 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                         </div>
 
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm" className="flex-1 h-9 font-bold text-[10px] uppercase border-border/40 gap-2 shadow-sm" onClick={(e) => handleSharedLineGeneration('previous', e)} title={tooltip('generateNextLine')}>
+                            <InkArmAffordance
+                              armed={
+                                !!activeGeneratorBar &&
+                                !!isInkArmed?.(
+                                  lineGenInkKey('previous', activeGeneratorBar.sectionId, activeGeneratorBar.idx)
+                                )
+                              }
+                              className="flex-1"
+                            >
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className={cn(
+                                  'w-full h-9 font-bold text-[10px] uppercase border-border/40 gap-2 shadow-sm',
+                                  inkArmedButtonClass(
+                                    !!activeGeneratorBar &&
+                                      !!isInkArmed?.(
+                                        lineGenInkKey('previous', activeGeneratorBar.sectionId, activeGeneratorBar.idx)
+                                      )
+                                  )
+                                )}
+                                onClick={(e) => handleSharedLineGeneration('previous', e)}
+                                title={tooltip('generateNextLine')}
+                              >
                                 <ArrowUp className="h-3 w-3 text-primary" /> PREV
-                            </Button>
-                            <Button variant="outline" size="sm" className="flex-1 h-9 font-bold text-[10px] uppercase border-border/40 gap-2 shadow-sm" onClick={(e) => handleSharedLineGeneration('next', e)} title={tooltip('generateNextLine')}>
+                              </Button>
+                            </InkArmAffordance>
+                            <InkArmAffordance
+                              armed={
+                                !!activeGeneratorBar &&
+                                !!isInkArmed?.(
+                                  lineGenInkKey('next', activeGeneratorBar.sectionId, activeGeneratorBar.idx)
+                                )
+                              }
+                              className="flex-1"
+                            >
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className={cn(
+                                  'w-full h-9 font-bold text-[10px] uppercase border-border/40 gap-2 shadow-sm',
+                                  inkArmedButtonClass(
+                                    !!activeGeneratorBar &&
+                                      !!isInkArmed?.(
+                                        lineGenInkKey('next', activeGeneratorBar.sectionId, activeGeneratorBar.idx)
+                                      )
+                                  )
+                                )}
+                                onClick={(e) => handleSharedLineGeneration('next', e)}
+                                title={tooltip('generateNextLine')}
+                              >
                                 <ArrowDown className="h-3 w-3 text-primary" /> NEXT
-                            </Button>
+                              </Button>
+                            </InkArmAffordance>
                         </div>
 
                         <Button variant="outline" className="w-full h-10 border-fuchsia-500/20 bg-background/40 text-fuchsia-400 font-bold text-[11px] uppercase gap-2 hover:bg-fuchsia-500/5 shadow-inner" onClick={() => setImproveStyleOpen(true)}>
@@ -3253,7 +3406,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       )}
       <div className="flex flex-1 min-h-0 overflow-hidden w-full">
       <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={isMobileLayout && mobilePanelTab === 'workstation'} trackLocked={editsLocked} tierLocked={tierLocked} completeLocked={completeLocked} workstationAttention={workstationAttention} tourMobilePad={tourActive && isMobileLayout} />
-      <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} rhymePulseArmed={isArmed('findRhymes')} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleDismissGenerationOptions={handleDismissGenerationOptions} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={isMobileLayout && mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} />
+      <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} rhymePulseArmed={isArmed('findRhymes')} isInkArmed={isArmed} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleDismissGenerationOptions={handleDismissGenerationOptions} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={isMobileLayout && mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} />
       <RightPanel 
         track={track} 
         album={album} 
@@ -3281,6 +3434,8 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         trackLocked={editsLocked}
         completeLocked={completeLocked}
         tourMobilePad={tourActive && isMobileLayout}
+        isInkArmed={isArmed}
+        activeGeneratorBar={activeGeneratorBar}
       />
       <GenerateSongDraftDialog
         open={generateDraftOpen}

@@ -1236,3 +1236,20 @@
     color: hsl(var(--foreground) / 0.88);
   }
 }
+
+/* Ink confirm on touch: pin banner to top so bottom bar-workstation controls stay tappable */
+@media (max-width: 767px) {
+  .touch-ink-confirm {
+    position: fixed !important;
+    top: max(0.75rem, env(safe-area-inset-top)) !important;
+    bottom: auto !important;
+    left: 1rem !important;
+    right: 1rem !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    transform: none !important;
+    pointer-events: none !important;
+    z-index: 2201;
+  }
+}

@@ -61,7 +61,16 @@ const TooltipTrigger = React.forwardRef<
 TooltipTrigger.displayName = TooltipPrimitive.Trigger.displayName
 
 const hintSurfaceClass =
-  "z-[2200] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+  "z-[2100] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+
+/** On touch, open hints above the trigger so bottom-docked controls (bar workstation) stay tappable. */
+function resolveTouchPopoverSide(
+  side?: React.ComponentProps<typeof TooltipContent>["side"]
+): React.ComponentProps<typeof TooltipContent>["side"] {
+  if (side === "top") return "top"
+  if (side === "bottom" || side === "left" || side === "right" || !side) return "top"
+  return side
+}
 
 const TooltipContent = React.forwardRef<
   React.ElementRef<typeof TooltipPrimitive.Content>,
@@ -70,8 +79,12 @@ const TooltipContent = React.forwardRef<
   }
 >(({ className, sideOffset = 4, side, align, collisionPadding = 12, ...props }, ref) => {
   const touch = useTouchHintMode()
-  const touchSide = touch && (side === 'right' || side === 'left') ? 'bottom' : side
-  const touchAlign = touch && (side === 'right' || side === 'left') ? 'center' : align
+  const touchSide = touch ? resolveTouchPopoverSide(side) : side
+  const touchAlign = touch ? (align ?? "center") : align
+  const touchCollisionPadding =
+    touch && typeof collisionPadding === "number"
+      ? Math.max(collisionPadding, 20)
+      : collisionPadding
 
   if (touch) {
     return (
@@ -81,10 +94,10 @@ const TooltipContent = React.forwardRef<
           side={touchSide}
           align={touchAlign ?? "center"}
           sideOffset={sideOffset}
-          collisionPadding={collisionPadding}
+          collisionPadding={touchCollisionPadding}
           className={cn(
             hintSurfaceClass,
-            "px-3 py-2 text-sm max-w-[min(calc(100vw-2rem),18rem)] touch-manipulation outline-none",
+            "px-3 py-2 text-sm max-w-[min(calc(100vw-2rem),18rem)] touch-manipulation outline-none pointer-events-auto",
             className
           )}
           {...props}

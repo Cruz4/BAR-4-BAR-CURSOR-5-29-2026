@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 const ARM_MS = 5000;
 
 const INK_CONFIRM_TOAST_CLASS =
-  'pointer-events-none touch-ink-confirm border-primary/35 bg-background/95 backdrop-blur-md py-3 px-4 pr-6 shadow-[0_-8px_32px_rgba(0,0,0,0.35)]';
+  'pointer-events-none touch-ink-confirm border-primary/35 bg-background/95 backdrop-blur-md py-2.5 px-3 pr-5 shadow-lg';
 
 /**
  * On touch devices: first tap arms (shows ink cost); second tap on the same action deducts and runs.
