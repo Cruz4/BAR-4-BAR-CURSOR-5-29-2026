@@ -8,12 +8,19 @@ export function InkArmAffordance({
   armed,
   children,
   className,
+  compact = false,
 }: {
   armed?: boolean;
   children: React.ReactNode;
   className?: string;
+  /** Inline row controls — ring only on touch (confirm toast carries the message). */
+  compact?: boolean;
 }) {
   const touch = usePrefersTouch();
+
+  if (compact) {
+    return <div className={cn('inline-flex shrink-0', className)}>{children}</div>;
+  }
 
   if (touch && armed) {
     return (

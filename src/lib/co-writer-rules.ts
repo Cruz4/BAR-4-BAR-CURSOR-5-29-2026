@@ -23,6 +23,14 @@ export function hasGuardrailsContent(guardrails?: Track['guardrails'] | null): b
 }
 
 /** Hub / form strings before comma-splitting into guardrails arrays. */
+export function formatGuardrailsCsv(words?: string[] | null): string {
+  return (words ?? []).join(', ');
+}
+
+export function parseGuardrailsCsv(csv: string): string[] {
+  return csv.split(',').map((w) => w.trim()).filter(Boolean);
+}
+
 export function hasGuardrailsStringsContent(
   negativePrompt = '',
   forbiddenCsv = '',
@@ -30,8 +38,8 @@ export function hasGuardrailsStringsContent(
 ): boolean {
   return hasGuardrailsContent({
     negativePrompt,
-    forbiddenWords: forbiddenCsv.split(',').map((w) => w.trim()).filter(Boolean),
-    mustIncludeWords: mustIncludeCsv.split(',').map((w) => w.trim()).filter(Boolean),
+    forbiddenWords: parseGuardrailsCsv(forbiddenCsv),
+    mustIncludeWords: parseGuardrailsCsv(mustIncludeCsv),
   });
 }
 

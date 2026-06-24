@@ -134,6 +134,8 @@ import {
   isGuardrailsToggleOn,
   isLooseTrackAlbum,
   isTrackDnaToggleOn,
+  formatGuardrailsCsv,
+  parseGuardrailsCsv,
 } from '@/lib/co-writer-rules';
 import { LockedSaveButton, ProLockBadge, proLockIcon, proLockShell, proLockText } from '@/components/pro-lock';
 import { UpgradeTooltip } from '@/components/upgrade-tooltip';
@@ -536,8 +538,8 @@ export function GenerateSongDraftDialog({
     setIntentsEnabled(track.intentsEnabled ?? ((track.checkedIntents?.length ?? 0) > 0));
     setEnableGuardrails(isGuardrailsToggleOn(track));
     setNegativePrompt(track.guardrails?.negativePrompt ?? '');
-    setForbiddenWords((track.guardrails?.forbiddenWords || []).join(', '));
-    setMustIncludeWords((track.guardrails?.mustIncludeWords || []).join(', '));
+    setForbiddenWords(formatGuardrailsCsv(track.guardrails?.forbiddenWords));
+    setMustIncludeWords(formatGuardrailsCsv(track.guardrails?.mustIncludeWords));
     setHubStyleEnabled(track.styleEnabled === true);
     setHubStyleAnalysis(styleProfile?.history[0]?.analysis || '');
     setHubStyleMetrics(styleProfile?.history[0]?.metrics || { vocabularyScore: 50, rhymeComplexity: 50, cadenceMap: 'Neutral' });
@@ -1022,8 +1024,8 @@ export function GenerateSongDraftDialog({
         guardrails: guardrailsWithSyncedEnabled(track.guardrails, {
           enabled: enableGuardrails,
           negativePrompt,
-          forbiddenWords: forbiddenWords.split(',').map((w) => w.trim()).filter(Boolean),
-          mustIncludeWords: mustIncludeWords.split(',').map((w) => w.trim()).filter(Boolean),
+          forbiddenWords: parseGuardrailsCsv(forbiddenWords),
+          mustIncludeWords: parseGuardrailsCsv(mustIncludeWords),
         }),
         styleEnabled: hubStyleEnabled,
       });
@@ -1046,10 +1048,10 @@ export function GenerateSongDraftDialog({
             lyricsAbout: lyricsAbout,
             negativePrompt: enableGuardrails ? negativePrompt : undefined,
             forbiddenWords: enableGuardrails
-              ? forbiddenWords.split(',').map((w) => w.trim()).filter(Boolean)
+              ? parseGuardrailsCsv(forbiddenWords)
               : undefined,
             mustIncludeWords: enableGuardrails
-              ? mustIncludeWords.split(',').map((w) => w.trim()).filter(Boolean)
+              ? parseGuardrailsCsv(mustIncludeWords)
               : undefined,
           })
         ),
@@ -1425,8 +1427,8 @@ export function GenerateSongDraftDialog({
             guardrails: guardrailsWithSyncedEnabled(track.guardrails, {
               enabled: enableGuardrails,
               negativePrompt,
-              forbiddenWords: forbiddenWords.split(',').map((w) => w.trim()).filter(Boolean),
-              mustIncludeWords: mustIncludeWords.split(',').map((w) => w.trim()).filter(Boolean),
+              forbiddenWords: parseGuardrailsCsv(forbiddenWords),
+              mustIncludeWords: parseGuardrailsCsv(mustIncludeWords),
             }),
             styleEnabled: hubStyleEnabled,
         });
@@ -1462,10 +1464,10 @@ export function GenerateSongDraftDialog({
               specialInstructions: lyricsAbout,
               negativePrompt: enableGuardrails ? negativePrompt : undefined,
               forbiddenWords: enableGuardrails
-                ? forbiddenWords.split(',').map((w) => w.trim()).filter(Boolean)
+                ? parseGuardrailsCsv(forbiddenWords)
                 : undefined,
               mustIncludeWords: enableGuardrails
-                ? mustIncludeWords.split(',').map((w) => w.trim()).filter(Boolean)
+                ? parseGuardrailsCsv(mustIncludeWords)
                 : undefined,
               structure: hubStructure.filter((s) => s.enabled).map((s) => ({ name: s.name, bars: s.bars })),
               structureGuide: hubStructureGuide.trim() || undefined,

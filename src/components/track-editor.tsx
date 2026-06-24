@@ -189,6 +189,8 @@ import {
   directionWithSyncedEnabled,
   hasCreativeDnaContent,
   guardrailsWithSyncedEnabled,
+  formatGuardrailsCsv,
+  parseGuardrailsCsv,
 } from '@/lib/co-writer-rules';
 import {
   isSystemPreset,
@@ -1522,61 +1524,18 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                         <div
                           key={`${section.id}-${bar.idx}`}
                           className={cn(
-                          "group relative flex max-md:flex-row md:block items-start transition-colors max-md:px-1 max-md:pb-1",
+                          "group relative flex max-md:flex-row max-md:items-start md:block items-start transition-colors max-md:px-1 max-md:gap-0.5",
                           isSelected && "bg-primary/10",
                           bar.justGenerated && "animate-line-glow"
                         )}>
                         <span className={cn(
                           "font-mono text-muted-foreground/40 text-right font-bold shrink-0 z-10",
-                          "max-md:relative max-md:w-7 max-md:mr-0.5 max-md:text-[10px]",
+                          "max-md:relative max-md:w-7 max-md:mr-0 max-md:text-[10px] max-md:pt-0.5",
                           "md:absolute md:left-[50px] md:w-10 md:text-muted-foreground/30",
                           fontSizes[fontSize]
                         )} style={{ lineHeight: activeLineHeight }}>{String(bar.idx).padStart(2, '0')}</span>
-                        
-                        <div className={cn(
-                          "absolute right-1 md:right-4 md:top-0 md:h-full flex gap-0.5 transition-opacity z-20",
-                          "max-md:top-1 max-md:bottom-auto max-md:h-auto max-md:items-end",
-                          isSelected ? "opacity-100" : "max-md:opacity-0 max-md:pointer-events-none",
-                          !isSelected && "md:opacity-0 md:group-hover:opacity-100"
-                        )}>
-                            <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
-                              <InkArmAffordance armed={isInkArmed?.(lineGenInkKey('next', section.id, bar.idx))}>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  disabled={trackLocked}
-                                  aria-label={isInkArmed?.(lineGenInkKey('next', section.id, bar.idx)) ? 'Tap again to confirm next line' : 'Generate next line'}
-                                  className={cn(
-                                    'h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10',
-                                    inkArmedButtonClass(!!isInkArmed?.(lineGenInkKey('next', section.id, bar.idx)))
-                                  )}
-                                  onClick={(e) => handleSharedLineGeneration('next', e, section.id, bar.idx)}
-                                >
-                                  <ArrowDown className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                                </Button>
-                              </InkArmAffordance>
-                            </Hint>
-                            <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
-                              <InkArmAffordance armed={isInkArmed?.(lineGenInkKey('previous', section.id, bar.idx))}>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  disabled={trackLocked}
-                                  aria-label={isInkArmed?.(lineGenInkKey('previous', section.id, bar.idx)) ? 'Tap again to confirm previous line' : 'Generate previous line'}
-                                  className={cn(
-                                    'h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10',
-                                    inkArmedButtonClass(!!isInkArmed?.(lineGenInkKey('previous', section.id, bar.idx)))
-                                  )}
-                                  onClick={(e) => handleSharedLineGeneration('previous', e, section.id, bar.idx)}
-                                >
-                                  <ArrowUp className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                                </Button>
-                              </InkArmAffordance>
-                            </Hint>
-                            <Button variant="ghost" size="icon" disabled={trackLocked} className="h-7 w-7 md:h-8 md:w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteBar(section.id, bar.idx)}><Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
-                        </div>
 
-                        <div className="flex-grow flex items-start min-w-0 h-full max-md:flex-1 relative overflow-hidden">
+                        <div className="flex-grow flex items-start min-w-0 max-md:flex-1 relative overflow-hidden">
                             <textarea 
                             id={`bar-input-${section.id}-${bar.idx}`} 
                             value={bar.text} 
@@ -1618,7 +1577,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                             }} 
                             className={cn(
                                 "border-0 bg-transparent p-0 focus-visible:ring-0 font-code font-bold w-full shadow-none z-10 tracking-normal resize-none overflow-hidden whitespace-pre-wrap break-words",
-                                "max-md:pl-1 max-md:pr-12 max-md:indent-0",
+                                "max-md:pl-0.5 max-md:pr-1 max-md:indent-0",
                                 "md:pr-24 md:pl-[145px] md:-indent-[25px]",
                                 "antialiased text-rendering-geometric",
                                 trackLocked && "opacity-80 cursor-not-allowed",
@@ -1628,7 +1587,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                             placeholder={trackLocked ? 'Locked — reopen track to edit' : '...'} 
                             />
                             {track.rhymeHighlightingEnabled && bar.text && (
-                            <div className="absolute inset-0 pointer-events-none flex items-start pl-0 max-md:pl-1 md:pl-0 pr-12 md:pr-24 z-0 h-full overflow-hidden">
+                            <div className="absolute inset-0 pointer-events-none flex items-start pl-0 max-md:pl-0.5 md:pl-0 pr-1 md:pr-24 z-0 h-full overflow-hidden">
                                 <p className={cn(
                                     "font-code font-bold tracking-normal whitespace-pre-wrap break-words w-full text-transparent m-0",
                                     "max-md:indent-0",
@@ -1640,6 +1599,50 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                 </p>
                             </div>
                             )}
+                        </div>
+
+                        <div className={cn(
+                          "flex gap-0.5 shrink-0 transition-opacity z-20",
+                          "max-md:relative max-md:flex max-md:items-center max-md:self-center max-md:mr-0.5",
+                          "md:absolute md:right-4 md:top-0 md:h-full md:items-center",
+                          isSelected ? "opacity-100" : "max-md:opacity-0 max-md:pointer-events-none",
+                          !isSelected && "md:opacity-0 md:group-hover:opacity-100"
+                        )}>
+                            <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
+                              <InkArmAffordance compact armed={isInkArmed?.(lineGenInkKey('next', section.id, bar.idx))}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={trackLocked}
+                                  aria-label={isInkArmed?.(lineGenInkKey('next', section.id, bar.idx)) ? 'Tap again to confirm next line' : 'Generate next line'}
+                                  className={cn(
+                                    'h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10',
+                                    inkArmedButtonClass(!!isInkArmed?.(lineGenInkKey('next', section.id, bar.idx)))
+                                  )}
+                                  onClick={(e) => handleSharedLineGeneration('next', e, section.id, bar.idx)}
+                                >
+                                  <ArrowDown className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                                </Button>
+                              </InkArmAffordance>
+                            </Hint>
+                            <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
+                              <InkArmAffordance compact armed={isInkArmed?.(lineGenInkKey('previous', section.id, bar.idx))}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={trackLocked}
+                                  aria-label={isInkArmed?.(lineGenInkKey('previous', section.id, bar.idx)) ? 'Tap again to confirm previous line' : 'Generate previous line'}
+                                  className={cn(
+                                    'h-7 w-7 md:h-8 md:w-8 text-primary hover:bg-primary/10',
+                                    inkArmedButtonClass(!!isInkArmed?.(lineGenInkKey('previous', section.id, bar.idx)))
+                                  )}
+                                  onClick={(e) => handleSharedLineGeneration('previous', e, section.id, bar.idx)}
+                                >
+                                  <ArrowUp className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                                </Button>
+                              </InkArmAffordance>
+                            </Hint>
+                            <Button variant="ghost" size="icon" disabled={trackLocked} className="h-7 w-7 md:h-8 md:w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteBar(section.id, bar.idx)}><Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4"/></Button>
                         </div>
                         </div>
                     );
@@ -1861,7 +1864,14 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   const [archivalDialog, setArchivalDialog] = useState<{ open: boolean, type: 'DNA' | 'Vibe' }>({ open: false, type: 'DNA' });
   const [editIntentDialog, setEditIntentDialog] = useState<{ open: boolean, intent: string }>({ open: false, intent: '' });
   const [newIntent, setNewIntent] = useState('');
+  const [forbiddenWordsDraft, setForbiddenWordsDraft] = useState('');
+  const [mustIncludeWordsDraft, setMustIncludeWordsDraft] = useState('');
   const currentMetrics = styleProfile?.history[0]?.metrics;
+
+  useEffect(() => {
+    setForbiddenWordsDraft(formatGuardrailsCsv(track.guardrails?.forbiddenWords));
+    setMustIncludeWordsDraft(formatGuardrailsCsv(track.guardrails?.mustIncludeWords));
+  }, [track.id]);
   const dnaInjectHandlers = useMemo(
     () =>
       createCoWriterDnaInjectHandlers({
@@ -2514,27 +2524,29 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                         <div className="space-y-1">
                             <Label className="text-[10px] font-bold uppercase text-rose-300/85">Forbidden Words</Label>
                             <Input 
-                                placeholder="Must be separated by comma" 
+                                placeholder="e.g. cliche, violence — separate with commas" 
                                 className="h-8 text-[11px] text-foreground/90 bg-background/50 border-rose-500/10" 
-                                value={(track.guardrails?.forbiddenWords || []).join(', ')}
-                                onChange={(e) =>
-                                  handleGuardrailsPatch({
-                                    forbiddenWords: e.target.value.split(',').map((w) => w.trim()).filter(Boolean),
-                                  })
-                                }
+                                value={forbiddenWordsDraft}
+                                onChange={(e) => setForbiddenWordsDraft(e.target.value)}
+                                onBlur={(e) => {
+                                  const parsed = parseGuardrailsCsv(e.target.value);
+                                  handleGuardrailsPatch({ forbiddenWords: parsed });
+                                  setForbiddenWordsDraft(formatGuardrailsCsv(parsed));
+                                }}
                             />
                         </div>
                         <div className="space-y-1">
                             <Label className="text-[10px] font-bold uppercase text-rose-300/85">Must-Include Words</Label>
                             <Input 
-                                placeholder="Must include specific phrase" 
+                                placeholder="e.g. bar 4 bar, exact phrase — commas between items" 
                                 className="h-8 text-[11px] text-foreground/90 bg-background/50 border-rose-500/10" 
-                                value={(track.guardrails?.mustIncludeWords || []).join(', ')}
-                                onChange={(e) =>
-                                  handleGuardrailsPatch({
-                                    mustIncludeWords: e.target.value.split(',').map((w) => w.trim()).filter(Boolean),
-                                  })
-                                }
+                                value={mustIncludeWordsDraft}
+                                onChange={(e) => setMustIncludeWordsDraft(e.target.value)}
+                                onBlur={(e) => {
+                                  const parsed = parseGuardrailsCsv(e.target.value);
+                                  handleGuardrailsPatch({ mustIncludeWords: parsed });
+                                  setMustIncludeWordsDraft(formatGuardrailsCsv(parsed));
+                                }}
                             />
                         </div>
                     </CardContent>
