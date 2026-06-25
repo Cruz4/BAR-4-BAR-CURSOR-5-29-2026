@@ -63,66 +63,59 @@ export function PublicHomeLanding() {
       </header>
 
       <main className="flex-grow flex flex-col mt-16 relative z-10">
-        <section className="relative min-h-[88vh] flex flex-col items-center justify-center text-center px-4">
-          <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in zoom-in duration-1000 relative z-10">
-            <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-md border border-orange-500/40 px-6 py-2 rounded-full shadow-2xl">
+        <section className="relative min-h-[calc(100vh-4rem)] flex items-center px-4 py-8 lg:py-10">
+          <div className="mx-auto w-full max-w-7xl animate-in fade-in zoom-in duration-1000 relative z-10">
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center">
+              <div className="space-y-5 text-center lg:text-left max-w-2xl lg:pr-4">
+                <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-md border border-orange-500/40 px-6 py-2 rounded-full shadow-2xl">
               <Sparkles className="h-4 w-4 text-orange-500 animate-pulse" />
               <span className="text-[11px] font-bold uppercase tracking-[0.3em] text-orange-500">
                 Professional Lyrical Workspace
               </span>
-            </div>
+                </div>
 
-            <div className="space-y-4">
-              <motion.div whileHover={{ scale: 1.02 }} className="cursor-default">
-                <h2 className="text-7xl md:text-9xl font-headline font-bold text-white tracking-tight drop-shadow-[0_10px_25px_rgba(0,0,0,0.9)]">
-                  BAR 4 BAR
-                </h2>
-              </motion.div>
-              <div className="flex items-center justify-center gap-6">
-                <h3 className="text-xl md:text-5xl font-headline font-bold text-white tracking-widest uppercase">
-                  YOUR <span className="text-primary animate-pulse">ULTIMATE</span> STUDIO RHYME BOOK.
-                </h3>
-                <motion.span
-                  animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 4, repeat: Infinity }}
-                  className="text-4xl md:text-6xl drop-shadow-lg"
-                >
-                  🤖
-                </motion.span>
+                <div className="space-y-3">
+                  <motion.div whileHover={{ scale: 1.02 }} className="cursor-default">
+                    <h2 className="text-6xl sm:text-7xl md:text-8xl lg:text-[5rem] xl:text-[5.6rem] font-headline font-bold text-white tracking-tight drop-shadow-[0_10px_25px_rgba(0,0,0,0.9)] leading-none lg:whitespace-nowrap">
+                      BAR 4 BAR
+                    </h2>
+                  </motion.div>
+                  <div className="flex items-center justify-center lg:justify-start gap-2">
+                    <h3 className="text-xl sm:text-2xl md:text-4xl lg:text-[2.7rem] font-headline font-bold text-white tracking-widest uppercase leading-tight">
+                      YOUR <span className="text-primary animate-pulse">ULTIMATE</span> STUDIO RHYME BOOK.
+                    </h3>
+                  </div>
+                </div>
+
+                <p className="text-sm md:text-lg text-white font-body font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0 tracking-wide drop-shadow-lg">
+                  The power-user workstation for{' '}
+                  <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">musicians and lyricists</span>.
+                  Organize{' '}
+                  <span className="bg-sky-500/20 text-sky-400 px-1 rounded-sm font-bold italic underline decoration-primary/40 underline-offset-8">
+                    concept albums
+                  </span>
+                  , train the AI on your{' '}
+                  <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">unique style</span>, and{' '}
+                  <span className="text-sky-400 font-bold">master your craft</span>.
+                </p>
+
+                <LandingHeroCtAs />
+              </div>
+
+              <div className="mx-auto w-full max-w-5xl rounded-2xl border border-white/10 bg-black/35 p-3 shadow-2xl lg:justify-self-end">
+                <p className="mb-2 text-[10px] font-code font-bold uppercase tracking-[0.22em] text-emerald-300 text-center lg:text-left">
+                  Live workstation preview
+                </p>
+                <div className="overflow-hidden rounded-xl border border-white/10 bg-black/50">
+                  <img
+                    src="/marketing/hero-workstation.png"
+                    alt="Bar 4 Bar workstation showing generated next-line options"
+                    className="w-full h-auto object-contain object-top"
+                    loading="eager"
+                  />
+                </div>
               </div>
             </div>
-
-            <p className="text-sm md:text-xl text-white font-body font-medium leading-relaxed max-w-3xl mx-auto px-6 tracking-wide drop-shadow-lg">
-              The power-user workstation for{' '}
-              <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">musicians and lyricists</span>.
-              Organize{' '}
-              <span className="bg-sky-500/20 text-sky-400 px-1 rounded-sm font-bold italic underline decoration-primary/40 underline-offset-8">
-                concept albums
-              </span>
-              , train the AI on your{' '}
-              <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">unique style</span>, and{' '}
-              <span className="text-sky-400 font-bold">master your craft</span>.
-            </p>
-
-            <div className="mx-auto w-full max-w-xl rounded-2xl border border-white/10 bg-black/35 p-3 shadow-2xl">
-              <p className="mb-2 text-[10px] font-code font-bold uppercase tracking-[0.22em] text-emerald-300">
-                Live workstation preview
-              </p>
-              <img
-                src="/marketing/gif-co-writer-next-line.gif"
-                alt="Bar 4 Bar generating the next lyric line in the co-writer"
-                className="w-full rounded-xl border border-white/10"
-                loading="eager"
-              />
-            </div>
-
-            <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[10px] font-code font-bold uppercase tracking-widest text-white/75">
-              <span>For lyricists & musicians</span>
-              <span>No studio setup required</span>
-              <span>Start free, cancel anytime</span>
-            </div>
-
-            <LandingHeroCtAs />
           </div>
         </section>
 

@@ -448,6 +448,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const loadData = async () => {
       if (!user || !authReady) {
+        // Prevent cross-account/stale vault flash while auth session is settling.
+        setAlbums([]);
+        setStyleProfile(null);
+        setSyncPendingCount(0);
+        setCloudSaveStatus('saved');
         setLoading(false);
         vaultLoadedUserIdRef.current = null;
         return;

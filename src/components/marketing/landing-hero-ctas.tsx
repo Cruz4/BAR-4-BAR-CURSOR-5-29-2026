@@ -8,8 +8,6 @@ import { LandingSignupLink } from '@/components/marketing/landing-signup-link';
 import { buildLoginPath, buildProCheckoutPath } from '@/lib/checkout-intent';
 import {
   getFreeSignupCtaLine,
-  getProIntentBilledDetail,
-  getProIntentInkDetail,
   PRO_YEARLY_PRICE,
 } from '@/lib/studio-tiers';
 
@@ -35,10 +33,6 @@ export function LandingHeroCtAs() {
         </LandingSignupLink>
       </Button>
 
-      <p className="text-[10px] sm:text-[11px] text-white/85 font-code text-center leading-relaxed max-w-xl">
-        See a real workflow preview first. Start free, and upgrade only if it helps your writing process.
-      </p>
-
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
         <Link href={payNowCheckoutHref} className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-accent hover:text-accent/80">
           Go Pro now — {PRO_YEARLY_PRICE}/mo yearly
@@ -47,10 +41,6 @@ export function LandingHeroCtAs() {
           View Studio Tiers
         </Link>
       </div>
-
-      <p className="text-[9px] sm:text-[10px] text-muted-foreground/80 font-code uppercase tracking-wide text-center">
-        {getProIntentInkDetail('yearly')} · {getProIntentBilledDetail('yearly')} · card required
-      </p>
     </div>
   );
 }

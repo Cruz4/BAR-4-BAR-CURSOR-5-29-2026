@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Droplets, Sparkles, Timer, Battery } from 'lucide-react';
 import {
   Dialog,
@@ -36,6 +37,7 @@ type GrantLine = {
 };
 
 export function WelcomeInkDialog() {
+  const pathname = usePathname();
   const { user, authReady, loading: authLoading } = useAuth();
   const { inkBalance, residencyBalance, trialInkBalance, purchasedBalance, loading: usageLoading } = useUsage();
   const [open, setOpen] = useState(false);
@@ -105,21 +107,41 @@ export function WelcomeInkDialog() {
   const tryOpenWelcome = useCallback(() => {
     if (!user?.id || !isRecentStudioAccount(user.createdAt)) return;
     if (hasSeenWelcomeInk(user.id)) return;
+    if (!user.vaultTutorialCompletedAt || !user.studioPrivacyIntroCompletedAt) return;
+    if (pathname === '/') return;
     if (isStudioOnboardingBusy()) return;
     setOpen(true);
-  }, [user?.id, user?.createdAt]);
+  }, [
+    user?.id,
+    user?.createdAt,
+    user?.vaultTutorialCompletedAt,
+    user?.studioPrivacyIntroCompletedAt,
+    pathname,
+  ]);
 
   useEffect(() => {
     if (!authReady || authLoading || usageLoading || !user?.id) return;
     if (!isRecentStudioAccount(user.createdAt)) return;
     if (hasSeenWelcomeInk(user.id)) return;
+    if (!user.vaultTutorialCompletedAt || !user.studioPrivacyIntroCompletedAt) return;
+    if (pathname === '/') return;
     if (scheduledRef.current) return;
     if (isStudioOnboardingBusy()) return;
 
     scheduledRef.current = true;
     const timer = window.setTimeout(tryOpenWelcome, 2200);
     return () => window.clearTimeout(timer);
-  }, [authReady, authLoading, usageLoading, user?.id, user?.createdAt, tryOpenWelcome]);
+  }, [
+    authReady,
+    authLoading,
+    usageLoading,
+    user?.id,
+    user?.createdAt,
+    user?.vaultTutorialCompletedAt,
+    user?.studioPrivacyIntroCompletedAt,
+    pathname,
+    tryOpenWelcome,
+  ]);
 
   useEffect(() => {
     const onEligible = () => tryOpenWelcome();

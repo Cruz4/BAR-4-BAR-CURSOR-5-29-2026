@@ -53,7 +53,7 @@ export function VaultStudioProgress({
   const { user } = useAuth();
   const { summary, rankLabel, loading } = useGamification();
   const isSidebar = variant === 'sidebar';
-  const [expanded, setExpanded] = useState(variant !== 'sidebar');
+  const [expanded, setExpanded] = useState(false);
   const initializedRef = useRef(false);
   const xpRingGradientId = useId();
 
