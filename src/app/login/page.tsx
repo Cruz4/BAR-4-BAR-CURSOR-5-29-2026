@@ -31,7 +31,13 @@ import { StudioLoader } from '@/components/studio-loader';
 import { cn } from '@/lib/utils';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
-import { captureMarketingRefFromUrl, getStoredMarketingRef } from '@/lib/marketing-attribution';
+import {
+  captureMarketingRefFromUrl,
+  getStoredMarketingRef,
+  isSocialMarketingRef,
+  marketingRefLabel,
+  normalizeMarketingRef,
+} from '@/lib/marketing-attribution';
 import { REFERRAL_INK_REWARD, REFERRAL_STORAGE_KEY, normalizeReferralCode } from '@/lib/referrals';
 import { claimPendingReferral } from '@/components/refer-a-friend-section';
 import { getTopFunnelSignupSubline } from '@/lib/studio-tiers';
@@ -72,6 +78,9 @@ function LoginForm() {
   const importIntent = searchParams.get('intent') === 'dna-import';
   const safeNext = getSafeNextPath(searchParams.get('next'));
   const proCheckoutIntent = getCheckoutFromPath(safeNext);
+  const marketingRef = normalizeMarketingRef(searchParams.get('ref'));
+  const isTikTokRef = marketingRef === 'tiktok';
+  const isSocialRef = isSocialMarketingRef(marketingRef);
 
   useEffect(() => {
     if (proCheckoutIntent) setAuthMode('signup');
@@ -293,6 +302,22 @@ function LoginForm() {
           <div className="w-full max-w-5xl relative z-10 space-y-4">
             <InviteGateLoginBanner />
 
+            {!proCheckoutIntent && !importIntent && (
+              <Card className="w-full border-primary/20 bg-primary/10 backdrop-blur-md relative z-50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-headline uppercase tracking-wide flex items-center gap-2 text-primary">
+                    <Zap className="h-4 w-4" />
+                    {isSocialRef ? `${marketingRefLabel(marketingRef || '')} signup flow` : 'Start in under 10 seconds'}
+                  </CardTitle>
+                  <CardDescription className="text-[11px] font-code leading-relaxed text-left text-white/85">
+                    {isTikTokRef
+                      ? 'Tap Google to skip email verification friction and jump straight into your first AI next-line session.'
+                      : 'Use Google for the fastest start, then generate your first AI next-line immediately after signup.'}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            )}
+
             {proCheckoutIntent && (
               <Card className="w-full border-accent/30 bg-accent/10 backdrop-blur-md relative z-50">
                 <CardHeader className="pb-2">
@@ -356,13 +381,15 @@ function LoginForm() {
                     </div>
                     <div className="space-y-2.5 max-w-[16rem]">
                       <p className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/35 bg-orange-500/10 px-3 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.28em] text-orange-400">
-                        AI Notebook
+                        {isTikTokRef ? 'TikTok Artist Flow' : 'AI Notebook'}
                       </p>
                       <h2 className="font-headline text-2xl sm:text-3xl lg:text-[2.1rem] font-bold uppercase text-white tracking-tight leading-tight">
-                        Enter the Studio
+                        {isTikTokRef ? 'Write Better Bars Fast' : 'Enter the Studio'}
                       </h2>
                       <p className="text-[10px] sm:text-xs font-code text-primary/80 uppercase tracking-widest leading-relaxed">
-                        {getTopFunnelSignupSubline()}
+                        {isTikTokRef
+                          ? 'Google signup -> first AI next-line in under a minute'
+                          : getTopFunnelSignupSubline()}
                       </p>
                     </div>
                     <div className="hidden sm:flex flex-col items-center gap-1 pt-1 w-full border-t border-white/10 pt-4 max-w-[14rem]">
@@ -390,6 +417,27 @@ function LoginForm() {
                         {getVisitorInkGrantSummary()}
                       </p>
                     )}
+
+                    <div className="grid grid-cols-1 gap-2 mb-3">
+                      <Button
+                        variant="outline"
+                        type="button"
+                        className="w-full h-10 text-sm font-bold bg-black/40 border-white/10 text-white hover:bg-white/5"
+                        onClick={handleGoogleSignIn}
+                        disabled={isProcessing}
+                      >
+                        <svg className="mr-2 h-4 w-4 shrink-0" viewBox="0 0 488 512">
+                          <path
+                            fill="currentColor"
+                            d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"
+                          />
+                        </svg>
+                        Continue with Google (fastest)
+                      </Button>
+                      <p className="text-[10px] text-muted-foreground font-code text-center">
+                        Email signup is available below.
+                      </p>
+                    </div>
 
                     <form onSubmit={handleEmailAuth} className="space-y-3">
                       <div
@@ -482,30 +530,6 @@ function LoginForm() {
                           )}
                         </Button>
 
-                        <div className="relative sm:col-span-2 my-0.5">
-                          <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-white/10" />
-                          </div>
-                          <div className="relative flex justify-center text-[10px] uppercase">
-                            <span className="bg-[#0c121d] px-3 text-muted-foreground font-code">Or continue with</span>
-                          </div>
-                        </div>
-
-                        <Button
-                          variant="outline"
-                          type="button"
-                          className="w-full h-10 text-sm font-bold bg-black/40 border-white/10 text-white hover:bg-white/5 sm:col-span-2"
-                          onClick={handleGoogleSignIn}
-                          disabled={isProcessing}
-                        >
-                          <svg className="mr-2 h-4 w-4 shrink-0" viewBox="0 0 488 512">
-                            <path
-                              fill="currentColor"
-                              d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"
-                            />
-                          </svg>
-                          Google {authMode === 'signup' ? 'Sign Up' : 'Sign In'}
-                        </Button>
                       </div>
                     </form>
                   </Tabs>

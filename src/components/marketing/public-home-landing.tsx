@@ -104,6 +104,24 @@ export function PublicHomeLanding() {
               <span className="text-sky-400 font-bold">master your craft</span>.
             </p>
 
+            <div className="mx-auto w-full max-w-xl rounded-2xl border border-white/10 bg-black/35 p-3 shadow-2xl">
+              <p className="mb-2 text-[10px] font-code font-bold uppercase tracking-[0.22em] text-emerald-300">
+                Real product proof: AI next-line generation
+              </p>
+              <img
+                src="/marketing/gif-co-writer-next-line.gif"
+                alt="Bar 4 Bar generating the next lyric line in the co-writer"
+                className="w-full rounded-xl border border-white/10"
+                loading="eager"
+              />
+            </div>
+
+            <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[10px] font-code font-bold uppercase tracking-widest text-white/75">
+              <span>For lyricists & musicians</span>
+              <span>No studio setup required</span>
+              <span>Start free, cancel anytime</span>
+            </div>
+
             <LandingHeroCtAs />
           </div>
         </section>
