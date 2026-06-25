@@ -40,19 +40,19 @@ export function ProFeaturePreviewBanner({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'shrink-0 border-b border-pink-500/30 bg-pink-600/10 px-4 py-2 flex items-center gap-3 z-40',
+        'shrink-0 border-b border-pink-500/35 bg-pink-100/80 dark:bg-pink-600/10 px-4 py-2 flex items-center gap-3 z-40',
         className
       )}
     >
-      <Sparkles className="h-4 w-4 text-pink-400 shrink-0" aria-hidden />
-      <p className="text-[10px] sm:text-[11px] font-code text-pink-100/90 flex-grow min-w-0">
-        <span className="font-bold uppercase tracking-widest text-pink-300">Pro preview · {timeLabel}</span>
+      <Sparkles className="h-4 w-4 text-pink-600 dark:text-pink-400 shrink-0" aria-hidden />
+      <p className="text-[10px] sm:text-[11px] font-code text-pink-950/90 dark:text-pink-100/90 flex-grow min-w-0">
+        <span className="font-bold uppercase tracking-widest text-pink-800 dark:text-pink-300">Pro preview · {timeLabel}</span>
         {' — '}
         Vault saves, export, unlimited tracks, Performance &amp; DNA Drop unlocked. Ink unchanged.
       </p>
       <Link
         href="/usage?tab=cloud"
-        className="text-[9px] font-bold uppercase tracking-widest text-pink-200 hover:text-white shrink-0"
+        className="text-[9px] font-bold uppercase tracking-widest text-pink-800 hover:text-pink-950 dark:text-pink-200 dark:hover:text-white shrink-0"
       >
         Go Pro
       </Link>

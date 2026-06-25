@@ -318,7 +318,7 @@ function FreeVisitorVault({
         <div className="flex items-center gap-4 border-l-4 border-sky-500 pl-6" data-tour="vault-loose-tracks">
           <Link
             href="/albums/unassigned"
-            className="text-3xl font-headline font-bold text-white uppercase tracking-tighter flex items-center gap-3 hover:text-sky-300 transition-colors"
+            className="text-3xl font-headline font-bold text-foreground uppercase tracking-tighter flex items-center gap-3 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
           >
             <CassetteTape className="text-sky-500 h-8 w-8 shrink-0" />
             Loose Tracks
@@ -336,7 +336,7 @@ function FreeVisitorVault({
               <div
                 key={track.id}
                 className={cn(
-                  'group flex items-center gap-2 py-4 pl-6 pr-3 rounded-2xl bg-black/40 border-2 transition-all shadow-xl',
+                  'group flex items-center gap-2 py-4 pl-6 pr-3 rounded-2xl bg-card/95 border-2 transition-all shadow-xl',
                   tierLocked
                     ? 'border-pink-500/25 hover:border-pink-400/40'
                     : 'border-sky-500/30 hover:border-sky-400/60 hover:bg-sky-500/5'
@@ -358,7 +358,7 @@ function FreeVisitorVault({
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 min-w-0">
-                      <p className="font-bold font-headline text-base text-white uppercase truncate">{track.title}</p>
+                      <p className="font-bold font-headline text-base text-foreground uppercase truncate">{track.title}</p>
                       <DnaDropLiveIndicator shareId={track.shareId} variant="compact" />
                       {tierLocked && (
                         <Badge variant="outline" className={cn('text-[7px] px-1.5 h-4 shrink-0', proLockText())}>View only</Badge>
@@ -373,17 +373,17 @@ function FreeVisitorVault({
                   {!tierLocked && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-white">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-muted/80 text-muted-foreground hover:text-foreground">
                           <MoreVertical className="h-3.5 w-3.5" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48 bg-card border-white/10">
+                      <DropdownMenuContent align="end" className="w-48 bg-card border-border">
                         <DropdownMenuSub>
                           <DropdownMenuSubTrigger className="text-[10px] font-bold uppercase">
                             <Move className="mr-2 h-4 w-4" /> Move To Album
                           </DropdownMenuSubTrigger>
                           <DropdownMenuPortal>
-                            <DropdownMenuSubContent className="bg-card border-white/10">
+                            <DropdownMenuSubContent className="bg-card border-border">
                               {realAlbums.map((album) => (
                                 <DropdownMenuItem
                                   key={album.id}
@@ -441,7 +441,7 @@ function FreeVisitorVault({
 
       <div className="space-y-10" data-tour="vault-collection">
         <div className="flex items-center gap-4 border-l-4 border-emerald-500 pl-6">
-          <h2 className="text-3xl font-headline font-bold text-white uppercase tracking-tighter flex items-center gap-3">
+          <h2 className="text-3xl font-headline font-bold text-foreground uppercase tracking-tighter flex items-center gap-3">
             <Music className="text-emerald-500 h-8 w-8" /> YOUR COLLECTION
           </h2>
           <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 font-mono">{realAlbums.length}/{FREE_ALBUM_LIMIT}</Badge>
@@ -505,7 +505,7 @@ const VinylRecord = ({ album, tierLocked = false }: { album: Album; tierLocked?:
             <div className="absolute inset-0 bg-gradient-to-tr from-white/5 via-transparent to-white/5 pointer-events-none rounded-full" />
         </div>
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 z-20 pointer-events-none translate-y-4 group-hover:translate-y-0">
-            <div className="bg-black/90 backdrop-blur-xl px-6 py-3 rounded-full border border-primary/40 shadow-[0_0_30px_rgba(59,130,246,0.3)] flex flex-col items-center">
+            <div data-dark-surface className="bg-black/90 backdrop-blur-xl px-6 py-3 rounded-full border border-primary/40 shadow-[0_0_30px_rgba(59,130,246,0.3)] flex flex-col items-center">
                 <p className="font-headline text-xl font-bold text-white uppercase tracking-tighter text-center leading-none">{album.title}</p>
                 <p className="text-[9px] text-primary/60 font-code font-bold uppercase tracking-[0.2em] text-center mt-1">{album.tracks?.length || 0} TRACKS</p>
             </div>
@@ -796,13 +796,13 @@ export function AlbumList() {
 
   return (
     <TooltipProvider>
-      <div className="flex-grow w-full relative min-h-screen selection:bg-primary/30 font-code">
+      <div className="flex-grow w-full relative min-h-screen selection:bg-primary/30 font-code" data-vault-shell>
         <FreeTierExpectationsBanner user={user} />
         <VaultChamberAtmosphere />
 
         <div className="relative z-20 w-full min-w-0 max-w-[100vw] xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,72rem)_minmax(0,1fr)] xl:grid-rows-[auto_auto] xl:items-start">
           <div className="relative min-w-0 w-full xl:col-start-2 xl:row-start-1 px-4 sm:px-6 pt-6">
-            <header className="mb-8 pb-6 border-b border-white/5" data-tour="vault-header">
+            <header className="mb-8 pb-6 border-b border-border" data-tour="vault-header">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-6">
                 <div className="flex items-center gap-3 shrink-0">
                   <Waves className="h-8 w-8 text-primary shrink-0" />
@@ -810,7 +810,7 @@ export function AlbumList() {
                     <h1 className="text-4xl md:text-5xl font-headline font-bold text-primary uppercase tracking-tighter leading-none">
                       The Vault
                     </h1>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-[0.4em] font-bold opacity-60">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-[0.4em] font-bold">
                       Professional Project Blueprints
                     </p>
                   </div>
@@ -821,7 +821,7 @@ export function AlbumList() {
                         <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                         <Input 
                             placeholder='Search Vault... use "" for exact' 
-                            className="pl-10 h-10 bg-black/60 border-white/5 focus:border-primary/40 rounded-xl font-code font-bold text-xs"
+                            className="pl-10 h-10 bg-muted border-border focus:border-primary/40 rounded-xl font-code font-bold text-xs"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -830,11 +830,11 @@ export function AlbumList() {
                     
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-10 px-4 bg-black/40 border-white/5 rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest">
+                            <Button variant="outline" size="sm" className="h-10 px-4 bg-card/95 border-border rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest">
                                 <ArrowUpDown className="h-4 w-4" /> Sort
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-card border-white/10">
+                        <DropdownMenuContent align="end" className="bg-card border-border">
                             <DropdownMenuItem onClick={() => setSortBy('newest')} className="text-[10px] font-bold uppercase"><SortDesc className="mr-2 h-4 w-4" /> Newest First</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setSortBy('oldest')} className="text-[10px] font-bold uppercase"><SortAsc className="mr-2 h-4 w-4" /> Oldest First</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setSortBy('alphabetical')} className="text-[10px] font-bold uppercase"><SortAsc className="mr-2 h-4 w-4" /> Alphabetical</DropdownMenuItem>
@@ -847,7 +847,7 @@ export function AlbumList() {
                                 <PlusCircle className="h-4 w-4" /> Create New
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-card border-white/10 w-48">
+                        <DropdownMenuContent align="end" className="bg-card border-border w-48">
                             <DropdownMenuItem onClick={() => setCreateItemType('Album')} className="text-[10px] font-bold uppercase">
                                 <Music className="mr-2 h-4 w-4" /> Concept Album
                             </DropdownMenuItem>
@@ -861,7 +861,7 @@ export function AlbumList() {
                         {isPro ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-10 w-10 border border-white/5 bg-black/40 rounded-xl" onClick={() => fileInputRef.current?.click()}>
+                              <Button variant="ghost" size="icon" className="h-10 w-10 border border-border bg-card/95 rounded-xl" onClick={() => fileInputRef.current?.click()}>
                                 <Import className="h-4 w-4 text-muted-foreground" />
                               </Button>
                             </TooltipTrigger>
@@ -873,7 +873,7 @@ export function AlbumList() {
                         {isPro ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-10 w-10 border border-white/5 bg-black/40 rounded-xl" onClick={handleExport}>
+                              <Button variant="ghost" size="icon" className="h-10 w-10 border border-border bg-card/95 rounded-xl" onClick={handleExport}>
                                 <Download className="h-4 w-4 text-muted-foreground" />
                               </Button>
                             </TooltipTrigger>
@@ -909,23 +909,23 @@ export function AlbumList() {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-                            <h2 className="text-2xl font-headline font-bold text-white uppercase tracking-tight">Search Results ({searchResults.length})</h2>
+                            <h2 className="text-2xl font-headline font-bold text-foreground uppercase tracking-tight">Search Results ({searchResults.length})</h2>
                         </div>
                         <Button variant="ghost" className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary" onClick={() => setSearchQuery('')}>Clear Search</Button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {searchResults.map((res, i) => (
                             <Link key={i} href={res.type === 'album' ? `/albums/${res.id}` : `/albums/${res.albumId}/tracks/${res.id}`} className="group">
-                                <Card className="p-4 bg-black/40 border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all shadow-xl flex items-center justify-between group h-24">
+                                <Card className="p-4 bg-card/95 border-border hover:border-primary/40 hover:bg-primary/5 transition-all shadow-xl flex items-center justify-between group h-24">
                                     <div className="flex items-center gap-4 overflow-hidden">
                                         <div className="w-12 h-12 bg-primary/10 rounded-xl border border-primary/20 flex items-center justify-center group-hover:bg-primary/20 transition-all shrink-0">
                                             {res.type === 'album' ? <Music className="h-6 w-6 text-primary" /> : <CassetteTape className="h-6 w-6 text-primary" />}
                                         </div>
                                         <div className="space-y-1 min-w-0">
                                             <div className="flex items-center gap-2 min-w-0">
-                                                <h4 className="font-bold text-lg text-white font-headline leading-tight uppercase group-hover:text-primary transition-colors truncate">{res.title}</h4>
+                                                <h4 className="font-bold text-lg text-foreground font-headline leading-tight uppercase group-hover:text-primary transition-colors truncate">{res.title}</h4>
                                                 <DnaDropLiveIndicator shareId={res.shareId} variant="compact" />
-                                                <Badge variant="outline" className={cn("text-[8px] font-bold uppercase px-1.5 h-4 border-white/10 shrink-0", res.type === 'album' ? 'text-emerald-500' : 'text-sky-500')}>{res.type}</Badge>
+                                                <Badge variant="outline" className={cn("text-[8px] font-bold uppercase px-1.5 h-4 border-border shrink-0", res.type === 'album' ? 'text-emerald-500' : 'text-sky-500')}>{res.type}</Badge>
                                             </div>
                                             <p className="text-[10px] text-muted-foreground italic font-code line-clamp-1 opacity-60">
                                                 "{res.type === 'album' ? res.theme : (res.matchingSnippet || 'No lyrics drafted yet.')}"
@@ -961,7 +961,7 @@ export function AlbumList() {
                                 <div className="flex items-center gap-4 min-w-0">
                                     <Link
                                       href="/albums/unassigned"
-                                      className="text-2xl sm:text-3xl font-headline font-bold text-white uppercase tracking-tighter flex items-center gap-3 hover:text-primary transition-colors"
+                                      className="text-2xl sm:text-3xl font-headline font-bold text-foreground uppercase tracking-tighter flex items-center gap-3 hover:text-primary transition-colors"
                                     >
                                       <CassetteTape className="text-primary h-7 w-7 sm:h-8 sm:w-8 shrink-0" />
                                       Loose Tracks
@@ -971,7 +971,7 @@ export function AlbumList() {
                                         <Button
                                           variant="ghost"
                                           size="icon"
-                                          className="h-10 w-10 min-h-10 min-w-10 rounded-full hover:bg-white/10"
+                                          className="h-10 w-10 min-h-10 min-w-10 rounded-full hover:bg-muted/80"
                                           onClick={() => setLooseTracksMinimized(!looseTracksMinimized)}
                                           aria-label={looseTracksMinimized ? 'Expand loose tracks' : 'Collapse loose tracks'}
                                         >
@@ -996,14 +996,14 @@ export function AlbumList() {
                                     >
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                             {sortedLooseTracks.map(track => (
-                                                <div key={track.id} className="group flex items-center gap-2 py-4 pl-6 pr-3 rounded-2xl bg-black/40 backdrop-blur-3xl border border-white/5 hover:border-primary/30 hover:bg-primary/5 transition-all shadow-xl">
+                                                <div key={track.id} className="group flex items-center gap-2 py-4 pl-6 pr-3 rounded-2xl bg-card/95 backdrop-blur-3xl border border-border hover:border-primary/30 hover:bg-primary/5 transition-all shadow-xl">
                                                     <Link href={`/albums/unassigned/tracks/${track.id}`} className="flex items-center gap-4 min-w-0 flex-1">
                                                         <div className="p-2 bg-primary/10 rounded-xl border border-primary/20 group-hover:bg-primary/20 transition-all shrink-0">
                                                             <CassetteTape className="h-5 w-5 text-primary" />
                                                         </div>
                                                         <div className="min-w-0">
                                                             <div className="flex items-center gap-2 min-w-0">
-                                                              <p className="font-bold font-headline text-base text-white uppercase truncate">{track.title}</p>
+                                                              <p className="font-bold font-headline text-base text-foreground uppercase truncate">{track.title}</p>
                                                               <DnaDropLiveIndicator shareId={track.shareId} variant="compact" />
                                                             </div>
                                                             <p className="text-[8px] text-muted-foreground uppercase font-code mt-0.5">{track.vibe?.genre} &middot; {track.vibe?.tempoBPM} BPM</p>
@@ -1012,15 +1012,15 @@ export function AlbumList() {
                                                     <div className="flex items-center gap-0.5 shrink-0">
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-white">
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-muted/80 text-muted-foreground hover:text-foreground">
                                                                     <MoreVertical className="h-3.5 w-3.5" />
                                                                 </Button>
                                                             </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end" className="w-48 bg-card border-white/10">
+                                                            <DropdownMenuContent align="end" className="w-48 bg-card border-border">
                                                                 <DropdownMenuSub>
                                                                     <DropdownMenuSubTrigger className="text-[10px] font-bold uppercase"><Move className="mr-2 h-4 w-4" /> Move To Album</DropdownMenuSubTrigger>
                                                                     <DropdownMenuPortal>
-                                                                        <DropdownMenuSubContent className="bg-card border-white/10">
+                                                                        <DropdownMenuSubContent className="bg-card border-border">
                                                                             {realAlbums.map(album => (
                                                                                 <DropdownMenuItem key={album.id} onClick={() => { moveTrack(track.id, 'unassigned', album.id); toast({ title: "Track Assigned", description: `"${track.title}" moved to ${album.title}. Album DNA inherit is on.` }); }} className="text-[10px] font-bold uppercase">
                                                                                     <Music className="mr-2 h-3 w-3" /> {album.title}
@@ -1055,10 +1055,10 @@ export function AlbumList() {
                     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200" data-tour="vault-collection">
                         <div className="flex items-center gap-4 border-l-4 border-emerald-500 pl-6">
                             <div>
-                                <h2 className="text-3xl font-headline font-bold text-white uppercase tracking-tighter flex items-center gap-3">
+                                <h2 className="text-3xl font-headline font-bold text-foreground uppercase tracking-tighter flex items-center gap-3">
                                     <Music className="text-emerald-500 h-8 w-8" /> YOUR COLLECTION
                                 </h2>
-                                <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-1 opacity-60">Concept Album DNA Architectures</p>
+                                <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Concept Album DNA Architectures</p>
                             </div>
                             {filteredAlbums.length > 0 && (
                               <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 font-mono ml-auto">{filteredAlbums.length}</Badge>
@@ -1084,7 +1084,7 @@ export function AlbumList() {
               variant="outline"
               tabIndex={-1}
               onClick={() => setShowClearVaultConfirm(true)}
-              className="pointer-events-auto h-6 min-h-6 px-2.5 gap-1 rounded-lg border-red-500/30 bg-black/80 backdrop-blur-md text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50 shadow-[0_4px_16px_rgba(0,0,0,0.35)] font-bold text-[8px] uppercase tracking-wider"
+              className="pointer-events-auto h-6 min-h-6 px-2.5 gap-1 rounded-lg border-red-500/30 bg-card backdrop-blur-md text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50 shadow-[0_4px_16px_rgba(0,0,0,0.35)] font-bold text-[8px] uppercase tracking-wider"
             >
               <Trash2 className="h-3 w-3 shrink-0" />
               Clear Vault

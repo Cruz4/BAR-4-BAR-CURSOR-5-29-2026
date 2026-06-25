@@ -18,6 +18,8 @@
 
 import React, { useState, useEffect, useMemo, useTransition, useContext, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useWritingSurface } from '@/hooks/use-writing-surface';
+import { buildLyricsNotebookStyle, lyricsSurfaceClassName } from '@/lib/writing-surface-styles';
 import { DataContext } from '@/context/data-context';
 import type { Album, Track, Direction, TrackSection, TrackVibe, StyleProfile } from '@/lib/types';
 import {
@@ -552,14 +554,14 @@ function DNAVaultDialog({
                     <TooltipProvider delayDuration={300}>
                     <div className="space-y-4 pb-1">
                         {presets.length > 0 ? presets.map((p: any, i: number) => (
-                            <Card key={`${p.name}-${i}`} className="bg-background/40 border-white/5 overflow-hidden flex flex-col transition-all">
+                            <Card key={`${p.name}-${i}`} className="bg-card/90 border-border overflow-hidden flex flex-col transition-all dark:bg-background/40 dark:border-white/5">
                                 <div 
-                                  className="p-3 flex items-center justify-between cursor-pointer hover:bg-white/5"
+                                  className="p-3 flex items-center justify-between cursor-pointer hover:bg-muted/50 dark:hover:bg-white/5"
                                   onClick={() => setExpandedIdx(expandedIdx === i ? null : i)}
                                 >
                                     <div className="min-w-0 flex-grow pr-4">
                                         <div className="flex items-center gap-2">
-                                            <p className="text-xs font-bold text-white uppercase truncate">{p.name}</p>
+                                            <p className="text-xs font-bold text-foreground dark:text-white uppercase truncate">{p.name}</p>
                                             {isSystemPreset(p.createdAt) && (
                                                 <ProLockBadge label="System" />
                                             )}
@@ -583,7 +585,7 @@ function DNAVaultDialog({
                                     </div>
                                 </div>
                                 {expandedIdx === i && (
-                                    <div className="p-3 bg-black/40 border-t border-white/5 animate-in slide-in-from-top-2 duration-300">
+                                    <div className="p-3 bg-muted/40 border-t border-border animate-in slide-in-from-top-2 duration-300 dark:bg-black/40 dark:border-white/5">
                                         <DnaVaultPresetDetails
                                             preset={p}
                                             {...injectHandlers}
@@ -629,7 +631,7 @@ function VibeVaultDialog({ open, onOpenChange, track, onUpdateTrack, onApply, is
                             <div key={`${v.name}-${i}`} className="p-3 border rounded-lg hover:bg-muted/50 transition-colors flex items-center justify-between group">
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2">
-                                        <p className="text-xs font-bold text-white uppercase truncate">{v.name || 'Unnamed Preset'}</p>
+                                        <p className="text-xs font-bold text-foreground dark:text-white uppercase truncate">{v.name || 'Unnamed Preset'}</p>
                                         {isSystemPreset(v.createdAt) && (
                                             <ProLockBadge label="System" />
                                         )}
@@ -688,7 +690,7 @@ function StyleVaultDialog({ open, onOpenChange, album, updateAlbum, onApply, isP
                             <div key={`${s.name}-${i}`} className="p-3 border rounded-lg hover:bg-muted/50 transition-colors flex items-center justify-between group">
                                 <div className="min-w-0 pr-2">
                                     <div className="flex items-center gap-2">
-                                        <p className="text-xs font-bold text-white uppercase truncate">{s.name}</p>
+                                        <p className="text-xs font-bold text-foreground dark:text-white uppercase truncate">{s.name}</p>
                                         {isSystemPreset(s.createdAt) && (
                                             <ProLockBadge label="System" />
                                         )}
@@ -903,7 +905,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                     <p
                       className={cn(
                         'text-[9px] leading-snug',
-                        completeLocked ? 'text-amber-100/90 font-medium' : 'text-muted-foreground'
+                        completeLocked ? 'text-amber-900 dark:text-amber-100/90 font-medium' : 'text-muted-foreground'
                       )}
                     >
                       {tierLocked
@@ -991,30 +993,30 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
               </CardContent>
           </Card>
           
-          <Card className="border-yellow-500/20 bg-[#1a1a14] shadow-lg overflow-hidden p-0">
-            <div className="flex items-center gap-2 p-4 pb-2 border-b border-white/5">
-                <GitMerge className="h-4 w-4 text-yellow-500" />
-                <h3 className="font-headline font-bold text-lg text-yellow-500 uppercase tracking-tight">Structure</h3>
+          <Card className="border-yellow-500/20 bg-yellow-500/12 dark:bg-[#1a1a14] shadow-lg overflow-hidden p-0">
+            <div className="flex items-center gap-2 p-4 pb-2 border-b border-border dark:border-white/5">
+                <GitMerge className="h-4 w-4 text-yellow-700 dark:text-yellow-500" />
+                <h3 className="font-headline font-bold text-lg text-yellow-800 dark:text-yellow-500 uppercase tracking-tight">Structure</h3>
             </div>
             <div className="space-y-1 px-2 py-3">
                 {track.sections?.map((s: any, idx: number) => (
                     <div key={s.id} onClick={() => setActiveSectionId(s.id)} className={cn(
                         "flex items-center justify-between px-3 py-2 rounded-md transition-all cursor-pointer border border-transparent",
-                        activeSectionId === s.id ? "bg-yellow-500/10 border-yellow-500/20" : "hover:bg-yellow-500/5"
+                        activeSectionId === s.id ? "bg-yellow-500/15 border-yellow-500/30 dark:bg-yellow-500/10 dark:border-yellow-500/20" : "hover:bg-yellow-500/10 dark:hover:bg-yellow-500/5"
                     )}>
                         <div className="flex items-center gap-2 min-w-0">
                              <Badge
                                variant="outline"
-                               className="h-4 px-1 text-[7px] font-mono border-white/10 text-muted-foreground"
+                               className="h-4 px-1 text-[7px] font-mono border-border dark:border-white/10 text-muted-foreground"
                                title={`${s.bars.length} lines · ${linesToRhymeBars(s.bars.length)} bars`}
                              >
                                {linesToRhymeBars(s.bars.length)}
                              </Badge>
-                             <span className="font-bold text-xs text-white uppercase truncate">{s.type}</span>
+                             <span className="font-bold text-xs text-foreground uppercase truncate">{s.type}</span>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-yellow-500" onClick={(e) => { e.stopPropagation(); handleMoveSection(s.id, 'up'); }} disabled={trackLocked || idx === 0}><ArrowUp className="h-3 w-3" /></Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-yellow-500" onClick={(e) => { e.stopPropagation(); handleMoveSection(s.id, 'down'); }} disabled={trackLocked || idx === track.sections.length - 1}><ArrowDown className="h-3 w-3" /></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-yellow-700 dark:hover:text-yellow-500" onClick={(e) => { e.stopPropagation(); handleMoveSection(s.id, 'up'); }} disabled={trackLocked || idx === 0}><ArrowUp className="h-3 w-3" /></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-yellow-700 dark:hover:text-yellow-500" onClick={(e) => { e.stopPropagation(); handleMoveSection(s.id, 'down'); }} disabled={trackLocked || idx === track.sections.length - 1}><ArrowDown className="h-3 w-3" /></Button>
                             <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500/60 hover:text-red-500 hover:bg-red-500/10" onClick={(e) => { e.stopPropagation(); onUpdateTrack({ sections: track.sections.filter((sec:any) => sec.id !== s.id) }); }} disabled={trackLocked}><Trash2 className="h-3 w-3" /></Button>
                         </div>
                     </div>
@@ -1023,7 +1025,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
             <div className="p-4 pt-0">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" disabled={trackLocked} className="w-full h-10 border-yellow-500/20 bg-background/40 hover:bg-yellow-500/5 text-yellow-500 font-bold text-xs uppercase gap-2 shadow-inner disabled:opacity-50">
+                        <Button variant="outline" disabled={trackLocked} className="w-full h-10 border-yellow-500/30 dark:border-yellow-500/20 bg-background hover:bg-yellow-500/10 text-yellow-800 dark:text-yellow-500 font-bold text-xs uppercase gap-2 shadow-inner disabled:opacity-50">
                             <PlusCircle className="h-4 w-4" /> Add Section
                         </Button>
                     </DropdownMenuTrigger>
@@ -1107,36 +1109,38 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   );
 }
 
-function NeuralStripItem({ text, active, color, onClick }: { text: string, active?: boolean, color: string, onClick: () => void }) {
-    return (
-      <div 
-        onClick={onClick}
-        className="flex flex-col items-center gap-3 py-3 cursor-pointer transition-all duration-500 w-full group shrink-0"
+function NeuralStripItem({ text, active, color, onClick }: { text: string; active?: boolean; color: string; onClick: () => void }) {
+  return (
+    <div
+      onClick={onClick}
+      className="flex flex-col items-center gap-3 py-3 cursor-pointer transition-all duration-500 w-full group shrink-0"
+    >
+      <div
+        style={{
+          backgroundColor: color,
+          boxShadow: active ? `0 0 12px ${color}` : 'none',
+        }}
+        className={cn(
+          'w-1.5 h-12 rounded-full transition-all duration-700',
+          active ? 'opacity-100' : 'opacity-20 group-hover:opacity-40'
+        )}
+      />
+      <div
+        style={{
+          color,
+          filter: active ? `drop-shadow(0 0 4px ${color})` : 'none',
+        }}
+        className={cn(
+          'flex flex-col items-center gap-0.5 text-[9px] font-bold leading-none tracking-[0.2em] uppercase font-code transition-all duration-500',
+          active ? 'opacity-100' : 'opacity-20 group-hover:opacity-100'
+        )}
       >
-        <div 
-          style={{ 
-              backgroundColor: color,
-              boxShadow: active ? `0 0 12px ${color}` : 'none'
-          }}
-          className={cn(
-              "w-1.5 h-12 rounded-full transition-all duration-700",
-              active ? "opacity-100" : "opacity-20 group-hover:opacity-40"
-          )} 
-        />
-        <div 
-          style={{ 
-              color: color,
-              filter: active ? `drop-shadow(0 0 4px ${color})` : 'none'
-          }}
-          className={cn(
-              "flex flex-col items-center gap-0.5 text-[9px] font-bold leading-none tracking-[0.2em] uppercase font-code transition-all duration-500",
-              active ? "opacity-100" : "opacity-20 group-hover:opacity-100"
-          )}
-        >
-          {text.split('').map((char, i) => <span key={i}>{char}</span>)}
-        </div>
+        {text.split('').map((char, i) => (
+          <span key={i}>{char}</span>
+        ))}
       </div>
-    );
+    </div>
+  );
 }
 
 // --- Center Panel Component ---
@@ -1208,15 +1212,20 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
     };
   }, [syncHeights]);
 
-  const notebookStyle = {
-    backgroundColor: 'transparent',
-    backgroundImage: `
-      linear-gradient(90deg, transparent var(--lyrics-gutter, 100px), rgba(255, 0, 0, 0.2) var(--lyrics-gutter, 100px), rgba(255, 0, 0, 0.2) calc(var(--lyrics-gutter, 100px) + 1px), transparent calc(var(--lyrics-gutter, 100px) + 1px)),
-      repeating-linear-gradient(transparent, transparent ${parseInt(activeLineHeight) - 1}px, rgba(255, 255, 255, 0.08) ${parseInt(activeLineHeight) - 1}px, rgba(255, 255, 255, 0.08) ${activeLineHeight})
-    `,
-    backgroundSize: `100% ${activeLineHeight}`,
-    backgroundAttachment: 'local'
-  } as React.CSSProperties;
+  const { mode: writingSurfaceMode, colorTheme } = useWritingSurface();
+  const lineHeightPx = parseInt(activeLineHeight, 10);
+
+  const notebookStyle = useMemo(
+    () =>
+      buildLyricsNotebookStyle({
+        writingMode: writingSurfaceMode,
+        colorTheme,
+        lineHeightPx,
+      }),
+    [writingSurfaceMode, colorTheme, lineHeightPx]
+  );
+
+  const lyricsSurfaceClass = lyricsSurfaceClassName(writingSurfaceMode, colorTheme);
 
   const handleDeleteBar = (sId: string, bIdx: number) => {
       if (trackLocked) {
@@ -1500,7 +1509,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
         </div>
       </div>
       
-      <div id="lyrics-viewport" ref={lyricsViewportRef} data-tour="lyrics-sheet" className="flex-1 relative overflow-x-hidden overflow-y-auto min-h-0 studio-scrollbar max-md:[--lyrics-gutter:2rem]" style={notebookStyle}>
+      <div id="lyrics-viewport" ref={lyricsViewportRef} data-tour="lyrics-sheet" className={cn("flex-1 relative overflow-x-hidden overflow-y-auto min-h-0 studio-scrollbar max-md:[--lyrics-gutter:2rem]", lyricsSurfaceClass)} style={notebookStyle}>
         <div className="w-full max-full pb-12">
           {!track.sections || track.sections.length === 0 ? (
               <div data-tour="lyrics-sheet-focus" className="flex flex-col items-center justify-center h-[400px] text-center gap-6 animate-in fade-in zoom-in duration-1000">
@@ -1508,7 +1517,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                       <NotebookPen className="h-10 w-10 text-primary animate-pulse" />
                   </div>
                   <div className="space-y-2">
-                    <h3 className="font-headline text-3xl font-bold uppercase tracking-tight text-white">Initialize Studio</h3>
+                    <h3 className="font-headline text-3xl font-bold uppercase tracking-tight text-foreground dark:text-white">Initialize Studio</h3>
                     <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">Select a section in the left panel to begin your sheet.</p>
                   </div>
               </div>
@@ -1716,18 +1725,18 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                 <Button 
                                     key={i} 
                                     variant="outline" 
-                                    className="flex-1 min-w-0 h-14 py-1 px-2 md:px-4 font-bold bg-primary/10 border-primary/40 hover:bg-primary/20 text-white text-left justify-start gap-2 group border-2 shadow-2xl transition-all w-full"
+                                    className="flex-1 min-w-0 h-14 py-1 px-2 md:px-4 font-bold bg-primary/10 border-primary/40 hover:bg-primary/20 text-foreground dark:text-white text-left justify-start gap-2 group border-2 shadow-2xl transition-all w-full"
                                     disabled={trackLocked}
                                     onClick={() => handleAcceptOption(opt.line)}
                                 >
-                                    <div className="flex flex-col gap-0.5 shrink-0 border-r border-white/10 pr-2">
+                                    <div className="flex flex-col gap-0.5 shrink-0 border-r border-border dark:border-white/10 pr-2">
                                         <Badge className="bg-primary text-[8px] h-4 px-1 uppercase leading-none whitespace-nowrap">Opt {i+1}</Badge>
                                         <span className="text-[9px] text-muted-foreground font-mono uppercase tracking-tighter leading-none">{opt.syllables} SYLL</span>
                                     </div>
                                     <span className="text-xs md:text-sm leading-tight tracking-tight flex-1 min-w-0 break-words line-clamp-2">{opt.line}</span>
                                 </Button>
                             ))}
-                            <Button variant="ghost" size="icon" onClick={handleDismissGenerationOptions} className="h-10 w-10 md:h-14 md:w-10 shrink-0 text-muted-foreground hover:text-red-500 bg-white/5 border border-white/10 rounded-lg">
+                            <Button variant="ghost" size="icon" onClick={handleDismissGenerationOptions} className="h-10 w-10 md:h-14 md:w-10 shrink-0 text-muted-foreground hover:text-red-500 bg-muted/50 border border-border rounded-lg dark:bg-white/5 dark:border-white/10">
                                 <X className="h-5 w-5" />
                             </Button>
                         </div>
@@ -2071,7 +2080,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           <Collapsible open={sectionOpen.dna} onOpenChange={(o) => onSectionChange('dna', o)} className="space-y-1">
             <Card
               className={cn(
-                coWriterSectionCardClass(dnaSectionLit, 'border-green-500/30 bg-green-500/5'),
+                coWriterSectionCardClass(dnaSectionLit, 'border-green-500/30 bg-green-500/12 dark:bg-green-500/5'),
                 inheritFromAlbumOn && 'border border-dashed border-emerald-500/35'
               )}
               data-tour="dna-suite"
@@ -2103,8 +2112,8 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                               className={cn(
                                 cowriterSectionSubtitle(sectionOpen.dna),
                                 dnaCollapsedInherit
-                                  ? 'text-green-400/90'
-                                  : coWriterSectionAccentClass(dnaSectionLit, 'text-green-400/80')
+                                  ? 'text-green-700/90 dark:text-green-400/90'
+                                  : coWriterSectionAccentClass(dnaSectionLit, 'text-green-700/80 dark:text-green-400/80')
                               )}
                               title={
                                 sectionOpen.dna
@@ -2168,7 +2177,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                     <span
                       className={cn(
                         'text-[10px] font-bold uppercase',
-                        inheritFromAlbumOn ? 'text-green-400/95' : 'text-green-300/90'
+                        inheritFromAlbumOn ? 'text-green-700/95 dark:text-green-400/95' : 'text-green-800/90 dark:text-green-300/90'
                       )}
                     >
                       Inherit From Album
@@ -2243,7 +2252,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           </Collapsible>
 
           <Collapsible open={sectionOpen.vibe} onOpenChange={(o) => onSectionChange('vibe', o)} className="space-y-1">
-            <Card className={coWriterSectionCardClass(vibeActive, 'border-amber-500/30 bg-amber-500/5')}>
+            <Card className={coWriterSectionCardClass(vibeActive, 'border-amber-500/30 bg-amber-500/12 dark:bg-amber-500/5')}>
                 <div className="p-4 flex flex-row items-center justify-between space-y-0">
                     <TooltipProvider delayDuration={300}>
                       <Tooltip>
@@ -2251,7 +2260,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                           <CollapsibleTrigger asChild>
                             <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 overflow-hidden pr-1 text-left">
                               <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none truncate', coWriterSectionTitleClass(vibeActive, 'text-amber-500'))}><Palette className="h-4 w-4 shrink-0" /> Track Vibe</CardTitle>
-                              <p className={cn(cowriterSectionSubtitle(sectionOpen.vibe), coWriterSectionAccentClass(vibeActive, 'text-amber-400/80'))}>
+                              <p className={cn(cowriterSectionSubtitle(sectionOpen.vibe), coWriterSectionAccentClass(vibeActive, 'text-amber-700/80 dark:text-amber-400/80'))}>
                                 {sectionOpen.vibe ? 'Instrumentation & Atmosphere' : 'Vibe & Production'}
                               </p>
                             </div>
@@ -2295,7 +2304,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                     <CardContent className="space-y-3 px-4 pb-4 font-code">
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
-                                <Label className="text-[10px] font-bold uppercase text-amber-300/85">Genre</Label>
+                                <Label className="text-[10px] font-bold uppercase text-amber-800 dark:text-amber-300/85">Genre</Label>
                                 <Input 
                                     value={track.vibe.genre} 
                                     onChange={(e) => onUpdateTrack({ vibe: { ...track.vibe, genre: e.target.value } })}
@@ -2303,7 +2312,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                 />
                             </div>
                             <div className="space-y-1">
-                                <Label className="text-[10px] font-bold uppercase text-amber-300/85">BPM</Label>
+                                <Label className="text-[10px] font-bold uppercase text-amber-800 dark:text-amber-300/85">BPM</Label>
                                 <Input 
                                     type="number" 
                                     value={track.vibe.tempoBPM} 
@@ -2316,7 +2325,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                             <TooltipProvider delayDuration={300}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Label className="text-[10px] font-bold uppercase text-amber-300/85 cursor-help w-fit">Instrumentation</Label>
+                                  <Label className="text-[10px] font-bold uppercase text-amber-800 dark:text-amber-300/85 cursor-help w-fit">Instrumentation</Label>
                                 </TooltipTrigger>
                                 <TooltipContent side="left" className="max-w-[260px] space-y-1">
                                   <p className="text-[10px] font-bold leading-snug">Paste into Suno / Udio</p>
@@ -2361,7 +2370,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           </Collapsible>
 
           <Collapsible open={sectionOpen.intents} onOpenChange={(o) => onSectionChange('intents', o)} className="space-y-1">
-            <Card className={coWriterSectionCardClass(intentsMasterOn, 'border-sky-500/30 bg-[#0c1a26] shadow-xl overflow-hidden p-0')}>
+            <Card className={coWriterSectionCardClass(intentsMasterOn, 'border-sky-500/30 bg-sky-500/12 dark:bg-[#0c1a26] shadow-xl overflow-hidden p-0')} data-studio-panel>
                 <div className="flex items-center justify-between p-4 pb-2">
                     <TooltipProvider delayDuration={300}>
                       <Tooltip>
@@ -2369,12 +2378,13 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                           <CollapsibleTrigger asChild>
                             <div className="space-y-1 cursor-pointer flex-grow min-w-0 overflow-hidden text-left pr-1">
                               <div className="flex items-center gap-2 min-w-0">
-                                  <Target className={cn('h-5 w-5 shrink-0', coWriterSectionTitleClass(intentsMasterOn, 'text-sky-400'))} />
-                                  <h3 className={cn('font-headline font-bold text-xl uppercase tracking-tighter truncate', coWriterSectionTitleClass(intentsMasterOn, 'text-sky-400'))}>Intents</h3>
+                                  <Target className={cn('h-5 w-5 shrink-0', coWriterSectionTitleClass(intentsMasterOn, 'text-sky-700 dark:text-sky-400'))} />
+                                  <h3 className={cn('font-bold text-xl uppercase tracking-tighter truncate', coWriterSectionTitleClass(intentsMasterOn, 'text-sky-700 dark:text-sky-400'))}>Intents</h3>
                               </div>
                               <p
                                 className={cn(
-                                  'text-[10px] text-foreground/75 font-code normal-case tracking-normal',
+                                  'text-[10px] font-code normal-case tracking-normal',
+                                  coWriterSectionAccentClass(intentsMasterOn, 'text-sky-800/90 dark:text-sky-300/80'),
                                   sectionOpen.intents ? 'leading-snug break-words' : 'leading-none truncate'
                                 )}
                                 title="Punchlines and lines to weave into this track."
@@ -2430,10 +2440,10 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                         {!isActiveForTrack && intentCheckbox}
                                         <span className={cn(
                                             "text-xs font-code flex-1 min-w-0 whitespace-normal break-words leading-snug",
-                                            isLocked ? "text-sky-300 font-bold" : isChecked ? "text-foreground/90" : "text-foreground/85"
+                                            isLocked ? "text-sky-800 font-bold dark:text-sky-300" : isChecked ? "text-foreground/90" : "text-foreground/85"
                                         )}>{intent}</span>
                                         {isLocked && (
-                                          <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-sky-400 shrink-0 self-center whitespace-nowrap">
+                                          <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400 shrink-0 self-center whitespace-nowrap">
                                             End in
                                           </span>
                                         )}
@@ -2500,12 +2510,12 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           </Collapsible>
 
           <Collapsible open={sectionOpen.guardrails} onOpenChange={(o) => onSectionChange('guardrails', o)} className="space-y-1">
-            <Card className={coWriterSectionCardClass(guardActive, 'border-rose-500/30 bg-rose-500/5')}>
+            <Card className={coWriterSectionCardClass(guardActive, 'border-rose-500/30 bg-rose-500/12 dark:bg-rose-500/5')}>
                 <CollapsibleTrigger asChild>
                     <CardHeader className="p-4 flex-row items-center justify-between cursor-pointer space-y-0">
                         <div className="space-y-0.5 min-w-0 flex-grow pr-1">
                             <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none', coWriterSectionTitleClass(guardActive, 'text-rose-500'))}><Shield className="h-4 w-4" /> Guardrails</CardTitle>
-                            <p className={cn(cowriterSectionSubtitle(sectionOpen.guardrails), coWriterSectionAccentClass(guardActive, 'text-rose-400/80'))} title="Content Restrictions">
+                            <p className={cn(cowriterSectionSubtitle(sectionOpen.guardrails), coWriterSectionAccentClass(guardActive, 'text-rose-700/80 dark:text-rose-400/80'))} title="Content Restrictions">
                               Content Restrictions
                             </p>
                         </div>
@@ -2561,14 +2571,14 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           </Collapsible>
 
           <Collapsible open={sectionOpen.coWriter} onOpenChange={(o) => onSectionChange('coWriter', o)} className="space-y-1">
-            <Card className={coWriterSectionCardClass(styleActive, 'border-fuchsia-500/30 bg-fuchsia-500/5 shadow-xl')}>
+            <Card className={coWriterSectionCardClass(styleActive, 'border-fuchsia-500/30 bg-fuchsia-500/12 dark:bg-fuchsia-500/5 shadow-xl')}>
                 <div className="p-4 flex flex-row items-center justify-between space-y-0">
                     <CollapsibleTrigger asChild>
                         <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 overflow-hidden pr-1">
                             <div className="flex items-center gap-2">
                                 <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none', coWriterSectionTitleClass(styleActive, 'text-fuchsia-500'))}><BrainCircuit className="h-4 w-4" /> AI Co-Writer</CardTitle>
                             </div>
-                            <p className={cn(cowriterSectionSubtitle(sectionOpen.coWriter), coWriterSectionAccentClass(styleActive, 'text-fuchsia-400/80'))} title="Neural Sharpening Tools">
+                            <p className={cn(cowriterSectionSubtitle(sectionOpen.coWriter), coWriterSectionAccentClass(styleActive, 'text-fuchsia-700/80 dark:text-fuchsia-400/80'))} title="Neural Sharpening Tools">
                               {sectionOpen.coWriter ? 'Neural Sharpening Tools' : 'Style & AI Tools'}
                             </p>
                         </div>
@@ -2594,7 +2604,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                     <CardContent className="px-4 pb-4 space-y-4 font-code">
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-bold uppercase text-fuchsia-300/85">Technical DNA</Label>
+                                <Label className="text-[10px] font-bold uppercase text-fuchsia-800 dark:text-fuchsia-300/85">Technical DNA</Label>
                                 <div className="flex items-center gap-1.5">
                                     <Hint
                                       side="left"
@@ -2631,7 +2641,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                             <Progress value={currentMetrics.rhymeComplexity} className="h-1 bg-fuchsia-500/10" />
                                         </div>
                                         <div className="pt-1 flex items-center gap-2">
-                                            <Badge variant="outline" className="text-[8px] border-fuchsia-500/20 text-fuchsia-400 py-0.5 px-2 bg-fuchsia-500/5 uppercase">{currentMetrics.cadenceMap}</Badge>
+                                            <Badge variant="outline" className={cn('text-[8px] py-0.5 px-2 uppercase border-2', getWorkstationRuleBadgeClass('STYLE', true))}>{currentMetrics.cadenceMap}</Badge>
                                         </div>
                                         <p className="text-[10px] text-foreground/75 leading-relaxed italic border-t border-white/5 pt-2 mt-1">"{styleProfile?.history[0]?.analysis}"</p>
                                     </>

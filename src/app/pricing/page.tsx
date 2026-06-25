@@ -34,6 +34,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { LegalFooter } from '@/components/legal-footer';
+import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmosphere';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
@@ -208,9 +209,7 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen flex flex-col relative selection:bg-primary/30 overflow-x-hidden">
-      <div className="fixed inset-0 z-0">
-        <img src="/Bar 4 Bar background.png" alt="Studio Background" className="w-full h-full object-cover opacity-20 blur-[1px] scale-105" />
-      </div>
+      <LoginStudioAtmosphere />
 
       <header className="fixed top-0 left-0 right-0 h-14 border-b border-white/5 bg-background/75 backdrop-blur-xl z-[200] flex items-center px-4 sm:px-6">
         <Link href="/">

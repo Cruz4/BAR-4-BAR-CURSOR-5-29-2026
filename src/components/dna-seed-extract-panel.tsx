@@ -243,7 +243,8 @@ export function DnaSeedExtractPanel({ lyrics, className, compact = false }: DnaS
     <div
       className={cn(
         'relative flex flex-col h-full min-h-[160px] overflow-hidden',
-        'bg-gradient-to-br from-sky-950/40 via-[hsl(216_48%_6%)] to-violet-950/30',
+        'bg-gradient-to-br from-sky-500/10 via-card to-violet-500/10',
+        'dark:from-sky-950/40 dark:via-[hsl(216_48%_6%)] dark:to-violet-950/30',
         className
       )}
     >
@@ -251,7 +252,7 @@ export function DnaSeedExtractPanel({ lyrics, className, compact = false }: DnaS
         <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.28em] text-cyan-300/90">
           Strain Resonance Field
         </p>
-        <p className="text-[8px] sm:text-[9px] text-white/40 uppercase tracking-widest mt-0.5">
+        <p className="text-[8px] sm:text-[9px] text-muted-foreground uppercase tracking-widest mt-0.5 dark:text-white/40">
           Live lexical mapping
         </p>
       </div>

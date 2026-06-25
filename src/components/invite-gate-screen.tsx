@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import type { InviteGateCopy } from '@/lib/invite-gate';
 import { DEFAULT_INVITE_GATE_COPY } from '@/lib/invite-gate';
 import { persistInviteGateUnlock } from '@/lib/invite-gate-client';
+import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmosphere';
 
 type InviteGateScreenProps = {
   copy?: Partial<InviteGateCopy>;
@@ -50,15 +51,9 @@ export function InviteGateScreen({ copy: copyPartial, onUnlocked }: InviteGateSc
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-[#030712]">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          background:
-            'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(59,130,246,0.35) 0%, transparent 55%), radial-gradient(ellipse 60% 50% at 80% 100%, rgba(245,158,11,0.2) 0%, transparent 50%)',
-        }}
-      />
-      <div className="pointer-events-none absolute inset-0 bg-[url('/Logo.png')] bg-center bg-no-repeat opacity-[0.03] bg-[length:min(480px,80vw)]" />
+    <div className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-background">
+      <LoginStudioAtmosphere />
+      <div className="pointer-events-none absolute inset-0 bg-[url('/Logo.png')] bg-center bg-no-repeat opacity-[0.04] dark:opacity-[0.03] bg-[length:min(480px,80vw)]" />
 
       <div className="relative z-10 mx-auto w-full max-w-lg px-6 py-10 animate-in fade-in zoom-in-95 duration-700">
         <div className="mb-8 flex flex-col items-center text-center">
@@ -81,7 +76,7 @@ export function InviteGateScreen({ copy: copyPartial, onUnlocked }: InviteGateSc
             Bar 4 Bar Studio · Private Beta
           </p>
 
-          <h1 className="font-headline text-3xl sm:text-4xl font-bold uppercase tracking-tight text-white leading-tight">
+          <h1 className="font-headline text-3xl sm:text-4xl font-bold uppercase tracking-tight text-foreground dark:text-white leading-tight">
             {success ? copy.successHeadline : copy.headline}
           </h1>
           <p className="mt-4 text-sm sm:text-base text-muted-foreground leading-relaxed max-w-md">
@@ -92,7 +87,7 @@ export function InviteGateScreen({ copy: copyPartial, onUnlocked }: InviteGateSc
         {!success && (
           <form
             onSubmit={handleSubmit}
-            className="space-y-4 rounded-2xl border border-white/10 bg-black/50 p-6 shadow-2xl backdrop-blur-md"
+            className="space-y-4 rounded-2xl border border-border bg-card/95 p-6 shadow-2xl backdrop-blur-md dark:border-white/10 dark:bg-black/50"
           >
             <label className="block space-y-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">

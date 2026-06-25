@@ -10,6 +10,7 @@ import { LandingShowcase } from '@/components/marketing/landing-showcase';
 import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmosphere';
 import { LandingHeroCtAs } from '@/components/marketing/landing-hero-ctas';
 import { LandingSignInLink, LandingSignupLink } from '@/components/marketing/landing-signup-link';
+import { StudioThemeControls } from '@/components/studio-theme-controls';
 import { ProBillingCheckoutCta, proCheckoutHeaderHref } from '@/components/marketing/pro-billing-checkout-cta';
 import {
   getFreeSignupCtaLine,
@@ -51,6 +52,7 @@ export function PublicHomeLanding() {
           <LandingSignInLink className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
             Sign in
           </LandingSignInLink>
+          <StudioThemeControls className="hidden sm:inline-flex" />
           <Button
             asChild
             className="bg-primary hover:bg-primary/90 text-white font-bold h-9 px-3 sm:px-5 gap-1.5 sm:gap-2 rounded-md shadow-lg shrink-0 transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm"
@@ -76,18 +78,18 @@ export function PublicHomeLanding() {
 
                 <div className="space-y-3">
                   <motion.div whileHover={{ scale: 1.02 }} className="cursor-default">
-                    <h2 className="text-6xl sm:text-7xl md:text-8xl lg:text-[5rem] xl:text-[5.6rem] font-headline font-bold text-white tracking-tight drop-shadow-[0_10px_25px_rgba(0,0,0,0.9)] leading-none lg:whitespace-nowrap">
+                    <h2 className="text-6xl sm:text-7xl md:text-8xl lg:text-[5rem] xl:text-[5.6rem] font-headline font-bold text-foreground dark:text-white tracking-tight drop-shadow-[0_10px_25px_rgba(0,0,0,0.9)] dark:drop-shadow-[0_10px_25px_rgba(0,0,0,0.9)] leading-none lg:whitespace-nowrap">
                       BAR 4 BAR
                     </h2>
                   </motion.div>
                   <div className="flex items-center justify-center lg:justify-start gap-2">
-                    <h3 className="text-xl sm:text-2xl md:text-4xl lg:text-[2.7rem] font-headline font-bold text-white tracking-widest uppercase leading-tight">
+                    <h3 className="text-xl sm:text-2xl md:text-4xl lg:text-[2.7rem] font-headline font-bold text-foreground dark:text-white tracking-widest uppercase leading-tight">
                       YOUR <span className="text-primary animate-pulse">ULTIMATE</span> STUDIO RHYME BOOK.
                     </h3>
                   </div>
                 </div>
 
-                <p className="text-sm md:text-lg text-white font-body font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0 tracking-wide drop-shadow-lg">
+                <p className="text-sm md:text-lg text-foreground/90 dark:text-white font-body font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0 tracking-wide drop-shadow-lg">
                   The power-user workstation for{' '}
                   <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">musicians and lyricists</span>.
                   Organize{' '}
@@ -123,7 +125,7 @@ export function PublicHomeLanding() {
 
         <section className="relative py-10 px-4 text-center z-10">
           <div className="container mx-auto max-w-2xl space-y-4">
-            <h3 className="font-headline text-xl md:text-2xl font-bold uppercase text-white">
+            <h3 className="font-headline text-xl md:text-2xl font-bold uppercase text-foreground dark:text-white">
               Ready to write your next bar?
             </h3>
             <p className="font-code text-xs md:text-sm text-primary/80">

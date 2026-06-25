@@ -79,6 +79,7 @@ import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-
 import { InkRefillCountdown } from '@/components/ink-refill-countdown';
 import { TierPriceSummary } from '@/components/tier-price-summary';
 import { PwaInstallGuideCard } from '@/components/pwa-install-prompt';
+import { StudioThemeSettingsCard } from '@/components/studio-theme-controls';
 import { ReferAFriendSection } from '@/components/refer-a-friend-section';
 import { DeleteAccountDialog } from '@/components/delete-account-dialog';
 import {
@@ -661,6 +662,7 @@ function UsagePageContent() {
         <TabsContent value="settings" className="w-full max-w-3xl">
             <div className="space-y-10 text-[15px] md:text-base">
                 <PwaInstallGuideCard />
+                <StudioThemeSettingsCard />
                 {isCloudSyncActive && (
                 <Card className="border-primary/20">
                     <CardHeader className="pb-4">

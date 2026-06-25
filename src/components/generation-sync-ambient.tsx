@@ -432,7 +432,7 @@ export function GenerationSyncAmbient({
   return (
     <div
       className={cn(
-        'pointer-events-none select-none overflow-hidden bg-[hsl(216_48%_5%)]',
+        'pointer-events-none select-none overflow-hidden bg-background dark:bg-[hsl(216_48%_5%)]',
         className
       )}
       aria-hidden

@@ -136,6 +136,12 @@ import {
   isTrackDnaToggleOn,
   formatGuardrailsCsv,
   parseGuardrailsCsv,
+  getWorkstationRuleBadgeClass,
+  coWriterEffectPanel,
+  coWriterEffectHeader,
+  coWriterEffectLabel,
+  coWriterEffectSubtitle,
+  coWriterEffectTitle,
 } from '@/lib/co-writer-rules';
 import { LockedSaveButton, ProLockBadge, proLockIcon, proLockShell, proLockText } from '@/components/pro-lock';
 import { UpgradeTooltip } from '@/components/upgrade-tooltip';
@@ -145,6 +151,25 @@ import { DNASynthesisLoader, getDnaLoaderStatusText, type SynthesisLoaderMode } 
 import { GenerationSyncAmbient, type SyncAttractor } from '@/components/generation-sync-ambient';
 import { DnaSeedExtractPanel } from '@/components/dna-seed-extract-panel';
 import { WorkstationStepBackground, stepToWorkstationVariant } from '@/components/workstation-step-background';
+import {
+  workstationBorderPanel,
+  workstationBorderSubtle,
+  workstationCardInset,
+  workstationDialogHeader,
+  workstationDialogOverlay,
+  workstationDialogShell,
+  workstationGeneratingFooter,
+  workstationGeneratingStatus,
+  workstationHeroTitle,
+  workstationInsetPanel,
+  workstationInsetPanelStrong,
+  workstationModeCard,
+  workstationOnPanelMuted,
+  workstationOnPanelSubtle,
+  workstationOnPanelText,
+  workstationRowInset,
+  workstationTabsList,
+} from '@/lib/studio-panel-styles';
 import { HubCalibrationAmbient, HUB_INK_KEYS, type HubInkKey } from '@/components/hub-calibration-ambient';
 import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -385,7 +410,7 @@ function HubSectionShell({
         <span className="font-headline font-bold text-sm sm:text-lg uppercase leading-tight break-words sm:truncate">{title}</span>
       </span>
       {collapsed && summary && (
-        <span className="text-[9px] text-muted-foreground truncate italic hidden md:inline">{summary}</span>
+        <span className="text-[9px] text-foreground/70 truncate italic hidden md:inline dark:text-muted-foreground">{summary}</span>
       )}
     </button>
   );
@@ -396,7 +421,7 @@ function HubSectionShell({
         {headerTooltip ? (
           <Tooltip>
             <TooltipTrigger asChild>{headerButton}</TooltipTrigger>
-            <TooltipContent side="bottom" className="max-w-[260px] text-[10px] leading-snug">
+            <TooltipContent side="bottom" className="max-w-[260px] text-[10px] leading-snug text-popover-foreground">
               {headerTooltip}
             </TooltipContent>
           </Tooltip>
@@ -953,17 +978,19 @@ export function GenerateSongDraftDialog({
   const activeDraftCharged = getEffectiveCost('generateDraftPerBar', activeDraftBase);
 
   const activeBadges = useMemo(() => {
-      const badges = [];
-      if (enableGuardrails) badges.push({ text: 'GUARDRAILS', color: 'border-rose-500 text-rose-500' });
-      if (intentsEnabled && hubIntents.length > 0) badges.push({ text: `${hubIntents.length} INTENTS`, color: 'border-sky-500 text-sky-500' });
-      if (lyricsAbout.trim()) badges.push({ text: 'SPECIAL INSTRUCTIONS', color: 'border-primary text-primary' });
-      if (hubVibeEnabled) badges.push({ text: 'VIBE', color: 'border-amber-500 text-amber-500' });
-      if (inheritAlbum) badges.push({ text: 'INHERIT ALBUM', color: 'border-teal-500 text-teal-400' });
-      if (inheritTrack) badges.push({ text: 'TRACK DNA', color: 'border-green-500 text-green-400' });
-      if (hubStyleEnabled && hubStyleAnalysis.trim()) badges.push({ text: 'STYLE DNA', color: 'border-fuchsia-500 text-fuchsia-500' });
-      if (wizardState.selectedDirections.length > 0) badges.push({ text: `${wizardState.selectedDirections.length} REMIX PATHS`, color: 'border-primary text-primary' });
+      const badges: { id: string; text: string }[] = [];
+      if (enableGuardrails) badges.push({ id: 'GUARDRAILS', text: 'GUARDRAILS' });
+      if (intentsEnabled && hubIntents.length > 0) badges.push({ id: 'INTENTS', text: `${hubIntents.length} INTENTS` });
+      if (lyricsAbout.trim()) badges.push({ id: 'SPECIAL INSTRUCTIONS', text: 'SPECIAL INSTRUCTIONS' });
+      if (hubVibeEnabled) badges.push({ id: 'VIBE', text: 'VIBE' });
+      if (inheritAlbum) badges.push({ id: 'INHERIT ALBUM', text: 'INHERIT ALBUM' });
+      if (inheritTrack) badges.push({ id: 'TRACK DNA', text: 'TRACK DNA' });
+      if (hubStyleEnabled && hubStyleAnalysis.trim()) badges.push({ id: 'STYLE DNA', text: 'STYLE DNA' });
+      if (wizardState.selectedDirections.length > 0) {
+        badges.push({ id: 'REMIX PATHS', text: `${wizardState.selectedDirections.length} REMIX PATHS` });
+      }
       return badges;
-  }, [enableGuardrails, intentsEnabled, hubIntents, lyricsAbout, hubVibeEnabled, inheritAlbum, album, inheritTrack, hubStyleEnabled, wizardState.selectedDirections]);
+  }, [enableGuardrails, intentsEnabled, hubIntents, lyricsAbout, hubVibeEnabled, inheritAlbum, album, inheritTrack, hubStyleEnabled, hubStyleAnalysis, wizardState.selectedDirections]);
 
   const buildDraftSections = () => {
     if (!wizardState.generatedVariant) return [];
@@ -1294,7 +1321,7 @@ export function GenerateSongDraftDialog({
             const key = `${options.keyPrefix}-${i}`;
             const isExpanded = expandedDnaPresetKey === key;
             return (
-              <Card key={key} className="bg-background/40 border-white/5 overflow-hidden flex flex-col transition-all">
+              <Card key={key} className={cn('overflow-hidden flex flex-col transition-all', workstationCardInset)}>
                 <div
                   className="p-3 flex items-center justify-between cursor-pointer hover:bg-white/5"
                   onClick={() => setExpandedDnaPresetKey(isExpanded ? null : key)}
@@ -1335,7 +1362,7 @@ export function GenerateSongDraftDialog({
                   </div>
                 </div>
                 {isExpanded && (
-                  <div className="p-3 bg-black/40 border-t border-white/5 animate-in slide-in-from-top-2 duration-300">
+                  <div className={cn('p-3 animate-in slide-in-from-top-2 duration-300', workstationInsetPanel, 'border-t')}>
                     <DnaVaultPresetDetails
                       preset={p}
                       onInjectMappingField={(field, value) => {
@@ -2001,10 +2028,11 @@ export function GenerateSongDraftDialog({
     <TooltipProvider delayDuration={300}>
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent
-        overlayClassName="z-[2090] bg-[hsl(216_50%_4%/0.98)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-        className="fixed left-1/2 top-[max(0.5rem,env(safe-area-inset-top))] sm:top-[2vh] -translate-x-1/2 translate-y-0 w-[min(99vw,1720px)] max-w-none h-[min(94vh,calc(100dvh-1rem))] max-h-[calc(100dvh-env(safe-area-inset-top,0px)-0.5rem)] sm:max-h-[calc(100dvh-1rem)] flex flex-col gap-0 bg-[hsl(216_48%_7%)] border-2 border-white/10 overflow-hidden p-0 rounded-xl shadow-2xl z-[2100] [&>button.absolute]:hidden"
+        data-workstation-shell
+        overlayClassName={cn('z-[2090] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0', workstationDialogOverlay)}
+        className={cn('fixed left-1/2 top-[max(0.5rem,env(safe-area-inset-top))] sm:top-[2vh] -translate-x-1/2 translate-y-0 w-[min(99vw,1720px)] max-w-none h-[min(94vh,calc(100dvh-1rem))] max-h-[calc(100dvh-env(safe-area-inset-top,0px)-0.5rem)] sm:max-h-[calc(100dvh-1rem)] flex flex-col gap-0 overflow-hidden p-0 rounded-xl shadow-2xl z-[2100] [&>button.absolute]:hidden', workstationDialogShell)}
       >
-        <DialogHeader className="shrink-0 p-3 border-b border-white/10 bg-[hsl(216_48%_8%/0.95)] flex-row items-center justify-between relative z-[110] gap-2 min-w-0">
+        <DialogHeader className={cn('shrink-0 p-3 flex-row items-center justify-between relative z-[110] gap-2 min-w-0', workstationDialogHeader)}>
             <Button
               type="button"
               variant="ghost"
@@ -2098,12 +2126,12 @@ export function GenerateSongDraftDialog({
                 />
               </div>
             </div>
-            <div className="shrink-0 border-t border-white/10 bg-[hsl(216_48%_6%/0.95)] backdrop-blur-sm px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-4 space-y-2.5 sm:space-y-3 relative z-20">
-              <p className="text-[10px] sm:text-[11px] font-code uppercase text-white/70 text-center leading-relaxed tracking-[0.18em] px-1">
+            <div className={cn('shrink-0 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-4 space-y-2.5 sm:space-y-3 relative z-20', workstationGeneratingFooter)}>
+              <p className={cn('text-[10px] sm:text-[11px] font-code uppercase text-center leading-relaxed tracking-[0.18em] px-1', workstationGeneratingStatus)}>
                 {getDnaLoaderStatusText(progress, undefined, synthesisLoaderMode)}
               </p>
               <div className="w-full max-w-lg mx-auto space-y-2">
-                <div className="relative h-2.5 sm:h-3 bg-white/5 border border-amber-500/25 rounded-full overflow-hidden">
+                <div className="relative h-2.5 sm:h-3 bg-muted/60 border border-amber-500/25 rounded-full overflow-hidden dark:bg-white/5">
                   <motion.div
                     className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-amber-700 via-yellow-500 to-amber-300"
                     animate={{ width: `${progress}%` }}
@@ -2123,25 +2151,25 @@ export function GenerateSongDraftDialog({
             <div className="flex flex-1 flex-col items-center justify-center w-full min-h-0 px-3 sm:px-8 py-8 sm:py-12 gap-6 sm:gap-9 md:gap-10 animate-in fade-in duration-700">
                 <div className="text-center space-y-2 sm:space-y-3 w-full shrink-0 max-w-5xl mx-auto">
                     <p className="sm:hidden text-[10px] font-bold uppercase tracking-[0.35em] text-primary">Mode Select</p>
-                    <h2 className="text-3xl sm:text-5xl font-headline font-bold text-white uppercase tracking-tight leading-tight px-1">Select Workflow Mode</h2>
+                    <h2 className={cn('text-3xl sm:text-5xl uppercase tracking-tight leading-tight px-1', workstationHeroTitle)}>Select Workflow Mode</h2>
                     <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-[0.25em] sm:tracking-[0.4em]">Initialize your creative process.</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-10 w-full max-w-5xl mx-auto">
-                    <Card className="cursor-pointer border-2 hover:border-primary/50 p-8 sm:p-12 min-h-[220px] sm:min-h-[280px] flex flex-col items-center justify-center gap-5 sm:gap-7 bg-black/45 hover:scale-[1.02] sm:hover:scale-[1.04] transition-all group relative overflow-hidden" onClick={() => setStep(10)}>
+                    <Card className={cn('cursor-pointer hover:border-primary/50 p-8 sm:p-12 min-h-[220px] sm:min-h-[280px] flex flex-col items-center justify-center gap-5 sm:gap-7 hover:scale-[1.02] sm:hover:scale-[1.04] transition-all group relative overflow-hidden', workstationModeCard)} onClick={() => setStep(10)}>
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent opacity-80" />
                         <div className="pointer-events-none absolute -right-8 -top-8 h-36 w-36 rounded-full bg-primary/20 blur-3xl" />
                         <Wand2 className="relative h-20 w-16 sm:h-24 sm:w-20 text-primary group-hover:animate-bounce" />
                         <div className="relative text-center space-y-2 sm:space-y-3 px-2">
-                            <h4 className="font-headline text-2xl sm:text-4xl font-bold uppercase text-white">Full Studio Draft</h4>
+                            <h4 className={cn('text-2xl sm:text-4xl uppercase', workstationHeroTitle)}>Full Studio Draft</h4>
                             <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-widest leading-relaxed max-w-[280px] mx-auto">Direct synthesis from active rules.</p>
                         </div>
                     </Card>
-                    <Card className="cursor-pointer border-2 hover:border-sky-500/50 p-8 sm:p-12 min-h-[220px] sm:min-h-[280px] flex flex-col items-center justify-center gap-5 sm:gap-7 bg-black/45 hover:scale-[1.02] sm:hover:scale-[1.04] transition-all group relative overflow-hidden" onClick={() => setStep(1)}>
+                    <Card className={cn('cursor-pointer hover:border-sky-500/50 p-8 sm:p-12 min-h-[220px] sm:min-h-[280px] flex flex-col items-center justify-center gap-5 sm:gap-7 hover:scale-[1.02] sm:hover:scale-[1.04] transition-all group relative overflow-hidden', workstationModeCard)} onClick={() => setStep(1)}>
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-sky-500/15 via-cyan-500/5 to-transparent opacity-80" />
                         <div className="pointer-events-none absolute -left-8 -bottom-8 h-36 w-36 rounded-full bg-sky-500/20 blur-3xl" />
-                        <BrainCircuit className="relative h-20 w-16 sm:h-24 sm:w-20 text-sky-400 group-hover:animate-pulse" />
+                        <BrainCircuit className="relative h-20 w-16 sm:h-24 sm:w-20 text-sky-600 dark:text-sky-400 group-hover:animate-pulse" />
                         <div className="relative text-center space-y-2 sm:space-y-3 px-2">
-                            <h4 className="font-headline text-2xl sm:text-4xl font-bold uppercase text-white">DNA & REMIX</h4>
+                            <h4 className={cn('text-2xl sm:text-4xl uppercase', workstationHeroTitle)}>DNA & REMIX</h4>
                             <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-widest leading-relaxed max-w-[320px] mx-auto">Extract from pasted text or your sheet — save the full profile or inject strains on Analysis Step.</p>
                         </div>
                     </Card>
@@ -2190,15 +2218,15 @@ export function GenerateSongDraftDialog({
                                       </Select>
                                   }
                               >
-                                  <Card className="bg-black/40 border-white/5 p-3 rounded-xl shadow-2xl">
+                                  <Card className={cn('p-3 rounded-xl shadow-2xl', workstationInsetPanel)}>
                                       <ScrollArea className="h-[min(22vh,200px)] pr-2">
                                           <p className="text-[8px] text-muted-foreground uppercase tracking-wide mb-2 px-1">Bars · 2 lines per bar</p>
                                           <div className="space-y-2">
                                               {hubStructure.map((s, idx) => (
-                                                  <div key={`${s.name}-${idx}`} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5 group">
+                                                  <div key={`${s.name}-${idx}`} className={cn('flex items-center justify-between p-3 rounded-lg border group', workstationRowInset)}>
                                                       <div className="flex items-center gap-3">
                                                           <Checkbox checked={s.enabled} onCheckedChange={(c) => { setStructurePresetId('custom'); setHubSections(prev => prev.map((x, i) => i === idx ? { ...x, enabled: !!c } : x)); }} />
-                                                          <span className="font-bold uppercase text-[10px] text-white">{s.name}</span>
+                                                          <span className="font-bold uppercase text-[10px] text-foreground">{s.name}</span>
                                                       </div>
                                                       <div className="flex items-center gap-2">
                                                           <Input type="number" value={s.bars} onChange={(e) => { setStructurePresetId('custom'); setHubSections(prev => prev.map((x, i) => i === idx ? { ...x, bars: parseInt(e.target.value) || 0 } : x)); }} className="w-10 h-6 text-center font-mono text-[9px] bg-background/50 p-0" />
@@ -2238,14 +2266,14 @@ export function GenerateSongDraftDialog({
                                               <p className="text-[10px] sm:text-[11px] text-yellow-50/95 font-code leading-relaxed whitespace-pre-wrap">{hubStructureGuide}</p>
                                           </div>
                                       )}
-                                      <div className="pt-3 border-t border-white/5">
+                                      <div className={cn('pt-3 border-t', workstationBorderSubtle)}>
                                           <DropdownMenu>
                                               <DropdownMenuTrigger asChild>
                                                   <Button variant="outline" className="w-full h-8 text-[9px] font-bold uppercase border-yellow-500/20 text-yellow-500 hover:bg-yellow-500/5">
                                                       <PlusCircle className="h-3 w-3 mr-2" /> Add Section
                                                   </Button>
                                               </DropdownMenuTrigger>
-                                              <DropdownMenuContent align="center" className="bg-card border-white/10 w-40 z-[3100]">
+                                              <DropdownMenuContent align="center" className="bg-card border-border w-40 z-[3100] dark:border-white/10">
                                                   {['Intro', 'Verse', 'Hook', 'Chorus', 'Bridge', 'Outro', 'Pre'].map(t => (
                                                       <DropdownMenuItem key={t} onClick={() => handleAddStructureSection(t)} className="text-[10px] font-bold uppercase">{t}</DropdownMenuItem>
                                                   ))}
@@ -2258,20 +2286,20 @@ export function GenerateSongDraftDialog({
                               <HubSectionShell
                                   title="Track Vibe"
                                   icon={Palette}
-                                  colorClass="text-amber-500"
+                                  colorClass={coWriterEffectHeader('amber')}
                                   collapsed={hubCollapsed.vibe}
                                   onToggle={() => toggleHubSection('vibe')}
                                   summary={hubSectionSummary.vibe}
                                   trailing={<Switch checked={hubVibeEnabled} onCheckedChange={setHubVibeEnabled} />}
                               >
-                                  <Card className={cn("bg-amber-500/5 border-amber-500/20 p-3 rounded-xl space-y-3 transition-opacity", !hubVibeEnabled && "opacity-50 pointer-events-none")}>
+                                  <Card className={cn(coWriterEffectPanel('amber'), 'p-3 space-y-3 transition-opacity', !hubVibeEnabled && 'opacity-50 pointer-events-none')}>
                                       <div className="grid grid-cols-2 gap-3">
-                                          <div className="space-y-1"><Label className="text-[9px] font-bold uppercase text-amber-700">Genre</Label><Input placeholder="e.g. Lofi-Hop" value={hubVibe.genre} onChange={(e) => setHubVibe(v => ({ ...v, genre: e.target.value }))} className="h-8 text-[10px] bg-background/50" /></div>
-                                          <div className="space-y-1"><Label className="text-[9px] font-bold uppercase text-amber-700">BPM</Label><Input type="number" placeholder="90" value={hubVibe.tempoBPM} onChange={(e) => setHubVibe(v => ({ ...v, tempoBPM: parseInt(e.target.value) || 90 }))} className="h-8 text-[10px] bg-background/50" /></div>
+                                          <div className="space-y-1"><Label className={cn('text-[9px] font-bold uppercase', coWriterEffectLabel('amber'))}>Genre</Label><Input placeholder="e.g. Lofi-Hop" value={hubVibe.genre} onChange={(e) => setHubVibe(v => ({ ...v, genre: e.target.value }))} className="h-8 text-[10px] bg-background/80 border-amber-500/25" /></div>
+                                          <div className="space-y-1"><Label className={cn('text-[9px] font-bold uppercase', coWriterEffectLabel('amber'))}>BPM</Label><Input type="number" placeholder="90" value={hubVibe.tempoBPM} onChange={(e) => setHubVibe(v => ({ ...v, tempoBPM: parseInt(e.target.value) || 90 }))} className="h-8 text-[10px] bg-background/80 border-amber-500/25" /></div>
                                       </div>
-                                      <div className="space-y-1"><Label className="text-[9px] font-bold uppercase text-amber-700">Production</Label><Textarea placeholder="e.g. Saturated 808s, airy vocal pads..." value={hubVibe.instrumentation} onChange={(e) => setHubVibe(v => ({ ...v, instrumentation: e.target.value }))} className="h-16 text-[10px] bg-background/50 resize-none" /></div>
-                                      <div className="space-y-1 pt-1 border-t border-amber-500/15">
-                                        <Label className="text-[8px] font-bold uppercase text-amber-600/90">System vibe presets (free)</Label>
+                                      <div className="space-y-1"><Label className={cn('text-[9px] font-bold uppercase', coWriterEffectLabel('amber'))}>Production</Label><Textarea placeholder="e.g. Saturated 808s, airy vocal pads..." value={hubVibe.instrumentation} onChange={(e) => setHubVibe(v => ({ ...v, instrumentation: e.target.value }))} className="h-16 text-[10px] bg-background/80 border-amber-500/25 resize-none" /></div>
+                                      <div className="space-y-1 pt-1 border-t border-amber-500/25 dark:border-amber-500/15">
+                                        <Label className={cn('text-[8px] font-bold uppercase', coWriterEffectLabel('amber'))}>System vibe presets (free)</Label>
                                       <Select onValueChange={(name) => {
                                         const p = SYSTEM_VIBE_PRESETS.find((x) => x.name === name);
                                         if (p) {
@@ -2291,13 +2319,13 @@ export function GenerateSongDraftDialog({
                               <HubSectionShell
                                   title="Intents"
                                   icon={Target}
-                                  colorClass="text-sky-500"
+                                  colorClass={coWriterEffectHeader('sky')}
                                   collapsed={hubCollapsed.intents}
                                   onToggle={() => toggleHubSection('intents')}
                                   summary={hubSectionSummary.intents}
                                   trailing={<Switch checked={intentsEnabled} onCheckedChange={setIntentsEnabled} />}
                               >
-                                  <Card className={cn("bg-sky-500/5 border-sky-500/20 p-3 rounded-xl transition-opacity", !intentsEnabled && "opacity-50 pointer-events-none")}>
+                                  <Card className={cn(coWriterEffectPanel('sky'), 'p-3 transition-opacity', !intentsEnabled && 'opacity-50 pointer-events-none')}>
                                       <div className="space-y-3">
                                           <div className="flex flex-wrap gap-1.5 max-h-[min(14vh,120px)] overflow-y-auto studio-scrollbar pr-1">
                                                   {(album?.thingsToSay || []).map(intent => {
@@ -2306,7 +2334,12 @@ export function GenerateSongDraftDialog({
                                                           <Badge 
                                                               key={intent} 
                                                               variant={isSelected ? "default" : "outline"} 
-                                                              className={cn("cursor-pointer text-[9px] uppercase", isSelected ? "bg-sky-500" : "border-sky-500/30 text-sky-400")}
+                                                              className={cn(
+                                                                'cursor-pointer text-[9px] uppercase border-2',
+                                                                isSelected
+                                                                  ? 'bg-sky-600 text-white border-sky-600 hover:bg-sky-600'
+                                                                  : getWorkstationRuleBadgeClass('INTENTS', true)
+                                                              )}
                                                               onClick={() => setHubIntents(prev => isSelected ? prev.filter(i => i !== intent) : [...prev, intent])}
                                                           >
                                                               {intent}
@@ -2314,7 +2347,7 @@ export function GenerateSongDraftDialog({
                                                       );
                                                   })}
                                           </div>
-                                          <div className="flex gap-2 pt-2 border-t border-sky-500/10">
+                                          <div className="flex gap-2 pt-2 border-t border-sky-500/25 dark:border-sky-500/10">
                                               <Input 
                                                   placeholder="Add new intent..." 
                                                   value={newHubIntent} 
@@ -2336,7 +2369,7 @@ export function GenerateSongDraftDialog({
                               <HubSectionShell
                                   title="Creative DNA"
                                   icon={Compass}
-                                  colorClass="text-green-500"
+                                  colorClass={coWriterEffectHeader('green')}
                                   collapsed={hubCollapsed.creativeDna}
                                   onToggle={() => toggleHubSection('creativeDna')}
                                   summary={hubSectionSummary.creativeDna}
@@ -2346,11 +2379,11 @@ export function GenerateSongDraftDialog({
                                           <Tooltip>
                                               <TooltipTrigger asChild>
                                                   <div className="flex items-center gap-2 cursor-help">
-                                                      <span className="text-[8px] font-bold text-muted-foreground uppercase">Inherit Album</span>
+                                                      <span className="text-[8px] font-bold text-foreground/75 uppercase dark:text-muted-foreground">Inherit Album</span>
                                                       <Switch checked={inheritAlbum} onCheckedChange={setInheritAlbum} />
                                                   </div>
                                               </TooltipTrigger>
-                                              <TooltipContent side="bottom" className="max-w-[220px] text-[10px] leading-snug">
+                                              <TooltipContent side="bottom" className="max-w-[220px] text-[10px] leading-snug text-popover-foreground">
                                                   {DNA_HUB_TOOLTIPS.inheritAlbum}
                                               </TooltipContent>
                                           </Tooltip>
@@ -2358,18 +2391,18 @@ export function GenerateSongDraftDialog({
                                           <Tooltip>
                                               <TooltipTrigger asChild>
                                                   <div className="flex items-center gap-2 cursor-help">
-                                                      <span className="text-[8px] font-bold text-muted-foreground uppercase">Track DNA</span>
+                                                      <span className="text-[8px] font-bold text-foreground/75 uppercase dark:text-muted-foreground">Track DNA</span>
                                                       <Switch checked={inheritTrack} onCheckedChange={setInheritTrack} />
                                                   </div>
                                               </TooltipTrigger>
-                                              <TooltipContent side="bottom" className="max-w-[220px] text-[10px] leading-snug">
+                                              <TooltipContent side="bottom" className="max-w-[220px] text-[10px] leading-snug text-popover-foreground">
                                                   {DNA_HUB_TOOLTIPS.inheritTrack}
                                               </TooltipContent>
                                           </Tooltip>
                                       </div>
                                   }
                               >
-                              <Card className="bg-green-500/5 border-green-500/20 p-4 rounded-xl shadow-2xl w-full min-w-0">
+                              <Card className={cn(coWriterEffectPanel('green'), 'p-4 shadow-2xl w-full min-w-0')}>
                                   <div className="space-y-3 w-full min-w-0">
                                       {[
                                         { id: 'setting_world', label: '1. Setting / World', placeholder: 'e.g. A rainy midnight in 1940s Chicago...' },
@@ -2379,7 +2412,7 @@ export function GenerateSongDraftDialog({
                                         { id: 'tone_palette', label: '5. Tone / Palette', placeholder: 'e.g. Gritty, neon-drenched, smoky textures...' }
                                       ].map(f => (
                                           <div key={f.id} className="space-y-1.5 w-full min-w-0">
-                                              <Label className="text-[9px] font-bold uppercase tracking-widest text-green-700/80">{f.label}</Label>
+                                              <Label className={cn('text-[9px] font-bold uppercase tracking-widest', coWriterEffectLabel('green'))}>{f.label}</Label>
                                               <HubCreativeDnaTextarea
                                                   placeholder={f.placeholder}
                                                   value={(hubDirection[f.id as keyof Direction] as string) || ''}
@@ -2400,23 +2433,23 @@ export function GenerateSongDraftDialog({
                               <HubSectionShell
                                   title="Special Instructions"
                                   icon={MessageSquareQuote}
-                                  colorClass="text-primary"
+                                  colorClass={coWriterEffectHeader('primary')}
                                   collapsed={hubCollapsed.specialInstructions}
                                   onToggle={() => toggleHubSection('specialInstructions')}
                                   summary={hubSectionSummary.specialInstructions}
                               >
-                                  <Card className="bg-primary/5 border-primary/20 p-4 rounded-xl">
-                                      <Label className="text-[9px] font-bold uppercase tracking-widest text-primary/60 mb-2 block">What do you want this song or remix to do?</Label>
+                                  <Card className={cn(coWriterEffectPanel('primary'), 'p-4')}>
+                                      <Label className={cn('text-[9px] font-bold uppercase tracking-widest mb-2 block', coWriterEffectLabel('primary'))}>What do you want this song or remix to do?</Label>
                                       <Textarea 
                                           placeholder="e.g. Alternate braggadocio and vulnerability, use ocean imagery, keep hooks under 8 syllables, no filler ad-libs…" 
-                                          className="bg-background/40 border-primary/10 min-h-[5rem] h-24 text-xs font-code p-3 resize-none" 
+                                          className="bg-background/80 border-primary/25 min-h-[5rem] h-24 text-xs font-code p-3 resize-none text-foreground" 
                                           value={lyricsAbout}
                                           onChange={(e) => {
                                               setLyricsAbout(e.target.value);
                                               if (e.target.value.trim()) markHubSeeded('specialInstructions');
                                           }}
                                       />
-                                      <p className="text-[9px] text-muted-foreground mt-2 leading-snug italic">Direct creative brief — synthesis treats this as a core anchor alongside DNA strains and remix paths.</p>
+                                      <p className="text-[9px] text-foreground/65 dark:text-muted-foreground mt-2 leading-snug italic">Direct creative brief — synthesis treats this as a core anchor alongside DNA strains and remix paths.</p>
                                   </Card>
                               </HubSectionShell>
 
@@ -2424,15 +2457,15 @@ export function GenerateSongDraftDialog({
                                   <HubSectionShell
                                       title="Remix Directions"
                                       icon={GitBranch}
-                                      colorClass="text-primary"
+                                      colorClass={coWriterEffectHeader('primary')}
                                       collapsed={hubCollapsed.remix}
                                       onToggle={() => toggleHubSection('remix')}
                                       summary={hubSectionSummary.remix}
                                   >
-                                      <Card className="bg-primary/5 border-primary/20 p-4 rounded-xl space-y-3">
+                                      <Card className={cn(coWriterEffectPanel('primary'), 'p-4 space-y-3')}>
                                           <div className="flex flex-wrap gap-1.5">
                                               {wizardState.selectedDirections.map(d => (
-                                                  <Badge key={d.name} variant="outline" className="text-[9px] uppercase border-primary/30 text-primary py-0.5 px-2">{d.name} · {d.weight ?? 50}%</Badge>
+                                                  <Badge key={d.name} variant="outline" className={cn('text-[9px] uppercase py-0.5 px-2 border-2', getWorkstationRuleBadgeClass('REMIX PATHS', true))}>{d.name} · {d.weight ?? 50}%</Badge>
                                               ))}
                                           </div>
                                           {renderRemixWeightControls(true)}
@@ -2452,7 +2485,7 @@ export function GenerateSongDraftDialog({
                                   summary={wizardState.analysis ? 'Extraction ready' : undefined}
                                   trailing={
                                       <Tabs value={strainTab} onValueChange={(v) => handleStrainTabChange(v as 'insights' | 'presets' | 'vault')} className="w-fit">
-                                          <TabsList className="h-8 bg-white/5 border-white/10 p-0.5">
+                                          <TabsList className={cn('h-8 p-0.5', workstationTabsList)}>
                                               <Tooltip>
                                                   <TooltipTrigger asChild>
                                                       <TabsTrigger value="insights" className="text-[9px] px-3 font-bold" onClick={() => expandHubSection('dnaStrains')}>INSIGHTS</TabsTrigger>
@@ -2504,7 +2537,7 @@ export function GenerateSongDraftDialog({
                                               wizardState.analysis ? (
                                                   renderAnalysisStrainLayout(wizardState.analysis, 'sidebar')
                                               ) : (
-                                                  <div className="h-[180px] flex flex-col items-center justify-center text-center p-6 gap-4 border-2 border-dashed border-white/5 rounded-lg">
+                                                  <div className={cn('h-[180px] flex flex-col items-center justify-center text-center p-6 gap-4 border-2 border-dashed rounded-lg', workstationBorderSubtle)}>
                                                       <BrainCircuit className="h-10 w-10 text-muted-foreground/20" />
                                                       <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground px-4">No recent DNA extracted.</p>
                                                   </div>
@@ -2530,7 +2563,7 @@ export function GenerateSongDraftDialog({
                               <HubSectionShell
                                   title="Style DNA"
                                   icon={Fingerprint}
-                                  colorClass="text-fuchsia-500"
+                                  colorClass={coWriterEffectHeader('fuchsia')}
                                   collapsed={hubCollapsed.style}
                                   onToggle={() => toggleHubSection('style')}
                                   summary={hubSectionSummary.style}
@@ -2538,7 +2571,7 @@ export function GenerateSongDraftDialog({
                                       <div className="flex items-center gap-2">
                                         <Switch checked={hubStyleEnabled} onCheckedChange={setHubStyleEnabled} />
                                         <Tabs value={styleTab} onValueChange={(v) => handleStyleTabChange(v as 'current' | 'presets' | 'vault')} className="w-fit">
-                                          <TabsList className="h-8 bg-white/5 border-white/10 p-0.5">
+                                          <TabsList className={cn('h-8 p-0.5', workstationTabsList)}>
                                               <TabsTrigger value="current" className="text-[9px] px-3 font-bold" onClick={() => expandHubSection('style')}>LATEST</TabsTrigger>
                                               <TabsTrigger value="presets" className="text-[9px] px-3 font-bold" onClick={() => expandHubSection('style')}>PRESETS</TabsTrigger>
                                               {isPro ? (
@@ -2564,10 +2597,10 @@ export function GenerateSongDraftDialog({
                                       </div>
                                   }
                               >
-                                  <Card className={cn("bg-fuchsia-500/5 border-fuchsia-500/20 p-3 rounded-xl shadow-inner transition-opacity", !hubStyleEnabled && "opacity-50 pointer-events-none")}>
+                                  <Card className={cn(coWriterEffectPanel('fuchsia'), 'p-3 shadow-inner transition-opacity', !hubStyleEnabled && 'opacity-50 pointer-events-none')}>
                                           {styleTab === 'current' ? (
-                                              <div className="p-3 bg-background/40 border border-fuchsia-500/10 rounded-lg space-y-3">
-                                                  <div className="flex justify-between items-center text-[10px] font-bold uppercase text-fuchsia-700">
+                                              <div className="p-3 bg-background/80 border border-fuchsia-500/30 rounded-lg space-y-3 dark:bg-background/40 dark:border-fuchsia-500/10">
+                                                  <div className={cn('flex justify-between items-center text-[10px] font-bold uppercase', coWriterEffectLabel('fuchsia'))}>
                                                       <span>Active Profiling</span>
                                                       {isPro ? (
                                                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSaveStyleNamingOpen(true)}><Save className="h-3.5 w-3.5" /></Button>
@@ -2580,8 +2613,8 @@ export function GenerateSongDraftDialog({
                                                           <div className="flex justify-between text-[10px] font-bold uppercase"><span>Vocab</span><span>{hubStyleMetrics.vocabularyScore}%</span></div>
                                                           <Progress value={hubStyleMetrics.vocabularyScore} className="h-1.5 bg-fuchsia-500/10" />
                                                       </div>
-                                                      <div className="space-y-1.5 rounded-lg border border-fuchsia-500/35 bg-fuchsia-500/10 p-2 ring-1 ring-fuchsia-400/25 shadow-[0_0_18px_rgba(217,70,239,0.12)]">
-                                                          <div className="flex items-center justify-between text-[10px] font-bold uppercase text-fuchsia-200">
+                                                      <div className="space-y-1.5 rounded-lg border border-fuchsia-500/45 bg-fuchsia-500/18 p-2 ring-1 ring-fuchsia-500/25 shadow-[0_0_18px_rgba(217,70,239,0.12)] dark:border-fuchsia-500/35 dark:bg-fuchsia-500/10">
+                                                          <div className={cn('flex items-center justify-between text-[10px] font-bold uppercase', coWriterEffectLabel('fuchsia'))}>
                                                             <span className="flex items-center gap-1.5">
                                                               <Waves className="h-3 w-3 text-fuchsia-400 animate-pulse shrink-0" />
                                                               Rhyme Pulse
@@ -2591,15 +2624,15 @@ export function GenerateSongDraftDialog({
                                                           <Progress value={hubStyleMetrics.rhymeComplexity} className="h-1.5 bg-fuchsia-500/10 [&>div]:bg-fuchsia-400" />
                                                       </div>
                                                   </div>
-                                                  <p className="text-[10px] font-bold uppercase text-fuchsia-500/80">Cadence: {hubStyleMetrics.cadenceMap}</p>
+                                                  <p className={cn('text-[10px] font-bold uppercase', coWriterEffectSubtitle('fuchsia', true))}>Cadence: {hubStyleMetrics.cadenceMap}</p>
                                                   <p className="text-xs text-foreground/90 italic leading-relaxed whitespace-pre-wrap break-words">"{hubStyleAnalysis || 'No style extracted yet — run DNA extraction or load a preset.'}"</p>
                                               </div>
                                           ) : styleTab === 'presets' ? (
                                               <div className="space-y-2 max-h-[min(18vh,160px)] overflow-y-auto studio-scrollbar pr-1">
                                                   {SYSTEM_STYLE_PRESETS.map((s, i) => (
-                                                      <Card key={i} className="bg-background/40 border-white/5 p-2.5 flex items-center justify-between shadow-lg">
+                                                      <Card key={i} className={cn('p-2.5 flex items-center justify-between shadow-lg', workstationCardInset)}>
                                                           <div className="min-w-0">
-                                                              <p className="text-xs font-bold text-fuchsia-400 truncate uppercase">{s.name}</p>
+                                                              <p className={cn('text-xs font-bold truncate uppercase', coWriterEffectTitle('fuchsia', true))}>{s.name}</p>
                                                               <p className="text-[10px] text-muted-foreground uppercase">{s.metrics.cadenceMap}</p>
                                                           </div>
                                                           <Button
@@ -2631,9 +2664,9 @@ export function GenerateSongDraftDialog({
                                           ) : (
                                               <div className="space-y-2 max-h-[min(18vh,160px)] overflow-y-auto studio-scrollbar pr-1">
                                                   {album?.stylePresets && album.stylePresets.length > 0 ? album.stylePresets.map((s, i) => (
-                                                      <Card key={i} className="bg-background/40 border-white/5 p-2.5 flex items-center justify-between shadow-lg">
+                                                      <Card key={i} className={cn('p-2.5 flex items-center justify-between shadow-lg', workstationCardInset)}>
                                                           <div className="min-w-0">
-                                                              <p className="text-xs font-bold text-fuchsia-400 truncate uppercase">{s.name}</p>
+                                                              <p className={cn('text-xs font-bold truncate uppercase', coWriterEffectTitle('fuchsia', true))}>{s.name}</p>
                                                               <p className="text-[10px] text-muted-foreground uppercase">{s.metrics.cadenceMap}</p>
                                                           </div>
                                                           <div className="flex items-center gap-2">
@@ -2650,15 +2683,15 @@ export function GenerateSongDraftDialog({
                               <HubSectionShell
                                   title="Guardrails"
                                   icon={Shield}
-                                  colorClass="text-rose-500"
+                                  colorClass={coWriterEffectHeader('rose')}
                                   collapsed={hubCollapsed.guardrails}
                                   onToggle={() => toggleHubSection('guardrails')}
                                   summary={hubSectionSummary.guardrails}
                                   trailing={<Switch checked={enableGuardrails} onCheckedChange={setEnableGuardrails} />}
                               >
-                                  <Card className={cn("bg-rose-500/5 border-rose-500/20 p-3 rounded-xl space-y-3 transition-opacity", !enableGuardrails && "opacity-60")}>
+                                  <Card className={cn(coWriterEffectPanel('rose'), 'p-3 space-y-3 transition-opacity', !enableGuardrails && 'opacity-60')}>
                                       <div className="space-y-1">
-                                        <Label className="text-[9px] font-bold uppercase text-rose-800">Negative Prompt</Label>
+                                        <Label className={cn('text-[9px] font-bold uppercase', coWriterEffectLabel('rose'))}>Negative Prompt</Label>
                                         <Input 
                                           placeholder="e.g. Avoid violence, generic love cliches..." 
                                           value={negativePrompt} 
@@ -2667,11 +2700,11 @@ export function GenerateSongDraftDialog({
                                             setNegativePrompt(val);
                                             setEnableGuardrails(hasGuardrailsStringsContent(val, forbiddenWords, mustIncludeWords));
                                           }} 
-                                          className="h-8 text-[10px] bg-background/50 border-rose-500/10" 
+                                          className="h-8 text-[10px] bg-background/80 border-rose-500/25" 
                                         />
                                       </div>
                                       <div className="space-y-1">
-                                        <Label className="text-[9px] font-bold uppercase text-rose-800">Forbidden</Label>
+                                        <Label className={cn('text-[9px] font-bold uppercase', coWriterEffectLabel('rose'))}>Forbidden</Label>
                                         <Input 
                                           placeholder="e.g. list, words, to, avoid, separated, by, commas" 
                                           value={forbiddenWords} 
@@ -2680,11 +2713,11 @@ export function GenerateSongDraftDialog({
                                             setForbiddenWords(val);
                                             setEnableGuardrails(hasGuardrailsStringsContent(negativePrompt, val, mustIncludeWords));
                                           }} 
-                                          className="h-8 text-[10px] bg-background/50 border-rose-500/10" 
+                                          className="h-8 text-[10px] bg-background/80 border-rose-500/25" 
                                         />
                                       </div>
                                       <div className="space-y-1">
-                                        <Label className="text-[9px] font-bold uppercase text-rose-800">Must Include</Label>
+                                        <Label className={cn('text-[9px] font-bold uppercase', coWriterEffectLabel('rose'))}>Must Include</Label>
                                         <Input 
                                           placeholder="e.g. exact phrase to weave in" 
                                           value={mustIncludeWords} 
@@ -2742,7 +2775,7 @@ export function GenerateSongDraftDialog({
                   <DnaSeedExtractPanel lyrics={wizardState.lyrics} className="w-full h-full" compact />
                 </div>
 
-                <div className="flex items-center gap-3 p-3 sm:p-4 bg-muted/20 border border-white/5 rounded-lg shrink-0">
+                <div className={cn('flex items-center gap-3 p-3 sm:p-4 rounded-lg shrink-0', workstationRowInset)}>
                     <Checkbox id="rc" checked={permissionChecked} onCheckedChange={(c) => setPermissionChecked(!!c)} />
                     <Label htmlFor="rc" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest cursor-pointer text-foreground/70 leading-snug">I have clearance to utilize these lyrical assets.</Label>
                 </div>
@@ -2820,7 +2853,7 @@ export function GenerateSongDraftDialog({
                         </TooltipContent>
                     </Tooltip>
                 </div>
-                <ScrollArea className="relative flex-grow min-h-0 border border-white/10 rounded-xl bg-black/40 studio-scrollbar">
+                <ScrollArea className={cn('relative flex-grow min-h-0 rounded-xl studio-scrollbar', workstationInsetPanel)}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
                         {(wizardState.directions || []).length === 0 ? (
                           <div className="col-span-full flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
@@ -2845,7 +2878,7 @@ export function GenerateSongDraftDialog({
                                     key={idx} 
                                     className={cn(
                                         "p-8 border-2 cursor-pointer transition-all hover:scale-[1.02] flex flex-col justify-between min-h-72 h-auto shadow-xl overflow-visible", 
-                                        isSelected ? "border-primary bg-primary/10 shadow-[0_0_30px_rgba(59,130,246,0.15)]" : "border-border/50 bg-card hover:bg-white/5"
+                                        isSelected ? "border-primary bg-primary/10 shadow-[0_0_30px_rgba(59,130,246,0.15)]" : "border-border/50 bg-card hover:bg-muted/50 dark:hover:bg-white/5"
                                     )} 
                                     onClick={() => toggleRemixDirection(dir)}
                                 >
@@ -2932,7 +2965,7 @@ export function GenerateSongDraftDialog({
                                                 <div key={lIdx} className="relative group flex items-start min-h-[32px]">
                                                     <span className="absolute left-0 sm:left-[50px] font-mono text-muted-foreground/25 w-9 sm:w-10 text-right font-bold text-[9px] sm:text-[10px] leading-[32px]">{String(lIdx + 1).padStart(2, '0')}</span>
                                                     <div className="flex-grow flex items-start min-w-0 h-full relative overflow-hidden pl-[2.75rem] sm:pl-[145px]">
-                                                        <p className="font-code font-bold text-[17px] sm:text-[22px] md:text-[24px] leading-[32px] tracking-tight text-white/90 whitespace-pre-wrap break-words w-full sm:-indent-[25px]">
+                                                        <p className={cn('font-code font-bold text-[17px] sm:text-[22px] md:text-[24px] leading-[32px] tracking-tight whitespace-pre-wrap break-words w-full sm:-indent-[25px]', workstationOnPanelText)}>
                                                             <HighlightedText text={line} rhymeGroups={previewRhymeGroups} />
                                                         </p>
                                                     </div>
@@ -2945,7 +2978,7 @@ export function GenerateSongDraftDialog({
                         </div>
                       </Card>
                   </div>
-                  <div className="relative w-full lg:w-[340px] shrink-0 order-2 lg:order-none lg:min-h-0 p-3 sm:p-6 space-y-4 sm:space-y-6 bg-black/50 border-t lg:border-t-0 lg:border-l border-white/10 lg:overflow-y-auto studio-scrollbar z-[2]">
+                  <div className={cn('relative w-full lg:w-[340px] shrink-0 order-2 lg:order-none lg:min-h-0 p-3 sm:p-6 space-y-4 sm:space-y-6 border-t lg:border-t-0 lg:border-l lg:overflow-y-auto studio-scrollbar z-[2]', workstationInsetPanelStrong)}>
                       {approvalDraftHistory.length > 0 && (
                         <div className="space-y-2 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5">
                           <p className="text-[9px] font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1.5">
@@ -2968,11 +3001,11 @@ export function GenerateSongDraftDialog({
                                     'w-full text-left rounded-md border px-2.5 py-2 transition-colors',
                                     isActive
                                       ? 'border-primary/50 bg-primary/10'
-                                      : 'border-white/10 bg-black/30 hover:border-primary/35 hover:bg-primary/5'
+                                      : cn(workstationBorderPanel, 'bg-muted/40 hover:border-primary/35 hover:bg-primary/5 dark:bg-black/30')
                                   )}
                                 >
                                   <div className="flex items-center justify-between gap-2">
-                                    <span className="text-[9px] font-bold uppercase text-white">
+                                    <span className="text-[9px] font-bold uppercase text-foreground dark:text-white">
                                       Draft {approvalDraftHistory.length - idx}
                                     </span>
                                     <span className="text-[8px] font-mono text-muted-foreground shrink-0">
@@ -2994,13 +3027,13 @@ export function GenerateSongDraftDialog({
                         <p className="text-[9px] text-muted-foreground font-code uppercase">Settings used for this synthesis.</p>
                       </div>
                       
-                      <div className="space-y-4 border-t border-white/5 pt-4">
+                      <div className={cn('space-y-4 border-t pt-4', workstationBorderSubtle)}>
                           {/* Receipt: Vibe */}
                           {hubVibeEnabled && (
                               <div className="space-y-1.5 p-3 rounded-lg bg-amber-500/5 border border-amber-500/10">
                                   <p className="text-[9px] font-bold text-amber-500 uppercase tracking-widest flex items-center gap-1.5"><Palette className="h-3 w-3" /> Vibe Context</p>
-                                  <p className="text-[12px] text-white/70 font-code truncate">{hubVibe.genre} @ {hubVibe.tempoBPM} BPM</p>
-                                  {hubVibe.instrumentation && <p className="text-[11px] text-white/40 italic line-clamp-2 leading-tight">"{hubVibe.instrumentation}"</p>}
+                                  <p className={cn('text-[12px] font-code truncate', workstationOnPanelMuted)}>{hubVibe.genre} @ {hubVibe.tempoBPM} BPM</p>
+                                  {hubVibe.instrumentation && <p className={cn('text-[11px] italic line-clamp-2 leading-tight', workstationOnPanelSubtle)}>"{hubVibe.instrumentation}"</p>}
                               </div>
                           )}
 
@@ -3009,12 +3042,12 @@ export function GenerateSongDraftDialog({
                                   <p className="text-[9px] font-bold text-teal-400 uppercase tracking-widest flex items-center gap-1.5"><Compass className="h-3 w-3" /> Inherit Album</p>
                                   {hasDirectionContent(album?.direction) ? (
                                     <div className="space-y-1 mt-1">
-                                        {album?.direction?.setting_world && <p className="text-[11px] text-white/50 leading-tight">• Setting: {album.direction.setting_world}</p>}
-                                        {album?.direction?.emotion_core && <p className="text-[11px] text-white/50 leading-tight">• Core: {album.direction.emotion_core}</p>}
-                                        {album?.direction?.message_truth && <p className="text-[11px] text-white/50 leading-tight">• Truth: {album.direction.message_truth}</p>}
+                                        {album?.direction?.setting_world && <p className={cn('text-[11px] leading-tight', workstationOnPanelMuted)}>• Setting: {album.direction.setting_world}</p>}
+                                        {album?.direction?.emotion_core && <p className={cn('text-[11px] leading-tight', workstationOnPanelMuted)}>• Core: {album.direction.emotion_core}</p>}
+                                        {album?.direction?.message_truth && <p className={cn('text-[11px] leading-tight', workstationOnPanelMuted)}>• Truth: {album.direction.message_truth}</p>}
                                     </div>
                                   ) : (
-                                    <p className="text-[10px] text-white/35 italic">Album direction will layer in when set on the album.</p>
+                                    <p className={cn('text-[10px] italic', workstationOnPanelSubtle)}>Album direction will layer in when set on the album.</p>
                                   )}
                               </div>
                           )}
@@ -3023,11 +3056,11 @@ export function GenerateSongDraftDialog({
                               <div className="space-y-1.5 p-3 rounded-lg bg-green-500/5 border border-green-500/15">
                                   <p className="text-[9px] font-bold text-green-400 uppercase tracking-widest flex items-center gap-1.5"><Compass className="h-3 w-3" /> Track DNA</p>
                                   <div className="space-y-1 mt-1">
-                                      {hubDirection.setting_world && <p className="text-[11px] text-white/50 leading-tight">• Setting: {hubDirection.setting_world}</p>}
-                                      {hubDirection.emotion_core && <p className="text-[11px] text-white/50 leading-tight">• Core: {hubDirection.emotion_core}</p>}
-                                      {hubDirection.message_truth && <p className="text-[11px] text-white/50 leading-tight">• Truth: {hubDirection.message_truth}</p>}
+                                      {hubDirection.setting_world && <p className={cn('text-[11px] leading-tight', workstationOnPanelMuted)}>• Setting: {hubDirection.setting_world}</p>}
+                                      {hubDirection.emotion_core && <p className={cn('text-[11px] leading-tight', workstationOnPanelMuted)}>• Core: {hubDirection.emotion_core}</p>}
+                                      {hubDirection.message_truth && <p className={cn('text-[11px] leading-tight', workstationOnPanelMuted)}>• Truth: {hubDirection.message_truth}</p>}
                                       {!hasDirectionContent(hubDirection) && (
-                                        <p className="text-[10px] text-white/35 italic">Track fields empty — add Creative DNA below or load a preset.</p>
+                                        <p className={cn('text-[10px] italic', workstationOnPanelSubtle)}>Track fields empty — add Creative DNA below or load a preset.</p>
                                       )}
                                   </div>
                               </div>
@@ -3070,8 +3103,8 @@ export function GenerateSongDraftDialog({
                               <div className="space-y-1.5 p-3 rounded-lg bg-rose-500/5 border border-rose-500/10">
                                   <p className="text-[9px] font-bold text-rose-500 uppercase tracking-widest flex items-center gap-1.5"><Shield className="h-3 w-3" /> Guardrails Active</p>
                                   <div className="space-y-1 mt-1">
-                                      {negativePrompt && <div className="flex flex-col gap-0.5"><span className="text-[9px] font-bold text-rose-800 uppercase">NEGATIVE</span><p className="text-[11px] text-white/40 line-clamp-1">{negativePrompt}</p></div>}
-                                      {forbiddenWords && <div className="flex flex-col gap-0.5"><span className="text-[9px] font-bold text-rose-800 uppercase">FORBIDDEN</span><p className="text-[11px] text-white/40 line-clamp-1">{forbiddenWords}</p></div>}
+                                      {negativePrompt && <div className="flex flex-col gap-0.5"><span className="text-[9px] font-bold text-rose-800 uppercase">NEGATIVE</span><p className={cn('text-[11px] line-clamp-1', workstationOnPanelSubtle)}>{negativePrompt}</p></div>}
+                                      {forbiddenWords && <div className="flex flex-col gap-0.5"><span className="text-[9px] font-bold text-rose-800 uppercase">FORBIDDEN</span><p className={cn('text-[11px] line-clamp-1', workstationOnPanelSubtle)}>{forbiddenWords}</p></div>}
                                   </div>
                               </div>
                           )}
@@ -3097,12 +3130,12 @@ export function GenerateSongDraftDialog({
                           {lyricsAbout.trim() && (
                               <div className="space-y-1.5 p-3 rounded-lg bg-primary/5 border border-primary/10">
                                   <p className="text-[9px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5"><MessageSquareQuote className="h-3 w-3" /> Instructions</p>
-                                  <p className="text-[11px] text-white/50 italic leading-tight line-clamp-3">"{lyricsAbout}"</p>
+                                  <p className={cn('text-[11px] italic leading-tight line-clamp-3', workstationOnPanelMuted)}>"{lyricsAbout}"</p>
                               </div>
                           )}
                       </div>
 
-                      <div className="hidden lg:block pt-6 border-t border-white/5 space-y-4">
+                      <div className={cn('hidden lg:block pt-6 border-t space-y-4', workstationBorderSubtle)}>
                         <Card className="border-primary/30 bg-primary/5 p-4 space-y-3">
                             <CardTitle className="text-[10px] font-bold uppercase text-primary flex items-center gap-2"><CheckCircle2 className="h-3 w-3" /> Apply Draft</CardTitle>
                             <p className="text-[9px] text-muted-foreground leading-relaxed">
@@ -3156,7 +3189,19 @@ export function GenerateSongDraftDialog({
                   )}
                   {step === 10 && (
                       <div className="flex flex-wrap gap-1.5 max-w-full sm:max-w-2xl sm:ml-4">
-                          {activeBadges.map((b, i) => <Badge key={i} variant="outline" className={cn("text-[8px] font-bold uppercase py-0.5 px-2 bg-background/40", b.color, b.text === 'VIBE' && "animate-pulse")}>{b.text}</Badge>)}
+                          {activeBadges.map((b, i) => (
+                            <Badge
+                              key={i}
+                              variant="outline"
+                              className={cn(
+                                'text-[8px] font-bold uppercase py-0.5 px-2 border-2',
+                                getWorkstationRuleBadgeClass(b.id, true),
+                                b.id === 'VIBE' && 'animate-pulse'
+                              )}
+                            >
+                              {b.text}
+                            </Badge>
+                          ))}
                       </div>
                   )}
               </div>
@@ -3212,7 +3257,7 @@ export function GenerateSongDraftDialog({
 
     <Dialog open={remixSeedBackConfirmOpen} onOpenChange={setRemixSeedBackConfirmOpen}>
       <DialogContent
-        overlayClassName="z-[2195] bg-black/85"
+        overlayClassName="z-[2195] bg-background/85 dark:bg-black/85"
         className="z-[2200] sm:max-w-md bg-card border-2 border-amber-500/30"
       >
         <DialogHeader>

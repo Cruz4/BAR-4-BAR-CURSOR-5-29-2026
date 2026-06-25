@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/popover";
 import { BrandLockup } from '@/components/brand-lockup';
 import { BRAND_ARIA_LABEL } from '@/lib/brand';
+import { StudioThemeControls } from '@/components/studio-theme-controls';
 
 export function Header() {
   const { user, loading } = useAuth();
@@ -136,6 +137,7 @@ export function Header() {
             <TooltipProvider>
             {!loading && user && (
               <>
+                <StudioThemeControls />
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button variant="ghost" size="icon" className="hidden md:inline-flex h-8 md:h-9 w-8 md:w-9 text-primary hover:bg-primary/10 shrink-0" onClick={() => setGuideOpen(true)}>

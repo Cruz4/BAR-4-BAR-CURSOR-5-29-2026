@@ -141,7 +141,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   useChunkLoadRecovery();
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="b4b-theme">
       <AuthProvider>
         <AppShell>{children}</AppShell>
       </AuthProvider>

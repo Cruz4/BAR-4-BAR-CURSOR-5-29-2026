@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { NotebookText, Trash2, Wand2, ChevronsUpDown, Copy, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -10,6 +10,7 @@ import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { cn } from '@/lib/utils';
+import { studioAccentPanel, studioPanelCaption } from '@/lib/studio-panel-styles';
 
 const TEXT_STORAGE_KEY = 'bar4bar-scratchpad-text';
 const EFFECTS_STORAGE_KEY = 'bar4bar-scratchpad-effects';
@@ -111,23 +112,24 @@ const ScratchPad = forwardRef<{ addEffectResult: (result: ScratchPadEffectResult
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className="bg-muted/30 border-border/50 min-w-0 overflow-hidden">
+      <Card data-studio-panel className={studioAccentPanel('muted')}>
         <CollapsibleTrigger asChild>
           <CardHeader className="cursor-pointer p-4 md:p-6">
             <div className="flex justify-between items-center">
                 <div className="flex flex-col text-left min-w-0 pr-1">
-                    <CardTitle className="font-headline text-lg flex items-center gap-2 uppercase tracking-widest text-muted-foreground">
+                    <CardTitle className="font-headline text-lg flex items-center gap-2 uppercase tracking-widest text-foreground/90">
                       <NotebookText className="h-5 w-5" /> Scratch Pad
                     </CardTitle>
-                    <CardDescription
+                    <p
+                      data-studio-caption
                       className={cn(
-                        'font-code tracking-wider uppercase font-bold tracking-tight text-muted-foreground/75',
+                        studioPanelCaption,
                         isOpen ? 'text-[10px] leading-snug break-words' : 'text-[9px] leading-none truncate'
                       )}
                       title="Temporary Work Area"
                     >
                       {isOpen ? 'Temporary Work Area' : 'Scratch Notes'}
-                    </CardDescription>
+                    </p>
                 </div>
                 <div className="flex items-center gap-1">
                   {effectResults.length > 0 && (

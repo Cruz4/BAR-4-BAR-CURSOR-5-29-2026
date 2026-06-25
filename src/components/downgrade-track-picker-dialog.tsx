@@ -132,7 +132,7 @@ export function DowngradeTrackPickerDialog({
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-headline text-sm uppercase text-white truncate">{track.title}</p>
+                  <p className="font-headline text-sm uppercase text-foreground dark:text-white truncate">{track.title}</p>
                   <p className="text-[9px] font-code text-muted-foreground uppercase">
                     {trackLocationLabel(track, albums)}
                   </p>

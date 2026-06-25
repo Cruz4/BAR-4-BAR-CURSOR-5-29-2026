@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -10,10 +10,17 @@ import { Slider } from '@/components/ui/slider';
 import { Wand2, ChevronsUpDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn, mergeDirection } from '@/lib/utils';
+import {
+  studioAccentPanel,
+  studioPanelCaption,
+  studioPanelField,
+  studioPanelInner,
+  studioPanelLabel,
+} from '@/lib/studio-panel-styles';
 
 function effectsSubtitleClass(expanded: boolean) {
   return cn(
-    'uppercase font-bold tracking-tight text-indigo-200/90',
+    studioPanelCaption,
     expanded ? 'text-[10px] leading-snug break-words' : 'text-[9px] leading-none truncate'
   );
 }
@@ -192,9 +199,9 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
     const config = TOOL_CONFIG[tool];
     return Object.entries(config.inputs).map(([key, inputConfig]: [string, any]) => (
       <div key={key}>
-        <Label htmlFor={`${tool}-${key}`} className="text-[11px] font-bold uppercase text-indigo-100/95">{inputConfig.label}</Label>
+        <Label htmlFor={`${tool}-${key}`} className={studioPanelLabel}>{inputConfig.label}</Label>
         {inputConfig.type === 'text' && (
-          <Input id={`${tool}-${key}`} defaultValue={formStateRef.current[tool][key]} onChange={(e) => handleInputChange(tool, key, e.target.value)} className="h-8 bg-background/50 text-[12px] text-foreground/90 placeholder:text-muted-foreground/75" />
+          <Input id={`${tool}-${key}`} defaultValue={formStateRef.current[tool][key]} onChange={(e) => handleInputChange(tool, key, e.target.value)} className={cn('h-8 text-[12px]', studioPanelField)} />
         )}
         {inputConfig.type === 'slider' && (
           <div className="flex items-center gap-4 py-1">
@@ -204,7 +211,7 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
         )}
         {inputConfig.type === 'select' && (
            <Select defaultValue={formStateRef.current[tool][key]} onValueChange={(value) => handleInputChange(tool, key, value)}>
-                <SelectTrigger className="h-8 bg-background/50 text-[12px] text-foreground/90"><SelectValue /></SelectTrigger>
+                <SelectTrigger className={cn('h-8 text-[12px]', studioPanelField)}><SelectValue /></SelectTrigger>
                 <SelectContent>
                     {inputConfig.options.map((opt: string) => (
                         <SelectItem key={opt} value={opt} className="capitalize text-[12px]">{opt}</SelectItem>
@@ -218,29 +225,29 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <Card data-creative-effects className="bg-indigo-500/10 dark:bg-indigo-500/5 border-indigo-200/50">
+        <Card data-creative-effects data-studio-panel className={studioAccentPanel('indigo')}>
         <CollapsibleTrigger asChild>
             <CardHeader className="flex-row items-center justify-between cursor-pointer p-4 md:p-6">
                 <div className="flex flex-col w-full min-w-0 pr-1">
-                    <CardTitle className="font-headline text-lg flex items-center gap-2 uppercase tracking-widest text-indigo-700 dark:text-indigo-400 text-left">
+                    <CardTitle className="font-headline text-lg flex items-center gap-2 uppercase tracking-widest text-indigo-600 dark:text-indigo-400 text-left">
                       <Wand2 className="h-5 w-5 shrink-0"/> Creative Effects
                     </CardTitle>
-                    <CardDescription
-                      className={cn('font-code tracking-wider text-left pl-7', effectsSubtitleClass(isOpen))}
+                    <p
+                      className={cn('text-left pl-7', effectsSubtitleClass(isOpen))}
                       title="Specialized Lyrical Tools"
                     >
                       {isOpen ? 'All 9 tools — Ink per run' : 'Lyrical Tools'}
-                    </CardDescription>
+                    </p>
                 </div>
                 <Button variant="ghost" size="icon" className="h-6 w-6"><ChevronsUpDown className="h-4 w-4" /></Button>
             </CardHeader>
         </CollapsibleTrigger>
         <CollapsibleContent>
-            <CardContent className="space-y-4 p-4 md:p-6 md:pt-0 font-code text-[12px] text-foreground/90">
+            <CardContent className="space-y-4 p-4 md:p-6 md:pt-0 font-code text-[12px] text-foreground">
             <div>
-                <Label className="text-[11px] font-bold uppercase text-indigo-100/95">Select Tool</Label>
+                <Label className={studioPanelLabel}>Select Tool</Label>
                 <Select value={selectedTool} onValueChange={(value) => setSelectedTool(value as CreativeTool)}>
-                    <SelectTrigger className="bg-background/50 h-9 text-[12px] text-foreground/90"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className={cn('h-9 text-[12px]', studioPanelField)}><SelectValue /></SelectTrigger>
                     <SelectContent>
                         {ALL_CREATIVE_TOOLS.map((key) => (
                         <SelectItem key={key} value={key} className="text-[12px]">{TOOL_CONFIG[key].label}</SelectItem>
@@ -249,19 +256,19 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
                 </Select>
             </div>
             
-            <div className="space-y-3 p-3 bg-background/50 rounded-lg border border-indigo-500/20">
+            <div className={cn('space-y-3', studioPanelInner, 'border-indigo-500/20 dark:border-indigo-500/20')}>
                 <div className="space-y-2">
                     {renderInputs(selectedTool)}
                 </div>
-                <div className="text-[11px] text-indigo-50/90 pt-2 border-t border-indigo-500/20 leading-relaxed">
-                    <p className="font-bold text-foreground/95">{TOOL_CONFIG[selectedTool].description}</p>
-                    <p className="italic mt-0.5 text-indigo-100/80">{TOOL_CONFIG[selectedTool].howTo}</p>
+                <div className="text-[11px] text-foreground pt-2 border-t border-border/60 leading-relaxed">
+                    <p className="font-bold">{TOOL_CONFIG[selectedTool].description}</p>
+                    <p className="italic mt-0.5 text-muted-foreground">{TOOL_CONFIG[selectedTool].howTo}</p>
                 </div>
             </div>
             
             <div>
-                <Label htmlFor="effect-end-with" className="text-[11px] font-bold uppercase text-indigo-100/90">End With (Optional)</Label>
-                <Input id="effect-end-with" placeholder="e.g., the moonlight" value={endWith} onChange={(e) => setEndWith(e.target.value)} className="h-9 bg-background/50 text-[12px] text-foreground/90 placeholder:text-muted-foreground/75" />
+                <Label htmlFor="effect-end-with" className={studioPanelLabel}>End With (Optional)</Label>
+                <Input id="effect-end-with" placeholder="e.g., the moonlight" value={endWith} onChange={(e) => setEndWith(e.target.value)} className={cn('h-9 text-[12px]', studioPanelField)} />
             </div>
 
             <TooltipProvider>

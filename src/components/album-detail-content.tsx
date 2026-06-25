@@ -115,6 +115,13 @@ import { trackUpgradeClick } from '@/lib/conversion-analytics';
 import { format } from 'date-fns';
 import { countRhymeBars } from '@/lib/lyrics-units';
 import { cn } from '@/lib/utils';
+import {
+  studioVaultCard,
+  studioVaultCardTitle,
+  studioVaultMetricCell,
+  studioVaultRowButton,
+  studioVaultTrackCard,
+} from '@/lib/studio-panel-styles';
 import { isDataUrl } from '@/lib/cover-art';
 import {
   processCoverArtFile,
@@ -446,29 +453,29 @@ function LooseTracksSidebar({
 
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden rounded-2xl border-sky-500/20 bg-gradient-to-br from-sky-500/10 via-black/50 to-primary/10 shadow-xl">
+      <Card className={cn('overflow-hidden border-sky-500/20 bg-gradient-to-br from-sky-500/10 via-card to-primary/10 shadow-xl', studioVaultCard)}>
         <CardHeader className="pb-3">
-          <CardTitle className="font-headline text-lg uppercase tracking-tight text-white">Vault Snapshot</CardTitle>
+          <CardTitle className={cn('text-lg', studioVaultCardTitle)}>Vault Snapshot</CardTitle>
           <CardDescription className="text-[9px] uppercase tracking-widest font-bold text-sky-400/80">
             Singles waiting for a home
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-3 gap-3 pb-5">
-          <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
-            <p className="font-headline text-2xl text-white">{tracks.length}</p>
+          <div className={studioVaultMetricCell}>
+            <p className={cn('text-2xl', studioVaultCardTitle)}>{tracks.length}</p>
             <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Tracks</p>
           </div>
-          <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
-            <p className="font-headline text-2xl text-white">{totalBars}</p>
+          <div className={studioVaultMetricCell}>
+            <p className={cn('text-2xl', studioVaultCardTitle)}>{totalBars}</p>
             <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Bars</p>
           </div>
-          <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
-            <p className="font-headline text-2xl text-white">{realAlbums.length}</p>
+          <div className={studioVaultMetricCell}>
+            <p className={cn('text-2xl', studioVaultCardTitle)}>{realAlbums.length}</p>
             <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Albums</p>
           </div>
         </CardContent>
         {genreCounts.length > 0 && (
-          <div className="border-t border-white/5 px-5 py-4 flex flex-wrap gap-2">
+          <div className="border-t border-border dark:border-white/5 px-5 py-4 flex flex-wrap gap-2">
             {genreCounts.map(([genre, count]) => (
               <Badge key={genre} variant="outline" className="text-[8px] border-sky-500/25 text-sky-300 font-code">
                 {genre} · {count}
@@ -478,9 +485,9 @@ function LooseTracksSidebar({
         )}
       </Card>
 
-      <Card className="rounded-2xl border-white/10 bg-black/40 backdrop-blur-xl shadow-xl">
+      <Card className={studioVaultCard}>
         <CardHeader className="pb-3">
-          <CardTitle className="font-headline text-lg uppercase tracking-tight text-white flex items-center gap-2">
+          <CardTitle className={cn('text-lg flex items-center gap-2', studioVaultCardTitle)}>
             <Move className="h-4 w-4 text-primary" />
             Assign to Album
           </CardTitle>
@@ -495,9 +502,9 @@ function LooseTracksSidebar({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="w-full flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left hover:border-primary/30 hover:bg-primary/5 transition-all"
+                    className={cn('w-full flex items-center gap-3 text-left hover:border-primary/30 hover:bg-primary/5 transition-all', studioVaultRowButton)}
                   >
-                    <div className="h-10 w-10 shrink-0 rounded-lg border border-white/10 bg-neutral-900 overflow-hidden flex items-center justify-center">
+                    <div className="h-10 w-10 shrink-0 rounded-lg border border-border bg-muted/50 overflow-hidden flex items-center justify-center dark:border-white/10 dark:bg-neutral-900">
                       {targetAlbum.coverArtUrl ? (
                         <Image src={targetAlbum.coverArtUrl} alt="" width={40} height={40} className="h-full w-full object-cover" />
                       ) : (
@@ -505,7 +512,7 @@ function LooseTracksSidebar({
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-headline text-sm uppercase text-white truncate">{targetAlbum.title}</p>
+                      <p className={cn('text-sm truncate', studioVaultCardTitle)}>{targetAlbum.title}</p>
                       <p className="text-[9px] font-code text-muted-foreground uppercase">
                         {targetAlbum.tracks?.length ?? 0} track{(targetAlbum.tracks?.length ?? 0) === 1 ? '' : 's'}
                       </p>
@@ -513,7 +520,7 @@ function LooseTracksSidebar({
                     <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-card border-white/10 w-56 max-h-64 overflow-y-auto">
+                <DropdownMenuContent align="end" className="bg-card border-border w-56 max-h-64 overflow-y-auto dark:border-white/10">
                   {tracks.map((t) => (
                     <DropdownMenuItem
                       key={t.id}
@@ -528,7 +535,7 @@ function LooseTracksSidebar({
               </DropdownMenu>
             ))
           ) : (
-            <div className="rounded-xl border border-dashed border-white/10 p-6 text-center space-y-3">
+            <div className="rounded-xl border border-dashed border-border p-6 text-center space-y-3 dark:border-white/10">
               <p className="text-[10px] font-code text-muted-foreground uppercase tracking-widest">No albums yet</p>
               <Button variant="outline" size="sm" asChild className="text-[9px] font-bold uppercase">
                 <Link href="/">Create from The Vault</Link>
@@ -573,7 +580,7 @@ function LooseTrackCard({
   const sectionCount = track.sections?.length ?? 0;
 
   return (
-    <div className="group relative flex flex-col rounded-2xl border border-white/10 bg-gradient-to-br from-black/60 via-black/40 to-primary/[0.06] p-5 hover:border-primary/35 hover:shadow-[0_0_32px_rgba(59,130,246,0.12)] transition-all min-h-[168px]">
+    <div className={cn('group relative flex flex-col hover:border-primary/35 hover:shadow-[0_0_32px_rgba(59,130,246,0.12)] transition-all min-h-[168px]', studioVaultTrackCard)}>
       <div className="flex items-start justify-between gap-2 mb-3">
         <span className="font-code text-sm text-primary/70 tabular-nums">{String(index + 1).padStart(2, '0')}</span>
         {!tierLocked && (
@@ -583,13 +590,13 @@ function LooseTrackCard({
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-card border-white/10 w-48">
+            <DropdownMenuContent align="end" className="bg-card border-border w-48 dark:border-white/10">
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger className="text-[10px] font-bold uppercase">
                   <Move className="mr-2 h-4 w-4" /> Move To Album
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
-                  <DropdownMenuSubContent className="bg-card border-white/10">
+                  <DropdownMenuSubContent className="bg-card border-border dark:border-white/10">
                     {realAlbums.map((targetAlbum) => (
                       <DropdownMenuItem
                         key={targetAlbum.id}
@@ -615,12 +622,12 @@ function LooseTrackCard({
       </div>
 
       <Link href={`/albums/${albumId}/tracks/${track.id}`} className="flex flex-col flex-1 min-w-0">
-        <p className="font-headline text-xl md:text-2xl text-white uppercase tracking-tight group-hover:text-primary transition-colors line-clamp-2">
+        <p className={cn('text-xl md:text-2xl group-hover:text-primary transition-colors line-clamp-2', studioVaultCardTitle)}>
           {track.title}
         </p>
         <div className="flex flex-wrap items-center gap-2 mt-3">
           <DnaDropLiveIndicator shareId={track.shareId} variant="badge" />
-          <Badge variant="outline" className="h-5 px-2 text-[8px] border-white/10 text-muted-foreground font-code">
+          <Badge variant="outline" className="h-5 px-2 text-[8px] border-border text-muted-foreground font-code dark:border-white/10">
             {track.vibe?.genre || 'No genre'}
           </Badge>
           <span className="text-[9px] text-muted-foreground/70 font-code uppercase">{track.vibe?.tempoBPM ?? '—'} BPM</span>
@@ -776,7 +783,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                         readOnly={albumTierLocked}
                         onBlur={(e) => !albumTierLocked && handleAlbumUpdate({ title: e.target.value })} 
                         className={cn(
-                          'text-3xl sm:text-5xl md:text-7xl font-headline font-bold text-white bg-transparent border-0 p-0 focus-visible:ring-0 h-auto tracking-tighter uppercase leading-none w-full max-w-full',
+                          'text-3xl sm:text-5xl md:text-7xl font-headline font-bold text-foreground dark:text-white bg-transparent border-0 p-0 focus-visible:ring-0 h-auto tracking-tighter uppercase leading-none w-full max-w-full',
                           albumTierLocked && 'opacity-80 cursor-default'
                         )}
                     />
@@ -830,13 +837,13 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                         </div>
                     </div>
                 ) : (
-                    <div className="w-full lg:w-[min(100%,340px)] shrink-0 rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/10 via-black/50 to-primary/10 p-5 shadow-xl">
+                    <div className="w-full lg:w-[min(100%,340px)] shrink-0 rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/10 via-card to-primary/10 p-5 shadow-xl">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="p-2.5 rounded-xl bg-sky-500/15 border border-sky-500/25">
                                 <CassetteTape className="h-6 w-6 text-sky-400" />
                             </div>
                             <div>
-                                <p className="font-headline text-lg uppercase text-white tracking-tight">Idea Shelf</p>
+                                <p className={cn('text-lg tracking-tight', studioVaultCardTitle)}>Idea Shelf</p>
                                 <p className="text-[9px] font-code text-muted-foreground uppercase tracking-widest">Unassigned workspace</p>
                             </div>
                         </div>
@@ -849,8 +856,8 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
 
             <div className={cn('grid gap-8 pb-40', isUnassignedVault ? 'grid-cols-1 xl:grid-cols-12' : 'grid-cols-1 lg:grid-cols-3')}>
                 <div className={cn('space-y-10', isUnassignedVault ? 'xl:col-span-8' : 'lg:col-span-2')}>
-                    <Card className="bg-black/40 border-white/5 backdrop-blur-3xl shadow-2xl overflow-hidden rounded-2xl min-w-0">
-                        <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-4 sm:p-6 md:p-8 border-b border-white/5">
+                    <Card className={cn('backdrop-blur-3xl shadow-2xl overflow-hidden min-w-0', studioVaultCard)}>
+                        <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-4 sm:p-6 md:p-8 border-b border-border dark:border-white/5">
                             <div className="flex items-center gap-3 sm:gap-4 min-w-0 shrink-0">
                                 <div className="p-2 sm:p-3 bg-primary/10 rounded-xl border border-primary/20 shrink-0">
                                     {isUnassignedVault ? <CassetteTape className="h-6 w-6 sm:h-8 sm:w-8 text-primary" /> : <ListMusic className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />}
@@ -871,7 +878,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-white/10 rounded-xl bg-white/5 flex-1 sm:flex-none min-w-0"
+                                  className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-border rounded-xl bg-muted/40 flex-1 sm:flex-none min-w-0 dark:border-white/10 dark:bg-white/5"
                                   onClick={() => {
                                     if (!canExportVault(user)) {
                                       toast(EXPORT_PRO_TOAST);
@@ -932,13 +939,13 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                             {String(index + 1).padStart(2, '0')}
                                         </div>
                                         <Link href={`/albums/${album.id}/tracks/${track.id}`} className="flex-grow min-w-0">
-                                            <p className="font-bold font-headline text-lg sm:text-2xl text-white uppercase tracking-tight group-hover:text-primary transition-colors break-words">{track.title}</p>
+                                            <p className={cn('font-bold text-lg sm:text-2xl group-hover:text-primary transition-colors break-words', studioVaultCardTitle)}>{track.title}</p>
                                             <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
                                                 <DnaDropLiveIndicator shareId={track.shareId} variant="compact" />
                                                 {trackTierLocked && (
                                                   <Badge variant="outline" className={cn('h-4 px-1.5 text-[8px]', proLockText())}>View only</Badge>
                                                 )}
-                                                <Badge variant="outline" className="h-4 px-1.5 text-[8px] border-white/10 text-muted-foreground font-code">{track.vibe?.genre}</Badge>
+                                                <Badge variant="outline" className="h-4 px-1.5 text-[8px] border-border text-muted-foreground font-code dark:border-white/10">{track.vibe?.genre}</Badge>
                                                 <span className="text-[9px] text-muted-foreground/60 font-code uppercase">{track.vibe?.tempoBPM} BPM</span>
                                             </div>
                                         </Link>
@@ -955,13 +962,13 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-white"><MoreVertical className="h-5 w-5" /></Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="bg-card border-white/10 w-48">
+                                                <DropdownMenuContent align="end" className="bg-card border-border w-48 dark:border-white/10">
                                                     {isUnassignedVault ? (
                                                         <>
                                                             <DropdownMenuSub>
                                                                 <DropdownMenuSubTrigger className="text-[10px] font-bold uppercase"><Move className="mr-2 h-4 w-4" /> Move To Album</DropdownMenuSubTrigger>
                                                                 <DropdownMenuPortal>
-                                                                    <DropdownMenuSubContent className="bg-card border-white/10">
+                                                                    <DropdownMenuSubContent className="bg-card border-border dark:border-white/10">
                                                                         {realAlbums.map(targetAlbum => (
                                                                             <DropdownMenuItem key={targetAlbum.id} onClick={() => { moveTrack(track.id, 'unassigned', targetAlbum.id); toast({ title: "Track Assigned", description: `"${track.title}" moved to ${targetAlbum.title}. Album DNA inherit is on.` }); }} className="text-[10px] font-bold uppercase">
                                                                                 <PlusCircle className="mr-2 h-3 w-3" /> {targetAlbum.title}

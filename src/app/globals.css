@@ -19,9 +19,43 @@
 }
 
 @layer base {
+  /* Light theme (C) — full app readability outdoors */
   :root {
-    --background: 216 50% 8%; /* Locked Blue Base (RGB 10, 18, 30) */
-    --foreground: 220 20% 90%; 
+    --background: 220 22% 96%;
+    --foreground: 220 32% 9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 10%;
+
+    --primary: 217 91% 42%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 16% 91%;
+    --secondary-foreground: 220 28% 14%;
+
+    --muted: 220 14% 90%;
+    --muted-foreground: 220 12% 34%;
+
+    --accent: 340 72% 44%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 74.2% 50.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 14% 78%;
+    --input: 220 14% 78%;
+    --ring: 217 91% 42%;
+
+    --radius: 0.25rem;
+  }
+
+  /* Deep navy dark — original studio look */
+  .dark {
+    --background: 216 50% 8%;
+    --foreground: 220 20% 90%;
 
     --card: 216 50% 10%;
     --card-foreground: 220 20% 85%;
@@ -29,7 +63,7 @@
     --popover: 216 50% 10%;
     --popover-foreground: 220 20% 85%;
 
-    --primary: 217 91% 60%; 
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 216 30% 15%;
@@ -38,7 +72,7 @@
     --muted: 216 40% 12%;
     --muted-foreground: 220 10% 60%;
 
-    --accent: 340 75% 55%; /* Professional Rose Theme */
+    --accent: 340 75% 55%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 74.2% 50.2%;
@@ -47,8 +81,6 @@
     --border: 216 40% 15%;
     --input: 216 40% 15%;
     --ring: 217 91% 60%;
-
-    --radius: 0.25rem;
   }
 }
 
@@ -73,10 +105,24 @@
 
   /* Solid base — mesh orbs in StudioPageBackground provide smooth color falloff */
   .studio-page-base {
+    background-color: hsl(var(--background));
+  }
+
+  .dark .studio-page-base {
     background-color: hsl(216 50% 7%);
   }
 
   .studio-page-vignette {
+    background-image: linear-gradient(
+      165deg,
+      hsl(220 24% 96% / 0.35) 0%,
+      hsl(220 22% 95% / 0.2) 35%,
+      hsl(220 20% 94% / 0.08) 60%,
+      hsl(220 18% 92% / 0.25) 100%
+    );
+  }
+
+  .dark .studio-page-vignette {
     background-image: linear-gradient(
       165deg,
       hsl(216 48% 11% / 0.72) 0%,
@@ -89,7 +135,262 @@
 
   /* Legacy alias — prefer StudioPageBackground mesh layers */
   .studio-page-bg {
-    background-color: hsl(216 50% 7%);
+    background-color: hsl(var(--background));
+  }
+
+  /* Lyrics sheet — paper writing surface (B) */
+  .writing-surface-paper {
+    color: hsl(220 28% 14%);
+  }
+
+  .writing-surface-paper textarea,
+  .writing-surface-paper .writing-surface-text {
+    color: hsl(220 28% 14%) !important;
+  }
+
+  .writing-surface-paper .text-muted-foreground {
+    color: hsl(220 14% 36%) !important;
+  }
+
+  .writing-surface-studio {
+    color: hsl(var(--foreground));
+  }
+
+  /* Mobile — stronger contrast for secondary labels */
+  @media (max-width: 768px) {
+    :root {
+      --muted-foreground: 220 12% 28%;
+    }
+
+    .dark {
+      --muted-foreground: 220 12% 80%;
+    }
+  }
+
+  /* Light mode — vault chamber parity: same motion/layers, colors tuned for pale sky */
+  html:not(.dark) .vault-chamber {
+    opacity: 1;
+  }
+
+  html:not(.dark) .vault-chamber-moire-a {
+    opacity: 0.075;
+    mix-blend-mode: multiply;
+    background: repeating-linear-gradient(
+      108deg,
+      transparent 0 5px,
+      rgba(59, 130, 246, 0.38) 5px 6px,
+      transparent 6px 14px
+    );
+  }
+
+  html:not(.dark) .vault-chamber-moire-b {
+    opacity: 0.06;
+    mix-blend-mode: multiply;
+    background: repeating-linear-gradient(
+      72deg,
+      transparent 0 7px,
+      rgba(37, 99, 235, 0.3) 7px 8px,
+      transparent 8px 18px
+    );
+  }
+
+  html:not(.dark) .vault-chamber-floor {
+    background: linear-gradient(
+      to top,
+      rgba(59, 130, 246, 0.16) 0%,
+      rgba(59, 130, 246, 0.06) 38%,
+      transparent 100%
+    );
+  }
+
+  html:not(.dark) .vault-chamber-lift {
+    background: radial-gradient(
+      ellipse 130% 55% at 50% 100%,
+      rgba(59, 130, 246, 0.14) 0%,
+      rgba(37, 99, 235, 0.07) 32%,
+      transparent 62%
+    );
+    mix-blend-mode: normal;
+  }
+
+  html:not(.dark) .vault-chamber-sill {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(37, 99, 235, 0.42) 48%,
+      rgba(37, 99, 235, 0.42) 52%,
+      transparent 100%
+    );
+  }
+
+  html:not(.dark) .vault-speaker-ripple {
+    border: 1px solid rgba(37, 99, 235, 0.48);
+    box-shadow:
+      0 0 32px rgba(59, 130, 246, 0.22),
+      inset 0 0 52px rgba(59, 130, 246, 0.1);
+  }
+
+  html:not(.dark) .vault-speaker-core {
+    background: radial-gradient(
+      circle,
+      rgba(59, 130, 246, 0.48) 0%,
+      rgba(37, 99, 235, 0.2) 35%,
+      rgba(59, 130, 246, 0.09) 55%,
+      transparent 72%
+    );
+  }
+
+  html:not(.dark) .studio-sky-wash {
+    background: linear-gradient(
+      180deg,
+      hsl(220 24% 98% / 0.28) 0%,
+      hsl(220 22% 96% / 0.42) 55%,
+      hsl(220 20% 94% / 0.58) 100%
+    );
+  }
+
+  html:not(.dark) .settings-control-hex {
+    opacity: 0.09;
+    mix-blend-mode: multiply;
+  }
+
+  html:not(.dark) .settings-control-grid {
+    opacity: 0.075;
+  }
+
+  html:not(.dark) .settings-control-reticle {
+    border-color: rgba(14, 165, 233, 0.22);
+    box-shadow:
+      inset 0 0 0 1px rgba(59, 130, 246, 0.12),
+      0 0 80px rgba(45, 212, 191, 0.08);
+  }
+
+  html:not(.dark) .settings-control-reticle-inner {
+    border-color: rgba(37, 99, 235, 0.2);
+  }
+
+  html:not(.dark) .progress-hall-stage-left {
+    background: linear-gradient(
+      to top,
+      rgba(16, 185, 129, calc(0.16 * var(--hall-glow, 0.5))) 0%,
+      rgba(59, 130, 246, 0.09) 42%,
+      transparent 100%
+    );
+  }
+
+  html:not(.dark) .progress-hall-stage-right {
+    background: linear-gradient(
+      to top,
+      rgba(167, 139, 250, calc(0.14 * var(--hall-glow, 0.5))) 0%,
+      rgba(59, 130, 246, 0.08) 40%,
+      transparent 100%
+    );
+  }
+
+  html:not(.dark) .progress-hall-bridge-path {
+    stroke: rgba(59, 130, 246, 0.28);
+  }
+
+  html:not(.dark) .progress-hall-panel {
+    border-color: rgba(59, 130, 246, 0.2);
+    background: linear-gradient(
+      155deg,
+      rgba(255, 255, 255, 0.88) 0%,
+      rgba(240, 249, 255, 0.68) 55%,
+      rgba(219, 234, 254, 0.48) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.85),
+      0 18px 48px rgba(59, 130, 246, 0.12);
+  }
+
+  html:not(.dark) .progress-hall-panel-written {
+    border-color: rgba(16, 185, 129, 0.28);
+    box-shadow:
+      inset 0 1px 0 rgba(16, 185, 129, 0.12),
+      0 18px 48px rgba(59, 130, 246, 0.1),
+      0 0 40px rgba(16, 185, 129, calc(0.1 * var(--hall-glow, 0.5)));
+  }
+
+  html:not(.dark) .progress-hall-panel-generated {
+    border-color: rgba(167, 139, 250, 0.28);
+    box-shadow:
+      inset 0 1px 0 rgba(167, 139, 250, 0.12),
+      0 18px 48px rgba(59, 130, 246, 0.1),
+      0 0 40px rgba(167, 139, 250, calc(0.1 * var(--hall-glow, 0.5)));
+  }
+
+  /*
+   * B4B display font ships with light-filled glyphs (built for dark UI).
+   * Recolor via background-clip so headlines stay on-brand but readable in light theme.
+   */
+  html:not(.dark) .font-headline {
+    background-image: linear-gradient(
+      hsl(var(--foreground)),
+      hsl(var(--foreground))
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  html:not(.dark) .font-headline.text-primary,
+  html:not(.dark) .text-primary.font-headline {
+    background-image: linear-gradient(
+      hsl(var(--primary)),
+      hsl(var(--primary))
+    );
+  }
+
+  html:not(.dark) .font-headline.text-red-500,
+  html:not(.dark) .text-red-500.font-headline {
+    background-image: linear-gradient(
+      hsl(0 74% 50%),
+      hsl(0 74% 50%)
+    );
+  }
+
+  /* White headlines only on intentional dark surfaces (hero chips, vinyl hover, etc.) */
+  html:not(.dark) [data-dark-surface] .font-headline.text-white,
+  html:not(.dark) [data-dark-surface] .text-white.font-headline,
+  html:not(.dark) .font-headline.text-white[data-dark-surface] {
+    background-image: linear-gradient(#ffffff, #ffffff);
+  }
+
+  html:not(.dark) .font-headline.text-amber-900,
+  html:not(.dark) .text-amber-900.font-headline {
+    background-image: linear-gradient(hsl(32 95% 28%), hsl(32 95% 28%));
+  }
+
+  html:not(.dark) .font-headline.text-yellow-800,
+  html:not(.dark) .text-yellow-800.font-headline {
+    background-image: linear-gradient(hsl(45 93% 28%), hsl(45 93% 28%));
+  }
+
+  html:not(.dark) .font-headline.text-indigo-700,
+  html:not(.dark) .text-indigo-700.font-headline,
+  html:not(.dark) .font-headline.text-indigo-600,
+  html:not(.dark) .text-indigo-600.font-headline {
+    background-image: linear-gradient(hsl(243 75% 38%), hsl(243 75% 38%));
+  }
+
+  html:not(.dark) .font-headline.text-amber-700,
+  html:not(.dark) .text-amber-700.font-headline {
+    background-image: linear-gradient(hsl(32 95% 32%), hsl(32 95% 32%));
+  }
+
+  html:not(.dark) .pro-trial-banner-glow {
+    background-color: rgba(186, 230, 253, 0.55);
+    border-bottom-color: rgba(14, 165, 233, 0.35);
+  }
+
+  html:not(.dark) .pro-trial-banner-glow::before {
+    opacity: 0.35;
+  }
+
+  html:not(.dark) .pro-trial-banner-glow::after {
+    opacity: 0.25;
   }
 
   .leaderboard-fire-title {
@@ -653,7 +954,15 @@
   }
 
   .settings-control-base {
-    background-color: hsl(228 44% 6%);
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(ellipse 90% 55% at 50% -8%, hsl(187 55% 88% / 0.35), transparent 52%),
+      radial-gradient(ellipse 55% 45% at 100% 90%, hsl(265 45% 90% / 0.2), transparent 48%),
+      radial-gradient(ellipse 40% 35% at 0% 60%, hsl(199 50% 90% / 0.18), transparent 45%);
+  }
+
+  .dark .settings-control-base {
+    background-color: hsl(228 32% 11%);
     background-image:
       radial-gradient(ellipse 90% 55% at 50% -8%, hsl(187 55% 16% / 0.4), transparent 52%),
       radial-gradient(ellipse 55% 45% at 100% 90%, hsl(265 45% 14% / 0.28), transparent 48%),
@@ -711,6 +1020,16 @@
   }
 
   .settings-control-vignette {
+    background-image: linear-gradient(
+      180deg,
+      hsl(220 24% 96% / 0.45) 0%,
+      transparent 18%,
+      transparent 72%,
+      hsl(220 20% 92% / 0.6) 100%
+    );
+  }
+
+  .dark .settings-control-vignette {
     background-image: linear-gradient(
       180deg,
       hsl(228 44% 5% / 0.5) 0%,
@@ -1234,6 +1553,34 @@
   .co-writer-body .font-code p,
   .co-writer-body .font-code span.font-bold.uppercase {
     color: hsl(var(--foreground) / 0.88);
+  }
+
+  /* Light mode — force readable captions/labels on tinted panels (utility classes lose to components layer) */
+  html:not(.dark) [data-studio-panel] label,
+  html:not(.dark) [data-studio-panel] [data-studio-caption],
+  html:not(.dark) [data-studio-panel] [data-studio-label] {
+    color: hsl(var(--foreground) / 0.92) !important;
+  }
+
+  html:not(.dark) [data-studio-panel] .text-muted-foreground {
+    color: hsl(var(--foreground) / 0.72) !important;
+  }
+
+  html:not(.dark) [data-workstation-shell] label,
+  html:not(.dark) [data-workstation-shell] [data-studio-caption],
+  html:not(.dark) [data-workstation-shell] [data-studio-label] {
+    color: hsl(var(--foreground) / 0.92) !important;
+  }
+
+  html:not(.dark) [data-workstation-shell] .text-muted-foreground {
+    color: hsl(var(--foreground) / 0.72) !important;
+  }
+
+  html:not(.dark) [data-workstation-shell] .font-headline {
+    background-image: linear-gradient(
+      hsl(var(--foreground)),
+      hsl(var(--foreground))
+    );
   }
 }
 

@@ -97,9 +97,9 @@ export const GOLD_CREATE_SLOT = {
     'border-amber-400/40 bg-amber-500/[0.07] group-hover:border-amber-300/55 group-hover:bg-amber-400/[0.12] group-hover:shadow-[0_0_28px_rgba(251,191,36,0.28)]',
   inner:
     'border-amber-400/45 bg-amber-500/[0.1] group-hover:border-amber-300/60 group-hover:bg-amber-400/20',
-  plus: 'text-amber-200/80 group-hover:text-amber-50',
-  title: 'text-amber-100/85 group-hover:text-amber-50',
-  sub: 'text-amber-300/65 group-hover:text-amber-100/90',
+  plus: 'text-amber-700 dark:text-amber-200/80 group-hover:text-amber-900 dark:group-hover:text-amber-50',
+  title: 'text-amber-900/90 dark:text-amber-100/85 group-hover:text-amber-950 dark:group-hover:text-amber-50',
+  sub: 'text-amber-800/75 dark:text-amber-300/65 group-hover:text-amber-900 dark:group-hover:text-amber-100/90',
 } as const;
 
 export function LockedSaveButton({
@@ -169,7 +169,7 @@ export function LockedVaultSlot({
     >
       <div className="absolute inset-0 bg-gradient-to-b from-pink-600/5 via-transparent to-pink-600/5 pointer-events-none" aria-hidden />
       <Lock className={cn('h-9 w-9 mb-3 relative z-10', proLockIcon())} />
-      <p className="font-headline font-bold text-white uppercase text-sm tracking-tight relative z-10">{label}</p>
+      <p className="font-headline font-bold text-foreground uppercase text-sm tracking-tight relative z-10">{label}</p>
       <p className={cn('text-[8px] uppercase tracking-widest mt-2 relative z-10', proLockText())}>{sublabel}</p>
       <p className={cn('text-[7px] uppercase mt-3 px-2 py-0.5 rounded border border-pink-500/40 bg-pink-600/15 relative z-10', proLockText())}>
         Studio Pro
@@ -193,7 +193,7 @@ export function ProCreateAlbumSlot({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="group relative aspect-square block w-full text-left opacity-50 hover:opacity-100 transition-opacity duration-300"
+      className="group relative aspect-square block w-full text-left opacity-80 hover:opacity-100 dark:opacity-50 dark:hover:opacity-100 transition-opacity duration-300"
     >
       <div
         className={cn(
@@ -228,7 +228,7 @@ export function ProCreateTrackSlot({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       className={cn(
-        'group w-full py-4 px-6 rounded-2xl border-2 border-dashed opacity-50 hover:opacity-100 transition-all flex items-center gap-4 text-left',
+        'group w-full py-4 px-6 rounded-2xl border-2 border-dashed opacity-80 hover:opacity-100 dark:opacity-50 dark:hover:opacity-100 transition-all flex items-center gap-4 text-left',
         GOLD_CREATE_SLOT.shell
       )}
     >
@@ -262,7 +262,7 @@ export function OpenAlbumSlot({ onClick }: { onClick: () => void }) {
           <span className="text-2xl text-emerald-400 font-light">+</span>
         </div>
         <div className="text-center px-4">
-          <p className="font-headline font-bold text-white uppercase text-sm tracking-tight">Album Slot</p>
+          <p className="font-headline font-bold text-foreground uppercase text-sm tracking-tight">Album Slot</p>
           <p className="text-[8px] text-emerald-400/80 uppercase tracking-widest mt-1 font-bold">Open · Tap to create</p>
         </div>
       </div>
@@ -285,7 +285,7 @@ export function OpenTrackSlot({ onClick, filled }: { onClick: () => void; filled
         <span className="text-lg text-sky-400 font-light block w-5 h-5 text-center leading-5">+</span>
       </div>
       <div>
-        <p className="text-xs font-bold uppercase text-white">Track Slot</p>
+        <p className="text-xs font-bold uppercase text-foreground">Track Slot</p>
         <p className="text-[8px] text-sky-400/80 uppercase tracking-widest font-bold">Open · Tap to capture</p>
       </div>
     </button>
@@ -316,7 +316,7 @@ export function LockedToolbarButton({
         size="icon"
         type="button"
         className={cn(
-          'h-10 w-10 border border-white/5 bg-black/40 rounded-xl flex items-center justify-center p-0 cursor-not-allowed',
+          'h-10 w-10 border border-border bg-muted/80 dark:border-white/5 dark:bg-black/40 rounded-xl flex items-center justify-center p-0 cursor-not-allowed',
           lockedActionShell,
           buttonClassName
         )}

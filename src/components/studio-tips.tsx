@@ -199,7 +199,7 @@ export function StudioTips() {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/40 pointer-events-auto" onClick={dismissTip}>
+      <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-background/70 pointer-events-auto dark:bg-black/40" onClick={dismissTip}>
         <motion.div 
             initial={{ opacity: 0, scale: 0.9, y: 20 }} 
             animate={{ opacity: 1, scale: 1, y: 0 }} 
@@ -207,19 +207,19 @@ export function StudioTips() {
             className="w-full max-w-[420px] pointer-events-auto"
             onClick={(e) => e.stopPropagation()}
         >
-            <Card className="border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.65)] bg-[hsl(216_45%_8%)] overflow-hidden rounded-xl relative">
+            <Card className="border border-border shadow-[0_30px_60px_rgba(0,0,0,0.65)] bg-card overflow-hidden rounded-xl relative dark:border-white/10 dark:bg-[hsl(216_45%_8%)]">
                 <div className="absolute left-12 top-0 bottom-0 w-px bg-rose-500/25 z-0" />
-                <div className="absolute inset-0 bg-[repeating-linear-gradient(transparent,transparent_31px,rgba(148,163,184,0.06)_31px,rgba(148,163,184,0.06)_32px)] pointer-events-none z-0" />
+                <div className="absolute inset-0 bg-[repeating-linear-gradient(transparent,transparent_31px,rgba(148,163,184,0.06)_31px,rgba(148,163,184,0.06)_32px)] pointer-events-none z-0 dark:opacity-100 opacity-40" />
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-violet-500/[0.03] pointer-events-none z-0" />
 
-                <div className="h-1.5 bg-white/5 w-full relative z-10">
+                <div className="h-1.5 bg-muted/60 w-full relative z-10 dark:bg-white/5">
                   <motion.div className="h-full bg-primary/80" style={{ width: `${progress}%` }} />
                 </div>
                 
                 <CardContent className="p-8 pl-16 space-y-5 relative z-10">
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-3">
-                            <div className={cn("p-2 rounded-xl bg-black/40 border border-white/10 shrink-0 shadow-sm", currentTip.color)}>
+                            <div className={cn("p-2 rounded-xl bg-muted/60 border border-border shrink-0 shadow-sm dark:bg-black/40 dark:border-white/10", currentTip.color)}>
                                 <currentTip.icon className="h-6 w-6" />
                             </div>
                             <div className="space-y-0.5">
@@ -229,16 +229,16 @@ export function StudioTips() {
                                 <p className="font-bold text-lg font-headline tracking-tight text-foreground uppercase italic leading-none">{currentTip.title}</p>
                             </div>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-white/5" onClick={dismissTip}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/5" onClick={dismissTip}>
                             <X className="h-5 w-5" />
                         </Button>
                     </div>
 
-                    <p className="text-base text-sky-200/90 leading-relaxed font-handwriting font-medium min-h-[80px]">
+                    <p className="text-base text-foreground/85 leading-relaxed font-handwriting font-medium min-h-[80px] dark:text-sky-200/90">
                       {currentTip.text}
                     </p>
 
-                    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/25 px-3 py-2.5">
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2.5 dark:border-white/10 dark:bg-black/25">
                       <Label htmlFor="studio-tips-toggle" className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground cursor-pointer">
                         Show tips when I revisit a sheet
                       </Label>
@@ -253,7 +253,7 @@ export function StudioTips() {
                     <div className="flex items-center gap-2 pt-2">
                         <Button
                           variant="ghost"
-                          className="flex-1 font-bold uppercase tracking-widest text-[9px] h-10 border border-white/10 hover:bg-white/5 text-muted-foreground"
+                          className="flex-1 font-bold uppercase tracking-widest text-[9px] h-10 border border-border hover:bg-muted/60 text-muted-foreground dark:border-white/10 dark:hover:bg-white/5"
                           onClick={() => setIsPaused(!isPaused)}
                         >
                             {isPaused ? <Play className="mr-2 h-3.5 w-3.5" /> : <div className="mr-2 flex gap-0.5"><div className="w-0.5 h-3 bg-current" /><div className="w-0.5 h-3 bg-current" /></div>}

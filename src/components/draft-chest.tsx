@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { ChevronsUpDown, PlusCircle, Replace, Trash2 } from 'lucide-react';
 import type { DraftChestEntry } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { sheetDraftEntries } from '@/lib/draft-chest';
+import { studioDraftChestShell, studioPanelCaption } from '@/lib/studio-panel-styles';
 
 type DraftChestProps = {
   entries: DraftChestEntry[];
@@ -104,15 +105,13 @@ export function DraftChest({
     <>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <Card
-          className={cn(
-            'relative overflow-hidden border-amber-700/45 bg-gradient-to-b from-amber-950/55 via-[#120d08]/90 to-amber-950/25',
-            'shadow-[inset_0_1px_0_rgba(251,191,36,0.18),0_4px_14px_rgba(0,0,0,0.22)]',
-            sheetEntries.length > 0 && 'border-amber-500/55'
-          )}
+          data-studio-panel
+          data-draft-chest
+          className={studioDraftChestShell(sheetEntries.length > 0)}
         >
-          <span className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/35 to-transparent" />
-          <span className="pointer-events-none absolute left-1.5 top-1.5 h-1 w-1 rounded-full bg-amber-200/50" />
-          <span className="pointer-events-none absolute right-1.5 top-1.5 h-1 w-1 rounded-full bg-amber-200/50" />
+          <span className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-amber-500/25 dark:via-amber-300/35 to-transparent" />
+          <span className="pointer-events-none absolute left-1.5 top-1.5 h-1 w-1 rounded-full bg-amber-600/25 dark:bg-amber-200/50" />
+          <span className="pointer-events-none absolute right-1.5 top-1.5 h-1 w-1 rounded-full bg-amber-600/25 dark:bg-amber-200/50" />
 
           <CollapsibleTrigger asChild>
             <CardHeader className="cursor-pointer p-4 md:p-6">
@@ -120,28 +119,29 @@ export function DraftChest({
                 <div className="flex min-w-0 flex-1 items-center gap-2.5">
                   <TreasureChestMark open={isOpen} count={sheetEntries.length} />
                   <div className="min-w-0 text-left">
-                    <CardTitle className="font-headline text-lg uppercase tracking-widest text-amber-300/95">
+                    <CardTitle className="font-headline text-lg uppercase tracking-widest text-amber-700 dark:text-amber-300/95">
                       Draft Chest
                     </CardTitle>
-                    <CardDescription
+                    <p
+                      data-studio-caption
                       className={cn(
-                        'font-code font-bold uppercase tracking-wider text-muted-foreground/75',
+                        studioPanelCaption,
                         isOpen ? 'text-[10px] leading-snug' : 'text-[9px] leading-none truncate'
                       )}
                     >
                       {sheetEntries.length > 0
                         ? `${sheetEntries.length} saved · full drafts`
                         : 'Unused drafts stash'}
-                    </CardDescription>
+                    </p>
                   </div>
                 </div>
-                <ChevronsUpDown className="h-4 w-4 shrink-0 text-amber-200/45" />
+                <ChevronsUpDown className="h-4 w-4 shrink-0 text-amber-700/70 dark:text-amber-200/45" />
               </div>
             </CardHeader>
           </CollapsibleTrigger>
 
           <CollapsibleContent>
-            <div className="mx-4 md:mx-6 h-px bg-gradient-to-r from-transparent via-amber-500/35 to-transparent md:mt-0" />
+            <div className="mx-4 md:mx-6 h-px bg-gradient-to-r from-transparent via-amber-500/30 dark:via-amber-500/35 to-transparent md:mt-0" />
             <CardContent className="p-4 md:p-6 md:pt-4">
               {sheetEntries.length === 0 ? (
                 <p className="py-2 text-[10px] font-code leading-relaxed text-muted-foreground">
@@ -154,11 +154,11 @@ export function DraftChest({
                     {sheetEntries.map((entry) => (
                       <div
                         key={entry.id}
-                        className="space-y-2 rounded-lg border border-amber-500/20 bg-amber-950/20 p-3 shadow-[inset_0_1px_0_rgba(251,191,36,0.08)]"
+                        className="space-y-2 rounded-lg border border-amber-500/25 bg-background/80 dark:border-amber-500/20 dark:bg-amber-950/20 p-3 shadow-[inset_0_1px_0_rgba(251,191,36,0.08)]"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-300/90">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-800 dark:text-amber-300/90">
                               {entry.label}
                             </p>
                             <p className="mt-0.5 text-[8px] font-mono text-muted-foreground">
@@ -194,7 +194,7 @@ export function DraftChest({
                             variant="outline"
                             size="sm"
                             disabled={disabled}
-                            className="h-8 gap-1.5 border-amber-500/30 text-[9px] font-bold uppercase text-amber-200"
+                            className="h-8 gap-1.5 border-amber-500/35 text-[9px] font-bold uppercase text-amber-900 dark:border-amber-500/30 dark:text-amber-200"
                             onClick={() => setReplaceTarget(entry)}
                           >
                             <Replace className="h-3 w-3" /> Replace sheet

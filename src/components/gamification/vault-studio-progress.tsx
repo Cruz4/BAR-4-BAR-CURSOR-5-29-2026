@@ -112,10 +112,15 @@ export function VaultStudioProgress({
           onClick={() => setExpanded(true)}
           className={cn(
             'group relative flex h-[3.75rem] w-[3.75rem] shrink-0 items-center justify-center rounded-full',
-            'border-2 border-primary/35 bg-gradient-to-br from-black/90 via-violet-950/50 to-black/90',
-            'shadow-[0_4px_28px_rgba(0,0,0,0.45),0_0_32px_rgba(139,92,246,0.25)]',
-            'transition-all duration-300 hover:scale-105 hover:border-primary/55 hover:shadow-[0_0_40px_rgba(139,92,246,0.4)]',
-            hasRecentEarn && 'border-amber-400/50 shadow-[0_0_36px_rgba(251,191,36,0.35)]'
+            'border-2 transition-all duration-300 hover:scale-105',
+            'border-primary/25 bg-gradient-to-br from-white via-sky-50/95 to-violet-100/75',
+            'shadow-[0_4px_18px_rgba(59,130,246,0.1),0_0_20px_rgba(139,92,246,0.06)]',
+            'hover:border-primary/40 hover:shadow-[0_4px_22px_rgba(59,130,246,0.16),0_0_28px_rgba(139,92,246,0.1)]',
+            'dark:border-primary/35 dark:from-black/90 dark:via-violet-950/50 dark:to-black/90',
+            'dark:shadow-[0_4px_28px_rgba(0,0,0,0.45),0_0_32px_rgba(139,92,246,0.25)]',
+            'dark:hover:border-primary/55 dark:hover:shadow-[0_0_40px_rgba(139,92,246,0.4)]',
+            hasRecentEarn &&
+              'border-amber-500/45 shadow-[0_0_22px_rgba(251,191,36,0.18)] dark:border-amber-400/50 dark:shadow-[0_0_36px_rgba(251,191,36,0.35)]'
           )}
           aria-label={`Studio progress: ${rankLabel}, ${summary.xp.toLocaleString()} XP. Click to expand.`}
           aria-expanded={false}
@@ -130,7 +135,7 @@ export function VaultStudioProgress({
               cy="32"
               r={ringRadius}
               fill="none"
-              stroke="rgba(255,255,255,0.08)"
+              className="stroke-slate-200/90 dark:stroke-white/10"
               strokeWidth="3"
             />
             <circle
@@ -152,14 +157,14 @@ export function VaultStudioProgress({
               </linearGradient>
             </defs>
           </svg>
-          <Trophy className="relative h-5 w-5 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
+          <Trophy className="relative h-5 w-5 text-amber-600 drop-shadow-[0_0_6px_rgba(245,158,11,0.25)] dark:text-amber-400 dark:drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
           {summary.currentStreak > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-orange-500/50 bg-orange-950/80 shadow-[0_0_10px_rgba(249,115,22,0.35)]">
-              <Flame className="h-3 w-3 text-orange-400" />
+            <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-orange-400/55 bg-orange-100 shadow-[0_0_8px_rgba(249,115,22,0.18)] dark:border-orange-500/50 dark:bg-orange-950/80 dark:shadow-[0_0_10px_rgba(249,115,22,0.35)]">
+              <Flame className="h-3 w-3 text-orange-600 dark:text-orange-400" />
             </span>
           )}
           {hasRecentEarn && (
-            <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 rounded-full bg-amber-400 px-1.5 py-px text-[7px] font-black uppercase tracking-wide text-black">
+            <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 rounded-full bg-amber-500 px-1.5 py-px text-[7px] font-black uppercase tracking-wide text-white dark:bg-amber-400 dark:text-black">
               New
             </span>
           )}
@@ -178,8 +183,8 @@ export function VaultStudioProgress({
   const headerBlock = (
     <div
       className={cn(
-        'flex flex-row items-center justify-between gap-2 cursor-pointer select-none min-w-0 border-b border-white/5',
-        isSidebar ? 'px-2.5 py-2 bg-black/30' : 'px-3 py-2 bg-black/20'
+        'flex flex-row items-center justify-between gap-2 cursor-pointer select-none min-w-0 border-b border-border',
+        isSidebar ? 'px-2.5 py-2 bg-muted/40' : 'px-3 py-2 bg-muted/30'
       )}
       onClick={() => {
         if (!tourForceExpanded) setExpanded((v) => !v);
@@ -198,7 +203,7 @@ export function VaultStudioProgress({
         <div className="min-w-0 flex-1 overflow-hidden">
           <p
             className={cn(
-              'font-headline uppercase tracking-tight text-white truncate leading-none',
+              'font-headline uppercase tracking-tight text-foreground truncate leading-none',
               isSidebar ? 'text-[11px]' : 'text-[10px]'
             )}
           >
@@ -218,7 +223,7 @@ export function VaultStudioProgress({
         size="sm"
         asChild
         className={cn(
-          'h-6 px-1.5 font-bold uppercase tracking-wider text-muted-foreground hover:text-sky-200 shrink-0',
+          'h-6 px-1.5 font-bold uppercase tracking-wider text-muted-foreground hover:text-primary shrink-0',
           isSidebar ? 'text-[9px]' : 'text-[8px]'
         )}
         onClick={(e) => e.stopPropagation()}
@@ -238,7 +243,7 @@ export function VaultStudioProgress({
         isSidebar ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
       )}
     >
-        <div className="rounded-lg border border-primary/15 bg-gradient-to-br from-black/40 to-sky-950/20 px-2.5 py-2 space-y-1.5 min-w-0 overflow-hidden">
+        <div className="rounded-lg border border-primary/15 bg-gradient-to-br from-muted/80 to-sky-100/60 dark:from-black/40 dark:to-sky-950/20 px-2.5 py-2 space-y-1.5 min-w-0 overflow-hidden">
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge
               variant="outline"
@@ -262,11 +267,11 @@ export function VaultStudioProgress({
                 {summary.currentStreak}d
               </Badge>
             )}
-            <span className={cn('font-code text-sky-100/90 font-bold', isSidebar ? 'text-[11px]' : 'text-[10px]')}>
+            <span className={cn('font-code text-sky-800 dark:text-sky-100/90 font-bold', isSidebar ? 'text-[11px]' : 'text-[10px]')}>
               {summary.xp.toLocaleString()} XP
             </span>
           </div>
-          <div className="h-1 rounded-full bg-white/5 overflow-hidden">
+          <div className="h-1 rounded-full bg-muted overflow-hidden">
             <div
               className="h-full rounded-full bg-gradient-to-r from-sky-600 via-primary to-violet-500 transition-all duration-500"
               style={{ width: `${xpPercent}%` }}
@@ -284,10 +289,10 @@ export function VaultStudioProgress({
           </p>
         </div>
 
-        <div className="rounded-lg border border-emerald-500/15 bg-gradient-to-br from-black/40 to-emerald-950/15 px-2.5 py-2 min-w-0 overflow-hidden">
-          <p className={cn('font-bold uppercase tracking-wide text-emerald-200 mb-1.5 leading-snug', isSidebar ? 'text-[10px]' : 'text-[9px]')}>
+        <div className="rounded-lg border border-emerald-500/15 bg-gradient-to-br from-muted/80 to-emerald-100/50 dark:from-black/40 dark:to-emerald-950/15 px-2.5 py-2 min-w-0 overflow-hidden">
+          <p className={cn('font-bold uppercase tracking-wide text-emerald-800 dark:text-emerald-200 mb-1.5 leading-snug', isSidebar ? 'text-[10px]' : 'text-[9px]')}>
             <span className="block sm:inline">Weekly goals</span>
-            <span className="block sm:inline font-normal normal-case tracking-normal text-slate-300/90 sm:before:content-['·_']">
+            <span className="block sm:inline font-normal normal-case tracking-normal text-muted-foreground sm:before:content-['·_']">
               Mon reset
             </span>
           </p>
@@ -307,7 +312,7 @@ export function VaultStudioProgress({
                     className={cn(
                       'font-code leading-snug truncate flex-1 min-w-0',
                       isSidebar ? 'text-[11px]' : 'text-[10px]',
-                      done ? 'text-emerald-300/95' : 'text-white/85'
+                      done ? 'text-emerald-700 dark:text-emerald-300/95' : 'text-foreground/90'
                     )}
                   >
                     {challenge.label}
@@ -328,8 +333,8 @@ export function VaultStudioProgress({
         </div>
 
         {isSidebar && (
-          <div className="rounded-lg border border-amber-500/15 bg-gradient-to-br from-black/40 to-amber-950/15 px-2.5 py-2 min-w-0 overflow-hidden">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-amber-200 mb-1.5 leading-snug">
+          <div className="rounded-lg border border-amber-500/15 bg-gradient-to-br from-muted/80 to-amber-100/50 dark:from-black/40 dark:to-amber-950/15 px-2.5 py-2 min-w-0 overflow-hidden">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200 mb-1.5 leading-snug">
               Personal milestones
             </p>
             <ul className="space-y-1 min-w-0">
@@ -354,7 +359,7 @@ export function VaultStudioProgress({
                     <p
                       className={cn(
                         'text-[11px] font-code leading-snug truncate flex-1 min-w-0',
-                        done ? 'text-amber-200/95' : 'text-white/85'
+                        done ? 'text-amber-800 dark:text-amber-200/95' : 'text-foreground/90'
                       )}
                     >
                       {challenge.label}
@@ -376,15 +381,15 @@ export function VaultStudioProgress({
 
         <div
           className={cn(
-            'rounded-lg border border-violet-500/20 bg-gradient-to-r from-violet-950/25 via-black/30 to-fuchsia-950/20 px-2.5 py-2 min-w-0 overflow-hidden',
+            'rounded-lg border border-violet-500/20 bg-gradient-to-r from-violet-100/70 via-muted/60 to-fuchsia-100/50 dark:from-violet-950/25 dark:via-black/30 dark:to-fuchsia-950/20 px-2.5 py-2 min-w-0 overflow-hidden',
             !isSidebar && 'md:col-span-2'
           )}
         >
           <div className="flex items-center justify-between gap-2 mb-1.5 min-w-0">
-            <p className={cn('font-bold uppercase tracking-wide text-violet-300/90 shrink-0', isSidebar ? 'text-[10px]' : 'text-[9px]')}>
+            <p className={cn('font-bold uppercase tracking-wide text-violet-800 dark:text-violet-300/90 shrink-0', isSidebar ? 'text-[10px]' : 'text-[9px]')}>
               Achievements
             </p>
-            <span className={cn('font-mono text-violet-200/60 tabular-nums shrink-0 whitespace-nowrap', isSidebar ? 'text-[10px]' : 'text-[9px]')}>
+            <span className={cn('font-mono text-violet-700/80 dark:text-violet-200/60 tabular-nums shrink-0 whitespace-nowrap', isSidebar ? 'text-[10px]' : 'text-[9px]')}>
               {achievementCount}/{ACHIEVEMENTS.length}
             </span>
           </div>
@@ -432,7 +437,7 @@ export function VaultStudioProgress({
   const cardClassName = cn(
     'mb-0 border rounded-xl shadow-none shrink-0',
     isSidebar
-      ? 'w-[236px] 2xl:w-[256px] overflow-visible border-white/10 bg-black/35'
+      ? 'w-[236px] 2xl:w-[256px] overflow-visible border-border bg-card/95'
       : 'overflow-hidden mb-4 border-primary/20 bg-gradient-to-br from-primary/[0.08] via-card/50 to-amber-500/[0.06] shadow-[0_0_32px_rgba(59,130,246,0.08)]'
   );
 

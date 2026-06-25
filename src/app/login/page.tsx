@@ -54,6 +54,7 @@ import {
   getSafeNextPath,
 } from '@/lib/checkout-intent';
 import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmosphere';
+import { StudioThemeControls } from '@/components/studio-theme-controls';
 import {
   completeGoogleRedirectSignIn,
   hasGoogleRedirectPending,
@@ -291,6 +292,7 @@ function LoginForm() {
             <Link href="/#features" className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Features</Link>
             <Link href="/pricing" className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Pricing</Link>
             <Link href={proCheckoutHeaderHref()} className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-accent hover:text-accent/80 transition-colors">Go Pro</Link>
+            <StudioThemeControls />
           </nav>
       </header>
 
@@ -358,9 +360,9 @@ function LoginForm() {
               </Card>
             )}
 
-            <Card className="w-full border-primary/15 shadow-[0_0_80px_rgba(59,130,246,0.12)] bg-[#0c121d]/55 backdrop-blur-2xl overflow-hidden relative z-10 transition-all duration-700 hover:border-primary/30">
+            <Card className="w-full border-primary/15 shadow-[0_0_80px_rgba(59,130,246,0.12)] bg-card/95 backdrop-blur-2xl overflow-hidden relative z-10 transition-all duration-700 hover:border-primary/30 dark:bg-[#0c121d]/55">
               <div className="grid md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] gap-0">
-                <div className="relative flex flex-col items-center justify-center gap-5 p-6 sm:p-8 border-b md:border-b-0 md:border-r border-white/10 text-center overflow-hidden">
+                <div className="relative flex flex-col items-center justify-center gap-5 p-6 sm:p-8 border-b md:border-b-0 md:border-r border-border dark:border-white/10 text-center overflow-hidden">
                   <div
                     className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/12 via-transparent to-orange-500/8"
                     aria-hidden
@@ -383,7 +385,7 @@ function LoginForm() {
                       <p className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/35 bg-orange-500/10 px-3 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.28em] text-orange-400">
                         {isTikTokRef ? 'TikTok Artist Flow' : 'AI Notebook'}
                       </p>
-                      <h2 className="font-headline text-2xl sm:text-3xl lg:text-[2.1rem] font-bold uppercase text-white tracking-tight leading-tight">
+                      <h2 className="font-headline text-2xl sm:text-3xl lg:text-[2.1rem] font-bold uppercase text-foreground dark:text-white tracking-tight leading-tight">
                         {isTikTokRef ? 'Write Better Bars Fast' : 'Enter the Studio'}
                       </h2>
                       <p className="text-[10px] sm:text-xs font-code text-primary/80 uppercase tracking-widest leading-relaxed">
@@ -392,7 +394,7 @@ function LoginForm() {
                           : getTopFunnelSignupSubline()}
                       </p>
                     </div>
-                    <div className="hidden sm:flex flex-col items-center gap-1 pt-1 w-full border-t border-white/10 pt-4 max-w-[14rem]">
+                    <div className="hidden sm:flex flex-col items-center gap-1 pt-1 w-full border-t border-border dark:border-white/10 pt-4 max-w-[14rem]">
                       <p className="font-headline text-base font-bold uppercase text-primary">Initialize Session</p>
                       <p className="text-[9px] uppercase tracking-[0.32em] text-muted-foreground font-bold">
                         Studio Access Required
@@ -403,7 +405,7 @@ function LoginForm() {
 
                 <CardContent className="p-5 sm:p-6 lg:p-7 flex flex-col justify-center">
                   <Tabs value={authMode} onValueChange={(v) => setAuthMode(v as any)} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-4 bg-black/40 border border-white/5 p-1 h-10">
+                    <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/60 border border-border p-1 h-10 dark:bg-black/40 dark:border-white/5">
                       <TabsTrigger value="signin" className="font-bold text-sm data-[state=active]:bg-primary">
                         Sign In
                       </TabsTrigger>
@@ -422,7 +424,7 @@ function LoginForm() {
                       <Button
                         variant="outline"
                         type="button"
-                        className="w-full h-10 text-sm font-bold bg-black/40 border-white/10 text-white hover:bg-white/5"
+                        className="w-full h-10 text-sm font-bold bg-background border-border text-foreground hover:bg-muted/60 dark:bg-black/40 dark:border-white/10 dark:text-white dark:hover:bg-white/5"
                         onClick={handleGoogleSignIn}
                         disabled={isProcessing}
                       >
@@ -458,7 +460,7 @@ function LoginForm() {
                                 name="name"
                                 autoComplete="name"
                                 placeholder="Stage Name"
-                                className="pl-10 h-10 bg-black/40 border-white/10 text-white"
+                                className="pl-10 h-10 bg-background border-border text-foreground dark:bg-black/40 dark:border-white/10 dark:text-white"
                                 value={displayName}
                                 onChange={(e) => setDisplayName(e.target.value)}
                               />

@@ -97,17 +97,17 @@ export function ProTrialWinQuestStrip() {
 
   if (questDone) {
     return (
-      <div className="shrink-0 border-b border-emerald-500/25 bg-emerald-500/[0.08] px-4 py-2 flex items-center gap-3 z-50">
-        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" aria-hidden />
-        <p className="text-[10px] sm:text-[11px] font-code text-emerald-100/90 flex-grow min-w-0">
-          <span className="font-bold uppercase tracking-widest text-emerald-400">Pro preview quest complete</span>
+      <div className="shrink-0 border-b border-emerald-500/25 bg-emerald-100/70 dark:bg-emerald-500/[0.08] px-4 py-2 flex items-center gap-3 z-50">
+        <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" aria-hidden />
+        <p className="text-[10px] sm:text-[11px] font-code text-emerald-950/90 dark:text-emerald-100/90 flex-grow min-w-0">
+          <span className="font-bold uppercase tracking-widest text-emerald-800 dark:text-emerald-400">Pro preview quest complete</span>
           {' — '}
           {PRO_TRIAL_WIN_QUEST.completeSummary}
         </p>
         <Link
           href="/usage?tab=cloud"
           onClick={() => trackUpgradeClick('trial_quest', { questState: 'complete' })}
-          className="text-[9px] font-bold uppercase text-emerald-400 hover:text-emerald-300 hover:underline shrink-0 whitespace-nowrap"
+          className="text-[9px] font-bold uppercase text-emerald-800 hover:text-emerald-950 dark:text-emerald-400 dark:hover:text-emerald-300 hover:underline shrink-0 whitespace-nowrap"
         >
           Upgrade →
         </Link>
@@ -126,14 +126,14 @@ export function ProTrialWinQuestStrip() {
   if (!shouldShowProTrialWinQuest(user)) return null;
 
   return (
-    <div className="pro-trial-banner-glow shrink-0 px-4 py-2.5 flex flex-col sm:flex-row sm:items-center gap-3 z-50 border-b border-sky-500/20">
+    <div className="pro-trial-banner-glow shrink-0 px-4 py-2.5 flex flex-col sm:flex-row sm:items-center gap-3 z-50 border-b border-sky-500/25 bg-sky-100/60 dark:bg-transparent dark:border-sky-500/20">
       <div className="flex items-start gap-3 flex-grow min-w-0">
         <Dna className="h-4 w-4 text-sky-400 shrink-0 mt-0.5" aria-hidden />
         <div className="space-y-1 min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400 leading-none flex items-center gap-2 flex-wrap">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-sky-800 dark:text-sky-400 leading-none flex items-center gap-2 flex-wrap">
             <span>{PRO_TRIAL_WIN_QUEST.title}</span>
             {previewActive && (
-              <span className="inline-flex items-center gap-1 text-sky-300/90 font-code normal-case tracking-normal">
+              <span className="inline-flex items-center gap-1 text-sky-700/90 dark:text-sky-300/90 font-code normal-case tracking-normal">
                 <Timer className="h-3 w-3" />
                 {previewHours === null || previewHours <= 1
                   ? 'under 1h left on Pro preview'
@@ -157,8 +157,8 @@ export function ProTrialWinQuestStrip() {
           disabled={vaultLoading}
           className={cn(
             'text-[9px] sm:text-[10px] font-bold uppercase px-3 py-1.5 rounded-md',
-            'bg-sky-500/20 border border-sky-500/40 text-sky-300 hover:bg-sky-500/30 hover:text-sky-200 transition-colors',
-            vaultLoading && 'opacity-50 cursor-not-allowed hover:bg-sky-500/20 hover:text-sky-300'
+            'bg-sky-600/15 border border-sky-600/35 text-sky-900 dark:bg-sky-500/20 dark:border-sky-500/40 dark:text-sky-300 hover:bg-sky-600/25 hover:text-sky-950 dark:hover:bg-sky-500/30 dark:hover:text-sky-200 transition-colors',
+            vaultLoading && 'opacity-50 cursor-not-allowed hover:bg-sky-600/15 hover:text-sky-900 dark:hover:bg-sky-500/20 dark:hover:text-sky-300'
           )}
         >
           {vaultLoading ? 'Loading vault…' : PRO_TRIAL_WIN_QUEST.cta}
@@ -166,7 +166,7 @@ export function ProTrialWinQuestStrip() {
         <Link
           href="/usage?tab=cloud"
           onClick={() => trackUpgradeClick('trial_quest', { questState: 'active' })}
-          className="text-[9px] font-bold uppercase text-sky-400/80 hover:text-sky-300 hover:underline whitespace-nowrap"
+          className="text-[9px] font-bold uppercase text-sky-800/90 hover:text-sky-950 dark:text-sky-400/80 dark:hover:text-sky-300 hover:underline whitespace-nowrap"
         >
           Upgrade
         </Link>
