@@ -106,7 +106,7 @@ export function PublicHomeLanding() {
 
             <div className="mx-auto w-full max-w-xl rounded-2xl border border-white/10 bg-black/35 p-3 shadow-2xl">
               <p className="mb-2 text-[10px] font-code font-bold uppercase tracking-[0.22em] text-emerald-300">
-                Real product proof: AI next-line generation
+                Live workstation preview
               </p>
               <img
                 src="/marketing/gif-co-writer-next-line.gif"

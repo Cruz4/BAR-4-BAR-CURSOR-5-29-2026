@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LandingSignupLink } from '@/components/marketing/landing-signup-link';
 import { buildLoginPath, buildProCheckoutPath } from '@/lib/checkout-intent';
@@ -36,11 +36,7 @@ export function LandingHeroCtAs() {
       </Button>
 
       <p className="text-[10px] sm:text-[11px] text-white/85 font-code text-center leading-relaxed max-w-xl">
-        <span className="inline-flex items-center gap-1.5 font-bold text-emerald-300 mr-2">
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          10-sec setup
-        </span>
-        See your first AI next-line suggestion fast, then decide if Pro is worth it.
+        See a real workflow preview first. Start free, and upgrade only if it helps your writing process.
       </p>
 
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">

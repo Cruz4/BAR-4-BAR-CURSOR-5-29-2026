@@ -60,7 +60,7 @@ export function MarketingMediaFrame({
           alt={alt}
           className={cn(
             'block mx-auto',
-            isHero ? 'w-full h-auto max-h-[min(72vh,680px)] object-cover object-top' : 'object-contain object-center',
+            isHero ? 'w-full h-auto max-h-[min(78vh,760px)] object-contain object-top' : 'object-contain object-center',
             !isHero && FRAME_MAX[variant]
           )}
           loading={priority ? 'eager' : 'lazy'}
