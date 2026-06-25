@@ -820,10 +820,10 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   if (leftCollapsed && !mobileActive) {
     return (
         <div className={cn("flex flex-col items-center h-full bg-card border-r w-[56px] shrink-0 overflow-hidden py-6 z-30", mobileLyricsPanelClass(mobileActive, 'left'))}>
-            <NeuralStripItem text="STATUS" active={track.status === 'complete'} color="#0ea5e9" onClick={() => onCollapse(false)} />
-            <NeuralStripItem text="STRUC" active={true} color="#eab308" onClick={() => onCollapse(false)} />
-            <NeuralStripItem text="VIBE" active={isVibeActive(track)} color="#f59e0b" onClick={() => onCollapse(false)} />
-            <NeuralStripItem text="SCENE" active={false} color="#6366f1" onClick={() => onCollapse(false)} />
+            <NeuralStripItem text="STATUS" active={track.status === 'complete'} color="#0ea5e9" glow={false} onClick={() => onCollapse(false)} />
+            <NeuralStripItem text="STRUC" active={true} color="#eab308" glow={false} onClick={() => onCollapse(false)} />
+            <NeuralStripItem text="VIBE" active={isVibeActive(track)} color="#f59e0b" glow={false} onClick={() => onCollapse(false)} />
+            <NeuralStripItem text="SCENE" active={false} color="#6366f1" glow={false} onClick={() => onCollapse(false)} />
         </div>
     );
   }
@@ -1109,7 +1109,20 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   );
 }
 
-function NeuralStripItem({ text, active, color, onClick }: { text: string; active?: boolean; color: string; onClick: () => void }) {
+function NeuralStripItem({
+  text,
+  active,
+  color,
+  glow = true,
+  onClick,
+}: {
+  text: string;
+  active?: boolean;
+  color: string;
+  glow?: boolean;
+  onClick: () => void;
+}) {
+  const showGlow = glow && active;
   return (
     <div
       onClick={onClick}
@@ -1118,7 +1131,7 @@ function NeuralStripItem({ text, active, color, onClick }: { text: string; activ
       <div
         style={{
           backgroundColor: color,
-          boxShadow: active ? `0 0 12px ${color}` : 'none',
+          boxShadow: showGlow ? `0 0 12px ${color}` : 'none',
         }}
         className={cn(
           'w-1.5 h-12 rounded-full transition-all duration-700',
@@ -1128,7 +1141,7 @@ function NeuralStripItem({ text, active, color, onClick }: { text: string; activ
       <div
         style={{
           color,
-          filter: active ? `drop-shadow(0 0 4px ${color})` : 'none',
+          filter: showGlow ? `drop-shadow(0 0 4px ${color})` : 'none',
         }}
         className={cn(
           'flex flex-col items-center gap-0.5 text-[9px] font-bold leading-none tracking-[0.2em] uppercase font-code transition-all duration-500',
