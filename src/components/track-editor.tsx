@@ -1155,6 +1155,11 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
   const fontSizes = { xs: 'text-[14px]', sm: 'text-[16px]', md: 'text-[24px]', lg: 'text-[36px]' };
   const lineHeights = { xs: '20px', sm: '22px', md: '32px', lg: '40px' };
   const activeLineHeight = lineHeights[fontSize];
+  const barTextStyle = {
+    minHeight: activeLineHeight,
+    lineHeight: activeLineHeight,
+    fontVariantLigatures: 'none' as const,
+  };
 
   const snapBarTextareaHeight = useCallback(
     (el: HTMLTextAreaElement) => {
@@ -1168,7 +1173,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
       el.style.height = `${snapped}px`;
       el.style.minHeight = `${lineHeightPx}px`;
     },
-    [fontSize]
+    [fontSize, lineHeights]
   );
 
   const syncHeights = useCallback(() => {
@@ -1524,16 +1529,16 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                         <div
                           key={`${section.id}-${bar.idx}`}
                           className={cn(
-                          "group relative flex max-md:flex-row max-md:items-start md:block items-start transition-colors max-md:px-1 max-md:gap-0.5",
+                          "group relative flex max-md:flex-row max-md:items-start md:block items-start transition-colors max-md:px-1 max-md:gap-0.5 max-md:min-h-[var(--lyrics-line-h)]",
                           isSelected && "bg-primary/10",
                           bar.justGenerated && "animate-line-glow"
-                        )}>
+                        )}
+                        style={{ ['--lyrics-line-h' as string]: activeLineHeight }}>
                         <span className={cn(
                           "font-mono text-muted-foreground/40 text-right font-bold shrink-0 z-10",
-                          "max-md:relative max-md:w-7 max-md:mr-0 max-md:text-[10px] max-md:pt-0.5",
-                          "md:absolute md:left-[50px] md:w-10 md:text-muted-foreground/30",
-                          fontSizes[fontSize]
-                        )} style={{ lineHeight: activeLineHeight }}>{String(bar.idx).padStart(2, '0')}</span>
+                          "max-md:relative max-md:w-7 max-md:mr-0 max-md:text-[10px]",
+                          "md:absolute md:left-[50px] md:w-10 md:text-muted-foreground/30"
+                        )} style={barTextStyle}>{String(bar.idx).padStart(2, '0')}</span>
 
                         <div className="flex-grow flex items-start min-w-0 max-md:flex-1 relative overflow-hidden">
                             <textarea 
@@ -1583,7 +1588,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                 trackLocked && "opacity-80 cursor-not-allowed",
                                 fontSizes[fontSize]
                             )} 
-                            style={{ minHeight: activeLineHeight, lineHeight: activeLineHeight, fontVariantLigatures: 'none' }}
+                            style={barTextStyle}
                             placeholder={trackLocked ? 'Locked — reopen track to edit' : '...'} 
                             />
                             {track.rhymeHighlightingEnabled && bar.text && (
@@ -1594,7 +1599,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                     "md:pl-[145px] md:-indent-[25px]",
                                     "antialiased text-rendering-geometric",
                                     fontSizes[fontSize]
-                                )} style={{ lineHeight: activeLineHeight, fontVariantLigatures: 'none' }}>
+                                )} style={barTextStyle}>
                                     <HighlightedText text={bar.text} rhymeGroups={track.rhymeGroups || []} transparent={true} />
                                 </p>
                             </div>
@@ -1603,11 +1608,12 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
 
                         <div className={cn(
                           "flex gap-0.5 shrink-0 transition-opacity z-20",
-                          "max-md:relative max-md:flex max-md:items-center max-md:self-center max-md:mr-0.5",
+                          "max-md:relative max-md:flex max-md:items-center max-md:mr-0.5",
                           "md:absolute md:right-4 md:top-0 md:h-full md:items-center",
                           isSelected ? "opacity-100" : "max-md:opacity-0 max-md:pointer-events-none",
                           !isSelected && "md:opacity-0 md:group-hover:opacity-100"
-                        )}>
+                        )}
+                        >
                             <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>
                               <InkArmAffordance compact armed={isInkArmed?.(lineGenInkKey('next', section.id, bar.idx))}>
                                 <Button
