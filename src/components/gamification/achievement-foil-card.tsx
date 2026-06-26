@@ -110,7 +110,7 @@ export const AchievementFoilCard = React.forwardRef<HTMLDivElement, AchievementF
         ref={ref}
         data-achievement-card-root
         className={cn(
-          'relative overflow-visible rounded-2xl text-left shadow-[0_16px_48px_rgba(0,0,0,0.45)]',
+          'relative w-full overflow-visible rounded-2xl text-left shadow-[0_16px_48px_rgba(0,0,0,0.45)]',
           dimmed && 'opacity-90',
           className
         )}

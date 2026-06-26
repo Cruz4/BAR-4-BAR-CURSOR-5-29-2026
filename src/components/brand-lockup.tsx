@@ -50,7 +50,7 @@ export function BrandLockup({
         </TitleTag>
         <p
           className={cn(
-            'font-tagline -mt-0.5 truncate uppercase tracking-widest opacity-70',
+            'font-tagline -mt-0.5 truncate uppercase tracking-widest opacity-70 max-sm:hidden',
             isMarketing
               ? 'text-[7px] text-muted-foreground sm:text-[8px]'
               : 'text-[7px] text-muted-foreground md:text-[8px]'

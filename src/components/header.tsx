@@ -105,23 +105,37 @@ export function Header() {
           </div>
       )}
       <div className="relative h-14 w-full px-2 sm:px-4 md:px-6">
-            {/* Logo centered — above side columns so clicks reach home / vault */}
-            <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-[4.75rem] sm:px-24 md:px-32">
+            {/* Logo centered — tablet/desktop only (mobile uses left column to avoid theme-toggle overlap) */}
+            <div className="pointer-events-none absolute inset-0 z-20 hidden md:flex items-center justify-center px-24 lg:px-32">
                 <Link href="/" className="pointer-events-auto min-w-0 max-w-full group" aria-label={BRAND_ARIA_LABEL}>
                     <BrandLockup variant="app" />
                 </Link>
             </div>
 
             <div className="relative z-10 flex h-14 items-center justify-between gap-1 min-w-0 pointer-events-none [&_button]:pointer-events-auto [&_a]:pointer-events-auto">
-            <div className="flex items-center justify-start gap-2 min-w-0 flex-1 basis-0 max-w-[42%] sm:max-w-none pointer-events-none [&>*]:pointer-events-auto">
+            <div className="flex items-center justify-start gap-1 sm:gap-2 min-w-0 flex-1 basis-0 max-w-[58%] sm:max-w-[62%] md:max-w-none pointer-events-none [&>*]:pointer-events-auto">
+                {albumId && trackId && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => router.push(`/albums/${albumId}`)} 
+                    className="h-9 w-9 shrink-0 text-muted-foreground hover:text-primary transition-all hover:bg-primary/5 md:hidden"
+                    aria-label="Back to album"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                )}
+                <Link href="/" className="min-w-0 flex-1 md:hidden group overflow-hidden" aria-label={BRAND_ARIA_LABEL}>
+                    <BrandLockup variant="app" className="max-w-full" />
+                </Link>
                 {albumId && trackId && (
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={() => router.push(`/albums/${albumId}`)} 
-                    className="h-9 px-3 max-md:px-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-all hover:bg-primary/5 shrink-0"
+                    className="hidden md:inline-flex h-9 px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-all hover:bg-primary/5 shrink-0"
                   >
-                    <ChevronLeft className="mr-2 max-md:mr-0 h-4 w-4" /> <span className="max-md:hidden">Back to Album</span>
+                    <ChevronLeft className="mr-2 h-4 w-4" /> Back to Album
                   </Button>
                 )}
                 <div className={cn(
@@ -133,7 +147,7 @@ export function Header() {
                 </div>
             </div>
 
-          <nav className="flex items-center justify-end gap-0.5 sm:gap-1 md:gap-2 min-w-0 flex-1 basis-0 max-w-[48%] sm:max-w-none shrink-0 pointer-events-none [&>*]:pointer-events-auto">
+          <nav className="flex items-center justify-end gap-0.5 sm:gap-1 md:gap-2 min-w-0 flex-1 basis-0 max-w-[42%] sm:max-w-[38%] md:max-w-none shrink-0 pointer-events-none [&>*]:pointer-events-auto">
             <TooltipProvider>
             {!loading && user && (
               <>

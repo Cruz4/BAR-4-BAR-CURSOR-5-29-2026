@@ -1690,11 +1690,13 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
         >
             <div
               className={cn(
-                'flex flex-row items-center justify-between gap-2 min-w-0 w-full',
-                isMinimized ? 'h-full' : 'shrink-0 min-h-[28px] py-0.5 border-b border-white/5'
+                'min-w-0 w-full',
+                isMinimized
+                  ? 'flex flex-row items-center justify-between gap-2 h-full'
+                  : 'flex flex-col gap-1.5 md:flex-row md:items-center md:justify-between shrink-0 min-h-[28px] py-0.5 border-b border-white/5'
               )}
             >
-                <div className="flex items-center gap-1.5 md:gap-2 min-w-0 overflow-hidden">
+                <div className="flex items-center gap-1.5 md:gap-2 min-w-0 overflow-hidden flex-1">
                     <h4 className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] text-primary flex items-center gap-1 shrink-0 leading-none whitespace-nowrap"><Zap className="h-3 w-3 shrink-0" /> BAR WORKSTATION</h4>
                     <Hint
                       side="top"
@@ -1707,17 +1709,23 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                         <Info className="h-3 w-3" />
                       </button>
                     </Hint>
-                    <span className="text-muted-foreground font-code text-[8px] md:text-[9px] font-bold tracking-widest uppercase min-w-0 truncate leading-none">{activeBarLabel}</span>
+                    <span className="hidden sm:inline text-muted-foreground font-code text-[8px] md:text-[9px] font-bold tracking-widest uppercase min-w-0 truncate leading-none">{activeBarLabel}</span>
                 </div>
-                <div className="flex items-center gap-1.5 min-w-0 shrink self-center">
-                    <div className="flex items-center justify-center gap-1.5 overflow-x-auto studio-scrollbar flex-nowrap max-w-[min(52vw,14rem)] md:max-w-[min(40vw,18rem)] lg:max-w-none py-px">
+                <div className={cn(
+                  'flex items-center gap-1.5 min-w-0',
+                  isMinimized ? 'shrink-0' : 'w-full md:w-auto md:shrink-0'
+                )}>
+                    <div className={cn(
+                      'flex items-center gap-1 overflow-x-auto studio-scrollbar flex-nowrap py-px min-w-0',
+                      isMinimized ? 'max-w-[min(48vw,11rem)]' : 'flex-1 md:flex-none md:max-w-[min(40vw,18rem)] lg:max-w-none'
+                    )}>
                         {ruleBadges.map((b) => (
                           <Badge
                             key={b.id}
                             data-workstation-rule-badge={b.id}
                             variant="outline"
                             className={cn(
-                              'text-[8px] md:text-[9px] font-bold uppercase h-[20px] px-2 inline-flex items-center justify-center leading-none whitespace-nowrap shrink-0 border-2',
+                              'text-[7px] sm:text-[8px] md:text-[9px] font-bold uppercase h-[18px] sm:h-[20px] px-1.5 sm:px-2 inline-flex items-center justify-center leading-none whitespace-nowrap shrink-0 border-2',
                               getWorkstationRuleBadgeClass(b.id, true),
                               b.id === 'END WITH' && 'animate-pulse'
                             )}
@@ -1730,6 +1738,9 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                         {isMinimized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
                 </div>
+                {!isMinimized && (
+                  <span className="sm:hidden text-muted-foreground font-code text-[8px] font-bold tracking-widest uppercase leading-none -mt-0.5">{activeBarLabel}</span>
+                )}
             </div>
             {!isMinimized && (
                 <div className="flex max-md:flex-col md:flex-row md:items-center gap-2 mt-0.5 min-w-0 flex-1">
