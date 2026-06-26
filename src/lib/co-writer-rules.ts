@@ -257,20 +257,34 @@ export const EFFECT_ACCENT: Record<
 };
 
 const WORKSTATION_BADGE_ACTIVE: Record<string, string> = {
-  INHERIT: cn('border-dashed', EFFECT_ACCENT.emerald.badge),
-  'FROM ALBUM': cn('border-dashed', EFFECT_ACCENT.emerald.badge),
-  'ALBUM DNA': EFFECT_ACCENT.emerald.badge,
-  'INHERIT ALBUM': EFFECT_ACCENT.teal.badge,
-  'TRACK DNA': EFFECT_ACCENT.green.badge,
-  VIBE: EFFECT_ACCENT.amber.badge,
-  INTENTS: EFFECT_ACCENT.sky.badge,
-  'END WITH': EFFECT_ACCENT.cyan.badge,
-  GUARD: EFFECT_ACCENT.rose.badge,
-  GUARDRAILS: EFFECT_ACCENT.rose.badge,
-  STYLE: EFFECT_ACCENT.fuchsia.badge,
-  'STYLE DNA': EFFECT_ACCENT.fuchsia.badge,
-  'SPECIAL INSTRUCTIONS': EFFECT_ACCENT.primary.badge,
-  'REMIX PATHS': EFFECT_ACCENT.primary.badge,
+  INHERIT:
+    'border-dashed border-emerald-500/55 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  'FROM ALBUM':
+    'border-dashed border-emerald-500/55 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  'ALBUM DNA':
+    'border-emerald-500/70 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  'INHERIT ALBUM':
+    'border-teal-500/70 bg-teal-500/10 text-teal-700 dark:text-teal-400',
+  'TRACK DNA':
+    'border-green-500/70 bg-green-500/10 text-green-700 dark:text-green-400',
+  VIBE:
+    'border-amber-500/70 bg-amber-500/10 text-amber-700 dark:text-amber-400',
+  INTENTS:
+    'border-sky-500/70 bg-sky-500/10 text-sky-700 dark:text-sky-400',
+  'END WITH':
+    'border-cyan-500/70 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300',
+  GUARD:
+    'border-rose-500/70 bg-rose-500/10 text-rose-700 dark:text-rose-400',
+  GUARDRAILS:
+    'border-rose-500/70 bg-rose-500/10 text-rose-700 dark:text-rose-400',
+  STYLE:
+    'border-fuchsia-500/70 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-400',
+  'STYLE DNA':
+    'border-fuchsia-500/70 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-400',
+  'SPECIAL INSTRUCTIONS':
+    'border-primary/70 bg-primary/10 text-primary',
+  'REMIX PATHS':
+    'border-primary/70 bg-primary/10 text-primary',
 };
 
 /** Muted pill when the Co-Writer rule is toggled off (still visible in Bar WS telemetry). */
@@ -282,7 +296,7 @@ export function getWorkstationRuleBadgeClass(id: string, active: boolean): strin
   if (WORKSTATION_BADGE_ACTIVE[id]) return WORKSTATION_BADGE_ACTIVE[id];
   if (id.includes('INTENTS')) return WORKSTATION_BADGE_ACTIVE.INTENTS;
   if (id.includes('REMIX PATHS')) return WORKSTATION_BADGE_ACTIVE['REMIX PATHS'];
-  return EFFECT_ACCENT.amber.badge;
+  return WORKSTATION_BADGE_ACTIVE.VIBE;
 }
 
 export function coWriterEffectPanel(accent: EffectAccentKey): string {

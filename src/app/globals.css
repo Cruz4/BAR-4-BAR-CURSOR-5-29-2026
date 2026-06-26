@@ -1584,6 +1584,49 @@
   }
 }
 
+/* Bar Workstation telemetry badges — vivid accent text on dark (utility layer loses to outline Badge) */
+@layer components {
+  .dark [data-tour='bar-workstation'] [data-workstation-rule-badge='TRACK DNA'] {
+    border-color: rgb(34 197 94 / 0.7);
+    background-color: rgb(34 197 94 / 0.1);
+    color: rgb(74 222 128);
+  }
+  .dark [data-tour='bar-workstation'] [data-workstation-rule-badge='GUARD'],
+  .dark [data-tour='bar-workstation'] [data-workstation-rule-badge='GUARDRAILS'] {
+    border-color: rgb(244 63 94 / 0.7);
+    background-color: rgb(244 63 94 / 0.1);
+    color: rgb(251 113 133);
+  }
+  .dark [data-tour='bar-workstation'] [data-workstation-rule-badge='VIBE'] {
+    border-color: rgb(245 158 11 / 0.7);
+    background-color: rgb(245 158 11 / 0.1);
+    color: rgb(251 191 36);
+  }
+  .dark [data-tour='bar-workstation'] [data-workstation-rule-badge='INTENTS'] {
+    border-color: rgb(14 165 233 / 0.7);
+    background-color: rgb(14 165 233 / 0.1);
+    color: rgb(56 189 248);
+  }
+  .dark [data-tour='bar-workstation'] [data-workstation-rule-badge='STYLE'],
+  .dark [data-tour='bar-workstation'] [data-workstation-rule-badge='STYLE DNA'] {
+    border-color: rgb(217 70 239 / 0.7);
+    background-color: rgb(217 70 239 / 0.1);
+    color: rgb(232 121 249);
+  }
+  .dark [data-tour='bar-workstation'] [data-workstation-rule-badge='ALBUM DNA'],
+  .dark [data-tour='bar-workstation'] [data-workstation-rule-badge='INHERIT'],
+  .dark [data-tour='bar-workstation'] [data-workstation-rule-badge='FROM ALBUM'] {
+    border-color: rgb(16 185 129 / 0.7);
+    background-color: rgb(16 185 129 / 0.1);
+    color: rgb(52 211 153);
+  }
+  .dark [data-tour='bar-workstation'] [data-workstation-rule-badge='END WITH'] {
+    border-color: rgb(6 182 212 / 0.7);
+    background-color: rgb(6 182 212 / 0.1);
+    color: rgb(103 232 249);
+  }
+}
+
 /* Ink confirm on touch: pin banner to top so bottom bar-workstation controls stay tappable */
 @media (max-width: 767px) {
   .touch-ink-confirm {

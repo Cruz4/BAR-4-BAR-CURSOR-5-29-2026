@@ -1714,9 +1714,10 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                         {ruleBadges.map((b) => (
                           <Badge
                             key={b.id}
+                            data-workstation-rule-badge={b.id}
                             variant="outline"
                             className={cn(
-                              'text-[8px] md:text-[9px] font-bold uppercase h-[20px] px-2 inline-flex items-center justify-center leading-none whitespace-nowrap shrink-0',
+                              'text-[8px] md:text-[9px] font-bold uppercase h-[20px] px-2 inline-flex items-center justify-center leading-none whitespace-nowrap shrink-0 border-2',
                               getWorkstationRuleBadgeClass(b.id, true),
                               b.id === 'END WITH' && 'animate-pulse'
                             )}
