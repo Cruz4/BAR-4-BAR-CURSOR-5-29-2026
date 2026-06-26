@@ -2445,64 +2445,78 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                     className="border-sky-500 data-[state=checked]:bg-sky-500 shrink-0 mt-0.5 self-center"
                                   />
                                 );
+                                const intentTextClass = cn(
+                                  'text-xs font-code min-w-0 whitespace-normal break-words leading-snug',
+                                  isLocked
+                                    ? 'text-sky-800 font-bold dark:text-sky-300'
+                                    : isChecked
+                                      ? 'text-foreground/90'
+                                      : 'text-foreground/85'
+                                );
+                                const intentActions = (
+                                  <TooltipProvider delayDuration={300}>
+                                    <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-7 w-7 text-sky-400/40 hover:text-sky-400 hover:bg-sky-500/10" onClick={(e) => { e.stopPropagation(); setEditIntentDialog({ open: true, intent }); }}><Pencil className="h-3.5 w-3.5" /></Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left" className="max-w-[240px] space-y-1">
+                                          <p className="text-[10px] font-bold leading-snug">Edit motif</p>
+                                          <p className="text-[10px] text-muted-foreground leading-snug">Rename or refine this phrase for the whole album. Updates apply everywhere the motif appears.</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className={cn('h-7 w-7 transition-colors', isLocked ? 'text-sky-400' : 'text-sky-400/40 hover:text-sky-400 hover:bg-sky-500/10')}
+                                            onClick={(e) => { e.stopPropagation(); handleIntentPrecisionLock(intent); }}
+                                          >
+                                            <ArrowUpRight className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left" className="max-w-[240px] space-y-1">
+                                          <p className="text-[10px] font-bold leading-snug">{isLocked ? 'Release Precision Lock' : 'Precision Lock'}</p>
+                                          <p className="text-[10px] text-muted-foreground leading-snug">
+                                            {isLocked
+                                              ? 'The synthesizer is forced to end its next suggestion on this phrase. Click again to release the lock.'
+                                              : 'Force the next suggestion to land exactly on this motif — ideal for hooks and punchlines. Also checks the motif for this track.'}
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500 hover:bg-red-500/10" onClick={(e) => { e.stopPropagation(); handleDeleteIntent(intent); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left" className="max-w-[240px] space-y-1">
+                                          <p className="text-[10px] font-bold leading-snug">Delete motif</p>
+                                          <p className="text-[10px] text-muted-foreground leading-snug">Remove from the album vault and clear it from this track&apos;s checked list and any active lock.</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </div>
+                                  </TooltipProvider>
+                                );
                                 return (
                                     <div
                                       key={intent}
-                                      className={coWriterIntentRowClass(intentsMasterOn, isLocked, isChecked)}
+                                      className={cn(
+                                        coWriterIntentRowClass(intentsMasterOn, isLocked, isChecked),
+                                        'flex-col items-stretch gap-2'
+                                      )}
                                     >
-                                        {!isActiveForTrack && intentCheckbox}
-                                        <span className={cn(
-                                            "text-xs font-code flex-1 min-w-0 whitespace-normal break-words leading-snug",
-                                            isLocked ? "text-sky-800 font-bold dark:text-sky-300" : isChecked ? "text-foreground/90" : "text-foreground/85"
-                                        )}>{intent}</span>
+                                      <div className="flex items-start gap-2 w-full min-w-0">
+                                        {intentCheckbox}
+                                        <span className={cn(intentTextClass, 'flex-1')}>{intent}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1 justify-end w-full pl-6">
                                         {isLocked && (
-                                          <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400 shrink-0 self-center whitespace-nowrap">
+                                          <span className="mr-auto text-[9px] font-bold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400 whitespace-nowrap">
                                             End in
                                           </span>
                                         )}
-                                        <TooltipProvider delayDuration={300}>
-                                            <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 flex-none self-start sm:self-center">
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-sky-400/40 hover:text-sky-400 hover:bg-sky-500/10" onClick={(e) => { e.stopPropagation(); setEditIntentDialog({ open: true, intent }); }}><Pencil className="h-3.5 w-3.5" /></Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent side="left" className="max-w-[240px] space-y-1">
-                                                        <p className="text-[10px] font-bold leading-snug">Edit motif</p>
-                                                        <p className="text-[10px] text-muted-foreground leading-snug">Rename or refine this phrase for the whole album. Updates apply everywhere the motif appears.</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button 
-                                                            variant="ghost" 
-                                                            size="icon" 
-                                                            className={cn("h-7 w-7 transition-colors", isLocked ? "text-sky-400" : "text-sky-400/40 hover:text-sky-400 hover:bg-sky-500/10")}
-                                                            onClick={(e) => { e.stopPropagation(); handleIntentPrecisionLock(intent); }}
-                                                        >
-                                                            <ArrowUpRight className="h-4 w-4" />
-                                                        </Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent side="left" className="max-w-[240px] space-y-1">
-                                                        <p className="text-[10px] font-bold leading-snug">{isLocked ? 'Release Precision Lock' : 'Precision Lock'}</p>
-                                                        <p className="text-[10px] text-muted-foreground leading-snug">
-                                                            {isLocked
-                                                                ? 'The synthesizer is forced to end its next suggestion on this phrase. Click again to release the lock.'
-                                                                : 'Force the next suggestion to land exactly on this motif — ideal for hooks and punchlines. Also checks the motif for this track.'}
-                                                        </p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500 hover:bg-red-500/10" onClick={(e) => { e.stopPropagation(); handleDeleteIntent(intent); }}><Trash2 className="h-3.5 w-3.5" /></Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent side="left" className="max-w-[240px] space-y-1">
-                                                        <p className="text-[10px] font-bold leading-snug">Delete motif</p>
-                                                        <p className="text-[10px] text-muted-foreground leading-snug">Remove from the album vault and clear it from this track&apos;s checked list and any active lock.</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </div>
-                                        </TooltipProvider>
-                                        {isActiveForTrack && intentCheckbox}
+                                        {intentActions}
+                                      </div>
                                     </div>
                                 );
                             })}
