@@ -7,6 +7,11 @@ import { useAuth } from '@/hooks/use-auth';
 import { isProUser } from '@/lib/subscription';
 import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { rankFromXp, STUDIO_RANKS, xpProgressInRank } from '@/lib/gamification/ranks';
+import {
+  RANK_BADGE,
+  STREAK_BADGE,
+  XP_LABEL,
+} from '@/lib/gamification/badge-styles';
 import { AchievementBadgeCell } from '@/components/gamification/achievement-badge-cell';
 import { ChallengeGoalsPanel } from '@/components/gamification/challenge-goals-panel';
 import { StudioSharingSection } from '@/components/gamification/studio-profile-section';
@@ -39,13 +44,6 @@ type LeaderboardPayload = {
   };
 };
 
-const RANK_BADGE: Record<string, string> = {
-  open_mic: 'border-slate-400/40 bg-slate-500/10 text-slate-200',
-  demo_tape: 'border-sky-500/45 bg-sky-500/12 text-sky-300',
-  session_ready: 'border-cyan-500/45 bg-cyan-500/12 text-cyan-200',
-  headliner: 'border-amber-500/45 bg-amber-500/12 text-amber-300',
-  vault_architect: 'border-violet-500/50 bg-violet-500/15 text-violet-200',
-};
 
 export function StudioProgressBoard() {
   const { user } = useAuth();
@@ -133,19 +131,19 @@ export function StudioProgressBoard() {
             <CardTitle className="text-base font-headline uppercase">Your studio standing</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
-            <div className="rounded-lg border border-primary/15 bg-black/30 px-3.5 py-3 space-y-2.5 md:col-span-2 min-w-0 overflow-hidden">
+            <div className="rounded-lg border border-primary/15 bg-gradient-to-br from-muted/80 to-sky-100/60 dark:from-black/40 dark:to-sky-950/20 px-3.5 py-3 space-y-2.5 md:col-span-2 min-w-0 overflow-hidden">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className={cn('text-[10px] font-bold uppercase', RANK_BADGE[rank.id])}>
                   {rankLabel}
                 </Badge>
                 {summary.currentStreak > 0 && (
-                  <Badge variant="outline" className="border-orange-500/45 text-orange-200 text-[10px] gap-1">
+                  <Badge variant="outline" className={cn('text-[10px] gap-1', STREAK_BADGE)}>
                     <Flame className="h-3.5 w-3.5" /> {summary.currentStreak}d streak
                   </Badge>
                 )}
-                <span className="text-xs font-code font-bold">{summary.xp.toLocaleString()} XP</span>
+                <span className={cn('text-xs', XP_LABEL)}>{summary.xp.toLocaleString()} XP</span>
               </div>
-              <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+              <div className="h-2 rounded-full bg-muted dark:bg-white/5 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-sky-600 via-primary to-violet-500"
                   style={{ width: `${xpPercent}%` }}
@@ -157,10 +155,10 @@ export function StudioProgressBoard() {
                   : 'Top rank — keep building.'}
               </p>
               <div className="flex flex-wrap gap-2 pt-1 text-[10px] font-bold uppercase tracking-wide">
-                <span className="rounded border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-emerald-300/90">
+                <span className="rounded border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-emerald-800 dark:text-emerald-300/90">
                   Written: {linesToRhymeBars(summary.lifetimeBarsWritten).toLocaleString()} bars
                 </span>
-                <span className="rounded border border-violet-500/25 bg-violet-500/10 px-2.5 py-1 text-violet-300/90">
+                <span className="rounded border border-violet-500/25 bg-violet-500/10 px-2.5 py-1 text-violet-800 dark:text-violet-300/90">
                   Generated: {linesToRhymeBars(summary.lifetimeLinesGenerated || 0).toLocaleString()} bars
                 </span>
               </div>

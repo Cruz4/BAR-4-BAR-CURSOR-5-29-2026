@@ -3,15 +3,17 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-
-const STORAGE_KEY = 'b4b-cookie-consent';
+import {
+  COOKIE_CONSENT_STORAGE_KEY,
+  grantTikTokPixelConsent,
+} from '@/lib/tiktok-pixel';
 
 export function CookieConsent() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     try {
-      if (!localStorage.getItem(STORAGE_KEY)) setVisible(true);
+      if (!localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY)) setVisible(true);
     } catch {
       setVisible(true);
     }
@@ -19,10 +21,11 @@ export function CookieConsent() {
 
   const accept = () => {
     try {
-      localStorage.setItem(STORAGE_KEY, 'accepted');
+      localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, 'accepted');
     } catch {
       /* ignore */
     }
+    grantTikTokPixelConsent();
     setVisible(false);
   };
 

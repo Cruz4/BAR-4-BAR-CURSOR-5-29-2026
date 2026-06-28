@@ -228,7 +228,7 @@ export function LeaderboardCompareCard({
     >
       <p
         className={cn(
-          'font-bold uppercase tracking-wide text-orange-300/80 truncate',
+          'font-bold uppercase tracking-wide text-orange-800/90 dark:text-orange-300/80 truncate',
           comfortable ? 'text-[10px]' : 'text-[9px]'
         )}
       >
@@ -242,7 +242,7 @@ export function LeaderboardCompareCard({
         <>
           <p
             className={cn(
-              'font-headline font-bold text-orange-200 leading-tight',
+              'font-headline font-bold text-orange-700 dark:text-orange-200 leading-tight',
               comfortable ? 'text-xl' : 'text-lg'
             )}
           >

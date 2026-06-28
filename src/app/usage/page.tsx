@@ -50,6 +50,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useStripe } from '@/services/stripe';
+import { TIKTOK_CONTENT_TYPE, trackTikTokEvent } from '@/lib/tiktok-pixel';
 import { useAuth } from '@/hooks/use-auth';
 import { db, auth } from '@/lib/firebase/client/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -135,6 +136,15 @@ function UsagePageContent() {
       setIsProcessingOrder(true);
       fulfillCheckoutReturn(sessionId, user.id)
         .then((result) => {
+          const isSubscription = result.inkAmount === 0;
+          trackTikTokEvent('CompletePayment', {
+            content_type: TIKTOK_CONTENT_TYPE,
+            content_name: isSubscription ? 'Studio Pro Subscription' : 'Ink Pack',
+            currency: 'USD',
+          });
+          if (isSubscription) {
+            trackTikTokEvent('Subscribe', { currency: 'USD' });
+          }
           const inkMsg =
             result.inkAmount > 0
               ? `${result.inkAmount.toLocaleString()} permanent Ink added to your balance.`

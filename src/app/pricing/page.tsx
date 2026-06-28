@@ -71,6 +71,7 @@ import {
 import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, SIGNUP_INK } from '@/lib/subscription';
 import { TierPriceSummary } from '@/components/tier-price-summary';
 import { trackStudioEvent } from '@/lib/analytics-client';
+import { TIKTOK_CONTENT_TYPE, trackTikTokEvent } from '@/lib/tiktok-pixel';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { trackUpgradeClick } from '@/lib/conversion-analytics';
 import { useAuth } from '@/hooks/use-auth';
@@ -103,6 +104,11 @@ export default function PricingPage() {
     const ref = getStoredMarketingRef();
     void trackStudioEvent(ANALYTICS_EVENTS.PRICING_VIEW, {
       path: '/pricing',
+      ...(ref ? { ref } : {}),
+    });
+    trackTikTokEvent('ViewContent', {
+      content_name: 'Studio Pro Pricing',
+      content_type: TIKTOK_CONTENT_TYPE,
       ...(ref ? { ref } : {}),
     });
   }, [user]);

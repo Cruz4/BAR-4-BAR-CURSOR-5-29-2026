@@ -10,32 +10,19 @@ import { useGamification } from '@/context/gamification-context';
 import { useAuth } from '@/hooks/use-auth';
 import { WEEKLY_CHALLENGES, LIFETIME_MILESTONES, getChallengeProgress, isChallengeComplete, resolveChallengeTarget } from '@/lib/gamification/challenges';
 import { rankFromXp, STUDIO_RANKS, xpProgressInRank } from '@/lib/gamification/ranks';
-import { ACHIEVEMENTS, type AchievementDef } from '@/lib/gamification/achievements';
+import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
+import {
+  ACHIEVEMENT_CATEGORY,
+  ACHIEVEMENT_CATEGORY_LOCKED,
+  RANK_BADGE,
+  STREAK_BADGE,
+  XP_LABEL,
+} from '@/lib/gamification/badge-styles';
 import { isProUser } from '@/lib/subscription';
 import { CheckCircle2, Circle, Flame, Lock, Trophy, ChevronRight, ChevronDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const RECENT_EARN_MS = 48 * 60 * 60 * 1000;
-
-const RANK_BADGE: Record<string, string> = {
-  open_mic: 'border-slate-400/40 bg-slate-500/10 text-slate-200',
-  demo_tape: 'border-sky-500/45 bg-sky-500/12 text-sky-300',
-  session_ready: 'border-cyan-500/45 bg-cyan-500/12 text-cyan-200',
-  headliner: 'border-amber-500/45 bg-amber-500/12 text-amber-300',
-  vault_architect: 'border-violet-500/50 bg-violet-500/15 text-violet-200 shadow-[0_0_12px_rgba(139,92,246,0.2)]',
-};
-
-const ACHIEVEMENT_CATEGORY: Record<AchievementDef['category'], string> = {
-  activation: 'border-sky-500/45 bg-sky-500/12 text-sky-200',
-  retention: 'border-amber-500/45 bg-amber-500/12 text-amber-200',
-  conversion: 'border-fuchsia-500/45 bg-fuchsia-500/12 text-fuchsia-200',
-};
-
-const ACHIEVEMENT_CATEGORY_LOCKED: Record<AchievementDef['category'], string> = {
-  activation: 'border-sky-500/25 bg-sky-950/35 text-slate-200',
-  retention: 'border-amber-500/25 bg-amber-950/35 text-slate-200',
-  conversion: 'border-fuchsia-500/25 bg-fuchsia-950/35 text-slate-200',
-};
 
 function shortRankLabel(label: string): string {
   const first = label.split(' ')[0] || label;
@@ -199,7 +186,7 @@ export function VaultStudioProgress({
           )}
           aria-hidden
         />
-        <Trophy className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+        <Trophy className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
         <div className="min-w-0 flex-1 overflow-hidden">
           <p
             className={cn(
@@ -259,7 +246,8 @@ export function VaultStudioProgress({
               <Badge
                 variant="outline"
                 className={cn(
-                  'border-orange-500/45 bg-orange-500/12 text-orange-200 font-bold uppercase gap-1 px-2 py-0 h-5 shadow-[0_0_10px_rgba(249,115,22,0.15)]',
+                  STREAK_BADGE,
+                  'px-2 py-0 h-5',
                   isSidebar ? 'text-[10px]' : 'text-[9px]'
                 )}
               >
@@ -267,7 +255,7 @@ export function VaultStudioProgress({
                 {summary.currentStreak}d
               </Badge>
             )}
-            <span className={cn('font-code text-sky-800 dark:text-sky-100/90 font-bold', isSidebar ? 'text-[11px]' : 'text-[10px]')}>
+            <span className={cn(XP_LABEL, isSidebar ? 'text-[11px]' : 'text-[10px]')}>
               {summary.xp.toLocaleString()} XP
             </span>
           </div>
@@ -304,7 +292,7 @@ export function VaultStudioProgress({
               return (
                 <li key={challenge.id} className="flex items-center gap-2 min-h-[18px] min-w-0">
                   {done ? (
-                    <CheckCircle2 className="h-3 w-3 text-emerald-400 shrink-0" aria-hidden />
+                    <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" aria-hidden />
                   ) : (
                     <Circle className="h-3 w-3 text-muted-foreground/35 shrink-0" aria-hidden />
                   )}
@@ -321,7 +309,7 @@ export function VaultStudioProgress({
                     className={cn(
                       'font-mono shrink-0 tabular-nums whitespace-nowrap',
                       isSidebar ? 'text-[10px]' : 'text-[9px]',
-                      done ? 'text-emerald-400/80' : 'text-muted-foreground'
+                      done ? 'text-emerald-700 dark:text-emerald-400/80' : 'text-muted-foreground'
                     )}
                   >
                     {progress}/{target}
@@ -352,7 +340,7 @@ export function VaultStudioProgress({
                 return (
                   <li key={challenge.id} className="flex items-center gap-2 min-h-[18px] min-w-0">
                     {done ? (
-                      <CheckCircle2 className="h-3 w-3 text-amber-400 shrink-0" aria-hidden />
+                      <CheckCircle2 className="h-3 w-3 text-amber-600 dark:text-amber-400 shrink-0" aria-hidden />
                     ) : (
                       <Circle className="h-3 w-3 text-muted-foreground/35 shrink-0" aria-hidden />
                     )}
@@ -367,7 +355,7 @@ export function VaultStudioProgress({
                     <span
                       className={cn(
                         'text-[10px] font-mono shrink-0 tabular-nums whitespace-nowrap',
-                        done ? 'text-amber-400/80' : 'text-muted-foreground'
+                        done ? 'text-amber-700 dark:text-amber-400/80' : 'text-muted-foreground'
                       )}
                     >
                       {progressLabel}
@@ -425,7 +413,7 @@ export function VaultStudioProgress({
                 )}
                 title={a.description}
               >
-                <Lock className="h-2.5 w-2.5 mr-1 shrink-0 text-slate-400" />
+                <Lock className="h-2.5 w-2.5 mr-1 shrink-0 text-muted-foreground dark:text-slate-400" />
                 <span className="truncate">{a.title}</span>
               </Badge>
             ))}

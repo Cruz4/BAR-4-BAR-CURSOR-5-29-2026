@@ -26,6 +26,7 @@ import { ServiceWorkerRegister } from './service-worker-register';
 import { StudioPageBackground } from './studio-page-background';
 import { SettingsControlAtmosphere } from './settings-control-atmosphere';
 import { ProductAnalytics } from './product-analytics';
+import { TikTokPixel } from './tiktok-pixel';
 import { MarketingAttributionCapture } from './marketing-attribution-capture';
 import { AdminAlertListener } from './admin-alert-listener';
 import { InviteGateGuard } from './invite-gate-guard';
@@ -98,6 +99,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <MarketingAttributionCapture />
               <AdminAlertListener />
               <ProductAnalytics />
+              <TikTokPixel />
               {isMarketingCapture || isMarketingShell ? null : isSettingsRoute ? (
                 <SettingsControlAtmosphere />
               ) : (

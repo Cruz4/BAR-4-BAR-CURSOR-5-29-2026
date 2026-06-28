@@ -31,11 +31,10 @@ import { StudioLoader } from '@/components/studio-loader';
 import { cn } from '@/lib/utils';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
+import { identifyTikTokUser, trackTikTokEvent } from '@/lib/tiktok-pixel';
 import {
   captureMarketingRefFromUrl,
   getStoredMarketingRef,
-  isSocialMarketingRef,
-  marketingRefLabel,
   normalizeMarketingRef,
 } from '@/lib/marketing-attribution';
 import { REFERRAL_INK_REWARD, REFERRAL_STORAGE_KEY, normalizeReferralCode } from '@/lib/referrals';
@@ -81,7 +80,6 @@ function LoginForm() {
   const proCheckoutIntent = getCheckoutFromPath(safeNext);
   const marketingRef = normalizeMarketingRef(searchParams.get('ref'));
   const isTikTokRef = marketingRef === 'tiktok';
-  const isSocialRef = isSocialMarketingRef(marketingRef);
 
   useEffect(() => {
     if (proCheckoutIntent) setAuthMode('signup');
@@ -151,6 +149,14 @@ function LoginForm() {
           await trackStudioEvent(ANALYTICS_EVENTS.SIGNUP, {
             method: signupMethod,
             ...(signupRef ? { ref: signupRef } : {}),
+          });
+          trackTikTokEvent('CompleteRegistration', {
+            method: signupMethod,
+            ...(signupRef ? { ref: signupRef } : {}),
+          });
+          void identifyTikTokUser({
+            email: firebaseUser.email,
+            externalId: firebaseUser.uid,
           });
           await applyReferralIfNew(firebaseUser.uid);
           markFreshSignup();
@@ -291,7 +297,9 @@ function LoginForm() {
           <nav className="flex items-center justify-end gap-2 sm:gap-4 min-w-0">
             <Link href="/#features" className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Features</Link>
             <Link href="/pricing" className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Pricing</Link>
-            <Link href={proCheckoutHeaderHref()} className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-accent hover:text-accent/80 transition-colors">Go Pro</Link>
+            {!isTikTokRef && (
+              <Link href={proCheckoutHeaderHref()} className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-accent hover:text-accent/80 transition-colors">Go Pro</Link>
+            )}
             <StudioThemeControls />
           </nav>
       </header>
@@ -303,22 +311,6 @@ function LoginForm() {
         >
           <div className="w-full max-w-5xl relative z-10 space-y-4">
             <InviteGateLoginBanner />
-
-            {!proCheckoutIntent && !importIntent && (
-              <Card className="w-full border-primary/20 bg-primary/10 backdrop-blur-md relative z-50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-headline uppercase tracking-wide flex items-center gap-2 text-primary">
-                    <Zap className="h-4 w-4" />
-                    {isSocialRef ? `${marketingRefLabel(marketingRef || '')} signup flow` : 'Start in under 10 seconds'}
-                  </CardTitle>
-                  <CardDescription className="text-[11px] font-code leading-relaxed text-left text-white/85">
-                    {isTikTokRef
-                      ? 'Tap Google to skip email verification friction and jump straight into your first AI next-line session.'
-                      : 'Use Google for the fastest start, then generate your first AI next-line immediately after signup.'}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            )}
 
             {proCheckoutIntent && (
               <Card className="w-full border-accent/30 bg-accent/10 backdrop-blur-md relative z-50">
@@ -335,7 +327,7 @@ function LoginForm() {
               </Card>
             )}
 
-            {!proCheckoutIntent && !importIntent && (
+            {!proCheckoutIntent && !importIntent && !isTikTokRef && (
               <Card className="w-full border-accent/25 bg-accent/5 backdrop-blur-md relative z-50">
                 <CardHeader className="pb-2 space-y-3">
                   <CardTitle className="text-sm font-headline uppercase tracking-wide flex items-center gap-2 text-accent">

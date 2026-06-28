@@ -8,6 +8,7 @@ import { useCallback, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/client/firebase';
 import { STRIPE_PRICE_IDS, type StripePriceKey } from '@/lib/stripe-catalog';
+import { TIKTOK_CONTENT_TYPE, trackTikTokEvent } from '@/lib/tiktok-pixel';
 
 export type { StripePriceKey };
 
@@ -61,8 +62,15 @@ export function useStripe() {
         const data = await response.json();
         if (!response.ok || data.error) throw new Error(data.error || 'Checkout failed');
 
-        if (data.url) window.location.href = data.url;
-        else throw new Error('No checkout URL returned');
+        if (data.url) {
+          const isSubscription = priceKey === 'PRO_MONTHLY' || priceKey === 'PRO_YEARLY';
+          trackTikTokEvent('InitiateCheckout', {
+            content_id: priceKey,
+            content_type: TIKTOK_CONTENT_TYPE,
+            content_name: isSubscription ? 'Studio Pro Subscription' : 'Ink Pack',
+          });
+          window.location.href = data.url;
+        } else throw new Error('No checkout URL returned');
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Checkout failed';
         toast({ variant: 'destructive', title: 'Checkout Failed', description: message });

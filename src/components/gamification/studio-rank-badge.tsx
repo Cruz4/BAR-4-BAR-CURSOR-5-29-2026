@@ -23,7 +23,7 @@ export function StudioRankBadge({ className, showStreak = true }: StudioRankBadg
         {rankLabel}
       </Badge>
       {showStreak && summary.currentStreak > 0 && (
-        <Badge variant="outline" className="border-amber-500/30 text-amber-400 text-[9px] font-bold uppercase gap-1">
+        <Badge variant="outline" className="border-amber-500/30 text-orange-700 dark:text-amber-400 text-[9px] font-bold uppercase gap-1">
           <Flame className="h-3 w-3" />
           {summary.currentStreak}d streak
         </Badge>
