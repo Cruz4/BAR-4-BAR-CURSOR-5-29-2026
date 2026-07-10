@@ -127,6 +127,7 @@ import {
   markLyricsTutorialComplete,
   REPLAY_GUIDED_TOUR_EVENT,
   PENDING_TOUR_REPLAY_KEY,
+  LYRICS_PAGE_TOUR_STEPS,
   type LyricsTourStep,
 } from '@/lib/studio-onboarding';
 import { persistLastWorkedTrack } from '@/lib/studio-tips-session';
@@ -148,6 +149,8 @@ import {
   COACH_FIRST_INK_EVENT,
   dispatchCoachEvent,
   isFirstWriteSession,
+  buildFirstSessionGuidedSteps,
+  consumeFirstSessionGuidedPending,
 } from '@/lib/first-session';
 import { postGamificationEvent } from '@/lib/gamification-client';
 import { claimMilestone } from '@/lib/milestones-client';
@@ -2899,6 +2902,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
+  const [tourSteps, setTourSteps] = useState<LyricsTourStep[]>(LYRICS_PAGE_TOUR_STEPS);
   const tourAutoStartRef = useRef(false);
 
   const scratchPadRef = useRef<any>(null);
@@ -3091,10 +3095,16 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       tourAutoStartRef.current = true;
       return;
     }
-    // Fresh signups skip the blocking 9-step tour — just-in-time coach marks
-    // guide the first write instead. The full tour auto-runs on a later
-    // session and stays available in the Studio Manual.
+    // Fresh signups who chose Start blank skip the blocking 9-step tour —
+    // just-in-time coach marks guide the first write instead.
     if (isFirstWriteSession(user)) {
+      const guided = consumeFirstSessionGuidedPending();
+      if (guided.active) {
+        tourAutoStartRef.current = true;
+        setTourSteps(buildFirstSessionGuidedSteps(guided.ctx));
+        const t = setTimeout(() => setTourActive(true), 1200);
+        return () => clearTimeout(t);
+      }
       tourAutoStartRef.current = true;
       return;
     }
@@ -3105,6 +3115,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   useEffect(() => {
     const onReplay = () => {
+      setTourSteps(LYRICS_PAGE_TOUR_STEPS);
       setTourStep(0);
       setTourActive(true);
     };
@@ -3113,7 +3124,22 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   }, []);
 
   const handleTourBeforeStep = useCallback((step: LyricsTourStep) => {
-    if (step.id === 'dna') {
+    if (['first-write', 'first-context', 'first-generate'].includes(step.id)) {
+      setMobilePanelTab('lyrics');
+      if (step.id === 'first-generate') setIsMinimized(false);
+      if (step.id === 'first-write') {
+        window.setTimeout(() => {
+          const focus = document.querySelector('[data-tour="lyrics-sheet-focus"]') as HTMLElement | null;
+          focus?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'auto' });
+        }, 280);
+      }
+      if (step.id === 'first-context') {
+        window.setTimeout(() => {
+          const viewport = document.querySelector('[data-tour="lyrics-sheet"]') as HTMLElement | null;
+          viewport?.scrollTo({ top: 0, behavior: 'auto' });
+        }, 280);
+      }
+    } else if (step.id === 'dna') {
       setRightCollapsed(false);
       setMobilePanelTab('cowriter');
       handleSectionChange('dna', true);
@@ -3576,6 +3602,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       <StudioGuidedTour
         active={tourActive}
         stepIndex={tourStep}
+        steps={tourSteps}
         onStepChange={setTourStep}
         onComplete={handleTourComplete}
         onBeforeStep={handleTourBeforeStep}

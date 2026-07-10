@@ -36,8 +36,8 @@ const STAGE_CONTENT: Record<CoachMarkStage, { icon: React.ComponentType<{ classN
   },
   accept: {
     icon: RefreshCw,
-    title: 'Line added',
-    text: 'Not feeling it? Hit Generate Next again for fresh options — your own written lines always stay put, and the sheet autosaves as you go.',
+    title: 'Line added — you are live',
+    text: 'Not feeling it? Hit Generate Next again for fresh options. Your sheet autosaves. Open Studio Manual (?) anytime to replay this guide or the full workstation tour.',
   },
 };
 

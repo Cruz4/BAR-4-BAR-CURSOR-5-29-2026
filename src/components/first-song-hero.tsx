@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { DataContext } from '@/context/data-context';
+import { markFirstSessionGuidedPending } from '@/lib/first-session';
 import type { Track } from '@/lib/types';
 
 const GENRE_PRESETS: Array<{ genre: string; tempoBPM: number }> = [
@@ -48,9 +49,7 @@ export function FirstSongHero() {
         ? { genre: genre.genre, tempoBPM: genre.tempoBPM, feeling: ['first session'] }
         : { genre: 'Lofi-Hop', tempoBPM: 90, feeling: ['new idea'] };
 
-      const title = options.guided && topic.trim()
-        ? topic.trim().split(/\s+/).slice(0, 5).join(' ')
-        : 'My First Song';
+      const title = 'My First Song';
 
       const newTrack: Omit<Track, 'id'> = {
         albumId: 'unassigned',
@@ -71,6 +70,12 @@ export function FirstSongHero() {
         ...(options.guided && topic.trim() ? { specialInstructions: topic.trim() } : {}),
       };
       const created = addTrack('unassigned', newTrack);
+      if (options.guided) {
+        markFirstSessionGuidedPending({
+          topic: topic.trim(),
+          genre: genre.genre,
+        });
+      }
       router.push(`/albums/unassigned/tracks/${created.id}`);
     } catch (e) {
       setIsCreating(false);
@@ -120,7 +125,7 @@ export function FirstSongHero() {
               <div className="space-y-1">
                 <p className="font-bold uppercase tracking-widest text-xs">Guide me</p>
                 <p className="text-[10px] font-code text-muted-foreground leading-snug normal-case tracking-normal">
-                  Two quick questions, then the studio sets your vibe.
+                  Quick vibe + topic, then a 4-step walkthrough to your first AI bar.
                 </p>
               </div>
             </Button>
@@ -187,7 +192,7 @@ export function FirstSongHero() {
               onClick={() => createFirstTrack({ guided: true })}
               disabled={isCreating}
             >
-              {isCreating ? 'Opening your sheet...' : 'Start writing'} <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              {isCreating ? 'Opening your sheet...' : 'Open guided sheet'} <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
