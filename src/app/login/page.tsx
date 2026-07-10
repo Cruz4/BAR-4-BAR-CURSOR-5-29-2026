@@ -28,7 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StudioLoader } from '@/components/studio-loader';
-import { cn } from '@/lib/utils';
+import { cn, stripForFirestore } from '@/lib/utils';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { identifyTikTokUser, trackTikTokEvent } from '@/lib/tiktok-pixel';
@@ -128,24 +128,34 @@ function LoginForm() {
         const userRef = doc(db, 'users', firebaseUser.uid);
         const existing = await getDoc(userRef);
         const isNew = !existing.exists();
+        const existingData = existing.data() || {};
         const signupRef = getStoredMarketingRef();
-        const profileBase = {
+        const profilePatch: Record<string, unknown> = {
           displayName: firebaseUser.displayName || displayName || 'Anonymous Artist',
-          email: firebaseUser.email,
-          photoURL: firebaseUser.photoURL || null,
+          email: firebaseUser.email ?? null,
+          photoURL: firebaseUser.photoURL ?? null,
           lastLogin: serverTimestamp(),
         };
 
+        if (signupRef && !existingData.signupAttribution) {
+          profilePatch.signupAttribution = signupRef;
+        }
+        if (!existingData.status) {
+          profilePatch.status = 'active';
+        }
+
         if (isNew) {
-          await setDoc(userRef, {
-            ...profileBase,
+          Object.assign(profilePatch, {
             createdAt: new Date().toISOString(),
             role: 'artist',
             subscriptionStatus: 'none',
             subscriptionTier: 'none',
-            status: 'active',
-            ...(signupRef ? { signupAttribution: signupRef } : {}),
           });
+        }
+
+        await setDoc(userRef, stripForFirestore(profilePatch), { merge: true });
+
+        if (isNew) {
           await trackStudioEvent(ANALYTICS_EVENTS.SIGNUP, {
             method: signupMethod,
             ...(signupRef ? { ref: signupRef } : {}),
@@ -163,15 +173,6 @@ function LoginForm() {
           return true;
         }
 
-        const existingData = existing.data() || {};
-        const patch: Record<string, unknown> = { ...profileBase };
-        if (signupRef && !existingData.signupAttribution) {
-          patch.signupAttribution = signupRef;
-        }
-        if (!existingData.status) {
-          patch.status = 'active';
-        }
-        await setDoc(userRef, patch, { merge: true });
         return false;
     } catch (e) {
       console.error("Profile sync failed", e);

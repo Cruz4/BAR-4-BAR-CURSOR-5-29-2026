@@ -1347,7 +1347,9 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
     return `${section?.type?.toUpperCase() || 'LINE'} - LINE: ${activeGeneratorBar.idx}`;
   }, [activeGeneratorBar, track.sections]);
 
-  const ruleBadges = useMemo(() => getWorkstationRuleBadges(track, album), [
+  const ruleBadges = useMemo(
+    () => (track ? getWorkstationRuleBadges(track, album) : []),
+    [
     album?.id,
     album?.direction?.enabled,
     track.direction?.enabled,

@@ -89,7 +89,7 @@ import {
   lazyGenerateSongDraft,
   lazySuggestRelayDirections,
 } from '@/lib/lazy-ai-flows';
-import { mergeDirection, cn, stripForFirestore, resolveWorkstationDirection, hasDirectionContent } from '@/lib/utils';
+import { mergeDirection, cn, stripForFirestore, resolveWorkstationDirection, hasDirectionContent, safeTrim } from '@/lib/utils';
 import {
   STRAIN_TARGETS,
   appendDirectionField,
@@ -981,11 +981,11 @@ export function GenerateSongDraftDialog({
       const badges: { id: string; text: string }[] = [];
       if (enableGuardrails) badges.push({ id: 'GUARDRAILS', text: 'GUARDRAILS' });
       if (intentsEnabled && hubIntents.length > 0) badges.push({ id: 'INTENTS', text: `${hubIntents.length} INTENTS` });
-      if (lyricsAbout.trim()) badges.push({ id: 'SPECIAL INSTRUCTIONS', text: 'SPECIAL INSTRUCTIONS' });
+      if (safeTrim(lyricsAbout)) badges.push({ id: 'SPECIAL INSTRUCTIONS', text: 'SPECIAL INSTRUCTIONS' });
       if (hubVibeEnabled) badges.push({ id: 'VIBE', text: 'VIBE' });
       if (inheritAlbum) badges.push({ id: 'INHERIT ALBUM', text: 'INHERIT ALBUM' });
       if (inheritTrack) badges.push({ id: 'TRACK DNA', text: 'TRACK DNA' });
-      if (hubStyleEnabled && hubStyleAnalysis.trim()) badges.push({ id: 'STYLE DNA', text: 'STYLE DNA' });
+      if (hubStyleEnabled && safeTrim(hubStyleAnalysis)) badges.push({ id: 'STYLE DNA', text: 'STYLE DNA' });
       if (wizardState.selectedDirections.length > 0) {
         badges.push({ id: 'REMIX PATHS', text: `${wizardState.selectedDirections.length} REMIX PATHS` });
       }
@@ -998,15 +998,18 @@ export function GenerateSongDraftDialog({
     return g.sections.map((s, i) => ({
         id: `draft-${Date.now()}-${i}`,
         type: s.name.toLowerCase() as any,
-        bars: s.bars.map((l, j) => ({
+        bars: s.bars.map((l, j) => {
+          const text = safeTrim(l);
+          return {
             idx: j + 1,
-            text: l.trim(),
+            text,
             accepted: true,
             rhymeKey: '?',
-            syllables: l.split(' ').length,
+            syllables: text ? text.split(/\s+/).filter(Boolean).length : 0,
             justGenerated: true,
             lineSource: 'generated' as const,
-        }))
+          };
+        })
     }));
   };
 
@@ -1832,10 +1835,10 @@ export function GenerateSongDraftDialog({
 
   const hubSectionSummary = useMemo(
     (): Partial<Record<HubSectionKey, string>> => ({
-      structure: hubStructureGuide.trim()
+      structure: safeTrim(hubStructureGuide)
         ? 'Structure guide active'
         : `${hubStructure.filter((s) => s.enabled).length} sections`,
-      vibe: hubVibe?.genre?.trim() || (hubVibeEnabled ? 'Enabled' : 'Off'),
+      vibe: safeTrim(hubVibe?.genre) || (hubVibeEnabled ? 'Enabled' : 'Off'),
       intents: hubIntents.length ? `${hubIntents.length} motifs` : undefined,
       creativeDna: (() => {
         const parts: string[] = [];
@@ -1846,11 +1849,11 @@ export function GenerateSongDraftDialog({
         }
         return parts.length ? parts.join(' · ') : undefined;
       })(),
-      specialInstructions: lyricsAbout.trim() ? 'Instructions set' : undefined,
+      specialInstructions: safeTrim(lyricsAbout) ? 'Instructions set' : undefined,
       remix: wizardState.selectedDirections.length
         ? `${wizardState.selectedDirections.length} paths`
         : undefined,
-      style: hubStyleAnalysis.trim() ? 'Style loaded' : undefined,
+      style: safeTrim(hubStyleAnalysis) ? 'Style loaded' : undefined,
       guardrails: enableGuardrails ? 'Active' : 'Off',
     }),
     [
@@ -1877,10 +1880,10 @@ export function GenerateSongDraftDialog({
       albumDna: inheritAlbum,
       trackDna: inheritTrack,
       creativeDna: CREATIVE_DNA_FIELDS.some(({ key }) => String(hubDirection[key] ?? '').trim()),
-      specialInstructions: !!lyricsAbout.trim(),
+      specialInstructions: !!safeTrim(lyricsAbout),
       remix: wizardState.selectedDirections.length > 0,
       dnaStrains: !!wizardState.analysis,
-      style: hubStyleEnabled && !!hubStyleAnalysis.trim(),
+      style: hubStyleEnabled && !!safeTrim(hubStyleAnalysis),
       guardrails: enableGuardrails,
     }),
     [
@@ -1932,7 +1935,7 @@ export function GenerateSongDraftDialog({
             style: hubStyleEnabled && !!hubStyleAnalysis?.trim(),
             vibe: hubVibeEnabled,
             guardrails: enableGuardrails,
-            instructions: !!lyricsAbout.trim(),
+            instructions: !!safeTrim(lyricsAbout),
           },
     [
       synthesisLoaderMode,

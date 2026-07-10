@@ -6,6 +6,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Coerce unknown Firestore/UI values before calling string methods. */
+export function safeTrim(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 /** Remove undefined values so Firestore set()/batch.set() does not reject documents. */
 export function stripForFirestore<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -30,11 +35,11 @@ export function mergeDirection(album?: Direction, track?: Track["direction"]): D
 export function hasDirectionContent(d?: Partial<Direction> | null): boolean {
   if (!d) return false;
   return Boolean(
-    d.setting_world?.trim() ||
-      d.emotion_core?.trim() ||
-      d.trigger_moment?.trim() ||
-      d.message_truth?.trim() ||
-      d.tone_palette?.trim()
+    safeTrim(d.setting_world) ||
+      safeTrim(d.emotion_core) ||
+      safeTrim(d.trigger_moment) ||
+      safeTrim(d.message_truth) ||
+      safeTrim(d.tone_palette)
   );
 }
 

@@ -1,6 +1,6 @@
 import { CREATIVE_DNA_FIELDS } from '@/lib/dna-strands';
 import type { Album, Direction, Track } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, safeTrim } from '@/lib/utils';
 
 export const UNASSIGNED_ALBUM_ID = 'unassigned';
 
@@ -16,7 +16,7 @@ export function hasCreativeDnaContent(direction?: Partial<Direction> | null): bo
 
 export function hasGuardrailsContent(guardrails?: Track['guardrails'] | null): boolean {
   if (!guardrails) return false;
-  if (guardrails.negativePrompt?.trim()) return true;
+  if (safeTrim(guardrails.negativePrompt)) return true;
   if ((guardrails.forbiddenWords?.length ?? 0) > 0) return true;
   if ((guardrails.mustIncludeWords?.length ?? 0) > 0) return true;
   return false;
@@ -27,7 +27,7 @@ export function formatGuardrailsCsv(words?: string[] | null): string {
   return (words ?? []).join(', ');
 }
 
-export function parseGuardrailsCsv(csv: string): string[] {
+export function parseGuardrailsCsv(csv = ''): string[] {
   return csv.split(',').map((w) => w.trim()).filter(Boolean);
 }
 
@@ -430,7 +430,7 @@ export function getWorkstationRuleBadges(track: Track, album?: Album | null): Wo
   if (isIntentsActive(track)) {
     badges.push({ id: 'INTENTS', active: true });
   }
-  if (track.endWith?.trim() && isIntentsActive(track)) {
+  if (safeTrim(track.endWith) && isIntentsActive(track)) {
     badges.push({ id: 'END WITH', active: true });
   }
   if (isGuardrailsActive(track)) {

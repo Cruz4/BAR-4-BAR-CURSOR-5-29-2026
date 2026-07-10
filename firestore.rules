@@ -75,7 +75,7 @@ service cloud.firestore {
           && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
             'role', 'subscriptionStatus', 'subscriptionTier', 'status',
             'subscriptionId', 'stripeCustomerId', 'referredBy', 'referralCode', 'referralCount',
-            'returningIdentity'
+            'returningIdentity', 'proFeaturePreviewExpiresAt', 'pendingWelcomeInk', 'welcomeInkReconciled'
           ]));
       allow delete: if isOwner(userId) || isAdmin();
 
