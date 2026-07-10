@@ -148,11 +148,11 @@ export function PublicHomeLanding() {
         </section>
       </main>
 
-      <footer className="py-16 px-4 relative z-10 flex flex-col items-center gap-8">
+      <footer className="py-16 px-4 relative z-10 flex flex-col items-center gap-6">
         <p className="text-[11px] text-muted-foreground font-code text-center uppercase tracking-[0.5em] opacity-50">
           BAR 4 BAR BY JORDIE CRUZ
         </p>
-        <LegalFooter className="opacity-60 pt-2 border-t border-white/5 w-full max-w-xl" />
+        <LegalFooter className="opacity-80 pt-4 border-t border-white/10 w-full max-w-2xl" />
       </footer>
     </div>
   );
