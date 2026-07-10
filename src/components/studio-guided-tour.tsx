@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { LYRICS_PAGE_TOUR_STEPS, type LyricsTourStep } from '@/lib/studio-onboarding';
 import { ChevronRight, X } from 'lucide-react';
 
-type StudioGuidedTourProps = {
+export type StudioGuidedTourProps = {
   active: boolean;
   stepIndex: number;
   onStepChange: (index: number) => void;
@@ -304,7 +304,7 @@ export function StudioGuidedTour({
       const targetInLowerHalf = next.top > window.innerHeight * 0.42;
 
       const placement: 'top' | 'bottom' = compact
-        ? computeMobileCardPlacement(next)
+        ? step!.mobileCardPlacement ?? computeMobileCardPlacement(next)
         : spaceBelow < bottomCardReserve + 16 && spaceAbove >= TOUR_CARD_HEIGHT_ESTIMATE + 16
           ? 'top'
           : spaceBelow < TOUR_CARD_HEIGHT_ESTIMATE + 16 || targetInLowerHalf

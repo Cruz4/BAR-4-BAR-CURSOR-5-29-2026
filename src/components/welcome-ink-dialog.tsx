@@ -107,14 +107,16 @@ export function WelcomeInkDialog() {
   const tryOpenWelcome = useCallback(() => {
     if (!user?.id || !isRecentStudioAccount(user.createdAt)) return;
     if (hasSeenWelcomeInk(user.id)) return;
-    if (!user.vaultTutorialCompletedAt || !user.studioPrivacyIntroCompletedAt) return;
+    // Fresh signups skip the vault tour for 30 minutes, so requiring
+    // vaultTutorialCompletedAt here used to block this dialog entirely.
+    // Privacy intro completion is enough of an onboarding checkpoint.
+    if (!user.studioPrivacyIntroCompletedAt) return;
     if (pathname === '/') return;
     if (isStudioOnboardingBusy()) return;
     setOpen(true);
   }, [
     user?.id,
     user?.createdAt,
-    user?.vaultTutorialCompletedAt,
     user?.studioPrivacyIntroCompletedAt,
     pathname,
   ]);
@@ -123,7 +125,7 @@ export function WelcomeInkDialog() {
     if (!authReady || authLoading || usageLoading || !user?.id) return;
     if (!isRecentStudioAccount(user.createdAt)) return;
     if (hasSeenWelcomeInk(user.id)) return;
-    if (!user.vaultTutorialCompletedAt || !user.studioPrivacyIntroCompletedAt) return;
+    if (!user.studioPrivacyIntroCompletedAt) return;
     if (pathname === '/') return;
     if (scheduledRef.current) return;
     if (isStudioOnboardingBusy()) return;
@@ -137,7 +139,6 @@ export function WelcomeInkDialog() {
     usageLoading,
     user?.id,
     user?.createdAt,
-    user?.vaultTutorialCompletedAt,
     user?.studioPrivacyIntroCompletedAt,
     pathname,
     tryOpenWelcome,

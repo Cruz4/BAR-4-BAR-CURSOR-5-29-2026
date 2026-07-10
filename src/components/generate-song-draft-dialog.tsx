@@ -1490,9 +1490,10 @@ export function GenerateSongDraftDialog({
               trackDirection: inheritTrack ? hubDirection : undefined,
               specialInstructions: lyricsAbout,
               negativePrompt: enableGuardrails ? negativePrompt : undefined,
-              forbiddenWords: enableGuardrails
-                ? parseGuardrailsCsv(forbiddenWords)
-                : undefined,
+              forbiddenWords: [
+                ...(enableGuardrails ? parseGuardrailsCsv(forbiddenWords) : []),
+                ...parseGuardrailsCsv(wizardState.excludedWords),
+              ],
               mustIncludeWords: enableGuardrails
                 ? parseGuardrailsCsv(mustIncludeWords)
                 : undefined,

@@ -20,6 +20,8 @@ import {
   totalInkBalance,
 } from '@/lib/ink-balance';
 import { recordInkLedgerEntries } from '@/lib/server/ink-ledger';
+import { isProOrTrial } from '@/lib/subscription';
+import type { User } from '@/lib/types';
 
 export class AiGateError extends Error {
   constructor(
@@ -56,7 +58,8 @@ async function enforceProOnlyAiAction(uid: string, actionName: string): Promise<
 
   const db = await getDb();
   const userSnap = await db.doc(`users/${uid}`).get();
-  if (userSnap.data()?.subscriptionStatus !== 'active') {
+  const userData = userSnap.data() as Pick<User, 'subscriptionStatus' | 'proFeaturePreviewExpiresAt'> | undefined;
+  if (!isProOrTrial(userData)) {
     throw new AiGateError('This AI tool requires Studio Pro.', 'AUTH');
   }
 }

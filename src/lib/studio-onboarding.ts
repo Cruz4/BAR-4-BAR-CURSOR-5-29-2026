@@ -68,6 +68,8 @@ export type LyricsTourStep = {
   target: string;
   /** Smaller highlight on phone — avoids full-panel spotlights that fight the tour card. */
   mobileTarget?: string;
+  /** On mobile, pin the tour card above or below the spotlight (defaults to auto). */
+  mobileCardPlacement?: 'top' | 'bottom';
   title: string;
   body: string;
   example?: string;
@@ -160,12 +162,14 @@ export const VAULT_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'vault-header',
     target: '[data-tour="vault-header"]',
+    mobileCardPlacement: 'top',
     title: 'The Vault',
     body: 'Your studio home — albums, loose tracks, and every project blueprint live here.',
   },
   {
     id: 'vault-create',
     target: '[data-tour="vault-create"]',
+    mobileCardPlacement: 'top',
     title: 'Create a project',
     body: 'Spin up a Concept Album (shared DNA across tracks) or capture a Loose Track for quick ideas.',
     example: 'Album = cohesive project. Loose track = single song, no album inherit.',
@@ -185,6 +189,7 @@ export const VAULT_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'vault-progress',
     target: '[data-tour="vault-progress-mobile"], [data-tour="vault-progress-desktop"]',
+    mobileCardPlacement: 'top',
     title: 'Studio progress',
     body: 'XP, rank, weekly goals, and trophies live here. On phone it sits under the vault header; on desktop look for the trophy bubble on the left.',
     example: 'Tap the header anytime to expand or collapse — View all opens your full progress board.',
@@ -192,6 +197,7 @@ export const VAULT_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'vault-search',
     target: '[data-tour="vault-search"]',
+    mobileCardPlacement: 'top',
     title: 'Search the vault',
     body: 'Find lyrics across every album and track. Use quotes for exact phrases.',
     example: '"midnight drive" finds that exact line anywhere in your vault.',
@@ -199,6 +205,7 @@ export const VAULT_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'ink',
     target: '[data-tour="ink-balance"]',
+    mobileCardPlacement: 'top',
     title: 'Ink fuel',
     body: 'Residency Ink refills monthly; permanent Ink never expires. Tap to open the Ink Store or buy packs.',
   },

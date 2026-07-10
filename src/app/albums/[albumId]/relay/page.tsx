@@ -161,7 +161,13 @@ function RelayWizardContent() {
             const result = await generateRelayDraft(await withAiAuth({
                 analysis: JSON.stringify(wizardState.analysis),
                 direction: directionStr,
-                excludedWords: wizardState.excludedWords,
+                distanceFromSource: 'balanced',
+                delivery: 'dynamic',
+                cleanliness: 'standard',
+                forbiddenWords: wizardState.excludedWords
+                    .split(',')
+                    .map((w) => w.trim())
+                    .filter(Boolean),
                 userName: user?.displayName
             }));
             setWizardState(prev => ({ ...prev, generatedVariant: result }));

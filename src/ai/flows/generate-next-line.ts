@@ -16,6 +16,11 @@ import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
 import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
 import { AI_COSTS } from '@/lib/costs';
 import type { AiSecuredInput } from '@/lib/ai-secured';
+import {
+  computeLineMetrics,
+  enforceBannedWordsOnOptions,
+  enforceRepetitionOnOptions,
+} from '@/lib/server/lyric-guardrails';
 
 const GenerateNextLineInputSchema = z.object({
   userId: z.string().optional(),
@@ -152,6 +157,44 @@ const generateNextLineFlow = ai.defineFlow(
   async input => {
     const response = await nextLinePrompt(input, getGenkitPromptOptions());
     if (!response || !response.output) return [];
-    return response.output.slice(0, 2);
+    let options = response.output.slice(0, 2);
+    const contextLines = [...input.priorLines, ...input.nextLines].map((l) => l.trim()).filter(Boolean);
+
+    const applyGuardrails = (pool: typeof options) => {
+      let next = pool;
+      const forbidden = input.forbiddenWords ?? [];
+      if (forbidden.length > 0) {
+        const banned = enforceBannedWordsOnOptions(next.map((o) => o.line), forbidden);
+        if (banned.hadViolations) {
+          next = banned.options
+            .map((line) => next.find((o) => o.line === line) ?? { ...next[0], line })
+            .slice(0, 2);
+        }
+      }
+      if (contextLines.length > 0) {
+        const repetition = enforceRepetitionOnOptions(next.map((o) => o.line), contextLines);
+        if (repetition.hadViolations) {
+          next = repetition.options
+            .map((line) => next.find((o) => o.line === line) ?? { ...next[0], line })
+            .slice(0, 2);
+        }
+      }
+      return next;
+    };
+
+    options = applyGuardrails(options);
+    if (options.length < 2 && (input.forbiddenWords?.length || contextLines.length)) {
+      const retry = await nextLinePrompt(input, getGenkitPromptOptions());
+      const retryOptions = retry?.output?.slice(0, 2) ?? [];
+      options = applyGuardrails([...options, ...retryOptions]).slice(0, 2);
+    }
+
+    // Deterministic metadata — never trust the model's own numbers.
+    return Promise.all(
+      options.map(async (opt) => {
+        const metrics = await computeLineMetrics(opt.line);
+        return { ...opt, syllables: metrics.syllables, rhymeKey: metrics.rhymeKey };
+      })
+    );
   }
 );

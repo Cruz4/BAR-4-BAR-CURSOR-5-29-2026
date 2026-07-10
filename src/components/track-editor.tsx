@@ -142,6 +142,13 @@ import {
 } from '@/lib/workstation-path';
 import { dispatchStudioPrivacyIntroEligible, queueStudioPrivacyIntro } from '@/lib/studio-privacy-intro';
 import { StudioGuidedTour } from '@/components/studio-guided-tour';
+import { FirstSessionCoachMarks } from '@/components/first-session-coach-marks';
+import {
+  COACH_FIRST_ACCEPT_EVENT,
+  COACH_FIRST_INK_EVENT,
+  dispatchCoachEvent,
+  isFirstWriteSession,
+} from '@/lib/first-session';
 import { postGamificationEvent } from '@/lib/gamification-client';
 import { claimMilestone } from '@/lib/milestones-client';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
@@ -3082,6 +3089,13 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       tourAutoStartRef.current = true;
       return;
     }
+    // Fresh signups skip the blocking 9-step tour — just-in-time coach marks
+    // guide the first write instead. The full tour auto-runs on a later
+    // session and stays available in the Studio Manual.
+    if (isFirstWriteSession(user)) {
+      tourAutoStartRef.current = true;
+      return;
+    }
     tourAutoStartRef.current = true;
     const t = setTimeout(() => setTourActive(true), 1200);
     return () => clearTimeout(t);
@@ -3283,6 +3297,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         setIsMinimized(false);
         setPendingGenCtx({ mode, sId: sectionId, bIdx: barIdx });
         addUsageLog({ flowName: 'generateNextLine', inkCost: cost, status: 'success' });
+        dispatchCoachEvent(COACH_FIRST_INK_EVENT);
       } catch (err: any) {
         refundInk(cost);
         toast({ variant: 'destructive', title: 'Synthesis Failed', description: err.message });
@@ -3387,6 +3402,8 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     }
     const { mode, sId, bIdx } = pendingGenCtx;
     const insertIdx = mode === 'next' ? bIdx + 1 : bIdx;
+    // Server computes phonetic syllables/rhymeKey for generated options — persist them.
+    const acceptedOption = generationOptions?.find((o: any) => o.line === line);
     const newSections = track.sections.map(s => {
         if (s.id !== sId) return s;
         const updatedBars = s.bars.map(b => ({ ...b }));
@@ -3397,8 +3414,8 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
               idx: insertIdx,
               text: line.trim(),
               accepted: true,
-              syllables: line.trim().split(' ').length,
-              rhymeKey: '?',
+              syllables: acceptedOption?.syllables ?? line.trim().split(' ').length,
+              rhymeKey: acceptedOption?.rhymeKey ?? '?',
             },
             'generated'
           )
@@ -3409,6 +3426,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     handleUpdateTrack({ sections: markBarAnchorGlow(newSections, sId, insertIdx) });
     setGenerationOptions(null);
     setPendingGenCtx(null);
+    dispatchCoachEvent(COACH_FIRST_ACCEPT_EVENT);
     setTimeout(() => { const el = document.getElementById(`bar-input-${sId}-${insertIdx}`) as HTMLTextAreaElement; if (el) { el.focus(); } }, 100);
   };
 
@@ -3560,6 +3578,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         onComplete={handleTourComplete}
         onBeforeStep={handleTourBeforeStep}
       />
+      {!tourActive && <FirstSessionCoachMarks user={user} track={track} />}
     </div>
   );
 }

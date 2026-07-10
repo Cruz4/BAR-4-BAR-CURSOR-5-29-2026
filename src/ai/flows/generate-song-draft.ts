@@ -15,6 +15,7 @@ import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
 import { computeDraftInkCostFromRates } from '@/lib/studio-costs';
 import { getStudioCosts } from '@/lib/server/studio-costs';
 import type { AiSecuredInput } from '@/lib/ai-secured';
+import { sanitizeLinesBannedWords, sanitizeSectionLinesRepetition } from '@/lib/server/lyric-guardrails';
 
 const StyleProfileSchema = z.object({
   analysis: z.string().describe('A concise summary of the lyrical style analysis.'),
@@ -187,6 +188,17 @@ const generateDraftFlow = ai.defineFlow(
     
     const { output } = await draftPrompt(promptInput, getGenkitPromptOptions());
     if (!output) throw new Error("No output from drafting engine.");
+
+    // Hard guardrail enforcement on every generated line.
+    const forbidden = input.forbiddenWords ?? [];
+    output.sections = output.sections.map((section) => {
+      let lines = section.lines;
+      if (forbidden.length > 0) {
+        lines = sanitizeLinesBannedWords(lines, forbidden).lines;
+      }
+      lines = sanitizeSectionLinesRepetition(lines, { sectionName: section.name }).lines;
+      return { ...section, lines };
+    });
     return output;
   }
 );

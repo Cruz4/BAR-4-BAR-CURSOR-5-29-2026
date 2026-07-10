@@ -11,6 +11,7 @@ import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
 import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
 import { AI_COSTS } from '@/lib/costs';
 import type { AiSecuredInput } from '@/lib/ai-secured';
+import { enforceBannedWordsOnOptions, enforceRepetitionOnOptions } from '@/lib/server/lyric-guardrails';
 
 // Define tool-specific input schemas
 const SimileInputSchema = z.object({ subject: z.string() });
@@ -258,6 +259,23 @@ const creativeEffectsFlow = ai.defineFlow(
         };
 
         const { output } = await effectsPrompt(promptInput, getGenkitPromptOptions());
-        return output!;
+        if (!output) return output!;
+
+        let options = output.options ?? [];
+        const contextLines = [
+          ...input.sectionContext.priorLines,
+          ...input.sectionContext.nextLines,
+        ].map((l) => l.trim()).filter(Boolean);
+
+        const forbidden = input.forbiddenWords ?? [];
+        if (forbidden.length > 0 && options.length) {
+            const enforced = enforceBannedWordsOnOptions(options, forbidden);
+            options = enforced.options;
+        }
+        if (contextLines.length > 0 && options.length) {
+            const repetition = enforceRepetitionOnOptions(options, contextLines);
+            options = repetition.options;
+        }
+        return { ...output, options };
     }
 );

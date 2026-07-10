@@ -19,6 +19,7 @@ import { getStudioCosts } from '@/lib/server/studio-costs';
 import { AI_COSTS } from '@/lib/costs';
 import type { AiSecuredInput } from '@/lib/ai-secured';
 import { normalizeRelayDirections } from '@/lib/dna-strands';
+import { sanitizeLinesBannedWords, sanitizeSectionLinesRepetition } from '@/lib/server/lyric-guardrails';
 
 // --- Phase 1 Schemas ---
 
@@ -192,6 +193,17 @@ export async function generateRelayDraft(input: {
           structureGuide: input.structureGuide?.trim() || undefined
         }, getGenkitPromptOptions());
         if (!response || !response.output) throw new Error("Synthesis failed.");
+
+        // Hard guardrail enforcement on every generated bar.
+        const forbidden = input.forbiddenWords ?? [];
+        response.output.sections = response.output.sections.map((section) => {
+          let bars = section.bars;
+          if (forbidden.length > 0) {
+            bars = sanitizeLinesBannedWords(bars, forbidden).lines;
+          }
+          bars = sanitizeSectionLinesRepetition(bars, { sectionName: section.name }).lines;
+          return { ...section, bars };
+        });
         return response.output;
       } catch (error: any) { 
         console.error("[RELAY SYNTHESIS ERROR]", error);

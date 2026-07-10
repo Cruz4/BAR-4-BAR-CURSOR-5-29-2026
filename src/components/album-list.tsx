@@ -133,6 +133,7 @@ import { getEditableAlbumIds, getEditableTrackIds, needsFreeEditableTrackPicker 
 import type { User } from '@/lib/types';
 import { VisitorVaultBanner } from '@/components/visitor-vault-banner';
 import { DowngradeTrackPickerDialog } from '@/components/downgrade-track-picker-dialog';
+import { FirstSongHero } from '@/components/first-song-hero';
 
 function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenChange: (open: boolean) => void, type: 'Album' | 'Track' }) {
   const [title, setTitle] = useState('');
@@ -539,11 +540,6 @@ export function AlbumList() {
   const [vaultTourStep, setVaultTourStep] = useState(0);
   const vaultTourAutoStartRef = useRef(false);
 
-  const VAULT_TOUR_MOBILE_TOP = useMemo(
-    () => new Set(['vault-header', 'vault-search', 'vault-create', 'vault-progress', 'ink']),
-    []
-  );
-
   const vaultProgressTourPinned =
     vaultTourActive && VAULT_PAGE_TOUR_STEPS[vaultTourStep]?.id === 'vault-progress';
 
@@ -904,6 +900,7 @@ export function AlbumList() {
           )}
 
           <div className="relative min-w-0 w-full xl:col-start-2 xl:row-start-2 px-4 sm:px-6 pb-10">
+            {user && isEmpty && !searchResults && <FirstSongHero />}
             {searchResults ? (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                     <div className="flex items-center justify-between">
@@ -1190,7 +1187,6 @@ export function AlbumList() {
         onComplete={handleVaultTourComplete}
         onBeforeStep={handleVaultTourBeforeStep}
         steps={VAULT_PAGE_TOUR_STEPS}
-        mobileTopCardStepIds={VAULT_TOUR_MOBILE_TOP}
       />
     </TooltipProvider>
   );

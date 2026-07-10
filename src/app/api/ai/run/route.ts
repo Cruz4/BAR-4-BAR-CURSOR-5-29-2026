@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { AiGateError } from '@/lib/server/ai-gate';
 
 export const runtime = 'nodejs';
 
@@ -43,6 +44,17 @@ export async function POST(req: Request) {
     return NextResponse.json(result);
   } catch (error) {
     console.error(`[api/ai/run] ${action}`, error);
+    if (error instanceof AiGateError) {
+      const status =
+        error.code === 'RATE_LIMIT'
+          ? 429
+          : error.code === 'INSUFFICIENT_INK'
+            ? 402
+            : error.message.toLowerCase().includes('sign in')
+              ? 401
+              : 403;
+      return NextResponse.json({ error: error.message, code: error.code }, { status });
+    }
     const message = error instanceof Error ? error.message : 'AI action failed';
     const status = message.toLowerCase().includes('sign in') ? 401 : 500;
     return NextResponse.json({ error: message }, { status });
