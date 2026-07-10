@@ -359,13 +359,13 @@ function FreeVisitorVault({
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 min-w-0">
-                      <p className="font-bold font-headline text-base text-foreground uppercase truncate">{track.title}</p>
+                      <p className="font-bold font-headline text-lg text-foreground uppercase truncate">{track.title}</p>
                       <DnaDropLiveIndicator shareId={track.shareId} variant="compact" />
                       {tierLocked && (
                         <Badge variant="outline" className={cn('text-[7px] px-1.5 h-4 shrink-0', proLockText())}>View only</Badge>
                       )}
                     </div>
-                    <p className={cn('text-[8px] uppercase font-code mt-0.5', tierLocked ? 'text-muted-foreground' : 'text-sky-400/80')}>
+                    <p className={cn('text-xs uppercase font-code mt-0.5', tierLocked ? 'text-muted-foreground' : 'text-sky-400/80')}>
                       {tierLocked ? 'View-only · lyrics saved' : `Loose track · ${track.vibe?.genre}`}
                     </p>
                   </div>

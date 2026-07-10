@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://pagead2.googlesyndication.com https://www.googletagservices.com https://analytics.tiktok.com https://*.tiktok.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://pagead2.googlesyndication.com https://www.googletagservices.com https://*.adtrafficquality.google https://analytics.tiktok.com https://*.tiktok.com",
   "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",

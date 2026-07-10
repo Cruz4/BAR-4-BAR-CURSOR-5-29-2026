@@ -160,7 +160,7 @@ export function LockedVaultSlot({
     <div
       className={cn(
         'relative flex flex-col items-center justify-center text-center p-6 overflow-hidden',
-        variant === 'album' ? 'aspect-square' : 'min-h-[88px] rounded-2xl',
+        variant === 'album' ? 'aspect-square' : 'min-h-[96px] rounded-2xl',
         proLockShell('lg'),
         'border-2 border-dashed cursor-not-allowed',
         variant === 'album' && 'rounded-full',
@@ -169,9 +169,9 @@ export function LockedVaultSlot({
     >
       <div className="absolute inset-0 bg-gradient-to-b from-pink-600/5 via-transparent to-pink-600/5 pointer-events-none" aria-hidden />
       <Lock className={cn('h-9 w-9 mb-3 relative z-10', proLockIcon())} />
-      <p className="font-headline font-bold text-foreground uppercase text-sm tracking-tight relative z-10">{label}</p>
-      <p className={cn('text-[8px] uppercase tracking-widest mt-2 relative z-10', proLockText())}>{sublabel}</p>
-      <p className={cn('text-[7px] uppercase mt-3 px-2 py-0.5 rounded border border-pink-500/40 bg-pink-600/15 relative z-10', proLockText())}>
+      <p className="font-headline font-bold text-foreground uppercase text-base tracking-tight relative z-10">{label}</p>
+      <p className={cn('text-xs uppercase tracking-widest mt-2 relative z-10', proLockText())}>{sublabel}</p>
+      <p className={cn('text-[10px] uppercase mt-3 px-2.5 py-1 rounded border border-pink-500/40 bg-pink-600/15 relative z-10', proLockText())}>
         Studio Pro
       </p>
     </div>
@@ -241,8 +241,8 @@ export function ProCreateTrackSlot({ onClick }: { onClick: () => void }) {
         <span className={cn('text-lg font-light block w-5 h-5 text-center leading-5', GOLD_CREATE_SLOT.plus)}>+</span>
       </div>
       <div>
-        <p className={cn('text-xs font-bold uppercase', GOLD_CREATE_SLOT.title)}>New Loose Track</p>
-        <p className={cn('text-[8px] uppercase tracking-widest font-bold', GOLD_CREATE_SLOT.sub)}>
+        <p className={cn('text-base font-bold uppercase', GOLD_CREATE_SLOT.title)}>New Loose Track</p>
+        <p className={cn('text-[10px] uppercase tracking-widest font-bold', GOLD_CREATE_SLOT.sub)}>
           Capture a single · tap to create
         </p>
       </div>
@@ -285,8 +285,8 @@ export function OpenTrackSlot({ onClick, filled }: { onClick: () => void; filled
         <span className="text-lg text-sky-400 font-light block w-5 h-5 text-center leading-5">+</span>
       </div>
       <div>
-        <p className="text-xs font-bold uppercase text-foreground">Track Slot</p>
-        <p className="text-[8px] text-sky-400/80 uppercase tracking-widest font-bold">Open · Tap to capture</p>
+        <p className="text-base font-bold uppercase text-foreground">Track Slot</p>
+        <p className="text-xs text-sky-400/80 uppercase tracking-widest font-bold">Open · Tap to capture</p>
       </div>
     </button>
   );
