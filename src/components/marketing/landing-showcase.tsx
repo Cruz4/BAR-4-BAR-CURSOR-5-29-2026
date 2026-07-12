@@ -19,8 +19,8 @@ export function LandingShowcase({ showClosingCta = true }: LandingShowcaseProps)
       <section className="px-3 sm:px-4 pb-4 pt-4 relative z-10 w-full">
         <div className="container mx-auto max-w-6xl w-full">
           <MarketingMediaFrame
-            src="/marketing/hero-workstation.png"
-            alt="Bar 4 Bar workstation with lyrics sheet, DNA Suite, and co-writer"
+            src="/marketing/feature-dna-suite.png"
+            alt="Bar 4 Bar DNA Suite with creative direction, guardrails, and intents"
             mediaType="image"
             variant="hero-full"
             priority
