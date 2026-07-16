@@ -99,8 +99,8 @@ export function ProBillingCheckoutCta({ variant = 'compact', className }: ProBil
         </p>
         <div className="rounded-lg border border-primary/20 bg-primary/[0.055] px-3 py-2.5">
           <p className="text-[10px] font-code leading-relaxed text-foreground">
-            <strong className="text-primary uppercase tracking-wider">Want to stay free?</strong>{' '}
-            Continue with the signup form below—no card required. First-time eligible artists receive {SIGNUP_INK} welcome Ink and a {previewHours}-hour Pro feature preview, then remain on the free Visitor tier unless they choose to upgrade.
+            <strong className="text-primary uppercase tracking-wider">Your account above is free.</strong>{' '}
+            No card is required. First-time eligible artists receive {SIGNUP_INK} welcome Ink and a {previewHours}-hour Pro feature preview, then remain on the free Visitor tier unless they deliberately choose one of these paid plans.
           </p>
         </div>
       </div>

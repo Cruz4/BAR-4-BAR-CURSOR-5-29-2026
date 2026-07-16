@@ -18,7 +18,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Mail, Lock, User as UserIcon, Zap, Import } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, Zap, Import, ShieldCheck } from 'lucide-react';
 import { BUY_ME_COFFEE_URL, SUPPORT_MAILTO } from '@/lib/support';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
@@ -61,6 +61,7 @@ import {
 } from '@/lib/google-auth-client';
 import { markFreshSignup } from '@/lib/post-login-redirect';
 import { sendSignupVerificationEmail } from '@/lib/email-verification-client';
+import { PRO_FEATURE_PREVIEW_DAYS } from '@/lib/subscription';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -328,17 +329,6 @@ function LoginForm() {
               </Card>
             )}
 
-            {!proCheckoutIntent && !importIntent && !isTikTokRef && (
-              <Card className="w-full border-accent/25 bg-accent/5 backdrop-blur-md relative z-50">
-                <CardHeader className="pb-2 space-y-3">
-                  <CardTitle className="text-sm font-headline uppercase tracking-wide flex items-center gap-2 text-accent">
-                    <Zap className="h-4 w-4" /> Want full access now?
-                  </CardTitle>
-                  <ProBillingCheckoutCta variant="card" />
-                </CardHeader>
-              </Card>
-            )}
-
             {importIntent && (
               <Card className="w-full border-primary/30 bg-primary/10 backdrop-blur-md relative z-50">
                 <CardHeader className="pb-2">
@@ -408,9 +398,17 @@ function LoginForm() {
                     </TabsList>
 
                     {authMode === 'signup' && (
-                      <p className="text-[10px] text-muted-foreground font-code mb-3 leading-relaxed">
-                        {getVisitorInkGrantSummary()}
-                      </p>
+                      <div className="mb-3 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.07] px-3 py-2.5 flex items-start gap-2.5">
+                        <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                            Free account signup · no card required
+                          </p>
+                          <p className="text-[9px] text-muted-foreground font-code mt-0.5 leading-relaxed">
+                            {getVisitorInkGrantSummary()} · Eligible first-time artists also explore Pro features for {PRO_FEATURE_PREVIEW_DAYS * 24} hours.
+                          </p>
+                        </div>
+                      </div>
                     )}
 
                     <div className="grid grid-cols-1 gap-2 mb-3">
@@ -531,6 +529,17 @@ function LoginForm() {
                 </CardContent>
               </div>
             </Card>
+
+            {!proCheckoutIntent && !importIntent && !isTikTokRef && (
+              <Card className="w-full border-accent/20 bg-accent/[0.035] backdrop-blur-md relative z-10">
+                <CardHeader className="pb-3 space-y-3">
+                  <CardTitle className="text-xs font-headline uppercase tracking-wide flex items-center gap-2 text-accent">
+                    <Zap className="h-3.5 w-3.5" /> Optional paid upgrade · Studio Pro
+                  </CardTitle>
+                  <ProBillingCheckoutCta variant="card" />
+                </CardHeader>
+              </Card>
+            )}
 
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
               <Link href="/#features" className="hover:text-primary transition-colors">
