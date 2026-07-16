@@ -11,6 +11,7 @@ import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmos
 import { LandingHeroCtAs } from '@/components/marketing/landing-hero-ctas';
 import { LandingSignInLink, LandingSignupLink } from '@/components/marketing/landing-signup-link';
 import { StudioThemeControls } from '@/components/studio-theme-controls';
+import { GuestDemoSheet } from '@/components/marketing/guest-demo-sheet';
 import { ProBillingCheckoutCta, proCheckoutHeaderHref } from '@/components/marketing/pro-billing-checkout-cta';
 import {
   getFreeSignupCtaLine,
@@ -65,7 +66,33 @@ export function PublicHomeLanding() {
       </header>
 
       <main className="flex-grow flex flex-col mt-16 relative z-10">
-        <section className="relative min-h-[calc(100vh-4rem)] flex items-center px-4 py-8 lg:py-10">
+        <section className="relative min-h-[calc(92vh-4rem)] flex flex-col items-center justify-center px-4 py-10 gap-7">
+          <div className="text-center space-y-3 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-md border border-orange-500/40 px-5 py-1.5 rounded-full shadow-2xl">
+              <Sparkles className="h-3.5 w-3.5 text-orange-500 animate-pulse" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-orange-500">
+                Try it before you sign up
+              </span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-headline font-bold uppercase tracking-tight text-foreground dark:text-white drop-shadow-[0_10px_25px_rgba(0,0,0,0.9)]">
+              Write a bar.<br className="sm:hidden" /> <span className="text-primary">AI writes the next.</span>
+            </h2>
+            <p className="text-xs sm:text-sm font-code text-muted-foreground max-w-md mx-auto">
+              Drop one line below and watch the studio match your rhyme — right here, no account.
+            </p>
+          </div>
+
+          <GuestDemoSheet />
+
+          <a
+            href="#pitch"
+            className="text-[10px] font-code font-bold uppercase tracking-[0.3em] text-muted-foreground/70 hover:text-primary transition-colors animate-pulse"
+          >
+            ↓ What is Bar 4 Bar?
+          </a>
+        </section>
+
+        <section id="pitch" className="relative flex items-center px-4 py-8 lg:py-10">
           <div className="mx-auto w-full max-w-7xl animate-in fade-in zoom-in duration-1000 relative z-10">
             <div className="grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center">
               <div className="space-y-5 text-center lg:text-left max-w-2xl lg:pr-4">

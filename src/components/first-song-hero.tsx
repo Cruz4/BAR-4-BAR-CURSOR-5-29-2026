@@ -7,9 +7,9 @@
  *   Guide me    -> two quick questions (vibe + topic), then the editor.
  */
 
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { NotebookPen, Compass, ArrowRight, ArrowLeft, Mic2 } from 'lucide-react';
+import { NotebookPen, Compass, ArrowRight, ArrowLeft, Mic2, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { DataContext } from '@/context/data-context';
 import { markFirstSessionGuidedPending } from '@/lib/first-session';
+import { clearDemoLines, readDemoLines } from '@/lib/demo-session';
 import type { Track } from '@/lib/types';
 
 const GENRE_PRESETS: Array<{ genre: string; tempoBPM: number }> = [
@@ -40,8 +41,13 @@ export function FirstSongHero() {
   const [genre, setGenre] = useState(GENRE_PRESETS[0]);
   const [topic, setTopic] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [demoLines, setDemoLines] = useState<string[]>([]);
 
-  const createFirstTrack = (options: { guided: boolean }) => {
+  useEffect(() => {
+    setDemoLines(readDemoLines());
+  }, []);
+
+  const createFirstTrack = (options: { guided: boolean; fromDemo?: boolean }) => {
     if (!user || isCreating) return;
     setIsCreating(true);
     try {
@@ -49,7 +55,12 @@ export function FirstSongHero() {
         ? { genre: genre.genre, tempoBPM: genre.tempoBPM, feeling: ['first session'] }
         : { genre: 'Lofi-Hop', tempoBPM: 90, feeling: ['new idea'] };
 
-      const title = 'My First Song';
+      const title = options.fromDemo ? 'My Demo Track' : 'My First Song';
+
+      const initialBars =
+        options.fromDemo && demoLines.length > 0
+          ? demoLines.map((text, i) => ({ idx: i + 1, text, accepted: true, syllables: 0, rhymeKey: '?' }))
+          : [{ idx: 1, text: '', accepted: true, syllables: 0, rhymeKey: '?' }];
 
       const newTrack: Omit<Track, 'id'> = {
         albumId: 'unassigned',
@@ -61,7 +72,7 @@ export function FirstSongHero() {
           {
             id: `section-${Date.now()}`,
             type: 'verse',
-            bars: [{ idx: 1, text: '', accepted: true, syllables: 0, rhymeKey: '?' }],
+            bars: initialBars,
           },
         ],
         status: 'in_progress',
@@ -70,6 +81,9 @@ export function FirstSongHero() {
         ...(options.guided && topic.trim() ? { specialInstructions: topic.trim() } : {}),
       };
       const created = addTrack('unassigned', newTrack);
+      if (options.fromDemo) {
+        clearDemoLines();
+      }
       if (options.guided) {
         markFirstSessionGuidedPending({
           topic: topic.trim(),
@@ -89,6 +103,25 @@ export function FirstSongHero() {
 
       {step === 'choice' ? (
         <div className="relative space-y-6">
+          {demoLines.length > 0 && (
+            <div className="rounded-xl border border-emerald-500/35 bg-emerald-500/[0.07] p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-400 flex items-center gap-2">
+                  <Sparkles className="h-3.5 w-3.5" /> Your demo bars made it
+                </p>
+                <p className="text-xs font-code text-muted-foreground mt-1 truncate">
+                  &ldquo;{demoLines[0]}&rdquo;{demoLines.length > 1 ? ` +${demoLines.length - 1} more` : ''}
+                </p>
+              </div>
+              <Button
+                disabled={isCreating}
+                onClick={() => createFirstTrack({ guided: false, fromDemo: true })}
+                className="font-bold uppercase text-[10px] tracking-widest shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white"
+              >
+                Keep writing this track <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
           <div className="space-y-2 text-center sm:text-left">
             <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-primary flex items-center justify-center sm:justify-start gap-2">
               <Mic2 className="h-3.5 w-3.5" /> Your studio is open
