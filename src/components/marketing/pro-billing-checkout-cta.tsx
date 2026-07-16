@@ -9,12 +9,12 @@ import { Button } from '@/components/ui/button';
 import { buildLoginPath, buildProCheckoutPath } from '@/lib/checkout-intent';
 import {
   getProIntentBilledDetail,
-  getProIntentCtaLine,
   getProIntentInkDetail,
   PRO_MONTHLY_PRICE,
   PRO_YEARLY_PRICE,
   PRO_YEARLY_TOGGLE_LABEL,
 } from '@/lib/studio-tiers';
+import { PRO_FEATURE_PREVIEW_DAYS, SIGNUP_INK } from '@/lib/subscription';
 
 type ProBillingCheckoutCtaProps = {
   /** compact = footer CTA; card = login upgrade card */
@@ -64,18 +64,45 @@ export function ProBillingCheckoutCta({ variant = 'compact', className }: ProBil
   const checkoutHref = buildLoginPath(buildProCheckoutPath(isYearly));
 
   if (variant === 'card') {
+    const monthlyHref = buildLoginPath(buildProCheckoutPath(false));
+    const yearlyHref = buildLoginPath(buildProCheckoutPath(true));
+    const previewHours = PRO_FEATURE_PREVIEW_DAYS * 24;
+
     return (
-      <div className={cn('space-y-2', className)}>
-        <ProBillingToggle isYearly={isYearly} onCheckedChange={setIsYearly} />
-        <p className="text-[11px] font-code leading-relaxed text-left">
-          Skip the demo limits —{' '}
-          <Link href={checkoutHref} className="font-bold text-accent hover:underline">
-            {getProIntentCtaLine(billing)}
-          </Link>
-          {' '}
-          for unlimited projects, vault saves, Performance Mode, and {getProIntentInkDetail(billing)} (
-          {getProIntentBilledDetail(billing)}).
+      <div className={cn('space-y-3', className)}>
+        <p className="text-[10px] font-code uppercase tracking-widest text-muted-foreground">
+          Choose a plan only if you want paid Pro now:
         </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <Button
+            asChild
+            variant="outline"
+            className="h-auto min-h-12 py-2.5 border-primary/35 bg-primary/[0.04] hover:bg-primary/10"
+          >
+            <Link href={monthlyHref} className="flex flex-col items-start">
+              <span className="text-xs font-bold uppercase tracking-wider text-foreground">Monthly Pro</span>
+              <span className="text-[10px] font-code text-primary">{PRO_MONTHLY_PRICE}/month · billed monthly</span>
+            </Link>
+          </Button>
+          <Button
+            asChild
+            className="h-auto min-h-12 py-2.5 bg-accent/90 text-accent-foreground hover:bg-accent"
+          >
+            <Link href={yearlyHref} className="flex flex-col items-start">
+              <span className="text-xs font-bold uppercase tracking-wider">Yearly Pro · Best Value</span>
+              <span className="text-[10px] font-code">{PRO_YEARLY_PRICE}/month · {getProIntentBilledDetail('yearly')}</span>
+            </Link>
+          </Button>
+        </div>
+        <p className="text-[9px] font-code text-muted-foreground leading-relaxed">
+          Selecting a plan opens its checkout path. You will review the plan before submitting payment.
+        </p>
+        <div className="rounded-lg border border-primary/20 bg-primary/[0.055] px-3 py-2.5">
+          <p className="text-[10px] font-code leading-relaxed text-foreground">
+            <strong className="text-primary uppercase tracking-wider">Want to stay free?</strong>{' '}
+            Continue with the signup form below—no card required. First-time eligible artists receive {SIGNUP_INK} welcome Ink and a {previewHours}-hour Pro feature preview, then remain on the free Visitor tier unless they choose to upgrade.
+          </p>
+        </div>
       </div>
     );
   }
