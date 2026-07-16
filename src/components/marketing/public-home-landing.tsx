@@ -71,14 +71,14 @@ export function PublicHomeLanding() {
             <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-md border border-orange-500/40 px-5 py-1.5 rounded-full shadow-2xl">
               <Sparkles className="h-3.5 w-3.5 text-orange-500 animate-pulse" />
               <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-orange-500">
-                Try it before you sign up
+                Your lyrics · your patterns · your process
               </span>
             </div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-headline font-bold uppercase tracking-tight text-foreground dark:text-white drop-shadow-[0_10px_25px_rgba(0,0,0,0.9)]">
-              Write a bar.<br className="sm:hidden" /> <span className="text-primary">AI writes the next.</span>
+              Your smart DNA notebook<br className="sm:hidden" /> <span className="text-primary">for lyrics.</span>
             </h2>
-            <p className="text-xs sm:text-sm font-code text-muted-foreground max-w-md mx-auto">
-              Drop one line below and watch the studio match your rhyme — right here, no account.
+            <p className="text-xs sm:text-sm font-code text-muted-foreground max-w-lg mx-auto">
+              Write naturally. Watch your rhyme patterns surface, then discover new ways to move the verse when you want them.
             </p>
           </div>
 
