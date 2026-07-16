@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
-import { ai, z } from '@/ai/genkit';
 import { checkRateLimit } from '@/lib/server/rate-limit';
 import { getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
-import { computeLineMetrics } from '@/lib/server/lyric-guardrails';
+import { generateGuestDemoNextLine } from '@/ai/flows/guest-demo-next-line';
 
 export const runtime = 'nodejs';
 
@@ -57,6 +56,15 @@ function clientIp(req: Request): string {
   return fwd ? fwd.split(',')[0].trim() : 'unknown';
 }
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'object' && error && 'message' in error) {
+    const msg = (error as { message?: unknown }).message;
+    if (typeof msg === 'string' && msg.trim()) return msg;
+  }
+  return 'Demo generation failed — try again';
+}
+
 /** Firestore-backed daily circuit breaker — worst case the demo degrades to a signup prompt. */
 async function consumeGlobalDailyBudget(): Promise<boolean> {
   if (!hasAdminFirestoreCredentials()) return true;
@@ -75,26 +83,6 @@ async function consumeGlobalDailyBudget(): Promise<boolean> {
   });
   return allowed;
 }
-
-const demoPrompt = ai.definePrompt({
-  name: 'guestDemoNextLinePrompt',
-  input: { schema: z.object({ lines: z.array(z.string()) }) },
-  output: { schema: z.array(z.object({ line: z.string() })) },
-  config: { temperature: 0.85 },
-  prompt: `You are a Professional Phonetic Rhyme Engine demoing for a new artist. Generate TWO single-line rap/lyric options that continue their verse.
-
-RULES:
-1. You MUST rhyme with the last word of the LAST line below.
-2. Match their tone, vocabulary level, and syllable count closely.
-3. NEVER repeat their exact words or end-words.
-4. Keep each option to one line, no profanity or slurs.
-
-THEIR BARS:
-{{#each lines}}- {{{this}}}
-{{/each}}
-
-Return a JSON array of exactly two objects, each with a 'line' field.`,
-});
 
 function limitResponse(remaining: number, message: string) {
   return NextResponse.json(
@@ -151,22 +139,14 @@ export async function POST(req: Request) {
   }
 
   try {
-    const response = await demoPrompt({ lines });
-    const options = (response?.output ?? []).slice(0, 2);
+    const options = await generateGuestDemoNextLine(lines);
     if (options.length === 0) {
       return NextResponse.json({ error: 'No suggestions this time — try again' }, { status: 502 });
     }
 
-    const enriched = await Promise.all(
-      options.map(async (opt) => {
-        const metrics = await computeLineMetrics(opt.line);
-        return { line: opt.line, syllables: metrics.syllables, rhymeKey: metrics.rhymeKey };
-      })
-    );
-
     const nextUses = uses + 1;
     const res = NextResponse.json({
-      options: enriched,
+      options,
       remaining: Math.max(0, DEMO_MAX_USES - nextUses),
     });
     res.cookies.set(COOKIE_NAME, signUses(nextUses), {
@@ -178,7 +158,8 @@ export async function POST(req: Request) {
     });
     return res;
   } catch (error) {
-    console.error('[api/ai/demo] generation failed', error);
-    return NextResponse.json({ error: 'Demo generation failed — try again' }, { status: 500 });
+    const message = errorMessage(error);
+    console.error('[api/ai/demo] generation failed:', message, error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
