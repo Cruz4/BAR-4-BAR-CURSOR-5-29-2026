@@ -534,7 +534,7 @@ function LoginForm() {
               <Card className="w-full border-accent/20 bg-accent/[0.035] backdrop-blur-md relative z-10">
                 <CardHeader className="pb-3 space-y-3">
                   <CardTitle className="text-xs font-headline uppercase tracking-wide flex items-center gap-2 text-accent">
-                    <Zap className="h-3.5 w-3.5" /> Optional paid upgrade · Studio Pro
+                    <Zap className="h-3.5 w-3.5" /> Go straight to Studio Pro
                   </CardTitle>
                   <ProBillingCheckoutCta variant="card" />
                 </CardHeader>
