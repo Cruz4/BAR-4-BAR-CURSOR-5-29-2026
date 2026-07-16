@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
+import { Archive, Fingerprint, Orbit, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LegalFooter } from '@/components/legal-footer';
 import { LandingShowcase } from '@/components/marketing/landing-showcase';
@@ -66,7 +66,7 @@ export function PublicHomeLanding() {
       </header>
 
       <main className="flex-grow flex flex-col mt-16 relative z-10">
-        <section className="relative min-h-[calc(92vh-4rem)] flex flex-col items-center justify-center px-4 py-10 gap-7">
+        <section className="relative min-h-[calc(100vh-4rem)] overflow-hidden flex flex-col items-center justify-center px-4 py-8 gap-5">
           <div className="text-center space-y-3 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-md border border-orange-500/40 px-5 py-1.5 rounded-full shadow-2xl">
               <Sparkles className="h-3.5 w-3.5 text-orange-500 animate-pulse" />
@@ -77,18 +77,47 @@ export function PublicHomeLanding() {
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-headline font-bold uppercase tracking-tight text-foreground dark:text-white drop-shadow-[0_10px_25px_rgba(0,0,0,0.9)]">
               Your smart DNA notebook<br className="sm:hidden" /> <span className="text-primary">for lyrics.</span>
             </h2>
-            <p className="text-xs sm:text-sm font-code text-muted-foreground max-w-lg mx-auto">
-              Write naturally. Watch your rhyme patterns surface, then discover new ways to move the verse when you want them.
+            <p className="text-xs sm:text-sm font-code text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Start in the smart sheet below. The full studio surrounds your lyrics with Creative DNA, world-building, rhyme intelligence, and a living vault—so every idea becomes a place you can return to.
             </p>
           </div>
 
           <GuestDemoSheet />
 
+          <div className="w-full max-w-3xl space-y-2.5">
+            <p className="text-center text-[9px] font-code font-bold uppercase tracking-[0.28em] text-primary/80">
+              This sheet is only the opening bar · the full professional studio gives you
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="rounded-lg border border-violet-500/20 bg-violet-500/[0.055] px-3 py-2.5 flex items-start gap-2.5">
+                <Fingerprint className="h-4 w-4 text-violet-300 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-violet-200">Creative DNA</p>
+                  <p className="text-[9px] font-code text-muted-foreground leading-relaxed">Shape voice, intent, guardrails, and style that stay with the track.</p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-sky-500/20 bg-sky-500/[0.055] px-3 py-2.5 flex items-start gap-2.5">
+                <Orbit className="h-4 w-4 text-sky-300 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-sky-200">Build Lyrical Worlds</p>
+                  <p className="text-[9px] font-code text-muted-foreground leading-relaxed">Create settings, themes, concept albums, and evolving song blueprints.</p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.055] px-3 py-2.5 flex items-start gap-2.5">
+                <Archive className="h-4 w-4 text-emerald-300 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-200">A Living Vault</p>
+                  <p className="text-[9px] font-code text-muted-foreground leading-relaxed">Save, revisit, remix, and keep building every world you start.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <a
             href="#pitch"
-            className="text-[10px] font-code font-bold uppercase tracking-[0.3em] text-muted-foreground/70 hover:text-primary transition-colors animate-pulse"
+            className="text-[10px] font-code font-bold uppercase tracking-[0.3em] text-muted-foreground/70 hover:text-primary transition-colors"
           >
-            ↓ What is Bar 4 Bar?
+            Explore everything inside Bar 4 Bar ↓
           </a>
         </section>
 
