@@ -61,7 +61,7 @@ import {
 } from '@/lib/google-auth-client';
 import { markFreshSignup } from '@/lib/post-login-redirect';
 import { sendSignupVerificationEmail } from '@/lib/email-verification-client';
-import { PRO_FEATURE_PREVIEW_DAYS } from '@/lib/subscription';
+import { PRO_FEATURE_PREVIEW_DAYS, SIGNUP_INK } from '@/lib/subscription';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -312,6 +312,13 @@ function LoginForm() {
           className="flex-1 px-4 py-5 sm:py-6 flex items-center justify-center"
         >
           <div className="w-full max-w-5xl relative z-10 space-y-4">
+            <div className="rounded-xl border border-emerald-500/35 bg-emerald-500/[0.08] px-4 py-3 flex items-start gap-3">
+              <ShieldCheck className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+              <p className="text-[11px] sm:text-xs font-code leading-relaxed text-foreground">
+                No card is required. First-time eligible artists receive {SIGNUP_INK} welcome Ink and a {PRO_FEATURE_PREVIEW_DAYS * 24}-hour Pro feature preview, then remain on the free Visitor tier unless they deliberately choose one of these paid plans.
+              </p>
+            </div>
+
             <InviteGateLoginBanner />
 
             {proCheckoutIntent && (
@@ -534,7 +541,7 @@ function LoginForm() {
               <Card className="w-full border-accent/20 bg-accent/[0.035] backdrop-blur-md relative z-10">
                 <CardHeader className="pb-3 space-y-3">
                   <CardTitle className="text-xs font-headline uppercase tracking-wide flex items-center gap-2 text-accent">
-                    <Zap className="h-3.5 w-3.5" /> Go straight to Studio Pro
+                    <Zap className="h-3.5 w-3.5" /> Or go straight to Studio Pro now (upgrade later always available)
                   </CardTitle>
                   <ProBillingCheckoutCta variant="card" />
                 </CardHeader>

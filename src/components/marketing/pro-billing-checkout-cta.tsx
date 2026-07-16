@@ -14,7 +14,6 @@ import {
   PRO_YEARLY_PRICE,
   PRO_YEARLY_TOGGLE_LABEL,
 } from '@/lib/studio-tiers';
-import { PRO_FEATURE_PREVIEW_DAYS, SIGNUP_INK } from '@/lib/subscription';
 
 type ProBillingCheckoutCtaProps = {
   /** compact = footer CTA; card = login upgrade card */
@@ -66,7 +65,6 @@ export function ProBillingCheckoutCta({ variant = 'compact', className }: ProBil
   if (variant === 'card') {
     const monthlyHref = buildLoginPath(buildProCheckoutPath(false));
     const yearlyHref = buildLoginPath(buildProCheckoutPath(true));
-    const previewHours = PRO_FEATURE_PREVIEW_DAYS * 24;
 
     return (
       <div className={cn('space-y-3', className)}>
@@ -97,12 +95,6 @@ export function ProBillingCheckoutCta({ variant = 'compact', className }: ProBil
         <p className="text-[9px] font-code text-muted-foreground leading-relaxed">
           Selecting a plan opens its checkout path. You will review the plan before submitting payment.
         </p>
-        <div className="rounded-lg border border-primary/20 bg-primary/[0.055] px-3 py-2.5">
-          <p className="text-[10px] font-code leading-relaxed text-foreground">
-            <strong className="text-primary uppercase tracking-wider">Your account above is free.</strong>{' '}
-            No card is required. First-time eligible artists receive {SIGNUP_INK} welcome Ink and a {previewHours}-hour Pro feature preview, then remain on the free Visitor tier unless they deliberately choose one of these paid plans.
-          </p>
-        </div>
       </div>
     );
   }
