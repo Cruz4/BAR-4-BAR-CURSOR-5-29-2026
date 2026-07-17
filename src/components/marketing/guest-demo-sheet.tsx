@@ -1,55 +1,99 @@
 'use client';
 
 /**
- * Guest demo sheet — the first thing anonymous visitors see on bar4bar.ink.
- * Write naturally, see rhyme connections, and optionally ask the sheet
- * to continue a rhyme — no account needed.
- * Server enforces all limits (/api/ai/demo); lines carry into the first
- * real track after signup via demo-session.ts.
+ * Guest demo sheet — mirrors studio Intents + Precision Lock + Rhyme Pulse
+ * (phonetic end-rhyme highlighting on user-written and assisted bars).
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, PenLine, RotateCcw, Lock, Waves } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Lock, PenLine, PlusCircle, RotateCcw, Trash2, Waves } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { HighlightedText } from '@/components/highlighted-text';
 import { cn } from '@/lib/utils';
 import { persistDemoLines } from '@/lib/demo-session';
 import { buildLandingSignupUrl } from '@/lib/login-links';
 import { SIGNUP_INK } from '@/lib/subscription';
+import { coWriterIntentRowClass } from '@/lib/co-writer-rules';
+import {
+  lineEndWord,
+  nearRhymeScore,
+  NEAR_RHYME_THRESHOLD,
+  rhymeKey,
+} from '@/lib/lyrics-analysis';
 
 type DemoOption = { line: string; syllables: number; rhymeKey: string };
 
 const MAX_SHEET_LINES = 8;
-const RHYME_COLORS = [
-  'bg-emerald-500/25 text-emerald-200 ring-1 ring-emerald-400/35',
-  'bg-sky-500/25 text-sky-200 ring-1 ring-sky-400/35',
-  'bg-violet-500/25 text-violet-200 ring-1 ring-violet-400/35',
-];
+const MAX_MOTIF = 48;
+const MAX_MOTIFS = 6;
+const LOCK_HIGHLIGHT = 'bg-sky-500/30 text-sky-100 ring-1 ring-sky-400/50 font-bold';
 
-function endWord(line: string): string {
-  return line.trim().match(/([a-z0-9']+)[^a-z0-9']*$/i)?.[1] ?? '';
+/** Build app-style rhymeGroups from end-words across sheet lines (user + assist). */
+function buildRhymeGroups(lines: string[]): { words: string[] }[] {
+  const ends = lines
+    .map((line) => lineEndWord(line))
+    .filter((w): w is string => !!w && w.length > 0);
+  if (ends.length < 2) return [];
+
+  const parent = ends.map((_, i) => i);
+  const find = (i: number): number => {
+    let cur = i;
+    while (parent[cur] !== cur) cur = parent[cur];
+    return cur;
+  };
+  const union = (a: number, b: number) => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent[rb] = ra;
+  };
+
+  for (let i = 0; i < ends.length; i++) {
+    for (let j = i + 1; j < ends.length; j++) {
+      const a = ends[i];
+      const b = ends[j];
+      if (a.toLowerCase() === b.toLowerCase()) {
+        union(i, j);
+        continue;
+      }
+      const ka = rhymeKey(a);
+      const kb = rhymeKey(b);
+      if (ka !== '?' && kb !== '?' && ka === kb) {
+        union(i, j);
+        continue;
+      }
+      if (nearRhymeScore(a, b) >= NEAR_RHYME_THRESHOLD) {
+        union(i, j);
+      }
+    }
+  }
+
+  const buckets = new Map<number, Set<string>>();
+  ends.forEach((word, i) => {
+    const root = find(i);
+    if (!buckets.has(root)) buckets.set(root, new Set());
+    buckets.get(root)!.add(word.toLowerCase());
+  });
+
+  return Array.from(buckets.values())
+    .map((set) => ({ words: Array.from(set) }))
+    .filter((g) => g.words.length >= 2);
 }
 
-/** Lightweight, local-only pulse for obvious written rhymes. */
-function rhymeSignature(word: string): string {
-  const clean = word.toLowerCase().replace(/[^a-z0-9]/g, '');
-  if (clean.length <= 2) return clean;
-  return clean.slice(-Math.min(3, clean.length));
-}
-
-function highlightedLine(line: string, className?: string) {
-  const word = endWord(line);
-  if (!word || !className) return line;
-  const start = line.toLowerCase().lastIndexOf(word.toLowerCase());
-  if (start < 0) return line;
+function highlightLockedEnding(line: string, endWith: string) {
+  const lock = endWith.trim();
+  if (!lock) return line;
+  const lower = line.toLowerCase();
+  const target = lock.toLowerCase();
+  const idx = lower.lastIndexOf(target);
+  if (idx < 0) return line;
   return (
     <>
-      {line.slice(0, start)}
-      <span className={cn('rounded px-1 py-0.5 transition-colors', className)}>
-        {line.slice(start, start + word.length)}
-      </span>
-      {line.slice(start + word.length)}
+      {line.slice(0, idx)}
+      <span className={cn('rounded px-1 py-0.5', LOCK_HIGHLIGHT)}>{line.slice(idx, idx + lock.length)}</span>
+      {line.slice(idx + lock.length)}
     </>
   );
 }
@@ -60,39 +104,26 @@ export function GuestDemoSheet() {
 
   const [lines, setLines] = useState<string[]>([]);
   const [draft, setDraft] = useState('');
+  const [motifs, setMotifs] = useState<string[]>([]);
+  const [checkedMotifs, setCheckedMotifs] = useState<string[]>([]);
+  const [endWith, setEndWith] = useState<string | null>(null);
+  const [newMotif, setNewMotif] = useState('');
   const [options, setOptions] = useState<DemoOption[] | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [gateMessage, setGateMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pulseOverrides, setPulseOverrides] = useState<Record<number, string>>({});
+  const [activeLock, setActiveLock] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const pulseClasses = useMemo(() => {
-    const signatures = lines.map((line) => rhymeSignature(endWord(line)));
-    const counts = new Map<string, number>();
-    signatures.forEach((sig) => {
-      if (sig) counts.set(sig, (counts.get(sig) ?? 0) + 1);
-    });
+  /** Include in-progress draft so pulse updates as they write. */
+  const pulseLines = useMemo(() => {
+    const draftText = draft.trim();
+    return draftText ? [...lines, draftText] : lines;
+  }, [lines, draft]);
 
-    const groupByIndex = new Map<number, string>();
-    signatures.forEach((sig, index) => {
-      if (sig && (counts.get(sig) ?? 0) > 1) groupByIndex.set(index, `local-${sig}`);
-    });
-    Object.entries(pulseOverrides).forEach(([index, group]) => {
-      groupByIndex.set(Number(index), group);
-    });
-
-    const colorByGroup = new Map<string, string>();
-    const result = new Map<number, string>();
-    groupByIndex.forEach((group, index) => {
-      if (!colorByGroup.has(group)) {
-        colorByGroup.set(group, RHYME_COLORS[colorByGroup.size % RHYME_COLORS.length]);
-      }
-      result.set(index, colorByGroup.get(group)!);
-    });
-    return result;
-  }, [lines, pulseOverrides]);
+  const rhymeGroups = useMemo(() => buildRhymeGroups(pulseLines), [pulseLines]);
+  const pulseConnectionCount = rhymeGroups.length;
 
   useEffect(() => {
     fetch('/api/ai/demo')
@@ -113,6 +144,11 @@ export function GuestDemoSheet() {
     router.push(buildLandingSignupUrl(searchParams));
   }, [lines, draft, router, searchParams]);
 
+  /** Keep demo bars ready for signup even if they use the header CTA. */
+  useEffect(() => {
+    persistDemoLines([...lines, draft]);
+  }, [lines, draft]);
+
   const commitDraft = useCallback((): string[] => {
     const text = draft.trim();
     if (!text) return lines;
@@ -121,6 +157,57 @@ export function GuestDemoSheet() {
     setDraft('');
     return next;
   }, [draft, lines]);
+
+  const handleAddMotif = useCallback(() => {
+    const text = newMotif.trim().slice(0, MAX_MOTIF);
+    if (!text) return;
+    if (motifs.some((m) => m.toLowerCase() === text.toLowerCase())) {
+      setNewMotif('');
+      return;
+    }
+    if (motifs.length >= MAX_MOTIFS) {
+      setError(`Demo allows up to ${MAX_MOTIFS} motifs — delete one to add another.`);
+      return;
+    }
+    setMotifs((prev) => [...prev, text]);
+    setNewMotif('');
+    setError(null);
+  }, [newMotif, motifs]);
+
+  const handleMotifCheck = useCallback(
+    (motif: string, checked: boolean) => {
+      setCheckedMotifs((prev) => {
+        const next = checked ? Array.from(new Set([...prev, motif])) : prev.filter((m) => m !== motif);
+        return next;
+      });
+      if (!checked && endWith === motif) {
+        setEndWith(null);
+      }
+    },
+    [endWith]
+  );
+
+  /** Same toggle semantics as studio handleIntentPrecisionLock. */
+  const handlePrecisionLock = useCallback(
+    (motif: string) => {
+      if (endWith === motif) {
+        setEndWith(null);
+        return;
+      }
+      setCheckedMotifs((prev) => Array.from(new Set([...prev, motif])));
+      setEndWith(motif);
+    },
+    [endWith]
+  );
+
+  const handleDeleteMotif = useCallback(
+    (motif: string) => {
+      setMotifs((prev) => prev.filter((m) => m !== motif));
+      setCheckedMotifs((prev) => prev.filter((m) => m !== motif));
+      if (endWith === motif) setEndWith(null);
+    },
+    [endWith]
+  );
 
   const generate = useCallback(async () => {
     if (loading || gateMessage) return;
@@ -133,11 +220,17 @@ export function GuestDemoSheet() {
     setLoading(true);
     setError(null);
     setOptions(null);
+    const lock = endWith?.trim() || '';
+    const activeIntents = checkedMotifs.filter((m) => motifs.includes(m));
     try {
       const res = await fetch('/api/ai/demo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lines: sheet }),
+        body: JSON.stringify({
+          lines: sheet,
+          ...(lock ? { endWith: lock } : {}),
+          ...(activeIntents.length ? { intents: activeIntents } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -150,36 +243,31 @@ export function GuestDemoSheet() {
         return;
       }
       setOptions(data.options ?? []);
+      setActiveLock(lock);
       if (typeof data.remaining === 'number') setRemaining(data.remaining);
     } catch {
       setError('Connection hiccup — try again.');
     } finally {
       setLoading(false);
     }
-  }, [loading, gateMessage, commitDraft]);
+  }, [loading, gateMessage, commitDraft, endWith, checkedMotifs, motifs]);
 
   const acceptOption = useCallback(
     (opt: DemoOption) => {
-      const sourceIndex = Math.max(0, lines.length - 1);
-      const generatedIndex = lines.length;
-      const pulseGroup = `assist-${sourceIndex}-${generatedIndex}`;
       setLines((prev) => [...prev, opt.line].slice(-MAX_SHEET_LINES));
-      setPulseOverrides((prev) => ({
-        ...prev,
-        [sourceIndex]: pulseGroup,
-        [generatedIndex]: pulseGroup,
-      }));
       setOptions(null);
+      setActiveLock('');
       if (remaining !== null && remaining <= 0) {
         setGateMessage('That was your last free demo bar on this device.');
       } else {
         inputRef.current?.focus();
       }
     },
-    [remaining, lines.length]
+    [remaining]
   );
 
   const outOfInk = gateMessage !== null;
+  const showIntents = !outOfInk;
 
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -198,7 +286,7 @@ export function GuestDemoSheet() {
         <div className="px-4 sm:px-6 py-5 space-y-1 min-h-[120px]">
           {lines.length === 0 && (
             <p className="text-xs font-code text-muted-foreground/70 italic pb-2">
-              Start with one line. Add another naturally, or ask the sheet to continue your rhyme.
+              Write a bar, then use Motifs below: type the exact word or phrase you want the AI line to use — check it to weave it into the content, or Precision-Lock it as End in so the generated bar must finish on that exact ending.
             </p>
           )}
           <AnimatePresence initial={false}>
@@ -210,7 +298,7 @@ export function GuestDemoSheet() {
                 className="font-code text-sm sm:text-base text-foreground/95 leading-relaxed border-b border-white/[0.05] py-1.5"
               >
                 <span className="text-muted-foreground/40 mr-3 select-none">{i + 1}</span>
-                {highlightedLine(line, pulseClasses.get(i))}
+                <HighlightedText text={line} rhymeGroups={rhymeGroups} />
               </motion.p>
             ))}
           </AnimatePresence>
@@ -229,24 +317,156 @@ export function GuestDemoSheet() {
                   }
                 }}
                 maxLength={200}
-                placeholder={lines.length === 0 ? 'e.g. Been counting these losses like blessings in disguise...' : 'Add another bar (optional)...'}
+                placeholder={
+                  lines.length === 0
+                    ? 'e.g. Been counting these losses like blessings in disguise...'
+                    : 'Add another bar (optional)...'
+                }
                 className="flex-1 bg-transparent border-none outline-none font-code text-sm sm:text-base text-foreground placeholder:text-muted-foreground/40 caret-primary"
               />
             </div>
           )}
+
+          {/* Live draft pulse preview (same highlighter as committed bars) */}
+          {!outOfInk && draft.trim() && rhymeGroups.length > 0 && (
+            <p className="font-code text-[11px] text-muted-foreground/80 pt-1 pl-7">
+              Pulse preview:{' '}
+              <span className="text-foreground/90">
+                <HighlightedText text={draft.trim()} rhymeGroups={rhymeGroups} />
+              </span>
+            </p>
+          )}
         </div>
 
-        {lines.length > 0 && (
+        {pulseLines.length > 0 && (
           <div className="px-4 sm:px-6 py-2.5 border-t border-white/[0.06] bg-sky-500/[0.035] flex items-center gap-2">
-            <Waves className={cn('h-3.5 w-3.5', pulseClasses.size > 0 ? 'text-sky-300' : 'text-muted-foreground')} />
+            <Waves className={cn('h-3.5 w-3.5', pulseConnectionCount > 0 ? 'text-sky-300' : 'text-muted-foreground')} />
             <p className="text-[9px] font-code font-bold uppercase tracking-[0.22em] text-muted-foreground">
               Rhyme Pulse ·{' '}
-              <span className={pulseClasses.size > 0 ? 'text-sky-300' : 'text-muted-foreground/70'}>
-                {pulseClasses.size > 0
-                  ? `${Math.max(1, Math.floor(pulseClasses.size / 2))} connection${pulseClasses.size > 2 ? 's' : ''} found`
+              <span className={pulseConnectionCount > 0 ? 'text-sky-300' : 'text-muted-foreground/70'}>
+                {pulseConnectionCount > 0
+                  ? `${pulseConnectionCount} rhyme group${pulseConnectionCount === 1 ? '' : 's'} · your bars + assists`
                   : 'listening as you write'}
               </span>
             </p>
+          </div>
+        )}
+
+        {showIntents && (
+          <div className="px-4 sm:px-6 py-3.5 border-t border-sky-500/20 bg-sky-500/[0.05] space-y-3">
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-sky-300">Intents · Motifs</p>
+              <p className="text-[11px] font-code text-foreground/85 leading-relaxed">
+                Type exactly the word or short phrase you want the AI to work with (e.g. <span className="text-sky-300">my city</span>,{' '}
+                <span className="text-sky-300">for real</span>).
+              </p>
+              <ul className="text-[10px] font-code text-muted-foreground leading-relaxed space-y-1 list-none">
+                <li>
+                  <span className="text-sky-300 font-bold">Checkbox only</span> — the assist weaves that motif into the bar as content / topic (does not have to be the last words).
+                </li>
+                <li>
+                  <span className="text-sky-300 font-bold">↗ Precision Lock → End in</span> — forces the generated line to{' '}
+                  <span className="text-foreground/90">end with that exact word or phrase</span>. Click the arrow again to release.
+                </li>
+              </ul>
+            </div>
+
+            {motifs.length > 0 && (
+              <div className="space-y-2">
+                {motifs.map((motif) => {
+                  const isLocked = endWith === motif;
+                  const isChecked = checkedMotifs.includes(motif) || isLocked;
+                  return (
+                    <div
+                      key={motif}
+                      className={cn(coWriterIntentRowClass(true, isLocked, isChecked), 'flex-col items-stretch gap-2')}
+                    >
+                      <div className="flex items-start gap-2 w-full min-w-0">
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={(c) => handleMotifCheck(motif, !!c)}
+                          className="border-sky-500 data-[state=checked]:bg-sky-500 shrink-0 mt-0.5 self-center"
+                        />
+                        <span
+                          className={cn(
+                            'text-xs font-code min-w-0 whitespace-normal break-words leading-snug flex-1',
+                            isLocked ? 'text-sky-300 font-bold' : isChecked ? 'text-foreground/90' : 'text-foreground/85'
+                          )}
+                        >
+                          {motif}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 justify-end w-full pl-6">
+                        {isLocked && (
+                          <span className="mr-auto text-[9px] font-bold uppercase tracking-[0.2em] text-sky-400 whitespace-nowrap">
+                            End in
+                          </span>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            'h-7 w-7 transition-colors',
+                            isLocked ? 'text-sky-400' : 'text-sky-400/40 hover:text-sky-400 hover:bg-sky-500/10'
+                          )}
+                          onClick={() => handlePrecisionLock(motif)}
+                          aria-label={isLocked ? 'Release Precision Lock' : 'Precision Lock'}
+                          title={
+                            isLocked
+                              ? 'Release Precision Lock — synthesizer no longer forced to end on this motif'
+                              : 'Precision Lock — force the next suggestion to end on this motif'
+                          }
+                        >
+                          <ArrowUpRight className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-red-500/40 hover:text-red-500 hover:bg-red-500/10"
+                          onClick={() => handleDeleteMotif(motif)}
+                          aria-label="Delete motif"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <input
+                value={newMotif}
+                onChange={(e) => setNewMotif(e.target.value.slice(0, MAX_MOTIF))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddMotif();
+                  }
+                }}
+                maxLength={MAX_MOTIF}
+                placeholder="Exact word or phrase… e.g. my city"
+                className="flex-1 h-9 rounded-md border border-sky-500/20 bg-black/40 px-3 font-code text-xs text-foreground outline-none placeholder:text-muted-foreground/40 focus:border-sky-400"
+              />
+              <Button
+                type="button"
+                size="sm"
+                className="h-9 px-3 bg-sky-600 hover:bg-sky-700"
+                onClick={handleAddMotif}
+                aria-label="Add motif"
+              >
+                <PlusCircle className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {endWith && (
+              <p className="text-[9px] font-code text-sky-300/90">
+                Precision Lock active — next Continue must End With “{endWith}”
+              </p>
+            )}
           </div>
         )}
 
@@ -259,7 +479,9 @@ export function GuestDemoSheet() {
               className="border-t border-primary/20 bg-primary/[0.04]"
             >
               <p className="px-4 sm:px-6 pt-3 text-[10px] font-code font-bold uppercase tracking-[0.25em] text-primary">
-                Two ways your rhyme could move
+                {activeLock
+                  ? `End With “${activeLock}” · both options locked`
+                  : 'Two ways your rhyme could move'}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 sm:px-6">
                 {options.map((opt, i) => (
@@ -271,9 +493,12 @@ export function GuestDemoSheet() {
                   >
                     <p className="text-[9px] font-code font-bold uppercase tracking-widest text-primary/70 mb-1">
                       Opt {i + 1} · {opt.syllables} syll
+                      {activeLock ? ' · locked' : ''}
                     </p>
                     <p className="font-code text-sm text-foreground/95 leading-snug group-hover:text-white">
-                      {opt.line}
+                      {activeLock ? highlightLockedEnding(opt.line, activeLock) : (
+                        <HighlightedText text={opt.line} rhymeGroups={buildRhymeGroups([...lines, opt.line])} />
+                      )}
                     </p>
                   </button>
                 ))}
@@ -301,9 +526,14 @@ export function GuestDemoSheet() {
                 className="font-bold uppercase text-xs tracking-widest px-6 w-full sm:w-auto bg-primary hover:bg-primary/90 shadow-[0_0_25px_rgba(59,130,246,0.35)]"
               >
                 {loading ? (
-                  <span className="flex items-center gap-2"><RotateCcw className="h-4 w-4 animate-spin" /> Listening...</span>
+                  <span className="flex items-center gap-2">
+                    <RotateCcw className="h-4 w-4 animate-spin" /> Listening...
+                  </span>
                 ) : (
-                  <span className="flex items-center gap-2"><Waves className="h-4 w-4" /> Continue My Rhyme</span>
+                  <span className="flex items-center gap-2">
+                    {endWith ? <Lock className="h-4 w-4" /> : <Waves className="h-4 w-4" />}
+                    {endWith ? 'Continue · End With Locked' : 'Continue My Rhyme'}
+                  </span>
                 )}
               </Button>
               {error && <p className="text-xs font-code text-red-400">{error}</p>}

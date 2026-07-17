@@ -2,6 +2,7 @@
  * stashed here and turned into the artist's first track after signup. */
 
 export const DEMO_LINES_KEY = 'b4b-demo-lines';
+const DEMO_HANDOFF_LOCK_KEY = 'b4b-demo-handoff-lock';
 
 export function persistDemoLines(lines: string[]): void {
   if (typeof window === 'undefined') return;
@@ -32,6 +33,44 @@ export function clearDemoLines(): void {
   if (typeof window === 'undefined') return;
   try {
     sessionStorage.removeItem(DEMO_LINES_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Atomically claim demo lines for auto-open after signup.
+ * Returns null if nothing to hand off or another claim is in flight.
+ */
+export function claimDemoHandoff(): string[] | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    if (sessionStorage.getItem(DEMO_HANDOFF_LOCK_KEY) === '1') return null;
+    const lines = readDemoLines();
+    if (lines.length === 0) return null;
+    sessionStorage.setItem(DEMO_HANDOFF_LOCK_KEY, '1');
+    clearDemoLines();
+    return lines;
+  } catch {
+    return null;
+  }
+}
+
+export function completeDemoHandoff(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.removeItem(DEMO_HANDOFF_LOCK_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Restore bars if track creation failed after a claim. */
+export function releaseDemoHandoff(lines: string[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.removeItem(DEMO_HANDOFF_LOCK_KEY);
+    persistDemoLines(lines);
   } catch {
     /* ignore */
   }

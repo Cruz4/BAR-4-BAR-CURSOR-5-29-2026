@@ -19,6 +19,7 @@ const IP_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const GLOBAL_DAILY_CAP = 500;
 const MAX_LINES = 6;
 const MAX_LINE_CHARS = 200;
+const MAX_END_WITH_CHARS = 48;
 const COOKIE_NAME = 'b4b_demo_uses';
 const COOKIE_MAX_AGE_S = 60 * 60 * 24 * 30;
 
@@ -97,7 +98,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  let body: { lines?: unknown };
+  let body: { lines?: unknown; endWith?: unknown; intents?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -115,6 +116,15 @@ export async function POST(req: Request) {
   if (lines.length === 0) {
     return NextResponse.json({ error: 'Write a bar first' }, { status: 400 });
   }
+  const endWith =
+    typeof body.endWith === 'string' ? body.endWith.trim().slice(0, MAX_END_WITH_CHARS) : '';
+  const intents = Array.isArray(body.intents)
+    ? body.intents
+        .filter((i): i is string => typeof i === 'string')
+        .map((i) => i.trim().slice(0, MAX_END_WITH_CHARS))
+        .filter(Boolean)
+        .slice(0, 6)
+    : [];
 
   const uses = readUses(getCookie(req, COOKIE_NAME));
   if (uses >= DEMO_MAX_USES) {
@@ -139,7 +149,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const options = await generateGuestDemoNextLine(lines);
+    const options = await generateGuestDemoNextLine(lines, endWith || null, intents);
     if (options.length === 0) {
       return NextResponse.json({ error: 'No suggestions this time — try again' }, { status: 502 });
     }
@@ -148,6 +158,8 @@ export async function POST(req: Request) {
     const res = NextResponse.json({
       options,
       remaining: Math.max(0, DEMO_MAX_USES - nextUses),
+      endWith: endWith || null,
+      intents,
     });
     res.cookies.set(COOKIE_NAME, signUses(nextUses), {
       httpOnly: true,

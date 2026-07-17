@@ -5,9 +5,10 @@
  * Gets a new artist from signup to a lyrics sheet in one or two clicks:
  *   Start blank -> auto-creates a loose track and opens the editor.
  *   Guide me    -> two quick questions (vibe + topic), then the editor.
+ * If landing-demo bars are stashed, auto-creates "My Demo Track" and opens it.
  */
 
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { NotebookPen, Compass, ArrowRight, ArrowLeft, Mic2, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -19,7 +20,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { DataContext } from '@/context/data-context';
 import { markFirstSessionGuidedPending } from '@/lib/first-session';
-import { clearDemoLines, readDemoLines } from '@/lib/demo-session';
+import {
+  claimDemoHandoff,
+  completeDemoHandoff,
+  releaseDemoHandoff,
+} from '@/lib/demo-session';
 import type { Track } from '@/lib/types';
 
 const GENRE_PRESETS: Array<{ genre: string; tempoBPM: number }> = [
@@ -35,67 +40,103 @@ export function FirstSongHero() {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { addTrack } = useContext(DataContext);
+  const { addTrack, loading: vaultLoading } = useContext(DataContext);
 
   const [step, setStep] = useState<'choice' | 'guide'>('choice');
   const [genre, setGenre] = useState(GENRE_PRESETS[0]);
   const [topic, setTopic] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [demoLines, setDemoLines] = useState<string[]>([]);
+  const [autoOpeningDemo, setAutoOpeningDemo] = useState(false);
+  const creatingRef = useRef(false);
+
+  const createFirstTrack = useCallback(
+    (options: { guided: boolean; fromDemo?: boolean; lines?: string[]; claimed?: boolean }) => {
+      if (!user || creatingRef.current) return;
+      creatingRef.current = true;
+      setIsCreating(true);
+      try {
+        const vibe = options.guided
+          ? { genre: genre.genre, tempoBPM: genre.tempoBPM, feeling: ['first session'] }
+          : { genre: 'Lofi-Hop', tempoBPM: 90, feeling: ['new idea'] };
+
+        const carried = options.lines ?? demoLines;
+        const title = options.fromDemo ? 'My Demo Track' : 'My First Song';
+
+        const initialBars =
+          options.fromDemo && carried.length > 0
+            ? carried.map((text, i) => ({ idx: i + 1, text, accepted: true, syllables: 0, rhymeKey: '?' }))
+            : [{ idx: 1, text: '', accepted: true, syllables: 0, rhymeKey: '?' }];
+
+        const newTrack: Omit<Track, 'id'> = {
+          albumId: 'unassigned',
+          ownerId: user.id,
+          title,
+          vibe,
+          intentRefs: [],
+          sections: [
+            {
+              id: `section-${Date.now()}`,
+              type: 'verse',
+              bars: initialBars,
+            },
+          ],
+          status: 'in_progress',
+          createdAt: new Date().toISOString(),
+          direction: { enabled: false, inheritFromAlbum: false },
+          ...(options.guided && topic.trim() ? { specialInstructions: topic.trim() } : {}),
+        };
+        const created = addTrack('unassigned', newTrack);
+        if (options.claimed || options.fromDemo) {
+          completeDemoHandoff();
+        }
+        if (options.guided) {
+          markFirstSessionGuidedPending({
+            topic: topic.trim(),
+            genre: genre.genre,
+          });
+        }
+        router.push(`/albums/unassigned/tracks/${created.id}`);
+      } catch (e) {
+        creatingRef.current = false;
+        setIsCreating(false);
+        setAutoOpeningDemo(false);
+        if (options.claimed && (options.lines?.length || 0) > 0) {
+          releaseDemoHandoff(options.lines!);
+        }
+        toast({ variant: 'destructive', title: 'Could not start your song', description: (e as Error).message });
+      }
+    },
+    [user, genre, demoLines, topic, addTrack, router, toast]
+  );
 
   useEffect(() => {
-    setDemoLines(readDemoLines());
-  }, []);
+    if (!user || vaultLoading || autoOpeningDemo || creatingRef.current) return;
+    const claimed = claimDemoHandoff();
+    if (!claimed) return;
+    setDemoLines(claimed);
+    setAutoOpeningDemo(true);
+    createFirstTrack({ guided: false, fromDemo: true, lines: claimed, claimed: true });
+  }, [user, vaultLoading, autoOpeningDemo, createFirstTrack]);
 
-  const createFirstTrack = (options: { guided: boolean; fromDemo?: boolean }) => {
-    if (!user || isCreating) return;
-    setIsCreating(true);
-    try {
-      const vibe = options.guided
-        ? { genre: genre.genre, tempoBPM: genre.tempoBPM, feeling: ['first session'] }
-        : { genre: 'Lofi-Hop', tempoBPM: 90, feeling: ['new idea'] };
-
-      const title = options.fromDemo ? 'My Demo Track' : 'My First Song';
-
-      const initialBars =
-        options.fromDemo && demoLines.length > 0
-          ? demoLines.map((text, i) => ({ idx: i + 1, text, accepted: true, syllables: 0, rhymeKey: '?' }))
-          : [{ idx: 1, text: '', accepted: true, syllables: 0, rhymeKey: '?' }];
-
-      const newTrack: Omit<Track, 'id'> = {
-        albumId: 'unassigned',
-        ownerId: user.id,
-        title,
-        vibe,
-        intentRefs: [],
-        sections: [
-          {
-            id: `section-${Date.now()}`,
-            type: 'verse',
-            bars: initialBars,
-          },
-        ],
-        status: 'in_progress',
-        createdAt: new Date().toISOString(),
-        direction: { enabled: false, inheritFromAlbum: false },
-        ...(options.guided && topic.trim() ? { specialInstructions: topic.trim() } : {}),
-      };
-      const created = addTrack('unassigned', newTrack);
-      if (options.fromDemo) {
-        clearDemoLines();
-      }
-      if (options.guided) {
-        markFirstSessionGuidedPending({
-          topic: topic.trim(),
-          genre: genre.genre,
-        });
-      }
-      router.push(`/albums/unassigned/tracks/${created.id}`);
-    } catch (e) {
-      setIsCreating(false);
-      toast({ variant: 'destructive', title: 'Could not start your song', description: (e as Error).message });
-    }
-  };
+  if (autoOpeningDemo) {
+    return (
+      <Card className="relative overflow-hidden border-emerald-500/30 bg-card/95 p-6 sm:p-8 mb-10 animate-in fade-in duration-500">
+        <div className="relative flex flex-col items-center text-center gap-3 py-4">
+          <Sparkles className="h-6 w-6 text-emerald-400 animate-pulse" />
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-400">Your demo bars made it</p>
+          <h2 className="text-xl sm:text-2xl font-headline font-bold uppercase tracking-tight text-foreground">
+            Opening your track…
+          </h2>
+          <p className="text-xs font-code text-muted-foreground max-w-md">
+            {demoLines[0]
+              ? `“${demoLines[0]}”${demoLines.length > 1 ? ` +${demoLines.length - 1} more` : ''} — straight onto your sheet.`
+              : 'Putting your landing demo onto the sheet so you can keep writing.'}
+          </p>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="relative overflow-hidden border-primary/25 bg-card/95 p-6 sm:p-8 mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -103,25 +144,6 @@ export function FirstSongHero() {
 
       {step === 'choice' ? (
         <div className="relative space-y-6">
-          {demoLines.length > 0 && (
-            <div className="rounded-xl border border-emerald-500/35 bg-emerald-500/[0.07] p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-400 flex items-center gap-2">
-                  <Sparkles className="h-3.5 w-3.5" /> Your demo bars made it
-                </p>
-                <p className="text-xs font-code text-muted-foreground mt-1 truncate">
-                  &ldquo;{demoLines[0]}&rdquo;{demoLines.length > 1 ? ` +${demoLines.length - 1} more` : ''}
-                </p>
-              </div>
-              <Button
-                disabled={isCreating}
-                onClick={() => createFirstTrack({ guided: false, fromDemo: true })}
-                className="font-bold uppercase text-[10px] tracking-widest shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white"
-              >
-                Keep writing this track <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-              </Button>
-            </div>
-          )}
           <div className="space-y-2 text-center sm:text-left">
             <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-primary flex items-center justify-center sm:justify-start gap-2">
               <Mic2 className="h-3.5 w-3.5" /> Your studio is open
@@ -198,13 +220,15 @@ export function FirstSongHero() {
 
           <div className="space-y-2">
             <Label htmlFor="first-song-topic" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              2 · What's it about? <span className="normal-case font-normal tracking-normal">(optional)</span>
+              2 · What&apos;s it about? <span className="normal-case font-normal tracking-normal">(optional)</span>
             </Label>
             <Input
               id="first-song-topic"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') createFirstTrack({ guided: true }); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') createFirstTrack({ guided: true });
+              }}
               placeholder="e.g. proving everyone wrong, late nights, my city..."
               className="font-code text-sm"
               maxLength={120}
