@@ -267,7 +267,7 @@ export function GuestDemoSheet() {
   );
 
   const outOfInk = gateMessage !== null;
-  const showIntents = !outOfInk;
+  const showIntents = !outOfInk && (lines.length > 0 || draft.trim().length > 0);
 
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -286,7 +286,7 @@ export function GuestDemoSheet() {
         <div className="px-4 sm:px-6 py-5 space-y-1 min-h-[120px]">
           {lines.length === 0 && (
             <p className="text-xs font-code text-muted-foreground/70 italic pb-2">
-              Write a bar, then use Motifs below: type the exact word or phrase you want the AI line to use — check it to weave it into the content, or Precision-Lock it as End in so the generated bar must finish on that exact ending.
+              Write your first bar. Press Enter to add it.
             </p>
           )}
           <AnimatePresence initial={false}>
@@ -354,21 +354,11 @@ export function GuestDemoSheet() {
 
         {showIntents && (
           <div className="px-4 sm:px-6 py-3.5 border-t border-sky-500/20 bg-sky-500/[0.05] space-y-3">
-            <div className="space-y-1.5">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-sky-300">Intents · Motifs</p>
-              <p className="text-[11px] font-code text-foreground/85 leading-relaxed">
-                Type exactly the word or short phrase you want the AI to work with (e.g. <span className="text-sky-300">my city</span>,{' '}
-                <span className="text-sky-300">for real</span>).
+              <p className="text-[9px] font-code text-muted-foreground">
+                ✓ use it in the bar · ↗ make the bar end with it
               </p>
-              <ul className="text-[10px] font-code text-muted-foreground leading-relaxed space-y-1 list-none">
-                <li>
-                  <span className="text-sky-300 font-bold">Checkbox only</span> — the assist weaves that motif into the bar as content / topic (does not have to be the last words).
-                </li>
-                <li>
-                  <span className="text-sky-300 font-bold">↗ Precision Lock → End in</span> — forces the generated line to{' '}
-                  <span className="text-foreground/90">end with that exact word or phrase</span>. Click the arrow again to release.
-                </li>
-              </ul>
             </div>
 
             {motifs.length > 0 && (

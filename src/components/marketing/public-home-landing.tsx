@@ -78,7 +78,7 @@ export function PublicHomeLanding() {
               Your smart DNA notebook<br className="sm:hidden" /> <span className="text-primary">for lyrics.</span>
             </h2>
             <p className="text-xs sm:text-sm font-code text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Start in the smart sheet below. The full studio surrounds your lyrics with Creative DNA, world-building, rhyme intelligence, and a living vault—so every idea becomes a place you can return to.
+              Write a bar below. See your rhymes connect, then carry the track into the full studio.
             </p>
           </div>
 
