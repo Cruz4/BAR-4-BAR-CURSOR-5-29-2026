@@ -1580,7 +1580,17 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
         </div>
       </div>
       
-      <div id="lyrics-viewport" ref={lyricsViewportRef} data-tour="lyrics-sheet" className={cn("flex-1 relative overflow-x-hidden overflow-y-auto min-h-0 studio-scrollbar max-md:[--lyrics-gutter:2rem]", lyricsSurfaceClass)} style={notebookStyle}>
+      <div
+        id="lyrics-viewport"
+        ref={lyricsViewportRef}
+        data-tour="lyrics-sheet"
+        className={cn(
+          'flex-1 relative overflow-x-hidden overflow-y-auto min-h-0 studio-scrollbar',
+          '[--lyrics-gutter:100px] max-md:[--lyrics-gutter:2.75rem]',
+          lyricsSurfaceClass
+        )}
+        style={notebookStyle}
+      >
         <div className="w-full max-full pb-12">
           {!track.sections || track.sections.length === 0 ? (
               <div data-tour="lyrics-sheet-focus" className="flex flex-col items-center justify-center h-[400px] text-center gap-6 animate-in fade-in zoom-in duration-1000">
@@ -1599,7 +1609,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                   id={`section-header-${section.id}`}
                   data-tour={sectionIdx === 0 ? 'lyrics-sheet-focus' : undefined}
                   style={{ height: `calc(${activeLineHeight} * 2)` }}
-                  className="flex items-end pl-[120px] max-md:pl-[2rem]"
+                  className="flex items-end pl-[calc(var(--lyrics-gutter)+0.5rem)] md:pl-[120px]"
                 >
                     <h3 className="text-lg md:text-2xl font-headline font-bold text-sky-400 uppercase leading-none">[{section.type}]</h3>
                 </div>
@@ -1609,18 +1619,18 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                         <div
                           key={`${section.id}-${bar.idx}`}
                           className={cn(
-                          "group relative flex max-md:flex-row max-md:items-start md:block items-start transition-colors max-md:px-1 max-md:gap-0.5 max-md:min-h-[var(--lyrics-line-h)]",
+                          "group relative block items-start transition-colors max-md:min-h-[var(--lyrics-line-h)]",
                           isSelected && "bg-primary/10",
                           bar.justGenerated && "animate-line-glow"
                         )}
                         style={{ ['--lyrics-line-h' as string]: activeLineHeight }}>
                         <span className={cn(
-                          "font-mono text-muted-foreground/40 text-right font-bold shrink-0 z-10",
-                          "max-md:relative max-md:w-7 max-md:mr-0 max-md:text-[10px]",
-                          "md:absolute md:left-[50px] md:w-10 md:text-muted-foreground/30"
+                          "font-mono text-muted-foreground/40 text-right font-bold shrink-0 z-10 absolute",
+                          "left-0 w-[var(--lyrics-gutter)] pr-1.5 text-[10px] md:text-sm",
+                          "md:left-[50px] md:w-10 md:pr-0 md:text-muted-foreground/30"
                         )} style={barTextStyle}>{String(bar.idx).padStart(2, '0')}</span>
 
-                        <div className="flex-grow flex items-start min-w-0 max-md:flex-1 relative overflow-hidden">
+                        <div className="flex-grow flex items-start min-w-0 relative overflow-hidden pl-[calc(var(--lyrics-gutter)+0.5rem)] md:pl-0">
                             <textarea 
                             id={`bar-input-${section.id}-${bar.idx}`} 
                             value={bar.text} 
@@ -1662,7 +1672,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                             }} 
                             className={cn(
                                 "border-0 bg-transparent p-0 focus-visible:ring-0 font-code font-bold w-full shadow-none z-10 tracking-normal resize-none overflow-hidden whitespace-pre-wrap break-words",
-                                "max-md:pl-0.5 max-md:pr-1 max-md:indent-0",
+                                "pr-14 max-md:indent-0",
                                 "md:pr-24 md:pl-[145px] md:-indent-[25px]",
                                 "antialiased text-rendering-geometric",
                                 trackLocked && "opacity-80 cursor-not-allowed",
@@ -1672,7 +1682,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                             placeholder={trackLocked ? 'Locked — reopen track to edit' : '...'} 
                             />
                             {track.rhymeHighlightingEnabled && bar.text && (
-                            <div className="absolute inset-0 pointer-events-none flex items-start pl-0 max-md:pl-0.5 md:pl-0 pr-1 md:pr-24 z-0 h-full overflow-hidden">
+                            <div className="absolute inset-0 pointer-events-none flex items-start pl-[calc(var(--lyrics-gutter)+0.5rem)] md:pl-0 pr-14 md:pr-24 z-0 h-full overflow-hidden">
                                 <p className={cn(
                                     "font-code font-bold tracking-normal whitespace-pre-wrap break-words w-full text-transparent m-0",
                                     "max-md:indent-0",
@@ -1687,11 +1697,9 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                         </div>
 
                         <div className={cn(
-                          "flex gap-0.5 shrink-0 transition-opacity z-20",
-                          "max-md:relative max-md:flex max-md:items-center max-md:mr-0.5",
-                          "md:absolute md:right-4 md:top-0 md:h-full md:items-center",
-                          isSelected ? "opacity-100" : "max-md:opacity-0 max-md:pointer-events-none",
-                          !isSelected && "md:opacity-0 md:group-hover:opacity-100"
+                          "flex gap-0.5 shrink-0 transition-opacity z-20 absolute right-1 top-0 h-[var(--lyrics-line-h)] items-center md:right-4 md:h-full",
+                          isSelected ? "opacity-100" : "opacity-0 pointer-events-none max-md:opacity-0",
+                          !isSelected && "md:group-hover:opacity-100 md:group-hover:pointer-events-auto md:opacity-0"
                         )}
                         >
                             <Hint skipOnTouch content={<p className="text-[10px] font-bold">{tooltip('generateNextLine')}</p>}>

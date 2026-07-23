@@ -17,7 +17,8 @@ export function buildLyricsNotebookStyle({
 }: NotebookStyleArgs): CSSProperties {
   const surface = resolveWritingSurface(writingMode, colorTheme);
   const lh = `${lineHeightPx}px`;
-  const gutter = `${gutterPx}px`;
+  // Prefer CSS --lyrics-gutter so mobile can shrink the margin without fighting inline px.
+  const gutter = `var(--lyrics-gutter, ${gutterPx}px)`;
 
   if (surface === 'paper') {
     return {
