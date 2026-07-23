@@ -95,6 +95,7 @@ import {
   FREE_TRACK_LIMIT,
   FREE_TRACK_LIMIT_TOAST,
   isProOrTrial,
+  isProUser,
 } from '@/lib/subscription';
 import {
   getEditableTrackIds,
@@ -748,7 +749,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
     !downgradePickerDone && !loading && user != null && needsFreeEditableTrackPicker(user, albums);
 
   useEffect(() => {
-    if (user && isProOrTrial(user)) {
+    if (user && isProUser(user)) {
       setDowngradePickerDone(false);
     }
   }, [user?.subscriptionStatus, user?.proFeaturePreviewExpiresAt, user?.trialStartedAt]);

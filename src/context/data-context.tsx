@@ -41,7 +41,7 @@ import {
   findTrackInVault,
   type DnaDropTrackPayload,
 } from '@/lib/dna-drop';
-import { canUserAddTrack, FreeTrackLimitError, isProOrTrial } from '@/lib/subscription';
+import { canUserAddTrack, FreeTrackLimitError, hasUnlimitedCatalog, isProOrTrial } from '@/lib/subscription';
 import { computeRotatedFreeEditableTrackIds } from '@/lib/tier-limits';
 import { persistFreeEditableTrackIds } from '@/lib/free-editable-tracks';
 
@@ -736,7 +736,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const next = prev.map((a) =>
         a.id === albumId ? { ...a, tracks: a.tracks.filter((t) => t.id !== trackId) } : a
       );
-      if (user && !isProOrTrial(user) && user.freeEditableSelectionAt) {
+      if (user && !hasUnlimitedCatalog(user) && user.freeEditableSelectionAt) {
         const nextIds = computeRotatedFreeEditableTrackIds(user, next, trackId);
         if (nextIds) {
           void persistFreeEditableTrackIds(user.id, nextIds);

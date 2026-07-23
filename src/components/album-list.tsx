@@ -89,12 +89,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { StudioLoader } from '@/components/studio-loader';
 import {
   canUserAddTrack,
+  canUserAddAlbum,
   countUserTracks,
   FREE_ALBUM_LIMIT,
   FREE_ALBUM_LIMIT_TOAST,
   FREE_TRACK_LIMIT,
   FREE_TRACK_LIMIT_TOAST,
   isProOrTrial,
+  isProUser,
 } from '@/lib/subscription';
 import { isDataUrl } from '@/lib/cover-art';
 import { postGamificationEvent } from '@/lib/gamification-client';
@@ -155,12 +157,12 @@ function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenC
   };
 
   const handleCreate = async (mode: 'blank' | 'workstation' = 'blank') => {
-      const isPro = isProOrTrial(user);
+      const unlimitedCatalog = isProUser(user);
       const albumCount = albums.filter((a) => a.id !== 'unassigned').length;
       const trackCount = countUserTracks(albums);
 
-      if (!isPro) {
-          if (type === 'Album' && albumCount >= FREE_ALBUM_LIMIT) {
+      if (!unlimitedCatalog) {
+          if (type === 'Album' && !canUserAddAlbum(albums, user)) {
               trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, { limitType: 'album', count: albumCount });
               trackUpgradeClick('slot_limit', { limitType: 'album', count: albumCount });
               void postGamificationEvent('album_limit_hit');
@@ -518,7 +520,8 @@ export function AlbumList() {
   const [createItemType, setCreateItemType] = useState<'Album' | 'Track' | null>(null);
   const { albums, loading, deleteAlbum, deleteTrack, moveTrack, getAlbumById, mergeData, clearVault, isCloudSyncActive } = useContext(DataContext);
   const { user, loading: authLoading } = useAuth();
-  const isPro = isProOrTrial(user);
+  const isPaidPro = isProUser(user);
+  const hasProWorkflow = isProOrTrial(user);
   const albumCount = albums.filter((a) => a.id !== 'unassigned').length;
   const trackCount = countUserTracks(albums);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -551,7 +554,7 @@ export function AlbumList() {
     needsFreeEditableTrackPicker(user, albums);
 
   useEffect(() => {
-    if (user && isProOrTrial(user)) {
+    if (user && isProUser(user)) {
       setDowngradePickerDone(false);
     }
   }, [user?.subscriptionStatus, user?.proFeaturePreviewExpiresAt, user?.trialStartedAt]);
@@ -859,7 +862,7 @@ export function AlbumList() {
                     </DropdownMenu>
                     
                     <div className="flex gap-2">
-                        {isPro ? (
+                        {hasProWorkflow ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-10 w-10 border border-border bg-card/95 rounded-xl" onClick={() => fileInputRef.current?.click()}>
@@ -871,7 +874,7 @@ export function AlbumList() {
                         ) : (
                           <LockedToolbarButton feature="Vault Import" benefit="Merge backup blueprints into your studio." icon={Import} />
                         )}
-                        {isPro ? (
+                        {hasProWorkflow ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-10 w-10 border border-border bg-card/95 rounded-xl" onClick={handleExport}>
@@ -940,7 +943,7 @@ export function AlbumList() {
                         ))}
                     </div>
                 </div>
-            ) : !isPro ? (
+            ) : !isPaidPro ? (
                 <FreeVisitorVault
                   sortedLooseTracks={sortedLooseTracks}
                   filteredAlbums={filteredAlbums}
@@ -1070,7 +1073,7 @@ export function AlbumList() {
                             {filteredAlbums.map((album) => (
                                 <VinylRecord key={album.id} album={album} />
                             ))}
-                            {isPro && (
+                            {isPaidPro && (
                               <ProCreateAlbumSlot onClick={() => setCreateItemType('Album')} />
                             )}
                         </div>

@@ -91,7 +91,7 @@ export function DowngradeTrackPickerDialog({
             Pick {FREE_TRACK_LIMIT} tracks to edit
           </DialogTitle>
           <DialogDescription className="text-sm font-code leading-relaxed">
-            Your Pro plan ended — nothing was deleted. Choose {FREE_TRACK_LIMIT} tracks to keep editable on
+            Your Pro access ended — nothing was deleted. Choose {FREE_TRACK_LIMIT} tracks to keep editable on
             Visitor. Everything else stays view-only. You can change the lineup anytime by scrapping an
             editable track; the next oldest locked track rotates in.
           </DialogDescription>

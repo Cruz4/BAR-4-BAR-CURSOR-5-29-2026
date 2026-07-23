@@ -32,6 +32,7 @@ import { AdminAlertListener } from './admin-alert-listener';
 import { InviteGateGuard } from './invite-gate-guard';
 import { ProFeaturePreviewBanner } from './pro-feature-preview-banner';
 import { ProTrialWinQuestStrip } from './pro-trial-win-quest-strip';
+import { ProPreviewEndedDialog } from './pro-preview-ended-dialog';
 import { EmailVerificationBanner } from './email-verification-banner';
 import { AdSenseRouteLoader } from './adsense-route-loader';
 import { useAuth } from '@/hooks/use-auth';
@@ -120,6 +121,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 </main>
                 {!isSharePage && !isPublicProfilePage && !isMarketingCapture && <WhatsNewDialog />}
                 {!isSharePage && !isPublicProfilePage && !isMarketingShell && !isMarketingCapture && <WelcomeInkDialog />}
+                {!isSharePage && !isPublicProfilePage && !isMarketingShell && !isMarketingCapture && <ProPreviewEndedDialog />}
                 {!isSharePage && !isPublicProfilePage && !isMarketingShell && !isMarketingCapture && <StudioPrivacyIntroDialog />}
                 {!isMarketingCapture && <CookieConsent />}
                 {!isSharePage && !isPublicProfilePage && !isMarketingShell && !isMarketingCapture && <PwaInstallPrompt />}

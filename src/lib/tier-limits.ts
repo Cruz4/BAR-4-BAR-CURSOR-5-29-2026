@@ -3,6 +3,7 @@ import {
   countUserTracks,
   FREE_ALBUM_LIMIT,
   FREE_TRACK_LIMIT,
+  hasUnlimitedCatalog,
   isProOrTrial,
 } from '@/lib/subscription';
 
@@ -53,12 +54,12 @@ function oldestTrackIdsNotIn(albums: AlbumLike[], exclude: Set<string>, limit: n
 }
 
 export function isDowngradedProVault(user: TierUserLike, albums: AlbumLike[]): boolean {
-  if (isProOrTrial(user)) return false;
+  if (hasUnlimitedCatalog(user)) return false;
   return countUserTracks(albums as { id: string; tracks: unknown[] }[]) > FREE_TRACK_LIMIT;
 }
 
 export function needsFreeEditableTrackPicker(user: TierUserLike, albums: AlbumLike[]): boolean {
-  if (isProOrTrial(user)) return false;
+  if (hasUnlimitedCatalog(user)) return false;
   if (countUserTracks(albums as { id: string; tracks: unknown[] }[]) <= FREE_TRACK_LIMIT) {
     return false;
   }
@@ -92,7 +93,7 @@ export function computeRotatedFreeEditableTrackIds(
   albumsAfterDelete: AlbumLike[],
   deletedTrackId: string
 ): string[] | null {
-  if (isProOrTrial(user)) return null;
+  if (hasUnlimitedCatalog(user)) return null;
   if (!user?.freeEditableSelectionAt) return null;
 
   const remaining = getAllVaultTracks(albumsAfterDelete);
@@ -112,14 +113,14 @@ export function computeRotatedFreeEditableTrackIds(
 }
 
 export function getEditableTrackIds(albums: AlbumLike[], user: TierUserLike): Set<string> {
-  if (isProOrTrial(user)) {
+  if (hasUnlimitedCatalog(user)) {
     return new Set(getAllVaultTracks(albums).map((t) => t.id));
   }
   return new Set(resolveFreeEditableTrackIds(albums, user));
 }
 
 export function getEditableAlbumIds(albums: AlbumLike[], user: TierUserLike): Set<string> {
-  if (isProOrTrial(user)) {
+  if (hasUnlimitedCatalog(user)) {
     return new Set(albums.filter((a) => a.id !== 'unassigned').map((a) => a.id));
   }
   const real = albums.filter((a) => a.id !== 'unassigned').sort(byCreatedAtAsc);
@@ -132,7 +133,7 @@ export function isTrackEditableByTier(
   albums: AlbumLike[],
   user: TierUserLike
 ): boolean {
-  if (isProOrTrial(user)) return true;
+  if (hasUnlimitedCatalog(user)) return true;
   if (albumId !== 'unassigned' && !getEditableAlbumIds(albums, user).has(albumId)) {
     return false;
   }
@@ -140,7 +141,7 @@ export function isTrackEditableByTier(
 }
 
 export function isAlbumEditableByTier(albumId: string, albums: AlbumLike[], user: TierUserLike): boolean {
-  if (isProOrTrial(user)) return true;
+  if (hasUnlimitedCatalog(user)) return true;
   if (albumId === 'unassigned') return true;
   return getEditableAlbumIds(albums, user).has(albumId);
 }

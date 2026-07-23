@@ -42,11 +42,32 @@ export function getProFeaturePreviewHoursRemaining(
   return Math.ceil(ms / (60 * 60 * 1000));
 }
 
-/** Paid Pro or active Pro feature preview window. */
+/**
+ * Preview window has ended (timestamp in the past) and the artist is not paid Pro.
+ * Used for the one-time end-of-preview announcement.
+ */
+export function hasProFeaturePreviewEnded(
+  user: Pick<User, 'subscriptionStatus' | 'proFeaturePreviewExpiresAt'> | null | undefined
+): boolean {
+  if (!user?.proFeaturePreviewExpiresAt || isProUser(user)) return false;
+  return new Date(user.proFeaturePreviewExpiresAt).getTime() <= Date.now();
+}
+
+/** Paid Pro or active Pro feature preview — workflow unlocks (export, vault saves, etc.). */
 export function isProOrTrial(
   user: Pick<User, 'subscriptionStatus' | 'proFeaturePreviewExpiresAt'> | null | undefined
 ): boolean {
   return isProUser(user) || isProFeaturePreviewActive(user);
+}
+
+/**
+ * Unlimited albums & tracks — paid Studio Pro only.
+ * The 48h Pro feature preview keeps Visitor catalog caps (1 album / 2 tracks).
+ */
+export function hasUnlimitedCatalog(
+  user: Pick<User, 'subscriptionStatus'> | null | undefined
+): boolean {
+  return isProUser(user);
 }
 
 export function isYearlyPro(user: Pick<User, 'subscriptionStatus' | 'subscriptionTier'> | null | undefined): boolean {
@@ -57,13 +78,26 @@ export function countUserTracks(albums: { id: string; tracks: unknown[] }[]): nu
   return albums.reduce((acc, a) => acc + (a.tracks?.length || 0), 0);
 }
 
-/** Free tier: max tracks across all albums + loose tracks combined. */
+export function countUserAlbums(albums: { id: string }[]): number {
+  return albums.filter((a) => a.id !== 'unassigned').length;
+}
+
+/** Free / preview: max tracks across all albums + loose tracks combined. */
 export function canUserAddTrack(
   albums: { tracks?: unknown[] }[],
   user: Pick<User, 'subscriptionStatus' | 'proFeaturePreviewExpiresAt'> | null | undefined
 ): boolean {
-  if (isProOrTrial(user)) return true;
+  if (hasUnlimitedCatalog(user)) return true;
   return countUserTracks(albums as { id: string; tracks: unknown[] }[]) < FREE_TRACK_LIMIT;
+}
+
+/** Free / preview: max concept albums. */
+export function canUserAddAlbum(
+  albums: { id: string }[],
+  user: Pick<User, 'subscriptionStatus'> | null | undefined
+): boolean {
+  if (hasUnlimitedCatalog(user)) return true;
+  return countUserAlbums(albums) < FREE_ALBUM_LIMIT;
 }
 
 export class FreeTrackLimitError extends Error {

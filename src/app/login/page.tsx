@@ -315,7 +315,7 @@ function LoginForm() {
             <div className="rounded-xl border border-emerald-500/35 bg-emerald-500/[0.08] px-4 py-3 flex items-start gap-3">
               <ShieldCheck className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
               <p className="text-[11px] sm:text-xs font-code leading-relaxed text-foreground">
-                No card is required. First-time eligible artists receive {SIGNUP_INK} welcome Ink and a {PRO_FEATURE_PREVIEW_DAYS * 24}-hour Pro feature preview, then remain on the free Visitor tier unless they deliberately choose one of these paid plans.
+                No card is required. First-time eligible artists receive {SIGNUP_INK} welcome Ink and a {PRO_FEATURE_PREVIEW_DAYS * 24}-hour Pro feature preview (export, vault saves, Performance — catalog stays demo-scale until paid Pro), then remain on the free Visitor tier unless they deliberately choose one of these paid plans.
               </p>
             </div>
 

@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { Sparkles, X } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import {
+  FREE_ALBUM_LIMIT,
+  FREE_TRACK_LIMIT,
   getProFeaturePreviewHoursRemaining,
   isProFeaturePreviewActive,
   isProUser,
@@ -48,7 +50,8 @@ export function ProFeaturePreviewBanner({ className }: { className?: string }) {
       <p className="text-[10px] sm:text-[11px] font-code text-pink-950/90 dark:text-pink-100/90 flex-grow min-w-0">
         <span className="font-bold uppercase tracking-widest text-pink-800 dark:text-pink-300">Pro preview · {timeLabel}</span>
         {' — '}
-        Vault saves, export, unlimited tracks, Performance &amp; DNA Drop unlocked. Ink unchanged.
+        Vault saves, export, Performance &amp; DNA Drop unlocked. Still {FREE_TRACK_LIMIT} tracks /{' '}
+        {FREE_ALBUM_LIMIT} album — Go Pro for unlimited catalog. Ink unchanged.
       </p>
       <Link
         href="/usage?tab=cloud"
