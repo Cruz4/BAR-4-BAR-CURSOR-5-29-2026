@@ -142,7 +142,7 @@ export function FirstSongHero() {
           <p className="text-xs font-code text-muted-foreground max-w-md">
             {demoLines[0]
               ? `“${demoLines[0]}”${demoLines.length > 1 ? ` +${demoLines.length - 1} more` : ''} — straight onto your sheet.`
-              : 'Putting your landing demo onto the sheet so you can keep writing.'}
+              : 'Putting your try-sheet bars onto the sheet so you can keep writing.'}
           </p>
         </div>
       </Card>

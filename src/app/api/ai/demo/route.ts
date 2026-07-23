@@ -8,7 +8,7 @@ import { generateGuestDemoNextLine } from '@/ai/flows/guest-demo-next-line';
 export const runtime = 'nodejs';
 
 /**
- * Anonymous guest demo — powers free AI on the guest try sheet (and landing demo).
+ * Anonymous guest demo — powers free AI on the guest try sheet.
  * Never touches user accounts or the Ink economy. Hard-capped five ways:
  * signed cookie per browser, IP rate limit, global daily budget, tiny prompt,
  * generate-next-line only.

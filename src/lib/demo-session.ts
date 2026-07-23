@@ -1,5 +1,5 @@
-/** Guest demo → signup handoff. Lines written on the landing demo sheet are
- * stashed here and turned into the artist's first track after signup. */
+/** Guest try sheet → signup handoff. Lines written on the guest try sheet are
+ *  staged here so the vault can open “My Demo Track” after account creation. */
 
 export const DEMO_LINES_KEY = 'b4b-demo-lines';
 const DEMO_HANDOFF_LOCK_KEY = 'b4b-demo-handoff-lock';

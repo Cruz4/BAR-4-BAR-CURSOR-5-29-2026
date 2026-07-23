@@ -2970,7 +2970,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     !user && isGuestTrySheetEnabled() && isGuestTryAlbumId(albumId);
   const [guestDemoRemaining, setGuestDemoRemaining] = useState<number | null>(null);
 
-  // Guest try: live Ink-free Rhyme Pulse (same client phonetics as landing demo).
+  // Guest try: live Ink-free Rhyme Pulse (same client phonetics as studio).
   useEffect(() => {
     if (!isGuestTryMode) return;
     void loadPhoneticDictionary();

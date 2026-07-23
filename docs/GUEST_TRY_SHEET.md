@@ -30,7 +30,7 @@ Redeploy. Logged-out users see the landing on `/` again. `/welcome` still shows 
 |------|----------|
 | `/` (logged out) | Redirect → guest try sheet (when flag on) |
 | `/albums/try/tracks/guest-sheet` | Real `TrackEditor` — local-only vault, demo AI caps |
-| `/welcome` | Marketing landing (pitch + old demo sheet) |
+| `/welcome` | Marketing landing (classic pitch + workstation preview) |
 | `/try` | Short alias → guest sheet |
 
 ## Soft gate

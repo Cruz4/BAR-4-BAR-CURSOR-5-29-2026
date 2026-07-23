@@ -1,6 +1,6 @@
 /**
  * Client-side rhyme groups for HighlightedText — Ink-free.
- * Used by the landing demo sheet and guest try-sheet auto Rhyme Pulse.
+ * Used by the guest try-sheet auto Rhyme Pulse (client phonetics).
  */
 
 import {

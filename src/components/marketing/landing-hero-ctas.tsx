@@ -34,6 +34,9 @@ export function LandingHeroCtAs() {
       </Button>
 
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+        <Link href="/try" className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-emerald-400 hover:text-emerald-300">
+          Try the real studio sheet
+        </Link>
         <Link href={payNowCheckoutHref} className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-accent hover:text-accent/80">
           Go Pro now — {PRO_YEARLY_PRICE}/mo yearly
         </Link>
