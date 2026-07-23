@@ -2,18 +2,21 @@ import { NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { checkRateLimit } from '@/lib/server/rate-limit';
 import { getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
+import { GUEST_DEMO_MAX_USES } from '@/lib/guest-try';
 import { generateGuestDemoNextLine } from '@/ai/flows/guest-demo-next-line';
 
 export const runtime = 'nodejs';
 
 /**
- * Anonymous guest demo — powers the "try a bar" sheet on the public landing page.
+ * Anonymous guest demo — powers free AI on the guest try sheet (and landing demo).
  * Never touches user accounts or the Ink economy. Hard-capped five ways:
  * signed cookie per browser, IP rate limit, global daily budget, tiny prompt,
  * generate-next-line only.
+ *
+ * Separate from SIGNUP_INK (250) — that only applies after creating an account.
  */
 
-const DEMO_MAX_USES = 3;
+const DEMO_MAX_USES = GUEST_DEMO_MAX_USES;
 const IP_LIMIT_MAX = 6;
 const IP_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const GLOBAL_DAILY_CAP = 500;
@@ -33,14 +36,18 @@ function signUses(count: number): string {
   return `${count}.${sig}`;
 }
 
-/** Returns the verified use count, or DEMO_MAX_USES on any tamper/parse failure. */
+/**
+ * Verified use count. Missing/invalid cookie → 0 (fresh), not max.
+ * (Invalid used to count as exhausted, which falsely blocked after secret rotation.)
+ */
 function readUses(cookieValue: string | undefined): number {
   if (!cookieValue) return 0;
   const [countRaw, sig] = cookieValue.split('.');
   const count = Number.parseInt(countRaw, 10);
-  if (!Number.isFinite(count) || count < 0 || !sig) return DEMO_MAX_USES;
+  if (!Number.isFinite(count) || count < 0 || !sig) return 0;
   const expected = createHmac('sha256', DEMO_SECRET).update(String(count)).digest('hex').slice(0, 24);
-  return sig === expected ? count : DEMO_MAX_USES;
+  if (sig !== expected) return 0;
+  return Math.min(count, DEMO_MAX_USES);
 }
 
 function getCookie(req: Request, name: string): string | undefined {
@@ -85,9 +92,13 @@ async function consumeGlobalDailyBudget(): Promise<boolean> {
   return allowed;
 }
 
-function limitResponse(remaining: number, message: string) {
+function limitResponse(
+  remaining: number,
+  message: string,
+  reason: 'browser' | 'ip' | 'global' = 'browser'
+) {
   return NextResponse.json(
-    { error: message, code: 'DEMO_LIMIT', remaining },
+    { error: message, code: 'DEMO_LIMIT', remaining, reason },
     { status: 429 }
   );
 }
@@ -128,20 +139,29 @@ export async function POST(req: Request) {
 
   const uses = readUses(getCookie(req, COOKIE_NAME));
   if (uses >= DEMO_MAX_USES) {
-    return limitResponse(0, 'Demo limit reached — sign up free to keep writing.');
+    return limitResponse(
+      0,
+      `You already used your ${DEMO_MAX_USES} free demo Generate Next assists on this browser. Sign up free — you get real Ink (not connected to this demo cap).`,
+      'browser'
+    );
   }
 
   const ipCheck = checkRateLimit(`demo:${clientIp(req)}`, IP_LIMIT_MAX, IP_LIMIT_WINDOW_MS);
   if (!ipCheck.allowed) {
     return limitResponse(
       Math.max(0, DEMO_MAX_USES - uses),
-      'Too many demo requests from this connection — sign up free to keep writing.'
+      'Too many demo requests from this connection right now. Wait a bit, or sign up free for real Ink.',
+      'ip'
     );
   }
 
   try {
     if (!(await consumeGlobalDailyBudget())) {
-      return limitResponse(0, 'The demo studio is at capacity today — sign up free to keep writing.');
+      return limitResponse(
+        0,
+        'The public demo is at capacity today. Sign up free to keep writing with real Ink.',
+        'global'
+      );
     }
   } catch (err) {
     console.error('[api/ai/demo] global budget check failed', err);

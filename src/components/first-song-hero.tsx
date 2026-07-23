@@ -25,6 +25,11 @@ import {
   completeDemoHandoff,
   releaseDemoHandoff,
 } from '@/lib/demo-session';
+import {
+  claimGuestTrackHandoff,
+  completeGuestTrackHandoff,
+  releaseGuestTrackHandoff,
+} from '@/lib/guest-track-session';
 import type { Track } from '@/lib/types';
 
 const GENRE_PRESETS: Array<{ genre: string; tempoBPM: number }> = [
@@ -89,6 +94,7 @@ export function FirstSongHero() {
         const created = addTrack('unassigned', newTrack);
         if (options.claimed || options.fromDemo) {
           completeDemoHandoff();
+          completeGuestTrackHandoff();
         }
         if (options.guided) {
           markFirstSessionGuidedPending({
@@ -103,6 +109,7 @@ export function FirstSongHero() {
         setAutoOpeningDemo(false);
         if (options.claimed && (options.lines?.length || 0) > 0) {
           releaseDemoHandoff(options.lines!);
+          releaseGuestTrackHandoff(options.lines!);
         }
         toast({ variant: 'destructive', title: 'Could not start your song', description: (e as Error).message });
       }
@@ -112,7 +119,7 @@ export function FirstSongHero() {
 
   useEffect(() => {
     if (!user || vaultLoading || autoOpeningDemo || creatingRef.current) return;
-    const claimed = claimDemoHandoff();
+    const claimed = claimGuestTrackHandoff() ?? claimDemoHandoff();
     if (!claimed) return;
     setDemoLines(claimed);
     setAutoOpeningDemo(true);

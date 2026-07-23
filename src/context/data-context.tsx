@@ -4,6 +4,9 @@ import React, { createContext, useState, useEffect, ReactNode, useCallback, useR
 import type { Album, StyleProfile, Track, ProjectShare, Direction } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
+import { loadOrCreateGuestAlbum, persistGuestTrack } from '@/lib/guest-track-session';
+
 import { db } from '@/lib/firebase/client/firebase';
 import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import { doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch, deleteField } from 'firebase/firestore';
@@ -447,8 +450,37 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const loadData = async () => {
-      if (!user || !authReady) {
-        // Prevent cross-account/stale vault flash while auth session is settling.
+      if (!authReady) {
+        // Auth still settling — seed guest try vault so the sheet can open without login redirect.
+        if (!user && isGuestTrySheetEnabled()) {
+          setAlbums([loadOrCreateGuestAlbum()]);
+          setStyleProfile(null);
+          setSyncPendingCount(0);
+          setCloudSaveStatus('saved');
+          setLoading(false);
+          vaultLoadedUserIdRef.current = null;
+          return;
+        }
+        setAlbums([]);
+        setStyleProfile(null);
+        setSyncPendingCount(0);
+        setCloudSaveStatus('saved');
+        setLoading(false);
+        vaultLoadedUserIdRef.current = null;
+        return;
+      }
+
+      if (!user) {
+        if (isGuestTrySheetEnabled()) {
+          setAlbums([loadOrCreateGuestAlbum()]);
+          setStyleProfile(null);
+          setSyncPendingCount(0);
+          setCloudSaveStatus('saved');
+          setLoading(false);
+          vaultLoadedUserIdRef.current = null;
+          return;
+        }
+        // Prevent cross-account/stale vault flash while logged out.
         setAlbums([]);
         setStyleProfile(null);
         setSyncPendingCount(0);
@@ -643,7 +675,20 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }, [user, albums]);
 
   const updateTrack = useCallback((albumId: string, trackId: string, updates: Partial<Track>) => {
-    setAlbums(prev => prev.map(a => (a.id === albumId ? { ...a, tracks: a.tracks.map(t => t.id === trackId ? { ...t, ...updates } : t) } : a)));
+    setAlbums((prev) => {
+      const next = prev.map((a) =>
+        a.id === albumId
+          ? { ...a, tracks: a.tracks.map((t) => (t.id === trackId ? { ...t, ...updates } : t)) }
+          : a
+      );
+      if (!user && isGuestTryAlbumId(albumId) && isGuestTrySheetEnabled()) {
+        const guestTrack = next
+          .find((a) => a.id === albumId)
+          ?.tracks.find((t) => t.id === trackId);
+        if (guestTrack) persistGuestTrack(guestTrack);
+      }
+      return next;
+    });
     if (user) {
       pendingTrackUpdates.current[trackId] = { albumId, updates: { ...(pendingTrackUpdates.current[trackId]?.updates || {}), ...updates } };
       if (isBrowserOffline()) {

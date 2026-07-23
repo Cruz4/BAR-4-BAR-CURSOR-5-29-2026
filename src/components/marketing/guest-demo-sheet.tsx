@@ -17,12 +17,7 @@ import { persistDemoLines } from '@/lib/demo-session';
 import { buildLandingSignupUrl } from '@/lib/login-links';
 import { SIGNUP_INK } from '@/lib/subscription';
 import { coWriterIntentRowClass } from '@/lib/co-writer-rules';
-import {
-  lineEndWord,
-  nearRhymeScore,
-  NEAR_RHYME_THRESHOLD,
-  rhymeKey,
-} from '@/lib/lyrics-analysis';
+import { buildClientRhymeGroups } from '@/lib/lyrics-analysis/client-rhyme-groups';
 
 type DemoOption = { line: string; syllables: number; rhymeKey: string };
 
@@ -30,57 +25,6 @@ const MAX_SHEET_LINES = 8;
 const MAX_MOTIF = 48;
 const MAX_MOTIFS = 6;
 const LOCK_HIGHLIGHT = 'bg-sky-500/30 text-sky-100 ring-1 ring-sky-400/50 font-bold';
-
-/** Build app-style rhymeGroups from end-words across sheet lines (user + assist). */
-function buildRhymeGroups(lines: string[]): { words: string[] }[] {
-  const ends = lines
-    .map((line) => lineEndWord(line))
-    .filter((w): w is string => !!w && w.length > 0);
-  if (ends.length < 2) return [];
-
-  const parent = ends.map((_, i) => i);
-  const find = (i: number): number => {
-    let cur = i;
-    while (parent[cur] !== cur) cur = parent[cur];
-    return cur;
-  };
-  const union = (a: number, b: number) => {
-    const ra = find(a);
-    const rb = find(b);
-    if (ra !== rb) parent[rb] = ra;
-  };
-
-  for (let i = 0; i < ends.length; i++) {
-    for (let j = i + 1; j < ends.length; j++) {
-      const a = ends[i];
-      const b = ends[j];
-      if (a.toLowerCase() === b.toLowerCase()) {
-        union(i, j);
-        continue;
-      }
-      const ka = rhymeKey(a);
-      const kb = rhymeKey(b);
-      if (ka !== '?' && kb !== '?' && ka === kb) {
-        union(i, j);
-        continue;
-      }
-      if (nearRhymeScore(a, b) >= NEAR_RHYME_THRESHOLD) {
-        union(i, j);
-      }
-    }
-  }
-
-  const buckets = new Map<number, Set<string>>();
-  ends.forEach((word, i) => {
-    const root = find(i);
-    if (!buckets.has(root)) buckets.set(root, new Set());
-    buckets.get(root)!.add(word.toLowerCase());
-  });
-
-  return Array.from(buckets.values())
-    .map((set) => ({ words: Array.from(set) }))
-    .filter((g) => g.words.length >= 2);
-}
 
 function highlightLockedEnding(line: string, endWith: string) {
   const lock = endWith.trim();
@@ -122,7 +66,7 @@ export function GuestDemoSheet() {
     return draftText ? [...lines, draftText] : lines;
   }, [lines, draft]);
 
-  const rhymeGroups = useMemo(() => buildRhymeGroups(pulseLines), [pulseLines]);
+  const rhymeGroups = useMemo(() => buildClientRhymeGroups(pulseLines), [pulseLines]);
   const pulseConnectionCount = rhymeGroups.length;
 
   useEffect(() => {
@@ -487,7 +431,7 @@ export function GuestDemoSheet() {
                     </p>
                     <p className="font-code text-sm text-foreground/95 leading-snug group-hover:text-white">
                       {activeLock ? highlightLockedEnding(opt.line, activeLock) : (
-                        <HighlightedText text={opt.line} rhymeGroups={buildRhymeGroups([...lines, opt.line])} />
+                        <HighlightedText text={opt.line} rhymeGroups={buildClientRhymeGroups([...lines, opt.line])} />
                       )}
                     </p>
                   </button>

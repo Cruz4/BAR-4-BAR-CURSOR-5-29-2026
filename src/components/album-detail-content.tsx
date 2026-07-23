@@ -87,6 +87,7 @@ import { ShareDialog } from './share-dialog';
 import { TooltipProvider } from './ui/tooltip';
 import { DataContext } from '@/context/data-context';
 import { useAuth } from '@/hooks/use-auth';
+import { GUEST_TRY_PATH, isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
 import {
   canUserAddTrack,
   countUserTracks,
@@ -664,6 +665,12 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
     setCreateTrackOpen(true);
   };
   const [album, setAlbum] = useState<Album | null>(null);
+
+  useEffect(() => {
+    if (isGuestTrySheetEnabled() && isGuestTryAlbumId(albumId) && !user) {
+      router.replace(GUEST_TRY_PATH);
+    }
+  }, [albumId, user, router]);
 
   useEffect(() => {
     if (!loading) {

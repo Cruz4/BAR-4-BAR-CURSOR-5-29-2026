@@ -38,6 +38,9 @@ import {
 import { BrandLockup } from '@/components/brand-lockup';
 import { BRAND_ARIA_LABEL } from '@/lib/brand';
 import { StudioThemeControls } from '@/components/studio-theme-controls';
+import { isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
+import { buildLoginUrl } from '@/lib/login-links';
+import { prepareGuestTrackForSignup } from '@/lib/guest-track-session';
 
 export function Header() {
   const { user, loading } = useAuth();
@@ -57,6 +60,10 @@ export function Header() {
 
   const albumId = params?.albumId as string;
   const trackId = params?.trackId as string;
+  const isGuestTry =
+    !user && isGuestTrySheetEnabled() && isGuestTryAlbumId(albumId);
+  const backHref = isGuestTry ? '/welcome' : albumId ? `/albums/${albumId}` : '/';
+  const signupHref = buildLoginUrl({ mode: 'signup', next: '/' });
 
   useEffect(() => {
     let interval: any;
@@ -107,7 +114,7 @@ export function Header() {
       <div className="relative h-14 w-full px-2 sm:px-4 md:px-6">
             {/* Logo centered — tablet/desktop only (mobile uses left column to avoid theme-toggle overlap) */}
             <div className="pointer-events-none absolute inset-0 z-20 hidden md:flex items-center justify-center px-24 lg:px-32">
-                <Link href="/" className="pointer-events-auto min-w-0 max-w-full group" aria-label={BRAND_ARIA_LABEL}>
+                <Link href={isGuestTry ? '/welcome' : '/'} className="pointer-events-auto min-w-0 max-w-full group" aria-label={BRAND_ARIA_LABEL}>
                     <BrandLockup variant="app" />
                 </Link>
             </div>
@@ -118,27 +125,26 @@ export function Header() {
                   <Button 
                     variant="ghost" 
                     size="icon"
-                    onClick={() => router.push(`/albums/${albumId}`)} 
+                    onClick={() => router.push(backHref)} 
                     className="h-9 w-9 shrink-0 text-muted-foreground hover:text-primary transition-all hover:bg-primary/5 md:hidden"
-                    aria-label="Back to album"
+                    aria-label={isGuestTry ? 'About Bar 4 Bar' : 'Back to album'}
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
                 )}
-                <Link href="/" className="min-w-0 flex-1 md:hidden group overflow-hidden" aria-label={BRAND_ARIA_LABEL}>
+                <Link href={isGuestTry ? '/welcome' : '/'} className="min-w-0 flex-1 md:hidden group overflow-hidden" aria-label={BRAND_ARIA_LABEL}>
                     <BrandLockup variant="app" className="max-w-full" />
                 </Link>
                 {albumId && trackId && (
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    onClick={() => router.push(`/albums/${albumId}`)} 
+                    onClick={() => router.push(backHref)} 
                     className="hidden md:inline-flex h-9 px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-all hover:bg-primary/5 shrink-0"
                   >
-                    <ChevronLeft className="mr-2 h-4 w-4" /> Back to Album
+                    <ChevronLeft className="mr-2 h-4 w-4" /> {isGuestTry ? 'About' : 'Back to Album'}
                   </Button>
-                )}
-                <div className={cn(
+                )}                <div className={cn(
                   "flex items-center gap-3 text-[10px] text-primary transition-all duration-300 min-w-0", 
                   isGenerating ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 pointer-events-none w-0 overflow-hidden'
                 )}>
@@ -149,6 +155,36 @@ export function Header() {
 
           <nav className="flex items-center justify-end gap-0.5 sm:gap-1 md:gap-2 min-w-0 flex-1 basis-0 max-w-[42%] sm:max-w-[38%] md:max-w-none shrink-0 pointer-events-none [&>*]:pointer-events-auto">
             <TooltipProvider>
+            {!loading && !user && isGuestTry && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground hidden sm:inline-flex"
+                  onClick={() => router.push('/welcome')}
+                >
+                  About
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-[10px] font-bold uppercase tracking-wide"
+                  onClick={() => router.push('/login')}
+                >
+                  Log in
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-8 px-3 text-[10px] font-bold uppercase tracking-wide bg-emerald-500 hover:bg-emerald-400 text-emerald-950"
+                  onClick={() => {
+                    prepareGuestTrackForSignup();
+                    router.push(signupHref);
+                  }}
+                >
+                  Sign up
+                </Button>
+              </>
+            )}
             {!loading && user && (
               <>
                 <StudioThemeControls />

@@ -20,7 +20,7 @@ import {
 } from '@/lib/studio-tiers';
 import { BrandLockup } from '@/components/brand-lockup';
 
-/** Public marketing surface for anonymous visitors on `/` (no auth form — CTA to `/login`). */
+/** Public marketing surface — served at `/welcome` (and `/` when guest try sheet is off). */
 export function PublicHomeLanding() {
   return (
     <div className="min-h-screen flex flex-col selection:bg-primary/30 overflow-x-hidden relative">
@@ -79,6 +79,14 @@ export function PublicHomeLanding() {
             </h2>
             <p className="text-xs sm:text-sm font-code text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               Write a bar below. See your rhymes connect, then carry the track into the full studio.
+            </p>
+            <p className="pt-1">
+              <Link
+                href="/try"
+                className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-400 hover:text-emerald-300 transition-colors"
+              >
+                Or open the real studio sheet →
+              </Link>
             </p>
           </div>
 

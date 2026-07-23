@@ -7,8 +7,10 @@ import { buildLoginUrl } from '@/lib/login-links';
 import { StudioLoader } from '@/components/studio-loader';
 
 /**
- * Social/ad ?ref= links on `/` go straight to signup — no landing detour.
+ * Social/ad ?ref= links on `/welcome` go straight to signup — no landing detour.
  * Organic visitors without ?ref= still see the full marketing landing page.
+ * Note: when guest try sheet is ON, `/` redirects to the real editor instead;
+ * this redirect only applies on `/welcome`.
  */
 export function SocialRefSignupRedirect({ children }: { children: React.ReactNode }) {
   const router = useRouter();

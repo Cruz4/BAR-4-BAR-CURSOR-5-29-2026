@@ -108,7 +108,7 @@ import { StudioLoader } from '@/components/studio-loader';
 import { useInkCosts } from '@/hooks/use-ink-costs';
 import { withAiAuth } from '@/lib/ai-client';
 import { useAuth } from '@/hooks/use-auth';
-import { isProFeaturePreviewActive, isProOrTrial } from '@/lib/subscription';
+import { isProFeaturePreviewActive, isProOrTrial, SIGNUP_INK } from '@/lib/subscription';
 import { recordProTrialVaultSave } from '@/lib/pro-trial-quest-client';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
@@ -155,6 +155,10 @@ import {
 import { postGamificationEvent } from '@/lib/gamification-client';
 import { claimMilestone } from '@/lib/milestones-client';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
+import { GuestTrySaveBanner } from '@/components/guest-try-save-banner';
+import { GUEST_DEMO_MAX_USES, guestInkFeatureLockedToast, isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
+import { buildClientRhymeGroups } from '@/lib/lyrics-analysis/client-rhyme-groups';
+import { loadPhoneticDictionary } from '@/lib/lyrics-analysis';
 import { MobileLyricsTabBar, type MobileLyricsTab } from '@/components/mobile-lyrics-tab-bar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { UpgradeTooltip } from '@/components/upgrade-tooltip';
@@ -747,7 +751,7 @@ function mobileLyricsPanelClass(active: boolean, edge?: 'left' | 'right') {
   );
 }
 
-function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSectionId, setExportDialogOpen, setShareDialogOpen, onCollapse, leftCollapsed, setGenerateDraftOpen, scratchPadRef, isPro, mobileActive = false, trackLocked = false, tierLocked = false, completeLocked = false, workstationAttention = false, tourMobilePad = false }: any) {
+function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSectionId, setExportDialogOpen, setShareDialogOpen, onCollapse, leftCollapsed, setGenerateDraftOpen, scratchPadRef, isPro, mobileActive = false, trackLocked = false, tierLocked = false, completeLocked = false, workstationAttention = false, tourMobilePad = false, isGuestTryMode = false }: any) {
   const { user } = useAuth();
   const router = useRouter();
   const { setGenerating } = useUIState();
@@ -756,7 +760,14 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   const { getEffectiveCost, tooltip, buttonLabel } = useInkCosts();
   const { runWithInk } = useTouchInkRunner();
 
+  const gateGuestInk = (featureLabel: string) => {
+    if (!isGuestTryMode) return false;
+    toast(guestInkFeatureLockedToast(featureLabel));
+    return true;
+  };
+
   const handleSuggestVibe = async (e: any) => {
+    if (gateGuestInk('Vibe Suggester')) return;
     if (trackLocked) {
       toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
       return;
@@ -780,6 +791,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   };
 
   const handleGenerateScene = async (e: any) => {
+    if (gateGuestInk('Scene Gen')) return;
     if (trackLocked) {
       toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
       return;
@@ -852,7 +864,13 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  onClick={() => setGenerateDraftOpen(true)}
+                  onClick={() => {
+                    if (isGuestTryMode) {
+                      toast(guestInkFeatureLockedToast('Generation Workstation'));
+                      return;
+                    }
+                    setGenerateDraftOpen(true);
+                  }}
                   disabled={trackLocked}
                   data-tour="generation-workstation"
                   aria-label={workstationAttention ? 'Generation Workstation — session in progress, tap to reopen' : 'Open Generation Workstation'}
@@ -865,6 +883,9 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                     <div className="flex flex-col items-start">
                       <span className="text-xs leading-none">Generation</span>
                       <span className="text-lg leading-none mt-1">Workstation</span>
+                      {isGuestTryMode && (
+                        <span className="text-[8px] leading-none mt-1.5 opacity-90 normal-case tracking-normal font-code">Sign up · uses Ink</span>
+                      )}
                     </div>
                 </Button>
               </TooltipTrigger>
@@ -1079,7 +1100,9 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                     </>
                   }
                 >
-                  <Button variant="outline" size="sm" disabled={trackLocked} className="w-full h-9 text-[9px] font-bold uppercase border-amber-500/20 hover:bg-amber-500/10 text-amber-600 disabled:opacity-50" onClick={(e) => handleSuggestVibe(e)}><RefreshCw className="mr-2 h-3.5 w-3.5"/> {buttonLabel('suggestVibe')}</Button>
+                  <Button variant="outline" size="sm" disabled={trackLocked} className="w-full h-9 text-[9px] font-bold uppercase border-amber-500/20 hover:bg-amber-500/10 text-amber-600 disabled:opacity-50" onClick={(e) => handleSuggestVibe(e)}>
+                    <RefreshCw className="mr-2 h-3.5 w-3.5"/> {isGuestTryMode ? 'Sign up for Vibe AI' : buttonLabel('suggestVibe')}
+                  </Button>
                 </Hint>
               </CardContent>
           </Card>
@@ -1108,7 +1131,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                   }
                 >
                   <Button variant="outline" size="sm" disabled={trackLocked} className="w-full h-9 text-[9px] font-bold uppercase border-indigo-500/20 hover:bg-indigo-500/10 text-indigo-400 disabled:opacity-50" onClick={(e) => handleGenerateScene(e)}>
-                    <Sparkles className="mr-2 h-3.5 w-3.5"/> {buttonLabel('generateCoverArt')}
+                    <Sparkles className="mr-2 h-3.5 w-3.5"/> {isGuestTryMode ? 'Sign up for Scene Gen' : buttonLabel('generateCoverArt')}
                   </Button>
                 </Hint>
               </CardContent>
@@ -1172,7 +1195,7 @@ function lineGenInkKey(mode: 'next' | 'previous', sectionId: string, barIdx: num
   return `generateNextLine-${mode}-${sectionId}-${barIdx}`;
 }
 
-function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, rhymePulseArmed = false, isInkArmed, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false }: any) {
+function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, rhymePulseArmed = false, isInkArmed, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false, isGuestTryMode = false }: any) {
   const [fontSize, setFontSize] = useState<'xs' | 'sm' | 'md' | 'lg'>('md');
   const lyricsViewportRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -1495,28 +1518,51 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                 <Hint
                   skipOnTouch
                   side="bottom"
-                  content={<p className="text-[10px] font-bold">{tooltip('findRhymes')}</p>}
+                  content={
+                    <p className="text-[10px] font-bold">
+                      {isGuestTryMode
+                        ? 'Live free on the try sheet — highlights matching end-rhymes as you write'
+                        : tooltip('findRhymes')}
+                    </p>
+                  }
                 >
                   <div data-tour="rhyme-pulse" className="relative inline-flex shrink-0">
-                  <InkArmAffordance armed={rhymePulseArmed}>
+                  <InkArmAffordance armed={!isGuestTryMode && rhymePulseArmed}>
                   <Button 
                       variant="outline" 
                       size="sm" 
                       className={cn(
                           "rounded-full h-8 w-8 p-0 transition-all active:scale-90 bg-background border-primary/40 hover:bg-primary/5 group shadow-lg flex items-center justify-center shrink-0",
                           isRhymeLoading && "animate-pulse",
-                          inkArmedButtonClass(rhymePulseArmed)
+                          !isGuestTryMode && inkArmedButtonClass(rhymePulseArmed),
+                          isGuestTryMode && track.rhymeHighlightingEnabled && "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
                       )}
                       onClick={handleRunRhymeScan}
                       disabled={trackLocked || isRhymeLoading}
-                      aria-label={rhymePulseArmed ? 'Tap again to confirm Rhyme Pulse' : 'Rhyme Pulse'}
+                      aria-label={
+                        isGuestTryMode
+                          ? 'Rhyme Pulse (free on try sheet)'
+                          : rhymePulseArmed
+                            ? 'Tap again to confirm Rhyme Pulse'
+                            : 'Rhyme Pulse'
+                      }
                   >
                       {isRhymeLoading ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <Target className="h-4 w-4 text-primary" />}
                   </Button>
                   </InkArmAffordance>
                   </div>
                 </Hint>
-                <Badge variant="outline" className="h-4 px-1.5 text-[7px] font-bold border-primary/20 text-primary shrink-0 leading-none whitespace-nowrap">{getEffectiveCost('findRhymes')} INK</Badge>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'h-4 px-1.5 text-[7px] font-bold shrink-0 leading-none whitespace-nowrap',
+                    isGuestTryMode
+                      ? 'border-emerald-500/40 text-emerald-400'
+                      : 'border-primary/20 text-primary'
+                  )}
+                >
+                  {isGuestTryMode ? 'FREE' : `${getEffectiveCost('findRhymes')} INK`}
+                </Badge>
              </div>
           </div>
           <ToggleGroup
@@ -2908,6 +2954,39 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const scratchPadRef = useRef<any>(null);
 
   const { track, album } = useMemo(() => getTrackById(albumId, trackId), [getTrackById, albumId, trackId]);
+  const isGuestTryMode =
+    !user && isGuestTrySheetEnabled() && isGuestTryAlbumId(albumId);
+  const [guestDemoRemaining, setGuestDemoRemaining] = useState<number | null>(null);
+
+  // Guest try: live Ink-free Rhyme Pulse (same client phonetics as landing demo).
+  useEffect(() => {
+    if (!isGuestTryMode) return;
+    void loadPhoneticDictionary();
+  }, [isGuestTryMode]);
+
+  useEffect(() => {
+    if (!isGuestTryMode || !track) return;
+    const lines = track.sections.flatMap((s) => s.bars.map((b) => b.text)).filter((t) => (t || '').trim());
+    const groups = buildClientRhymeGroups(lines);
+    const sameGroups = JSON.stringify(groups) === JSON.stringify(track.rhymeGroups || []);
+    const needOn = track.rhymeHighlightingEnabled !== true;
+    if (sameGroups && !needOn) return;
+    const t = window.setTimeout(() => {
+      updateTrack(albumId, trackId, {
+        rhymeGroups: groups,
+        ...(needOn ? { rhymeHighlightingEnabled: true } : {}),
+      });
+    }, 180);
+    return () => window.clearTimeout(t);
+  }, [
+    isGuestTryMode,
+    track?.sections,
+    track?.rhymeGroups,
+    track?.rhymeHighlightingEnabled,
+    albumId,
+    trackId,
+    updateTrack,
+  ]);
 
   useEffect(() => {
     if (!track || !user) return;
@@ -3247,6 +3326,22 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   const handleRunRhymeScan = async (e: any) => {
     if (!track) return;
+    // Guest try: Ink-free client phonetic pulse (auto-runs while writing; button re-scans / toggles focus).
+    if (isGuestTryMode) {
+      const lines = track.sections.flatMap((s) => s.bars.map((b) => b.text)).filter((t) => t.trim());
+      const groups = buildClientRhymeGroups(lines);
+      handleUpdateTrack({
+        rhymeGroups: groups,
+        rhymeHighlightingEnabled: true,
+      });
+      toast({
+        title: groups.length ? 'Rhyme Pulse live' : 'Rhyme Pulse on',
+        description: groups.length
+          ? `${groups.length} rhyme group${groups.length === 1 ? '' : 's'} highlighted — free on the try sheet.`
+          : 'Write a few bars that rhyme — colors light up automatically (free, not Ink).',
+      });
+      return;
+    }
     if (isTrackOverTierLimit(trackId, albumId, albums, user)) {
       toast({ variant: 'destructive', ...TIER_LIMIT_LOCKED_TOAST });
       return;
@@ -3289,6 +3384,93 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     const sectionId = sId || activeGeneratorBar?.sectionId;
     const barIdx = bIdx || activeGeneratorBar?.idx;
     if (!sectionId || !barIdx) { toast({ variant: 'destructive', title: 'Selection Required' }); return; }
+
+    // Anonymous try sheet — capped demo API (no Ink / no account).
+    if (isGuestTryMode) {
+      if (mode === 'previous') {
+        toast({
+          title: 'Sign up to unlock',
+          description: 'Previous-line fill and full Co-Writer unlock after you create a free account.',
+        });
+        return;
+      }
+      const section = track.sections.find((s) => s.id === sectionId);
+      if (!section) return;
+      const priorLines = section.bars
+        .filter((b) => b.idx < barIdx)
+        .map((b) => b.text)
+        .filter((t) => t.trim());
+      const targetLine = section.bars.find((b) => b.idx === barIdx)?.text || '';
+      const sheetLines = [...priorLines, ...(targetLine.trim() ? [targetLine] : [])].filter((t) => t.trim());
+      if (sheetLines.length === 0) {
+        toast({ variant: 'destructive', title: 'Write a bar first', description: 'One line is all it takes.' });
+        return;
+      }
+      setGenerating(true, 'Neural Synthesis Active...');
+      try {
+        const endWith =
+          isIntentsActive(track) && typeof track.endWith === 'string' ? track.endWith.trim() : '';
+        const intents = isIntentsActive(track)
+          ? (track.checkedIntents || []).filter((i) => typeof i === 'string' && i.trim())
+          : [];
+        const res = await fetch('/api/ai/demo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lines: sheetLines.slice(-6),
+            ...(endWith ? { endWith } : {}),
+            ...(intents.length ? { intents: intents.slice(0, 6) } : {}),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          if (data.code === 'DEMO_LIMIT') {
+            if (typeof data.remaining === 'number') setGuestDemoRemaining(data.remaining);
+            const reason = data.reason as string | undefined;
+            toast({
+              variant: 'destructive',
+              title:
+                reason === 'ip'
+                  ? 'Demo rate limit'
+                  : reason === 'global'
+                    ? 'Demo at capacity'
+                    : 'Demo assists used',
+              description:
+                data.error ||
+                `This browser already used its ${GUEST_DEMO_MAX_USES} free Generate Next assists (not real Ink). Sign up to get ${SIGNUP_INK} Ink — separate from this demo.`,
+            });
+          } else {
+            toast({ variant: 'destructive', title: 'Synthesis Failed', description: data.error || 'Try again' });
+          }
+          return;
+        }
+        const options = Array.isArray(data.options) ? data.options : [];
+        if (options.length === 0) throw new Error('Synthesis produced no results.');
+        setGenerationOptions(options);
+        setIsMinimized(false);
+        setPendingGenCtx({ mode, sId: sectionId, bIdx: barIdx });
+        if (typeof data.remaining === 'number') {
+          setGuestDemoRemaining(data.remaining);
+          if (data.remaining <= 0) {
+            toast({
+              title: 'Last demo assist used',
+              description: `That was free demo Generate Next (not Ink). Sign up to save this sheet and get ${SIGNUP_INK} Ink for the full studio.`,
+            });
+          } else {
+            toast({
+              title: 'Demo assist used',
+              description: `${data.remaining} free Generate Next left on this browser · signup Ink (${SIGNUP_INK}) is separate.`,
+            });
+          }
+        }
+      } catch (err: any) {
+        toast({ variant: 'destructive', title: 'Synthesis Failed', description: err.message });
+      } finally {
+        setGenerating(false);
+      }
+      return;
+    }
+
     const cost = getEffectiveCost('generateNextLine');
     const inkKey = `generateNextLine-${mode}-${sectionId}-${barIdx}`;
     runWithInk(inkKey, cost, 'generateNextLine', e, async () => {
@@ -3492,7 +3674,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] max-md:h-[calc(100dvh-3.5rem)] w-full overflow-hidden max-md:pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))]">
-      <FreeTierExpectationsBanner user={user} />
+      {isGuestTryMode ? <GuestTrySaveBanner remainingOverride={guestDemoRemaining} /> : <FreeTierExpectationsBanner user={user} />}
       {tierLocked && (
         <div className="shrink-0 border-b border-pink-500/25 bg-pink-500/10 px-4 py-2 flex items-center gap-2 z-30">
           <Lock className={cn('h-4 w-4 shrink-0', proLockIcon())} />
@@ -3525,8 +3707,20 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         </div>
       )}
       <div className="flex flex-1 min-h-0 overflow-hidden w-full">
-      <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={isMobileLayout && mobilePanelTab === 'workstation'} trackLocked={editsLocked} tierLocked={tierLocked} completeLocked={completeLocked} workstationAttention={workstationAttention} tourMobilePad={tourActive && isMobileLayout} />
-      <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={setFreestyleOpen} album={album} setSmartStructureOpen={setSmartStructureOpen} isRhymeLoading={isRhymeLoading} rhymePulseArmed={isArmed('findRhymes')} isInkArmed={isArmed} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleDismissGenerationOptions={handleDismissGenerationOptions} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={isMobileLayout && mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} />
+      <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={isMobileLayout && mobilePanelTab === 'workstation'} trackLocked={editsLocked} tierLocked={tierLocked} completeLocked={completeLocked} workstationAttention={workstationAttention} tourMobilePad={tourActive && isMobileLayout} isGuestTryMode={isGuestTryMode} />
+      <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={(open: boolean) => {
+        if (open && isGuestTryMode) {
+          toast(guestInkFeatureLockedToast('Freestyle Pad'));
+          return;
+        }
+        setFreestyleOpen(open);
+      }} album={album} setSmartStructureOpen={(open: boolean) => {
+        if (open && isGuestTryMode) {
+          toast(guestInkFeatureLockedToast('Smart Structure'));
+          return;
+        }
+        setSmartStructureOpen(open);
+      }} isRhymeLoading={isRhymeLoading} rhymePulseArmed={isArmed('findRhymes')} isInkArmed={isArmed} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleDismissGenerationOptions={handleDismissGenerationOptions} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={isMobileLayout && mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} isGuestTryMode={isGuestTryMode} />
       <RightPanel 
         track={track} 
         album={album} 
@@ -3538,7 +3732,13 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         rightCollapsed={rightCollapsed} 
         onCollapse={setRightCollapsed} 
         improveStyleOpen={improveStyleOpen}
-        setImproveStyleOpen={setImproveStyleOpen} 
+        setImproveStyleOpen={(open: boolean) => {
+          if (open && isGuestTryMode) {
+            toast(guestInkFeatureLockedToast('Improve My Style'));
+            return;
+          }
+          setImproveStyleOpen(open);
+        }}
         styleVaultOpen={styleVaultOpen}
         setStyleVaultOpen={setStyleVaultOpen} 
         handleSharedLineGeneration={handleSharedLineGeneration} 
@@ -3579,7 +3779,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       />
       <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} album={album} tracks={[track]} exportType="track" allowDownload={isPro} />
       <ShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} type="track" id={track.id} title={track.title} albumId={album.id} existingShareId={track.shareId} />
-      <FreestylePad open={freestyleOpen} onOpenChange={setFreestyleOpen} onAddFreestyle={(text) => { const lines = text.split('. ').filter(l => l.trim()); const activeS = track.sections.find(s => s.id === activeSectionId) || track.sections[0]; const startIdx = activeS.bars.length + 1; const newBars = lines.map((l, i) => withLineSource({ idx: startIdx + i, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' }, 'written')); handleUpdateTrack({ sections: track.sections.map(s => s.id === activeS.id ? { ...s, bars: [...s.bars, ...newBars] } : s) }); setFreestyleOpen(false); }} disabled={editsLocked} trackVibe={track.vibe} albumTheme={album.theme} styleProfileSummary={styleProfile.history[0]?.analysis || ''} isPro={isPro} />
+      <FreestylePad open={freestyleOpen} onOpenChange={setFreestyleOpen} onAddFreestyle={(text) => { const lines = text.split('. ').filter(l => l.trim()); const activeS = track.sections.find(s => s.id === activeSectionId) || track.sections[0]; const startIdx = activeS.bars.length + 1; const newBars = lines.map((l, i) => withLineSource({ idx: startIdx + i, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' }, 'written')); handleUpdateTrack({ sections: track.sections.map(s => s.id === activeS.id ? { ...s, bars: [...s.bars, ...newBars] } : s) }); setFreestyleOpen(false); }} disabled={editsLocked} trackVibe={track.vibe} albumTheme={album.theme} styleProfileSummary={effectiveStyleProfile.history[0]?.analysis || ''} isPro={isPro} />
       <SmartStructureDialog
         open={smartStructureOpen}
         onOpenChange={(open) => { if (open && editsLocked) { toast({ variant: 'destructive', ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST) }); return; } setSmartStructureOpen(open); }}

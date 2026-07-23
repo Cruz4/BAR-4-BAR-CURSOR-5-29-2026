@@ -26,6 +26,7 @@ import {
 } from '@/lib/offline/vault-cache';
 import { isMasterAdminEmail } from '@/lib/master-admin';
 import { resolvePostLoginPath } from '@/lib/post-login-redirect';
+import { isGuestTryPath, isGuestTrySheetEnabled } from '@/lib/guest-try';
 
 interface AuthContextType {
   user: User | null;
@@ -279,6 +280,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    const guestTryAllowed =
+      isGuestTrySheetEnabled() && isGuestTryPath(pathname);
     const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
     const shouldBounceLoggedInUser = LOGGED_IN_BOUNCE_ROUTES.includes(pathname);
 
@@ -287,7 +290,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    if (!user && isProtectedRoute) {
+    // Logged-in users on the anonymous try sheet → vault (handoff runs on empty vault).
+    if (user && guestTryAllowed) {
+      setIsRedirecting(true);
+      router.replace('/');
+      return;
+    }
+
+    if (!user && isProtectedRoute && !guestTryAllowed) {
       if (isBrowserOffline()) return;
       setIsRedirecting(true);
       const search = typeof window !== 'undefined' ? window.location.search : '';
