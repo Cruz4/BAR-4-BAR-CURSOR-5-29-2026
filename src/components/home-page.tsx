@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { AlbumList } from '@/components/album-list';
 import { PublicHomeLanding } from '@/components/marketing/public-home-landing';
 import { SocialRefSignupRedirect } from '@/components/marketing/social-ref-signup-redirect';
+import { GuestTryHandoffScreen } from '@/components/guest-try-handoff-screen';
 import { useAuth } from '@/hooks/use-auth';
-import { StudioLoader } from '@/components/studio-loader';
 import { GUEST_TRY_PATH, isGuestTrySheetEnabled } from '@/lib/guest-try';
 
 function GuestHomeEntry() {
@@ -21,11 +21,7 @@ function GuestHomeEntry() {
   }, [guestTry, router, searchParams]);
 
   if (guestTry) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <StudioLoader size="lg" />
-      </div>
-    );
+    return <GuestTryHandoffScreen />;
   }
 
   return (
@@ -40,13 +36,7 @@ export function HomePage() {
   return user ? (
     <AlbumList />
   ) : (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          <StudioLoader size="lg" />
-        </div>
-      }
-    >
+    <Suspense fallback={<GuestTryHandoffScreen />}>
       <GuestHomeEntry />
     </Suspense>
   );

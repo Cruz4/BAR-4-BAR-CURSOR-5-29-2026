@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { GuestTryHandoffScreen } from '@/components/guest-try-handoff-screen';
 import { StudioLoader } from '@/components/studio-loader';
 import { GUEST_TRY_PATH, isGuestTrySheetEnabled } from '@/lib/guest-try';
 import { useAuth } from '@/hooks/use-auth';
@@ -26,6 +27,10 @@ export default function TryRedirectInner() {
     }
     router.replace(`${GUEST_TRY_PATH}${suffix}`);
   }, [loading, user, router, searchParams]);
+
+  if (!user && isGuestTrySheetEnabled()) {
+    return <GuestTryHandoffScreen />;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center">

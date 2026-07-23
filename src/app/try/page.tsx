@@ -1,18 +1,12 @@
 'use client';
 
 import { Suspense } from 'react';
-import { StudioLoader } from '@/components/studio-loader';
+import { GuestTryHandoffScreen } from '@/components/guest-try-handoff-screen';
 import TryRedirectInner from './try-redirect-inner';
 
 export default function TryRedirectPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          <StudioLoader size="lg" />
-        </div>
-      }
-    >
+    <Suspense fallback={<GuestTryHandoffScreen />}>
       <TryRedirectInner />
     </Suspense>
   );
