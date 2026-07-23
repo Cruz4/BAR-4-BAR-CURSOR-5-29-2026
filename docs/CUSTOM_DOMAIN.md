@@ -74,7 +74,7 @@ In **root `.env`** and **`.firebase/lyricai-studio-otgxn/functions/.env`**:
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=bar4bar.ink
 ```
 
-The client config in [`src/lib/firebase/client/firebase.ts`](../src/lib/firebase/client/firebase.ts) reads this variable. Until you set it, the app keeps using `lyricai-studio-otgxn.firebaseapp.com`.
+The client config in [`src/lib/firebase/client/firebase.ts`](../src/lib/firebase/client/firebase.ts) reads this variable. In **production** the default is `bar4bar.ink`; in **local `next dev`** the default is `lyricai-studio-otgxn.firebaseapp.com` so Google signup can finish on localhost (using `bar4bar.ink` as authDomain from localhost leaves a blank `/__/auth/handler` page).
 
 Then build and deploy when you’re ready:
 
@@ -96,6 +96,7 @@ npx firebase deploy --only hosting,functions
 | `redirect_uri_mismatch` | Add `https://bar4bar.ink/__/auth/handler` in Google Cloud OAuth client |
 | Auth works on `.web.app` but not `.ink` | Add `bar4bar.ink` to Firebase Authorized domains |
 | SSL / handler 404 | Wait for Hosting SSL; confirm domain is Connected |
+| Blank `/__/auth/handler` after Google on **localhost** | Expected if authDomain is `bar4bar.ink` — local `next dev` uses `*.firebaseapp.com`; restart the dev server and use the Google **popup** (redirect is disabled on localhost) |
 
 **Account picker:** The app sends `prompt=select_account` to Google so users always see “Choose an account” instead of auto-signing into the last Gmail session in the browser.
 

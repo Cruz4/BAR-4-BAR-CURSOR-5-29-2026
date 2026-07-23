@@ -51,6 +51,10 @@ export async function grantCompletionBurstIfEligible(
   return { granted: true, amount: grantAmount };
 }
 
+/**
+ * Marks first meaningful studio activity.
+ * Fired from song-draft complete and (server-side) the first successful AI spend.
+ */
 export async function markUserActivatedIfNeeded(
   db: Firestore,
   userId: string,

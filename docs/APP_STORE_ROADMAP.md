@@ -115,7 +115,7 @@ npx cap open ios
 |-------|--------|
 | 15–30s preview | Best TikTok Spark Ad clip |
 | Screenshots | Phone screen record: Vault, Editor, Generate Next Line, Usage |
-| Description bullets | Pro $7.77/mo, free 300 Ink demo, bar-by-bar workstation |
+| Description bullets | Pro $7.77/mo, free 250 Ink demo, bar-by-bar workstation |
 
 ---
 

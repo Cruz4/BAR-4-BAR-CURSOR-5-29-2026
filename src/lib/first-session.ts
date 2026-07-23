@@ -1,12 +1,12 @@
 /**
  * First-session onboarding helpers.
  *
- * Guide me path: condensed 4-step editor tour (buildFirstSessionGuidedSteps),
- * then three just-in-time coach marks after the first write / Ink spend / accept.
+ * After signup (demo handoff or landing), the first lyrics sheet offers an
+ * opt-in workstation tour (LyricsTourOfferDialog). Coach marks still help
+ * during the first ~30 minutes. Vault tour runs on the first real vault visit
+ * (after handoff). Visibility / leaderboard intro follows the vault tour.
  *
- * Start blank path: coach marks only during the first ~30 minutes after signup.
- *
- * The full 9-step guided tour stays in Studio Manual → Replay Workstation Tour.
+ * Replay: Studio Manual (?) → Replay Workstation Tour / Replay Vault Tour.
  */
 
 import type { User } from '@/lib/types';
@@ -20,6 +20,59 @@ export const COACH_FIRST_ACCEPT_EVENT = 'b4b:coach-first-accept';
 export const FIRST_SESSION_GUIDED_PENDING_KEY = 'b4b-first-session-guided';
 export const FIRST_SESSION_GUIDED_TOPIC_KEY = 'b4b-first-session-guided-topic';
 export const FIRST_SESSION_GUIDED_GENRE_KEY = 'b4b-first-session-guided-genre';
+
+/** Blocks vault tour / privacy while demo→sheet handoff is navigating. */
+export const DEMO_HANDOFF_IN_FLIGHT_KEY = 'b4b-demo-handoff-inflight';
+
+/** User was offered the lyrics sheet tour once (accepted or declined). */
+export function lyricsTourOfferKey(userId: string): string {
+  return `b4b_lyrics_tour_offer_${userId}`;
+}
+
+export function hasSeenLyricsTourOffer(userId: string): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    return localStorage.getItem(lyricsTourOfferKey(userId)) === '1';
+  } catch {
+    return true;
+  }
+}
+
+export function markLyricsTourOfferSeen(userId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(lyricsTourOfferKey(userId), '1');
+  } catch {
+    /* ignore */
+  }
+}
+
+export function markDemoHandoffInFlight(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(DEMO_HANDOFF_IN_FLIGHT_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearDemoHandoffInFlight(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.removeItem(DEMO_HANDOFF_IN_FLIGHT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isDemoHandoffInFlight(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return sessionStorage.getItem(DEMO_HANDOFF_IN_FLIGHT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 export type CoachMarkStage = 'generate' | 'ink' | 'accept';
 

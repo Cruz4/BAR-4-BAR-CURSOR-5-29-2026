@@ -45,7 +45,7 @@ export const INK_PACK_YEARLY_DISCOUNT_LABEL = `${INK_PACK_YEARLY_DISCOUNT_PERCEN
 export const PRO_MONTHLY_INK = PRO_MONTHLY_RESIDENCY;
 export const PRO_YEARLY_INK = PRO_YEARLY_RESIDENCY;
 
-/** Pro Monthly residency refill vs Visitor monthly grant (1,777 ÷ 111 ≈ 16). */
+/** Pro Monthly residency refill vs Visitor monthly grant (1,777 ÷ 150 ≈ 12). */
 export const PRO_VS_VISITOR_MONTHLY_INK_MULTIPLIER = Math.round(
   PRO_MONTHLY_INK / FREE_MONTHLY_RESIDENCY_INK
 );
@@ -257,7 +257,7 @@ export function getFreeSignupCtaLine(): string {
   return 'Start free demo';
 }
 
-/** Marketing signup CTAs — welcome Ink only (no +111/mo at top of funnel) */
+/** Marketing signup CTAs — welcome Ink only (no +150/mo at top of funnel) */
 export function getSignupInkMarketingLine(
   variant: 'login' | 'landing' | 'showcase' | 'social' | 'footnote' = 'login'
 ): string {

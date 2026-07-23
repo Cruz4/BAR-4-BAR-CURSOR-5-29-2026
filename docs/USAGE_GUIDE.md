@@ -3,7 +3,7 @@
 ## 1. Monitoring Your Balance
 Your Ink balance is displayed in the header and on the **Usage & Billing** page.
 
-- **Visitor:** 300 signup Ink + 111 residency Ink per month (pool caps at 500). All Ink-priced AI tools work, including all 9 Creative Effects.
+- **Visitor:** 250 signup Ink + 150 residency Ink per month (pool caps at 400). All Ink-priced AI tools work, including all 9 Creative Effects.
 - **Pro Monthly:** 1,777 residency Ink per refill cycle.
 - **Pro Yearly:** 3,444 residency Ink per refill cycle.
 

@@ -583,9 +583,14 @@ export function AlbumList() {
   useEffect(() => {
     if (!user || pathname !== '/' || loading || authLoading || vaultTourAutoStartRef.current) return;
     if (user.vaultTutorialCompletedAt) return;
-    const accountAgeMs = Date.now() - new Date(user.createdAt).getTime();
-    const isLikelyNewSignup = accountAgeMs >= 0 && accountAgeMs < 30 * 60 * 1000;
-    if (isLikelyNewSignup && !isProOrTrial(user)) return;
+    // Wait while demo→sheet handoff is navigating away from the vault.
+    try {
+      if (sessionStorage.getItem('b4b-demo-handoff-inflight') === '1') return;
+    } catch {
+      /* ignore */
+    }
+    // FirstSongHero empty-vault auto-open — don't start vault tour mid-handoff.
+    if (albums.length === 0) return;
 
     vaultTourAutoStartRef.current = true;
     setVaultTourRunning(true);
@@ -598,7 +603,7 @@ export function AlbumList() {
       clearTimeout(t);
       if (!activated) setVaultTourRunning(false);
     };
-  }, [user, pathname, loading, authLoading]);
+  }, [user, pathname, loading, authLoading, albums.length]);
 
   useEffect(() => {
     setVaultTourRunning(vaultTourActive);

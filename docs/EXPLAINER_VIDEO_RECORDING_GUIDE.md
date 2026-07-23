@@ -14,9 +14,26 @@ npm run sample-data:marketing-vault
 
 ## Part 1 — Demo account setup (do this first)
 
-### 1. Create a marketing-only login
+### Agent / QA login (recommended)
 
-Use a **separate account** from your daily driver — e.g. `bar4bar.demo@gmail.com` or similar.
+A dedicated **Studio Pro + 10k permanent Ink** account can be seeded for browser agents and demos:
+
+```bash
+npm run seed:agent-demo
+```
+
+Credentials are written to **`.env.local`** only (`AGENT_DEMO_EMAIL`, `AGENT_DEMO_PASSWORD`, `AGENT_DEMO_UID`) — never commit them. Re-run the script to rotate the password.
+
+| Setting | Value |
+|---------|--------|
+| **Email** | `AGENT_DEMO_EMAIL` from `.env.local` (default `agent.demo@bar4bar.ink`) |
+| **Tier** | Studio Pro (yearly) |
+| **Ink** | 10,000 permanent |
+| **Login** | `http://localhost:9002/login` or `https://bar4bar.ink/login` |
+
+### Marketing-only login (manual)
+
+Use a **separate account** from your daily driver — e.g. `bar4bar.demo@gmail.com` or similar — if you prefer not to use the agent seed.
 
 | Setting | Recommendation |
 |---------|----------------|

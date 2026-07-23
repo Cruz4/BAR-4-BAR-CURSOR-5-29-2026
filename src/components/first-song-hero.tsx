@@ -30,6 +30,7 @@ import {
   completeGuestTrackHandoff,
   releaseGuestTrackHandoff,
 } from '@/lib/guest-track-session';
+import { clearDemoHandoffInFlight, markDemoHandoffInFlight } from '@/lib/first-session';
 import type { Track } from '@/lib/types';
 
 const GENRE_PRESETS: Array<{ genre: string; tempoBPM: number }> = [
@@ -95,6 +96,7 @@ export function FirstSongHero() {
         if (options.claimed || options.fromDemo) {
           completeDemoHandoff();
           completeGuestTrackHandoff();
+          clearDemoHandoffInFlight();
         }
         if (options.guided) {
           markFirstSessionGuidedPending({
@@ -107,6 +109,7 @@ export function FirstSongHero() {
         creatingRef.current = false;
         setIsCreating(false);
         setAutoOpeningDemo(false);
+        clearDemoHandoffInFlight();
         if (options.claimed && (options.lines?.length || 0) > 0) {
           releaseDemoHandoff(options.lines!);
           releaseGuestTrackHandoff(options.lines!);
@@ -121,6 +124,7 @@ export function FirstSongHero() {
     if (!user || vaultLoading || autoOpeningDemo || creatingRef.current) return;
     const claimed = claimGuestTrackHandoff() ?? claimDemoHandoff();
     if (!claimed) return;
+    markDemoHandoffInFlight();
     setDemoLines(claimed);
     setAutoOpeningDemo(true);
     createFirstTrack({ guided: false, fromDemo: true, lines: claimed, claimed: true });

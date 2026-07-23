@@ -181,6 +181,13 @@ export async function deductInkTransaction(
   }
 
   try {
+    const { markUserActivatedIfNeeded } = await import('@/lib/server/milestones');
+    await markUserActivatedIfNeeded(db, uid, userName);
+  } catch (activationErr) {
+    console.warn('[ai-gate] activation milestone failed', activationErr);
+  }
+
+  try {
     const { fulfillPendingReferralRewards } = await import('@/lib/server/referrals');
     await fulfillPendingReferralRewards(db, uid);
   } catch (referralErr) {

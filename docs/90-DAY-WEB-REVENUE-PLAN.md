@@ -99,13 +99,13 @@ Source of truth in code: `src/lib/studio-tiers.ts`, `src/lib/stripe-catalog.ts`,
 
 | Item | Value |
 |------|--------|
-| Signup Ink | 300 |
-| Monthly residency Ink | 111 (additive monthly grant) |
-| Projects | 1 album · 4 tracks |
+| Signup Ink | 250 |
+| Monthly residency Ink | 150 (additive from month two; pool caps at 400) |
+| Projects | 1 album · 2 tracks |
 | Creative Effects | All 9 (10 Ink each) |
 | Locked | Performance Mode, Freestyle, custom DNA saves, vault I/O, share links |
 | Available | Full bar-by-bar AI on Ink, DNA & REMIX, Generation Workstation, PDF export |
-| Trial | 3-day Pro workflow + 400 bonus Ink on signup |
+| Trial | 2-day Pro feature preview on eligible verified signups (features only — Ink unchanged) |
 
 ### Pro Monthly — $7.77/mo
 
@@ -137,7 +137,7 @@ Yearly Pro gets 50% off at checkout.
 
 ### Price anchor in ads
 
-**Free demo (300 Ink + real workstation) → Pro unlocks unlimited projects + full co-writer → Yearly for heavy writers.**
+**Free demo (250 Ink + real workstation) → Pro unlocks unlimited projects + full co-writer → Yearly for heavy writers.**
 
 - Push **monthly Pro** in ads ($7.77/mo)
 - Mention yearly on pricing page and to power users only
@@ -362,11 +362,11 @@ Every ad follows this structure:
 | 2–8 | Screen record — paste messy lyrics | “Paste your verse…” |
 | 8–14 | Smart Structure or Next Line | “…split into hooks & bars” / “AI suggests the next line *in your rhyme*” |
 | 14–20 | Co-writer badges / Rhyme Pulse | “Rhyme book + co-writer. Not generic paragraphs.” |
-| 20–25 | CTA | “Free demo — link in bio” / “300 Ink free” |
+| 20–25 | CTA | “Free demo — link in bio” / “250 Ink free” |
 
 ### CTA lines
 
-- “Try free — 300 Ink”
+- “Try free — 250 Ink”
 - “Write bar 5 today”
 - “Link in bio → Bar 4 Bar Studio”
 

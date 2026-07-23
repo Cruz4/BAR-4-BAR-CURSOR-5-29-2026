@@ -86,8 +86,8 @@ export async function reserveProFeaturePreview(
   db: Firestore,
   email: string,
   userId: string
-): Promise<boolean> {
-  if (!email.trim()) return true;
+): Promise<'granted' | 'already_this_uid' | 'denied'> {
+  if (!email.trim()) return 'granted';
 
   const emailHash = hashIdentityEmail(email);
   const ref = registryRef(db, emailHash);
@@ -96,7 +96,11 @@ export async function reserveProFeaturePreview(
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const existing = snap.data() as IdentityRegistryDoc | undefined;
-    if (existing?.proFeaturePreviewGrantedAt) return false;
+    if (existing?.proFeaturePreviewGrantedAt) {
+      return existing.proFeaturePreviewGrantedToUid === userId
+        ? 'already_this_uid'
+        : 'denied';
+    }
 
     const patch: IdentityRegistryDoc = {
       emailHash,
@@ -118,7 +122,7 @@ export async function reserveProFeaturePreview(
     if (typeof existing?.deleteCount === 'number') patch.deleteCount = existing.deleteCount;
 
     tx.set(ref, patch, { merge: true });
-    return true;
+    return 'granted';
   });
 }
 
@@ -144,8 +148,10 @@ export async function reserveSignupEntitlements(
     const snap = await tx.get(ref);
     const existing = snap.data() as IdentityRegistryDoc | undefined;
 
-    const welcomeEligible = !existing?.welcomeInkGrantedAt;
-    const trialEligible = !existing?.trialGrantedAt;
+    const welcomeEligible =
+      !existing?.welcomeInkGrantedAt || existing.welcomeInkGrantedToUid === userId;
+    const trialEligible =
+      !existing?.trialGrantedAt || existing.trialGrantedToUid === userId;
     const grantWelcome = welcomeEligible && opts.welcomeInkAmount > 0;
     const grantTrial =
       trialEligible && opts.wantsTrial && opts.trialInkAmount > 0;
@@ -156,7 +162,7 @@ export async function reserveSignupEntitlements(
     };
 
     if (grantWelcome) {
-      patch.welcomeInkGrantedAt = now;
+      patch.welcomeInkGrantedAt = existing?.welcomeInkGrantedAt ?? now;
       patch.welcomeInkGrantedToUid = userId;
     } else if (existing?.welcomeInkGrantedAt) {
       patch.welcomeInkGrantedAt = existing.welcomeInkGrantedAt;
@@ -164,11 +170,16 @@ export async function reserveSignupEntitlements(
     }
 
     if (grantTrial) {
-      patch.trialGrantedAt = now;
+      patch.trialGrantedAt = existing?.trialGrantedAt ?? now;
       patch.trialGrantedToUid = userId;
     } else if (existing?.trialGrantedAt) {
       patch.trialGrantedAt = existing.trialGrantedAt;
       patch.trialGrantedToUid = existing.trialGrantedToUid ?? null;
+    }
+
+    if (existing?.proFeaturePreviewGrantedAt) {
+      patch.proFeaturePreviewGrantedAt = existing.proFeaturePreviewGrantedAt;
+      patch.proFeaturePreviewGrantedToUid = existing.proFeaturePreviewGrantedToUid ?? null;
     }
 
     if (existing?.lastDeletedAt) patch.lastDeletedAt = existing.lastDeletedAt;
@@ -177,10 +188,15 @@ export async function reserveSignupEntitlements(
 
     tx.set(ref, patch, { merge: true });
 
+    const isReturningOtherAccount =
+      Boolean(existing?.welcomeInkGrantedAt && existing.welcomeInkGrantedToUid !== userId) ||
+      (opts.wantsTrial &&
+        Boolean(existing?.trialGrantedAt && existing.trialGrantedToUid !== userId));
+
     return {
       welcomeInk: grantWelcome ? opts.welcomeInkAmount : 0,
       trialInk: grantTrial ? opts.trialInkAmount : 0,
-      returningIdentity: !welcomeEligible || (opts.wantsTrial && !trialEligible),
+      returningIdentity: isReturningOtherAccount,
     };
   });
 }
@@ -204,7 +220,7 @@ export async function writeIdentityTombstone(
   db: Firestore,
   email: string,
   userId: string,
-  flags: { hadWelcomeInk: boolean; hadTrial: boolean }
+  flags: { hadWelcomeInk: boolean; hadTrial: boolean; hadProFeaturePreview?: boolean }
 ): Promise<void> {
   if (!email.trim()) return;
 
@@ -238,6 +254,14 @@ export async function writeIdentityTombstone(
     } else if (existing?.trialGrantedAt) {
       patch.trialGrantedAt = existing.trialGrantedAt;
       patch.trialGrantedToUid = existing.trialGrantedToUid ?? null;
+    }
+
+    if (flags.hadProFeaturePreview && !existing?.proFeaturePreviewGrantedAt) {
+      patch.proFeaturePreviewGrantedAt = now;
+      patch.proFeaturePreviewGrantedToUid = userId;
+    } else if (existing?.proFeaturePreviewGrantedAt) {
+      patch.proFeaturePreviewGrantedAt = existing.proFeaturePreviewGrantedAt;
+      patch.proFeaturePreviewGrantedToUid = existing.proFeaturePreviewGrantedToUid ?? null;
     }
 
     tx.set(ref, patch, { merge: true });

@@ -26,6 +26,7 @@ import {
   reserveProFeaturePreview,
   reserveSignupEntitlements,
 } from '@/lib/server/identity-registry';
+import type { User } from '@/lib/types';
 
 function computeProFeaturePreviewExpiresAt(days = PRO_FEATURE_PREVIEW_DAYS): string {
   const d = new Date();
@@ -44,7 +45,10 @@ async function grantProFeaturePreview(
   }
   if (!userEmail) return computeProFeaturePreviewExpiresAt();
   const reserved = await reserveProFeaturePreview(db, userEmail, userId);
-  return reserved ? computeProFeaturePreviewExpiresAt() : null;
+  // 'already_this_uid' recovers accounts where the registry was stamped but
+  // proFeaturePreviewExpiresAt never landed on the user doc (init race).
+  if (reserved === 'denied') return null;
+  return computeProFeaturePreviewExpiresAt();
 }
 
 /** Server-side balance bootstrap — requires FIREBASE_SERVICE_ACCOUNT_KEY locally. */
@@ -132,34 +136,6 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
     }
 
     const grantTrialWorkflow = trialActive && trialInk > 0;
-    const userPatch: Record<string, unknown> = {
-      updatedAt: new Date().toISOString(),
-    };
-    if (!emailVerified) {
-      userPatch.pendingWelcomeInk = true;
-    }
-    if (returningIdentity) {
-      userPatch.returningIdentity = true;
-      if (!grantTrialWorkflow) {
-        userPatch.trialStartedAt = null;
-      }
-    }
-    if (emailVerified && residencyInk > 0 && !returningIdentity) {
-      const previewExpiresAt = await grantProFeaturePreview(
-        db,
-        userEmail,
-        userId,
-        bypassIdentityRegistry
-      );
-      if (previewExpiresAt) {
-        userPatch.proFeaturePreviewExpiresAt = previewExpiresAt;
-      }
-    }
-
-    if (Object.keys(userPatch).length > 1) {
-      await userRef.set(userPatch, { merge: true });
-    }
-
     const signupLedger: InkLedgerWrite[] = [];
     if (residencyInk > 0) {
       signupLedger.push({
@@ -180,19 +156,69 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
     if (trialInk > 0) {
       signupLedger.push({ type: 'credit', pool: 'trial', amount: trialInk, reason: 'trial_ink' });
     }
-    await balanceRef.set({
-      ...inkBalanceFirestorePatch({
-        residencyBalance: residencyInk,
-        trialInkBalance: trialInk,
-        purchasedBalance: SIGNUP_PERMANENT_INK,
-      }),
-      signupGranted: true,
-      signupGrantSkipped,
-      signupResidencyGranted: residencyInk,
-      trialInkGranted: grantTrialWorkflow,
-      // Ledger written below — skip legacy "Opening balance" backfill on the next init.
-      inkLedgerBackfilled: signupLedger.length > 0,
-    });
+
+    // create() loses the race cleanly — concurrent /api/usage/init used to
+    // overwrite a winning 250 Ink + Pro preview balance with zeros.
+    let createdBalance = false;
+    try {
+      await balanceRef.create({
+        ...inkBalanceFirestorePatch({
+          residencyBalance: residencyInk,
+          trialInkBalance: trialInk,
+          purchasedBalance: SIGNUP_PERMANENT_INK,
+        }),
+        signupGranted: true,
+        signupGrantSkipped,
+        signupResidencyGranted: residencyInk,
+        trialInkGranted: grantTrialWorkflow,
+        inkLedgerBackfilled: signupLedger.length > 0,
+      });
+      createdBalance = true;
+    } catch (err) {
+      const code = (err as { code?: number | string })?.code;
+      const alreadyExists =
+        code === 6 ||
+        code === 'already-exists' ||
+        /ALREADY_EXISTS|already exists/i.test(String((err as Error)?.message || err));
+      if (!alreadyExists) throw err;
+    }
+
+    if (!createdBalance) {
+      // Another init already created the balance — do not overwrite Ink or mark returning.
+      return;
+    }
+
+    const userPatch: Record<string, unknown> = {
+      updatedAt: new Date().toISOString(),
+    };
+    if (!emailVerified) {
+      userPatch.pendingWelcomeInk = true;
+    }
+    if (returningIdentity) {
+      userPatch.returningIdentity = true;
+      if (!grantTrialWorkflow) {
+        userPatch.trialStartedAt = null;
+      }
+    }
+    // Pro preview is registry-gated (not blocked when welcome Ink is 0 for other reasons).
+    if (
+      emailVerified &&
+      !(userData as { proFeaturePreviewExpiresAt?: string })?.proFeaturePreviewExpiresAt
+    ) {
+      const previewExpiresAt = await grantProFeaturePreview(
+        db,
+        userEmail,
+        userId,
+        bypassIdentityRegistry
+      );
+      if (previewExpiresAt) {
+        userPatch.proFeaturePreviewExpiresAt = previewExpiresAt;
+      }
+    }
+
+    if (Object.keys(userPatch).length > 1) {
+      await userRef.set(userPatch, { merge: true });
+    }
 
     if (signupLedger.length > 0) {
       await recordInkLedgerEntries(db, userId, signupLedger);
@@ -263,7 +289,10 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
     if (returningIdentity) {
       userPatch.returningIdentity = true;
     }
-    if (residencyInk > 0 && !returningIdentity && !(userData as { proFeaturePreviewExpiresAt?: string })?.proFeaturePreviewExpiresAt) {
+    if (
+      emailVerified &&
+      !(userData as { proFeaturePreviewExpiresAt?: string })?.proFeaturePreviewExpiresAt
+    ) {
       const previewExpiresAt = await grantProFeaturePreview(
         db,
         userEmail,
@@ -275,6 +304,29 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
       }
     }
     await userRef.set(userPatch, { merge: true });
+  }
+
+  // Backfill Pro preview when balance already existed but expiresAt was never set
+  // (race, older signup path, or email-verify reconcile missed it).
+  if (
+    emailVerified &&
+    !(userData as { proFeaturePreviewExpiresAt?: string })?.proFeaturePreviewExpiresAt
+  ) {
+    const previewExpiresAt = await grantProFeaturePreview(
+      db,
+      userEmail,
+      userId,
+      bypassIdentityRegistry
+    );
+    if (previewExpiresAt) {
+      await userRef.set(
+        {
+          proFeaturePreviewExpiresAt: previewExpiresAt,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    }
   }
 
   let pools = normalizeInkPools(data);
@@ -437,7 +489,7 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
   }
 
   if (
-    !isProUser(userData as { subscriptionStatus?: string }) &&
+    !isProUser(userData as Pick<User, 'subscriptionStatus'> | undefined) &&
     data.lastFreeResidencyGrant !== monthKey
   ) {
     pools = normalizeInkPools(data);

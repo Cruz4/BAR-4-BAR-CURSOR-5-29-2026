@@ -2,8 +2,8 @@
 
 /**
  * Three just-in-time coach marks for a brand-new artist's first session.
- * Non-blocking bottom-center callouts that replace the 9-step guided tour
- * during the first ~30 minutes after signup. See src/lib/first-session.ts.
+ * Non-blocking callouts — must stay fully on-screen on mobile (Framer Motion
+ * must not wipe horizontal centering transforms).
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -27,7 +27,7 @@ const STAGE_CONTENT: Record<CoachMarkStage, { icon: React.ComponentType<{ classN
   generate: {
     icon: Sparkles,
     title: 'First line down',
-    text: `Click your line, then hit Generate Next in the bar workstation below — the AI writes the next bar to match your rhyme (${AI_COSTS.generateNextLine} Ink).`,
+    text: `Tap your line, then hit Generate Next in the bar workstation below — the AI writes the next bar to match your rhyme (${AI_COSTS.generateNextLine} Ink).`,
   },
   ink: {
     icon: Droplets,
@@ -37,7 +37,7 @@ const STAGE_CONTENT: Record<CoachMarkStage, { icon: React.ComponentType<{ classN
   accept: {
     icon: RefreshCw,
     title: 'Line added — you are live',
-    text: 'Not feeling it? Hit Generate Next again for fresh options. Your sheet autosaves. Open Studio Manual (?) anytime to replay this guide or the full workstation tour.',
+    text: 'Not feeling it? Hit Generate Next again for fresh options. Your sheet autosaves. Replay tips anytime: header ? → Studio Manual → Replay Workstation Tour.',
   },
 };
 
@@ -63,14 +63,12 @@ export function FirstSessionCoachMarks({ user, track }: { user: User | null; tra
 
   const dismiss = useCallback(() => setStage(null), []);
 
-  // Stage 1: the first non-empty line appears on the sheet.
   useEffect(() => {
     if (!eligible || !hasWrittenLine) return;
     const t = window.setTimeout(() => show('generate'), 700);
     return () => window.clearTimeout(t);
   }, [eligible, hasWrittenLine, show]);
 
-  // Stages 2 and 3: fired by the editor at first Ink spend / first accepted option.
   useEffect(() => {
     if (!eligible) return;
     const onInk = () => show('ink');
@@ -97,18 +95,18 @@ export function FirstSessionCoachMarks({ user, track }: { user: User | null; tra
     <AnimatePresence>
       <motion.div
         key={stage}
-        initial={{ opacity: 0, y: 24 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 12 }}
-        className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[1500] w-[calc(100vw-2rem)] max-w-md pointer-events-none"
+        exit={{ opacity: 0, y: 10 }}
+        className="fixed z-[1500] pointer-events-none left-3 right-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] max-md:bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))]"
       >
-        <div className="pointer-events-auto rounded-xl border border-primary/30 bg-card/95 backdrop-blur-md shadow-[0_20px_45px_rgba(0,0,0,0.45)] p-4 flex items-start gap-3">
+        <div className="pointer-events-auto w-full max-w-md mx-auto rounded-xl border border-primary/30 bg-card/95 backdrop-blur-md shadow-[0_20px_45px_rgba(0,0,0,0.45)] p-3.5 sm:p-4 flex items-start gap-3">
           <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 shrink-0">
             <Icon className="h-4 w-4 text-primary" />
           </div>
-          <div className="min-w-0 space-y-1">
+          <div className="min-w-0 flex-1 space-y-1">
             <p className="text-[10px] font-bold uppercase tracking-widest text-primary">{content.title}</p>
-            <p className="text-xs text-foreground/85 leading-relaxed">{content.text}</p>
+            <p className="text-xs text-foreground/85 leading-relaxed break-words">{content.text}</p>
           </div>
           <Button
             variant="ghost"

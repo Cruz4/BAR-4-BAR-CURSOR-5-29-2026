@@ -13,7 +13,7 @@
 > Bar 4 Bar is the rhyme book + co-writer for rappers and songwriters who think in **bars**—not paragraphs.
 
 **Bio line 1:** Rhyme book + AI co-writer for rappers & songwriters  
-**Bio line 2:** Free 300 Ink — write your next bar today
+**Bio line 2:** Free 250 Ink — write your next bar today
 
 ---
 
@@ -26,7 +26,7 @@
 | YouTube description | `https://bar4bar.ink/login?mode=signup&ref=yt` |
 | Reddit posts | `https://bar4bar.ink/login?mode=signup&ref=reddit` |
 
-Signups store `ref` in analytics (Admin → Growth Metrics). Pin comment: **“300 Ink free — link in bio.”**
+Signups store `ref` in analytics (Admin → Growth Metrics). Pin comment: **“250 Ink free — link in bio.”**
 
 ---
 
@@ -51,7 +51,7 @@ Signups store `ref` in analytics (Admin → Growth Metrics). Pin comment: **“3
 | 0–2 | Pain | “Stuck on the next bar?” |
 | 2–8 | Paste lyrics | “Paste your verse…” |
 | 8–14 | Next Line / structure | “…split into hooks & bars” |
-| 14–20 | CTA | “Free 300 Ink — link in bio” |
+| 14–20 | CTA | “Free 250 Ink — link in bio” |
 
 ### Tools
 

@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useUsage } from '@/context/usage-context';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { SIGNUP_INK } from '@/lib/subscription';
+import { PRO_FEATURE_PREVIEW_DAYS, SIGNUP_INK } from '@/lib/subscription';
 import { cn } from '@/lib/utils';
 
 export function EmailVerificationBanner({ className }: { className?: string }) {
@@ -54,7 +54,7 @@ export function EmailVerificationBanner({ className }: { className?: string }) {
       await syncUserUsageBootstrap(true);
       toast({
         title: 'Email verified',
-        description: `Welcome Ink (${SIGNUP_INK}) is syncing to your account.`,
+        description: `Welcome Ink (${SIGNUP_INK}) and your ${PRO_FEATURE_PREVIEW_DAYS * 24}-hour Pro preview are syncing.`,
       });
       window.location.reload();
     } else {
@@ -79,7 +79,7 @@ export function EmailVerificationBanner({ className }: { className?: string }) {
       <p className="text-[10px] sm:text-[11px] font-code text-amber-100/90 flex-grow min-w-0">
         <span className="font-bold uppercase tracking-widest text-amber-300">Verify your email</span>
         {' — '}
-        {SIGNUP_INK} welcome Ink unlocks after verification (abuse protection).
+        Your {SIGNUP_INK} welcome Ink and {PRO_FEATURE_PREVIEW_DAYS * 24}-hour Pro preview unlock after you verify (abuse protection — not a failed signup).
       </p>
       <div className="flex gap-2 shrink-0">
         <Button

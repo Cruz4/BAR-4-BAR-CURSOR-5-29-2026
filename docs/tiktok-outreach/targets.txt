@@ -1,0 +1,9 @@
+# targets.txt ? one TikTok handle per line (with or without @)
+# Lines starting with # are ignored.
+# Import into the tracker queue:
+#   npm run tiktok:dm -- import-targets
+#
+# Example:
+# @creatorone
+# creatortwo
+

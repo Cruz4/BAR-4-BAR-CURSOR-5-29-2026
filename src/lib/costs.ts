@@ -1,7 +1,7 @@
 /**
  * Per-action Ink costs — studio economy.
  * Pools: 1,777/mo (Pro Monthly) · 3,444/mo (Pro Yearly residency refill).
- * Visitor: 200 welcome on signup · +111/mo from month two (see subscription.ts).
+ * Visitor: 250 welcome on signup · +150/mo from month two (see subscription.ts).
  */
 export const AI_COSTS = {
   generateNextLine: 15,

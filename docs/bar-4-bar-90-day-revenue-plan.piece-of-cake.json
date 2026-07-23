@@ -45,7 +45,7 @@
           "priority": "High",
           "dependencies": ["Lock Core Positioning Statement"],
           "checklist": [
-            "Visitor: 300 signup Ink + 111/mo residency, 1 album, 4 tracks, 3 Creative Effects",
+            "Visitor: 250 signup Ink + 150/mo residency, 1 album, 2 tracks, all Creative Effects on Ink",
             "Pro Monthly: $7.77/mo, 1,777 Ink/mo, unlimited projects, full co-writer unlocks",
             "Pro Yearly: $4.44/mo effective ($53.28/yr), 3,444 Ink/mo, ~43% sub savings vs monthly, 50% off Permanent Ink packs",
             "Push monthly Pro in ads; mention yearly on pricing page and to power users only"
@@ -87,7 +87,7 @@
           "dependencies": ["Lock Core Positioning Statement", "Fix Production Firebase and Billing Stability"],
           "checklist": [
             "Hero copy reflects rhyme book + co-writer for bars positioning",
-            "Single primary CTA: Start free — 300 Ink",
+            "Single primary CTA: Start free — 250 Ink",
             "Mobile layout tested — no horizontal scroll or broken CTAs",
             "Link to /pricing visible but secondary to signup CTA"
           ]
@@ -125,7 +125,7 @@
             "1 Reddit post per week (r/WeAreTheMusicMakers, r/Songwriting, r/rap)",
             "1–2 Twitter/X threads showing bar-by-bar workflow per week",
             "Use dark UI + real finger taps — not mockups",
-            "CTA every post: Free demo — link in bio or 300 Ink free"
+            "CTA every post: Free demo — link in bio or 250 Ink free"
           ]
         },
         {
@@ -138,7 +138,7 @@
             "Sec 2–8: Screen record — paste messy lyrics",
             "Sec 8–14: Smart Structure or Generate Next Line — split into hooks and bars",
             "Sec 14–20: Co-writer badges / Rhyme Pulse flash — Not generic paragraphs",
-            "Sec 20–25: CTA — Free demo — link in bio / 300 Ink free",
+            "Sec 20–25: CTA — Free demo — link in bio / 250 Ink free",
             "Optional face: hands + screen outperforms talking head for tool demos"
           ]
         },
@@ -352,7 +352,7 @@
           "checklist": [
             "MRR + ink pack revenue (track in admin metrics)",
             "Monthly churn rate (monthly Pro cancels)",
-            "LTV estimate: monthly Pro ~$7.77 x avg 4 mo ≈ $31; yearly ~$53 upfront",
+            "LTV estimate: monthly Pro ~$7.77 x avg 4 mo â‰ˆ $31; yearly ~$53 upfront",
             "Organic vs paid signup split",
             "7-day return rate",
             "Revenue target: $800–2,000/mo if one hook + offer clicks",
@@ -394,7 +394,7 @@
             "Outcome: From voice memo chaos to structured lyrics in 60 seconds",
             "Objection: Web studio works on phone no download + PWA demo",
             "Objection: Free tier is a real demo not a 3-day trial scam",
-            "CTA: Try free — 300 Ink / Write bar 5 today / Link in bio Bar 4 Bar Studio"
+            "CTA: Try free — 250 Ink / Write bar 5 today / Link in bio Bar 4 Bar Studio"
           ]
         },
         {
@@ -406,7 +406,7 @@
             "Cold traffic: Free demo — paste + next bar. Upgrade when 2-track limit or Ink runs low",
             "Warm retarget: Unlock unlimited albums + full co-writer — $7.77/mo for pricing visitors with 3+ AI uses",
             "Heavy users: Yearly pitch — more Ink/mo + 50% off refills when Ink depleted twice in one month",
-            "Free tier limits to reference in ads: 1 album, 4 tracks, 300 signup + 111/mo Ink"
+            "Free tier limits to reference in ads: 1 album, 2 tracks, 250 signup + 150/mo Ink"
           ]
         },
         {
@@ -438,7 +438,7 @@
             "Signups — top of funnel",
             "Activation rate — 1+ AI action (target 40–60% early)",
             "Time to first Generate Next Line — core value moment",
-            "Free limit hits — 4 tracks / low Ink upgrade trigger",
+            "Free limit hits — 2 tracks / low Ink upgrade trigger",
             "Pricing to checkout start to paid — monetization funnel",
             "MRR + ink pack revenue",
             "7-day return rate — stickiness",

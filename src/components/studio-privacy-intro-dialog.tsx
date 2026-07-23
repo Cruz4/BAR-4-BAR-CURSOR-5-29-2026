@@ -79,8 +79,16 @@ export function StudioPrivacyIntroDialog() {
     if (isStudioPrivacyIntroSnoozed()) return;
     if (!user?.id || user.studioPrivacyIntroCompletedAt || gamificationLoading) return;
     if (pathname === '/login' || pathname.startsWith('/share/')) return;
+    // Visibility intro belongs on the vault — never flash mid sheet / demo handoff.
+    if (pathname.startsWith('/albums/')) return;
+    if (pathname !== '/') return;
     if (!hasPendingStudioPrivacyIntro()) return;
     if (isVaultTourRunning()) return;
+    try {
+      if (sessionStorage.getItem('b4b-demo-handoff-inflight') === '1') return;
+    } catch {
+      /* ignore */
+    }
 
     openTimerRef.current = setTimeout(() => {
       openTimerRef.current = null;
@@ -88,10 +96,16 @@ export function StudioPrivacyIntroDialog() {
       if (!user?.id || user.studioPrivacyIntroCompletedAt) return;
       if (!hasPendingStudioPrivacyIntro()) return;
       if (isVaultTourRunning()) return;
+      if (typeof window !== 'undefined' && window.location.pathname !== '/') return;
+      try {
+        if (sessionStorage.getItem('b4b-demo-handoff-inflight') === '1') return;
+      } catch {
+        /* ignore */
+      }
 
       consumePendingStudioPrivacyIntro();
       setOpen(true);
-    }, 500);
+    }, 700);
   }, [clearOpenTimer, gamificationLoading, pathname, user?.id, user?.studioPrivacyIntroCompletedAt]);
 
   useEffect(() => {

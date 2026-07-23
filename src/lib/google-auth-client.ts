@@ -22,6 +22,14 @@ export function createGoogleAuthProvider(): GoogleAuthProvider {
 /** In-app browsers (TikTok, IG, etc.) and mobile often block auth popups. */
 export function shouldUseGoogleRedirect(): boolean {
   if (typeof window === 'undefined') return false;
+
+  // Redirect auth stores state on authDomain. From localhost that domain is
+  // production (or firebaseapp.com) — returning never completes in embedded
+  // browsers and leaves a blank /__/auth/handler page.
+  if (process.env.NODE_ENV === 'development') return false;
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') return false;
+
   const ua = navigator.userAgent || '';
   if (
     /BytedanceWebview|TikTok|Instagram|FBAN|FBAV|FBIOS|Twitter|Snapchat|Line\/|MicroMessenger|LinkedInApp/i.test(

@@ -197,13 +197,18 @@ export async function eradicateUserIdentity(
     Boolean(userData.trialStartedAt) ||
     balanceData.trialInkGranted === true ||
     (typeof balanceData.trialInkBalance === 'number' && balanceData.trialInkBalance > 0);
+  const hadProFeaturePreview = Boolean(userData.proFeaturePreviewExpiresAt);
 
   let identityRegistryCleared = false;
   if (userEmail) {
     if (mode === 'admin') {
       identityRegistryCleared = await clearIdentityRegistry(db, userEmail);
     } else {
-      await writeIdentityTombstone(db, userEmail, trimmedId, { hadWelcomeInk, hadTrial });
+      await writeIdentityTombstone(db, userEmail, trimmedId, {
+        hadWelcomeInk,
+        hadTrial,
+        hadProFeaturePreview,
+      });
     }
   }
 

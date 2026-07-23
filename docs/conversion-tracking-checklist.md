@@ -142,8 +142,8 @@ Not all are wired today — useful when A/B testing MiroFish winners:
 
 ## Quick reference — live economy (May 2026)
 
-- Free: 300 signup + 111/mo residency (cap 500), 1 album, 4 tracks  
-- Trial: 3 days Pro + 400 Ink  
+- Free: 250 signup + 150/mo residency (cap 400), 1 album, 2 tracks  
+- Pro feature preview: 2 days on eligible verified signups (features only)  
 - Pro: $7.77/mo or $53.28/yr · 1,777 / 3,444 Ink/mo  
 
 Source: `src/lib/subscription.ts`, `src/lib/trial.ts`, `src/lib/studio-tiers.ts`

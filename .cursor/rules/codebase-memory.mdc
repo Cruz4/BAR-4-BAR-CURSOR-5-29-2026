@@ -1,0 +1,17 @@
+---
+description: Automatically use codebase-memory-mcp for structural Bar4Bar work
+alwaysApply: true
+---
+
+# Codebase Memory
+
+Use `codebase-memory-mcp` proactively when it will improve accuracy or reduce exploration:
+
+- Broad code discovery, architecture questions, call chains, data flows, routes, impact analysis, refactors, dead-code checks, and cross-file debugging.
+- Query the indexed project `G-Bar-4-Bar-App-BAR-4-BAR-FULL-APP-5-28-2026-YOYO-SAVE-VER56`.
+- Verify critical graph findings by reading the referenced source before editing or making definitive claims.
+- Reindex the repository in `moderate` mode when the project is absent/stale or after substantial structural changes.
+- Do not reindex for minor edits, and do not force graph usage for a known file or simple one-file change.
+- If the MCP server is unavailable, continue with normal code search tools rather than blocking the task.
+
+The graph is structural memory, not a source of product intent. Use project docs and source code for business rules and final verification.

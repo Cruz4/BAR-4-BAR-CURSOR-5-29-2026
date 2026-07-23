@@ -18,7 +18,7 @@
 
 ```
 Bar 4 Bar Studio — rhyme book + AI co-writer for rappers and songwriters.
-Free demo: 300 Ink at signup.
+Free demo: 250 Ink at signup.
 
 Try it: https://bar4bar.ink?ref=yt
 
@@ -87,7 +87,7 @@ Chapters:
 
 ### Free vs Pro (2:30–3:30) — keep short
 
-> Free tier: **300 Ink** at signup, real workstation — one album, three tracks.  
+> Free tier: **250 Ink** at signup, real workstation — one album, two tracks.  
 > Pro is **$7.77 a month** — unlimited projects, full co-writer, Performance Mode, Freestyle.  
 > Link below — no download required; works in your phone browser. Add to Home Screen for full-screen.
 

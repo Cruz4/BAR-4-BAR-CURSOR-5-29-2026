@@ -13,10 +13,21 @@ import {
 import { registerFirestoreDevRecovery } from '@/lib/firebase/client/firestore-dev-recovery';
 import { registerFirestoreBlockedClientHint } from '@/lib/firebase/client/firestore-blocked-hint';
 
+/**
+ * Production uses bar4bar.ink as authDomain (custom domain).
+ * Local/dev must use *.firebaseapp.com — otherwise Google redirect/popup
+ * lands on https://bar4bar.ink/__/auth/handler and never returns to localhost
+ * (blank white page in Cursor/Simple Browser).
+ */
+const DEFAULT_AUTH_DOMAIN =
+  process.env.NODE_ENV === 'development'
+    ? 'lyricai-studio-otgxn.firebaseapp.com'
+    : 'bar4bar.ink';
+
 const firebaseConfig = {
   apiKey: 'AIzaSyAJX5uEhA_8SFvXGEnboud6i3VETJcfWVg',
   authDomain:
-    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? 'bar4bar.ink',
+    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? DEFAULT_AUTH_DOMAIN,
   projectId: 'lyricai-studio-otgxn',
   storageBucket: 'lyricai-studio-otgxn.firebasestorage.app',
   messagingSenderId: '603155091344',

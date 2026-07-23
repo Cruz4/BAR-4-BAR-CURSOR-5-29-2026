@@ -141,16 +141,19 @@ import {
   resolveWorkstationTrackPath,
   trackExistsInVault,
 } from '@/lib/workstation-path';
-import { dispatchStudioPrivacyIntroEligible, queueStudioPrivacyIntro } from '@/lib/studio-privacy-intro';
 import { StudioGuidedTour } from '@/components/studio-guided-tour';
 import { FirstSessionCoachMarks } from '@/components/first-session-coach-marks';
+import { LyricsTourOfferDialog } from '@/components/lyrics-tour-offer-dialog';
 import {
   COACH_FIRST_ACCEPT_EVENT,
   COACH_FIRST_INK_EVENT,
+  clearDemoHandoffInFlight,
   dispatchCoachEvent,
   isFirstWriteSession,
   buildFirstSessionGuidedSteps,
   consumeFirstSessionGuidedPending,
+  hasSeenLyricsTourOffer,
+  markLyricsTourOfferSeen,
 } from '@/lib/first-session';
 import { postGamificationEvent } from '@/lib/gamification-client';
 import { claimMilestone } from '@/lib/milestones-client';
@@ -1927,7 +1930,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                 {freestyleUnlocked ? (
                                   <Button variant="secondary" size="sm" disabled={trackLocked} aria-label="Freestyle recording" className="h-10 md:h-14 px-2 md:px-4 font-bold text-[10px] uppercase tracking-wide gap-1 bg-primary/20 text-primary border border-primary/20 shadow-lg shrink-0 min-w-0" onClick={handleOpenFreestyle} title={tooltip('freestyleTranscription')}>
                                     <Mic className="h-3.5 w-3.5 shrink-0" />
-                                    <span className="truncate hidden md:inline">Free</span>
+                                    <span className="truncate hidden md:inline">Freestyle</span>
                                   </Button>
                                 ) : (
                                   <LockedProFeatureButton
@@ -1936,7 +1939,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                     example="Record a 30-second freestyle and paste the bars mid-verse without leaving the workstation."
                                     icon={Mic}
                                     iconClassName="text-primary"
-                                    label={<span className="truncate hidden md:inline">Free</span>}
+                                    label={<span className="truncate hidden md:inline">Freestyle</span>}
                                     className="h-10 md:h-14 px-2 md:px-4 font-bold text-[10px] uppercase tracking-wide shadow-lg shrink-0 min-w-0 bg-primary/20 text-primary border border-primary/20"
                                   />
                                 )}
@@ -2957,6 +2960,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
   const [tourSteps, setTourSteps] = useState<LyricsTourStep[]>(LYRICS_PAGE_TOUR_STEPS);
+  const [lyricsTourOfferOpen, setLyricsTourOfferOpen] = useState(false);
   const tourAutoStartRef = useRef(false);
 
   const scratchPadRef = useRef<any>(null);
@@ -3182,8 +3186,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       tourAutoStartRef.current = true;
       return;
     }
-    // Fresh signups who chose Start blank skip the blocking 9-step tour —
-    // just-in-time coach marks guide the first write instead.
+    // Guide me from vault hero → condensed tour immediately.
     if (isFirstWriteSession(user)) {
       const guided = consumeFirstSessionGuidedPending();
       if (guided.active) {
@@ -3192,12 +3195,15 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         const t = setTimeout(() => setTourActive(true), 1200);
         return () => clearTimeout(t);
       }
+    }
+    // First sheet after signup (demo handoff or landing) — ask before running the tour.
+    if (!hasSeenLyricsTourOffer(user.id)) {
       tourAutoStartRef.current = true;
-      return;
+      clearDemoHandoffInFlight();
+      const t = setTimeout(() => setLyricsTourOfferOpen(true), 900);
+      return () => clearTimeout(t);
     }
     tourAutoStartRef.current = true;
-    const t = setTimeout(() => setTourActive(true), 1200);
-    return () => clearTimeout(t);
   }, [user, track, searchParams]);
 
   useEffect(() => {
@@ -3209,6 +3215,19 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     window.addEventListener(REPLAY_GUIDED_TOUR_EVENT, onReplay);
     return () => window.removeEventListener(REPLAY_GUIDED_TOUR_EVENT, onReplay);
   }, []);
+
+  const acceptLyricsTourOffer = useCallback(() => {
+    if (user?.id) markLyricsTourOfferSeen(user.id);
+    setLyricsTourOfferOpen(false);
+    setTourSteps(LYRICS_PAGE_TOUR_STEPS);
+    setTourStep(0);
+    window.setTimeout(() => setTourActive(true), 300);
+  }, [user?.id]);
+
+  const skipLyricsTourOffer = useCallback(() => {
+    if (user?.id) markLyricsTourOfferSeen(user.id);
+    setLyricsTourOfferOpen(false);
+  }, [user?.id]);
 
   const handleTourBeforeStep = useCallback((step: LyricsTourStep) => {
     if (['first-write', 'first-context', 'first-generate'].includes(step.id)) {
@@ -3268,8 +3287,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     if (!skipped) {
       void postGamificationEvent('tour_complete');
     }
-    queueStudioPrivacyIntro();
-    window.setTimeout(() => dispatchStudioPrivacyIntroEligible(), 400);
+    // Visibility / leaderboard intro waits for first vault visit (after vault tour).
   }, [user]);
 
   useEffect(() => {
@@ -3815,7 +3833,12 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         onComplete={handleTourComplete}
         onBeforeStep={handleTourBeforeStep}
       />
-      {!tourActive && <FirstSessionCoachMarks user={user} track={track} />}
+      <LyricsTourOfferDialog
+        open={lyricsTourOfferOpen && !tourActive}
+        onStart={acceptLyricsTourOffer}
+        onSkip={skipLyricsTourOffer}
+      />
+      {!tourActive && !lyricsTourOfferOpen && <FirstSessionCoachMarks user={user} track={track} />}
     </div>
   );
 }
