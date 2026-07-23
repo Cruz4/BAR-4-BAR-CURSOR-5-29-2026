@@ -47,17 +47,17 @@ export function GuestTrySaveBanner({ remainingOverride = null }: GuestTrySaveBan
   const outOfDemo = left !== null && left <= 0;
 
   return (
-    <div className="shrink-0 border-b border-emerald-500/30 bg-emerald-500/10 px-3 md:px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 z-50">
-      <div className="flex items-start gap-2 min-w-0 flex-1">
-        <Sparkles className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-        <div className="min-w-0 space-y-0.5">
-          <p className="text-[10px] md:text-[11px] font-code text-emerald-50/95 leading-snug">
+    <div className="shrink-0 border-b border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 md:px-4 md:py-2.5 flex flex-col gap-1.5 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-2 z-50">
+      <div className="flex items-start gap-1.5 md:gap-2 min-w-0 flex-1">
+        <Sparkles className="h-3.5 w-3.5 md:h-4 md:w-4 text-emerald-400 shrink-0 mt-0.5" />
+        <div className="min-w-0 space-y-0 md:space-y-0.5">
+          <p className="text-[9px] md:text-[11px] font-code text-emerald-50/95 leading-tight md:leading-snug">
             <span className="font-bold text-emerald-200">Try sheet — no account yet.</span>{' '}
             Write freely. <span className="text-emerald-100/90">Rhyme Pulse</span> is live & free.
             {' '}<span className="text-emerald-100/90">Generate Next</span> — up to {GUEST_DEMO_MAX_USES} demo assists (not Ink).
             Other AI tools unlock after signup.
           </p>
-          <p className="text-[9px] md:text-[10px] font-code text-muted-foreground leading-snug">
+          <p className="text-[8px] md:text-[10px] font-code text-muted-foreground leading-tight md:leading-snug">
             {outOfDemo ? (
               <>Demo assists used on this browser. Sign up to save this track and get {SIGNUP_INK} Ink (separate from the demo).</>
             ) : left !== null ? (
@@ -71,13 +71,13 @@ export function GuestTrySaveBanner({ remainingOverride = null }: GuestTrySaveBan
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <Button asChild size="sm" className="h-8 px-3 text-[10px] font-bold uppercase tracking-wide bg-emerald-500 hover:bg-emerald-400 text-emerald-950">
+      <div className="flex items-center gap-1.5 md:gap-2 shrink-0 self-stretch md:self-auto">
+        <Button asChild size="sm" className="h-7 md:h-8 flex-1 md:flex-none px-2.5 md:px-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wide bg-emerald-500 hover:bg-emerald-400 text-emerald-950">
           <Link href={signupHref} onClick={() => prepareGuestTrackForSignup()}>
             Sign up to save
           </Link>
         </Button>
-        <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-[10px] font-bold uppercase text-muted-foreground">
+        <Button asChild variant="ghost" size="sm" className="h-7 md:h-8 px-2 text-[9px] md:text-[10px] font-bold uppercase text-muted-foreground">
           <Link href="/welcome">About</Link>
         </Button>
       </div>
