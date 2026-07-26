@@ -16,7 +16,7 @@ export const GUEST_TRY_PATH = `/albums/${GUEST_TRY_ALBUM_ID}/tracks/${GUEST_TRY_
 export const GUEST_DEMO_MAX_USES = 3;
 
 /** Shown under the pencil while redirecting cold traffic into the try sheet. */
-export const GUEST_TRY_HANDOFF_MESSAGE = 'Opening your first sheet — no signup needed yet';
+export const GUEST_TRY_HANDOFF_MESSAGE = 'Opening your first sheet';
 export const GUEST_TRY_HANDOFF_SUBLINE = 'Write a bar. Watch the rhymes light up.';
 
 /** Toast copy when a guest taps an Ink-gated studio tool. */

@@ -188,6 +188,20 @@ export async function eradicateUserIdentity(
     }
   }
 
+  if (userEmail) {
+    try {
+      const { sendAccountDeletedEmail } = await import('@/lib/server/mail/lifecycle-emails');
+      await sendAccountDeletedEmail({
+        db,
+        userId: trimmedId,
+        email: userEmail,
+        displayName,
+      });
+    } catch (mailErr) {
+      console.warn('[eradicate] account deleted email failed', mailErr);
+    }
+  }
+
   const balanceSnap = await db.doc(`users/${trimmedId}/usage/balance`).get();
   const balanceData = balanceSnap.data() || {};
   const hadWelcomeInk =

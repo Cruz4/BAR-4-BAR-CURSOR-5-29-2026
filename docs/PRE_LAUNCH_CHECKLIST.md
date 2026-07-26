@@ -53,6 +53,7 @@ Stripe Dashboard toggle: **Test mode** on. Keys in `.env`: `sk_test_` / `pk_test
 ### Deploy
 
 - [ ] `.env` and `.firebase/lyricai-studio-otgxn/functions/.env` match
+- [ ] `RESEND_API_KEY` (+ verified `RESEND_FROM_EMAIL` on bar4bar.ink) — see [TRANSACTIONAL_EMAIL.md](./TRANSACTIONAL_EMAIL.md)
 - [ ] `npm run deploy:live` after any env change
 
 ---

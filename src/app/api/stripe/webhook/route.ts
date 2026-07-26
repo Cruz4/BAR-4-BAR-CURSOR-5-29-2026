@@ -15,6 +15,13 @@ import {
   markWebhookProcessed,
   refillProResidency,
 } from '@/lib/stripe-fulfillment';
+import { getResidencyRefillForTier } from '@/lib/stripe-catalog';
+import {
+  sendInkPurchaseEmail,
+  sendMembershipCanceledEmail,
+  sendProUpgradeEmail,
+  sendRenewalChargeEmail,
+} from '@/lib/server/mail/lifecycle-emails';
 
 export const runtime = 'nodejs';
 
@@ -129,7 +136,33 @@ export async function POST(req: Request) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        await fulfillPaidCheckoutSession(db, session);
+        const result = await fulfillPaidCheckoutSession(db, session);
+        if (!result.duplicate) {
+          const meta = session.metadata || {};
+          const userId = meta.userId || session.client_reference_id || '';
+          const amountUsd = (session.amount_total || 0) / 100;
+          const customerEmail =
+            session.customer_details?.email ||
+            (typeof session.customer_email === 'string' ? session.customer_email : null);
+          if (userId && meta.type === 'subscription') {
+            const tier = meta.subscriptionTier === 'yearly' ? 'yearly' : 'monthly';
+            void sendProUpgradeEmail(db, {
+              userId,
+              tier,
+              amountUsd,
+              eventKey: event.id,
+              email: customerEmail,
+            }).catch((e) => console.warn('[stripe/webhook] pro upgrade email', e));
+          } else if (userId && result.inkAmount > 0) {
+            void sendInkPurchaseEmail(db, {
+              userId,
+              inkAmount: result.inkAmount,
+              amountUsd,
+              eventKey: event.id,
+              email: customerEmail,
+            }).catch((e) => console.warn('[stripe/webhook] ink purchase email', e));
+          }
+        }
         break;
       }
 
@@ -148,6 +181,14 @@ export async function POST(req: Request) {
         );
         if (userId) {
           await refillProResidency(db, userId, tier);
+          void sendRenewalChargeEmail(db, {
+            userId,
+            tier,
+            amountUsd: (invoice.amount_paid || 0) / 100,
+            residencyInk: getResidencyRefillForTier(tier),
+            eventKey: event.id,
+            email: invoice.customer_email,
+          }).catch((e) => console.warn('[stripe/webhook] renewal email', e));
         } else {
           console.warn('[stripe/webhook] invoice.paid: no user for subscription', subscriptionId);
         }
@@ -171,6 +212,10 @@ export async function POST(req: Request) {
           });
         } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
           await deactivateSubscription(db, userId);
+          void sendMembershipCanceledEmail(db, {
+            userId,
+            eventKey: event.id,
+          }).catch((e) => console.warn('[stripe/webhook] cancel email', e));
         }
         break;
       }
@@ -178,7 +223,13 @@ export async function POST(req: Request) {
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
         const userId = subscription.metadata?.userId;
-        if (userId) await deactivateSubscription(db, userId);
+        if (userId) {
+          await deactivateSubscription(db, userId);
+          void sendMembershipCanceledEmail(db, {
+            userId,
+            eventKey: event.id,
+          }).catch((e) => console.warn('[stripe/webhook] cancel email', e));
+        }
         break;
       }
 

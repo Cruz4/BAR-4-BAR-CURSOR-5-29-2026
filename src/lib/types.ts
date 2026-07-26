@@ -36,6 +36,8 @@ export interface User {
   proFeaturePreviewExpiresAt?: string | null;
   /** Welcome Ink deferred until Firebase email is verified. */
   pendingWelcomeInk?: boolean;
+  /** ISO — branded welcome email sent after verified signup grant. */
+  welcomeEmailSentAt?: string;
   /** ISO timestamp — first meaningful activation (e.g. Studio Draft complete). */
   activatedAt?: string | null;
   /** Free tier: user-pinned track ids (max 2) after Pro downgrade — rotation fills empty slots. */

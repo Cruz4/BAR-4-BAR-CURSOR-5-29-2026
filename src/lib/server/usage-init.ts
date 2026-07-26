@@ -27,6 +27,35 @@ import {
   reserveSignupEntitlements,
 } from '@/lib/server/identity-registry';
 import type { User } from '@/lib/types';
+import { sendWelcomeBackEmail, sendWelcomeEmail } from '@/lib/server/mail/lifecycle-emails';
+
+async function maybeSendWelcomeEmail(
+  db: Awaited<ReturnType<typeof getDb>>,
+  opts: {
+    userId: string;
+    email: string;
+    emailVerified: boolean;
+    /** True when this email already used welcome Ink (post self-delete, etc.). */
+    returningIdentity?: boolean;
+    alreadySent?: boolean;
+    welcomeBackAlreadySent?: boolean;
+  }
+) {
+  if (!opts.emailVerified || !opts.email) return;
+  if (opts.returningIdentity) {
+    if (opts.welcomeBackAlreadySent) return;
+    void sendWelcomeBackEmail(db, {
+      userId: opts.userId,
+      email: opts.email,
+    }).catch((e) => console.warn('[usage-init] welcome-back email', e));
+    return;
+  }
+  if (opts.alreadySent) return;
+  void sendWelcomeEmail(db, {
+    userId: opts.userId,
+    email: opts.email,
+  }).catch((e) => console.warn('[usage-init] welcome email', e));
+}
 
 function computeProFeaturePreviewExpiresAt(days = PRO_FEATURE_PREVIEW_DAYS): string {
   const d = new Date();
@@ -223,6 +252,19 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
     if (signupLedger.length > 0) {
       await recordInkLedgerEntries(db, userId, signupLedger);
     }
+
+    if (emailVerified) {
+      await maybeSendWelcomeEmail(db, {
+        userId,
+        email: userEmail,
+        emailVerified,
+        returningIdentity,
+        alreadySent: Boolean((userData as { welcomeEmailSentAt?: string })?.welcomeEmailSentAt),
+        welcomeBackAlreadySent: Boolean(
+          (userData as { welcomeBackEmailSentAt?: string })?.welcomeBackEmailSentAt
+        ),
+      });
+    }
     return;
   }
 
@@ -304,6 +346,19 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
       }
     }
     await userRef.set(userPatch, { merge: true });
+
+    if (emailVerified) {
+      await maybeSendWelcomeEmail(db, {
+        userId,
+        email: userEmail,
+        emailVerified,
+        returningIdentity,
+        alreadySent: Boolean((userData as { welcomeEmailSentAt?: string })?.welcomeEmailSentAt),
+        welcomeBackAlreadySent: Boolean(
+          (userData as { welcomeBackEmailSentAt?: string })?.welcomeBackEmailSentAt
+        ),
+      });
+    }
   }
 
   // Backfill Pro preview when balance already existed but expiresAt was never set
