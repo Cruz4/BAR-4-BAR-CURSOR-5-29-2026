@@ -17,7 +17,7 @@ export default function TermsPage() {
         <header className="space-y-2">
           <Link href="/" className="text-primary text-sm font-bold uppercase tracking-widest hover:underline">← Back to Studio</Link>
           <h1 className="font-headline text-4xl font-bold uppercase text-white">Terms of Service</h1>
-          <p className="text-sm text-muted-foreground">Last updated: May 28, 2026 · Bar 4 Bar Studio</p>
+          <p className="text-sm text-muted-foreground">Last updated: July 27, 2026 · Bar 4 Bar Studio</p>
         </header>
 
         <article className="space-y-6 text-muted-foreground leading-relaxed text-sm font-code">
@@ -34,6 +34,7 @@ export default function TermsPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-white uppercase tracking-wide">3. Accounts &amp; Ink</h2>
             <p>You must provide accurate account information and keep credentials secure. <strong className="text-white">Ink</strong> is the Service&apos;s virtual currency for AI actions. Ink has no cash value outside the Service, is non-transferable, and residency Ink may reset per plan terms. Purchases are processed by Stripe; refunds follow our billing policy and applicable law.</p>
+            <p>We may log account and studio activity — including product analytics, billing events, and abuse-prevention signals — as described in our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>, to operate the Service, measure performance, prevent Ink and perk farming, and enforce these Terms.</p>
           </section>
 
           <section className="space-y-3">

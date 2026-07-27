@@ -93,10 +93,12 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
 
   let authEmailVerified = decoded.email_verified === true;
   let userRecordEmail = '';
+  let authDisplayName = '';
   try {
     const userRecord = await auth.getUser(userId);
     authEmailVerified = authEmailVerified || userRecord.emailVerified === true;
     userRecordEmail = userRecord.email?.trim() || '';
+    authDisplayName = userRecord.displayName?.trim() || '';
   } catch {
     // Keep token claim when Admin lookup fails.
   }
@@ -111,11 +113,31 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
   const [snap, userSnap] = await Promise.all([balanceRef.get(), userRef.get()]);
   const userData = userSnap.data();
 
+  // Always keep roster identity in sync from Auth (admin ARTIST column).
+  // usage-init often creates the user doc before client profile sync; without
+  // this, displayName/email stay blank when the client race fails rules.
+  {
+    const existingEmail =
+      typeof userData?.email === 'string' ? userData.email.trim() : '';
+    const existingName =
+      typeof userData?.displayName === 'string' ? userData.displayName.trim() : '';
+    const identityPatch: Record<string, unknown> = {};
+    if (userEmail && !existingEmail) identityPatch.email = userEmail.toLowerCase();
+    if (!existingName) {
+      identityPatch.displayName = authDisplayName || 'Anonymous Artist';
+    }
+    if (!userData?.status) identityPatch.status = 'active';
+    if (Object.keys(identityPatch).length > 0) {
+      identityPatch.updatedAt = new Date().toISOString();
+      await userRef.set(identityPatch, { merge: true });
+    }
+  }
+
   if (bypassIdentityRegistry) {
     await userRef.set(
       {
         role: 'admin',
-        ...(userEmail ? { email: userEmail } : {}),
+        ...(userEmail ? { email: userEmail.toLowerCase() } : {}),
         updatedAt: new Date().toISOString(),
       },
       { merge: true }

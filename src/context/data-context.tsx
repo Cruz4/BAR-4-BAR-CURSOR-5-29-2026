@@ -521,16 +521,46 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         const userSnap = await getDoc(userRef);
         if (!userSnap.exists()) {
           const { markFreshSignup } = await import('@/lib/post-login-redirect');
-          await setDoc(userRef, {
-            displayName: firebaseUser.displayName || 'Anonymous Artist',
-            email: firebaseUser.email || '',
-            createdAt: new Date().toISOString(),
-            role: 'artist',
-            subscriptionStatus: 'none',
-            subscriptionTier: 'none',
-            status: 'active',
-          });
+          const resolvedName =
+            (typeof firebaseUser.displayName === 'string' && firebaseUser.displayName.trim()) ||
+            'Anonymous Artist';
+          const resolvedEmail =
+            typeof firebaseUser.email === 'string' && firebaseUser.email.includes('@')
+              ? firebaseUser.email.trim().toLowerCase()
+              : '';
+          await setDoc(
+            userRef,
+            stripForFirestore({
+              displayName: resolvedName,
+              ...(resolvedEmail ? { email: resolvedEmail } : {}),
+              createdAt: new Date().toISOString(),
+              role: 'artist',
+              subscriptionStatus: 'none',
+              subscriptionTier: 'none',
+              status: 'active',
+            })
+          );
           markFreshSignup();
+        } else {
+          // Doc may exist from usage-init without identity — fill blanks only.
+          const data = userSnap.data() || {};
+          const patch: Record<string, unknown> = {};
+          if (!String(data.displayName || '').trim()) {
+            patch.displayName =
+              (typeof firebaseUser.displayName === 'string' && firebaseUser.displayName.trim()) ||
+              'Anonymous Artist';
+          }
+          if (
+            !String(data.email || '').trim() &&
+            typeof firebaseUser.email === 'string' &&
+            firebaseUser.email.includes('@')
+          ) {
+            patch.email = firebaseUser.email.trim().toLowerCase();
+          }
+          if (!data.status) patch.status = 'active';
+          if (Object.keys(patch).length > 0) {
+            await setDoc(userRef, stripForFirestore(patch), { merge: true });
+          }
         }
 
         // Universal Residency: Cloud Sync enabled for ALL users (Visitor and Pro)

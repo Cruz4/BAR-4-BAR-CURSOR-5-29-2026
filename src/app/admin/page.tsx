@@ -96,6 +96,7 @@ export default function AdminPage() {
   const rosterLoadedRef = useRef(false);
   const lastRosterUserIdsRef = useRef('');
   const gamificationFetchRef = useRef<Promise<void> | null>(null);
+  const profileBackfillRef = useRef(false);
 
   const sortedUsers = useMemo(() => {
     const dir = rosterSort.dir === 'asc' ? 1 : -1;
@@ -224,6 +225,33 @@ export default function AdminPage() {
           if (rosterChanged) {
             lastRosterUserIdsRef.current = rosterUserIds;
             void loadGamificationRoster();
+          }
+
+          // One-shot: fill blank ARTIST name/email from Firebase Auth.
+          const needsIdentityBackfill = allUsers.some(
+            (u) => !String(u.displayName || '').trim() || !String(u.email || '').trim()
+          );
+          if (needsIdentityBackfill && !profileBackfillRef.current) {
+            profileBackfillRef.current = true;
+            void adminApiFetch('/api/admin/users/backfill-profiles', { method: 'POST' })
+              .then(async (res) => {
+                const body = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                  profileBackfillRef.current = false;
+                  console.warn('[admin] profile backfill failed:', body.error || res.status);
+                  return;
+                }
+                if (body.patched > 0) {
+                  toast({
+                    title: 'Roster identity restored',
+                    description: `Filled name/email for ${body.patched} artist${body.patched === 1 ? '' : 's'} from Auth.`,
+                  });
+                }
+              })
+              .catch((err) => {
+                profileBackfillRef.current = false;
+                console.warn('[admin] profile backfill error:', err);
+              });
           }
 
           void (async () => {

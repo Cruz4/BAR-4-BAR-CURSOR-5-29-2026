@@ -7,7 +7,7 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/client/firebase';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -128,34 +128,54 @@ function LoginForm() {
     try {
         const userRef = doc(db, 'users', firebaseUser.uid);
         const existing = await getDoc(userRef);
-        const isNew = !existing.exists();
-        const existingData = existing.data() || {};
+        const wasNew = !existing.exists();
         const signupRef = getStoredMarketingRef();
-        const profilePatch: Record<string, unknown> = {
-          displayName: firebaseUser.displayName || displayName || 'Anonymous Artist',
-          email: firebaseUser.email ?? null,
-          photoURL: firebaseUser.photoURL ?? null,
-          lastLogin: serverTimestamp(),
-        };
+        const resolvedName =
+          (typeof firebaseUser.displayName === 'string' && firebaseUser.displayName.trim()) ||
+          (typeof displayName === 'string' && displayName.trim()) ||
+          'Anonymous Artist';
+        const resolvedEmail =
+          typeof firebaseUser.email === 'string' && firebaseUser.email.includes('@')
+            ? firebaseUser.email.trim().toLowerCase()
+            : '';
 
-        if (signupRef && !existingData.signupAttribution) {
-          profilePatch.signupAttribution = signupRef;
-        }
-        if (!existingData.status) {
-          profilePatch.status = 'active';
-        }
-
-        if (isNew) {
-          Object.assign(profilePatch, {
-            createdAt: new Date().toISOString(),
-            role: 'artist',
-            subscriptionStatus: 'none',
-            subscriptionTier: 'none',
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(userRef);
+          // Keep FieldValue out of stripForFirestore (JSON round-trip would destroy it).
+          const withLogin = (patch: Record<string, unknown>) => ({
+            ...stripForFirestore(patch),
+            lastLogin: serverTimestamp(),
           });
-        }
+          if (!snap.exists()) {
+            tx.set(
+              userRef,
+              withLogin({
+                displayName: resolvedName,
+                ...(resolvedEmail ? { email: resolvedEmail } : {}),
+                ...(firebaseUser.photoURL ? { photoURL: firebaseUser.photoURL } : {}),
+                ...(signupRef ? { signupAttribution: signupRef } : {}),
+                createdAt: new Date().toISOString(),
+                role: 'artist',
+                subscriptionStatus: 'none',
+                subscriptionTier: 'none',
+                status: 'active',
+              })
+            );
+          } else {
+            const data = snap.data() || {};
+            const patch: Record<string, unknown> = {
+              displayName: resolvedName,
+              ...(resolvedEmail ? { email: resolvedEmail } : {}),
+              ...(firebaseUser.photoURL ? { photoURL: firebaseUser.photoURL } : {}),
+            };
+            if (signupRef && !data.signupAttribution) patch.signupAttribution = signupRef;
+            if (!data.status) patch.status = 'active';
+            if (!data.createdAt) patch.createdAt = new Date().toISOString();
+            tx.set(userRef, withLogin(patch), { merge: true });
+          }
+        });
 
-        await setDoc(userRef, stripForFirestore(profilePatch), { merge: true });
-
+        const isNew = wasNew;
         if (isNew) {
           await trackStudioEvent(ANALYTICS_EVENTS.SIGNUP, {
             method: signupMethod,
