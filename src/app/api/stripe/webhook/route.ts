@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { FieldValue } from 'firebase-admin/firestore';
 import { getDb } from '@/lib/firebase/server';
 import { getStripe } from '@/lib/stripe-server';
 import {
@@ -10,12 +9,13 @@ import {
   webhookSecretHealth,
 } from '@/lib/stripe-webhook-verify';
 import {
+  activateOrUpgradeProSubscription,
   deactivateSubscription,
   fulfillPaidCheckoutSession,
   markWebhookProcessed,
   refillProResidency,
 } from '@/lib/stripe-fulfillment';
-import { getResidencyRefillForTier } from '@/lib/stripe-catalog';
+import { getCatalogEntry, getResidencyRefillForTier } from '@/lib/stripe-catalog';
 import {
   sendInkPurchaseEmail,
   sendMembershipCanceledEmail,
@@ -24,6 +24,20 @@ import {
 } from '@/lib/server/mail/lifecycle-emails';
 
 export const runtime = 'nodejs';
+
+function resolveTierFromSubscription(
+  subscription: Stripe.Subscription
+): 'monthly' | 'yearly' {
+  if (subscription.metadata?.subscriptionTier === 'yearly') return 'yearly';
+  if (subscription.metadata?.subscriptionTier === 'monthly') return 'monthly';
+
+  const priceId = subscription.items?.data?.[0]?.price?.id;
+  if (priceId) {
+    const entry = getCatalogEntry(priceId);
+    if (entry?.type === 'subscription') return entry.tier;
+  }
+  return 'monthly';
+}
 
 /** Health check — prefixes only, never full secrets. */
 export async function GET() {
@@ -51,7 +65,7 @@ async function resolveSubscriptionUser(
 ): Promise<{ userId?: string; tier: 'monthly' | 'yearly' }> {
   if (subscriptionObject && typeof subscriptionObject === 'object') {
     const userId = subscriptionObject.metadata?.userId;
-    const tier = subscriptionObject.metadata?.subscriptionTier === 'yearly' ? 'yearly' : 'monthly';
+    const tier = resolveTierFromSubscription(subscriptionObject);
     if (userId) return { userId, tier };
   }
 
@@ -70,7 +84,7 @@ async function resolveSubscriptionUser(
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     return {
       userId: subscription.metadata?.userId,
-      tier: subscription.metadata?.subscriptionTier === 'yearly' ? 'yearly' : 'monthly',
+      tier: resolveTierFromSubscription(subscription),
     };
   } catch (err) {
     console.error('[stripe/webhook] subscription lookup failed', subscriptionId, err);
@@ -201,15 +215,8 @@ export async function POST(req: Request) {
         if (!userId) break;
 
         if (subscription.status === 'active' || subscription.status === 'trialing') {
-          const tier = subscription.metadata?.subscriptionTier === 'yearly' ? 'yearly' : 'monthly';
-          await db.collection('users').doc(userId).update({
-            subscriptionStatus: 'active',
-            subscriptionTier: tier,
-            subscriptionId: subscription.id,
-            updatedAt: new Date().toISOString(),
-            freeEditableTrackIds: FieldValue.delete(),
-            freeEditableSelectionAt: FieldValue.delete(),
-          });
+          const tier = resolveTierFromSubscription(subscription);
+          await activateOrUpgradeProSubscription(db, userId, tier, subscription.id);
         } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
           await deactivateSubscription(db, userId);
           void sendMembershipCanceledEmail(db, {

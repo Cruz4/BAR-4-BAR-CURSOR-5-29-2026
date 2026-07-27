@@ -292,8 +292,12 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
 
   const monthKey = new Date().toISOString().slice(0, 7);
   let data = snap.data()!;
+  const isPaidProEarly = isProUser(userData as Pick<User, 'subscriptionStatus'> | undefined);
 
+  // Never run free welcome reconciliation on paid Pro — FREE_RESIDENCY_POOL_CAP (400)
+  // would crush a Pro refill (1777/3444) down to the visitor pool ceiling.
   if (
+    !isPaidProEarly &&
     emailVerified &&
     !data.welcomeInkReconciled &&
     ((userData as { pendingWelcomeInk?: boolean })?.pendingWelcomeInk ||
@@ -407,89 +411,94 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
   }
 
   let pools = normalizeInkPools(data);
+  const isPaidPro = isProUser(userData as Pick<User, 'subscriptionStatus'> | undefined);
 
-  if (
-    !data.signupMonthMonthlyCorrected &&
-    isLikelyErroneousSignupMonthGrant(pools.residencyBalance, userCreatedAt, monthKey)
-  ) {
-    const excess = pools.residencyBalance - SIGNUP_INK;
-    pools = { ...pools, residencyBalance: SIGNUP_INK };
-    await balanceRef.set(
-      inkBalanceFirestorePatch(pools, { signupMonthMonthlyCorrected: true }),
-      { merge: true }
+  // Free-tier signup-month corrections must never run for paid Pro — they used to
+  // treat Pro refills (1777/3444) as "erroneous free grants" and reset to 250.
+  if (!isPaidPro) {
+    if (
+      !data.signupMonthMonthlyCorrected &&
+      isLikelyErroneousSignupMonthGrant(pools.residencyBalance, userCreatedAt, monthKey)
+    ) {
+      const excess = pools.residencyBalance - SIGNUP_INK;
+      pools = { ...pools, residencyBalance: SIGNUP_INK };
+      await balanceRef.set(
+        inkBalanceFirestorePatch(pools, { signupMonthMonthlyCorrected: true }),
+        { merge: true }
+      );
+      await recordInkLedgerEntries(db, userId, [
+        {
+          type: 'debit',
+          pool: 'residency',
+          amount: excess,
+          reason: 'monthly_residency',
+          details: 'signup_month_correction',
+        },
+      ]);
+      data = { ...data, residencyBalance: SIGNUP_INK, signupMonthMonthlyCorrected: true };
+    }
+
+    const erroneousSignupMonthly = isErroneousSignupMonthMonthlyOnly(
+      pools.residencyBalance,
+      userCreatedAt,
+      monthKey
     );
-    await recordInkLedgerEntries(db, userId, [
-      {
-        type: 'debit',
-        pool: 'residency',
-        amount: excess,
-        reason: 'monthly_residency',
-        details: 'signup_month_correction',
-      },
-    ]);
-    data = { ...data, residencyBalance: SIGNUP_INK, signupMonthMonthlyCorrected: true };
-  }
+    const missingWelcomeOnly =
+      pools.residencyBalance === 0 &&
+      isSignupMonth(userCreatedAt, monthKey) &&
+      missingSignupWelcomeInk(pools.residencyBalance, userCreatedAt, monthKey, data.signupGrantSkipped);
 
-  const erroneousSignupMonthly = isErroneousSignupMonthMonthlyOnly(
-    pools.residencyBalance,
-    userCreatedAt,
-    monthKey
-  );
-  const missingWelcomeOnly =
-    pools.residencyBalance === 0 &&
-    isSignupMonth(userCreatedAt, monthKey) &&
-    missingSignupWelcomeInk(pools.residencyBalance, userCreatedAt, monthKey, data.signupGrantSkipped);
+    if (
+      !data.welcomeInkReconciled &&
+      !data.signupGrantSkipped &&
+      (erroneousSignupMonthly || missingWelcomeOnly)
+    ) {
+      const erroneousMonthly = erroneousSignupMonthly;
+      const previousBalance = pools.residencyBalance;
+      const ledger: InkLedgerWrite[] = [];
 
-  if (
-    !data.welcomeInkReconciled &&
-    !data.signupGrantSkipped &&
-    (erroneousSignupMonthly || missingWelcomeOnly)
-  ) {
-    const erroneousMonthly = erroneousSignupMonthly;
-    const previousBalance = pools.residencyBalance;
-    const ledger: InkLedgerWrite[] = [];
+      if (erroneousMonthly && previousBalance > 0) {
+        ledger.push({
+          type: 'debit',
+          pool: 'residency',
+          amount: previousBalance,
+          reason: 'monthly_residency',
+          details: 'signup_month_reversal',
+        });
+      }
 
-    if (erroneousMonthly && previousBalance > 0) {
-      ledger.push({
-        type: 'debit',
-        pool: 'residency',
-        amount: previousBalance,
-        reason: 'monthly_residency',
-        details: 'signup_month_reversal',
-      });
-    }
+      const welcomeCredit = erroneousMonthly
+        ? SIGNUP_INK
+        : SIGNUP_INK - previousBalance;
 
-    const welcomeCredit = erroneousMonthly
-      ? SIGNUP_INK
-      : SIGNUP_INK - previousBalance;
+      if (welcomeCredit > 0) {
+        ledger.push({
+          type: 'credit',
+          pool: 'residency',
+          amount: welcomeCredit,
+          reason: 'signup_residency',
+          details: erroneousMonthly ? 'welcome_correction' : 'welcome_grant',
+        });
+      }
 
-    if (welcomeCredit > 0) {
-      ledger.push({
-        type: 'credit',
-        pool: 'residency',
-        amount: welcomeCredit,
-        reason: 'signup_residency',
-        details: erroneousMonthly ? 'welcome_correction' : 'welcome_grant',
-      });
-    }
-
-    pools = { ...pools, residencyBalance: SIGNUP_INK };
-    await balanceRef.set(
-      inkBalanceFirestorePatch(pools, {
+      pools = { ...pools, residencyBalance: SIGNUP_INK };
+      await balanceRef.set(
+        inkBalanceFirestorePatch(pools, {
+          welcomeInkReconciled: true,
+          ...(erroneousMonthly ? { lastFreeResidencyGrant: null } : {}),
+        }),
+        { merge: true }
+      );
+      if (ledger.length > 0) {
+        await recordInkLedgerEntries(db, userId, ledger);
+      }
+      data = {
+        ...data,
+        residencyBalance: SIGNUP_INK,
         welcomeInkReconciled: true,
         ...(erroneousMonthly ? { lastFreeResidencyGrant: null } : {}),
-      }),
-      { merge: true }
-    );
-    if (ledger.length > 0) {
-      await recordInkLedgerEntries(db, userId, ledger);
+      };
     }
-    data = {
-      ...data,
-      residencyBalance: SIGNUP_INK,
-      welcomeInkReconciled: true,
-      ...(erroneousMonthly ? { lastFreeResidencyGrant: null } : {}),
-    };
   }
 
   if (trialActive && TRIAL_INK_GRANT === 0 && pools.trialInkBalance > 0) {
@@ -565,10 +574,7 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
     }
   }
 
-  if (
-    !isProUser(userData as Pick<User, 'subscriptionStatus'> | undefined) &&
-    data.lastFreeResidencyGrant !== monthKey
-  ) {
+  if (!isPaidPro && data.lastFreeResidencyGrant !== monthKey) {
     pools = normalizeInkPools(data);
     const eligible = isEligibleForFreeMonthlyGrant(userCreatedAt, monthKey);
 

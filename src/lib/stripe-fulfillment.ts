@@ -5,7 +5,7 @@ import { calculateNetRevenue } from '@/lib/billing';
 import { getResidencyRefillForTier } from '@/lib/stripe-catalog';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
 import { recordInkLedgerEntries } from '@/lib/server/ink-ledger';
-import { normalizeInkPools } from '@/lib/ink-balance';
+import { inkBalanceFirestorePatch, normalizeInkPools } from '@/lib/ink-balance';
 
 export type FulfillmentMetadata = {
   userId: string;
@@ -30,21 +30,21 @@ export async function fulfillCheckoutSession(
 
   const batch = db.batch();
   const inkAmount = parseInt(metadata.inkAmount || '0', 10);
+  const isSubscription =
+    metadata.type === 'subscription' || Boolean(extras?.subscriptionId && metadata.subscriptionTier);
+
+  let poolsWorking = { ...poolsBefore };
+  let usageExtra: Record<string, unknown> = {};
 
   if (inkAmount > 0) {
-    batch.set(
-      usageRef,
-      {
-        purchasedBalance: FieldValue.increment(inkAmount),
-        balance: FieldValue.increment(inkAmount),
-        lastRewardReason: 'purchase_fulfillment',
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+    poolsWorking = {
+      ...poolsWorking,
+      purchasedBalance: poolsWorking.purchasedBalance + inkAmount,
+    };
+    usageExtra.lastRewardReason = 'purchase_fulfillment';
   }
 
-  if (metadata.type === 'subscription') {
+  if (isSubscription) {
     const tier = metadata.subscriptionTier === 'yearly' ? 'yearly' : 'monthly';
     const refillAmount = getResidencyRefillForTier(tier);
     const userUpdate: Record<string, unknown> = {
@@ -58,23 +58,31 @@ export async function fulfillCheckoutSession(
     if (extras?.stripeCustomerId) userUpdate.stripeCustomerId = extras.stripeCustomerId;
 
     batch.update(userRef, userUpdate);
-    batch.set(
-      usageRef,
-      {
-        residencyBalance: refillAmount,
-        lastRewardReason: 'pro_refill',
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+
+    // Absolute Pro residency refill (1777 monthly / 3444 yearly). Keep other pools.
+    poolsWorking = {
+      ...poolsWorking,
+      residencyBalance: refillAmount,
+    };
+    usageExtra = {
+      ...usageExtra,
+      lastRewardReason: 'pro_refill',
+      // Prevent free-tier signup-month clawback from treating Pro refill as visitor ink.
+      signupMonthMonthlyCorrected: true,
+      welcomeInkReconciled: true,
+    };
   } else if (extras?.stripeCustomerId) {
     batch.set(userRef, { stripeCustomerId: extras.stripeCustomerId }, { merge: true });
+  }
+
+  if (inkAmount > 0 || isSubscription) {
+    batch.set(usageRef, inkBalanceFirestorePatch(poolsWorking, usageExtra), { merge: true });
   }
 
   batch.set(systemLogRef, {
     timestamp: new Date().toISOString(),
     userId,
-    action: metadata.type === 'subscription' ? 'Pro Membership' : 'Ink Pack Purchase',
+    action: isSubscription ? 'Pro Membership' : 'Ink Pack Purchase',
     usdCost: calculateNetRevenue(amountTotal),
     inkUsed: 0,
     type: 'transaction',
@@ -93,7 +101,7 @@ export async function fulfillCheckoutSession(
       details: `Gross: $${amountTotal.toFixed(2)}`,
     });
   }
-  if (metadata.type === 'subscription') {
+  if (isSubscription) {
     const tier = metadata.subscriptionTier === 'yearly' ? 'yearly' : 'monthly';
     const refillAmount = getResidencyRefillForTier(tier);
     const residencyCredit = Math.max(0, refillAmount - poolsBefore.residencyBalance);
@@ -112,7 +120,7 @@ export async function fulfillCheckoutSession(
   }
 
   await recordStudioEvent(userId, 'checkout_completed', {
-    type: metadata.type || 'one_time',
+    type: isSubscription ? 'subscription' : metadata.type || 'one_time',
     tier: metadata.subscriptionTier || null,
     amountUsd: amountTotal,
     inkAmount,
@@ -129,11 +137,14 @@ export async function refillProResidency(
   const poolsBefore = normalizeInkPools(beforeSnap.data() || {});
   const refillAmount = getResidencyRefillForTier(tier);
   await usageRef.set(
-    {
-      residencyBalance: refillAmount,
-      lastRewardReason: 'pro_refill',
-      updatedAt: FieldValue.serverTimestamp(),
-    },
+    inkBalanceFirestorePatch(
+      { ...poolsBefore, residencyBalance: refillAmount },
+      {
+        lastRewardReason: 'pro_refill',
+        signupMonthMonthlyCorrected: true,
+        welcomeInkReconciled: true,
+      }
+    ),
     { merge: true }
   );
   const residencyCredit = Math.max(0, refillAmount - poolsBefore.residencyBalance);
@@ -147,6 +158,46 @@ export async function refillProResidency(
         details: tier === 'yearly' ? 'Yearly Pro renewal' : 'Monthly Pro renewal',
       },
     ]);
+  }
+}
+
+/**
+ * Activate Pro (or change tier) from subscription webhooks / portal changes.
+ * Refills residency when newly activated, upgrading to yearly, or switching to monthly.
+ */
+export async function activateOrUpgradeProSubscription(
+  db: Firestore,
+  userId: string,
+  tier: 'monthly' | 'yearly',
+  subscriptionId?: string | null
+) {
+  const userRef = db.collection('users').doc(userId);
+  const userSnap = await userRef.get();
+  const prev = userSnap.data() || {};
+  const wasActive = prev.subscriptionStatus === 'active';
+  const prevTier =
+    prev.subscriptionTier === 'yearly'
+      ? 'yearly'
+      : prev.subscriptionTier === 'monthly'
+        ? 'monthly'
+        : null;
+
+  const userUpdate: Record<string, unknown> = {
+    subscriptionStatus: 'active',
+    subscriptionTier: tier,
+    updatedAt: FieldValue.serverTimestamp(),
+    freeEditableTrackIds: FieldValue.delete(),
+    freeEditableSelectionAt: FieldValue.delete(),
+  };
+  if (subscriptionId) userUpdate.subscriptionId = subscriptionId;
+  await userRef.update(userUpdate);
+
+  const newlyActivated = !wasActive;
+  const upgradedToYearly = prevTier !== 'yearly' && tier === 'yearly';
+  const switchedToMonthly = wasActive && prevTier === 'yearly' && tier === 'monthly';
+
+  if (newlyActivated || upgradedToYearly || switchedToMonthly) {
+    await refillProResidency(db, userId, tier);
   }
 }
 
@@ -187,6 +238,7 @@ export async function fulfillPaidCheckoutSession(
     amount_total: number | null;
     payment_status: string | null;
     status: string | null;
+    mode?: string | null;
     client_reference_id: string | null;
     subscription?: string | { id: string } | null;
     customer?: string | { id: string } | null;
@@ -216,12 +268,19 @@ export async function fulfillPaidCheckoutSession(
   const stripeCustomerId =
     typeof session.customer === 'string' ? session.customer : session.customer?.id ?? null;
 
+  // Prefer explicit metadata; fall back to Checkout mode / subscription presence
+  // so Pro still grants when type is missing on a legacy or Dashboard session.
+  const isSubscriptionCheckout =
+    metadata?.type === 'subscription' ||
+    session.mode === 'subscription' ||
+    Boolean(subscriptionId);
+
   await fulfillCheckoutSession(
     db,
     {
       userId,
       inkAmount: metadata?.inkAmount,
-      type: metadata?.type,
+      type: isSubscriptionCheckout ? 'subscription' : metadata?.type,
       subscriptionTier: metadata?.subscriptionTier,
     },
     session.amount_total || 0,

@@ -74,7 +74,11 @@ export function expectedSignupResidencyInk(): number {
   return SIGNUP_INK;
 }
 
-/** Detect erroneous signup-month monthly bump (welcome + monthly) that was never spent down. */
+/**
+ * Detect erroneous signup-month monthly bump (welcome + monthly) that was never spent down.
+ * Must stay tightly bounded around ~400 — Pro refills (1777 / 3444) must NEVER match,
+ * or usage-init will claw Pro residency back down to SIGNUP_INK (250).
+ */
 export function isLikelyErroneousSignupMonthGrant(
   residencyBalance: number,
   createdAt: string | null | undefined,
@@ -82,7 +86,7 @@ export function isLikelyErroneousSignupMonthGrant(
 ): boolean {
   if (!isSignupMonth(createdAt, monthKey)) return false;
   const expectedBump = SIGNUP_INK + FREE_MONTHLY_RESIDENCY_INK;
-  return residencyBalance >= expectedBump - 2;
+  return residencyBalance >= expectedBump - 2 && residencyBalance <= expectedBump + 10;
 }
 
 /**
