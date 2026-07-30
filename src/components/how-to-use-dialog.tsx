@@ -196,7 +196,7 @@ const FAQS = [
     },
     {
       q: "What shows on the leaderboard and public profile?",
-      a: "The weekly leaderboard shows your display name, rank, XP, bars written (7 days), streak, and tracks completed — never lyrics or vault content. You are listed unless you turn on Hide from leaderboard in Studio Progress → Sharing & visibility. A public profile page is optional (off by default) and only shares rank, streak, badges, and album cover collage when you enable it."
+      a: "The weekly leaderboard shows your display name, rank, XP, bars written (7 days), streak, and tracks completed — never lyrics or vault content. New artists start private: turn on Show on leaderboard in Studio Progress → Sharing & visibility to appear. A public profile page is also off by default and only shares rank, streak, badges, and album cover collage when you enable it."
     },
     {
       q: "What is included in a DNA Drop?",

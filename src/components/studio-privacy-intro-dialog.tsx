@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, Globe, Trophy } from 'lucide-react';
+import { Eye, Globe, Trophy } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
 import { patchGamificationSettings } from '@/lib/gamification-client';
@@ -33,11 +33,12 @@ import {
 export function StudioPrivacyIntroDialog() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const { summary, loading: gamificationLoading } = useGamification();
+  const { loading: gamificationLoading } = useGamification();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  /** Both off = private. ON = opt in to that public surface. */
   const [publicProfile, setPublicProfile] = useState(false);
-  const [leaderboardHidden, setLeaderboardHidden] = useState(false);
+  const [showOnLeaderboard, setShowOnLeaderboard] = useState(false);
   const [saving, setSaving] = useState(false);
   const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -46,10 +47,13 @@ export function StudioPrivacyIntroDialog() {
     return () => setStudioPrivacyIntroOpen(false);
   }, [open]);
 
+  // First-run popup always starts private — artist opts in explicitly.
   useEffect(() => {
-    setPublicProfile(summary.publicProfile);
-    setLeaderboardHidden(summary.leaderboardHidden);
-  }, [summary.publicProfile, summary.leaderboardHidden]);
+    if (open) {
+      setPublicProfile(false);
+      setShowOnLeaderboard(false);
+    }
+  }, [open]);
 
   const finishIntro = useCallback(async () => {
     setOpen(false);
@@ -129,11 +133,14 @@ export function StudioPrivacyIntroDialog() {
     try {
       await patchGamificationSettings({
         publicProfile,
-        leaderboardHidden,
+        leaderboardHidden: !showOnLeaderboard,
         displayName: user?.displayName,
       });
       await finishIntro();
-      toast({ title: 'Visibility saved', description: 'Change anytime in Studio Progress → Sharing & visibility.' });
+      toast({
+        title: 'Visibility saved',
+        description: 'Change anytime in Studio Progress → Sharing & visibility.',
+      });
     } catch {
       toast({ variant: 'destructive', title: 'Could not save visibility settings' });
     } finally {
@@ -150,8 +157,8 @@ export function StudioPrivacyIntroDialog() {
             Your studio visibility
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
-            Bar 4 Bar can show your <strong className="text-foreground">display name and studio stats</strong> on the
-            weekly leaderboard. Lyrics, DNA, and vault content are never published unless you share a DNA Drop link.
+            You start <strong className="text-foreground">fully private</strong>. Turn a switch on only if you want that
+            surface public. Lyrics, DNA, and vault content are never published unless you share a DNA Drop link.
           </DialogDescription>
         </DialogHeader>
 
@@ -159,8 +166,8 @@ export function StudioPrivacyIntroDialog() {
           <p className="flex items-start gap-2">
             <Trophy className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
             <span>
-              <strong className="text-foreground/90">Leaderboard</strong> — your display name plus rank, XP, bars written
-              (7 days), streak, and tracks completed. You are included unless you turn on Hide below.
+              <strong className="text-foreground/90">Both off</strong> — private studio. Leaderboard &amp; profile stay
+              off until you opt in.
             </span>
           </p>
         </div>
@@ -169,16 +176,16 @@ export function StudioPrivacyIntroDialog() {
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-0.5 min-w-0">
               <Label className="text-xs font-bold uppercase flex items-center gap-1.5">
-                <EyeOff className="h-3.5 w-3.5" /> Hide from leaderboard
+                <Trophy className="h-3.5 w-3.5" /> Show on leaderboard
               </Label>
               <p className="text-[10px] text-muted-foreground">
-                Keep rankings private. Studio Progress still tracks your stats for you.
+                Weekly rankings: display name, rank, XP, bars, streak — never lyrics.
               </p>
             </div>
             <Switch
-              checked={leaderboardHidden}
+              checked={showOnLeaderboard}
               disabled={saving}
-              onCheckedChange={setLeaderboardHidden}
+              onCheckedChange={setShowOnLeaderboard}
             />
           </div>
           <div className="flex items-center justify-between gap-4">

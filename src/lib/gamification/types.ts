@@ -34,6 +34,13 @@ export type GamificationSummary = {
   };
   publicProfile: boolean;
   profileSlug?: string;
+  /**
+   * Public profile hero art. `collage` (default) uses album covers;
+   * `custom` uses profilePhotoUrl when set.
+   */
+  profilePhotoMode?: 'collage' | 'custom';
+  /** Square JPEG/PNG data URL or https URL when profilePhotoMode is custom. */
+  profilePhotoUrl?: string;
   leaderboardHidden: boolean;
   bonusInkGrantedThisMonth: number;
   bonusInkMonthKey: string;
@@ -89,7 +96,9 @@ export const DEFAULT_GAMIFICATION_SUMMARY: GamificationSummary = {
   lifetimeStudioSessions: 0,
   personalBests: { barsInDay: 0, longestStreak: 0, barsInSession: 0 },
   publicProfile: false,
-  leaderboardHidden: false,
+  profilePhotoMode: 'collage',
+  /** Private by default — appear on leaderboard only when the artist opts in. */
+  leaderboardHidden: true,
   bonusInkGrantedThisMonth: 0,
   bonusInkMonthKey: '',
   barsWritten7d: 0,

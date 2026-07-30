@@ -25,8 +25,13 @@ export async function fulfillCheckoutSession(
   const usageRef = userRef.collection('usage').doc('balance');
   const systemLogRef = db.collection('system').doc('logs').collection('entries').doc();
   const amountTotal = amountTotalCents / 100;
-  const balanceBeforeSnap = await usageRef.get();
+  const [balanceBeforeSnap, userSnap] = await Promise.all([usageRef.get(), userRef.get()]);
   const poolsBefore = normalizeInkPools(balanceBeforeSnap.data() || {});
+  const userData = userSnap.data() || {};
+  const userName =
+    (typeof userData.displayName === 'string' && userData.displayName.trim()) ||
+    (typeof userData.email === 'string' && userData.email.trim()) ||
+    'Artist';
 
   const batch = db.batch();
   const inkAmount = parseInt(metadata.inkAmount || '0', 10);
@@ -35,6 +40,8 @@ export async function fulfillCheckoutSession(
 
   let poolsWorking = { ...poolsBefore };
   let usageExtra: Record<string, unknown> = {};
+  let residencyCredit = 0;
+  let proRefillAmount = 0;
 
   if (inkAmount > 0) {
     poolsWorking = {
@@ -47,6 +54,8 @@ export async function fulfillCheckoutSession(
   if (isSubscription) {
     const tier = metadata.subscriptionTier === 'yearly' ? 'yearly' : 'monthly';
     const refillAmount = getResidencyRefillForTier(tier);
+    proRefillAmount = refillAmount;
+    residencyCredit = Math.max(0, refillAmount - poolsBefore.residencyBalance);
     const userUpdate: Record<string, unknown> = {
       subscriptionStatus: 'active',
       subscriptionTier: tier,
@@ -79,14 +88,27 @@ export async function fulfillCheckoutSession(
     batch.set(usageRef, inkBalanceFirestorePatch(poolsWorking, usageExtra), { merge: true });
   }
 
+  // Ops stream: show ink the purchase delivers (pack size / Pro residency refill),
+  // not net wallet delta — residencyCredit is 0 when balance was already at the refill cap.
+  const inkForOpsLog = isSubscription ? proRefillAmount : Math.max(0, inkAmount);
+  const tierLabel =
+    metadata.subscriptionTier === 'yearly'
+      ? 'Yearly'
+      : metadata.subscriptionTier === 'monthly'
+        ? 'Monthly'
+        : '';
   batch.set(systemLogRef, {
     timestamp: new Date().toISOString(),
     userId,
+    userName,
     action: isSubscription ? 'Pro Membership' : 'Ink Pack Purchase',
     usdCost: calculateNetRevenue(amountTotal),
-    inkUsed: 0,
+    inkUsed: inkForOpsLog,
+    inkDelta: inkForOpsLog,
     type: 'transaction',
-    details: `Gross: $${amountTotal.toFixed(2)}`,
+    details: isSubscription
+      ? `${tierLabel} Pro · residency → ${proRefillAmount.toLocaleString()} (wallet +${residencyCredit.toLocaleString()}) · Gross: $${amountTotal.toFixed(2)}`
+      : `+${inkAmount.toLocaleString()} permanent Ink · Gross: $${amountTotal.toFixed(2)}`,
   });
 
   await batch.commit();
@@ -101,19 +123,15 @@ export async function fulfillCheckoutSession(
       details: `Gross: $${amountTotal.toFixed(2)}`,
     });
   }
-  if (isSubscription) {
+  if (isSubscription && residencyCredit > 0) {
     const tier = metadata.subscriptionTier === 'yearly' ? 'yearly' : 'monthly';
-    const refillAmount = getResidencyRefillForTier(tier);
-    const residencyCredit = Math.max(0, refillAmount - poolsBefore.residencyBalance);
-    if (residencyCredit > 0) {
-      ledgerEntries.push({
-        type: 'credit' as const,
-        pool: 'residency' as const,
-        amount: residencyCredit,
-        reason: 'pro_residency_refill' as const,
-        details: tier === 'yearly' ? 'Yearly Pro' : 'Monthly Pro',
-      });
-    }
+    ledgerEntries.push({
+      type: 'credit' as const,
+      pool: 'residency' as const,
+      amount: residencyCredit,
+      reason: 'pro_residency_refill' as const,
+      details: tier === 'yearly' ? 'Yearly Pro' : 'Monthly Pro',
+    });
   }
   if (ledgerEntries.length > 0) {
     await recordInkLedgerEntries(db, userId, ledgerEntries);
@@ -130,12 +148,21 @@ export async function fulfillCheckoutSession(
 export async function refillProResidency(
   db: Firestore,
   userId: string,
-  tier: 'monthly' | 'yearly'
+  tier: 'monthly' | 'yearly',
+  opts?: { amountTotalUsd?: number; reason?: string; logOps?: boolean }
 ) {
   const usageRef = db.collection('users').doc(userId).collection('usage').doc('balance');
-  const beforeSnap = await usageRef.get();
+  const userRef = db.collection('users').doc(userId);
+  const [beforeSnap, userSnap] = await Promise.all([usageRef.get(), userRef.get()]);
   const poolsBefore = normalizeInkPools(beforeSnap.data() || {});
   const refillAmount = getResidencyRefillForTier(tier);
+  const residencyCredit = Math.max(0, refillAmount - poolsBefore.residencyBalance);
+  const userData = userSnap.data() || {};
+  const userName =
+    (typeof userData.displayName === 'string' && userData.displayName.trim()) ||
+    (typeof userData.email === 'string' && userData.email.trim()) ||
+    'Artist';
+
   await usageRef.set(
     inkBalanceFirestorePatch(
       { ...poolsBefore, residencyBalance: refillAmount },
@@ -147,7 +174,7 @@ export async function refillProResidency(
     ),
     { merge: true }
   );
-  const residencyCredit = Math.max(0, refillAmount - poolsBefore.residencyBalance);
+
   if (residencyCredit > 0) {
     await recordInkLedgerEntries(db, userId, [
       {
@@ -159,6 +186,24 @@ export async function refillProResidency(
       },
     ]);
   }
+
+  if (!opts?.logOps) return;
+
+  const amountTotal = typeof opts?.amountTotalUsd === 'number' ? opts.amountTotalUsd : 0;
+  const reason = opts?.reason || (tier === 'yearly' ? 'Yearly Pro renewal' : 'Monthly Pro renewal');
+  await db.collection('system').doc('logs').collection('entries').add({
+    timestamp: new Date().toISOString(),
+    userId,
+    userName,
+    action: 'Pro Membership',
+    usdCost: amountTotal > 0 ? calculateNetRevenue(amountTotal) : 0,
+    inkUsed: refillAmount,
+    inkDelta: refillAmount,
+    type: 'transaction',
+    details: `${reason} · residency → ${refillAmount.toLocaleString()} (wallet +${residencyCredit.toLocaleString()})${
+      amountTotal > 0 ? ` · Gross: $${amountTotal.toFixed(2)}` : ''
+    }`,
+  });
 }
 
 /**

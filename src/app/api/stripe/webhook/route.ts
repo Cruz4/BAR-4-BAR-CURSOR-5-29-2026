@@ -194,7 +194,11 @@ export async function POST(req: Request) {
           invoice.subscription
         );
         if (userId) {
-          await refillProResidency(db, userId, tier);
+          await refillProResidency(db, userId, tier, {
+            logOps: true,
+            amountTotalUsd: (invoice.amount_paid || 0) / 100,
+            reason: tier === 'yearly' ? 'Yearly Pro renewal' : 'Monthly Pro renewal',
+          });
           void sendRenewalChargeEmail(db, {
             userId,
             tier,

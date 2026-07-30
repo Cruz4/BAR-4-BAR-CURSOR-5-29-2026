@@ -53,13 +53,23 @@ function countNonEmptyBars(sections: unknown): number {
 }
 
 function mergeSummary(existing: Partial<GamificationSummary>): GamificationSummary {
+  const raw = existing || {};
+  const isBrandNew = Object.keys(raw).length === 0;
   return {
     ...DEFAULT_GAMIFICATION_SUMMARY,
-    ...existing,
-    unlockedAchievements: existing.unlockedAchievements || {},
-    weeklyChallengeProgress: existing.weeklyChallengeProgress || {},
-    monthlyChallengeProgress: existing.monthlyChallengeProgress || {},
-    personalBests: { ...DEFAULT_GAMIFICATION_SUMMARY.personalBests, ...(existing.personalBests || {}) },
+    ...raw,
+    unlockedAchievements: raw.unlockedAchievements || {},
+    weeklyChallengeProgress: raw.weeklyChallengeProgress || {},
+    monthlyChallengeProgress: raw.monthlyChallengeProgress || {},
+    personalBests: { ...DEFAULT_GAMIFICATION_SUMMARY.personalBests, ...(raw.personalBests || {}) },
+    // New accounts default private. Existing docs without the field used the old
+    // default (visible) — keep them on the board until they opt out.
+    leaderboardHidden:
+      typeof raw.leaderboardHidden === 'boolean'
+        ? raw.leaderboardHidden
+        : isBrandNew
+          ? true
+          : false,
   };
 }
 
@@ -270,9 +280,13 @@ async function syncLeaderboardEntry(
   displayName: string
 ): Promise<void> {
   const db = await getDb();
-  if (summary.leaderboardHidden) return;
   const weekKey = getWeekKey();
-  await db.doc(`leaderboard_weekly/${weekKey}/entries/${uid}`).set(
+  const entryRef = db.doc(`leaderboard_weekly/${weekKey}/entries/${uid}`);
+  if (summary.leaderboardHidden) {
+    await entryRef.delete().catch(() => undefined);
+    return;
+  }
+  await entryRef.set(
     {
       userId: uid,
       displayName,
@@ -301,6 +315,11 @@ async function syncPublicProfile(
 
   const badgeIds = Object.keys(summary.unlockedAchievements);
   const albumCoverUrls = await getPublicAlbumCoverUrls(uid);
+  const profilePhotoMode = summary.profilePhotoMode === 'custom' ? 'custom' : 'collage';
+  const profilePhotoUrl =
+    profilePhotoMode === 'custom' && typeof summary.profilePhotoUrl === 'string'
+      ? summary.profilePhotoUrl
+      : null;
   await db.doc(`publicProfiles/${summary.profileSlug}`).set(
     {
       userId: uid,
@@ -311,6 +330,8 @@ async function syncPublicProfile(
       longestStreak: summary.longestStreak,
       badgeIds,
       albumCoverUrls,
+      profilePhotoMode,
+      profilePhotoUrl,
       updatedAt: new Date().toISOString(),
     },
     { merge: true }
@@ -482,14 +503,39 @@ export async function processGamificationEvent(
   }
 
   for (const u of unlocks) {
-    const def = getAchievement(u.id);
-    if (
-      def?.inkReward &&
-      canUnlockAchievement(u.id, analytics, verifyCtx, summary, trigger)
-    ) {
-      await grantBonusInk(userId, def.inkReward, def.title);
+    // Unlock already passed verification in tryUnlock — grant ink from the reward payload
+    // (do not re-check canUnlockAchievement; that can skip ink after summary is mutated).
+    const inkReward = Math.max(0, Number(u.inkReward) || 0);
+    let inkGranted = 0;
+    if (inkReward > 0) {
+      inkGranted = await grantBonusInk(userId, inkReward, u.title);
     }
+    const xpReward = Math.max(0, Number(u.xpReward) || 0);
     await recordGamificationAnalytics(userId, 'achievement_unlocked', { achievementId: u.id }, displayName);
+
+    const detailParts: string[] = [];
+    if (inkGranted > 0) detailParts.push(`+${inkGranted} Ink`);
+    if (xpReward > 0) detailParts.push(`+${xpReward} XP`);
+    if (u.description) detailParts.push(u.description);
+    else detailParts.push(u.id);
+
+    const unlockedAt =
+      (typeof summary.unlockedAchievements[u.id] === 'string' && summary.unlockedAchievements[u.id]) ||
+      timestamp;
+
+    await db.collection('system').doc('logs').collection('entries').add({
+      timestamp: unlockedAt,
+      unlockedAt,
+      userId,
+      userName: displayName,
+      action: `Achievement: ${u.title}`,
+      usdCost: 0,
+      inkUsed: inkGranted,
+      inkDelta: inkGranted,
+      type: 'achievement',
+      achievementId: u.id,
+      details: detailParts.join(' · '),
+    });
   }
 
   if (summary.currentStreak === 3 || summary.currentStreak === 7 || summary.currentStreak === 30) {
@@ -540,7 +586,13 @@ export async function processGamificationFromAnalytics(
 
 export async function updateGamificationSettings(
   userId: string,
-  settings: { publicProfile?: boolean; leaderboardHidden?: boolean; displayName?: string }
+  settings: {
+    publicProfile?: boolean;
+    leaderboardHidden?: boolean;
+    displayName?: string;
+    profilePhotoMode?: 'collage' | 'custom';
+    profilePhotoUrl?: string | null;
+  }
 ): Promise<GamificationSummary> {
   const db = await getDb();
   const snap = await db.doc(`users/${userId}/gamification/summary`).get();
@@ -555,9 +607,36 @@ export async function updateGamificationSettings(
   if (settings.displayName) {
     summary.profileSlug = slugify(settings.displayName, userId);
   }
+  if (settings.profilePhotoMode === 'collage' || settings.profilePhotoMode === 'custom') {
+    summary.profilePhotoMode = settings.profilePhotoMode;
+  }
+  if (settings.profilePhotoUrl === null) {
+    summary.profilePhotoMode = 'collage';
+    delete summary.profilePhotoUrl;
+  } else if (typeof settings.profilePhotoUrl === 'string' && settings.profilePhotoUrl.trim()) {
+    summary.profilePhotoUrl = settings.profilePhotoUrl.trim();
+    summary.profilePhotoMode = 'custom';
+  }
+  if (summary.publicProfile && !summary.profileSlug) {
+    const userSnap = await db.doc(`users/${userId}`).get();
+    const name = settings.displayName || userSnap.data()?.displayName || 'Artist';
+    summary.profileSlug = slugify(String(name), userId);
+  }
 
   summary.updatedAt = new Date().toISOString();
-  await db.doc(`users/${userId}/gamification/summary`).set(summary, { merge: true });
+  const summaryRef = db.doc(`users/${userId}/gamification/summary`);
+  if (settings.profilePhotoUrl === null) {
+    await summaryRef.set(
+      {
+        ...summary,
+        profilePhotoUrl: FieldValue.delete(),
+        profilePhotoMode: 'collage',
+      },
+      { merge: true }
+    );
+  } else {
+    await summaryRef.set(summary, { merge: true });
+  }
 
   if (settings.displayName) {
     await db.doc(`users/${userId}`).set({ displayName: settings.displayName }, { merge: true });
@@ -566,9 +645,7 @@ export async function updateGamificationSettings(
   const userSnap = await db.doc(`users/${userId}`).get();
   const displayName = settings.displayName || userSnap.data()?.displayName || 'Artist';
   await syncPublicProfile(userId, summary, displayName);
-  if (!summary.leaderboardHidden) {
-    await syncLeaderboardEntry(userId, summary, displayName);
-  }
+  await syncLeaderboardEntry(userId, summary, displayName);
 
   return summary;
 }

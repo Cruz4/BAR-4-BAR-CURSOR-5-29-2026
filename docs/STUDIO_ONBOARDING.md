@@ -27,23 +27,26 @@ This document describes how Bar 4 Bar teaches new systems to artists in-app. Sou
 ## Studio Insights & Did You Knows
 
 - **Component:** `src/components/studio-tips.tsx`
-- **Pool size:** 45 tips (ids 1–32 legacy + 33–46 added May 2026)
+- **Pool size:** ~57 tips (legacy 1–32 + May 2026 33–46 + Jul 2026 48–58; id 6 = Special Instructions; id 47 = Studio Ranks)
 - **Labels:** `Studio Insight` (default) or `Did You Know?` when `kind: 'did-you-know'`
-- **When shown:** One random tip per lyrics-page visit, 3s after load, **after** guided tour complete
+- **When shown:** On a track sheet revisit (2nd+ visit this session), 3s after load, **after** guided tour complete — one tip per sheet path per session
 - **Session guard:** `sessionStorage` key `b4b_studio_tip_shown:{pathname}`
+- **Opt-out:** Card toggle → `localStorage` `b4b_show_tips=false`
 
-### New tips (May 2026, ids 33–46)
+### May 2026 tips (ids 33–46)
 
 | ID | Title | Kind |
 |----|--------|------|
-| 33 | Rhyme Bar Math | Did You Know |
+| 33 | Written vs Generated | Did You Know |
 | 34 | DNA Drop | Insight |
 | 35 | ⚡ Inject vs ↻ Load | Did You Know |
 | 36 | Creative Syncing | Insight |
-| 37 | DNA Extraction | Did You Know |
+| 37 | Analysis Step | Did You Know |
 | 38 | Hub Insights Tab | Insight |
-| 39 | Special Instructions | Did You Know |
-| 40 | Studio Ranks | Insight |
+| 39 | Save Ink on Drafts | Did You Know |
+| 40 | Lyrics vs Full Songs | Did You Know |
+| 6 | Special Instructions | Did You Know |
+| 47 | Studio Ranks | Insight |
 | 41 | Vibe Vault | Did You Know |
 | 42 | 20-Level Undo | Insight |
 | 43 | Leaderboard & Profile | Did You Know |
@@ -51,13 +54,29 @@ This document describes how Bar 4 Bar teaches new systems to artists in-app. Sou
 | 45 | Weekly vs Monthly | Did You Know |
 | 46 | Vault Import | Insight |
 
+### Jul 2026 tips (ids 48–58)
+
+| ID | Title | Kind |
+|----|--------|------|
+| 48 | Foil Badge Preview | Did You Know |
+| 49 | Free Badge ≠ Locked | Did You Know |
+| 50 | Lyrics Stay Private | Did You Know |
+| 51 | Personal Bests | Did You Know |
+| 52 | Rhyme Bar Math | Did You Know |
+| 53 | Update DNA Drop | Insight |
+| 54 | Edit AI → Written | Did You Know |
+| 55 | Opt-In Switches | Did You Know |
+| 56 | Verify for Welcome | Insight |
+| 57 | Vault Sidebar Goals | Insight |
+| 58 | Preview Quest | Insight |
+
 ## Studio visibility intro
 
 - **Component:** `src/components/studio-privacy-intro-dialog.tsx`
 - **When shown:** Once per account (until saved), after the guided tour finishes or on first visit to The Vault (`/`)
 - **Completion:** Sets `studioPrivacyIntroCompletedAt` on the user doc when the artist taps **Save preferences**
 - **Remind me later:** Snoozes for the current browser session only
-- **Controls:** Hide from leaderboard · Public profile page (Studio Progress → Sharing & visibility)
+- **Controls:** Show on leaderboard · Public profile page — both off by default (Studio Progress → Sharing & visibility)
 
 The 9-step lyrics tour stays focused on workflow; visibility is explained in this separate dialog instead of adding a tour step.
 

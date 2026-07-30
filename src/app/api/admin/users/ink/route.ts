@@ -58,6 +58,8 @@ export async function POST(req: Request) {
     userId: targetUserId,
     userName: admin.email,
     inkUsed: Math.abs(amount),
+    inkDelta: amount,
+    type: 'system',
     timestamp: new Date().toISOString(),
     details: `${amount > 0 ? '+' : ''}${amount} ${type === 'res' ? 'residency' : 'permanent'} ink`,
   });

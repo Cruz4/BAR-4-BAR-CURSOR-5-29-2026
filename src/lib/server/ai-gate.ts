@@ -156,8 +156,9 @@ export async function deductInkTransaction(
     userName: userName || 'Artist',
     action: actionName,
     inkUsed: finalAmount,
+    inkDelta: -finalAmount,
     usdCost: estimateAiCost(actionName),
-    type: 'ai_request',
+    type: 'ai_request' as const,
   };
   await logsRef.add(logEntry);
 

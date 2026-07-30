@@ -196,10 +196,20 @@ export interface SystemLog {
   userId: string;
   userName: string;
   action: string;
-  usdCost: number; 
-  inkUsed: number; 
+  usdCost: number;
+  /** Absolute ink magnitude (legacy spends used this as “spent”). */
+  inkUsed: number;
+  /**
+   * Signed ink flow for ops UI: positive = credit (purchase/achievement),
+   * negative = spend. When omitted, UI falls back to -inkUsed.
+   */
+  inkDelta?: number;
   details?: string;
-  type: 'ai_request' | 'transaction' | 'system';
+  type: 'ai_request' | 'transaction' | 'system' | 'achievement';
+  /** Set on achievement unlock / backfill rows for idempotent ops history. */
+  achievementId?: string;
+  backfilled?: boolean;
+  unlockedAt?: string;
 }
 
 export interface BugReport {

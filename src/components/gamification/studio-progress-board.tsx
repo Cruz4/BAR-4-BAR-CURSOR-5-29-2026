@@ -8,7 +8,9 @@ import { isProUser } from '@/lib/subscription';
 import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { rankFromXp, STUDIO_RANKS, xpProgressInRank } from '@/lib/gamification/ranks';
 import {
-  RANK_BADGE,
+  rankBadgeClass,
+  rankLadderBadgeClass,
+  RANK_XP_BAR,
   STREAK_BADGE,
   XP_LABEL,
 } from '@/lib/gamification/badge-styles';
@@ -25,12 +27,14 @@ import { cn } from '@/lib/utils';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
 import {
   ChevronLeft,
+  ExternalLink,
   Flame,
   Share2,
   Sparkles,
   Trophy,
   Zap,
 } from 'lucide-react';
+import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
 
 type UserRank = { rank: number; total: number; value: number } | null;
 
@@ -50,6 +54,7 @@ export function StudioProgressBoard() {
   const { summary, rankLabel, loading } = useGamification();
   const [leaderboard, setLeaderboard] = useState<LeaderboardPayload | null>(null);
   const [lbLoading, setLbLoading] = useState(true);
+  const [profileShareOpen, setProfileShareOpen] = useState(false);
 
   const isPro = isProUser(user);
   const unlocked = summary?.unlockedAchievements || {};
@@ -121,9 +126,38 @@ export function StudioProgressBoard() {
               community. Writing goals count <strong className="text-foreground/90 font-semibold">hand-typed</strong> lines only; AI-generated lines are tracked separately.
             </p>
           </div>
-          <Button variant="outline" className="text-xs font-bold uppercase" asChild>
-            <Link href="/leaderboard">Full leaderboard</Link>
-          </Button>
+          <div className="flex flex-col items-stretch sm:items-end gap-2">
+            <Button variant="outline" className="text-xs font-bold uppercase" asChild>
+              <Link href="/leaderboard">Full leaderboard</Link>
+            </Button>
+            {summary.publicProfile && summary.profileSlug ? (
+              <Button
+                className="text-xs font-bold uppercase gap-2 bg-sky-500 hover:bg-sky-400 text-black shadow-[0_0_24px_rgba(14,165,233,0.35)]"
+                asChild
+              >
+                <Link href={`/profile/${summary.profileSlug}`} target="_blank">
+                  <ExternalLink className="h-3.5 w-3.5" /> View public profile
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                className="text-xs font-bold uppercase gap-2 border-sky-500/40 text-sky-300"
+                asChild
+              >
+                <Link href="/studio-progress#sharing-visibility">Enable public profile</Link>
+              </Button>
+            )}
+            {summary.publicProfile && summary.profileSlug && (
+              <Button
+                variant="secondary"
+                className="text-xs font-bold uppercase gap-2"
+                onClick={() => setProfileShareOpen(true)}
+              >
+                <Share2 className="h-3.5 w-3.5" /> Share profile
+              </Button>
+            )}
+          </div>
         </div>
 
         <Card className="border-primary/20 bg-gradient-to-br from-primary/[0.08] via-card/50 to-violet-500/[0.06]">
@@ -133,7 +167,7 @@ export function StudioProgressBoard() {
           <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
             <div className="rounded-lg border border-primary/15 bg-gradient-to-br from-muted/80 to-sky-100/60 dark:from-black/40 dark:to-sky-950/20 px-3.5 py-3 space-y-2.5 md:col-span-2 min-w-0 overflow-hidden">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className={cn('text-[10px] font-bold uppercase', RANK_BADGE[rank.id])}>
+                <Badge variant="outline" className={cn('text-[10px] font-bold uppercase', rankBadgeClass(rank.id))}>
                   {rankLabel}
                 </Badge>
                 {summary.currentStreak > 0 && (
@@ -145,7 +179,7 @@ export function StudioProgressBoard() {
               </div>
               <div className="h-2 rounded-full bg-muted dark:bg-white/5 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-sky-600 via-primary to-violet-500"
+                  className={cn('h-full rounded-full', RANK_XP_BAR[rank.id] ?? RANK_XP_BAR.open_mic)}
                   style={{ width: `${xpPercent}%` }}
                 />
               </div>
@@ -162,19 +196,32 @@ export function StudioProgressBoard() {
                   Generated: {linesToRhymeBars(summary.lifetimeLinesGenerated || 0).toLocaleString()} bars
                 </span>
               </div>
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {STUDIO_RANKS.map((r) => (
-                  <Badge
-                    key={r.id}
-                    variant="outline"
-                    className={cn(
-                      'text-[8px] h-5 px-2',
-                      summary.xp >= r.minXp ? 'border-primary/30 text-primary/90' : 'opacity-40'
-                    )}
-                  >
-                    {r.label}
-                  </Badge>
-                ))}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                {STUDIO_RANKS.map((r) => {
+                  const earned = summary.xp >= r.minXp && !(r.proOverlay && !isPro);
+                  const isCurrent = r.id === rank.id;
+                  const state = !earned ? 'locked' : isCurrent ? 'current' : 'cleared';
+                  return (
+                    <Badge
+                      key={r.id}
+                      variant="outline"
+                      title={
+                        isCurrent
+                          ? `Current rank: ${r.label}`
+                          : earned
+                            ? `Cleared: ${r.label}`
+                            : `Locked: ${r.label}`
+                      }
+                      className={cn(
+                        'text-[8px] h-5 px-2 font-bold uppercase transition-all',
+                        rankLadderBadgeClass(r.id, state)
+                      )}
+                      aria-current={isCurrent ? 'true' : undefined}
+                    >
+                      {isCurrent ? `● ${r.label}` : earned ? `✓ ${r.label}` : r.label}
+                    </Badge>
+                  );
+                })}
               </div>
             </div>
 
@@ -273,9 +320,24 @@ export function StudioProgressBoard() {
 
         {hidden && (
           <p className="text-[11px] text-center text-muted-foreground italic">
-            You are hidden from the public leaderboard. Rankings above are only visible to you until you turn off Hide
-            from leaderboard in Sharing &amp; visibility above.
+            You are off the public leaderboard. Rankings above are only visible to you until you turn on Show on
+            leaderboard in Sharing &amp; visibility above.
           </p>
+        )}
+
+        {summary.publicProfile && summary.profileSlug && (
+          <ProfileShareDialog
+            open={profileShareOpen}
+            onOpenChange={setProfileShareOpen}
+            profile={{
+              displayName: user.displayName || 'Artist',
+              rankLabel,
+              profileUrl:
+                typeof window !== 'undefined'
+                  ? `${window.location.origin}/profile/${summary.profileSlug}`
+                  : `/profile/${summary.profileSlug}`,
+            }}
+          />
         )}
       </div>
     </TooltipProvider>

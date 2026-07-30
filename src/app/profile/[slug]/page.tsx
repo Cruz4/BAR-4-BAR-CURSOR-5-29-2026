@@ -7,8 +7,10 @@ import { PublicProfileShowcase, type PublicProfileData } from '@/components/prof
 import { trackShareCardEvent } from '@/lib/gamification-client';
 import { getAchievement } from '@/lib/gamification/achievements';
 import type { AchievementDef } from '@/lib/gamification/achievements';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function PublicProfilePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { user } = useAuth();
   const [slug, setSlug] = useState<string | null>(null);
   const [profile, setProfile] = useState<PublicProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,11 +39,16 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
         setProfile({
           displayName: data.displayName,
           rankLabel: data.rankLabel,
+          rankId: data.rankId,
           xp: data.xp,
           currentStreak: data.currentStreak,
           longestStreak: data.longestStreak,
           albumCoverUrls: data.albumCoverUrls,
           badges,
+          userId: data.userId,
+          profilePhotoMode: data.profilePhotoMode === 'custom' ? 'custom' : 'collage',
+          profilePhotoUrl: data.profilePhotoUrl || null,
+          slug,
         });
         void trackShareCardEvent('share_card_opened', { slug });
       } finally {
@@ -70,5 +77,23 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
     );
   }
 
-  return <PublicProfileShowcase profile={profile} />;
+  const isOwner = Boolean(user?.id && profile.userId && user.id === profile.userId);
+
+  return (
+    <PublicProfileShowcase
+      profile={profile}
+      isOwner={isOwner}
+      onProfilePhotoChange={(next) => {
+        setProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                profilePhotoMode: next.profilePhotoMode,
+                profilePhotoUrl: next.profilePhotoUrl ?? null,
+              }
+            : prev
+        );
+      }}
+    />
+  );
 }

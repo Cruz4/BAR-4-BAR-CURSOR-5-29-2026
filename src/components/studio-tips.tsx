@@ -5,7 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { X, Play, Target, BrainCircuit, Shield, Wand2, Palette, Sparkles, Zap, FolderOpen, ClipboardPaste, ArrowRight, ListRestart, Fingerprint, MonitorPlay, RefreshCw, Link2, FilePenLine, Key, GitBranch, Download, Mic, Settings, Rocket, HelpCircle, MousePointer2, Dna, Clock, Star, Trophy, Share2, Gift, Globe, Lightbulb, Layers, FlaskConical, ScanLine, Undo2, Crown, EyeOff, Image, CalendarRange, Upload } from 'lucide-react';
+import { X, Play, Target, BrainCircuit, Shield, Wand2, Palette, Sparkles, Zap, FolderOpen, ClipboardPaste, ArrowRight, ListRestart, Fingerprint, MonitorPlay, RefreshCw, Link2, FilePenLine, GitBranch, Download, Mic, Settings, Rocket, HelpCircle, MousePointer2, Dna, Clock, Trophy, Share2, Gift, Globe, Lightbulb, Layers, FlaskConical, ScanLine, Undo2, Crown, EyeOff, Image, CalendarRange, Upload, Medal, BadgeCheck, Lock, Flame, Hash, Camera, Pencil, ToggleRight, Mail, PanelLeft, Sparkle } from 'lucide-react';
+import { PRO_FEATURE_PREVIEW_DAYS } from '@/lib/subscription';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
@@ -73,14 +74,26 @@ const STUDIO_TIPS: StudioTip[] = [
   { id: 38, icon: Layers, title: "HUB INSIGHTS TAB", text: "In the Calibration Hub, INSIGHTS shows your latest extraction strains with ⚡ inject buttons. VAULT loads saved album DNA presets — expand entries to cherry-pick individual fields.", color: "text-primary" },
   { id: 39, kind: 'did-you-know', icon: Lightbulb, title: "SAVE INK ON DRAFTS", text: STUDIO_DRAFT_INK_TIP, color: "text-sky-400" },
   { id: 40, kind: 'did-you-know', icon: Globe, title: "LYRICS VS FULL SONGS", text: COMPETITOR_ANCHOR_COPY, color: "text-muted-foreground" },
-  { id: 39, kind: 'did-you-know', icon: FilePenLine, title: "SPECIAL INSTRUCTIONS", text: "Did you know? Special Instructions in the Hub are a direct creative brief — they are not blended or weighted by remix path percentages.", color: "text-blue-400" },
-  { id: 40, icon: Crown, title: "STUDIO RANKS", text: "Earn XP from writing, generating, streaks, and milestones to climb ranks like Headliner and Vault Architect. Track progress on /studio-progress or the Vault sidebar.", color: "text-amber-500" },
+  { id: 6, kind: 'did-you-know', icon: FilePenLine, title: "SPECIAL INSTRUCTIONS", text: "Did you know? Special Instructions in the Hub are a direct creative brief — they are not blended or weighted by remix path percentages.", color: "text-blue-400" },
+  { id: 47, icon: Crown, title: "STUDIO RANKS", text: "Earn XP from writing, generating, streaks, and milestones to climb ranks like Headliner and Vault Architect. Track progress on /studio-progress or the Vault sidebar.", color: "text-amber-500" },
   { id: 41, kind: 'did-you-know', icon: Palette, title: "VIBE VAULT", text: "Did you know? Save instrumentation and BPM presets with the folder icon under Track Vibe (Right Panel) — reuse the same sonic palette across every song in the album.", color: "text-amber-600" },
   { id: 42, icon: Undo2, title: "20-LEVEL UNDO", text: "Made a structural mistake? The Undo button in the center top bar reverts sheet and section changes instantly — up to 20 history steps deep.", color: "text-muted-foreground" },
-  { id: 43, kind: 'did-you-know', icon: EyeOff, title: "LEADERBOARD & PROFILE", text: "Did you know? Weekly leaderboard lists your display name and studio stats — never lyrics. Hide anytime in Studio Progress → Sharing & visibility, or enable a public profile page when you want to share rank and badges.", color: "text-violet-400" },
+  { id: 43, kind: 'did-you-know', icon: EyeOff, title: "LEADERBOARD & PROFILE", text: "Did you know? You start private. Turn on Show on leaderboard or Public profile in Studio Progress → Sharing & visibility when you want to share — weekly rankings list display name and studio stats only, never lyrics.", color: "text-violet-400" },
   { id: 44, icon: Image, title: "COVER ART FOR DROPS", text: "Upload square album cover art (min 500px; exported at 1000×1000) so vinyl grids and DNA Drop previews stay sharp when you share.", color: "text-emerald-500" },
   { id: 45, kind: 'did-you-know', icon: CalendarRange, title: "WEEKLY VS MONTHLY", text: "Did you know? Weekly goals reset every Monday; monthly challenges roll on the calendar month. Both track rhyme bars — check /studio-progress for live counters.", color: "text-amber-400" },
   { id: 46, icon: Upload, title: "VAULT IMPORT", text: "Dashboard → Vault Export downloads a .json backup. Re-import anytime to restore albums, DNA presets, and strains on a new workstation.", color: "text-primary" },
+  // Jul 2026 — privacy, progress, and preview clarity
+  { id: 48, kind: 'did-you-know', icon: Medal, title: "FOIL BADGE PREVIEW", text: "Did you know? Tap an unlocked trophy in Studio Progress to preview the foil card first — then Download PNG when you like the look. Locked badges stay locked.", color: "text-violet-400" },
+  { id: 49, kind: 'did-you-know', icon: BadgeCheck, title: "FREE BADGE ≠ LOCKED", text: `Did you know? During your ${PRO_FEATURE_PREVIEW_DAYS * 24}-hour Pro feature preview, export, Performance, Freestyle, and DNA Drop can unlock while your badge still says FREE — that is the preview, not a bug.`, color: "text-pink-400" },
+  { id: 50, kind: 'did-you-know', icon: Lock, title: "LYRICS STAY PRIVATE", text: "Did you know? Leaderboard, public profile, and achievement share cards never publish vault lyrics — only the display name and studio stats you choose to share.", color: "text-emerald-400" },
+  { id: 51, kind: 'did-you-know', icon: Flame, title: "PERSONAL BESTS", text: "Did you know? Beat your best bars in a session, bars in a day, or longest streak and Studio Progress celebrates the personal best — keep an eye out when you are in the zone.", color: "text-orange-400" },
+  { id: 52, kind: 'did-you-know', icon: Hash, title: "RHYME BAR MATH", text: "Did you know? On the sheet, two lyric lines make one rhyme bar. Weekly writing goals and streaks count rhyme bars — not raw line count.", color: "text-amber-400" },
+  { id: 53, icon: Camera, title: "UPDATE DNA DROP", text: "Published a DNA Drop? After you edit the track, open DNA Drop → Update snapshot so collaborators get the latest lyrics and DNA on the same link.", color: "text-sky-400" },
+  { id: 54, kind: 'did-you-know', icon: Pencil, title: "EDIT AI → WRITTEN", text: "Did you know? Generate a line, then edit it by hand — that line counts toward writing goals and streaks, not just Generate Next milestones.", color: "text-amber-300" },
+  { id: 55, kind: 'did-you-know', icon: ToggleRight, title: "OPT-IN SWITCHES", text: "Did you know? In Sharing & visibility, ON means share. Both Show on leaderboard and Public profile off = fully private — no opposite “hide” toggle to decode.", color: "text-violet-300" },
+  { id: 56, icon: Mail, title: "VERIFY FOR WELCOME", text: "Welcome Ink and your Pro feature preview unlock after email verification — abuse protection so the same inbox cannot farm free Ink forever.", color: "text-primary" },
+  { id: 57, icon: PanelLeft, title: "VAULT SIDEBAR GOALS", text: "On desktop, the Vault sidebar shows live weekly goals and rank XP without leaving the sheet — open full Studio Progress anytime for trophies and sharing.", color: "text-amber-400" },
+  { id: 58, icon: Sparkle, title: "PREVIEW QUEST", text: "During Pro preview, saving a custom DNA profile completes the preview quest — a nudge to vault your extraction before the window ends.", color: "text-emerald-400" },
 ];
 
 export function StudioTips() {

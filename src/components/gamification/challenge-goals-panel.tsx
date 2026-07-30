@@ -65,7 +65,7 @@ export function ChallengeGoalsPanel({ summary, isPro = false }: ChallengeGoalsPa
       <div className="px-4 py-3.5 border-b border-white/5 bg-black/20">
         <h2 className="text-base font-headline font-bold uppercase tracking-tight">Studio goals</h2>
         <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-          Weekly, monthly, and lifetime progress — switch tabs instead of scrolling three uneven columns.
+          Weekly, monthly, and lifetime progress.
         </p>
       </div>
 

@@ -6,7 +6,8 @@ export const runtime = 'nodejs';
 
 export async function PATCH(req: Request) {
   try {
-    const { userId, publicProfile, leaderboardHidden, displayName } = await req.json();
+    const { userId, publicProfile, leaderboardHidden, displayName, profilePhotoMode, profilePhotoUrl } =
+      await req.json();
     if (!userId) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
@@ -24,6 +25,8 @@ export async function PATCH(req: Request) {
       publicProfile,
       leaderboardHidden,
       displayName,
+      profilePhotoMode,
+      profilePhotoUrl,
     });
     return NextResponse.json({ summary });
   } catch (err) {

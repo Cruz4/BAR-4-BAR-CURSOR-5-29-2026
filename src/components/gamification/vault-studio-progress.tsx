@@ -14,7 +14,8 @@ import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import {
   ACHIEVEMENT_CATEGORY,
   ACHIEVEMENT_CATEGORY_LOCKED,
-  RANK_BADGE,
+  rankBadgeClass,
+  RANK_XP_BAR,
   STREAK_BADGE,
   XP_LABEL,
 } from '@/lib/gamification/badge-styles';
@@ -236,7 +237,7 @@ export function VaultStudioProgress({
               variant="outline"
               className={cn(
                 isSidebar ? 'text-[10px] font-bold uppercase gap-1 px-2 py-0 h-5' : 'text-[9px] font-bold uppercase gap-1 px-2 py-0 h-5',
-                RANK_BADGE[rank.id] ?? RANK_BADGE.open_mic
+                rankBadgeClass(rank.id)
               )}
             >
               <Trophy className="h-3 w-3" />
@@ -261,7 +262,10 @@ export function VaultStudioProgress({
           </div>
           <div className="h-1 rounded-full bg-muted overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-sky-600 via-primary to-violet-500 transition-all duration-500"
+              className={cn(
+                'h-full rounded-full transition-all duration-500',
+                RANK_XP_BAR[rank.id] ?? RANK_XP_BAR.open_mic
+              )}
               style={{ width: `${xpPercent}%` }}
             />
           </div>

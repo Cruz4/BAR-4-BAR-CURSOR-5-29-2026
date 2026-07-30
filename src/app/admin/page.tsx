@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase/client/firebase';
-import { collection, query, doc, updateDoc, orderBy, getDoc, limit, setDoc } from 'firebase/firestore';
+import { collection, query, doc, updateDoc, orderBy, getDoc, limit, setDoc, where } from 'firebase/firestore';
 import { subscribeQuery } from '@/lib/firebase/client/firestore-subscribe';
 import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import { initUserUsageAction } from '@/lib/server/usage-actions';
@@ -38,6 +38,7 @@ import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { STUDIO_RANKS } from '@/lib/gamification/ranks';
 import { cn } from '@/lib/utils';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
+import { formatOpsLogInkLabel, resolveOpsLogInkDelta } from '@/lib/ops-log-ink';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -83,6 +84,8 @@ export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<User[]>([]);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
+  const [opsLogFilter, setOpsLogFilter] = useState<'all' | 'transaction' | 'achievement' | 'ai_request'>('all');
+  const [backfillingAchievements, setBackfillingAchievements] = useState(false);
   const [balances, setBalances] = useState<Record<string, { res: number, pur: number }>>({});
   const [gamificationStats, setGamificationStats] = useState<Record<string, AdminGamificationStats>>({});
   const [inkAdjustment, setInkAdjustment] = useState<Record<string, string>>({});
@@ -126,6 +129,23 @@ export default function AdminPage() {
     });
   }, [users, gamificationStats, balances, rosterSort]);
 
+  const filteredOpsLogs = useMemo(() => {
+    if (opsLogFilter === 'all') return systemLogs;
+    return systemLogs.filter((log) => log.type === opsLogFilter);
+  }, [systemLogs, opsLogFilter]);
+
+  const opsLogCounts = useMemo(() => {
+    let transaction = 0;
+    let achievement = 0;
+    let ai_request = 0;
+    for (const log of systemLogs) {
+      if (log.type === 'transaction') transaction += 1;
+      else if (log.type === 'achievement') achievement += 1;
+      else if (log.type === 'ai_request') ai_request += 1;
+    }
+    return { all: systemLogs.length, transaction, achievement, ai_request };
+  }, [systemLogs]);
+
   const toggleRosterSort = (key: RosterSortKey) => {
     setRosterSort((prev) =>
       prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }
@@ -167,7 +187,6 @@ export default function AdminPage() {
     }
 
     let unsubUsers: (() => void) | undefined;
-    let unsubLogs: (() => void) | undefined;
     let cancelled = false;
 
     const setupAdminListeners = async () => {
@@ -196,18 +215,6 @@ export default function AdminPage() {
           setStudioConfig(mergeStudioCosts(data.costs));
         }
       });
-
-      const logsRef = collection(db, 'system', 'logs', 'entries');
-      unsubLogs = subscribeQuery(
-        query(logsRef, orderBy('timestamp', 'desc'), limit(100)),
-        (rows) => {
-          setSystemLogs(rows as SystemLog[]);
-        },
-        (err) => {
-          console.error('[admin] ops log listener:', err);
-        },
-        20000
-      );
 
       const usersRef = collection(db, 'users');
       unsubUsers = subscribeQuery(
@@ -307,10 +314,85 @@ export default function AdminPage() {
     return () => {
       cancelled = true;
       unsubUsers?.();
-      unsubLogs?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-subscribe only when admin session identity changes
   }, [user?.id, user?.role, authLoading, authReady]);
+
+  useEffect(() => {
+    if (authLoading || !authReady || !user || user.role !== 'admin') return;
+
+    let cancelled = false;
+    let unsubLogs: (() => void) | undefined;
+
+    const setupLogs = async () => {
+      const firebaseUser = await waitForAuthUser();
+      if (cancelled || !firebaseUser || firebaseUser.uid !== user.id) return;
+
+      const logsRef = collection(db, 'system', 'logs', 'entries');
+      // Achievements can be sparse vs AI noise — query that type directly.
+      const logsQuery =
+        opsLogFilter === 'achievement'
+          ? query(logsRef, where('type', '==', 'achievement'), orderBy('timestamp', 'desc'), limit(200))
+          : opsLogFilter === 'transaction'
+            ? query(logsRef, where('type', '==', 'transaction'), orderBy('timestamp', 'desc'), limit(200))
+            : opsLogFilter === 'ai_request'
+              ? query(logsRef, where('type', '==', 'ai_request'), orderBy('timestamp', 'desc'), limit(200))
+              : query(logsRef, orderBy('timestamp', 'desc'), limit(400));
+
+      unsubLogs = subscribeQuery(
+        logsQuery,
+        (rows) => {
+          if (!cancelled) setSystemLogs(rows as SystemLog[]);
+        },
+        (err) => {
+          console.error('[admin] ops log listener:', err);
+          // Composite index missing — fall back to recent mix.
+          unsubLogs?.();
+          unsubLogs = subscribeQuery(
+            query(logsRef, orderBy('timestamp', 'desc'), limit(500)),
+            (rows) => {
+              if (cancelled) return;
+              const all = rows as SystemLog[];
+              setSystemLogs(
+                opsLogFilter === 'all' ? all : all.filter((log) => log.type === opsLogFilter)
+              );
+            },
+            (fallbackErr) => console.error('[admin] ops log fallback:', fallbackErr),
+            20000
+          );
+        },
+        20000
+      );
+    };
+
+    void setupLogs();
+    return () => {
+      cancelled = true;
+      unsubLogs?.();
+    };
+  }, [user?.id, user?.role, authLoading, authReady, opsLogFilter]);
+
+  const handleBackfillAchievements = async () => {
+    setBackfillingAchievements(true);
+    try {
+      const res = await adminApiFetch('/api/admin/ops/backfill-achievements', { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'Backfill failed');
+      toast({
+        title: 'Achievement ops backfill complete',
+        description: `Wrote ${body.logsWritten ?? 0} rows · skipped ${body.skippedExisting ?? 0} existing · scanned ${body.unlocksSeen ?? 0} unlocks`,
+      });
+      setOpsLogFilter('achievement');
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Backfill failed',
+        description: err instanceof Error ? err.message : 'Could not backfill achievement logs',
+      });
+    } finally {
+      setBackfillingAchievements(false);
+    }
+  };
 
   const handleUpdateTier = async (targetUser: User, tier: 'none' | 'monthly' | 'yearly') => {
     const status = tier === 'none' ? 'none' : 'active';
@@ -760,19 +842,100 @@ export default function AdminPage() {
 
         <TabsContent value="logs">
             <Card className="bg-card border-2 shadow-2xl">
-                <CardHeader className="border-b"><CardTitle className="font-headline text-2xl uppercase">Neural Operation Stream</CardTitle></CardHeader>
+                <CardHeader className="border-b space-y-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <CardTitle className="font-headline text-2xl uppercase">Neural Operation Stream</CardTitle>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-9 text-[10px] font-bold uppercase tracking-wider"
+                      disabled={backfillingAchievements}
+                      onClick={() => void handleBackfillAchievements()}
+                    >
+                      {backfillingAchievements ? 'Backfilling…' : 'Backfill achievement unlocks'}
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      [
+                        { id: 'all' as const, label: 'All' },
+                        { id: 'transaction' as const, label: 'Purchases' },
+                        { id: 'achievement' as const, label: 'Achievements' },
+                        { id: 'ai_request' as const, label: 'AI' },
+                      ] as const
+                    ).map((f) => (
+                      <Button
+                        key={f.id}
+                        type="button"
+                        size="sm"
+                        variant={opsLogFilter === f.id ? 'default' : 'outline'}
+                        className="h-8 text-[10px] font-bold uppercase tracking-wider"
+                        onClick={() => setOpsLogFilter(f.id)}
+                      >
+                        {f.label}
+                        <span className="ml-1.5 opacity-70">{opsLogCounts[f.id]}</span>
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed max-w-2xl">
+                    Timestamps are when the artist unlocked the badge. Use{' '}
+                    <strong className="text-foreground/80">Backfill achievement unlocks</strong> once to import
+                    existing trophies into this stream (shows defined ink rewards — does not re-grant Ink).
+                  </p>
+                </CardHeader>
                 <CardContent className="p-0">
                     <Table>
-                        <TableHeader><TableRow><TableHead>Timestamp</TableHead><TableHead>Artist</TableHead><TableHead>Operation</TableHead><TableHead className="text-right">Ink Spent</TableHead></TableRow></TableHeader>
+                        <TableHeader><TableRow><TableHead>Timestamp</TableHead><TableHead>Artist</TableHead><TableHead>Operation</TableHead><TableHead className="text-right">Ink</TableHead></TableRow></TableHeader>
                         <TableBody>
-                            {systemLogs.map(log => (
+                            {filteredOpsLogs.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
+                                  {opsLogFilter === 'achievement'
+                                    ? 'No achievement unlocks in the stream yet. Click “Backfill achievement unlocks” above to import existing trophies.'
+                                    : 'No operations in this filter.'}
+                                </TableCell>
+                              </TableRow>
+                            ) : null}
+                            {filteredOpsLogs.map(log => {
+                                const rosterUser = users.find((u) => u.id === log.userId)
+                                  || blockedUsers.find((u) => u.id === log.userId);
+                                const artistLabel =
+                                  (log.userName && String(log.userName).trim()) ||
+                                  rosterUser?.displayName ||
+                                  rosterUser?.email ||
+                                  (log.userId ? `${String(log.userId).slice(0, 8)}…` : 'Unknown');
+                                const delta = resolveOpsLogInkDelta(log);
+                                const inkLabel = formatOpsLogInkLabel(delta);
+                                const inkClass =
+                                  delta > 0
+                                    ? 'text-emerald-400'
+                                    : delta < 0
+                                      ? 'text-primary'
+                                      : 'text-muted-foreground';
+                                return (
                                 <TableRow key={log.id} className="border-b border-white/5">
                                     <TableCell className="text-[10px] font-code text-muted-foreground">{format(new Date(log.timestamp), 'MM/dd HH:mm:ss')}</TableCell>
-                                    <TableCell className="font-bold text-white uppercase text-xs">{log.userName || 'Unknown'}</TableCell>
-                                    <TableCell><Badge variant="outline" className="text-[9px] uppercase border-primary/20 text-primary">{log.action}</Badge></TableCell>
-                                    <TableCell className="text-right font-code font-bold text-primary">-{log.inkUsed}</TableCell>
+                                    <TableCell className="font-bold text-white uppercase text-xs">{artistLabel}</TableCell>
+                                    <TableCell>
+                                      <Badge
+                                        variant="outline"
+                                        className={cn(
+                                          'text-[9px] uppercase border-primary/20 text-primary',
+                                          log.type === 'achievement' && 'border-violet-400/40 text-violet-300',
+                                          log.type === 'transaction' && 'border-emerald-400/40 text-emerald-300'
+                                        )}
+                                      >
+                                        {log.action}
+                                      </Badge>
+                                      {log.details ? (
+                                        <p className="mt-1 text-[9px] text-muted-foreground font-code max-w-[28rem] truncate" title={log.details}>{log.details}</p>
+                                      ) : null}
+                                    </TableCell>
+                                    <TableCell className={`text-right font-code font-bold whitespace-nowrap ${inkClass}`}>{inkLabel}</TableCell>
                                 </TableRow>
-                            ))}
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </CardContent>

@@ -21,6 +21,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
 
     return NextResponse.json({
       ...profile,
+      rankId: rank.id,
       rankLabel: rank.label,
       badges,
     });

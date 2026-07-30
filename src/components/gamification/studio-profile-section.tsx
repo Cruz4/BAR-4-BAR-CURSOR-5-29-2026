@@ -11,8 +11,9 @@ import { useAuth } from '@/hooks/use-auth';
 import { pickFeaturedAchievementId } from '@/lib/gamification/achievement-card-theme';
 import { patchGamificationSettings, trackShareCardEvent } from '@/lib/gamification-client';
 import { useToast } from '@/hooks/use-toast';
-import { Share2, Globe, EyeOff, ExternalLink } from 'lucide-react';
+import { Share2, Globe, Trophy, ExternalLink } from 'lucide-react';
 import { AchievementShareCard } from '@/components/gamification/achievement-share-card';
+import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
 
 /** Sharing & visibility — lives on Studio Progress (not Settings). */
 export function StudioSharingSection() {
@@ -20,13 +21,14 @@ export function StudioSharingSection() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [publicProfile, setPublicProfile] = useState(summary.publicProfile);
-  const [leaderboardHidden, setLeaderboardHidden] = useState(summary.leaderboardHidden);
+  const [showOnLeaderboard, setShowOnLeaderboard] = useState(!summary.leaderboardHidden);
   const [shareOpen, setShareOpen] = useState(false);
+  const [profileShareOpen, setProfileShareOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setPublicProfile(summary.publicProfile);
-    setLeaderboardHidden(summary.leaderboardHidden);
+    setShowOnLeaderboard(!summary.leaderboardHidden);
   }, [summary.publicProfile, summary.leaderboardHidden]);
 
   const unlocked = summary.unlockedAchievements || {};
@@ -63,16 +65,36 @@ export function StudioSharingSection() {
             Sharing &amp; visibility
           </CardTitle>
           <CardDescription className="text-[11px] leading-relaxed">
-            Control what others see on the leaderboard and your optional public profile. Lyrics are never published —
-            only stats you choose to share.
+            Both switches off = fully private. Turn a switch on only when you want that surface public. Lyrics are never
+            published — only stats you choose to share.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 p-4 pt-5">
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1 min-w-0">
-              <Label className="text-sm font-bold uppercase">Public profile</Label>
+              <Label className="text-sm font-bold uppercase flex items-center gap-1.5">
+                <Trophy className="h-3.5 w-3.5" /> Show on leaderboard
+              </Label>
               <p className="text-sm text-muted-foreground leading-snug">
-                Share rank, streak, and badges — never lyrics.
+                Appear on the weekly public rankings (display name + studio stats).
+              </p>
+            </div>
+            <Switch
+              checked={showOnLeaderboard}
+              disabled={saving}
+              onCheckedChange={(c) => {
+                setShowOnLeaderboard(c);
+                void saveSettings({ leaderboardHidden: !c });
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-1 min-w-0">
+              <Label className="text-sm font-bold uppercase flex items-center gap-1.5">
+                <Globe className="h-3.5 w-3.5" /> Public profile
+              </Label>
+              <p className="text-sm text-muted-foreground leading-snug">
+                Share rank, streak, and badges on a profile page — never lyrics.
               </p>
             </div>
             <Switch
@@ -81,22 +103,6 @@ export function StudioSharingSection() {
               onCheckedChange={(c) => {
                 setPublicProfile(c);
                 void saveSettings({ publicProfile: c });
-              }}
-            />
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <div className="space-y-1 min-w-0">
-              <Label className="text-sm font-bold uppercase flex items-center gap-1.5">
-                <EyeOff className="h-3.5 w-3.5" /> Hide from leaderboard
-              </Label>
-              <p className="text-sm text-muted-foreground leading-snug">Opt out of public weekly rankings.</p>
-            </div>
-            <Switch
-              checked={leaderboardHidden}
-              disabled={saving}
-              onCheckedChange={(c) => {
-                setLeaderboardHidden(c);
-                void saveSettings({ leaderboardHidden: c });
               }}
             />
           </div>
@@ -113,11 +119,23 @@ export function StudioSharingSection() {
               <Share2 className="h-4 w-4" /> Share achievement card
             </Button>
             {profileUrl && (
-              <Button variant="ghost" className="gap-2 h-11 text-sm font-bold" asChild>
-                <Link href={`/profile/${summary.profileSlug}`} target="_blank">
-                  <ExternalLink className="h-4 w-4" /> View public profile
-                </Link>
-              </Button>
+              <>
+                <Button
+                  className="gap-2 h-11 text-sm font-bold bg-sky-500 hover:bg-sky-400 text-black shadow-[0_0_20px_rgba(14,165,233,0.3)]"
+                  asChild
+                >
+                  <Link href={`/profile/${summary.profileSlug}`} target="_blank">
+                    <ExternalLink className="h-4 w-4" /> View public profile
+                  </Link>
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="gap-2 h-11 text-sm font-bold"
+                  onClick={() => setProfileShareOpen(true)}
+                >
+                  <Share2 className="h-4 w-4" /> Share profile
+                </Button>
+              </>
             )}
           </div>
         </CardContent>
@@ -133,6 +151,18 @@ export function StudioSharingSection() {
         recentBadge={pickFeaturedAchievementId(unlocked)}
         unlockedAchievements={unlocked}
       />
+
+      {profileUrl && (
+        <ProfileShareDialog
+          open={profileShareOpen}
+          onOpenChange={setProfileShareOpen}
+          profile={{
+            displayName: user?.displayName || 'Artist',
+            rankLabel,
+            profileUrl,
+          }}
+        />
+      )}
     </>
   );
 }
