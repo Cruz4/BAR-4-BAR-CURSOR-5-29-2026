@@ -7,6 +7,7 @@ import { generateGuestDemoNextLine } from '@/ai/flows/guest-demo-next-line';
 import { GUEST_FUNNEL_EVENTS } from '@/lib/guest-funnel-events';
 import { recordGuestFunnelEvent } from '@/lib/server/record-guest-funnel-event';
 import { normalizeMarketingRef } from '@/lib/marketing-attribution';
+import { guestAliasFromId, normalizeGuestAlias, normalizeGuestId } from '@/lib/guest-identity';
 
 export const runtime = 'nodejs';
 
@@ -102,6 +103,27 @@ function resolveDemoRef(raw: unknown): string {
   return normalizeMarketingRef(trimmed) || 'organic';
 }
 
+function resolveDemoGuest(body: { guestId?: unknown; guestAlias?: unknown }): {
+  guestId: string | null;
+  guestAlias: string | null;
+} {
+  const guestId = normalizeGuestId(body.guestId);
+  const guestAlias =
+    normalizeGuestAlias(body.guestAlias) || (guestId ? guestAliasFromId(guestId) : null);
+  return { guestId, guestAlias };
+}
+
+function guestMeta(
+  base: Record<string, string | number | boolean | null>,
+  guest: { guestId: string | null; guestAlias: string | null }
+) {
+  return {
+    ...base,
+    ...(guest.guestId ? { guestId: guest.guestId } : {}),
+    ...(guest.guestAlias ? { guestAlias: guest.guestAlias } : {}),
+  };
+}
+
 function limitResponse(
   remaining: number,
   message: string,
@@ -116,11 +138,12 @@ function limitResponse(
 async function trackDemoLimit(
   ref: string,
   reason: 'browser' | 'ip' | 'global',
-  remaining: number
+  remaining: number,
+  guest: { guestId: string | null; guestAlias: string | null }
 ) {
   await recordGuestFunnelEvent(GUEST_FUNNEL_EVENTS.DEMO_AI_LIMIT, {
     ref,
-    metadata: { reason, remaining },
+    metadata: guestMeta({ reason, remaining }, guest),
   });
 }
 
@@ -130,7 +153,14 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  let body: { lines?: unknown; endWith?: unknown; intents?: unknown; ref?: unknown };
+  let body: {
+    lines?: unknown;
+    endWith?: unknown;
+    intents?: unknown;
+    ref?: unknown;
+    guestId?: unknown;
+    guestAlias?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
@@ -138,6 +168,7 @@ export async function POST(req: Request) {
   }
 
   const ref = resolveDemoRef(body.ref);
+  const guest = resolveDemoGuest(body);
 
   if (!Array.isArray(body.lines)) {
     return NextResponse.json({ error: 'Missing lines' }, { status: 400 });
@@ -162,12 +193,12 @@ export async function POST(req: Request) {
 
   void recordGuestFunnelEvent(GUEST_FUNNEL_EVENTS.DEMO_AI_REQUEST, {
     ref,
-    metadata: { lineCount: lines.length },
+    metadata: guestMeta({ lineCount: lines.length }, guest),
   });
 
   const uses = readUses(getCookie(req, COOKIE_NAME));
   if (uses >= DEMO_MAX_USES) {
-    await trackDemoLimit(ref, 'browser', 0);
+    await trackDemoLimit(ref, 'browser', 0, guest);
     return limitResponse(
       0,
       `You already used your ${DEMO_MAX_USES} free demo Generate Next assists on this browser. Sign up free — you get real Ink (not connected to this demo cap).`,
@@ -178,7 +209,7 @@ export async function POST(req: Request) {
   const ipCheck = checkRateLimit(`demo:${clientIp(req)}`, IP_LIMIT_MAX, IP_LIMIT_WINDOW_MS);
   if (!ipCheck.allowed) {
     const remaining = Math.max(0, DEMO_MAX_USES - uses);
-    await trackDemoLimit(ref, 'ip', remaining);
+    await trackDemoLimit(ref, 'ip', remaining, guest);
     return limitResponse(
       remaining,
       'Too many demo requests from this connection right now. Wait a bit, or sign up free for real Ink.',
@@ -188,7 +219,7 @@ export async function POST(req: Request) {
 
   try {
     if (!(await consumeGlobalDailyBudget())) {
-      await trackDemoLimit(ref, 'global', 0);
+      await trackDemoLimit(ref, 'global', 0, guest);
       return limitResponse(
         0,
         'The public demo is at capacity today. Sign up free to keep writing with real Ink.',
@@ -205,7 +236,7 @@ export async function POST(req: Request) {
     if (options.length === 0) {
       await recordGuestFunnelEvent(GUEST_FUNNEL_EVENTS.DEMO_AI_ERROR, {
         ref,
-        metadata: { reason: 'empty_options' },
+        metadata: guestMeta({ reason: 'empty_options' }, guest),
       });
       return NextResponse.json({ error: 'No suggestions this time — try again' }, { status: 502 });
     }
@@ -214,7 +245,10 @@ export async function POST(req: Request) {
     const remaining = Math.max(0, DEMO_MAX_USES - nextUses);
     await recordGuestFunnelEvent(GUEST_FUNNEL_EVENTS.DEMO_AI_SUCCESS, {
       ref,
-      metadata: { remaining, useNumber: nextUses, optionCount: options.length },
+      metadata: guestMeta(
+        { remaining, useNumber: nextUses, optionCount: options.length },
+        guest
+      ),
     });
     const res = NextResponse.json({
       options,
@@ -235,7 +269,7 @@ export async function POST(req: Request) {
     console.error('[api/ai/demo] generation failed:', message, error);
     await recordGuestFunnelEvent(GUEST_FUNNEL_EVENTS.DEMO_AI_ERROR, {
       ref,
-      metadata: { reason: 'generation_failed' },
+      metadata: guestMeta({ reason: 'generation_failed' }, guest),
     });
     return NextResponse.json({ error: message }, { status: 500 });
   }

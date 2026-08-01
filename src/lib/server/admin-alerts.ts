@@ -13,17 +13,24 @@ type EnqueueInput = {
   path?: string | null;
   userEmail?: string | null;
   userId?: string | null;
+  userName?: string | null;
   method?: string | null;
   detail?: string | null;
+  guestId?: string | null;
+  guestAlias?: string | null;
 };
 
 function buildMessage(input: EnqueueInput): string {
   const refLabel = input.ref ? marketingRefLabel(input.ref) : null;
   if (input.kind === 'signup') {
-    const who = input.userEmail || 'New artist';
+    const who =
+      input.userName && input.userEmail
+        ? `${input.userName} <${input.userEmail}>`
+        : input.userEmail || input.userName || 'New artist';
     const via = refLabel ? ` via ${refLabel}` : '';
     const method = input.method ? ` (${input.method})` : '';
-    return `${who} signed up${via}${method}`;
+    const converted = input.guestAlias ? ` · was ${input.guestAlias}` : '';
+    return `${who} signed up${converted}${via}${method}`;
   }
   if (input.kind === 'pricing_view') {
     const who = input.userEmail || 'Visitor';
@@ -55,8 +62,11 @@ export async function enqueueAdminAlert(input: EnqueueInput): Promise<void> {
     path: input.path,
     userEmail: input.userEmail,
     userId: input.userId,
+    userName: input.userName,
     method: input.method,
     detail: input.detail,
+    guestId: input.guestId,
+    guestAlias: input.guestAlias,
   });
 
   if (!hasAdminFirestoreCredentials()) return;
@@ -70,8 +80,11 @@ export async function enqueueAdminAlert(input: EnqueueInput): Promise<void> {
       path: input.path || null,
       userEmail: input.userEmail || null,
       userId: input.userId || null,
+      userName: input.userName || null,
       method: input.method || null,
       detail: input.detail || null,
+      guestId: input.guestId || null,
+      guestAlias: input.guestAlias || null,
       timestamp,
     });
   } catch (error) {
@@ -105,6 +118,8 @@ export async function listAdminAlertsSince(since: string): Promise<AdminAlert[]>
       userId: data.userId ?? null,
       method: data.method ?? null,
       detail: data.detail ?? null,
+      guestId: data.guestId ?? null,
+      guestAlias: data.guestAlias ?? null,
     };
   });
 }

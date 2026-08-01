@@ -174,6 +174,7 @@ import {
   promptGuestSignupLockedFeature,
 } from '@/components/guest-try-signup-toast';
 import { getStoredMarketingRef } from '@/lib/marketing-attribution';
+import { getOrCreateGuestIdentity } from '@/lib/guest-identity';
 import { buildClientRhymeGroups } from '@/lib/lyrics-analysis/client-rhyme-groups';
 import { loadPhoneticDictionary } from '@/lib/lyrics-analysis';
 import { MobileLyricsTabBar, type MobileLyricsTab } from '@/components/mobile-lyrics-tab-bar';
@@ -3475,12 +3476,15 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         const intents = isIntentsActive(track)
           ? (track.checkedIntents || []).filter((i) => typeof i === 'string' && i.trim())
           : [];
+        const guestIdentity = getOrCreateGuestIdentity();
         const res = await fetch('/api/ai/demo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             lines: sheetLines.slice(-6),
             ref: getStoredMarketingRef() || 'organic',
+            guestId: guestIdentity.guestId,
+            guestAlias: guestIdentity.guestAlias,
             ...(endWith ? { endWith } : {}),
             ...(intents.length ? { intents: intents.slice(0, 6) } : {}),
           }),

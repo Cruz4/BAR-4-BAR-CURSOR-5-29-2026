@@ -213,12 +213,14 @@ function LoginForm() {
           await trackStudioEvent(ANALYTICS_EVENTS.SIGNUP, {
             method: signupMethod,
             ...(signupRef ? { ref: signupRef } : {}),
-            ...(guestMeta.fromGuestTry || guestTryIntent
+            ...(guestMeta.fromGuestTry || guestTryIntent || guestMeta.guestId
               ? {
                   fromGuestTry: true,
                   intent: 'guest_try',
                   ...(guestMeta.barsWritten != null ? { barsWritten: guestMeta.barsWritten } : {}),
                   ...(guestMeta.assistsUsed != null ? { assistsUsed: guestMeta.assistsUsed } : {}),
+                  ...(guestMeta.guestId ? { guestId: guestMeta.guestId } : {}),
+                  ...(guestMeta.guestAlias ? { guestAlias: guestMeta.guestAlias } : {}),
                 }
               : {}),
           });

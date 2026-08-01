@@ -9,8 +9,11 @@ type TelegramAlertInput = {
   path?: string | null;
   userEmail?: string | null;
   userId?: string | null;
+  userName?: string | null;
   method?: string | null;
   detail?: string | null;
+  guestId?: string | null;
+  guestAlias?: string | null;
 };
 
 const KIND_HEADLINE: Record<AdminAlertKind, string> = {
@@ -34,9 +37,15 @@ function telegramConfigured(): boolean {
 
 function formatTelegramText(input: TelegramAlertInput): string {
   const lines: string[] = [KIND_HEADLINE[input.kind], input.message];
+  if (input.kind === 'signup' && input.guestAlias) {
+    lines.push(`converted from: ${input.guestAlias}`);
+  }
+  if (input.kind === 'guest_try' && input.guestAlias) {
+    lines.push(`guest: ${input.guestAlias}`);
+  }
   if (input.ref) lines.push(`ref: ${input.ref}`);
   if (input.path) lines.push(`path: ${input.path}`);
-  if (input.detail) lines.push(input.detail);
+  if (input.detail && input.kind === 'signup') lines.push(input.detail);
   if (input.userId) lines.push(`uid: ${input.userId.slice(0, 12)}…`);
   return lines.join('\n');
 }

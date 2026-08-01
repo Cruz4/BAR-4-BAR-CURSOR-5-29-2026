@@ -532,6 +532,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               ? firebaseUser.email.trim().toLowerCase()
               : '';
           const signupRef = getStoredMarketingRef();
+          const { consumeGuestTrySignupMeta } = await import('@/lib/guest-funnel-client');
+          const guestMeta = consumeGuestTrySignupMeta();
           await setDoc(
             userRef,
             stripForFirestore({
@@ -549,6 +551,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           void trackStudioEvent(ANALYTICS_EVENTS.SIGNUP, {
             method: 'profile_bootstrap',
             ...(signupRef ? { ref: signupRef } : {}),
+            ...(guestMeta.fromGuestTry || guestMeta.guestId
+              ? {
+                  fromGuestTry: true,
+                  intent: 'guest_try',
+                  ...(guestMeta.barsWritten != null ? { barsWritten: guestMeta.barsWritten } : {}),
+                  ...(guestMeta.assistsUsed != null ? { assistsUsed: guestMeta.assistsUsed } : {}),
+                  ...(guestMeta.guestId ? { guestId: guestMeta.guestId } : {}),
+                  ...(guestMeta.guestAlias ? { guestAlias: guestMeta.guestAlias } : {}),
+                }
+              : {}),
           });
           markFreshSignup();
         } else {

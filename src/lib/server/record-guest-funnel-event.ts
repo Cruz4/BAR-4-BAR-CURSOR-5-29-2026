@@ -7,6 +7,7 @@ import {
   type GuestFunnelEventName,
   type GuestFunnelMetadata,
 } from '@/lib/guest-funnel-events';
+import { guestAliasFromId, normalizeGuestAlias, normalizeGuestId } from '@/lib/guest-identity';
 import { enqueueAdminAlert } from '@/lib/server/admin-alerts';
 
 const COLLECTION = 'studio_guest_funnel_events';
@@ -26,7 +27,7 @@ const TELEGRAM_ALERT_EVENTS = new Set<GuestFunnelEventName>([
 function sanitizeMetadata(meta: GuestFunnelMetadata | undefined): GuestFunnelMetadata {
   if (!meta || typeof meta !== 'object') return {};
   const out: GuestFunnelMetadata = {};
-  for (const [key, value] of Object.entries(meta).slice(0, 12)) {
+  for (const [key, value] of Object.entries(meta).slice(0, 16)) {
     const k = key.slice(0, 40);
     if (typeof value === 'string') out[k] = value.slice(0, 120);
     else if (typeof value === 'number' && Number.isFinite(value)) out[k] = value;
@@ -40,6 +41,16 @@ function resolveRef(raw?: string | null): string {
   const rawRef = raw?.trim().toLowerCase();
   if (!rawRef || rawRef === 'organic') return 'organic';
   return normalizeMarketingRef(rawRef) || 'organic';
+}
+
+function resolveGuestLabel(metadata: GuestFunnelMetadata): {
+  guestId: string | null;
+  guestAlias: string | null;
+} {
+  const guestId = normalizeGuestId(metadata.guestId);
+  const guestAlias =
+    normalizeGuestAlias(metadata.guestAlias) || (guestId ? guestAliasFromId(guestId) : null);
+  return { guestId, guestAlias };
 }
 
 function guestAlertCopy(
@@ -98,15 +109,21 @@ export async function recordGuestFunnelEvent(
 ): Promise<void> {
   const ref = resolveRef(options?.ref);
   const metadata = sanitizeMetadata(options?.metadata);
+  const { guestId, guestAlias } = resolveGuestLabel(metadata);
+  if (guestId) metadata.guestId = guestId;
+  if (guestAlias) metadata.guestAlias = guestAlias;
 
   if (TELEGRAM_ALERT_EVENTS.has(event)) {
     const { method, detail } = guestAlertCopy(event, metadata);
+    const who = guestAlias || 'Guest';
     await enqueueAdminAlert({
       kind: 'guest_try',
       ref,
-      method,
+      method: `${who} · ${method}`,
       detail,
       path: '/albums/try/tracks/guest-sheet',
+      guestId,
+      guestAlias,
     });
   }
 
@@ -117,6 +134,8 @@ export async function recordGuestFunnelEvent(
     await db.collection(COLLECTION).add({
       event,
       ref,
+      guestId: guestId || null,
+      guestAlias: guestAlias || null,
       metadata,
       timestamp: new Date().toISOString(),
     });

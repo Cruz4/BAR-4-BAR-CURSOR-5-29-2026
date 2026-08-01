@@ -11,8 +11,13 @@ import { enqueueAdminAlert } from '@/lib/server/admin-alerts';
 export async function enqueueSignupAlertOnce(input: {
   userId: string;
   userEmail?: string | null;
+  userName?: string | null;
   ref?: string | null;
   method?: string | null;
+  guestId?: string | null;
+  guestAlias?: string | null;
+  barsWritten?: number | null;
+  assistsUsed?: number | null;
 }): Promise<boolean> {
   const userId = input.userId?.trim();
   if (!userId) return false;
@@ -32,6 +37,8 @@ export async function enqueueSignupAlertOnce(input: {
           {
             signupAlertedAt: now,
             signupAt: data.signupAt || now,
+            ...(input.guestId ? { guestId: input.guestId } : {}),
+            ...(input.guestAlias ? { guestAlias: input.guestAlias } : {}),
             updatedAt: now,
           },
           { merge: true }
@@ -44,12 +51,24 @@ export async function enqueueSignupAlertOnce(input: {
     }
   }
 
+  const tryBits: string[] = [];
+  if (typeof input.barsWritten === 'number') {
+    tryBits.push(`${input.barsWritten} bar${input.barsWritten === 1 ? '' : 's'}`);
+  }
+  if (typeof input.assistsUsed === 'number') {
+    tryBits.push(`${input.assistsUsed} assist${input.assistsUsed === 1 ? '' : 's'}`);
+  }
+
   await enqueueAdminAlert({
     kind: 'signup',
     userId,
     userEmail: input.userEmail ?? null,
+    userName: input.userName ?? null,
     ref: input.ref ?? null,
     method: input.method ?? null,
+    guestId: input.guestId ?? null,
+    guestAlias: input.guestAlias ?? null,
+    detail: tryBits.length ? `try sheet: ${tryBits.join(' · ')}` : null,
   });
   return true;
 }

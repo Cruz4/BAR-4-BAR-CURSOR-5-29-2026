@@ -7,6 +7,7 @@ import {
   type GuestFunnelEventName,
   type GuestFunnelMetadata,
 } from '@/lib/guest-funnel-events';
+import { getOrCreateGuestIdentity, peekGuestIdentity } from '@/lib/guest-identity';
 
 const SESSION_FLAG = 'b4b_guest_try_session';
 const ONCE_PREFIX = 'b4b_guest_funnel_once:';
@@ -23,10 +24,16 @@ function onceKey(event: GuestFunnelEventName): string {
   return `${ONCE_PREFIX}${event}`;
 }
 
+function withGuestIdentity(metadata: GuestFunnelMetadata = {}): GuestFunnelMetadata {
+  const { guestId, guestAlias } = getOrCreateGuestIdentity();
+  return { ...metadata, guestId, guestAlias };
+}
+
 export function markGuestTrySession(): void {
   if (typeof window === 'undefined') return;
   try {
     sessionStorage.setItem(SESSION_FLAG, '1');
+    getOrCreateGuestIdentity();
   } catch {
     /* ignore */
   }
@@ -59,17 +66,26 @@ export function setGuestBarsWritten(count: number): void {
   }
 }
 
-/** Snapshot engagement for signup analytics metadata, then clear session markers. */
+/** Snapshot engagement + guest identity for signup analytics, then clear session markers. */
 export function consumeGuestTrySignupMeta(): {
   fromGuestTry: boolean;
   barsWritten: number | null;
   assistsUsed: number | null;
+  guestId: string | null;
+  guestAlias: string | null;
 } {
   if (typeof window === 'undefined') {
-    return { fromGuestTry: false, barsWritten: null, assistsUsed: null };
+    return {
+      fromGuestTry: false,
+      barsWritten: null,
+      assistsUsed: null,
+      guestId: null,
+      guestAlias: null,
+    };
   }
   try {
     const fromGuestTry = sessionStorage.getItem(SESSION_FLAG) === '1';
+    const identity = peekGuestIdentity() || (fromGuestTry ? getOrCreateGuestIdentity() : null);
     const barsRaw = sessionStorage.getItem(BARS_WRITTEN_KEY);
     const assistsRaw = sessionStorage.getItem(ASSISTS_USED_KEY);
     const barsWritten = barsRaw != null ? Number.parseInt(barsRaw, 10) : null;
@@ -78,12 +94,20 @@ export function consumeGuestTrySignupMeta(): {
     sessionStorage.removeItem(BARS_WRITTEN_KEY);
     sessionStorage.removeItem(ASSISTS_USED_KEY);
     return {
-      fromGuestTry,
+      fromGuestTry: fromGuestTry || Boolean(identity),
       barsWritten: Number.isFinite(barsWritten) ? barsWritten : null,
       assistsUsed: Number.isFinite(assistsUsed) ? assistsUsed : null,
+      guestId: identity?.guestId ?? null,
+      guestAlias: identity?.guestAlias ?? null,
     };
   } catch {
-    return { fromGuestTry: false, barsWritten: null, assistsUsed: null };
+    return {
+      fromGuestTry: false,
+      barsWritten: null,
+      assistsUsed: null,
+      guestId: null,
+      guestAlias: null,
+    };
   }
 }
 
@@ -124,7 +148,7 @@ export async function trackGuestFunnelEvent(
       body: JSON.stringify({
         event,
         ref: resolveRef(options?.ref),
-        metadata,
+        metadata: withGuestIdentity(metadata),
       }),
     });
   } catch {

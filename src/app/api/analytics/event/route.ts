@@ -64,11 +64,30 @@ export async function POST(req: Request) {
     if (event === 'signup') {
       const ref = typeof metadata?.ref === 'string' ? metadata.ref : null;
       const method = typeof metadata?.method === 'string' ? metadata.method : null;
+      const guestId = typeof metadata?.guestId === 'string' ? metadata.guestId : null;
+      const guestAlias = typeof metadata?.guestAlias === 'string' ? metadata.guestAlias : null;
+      const barsWritten =
+        typeof metadata?.barsWritten === 'number'
+          ? metadata.barsWritten
+          : typeof metadata?.barsWritten === 'string'
+            ? Number.parseInt(metadata.barsWritten, 10)
+            : null;
+      const assistsUsed =
+        typeof metadata?.assistsUsed === 'number'
+          ? metadata.assistsUsed
+          : typeof metadata?.assistsUsed === 'string'
+            ? Number.parseInt(metadata.assistsUsed, 10)
+            : null;
       await enqueueSignupAlertOnce({
         userId: uid,
         userEmail,
+        userName: userRecord?.displayName || (typeof userName === 'string' ? userName : null),
         ref,
         method,
+        guestId,
+        guestAlias,
+        barsWritten: Number.isFinite(barsWritten as number) ? (barsWritten as number) : null,
+        assistsUsed: Number.isFinite(assistsUsed as number) ? (assistsUsed as number) : null,
       });
     }
 

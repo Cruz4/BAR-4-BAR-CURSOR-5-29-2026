@@ -18,4 +18,6 @@ export type AdminAlert = {
   userId?: string | null;
   method?: string | null;
   detail?: string | null;
+  guestId?: string | null;
+  guestAlias?: string | null;
 };
