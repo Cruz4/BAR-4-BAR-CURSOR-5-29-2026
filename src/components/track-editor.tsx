@@ -159,6 +159,7 @@ import { postGamificationEvent } from '@/lib/gamification-client';
 import { claimMilestone } from '@/lib/milestones-client';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
 import { GuestTrySaveBanner } from '@/components/guest-try-save-banner';
+import { GuestDemoSignupRequiredDialog } from '@/components/guest-demo-signup-required-dialog';
 import { GUEST_DEMO_MAX_USES, isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
 import { GUEST_FUNNEL_EVENTS } from '@/lib/guest-funnel-events';
 import {
@@ -170,7 +171,6 @@ import {
 } from '@/lib/guest-funnel-client';
 import {
   promptGuestSignupAfterAccept,
-  promptGuestSignupDemoExhausted,
   promptGuestSignupLockedFeature,
 } from '@/components/guest-try-signup-toast';
 import { getStoredMarketingRef } from '@/lib/marketing-attribution';
@@ -2987,6 +2987,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const isGuestTryMode =
     !user && isGuestTrySheetEnabled() && isGuestTryAlbumId(albumId);
   const [guestDemoRemaining, setGuestDemoRemaining] = useState<number | null>(null);
+  const [guestSignupRequiredOpen, setGuestSignupRequiredOpen] = useState(false);
 
   // Guest try: live Ink-free Rhyme Pulse (same client phonetics as studio).
   useEffect(() => {
@@ -3451,6 +3452,10 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         promptGuestSignupLockedFeature('Previous-line fill');
         return;
       }
+      if (guestDemoRemaining !== null && guestDemoRemaining <= 0) {
+        setGuestSignupRequiredOpen(true);
+        return;
+      }
       const section = track.sections.find((s) => s.id === sectionId);
       if (!section) return;
       const priorLines = section.bars
@@ -3486,7 +3491,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
             if (typeof data.remaining === 'number') setGuestDemoRemaining(data.remaining);
             const reason = data.reason as string | undefined;
             if (reason === 'browser' || data.remaining === 0) {
-              promptGuestSignupDemoExhausted();
+              setGuestSignupRequiredOpen(true);
             } else {
               toast({
                 variant: 'destructive',
@@ -3500,6 +3505,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
                   data.error ||
                   `This browser already used its ${GUEST_DEMO_MAX_USES} free Generate Next assists (not real Ink). Sign up to get ${SIGNUP_INK} Ink — separate from this demo.`,
               });
+              if (reason === 'global') setGuestSignupRequiredOpen(true);
             }
           } else {
             toast({ variant: 'destructive', title: 'Synthesis Failed', description: data.error || 'Try again' });
@@ -3514,14 +3520,13 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         if (typeof data.remaining === 'number') {
           setGuestDemoRemaining(data.remaining);
           setGuestDemoAssistsUsed(GUEST_DEMO_MAX_USES - data.remaining);
-          if (data.remaining <= 0) {
-            promptGuestSignupDemoExhausted();
-          } else {
+          if (data.remaining > 0) {
             toast({
               title: 'Demo assist used',
               description: `${data.remaining} free Generate Next left · tap a line to keep the flow.`,
             });
           }
+          // remaining === 0: let them accept the last line first; modal opens on accept/dismiss/next try.
         }
       } catch (err: any) {
         toast({ variant: 'destructive', title: 'Synthesis Failed', description: err.message });
@@ -3580,10 +3585,13 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const handleDismissGenerationOptions = useCallback(() => {
     if (isGuestTryMode && generationOptions) {
       void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.OPTION_DISMISS, {});
+      if (guestDemoRemaining !== null && guestDemoRemaining <= 0) {
+        setGuestSignupRequiredOpen(true);
+      }
     }
     setGenerationOptions(null);
     setPendingGenCtx(null);
-  }, [isGuestTryMode, generationOptions]);
+  }, [isGuestTryMode, generationOptions, guestDemoRemaining]);
 
   const handleApplyChestEntry = useCallback(
     (entry: DraftChestEntry, action: 'append' | 'replace') => {
@@ -3701,8 +3709,9 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     setPendingGenCtx(null);
     if (isGuestTryMode) {
       void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.OPTION_ACCEPT, {});
-      // Exhausted path already prompted on the last successful assist.
-      if (guestDemoRemaining === null || guestDemoRemaining > 0) {
+      if (guestDemoRemaining !== null && guestDemoRemaining <= 0) {
+        setGuestSignupRequiredOpen(true);
+      } else {
         promptGuestSignupAfterAccept(guestDemoRemaining);
       }
     }
@@ -3745,6 +3754,12 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] max-md:h-[calc(100dvh-3.5rem)] w-full overflow-hidden max-md:pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))]">
       {isGuestTryMode ? <GuestTrySaveBanner remainingOverride={guestDemoRemaining} /> : <FreeTierExpectationsBanner user={user} />}
+      {isGuestTryMode && (
+        <GuestDemoSignupRequiredDialog
+          open={guestSignupRequiredOpen}
+          onOpenChange={setGuestSignupRequiredOpen}
+        />
+      )}
       {tierLocked && (
         <div className="shrink-0 border-b border-pink-500/25 bg-pink-500/10 px-4 py-2 flex items-center gap-2 z-30">
           <Lock className={cn('h-4 w-4 shrink-0', proLockIcon())} />

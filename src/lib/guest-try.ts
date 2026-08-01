@@ -13,7 +13,7 @@ export const GUEST_TRY_TRACK_ID = 'guest-sheet';
 export const GUEST_TRY_PATH = `/albums/${GUEST_TRY_ALBUM_ID}/tracks/${GUEST_TRY_TRACK_ID}`;
 
 /** Free Generate Next assists per browser before signup (not real Ink). */
-export const GUEST_DEMO_MAX_USES = 3;
+export const GUEST_DEMO_MAX_USES = 2;
 
 /** Shown under the pencil while redirecting cold traffic into the try sheet. */
 export const GUEST_TRY_HANDOFF_MESSAGE = 'Opening your first sheet';

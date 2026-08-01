@@ -49,6 +49,7 @@ export function promptGuestSignupAfterAccept(remainingAssists: number | null): v
 }
 
 export function promptGuestSignupDemoExhausted(): void {
+  // Prefer GuestDemoSignupRequiredDialog from the try sheet; toast is a fallback.
   promptGuestSignup({
     title: 'Demo assists used',
     description: `Your bars stay on this device until you leave. Sign up free to save them and get ${SIGNUP_INK} Ink (separate from the demo).`,
