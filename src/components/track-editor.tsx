@@ -159,7 +159,21 @@ import { postGamificationEvent } from '@/lib/gamification-client';
 import { claimMilestone } from '@/lib/milestones-client';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
 import { GuestTrySaveBanner } from '@/components/guest-try-save-banner';
-import { GUEST_DEMO_MAX_USES, guestInkFeatureLockedToast, isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
+import { GUEST_DEMO_MAX_USES, isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
+import { GUEST_FUNNEL_EVENTS } from '@/lib/guest-funnel-events';
+import {
+  setGuestBarsWritten,
+  setGuestDemoAssistsUsed,
+  trackGuestFunnelEvent,
+  trackGuestTryOpen,
+  trackGuestWroteBar,
+} from '@/lib/guest-funnel-client';
+import {
+  promptGuestSignupAfterAccept,
+  promptGuestSignupDemoExhausted,
+  promptGuestSignupLockedFeature,
+} from '@/components/guest-try-signup-toast';
+import { getStoredMarketingRef } from '@/lib/marketing-attribution';
 import { buildClientRhymeGroups } from '@/lib/lyrics-analysis/client-rhyme-groups';
 import { loadPhoneticDictionary } from '@/lib/lyrics-analysis';
 import { MobileLyricsTabBar, type MobileLyricsTab } from '@/components/mobile-lyrics-tab-bar';
@@ -765,7 +779,8 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
 
   const gateGuestInk = (featureLabel: string) => {
     if (!isGuestTryMode) return false;
-    toast(guestInkFeatureLockedToast(featureLabel));
+    void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.LOCKED_FEATURE, { feature: featureLabel });
+    promptGuestSignupLockedFeature(featureLabel);
     return true;
   };
 
@@ -869,7 +884,10 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                 <Button
                   onClick={() => {
                     if (isGuestTryMode) {
-                      toast(guestInkFeatureLockedToast('Generation Workstation'));
+                      void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.LOCKED_FEATURE, {
+                        feature: 'Generation Workstation',
+                      });
+                      promptGuestSignupLockedFeature('Generation Workstation');
                       return;
                     }
                     setGenerateDraftOpen(true);
@@ -2977,6 +2995,21 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   }, [isGuestTryMode]);
 
   useEffect(() => {
+    if (!isGuestTryMode) return;
+    trackGuestTryOpen();
+  }, [isGuestTryMode]);
+
+  useEffect(() => {
+    if (!isGuestTryMode || !track) return;
+    const barCount = track.sections.reduce(
+      (n, s) => n + s.bars.filter((b) => (b.text || '').trim().length > 0).length,
+      0
+    );
+    setGuestBarsWritten(barCount);
+    if (barCount > 0) trackGuestWroteBar(barCount);
+  }, [isGuestTryMode, track?.sections]);
+
+  useEffect(() => {
     if (!isGuestTryMode || !track) return;
     const lines = track.sections.flatMap((s) => s.bars.map((b) => b.text)).filter((t) => (t || '').trim());
     const groups = buildClientRhymeGroups(lines);
@@ -3414,10 +3447,8 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     // Anonymous try sheet — capped demo API (no Ink / no account).
     if (isGuestTryMode) {
       if (mode === 'previous') {
-        toast({
-          title: 'Sign up to unlock',
-          description: 'Previous-line fill and full Co-Writer unlock after you create a free account.',
-        });
+        void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.LOCKED_FEATURE, { feature: 'Previous line' });
+        promptGuestSignupLockedFeature('Previous-line fill');
         return;
       }
       const section = track.sections.find((s) => s.id === sectionId);
@@ -3444,6 +3475,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             lines: sheetLines.slice(-6),
+            ref: getStoredMarketingRef() || 'organic',
             ...(endWith ? { endWith } : {}),
             ...(intents.length ? { intents: intents.slice(0, 6) } : {}),
           }),
@@ -3453,18 +3485,22 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
           if (data.code === 'DEMO_LIMIT') {
             if (typeof data.remaining === 'number') setGuestDemoRemaining(data.remaining);
             const reason = data.reason as string | undefined;
-            toast({
-              variant: 'destructive',
-              title:
-                reason === 'ip'
-                  ? 'Demo rate limit'
-                  : reason === 'global'
-                    ? 'Demo at capacity'
-                    : 'Demo assists used',
-              description:
-                data.error ||
-                `This browser already used its ${GUEST_DEMO_MAX_USES} free Generate Next assists (not real Ink). Sign up to get ${SIGNUP_INK} Ink — separate from this demo.`,
-            });
+            if (reason === 'browser' || data.remaining === 0) {
+              promptGuestSignupDemoExhausted();
+            } else {
+              toast({
+                variant: 'destructive',
+                title:
+                  reason === 'ip'
+                    ? 'Demo rate limit'
+                    : reason === 'global'
+                      ? 'Demo at capacity'
+                      : 'Demo assists used',
+                description:
+                  data.error ||
+                  `This browser already used its ${GUEST_DEMO_MAX_USES} free Generate Next assists (not real Ink). Sign up to get ${SIGNUP_INK} Ink — separate from this demo.`,
+              });
+            }
           } else {
             toast({ variant: 'destructive', title: 'Synthesis Failed', description: data.error || 'Try again' });
           }
@@ -3477,15 +3513,13 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         setPendingGenCtx({ mode, sId: sectionId, bIdx: barIdx });
         if (typeof data.remaining === 'number') {
           setGuestDemoRemaining(data.remaining);
+          setGuestDemoAssistsUsed(GUEST_DEMO_MAX_USES - data.remaining);
           if (data.remaining <= 0) {
-            toast({
-              title: 'Last demo assist used',
-              description: `That was free demo Generate Next (not Ink). Sign up to save this sheet and get ${SIGNUP_INK} Ink for the full studio.`,
-            });
+            promptGuestSignupDemoExhausted();
           } else {
             toast({
               title: 'Demo assist used',
-              description: `${data.remaining} free Generate Next left on this browser · signup Ink (${SIGNUP_INK}) is separate.`,
+              description: `${data.remaining} free Generate Next left · tap a line to keep the flow.`,
             });
           }
         }
@@ -3544,9 +3578,12 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   };
 
   const handleDismissGenerationOptions = useCallback(() => {
+    if (isGuestTryMode && generationOptions) {
+      void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.OPTION_DISMISS, {});
+    }
     setGenerationOptions(null);
     setPendingGenCtx(null);
-  }, []);
+  }, [isGuestTryMode, generationOptions]);
 
   const handleApplyChestEntry = useCallback(
     (entry: DraftChestEntry, action: 'append' | 'replace') => {
@@ -3662,6 +3699,13 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     handleUpdateTrack({ sections: markBarAnchorGlow(newSections, sId, insertIdx) });
     setGenerationOptions(null);
     setPendingGenCtx(null);
+    if (isGuestTryMode) {
+      void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.OPTION_ACCEPT, {});
+      // Exhausted path already prompted on the last successful assist.
+      if (guestDemoRemaining === null || guestDemoRemaining > 0) {
+        promptGuestSignupAfterAccept(guestDemoRemaining);
+      }
+    }
     dispatchCoachEvent(COACH_FIRST_ACCEPT_EVENT);
     setTimeout(() => { const el = document.getElementById(`bar-input-${sId}-${insertIdx}`) as HTMLTextAreaElement; if (el) { el.focus(); } }, 100);
   };
@@ -3736,13 +3780,15 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={isMobileLayout && mobilePanelTab === 'workstation'} trackLocked={editsLocked} tierLocked={tierLocked} completeLocked={completeLocked} workstationAttention={workstationAttention} tourMobilePad={tourActive && isMobileLayout} isGuestTryMode={isGuestTryMode} />
       <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={(open: boolean) => {
         if (open && isGuestTryMode) {
-          toast(guestInkFeatureLockedToast('Freestyle Pad'));
+          void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.LOCKED_FEATURE, { feature: 'Freestyle Pad' });
+          promptGuestSignupLockedFeature('Freestyle Pad');
           return;
         }
         setFreestyleOpen(open);
       }} album={album} setSmartStructureOpen={(open: boolean) => {
         if (open && isGuestTryMode) {
-          toast(guestInkFeatureLockedToast('Smart Structure'));
+          void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.LOCKED_FEATURE, { feature: 'Smart Structure' });
+          promptGuestSignupLockedFeature('Smart Structure');
           return;
         }
         setSmartStructureOpen(open);
@@ -3760,7 +3806,8 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         improveStyleOpen={improveStyleOpen}
         setImproveStyleOpen={(open: boolean) => {
           if (open && isGuestTryMode) {
-            toast(guestInkFeatureLockedToast('Improve My Style'));
+            void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.LOCKED_FEATURE, { feature: 'Improve My Style' });
+            promptGuestSignupLockedFeature('Improve My Style');
             return;
           }
           setImproveStyleOpen(open);

@@ -112,6 +112,7 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
   const userRef = db.doc(`users/${userId}`);
   const [snap, userSnap] = await Promise.all([balanceRef.get(), userRef.get()]);
   const userData = userSnap.data();
+  const userDocExisted = userSnap.exists;
 
   // Always keep roster identity in sync from Auth (admin ARTIST column).
   // usage-init often creates the user doc before client profile sync; without
@@ -130,6 +131,20 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
     if (Object.keys(identityPatch).length > 0) {
       identityPatch.updatedAt = new Date().toISOString();
       await userRef.set(identityPatch, { merge: true });
+    }
+  }
+
+  // Server safety net: if we materialize the roster row first, still Telegram once.
+  if (!userDocExisted) {
+    try {
+      const { enqueueSignupAlertOnce } = await import('@/lib/server/signup-alert');
+      await enqueueSignupAlertOnce({
+        userId,
+        userEmail: userEmail || null,
+        method: 'usage_init',
+      });
+    } catch (alertErr) {
+      console.warn('[usage-init] signup alert skipped', alertErr);
     }
   }
 

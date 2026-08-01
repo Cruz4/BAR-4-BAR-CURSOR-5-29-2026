@@ -39,7 +39,7 @@ export default function CookiesPage() {
               <li><strong className="text-white">TikTok Pixel</strong> — may set cookies or similar identifiers for ads and conversion measurement on the Service.</li>
               <li><strong className="text-white">Google AdSense</strong> — may set advertising cookies on selected public marketing and legal pages (not inside the signed-in studio workstation).</li>
             </ul>
-            <p>First-party product analytics (feature use, checkout funnels, and similar events) are stored in our own Firebase project and are not third-party ad cookies; details are in the Privacy Policy.</p>
+            <p>First-party product analytics (feature use, guest try-sheet funnel steps, checkout funnels, and similar events) are stored in our own Firebase project and are not third-party ad cookies; details are in the Privacy Policy.</p>
           </section>
 
           <section className="space-y-3">

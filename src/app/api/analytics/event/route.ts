@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 import { enqueueAdminAlert } from '@/lib/server/admin-alerts';
+import { enqueueSignupAlertOnce } from '@/lib/server/signup-alert';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
 import type { AnalyticsEventName } from '@/lib/analytics-events';
 import { checkRateLimit } from '@/lib/server/rate-limit';
@@ -63,8 +64,7 @@ export async function POST(req: Request) {
     if (event === 'signup') {
       const ref = typeof metadata?.ref === 'string' ? metadata.ref : null;
       const method = typeof metadata?.method === 'string' ? metadata.method : null;
-      await enqueueAdminAlert({
-        kind: 'signup',
+      await enqueueSignupAlertOnce({
         userId: uid,
         userEmail,
         ref,

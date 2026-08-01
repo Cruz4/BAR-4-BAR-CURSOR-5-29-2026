@@ -521,6 +521,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         const userSnap = await getDoc(userRef);
         if (!userSnap.exists()) {
           const { markFreshSignup } = await import('@/lib/post-login-redirect');
+          const { trackStudioEvent } = await import('@/lib/analytics-client');
+          const { ANALYTICS_EVENTS } = await import('@/lib/analytics-events');
+          const { getStoredMarketingRef } = await import('@/lib/marketing-attribution');
           const resolvedName =
             (typeof firebaseUser.displayName === 'string' && firebaseUser.displayName.trim()) ||
             'Anonymous Artist';
@@ -528,11 +531,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             typeof firebaseUser.email === 'string' && firebaseUser.email.includes('@')
               ? firebaseUser.email.trim().toLowerCase()
               : '';
+          const signupRef = getStoredMarketingRef();
           await setDoc(
             userRef,
             stripForFirestore({
               displayName: resolvedName,
               ...(resolvedEmail ? { email: resolvedEmail } : {}),
+              ...(signupRef ? { signupAttribution: signupRef } : {}),
               createdAt: new Date().toISOString(),
               role: 'artist',
               subscriptionStatus: 'none',
@@ -540,6 +545,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               status: 'active',
             })
           );
+          // Safety net when this path wins the race against login syncUserProfile.
+          void trackStudioEvent(ANALYTICS_EVENTS.SIGNUP, {
+            method: 'profile_bootstrap',
+            ...(signupRef ? { ref: signupRef } : {}),
+          });
           markFreshSignup();
         } else {
           // Doc may exist from usage-init without identity — fill blanks only.

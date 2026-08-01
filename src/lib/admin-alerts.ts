@@ -1,10 +1,11 @@
-/** In-app admin alert feed (signup, visits, funnel). */
+/** In-app admin alert feed (signup, visits, funnel, guest try). */
 
 export type AdminAlertKind =
   | 'signup'
   | 'landing_hit'
   | 'pricing_view'
-  | 'checkout_started';
+  | 'checkout_started'
+  | 'guest_try';
 
 export type AdminAlert = {
   id: string;

@@ -18,6 +18,7 @@ const KIND_HEADLINE: Record<AdminAlertKind, string> = {
   landing_hit: '👀 Page visit',
   pricing_view: '💰 Pricing page',
   checkout_started: '🛒 Checkout started',
+  guest_try: '🎤 Demo sheet',
 };
 
 function telegramConfigured(): boolean {

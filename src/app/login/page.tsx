@@ -4,7 +4,9 @@ import React, { useState, Suspense, useEffect, useCallback } from 'react';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  updateProfile
+  updateProfile,
+  getAdditionalUserInfo,
+  type UserCredential,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/client/firebase';
 import { doc, getDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
@@ -37,6 +39,7 @@ import {
   getStoredMarketingRef,
   normalizeMarketingRef,
 } from '@/lib/marketing-attribution';
+import { consumeGuestTrySignupMeta } from '@/lib/guest-funnel-client';
 import { REFERRAL_INK_REWARD, REFERRAL_STORAGE_KEY, normalizeReferralCode } from '@/lib/referrals';
 import { claimPendingReferral } from '@/components/refer-a-friend-section';
 import { getTopFunnelSignupSubline } from '@/lib/studio-tiers';
@@ -63,6 +66,25 @@ import { markFreshSignup } from '@/lib/post-login-redirect';
 import { sendSignupVerificationEmail } from '@/lib/email-verification-client';
 import { PRO_FEATURE_PREVIEW_DAYS, SIGNUP_INK } from '@/lib/subscription';
 
+/** Auth account young enough that usage-init/doc races still count as a signup. */
+function isFreshAuthAccount(firebaseUser: { metadata?: { creationTime?: string } }): boolean {
+  const created = firebaseUser.metadata?.creationTime;
+  if (!created) return false;
+  const ageMs = Date.now() - new Date(created).getTime();
+  return Number.isFinite(ageMs) && ageMs >= 0 && ageMs < 2 * 60 * 60 * 1000;
+}
+
+function authLooksLikeNewUser(credential: UserCredential | null | undefined): boolean | null {
+  if (!credential) return null;
+  try {
+    const info = getAdditionalUserInfo(credential);
+    if (typeof info?.isNewUser === 'boolean') return info.isNewUser;
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 function LoginForm() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -77,6 +99,7 @@ function LoginForm() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const importIntent = searchParams.get('intent') === 'dna-import';
+  const guestTryIntent = searchParams.get('intent') === 'guest_try';
   const safeNext = getSafeNextPath(searchParams.get('next'));
   const proCheckoutIntent = getCheckoutFromPath(safeNext);
   const marketingRef = normalizeMarketingRef(searchParams.get('ref'));
@@ -122,13 +145,17 @@ function LoginForm() {
 
   const syncUserProfile = useCallback(async (
     firebaseUser: any,
-    _isNewSignup = false,
-    signupMethod: 'email' | 'google' = 'google'
+    options: {
+      intentSignup?: boolean;
+      signupMethod?: 'email' | 'google';
+      authIsNewUser?: boolean | null;
+    } = {}
   ) => {
+    const signupMethod = options.signupMethod ?? 'google';
     try {
         const userRef = doc(db, 'users', firebaseUser.uid);
         const existing = await getDoc(userRef);
-        const wasNew = !existing.exists();
+        const wasNewDoc = !existing.exists();
         const signupRef = getStoredMarketingRef();
         const resolvedName =
           (typeof firebaseUser.displayName === 'string' && firebaseUser.displayName.trim()) ||
@@ -175,11 +202,25 @@ function LoginForm() {
           }
         });
 
-        const isNew = wasNew;
+        // Doc may already exist from usage-init / data-context — still a signup if Auth says so.
+        const isNew =
+          wasNewDoc ||
+          options.authIsNewUser === true ||
+          (options.authIsNewUser !== false && isFreshAuthAccount(firebaseUser));
+
         if (isNew) {
+          const guestMeta = consumeGuestTrySignupMeta();
           await trackStudioEvent(ANALYTICS_EVENTS.SIGNUP, {
             method: signupMethod,
             ...(signupRef ? { ref: signupRef } : {}),
+            ...(guestMeta.fromGuestTry || guestTryIntent
+              ? {
+                  fromGuestTry: true,
+                  intent: 'guest_try',
+                  ...(guestMeta.barsWritten != null ? { barsWritten: guestMeta.barsWritten } : {}),
+                  ...(guestMeta.assistsUsed != null ? { assistsUsed: guestMeta.assistsUsed } : {}),
+                }
+              : {}),
           });
           trackTikTokEvent('CompleteRegistration', {
             method: signupMethod,
@@ -198,7 +239,7 @@ function LoginForm() {
     } catch (e) {
       console.error("Profile sync failed", e);
     }
-  }, [applyReferralIfNew, displayName]);
+  }, [applyReferralIfNew, displayName, guestTryIntent]);
 
   useEffect(() => {
     if (user) return;
@@ -212,7 +253,11 @@ function LoginForm() {
           if (!cancelled) setIsProcessing(false);
           return;
         }
-        const isNew = await syncUserProfile(credential.user, intent === 'signup');
+        const isNew = await syncUserProfile(credential.user, {
+          intentSignup: intent === 'signup',
+          signupMethod: 'google',
+          authIsNewUser: authLooksLikeNewUser(credential),
+        });
         if (!isNew) {
           try {
             sessionStorage.removeItem(REFERRAL_STORAGE_KEY);
@@ -244,7 +289,11 @@ function LoginForm() {
     try {
       const result = await startGoogleSignIn(auth, authMode);
       if (!result) return;
-      const isNew = await syncUserProfile(result.user, authMode === 'signup');
+      const isNew = await syncUserProfile(result.user, {
+        intentSignup: authMode === 'signup',
+        signupMethod: 'google',
+        authIsNewUser: authLooksLikeNewUser(result),
+      });
       if (!isNew) {
         try {
           sessionStorage.removeItem(REFERRAL_STORAGE_KEY);
@@ -272,7 +321,11 @@ function LoginForm() {
       if (authMode === 'signup') {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         if (displayName) await updateProfile(userCredential.user, { displayName });
-        await syncUserProfile(userCredential.user, true, 'email');
+        await syncUserProfile(userCredential.user, {
+          intentSignup: true,
+          signupMethod: 'email',
+          authIsNewUser: true,
+        });
         try {
           await sendSignupVerificationEmail(userCredential.user);
           toast({
@@ -289,7 +342,11 @@ function LoginForm() {
         }
       } else {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        await syncUserProfile(userCredential.user, false, 'email');
+        await syncUserProfile(userCredential.user, {
+          intentSignup: false,
+          signupMethod: 'email',
+          authIsNewUser: false,
+        });
         toast({ title: 'Success', description: 'Studio session authorized.' });
       }
     } catch (error: any) {

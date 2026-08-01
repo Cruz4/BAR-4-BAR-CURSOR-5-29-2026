@@ -175,7 +175,7 @@ export function AdminMetricsTab() {
 
   if (!metrics) return null;
 
-  const { funnel, retention, monetization, freeTierPressure, acquisition, gamification, signupAttribution } =
+  const { funnel, retention, monetization, freeTierPressure, acquisition, gamification, signupAttribution, guestTryFunnel } =
     metrics;
   const attribution = signupAttribution ?? {
     taggedSignups: 0,
@@ -183,6 +183,26 @@ export function AdminMetricsTab() {
     totalLandingHits: 0,
     landingHitsLast30Days: 0,
     byRef: [],
+  };
+  const guestFunnel = guestTryFunnel ?? {
+    opens: 0,
+    opensLast7Days: 0,
+    opensLast30Days: 0,
+    wroteBar: 0,
+    demoAiRequests: 0,
+    demoAiSuccesses: 0,
+    demoAiLimits: 0,
+    demoAiErrors: 0,
+    optionAccepts: 0,
+    optionDismisses: 0,
+    lockedFeatureTaps: 0,
+    signupCtaClicks: 0,
+    guestTrySignups: 0,
+    openToWrotePercent: 0,
+    wroteToAiPercent: 0,
+    aiToAcceptPercent: 0,
+    openToCtaPercent: 0,
+    openToSignupPercent: 0,
   };
 
   const cacheLabel = metrics.cache
@@ -325,6 +345,40 @@ export function AdminMetricsTab() {
                 )}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Guest try-sheet funnel */}
+      <section>
+        <h3 className="text-[10px] font-bold uppercase tracking-[0.35em] text-muted-foreground mb-4 flex items-center gap-2">
+          <Target className="h-3 w-3" /> Guest try sheet (pre-signup)
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <MetricCard label="Opens (90d)" value={guestFunnel.opens} sub={`${guestFunnel.opensLast7Days} last 7d`} accent="text-emerald-400" />
+          <MetricCard label="Wrote a bar" value={guestFunnel.wroteBar} sub={`${guestFunnel.openToWrotePercent}% of opens`} />
+          <MetricCard label="Demo AI success" value={guestFunnel.demoAiSuccesses} sub={`${guestFunnel.demoAiLimits} hit limit · ${guestFunnel.demoAiErrors} errors`} accent="text-sky-400" />
+          <MetricCard label="Accepted a line" value={guestFunnel.optionAccepts} sub={`${guestFunnel.aiToAcceptPercent}% of AI wins`} />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <MetricCard label="Signup CTA clicks" value={guestFunnel.signupCtaClicks} sub={`${guestFunnel.openToCtaPercent}% of opens`} accent="text-amber-400" />
+          <MetricCard label="Guest → signup" value={guestFunnel.guestTrySignups} sub={`${guestFunnel.openToSignupPercent}% of opens`} accent="text-emerald-400" />
+          <MetricCard label="Locked feature taps" value={guestFunnel.lockedFeatureTaps} sub="Wanted Ink tools before signup" />
+          <MetricCard label="Dismissed AI" value={guestFunnel.optionDismisses} sub="Generated then skipped" />
+        </div>
+        <Card className="bg-card/40 border-white/10">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm uppercase tracking-widest">Try-sheet conversion ladder</CardTitle>
+            <CardDescription className="text-[10px]">
+              Anonymous funnel — where guests drop before creating an account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-2">
+            <RateBar label="Open → wrote bar" value={guestFunnel.openToWrotePercent} />
+            <RateBar label="Wrote → demo AI success" value={guestFunnel.wroteToAiPercent} />
+            <RateBar label="AI success → accepted line" value={guestFunnel.aiToAcceptPercent} />
+            <RateBar label="Open → signup CTA" value={guestFunnel.openToCtaPercent} />
+            <RateBar label="Open → signup" value={guestFunnel.openToSignupPercent} />
           </CardContent>
         </Card>
       </section>

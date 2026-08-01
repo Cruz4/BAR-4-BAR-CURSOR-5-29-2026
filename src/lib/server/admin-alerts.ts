@@ -35,6 +35,11 @@ function buildMessage(input: EnqueueInput): string {
     const detail = input.detail ? ` — ${input.detail}` : '';
     return `${who} started checkout${detail}`;
   }
+  if (input.kind === 'guest_try') {
+    const via = refLabel && input.ref !== 'organic' ? ` · ${refLabel}` : '';
+    const detail = input.detail ? ` — ${input.detail}` : '';
+    return `${input.method || 'Try sheet activity'}${via}${detail}`;
+  }
   const page = input.path || '/';
   const via = refLabel ? ` from ${refLabel}` : '';
   return `Page visit${via} on ${page}`;

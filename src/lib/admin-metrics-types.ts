@@ -26,6 +26,29 @@ export type SignupAttributionStats = {
   byRef: SignupAttributionRow[];
 };
 
+/** Anonymous guest try-sheet funnel (pre-signup). */
+export type GuestTryFunnelStats = {
+  opens: number;
+  opensLast7Days: number;
+  opensLast30Days: number;
+  wroteBar: number;
+  demoAiRequests: number;
+  demoAiSuccesses: number;
+  demoAiLimits: number;
+  demoAiErrors: number;
+  optionAccepts: number;
+  optionDismisses: number;
+  lockedFeatureTaps: number;
+  signupCtaClicks: number;
+  /** Signups that arrived with intent=guest_try or fromGuestTry metadata (from analytics). */
+  guestTrySignups: number;
+  openToWrotePercent: number;
+  wroteToAiPercent: number;
+  aiToAcceptPercent: number;
+  openToCtaPercent: number;
+  openToSignupPercent: number;
+};
+
 export type AdminMetricsSnapshot = {
   generatedAt: string;
   funnel: {
@@ -96,6 +119,7 @@ export type AdminMetricsSnapshot = {
     notes: string;
   };
   signupAttribution: SignupAttributionStats;
+  guestTryFunnel: GuestTryFunnelStats;
   recentEvents: Array<{
     timestamp: string;
     event: string;

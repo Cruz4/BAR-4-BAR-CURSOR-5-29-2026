@@ -39,8 +39,9 @@ import { BrandLockup } from '@/components/brand-lockup';
 import { BRAND_ARIA_LABEL } from '@/lib/brand';
 import { StudioThemeControls } from '@/components/studio-theme-controls';
 import { isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
-import { buildLoginUrl } from '@/lib/login-links';
+import { getGuestSignupHref, trackGuestSignupCta } from '@/lib/guest-funnel-client';
 import { prepareGuestTrackForSignup } from '@/lib/guest-track-session';
+import { getStoredMarketingRef } from '@/lib/marketing-attribution';
 
 export function Header() {
   const { user, loading } = useAuth();
@@ -63,7 +64,10 @@ export function Header() {
   const isGuestTry =
     !user && isGuestTrySheetEnabled() && isGuestTryAlbumId(albumId);
   const backHref = isGuestTry ? '/welcome' : albumId ? `/albums/${albumId}` : '/';
-  const signupHref = buildLoginUrl({ mode: 'signup', next: '/' });
+  const signupHref = getGuestSignupHref({
+    marketingRef: getStoredMarketingRef(),
+    next: '/',
+  });
 
   useEffect(() => {
     let interval: any;
@@ -177,6 +181,7 @@ export function Header() {
                   size="sm"
                   className="h-8 px-3 text-[10px] font-bold uppercase tracking-wide bg-emerald-500 hover:bg-emerald-400 text-emerald-950"
                   onClick={() => {
+                    trackGuestSignupCta('header');
                     prepareGuestTrackForSignup();
                     router.push(signupHref);
                   }}

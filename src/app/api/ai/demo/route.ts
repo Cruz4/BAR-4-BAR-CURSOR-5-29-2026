@@ -4,6 +4,9 @@ import { checkRateLimit } from '@/lib/server/rate-limit';
 import { getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
 import { GUEST_DEMO_MAX_USES } from '@/lib/guest-try';
 import { generateGuestDemoNextLine } from '@/ai/flows/guest-demo-next-line';
+import { GUEST_FUNNEL_EVENTS } from '@/lib/guest-funnel-events';
+import { recordGuestFunnelEvent } from '@/lib/server/record-guest-funnel-event';
+import { normalizeMarketingRef } from '@/lib/marketing-attribution';
 
 export const runtime = 'nodejs';
 
@@ -92,6 +95,13 @@ async function consumeGlobalDailyBudget(): Promise<boolean> {
   return allowed;
 }
 
+function resolveDemoRef(raw: unknown): string {
+  if (typeof raw !== 'string') return 'organic';
+  const trimmed = raw.trim().toLowerCase();
+  if (!trimmed || trimmed === 'organic') return 'organic';
+  return normalizeMarketingRef(trimmed) || 'organic';
+}
+
 function limitResponse(
   remaining: number,
   message: string,
@@ -103,18 +113,31 @@ function limitResponse(
   );
 }
 
+async function trackDemoLimit(
+  ref: string,
+  reason: 'browser' | 'ip' | 'global',
+  remaining: number
+) {
+  await recordGuestFunnelEvent(GUEST_FUNNEL_EVENTS.DEMO_AI_LIMIT, {
+    ref,
+    metadata: { reason, remaining },
+  });
+}
+
 export async function GET(req: Request) {
   const uses = readUses(getCookie(req, COOKIE_NAME));
   return NextResponse.json({ remaining: Math.max(0, DEMO_MAX_USES - uses) });
 }
 
 export async function POST(req: Request) {
-  let body: { lines?: unknown; endWith?: unknown; intents?: unknown };
+  let body: { lines?: unknown; endWith?: unknown; intents?: unknown; ref?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
+
+  const ref = resolveDemoRef(body.ref);
 
   if (!Array.isArray(body.lines)) {
     return NextResponse.json({ error: 'Missing lines' }, { status: 400 });
@@ -137,8 +160,14 @@ export async function POST(req: Request) {
         .slice(0, 6)
     : [];
 
+  void recordGuestFunnelEvent(GUEST_FUNNEL_EVENTS.DEMO_AI_REQUEST, {
+    ref,
+    metadata: { lineCount: lines.length },
+  });
+
   const uses = readUses(getCookie(req, COOKIE_NAME));
   if (uses >= DEMO_MAX_USES) {
+    await trackDemoLimit(ref, 'browser', 0);
     return limitResponse(
       0,
       `You already used your ${DEMO_MAX_USES} free demo Generate Next assists on this browser. Sign up free — you get real Ink (not connected to this demo cap).`,
@@ -148,8 +177,10 @@ export async function POST(req: Request) {
 
   const ipCheck = checkRateLimit(`demo:${clientIp(req)}`, IP_LIMIT_MAX, IP_LIMIT_WINDOW_MS);
   if (!ipCheck.allowed) {
+    const remaining = Math.max(0, DEMO_MAX_USES - uses);
+    await trackDemoLimit(ref, 'ip', remaining);
     return limitResponse(
-      Math.max(0, DEMO_MAX_USES - uses),
+      remaining,
       'Too many demo requests from this connection right now. Wait a bit, or sign up free for real Ink.',
       'ip'
     );
@@ -157,6 +188,7 @@ export async function POST(req: Request) {
 
   try {
     if (!(await consumeGlobalDailyBudget())) {
+      await trackDemoLimit(ref, 'global', 0);
       return limitResponse(
         0,
         'The public demo is at capacity today. Sign up free to keep writing with real Ink.',
@@ -171,13 +203,22 @@ export async function POST(req: Request) {
   try {
     const options = await generateGuestDemoNextLine(lines, endWith || null, intents);
     if (options.length === 0) {
+      await recordGuestFunnelEvent(GUEST_FUNNEL_EVENTS.DEMO_AI_ERROR, {
+        ref,
+        metadata: { reason: 'empty_options' },
+      });
       return NextResponse.json({ error: 'No suggestions this time — try again' }, { status: 502 });
     }
 
     const nextUses = uses + 1;
+    const remaining = Math.max(0, DEMO_MAX_USES - nextUses);
+    await recordGuestFunnelEvent(GUEST_FUNNEL_EVENTS.DEMO_AI_SUCCESS, {
+      ref,
+      metadata: { remaining, useNumber: nextUses, optionCount: options.length },
+    });
     const res = NextResponse.json({
       options,
-      remaining: Math.max(0, DEMO_MAX_USES - nextUses),
+      remaining,
       endWith: endWith || null,
       intents,
     });
@@ -192,6 +233,10 @@ export async function POST(req: Request) {
   } catch (error) {
     const message = errorMessage(error);
     console.error('[api/ai/demo] generation failed:', message, error);
+    await recordGuestFunnelEvent(GUEST_FUNNEL_EVENTS.DEMO_AI_ERROR, {
+      ref,
+      metadata: { reason: 'generation_failed' },
+    });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

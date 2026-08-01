@@ -10,10 +10,12 @@ import { totalInkBalance } from '@/lib/ink-balance';
 import type {
   AdminMetricsSnapshot,
   DailyCount,
+  GuestTryFunnelStats,
   SignupAttributionRow,
   SignupAttributionStats,
 } from '@/lib/admin-metrics-types';
 import { marketingRefLabel, normalizeMarketingRef } from '@/lib/marketing-attribution';
+import { GUEST_FUNNEL_EVENTS } from '@/lib/guest-funnel-events';
 
 export type { AdminMetricsSnapshot, DailyCount } from '@/lib/admin-metrics-types';
 
@@ -64,13 +66,22 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
   const d30 = daysAgo(30);
   const d90 = daysAgo(90);
 
-  const [usersSnap, eventsSnap, logsSnap, marketingSnap, landingHitsSnap] = await Promise.all([
-    db.collection('users').get(),
-    db.collection('analytics_events').orderBy('timestamp', 'desc').limit(500).get(),
-    db.collection('system').doc('logs').collection('entries').orderBy('timestamp', 'desc').limit(1000).get(),
-    db.doc('studioMetrics/marketing').get(),
-    db.collection('studio_landing_hits').where('timestamp', '>=', d90.toISOString()).get(),
-  ]);
+  const [usersSnap, eventsSnap, logsSnap, marketingSnap, landingHitsSnap, guestFunnelSnap] =
+    await Promise.all([
+      db.collection('users').get(),
+      db.collection('analytics_events').orderBy('timestamp', 'desc').limit(500).get(),
+      db.collection('system').doc('logs').collection('entries').orderBy('timestamp', 'desc').limit(1000).get(),
+      db.doc('studioMetrics/marketing').get(),
+      db.collection('studio_landing_hits').where('timestamp', '>=', d90.toISOString()).get(),
+      db
+        .collection('studio_guest_funnel_events')
+        .where('timestamp', '>=', d90.toISOString())
+        .get()
+        .catch((err) => {
+          console.warn('[admin-metrics] guest funnel query failed', err);
+          return { docs: [] as { data: () => Record<string, unknown> }[] };
+        }),
+    ]);
 
   const marketing = marketingSnap.data() || {};
   const adSpend30d = Number(marketing.adSpend30d || 0);
@@ -182,6 +193,41 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
       hitsLast90Days: hitAt >= d90 ? 1 : 0,
     });
   }
+
+  let guestOpens = 0;
+  let guestOpensLast7 = 0;
+  let guestOpensLast30 = 0;
+  let guestWroteBar = 0;
+  let guestDemoAiRequests = 0;
+  let guestDemoAiSuccesses = 0;
+  let guestDemoAiLimits = 0;
+  let guestDemoAiErrors = 0;
+  let guestOptionAccepts = 0;
+  let guestOptionDismisses = 0;
+  let guestLockedFeatureTaps = 0;
+  let guestSignupCtaClicks = 0;
+
+  for (const funnelDoc of guestFunnelSnap.docs) {
+    const data = funnelDoc.data();
+    const ev = String(data.event || '');
+    const at = parseDate(data.timestamp);
+    if (!at) continue;
+    if (ev === GUEST_FUNNEL_EVENTS.OPEN) {
+      guestOpens += 1;
+      if (at >= d7) guestOpensLast7 += 1;
+      if (at >= d30) guestOpensLast30 += 1;
+    } else if (ev === GUEST_FUNNEL_EVENTS.WROTE_BAR) guestWroteBar += 1;
+    else if (ev === GUEST_FUNNEL_EVENTS.DEMO_AI_REQUEST) guestDemoAiRequests += 1;
+    else if (ev === GUEST_FUNNEL_EVENTS.DEMO_AI_SUCCESS) guestDemoAiSuccesses += 1;
+    else if (ev === GUEST_FUNNEL_EVENTS.DEMO_AI_LIMIT) guestDemoAiLimits += 1;
+    else if (ev === GUEST_FUNNEL_EVENTS.DEMO_AI_ERROR) guestDemoAiErrors += 1;
+    else if (ev === GUEST_FUNNEL_EVENTS.OPTION_ACCEPT) guestOptionAccepts += 1;
+    else if (ev === GUEST_FUNNEL_EVENTS.OPTION_DISMISS) guestOptionDismisses += 1;
+    else if (ev === GUEST_FUNNEL_EVENTS.LOCKED_FEATURE) guestLockedFeatureTaps += 1;
+    else if (ev === GUEST_FUNNEL_EVENTS.SIGNUP_CTA) guestSignupCtaClicks += 1;
+  }
+
+  let guestTrySignups = 0;
 
   const summarySnaps = await Promise.all(
     users.map((u) => db.doc(`users/${u.id}/analytics/summary`).get())
@@ -307,6 +353,13 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
       const limitType = String(metadata.limitType || '');
       if (limitType === 'album') freeLimitHitsByType.album += 1;
       if (limitType === 'track') freeLimitHitsByType.track += 1;
+    }
+    if (ev === 'signup') {
+      const fromGuest =
+        metadata.fromGuestTry === true ||
+        metadata.fromGuestTry === 'true' ||
+        metadata.intent === 'guest_try';
+      if (fromGuest) guestTrySignups += 1;
     }
   }
 
@@ -457,6 +510,30 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
     byRef: attributionRows,
   };
 
+  const pct = (num: number, den: number) =>
+    den > 0 ? Math.round((num / den) * 1000) / 10 : 0;
+
+  const guestTryFunnel: GuestTryFunnelStats = {
+    opens: guestOpens,
+    opensLast7Days: guestOpensLast7,
+    opensLast30Days: guestOpensLast30,
+    wroteBar: guestWroteBar,
+    demoAiRequests: guestDemoAiRequests,
+    demoAiSuccesses: guestDemoAiSuccesses,
+    demoAiLimits: guestDemoAiLimits,
+    demoAiErrors: guestDemoAiErrors,
+    optionAccepts: guestOptionAccepts,
+    optionDismisses: guestOptionDismisses,
+    lockedFeatureTaps: guestLockedFeatureTaps,
+    signupCtaClicks: guestSignupCtaClicks,
+    guestTrySignups,
+    openToWrotePercent: pct(guestWroteBar, guestOpens),
+    wroteToAiPercent: pct(guestDemoAiSuccesses, guestWroteBar),
+    aiToAcceptPercent: pct(guestOptionAccepts, guestDemoAiSuccesses),
+    openToCtaPercent: pct(guestSignupCtaClicks, guestOpens),
+    openToSignupPercent: pct(guestTrySignups, guestOpens),
+  };
+
   const recentEvents = eventsSnap.docs.slice(0, 25).map((doc) => {
     const data = doc.data();
     return {
@@ -534,6 +611,7 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
       notes,
     },
     signupAttribution,
+    guestTryFunnel,
     recentEvents,
     gamification: {
       usersWithAchievements,
@@ -608,6 +686,26 @@ function emptyMetrics(notes: string): AdminMetricsSnapshot {
     },
     acquisition: { adSpend30d: 0, adSpend90d: 0, costPerSignup: null, costPerActivatedUser: null, notes },
     signupAttribution: { taggedSignups: 0, organicSignups: 0, totalLandingHits: 0, landingHitsLast30Days: 0, byRef: [] },
+    guestTryFunnel: {
+      opens: 0,
+      opensLast7Days: 0,
+      opensLast30Days: 0,
+      wroteBar: 0,
+      demoAiRequests: 0,
+      demoAiSuccesses: 0,
+      demoAiLimits: 0,
+      demoAiErrors: 0,
+      optionAccepts: 0,
+      optionDismisses: 0,
+      lockedFeatureTaps: 0,
+      signupCtaClicks: 0,
+      guestTrySignups: 0,
+      openToWrotePercent: 0,
+      wroteToAiPercent: 0,
+      aiToAcceptPercent: 0,
+      openToCtaPercent: 0,
+      openToSignupPercent: 0,
+    },
     recentEvents: [],
     gamification: {
       usersWithAchievements: 0,

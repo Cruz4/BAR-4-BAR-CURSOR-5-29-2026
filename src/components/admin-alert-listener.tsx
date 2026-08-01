@@ -41,19 +41,19 @@ function maybeAskBrowserNotify() {
   }
 }
 
+function alertTitle(kind: AdminAlert['kind']): string {
+  if (kind === 'signup') return 'New signup';
+  if (kind === 'pricing_view') return 'Pricing page';
+  if (kind === 'checkout_started') return 'Checkout started';
+  if (kind === 'guest_try') return 'Demo sheet';
+  return 'Page visit';
+}
+
 function pushBrowserNotify(alert: AdminAlert) {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
   try {
-    const title =
-      alert.kind === 'signup'
-        ? 'New signup'
-        : alert.kind === 'pricing_view'
-          ? 'Pricing page'
-          : alert.kind === 'checkout_started'
-            ? 'Checkout started'
-            : 'Page visit';
-    new Notification(title, {
+    new Notification(alertTitle(alert.kind), {
       body: alert.message,
       tag: `b4b-admin-${alert.id}`,
     });
@@ -103,14 +103,7 @@ export function AdminAlertListener() {
           if (alert.timestamp > latest) latest = alert.timestamp;
 
           toastRef.current({
-            title:
-              alert.kind === 'signup'
-                ? 'New signup'
-                : alert.kind === 'pricing_view'
-                  ? 'Pricing page'
-                  : alert.kind === 'checkout_started'
-                    ? 'Checkout started'
-                    : 'Page visit',
+            title: alertTitle(alert.kind),
             description: alert.message,
             duration: 12_000,
           });
