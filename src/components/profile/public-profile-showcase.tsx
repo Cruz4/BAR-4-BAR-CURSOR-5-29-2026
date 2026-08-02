@@ -40,6 +40,12 @@ export type PublicProfileData = {
   profilePhotoMode?: 'collage' | 'custom';
   profilePhotoUrl?: string | null;
   slug?: string;
+  /** Live public DNA Drops (share docs still online). */
+  liveDnaDrops?: Array<{
+    shareId: string;
+    title: string;
+    type: 'album' | 'track';
+  }>;
 };
 
 type PublicProfileShowcaseProps = {

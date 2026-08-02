@@ -159,6 +159,7 @@ export function StudioPrivacyIntroDialog() {
           <DialogDescription className="text-sm leading-relaxed">
             You start <strong className="text-foreground">fully private</strong>. Turn a switch on only if you want that
             surface public. Lyrics, DNA, and vault content are never published unless you share a DNA Drop link.
+            After you go live, customize modules and links on Edit Public Page.
           </DialogDescription>
         </DialogHeader>
 
@@ -194,7 +195,7 @@ export function StudioPrivacyIntroDialog() {
                 <Globe className="h-3.5 w-3.5" /> Public profile page
               </Label>
               <p className="text-[10px] text-muted-foreground">
-                Optional page with rank, streak, and badges — never lyrics.
+                Artist Home page: modules, social links, Album Rooms — never lyrics.
               </p>
             </div>
             <Switch

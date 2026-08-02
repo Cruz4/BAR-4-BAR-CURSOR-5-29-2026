@@ -101,6 +101,7 @@ import {
 import { isDataUrl } from '@/lib/cover-art';
 import { postGamificationEvent } from '@/lib/gamification-client';
 import { VaultStudioProgress } from '@/components/gamification/vault-studio-progress';
+import { VaultProfileDock } from '@/components/profile/vault-profile-dock';
 import { VaultChamberAtmosphere } from '@/components/vault-chamber-atmosphere';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
@@ -796,7 +797,7 @@ export function AlbumList() {
     }
   };
 
-  if (loading) return <div className="flex h-screen items-center justify-center"><StudioLoader size="lg" /></div>;
+  if (loading) return <StudioLoader size="lg" fullscreen />;
 
   return (
     <TooltipProvider>
@@ -892,8 +893,9 @@ export function AlbumList() {
             </header>
 
             {!loading && user && (
-              <div className="xl:hidden mb-4">
+              <div className="xl:hidden mb-4 space-y-3">
                 <VaultStudioProgress variant="banner" tourForceExpanded={vaultProgressTourPinned} />
+                <VaultProfileDock compact />
               </div>
             )}
           </div>
@@ -904,6 +906,15 @@ export function AlbumList() {
               aria-label="Studio progress"
             >
               <VaultStudioProgress variant="sidebar" tourForceExpanded={vaultProgressTourPinned} />
+            </aside>
+          )}
+
+          {!loading && user && (
+            <aside
+              className="hidden xl:flex xl:col-start-3 xl:row-start-2 justify-start items-start self-start pl-2 2xl:pl-3 sticky top-[5.25rem] z-30 pointer-events-none [&>*]:pointer-events-auto"
+              aria-label="Artist Home and The Block"
+            >
+              <VaultProfileDock />
             </aside>
           )}
 

@@ -21,6 +21,7 @@ import {
   enforceBannedWordsOnOptions,
   enforceRepetitionOnOptions,
 } from '@/lib/server/lyric-guardrails';
+import { lineEndWord } from '@/lib/lyrics-analysis';
 
 const GenerateNextLineInputSchema = z.object({
   userId: z.string().optional(),
@@ -42,6 +43,12 @@ const GenerateNextLineInputSchema = z.object({
   theme: z.string(),
   endWith: z.string().optional().nullable(),
   mergedDirection: DirectionSchema.optional(),
+  /** Prebuilt Album DNA continuity / avoid block (client: buildAlbumAlreadyUsed). */
+  albumAlreadyUsed: z.string().optional(),
+  /** Sibling lyric lines for album-wide near-duplicate guardrails. */
+  albumRepetitionContext: z.array(z.string()).optional(),
+  /** End rhymes already used on sibling tracks. */
+  albumAvoidEndWords: z.array(z.string()).optional(),
   negativePrompt: z.string().optional(),
   forbiddenWords: z.array(z.string()).optional(),
   mustIncludeWords: z.array(z.string()).optional(),
@@ -123,6 +130,10 @@ Mimic the technical patterns found in this profile: {{styleProfileSummary}}.
 - Message: {{mergedDirection.message_truth}}
 - Tone: {{mergedDirection.tone_palette}}
 
+{{#if albumAlreadyUsed}}
+{{{albumAlreadyUsed}}}
+{{/if}}
+
 **CONTEXT:**
 - Section: {{sectionType}}
 - Prior Bars: {{#each priorLines}}- {{{this}}} {{/each}}
@@ -158,7 +169,13 @@ const generateNextLineFlow = ai.defineFlow(
     const response = await nextLinePrompt(input, getGenkitPromptOptions());
     if (!response || !response.output) return [];
     let options = response.output.slice(0, 2);
-    const contextLines = [...input.priorLines, ...input.nextLines].map((l) => l.trim()).filter(Boolean);
+    const contextLines = [
+      ...input.priorLines,
+      ...input.nextLines,
+      ...(input.albumRepetitionContext ?? []),
+    ]
+      .map((l) => l.trim())
+      .filter(Boolean);
 
     const applyGuardrails = (pool: typeof options) => {
       let next = pool;
@@ -178,6 +195,16 @@ const generateNextLineFlow = ai.defineFlow(
             .map((line) => next.find((o) => o.line === line) ?? { ...next[0], line })
             .slice(0, 2);
         }
+      }
+      const avoidEnds = new Set(
+        (input.albumAvoidEndWords ?? []).map((w) => w.trim().toLowerCase()).filter(Boolean)
+      );
+      if (avoidEnds.size > 0 && next.length) {
+        const filtered = next.filter((o) => {
+          const ew = lineEndWord(o.line);
+          return !ew || !avoidEnds.has(ew.toLowerCase());
+        });
+        if (filtered.length > 0) next = filtered;
       }
       return next;
     };

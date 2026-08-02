@@ -109,7 +109,7 @@
   }
 
   .dark .studio-page-base {
-    background-color: hsl(216 50% 7%);
+    background-color: hsl(216 50% 8%);
   }
 
   .studio-page-vignette {
@@ -1254,7 +1254,9 @@
     80% { transform: translateX(-1px) translateY(2px) rotate(-10deg); }
   }
   .animate-writing {
+    /* translate/rotate only — never scale, or the pencil looks like it shrinks */
     animation: writing 0.8s infinite ease-in-out;
+    transform-origin: 30% 70%;
   }
 
   @keyframes ink-drip {

@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { pickFeaturedAchievementId } from '@/lib/gamification/achievement-card-theme';
 import { patchGamificationSettings, trackShareCardEvent } from '@/lib/gamification-client';
 import { useToast } from '@/hooks/use-toast';
-import { Share2, Globe, Trophy, ExternalLink } from 'lucide-react';
+import { Share2, Globe, Trophy, ExternalLink, Settings2, Users } from 'lucide-react';
 import { AchievementShareCard } from '@/components/gamification/achievement-share-card';
 import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
 
@@ -66,7 +66,7 @@ export function StudioSharingSection() {
           </CardTitle>
           <CardDescription className="text-[11px] leading-relaxed">
             Both switches off = fully private. Turn a switch on only when you want that surface public. Lyrics are never
-            published — only stats you choose to share.
+            published — only the Artist Home modules and stats you choose to share.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 p-4 pt-5">
@@ -78,6 +78,13 @@ export function StudioSharingSection() {
               <p className="text-sm text-muted-foreground leading-snug">
                 Appear on the weekly public rankings (display name + studio stats).
               </p>
+              <Button
+                variant="link"
+                className="h-auto px-0 py-0 text-[11px] font-bold uppercase tracking-wide text-amber-400/90"
+                asChild
+              >
+                <Link href="/leaderboard">Open leaderboard →</Link>
+              </Button>
             </div>
             <Switch
               checked={showOnLeaderboard}
@@ -91,10 +98,10 @@ export function StudioSharingSection() {
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1 min-w-0">
               <Label className="text-sm font-bold uppercase flex items-center gap-1.5">
-                <Globe className="h-3.5 w-3.5" /> Public profile
+                <Globe className="h-3.5 w-3.5" /> Artist Home (public profile)
               </Label>
               <p className="text-sm text-muted-foreground leading-snug">
-                Share rank, streak, and badges on a profile page — never lyrics.
+                Your public page — modules, social links, Album Rooms, live DNA Drops. Never private lyrics.
               </p>
             </div>
             <Switch
@@ -108,6 +115,16 @@ export function StudioSharingSection() {
           </div>
 
           <div className="flex flex-wrap gap-3 border-t border-white/10 pt-5">
+            <Button variant="outline" className="gap-2 h-11 text-sm font-bold" asChild>
+              <Link href="/leaderboard">
+                <Trophy className="h-4 w-4 text-amber-400" /> Leaderboard
+              </Link>
+            </Button>
+            <Button variant="outline" className="gap-2 h-11 text-sm font-bold" asChild>
+              <Link href="/feed">
+                <Users className="h-4 w-4 text-emerald-400" /> The Block
+              </Link>
+            </Button>
             <Button
               variant="outline"
               className="gap-2 h-11 text-sm font-bold"
@@ -125,7 +142,12 @@ export function StudioSharingSection() {
                   asChild
                 >
                   <Link href={`/profile/${summary.profileSlug}`} target="_blank">
-                    <ExternalLink className="h-4 w-4" /> View public profile
+                    <ExternalLink className="h-4 w-4" /> View Artist Home
+                  </Link>
+                </Button>
+                <Button variant="outline" className="gap-2 h-11 text-sm font-bold" asChild>
+                  <Link href="/profile/customize">
+                    <Settings2 className="h-4 w-4" /> Edit Public Page
                   </Link>
                 </Button>
                 <Button

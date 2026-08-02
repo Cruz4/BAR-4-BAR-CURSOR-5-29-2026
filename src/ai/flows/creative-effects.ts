@@ -12,6 +12,7 @@ import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
 import { AI_COSTS } from '@/lib/costs';
 import type { AiSecuredInput } from '@/lib/ai-secured';
 import { enforceBannedWordsOnOptions, enforceRepetitionOnOptions } from '@/lib/server/lyric-guardrails';
+import { lineEndWord } from '@/lib/lyrics-analysis';
 
 // Define tool-specific input schemas
 const SimileInputSchema = z.object({ subject: z.string() });
@@ -66,6 +67,9 @@ const CreativeEffectsInputSchema = z.object({
     mustRhyme: z.boolean(),
   }),
   toolRequest: ToolInputsSchema,
+  albumAlreadyUsed: z.string().optional(),
+  albumRepetitionContext: z.array(z.string()).optional(),
+  albumAvoidEndWords: z.array(z.string()).optional(),
   negativePrompt: z.string().optional(),
   forbiddenWords: z.array(z.string()).optional(),
   mustIncludeWords: z.array(z.string()).optional(),
@@ -151,6 +155,10 @@ DIRECTION (merged album→track)
 - Trigger Moment: {{mergedDirection.trigger_moment}}
 - Message/Truth: {{mergedDirection.message_truth}}
 - Tone/Palette: {{mergedDirection.tone_palette}}
+
+{{#if albumAlreadyUsed}}
+{{{albumAlreadyUsed}}}
+{{/if}}
 
 VIBE: Genre={{vibe.genre}} | BPM={{vibe.tempoBPM}} | Feeling={{vibe.feeling}}
 INTENTS (light weave): {{{intents}}}
@@ -265,6 +273,7 @@ const creativeEffectsFlow = ai.defineFlow(
         const contextLines = [
           ...input.sectionContext.priorLines,
           ...input.sectionContext.nextLines,
+          ...(input.albumRepetitionContext ?? []),
         ].map((l) => l.trim()).filter(Boolean);
 
         const forbidden = input.forbiddenWords ?? [];
@@ -275,6 +284,16 @@ const creativeEffectsFlow = ai.defineFlow(
         if (contextLines.length > 0 && options.length) {
             const repetition = enforceRepetitionOnOptions(options, contextLines);
             options = repetition.options;
+        }
+        const avoidEnds = new Set(
+          (input.albumAvoidEndWords ?? []).map((w) => w.trim().toLowerCase()).filter(Boolean)
+        );
+        if (avoidEnds.size > 0 && options.length) {
+          const filtered = options.filter((line) => {
+            const ew = lineEndWord(line);
+            return !ew || !avoidEnds.has(ew.toLowerCase());
+          });
+          if (filtered.length > 0) options = filtered;
         }
         return { ...output, options };
     }

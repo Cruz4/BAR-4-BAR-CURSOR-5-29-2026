@@ -20,6 +20,7 @@ import { AI_COSTS } from '@/lib/costs';
 import type { AiSecuredInput } from '@/lib/ai-secured';
 import { normalizeRelayDirections } from '@/lib/dna-strands';
 import { sanitizeLinesBannedWords, sanitizeSectionLinesRepetition } from '@/lib/server/lyric-guardrails';
+import { lineEndWord } from '@/lib/lyrics-analysis';
 
 // --- Phase 1 Schemas ---
 
@@ -161,6 +162,9 @@ export async function generateRelayDraft(input: {
   trackDirection?: any,
   styleProfile?: { analysis?: string },
   specialInstructions?: string,
+  albumAlreadyUsed?: string,
+  albumRepetitionContext?: string[],
+  albumAvoidEndWords?: string[],
   negativePrompt?: string,
   forbiddenWords?: string[],
   mustIncludeWords?: string[],
@@ -186,6 +190,7 @@ export async function generateRelayDraft(input: {
           useAlbumDirection: !!input.useAlbumDirection,
           useTrackDirection: !!input.useTrackDirection,
           styleStr: styleAnalysis || 'NONE — do not apply artist style DNA.',
+          albumAlreadyUsed: input.albumAlreadyUsed || undefined,
           forbiddenWords: input.forbiddenWords || [],
           mustIncludeWords: input.mustIncludeWords || [],
           specialInstructions: input.specialInstructions || 'N/A',
@@ -196,12 +201,25 @@ export async function generateRelayDraft(input: {
 
         // Hard guardrail enforcement on every generated bar.
         const forbidden = input.forbiddenWords ?? [];
+        const albumSeed = (input.albumRepetitionContext ?? []).map((l) => l.trim()).filter(Boolean);
+        const avoidEnds = new Set(
+          (input.albumAvoidEndWords ?? []).map((w) => w.trim().toLowerCase()).filter(Boolean)
+        );
         response.output.sections = response.output.sections.map((section) => {
           let bars = section.bars;
           if (forbidden.length > 0) {
             bars = sanitizeLinesBannedWords(bars, forbidden).lines;
           }
-          bars = sanitizeSectionLinesRepetition(bars, { sectionName: section.name }).lines;
+          bars = sanitizeSectionLinesRepetition(bars, {
+            sectionName: section.name,
+            seedContext: albumSeed,
+          }).lines;
+          if (avoidEnds.size > 0) {
+            bars = bars.filter((line) => {
+              const ew = lineEndWord(line);
+              return !ew || !avoidEnds.has(ew.toLowerCase());
+            });
+          }
           return { ...section, bars };
         });
         return response.output;
@@ -231,6 +249,7 @@ const generateRelayDraftPrompt = ai.definePrompt({
     useAlbumDirection: z.boolean().optional(),
     useTrackDirection: z.boolean().optional(),
     styleStr: z.string().optional(),
+    albumAlreadyUsed: z.string().optional(),
     negativePrompt: z.string().optional(),
     forbiddenWords: z.array(z.string()).optional(),
     mustIncludeWords: z.array(z.string()).optional(),
@@ -295,6 +314,10 @@ You MUST ONLY generate the following sections and bar counts: {{{structureStr}}}
 - TRACK DNA (active): {{{trackDnaStr}}}
 {{/if}}
 - MERGED DIRECTION (use this as the architectural blueprint): {{{dnaStr}}}
+
+{{#if albumAlreadyUsed}}
+{{{albumAlreadyUsed}}}
+{{/if}}
 
 **CONTEXT:**
 - Vibe: {{vibeStr}}

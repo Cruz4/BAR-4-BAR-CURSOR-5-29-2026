@@ -1,0 +1,420 @@
+'use client';
+
+/**
+ * Artist Home — master lacquer sheet.
+ * Living Inkfilm field + die-cut module plates. No glassmorphism card grid.
+ */
+
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { ChevronLeft, Crown, Dna, Flame, PenLine, Settings2, Share2, Trophy, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
+import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
+import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
+import { AlbumCoverCollage } from '@/components/gamification/album-cover-collage';
+import { rankBadgeClass, rankIdFromLabel } from '@/lib/gamification/badge-styles';
+import { FriendButton } from '@/components/profile/friend-button';
+import {
+  dieCutClip,
+  pressTokens,
+  pressingCssVars,
+  pressingTypeClass,
+  type PressingTokens,
+} from '@/lib/profile/pressing';
+import { LivingPressField } from '@/components/profile/living-press-field';
+import type { ArtistHomeConfig } from '@/lib/profile/modules';
+import {
+  AlbumRoomsModule,
+  BarOfWeekModule,
+  DnaStripModule,
+  DropShelfModule,
+  FriendsModule,
+  GuestbookModule,
+  NowPlayingModule,
+  ProofWallModule,
+  RhymeFingerprintModule,
+  WallModule,
+  type ModuleContext,
+} from '@/components/profile/profile-modules';
+import { useAuth } from '@/hooks/use-auth';
+import { fetchGamificationSummary } from '@/lib/gamification-client';
+import { trackGuestSignupCta } from '@/lib/guest-funnel-client';
+import { ProfileSocialLinks } from '@/components/profile/profile-social-links';
+
+type ArtistHomeProps = {
+  profile: PublicProfileData;
+  config: ArtistHomeConfig;
+  isOwner: boolean;
+};
+
+const MODULE_RENDERERS: Record<string, React.ComponentType<{ ctx: ModuleContext }>> = {
+  nowPlaying: NowPlayingModule,
+  barOfWeek: BarOfWeekModule,
+  dnaStrip: DnaStripModule,
+  rhymeFingerprint: RhymeFingerprintModule,
+  albumRooms: AlbumRoomsModule,
+  dropShelf: DropShelfModule,
+  proofWall: ProofWallModule,
+  wall: WallModule,
+  friends: FriendsModule,
+  guestbook: GuestbookModule,
+};
+
+export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
+  const { user } = useAuth();
+  const [shareOpen, setShareOpen] = useState(false);
+  const [dropsOpen, setDropsOpen] = useState(false);
+  const [viewerSlug, setViewerSlug] = useState<string | undefined>(undefined);
+  const [tokens, setTokens] = useState<PressingTokens>(() => pressTokens(config.theme));
+
+  useEffect(() => {
+    setTokens(pressTokens(config.theme));
+  }, [config.theme]);
+
+  const onTokensChange = useCallback((next: PressingTokens) => {
+    setTokens(next);
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (isOwner) {
+      setViewerSlug(profile.slug);
+      return;
+    }
+    void fetchGamificationSummary(user.id).then((summary) => {
+      if (summary?.publicProfile && summary.profileSlug) setViewerSlug(summary.profileSlug);
+    });
+  }, [user?.id, isOwner, profile.slug]);
+
+  const cssVars = useMemo(() => pressingCssVars(tokens), [tokens]);
+  const rankId = profile.rankId ?? rankIdFromLabel(profile.rankLabel);
+  const liveDnaDrops = profile.liveDnaDrops || [];
+
+  const useCustomPhoto =
+    profile.profilePhotoMode === 'custom' &&
+    typeof profile.profilePhotoUrl === 'string' &&
+    profile.profilePhotoUrl.trim().length > 0;
+
+  const profileUrl =
+    typeof window !== 'undefined' && profile.slug
+      ? `${window.location.origin}/profile/${profile.slug}`
+      : undefined;
+
+  const plateChrome = useMemo(
+    () => ({
+      serial: tokens.plateSerial,
+      cutStyle: tokens.cutStyle,
+      ghostText: tokens.ghostText,
+    }),
+    [tokens.plateSerial, tokens.cutStyle, tokens.ghostText]
+  );
+
+  const enabledModules = useMemo(() => {
+    const base = config.modules.filter((m) => m.enabled);
+    if (!liveDnaDrops.length) return base;
+    if (base.some((m) => m.id === 'dropShelf')) return base;
+    const shelf =
+      config.modules.find((m) => m.id === 'dropShelf') ||
+      ({ id: 'dropShelf' as const, enabled: true, size: 'M' as const });
+    const insertAt = base.findIndex((m) => m.id === 'albumRooms');
+    if (insertAt >= 0) {
+      const next = [...base];
+      next.splice(insertAt + 1, 0, { ...shelf, enabled: true });
+      return next;
+    }
+    return [...base, { ...shelf, enabled: true }];
+  }, [config.modules, liveDnaDrops.length]);
+
+  return (
+    <div
+      className="relative min-h-screen overflow-x-hidden pb-16 text-[var(--ph-text)]"
+      style={{ ...(cssVars as React.CSSProperties), backgroundColor: 'var(--ph-bg)' }}
+    >
+      <style>{`
+        @keyframes ph-hero-breath {
+          0%, 100% { opacity: 0.4; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.035); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ph-hero-breath { animation: none !important; }
+        }
+      `}</style>
+
+      <LivingPressField config={config.theme} onTokensChange={onTokensChange} />
+
+      <div className="relative z-10 mx-auto w-full max-w-[1200px] px-4 pt-6 sm:px-6 sm:pt-10">
+        {/* Sheet header */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-dashed border-[var(--ph-border)] pb-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-[var(--ph-muted)] transition-colors hover:text-[var(--ph-accent)]"
+            >
+              <ChevronLeft className="h-4 w-4" /> Bar 4 Bar Studio
+            </Link>
+            <span className="hidden font-code text-[9px] uppercase tracking-[0.3em] text-[var(--ph-muted)] sm:inline">
+              {tokens.plateSerial}
+              {tokens.autoDrift ? ' · restless' : ''}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {isOwner ? (
+              <>
+                <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
+                  <Link href="/profile/customize">
+                    <Settings2 className="h-3.5 w-3.5" /> Edit Public Page
+                  </Link>
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-9 gap-1.5 bg-[var(--ph-accent)] font-bold uppercase text-black hover:opacity-90"
+                  onClick={() => setShareOpen(true)}
+                >
+                  <Share2 className="h-3.5 w-3.5" /> Share
+                </Button>
+              </>
+            ) : (
+              profile.userId && (
+                <FriendButton
+                  targetUserId={profile.userId}
+                  targetName={profile.displayName}
+                  targetSlug={profile.slug}
+                  viewerSlug={viewerSlug}
+                />
+              )
+            )}
+          </div>
+        </div>
+
+        {/* Hero — original scale */}
+        <motion.section
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mt-8 grid gap-8 lg:grid-cols-12 lg:items-end"
+        >
+          <div className="space-y-5 lg:col-span-7">
+            {config.featured.tagline && (
+              <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-[var(--ph-accent)]">
+                {config.featured.tagline}
+              </p>
+            )}
+            <h1
+              className={cn(
+                'text-[clamp(2.4rem,7.5vw,5rem)] font-bold leading-[0.94] text-[var(--ph-text)]',
+                pressingTypeClass(tokens.typeVariant)
+              )}
+            >
+              {profile.displayName}
+            </h1>
+            <div
+              className={cn(
+                'inline-flex items-center gap-2 border px-4 py-2',
+                rankBadgeClass(rankId)
+              )}
+            >
+              <Crown className="h-4 w-4" />
+              <span className="text-xs font-bold uppercase tracking-[0.25em]">{profile.rankLabel}</span>
+            </div>
+            {config.featured.bio && (
+              <p className="max-w-xl text-sm leading-relaxed text-[var(--ph-muted)]">{config.featured.bio}</p>
+            )}
+
+            {liveDnaDrops.length > 0 && (
+              liveDnaDrops.length === 1 ? (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
+                >
+                  <Link href={`/share/${liveDnaDrops[0].shareId}`}>
+                    <Dna className="h-3.5 w-3.5" />
+                    1 DNA drop live
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
+                  onClick={() => setDropsOpen(true)}
+                >
+                  <Dna className="h-3.5 w-3.5" />
+                  {liveDnaDrops.length} DNA drops live
+                </Button>
+              )
+            )}
+
+            <div className="grid max-w-md grid-cols-3 gap-1.5">
+              {[
+                { label: 'Total XP', value: profile.xp.toLocaleString(), icon: Zap },
+                { label: 'Live streak', value: `${profile.currentStreak}d`, icon: Flame },
+                { label: 'Best streak', value: `${profile.longestStreak}d`, icon: Trophy },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="flex flex-col items-center justify-center border border-[var(--ph-border)] bg-[var(--ph-plate)] px-1.5 py-2 text-center"
+                >
+                  <stat.icon className="mb-0.5 h-3 w-3 text-[var(--ph-accent)]" />
+                  <p className="font-headline text-sm leading-none text-[var(--ph-text)] tabular-nums">
+                    {stat.value}
+                  </p>
+                  <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-[var(--ph-muted)]">
+                    {stat.label}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-center lg:col-span-5 lg:justify-end">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.55, delay: 0.08 }}
+              className="relative w-full max-w-sm"
+            >
+              {tokens.alive && (
+                <div
+                  aria-hidden
+                  className="ph-hero-breath pointer-events-none absolute -inset-5"
+                  style={{
+                    background: `radial-gradient(circle, hsl(${tokens.hue} 70% 60% / 0.2), transparent 70%)`,
+                    animation: `ph-hero-breath var(--ph-breath) ease-in-out infinite`,
+                  }}
+                />
+              )}
+              <div
+                className="absolute -inset-3 opacity-60 blur-xl"
+                style={{
+                  background: `linear-gradient(135deg, var(--ph-accent-soft), var(--ph-accent2-soft))`,
+                }}
+              />
+              <div
+                className="relative aspect-square w-full overflow-hidden border border-[var(--ph-border)] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+                style={{ clipPath: dieCutClip(((tokens.cutStyle + 1) % 6) as 0 | 1 | 2 | 3 | 4 | 5) }}
+              >
+                {useCustomPhoto ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profile.profilePhotoUrl!} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <AlbumCoverCollage
+                    urls={profile.albumCoverUrls || []}
+                    displayName={profile.displayName}
+                    className="h-full w-full"
+                  />
+                )}
+              </div>
+              <ProfileSocialLinks socials={config.featured.socials} className="mt-3" />
+            </motion.div>
+          </div>
+        </motion.section>
+
+        {/* Module deck — original width, masonry so S/M don't leave holes */}
+        <div className="mt-12 columns-1 gap-5 lg:columns-2 lg:gap-5">
+          {enabledModules.map((setting, i) => {
+            const Renderer = MODULE_RENDERERS[setting.id];
+            if (!Renderer) return null;
+            const ctx: ModuleContext = {
+              profileUserId: profile.userId || '',
+              profileName: profile.displayName,
+              profileSlug: profile.slug,
+              isOwner,
+              viewerSlug,
+              featured: config.featured,
+              badges: profile.badges,
+              liveDnaDrops,
+              plate: plateChrome,
+              moduleIndex: i,
+            };
+            const fullBleed = setting.size === 'L';
+            return (
+              <motion.div
+                key={setting.id}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.4, delay: Math.min(i * 0.04, 0.2) }}
+                className={cn(
+                  'mb-5 break-inside-avoid',
+                  fullBleed && 'lg:[column-span:all]'
+                )}
+              >
+                <Renderer ctx={ctx} />
+              </motion.div>
+            );
+          })}
+        </div>
+
+        <footer className="mt-16 flex flex-col items-center gap-3 border-t border-dashed border-[var(--ph-border)] pt-8 text-center">
+          <p className="font-code text-[9px] uppercase tracking-[0.35em] text-[var(--ph-muted)]">
+            Written in Bar 4 Bar · {tokens.plateSerial}
+          </p>
+          {!user && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 gap-1.5 border-[var(--ph-border)] font-bold uppercase"
+              asChild
+            >
+              <Link href="/try?src=profile" onClick={() => trackGuestSignupCta('artist_home')}>
+                <PenLine className="h-3.5 w-3.5" /> Write your first bar free
+              </Link>
+            </Button>
+          )}
+        </footer>
+      </div>
+
+      {isOwner && profileUrl && (
+        <ProfileShareDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          profile={{
+            displayName: profile.displayName,
+            rankLabel: profile.rankLabel,
+            profileUrl,
+          }}
+        />
+      )}
+
+      <Dialog open={dropsOpen} onOpenChange={setDropsOpen}>
+        <DialogContent className="max-w-md border-[var(--ph-border)] bg-[hsl(216_28%_7%)] text-[var(--ph-text,#fff)]">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-xl uppercase tracking-tight">
+              Live DNA Drops
+            </DialogTitle>
+          </DialogHeader>
+          <ul className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
+            {liveDnaDrops.map((drop) => (
+              <li key={drop.shareId}>
+                <Link
+                  href={`/share/${drop.shareId}`}
+                  onClick={() => setDropsOpen(false)}
+                  className="flex items-center gap-3 rounded-lg border border-white/10 bg-black/30 px-3 py-3 transition-colors hover:border-[var(--ph-accent,#7dd3fc)]"
+                >
+                  <Dna className="h-4 w-4 shrink-0 text-[var(--ph-accent,#7dd3fc)]" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold">{drop.title}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
+                      {drop.type === 'album' ? 'Album DNA' : 'Track DNA'}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

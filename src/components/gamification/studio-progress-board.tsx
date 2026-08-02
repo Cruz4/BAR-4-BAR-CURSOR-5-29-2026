@@ -91,11 +91,7 @@ export function StudioProgressBoard() {
   );
 
   if (!user || loading) {
-    return (
-      <div className="flex justify-center py-24">
-        <StudioLoader />
-      </div>
-    );
+    return <StudioLoader size="lg" fullscreen />;
   }
 
   const rank = rankFromXp(summary.xp, isPro);

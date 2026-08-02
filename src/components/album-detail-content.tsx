@@ -4,6 +4,7 @@ import React, { useState, useTransition, useEffect, useContext, useMemo } from '
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { StudioLoader } from '@/components/studio-loader';
 import type { Album, Track, Direction } from '@/lib/types';
 import {
   Card,
@@ -754,7 +755,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
     }
   }, [user?.subscriptionStatus, user?.proFeaturePreviewExpiresAt, user?.trialStartedAt]);
 
-  if (loading || !album) return <div className="flex h-screen items-center justify-center"><Loader className="animate-spin h-8 w-8 text-primary" /></div>;
+  if (loading || !album) return <StudioLoader size="lg" fullscreen />;
 
   return (
     <TooltipProvider>

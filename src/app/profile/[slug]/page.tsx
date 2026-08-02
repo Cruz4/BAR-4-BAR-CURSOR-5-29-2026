@@ -3,16 +3,19 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { StudioLoader } from '@/components/studio-loader';
-import { PublicProfileShowcase, type PublicProfileData } from '@/components/profile/public-profile-showcase';
+import { ArtistHome } from '@/components/profile/artist-home';
+import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
 import { trackShareCardEvent } from '@/lib/gamification-client';
 import { getAchievement } from '@/lib/gamification/achievements';
 import type { AchievementDef } from '@/lib/gamification/achievements';
+import { normalizeArtistHomeConfig, type ArtistHomeConfig } from '@/lib/profile/modules';
 import { useAuth } from '@/hooks/use-auth';
 
 export default function PublicProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const { user } = useAuth();
   const [slug, setSlug] = useState<string | null>(null);
   const [profile, setProfile] = useState<PublicProfileData | null>(null);
+  const [config, setConfig] = useState<ArtistHomeConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -48,8 +51,21 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
           userId: data.userId,
           profilePhotoMode: data.profilePhotoMode === 'custom' ? 'custom' : 'collage',
           profilePhotoUrl: data.profilePhotoUrl || null,
+          liveDnaDrops: Array.isArray(data.liveDnaDrops)
+            ? data.liveDnaDrops
+                .filter(
+                  (d: { shareId?: string }) =>
+                    typeof d?.shareId === 'string' && d.shareId.trim().length > 0
+                )
+                .map((d: { shareId: string; title?: string; type?: string }) => ({
+                  shareId: d.shareId,
+                  title: typeof d.title === 'string' && d.title.trim() ? d.title : 'Untitled drop',
+                  type: d.type === 'album' ? 'album' : 'track',
+                }))
+            : [],
           slug,
         });
+        setConfig(normalizeArtistHomeConfig(data.artistHome));
         void trackShareCardEvent('share_card_opened', { slug });
       } finally {
         setLoading(false);
@@ -60,13 +76,15 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
 
   if (loading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <StudioLoader />
-      </div>
+      <StudioLoader
+        size="lg"
+        fullscreen
+        className="!bg-[hsl(216_28%_5%)]"
+      />
     );
   }
 
-  if (error || !profile) {
+  if (error || !profile || !config) {
     return (
       <div className="container mx-auto max-w-lg py-20 px-4 text-center space-y-4">
         <p className="text-muted-foreground">This public profile is not available.</p>
@@ -79,21 +97,5 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
 
   const isOwner = Boolean(user?.id && profile.userId && user.id === profile.userId);
 
-  return (
-    <PublicProfileShowcase
-      profile={profile}
-      isOwner={isOwner}
-      onProfilePhotoChange={(next) => {
-        setProfile((prev) =>
-          prev
-            ? {
-                ...prev,
-                profilePhotoMode: next.profilePhotoMode,
-                profilePhotoUrl: next.profilePhotoUrl ?? null,
-              }
-            : prev
-        );
-      }}
-    />
-  );
+  return <ArtistHome profile={profile} config={config} isOwner={isOwner} />;
 }

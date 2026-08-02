@@ -121,11 +121,7 @@ export function InviteGateGuard({ children }: { children: React.ReactNode }) {
   const exempt = isInviteGateExemptPath(pathname);
 
   if (state.checking || (authLoading && state.gateEnabled && !state.unlocked && !isAdmin)) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#030712]">
-        <StudioLoader size="lg" />
-      </div>
-    );
+    return <StudioLoader size="lg" fullscreen className="bg-[#030712]" />;
   }
 
   if (state.gateEnabled && !state.unlocked && !isAdmin && !exempt) {

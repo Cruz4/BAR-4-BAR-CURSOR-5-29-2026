@@ -123,6 +123,80 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Artist Home wall/feed posts — public read, owner writes
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 1000
+        && (!('embedUrl' in request.resource.data)
+          || (request.resource.data.embedUrl is string
+            && request.resource.data.embedUrl.size() <= 500));
+      allow update: if request.auth != null
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if request.auth != null
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      match /likes/{likerId} {
+        allow read: if true;
+        allow create, delete: if request.auth != null && request.auth.uid == likerId;
+      }
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth != null
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 500;
+        allow delete: if request.auth != null
+          && (resource.data.authorId == request.auth.uid
+            || get(/databases/$(database)/documents/posts/$(postId)).data.ownerId == request.auth.uid
+            || isAdmin());
+      }
+    }
+
+    // Friend graph — accepted friendships are public (friends list on profile),
+    // pending requests visible only to the two participants.
+    // Split get/list so list queries with array-contains + status filters are provable.
+    match /friendships/{pairId} {
+      allow get: if resource.data.status == 'accepted'
+        || (request.auth != null && request.auth.uid in resource.data.uids);
+      allow list: if resource.data.status == 'accepted'
+        || (request.auth != null && request.auth.uid in resource.data.uids);
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAll(['uids', 'requestedBy', 'status', 'profiles', 'createdAt'])
+        && request.resource.data.uids is list
+        && request.resource.data.uids.size() == 2
+        && request.auth.uid in request.resource.data.uids
+        && request.resource.data.requestedBy == request.auth.uid
+        && request.resource.data.uids[0] != request.resource.data.uids[1]
+        && request.resource.data.status == 'pending';
+      allow update: if request.auth != null
+        && request.auth.uid in resource.data.uids
+        && request.auth.uid != resource.data.requestedBy
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'accepted'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'respondedAt']);
+      allow delete: if request.auth != null
+        && (request.auth.uid in resource.data.uids || isAdmin());
+    }
+
+    // Profile guestbook — one line per visitor (doc id == author uid);
+    // profile owner can moderate (delete)
+    match /guestbooks/{ownerUid}/entries/{authorUid} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && request.auth.uid == authorUid
+        && request.auth.uid != ownerUid
+        && request.resource.data.authorId == authorUid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 240;
+      allow delete: if request.auth != null
+        && (request.auth.uid == authorUid || request.auth.uid == ownerUid || isAdmin());
+    }
+
     match /leaderboard_weekly/{weekId} {
       allow read: if true;
       allow write: if false;

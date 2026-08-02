@@ -193,11 +193,7 @@ export default function LeaderboardPage() {
   }, [user]);
 
   if (loading) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <StudioLoader />
-      </div>
-    );
+    return <StudioLoader size="lg" fullscreen />;
   }
 
   return (
@@ -316,7 +312,8 @@ export default function LeaderboardPage() {
         </Tabs>
 
         <p className="text-[10px] text-orange-200/35 text-center font-code">
-          Appear by turning on Show on leaderboard in Studio Progress → Sharing &amp; visibility. Names link to public profiles when enabled.
+          Appear by turning on Show on leaderboard in Studio Progress → Sharing, or the Artist Home dock on The Vault.
+          Names link to Artist Home when that profile is live.
         </p>
       </div>
     </div>

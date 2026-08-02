@@ -196,7 +196,15 @@ const FAQS = [
     },
     {
       q: "What shows on the leaderboard and public profile?",
-      a: "The weekly leaderboard shows your display name, rank, XP, bars written (7 days), streak, and tracks completed — never lyrics or vault content. New artists start private: turn on Show on leaderboard in Studio Progress → Sharing & visibility to appear. A public profile page is also off by default and only shares rank, streak, badges, and album cover collage when you enable it."
+      a: "The weekly leaderboard shows your display name, rank, XP, bars written (7 days), streak, and tracks completed — never lyrics or vault content. New artists start private: turn on Show on leaderboard in Studio Progress → Sharing & visibility (or the Artist Home dock on The Vault). Artist Home is also off by default; when live it can show your modules, social links, Album Rooms, live DNA Drops, friends, and wall — still never private lyrics unless you publish a DNA Drop."
+    },
+    {
+      q: "What is Artist Home and Edit Public Page?",
+      a: "Artist Home is your public page at /profile/your-slug. Edit Public Page (Vault dock or Studio Progress → Sharing) is where you seed the living skin, set bio/links, pick Album Rooms, and arrange modules. Live DNA Drops appear automatically while a share link is online."
+    },
+    {
+      q: "What is The Block?",
+      a: "The Block (/feed) is your friends feed — wall posts from people you friend, plus incoming friend requests. From The Vault, open The Block next to Artist Home (badge shows new requests/posts). Search artist names to send invites, or copy your referral link for people not on Bar 4 Bar yet."
     },
     {
       q: "What is included in a DNA Drop?",

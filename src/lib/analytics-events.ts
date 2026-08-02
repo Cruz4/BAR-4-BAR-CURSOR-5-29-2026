@@ -20,6 +20,11 @@ export const ANALYTICS_EVENTS = {
   SHARE_CARD_OPENED: 'share_card_opened',
   LEADERBOARD_VIEW: 'leaderboard_view',
   USER_ACTIVATED: 'user_activated',
+  // Artist Home social surfaces
+  PROFILE_POST_CREATED: 'profile_post_created',
+  PROFILE_FRIEND_REQUEST: 'profile_friend_request',
+  PROFILE_FRIEND_ACCEPT: 'profile_friend_accept',
+  PROFILE_GUESTBOOK_SIGNED: 'profile_guestbook_signed',
 } as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS];

@@ -156,12 +156,7 @@ export default function SharedProjectPage() {
     };
 
     if (loading) {
-        return (
-            <div className="h-screen flex flex-col items-center justify-center">
-                <StudioLoader size="lg" />
-                <p className="mt-4 text-xs font-code uppercase animate-pulse">Accessing Studio Vault...</p>
-            </div>
-        );
+        return <StudioLoader size="lg" fullscreen message="Accessing Studio Vault..." />;
     }
 
     if (!share || !project) {

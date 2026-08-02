@@ -57,7 +57,7 @@ export async function sendWelcomeEmail(
         <li><strong style="color:#fff">${previewHours}-hour Pro feature preview</strong> — export, vault saves, Performance, Freestyle &amp; DNA Drop</li>
         <li>Demo catalog stays at <strong style="color:#fff">${FREE_ALBUM_LIMIT} album / ${FREE_TRACK_LIMIT} tracks</strong> until you Go Pro</li>
       </ul>
-      <p style="margin:0 0 14px">If you signed up with email, confirm your address via the Firebase verification link so Ink and preview unlock fully.</p>
+      <p style="margin:0 0 14px">If you signed up with email, confirm your address with the verification email from <strong style="color:#fff">noreply@bar4bar.ink</strong> so Ink and preview unlock fully.</p>
     `,
     ctaLabel: 'Open your vault',
     ctaUrl: studioEmailCtaUrl('/'),

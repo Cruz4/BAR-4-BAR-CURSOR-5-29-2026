@@ -523,7 +523,7 @@ function RelayWizardContent() {
 
 export default function RelayPage() {
     return (
-        <Suspense fallback={<div className="h-screen w-full flex items-center justify-center"><StudioLoader size="lg" /></div>}>
+        <Suspense fallback={<StudioLoader size="lg" fullscreen />}>
             <RelayWizardContent />
         </Suspense>
     );

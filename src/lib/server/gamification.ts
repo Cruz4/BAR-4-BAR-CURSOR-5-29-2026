@@ -320,10 +320,14 @@ async function syncPublicProfile(
     profilePhotoMode === 'custom' && typeof summary.profilePhotoUrl === 'string'
       ? summary.profilePhotoUrl
       : null;
+  // Artist Home skin/config — re-mirrored so slug renames never lose it.
+  const artistHomeSnap = await db.doc(`users/${uid}/gamification/artistHome`).get();
+  const artistHome = artistHomeSnap.exists ? artistHomeSnap.data() : null;
   await db.doc(`publicProfiles/${summary.profileSlug}`).set(
     {
       userId: uid,
       displayName,
+      displayNameLower: displayName.trim().toLowerCase(),
       rankId: summary.rankId,
       xp: summary.xp,
       currentStreak: summary.currentStreak,
@@ -332,6 +336,7 @@ async function syncPublicProfile(
       albumCoverUrls,
       profilePhotoMode,
       profilePhotoUrl,
+      ...(artistHome ? { artistHome } : {}),
       updatedAt: new Date().toISOString(),
     },
     { merge: true }
@@ -896,28 +901,218 @@ export async function getPublicProfile(slug: string) {
   if (!snap.exists) return null;
   const data = snap.data()!;
   const userId = String(data.userId || '');
-  const albumCoverUrls = userId ? await getPublicAlbumCoverUrls(userId) : [];
-  return { ...data, albumCoverUrls };
+  if (!userId) return { ...data, albumCoverUrls: [], liveDnaDrops: [] };
+
+  const [albumMeta, liveDnaDrops] = await Promise.all([
+    getPublicAlbumMeta(userId),
+    getLiveDnaDropsForUser(userId),
+  ]);
+
+  const artistHome = enrichAlbumRoomsWithLiveCovers(data.artistHome, albumMeta);
+
+  return {
+    ...data,
+    artistHome,
+    albumCoverUrls: albumMeta.coverUrls,
+    liveDnaDrops,
+  };
+}
+
+type PublicAlbumMeta = {
+  coverUrls: string[];
+  coverByAlbumId: Map<string, string>;
+  coverByTitle: Map<string, string>;
+};
+
+function enrichAlbumRoomsWithLiveCovers(artistHome: unknown, meta: PublicAlbumMeta) {
+  if (!artistHome || typeof artistHome !== 'object') return artistHome;
+  const home = artistHome as Record<string, unknown>;
+  const featured = home.featured;
+  if (!featured || typeof featured !== 'object') return artistHome;
+  const rooms = (featured as { albumRooms?: unknown }).albumRooms;
+  if (!Array.isArray(rooms) || !rooms.length) return artistHome;
+
+  const albumRooms = rooms.map((room) => {
+    if (!room || typeof room !== 'object') return room;
+    const r = room as Record<string, unknown>;
+    const custom =
+      typeof r.roomImageUrl === 'string' && r.roomImageUrl.trim() ? r.roomImageUrl.trim() : '';
+    // Custom door banner wins — don't replace with the square vinyl cover.
+    if (custom) {
+      const { coverArtUrl: _drop, ...rest } = r;
+      return { ...rest, roomImageUrl: custom };
+    }
+    const albumId = typeof r.albumId === 'string' ? r.albumId : '';
+    const title = typeof r.title === 'string' ? r.title.trim() : '';
+    const live =
+      (albumId && meta.coverByAlbumId.get(albumId)) ||
+      (title && meta.coverByTitle.get(title)) ||
+      undefined;
+    if (live) return { ...r, coverArtUrl: live };
+    const { coverArtUrl: _drop, ...rest } = r;
+    return rest;
+  });
+
+  return {
+    ...home,
+    featured: {
+      ...(featured as object),
+      albumRooms,
+    },
+  };
+}
+
+export type LiveDnaDropSummary = {
+  shareId: string;
+  title: string;
+  type: 'album' | 'track';
+};
+
+/** Active public DNA Drops for a user (shares collection = live). */
+export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDropSummary[]> {
+  if (!userId) return [];
+  const db = await getDb();
+  const snap = await db.collection('shares').where('ownerId', '==', userId).get();
+  const drops = snap.docs
+    .map((doc) => {
+      const data = doc.data();
+      const type = data.type === 'album' ? ('album' as const) : ('track' as const);
+      const title =
+        typeof data?.data?.title === 'string' && data.data.title.trim()
+          ? data.data.title.trim()
+          : type === 'album'
+            ? 'Untitled album'
+            : 'Untitled track';
+      const updatedAt =
+        typeof data.updatedAt === 'string'
+          ? data.updatedAt
+          : typeof data.createdAt === 'string'
+            ? data.createdAt
+            : '';
+      return {
+        shareId: doc.id,
+        title: title.slice(0, 120),
+        type,
+        updatedAt,
+      };
+    })
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, 24)
+    .map(({ shareId, title, type }) => ({ shareId, title, type }));
+  return drops;
+}
+
+async function getPublicAlbumMeta(userId: string): Promise<PublicAlbumMeta> {
+  const db = await getDb();
+  const albumsSnap = await db.collection(`users/${userId}/albums`).get();
+  const coverByAlbumId = new Map<string, string>();
+  const coverByTitle = new Map<string, string>();
+  const dated: Array<{ url: string; createdAt: string }> = [];
+
+  for (const doc of albumsSnap.docs) {
+    if (doc.id === 'unassigned') continue;
+    const data = doc.data();
+    const url = typeof data.coverArtUrl === 'string' ? data.coverArtUrl.trim() : '';
+    if (!url) continue;
+    coverByAlbumId.set(doc.id, url);
+    const title = typeof data.title === 'string' ? data.title.trim() : '';
+    if (title) coverByTitle.set(title, url);
+    dated.push({
+      url,
+      createdAt: typeof data.createdAt === 'string' ? data.createdAt : '',
+    });
+  }
+
+  const coverUrls = dated
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((entry) => entry.url);
+
+  return { coverUrls, coverByAlbumId, coverByTitle };
 }
 
 export async function getPublicAlbumCoverUrls(userId: string): Promise<string[]> {
-  const db = await getDb();
-  const albumsSnap = await db.collection(`users/${userId}/albums`).get();
+  return (await getPublicAlbumMeta(userId)).coverUrls;
+}
 
-  return albumsSnap.docs
-    .filter((doc) => doc.id !== 'unassigned')
-    .map((doc) => {
-      const data = doc.data();
-      const url = typeof data.coverArtUrl === 'string' ? data.coverArtUrl.trim() : '';
-      if (!url) return null;
-      return {
-        url,
-        createdAt: typeof data.createdAt === 'string' ? data.createdAt : '',
-      };
-    })
-    .filter((entry): entry is { url: string; createdAt: string } => entry !== null)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .map((entry) => entry.url);
+export type PublicArtistSearchHit = {
+  userId: string;
+  displayName: string;
+  slug: string;
+  rankId?: string;
+  xp?: number;
+};
+
+/** Find live public Artist Homes by display name (prefix) or exact slug. */
+export async function searchPublicArtists(
+  rawQuery: string,
+  opts: { limit?: number; excludeUserId?: string } = {}
+): Promise<PublicArtistSearchHit[]> {
+  const needle = rawQuery.trim().toLowerCase().slice(0, 48);
+  if (needle.length < 2) return [];
+  const limit = Math.min(Math.max(opts.limit ?? 12, 1), 24);
+  const db = await getDb();
+  const byUserId = new Map<string, PublicArtistSearchHit>();
+
+  const pushDoc = (slug: string, data: Record<string, unknown>) => {
+    const userId = typeof data.userId === 'string' ? data.userId : '';
+    if (!userId || (opts.excludeUserId && userId === opts.excludeUserId)) return;
+    if (byUserId.has(userId)) return;
+    const displayName =
+      typeof data.displayName === 'string' && data.displayName.trim()
+        ? data.displayName.trim()
+        : slug;
+    byUserId.set(userId, {
+      userId,
+      displayName,
+      slug,
+      rankId: typeof data.rankId === 'string' ? data.rankId : undefined,
+      xp: typeof data.xp === 'number' ? data.xp : undefined,
+    });
+  };
+
+  // Exact slug hit (profile URLs / typed slugs).
+  const slugCandidate = needle.replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '');
+  if (slugCandidate) {
+    const exact = await db.doc(`publicProfiles/${slugCandidate}`).get();
+    if (exact.exists) pushDoc(exact.id, exact.data() as Record<string, unknown>);
+  }
+
+  // Prefix on displayNameLower (written on every public-profile sync).
+  try {
+    const prefixSnap = await db
+      .collection('publicProfiles')
+      .where('displayNameLower', '>=', needle)
+      .where('displayNameLower', '<=', `${needle}\uf8ff`)
+      .limit(limit)
+      .get();
+    for (const doc of prefixSnap.docs) pushDoc(doc.id, doc.data() as Record<string, unknown>);
+  } catch (err) {
+    console.warn('[searchPublicArtists] prefix query failed', err);
+  }
+
+  // Legacy / contains fallback for profiles missing displayNameLower.
+  if (byUserId.size < limit) {
+    try {
+      const recent = await db
+        .collection('publicProfiles')
+        .orderBy('updatedAt', 'desc')
+        .limit(200)
+        .get();
+      for (const doc of recent.docs) {
+        if (byUserId.size >= limit) break;
+        const data = doc.data() as Record<string, unknown>;
+        const name = String(data.displayName || '').toLowerCase();
+        const lower = String(data.displayNameLower || '');
+        if (name.includes(needle) || lower.includes(needle) || doc.id.includes(needle)) {
+          pushDoc(doc.id, data);
+        }
+      }
+    } catch (err) {
+      console.warn('[searchPublicArtists] fallback scan failed', err);
+    }
+  }
+
+  return Array.from(byUserId.values()).slice(0, limit);
 }
 
 export { countNonEmptyBars, slugify };

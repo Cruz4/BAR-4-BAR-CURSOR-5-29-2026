@@ -16,6 +16,7 @@ import { computeDraftInkCostFromRates } from '@/lib/studio-costs';
 import { getStudioCosts } from '@/lib/server/studio-costs';
 import type { AiSecuredInput } from '@/lib/ai-secured';
 import { sanitizeLinesBannedWords, sanitizeSectionLinesRepetition } from '@/lib/server/lyric-guardrails';
+import { lineEndWord } from '@/lib/lyrics-analysis';
 
 const StyleProfileSchema = z.object({
   analysis: z.string().describe('A concise summary of the lyrical style analysis.'),
@@ -55,6 +56,9 @@ const GenerateDraftInputSchema = z.object({
   stylePreset: z.string().optional(),
   customStyle: z.string().optional(),
   customInstructions: z.string().optional(),
+  albumAlreadyUsed: z.string().optional(),
+  albumRepetitionContext: z.array(z.string()).optional(),
+  albumAvoidEndWords: z.array(z.string()).optional(),
   negativePrompt: z.string().optional(),
   forbiddenWords: z.array(z.string()).optional(),
   mustIncludeWords: z.array(z.string()).optional(),
@@ -150,6 +154,10 @@ DIRECTION (MASTER ARCHITECTURE — merged from active Inherit Album / Track DNA 
 - Truth: {{mergedDirection.message_truth}}
 - Palette: {{mergedDirection.tone_palette}}
 
+{{#if albumAlreadyUsed}}
+{{{albumAlreadyUsed}}}
+{{/if}}
+
 VIBE:
 - Genre: {{vibe.genre}} | BPM: {{vibe.tempoBPM}}
 - Instrumentation: {{vibe.instrumentation}}
@@ -191,12 +199,25 @@ const generateDraftFlow = ai.defineFlow(
 
     // Hard guardrail enforcement on every generated line.
     const forbidden = input.forbiddenWords ?? [];
+    const albumSeed = (input.albumRepetitionContext ?? []).map((l) => l.trim()).filter(Boolean);
+    const avoidEnds = new Set(
+      (input.albumAvoidEndWords ?? []).map((w) => w.trim().toLowerCase()).filter(Boolean)
+    );
     output.sections = output.sections.map((section) => {
       let lines = section.lines;
       if (forbidden.length > 0) {
         lines = sanitizeLinesBannedWords(lines, forbidden).lines;
       }
-      lines = sanitizeSectionLinesRepetition(lines, { sectionName: section.name }).lines;
+      lines = sanitizeSectionLinesRepetition(lines, {
+        sectionName: section.name,
+        seedContext: albumSeed,
+      }).lines;
+      if (avoidEnds.size > 0) {
+        lines = lines.filter((line) => {
+          const ew = lineEndWord(line);
+          return !ew || !avoidEnds.has(ew.toLowerCase());
+        });
+      }
       return { ...section, lines };
     });
     return output;

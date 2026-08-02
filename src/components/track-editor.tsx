@@ -226,6 +226,7 @@ import {
   formatGuardrailsCsv,
   parseGuardrailsCsv,
 } from '@/lib/co-writer-rules';
+import { buildAlbumAlreadyUsed } from '@/lib/album-already-used';
 import {
   isSystemPreset,
   mergeDnaVaultPresets,
@@ -3551,6 +3552,9 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         const targetLine = section.bars.find((b) => b.idx === barIdx)?.text || '';
         if (mode === 'next') priorLines.push(targetLine);
         else nextLines.unshift(targetLine);
+        const albumUsed = isAlbumDnaActive(track, album)
+          ? buildAlbumAlreadyUsed(album, track.id)
+          : null;
         const res = await lazyGenerateNextLine(
           await withAiAuth({
             userName: user?.displayName,
@@ -3566,6 +3570,9 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
             theme: track.title || album.title || 'Untitled',
             endWith: isIntentsActive(track) ? track.endWith : null,
             mergedDirection: mergeDirection(album.direction, track.direction),
+            albumAlreadyUsed: albumUsed?.promptBlock,
+            albumRepetitionContext: albumUsed?.repetitionContext,
+            albumAvoidEndWords: albumUsed?.avoidEndWords,
             negativePrompt: isGuardrailsActive(track) ? track.guardrails?.negativePrompt : undefined,
             forbiddenWords: isGuardrailsActive(track) ? track.guardrails?.forbiddenWords : undefined,
             mustIncludeWords: isGuardrailsActive(track) ? track.guardrails?.mustIncludeWords : undefined,
@@ -3752,7 +3759,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         </div>
       );
     }
-    return <div className="flex h-screen items-center justify-center"><StudioLoader size="lg" /></div>;
+    return <StudioLoader size="lg" fullscreen />;
   }
 
   return (
@@ -3911,7 +3918,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
 export function TrackEditorContent(props: { trackId: string, albumId: string }) {
     return (
-        <Suspense fallback={<div className="flex h-screen items-center justify-center"><StudioLoader size="lg" /></div>}>
+        <Suspense fallback={<StudioLoader size="lg" fullscreen />}>
             <TrackEditorImplementation {...props} />
         </Suspense>
     )

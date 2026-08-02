@@ -37,6 +37,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { withAiAuth } from '@/lib/ai-client';
 import { useAuth } from '@/hooks/use-auth';
 import { StudioLoader } from './studio-loader';
+import { buildAlbumAlreadyUsed } from '@/lib/album-already-used';
+import { isAlbumDnaActive } from '@/lib/co-writer-rules';
 
 interface CreativeEffectsPanelProps {
   track: Track;
@@ -156,6 +158,9 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
       try {
         const mergedDirection = mergeDirection(album.direction, track.direction);
         const priorLines = activeSection?.bars.map(b => b.text) || [];
+        const albumUsed = isAlbumDnaActive(track, album)
+          ? buildAlbumAlreadyUsed(album, track.id)
+          : null;
 
         const input: CreativeEffectsInput = {
           userId: user?.id,
@@ -167,6 +172,9 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
           sectionContext: { name: activeSection?.type || 'verse', priorLines: priorLines, nextLines: [] },
           editorConstraints: { maxLineLen: 80, rhymePreset: 'none', endWith: endWith || null, startWith: null, mustRhyme: false },
           toolRequest: { tool: selectedTool, inputs: currentToolInputs as any },
+          albumAlreadyUsed: albumUsed?.promptBlock,
+          albumRepetitionContext: albumUsed?.repetitionContext,
+          albumAvoidEndWords: albumUsed?.avoidEndWords,
         };
 
         const result = await lazyRunCreativeEffect(await withAiAuth(input));

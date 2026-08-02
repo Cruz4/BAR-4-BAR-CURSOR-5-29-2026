@@ -83,7 +83,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const isMarketingShell = isLoginPage || isPublicHome;
   const isPerformPage = pathname.endsWith('/perform');
   const isSharePage = pathname.startsWith('/share/');
-  const isPublicProfilePage = pathname.startsWith('/profile/');
+  // /profile/customize is Edit Public Page — an app page, not the public profile
+  const isPublicProfilePage = pathname.startsWith('/profile/') && pathname !== '/profile/customize';
   const isMarketingCapture = pathname.startsWith('/marketing/capture');
   const isSettingsRoute = pathname === '/usage' || pathname.startsWith('/usage/') || pathname === '/admin';
   const showAppHeader =
@@ -101,7 +102,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <AdminAlertListener />
               <ProductAnalytics />
               <TikTokPixel />
-              {isMarketingCapture || isMarketingShell ? null : isSettingsRoute ? (
+              {isMarketingCapture || isMarketingShell || isPublicProfilePage ? null : isSettingsRoute ? (
                 <SettingsControlAtmosphere />
               ) : (
                 <StudioPageBackground />
@@ -145,7 +146,13 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   useChunkLoadRecovery();
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="b4b-theme">
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="dark"
+      enableSystem
+      storageKey="b4b-theme"
+      disableTransitionOnChange
+    >
       <AuthProvider>
         <AppShell>{children}</AppShell>
       </AuthProvider>

@@ -8,11 +8,7 @@ const TrackEditorContent = dynamic(
   () => import('@/components/track-editor').then((m) => m.TrackEditorContent),
   {
     ssr: false,
-    loading: () => (
-      <div className="flex h-screen items-center justify-center">
-        <StudioLoader size="lg" />
-      </div>
-    ),
+    loading: () => <StudioLoader size="lg" fullscreen />,
   }
 );
 

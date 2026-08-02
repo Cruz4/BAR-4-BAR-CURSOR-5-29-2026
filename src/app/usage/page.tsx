@@ -36,6 +36,7 @@ import {
     Coffee,
     LifeBuoy,
 } from 'lucide-react';
+import { StudioLoader } from '@/components/studio-loader';
 import { BUY_ME_COFFEE_URL, SUPPORT_EMAIL, SUPPORT_MAILTO } from '@/lib/support';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
@@ -789,7 +790,7 @@ function UsagePageContent() {
 
 export default function UsagePage() {
   return (
-    <Suspense fallback={<div className="flex h-screen items-center justify-center"><Loader className="animate-spin h-8 w-8 text-primary" /></div>}>
+    <Suspense fallback={<StudioLoader size="lg" fullscreen />}>
       <UsagePageContent />
     </Suspense>
   );

@@ -33,7 +33,7 @@ const MOBILE_SPOTLIGHT_VH_BY_STEP: Record<string, number> = {
   sheet: 0.52,
 };
 /** Sticky/fixed targets — auto-scroll fights the spotlight and causes jitter. */
-const NO_AUTO_SCROLL_STEP_IDS = new Set(['vault-progress']);
+const NO_AUTO_SCROLL_STEP_IDS = new Set(['vault-progress', 'vault-social-dock']);
 /** Tab/panel switches need extra time before the target is visible on phone. */
 const PANEL_SWITCH_STEP_IDS = new Set(['generation', 'dna', 'dna-drop', 'save']);
 

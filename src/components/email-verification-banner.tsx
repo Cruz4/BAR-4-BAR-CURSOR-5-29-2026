@@ -34,7 +34,7 @@ export function EmailVerificationBanner({ className }: { className?: string }) {
       await sendSignupVerificationEmail(firebaseUser);
       toast({
         title: 'Verification email sent',
-        description: 'Check your inbox, then refresh this page after you verify.',
+        description: 'From noreply@bar4bar.ink — check inbox and junk/spam, then Refresh after you verify.',
       });
     } catch (e) {
       toast({
@@ -79,7 +79,8 @@ export function EmailVerificationBanner({ className }: { className?: string }) {
       <p className="text-[10px] sm:text-[11px] font-code text-amber-100/90 flex-grow min-w-0">
         <span className="font-bold uppercase tracking-widest text-amber-300">Verify your email</span>
         {' — '}
-        Your {SIGNUP_INK} welcome Ink and {PRO_FEATURE_PREVIEW_DAYS * 24}-hour Pro preview unlock after you verify (abuse protection — not a failed signup).
+        Check your inbox for the link from noreply@bar4bar.ink (and your junk / spam folder — it often lands there). Your{' '}
+        {SIGNUP_INK} welcome Ink and {PRO_FEATURE_PREVIEW_DAYS * 24}-hour Pro preview unlock after you verify.
       </p>
       <div className="flex gap-2 shrink-0">
         <Button

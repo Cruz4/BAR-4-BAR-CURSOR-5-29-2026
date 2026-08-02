@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LogOut, LayoutDashboard, LayoutGrid, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy, Smartphone, Settings } from 'lucide-react';
+import { LogOut, LayoutDashboard, LayoutGrid, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy, Smartphone, Settings, Users } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -38,6 +38,7 @@ import {
 import { BrandLockup } from '@/components/brand-lockup';
 import { BRAND_ARIA_LABEL } from '@/lib/brand';
 import { StudioThemeControls } from '@/components/studio-theme-controls';
+import { useSocialAlerts } from '@/hooks/use-social-alerts';
 import { isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
 import { getGuestSignupHref, trackGuestSignupCta } from '@/lib/guest-funnel-client';
 import { prepareGuestTrackForSignup } from '@/lib/guest-track-session';
@@ -52,6 +53,7 @@ export function Header() {
   const [guideOpen, setGuideOpen] = useState(false);
   const { isGenerating, generatingMessage } = useUIState();
   const { inkBalance, residencyBalance, trialInkBalance, purchasedBalance } = useUsage();
+  const { total: blockAlerts } = useSocialAlerts();
   const [progress, setProgress] = useState(0);
   const [showPwaInstallMenu, setShowPwaInstallMenu] = useState(false);
 
@@ -295,6 +297,15 @@ export function Header() {
                       <DropdownMenuItem onClick={() => router.push('/')}><LayoutDashboard className="mr-2 h-4 w-4" /><span>Dashboard</span></DropdownMenuItem>
                       <DropdownMenuItem className="md:hidden" onClick={() => setGuideOpen(true)}><HelpCircle className="mr-2 h-4 w-4 text-primary" /><span>Studio Manual</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/studio-progress')}><Trophy className="mr-2 h-4 w-4 text-amber-400" /><span>Studio Progress</span></DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => router.push('/feed')}>
+                        <Users className="mr-2 h-4 w-4 text-emerald-400" />
+                        <span className="flex-1">The Block</span>
+                        {blockAlerts > 0 && (
+                          <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-bold text-black">
+                            {blockAlerts > 99 ? '99+' : blockAlerts}
+                          </span>
+                        )}
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=buy-ink')}><LayoutGrid className="mr-2 h-4 w-4 text-primary" /><span>Ink Store</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=settings')}><Settings className="mr-2 h-4 w-4" /><span>Settings</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=cloud')}><Star className="mr-2 h-4 w-4 text-pink-400" /><span>Studio Tier</span></DropdownMenuItem>

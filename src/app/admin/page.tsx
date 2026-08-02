@@ -549,7 +549,7 @@ export default function AdminPage() {
       }
   };
 
-  if (authLoading || !authReady) return <div className="flex h-screen items-center justify-center"><StudioLoader size="lg" /></div>;
+  if (authLoading || !authReady) return <StudioLoader size="lg" fullscreen />;
   if (!user || user.role !== 'admin') return null;
 
   return (

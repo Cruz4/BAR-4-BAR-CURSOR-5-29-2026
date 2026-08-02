@@ -143,6 +143,7 @@ import {
   coWriterEffectSubtitle,
   coWriterEffectTitle,
 } from '@/lib/co-writer-rules';
+import { buildAlbumAlreadyUsed } from '@/lib/album-already-used';
 import { LockedSaveButton, ProLockBadge, proLockIcon, proLockShell, proLockText } from '@/components/pro-lock';
 import { UpgradeTooltip } from '@/components/upgrade-tooltip';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
@@ -1060,6 +1061,11 @@ export function GenerateSongDraftDialog({
         styleEnabled: hubStyleEnabled,
       });
 
+      const albumUsed =
+        inheritAlbum && album?.direction?.enabled
+          ? buildAlbumAlreadyUsed(album, track.id)
+          : null;
+
       const result = await withAsyncTimeout(
         lazyGenerateSongDraft(
           await withAiAuth({
@@ -1076,6 +1082,9 @@ export function GenerateSongDraftDialog({
             rhymePreset: 'trap-soul',
             constraints: { maxLineLen },
             lyricsAbout: lyricsAbout,
+            albumAlreadyUsed: albumUsed?.promptBlock,
+            albumRepetitionContext: albumUsed?.repetitionContext,
+            albumAvoidEndWords: albumUsed?.avoidEndWords,
             negativePrompt: enableGuardrails ? negativePrompt : undefined,
             forbiddenWords: enableGuardrails
               ? parseGuardrailsCsv(forbiddenWords)
@@ -1472,6 +1481,11 @@ export function GenerateSongDraftDialog({
           hubDirection
         );
 
+        const albumUsed =
+          inheritAlbum && album?.direction?.enabled
+            ? buildAlbumAlreadyUsed(album, track.id)
+            : null;
+
         const result = await withAsyncTimeout(
           lazyGenerateRelayDraft(
             await withAiAuth({
@@ -1492,6 +1506,9 @@ export function GenerateSongDraftDialog({
               albumDirection: inheritAlbum ? album?.direction : undefined,
               trackDirection: inheritTrack ? hubDirection : undefined,
               specialInstructions: lyricsAbout,
+              albumAlreadyUsed: albumUsed?.promptBlock,
+              albumRepetitionContext: albumUsed?.repetitionContext,
+              albumAvoidEndWords: albumUsed?.avoidEndWords,
               negativePrompt: enableGuardrails ? negativePrompt : undefined,
               forbiddenWords: [
                 ...(enableGuardrails ? parseGuardrailsCsv(forbiddenWords) : []),

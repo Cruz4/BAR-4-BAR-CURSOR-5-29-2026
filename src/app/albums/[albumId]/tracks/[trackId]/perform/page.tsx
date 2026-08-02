@@ -261,11 +261,7 @@ export default function PerformancePage() {
   const isResolvingTrack = !isBootstrapping && !track && !loadFailed;
 
   if (isBootstrapping || isResolvingTrack) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-black">
-        <StudioLoader size="lg" />
-      </div>
-    );
+    return <StudioLoader size="lg" fullscreen className="bg-black" />;
   }
 
   if (loadFailed || !track) {

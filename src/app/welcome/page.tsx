@@ -18,21 +18,11 @@ function WelcomeContent() {
   }, [loading, user, router]);
 
   if (loading || user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <StudioLoader size="lg" />
-      </div>
-    );
+    return <StudioLoader size="lg" fullscreen />;
   }
 
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          <StudioLoader size="lg" />
-        </div>
-      }
-    >
+    <Suspense fallback={<StudioLoader size="lg" fullscreen />}>
       <SocialRefSignupRedirect>
         <PublicHomeLanding />
       </SocialRefSignupRedirect>

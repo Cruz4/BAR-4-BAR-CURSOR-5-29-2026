@@ -195,6 +195,14 @@ export const VAULT_PAGE_TOUR_STEPS: LyricsTourStep[] = [
     example: 'Tap the header anytime to expand or collapse — View all opens your full progress board.',
   },
   {
+    id: 'vault-social-dock',
+    target: '[data-tour="vault-social-dock"]',
+    mobileCardPlacement: 'top',
+    title: 'Artist Home & The Block',
+    body: 'Turn your public Artist Home on or off here, open Edit Public Page, and jump to The Block — your friends feed. A green badge means friend requests or new posts.',
+    example: 'Search artists by name on The Block to send friend invites, or share your referral link.',
+  },
+  {
     id: 'vault-search',
     target: '[data-tour="vault-search"]',
     mobileCardPlacement: 'top',

@@ -329,11 +329,11 @@ function LoginForm() {
           authIsNewUser: true,
         });
         try {
-          await sendSignupVerificationEmail(userCredential.user);
+          await sendSignupVerificationEmail(userCredential.user, { force: true });
           toast({
             title: 'Account created',
             description:
-              'Check your inbox for a verification link. Welcome Ink unlocks after you verify (abuse protection).',
+              'Check your inbox for a verification email from noreply@bar4bar.ink — and check junk/spam if you don\'t see it.',
           });
         } catch {
           toast({
@@ -651,7 +651,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="h-screen w-full flex items-center justify-center"><StudioLoader size="lg" /></div>}>
+    <Suspense fallback={<StudioLoader size="lg" fullscreen />}>
       <LoginForm />
     </Suspense>
   );

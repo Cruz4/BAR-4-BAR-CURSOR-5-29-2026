@@ -333,9 +333,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AuthContext.Provider value={{ user, loading, authReady, offlineAuth }}>
       {showLoader ? (
-        <div className="flex h-screen w-full items-center justify-center bg-background">
-          <StudioLoader size="lg" />
-        </div>
+        <StudioLoader size="lg" fullscreen />
       ) : (
         children
       )}
