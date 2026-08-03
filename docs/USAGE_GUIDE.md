@@ -15,7 +15,7 @@ Your Ink balance is displayed in the header and on the **Usage & Billing** page.
 See `src/lib/lyrics-units.ts` for conversion helpers.
 
 ## 3. Cloud Sync
-Signed-in artists sync to Firestore. Visitors get the full AI workstation on Ink (system DNA presets only). Pro unlocks unlimited albums/tracks, custom DNA/Vibe/Style saves, Performance Mode, Freestyle, vault import/export, and DNA Drop share links. New signups receive a 3-day Pro trial with workflow access and 400 bonus Ink.
+Signed-in artists sync to Firestore. Visitors get the full AI workstation on Ink (system DNA presets only), plus Artist Home and The Block. Pro unlocks unlimited albums/tracks, custom DNA/Vibe/Style saves, Performance Mode, Freestyle, vault import/export, and DNA Drop share links. New signups receive a 3-day Pro trial with workflow access and 400 bonus Ink.
 
 ## 4. Cost Reference Table
 

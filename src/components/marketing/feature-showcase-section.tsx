@@ -255,7 +255,10 @@ function BentoGroup({ bands, startIndex }: { bands: MarketingFeatureBand[]; star
 
 export function FeatureShowcaseSection() {
   const bentoBands = MARKETING_FEATURE_BANDS.filter((b) => b.layout === 'bento');
-  const rowBands = MARKETING_FEATURE_BANDS.filter((b) => b.layout !== 'bento');
+  const artistHomeBand = MARKETING_FEATURE_BANDS.find((b) => b.id === 'artist-home');
+  const rowBands = MARKETING_FEATURE_BANDS.filter(
+    (b) => b.layout !== 'bento' && b.id !== 'artist-home'
+  );
 
   return (
     <section id="features" className="py-12 px-4 relative z-10">
@@ -276,11 +279,38 @@ export function FeatureShowcaseSection() {
                 </span>
               </h2>
               <p className="font-code text-amber-100/80 text-sm md:text-base leading-relaxed max-w-2xl mx-auto">
-                Bar 4 Bar is a studio app — store bars, poems, loose lines, and half-baked hooks. Jot something down
-                now, load it back when you are ready to digest, remix, or chase the next bar.
+                Bar 4 Bar is a studio app — store bars, poems, loose lines, and half-baked hooks. Write in the vault,
+                then show up on your shareable Artist Home when you are ready for eyes, friends, and DNA Drops.
               </p>
             </div>
             <BentoGroup bands={bentoBands} startIndex={MARKETING_FEATURE_BANDS.indexOf(bentoBands[0])} />
+          </div>
+        ) : null}
+
+        {artistHomeBand ? (
+          <div className="space-y-8">
+            <div className="text-center max-w-3xl mx-auto space-y-4">
+              <div className="inline-flex items-center gap-2 bg-black/40 backdrop-blur-md border border-fuchsia-500/35 px-5 py-1.5 rounded-full">
+                <span className="text-[10px] font-bold uppercase tracking-[0.35em] text-fuchsia-300">
+                  Shareable artist page
+                </span>
+              </div>
+              <h2 className="font-headline text-3xl md:text-[2.75rem] font-bold uppercase tracking-tight leading-[0.92]">
+                <span className="text-fuchsia-100">Artist Home.</span>
+                <span className="block mt-1 text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-300 via-sky-300 to-fuchsia-200">
+                  Your Scene Online.
+                </span>
+              </h2>
+              <p className="font-code text-fuchsia-100/75 text-sm md:text-base leading-relaxed max-w-2xl mx-auto">
+                A public page for every artist — living skin, Album Rooms, embeds, friends on The Block, and live DNA
+                Drops. Private until you flip it on.
+              </p>
+            </div>
+            <FeatureRow
+              band={artistHomeBand}
+              index={MARKETING_FEATURE_BANDS.indexOf(artistHomeBand)}
+              layout={artistHomeBand.layout}
+            />
           </div>
         ) : null}
 

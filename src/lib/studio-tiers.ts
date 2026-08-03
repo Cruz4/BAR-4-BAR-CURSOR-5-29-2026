@@ -167,7 +167,7 @@ export function getVaultPackSavingsPercent(): number {
 
 /** Why Bar 4 Bar vs full-song AI apps (pricing / FAQ). */
 export const COMPETITOR_ANCHOR_COPY =
-  'Unlike Suno or Udio, Bar 4 Bar is a lyric and rhyme workstation — you own the words, DNA strains, and vault; Ink powers drafting and analysis, not finished audio renders.';
+  'Unlike Suno or Udio, Bar 4 Bar is a lyric and rhyme workstation — you own the words, DNA strains, vault, and a shareable Artist Home page; Ink powers drafting and analysis, not finished audio renders.';
 
 export const PRO_FULL_UNLOCK_LINE = 'Full app unlocked — unlimited albums & tracks';
 
@@ -305,7 +305,7 @@ export function getReferralFaqAnswer(): string {
 /** Shown on Ink Store for non-Pro artists */
 export const VISITOR_INK_STORE_NOTICE = {
   headline: 'Visitor — AI lyric tools on Ink',
-  body: `Every Ink-priced AI tool works on welcome + monthly residency Ink and permanent packs — Generate Next Line, Smart Structure, all 9 Creative Effects, and more. Custom DNA/Vibe/Style vault saves, Performance Mode, Freestyle, vault import/export, and DNA Drop links are Pro — plus ${PRO_MONTHLY_INK.toLocaleString()} residency Ink/mo on Pro.`,
+  body: `Every Ink-priced AI tool works on welcome + monthly residency Ink and permanent packs — Generate Next Line, Smart Structure, all 9 Creative Effects, and more. Artist Home and The Block are included on Free. Custom DNA/Vibe/Style vault saves, Performance Mode, Freestyle, vault import/export, and DNA Drop links are Pro — plus ${PRO_MONTHLY_INK.toLocaleString()} residency Ink/mo on Pro.`,
 } as const;
 
 /** Free tier limits — shown on comparison charts */
@@ -314,6 +314,7 @@ export const VISITOR_FEATURES = [
   `${FREE_ALBUM_LIMIT} album · ${FREE_TRACK_LIMIT} tracks — demo-scale projects`,
   'Full bar-by-bar AI on Ink — Generate Next/Previous, Smart Structure, Studio Draft & Rhyme Pulse',
   'All 9 Creative Effects — Simile, Metaphor, Twist, POV, Blend & more (10 Ink each)',
+  'Artist Home — shareable public page, Edit Public Page, The Block friends feed',
   'System presets only — custom DNA/Vibe/Style vault saves are Pro',
   'Locked: PDF/TXT/JSON export, Performance Mode, Freestyle, vault import/export & DNA Drop links',
 ] as const;

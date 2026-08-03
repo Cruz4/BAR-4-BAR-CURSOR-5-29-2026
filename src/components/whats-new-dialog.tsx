@@ -14,7 +14,6 @@ import {
   Rocket,
   Gift,
   LayoutGrid,
-  Music2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -53,6 +52,13 @@ export function WhatsNewDialog() {
     () =>
       [
         {
+          title: 'Artist Home & The Block',
+          desc: 'Your shareable public page — living skin, Album Rooms, embeds, friends feed. Turn it on from the Vault dock or Studio Progress → Sharing.',
+          icon: Rocket,
+          color: 'text-fuchsia-400',
+          bgColor: 'bg-fuchsia-500/5',
+        },
+        {
           title: `${SIGNUP_INK} welcome Ink demo`,
           desc: `Free artists get ${SIGNUP_INK} Ink to try AI tools on a demo catalog. ${getProCheckoutCtaLine('yearly')} for export, vault saves, and unlimited projects.`,
           icon: Sparkles,
@@ -65,13 +71,6 @@ export function WhatsNewDialog() {
           icon: LayoutGrid,
           color: 'text-sky-400',
           bgColor: 'bg-sky-500/5',
-        },
-        {
-          title: 'Loose Track DNA',
-          desc: 'Loose tracks keep their own DNA. Album tracks still inherit from the project.',
-          icon: Music2,
-          color: 'text-emerald-400',
-          bgColor: 'bg-emerald-500/5',
         },
         {
           title: 'Refer a Friend',

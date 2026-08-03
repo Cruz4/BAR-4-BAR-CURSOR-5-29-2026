@@ -157,9 +157,10 @@ export function StudioPrivacyIntroDialog() {
             Your studio visibility
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
-            You start <strong className="text-foreground">fully private</strong>. Turn a switch on only if you want that
-            surface public. Lyrics, DNA, and vault content are never published unless you share a DNA Drop link.
-            After you go live, customize modules and links on Edit Public Page.
+            You start <strong className="text-foreground">fully private</strong>. Artist Home is a core shareable
+            surface — turn Public profile on only when you want eyes on your page. Lyrics, DNA, and vault content are
+            never published unless you share a DNA Drop link. After you go live, customize modules and links on Edit
+            Public Page.
           </DialogDescription>
         </DialogHeader>
 
@@ -195,7 +196,7 @@ export function StudioPrivacyIntroDialog() {
                 <Globe className="h-3.5 w-3.5" /> Public profile page
               </Label>
               <p className="text-[10px] text-muted-foreground">
-                Artist Home page: modules, social links, Album Rooms — never lyrics.
+                Artist Home — your shareable page: modules, social links, Album Rooms — never lyrics.
               </p>
             </div>
             <Switch

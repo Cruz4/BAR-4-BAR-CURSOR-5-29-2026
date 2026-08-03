@@ -141,7 +141,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
 
 export const FREE_TIER_EXPECTATIONS = {
   headline: 'Visitor — demo-scale studio',
-  body: `Free demo: ${FREE_ALBUM_LIMIT} album, ${FREE_TRACK_LIMIT} tracks. AI tools run on your Ink (${getVisitorInkGrantSummary()}); Pro unlocks custom vault saves, Performance, Freestyle, import/export, and DNA Drop links. Load-only DNA/Vibe/Style presets on Visitor.`,
+  body: `Free demo: ${FREE_ALBUM_LIMIT} album, ${FREE_TRACK_LIMIT} tracks. AI tools run on your Ink (${getVisitorInkGrantSummary()}). Artist Home and The Block are included. Pro unlocks custom vault saves, Performance, Freestyle, import/export, and DNA Drop links. Load-only DNA/Vibe/Style presets on Visitor.`,
   dismissKey: 'b4b-free-tier-expectations-dismissed',
 } as const;
 

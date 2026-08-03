@@ -129,6 +129,23 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     mediaVariant: 'bento',
     bentoGroup: 'studio',
   },
+  {
+    id: 'artist-home',
+    eyebrow: 'Artist Home',
+    title: 'Your Shareable Page',
+    description:
+      'Every artist gets a public home — living skin, Album Rooms, embeds, social links, live DNA Drops, and The Block for friends. Write in the vault. Show up on your page.',
+    bullets: [
+      'Public /profile link you control — private by default until you go live',
+      'Edit Public Page: modules, bio, socials, Album Rooms, wall posts',
+      'The Block — friends feed, requests, and find artists by name',
+    ],
+    mediaSrc: '/marketing/feature-artist-home.png',
+    mediaType: 'image',
+    mediaAlt: 'Bar 4 Bar Artist Home — shareable public artist page',
+    layout: 'split',
+    mediaVariant: 'showcase',
+  },
 ];
 
 /** @deprecated Section removed from landing; kept for optional HowItWorksSection component. */
@@ -149,8 +166,8 @@ export const MARKETING_HOW_IT_WORKS = [
   },
   {
     step: '03',
-    title: 'Run It Back',
-    body: 'Performance Mode, DNA Drops, Studio Progress.',
+    title: 'Show Your Page',
+    body: 'Artist Home, DNA Drops, The Block, Studio Progress.',
     media: '/marketing/how-step-progress.png',
   },
 ] as const;
@@ -163,5 +180,6 @@ export const MARKETING_COMPARISON = {
     ['No album context', 'Album DNA on every bar'],
     ['Generic filler lines', 'Guardrails + must-includes'],
     ['Paragraphs and prose', 'Bars, hooks, and rhyme schemes'],
+    ['No artist presence', 'Shareable Artist Home + friends on The Block'],
   ],
 };

@@ -101,7 +101,7 @@ export function StudioSharingSection() {
                 <Globe className="h-3.5 w-3.5" /> Artist Home (public profile)
               </Label>
               <p className="text-sm text-muted-foreground leading-snug">
-                Your public page — modules, social links, Album Rooms, live DNA Drops. Never private lyrics.
+                Your public page — a core shareable surface: modules, social links, Album Rooms, live DNA Drops. Never private lyrics.
               </p>
             </div>
             <Switch

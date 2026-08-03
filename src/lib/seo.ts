@@ -9,9 +9,9 @@ export const SEO = {
   /** Default document title (tab + PWA window suffix). Match appName to avoid duplicate title bar text. */
   title: 'Bar 4 Bar',
   /** Open Graph / structured data — one clear line for search & shares. */
-  titleLong: 'Bar 4 Bar DNA Notebook — AI Rhyme & Creative DNA Workstation',
+  titleLong: 'Bar 4 Bar DNA Notebook — AI Rhyme Workstation & Shareable Artist Home',
   description:
-    'Smart rhyme notebook for musicians, lyricists, and poets: bar-by-bar AI co-writing, creative DNA strains, vault presets, album blueprints, and rhyme scheme tools. Free tier; Studio Pro available.',
+    'Bar-by-bar AI co-writing, creative DNA strains, a cloud vault for lyrics — plus a shareable Artist Home page, Album Rooms, live DNA Drops, and The Block for friends. Free tier; Studio Pro available.',
   keywords: [
     'bar 4 bar',
     'bar4bar',
@@ -26,6 +26,8 @@ export const SEO = {
     'creative DNA lyrics',
     'poetry writing app',
     'concept album songwriting',
+    'artist home page',
+    'shareable lyric profile',
   ],
   url: getPublicAppUrl(),
   /** Tab, PWA, Google site icon, and social preview (BAR 4 BAR logo). */
@@ -44,6 +46,7 @@ export const PUBLIC_SITEMAP_PATHS: Array<{
   { path: '', changeFrequency: 'weekly', priority: 0.95 },
   { path: '/pricing', changeFrequency: 'weekly', priority: 0.9 },
   { path: '/leaderboard', changeFrequency: 'weekly', priority: 0.7 },
+  { path: '/feed', changeFrequency: 'weekly', priority: 0.65 },
   { path: '/terms', changeFrequency: 'monthly', priority: 0.4 },
   { path: '/privacy', changeFrequency: 'monthly', priority: 0.4 },
   { path: '/cookies', changeFrequency: 'monthly', priority: 0.35 },

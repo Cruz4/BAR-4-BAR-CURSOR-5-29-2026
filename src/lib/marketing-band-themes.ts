@@ -83,4 +83,15 @@ export const MARKETING_BAND_THEMES: Record<string, MarketingBandTheme> = {
     bulletText: ['text-orange-50/90', 'text-orange-50/90', 'text-orange-50/90'],
     bulletRails: ['border-l-orange-500/60', 'border-l-primary/50', 'border-l-orange-400/45'],
   },
+  'artist-home': {
+    panel: 'border-fuchsia-500/28 bg-gradient-to-br from-fuchsia-500/[0.1] via-black/20 to-sky-500/[0.07]',
+    rule: 'from-fuchsia-400',
+    eyebrow: 'text-fuchsia-200 border-fuchsia-500/35 bg-fuchsia-500/10',
+    titleParts: ['Your Shareable', 'Page'],
+    titlePartColors: ['text-fuchsia-100', 'text-sky-300'],
+    description: 'text-fuchsia-100/88',
+    bulletNums: ['text-fuchsia-400', 'text-sky-400', 'text-fuchsia-300'],
+    bulletText: ['text-fuchsia-50/92', 'text-sky-100/90', 'text-fuchsia-100/88'],
+    bulletRails: ['border-l-fuchsia-500/65', 'border-l-sky-500/55', 'border-l-fuchsia-400/45'],
+  },
 };

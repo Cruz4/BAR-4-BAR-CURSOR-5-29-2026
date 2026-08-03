@@ -183,8 +183,20 @@ const FAQS = [
       a: "Hand-typed lines (and lines you edit after AI suggests them) count toward “write X bars” goals, streaks, and writing achievements. Lines from Generate Next, full drafts, or Smart Structure paste are tracked separately as generated — they earn lighter XP and feed AI-specific milestones (e.g. Next Bar Graduate). Editing an AI line converts it to written credit on the next save."
     },
     {
+      q: "What is Artist Home and Edit Public Page?",
+      a: "Artist Home is a core part of Bar 4 Bar — your shareable public page at /profile/your-slug. Living skin, modules, Album Rooms, embeds, social links, wall, friends, and live DNA Drops. Edit Public Page (Vault dock or Studio Progress → Sharing) is where you customize it. Private by default; never shows private lyrics unless you publish a DNA Drop."
+    },
+    {
+      q: "What is The Block?",
+      a: "The Block (/feed) is your friends feed — wall posts from people you friend, plus incoming friend requests. From The Vault, open The Block next to Artist Home (badge shows new requests/posts). Search artist names to send invites, or copy your referral link for people not on Bar 4 Bar yet. Your circle (/friends) lists friends and blocked artists."
+    },
+    {
+      q: "What shows on the leaderboard and public profile?",
+      a: "The weekly leaderboard shows your display name, rank, XP, bars written (7 days), streak, and tracks completed — never lyrics or vault content. New artists start private: turn on Show on leaderboard in Studio Progress → Sharing & visibility (or the Artist Home dock on The Vault). Artist Home is also off by default; when live it can show your modules, social links, Album Rooms, live DNA Drops, friends, and wall — still never private lyrics unless you publish a DNA Drop."
+    },
+    {
       q: "What is DNA Drop?",
-      a: "Studio Pro artists publish a shareable link from the left panel (DNA Drop). Recipients sign in and import lyrics, structure, Creative DNA, vibe, and related strains into their vault. Square album cover art keeps drop previews sharp."
+      a: "Studio Pro artists publish a shareable link from the left panel (DNA Drop). Recipients sign in and import lyrics, structure, Creative DNA, vibe, and related strains into their vault. Square album cover art keeps drop previews sharp. Live drops also list automatically on your Artist Home."
     },
     {
       q: "What happens during Creative Syncing vs DNA Extraction?",
@@ -193,18 +205,6 @@ const FAQS = [
     {
       q: "How do weekly and monthly challenges differ?",
       a: "Weekly goals reset every Monday; monthly challenges follow the calendar month. Both track rhyme bars (lines ÷ 2). Open /studio-progress or the Vault sidebar for live counters, rank XP, and leaderboard compare."
-    },
-    {
-      q: "What shows on the leaderboard and public profile?",
-      a: "The weekly leaderboard shows your display name, rank, XP, bars written (7 days), streak, and tracks completed — never lyrics or vault content. New artists start private: turn on Show on leaderboard in Studio Progress → Sharing & visibility (or the Artist Home dock on The Vault). Artist Home is also off by default; when live it can show your modules, social links, Album Rooms, live DNA Drops, friends, and wall — still never private lyrics unless you publish a DNA Drop."
-    },
-    {
-      q: "What is Artist Home and Edit Public Page?",
-      a: "Artist Home is your public page at /profile/your-slug. Edit Public Page (Vault dock or Studio Progress → Sharing) is where you seed the living skin, set bio/links, pick Album Rooms, and arrange modules. Live DNA Drops appear automatically while a share link is online."
-    },
-    {
-      q: "What is The Block?",
-      a: "The Block (/feed) is your friends feed — wall posts from people you friend, plus incoming friend requests. From The Vault, open The Block next to Artist Home (badge shows new requests/posts). Search artist names to send invites, or copy your referral link for people not on Bar 4 Bar yet."
     },
     {
       q: "What is included in a DNA Drop?",
@@ -308,6 +308,28 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 <ChapterCard icon={<Lightbulb className="text-yellow-500" />} title="Studio Insights & Did You Knows" colorClass="border-l-yellow-500 text-yellow-500">
                   <p className="text-sm">After your first guided tour, the lyrics page surfaces one random tip per visit — either a <strong>Studio Insight</strong> or a <strong>Did You Know?</strong> card covering DNA Drop, rhyme-bar math, strain inject, ranks, vault import, and more.</p>
                   <p className="text-xs text-muted-foreground">45+ tips rotate in the pool. Pause or dismiss anytime; they never repeat twice on the same page visit.</p>
+                </ChapterCard>
+                <ChapterCard icon={<Globe className="text-fuchsia-400" />} title="Artist Home & The Block" colorClass="border-l-fuchsia-500 text-fuchsia-400">
+                  <p className="text-sm">
+                    Artist Home is a <strong>core part of Bar 4 Bar</strong> — your shareable public page at{' '}
+                    <code className="text-primary">/profile/your-slug</code>. Living skin, Album Rooms, embeds, social
+                    links, wall posts, and live DNA Drops. Private until you turn Public profile on (Vault dock or Studio
+                    Progress → Sharing).
+                  </p>
+                  <ul className="list-disc list-inside space-y-2 text-sm">
+                    <li>
+                      <strong>Edit Public Page</strong> — customize modules and links from the Vault dock or{' '}
+                      <code className="text-primary">/profile/customize</code>.
+                    </li>
+                    <li>
+                      <strong>The Block</strong> — friends feed, requests, and find artists by name (
+                      <code className="text-primary">/feed</code>).
+                    </li>
+                    <li>
+                      <strong>Your circle</strong> — friends + blocked lists at{' '}
+                      <code className="text-primary">/friends</code>.
+                    </li>
+                  </ul>
                 </ChapterCard>
                 <ChapterCard icon={<Trophy className="text-amber-400" />} title="Progress, Badges & Share Cards" colorClass="border-l-amber-500 text-amber-400">
                   <ul className="list-disc list-inside space-y-2 text-sm">

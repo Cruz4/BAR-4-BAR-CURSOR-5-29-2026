@@ -97,8 +97,9 @@ export function PublicHomeLanding() {
                     concept albums
                   </span>
                   , train the AI on your{' '}
-                  <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">unique style</span>, and{' '}
-                  <span className="text-sky-400 font-bold">master your craft</span>.
+                  <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">unique style</span>, and share an{' '}
+                  <span className="bg-fuchsia-500/20 text-fuchsia-300 px-1 rounded-sm font-bold">Artist Home</span>
+                  {' '}— your public page for drops, rooms, and The Block.
                 </p>
 
                 <LandingHeroCtAs />
