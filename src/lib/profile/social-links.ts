@@ -8,6 +8,8 @@ export type SocialProviderId =
   | 'myspace'
   | 'snapchat'
   | 'suno'
+  | 'spotify'
+  | 'appleMusic'
   | 'github'
   | 'twitter';
 
@@ -35,6 +37,46 @@ export const SOCIAL_PROVIDERS: Array<{
     placeholder: '@handle or tiktok.com/@...',
     toUrl: (raw) =>
       socialUrl(raw, 'tiktok.com', (h) => `https://www.tiktok.com/@${h.replace(/^@/, '')}`),
+  },
+  {
+    id: 'spotify',
+    label: 'Spotify',
+    short: 'SPOT',
+    placeholder: 'open.spotify.com/... or username',
+    toUrl: (raw) => {
+      const trimmed = raw.trim();
+      if (!trimmed) return null;
+      if (/^https?:\/\//i.test(trimmed)) {
+        try {
+          const u = new URL(trimmed);
+          if (!u.hostname.toLowerCase().includes('spotify.com')) return null;
+          return u.toString();
+        } catch {
+          return null;
+        }
+      }
+      const handle = trimmed.replace(/^@/, '').split(/[/?#]/)[0];
+      if (!handle || handle.length > 64 || /[\s<>"']/.test(handle)) return null;
+      return `https://open.spotify.com/user/${encodeURIComponent(handle)}`;
+    },
+  },
+  {
+    id: 'appleMusic',
+    label: 'Apple Music',
+    short: 'AM',
+    placeholder: 'music.apple.com/…',
+    toUrl: (raw) => {
+      const trimmed = raw.trim();
+      if (!trimmed) return null;
+      if (!/^https?:\/\//i.test(trimmed)) return null;
+      try {
+        const u = new URL(trimmed);
+        if (!u.hostname.toLowerCase().includes('music.apple.com')) return null;
+        return u.toString();
+      } catch {
+        return null;
+      }
+    },
   },
   {
     id: 'myspace',

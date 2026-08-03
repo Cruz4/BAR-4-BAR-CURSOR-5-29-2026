@@ -306,6 +306,10 @@ export function Header() {
                           </span>
                         )}
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => router.push('/friends')}>
+                        <Users className="mr-2 h-4 w-4 text-sky-400" />
+                        <span>Your circle</span>
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=buy-ink')}><LayoutGrid className="mr-2 h-4 w-4 text-primary" /><span>Ink Store</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=settings')}><Settings className="mr-2 h-4 w-4" /><span>Settings</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=cloud')}><Star className="mr-2 h-4 w-4 text-pink-400" /><span>Studio Tier</span></DropdownMenuItem>

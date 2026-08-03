@@ -55,6 +55,10 @@ function SocialGlyph({ id, className }: { id: SocialProviderId; className?: stri
       return <LetterBadge letters="SNAP" className={className} />;
     case 'suno':
       return <LetterBadge letters="SUNO" className={className} />;
+    case 'spotify':
+      return <LetterBadge letters="SPOT" className={className} />;
+    case 'appleMusic':
+      return <LetterBadge letters="AM" className={className} />;
     default:
       return null;
   }

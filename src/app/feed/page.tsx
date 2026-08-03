@@ -118,11 +118,18 @@ export default function FeedPage() {
             Drops from your circle{friendCount > 0 ? ` · ${friendCount} friends` : ''}
           </p>
         </div>
-        <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
-          <Link href="/leaderboard">
-            <Trophy className="h-3.5 w-3.5" /> Leaderboard
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
+            <Link href="/leaderboard">
+              <Trophy className="h-3.5 w-3.5" /> Leaderboard
+            </Link>
+          </Button>
+          <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
+            <Link href="/friends">
+              <Users className="h-3.5 w-3.5" /> Your circle
+            </Link>
+          </Button>
+        </div>
       </header>
 
       <FindArtistsPanel viewerSlug={viewerSlug} />

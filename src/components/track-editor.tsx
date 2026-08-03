@@ -1219,11 +1219,20 @@ function lineGenInkKey(mode: 'next' | 'previous', sectionId: string, barIdx: num
 }
 
 function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, rhymePulseArmed = false, isInkArmed, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false, isGuestTryMode = false }: any) {
+  const isPhoneView = useIsMobile();
   const [fontSize, setFontSize] = useState<'xs' | 'sm' | 'md' | 'lg'>('md');
+  const phoneDefaultSizeAppliedRef = useRef(false);
   const lyricsViewportRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { tooltip, buttonLabel, getCost, getEffectiveCost } = useInkCosts();
   const { toast } = useToast();
+
+  // Phone / narrow view: open the sheet on the second-smallest lyrics size. Desktop stays medium.
+  useEffect(() => {
+    if (!isPhoneView || phoneDefaultSizeAppliedRef.current) return;
+    phoneDefaultSizeAppliedRef.current = true;
+    setFontSize('sm');
+  }, [isPhoneView]);
   
   const fontSizes = { xs: 'text-[14px]', sm: 'text-[16px]', md: 'text-[24px]', lg: 'text-[36px]' };
   const lineHeights = { xs: '20px', sm: '22px', md: '32px', lg: '40px' };

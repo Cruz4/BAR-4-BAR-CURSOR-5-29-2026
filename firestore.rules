@@ -116,6 +116,17 @@ service cloud.firestore {
         allow read: if isOwnerOrAdmin(userId);
         allow write: if false;
       }
+
+      // Social blocks — only the blocker can read/write their own list
+      match /blocks/{blockedUid} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && request.auth.uid != blockedUid
+          && request.resource.data.blockedUserId == blockedUid
+          && request.resource.data.blockedUserId is string
+          && request.resource.data.createdAt is string;
+        allow delete: if isOwner(userId);
+      }
     }
 
     match /publicProfiles/{slug} {

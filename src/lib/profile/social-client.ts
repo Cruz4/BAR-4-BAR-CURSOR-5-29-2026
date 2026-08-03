@@ -317,6 +317,9 @@ export async function sendFriendRequest(
 ): Promise<Friendship> {
   const user = requireUser();
   if (target.userId === user.uid) throw new Error('That is you.');
+  if (await isUserBlocked(target.userId)) {
+    throw new Error('You blocked this artist. Unblock them first.');
+  }
   const id = friendshipIdFor(user.uid, target.userId);
   const friendship: Friendship = {
     id,
@@ -472,4 +475,76 @@ export async function deleteGuestbookEntry(
 ): Promise<void> {
   requireUser();
   await deleteDoc(doc(db, 'guestbooks', profileOwnerId, 'entries', entryId));
+}
+
+// ---------------------------------------------------------------------------
+// Blocks
+// ---------------------------------------------------------------------------
+
+export type BlockedUser = {
+  blockedUserId: string;
+  blockedName: string;
+  blockedSlug?: string;
+  createdAt: string;
+};
+
+export async function blockUser(target: {
+  userId: string;
+  name: string;
+  slug?: string;
+}): Promise<BlockedUser> {
+  const user = requireUser();
+  if (target.userId === user.uid) throw new Error('That is you.');
+  const entry: BlockedUser = {
+    blockedUserId: target.userId,
+    blockedName: target.name || 'Artist',
+    ...(target.slug ? { blockedSlug: target.slug } : {}),
+    createdAt: new Date().toISOString(),
+  };
+  await setDoc(doc(db, 'users', user.uid, 'blocks', target.userId), entry);
+  // Drop any friendship either way.
+  try {
+    await deleteDoc(doc(db, 'friendships', friendshipIdFor(user.uid, target.userId)));
+  } catch {
+    /* no friendship */
+  }
+  return entry;
+}
+
+export async function unblockUser(blockedUserId: string): Promise<void> {
+  const user = requireUser();
+  await deleteDoc(doc(db, 'users', user.uid, 'blocks', blockedUserId));
+}
+
+export async function fetchBlockedUsers(): Promise<BlockedUser[]> {
+  const user = auth.currentUser;
+  if (!user) return [];
+  try {
+    const snap = await getDocs(query(collection(db, 'users', user.uid, 'blocks'), limitTo(200)));
+    return snap.docs
+      .map((d) => {
+        const data = d.data();
+        return {
+          blockedUserId: String(data.blockedUserId || d.id),
+          blockedName: String(data.blockedName || 'Artist'),
+          blockedSlug: typeof data.blockedSlug === 'string' ? data.blockedSlug : undefined,
+          createdAt: String(data.createdAt || ''),
+        } satisfies BlockedUser;
+      })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  } catch (err) {
+    console.warn('[blocks]', err);
+    return [];
+  }
+}
+
+export async function isUserBlocked(otherUserId: string): Promise<boolean> {
+  const user = auth.currentUser;
+  if (!user || !otherUserId || user.uid === otherUserId) return false;
+  try {
+    const snap = await getDoc(doc(db, 'users', user.uid, 'blocks', otherUserId));
+    return snap.exists();
+  } catch {
+    return false;
+  }
 }

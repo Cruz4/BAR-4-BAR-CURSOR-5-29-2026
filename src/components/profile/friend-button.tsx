@@ -1,15 +1,18 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Check, Clock, UserMinus, UserPlus, X } from 'lucide-react';
+import { Ban, Check, Clock, UserMinus, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import {
   acceptFriendRequest,
+  blockUser,
   fetchFriendshipWith,
+  isUserBlocked,
   removeFriendship,
   sendFriendRequest,
+  unblockUser,
   type Friendship,
 } from '@/lib/profile/social-client';
 
@@ -22,13 +25,14 @@ type FriendButtonProps = {
 };
 
 /**
- * Add friend / requested / accept / friends states on a public profile.
+ * Add friend / requested / accept / friends / block states on a public profile.
  * Hidden for the profile owner; sign-in prompt for logged-out visitors.
  */
 export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug }: FriendButtonProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [friendship, setFriendship] = useState<Friendship | null>(null);
+  const [blocked, setBlocked] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -37,8 +41,11 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
       setLoaded(true);
       return;
     }
-    fetchFriendshipWith(targetUserId)
-      .then(setFriendship)
+    void Promise.all([fetchFriendshipWith(targetUserId), isUserBlocked(targetUserId)])
+      .then(([f, b]) => {
+        setFriendship(f);
+        setBlocked(b);
+      })
       .catch(() => undefined)
       .finally(() => setLoaded(true));
   }, [user?.id, targetUserId]);
@@ -72,7 +79,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
     }
   };
 
-  if (!friendship) {
+  if (blocked) {
     return (
       <Button
         size="sm"
@@ -81,59 +88,107 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
         disabled={busy}
         onClick={() =>
           run(async () => {
-            const created = await sendFriendRequest(
-              { name: user.displayName || 'Artist', slug: viewerSlug },
-              { userId: targetUserId, name: targetName, slug: targetSlug }
-            );
-            setFriendship(created);
-            toast({ title: 'Friend request sent' });
-          }, 'Could not send request')
+            await unblockUser(targetUserId);
+            setBlocked(false);
+            toast({ title: 'Unblocked' });
+          }, 'Could not unblock')
         }
       >
-        <UserPlus className="h-3.5 w-3.5" /> Add friend
+        <Ban className="h-3.5 w-3.5" /> Blocked · Unblock
       </Button>
+    );
+  }
+
+  const blockAction = (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="h-9 gap-1 font-bold uppercase text-muted-foreground"
+      disabled={busy}
+      title="Block this artist"
+      onClick={() =>
+        run(async () => {
+          await blockUser({ userId: targetUserId, name: targetName, slug: targetSlug });
+          setFriendship(null);
+          setBlocked(true);
+          toast({ title: 'Blocked', description: `${targetName} can’t send you friend requests.` });
+        }, 'Could not block')
+      }
+    >
+      <Ban className="h-3.5 w-3.5" />
+    </Button>
+  );
+
+  if (!friendship) {
+    return (
+      <div className="flex gap-1.5">
+        <Button
+          size="sm"
+          variant="outline"
+          className={baseClass}
+          disabled={busy}
+          onClick={() =>
+            run(async () => {
+              const created = await sendFriendRequest(
+                { name: user.displayName || 'Artist', slug: viewerSlug },
+                { userId: targetUserId, name: targetName, slug: targetSlug }
+              );
+              setFriendship(created);
+              toast({ title: 'Friend request sent' });
+            }, 'Could not send request')
+          }
+        >
+          <UserPlus className="h-3.5 w-3.5" /> Add friend
+        </Button>
+        {blockAction}
+      </div>
     );
   }
 
   if (friendship.status === 'accepted') {
     return (
-      <Button
-        size="sm"
-        variant="ghost"
-        className={baseClass}
-        disabled={busy}
-        onClick={() =>
-          run(async () => {
-            await removeFriendship(friendship.id);
-            setFriendship(null);
-            toast({ title: 'Removed from friends' });
-          }, 'Could not update friendship')
-        }
-      >
-        <Check className="h-3.5 w-3.5 text-emerald-400" /> Friends
-        <UserMinus className="h-3 w-3 opacity-60" />
-      </Button>
+      <div className="flex gap-1.5">
+        <Button
+          size="sm"
+          variant="ghost"
+          className={baseClass}
+          disabled={busy}
+          onClick={() =>
+            run(async () => {
+              await removeFriendship(friendship.id);
+              setFriendship(null);
+              toast({ title: 'Removed from friends' });
+            }, 'Could not update friendship')
+          }
+        >
+          <Check className="h-3.5 w-3.5 text-emerald-400" /> Friends
+          <UserMinus className="h-3 w-3 opacity-60" />
+        </Button>
+        {blockAction}
+      </div>
     );
   }
 
-  // Pending — I sent it vs they sent it
   if (friendship.requestedBy === user.id) {
     return (
-      <Button
-        size="sm"
-        variant="ghost"
-        className={baseClass}
-        disabled={busy}
-        onClick={() =>
-          run(async () => {
-            await removeFriendship(friendship.id);
-            setFriendship(null);
-            toast({ title: 'Request cancelled' });
-          }, 'Could not cancel request')
-        }
-      >
-        <Clock className="h-3.5 w-3.5" /> Requested
-      </Button>
+      <div className="flex gap-1.5">
+        <Button
+          size="sm"
+          variant="ghost"
+          className={baseClass}
+          disabled={busy}
+          onClick={() =>
+            run(async () => {
+              await removeFriendship(friendship.id);
+              setFriendship(null);
+              toast({ title: 'Request cancelled' });
+            }, 'Could not cancel request')
+          }
+        >
+          <Clock className="h-3.5 w-3.5" /> Requested
+        </Button>
+        {blockAction}
+      </div>
     );
   }
 
@@ -167,6 +222,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
       >
         <X className="h-3.5 w-3.5" />
       </Button>
+      {blockAction}
     </div>
   );
 }

@@ -498,7 +498,21 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
   if (loaded && friends.length === 0) return null;
 
   return (
-    <ModuleShell icon={Users} title={`Friends${friends.length ? ` · ${friends.length}` : ''}`} ctx={ctx}>
+    <ModuleShell
+      icon={Users}
+      title={`Friends${friends.length ? ` · ${friends.length}` : ''}`}
+      ctx={ctx}
+      action={
+        ctx.isOwner ? (
+          <Link
+            href="/friends"
+            className="text-[10px] font-bold uppercase tracking-widest text-[var(--ph-accent,#7dd3fc)] hover:underline"
+          >
+            Manage →
+          </Link>
+        ) : undefined
+      }
+    >
       <div className="flex flex-wrap gap-2">
         {friends.slice(0, 24).map((friend) =>
           friend.slug ? (
