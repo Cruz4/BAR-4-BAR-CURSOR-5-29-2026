@@ -7,7 +7,14 @@ import { parseEmbedUrl, EMBED_PROVIDER_LABELS } from '@/lib/profile/embeds';
 /**
  * Plays a whitelisted provider link right on the page (iframe embed).
  * Unsupported URLs render as a safe outbound link card — never a broken box.
+ *
+ * Sandbox note: YouTube's "Watch on YouTube" opens a popup. Without
+ * allow-popups-to-escape-sandbox that popup stays sandboxed and youtube.com
+ * refuses to connect (ERR_BLOCKED_BY_RESPONSE).
  */
+const EMBED_SANDBOX =
+  'allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox';
+
 export function EmbedPlayer({ url, title }: { url: string; title?: string }) {
   const parsed = parseEmbedUrl(url);
 
@@ -36,6 +43,15 @@ export function EmbedPlayer({ url, title }: { url: string; title?: string }) {
     );
   }
 
+  const openLabel =
+    parsed.provider === 'youtube'
+      ? 'Watch on YouTube'
+      : parsed.provider === 'spotify'
+        ? 'Open in Spotify'
+        : parsed.provider === 'soundcloud'
+          ? 'Open in SoundCloud'
+          : 'Open in Suno';
+
   return (
     <div className="overflow-hidden rounded-[var(--ph-radius,16px)] border border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/40">
       {parsed.isVideo ? (
@@ -45,9 +61,10 @@ export function EmbedPlayer({ url, title }: { url: string; title?: string }) {
             title={title || `${EMBED_PROVIDER_LABELS[parsed.provider]} player`}
             className="absolute inset-0 h-full w-full"
             loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
-            sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
+            sandbox={EMBED_SANDBOX}
           />
         </div>
       ) : (
@@ -57,10 +74,19 @@ export function EmbedPlayer({ url, title }: { url: string; title?: string }) {
           className="w-full"
           style={{ height: parsed.height ?? 166 }}
           loading="lazy"
+          referrerPolicy="strict-origin-when-cross-origin"
           allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
-          sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
+          sandbox={EMBED_SANDBOX}
         />
       )}
+      <a
+        href={parsed.watchUrl}
+        target="_blank"
+        rel="noopener noreferrer nofollow"
+        className="flex items-center justify-center gap-1.5 border-t border-[var(--ph-border,rgba(255,255,255,0.1))] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.65))] transition-colors hover:text-[var(--ph-accent,#7dd3fc)]"
+      >
+        {openLabel} <ExternalLink className="h-3 w-3" />
+      </a>
     </div>
   );
 }

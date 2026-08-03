@@ -11,6 +11,8 @@ export type ParsedEmbed = {
   provider: EmbedProvider;
   /** iframe src */
   src: string;
+  /** Canonical watch/listen URL for "open on provider" links. */
+  watchUrl: string;
   /** Fixed iframe height in px (video providers use aspect ratio instead). */
   height?: number;
   /** True when the embed is 16:9 video. */
@@ -47,6 +49,7 @@ function parseYouTube(url: URL): ParsedEmbed | null {
   return {
     provider: 'youtube',
     src: `https://www.youtube-nocookie.com/embed/${id}`,
+    watchUrl: `https://www.youtube.com/watch?v=${id}`,
     isVideo: true,
   };
 }
@@ -58,6 +61,7 @@ function parseSoundCloud(url: URL): ParsedEmbed | null {
   return {
     provider: 'soundcloud',
     src: `https://w.soundcloud.com/player/?url=${encodeURIComponent(clean)}&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=true&visual=false`,
+    watchUrl: clean,
     height: 166,
     isVideo: false,
   };
@@ -76,6 +80,7 @@ function parseSpotify(url: URL): ParsedEmbed | null {
   return {
     provider: 'spotify',
     src: `https://open.spotify.com/embed/${kind}/${id}`,
+    watchUrl: `https://open.spotify.com/${kind}/${id}`,
     height: kind === 'track' || kind === 'episode' ? 152 : 352,
     isVideo: false,
   };
@@ -91,6 +96,7 @@ function parseSuno(url: URL): ParsedEmbed | null {
   return {
     provider: 'suno',
     src: `https://suno.com/embed/${id}`,
+    watchUrl: `https://suno.com/song/${id}`,
     height: 240,
     isVideo: false,
   };
