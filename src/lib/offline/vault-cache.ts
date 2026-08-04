@@ -20,6 +20,7 @@ export type CachedUserProfile = Pick<
   | 'returningIdentity'
   | 'lyricsTutorialCompletedAt'
   | 'vaultTutorialCompletedAt'
+  | 'sceneTutorialCompletedAt'
 >;
 
 export function saveVaultSnapshot(userId: string, albums: Album[], styleProfile: StyleProfile | null): void {

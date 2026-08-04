@@ -2,6 +2,7 @@
 
 import { getStoredMarketingRef, normalizeMarketingRef } from '@/lib/marketing-attribution';
 import { buildLoginUrl } from '@/lib/login-links';
+import { vaultHref } from '@/lib/scene-home';
 import {
   GUEST_FUNNEL_EVENTS,
   type GuestFunnelEventName,
@@ -118,7 +119,8 @@ export function getGuestSignupHref(options?: {
   return buildLoginUrl({
     mode: 'signup',
     marketingRef: options?.marketingRef ?? getStoredMarketingRef(),
-    next: options?.next ?? '/',
+    // Guest demo bars hand off on the Vault surface, so signups land there.
+    next: options?.next ?? vaultHref(),
     intent: 'guest_try',
   });
 }

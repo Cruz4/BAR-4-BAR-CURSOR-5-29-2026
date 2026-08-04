@@ -42,7 +42,6 @@ export function GuestTrySaveBanner({ remainingOverride = null }: GuestTrySaveBan
 
   const signupHref = getGuestSignupHref({
     marketingRef: searchParams.get('ref'),
-    next: '/',
   });
 
   const left = remaining;

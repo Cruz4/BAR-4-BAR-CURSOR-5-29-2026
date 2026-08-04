@@ -100,7 +100,7 @@ export default function AlbumError({
                         Retry Blueprint Load
                     </button>
                     <button 
-                      onClick={() => window.location.href = '/'} 
+                      onClick={() => window.location.href = '/vault'} 
                       style={{
                         width: '100%',
                         backgroundColor: 'transparent',

@@ -27,7 +27,7 @@ function parseNextPath(next: string): { pathname: string; search: string } {
   return { pathname, search: search ? `?${search}` : '' };
 }
 
-/** Fresh signups start in the vault unless they chose Pro checkout or a share import. */
+/** Fresh signups start at the signed-in home (Scene) unless they chose Pro checkout or a share import. */
 export function resolvePostLoginPath(nextParam: string | null | undefined): string {
   const safeNext = getSafeNextPath(nextParam);
   const isFreshSignup = consumeFreshSignup();

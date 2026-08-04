@@ -1,5 +1,5 @@
 /** Bump when Studio Upgrade Notes change — users who dismissed an older version see the dialog again. */
-export const WHATS_NEW_VERSION = '0.5.3';
+export const WHATS_NEW_VERSION = '0.6.0';
 
 const DISMISS_KEY_PREFIX = 'b4b_whats_new_dismissed:';
 const SESSION_KEY_PREFIX = 'b4b_whats_new_shown:';

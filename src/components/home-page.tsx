@@ -3,11 +3,13 @@
 import React, { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AlbumList } from '@/components/album-list';
+import { SceneHome } from '@/components/scene/scene-home';
 import { PublicHomeLanding } from '@/components/marketing/public-home-landing';
 import { SocialRefSignupRedirect } from '@/components/marketing/social-ref-signup-redirect';
 import { GuestTryHandoffScreen } from '@/components/guest-try-handoff-screen';
 import { useAuth } from '@/hooks/use-auth';
 import { GUEST_TRY_PATH, isGuestTrySheetEnabled } from '@/lib/guest-try';
+import { SCENE_HOME_ENABLED } from '@/lib/scene-home';
 
 function GuestHomeEntry() {
   const router = useRouter();
@@ -33,9 +35,11 @@ function GuestHomeEntry() {
 
 export function HomePage() {
   const { user } = useAuth();
-  return user ? (
-    <AlbumList />
-  ) : (
+  if (user) {
+    // Scene home pivot — flip SCENE_HOME_ENABLED off to restore the Vault at /.
+    return SCENE_HOME_ENABLED ? <SceneHome /> : <AlbumList />;
+  }
+  return (
     <Suspense fallback={<GuestTryHandoffScreen />}>
       <GuestHomeEntry />
     </Suspense>

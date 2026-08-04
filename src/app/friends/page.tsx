@@ -2,6 +2,7 @@
 
 /**
  * Circle — your friends list + blocked artists.
+ * Also: search/add artists and copy your referral invite from this page.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -9,7 +10,9 @@ import Link from 'next/link';
 import { Ban, Loader2, UserMinus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StudioLoader } from '@/components/studio-loader';
+import { FindArtistsPanel } from '@/components/profile/find-artists-panel';
 import { useAuth } from '@/hooks/use-auth';
+import { useGamification } from '@/context/gamification-context';
 import { useToast } from '@/hooks/use-toast';
 import {
   fetchBlockedUsers,
@@ -24,12 +27,16 @@ import { cn } from '@/lib/utils';
 
 export default function FriendsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { summary } = useGamification();
   const { toast } = useToast();
   const [friendships, setFriendships] = useState<Friendship[]>([]);
   const [blocked, setBlocked] = useState<BlockedUser[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [tab, setTab] = useState<'friends' | 'blocked'>('friends');
+
+  const viewerSlug =
+    summary.publicProfile && summary.profileSlug ? summary.profileSlug : undefined;
 
   const reload = async () => {
     if (!user?.id) return;
@@ -95,9 +102,11 @@ export default function FriendsPage() {
       <header className="space-y-1">
         <h1 className="font-headline text-3xl font-bold uppercase tracking-tight">Your circle</h1>
         <p className="text-sm text-muted-foreground">
-          Friends on The Block · block anyone you don&apos;t want in your feed or requests.
+          Add artists, share your referral invite, manage friends, and unblock anyone you cut.
         </p>
       </header>
+
+      <FindArtistsPanel viewerSlug={viewerSlug} />
 
       <div className="flex gap-2 border-b border-white/10 pb-2">
         <button
@@ -130,11 +139,9 @@ export default function FriendsPage() {
         friends.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/15 bg-black/20 px-6 py-14 text-center space-y-3">
             <p className="text-sm text-muted-foreground">
-              No friends yet. Find artists on The Block or from their Artist Home.
+              No friends yet. Search above to invite someone on the app, or copy your referral invite for
+              artists who haven&apos;t joined.
             </p>
-            <Button size="sm" variant="outline" className="h-9 font-bold uppercase" asChild>
-              <Link href="/feed">Open The Block</Link>
-            </Button>
           </div>
         ) : (
           <ul className="space-y-2">

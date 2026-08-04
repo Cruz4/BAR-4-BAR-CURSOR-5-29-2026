@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useGamification } from '@/context/gamification-context';
 import { useAuth } from '@/hooks/use-auth';
 import { isProUser } from '@/lib/subscription';
+import { vaultHref } from '@/lib/scene-home';
 import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { rankFromXp, STUDIO_RANKS, xpProgressInRank } from '@/lib/gamification/ranks';
 import {
@@ -108,7 +109,7 @@ export function StudioProgressBoard() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <Link
-              href="/"
+              href={vaultHref()}
               className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary mb-2"
             >
               <ChevronLeft className="h-4 w-4" /> Vault

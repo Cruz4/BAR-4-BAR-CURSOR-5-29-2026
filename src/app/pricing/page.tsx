@@ -76,6 +76,7 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { trackUpgradeClick } from '@/lib/conversion-analytics';
 import { useAuth } from '@/hooks/use-auth';
 import { buildLoginPath, buildProCheckoutPath } from '@/lib/checkout-intent';
+import { vaultHref } from '@/lib/scene-home';
 import { getStoredMarketingRef } from '@/lib/marketing-attribution';
 
 function proFeatureIcon(text: string) {
@@ -127,7 +128,7 @@ export default function PricingPage() {
         router.push(buildLoginPath(checkoutPath));
       }
     } else if (user) {
-      router.push('/');
+      router.push(vaultHref());
     } else {
       router.push('/login');
     }

@@ -27,6 +27,7 @@ import {
 import { isMasterAdminEmail } from '@/lib/master-admin';
 import { resolvePostLoginPath } from '@/lib/post-login-redirect';
 import { isGuestTryPath, isGuestTrySheetEnabled } from '@/lib/guest-try';
+import { vaultHref } from '@/lib/scene-home';
 
 interface AuthContextType {
   user: User | null;
@@ -42,7 +43,7 @@ export const AuthContext = createContext<AuthContextType>({
   offlineAuth: false,
 });
 
-const PROTECTED_ROUTES = ['/usage', '/albums', '/admin', '/studio-progress'];
+const PROTECTED_ROUTES = ['/usage', '/albums', '/admin', '/studio-progress', '/vault'];
 /** Routes that bounce authenticated users away (login only — pricing stays open). */
 const LOGGED_IN_BOUNCE_ROUTES = ['/login'];
 const AUTH_BOOT_TIMEOUT_MS = 4500;
@@ -66,6 +67,7 @@ function userFromFirebase(
     returningIdentity: data?.returningIdentity === true,
     lyricsTutorialCompletedAt: data?.lyricsTutorialCompletedAt,
     vaultTutorialCompletedAt: data?.vaultTutorialCompletedAt,
+    sceneTutorialCompletedAt: data?.sceneTutorialCompletedAt,
     proTrialWinCompletedAt: data?.proTrialWinCompletedAt,
     proTrialWinDismissedAt: data?.proTrialWinDismissedAt,
     studioPrivacyIntroCompletedAt: data?.studioPrivacyIntroCompletedAt,
@@ -195,6 +197,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           returningIdentity: nextUser.returningIdentity,
           lyricsTutorialCompletedAt: nextUser.lyricsTutorialCompletedAt,
           vaultTutorialCompletedAt: nextUser.vaultTutorialCompletedAt,
+          sceneTutorialCompletedAt: nextUser.sceneTutorialCompletedAt,
           proTrialWinCompletedAt: nextUser.proTrialWinCompletedAt,
           proTrialWinDismissedAt: nextUser.proTrialWinDismissedAt,
           proFeaturePreviewExpiresAt: nextUser.proFeaturePreviewExpiresAt ?? null,
@@ -293,7 +296,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Logged-in users on the anonymous try sheet → vault (handoff runs on empty vault).
     if (user && guestTryAllowed) {
       setIsRedirecting(true);
-      router.replace('/');
+      router.replace(vaultHref());
       return;
     }
 

@@ -76,6 +76,7 @@ import {
   GitBranch,
   Settings,
   ListRestart,
+  Radio,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -84,6 +85,7 @@ import { AI_COSTS } from '@/lib/costs';
 import {
   dispatchReplayGuidedTour,
   dispatchReplayVaultTour,
+  dispatchReplaySceneTour,
   resolveWorkstationTourPath,
 } from '@/lib/studio-onboarding';
 import { DataContext } from '@/context/data-context';
@@ -183,12 +185,16 @@ const FAQS = [
       a: "Hand-typed lines (and lines you edit after AI suggests them) count toward “write X bars” goals, streaks, and writing achievements. Lines from Generate Next, full drafts, or Smart Structure paste are tracked separately as generated — they earn lighter XP and feed AI-specific milestones (e.g. Next Bar Graduate). Editing an AI line converts it to written credit on the next save."
     },
     {
+      q: "What is The Scene (my home page)?",
+      a: "The Scene is where you land when you sign in — friends' wall posts, a Discover stream (recently live Artist Homes, public drops, live DNA Drops, leaderboard risers), your Booth, and shortcuts to everything. The Vault (your albums and writing workstation) is one click away at /vault, top of the right dock."
+    },
+    {
       q: "What is Artist Home and Edit Public Page?",
-      a: "Artist Home is a core part of Bar 4 Bar — your shareable public page at /profile/your-slug. Living skin, modules, Album Rooms, embeds, social links, wall, friends, and live DNA Drops. Edit Public Page (Vault dock or Studio Progress → Sharing) is where you customize it. Private by default; never shows private lyrics unless you publish a DNA Drop."
+      a: "Artist Home is a core part of Bar 4 Bar — your shareable public page at /profile/your-slug. Living skin, modules, Album Rooms, embeds, social links, wall, friends, and live DNA Drops. Edit Public Page (Your Booth on the Scene, the Vault dock, or Studio Progress → Sharing) is where you customize it. Private by default; never shows private lyrics unless you publish a DNA Drop."
     },
     {
       q: "What is The Block?",
-      a: "The Block (/feed) is your friends feed — wall posts from people you friend, plus incoming friend requests. From The Vault, open The Block next to Artist Home (badge shows new requests/posts). Search artist names to send invites, or copy your referral link for people not on Bar 4 Bar yet. Your circle (/friends) lists friends and blocked artists."
+      a: "The Block is your friends feed — and it now lives on the Scene home, front and center when you sign in. Wall posts from people you friend, incoming requests, and a Discover stream when your circle is quiet. Search artist names to send invites, or copy your referral link for people not on Bar 4 Bar yet. Your circle (/friends) lists friends and blocked artists."
     },
     {
       q: "What shows on the leaderboard and public profile?",
@@ -247,6 +253,11 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
     dispatchReplayVaultTour();
   }, [onOpenChange]);
 
+  const handleReplaySceneTour = useCallback(() => {
+    onOpenChange(false);
+    dispatchReplaySceneTour();
+  }, [onOpenChange]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl w-[calc(100vw-1rem)] sm:w-full h-[min(90dvh,100vh)] max-h-[90dvh] flex flex-col p-0 overflow-hidden bg-background">
@@ -273,6 +284,27 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
             <div className="max-w-4xl mx-auto space-y-12 pb-12">
 
               <TabsContent value="start-here" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                <ChapterCard icon={<Radio className="text-emerald-400" />} title="The Scene — Your Home" colorClass="border-l-emerald-500 text-emerald-400">
+                  <p className="text-sm">
+                    Signing in lands you on <strong>The Scene</strong> — your home page. Friends&apos; wall
+                    drops, a Discover stream of who&apos;s live across the site, your Booth (Artist Home at a
+                    glance), and quick lanes into everything else.
+                  </p>
+                  <ul className="list-disc list-inside space-y-2 text-sm">
+                    <li><strong>Post to your wall</strong> — the composer at the top; friends see it on their Scene.</li>
+                    <li><strong>Discover</strong> — recently live Artist Homes, public drops, live DNA Drops, and this week&apos;s leaderboard risers, so the block is never empty.</li>
+                    <li><strong>Your Booth</strong> — flip your Artist Home live and open Edit Public Page without leaving home.</li>
+                    <li><strong>The Vault</strong> — top of the right dock (or the account menu): albums, tracks, and the writing workstation now live at <code className="text-primary">/vault</code>.</li>
+                  </ul>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="font-bold uppercase text-[10px] tracking-widest gap-2 border-emerald-500/40 hover:bg-emerald-500/10"
+                    onClick={handleReplaySceneTour}
+                  >
+                    <RefreshCw className="h-4 w-4" /> Replay Scene Tour
+                  </Button>
+                </ChapterCard>
                 <ChapterCard icon={<MousePointer2 className="text-primary" />} title="60-Second Start" colorClass="border-l-primary text-primary">
                   <p className="text-foreground/90">Bar 4 Bar is a <strong>bar-by-bar rhyme book</strong>, not a one-click song generator. Your first win in under a minute:</p>
                   <ol className="list-decimal list-inside space-y-3 text-sm">
@@ -295,7 +327,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </ChapterCard>
                 <ChapterCard icon={<CassetteTape className="text-sky-400" />} title="Guided Vault Tour" colorClass="border-l-sky-500 text-sky-400">
                   <p>Walk through the Vault with spotlight highlights — header, create project, collection, loose tracks, studio progress, search, and Ink.</p>
-                  <p className="text-xs text-muted-foreground">Runs automatically on your first vault visit. Replay takes you home and starts the tour.</p>
+                  <p className="text-xs text-muted-foreground">Runs automatically on your first visit to The Vault. Replay takes you to the Vault and starts the tour.</p>
                   <Button
                     type="button"
                     variant="outline"
@@ -313,17 +345,17 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                   <p className="text-sm">
                     Artist Home is a <strong>core part of Bar 4 Bar</strong> — your shareable public page at{' '}
                     <code className="text-primary">/profile/your-slug</code>. Living skin, Album Rooms, embeds, social
-                    links, wall posts, and live DNA Drops. Private until you turn Public profile on (Vault dock or Studio
-                    Progress → Sharing).
+                    links, wall posts, and live DNA Drops. Private until you turn Public profile on (Your Booth on
+                    the Scene, the Vault dock, or Studio Progress → Sharing).
                   </p>
                   <ul className="list-disc list-inside space-y-2 text-sm">
                     <li>
-                      <strong>Edit Public Page</strong> — customize modules and links from the Vault dock or{' '}
-                      <code className="text-primary">/profile/customize</code>.
+                      <strong>Edit Public Page</strong> — customize modules and links from the Scene dock, Your
+                      Booth, or <code className="text-primary">/profile/customize</code>.
                     </li>
                     <li>
-                      <strong>The Block</strong> — friends feed, requests, and find artists by name (
-                      <code className="text-primary">/feed</code>).
+                      <strong>The Block</strong> — your friends feed lives on the Scene home now: wall posts,
+                      requests, and find artists by name, right where you land.
                     </li>
                     <li>
                       <strong>Your circle</strong> — friends + blocked lists at{' '}

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { GuestTryHandoffScreen } from '@/components/guest-try-handoff-screen';
 import { StudioLoader } from '@/components/studio-loader';
 import { GUEST_TRY_PATH, isGuestTrySheetEnabled } from '@/lib/guest-try';
+import { vaultHref } from '@/lib/scene-home';
 import { useAuth } from '@/hooks/use-auth';
 
 /** Short URL → real guest track editor (or vault / welcome depending on flag + auth). */
@@ -18,7 +19,8 @@ export default function TryRedirectInner() {
     const qs = searchParams.toString();
     const suffix = qs ? `?${qs}` : '';
     if (user) {
-      router.replace(qs ? `/?${qs}` : '/');
+      // Guest-try handoff logic lives on the Vault surface.
+      router.replace(qs ? `${vaultHref()}?${qs}` : vaultHref());
       return;
     }
     if (!isGuestTrySheetEnabled()) {

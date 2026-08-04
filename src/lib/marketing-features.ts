@@ -131,14 +131,14 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
   },
   {
     id: 'artist-home',
-    eyebrow: 'Artist Home',
-    title: 'Your Shareable Page',
+    eyebrow: 'Artist Home & The Scene',
+    title: 'Your Page. Your Block.',
     description:
-      'Every artist gets a public home — living skin, Album Rooms, embeds, social links, live DNA Drops, and The Block for friends. Write in the vault. Show up on your page.',
+      'Sign in and land on The Scene — friends\u2019 drops, a Discover stream of live Artist Homes, and Your Booth. Every artist gets a public home: living skin, Album Rooms, embeds, live DNA Drops. Write in the vault. Show up on the block.',
     bullets: [
+      'The Scene home — friends feed + Discover, never an empty room',
       'Public /profile link you control — private by default until you go live',
       'Edit Public Page: modules, bio, socials, Album Rooms, wall posts',
-      'The Block — friends feed, requests, and find artists by name',
     ],
     mediaSrc: '/marketing/feature-artist-home.png',
     mediaType: 'image',
@@ -166,8 +166,8 @@ export const MARKETING_HOW_IT_WORKS = [
   },
   {
     step: '03',
-    title: 'Show Your Page',
-    body: 'Artist Home, DNA Drops, The Block, Studio Progress.',
+    title: 'Show Up on the Scene',
+    body: 'Artist Home, DNA Drops, your block of friends, Studio Progress.',
     media: '/marketing/how-step-progress.png',
   },
 ] as const;
@@ -180,6 +180,6 @@ export const MARKETING_COMPARISON = {
     ['No album context', 'Album DNA on every bar'],
     ['Generic filler lines', 'Guardrails + must-includes'],
     ['Paragraphs and prose', 'Bars, hooks, and rhyme schemes'],
-    ['No artist presence', 'Shareable Artist Home + friends on The Block'],
+    ['No artist presence', 'The Scene home + shareable Artist Home + friends on The Block'],
   ],
 };

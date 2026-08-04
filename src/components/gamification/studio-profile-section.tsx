@@ -10,6 +10,7 @@ import { useGamification } from '@/context/gamification-context';
 import { useAuth } from '@/hooks/use-auth';
 import { pickFeaturedAchievementId } from '@/lib/gamification/achievement-card-theme';
 import { patchGamificationSettings, trackShareCardEvent } from '@/lib/gamification-client';
+import { blockFeedHref } from '@/lib/scene-home';
 import { useToast } from '@/hooks/use-toast';
 import { Share2, Globe, Trophy, ExternalLink, Settings2, Users } from 'lucide-react';
 import { AchievementShareCard } from '@/components/gamification/achievement-share-card';
@@ -121,7 +122,7 @@ export function StudioSharingSection() {
               </Link>
             </Button>
             <Button variant="outline" className="gap-2 h-11 text-sm font-bold" asChild>
-              <Link href="/feed">
+              <Link href={blockFeedHref()}>
                 <Users className="h-4 w-4 text-emerald-400" /> The Block
               </Link>
             </Button>

@@ -8,6 +8,7 @@ import {
   isTrackEditorPath,
 } from '@/lib/studio-tips-session';
 import { resolveWorkstationTrackPath } from '@/lib/workstation-path';
+import { vaultHref } from '@/lib/scene-home';
 
 /** Dispatched from Studio Master Manual to replay the lyrics-page guided tour. */
 export const REPLAY_GUIDED_TOUR_EVENT = 'b4b-replay-guided-tour';
@@ -32,7 +33,7 @@ export function resolveWorkstationTourPath(albums: Album[]): string | null {
 
 export function dispatchReplayVaultTour() {
   if (typeof window === 'undefined') return;
-  if (isCurrentPath('/')) {
+  if (isCurrentPath(vaultHref())) {
     window.dispatchEvent(new CustomEvent(REPLAY_VAULT_TOUR_EVENT));
     return;
   }
@@ -41,7 +42,7 @@ export function dispatchReplayVaultTour() {
   } catch {
     /* ignore */
   }
-  window.location.assign('/');
+  window.location.assign(vaultHref());
 }
 
 export function dispatchReplayGuidedTour(trackPath?: string | null): boolean {
@@ -223,6 +224,84 @@ export async function markVaultTutorialComplete(userId: string) {
   await setDoc(
     doc(db, 'users', userId),
     { vaultTutorialCompletedAt: new Date().toISOString() },
+    { merge: true }
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Scene home tour — first-visit walkthrough of the signed-in social lobby.
+// ---------------------------------------------------------------------------
+
+export const REPLAY_SCENE_TOUR_EVENT = 'b4b-replay-scene-tour';
+export const PENDING_SCENE_TOUR_REPLAY_KEY = 'b4b-pending-scene-tour-replay';
+
+export function dispatchReplaySceneTour() {
+  if (typeof window === 'undefined') return;
+  if (isCurrentPath('/')) {
+    window.dispatchEvent(new CustomEvent(REPLAY_SCENE_TOUR_EVENT));
+    return;
+  }
+  try {
+    sessionStorage.setItem(PENDING_SCENE_TOUR_REPLAY_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+  window.location.assign('/');
+}
+
+export const SCENE_HOME_TOUR_STEPS: LyricsTourStep[] = [
+  {
+    id: 'scene-header',
+    target: '[data-tour="scene-header"]',
+    mobileCardPlacement: 'bottom',
+    title: 'Welcome to the Scene',
+    body: 'This is your home now — your friends, drops from across the site, and quick lanes into the studio. Everything you make shows up here.',
+  },
+  {
+    id: 'scene-composer',
+    target: '[data-tour="scene-composer"]',
+    mobileCardPlacement: 'bottom',
+    title: 'Drop a bar to your wall',
+    body: 'Post a line, a thought, or a link. Friends see it on their Scene, and visitors see it on your Artist Home wall.',
+    example: 'Add a YouTube / SoundCloud / Spotify link and it plays inline.',
+  },
+  {
+    id: 'scene-booth',
+    target: '[data-tour="scene-booth"]',
+    mobileCardPlacement: 'bottom',
+    title: 'Your Booth',
+    body: 'Your Artist Home at a glance. Flip it live to get on the map, then decorate — skin, Album Rooms, modules. Lyrics are never published.',
+    example: 'Edit Public Page is where the customizing happens.',
+  },
+  {
+    id: 'scene-feed',
+    target: '[data-tour="scene-feed"]',
+    mobileCardPlacement: 'top',
+    title: 'The feed',
+    body: 'Your circle posts up here. Below it, Discover keeps the block alive — recently live Artist Homes, public drops, and this week\u2019s risers.',
+    example: 'See someone interesting? Visit their page and send a friend request.',
+  },
+  {
+    id: 'scene-progress',
+    target: '[data-tour="scene-progress-mobile"], [data-tour="scene-progress-desktop"]',
+    mobileCardPlacement: 'top',
+    title: 'Studio progress',
+    body: 'XP, rank, streak, and weekly goals. Writing bars in the studio feeds all of it — and your rank shows on your page and the leaderboard.',
+  },
+  {
+    id: 'scene-nav',
+    target: '[data-tour="scene-nav-mobile"], [data-tour="scene-nav-desktop"]',
+    mobileCardPlacement: 'top',
+    title: 'The Vault is where you write',
+    body: 'Your albums, tracks, and the AI bar-for-bar workstation live in The Vault. The Scene is the block; the Vault is the booth. Go make something worth posting.',
+    example: 'Replay this tour anytime from the Studio Manual (?).',
+  },
+];
+
+export async function markSceneTutorialComplete(userId: string) {
+  await setDoc(
+    doc(db, 'users', userId),
+    { sceneTutorialCompletedAt: new Date().toISOString() },
     { merge: true }
   );
 }

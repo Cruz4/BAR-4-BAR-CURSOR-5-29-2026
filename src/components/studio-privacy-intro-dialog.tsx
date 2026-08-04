@@ -83,9 +83,9 @@ export function StudioPrivacyIntroDialog() {
     if (isStudioPrivacyIntroSnoozed()) return;
     if (!user?.id || user.studioPrivacyIntroCompletedAt || gamificationLoading) return;
     if (pathname === '/login' || pathname.startsWith('/share/')) return;
-    // Visibility intro belongs on the vault — never flash mid sheet / demo handoff.
+    // Visibility intro belongs on the Scene home or vault — never mid sheet / demo handoff.
     if (pathname.startsWith('/albums/')) return;
-    if (pathname !== '/') return;
+    if (pathname !== '/' && pathname !== '/vault') return;
     if (!hasPendingStudioPrivacyIntro()) return;
     if (isVaultTourRunning()) return;
     try {
@@ -100,7 +100,12 @@ export function StudioPrivacyIntroDialog() {
       if (!user?.id || user.studioPrivacyIntroCompletedAt) return;
       if (!hasPendingStudioPrivacyIntro()) return;
       if (isVaultTourRunning()) return;
-      if (typeof window !== 'undefined' && window.location.pathname !== '/') return;
+      if (
+        typeof window !== 'undefined' &&
+        window.location.pathname !== '/' &&
+        window.location.pathname !== '/vault'
+      )
+        return;
       try {
         if (sessionStorage.getItem('b4b-demo-handoff-inflight') === '1') return;
       } catch {

@@ -94,6 +94,9 @@ const STUDIO_TIPS: StudioTip[] = [
   { id: 56, icon: Mail, title: "VERIFY FOR WELCOME", text: "Welcome Ink and your Pro feature preview unlock after email verification — abuse protection so the same inbox cannot farm free Ink forever.", color: "text-primary" },
   { id: 57, icon: PanelLeft, title: "VAULT SIDEBAR GOALS", text: "On desktop, the Vault sidebar shows live weekly goals and rank XP without leaving the sheet — open full Studio Progress anytime for trophies and sharing.", color: "text-amber-400" },
   { id: 58, icon: Sparkle, title: "PREVIEW QUEST", text: "During Pro preview, saving a custom DNA profile completes the preview quest — a nudge to vault your extraction before the window ends.", color: "text-emerald-400" },
+  // Aug 2026 — Scene home pivot
+  { id: 59, icon: Globe, title: "THE SCENE", text: "Signing in lands you on The Scene — friends' wall drops, a Discover stream of live Artist Homes and DNA Drops, and Your Booth. The Vault is one click away in the right dock.", color: "text-emerald-400" },
+  { id: 60, kind: 'did-you-know', icon: Share2, title: "POST FROM HOME", text: "Did you know? The composer at the top of The Scene posts straight to your Artist Home wall — friends see it on their Scene feed too.", color: "text-fuchsia-400" },
 ];
 
 export function StudioTips() {

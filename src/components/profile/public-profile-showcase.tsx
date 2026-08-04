@@ -40,6 +40,8 @@ export type PublicProfileData = {
   profilePhotoMode?: 'collage' | 'custom';
   profilePhotoUrl?: string | null;
   slug?: string;
+  /** Owner's referral code — used when guests claim a profile from this page. */
+  referralCode?: string;
   /** Live public DNA Drops (share docs still online). */
   liveDnaDrops?: Array<{
     shareId: string;

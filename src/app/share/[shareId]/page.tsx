@@ -339,16 +339,30 @@ export default function SharedProjectPage() {
                     )}
 
                     {!isAlbum && trackProject?.guardrails?.enabled && (
-                        <Card className="border-rose-500/30 bg-rose-500/5">
+                        <Card className="border-rose-500/30 bg-rose-500/5 overflow-hidden">
                             <CardHeader className="p-4 pb-2">
                                 <CardTitle className="text-xs font-headline uppercase text-rose-400">Guardrails</CardTitle>
                             </CardHeader>
-                            <CardContent className="p-4 pt-0 space-y-2 text-[10px] text-muted-foreground">
-                                {trackProject.guardrails.forbiddenWords && (
-                                    <p><span className="font-bold uppercase text-rose-500/80">Forbidden:</span> {trackProject.guardrails.forbiddenWords}</p>
+                            <CardContent className="p-4 pt-0 space-y-2 text-[10px] text-muted-foreground min-w-0">
+                                {Array.isArray(trackProject.guardrails.forbiddenWords) &&
+                                    trackProject.guardrails.forbiddenWords.length > 0 && (
+                                    <p className="break-words [overflow-wrap:anywhere]">
+                                        <span className="font-bold uppercase text-rose-500/80">Forbidden:</span>{' '}
+                                        {trackProject.guardrails.forbiddenWords.join(', ')}
+                                    </p>
                                 )}
-                                {trackProject.guardrails.mustIncludeWords && (
-                                    <p><span className="font-bold uppercase text-emerald-500/80">Must include:</span> {trackProject.guardrails.mustIncludeWords.join(', ')}</p>
+                                {Array.isArray(trackProject.guardrails.mustIncludeWords) &&
+                                    trackProject.guardrails.mustIncludeWords.length > 0 && (
+                                    <p className="break-words [overflow-wrap:anywhere]">
+                                        <span className="font-bold uppercase text-emerald-500/80">Must include:</span>{' '}
+                                        {trackProject.guardrails.mustIncludeWords.join(', ')}
+                                    </p>
+                                )}
+                                {trackProject.guardrails.negativePrompt?.trim() && (
+                                    <p className="break-words [overflow-wrap:anywhere]">
+                                        <span className="font-bold uppercase text-rose-500/80">Avoid:</span>{' '}
+                                        {trackProject.guardrails.negativePrompt.trim()}
+                                    </p>
                                 )}
                             </CardContent>
                         </Card>

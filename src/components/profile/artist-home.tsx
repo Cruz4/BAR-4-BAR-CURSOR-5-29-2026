@@ -8,7 +8,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Crown, Dna, Flame, PenLine, Settings2, Share2, Trophy, Zap } from 'lucide-react';
+import { ChevronLeft, Crown, Dna, Flame, Globe, PenLine, Settings2, Share2, Trophy, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -48,6 +48,9 @@ import { useAuth } from '@/hooks/use-auth';
 import { fetchGamificationSummary } from '@/lib/gamification-client';
 import { trackGuestSignupCta } from '@/lib/guest-funnel-client';
 import { ProfileSocialLinks } from '@/components/profile/profile-social-links';
+import { ProfileMediaLightbox } from '@/components/profile/profile-media-lightbox';
+import { ArtistHomeGuestClaim } from '@/components/profile/artist-home-guest-claim';
+import { buildLoginUrl } from '@/lib/login-links';
 
 type ArtistHomeProps = {
   profile: PublicProfileData;
@@ -72,6 +75,7 @@ export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
   const { user } = useAuth();
   const [shareOpen, setShareOpen] = useState(false);
   const [dropsOpen, setDropsOpen] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
   const [viewerSlug, setViewerSlug] = useState<string | undefined>(undefined);
   const [tokens, setTokens] = useState<PressingTokens>(() => pressTokens(config.theme));
 
@@ -135,7 +139,7 @@ export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
 
   return (
     <div
-      className="relative min-h-screen overflow-x-hidden pb-16 text-[var(--ph-text)]"
+      className="relative min-h-screen overflow-x-hidden pb-24 text-[var(--ph-text)]"
       style={{ ...(cssVars as React.CSSProperties), backgroundColor: 'var(--ph-bg)' }}
     >
       <style>{`
@@ -255,7 +259,7 @@ export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
               )
             )}
 
-            <div className="grid max-w-md grid-cols-3 gap-1.5">
+            <div className="grid max-w-md grid-cols-3 gap-2">
               {[
                 { label: 'Total XP', value: profile.xp.toLocaleString(), icon: Zap },
                 { label: 'Live streak', value: `${profile.currentStreak}d`, icon: Flame },
@@ -263,13 +267,13 @@ export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
               ].map((stat) => (
                 <div
                   key={stat.label}
-                  className="flex flex-col items-center justify-center border border-[var(--ph-border)] bg-[var(--ph-plate)] px-1.5 py-2 text-center"
+                  className="flex flex-col items-center justify-center border border-[var(--ph-border)] bg-[var(--ph-plate)] px-2 py-2.5 text-center"
                 >
-                  <stat.icon className="mb-0.5 h-3 w-3 text-[var(--ph-accent)]" />
-                  <p className="font-headline text-sm leading-none text-[var(--ph-text)] tabular-nums">
+                  <stat.icon className="mb-1 h-3.5 w-3.5 text-[var(--ph-accent)]" />
+                  <p className="font-code text-base font-bold leading-none tracking-tight text-[var(--ph-text)] tabular-nums sm:text-lg">
                     {stat.value}
                   </p>
-                  <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-[var(--ph-muted)]">
+                  <p className="mt-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--ph-muted)] sm:text-[10px]">
                     {stat.label}
                   </p>
                 </div>
@@ -300,8 +304,11 @@ export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
                   background: `linear-gradient(135deg, var(--ph-accent-soft), var(--ph-accent2-soft))`,
                 }}
               />
-              <div
-                className="relative aspect-square w-full overflow-hidden border border-[var(--ph-border)] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+              <button
+                type="button"
+                onClick={() => setPhotoOpen(true)}
+                aria-label={`View ${profile.displayName}'s profile photo`}
+                className="relative aspect-square w-full cursor-zoom-in overflow-hidden border border-[var(--ph-border)] shadow-[0_24px_80px_rgba(0,0,0,0.55)] transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ph-accent,#7dd3fc)]"
                 style={{ clipPath: dieCutClip(((tokens.cutStyle + 1) % 6) as 0 | 1 | 2 | 3 | 4 | 5) }}
               >
                 {useCustomPhoto ? (
@@ -311,10 +318,10 @@ export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
                   <AlbumCoverCollage
                     urls={profile.albumCoverUrls || []}
                     displayName={profile.displayName}
-                    className="h-full w-full"
+                    className="h-full w-full border-0 shadow-none"
                   />
                 )}
-              </div>
+              </button>
               <ProfileSocialLinks socials={config.featured.socials} className="mt-3" />
             </motion.div>
           </div>
@@ -361,19 +368,59 @@ export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
             Written in Bar 4 Bar · {tokens.plateSerial}
           </p>
           {!user && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-9 gap-1.5 border-[var(--ph-border)] font-bold uppercase"
-              asChild
-            >
-              <Link href="/try?src=profile" onClick={() => trackGuestSignupCta('artist_home')}>
-                <PenLine className="h-3.5 w-3.5" /> Write your first bar free
-              </Link>
-            </Button>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button
+                size="sm"
+                className="h-9 gap-1.5 bg-[var(--ph-accent)] font-bold uppercase text-black hover:opacity-90"
+                asChild
+              >
+                <Link
+                  href={buildLoginUrl({
+                    mode: 'signup',
+                    next: '/',
+                    intent: 'claim_artist_home',
+                    referralCode: profile.referralCode,
+                  })}
+                  onClick={() => trackGuestSignupCta('artist_home_footer')}
+                >
+                  <Globe className="h-3.5 w-3.5" /> Claim your free profile
+                </Link>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 gap-1.5 border-[var(--ph-border)] font-bold uppercase"
+                asChild
+              >
+                <Link href="/try?src=profile" onClick={() => trackGuestSignupCta('artist_home')}>
+                  <PenLine className="h-3.5 w-3.5" /> Try writing free
+                </Link>
+              </Button>
+            </div>
           )}
         </footer>
       </div>
+
+      <ArtistHomeGuestClaim
+        artistName={profile.displayName}
+        referralCode={profile.referralCode}
+      />
+
+      <ProfileMediaLightbox
+        open={photoOpen}
+        onOpenChange={setPhotoOpen}
+        title={profile.displayName}
+        src={useCustomPhoto ? profile.profilePhotoUrl : null}
+        fit="contain"
+      >
+        {!useCustomPhoto ? (
+          <AlbumCoverCollage
+            urls={profile.albumCoverUrls || []}
+            displayName={profile.displayName}
+            className="mx-auto w-full max-w-md border-white/20 shadow-[0_0_60px_rgba(59,130,246,0.2)]"
+          />
+        ) : null}
+      </ProfileMediaLightbox>
 
       {isOwner && profileUrl && (
         <ProfileShareDialog

@@ -2,6 +2,20 @@
 
 This document describes how Bar 4 Bar teaches new systems to artists in-app. Source of truth for tip copy lives in `src/components/studio-tips.tsx`.
 
+## Signed-in home = The Scene (Aug 2026 pivot)
+
+- Signing in lands on **The Scene** (`/`) — friends feed + Discover stream + Your Booth + nav dock. The Vault moved to **`/vault`**.
+- Kill switch: `SCENE_HOME_ENABLED` in `src/lib/scene-home.ts` — set `false` to restore the Vault at `/` (`/vault` then redirects home, `/feed` works again).
+- Onboarding order: Scene tour (first home visit) → visibility intro → Vault tour (first `/vault` visit) → workstation tour (first track open).
+
+## Guided tour (Scene home)
+
+- **Definition:** `src/lib/studio-onboarding.ts` → `SCENE_HOME_TOUR_STEPS` (6 steps: welcome, composer, booth, feed + discover, progress, nav dock → "the Vault is where you write")
+- **UI:** mounted in `src/components/scene/scene-home.tsx`
+- **Trigger:** First Scene visit when `sceneTutorialCompletedAt` is unset (after feed paint, ~1s delay)
+- **Replay:** Studio Manual (`?` header) → **Replay Scene Tour**
+- **Completion:** Sets `sceneTutorialCompletedAt`; non-skip awards `tour_complete`; queues the visibility intro
+
 ## Guided tour (lyrics page)
 
 - **Definition:** `src/lib/studio-onboarding.ts` → `LYRICS_PAGE_TOUR_STEPS`
@@ -70,10 +84,17 @@ This document describes how Bar 4 Bar teaches new systems to artists in-app. Sou
 | 57 | Vault Sidebar Goals | Insight |
 | 58 | Preview Quest | Insight |
 
+### Aug 2026 tips (ids 59–60)
+
+| ID | Title | Kind |
+|----|--------|------|
+| 59 | The Scene | Insight |
+| 60 | Post From Home | Did You Know |
+
 ## Studio visibility intro
 
 - **Component:** `src/components/studio-privacy-intro-dialog.tsx`
-- **When shown:** Once per account (until saved), after the guided tour finishes or on first visit to The Vault (`/`)
+- **When shown:** Once per account (until saved), after the Scene or Vault tour finishes — on The Scene (`/`) or The Vault (`/vault`)
 - **Completion:** Sets `studioPrivacyIntroCompletedAt` on the user doc when the artist taps **Save preferences**
 - **Remind me later:** Snoozes for the current browser session only
 - **Controls:** Show on leaderboard · Public profile page — both off by default (Studio Progress → Sharing & visibility)
@@ -83,7 +104,7 @@ The 9-step lyrics tour stays focused on workflow; visibility is explained in thi
 ## What's New dialog
 
 - **Version key:** `src/lib/whats-new-session.ts` → `WHATS_NEW_VERSION` (currently `0.5.0`)
-- **When shown:** Once per login on `/` (home vault)
+- **When shown:** Once per login on `/` (Scene home) or `/vault`
 - **Content:** `src/components/whats-new-dialog.tsx`
 
 Bump `WHATS_NEW_VERSION` when shipping user-visible onboarding or feature notes so returning artists see the dialog again on next login.

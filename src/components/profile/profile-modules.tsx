@@ -33,6 +33,7 @@ import { PostCard } from '@/components/profile/post-card';
 import { PressPlate, type PressPlateChrome } from '@/components/profile/press-plate';
 import { PublicAchievementFoil } from '@/components/profile/public-achievement-foil';
 import type { AchievementDef } from '@/lib/gamification/achievements';
+import { ProfileMediaLightbox } from '@/components/profile/profile-media-lightbox';
 import {
   createPost,
   deleteGuestbookEntry,
@@ -225,10 +226,13 @@ function AlbumRoomCover({
   customSrc,
   albumCoverSrc,
   title,
+  onExpand,
 }: {
   customSrc?: string;
   albumCoverSrc?: string;
   title: string;
+  /** Opens the media lightbox when the cover has a real image. */
+  onExpand?: () => void;
 }) {
   const [failed, setFailed] = useState(false);
   const custom = customSrc?.trim() || '';
@@ -236,6 +240,7 @@ function AlbumRoomCover({
   const src = custom || album;
   const showLogo = !src || failed;
   const fitContain = !custom && Boolean(album);
+  const canExpand = Boolean(onExpand && !showLogo);
 
   return (
     <div className="relative aspect-[2/1] w-full overflow-hidden bg-neutral-950">
@@ -248,6 +253,28 @@ function AlbumRoomCover({
             className="h-14 w-14 object-contain opacity-25 sm:h-16 sm:w-16"
           />
         </div>
+      ) : canExpand ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onExpand?.();
+          }}
+          aria-label={`View ${title} larger`}
+          className="group/cover relative block h-full w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ph-accent,#7dd3fc)]"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt={title}
+            className={cn(
+              'h-full w-full transition-transform group-hover/cover:scale-[1.03]',
+              fitContain ? 'object-contain' : 'object-cover'
+            )}
+            onError={() => setFailed(true)}
+          />
+        </button>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -266,13 +293,22 @@ function AlbumRoomCover({
 
 export function AlbumRoomsModule({ ctx }: { ctx: ModuleContext }) {
   const rooms = ctx.featured.albumRooms;
+  const [lightbox, setLightbox] = useState<{ src: string; title: string } | null>(null);
+
   if (!rooms?.length) return null;
+
   return (
     <ModuleShell icon={DoorOpen} title={"Album Rooms"} ctx={ctx}>
       <div className="grid gap-4 sm:grid-cols-2">
         {rooms.map((room, i) => {
-          const inner = (
+          const expandSrc = (room.roomImageUrl || room.coverArtUrl || '').trim();
+          const openExpand = expandSrc
+            ? () => setLightbox({ src: expandSrc, title: room.title })
+            : undefined;
+
+          return (
             <div
+              key={i}
               className={cn(
                 inkWellClass,
                 'group flex h-full flex-col overflow-hidden transition-transform hover:-translate-y-0.5'
@@ -282,6 +318,7 @@ export function AlbumRoomsModule({ ctx }: { ctx: ModuleContext }) {
                 customSrc={room.roomImageUrl}
                 albumCoverSrc={room.coverArtUrl}
                 title={room.title}
+                onExpand={openExpand}
               />
               <div className="flex flex-1 flex-col gap-1.5 p-4">
                 <p className="font-headline text-base uppercase tracking-tight text-[var(--ph-text,#fff)]">
@@ -296,24 +333,28 @@ export function AlbumRoomsModule({ ctx }: { ctx: ModuleContext }) {
                   </p>
                 )}
                 {room.shareId && (
-                  <span className="mt-auto pt-2 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-accent,#7dd3fc)]">
+                  <Link
+                    href={`/share/${room.shareId}`}
+                    className="mt-auto pt-2 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-accent,#7dd3fc)] hover:underline"
+                  >
                     Enter the room →
-                  </span>
+                  </Link>
                 )}
               </div>
             </div>
           );
-          return room.shareId ? (
-            <Link key={i} href={`/share/${room.shareId}`} className="block h-full">
-              {inner}
-            </Link>
-          ) : (
-            <div key={i} className="h-full">
-              {inner}
-            </div>
-          );
         })}
       </div>
+
+      <ProfileMediaLightbox
+        open={Boolean(lightbox)}
+        onOpenChange={(open) => {
+          if (!open) setLightbox(null);
+        }}
+        title={lightbox?.title || 'Album Room'}
+        src={lightbox?.src}
+        fit="contain"
+      />
     </ModuleShell>
   );
 }

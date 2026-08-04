@@ -7,7 +7,9 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Check, Trophy, UserPlus, Users, X } from 'lucide-react';
+import { SCENE_HOME_ENABLED } from '@/lib/scene-home';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -27,6 +29,7 @@ import {
 import { markBlockSeen } from '@/lib/profile/social-alerts';
 
 export default function FeedPage() {
+  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [friendships, setFriendships] = useState<Friendship[]>([]);
@@ -34,7 +37,13 @@ export default function FeedPage() {
   const [loaded, setLoaded] = useState(false);
   const [viewerSlug, setViewerSlug] = useState<string | undefined>(undefined);
 
+  // The Block now lives on the Scene home feed.
   useEffect(() => {
+    if (SCENE_HOME_ENABLED) router.replace('/');
+  }, [router]);
+
+  useEffect(() => {
+    if (SCENE_HOME_ENABLED) return;
     if (!user?.id) return;
     let cancelled = false;
     const load = async () => {
@@ -74,7 +83,7 @@ export default function FeedPage() {
     [friendships, user?.id]
   );
 
-  if (authLoading) {
+  if (SCENE_HOME_ENABLED || authLoading) {
     return <StudioLoader size="lg" fullscreen />;
   }
 

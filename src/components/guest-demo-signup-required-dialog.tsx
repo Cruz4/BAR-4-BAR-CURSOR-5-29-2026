@@ -32,7 +32,7 @@ export function GuestDemoSignupRequiredDialog({
   open,
   onOpenChange,
 }: GuestDemoSignupRequiredDialogProps) {
-  const signupHref = getGuestSignupHref({ next: '/' });
+  const signupHref = getGuestSignupHref();
 
   const onSignup = () => {
     trackGuestSignupCta('demo_exhausted_modal');

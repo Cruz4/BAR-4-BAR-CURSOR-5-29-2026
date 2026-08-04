@@ -161,6 +161,7 @@ import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-
 import { GuestTrySaveBanner } from '@/components/guest-try-save-banner';
 import { GuestDemoSignupRequiredDialog } from '@/components/guest-demo-signup-required-dialog';
 import { GUEST_DEMO_MAX_USES, isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
+import { vaultHref } from '@/lib/scene-home';
 import { GUEST_FUNNEL_EVENTS } from '@/lib/guest-funnel-events';
 import {
   setGuestBarsWritten,
@@ -3122,7 +3123,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         router.replace(dest);
         return;
       }
-      router.replace('/');
+      router.replace(vaultHref());
       return;
     }
 
@@ -3760,8 +3761,8 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
             This track may have been removed or your vault is still syncing. Open another track from the vault or create a new one.
           </p>
           <div className="flex flex-wrap gap-2 justify-center">
-            <Button className="font-bold uppercase text-xs" onClick={() => router.push('/')}>Return to Vault</Button>
-            <Button variant="outline" className="font-bold uppercase text-xs" onClick={() => router.push('/?create=track')}>
+            <Button className="font-bold uppercase text-xs" onClick={() => router.push(vaultHref())}>Return to Vault</Button>
+            <Button variant="outline" className="font-bold uppercase text-xs" onClick={() => router.push(`${vaultHref()}?create=track`)}>
               Create Track
             </Button>
           </div>

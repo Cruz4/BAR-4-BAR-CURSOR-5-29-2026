@@ -24,6 +24,7 @@ import { useSocialAlerts } from '@/hooks/use-social-alerts';
 import { patchGamificationSettings } from '@/lib/gamification-client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { blockFeedHref } from '@/lib/scene-home';
 
 type VaultProfileDockProps = {
   /** Horizontal strip under vault progress on < xl. */
@@ -195,7 +196,7 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
         </button>
 
         <Link
-          href="/feed"
+          href={blockFeedHref()}
           aria-label={
             alertCount > 0
               ? `The Block — ${alertCount} social alerts`

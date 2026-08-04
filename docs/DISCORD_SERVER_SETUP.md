@@ -35,7 +35,7 @@ Copy **Topic** into each channel’s topic field.
 | `#rules` | Own your bars. Credit DNA Drops. No stealing vaults. No billing drama in public — use #ink-and-billing. Respect the craft. |
 | `#announcements` | Official ship notes, Ink & Pro updates. Read-only for members. |
 | `#changelog` | What’s new in the studio — mirrors in-app What’s New. |
-| `#start-here` | 6 steps: 1) Sign up at bar4bar.ink 2) Claim welcome Ink 3) Create a track 4) Try DNA & REMIX 5) Turn on Artist Home when ready 6) Go Pro when you need vault / Freestyle / DNA Drop |
+| `#start-here` | 6 steps: 1) Sign up at bar4bar.ink 2) Claim welcome Ink 3) Land on The Scene → go live from Your Booth 4) Open The Vault → create a track 5) Try DNA & REMIX 6) Go Pro when you need vault / Freestyle / DNA Drop |
 
 **Permissions:** `#announcements` + `#changelog` → @everyone View + Read; only Studio Ops / Mod can Send.
 
@@ -166,9 +166,9 @@ Pro = vault saves, Freestyle, Performance Mode, DNA Drop links, unlimited projec
 ONBOARDING (6 STEPS)
 1. Create an account at https://bar4bar.ink
 2. Verify email → welcome Ink lands
-3. Open The Vault → create a track → write a few bars
-4. Generation Workstation → DNA & REMIX (extract or load a system preset)
-5. Turn on Artist Home when ready (Vault dock) — shareable page + The Block friends feed
+3. You land on The Scene (your home) → flip Artist Home live from Your Booth
+4. Open The Vault (right dock) → create a track → write a few bars
+5. Generation Workstation → DNA & REMIX (extract or load a system preset)
 6. When you need custom vault saves, Freestyle, Performance, or DNA Drop → Go Pro
 
 Questions → #studio-help

@@ -22,6 +22,7 @@ import type { AdminGamificationRosterEntry } from '@/lib/gamification/admin-rost
 import type { AnalyticsEventName } from '@/lib/analytics-events';
 import { countLinesWithSource } from '@/lib/gamification/line-attribution';
 import { countNonEmptyLines, rhymeBarsToLines } from '@/lib/lyrics-units';
+import { ensureReferralCode } from '@/lib/server/referrals';
 
 export const MAX_DAILY_XP = 500;
 
@@ -903,9 +904,10 @@ export async function getPublicProfile(slug: string) {
   const userId = String(data.userId || '');
   if (!userId) return { ...data, albumCoverUrls: [], liveDnaDrops: [] };
 
-  const [albumMeta, liveDnaDrops] = await Promise.all([
+  const [albumMeta, liveDnaDrops, referralCode] = await Promise.all([
     getPublicAlbumMeta(userId),
     getLiveDnaDropsForUser(userId),
+    ensureReferralCode(db, userId).catch(() => null),
   ]);
 
   const artistHome = enrichAlbumRoomsWithLiveCovers(data.artistHome, albumMeta);
@@ -915,6 +917,7 @@ export async function getPublicProfile(slug: string) {
     artistHome,
     albumCoverUrls: albumMeta.coverUrls,
     liveDnaDrops,
+    ...(referralCode ? { referralCode } : {}),
   };
 }
 
@@ -1113,6 +1116,179 @@ export async function searchPublicArtists(
   }
 
   return Array.from(byUserId.values()).slice(0, limit);
+}
+
+// ---------------------------------------------------------------------------
+// Scene home Discover stream — light public summaries, no heavy payloads.
+// ---------------------------------------------------------------------------
+
+export type DiscoverArtistSummary = {
+  userId: string;
+  slug: string;
+  displayName: string;
+  rankId?: string;
+  xp?: number;
+  updatedAt: string;
+};
+
+/** Recently live / updated Artist Homes. */
+export async function listRecentPublicProfiles(
+  opts: { limit?: number; excludeUserId?: string } = {}
+): Promise<DiscoverArtistSummary[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 8, 1), 24);
+  const db = await getDb();
+  const snap = await db
+    .collection('publicProfiles')
+    .orderBy('updatedAt', 'desc')
+    .limit(limit + 4)
+    .get();
+  const out: DiscoverArtistSummary[] = [];
+  for (const doc of snap.docs) {
+    const data = doc.data() as Record<string, unknown>;
+    const userId = typeof data.userId === 'string' ? data.userId : '';
+    if (!userId || (opts.excludeUserId && userId === opts.excludeUserId)) continue;
+    out.push({
+      userId,
+      slug: doc.id,
+      displayName:
+        typeof data.displayName === 'string' && data.displayName.trim()
+          ? data.displayName.trim()
+          : doc.id,
+      rankId: typeof data.rankId === 'string' ? data.rankId : undefined,
+      xp: typeof data.xp === 'number' ? data.xp : undefined,
+      updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : '',
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+export type DiscoverShareSummary = {
+  shareId: string;
+  type: 'album' | 'track';
+  title: string;
+  ownerName: string;
+  updatedAt: string;
+};
+
+/** Recent live DNA Drops — summary only, heavy `data` payload stripped. */
+export async function listRecentShareSummaries(
+  opts: { limit?: number; excludeOwnerId?: string } = {}
+): Promise<DiscoverShareSummary[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 6, 1), 24);
+  const db = await getDb();
+  const snap = await db
+    .collection('shares')
+    .orderBy('updatedAt', 'desc')
+    .limit(limit + 4)
+    .get();
+  const out: DiscoverShareSummary[] = [];
+  for (const doc of snap.docs) {
+    const data = doc.data() as Record<string, unknown>;
+    const ownerId = typeof data.ownerId === 'string' ? data.ownerId : '';
+    if (opts.excludeOwnerId && ownerId === opts.excludeOwnerId) continue;
+    const type = data.type === 'album' ? ('album' as const) : ('track' as const);
+    const payload = (data.data ?? {}) as Record<string, unknown>;
+    const title =
+      typeof payload.title === 'string' && payload.title.trim()
+        ? payload.title.trim().slice(0, 120)
+        : type === 'album'
+          ? 'Untitled album'
+          : 'Untitled track';
+    out.push({
+      shareId: doc.id,
+      type,
+      title,
+      ownerName:
+        typeof data.ownerName === 'string' && data.ownerName.trim()
+          ? data.ownerName.trim()
+          : 'Artist',
+      updatedAt:
+        typeof data.updatedAt === 'string'
+          ? data.updatedAt
+          : typeof data.createdAt === 'string'
+            ? data.createdAt
+            : '',
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+export type DiscoverPostSummary = {
+  id: string;
+  ownerId: string;
+  ownerName: string;
+  ownerSlug?: string;
+  text: string;
+  embedUrl?: string;
+  embedProvider?: string;
+  createdAt: string;
+};
+
+/** Recent public wall posts — only from owners with a live Artist Home (ownerSlug set). */
+export async function listRecentPublicPosts(
+  opts: { limit?: number; excludeOwnerId?: string } = {}
+): Promise<DiscoverPostSummary[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 10, 1), 30);
+  const db = await getDb();
+  // Post ids are lexicographically newest-first, so document-id order = recency.
+  const snap = await db.collection('posts').limit(60).get();
+  const out: DiscoverPostSummary[] = [];
+  for (const doc of snap.docs) {
+    const data = doc.data() as Record<string, unknown>;
+    const ownerId = typeof data.ownerId === 'string' ? data.ownerId : '';
+    const ownerSlug = typeof data.ownerSlug === 'string' ? data.ownerSlug : undefined;
+    if (!ownerId || !ownerSlug) continue;
+    if (opts.excludeOwnerId && ownerId === opts.excludeOwnerId) continue;
+    out.push({
+      id: doc.id,
+      ownerId,
+      ownerName: String(data.ownerName || 'Artist'),
+      ownerSlug,
+      text: String(data.text || ''),
+      embedUrl: typeof data.embedUrl === 'string' ? data.embedUrl : undefined,
+      embedProvider: typeof data.embedProvider === 'string' ? data.embedProvider : undefined,
+      createdAt: String(data.createdAt || ''),
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+export type DiscoverRiserSummary = {
+  userId: string;
+  displayName: string;
+  profileSlug?: string;
+  barsWritten7d: number;
+  currentStreak: number;
+};
+
+/** Top of this week's bars-written leaderboard, sliced small for the Scene feed. */
+export async function listLeaderboardRisers(
+  opts: { limit?: number; excludeUserId?: string } = {}
+): Promise<DiscoverRiserSummary[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 5, 1), 10);
+  const db = await getDb();
+  const snap = await db
+    .collection(`leaderboard_weekly/${getWeekKey()}/entries`)
+    .orderBy('barsWritten7d', 'desc')
+    .limit(limit + 3)
+    .get();
+  const out: DiscoverRiserSummary[] = [];
+  for (const doc of snap.docs) {
+    if (opts.excludeUserId && doc.id === opts.excludeUserId) continue;
+    const data = doc.data() as Record<string, unknown>;
+    out.push({
+      userId: doc.id,
+      displayName: String(data.displayName || 'Artist'),
+      profileSlug: typeof data.profileSlug === 'string' ? data.profileSlug : undefined,
+      barsWritten7d: Number(data.barsWritten7d || 0),
+      currentStreak: Number(data.currentStreak || 0),
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
 }
 
 export { countNonEmptyBars, slugify };

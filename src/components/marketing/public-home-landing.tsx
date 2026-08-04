@@ -90,16 +90,17 @@ export function PublicHomeLanding() {
                 </div>
 
                 <p className="text-sm md:text-lg text-foreground/90 dark:text-white font-body font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0 tracking-wide drop-shadow-lg">
-                  The power-user workstation for{' '}
-                  <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">musicians and lyricists</span>.
-                  Organize{' '}
+                  Your{' '}
+                  <span className="bg-fuchsia-500/20 text-fuchsia-300 px-1 rounded-sm font-bold">scene</span> and your{' '}
+                  <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">studio</span>. Sign in and land
+                  on The Scene — friends, discover, your{' '}
+                  <span className="bg-fuchsia-500/20 text-fuchsia-300 px-1 rounded-sm font-bold">Artist Home</span> —
+                  with the full workstation one click in: organize{' '}
                   <span className="bg-sky-500/20 text-sky-400 px-1 rounded-sm font-bold italic underline decoration-primary/40 underline-offset-8">
                     concept albums
-                  </span>
-                  , train the AI on your{' '}
-                  <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">unique style</span>, and share an{' '}
-                  <span className="bg-fuchsia-500/20 text-fuchsia-300 px-1 rounded-sm font-bold">Artist Home</span>
-                  {' '}— your public page for drops, rooms, and The Block.
+                  </span>{' '}
+                  and train the AI on your{' '}
+                  <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">unique style</span>.
                 </p>
 
                 <LandingHeroCtAs />

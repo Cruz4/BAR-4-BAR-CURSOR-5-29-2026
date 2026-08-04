@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const PROTECTED_PREFIXES = ['/albums', '/usage', '/admin'];
+const PROTECTED_PREFIXES = ['/albums', '/usage', '/admin', '/vault'];
 
 export function middleware(request: NextRequest) {
   const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? '';

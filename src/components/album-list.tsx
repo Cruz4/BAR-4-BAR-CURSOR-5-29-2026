@@ -61,7 +61,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Card } from '@/components/ui/card';
 import { DataContext } from '@/context/data-context';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -127,6 +127,7 @@ import {
   REPLAY_VAULT_TOUR_EVENT,
   type LyricsTourStep,
 } from '@/lib/studio-onboarding';
+import { isVaultPath } from '@/lib/scene-home';
 import {
   dispatchStudioPrivacyIntroEligible,
   queueStudioPrivacyIntro,
@@ -529,6 +530,7 @@ export function AlbumList() {
   const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'alphabetical'>('newest');
@@ -575,6 +577,13 @@ export function AlbumList() {
     }
   }, []);
 
+  // Scene "Start a track" / deep links land here with ?create=track|album.
+  useEffect(() => {
+    const create = searchParams.get('create');
+    if (create === 'track') setCreateItemType('Track');
+    else if (create === 'album') setCreateItemType('Album');
+  }, [searchParams]);
+
   useEffect(() => {
     const onReplay = () => {
       setVaultTourStep(0);
@@ -585,7 +594,7 @@ export function AlbumList() {
   }, []);
 
   useEffect(() => {
-    if (!user || pathname !== '/' || loading || authLoading || vaultTourAutoStartRef.current) return;
+    if (!user || !isVaultPath(pathname) || loading || authLoading || vaultTourAutoStartRef.current) return;
     if (user.vaultTutorialCompletedAt) return;
     // Wait while demo→sheet handoff is navigating away from the vault.
     try {
@@ -652,7 +661,7 @@ export function AlbumList() {
 
   // Login and route transitions can leave the window scrolled mid-page before vault content paints.
   useEffect(() => {
-    if (pathname !== '/' || loading) return;
+    if (!isVaultPath(pathname) || loading) return;
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     const resetScroll = () => {
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
@@ -1109,7 +1118,17 @@ export function AlbumList() {
         )}
       </div>
 
-      <CreateItemDialog open={!!createItemType} onOpenChange={(isOpen) => !isOpen && setCreateItemType(null)} type={createItemType || 'Album'} />
+      <CreateItemDialog
+        open={!!createItemType}
+        onOpenChange={(isOpen) => {
+          if (isOpen) return;
+          setCreateItemType(null);
+          if (searchParams.get('create')) {
+            router.replace(pathname, { scroll: false });
+          }
+        }}
+        type={createItemType || 'Album'}
+      />
       
       <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={(e) => {
           const file = e.target.files?.[0]; if(!file) return;

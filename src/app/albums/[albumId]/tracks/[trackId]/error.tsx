@@ -79,7 +79,7 @@ export default function Error({
                     Initialize Repair
                 </button>
                 <button 
-                  onClick={() => window.location.href = '/'} 
+                  onClick={() => window.location.href = '/vault'} 
                   style={{
                     marginTop: '16px',
                     width: '100%',

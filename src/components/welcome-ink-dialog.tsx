@@ -111,7 +111,7 @@ export function WelcomeInkDialog() {
     // vaultTutorialCompletedAt here used to block this dialog entirely.
     // Privacy intro completion is enough of an onboarding checkpoint.
     if (!user.studioPrivacyIntroCompletedAt) return;
-    if (pathname === '/') return;
+    if (pathname === '/' || pathname === '/vault') return;
     if (isStudioOnboardingBusy()) return;
     setOpen(true);
   }, [
@@ -126,7 +126,7 @@ export function WelcomeInkDialog() {
     if (!isRecentStudioAccount(user.createdAt)) return;
     if (hasSeenWelcomeInk(user.id)) return;
     if (!user.studioPrivacyIntroCompletedAt) return;
-    if (pathname === '/') return;
+    if (pathname === '/' || pathname === '/vault') return;
     if (scheduledRef.current) return;
     if (isStudioOnboardingBusy()) return;
 

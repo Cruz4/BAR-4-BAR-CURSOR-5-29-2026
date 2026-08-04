@@ -89,6 +89,7 @@ import { TooltipProvider } from './ui/tooltip';
 import { DataContext } from '@/context/data-context';
 import { useAuth } from '@/hooks/use-auth';
 import { GUEST_TRY_PATH, isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
+import { vaultHref } from '@/lib/scene-home';
 import {
   canUserAddTrack,
   countUserTracks,
@@ -541,7 +542,7 @@ function LooseTracksSidebar({
             <div className="rounded-xl border border-dashed border-border p-6 text-center space-y-3 dark:border-white/10">
               <p className="text-[10px] font-code text-muted-foreground uppercase tracking-widest">No albums yet</p>
               <Button variant="outline" size="sm" asChild className="text-[9px] font-bold uppercase">
-                <Link href="/">Create from The Vault</Link>
+                <Link href={vaultHref()}>Create from The Vault</Link>
               </Button>
             </div>
           )}
@@ -678,7 +679,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
     if (!loading) {
       const currentAlbum = getAlbumById(albumId);
       if (currentAlbum) setAlbum(currentAlbum);
-      else { setTimeout(() => { if (!getAlbumById(albumId)) router.push('/'); }, 1000); }
+      else { setTimeout(() => { if (!getAlbumById(albumId)) router.push(vaultHref()); }, 1000); }
     }
   }, [albumId, loading, getAlbumById, router]);
 
@@ -766,7 +767,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
         </div>
         
         <div className="relative z-10 min-w-0 md:pl-32">
-            <Button variant="ghost" size="sm" onClick={() => router.push('/')} className="mb-4 sm:mb-6 -ml-1 sm:-ml-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-all">
+            <Button variant="ghost" size="sm" onClick={() => router.push(vaultHref())} className="mb-4 sm:mb-6 -ml-1 sm:-ml-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-all">
                 <ChevronLeft className="mr-2 h-4 w-4" /> Collection
             </Button>
 
@@ -1065,7 +1066,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                               className="w-full h-11 text-red-500/40 hover:text-red-500 hover:bg-red-500/5 font-bold uppercase text-[10px] tracking-widest disabled:opacity-40" 
                               onClick={() => {
                                 if (albumTierLocked) { toast(TIER_LIMIT_LOCKED_TOAST); return; }
-                                if(confirm("PERMANENT DATA WIPE: Are you absolutely sure you want to delete this entire album blueprint and all associated tracks? This cannot be undone.")) { deleteAlbum(albumId); router.push('/'); }
+                                if(confirm("PERMANENT DATA WIPE: Are you absolutely sure you want to delete this entire album blueprint and all associated tracks? This cannot be undone.")) { deleteAlbum(albumId); router.push(vaultHref()); }
                               }}
                             >
                                 <Trash2 className="mr-2 h-4 w-4" /> Delete Album

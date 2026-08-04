@@ -51,6 +51,10 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
           userId: data.userId,
           profilePhotoMode: data.profilePhotoMode === 'custom' ? 'custom' : 'collage',
           profilePhotoUrl: data.profilePhotoUrl || null,
+          referralCode:
+            typeof data.referralCode === 'string' && data.referralCode.trim()
+              ? data.referralCode.trim().toUpperCase()
+              : undefined,
           liveDnaDrops: Array.isArray(data.liveDnaDrops)
             ? data.liveDnaDrops
                 .filter(

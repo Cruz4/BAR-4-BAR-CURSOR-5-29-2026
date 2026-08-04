@@ -13,6 +13,7 @@ import {
   Sparkles,
   Rocket,
   Gift,
+  Globe,
   LayoutGrid,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +32,7 @@ import { getProCheckoutCtaLine } from '@/lib/studio-tiers';
 
 function isVaultLanding(pathname: string | null): boolean {
   if (!pathname) return false;
-  if (pathname === '/') return true;
+  if (pathname === '/' || pathname === '/vault') return true;
   return pathname.startsWith('/albums/') && !pathname.includes('/tracks/');
 }
 
@@ -52,9 +53,16 @@ export function WhatsNewDialog() {
     () =>
       [
         {
-          title: 'Artist Home & The Block',
-          desc: 'Your shareable public page — living skin, Album Rooms, embeds, friends feed. Turn it on from the Vault dock or Studio Progress → Sharing.',
+          title: 'The Scene — your new home',
+          desc: 'Sign in and land on your block: friends\u2019 wall drops, a Discover stream of who\u2019s live, and Your Booth. The Vault moved to its own room — one click away.',
           icon: Rocket,
+          color: 'text-emerald-400',
+          bgColor: 'bg-emerald-500/5',
+        },
+        {
+          title: 'Artist Home & The Block',
+          desc: 'Your shareable public page — living skin, Album Rooms, embeds, friends feed. Flip it live from Your Booth on the Scene or Studio Progress → Sharing.',
+          icon: Globe,
           color: 'text-fuchsia-400',
           bgColor: 'bg-fuchsia-500/5',
         },
@@ -109,7 +117,7 @@ export function WhatsNewDialog() {
   useEffect(() => {
     if (!user?.id || !authReady || loading) return;
     if (!isVaultLanding(pathname)) return;
-    if (!user.vaultTutorialCompletedAt) return;
+    if (!user.vaultTutorialCompletedAt && !user.sceneTutorialCompletedAt) return;
     if (!user.studioPrivacyIntroCompletedAt) return;
     if (isBrandNewStudioAccount(user.createdAt)) return;
     if (isStudioOnboardingBusy()) return;
