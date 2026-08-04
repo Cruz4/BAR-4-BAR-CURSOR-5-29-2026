@@ -675,14 +675,17 @@ export function AlbumList() {
   // Unified Sorting Logic
   const sortData = (data: any[]) => {
       let sorted = [...data];
-      if (sortBy === 'alphabetical') sorted.sort((a, b) => a.title.localeCompare(b.title));
+      if (sortBy === 'alphabetical') sorted.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
       else if (sortBy === 'oldest') sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       else sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       return sorted;
   };
 
   const filteredAlbums = useMemo(() => {
-      let filtered = realAlbums.filter(a => a.title.toLowerCase().includes(searchQuery.toLowerCase()) || a.theme.toLowerCase().includes(searchQuery.toLowerCase()));
+      const q = searchQuery.toLowerCase();
+      let filtered = realAlbums.filter(a =>
+        (a.title || '').toLowerCase().includes(q) || (a.theme || '').toLowerCase().includes(q)
+      );
       return sortData(filtered);
   }, [realAlbums, searchQuery, sortBy]);
 

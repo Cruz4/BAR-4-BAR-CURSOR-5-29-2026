@@ -173,9 +173,15 @@ export default function SharedProjectPage() {
             await revokeDNA(share.type, project.id, shareId);
             toast({
                 title: 'DNA Drop offline',
-                description: 'The public link no longer works. Taking you back to the edit page.',
+                description: 'The public link no longer works.',
             });
-            router.push(editHref ?? '/');
+            // Prefer the page they came from (profile, vault, etc.). Fall back to the
+            // project edit page only when this tab has no prior history (e.g. opened link cold).
+            if (typeof window !== 'undefined' && window.history.length > 1) {
+                router.back();
+            } else {
+                router.push(editHref ?? '/');
+            }
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : 'Could not take this DNA Drop offline.';
             toast({ variant: 'destructive', title: 'Offline failed', description: message });
@@ -219,18 +225,22 @@ export default function SharedProjectPage() {
                 <div className="h-full w-full bg-[repeating-linear-gradient(theme(colors.border),theme(colors.border)_1px,transparent_1px,transparent_24px)]" />
             </div>
 
-            <header className="sticky top-0 z-[100] h-16 border-b bg-background/80 backdrop-blur-md px-6 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <div className="bg-black rounded-lg w-10 h-10 p-1.5 border border-primary/20">
-                        <img src="/Logo.png" alt="Bar 4 Bar" className="w-full h-full object-contain" />
+            <header className="sticky top-0 z-[100] min-h-14 border-b bg-background/80 backdrop-blur-md px-3 sm:px-6 py-2 flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                    <div className="shrink-0 overflow-hidden rounded-lg h-8 w-8 sm:h-9 sm:w-9 border border-primary/20 bg-black">
+                        <img src="/Logo.png" alt="Bar 4 Bar" className="h-full w-full object-contain" />
                     </div>
-                    <div>
-                        <h1 className="text-xl font-headline font-bold text-foreground">BAR 4 BAR</h1>
-                        <p className="text-[8px] text-muted-foreground uppercase tracking-[0.2em] -mt-1">DNA Drop Snapshot</p>
+                    <div className="min-w-0">
+                        <h1 className="truncate font-headline text-sm sm:text-lg font-bold leading-none tracking-tight text-foreground">
+                            BAR 4 BAR
+                        </h1>
+                        <p className="text-[7px] sm:text-[8px] text-muted-foreground uppercase tracking-[0.18em] mt-0.5 truncate">
+                            DNA Drop Snapshot
+                        </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <div className="hidden md:flex items-center gap-4 mr-4 text-muted-foreground">
+                <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+                    <div className="hidden md:flex items-center gap-4 mr-2 text-muted-foreground">
                         <div className="flex items-center gap-1.5">
                             <Eye className="h-3.5 w-3.5" />
                             <span className="text-[10px] font-bold">{share.views.toLocaleString()}</span>
@@ -245,22 +255,38 @@ export default function SharedProjectPage() {
                             onClick={() => setOfflineConfirmOpen(true)}
                             size="sm"
                             variant="outline"
-                            className="h-9 px-4 font-bold border-red-500/30 text-red-500 hover:bg-red-500/10"
+                            className="h-8 sm:h-9 px-2 sm:px-3 font-bold border-red-500/30 text-red-500 hover:bg-red-500/10"
                             disabled={isTakingOffline}
+                            aria-label="Take offline"
+                            title="Take offline"
                         >
-                            {isTakingOffline ? <StudioLoader size="sm" /> : <EyeOff className="h-4 w-4 mr-2" />}
-                            Take offline
+                            {isTakingOffline ? <StudioLoader size="sm" /> : <EyeOff className="h-3.5 w-3.5 sm:mr-1.5" />}
+                            <span className="hidden sm:inline">Take offline</span>
                         </Button>
                     )}
-                    <Button onClick={handleImportClick} size="sm" className="h-9 px-4 font-bold shadow-lg" disabled={isImporting}>
+                    <Button
+                        onClick={handleImportClick}
+                        size="sm"
+                        className="h-8 sm:h-9 px-2.5 sm:px-4 font-bold shadow-lg max-w-[9.5rem] sm:max-w-none"
+                        disabled={isImporting}
+                    >
                         {isImporting ? (
                             <StudioLoader size="sm" />
                         ) : !user ? (
-                            <LogIn className="h-4 w-4 mr-2" />
+                            <LogIn className="h-3.5 w-3.5 mr-1.5 shrink-0" />
                         ) : (
-                            <Import className="h-4 w-4 mr-2" />
+                            <Import className="h-3.5 w-3.5 mr-1.5 shrink-0" />
                         )}
-                        {importLabel}
+                        <span className="truncate text-[10px] sm:text-sm">
+                            {isOwnShare && alreadyInVault ? (
+                                <>
+                                    <span className="sm:hidden">Open</span>
+                                    <span className="hidden sm:inline">{importLabel}</span>
+                                </>
+                            ) : (
+                                importLabel
+                            )}
+                        </span>
                     </Button>
                 </div>
             </header>
@@ -290,14 +316,14 @@ export default function SharedProjectPage() {
                                 priority
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
-                            <div className="absolute bottom-6 left-6 right-6 pointer-events-none">
-                                <h2 className="text-4xl font-headline font-bold text-white uppercase tracking-tighter leading-none">{project.title}</h2>
+                            <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 pointer-events-none">
+                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-headline font-bold text-white uppercase tracking-tighter leading-none break-words">{project.title}</h2>
                                 <p className="text-[10px] text-primary font-bold uppercase mt-2 tracking-widest flex items-center gap-2">
-                                    <Sparkles className="h-3 w-3" /> by {share.ownerName}
+                                    <Sparkles className="h-3 w-3 shrink-0" /> by {share.ownerName}
                                 </p>
                             </div>
                         </div>
-                        <CardContent className="p-6 space-y-6">
+                        <CardContent className="p-4 sm:p-6 space-y-6">
                             <div>
                                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-2">
                                     <Globe className="h-3 w-3" /> {isAlbum ? 'Album Concept' : 'Track Theme'}
@@ -411,17 +437,18 @@ export default function SharedProjectPage() {
                 </div>
 
                 <div className="lg:col-span-8 space-y-8">
-                    <Card className="border-2 shadow-2xl relative overflow-hidden bg-notebook min-h-[80vh]">
+                    <Card className="border-2 shadow-2xl relative overflow-hidden bg-notebook min-h-[60vh] md:min-h-[80vh] [--lyrics-gutter:2.75rem] md:[--lyrics-gutter:100px] [--lyrics-lh:20px] md:[--lyrics-lh:32px]">
                         <style>{`
                             .bg-notebook {
                                 background-image:
-                                    linear-gradient(90deg, transparent 100px, #ff000022 100px, #ff000022 101px, transparent 101px),
-                                    repeating-linear-gradient(transparent, transparent 31px, #ffffff05 31px, #ffffff05 32px);
-                                background-attachment: fixed;
+                                    linear-gradient(90deg, transparent var(--lyrics-gutter), #ff000022 var(--lyrics-gutter), #ff000022 calc(var(--lyrics-gutter) + 1px), transparent calc(var(--lyrics-gutter) + 1px)),
+                                    repeating-linear-gradient(transparent, transparent calc(var(--lyrics-lh) - 1px), #ffffff05 calc(var(--lyrics-lh) - 1px), #ffffff05 var(--lyrics-lh));
+                                background-size: 100% var(--lyrics-lh);
+                                background-attachment: local;
                             }
                         `}</style>
-                        <CardHeader className="bg-card border-b relative z-10 p-12 py-8">
-                            <div className="flex items-center gap-4">
+                        <CardHeader className="bg-card border-b relative z-10 px-4 py-4 sm:px-8 sm:py-6 md:p-12 md:py-8">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                                 <Badge variant="outline" className="text-[9px] uppercase tracking-widest border-primary/20 text-primary">
                                     Live Snapshot
                                 </Badge>
@@ -432,22 +459,25 @@ export default function SharedProjectPage() {
                         </CardHeader>
                         <CardContent className="p-0 relative z-10">
                             {isAlbum ? (
-                                <div className="p-12 space-y-12">
+                                <div className="px-3 py-6 sm:px-6 sm:py-8 md:p-12 space-y-8 md:space-y-12">
                                     {(project as DnaDropAlbumPayload)?.tracks?.map((track: Track, idx: number) => (
-                                        <div key={track.id} className="space-y-6">
-                                            <h4 className="text-3xl font-headline font-bold text-primary uppercase ml-[120px]">
+                                        <div key={track.id} className="space-y-4 md:space-y-6">
+                                            <h4 className="text-base sm:text-xl md:text-3xl font-headline font-bold text-primary uppercase pl-[calc(var(--lyrics-gutter)+0.5rem)]">
                                                 {idx + 1}. {track.title}
                                             </h4>
-                                            <div className="space-y-8">
+                                            <div className="space-y-6 md:space-y-8">
                                                 {track.sections.map((sec) => (
                                                     <div key={sec.id} className="space-y-0">
-                                                        <h5 className="text-sm font-bold text-sky-400 uppercase mb-2 ml-[120px]">[{sec.type}]</h5>
+                                                        <h5 className="text-[10px] sm:text-sm font-bold text-sky-400 uppercase mb-1.5 md:mb-2 pl-[calc(var(--lyrics-gutter)+0.5rem)]">[{sec.type}]</h5>
                                                         {sec.bars.map((bar) => (
-                                                            <div key={bar.idx} className="flex items-start min-h-[32px] pl-[120px] relative">
-                                                                <span className="absolute left-[50px] font-mono text-muted-foreground/10 text-lg leading-[32px] font-bold">
+                                                            <div
+                                                                key={bar.idx}
+                                                                className="relative flex items-start min-h-[var(--lyrics-lh)] pl-[calc(var(--lyrics-gutter)+0.5rem)] pr-2"
+                                                            >
+                                                                <span className="absolute left-0 w-[var(--lyrics-gutter)] pr-1.5 text-right font-mono text-[10px] md:text-sm text-muted-foreground/40 leading-[var(--lyrics-lh)] font-bold tabular-nums">
                                                                     {String(bar.idx).padStart(2, '0')}
                                                                 </span>
-                                                                <p className="text-xl md:text-2xl font-code font-bold leading-[32px] tracking-tight text-foreground/90">
+                                                                <p className="text-[14px] md:text-xl lg:text-2xl font-code font-bold leading-[var(--lyrics-lh)] tracking-tight text-foreground/90 break-words whitespace-pre-wrap min-w-0 w-full">
                                                                     {bar.text || '...'}
                                                                 </p>
                                                             </div>
@@ -459,16 +489,19 @@ export default function SharedProjectPage() {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="p-12 space-y-12">
+                                <div className="px-3 py-6 sm:px-6 sm:py-8 md:p-12 space-y-8 md:space-y-12">
                                     {(project as DnaDropTrackPayload)?.sections?.map((sec: Track['sections'][number]) => (
                                         <div key={sec.id} className="space-y-0">
-                                            <h4 className="text-2xl font-headline font-bold text-sky-400 uppercase mb-4 ml-[120px]">{sec.type}</h4>
+                                            <h4 className="text-base sm:text-xl md:text-2xl font-headline font-bold text-sky-400 uppercase mb-2 md:mb-4 pl-[calc(var(--lyrics-gutter)+0.5rem)]">{sec.type}</h4>
                                             {sec.bars.map((bar) => (
-                                                <div key={bar.idx} className="flex items-start min-h-[32px] pl-[120px] relative">
-                                                    <span className="absolute left-[50px] font-mono text-muted-foreground/10 text-lg leading-[32px] font-bold">
+                                                <div
+                                                    key={bar.idx}
+                                                    className="relative flex items-start min-h-[var(--lyrics-lh)] pl-[calc(var(--lyrics-gutter)+0.5rem)] pr-2"
+                                                >
+                                                    <span className="absolute left-0 w-[var(--lyrics-gutter)] pr-1.5 text-right font-mono text-[10px] md:text-sm text-muted-foreground/40 leading-[var(--lyrics-lh)] font-bold tabular-nums">
                                                         {String(bar.idx).padStart(2, '0')}
                                                     </span>
-                                                    <p className="text-xl md:text-2xl font-code font-bold leading-[32px] tracking-tight text-foreground/90">
+                                                    <p className="text-[14px] md:text-xl lg:text-2xl font-code font-bold leading-[var(--lyrics-lh)] tracking-tight text-foreground/90 break-words whitespace-pre-wrap min-w-0 w-full">
                                                         {bar.text || '...'}
                                                     </p>
                                                 </div>
@@ -483,8 +516,8 @@ export default function SharedProjectPage() {
             </main>
 
             <footer className="py-12 border-t mt-12 bg-muted/5 flex flex-col items-center gap-6 relative z-10">
-                <div className="bg-black p-3 rounded-xl border">
-                    <img src="/Logo.png" alt="B4B" className="h-8 w-8" />
+                <div className="overflow-hidden rounded-xl border border-primary/20 bg-black h-10 w-10">
+                    <img src="/Logo.png" alt="B4B" className="h-full w-full object-contain" />
                 </div>
                 <p className="text-[11px] text-muted-foreground font-code text-center uppercase tracking-[0.4em]">
                     Built and shared via Bar 4 Bar Studio
@@ -531,7 +564,7 @@ export default function SharedProjectPage() {
                         <AlertDialogTitle className="font-headline text-2xl uppercase">Take this DNA Drop offline?</AlertDialogTitle>
                         <AlertDialogDescription className="text-sm font-code leading-relaxed">
                             The public link for <strong className="text-foreground">{project.title}</strong> will stop working immediately.
-                            You&apos;ll be taken back to the edit page — publish again anytime from there.
+                            You&apos;ll go back to where you came from — publish again anytime from the project.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
