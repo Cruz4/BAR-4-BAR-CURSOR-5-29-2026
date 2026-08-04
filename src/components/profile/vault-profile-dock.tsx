@@ -7,7 +7,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink, Globe, Settings2, Trophy, UserRound, Users } from 'lucide-react';
+import { ExternalLink, Globe, Settings2, Trophy, UserRound, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -24,7 +24,6 @@ import { useSocialAlerts } from '@/hooks/use-social-alerts';
 import { patchGamificationSettings } from '@/lib/gamification-client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { blockFeedHref } from '@/lib/scene-home';
 
 type VaultProfileDockProps = {
   /** Horizontal strip under vault progress on < xl. */
@@ -196,11 +195,11 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
         </button>
 
         <Link
-          href={blockFeedHref()}
+          href="/activity"
           aria-label={
             alertCount > 0
-              ? `The Block — ${alertCount} social alerts`
-              : 'The Block — friends feed'
+              ? `Activity — ${alertCount} unread`
+              : 'Activity — loves, replies, requests'
           }
           className={blockBtnClass}
         >
@@ -211,7 +210,7 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
               alertCount > 0 && 'shadow-[0_0_18px_rgba(16,185,129,0.3)]'
             )}
           >
-            <Users className="h-4 w-4" />
+            <Bell className="h-4 w-4" />
             <AlertBadge count={alertCount} compact={compact} />
           </span>
 
@@ -222,13 +221,7 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
                 compact ? 'text-xs' : 'text-[10px]'
               )}
             >
-              {compact ? 'The Block' : (
-                <>
-                  The
-                  <br />
-                  Block
-                </>
-              )}
+              Activity
             </span>
             <span
               className={cn(
@@ -236,7 +229,7 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
                 compact ? 'text-[9px]' : 'text-[8px]'
               )}
             >
-              {alertCount > 0 ? `${alertCount > 99 ? '99+' : alertCount} new` : 'Feed'}
+              {alertCount > 0 ? `${alertCount > 99 ? '99+' : alertCount} new` : 'Inbox'}
             </span>
           </span>
 

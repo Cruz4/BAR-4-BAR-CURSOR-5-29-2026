@@ -2,8 +2,8 @@
 
 /**
  * Scene Nav Dock — right rail of the Scene home.
- * Fast lanes into every surface: Vault (primary), write split (keep / new),
- * Artist Home, Edit Public Page, Leaderboard, Your circle, Ink store.
+ * Fast lanes: Vault, write split (keep / new), Artist Home split (view / edit),
+ * Leaderboard, Activity, Your circle, Ink store.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -17,6 +17,7 @@ import {
   UserRound,
   Users,
   Droplets,
+  Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGamification } from '@/context/gamification-context';
@@ -43,7 +44,7 @@ type DockItem = {
 };
 
 const dockShell =
-  'group relative flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-all duration-300 shadow-[0_8px_28px_rgba(0,0,0,0.14)] backdrop-blur-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50';
+  'group relative flex h-[3.75rem] items-center gap-2.5 rounded-xl border px-3 text-left transition-all duration-300 shadow-[0_8px_28px_rgba(0,0,0,0.14)] backdrop-blur-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:gap-3 sm:px-3.5';
 
 const writeTone =
   'border-border/70 bg-card/55 hover:border-muted-foreground/40';
@@ -53,10 +54,7 @@ const writeIconTone =
 function DockLink({ item }: { item: DockItem }) {
   const Icon = item.icon;
   return (
-    <Link
-      href={item.href}
-      className={cn(dockShell, item.tone)}
-    >
+    <Link href={item.href} className={cn(dockShell, item.tone)}>
       <span
         className={cn(
           'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border',
@@ -76,19 +74,32 @@ function DockLink({ item }: { item: DockItem }) {
       <span className="min-w-0 flex-1">
         <span
           className={cn(
-            'block truncate font-headline text-xs font-bold uppercase leading-tight tracking-tight',
+            'block font-sans text-[11px] font-bold uppercase leading-tight tracking-wide sm:text-xs',
             item.primary ? 'text-primary' : 'text-foreground'
           )}
         >
           {item.label}
         </span>
-        <span className="mt-0.5 block truncate font-code text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground/70">
+        <span className="mt-0.5 block font-code text-[8px] font-bold uppercase leading-tight tracking-[0.12em] text-muted-foreground/70 sm:text-[9px] sm:tracking-[0.16em]">
           {item.sub}
         </span>
       </span>
     </Link>
   );
 }
+
+const splitShell =
+  'relative flex h-[3.75rem] overflow-hidden rounded-xl border transition-all duration-300 shadow-[0_8px_28px_rgba(0,0,0,0.14)] backdrop-blur-md hover:-translate-y-0.5';
+const splitPrimaryLink =
+  'flex min-w-0 flex-1 items-center gap-2 px-2.5 text-left transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50 sm:gap-2.5 sm:px-3';
+const splitSideLink =
+  'flex w-[3.15rem] shrink-0 flex-col items-center justify-center gap-0.5 px-0.5 transition-colors hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50 sm:w-[3.35rem]';
+const splitSideLabel =
+  'text-center font-sans text-[9px] font-semibold uppercase leading-[1.05] tracking-wide text-foreground';
+const splitTitle =
+  'block font-sans text-[11px] font-bold uppercase leading-tight tracking-wide text-foreground sm:text-xs';
+const splitSub =
+  'mt-0.5 block font-code text-[8px] font-bold uppercase leading-tight tracking-[0.12em] text-muted-foreground/70 sm:text-[9px] sm:tracking-[0.16em]';
 
 /** One dock control: primary = keep writing, split action = start new track. */
 function WriteSplitButton({
@@ -99,17 +110,8 @@ function WriteSplitButton({
   newTrackHref: string;
 }) {
   return (
-    <div
-      className={cn(
-        'relative flex overflow-hidden rounded-xl border transition-all duration-300',
-        'shadow-[0_8px_28px_rgba(0,0,0,0.14)] backdrop-blur-md hover:-translate-y-0.5',
-        'border-border/70 bg-card/55 hover:border-muted-foreground/40'
-      )}
-    >
-      <Link
-        href={lastTrackPath}
-        className="flex min-w-0 flex-1 items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50"
-      >
+    <div className={cn(splitShell, 'border-border/70 bg-card/55 hover:border-muted-foreground/40')}>
+      <Link href={lastTrackPath} className={splitPrimaryLink}>
         <span
           className={cn(
             'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border',
@@ -119,12 +121,8 @@ function WriteSplitButton({
           <PenLine className="h-4 w-4" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-headline text-xs font-bold uppercase leading-tight tracking-tight text-foreground">
-            Keep writing
-          </span>
-          <span className="mt-0.5 block truncate font-code text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground/70">
-            Last sheet
-          </span>
+          <span className={splitTitle}>Keep writing</span>
+          <span className={splitSub}>Last sheet</span>
         </span>
       </Link>
 
@@ -134,13 +132,57 @@ function WriteSplitButton({
         href={newTrackHref}
         title="Start a track"
         aria-label="Start a track"
-        className="flex w-[4.75rem] shrink-0 flex-col items-center justify-center gap-0.5 px-1.5 transition-colors hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50"
+        className={splitSideLink}
       >
-        <FilePlus2 className="h-4 w-4 text-foreground/80" />
-        <span className="text-center font-headline text-[9px] font-bold uppercase leading-tight tracking-tight text-foreground">
+        <FilePlus2 className="h-3.5 w-3.5 text-foreground/80" />
+        <span className={splitSideLabel}>
           Start
           <br />
           track
+        </span>
+      </Link>
+    </div>
+  );
+}
+
+/** One dock control: view live Artist Home + edit public page. */
+function ArtistHomeSplitButton({
+  profileHref,
+  isLive,
+}: {
+  profileHref: string;
+  isLive: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        splitShell,
+        'border-sky-500/35 bg-gradient-to-r from-sky-500/10 via-card/85 to-card/70 hover:border-sky-400/55'
+      )}
+    >
+      <Link href={profileHref} className={splitPrimaryLink}>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sky-400/50 bg-sky-500/15 text-sky-400">
+          <UserRound className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className={splitTitle}>Artist Home</span>
+          <span className={splitSub}>{isLive ? 'Live on web' : 'Preview'}</span>
+        </span>
+      </Link>
+
+      <div className="my-2 w-px shrink-0 self-stretch bg-border/70" aria-hidden />
+
+      <Link
+        href="/profile/customize"
+        title="Edit Public Page"
+        aria-label="Edit Public Page"
+        className={splitSideLink}
+      >
+        <Settings2 className="h-3.5 w-3.5 text-sky-300/90" />
+        <span className={splitSideLabel}>
+          Edit
+          <br />
+          page
         </span>
       </Link>
     </div>
@@ -171,28 +213,6 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       iconTone: 'border-primary/50 bg-primary/15 text-primary',
       primary: true,
     },
-    ...(isLive && profileHref
-      ? [
-          {
-            key: 'home',
-            href: profileHref,
-            label: 'My Artist Home',
-            sub: 'Live on the web',
-            icon: UserRound,
-            tone: 'border-sky-500/35 bg-gradient-to-r from-sky-500/10 via-card/85 to-card/70 hover:border-sky-400/55',
-            iconTone: 'border-sky-400/50 bg-sky-500/15 text-sky-400',
-          } satisfies DockItem,
-        ]
-      : []),
-    {
-      key: 'customize',
-      href: '/profile/customize',
-      label: 'Edit Public Page',
-      sub: isLive ? 'Skin · modules · rooms' : 'Set up your page',
-      icon: Settings2,
-      tone: writeTone,
-      iconTone: writeIconTone,
-    },
     {
       key: 'leaderboard',
       href: '/leaderboard',
@@ -203,14 +223,23 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       iconTone: 'border-amber-400/45 bg-amber-500/15 text-amber-400',
     },
     {
-      key: 'circle',
-      href: '/friends',
-      label: 'Your circle',
-      sub: alertCount > 0 ? `${alertCount > 99 ? '99+' : alertCount} new` : 'Friends & blocks',
-      icon: Users,
+      key: 'activity',
+      href: '/activity',
+      label: 'Activity',
+      sub: alertCount > 0 ? `${alertCount > 99 ? '99+' : alertCount} new` : 'Loves · replies · requests',
+      icon: Bell,
       tone: 'border-emerald-500/30 bg-card/55 hover:border-emerald-400/50',
       iconTone: 'border-emerald-400/45 bg-emerald-500/15 text-emerald-400',
       badge: alertCount,
+    },
+    {
+      key: 'circle',
+      href: '/friends',
+      label: 'Your circle',
+      sub: 'Friends & blocks',
+      icon: Users,
+      tone: 'border-sky-500/30 bg-card/55 hover:border-sky-400/50',
+      iconTone: 'border-sky-400/45 bg-sky-500/15 text-sky-400',
     },
     {
       key: 'ink',
@@ -248,6 +277,22 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
             label: 'Start a track',
             sub: 'Open a fresh sheet',
             icon: FilePlus2,
+            tone: writeTone,
+            iconTone: writeIconTone,
+          }}
+        />
+      )}
+
+      {isLive && profileHref ? (
+        <ArtistHomeSplitButton profileHref={profileHref} isLive={isLive} />
+      ) : (
+        <DockLink
+          item={{
+            key: 'customize',
+            href: '/profile/customize',
+            label: 'Edit Public Page',
+            sub: 'Set up your page',
+            icon: Settings2,
             tone: writeTone,
             iconTone: writeIconTone,
           }}

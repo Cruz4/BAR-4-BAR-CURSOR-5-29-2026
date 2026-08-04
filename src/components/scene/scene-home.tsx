@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { StudioLoader } from '@/components/studio-loader';
 import { PostCard } from '@/components/profile/post-card';
 import { FindArtistsPanel } from '@/components/profile/find-artists-panel';
-import { VaultStudioProgress } from '@/components/gamification/vault-studio-progress';
+import { VaultStudioProgress, SCENE_STUDIO_PROGRESS_EXPANDED_KEY } from '@/components/gamification/vault-studio-progress';
 import { SceneNavDock } from '@/components/scene/scene-nav-dock';
 import { SceneBoothCard } from '@/components/scene/scene-booth-card';
 import { SceneDiscoverCard } from '@/components/scene/scene-discover-card';
@@ -332,7 +332,11 @@ export function SceneHome() {
           {/* < xl: progress banner + nav strip stacked above the feed */}
           <div className="xl:hidden mb-4 space-y-3">
             <div data-tour="scene-progress-mobile">
-              <VaultStudioProgress variant="banner" />
+              <VaultStudioProgress
+                variant="banner"
+                defaultExpanded
+                persistExpandedKey={SCENE_STUDIO_PROGRESS_EXPANDED_KEY}
+              />
             </div>
             <SceneNavDock compact />
           </div>
@@ -344,7 +348,11 @@ export function SceneHome() {
           aria-label="Studio progress"
           data-tour="scene-progress-desktop"
         >
-          <VaultStudioProgress variant="sidebar" />
+          <VaultStudioProgress
+            variant="sidebar"
+            defaultExpanded
+            persistExpandedKey={SCENE_STUDIO_PROGRESS_EXPANDED_KEY}
+          />
         </aside>
 
         {/* Right rail — nav dock (xl only) */}

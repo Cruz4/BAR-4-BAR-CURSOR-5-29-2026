@@ -3,15 +3,18 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { pickSceneNeonEntry, type SceneNeonEntry } from '@/lib/scene/scene-neon-lexicon';
+import { useSceneSky } from '@/hooks/use-scene-sky';
+import {
+  cloudIntensity,
+  precipKind,
+  showsStars,
+  showsSun,
+  type SceneWeather,
+} from '@/lib/scene/scene-sky';
 
 /**
- * The Scene Block — a night skyline that is actually driven by what's
- * happening around the viewer, not a canned ambient loop.
- *
- * Unlike a purely decorative background, the number of lit windows tracks
- * real activity (friends + wall posts + Discover cards + pending requests),
- * and every time a new post/drop lands, a small burst of notes rises from a
- * lit window. The block gets busier as your circle does.
+ * The Scene Block — skyline driven by local day/night + live weather,
+ * with lit windows tracking social activity around the viewer.
  */
 
 function mulberry32(seed: number) {
@@ -26,9 +29,9 @@ function mulberry32(seed: number) {
 }
 
 type Building = {
-  left: number; // %
-  width: number; // %
-  height: number; // px
+  left: number;
+  width: number;
+  height: number;
   cols: number;
   rows: number;
 };
@@ -36,8 +39,8 @@ type Building = {
 type SkylineWindow = {
   id: number;
   buildingIndex: number;
-  leftPct: number; // within building, 0-100
-  topPct: number; // within building, 0 (roof) - 100 (ground)
+  leftPct: number;
+  topPct: number;
   hue: 'amber' | 'cyan' | 'magenta';
   delay: number;
   duration: number;
@@ -107,6 +110,30 @@ const STARS = (() => {
   }));
 })();
 
+const CLOUDS = (() => {
+  const rand = mulberry32(90210);
+  return Array.from({ length: 7 }, (_, i) => ({
+    id: i,
+    left: rand() * 90,
+    top: 8 + rand() * 38,
+    width: 18 + rand() * 28,
+    height: 6 + rand() * 10,
+    delay: rand() * 12,
+    duration: 40 + rand() * 50,
+  }));
+})();
+
+const PRECIP = (() => {
+  const rand = mulberry32(31415);
+  return Array.from({ length: 48 }, (_, i) => ({
+    id: i,
+    left: rand() * 100,
+    delay: rand() * 4,
+    duration: 0.6 + rand() * 1.4,
+    size: 1 + rand() * 2,
+  }));
+})();
+
 function windowAbsoluteLeft(win: SkylineWindow): number {
   const building = FRONT_BUILDINGS[win.buildingIndex];
   return building.left + (win.leftPct / 100) * building.width;
@@ -126,17 +153,22 @@ type NoteBurst = {
 
 const NOTE_GLYPHS = ['♪', '♫', '♬'];
 
+function precipClass(weather: SceneWeather): string {
+  const kind = precipKind(weather);
+  if (kind === 'none') return '';
+  return `is-${kind.replace(/_/g, '-')}`;
+}
+
 export function SceneBlockAtmosphere({
   className,
   energy = 0,
   pulseKey = 0,
 }: {
   className?: string;
-  /** Raw activity score — friends + wall posts + Discover cards + 2× pending requests. */
   energy?: number;
-  /** Bump this (e.g. to posts.length) to trigger a note burst when something new lands. */
   pulseKey?: number;
 }) {
+  const { phase, weather, windy, hasWeather } = useSceneSky();
   const litCount = Math.min(TOTAL_WINDOWS, Math.max(4, Math.round(4 + energy * 2)));
   const litIds = useMemo(() => new Set(WINDOW_LIGHT_ORDER.slice(0, litCount)), [litCount]);
   const litWindows = useMemo(
@@ -148,6 +180,12 @@ export function SceneBlockAtmosphere({
   const [neon, setNeon] = useState<SceneNeonEntry | null>(null);
   const prevPulseRef = useRef<number>(-1);
   const burstIdRef = useRef(0);
+
+  const clouds = cloudIntensity(weather);
+  const precip = precipKind(weather);
+  const starVisible = showsStars(phase);
+  const sunVisible = showsSun(phase, weather);
+  const showLightning = weather === 'thunderstorm' || weather === 'hail';
 
   useEffect(() => {
     setNeon(pickSceneNeonEntry());
@@ -181,25 +219,79 @@ export function SceneBlockAtmosphere({
 
   return (
     <div
-      className={cn('scene-block pointer-events-none fixed inset-0 z-[1] overflow-hidden', className)}
+      className={cn(
+        'scene-block pointer-events-none fixed inset-0 z-[1] overflow-hidden',
+        windy && 'is-windy',
+        className
+      )}
+      data-phase={phase}
+      data-weather={weather}
+      data-has-weather={hasWeather ? '1' : '0'}
       aria-hidden
     >
       <div className="scene-block-sky absolute inset-0" />
 
-      {STARS.map((star) => (
+      {sunVisible && <div className="scene-block-sun absolute" />}
+
+      {starVisible &&
+        STARS.map((star) => (
+          <div
+            key={star.id}
+            className={cn('scene-block-star absolute rounded-full', phase === 'dusk' && 'is-dusk')}
+            style={{
+              left: `${star.left}%`,
+              top: `${star.top}%`,
+              width: star.size,
+              height: star.size,
+              animationDelay: `${star.delay}s`,
+              animationDuration: `${star.duration}s`,
+            }}
+          />
+        ))}
+
+      {clouds > 0 && (
         <div
-          key={star.id}
-          className="scene-block-star absolute rounded-full"
-          style={{
-            left: `${star.left}%`,
-            top: `${star.top}%`,
-            width: star.size,
-            height: star.size,
-            animationDelay: `${star.delay}s`,
-            animationDuration: `${star.duration}s`,
-          }}
-        />
-      ))}
+          className="scene-block-clouds absolute inset-0"
+          style={{ opacity: clouds }}
+        >
+          {CLOUDS.map((cloud) => (
+            <div
+              key={cloud.id}
+              className="scene-block-cloud absolute rounded-full"
+              style={{
+                left: `${cloud.left}%`,
+                top: `${cloud.top}%`,
+                width: `${cloud.width}%`,
+                height: `${cloud.height}%`,
+                animationDelay: `${cloud.delay}s`,
+                animationDuration: `${cloud.duration}s`,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {weather === 'fog' && <div className="scene-block-fog absolute inset-0" />}
+
+      {precip !== 'none' && (
+        <div className={cn('scene-block-precip absolute inset-0', precipClass(weather))}>
+          {PRECIP.map((drop) => (
+            <span
+              key={drop.id}
+              className="scene-block-precip-particle absolute"
+              style={{
+                left: `${drop.left}%`,
+                animationDelay: `${drop.delay}s`,
+                animationDuration: `${drop.duration}s`,
+                width: drop.size,
+                height: precip === 'snow' || precip === 'heavy_snow' || precip === 'hail' ? drop.size : drop.size * 6,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {showLightning && <div className="scene-block-lightning absolute inset-0" />}
 
       <div className="scene-block-headlight absolute inset-y-0 -left-1/3 w-1/3" />
 
@@ -207,25 +299,22 @@ export function SceneBlockAtmosphere({
 
       {neon && (
         <div
-          className="scene-block-neon absolute right-[4%] top-[4.5rem] hidden max-w-[11rem] text-right sm:block"
+          className="scene-block-neon absolute right-[3%] top-[4.5rem] hidden max-w-[13rem] text-right sm:block"
           aria-hidden
         >
-          <span className="scene-block-neon-text font-headline text-sm font-bold uppercase italic tracking-[0.28em]">
+          <span className="scene-block-neon-text font-headline text-base font-bold uppercase tracking-[0.12em] sm:text-lg">
             {neon.word}
           </span>
-          <p className="scene-block-neon-pron mt-0.5 font-code text-[8px] font-medium normal-case tracking-wide">
+          <p className="scene-block-neon-pron mt-1 font-sans text-xs font-medium normal-case tracking-wide sm:text-[13px]">
             /{neon.pron}/
           </p>
-          <p className="scene-block-neon-gloss mt-1 font-code text-[9px] font-medium leading-snug tracking-wide">
+          <p className="scene-block-neon-gloss mt-1.5 font-code text-[10px] font-medium leading-snug tracking-wide">
             {neon.gloss}
           </p>
         </div>
       )}
 
-      <div
-        className="absolute inset-x-0 bottom-0"
-        style={{ height: SKYLINE_HEIGHT_PX }}
-      >
+      <div className="absolute inset-x-0 bottom-0" style={{ height: SKYLINE_HEIGHT_PX }}>
         {BACK_BUILDINGS.map((b, i) => (
           <div
             key={`back-${i}`}

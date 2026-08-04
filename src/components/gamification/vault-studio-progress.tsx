@@ -24,26 +24,65 @@ import { CheckCircle2, Circle, Flame, Lock, Trophy, ChevronRight, ChevronDown } 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const RECENT_EARN_MS = 48 * 60 * 60 * 1000;
+/** Scene home — remember expand/collapse across visits. */
+export const SCENE_STUDIO_PROGRESS_EXPANDED_KEY = 'b4b-scene-studio-progress-expanded';
 
 function shortRankLabel(label: string): string {
   const first = label.split(' ')[0] || label;
   return first.length > 8 ? first.slice(0, 7) : first;
 }
 
+function readPersistedExpanded(key: string | undefined, fallback: boolean): boolean {
+  if (!key || typeof window === 'undefined') return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === '1') return true;
+    if (raw === '0') return false;
+  } catch {
+    /* ignore */
+  }
+  return fallback;
+}
+
+function writePersistedExpanded(key: string | undefined, value: boolean) {
+  if (!key || typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, value ? '1' : '0');
+  } catch {
+    /* ignore */
+  }
+}
+
 export function VaultStudioProgress({
   variant = 'banner',
   tourForceExpanded = false,
+  /** When set, expand/collapse is remembered (Scene uses this). */
+  persistExpandedKey,
+  /** Used when no stored preference yet. Scene defaults open. */
+  defaultExpanded = false,
 }: {
   variant?: 'banner' | 'sidebar';
   /** Vault guided tour — expand panel so the spotlight covers the full progress card. */
   tourForceExpanded?: boolean;
+  persistExpandedKey?: string;
+  defaultExpanded?: boolean;
 }) {
   const { user } = useAuth();
   const { summary, rankLabel, loading } = useGamification();
   const isSidebar = variant === 'sidebar';
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(() =>
+    readPersistedExpanded(persistExpandedKey, defaultExpanded)
+  );
   const initializedRef = useRef(false);
   const xpRingGradientId = useId();
+
+  const setExpandedPersisted = (next: boolean | ((prev: boolean) => boolean)) => {
+    setExpanded((prev) => {
+      const value = typeof next === 'function' ? next(prev) : next;
+      writePersistedExpanded(persistExpandedKey, value);
+      return value;
+    });
+  };
 
   useEffect(() => {
     if (tourForceExpanded) setExpanded(true);
@@ -58,17 +97,22 @@ export function VaultStudioProgress({
     return Object.values(unlocked).some((iso) => now - new Date(iso).getTime() < RECENT_EARN_MS);
   }, [unlocked]);
 
+  // Vault-only: auto-open once when something was just earned (Scene uses persisted preference).
   useEffect(() => {
+    if (persistExpandedKey) return;
     if (initializedRef.current || loading) return;
     initializedRef.current = true;
     if (hasRecentEarn) setExpanded(true);
-  }, [hasRecentEarn, loading]);
+  }, [hasRecentEarn, loading, persistExpandedKey]);
 
   useEffect(() => {
-    const onUnlock = () => setExpanded(true);
+    const onUnlock = () => {
+      setExpanded(true);
+      writePersistedExpanded(persistExpandedKey, true);
+    };
     window.addEventListener('b4b-achievement-unlock', onUnlock);
     return () => window.removeEventListener('b4b-achievement-unlock', onUnlock);
-  }, []);
+  }, [persistExpandedKey]);
 
   const { unlockedBadges, lockedPreview } = useMemo(() => {
     const unlockedList = ACHIEVEMENTS.filter((a) => unlocked[a.id]).sort(
@@ -97,7 +141,7 @@ export function VaultStudioProgress({
       <TooltipTrigger asChild>
         <button
           type="button"
-          onClick={() => setExpanded(true)}
+          onClick={() => setExpandedPersisted(true)}
           className={cn(
             'group relative flex h-[3.75rem] w-[3.75rem] shrink-0 items-center justify-center rounded-full',
             'border-2 transition-all duration-300 hover:scale-105',
@@ -175,7 +219,7 @@ export function VaultStudioProgress({
         isSidebar ? 'px-2.5 py-2 bg-muted/40' : 'px-3 py-2 bg-muted/30'
       )}
       onClick={() => {
-        if (!tourForceExpanded) setExpanded((v) => !v);
+        if (!tourForceExpanded) setExpandedPersisted((v) => !v);
       }}
       aria-expanded={showExpanded}
     >

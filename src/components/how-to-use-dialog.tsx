@@ -3,11 +3,9 @@
 import { useCallback, useContext, useMemo } from 'react';
 
 /**
- * @fileOverview MASTER LOCKDOWN (5/14/2026) - Spatial Studio Manual.
- * 
- * - Mapping: Panel-based directions.
- * - Logic: ∞ Loop methodologies and Precision Tool deep-dives.
- * - UPDATE (5/24): Purged 48-Hour Trial references. Enabled Cloud Sync for all.
+ * @fileOverview Studio Master Manual — spatial guide for Scene, Vault, workstation.
+ * Start Here covers navigation, Activity, Artist Home, sky, and tours.
+ * Detail lives in Precision Tools + FAQ.
  */
 
 import {
@@ -77,6 +75,9 @@ import {
   Settings,
   ListRestart,
   Radio,
+  Bell,
+  Archive,
+  CloudSun,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -117,112 +118,120 @@ const ChapterCard = ({ icon, title, children, colorClass }: { icon: React.ReactN
 
 const FAQS = [
     {
-      q: "What is the difference between Residency and Raw Ink?",
-      a: "Residency Ink is provided by your membership and resets monthly—it does not rollover. Raw Ink is purchased separately, never expires, and is 'permanent fuel' for your workstation. The studio automatically uses expiring Residency Ink first."
-    },
-    {
-      q: "Where is the DNA Vault?",
-      a: "Save extractions on DNA & REMIX → Analysis Step with Save DNA Profile (Pro). Load saved profiles from DNA & REMIX → Calibration Hub → DNA Strains → VAULT, or the DNA Suite folder icon in the right panel. Both paths load full profiles or let you cherry-pick individual strains."
-    },
-    {
-      q: "How do I save a DNA profile from extraction?",
-      a: "Generation Workstation → DNA & REMIX → paste lyrics, a poem, or ideas (or toggle Sync Current Lyrics) → run extraction. On Analysis Step, Save DNA Profile archives the entire extraction. Use ⚡ on strain cards to inject parts into this remix only. DNA Suite is where you can also type your own five questions or edit fields after you load or extract."
-    },
-    {
-      q: "What is the difference between ⚡ inject and loading a DNA Profile?",
-      a: "On Analysis Step or in the Hub INSIGHTS tab, ⚡ on a strain appends that one field (Creative DNA, Intents, Structure guide, or Style DNA). Save DNA Profile or the vault ↻ button stores or loads the entire extraction at once. Expanded vault entries also offer partial ⚡ loads per strain."
-    },
-    {
-      q: "Where do analysis strains go in the Calibration Hub?",
-      a: "Themes → Setting/World · Emotion → Emotion/Core · Shift → Trigger Moment · Arc & What Makes It Work → Message/Truth · POV, Tense & Voice → Tone/Palette · Motifs → Intents · Structure → Structure guide · Style → Style DNA. Color-coded cards match their hub section."
-    },
-    {
-      q: "Do remix path percentages affect Special Instructions?",
-      a: "No. Remix Influence % sliders only blend selected remix paths relative to each other. Special Instructions are treated as a direct creative brief at synthesis—not weighted or blended by percentage."
-    },
-    {
-      q: "Why are Calibration Hub sections collapsed?",
-      a: "Structure opens expanded with the Default preset loaded so you can tune bar counts right away. Other sections stay minimized until you ⚡ inject a strain, load a vault preset, select remix paths, or add Special Instructions."
-    },
-    {
-      q: "What is the Rhyme Pulse?",
-      a: `The Rhyme Pulse is the round button in the Center Panel top bar. Clicking it initiates a deep phonetic scan of your current sheet for ${AI_COSTS.findRhymes} Ink. It is a one-time scan that updates your highlighting.`
-    },
-    {
-      q: "How do I save Ink on a full song?",
-      a: "Open the Calibration Hub and run Studio Draft on your sections — a typical default structure is about 104 Ink (2 Ink per bar). Next/Previous Line is perfect for tweaks, but using it on every bar costs more over a full track."
-    },
-    {
-      q: "Is this like Suno or Udio?",
-      a: "No — those tools render full songs. Bar 4 Bar is your rhyme book and DNA workstation: structure, remix strains, rhyme pulse, and vault saves. Ink powers lyric intelligence, not audio generation."
-    },
-    {
-      q: "How do I save a Vibe?",
-      a: "In the Right Panel under 'Track Vibe', click the folder icon to open the Vibe Vault. You can save your current instrumentation and BPM here for reuse across the project."
-    },
-    {
-      q: "What is the 3-Way System?",
-      a: "It's our precision generation framework. You can trigger suggestions via: 1. In-Line Hover Buttons (on the sheet), 2. The Bar Workstation (footer), and 3. The AI Co-Writer (right panel)."
-    },
-    {
-      q: "Where is Studio Progress?",
-      a: "On The Vault (desktop), use the Studio Progress panel in the left gutter. On mobile it appears as a banner under the header. For the full board — weekly goals, milestones, leaderboard compare, and achievements — open Studio Progress from the profile menu or visit /studio-progress."
-    },
-    {
-      q: "How do achievements and share cards work?",
-      a: "Badges unlock automatically as you hit studio milestones (writing, generating, streaks, and more). Open Studio Progress to see your trophy grid with tooltips. Tap Share achievement card (under Sharing & visibility) to download a foil milestone card you can post anywhere."
-    },
-    {
-      q: "How does Refer a Friend work?",
-      a: "Ink Store → Refer a Friend copies your personal link. When a new artist signs up through it, you each receive 150 permanent Ink automatically. Referrers can earn up to 4 bonuses (600 Ink total). Referred signups are tracked on the platform and logged with Stripe checkout metadata when they upgrade."
-    },
-    {
-      q: "What is a rhyme bar vs a sheet line?",
-      a: "Each row on the lyrics sheet is one line. Studio Progress displays rhyme bars — two non-empty lines equal one rhyme bar (a couplet). AI tools still work line-by-line."
-    },
-    {
-      q: "Written bars vs generated lines — what counts for trophies?",
-      a: "Hand-typed lines (and lines you edit after AI suggests them) count toward “write X bars” goals, streaks, and writing achievements. Lines from Generate Next, full drafts, or Smart Structure paste are tracked separately as generated — they earn lighter XP and feed AI-specific milestones (e.g. Next Bar Graduate). Editing an AI line converts it to written credit on the next save."
-    },
-    {
       q: "What is The Scene (my home page)?",
-      a: "The Scene is where you land when you sign in — friends' wall posts, a Discover stream (recently live Artist Homes, public drops, live DNA Drops, leaderboard risers), your Booth, and shortcuts to everything. The Vault (your albums and writing workstation) is one click away at /vault, top of the right dock."
+      a: "Signing in lands you on The Scene — friends' wall posts, Discover (live Artist Homes, public drops, DNA Drops, leaderboard risers), your Booth, and the right dock. The skyline follows your local day/night and optional live weather. Vault and Activity are also in the top nav."
+    },
+    {
+      q: "Where are The Vault and Activity?",
+      a: "Vault (albums & tracks) is at /vault — sky archive icon in the top nav, or top of the Scene dock. Activity (emerald bell) opens an unread dropdown: mark one or all read, or View all for the full Activity page (/activity) with Inbox · Requests · Sent. Push/settings live under Ink Store → Settings when available."
     },
     {
       q: "What is Artist Home and Edit Public Page?",
-      a: "Artist Home is a core part of Bar 4 Bar — your shareable public page at /profile/your-slug. Living skin, modules, Album Rooms, embeds, social links, wall, friends, and live DNA Drops. Edit Public Page (Your Booth on the Scene, the Vault dock, or Studio Progress → Sharing) is where you customize it. Private by default; never shows private lyrics unless you publish a DNA Drop."
+      a: "Artist Home is your shareable page at /profile/your-slug (skin, modules, Album Rooms, embeds, socials, wall, friends, live DNA Drops). On the Scene dock, Artist Home | Edit page is one split control — view live, or customize. Also reachable from Your Booth, Vault dock, or Studio Progress → Sharing. Private by default; never shows private lyrics unless you publish a DNA Drop."
     },
     {
       q: "What is The Block?",
-      a: "The Block is your friends feed — and it now lives on the Scene home, front and center when you sign in. Wall posts from people you friend, incoming requests, and a Discover stream when your circle is quiet. Search artist names to send invites, or copy your referral link for people not on Bar 4 Bar yet. Your circle (/friends) lists friends and blocked artists."
+      a: "The Block is your friends feed on The Scene — wall posts, requests, and Discover when your circle is quiet. Search artists to invite, or copy your referral link. Your circle (/friends) lists friends and blocked artists."
+    },
+    {
+      q: "Why does the Scene sky change?",
+      a: "The skyline uses your local clock for day, dawn, dusk, and night. If you allow location once (cached on-device ~6 hours), live weather from Open-Meteo can add clouds, rain, snow, fog, wind, or storms. Deny location and you still get clock-only day/night with no weather particles. Coords are never stored on our servers."
+    },
+    {
+      q: "What is the difference between Residency and Raw Ink?",
+      a: "Residency Ink comes with your membership and resets monthly — it does not rollover. Raw Ink is purchased, never expires, and is permanent fuel. The studio drains Residency first."
+    },
+    {
+      q: "Where is the DNA Vault?",
+      a: "Save on DNA & REMIX → Analysis Step → Save DNA Profile (Pro). Load from Calibration Hub → VAULT, or the DNA Suite folder icon in the right panel. Full profiles or cherry-pick individual strains."
+    },
+    {
+      q: "How do I save a DNA profile from extraction?",
+      a: "Generation Workstation → DNA & REMIX → paste or Sync Current Lyrics → extract. On Analysis Step, Save DNA Profile archives everything. ⚡ on a strain injects just that field into this remix. DNA Suite also lets you type or edit the five Creative Direction questions after load/extract."
+    },
+    {
+      q: "What is the difference between ⚡ inject and loading a DNA Profile?",
+      a: "⚡ appends one field (Creative DNA, Intents, Structure guide, or Style DNA). Save DNA Profile or vault ↻ stores/loads the whole extraction. Expanded vault entries also offer per-strain ⚡."
+    },
+    {
+      q: "Where do analysis strains go in the Calibration Hub?",
+      a: "Themes → Setting/World · Emotion → Emotion/Core · Shift → Trigger Moment · Arc & What Makes It Work → Message/Truth · POV, Tense & Voice → Tone/Palette · Motifs → Intents · Structure → Structure guide · Style → Style DNA."
+    },
+    {
+      q: "Do remix path percentages affect Special Instructions?",
+      a: "No. Influence % only blends selected remix paths. Special Instructions are a direct brief at synthesis — not weighted by percentage."
+    },
+    {
+      q: "Why are Calibration Hub sections collapsed?",
+      a: "Structure opens expanded with Default so you can tune bar counts. Other sections stay minimized until you ⚡ inject, load a vault preset, pick remix paths, or add Special Instructions."
+    },
+    {
+      q: "What is the Rhyme Pulse?",
+      a: `Round button in the Center Panel top bar — one deep phonetic scan of your sheet for ${AI_COSTS.findRhymes} Ink. Updates rhyme highlighting.`
+    },
+    {
+      q: "How do I save Ink on a full song?",
+      a: "Run Studio Draft from the Calibration Hub — a typical default structure is about 104 Ink (2 Ink per bar). Next/Previous Line is great for tweaks; using it on every bar costs more than one draft pass."
+    },
+    {
+      q: "Is this like Suno or Udio?",
+      a: "No — those render audio. Bar 4 Bar is your rhyme book and DNA workstation. Ink powers lyric intelligence, not song audio."
+    },
+    {
+      q: "How do I save a Vibe?",
+      a: "Right Panel → Track Vibe → folder icon opens the Vibe Vault. Save instrumentation and BPM for reuse across the project."
+    },
+    {
+      q: "What is the 3-Way System?",
+      a: "Three ways to generate: 1) In-line hover on the sheet, 2) Bar Workstation footer, 3) AI Co-Writer in the right panel."
+    },
+    {
+      q: "Where is Studio Progress?",
+      a: "Vault left gutter on desktop; banner under the header on mobile. Full board — weekly goals, milestones, leaderboard, achievements — at /studio-progress or from the profile menu."
+    },
+    {
+      q: "How do achievements and share cards work?",
+      a: "Badges unlock as you hit milestones. Studio Progress → Studio trophies for the grid. Sharing & visibility → Share achievement card downloads a foil milestone card."
+    },
+    {
+      q: "How does Refer a Friend work?",
+      a: "Ink Store → Refer a Friend copies your link. New signup through it: 150 permanent Ink each. Up to 4 referrer bonuses (600 Ink total)."
+    },
+    {
+      q: "What is a rhyme bar vs a sheet line?",
+      a: "Each sheet row is one line. Progress tracks rhyme bars — two non-empty lines = one couplet. AI tools still work line-by-line."
+    },
+    {
+      q: "Written bars vs generated lines — what counts for trophies?",
+      a: "Hand-typed lines (and AI lines you edit) count toward write goals, streaks, and writing trophies. Generate Next, drafts, and Smart Structure paste are tracked as generated — lighter XP and AI milestones. Editing an AI line converts it to written credit on the next save."
     },
     {
       q: "What shows on the leaderboard and public profile?",
-      a: "The weekly leaderboard shows your display name, rank, XP, bars written (7 days), streak, and tracks completed — never lyrics or vault content. New artists start private: turn on Show on leaderboard in Studio Progress → Sharing & visibility (or the Artist Home dock on The Vault). Artist Home is also off by default; when live it can show your modules, social links, Album Rooms, live DNA Drops, friends, and wall — still never private lyrics unless you publish a DNA Drop."
+      a: "Weekly board: display name, rank, XP, bars (7 days), streak, tracks completed — never lyrics. Opt in via Studio Progress → Sharing. Artist Home is off by default; when live it can show modules, socials, rooms, drops, friends, and wall — still never private lyrics unless you DNA Drop."
     },
     {
       q: "What is DNA Drop?",
-      a: "Studio Pro artists publish a shareable link from the left panel (DNA Drop). Recipients sign in and import lyrics, structure, Creative DNA, vibe, and related strains into their vault. Square album cover art keeps drop previews sharp. Live drops also list automatically on your Artist Home."
+      a: "Studio Pro — publish a shareable snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live drops list on your Artist Home. Update snapshot after edits; Take offline to revoke."
     },
     {
       q: "What happens during Creative Syncing vs DNA Extraction?",
-      a: "DNA Extraction (Seed → Analysis Step) maps strains from pasted or synced text without drafting new bars — Save DNA Profile archives the full result; ⚡ injects individual parts. Creative Syncing runs during full drafts and remix synthesis — it weaves active Hub rules into new lyrics."
+      a: "Extraction (Seed → Analysis) maps strains without drafting bars. Creative Syncing runs during drafts/remix synthesis and weaves Hub rules into new lyrics."
     },
     {
       q: "How do weekly and monthly challenges differ?",
-      a: "Weekly goals reset every Monday; monthly challenges follow the calendar month. Both track rhyme bars (lines ÷ 2). Open /studio-progress or the Vault sidebar for live counters, rank XP, and leaderboard compare."
+      a: "Weekly resets Monday; monthly follows the calendar. Both use rhyme bars (lines ÷ 2). Counters on /studio-progress and the Vault sidebar."
     },
     {
       q: "What is included in a DNA Drop?",
-      a: "A DNA Drop is a public snapshot of your saved project — lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when that toggle is on. Album drops also include album DNA presets and album-level motifs."
+      a: "Lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when toggled on. Album drops add album DNA presets and motifs."
     },
     {
       q: "Is my DNA Drop live-synced when I edit?",
-      a: "No. The link shows the last published snapshot. After you change anything you want shared, open DNA Drop again and press Update snapshot — the URL stays the same but visitors see the new version. Until then, old shared links keep showing the previous snapshot."
+      a: "No — it's the last published snapshot. After changes, open DNA Drop → Update snapshot (same URL). Until then, shared links keep the previous version."
     },
     {
       q: "How do I unshare or take a DNA Drop offline?",
-      a: "Open DNA Drop from the left panel (track) or album page, then press Take offline. The public link stops working immediately. You can publish again later with Confirm DNA Drop."
+      a: "DNA Drop (track left panel or album page) → Take offline. The public link stops immediately. Publish again later with Confirm DNA Drop."
     }
 ];
 
@@ -265,10 +274,10 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
             <DialogTitle className="font-headline text-2xl sm:text-4xl flex items-center gap-3 font-bold">
                 <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-primary shrink-0" /> Studio Master Manual
             </DialogTitle>
-            <DialogDescription className="font-tagline uppercase tracking-[0.3em] text-[10px] text-muted-foreground">Bar4Bar_v3</DialogDescription>
+            <DialogDescription className="font-tagline uppercase tracking-[0.3em] text-[10px] text-muted-foreground">Bar4Bar · Studio guide</DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="tiering" className="flex-grow flex flex-col min-h-0">
+        <Tabs defaultValue="start-here" className="flex-grow flex flex-col min-h-0">
           <div className="px-4 sm:px-8 border-b bg-muted/10 shrink-0">
             <TabsList className="bg-transparent h-11 sm:h-12 gap-4 sm:gap-8 overflow-x-auto justify-start w-full max-w-full flex-nowrap scrollbar-none">
               <TabsTrigger value="start-here" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Start Here</TabsTrigger>
@@ -284,94 +293,110 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
             <div className="max-w-4xl mx-auto space-y-12 pb-12">
 
               <TabsContent value="start-here" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                <ChapterCard icon={<Radio className="text-emerald-400" />} title="The Scene — Your Home" colorClass="border-l-emerald-500 text-emerald-400">
-                  <p className="text-sm">
-                    Signing in lands you on <strong>The Scene</strong> — your home page. Friends&apos; wall
-                    drops, a Discover stream of who&apos;s live across the site, your Booth (Artist Home at a
-                    glance), and quick lanes into everything else.
+                <ChapterCard icon={<Radio className="text-emerald-400" />} title="The Scene" colorClass="border-l-emerald-500 text-emerald-400">
+                  <p className="text-sm text-foreground/90">
+                    Your home after sign-in: wall posts, Discover, Your Booth, and a live skyline that follows
+                    local day/night (and weather if you allow location once).
                   </p>
-                  <ul className="list-disc list-inside space-y-2 text-sm">
-                    <li><strong>Post to your wall</strong> — the composer at the top; friends see it on their Scene.</li>
-                    <li><strong>Discover</strong> — recently live Artist Homes, public drops, live DNA Drops, and this week&apos;s leaderboard risers, so the block is never empty.</li>
-                    <li><strong>Your Booth</strong> — flip your Artist Home live and open Edit Public Page without leaving home.</li>
-                    <li><strong>The Vault</strong> — top of the right dock (or the account menu): albums, tracks, and the writing workstation now live at <code className="text-primary">/vault</code>.</li>
-                  </ul>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="font-bold uppercase text-[10px] tracking-widest gap-2 border-emerald-500/40 hover:bg-emerald-500/10"
-                    onClick={handleReplaySceneTour}
-                  >
-                    <RefreshCw className="h-4 w-4" /> Replay Scene Tour
-                  </Button>
+                  <div className="grid gap-3 sm:grid-cols-2 text-sm">
+                    <div className="rounded-lg border border-border/40 bg-muted/20 p-3 space-y-1.5">
+                      <p className="font-bold text-[10px] uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
+                        <Archive className="h-3 w-3" /> Get around
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-xs">
+                        <li><strong>Top nav</strong> — Vault (sky) and Activity (emerald bell with unread badge).</li>
+                        <li><strong>Dock</strong> — Vault, Keep writing | Start track, Artist Home | Edit page, leaderboard, circle, Ink.</li>
+                        <li><strong>Post</strong> — composer at the top; friends see it on their Scene.</li>
+                      </ul>
+                    </div>
+                    <div className="rounded-lg border border-border/40 bg-muted/20 p-3 space-y-1.5">
+                      <p className="font-bold text-[10px] uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
+                        <CloudSun className="h-3 w-3" /> Atmosphere
+                      </p>
+                      <p className="text-xs leading-relaxed">
+                        Dawn → day → dusk → night from sunrise/sunset when weather loads, else your clock.
+                        Location denied? Sky still flips; no rain/snow particles. Coords stay on-device only.
+                      </p>
+                    </div>
+                  </div>
                 </ChapterCard>
-                <ChapterCard icon={<MousePointer2 className="text-primary" />} title="60-Second Start" colorClass="border-l-primary text-primary">
-                  <p className="text-foreground/90">Bar 4 Bar is a <strong>bar-by-bar rhyme book</strong>, not a one-click song generator. Your first win in under a minute:</p>
-                  <ol className="list-decimal list-inside space-y-3 text-sm">
-                    <li><strong>Paste or write</strong> — top bar → Smart Structure, or type directly on the sheet.</li>
-                    <li><strong>Generate one bar</strong> — click a line, then Bar Workstation → Generate Next (~{AI_COSTS.generateNextLine} Ink).</li>
-                    <li><strong>Save</strong> — edits auto-save; use Export Track (left panel) for PDF anytime.</li>
+
+                <ChapterCard icon={<MousePointer2 className="text-primary" />} title="Write in 60 seconds" colorClass="border-l-primary text-primary">
+                  <ol className="list-decimal list-inside space-y-2 text-sm">
+                    <li><strong>Open a sheet</strong> — Vault, or Keep writing / Start track on the Scene dock.</li>
+                    <li><strong>Paste or type</strong> — Smart Structure in the top bar, or write on the sheet.</li>
+                    <li><strong>Generate one bar</strong> — select a line → Bar Workstation → Generate Next (~{AI_COSTS.generateNextLine} Ink).</li>
                   </ol>
-                  <p className="text-xs border-l-2 border-primary/30 pl-3 italic">Free tier: full DNA &amp; REMIX workflow + system vault presets. Pro saves <em>your</em> custom strains and unlocks cloud sync.</p>
-                </ChapterCard>
-                <ChapterCard icon={<Compass className="text-green-500" />} title="Guided Workstation Tour" colorClass="border-l-green-500">
-                  <p>Walk through the lyrics page with spotlight highlights — paste, sheet, bar AI, DNA, DNA Drop (Pro), and Ink. Skippable anytime.</p>
-                  <p className="text-xs text-muted-foreground">Runs automatically the first time you open a track. Replay opens your last worked-on project and starts the tour.</p>
-                  <Button
-                    type="button"
-                    className="font-bold uppercase text-[10px] tracking-widest gap-2"
-                    onClick={handleReplayWorkstationTour}
-                  >
-                    <RefreshCw className="h-4 w-4" /> Replay Workstation Tour
-                  </Button>
-                </ChapterCard>
-                <ChapterCard icon={<CassetteTape className="text-sky-400" />} title="Guided Vault Tour" colorClass="border-l-sky-500 text-sky-400">
-                  <p>Walk through the Vault with spotlight highlights — header, create project, collection, loose tracks, studio progress, search, and Ink.</p>
-                  <p className="text-xs text-muted-foreground">Runs automatically on your first visit to The Vault. Replay takes you to the Vault and starts the tour.</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="font-bold uppercase text-[10px] tracking-widest gap-2 border-sky-500/40 hover:bg-sky-500/10"
-                    onClick={handleReplayVaultTour}
-                  >
-                    <RefreshCw className="h-4 w-4" /> Replay Vault Tour
-                  </Button>
-                </ChapterCard>
-                <ChapterCard icon={<Lightbulb className="text-yellow-500" />} title="Studio Insights & Did You Knows" colorClass="border-l-yellow-500 text-yellow-500">
-                  <p className="text-sm">After your first guided tour, the lyrics page surfaces one random tip per visit — either a <strong>Studio Insight</strong> or a <strong>Did You Know?</strong> card covering DNA Drop, rhyme-bar math, strain inject, ranks, vault import, and more.</p>
-                  <p className="text-xs text-muted-foreground">45+ tips rotate in the pool. Pause or dismiss anytime; they never repeat twice on the same page visit.</p>
-                </ChapterCard>
-                <ChapterCard icon={<Globe className="text-fuchsia-400" />} title="Artist Home & The Block" colorClass="border-l-fuchsia-500 text-fuchsia-400">
-                  <p className="text-sm">
-                    Artist Home is a <strong>core part of Bar 4 Bar</strong> — your shareable public page at{' '}
-                    <code className="text-primary">/profile/your-slug</code>. Living skin, Album Rooms, embeds, social
-                    links, wall posts, and live DNA Drops. Private until you turn Public profile on (Your Booth on
-                    the Scene, the Vault dock, or Studio Progress → Sharing).
+                  <p className="text-xs border-l-2 border-primary/30 pl-3 italic">
+                    Free: full DNA &amp; REMIX + system presets. Pro: your own vault strains + cloud sync. Edits auto-save; Export Track (left) for PDF.
                   </p>
-                  <ul className="list-disc list-inside space-y-2 text-sm">
-                    <li>
-                      <strong>Edit Public Page</strong> — customize modules and links from the Scene dock, Your
-                      Booth, or <code className="text-primary">/profile/customize</code>.
-                    </li>
-                    <li>
-                      <strong>The Block</strong> — your friends feed lives on the Scene home now: wall posts,
-                      requests, and find artists by name, right where you land.
-                    </li>
-                    <li>
-                      <strong>Your circle</strong> — friends + blocked lists at{' '}
-                      <code className="text-primary">/friends</code>.
-                    </li>
+                </ChapterCard>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <ChapterCard icon={<Globe className="text-fuchsia-400" />} title="Artist Home" colorClass="border-l-fuchsia-500 text-fuchsia-400">
+                    <p className="text-sm">
+                      Public page at <code className="text-primary">/profile/your-slug</code> — skin, modules, Album Rooms,
+                      embeds, wall, friends, live DNA Drops. Off until you flip Public on.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Scene dock: <strong>Artist Home | Edit page</strong> (one control). Also Booth, Vault dock, or Studio Progress → Sharing.
+                    </p>
+                  </ChapterCard>
+                  <ChapterCard icon={<Bell className="text-emerald-400" />} title="Activity" colorClass="border-l-emerald-500 text-emerald-400">
+                    <p className="text-sm">
+                      Top-nav bell opens unread received activity — mark one or all read, or{' '}
+                      <strong>View all</strong> for the full inbox at{' '}
+                      <code className="text-primary">/activity</code>.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Full page tabs: Inbox · Requests · Sent. Notification prefs under Settings when push is enabled.
+                    </p>
+                  </ChapterCard>
+                </div>
+
+                <ChapterCard icon={<Trophy className="text-amber-400" />} title="Progress &amp; community" colorClass="border-l-amber-500 text-amber-400">
+                  <ul className="list-disc list-inside space-y-1.5 text-sm">
+                    <li><strong>Studio Progress</strong> — Vault sidebar / header menu; full board at <code className="text-primary">/studio-progress</code>.</li>
+                    <li><strong>The Block</strong> — friends feed on The Scene; Your circle at <code className="text-primary">/friends</code>.</li>
+                    <li><strong>Share card</strong> — Sharing &amp; visibility → foil milestone export. <strong>Refer a Friend</strong> — Ink Store, 150 Ink each (up to 4).</li>
                   </ul>
                 </ChapterCard>
-                <ChapterCard icon={<Trophy className="text-amber-400" />} title="Progress, Badges & Share Cards" colorClass="border-l-amber-500 text-amber-400">
-                  <ul className="list-disc list-inside space-y-2 text-sm">
-                    <li><strong>Studio Progress</strong> — Vault sidebar or header menu → weekly goals, rank XP, personal milestones.</li>
-                    <li><strong>Full board</strong> — <code className="text-primary">/studio-progress</code> for monthly/lifetime challenges and leaderboard compare.</li>
-                    <li><strong>Achievements</strong> — Studio Progress → Studio trophies (hover badges for unlock details).</li>
-                    <li><strong>Share card</strong> — Studio Progress → Sharing &amp; visibility → Share achievement card for a foil export of your latest milestone.</li>
-                    <li><strong>Refer a Friend</strong> — Ink Store → copy link; 150 permanent Ink each, up to 4 referrals.</li>
-                  </ul>
-                </ChapterCard>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <ChapterCard icon={<Radio className="text-emerald-400" />} title="Scene tour" colorClass="border-l-emerald-500 text-emerald-400">
+                    <p className="text-sm">Walk The Scene again — wall, Booth, feed, Discover, and the dock.</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="font-bold uppercase text-[10px] tracking-widest gap-2 border-emerald-500/40 hover:bg-emerald-500/10"
+                      onClick={handleReplaySceneTour}
+                    >
+                      <RefreshCw className="h-4 w-4" /> Replay Scene tour
+                    </Button>
+                  </ChapterCard>
+                  <ChapterCard icon={<Compass className="text-green-500" />} title="Workstation tour" colorClass="border-l-green-500">
+                    <p className="text-sm">Spotlight walkthrough of the lyrics page — paste, sheet, bar AI, DNA, DNA Drop (Pro), Ink.</p>
+                    <Button type="button" className="font-bold uppercase text-[10px] tracking-widest gap-2" onClick={handleReplayWorkstationTour}>
+                      <RefreshCw className="h-4 w-4" /> Replay tour
+                    </Button>
+                  </ChapterCard>
+                  <ChapterCard icon={<CassetteTape className="text-sky-400" />} title="Vault tour" colorClass="border-l-sky-500 text-sky-400">
+                    <p className="text-sm">Albums, create, loose tracks, progress, search, Ink — first visit auto-runs; replay anytime.</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="font-bold uppercase text-[10px] tracking-widest gap-2 border-sky-500/40 hover:bg-sky-500/10"
+                      onClick={handleReplayVaultTour}
+                    >
+                      <RefreshCw className="h-4 w-4" /> Replay tour
+                    </Button>
+                  </ChapterCard>
+                </div>
+
+                <p className="text-[11px] text-muted-foreground font-code border border-border/40 rounded-lg px-3 py-2 bg-muted/10">
+                  <Lightbulb className="inline h-3.5 w-3.5 mr-1.5 text-yellow-500 align-text-bottom" />
+                  After your first tour, the lyrics page shows one Studio Insight or Did You Know tip per visit (45+ in the pool). Pause or dismiss anytime.
+                </p>
               </TabsContent>
               
               <TabsContent value="tiering" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">

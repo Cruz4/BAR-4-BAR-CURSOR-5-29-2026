@@ -204,6 +204,12 @@ export async function likePost(postId: string): Promise<void> {
   await setDoc(doc(db, 'posts', postId, 'likes', user.uid), {
     createdAt: new Date().toISOString(),
   });
+  const { emitActivity } = await import('@/lib/activity/client');
+  emitActivity({
+    type: 'post_love',
+    actorName: user.displayName || 'Artist',
+    postId,
+  });
 }
 
 export async function unlikePost(postId: string): Promise<void> {
@@ -253,6 +259,14 @@ export async function addComment(
   };
   const { id, ...data } = comment;
   await setDoc(doc(db, 'posts', postId, 'comments', id), data);
+  const { emitActivity } = await import('@/lib/activity/client');
+  emitActivity({
+    type: 'post_reply',
+    actorName: comment.authorName,
+    ...(comment.authorSlug ? { actorSlug: comment.authorSlug } : {}),
+    postId,
+    preview: clean.slice(0, 120),
+  });
   return comment;
 }
 
@@ -335,16 +349,48 @@ export async function sendFriendRequest(
   const { id: _id, ...data } = friendship;
   await setDoc(doc(db, 'friendships', id), data);
   trackSocialEvent('profile_friend_request');
+  const { emitActivity } = await import('@/lib/activity/client');
+  emitActivity({
+    type: 'friend_request',
+    actorName: me.name || user.displayName || 'Artist',
+    ...(me.slug ? { actorSlug: me.slug } : {}),
+    recipientId: target.userId,
+    recipientName: target.name,
+    href: '/activity?tab=requests',
+  });
   return friendship;
 }
 
 export async function acceptFriendRequest(friendshipId: string): Promise<void> {
-  requireUser();
+  const user = requireUser();
+  const snap = await getDoc(doc(db, 'friendships', friendshipId));
   await updateDoc(doc(db, 'friendships', friendshipId), {
     status: 'accepted',
     respondedAt: new Date().toISOString(),
   });
   trackSocialEvent('profile_friend_accept');
+  if (snap.exists()) {
+    const data = snap.data();
+    const requestedBy = String(data.requestedBy || '');
+    if (requestedBy && requestedBy !== user.uid) {
+      const { emitActivity } = await import('@/lib/activity/client');
+      const myProfile = data.profiles?.[user.uid];
+      emitActivity({
+        type: 'friend_accepted',
+        actorName:
+          (myProfile && typeof myProfile === 'object' && typeof myProfile.name === 'string'
+            ? myProfile.name
+            : null) ||
+          user.displayName ||
+          'Artist',
+        ...(myProfile && typeof myProfile === 'object' && typeof myProfile.slug === 'string'
+          ? { actorSlug: myProfile.slug }
+          : {}),
+        recipientId: requestedBy,
+        href: '/friends',
+      });
+    }
+  }
 }
 
 /** Decline a request, cancel one you sent, or unfriend. */

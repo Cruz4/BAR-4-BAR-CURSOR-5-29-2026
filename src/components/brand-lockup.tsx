@@ -34,7 +34,7 @@ export function BrandLockup({
       </div>
       <div
         className={cn(
-          'min-w-0 flex-col text-left',
+          'min-w-0 flex flex-col items-center text-center',
           isMarketing ? 'hidden sm:flex' : 'flex'
         )}
       >

@@ -39,6 +39,30 @@ export async function POST(
       updatedAt: new Date().toISOString(),
     });
 
+    try {
+      const { emitActivityEvent } = await import('@/lib/server/activity');
+      const share = snap.data() || {};
+      let actorName = 'Artist';
+      try {
+        const userSnap = await db.collection('users').doc(userId).get();
+        if (userSnap.exists && typeof userSnap.data()?.displayName === 'string') {
+          actorName = userSnap.data()!.displayName;
+        }
+      } catch {
+        /* ignore */
+      }
+      await emitActivityEvent({
+        type: 'dna_import',
+        actorId: userId,
+        actorName,
+        shareId: shareId.trim().toUpperCase(),
+        recipientId: typeof share.ownerId === 'string' ? share.ownerId : undefined,
+        recipientName: typeof share.ownerName === 'string' ? share.ownerName : undefined,
+      });
+    } catch (activityErr) {
+      console.warn('[shares/import activity]', activityErr);
+    }
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[shares/import]', err);

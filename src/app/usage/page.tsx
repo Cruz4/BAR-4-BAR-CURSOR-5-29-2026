@@ -82,6 +82,7 @@ import { InkRefillCountdown } from '@/components/ink-refill-countdown';
 import { TierPriceSummary } from '@/components/tier-price-summary';
 import { PwaInstallGuideCard } from '@/components/pwa-install-prompt';
 import { StudioThemeSettingsCard } from '@/components/studio-theme-controls';
+import { NotificationSettingsCard } from '@/components/activity/notification-settings-card';
 import { ReferAFriendSection } from '@/components/refer-a-friend-section';
 import { DeleteAccountDialog } from '@/components/delete-account-dialog';
 import {
@@ -674,6 +675,7 @@ function UsagePageContent() {
             <div className="space-y-10 text-[15px] md:text-base">
                 <PwaInstallGuideCard />
                 <StudioThemeSettingsCard />
+                <NotificationSettingsCard />
                 {isCloudSyncActive && (
                 <Card className="border-primary/20">
                     <CardHeader className="pb-4">
