@@ -1645,3 +1645,247 @@
     z-index: 2201;
   }
 }
+
+/*
+ * The Scene Block atmosphere — a night skyline whose lit windows track real
+ * activity (friends + posts + Discover cards), plus note bursts when
+ * something new lands. See scene-block-atmosphere.tsx.
+ */
+@layer utilities {
+  .scene-block {
+    isolation: isolate;
+  }
+
+  .scene-block-sky {
+    background: radial-gradient(
+      ellipse 120% 70% at 50% -10%,
+      rgba(30, 27, 60, 0.35) 0%,
+      transparent 55%
+    );
+  }
+
+  @keyframes scene-block-star-twinkle {
+    0%, 100% { opacity: 0.15; transform: scale(0.85); }
+    50% { opacity: 0.85; transform: scale(1.15); }
+  }
+
+  .scene-block-star {
+    background: rgba(224, 231, 255, 0.85);
+    box-shadow: 0 0 4px rgba(224, 231, 255, 0.5);
+    animation: scene-block-star-twinkle 4s ease-in-out infinite;
+    will-change: opacity, transform;
+  }
+
+  /* Headlight sweep — a car passing the block. Long, mostly-off cycle. */
+  @keyframes scene-block-headlight {
+    0%, 88%, 100% { transform: translateX(0) skewX(-18deg); opacity: 0; }
+    90% { opacity: 0.16; }
+    96% { transform: translateX(430%) skewX(-18deg); opacity: 0.05; }
+    98%, 99% { opacity: 0; }
+  }
+
+  .scene-block-headlight {
+    background: linear-gradient(
+      100deg,
+      transparent 0%,
+      rgba(186, 210, 255, 0.16) 45%,
+      rgba(186, 210, 255, 0.05) 55%,
+      transparent 100%
+    );
+    filter: blur(18px);
+    animation: scene-block-headlight 38s linear infinite;
+    will-change: transform, opacity;
+  }
+
+  @keyframes scene-block-horizon-breathe {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 0.85; }
+  }
+
+  .scene-block-horizon {
+    background: radial-gradient(
+      ellipse 140% 60% at 18% 100%,
+      rgba(217, 70, 239, 0.1) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 130% 55% at 82% 100%,
+      rgba(56, 189, 248, 0.08) 0%,
+      transparent 55%
+    ),
+    linear-gradient(to top, rgba(8, 10, 24, 0.4) 0%, rgba(8, 10, 24, 0.08) 42%, transparent 100%);
+    animation: scene-block-horizon-breathe 26s ease-in-out infinite;
+  }
+
+  /* Neon word — soft, irregular flicker. Gloss stays still and quiet. */
+  @keyframes scene-block-neon-flicker {
+    0%, 8%, 100% { opacity: 0.72; filter: drop-shadow(0 0 4px currentColor); }
+    4.5% { opacity: 0.38; filter: none; }
+    52% { opacity: 0.7; }
+    53.2% { opacity: 0.45; }
+    54% { opacity: 0.74; filter: drop-shadow(0 0 4px currentColor); }
+  }
+
+  .scene-block-neon-text {
+    color: rgba(232, 121, 249, 0.72);
+    text-shadow:
+      0 0 5px rgba(232, 121, 249, 0.45),
+      0 0 14px rgba(217, 70, 239, 0.22);
+    animation: scene-block-neon-flicker 14s linear infinite;
+  }
+
+  .scene-block-neon-pron {
+    color: rgba(232, 121, 249, 0.32);
+    text-shadow: none;
+    font-style: italic;
+  }
+
+  .scene-block-neon-gloss {
+    color: rgba(196, 181, 253, 0.42);
+    text-shadow: none;
+  }
+
+  .scene-block-building-back {
+    background: linear-gradient(180deg, rgba(30, 26, 58, 0.55), rgba(14, 12, 32, 0.72));
+    clip-path: polygon(0 100%, 0 8%, 50% 0%, 100% 8%, 100% 100%);
+    opacity: 0.5;
+  }
+
+  .scene-block-building-front {
+    background: linear-gradient(180deg, rgba(20, 18, 42, 0.85), rgba(8, 7, 20, 0.95));
+    border-top: 1px solid rgba(148, 163, 184, 0.08);
+  }
+
+  .scene-block-window {
+    width: 5px;
+    height: 8px;
+    transform: translate(-50%, 0);
+    background: rgba(148, 163, 184, 0.12);
+    border-radius: 1px;
+  }
+
+  @keyframes scene-block-window-flicker {
+    0%, 100% { opacity: 0.55; }
+    8% { opacity: 0.95; }
+    14% { opacity: 0.4; }
+    22% { opacity: 0.9; }
+    60% { opacity: 0.7; }
+    75% { opacity: 1; }
+    88% { opacity: 0.5; }
+  }
+
+  .scene-block-window.is-lit {
+    animation: scene-block-window-flicker 5s ease-in-out infinite;
+    will-change: opacity;
+  }
+
+  .scene-block-window.is-lit.hue-amber {
+    background: rgba(251, 191, 36, 0.85);
+    box-shadow: 0 0 5px rgba(251, 191, 36, 0.65), 0 0 12px rgba(251, 191, 36, 0.25);
+  }
+
+  .scene-block-window.is-lit.hue-cyan {
+    background: rgba(56, 189, 248, 0.85);
+    box-shadow: 0 0 5px rgba(56, 189, 248, 0.65), 0 0 12px rgba(56, 189, 248, 0.25);
+  }
+
+  .scene-block-window.is-lit.hue-magenta {
+    background: rgba(232, 121, 249, 0.85);
+    box-shadow: 0 0 5px rgba(232, 121, 249, 0.65), 0 0 12px rgba(232, 121, 249, 0.25);
+  }
+
+  @keyframes scene-block-note-rise {
+    0% { opacity: 0; transform: translate(-50%, 0) scale(0.7) rotate(0deg); }
+    12% { opacity: 0.9; }
+    100% { opacity: 0; transform: translate(calc(-50% + 14px), -190px) scale(1.05) rotate(18deg); }
+  }
+
+  .scene-block-note {
+    font-size: 14px;
+    color: rgba(232, 121, 249, 0.9);
+    text-shadow: 0 0 8px rgba(232, 121, 249, 0.6);
+    animation: scene-block-note-rise 2.4s ease-out forwards;
+    will-change: transform, opacity;
+  }
+
+  /* Light mode — daylight block: warm sun instead of neon, dimmer windows. */
+  html:not(.dark) .scene-block-sky {
+    background: radial-gradient(
+      ellipse 120% 70% at 50% -10%,
+      rgba(191, 219, 254, 0.4) 0%,
+      transparent 55%
+    );
+  }
+
+  html:not(.dark) .scene-block-star {
+    opacity: 0 !important;
+  }
+
+  html:not(.dark) .scene-block-horizon {
+    background: radial-gradient(
+      ellipse 140% 60% at 18% 100%,
+      rgba(217, 70, 239, 0.08) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 130% 55% at 82% 100%,
+      rgba(56, 189, 248, 0.1) 0%,
+      transparent 55%
+    ),
+    linear-gradient(to top, rgba(59, 130, 246, 0.14) 0%, rgba(59, 130, 246, 0.05) 42%, transparent 100%);
+  }
+
+  html:not(.dark) .scene-block-neon-text {
+    color: rgba(190, 24, 200, 0.45);
+    text-shadow: 0 0 8px rgba(190, 24, 200, 0.18);
+  }
+
+  html:not(.dark) .scene-block-neon-pron {
+    color: rgba(190, 24, 200, 0.32);
+  }
+
+  html:not(.dark) .scene-block-neon-gloss {
+    color: rgba(100, 80, 140, 0.5);
+  }
+
+  html:not(.dark) .scene-block-building-back,
+  html:not(.dark) .scene-block-building-front {
+    opacity: 0.22;
+  }
+
+  html:not(.dark) .scene-block-window.is-lit {
+    opacity: 0.6;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scene-block-star,
+    .scene-block-headlight,
+    .scene-block-horizon,
+    .scene-block-neon-text,
+    .scene-block-window.is-lit {
+      animation: none;
+    }
+
+    .scene-block-headlight {
+      opacity: 0;
+    }
+
+    .scene-block-neon-text {
+      opacity: 0.65;
+    }
+
+    .scene-block-neon-pron,
+    .scene-block-neon-gloss {
+      opacity: 0.55;
+    }
+
+    .scene-block-window.is-lit {
+      opacity: 0.75;
+    }
+
+    .scene-block-note {
+      animation-duration: 0.01ms;
+      opacity: 0;
+    }
+  }
+}

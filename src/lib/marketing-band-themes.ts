@@ -87,7 +87,7 @@ export const MARKETING_BAND_THEMES: Record<string, MarketingBandTheme> = {
     panel: 'border-fuchsia-500/28 bg-gradient-to-br from-fuchsia-500/[0.1] via-black/20 to-sky-500/[0.07]',
     rule: 'from-fuchsia-400',
     eyebrow: 'text-fuchsia-200 border-fuchsia-500/35 bg-fuchsia-500/10',
-    titleParts: ['Your Shareable', 'Page'],
+    titleParts: ['Your Page.', 'Your Block.'],
     titlePartColors: ['text-fuchsia-100', 'text-sky-300'],
     description: 'text-fuchsia-100/88',
     bulletNums: ['text-fuchsia-400', 'text-sky-400', 'text-fuchsia-300'],

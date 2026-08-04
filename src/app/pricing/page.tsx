@@ -66,6 +66,8 @@ import {
   getVisitorHeadlinePerks,
   getResidencyVsPermanentFaqAnswer,
   getReferralFaqAnswer,
+  getArtistHomeFaqAnswer,
+  getPostSharingFaqAnswer,
   getProCheckoutCtaLine,
 } from '@/lib/studio-tiers';
 import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, SIGNUP_INK } from '@/lib/subscription';
@@ -189,6 +191,10 @@ export default function PricingPage() {
       a: 'Unlike Suno, Udio, or a general chatbot, Bar 4 Bar is a lyric and rhyme workstation: DNA strains, section maps, rhyme pulse, and vault exports stay in your project. Copy-pasting to ChatGPT loses that context — here every generation already knows your track. Pro unlocks the catalog workflow (vault saves, unlimited slots, Performance Mode); Ink powers AI inside the studio.',
     },
     {
+      q: 'Is my Artist Home page free?',
+      a: getArtistHomeFaqAnswer(),
+    },
+    {
       q: 'What is the difference between Residency and Permanent Ink?',
       a: getResidencyVsPermanentFaqAnswer(),
     },
@@ -211,6 +217,10 @@ export default function PricingPage() {
     {
       q: 'How does Refer a Friend work?',
       a: getReferralFaqAnswer(),
+    },
+    {
+      q: 'Can I share a post from my Artist Home?',
+      a: getPostSharingFaqAnswer(),
     },
   ];
 

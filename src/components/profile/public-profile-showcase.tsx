@@ -22,7 +22,7 @@ import { PublicAchievementFoil } from '@/components/profile/public-achievement-f
 import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { processCoverArtFile } from '@/lib/cover-art';
+import { processProfilePhotoFile } from '@/lib/cover-art';
 import { patchGamificationSettings } from '@/lib/gamification-client';
 import { rankBadgeClass, rankIdFromLabel } from '@/lib/gamification/badge-styles';
 import { useToast } from '@/hooks/use-toast';
@@ -137,7 +137,7 @@ export function PublicProfileShowcase({
   const handleUpload = async (file: File) => {
     setPhotoBusy(true);
     try {
-      const { dataUrl } = await processCoverArtFile(file);
+      const { dataUrl } = await processProfilePhotoFile(file);
       await savePhoto({ profilePhotoMode: 'custom', profilePhotoUrl: dataUrl });
     } catch (e) {
       toast({

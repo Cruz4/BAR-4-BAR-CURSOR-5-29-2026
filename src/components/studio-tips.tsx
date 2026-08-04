@@ -97,6 +97,9 @@ const STUDIO_TIPS: StudioTip[] = [
   // Aug 2026 — Scene home pivot
   { id: 59, icon: Globe, title: "THE SCENE", text: "Signing in lands you on The Scene — friends' wall drops, a Discover stream of live Artist Homes and DNA Drops, and Your Booth. The Vault is one click away in the right dock.", color: "text-emerald-400" },
   { id: 60, kind: 'did-you-know', icon: Share2, title: "POST FROM HOME", text: "Did you know? The composer at the top of The Scene posts straight to your Artist Home wall — friends see it on their Scene feed too.", color: "text-fuchsia-400" },
+  { id: 61, icon: FilePenLine, title: "KEEP WRITING OR START FRESH", text: "The write button on The Scene dock is split: tap the main side to jump back into your last sheet, or tap the Start Track edge to open a brand new one.", color: "text-primary" },
+  { id: 62, kind: 'did-you-know', icon: Share2, title: "SHARE ANY POST", text: "Did you know? Every wall post has a Share button — X, Facebook, WhatsApp, email, or copy link — that deep-links straight back to that post on your Artist Home.", color: "text-sky-400" },
+  { id: 63, icon: MonitorPlay, title: "EMBED TIKTOK, IG & FB", text: "Paste a full TikTok, Instagram, or Facebook post URL into a wall post and it plays inline on your Artist Home — short links usually will not parse, use the full post URL.", color: "text-fuchsia-400" },
 ];
 
 export function StudioTips() {

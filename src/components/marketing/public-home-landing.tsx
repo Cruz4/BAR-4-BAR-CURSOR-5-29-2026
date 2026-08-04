@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
+import { Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LegalFooter } from '@/components/legal-footer';
 import { LandingShowcase } from '@/components/marketing/landing-showcase';
@@ -11,12 +11,8 @@ import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmos
 import { LandingHeroCtAs } from '@/components/marketing/landing-hero-ctas';
 import { LandingSignInLink, LandingSignupLink } from '@/components/marketing/landing-signup-link';
 import { StudioThemeControls } from '@/components/studio-theme-controls';
-import { ProBillingCheckoutCta, proCheckoutHeaderHref } from '@/components/marketing/pro-billing-checkout-cta';
-import {
-  getFreeSignupCtaLine,
-  getProMarketingLine,
-  getSignupInkMarketingLine,
-} from '@/lib/studio-tiers';
+import { ProBillingCheckoutCta } from '@/components/marketing/pro-billing-checkout-cta';
+import { getSignupInkMarketingLine } from '@/lib/studio-tiers';
 import { BrandLockup } from '@/components/brand-lockup';
 
 /** Public marketing surface — served at `/welcome` (and `/` when guest try sheet is off). */
@@ -43,12 +39,6 @@ export function PublicHomeLanding() {
           >
             Pricing
           </Link>
-          <Link
-            href={proCheckoutHeaderHref()}
-            className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-accent hover:text-accent/80 transition-colors"
-          >
-            Go Pro
-          </Link>
           <LandingSignInLink className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
             Sign in
           </LandingSignInLink>
@@ -57,8 +47,8 @@ export function PublicHomeLanding() {
             asChild
             className="bg-primary hover:bg-primary/90 text-white font-bold h-9 px-3 sm:px-5 gap-1.5 sm:gap-2 rounded-md shadow-lg shrink-0 transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm"
           >
-            <LandingSignupLink>
-              <span className="truncate">Create free account</span>
+            <LandingSignupLink intent="claim_artist_home">
+              <span className="truncate">Claim free home</span>
             </LandingSignupLink>
           </Button>
         </nav>
@@ -69,10 +59,10 @@ export function PublicHomeLanding() {
           <div className="mx-auto w-full max-w-7xl animate-in fade-in zoom-in duration-1000 relative z-10 -translate-y-4 sm:-translate-y-6 lg:-translate-y-8">
             <div className="grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center">
               <div className="space-y-5 text-center lg:text-left max-w-2xl lg:pr-4">
-                <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-md border border-orange-500/40 px-6 py-2 rounded-full shadow-2xl">
-                  <Sparkles className="h-4 w-4 text-orange-500 animate-pulse" />
-                  <span className="text-[11px] font-bold uppercase tracking-[0.3em] text-orange-500">
-                    Professional Lyrical Workspace
+                <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-md border border-fuchsia-500/40 px-6 py-2 rounded-full shadow-2xl">
+                  <Radio className="h-4 w-4 text-fuchsia-400 animate-pulse" />
+                  <span className="text-[11px] font-bold uppercase tracking-[0.3em] text-fuchsia-300">
+                    Your scene · your studio
                   </span>
                 </div>
 
@@ -83,41 +73,42 @@ export function PublicHomeLanding() {
                     </h2>
                   </motion.div>
                   <div className="flex items-center justify-center lg:justify-start gap-2">
-                    <h3 className="text-xl sm:text-2xl md:text-4xl lg:text-[2.7rem] font-headline font-bold text-foreground dark:text-white tracking-widest uppercase leading-tight">
-                      YOUR <span className="text-primary animate-pulse">ULTIMATE</span> STUDIO RHYME BOOK.
+                    <h3 className="text-xl sm:text-2xl md:text-4xl lg:text-[2.55rem] font-headline font-bold text-foreground dark:text-white tracking-widest uppercase leading-tight">
+                      YOUR BOOTH. YOUR BLOCK.{' '}
+                      <span className="text-primary">YOUR BARS.</span>
                     </h3>
                   </div>
                 </div>
 
                 <p className="text-sm md:text-lg text-foreground/90 dark:text-white font-body font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0 tracking-wide drop-shadow-lg">
-                  Your{' '}
-                  <span className="bg-fuchsia-500/20 text-fuchsia-300 px-1 rounded-sm font-bold">scene</span> and your{' '}
-                  <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">studio</span>. Sign in and land
-                  on The Scene — friends, discover, your{' '}
-                  <span className="bg-fuchsia-500/20 text-fuchsia-300 px-1 rounded-sm font-bold">Artist Home</span> —
-                  with the full workstation one click in: organize{' '}
-                  <span className="bg-sky-500/20 text-sky-400 px-1 rounded-sm font-bold italic underline decoration-primary/40 underline-offset-8">
-                    concept albums
-                  </span>{' '}
-                  and train the AI on your{' '}
-                  <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">unique style</span>.
+                  Sign in and land on{' '}
+                  <span className="bg-fuchsia-500/20 text-fuchsia-300 px-1 rounded-sm font-bold">The Scene</span>
+                  — friends, discover, and your shareable{' '}
+                  <span className="bg-fuchsia-500/20 text-fuchsia-300 px-1 rounded-sm font-bold">Artist Home</span>.
+                  The Vault is one click away: write bar by bar, train your{' '}
+                  <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">DNA</span>, drop what
+                  you&apos;re proud of back on the block.
                 </p>
 
                 <LandingHeroCtAs />
               </div>
 
               <div className="mx-auto w-full max-w-5xl rounded-2xl border border-white/10 bg-black/35 p-3 shadow-2xl lg:justify-self-end">
-                <p className="mb-2 text-[10px] font-code font-bold uppercase tracking-[0.22em] text-emerald-300 text-center lg:text-left">
-                  Live workstation preview
+                <p className="mb-2 text-[10px] font-code font-bold uppercase tracking-[0.22em] text-fuchsia-300 text-center lg:text-left">
+                  Artist Home — live on the web
                 </p>
                 <div className="overflow-hidden rounded-xl border border-white/10 bg-black/50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="/marketing/hero-workstation.png"
-                    alt="Bar 4 Bar workstation showing generated next-line options"
+                    src="/marketing/feature-artist-home-live.jpg"
+                    alt="Bar 4 Bar Artist Home — shareable public artist page"
                     className="w-full h-auto object-contain object-top"
                     loading="eager"
                   />
                 </div>
+                <p className="mt-2 text-center text-[10px] font-code text-muted-foreground lg:text-left">
+                  Private by default. Flip it live when you&apos;re ready for eyes.
+                </p>
               </div>
             </div>
           </div>
@@ -128,18 +119,25 @@ export function PublicHomeLanding() {
         <section className="relative py-10 px-4 text-center z-10">
           <div className="container mx-auto max-w-2xl space-y-4">
             <h3 className="font-headline text-xl md:text-2xl font-bold uppercase text-foreground dark:text-white">
-              Ready to write your next bar?
+              Ready to claim your booth?
             </h3>
-            <p className="font-code text-xs md:text-sm text-primary/80">
-              {getProMarketingLine()}
+            <p className="font-code text-xs md:text-sm text-fuchsia-300/90">
+              Free Artist Home · The Scene · full studio one click in
             </p>
             <p className="font-code text-[10px] md:text-xs text-muted-foreground">
-              {getSignupInkMarketingLine('footnote')}
+              {getSignupInkMarketingLine('landing')}
             </p>
-            <div className="flex flex-col items-center justify-center gap-4 pt-1">
+            <div className="flex flex-col items-center justify-center gap-3 pt-1 sm:flex-row sm:flex-wrap">
               <Button asChild size="lg" className="h-12 px-8 font-bold rounded-full">
-                <LandingSignupLink>{getFreeSignupCtaLine()}</LandingSignupLink>
+                <LandingSignupLink intent="claim_artist_home">
+                  Claim your free Artist Home
+                </LandingSignupLink>
               </Button>
+              <Button asChild size="lg" variant="outline" className="h-12 px-8 font-bold rounded-full border-emerald-500/40">
+                <Link href="/try?src=landing">Try writing free</Link>
+              </Button>
+            </div>
+            <div className="pt-2">
               <ProBillingCheckoutCta variant="compact" />
             </div>
             <p className="text-[10px] text-muted-foreground">

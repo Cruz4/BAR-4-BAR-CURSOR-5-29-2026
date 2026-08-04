@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Github, Instagram } from 'lucide-react';
+import { Github, Instagram, Youtube } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   resolvedSocialLinks,
@@ -45,6 +45,8 @@ function SocialGlyph({ id, className }: { id: SocialProviderId; className?: stri
       return <Instagram className={className} />;
     case 'tiktok':
       return <TikTokIcon className={className} />;
+    case 'youtube':
+      return <Youtube className={className} />;
     case 'github':
       return <Github className={className} />;
     case 'twitter':

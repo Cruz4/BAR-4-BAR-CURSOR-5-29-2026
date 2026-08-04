@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Heart, MessageCircle, Send, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Send, Share2, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import { EmbedPlayer } from '@/components/profile/embed-player';
+import { PostShareDialog } from '@/components/profile/post-share-dialog';
 import {
   addComment,
   deleteComment,
@@ -51,6 +52,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted }: Po
   const [commentsLoaded, setCommentsLoaded] = useState(false);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const isOwner = Boolean(user?.id && user.id === post.ownerId);
 
@@ -123,7 +125,10 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted }: Po
   };
 
   return (
-    <article className="border border-dashed border-[var(--ph-border)] bg-black/20 p-4">
+    <article
+      id={`post-${post.id}`}
+      className="scroll-mt-24 border border-dashed border-[var(--ph-border)] bg-black/20 p-4"
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           {showAuthor &&
@@ -168,7 +173,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted }: Po
         </div>
       )}
 
-      <div className="mt-3 flex items-center gap-4">
+      <div className="mt-3 flex flex-wrap items-center gap-4">
         <button
           type="button"
           onClick={() => void toggleLike()}
@@ -190,7 +195,17 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted }: Po
           <MessageCircle className="h-3.5 w-3.5" />
           {commentCount > 0 ? commentCount : 'Reply'}
         </button>
+        <button
+          type="button"
+          onClick={() => setShareOpen(true)}
+          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))] transition-colors hover:text-[var(--ph-text,#fff)]"
+        >
+          <Share2 className="h-3.5 w-3.5" />
+          Share
+        </button>
       </div>
+
+      <PostShareDialog open={shareOpen} onOpenChange={setShareOpen} post={post} />
 
       {commentsOpen && (
         <div className="mt-3 space-y-2 border-t border-[var(--ph-border,rgba(255,255,255,0.12))] pt-3">

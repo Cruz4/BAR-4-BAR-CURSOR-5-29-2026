@@ -57,6 +57,7 @@ export async function patchGamificationSettings(settings: {
   displayName?: string;
   profilePhotoMode?: 'collage' | 'custom';
   profilePhotoUrl?: string | null;
+  profileCollageAlbumIds?: string[] | null;
 }) {
   const { user, token } = await authHeaders();
   const res = await fetch('/api/gamification/settings', {
@@ -67,7 +68,16 @@ export async function patchGamificationSettings(settings: {
     },
     body: JSON.stringify({ ...settings, userId: user.uid }),
   });
-  if (!res.ok) throw new Error('Failed to update profile settings');
+  if (!res.ok) {
+    let message = 'Failed to update profile settings';
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body?.error) message = body.error;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
   const data = await res.json();
   if (data.summary) {
     dispatchGamificationSummaryPatch(data.summary);

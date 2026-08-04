@@ -2,14 +2,15 @@
 
 /**
  * Scene Nav Dock — right rail of the Scene home.
- * Fast lanes into every surface: Vault (primary), keep writing, Artist Home,
- * Edit Public Page, Leaderboard, Your circle, Ink store.
+ * Fast lanes into every surface: Vault (primary), write split (keep / new),
+ * Artist Home, Edit Public Page, Leaderboard, Your circle, Ink store.
  */
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   Archive,
+  FilePlus2,
   PenLine,
   Settings2,
   Trophy,
@@ -41,6 +42,111 @@ type DockItem = {
   badge?: number;
 };
 
+const dockShell =
+  'group relative flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-all duration-300 shadow-[0_8px_28px_rgba(0,0,0,0.14)] backdrop-blur-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50';
+
+const writeTone =
+  'border-border/70 bg-card/55 hover:border-muted-foreground/40';
+const writeIconTone =
+  'border-muted-foreground/30 bg-muted/40 text-foreground/80';
+
+function DockLink({ item }: { item: DockItem }) {
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      className={cn(dockShell, item.tone)}
+    >
+      <span
+        className={cn(
+          'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border',
+          item.iconTone
+        )}
+      >
+        <Icon className="h-4 w-4" />
+        {Boolean(item.badge && item.badge > 0) && (
+          <span
+            className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-500 px-1 text-[9px] font-bold text-black shadow-[0_0_10px_rgba(16,185,129,0.55)]"
+            aria-label={`${item.badge} social alerts`}
+          >
+            {item.badge! > 99 ? '99+' : item.badge}
+          </span>
+        )}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span
+          className={cn(
+            'block truncate font-headline text-xs font-bold uppercase leading-tight tracking-tight',
+            item.primary ? 'text-primary' : 'text-foreground'
+          )}
+        >
+          {item.label}
+        </span>
+        <span className="mt-0.5 block truncate font-code text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground/70">
+          {item.sub}
+        </span>
+      </span>
+    </Link>
+  );
+}
+
+/** One dock control: primary = keep writing, split action = start new track. */
+function WriteSplitButton({
+  lastTrackPath,
+  newTrackHref,
+}: {
+  lastTrackPath: string;
+  newTrackHref: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'relative flex overflow-hidden rounded-xl border transition-all duration-300',
+        'shadow-[0_8px_28px_rgba(0,0,0,0.14)] backdrop-blur-md hover:-translate-y-0.5',
+        'border-border/70 bg-card/55 hover:border-muted-foreground/40'
+      )}
+    >
+      <Link
+        href={lastTrackPath}
+        className="flex min-w-0 flex-1 items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50"
+      >
+        <span
+          className={cn(
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border',
+            writeIconTone
+          )}
+        >
+          <PenLine className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-headline text-xs font-bold uppercase leading-tight tracking-tight text-foreground">
+            Keep writing
+          </span>
+          <span className="mt-0.5 block truncate font-code text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground/70">
+            Last sheet
+          </span>
+        </span>
+      </Link>
+
+      <div className="my-2 w-px shrink-0 self-stretch bg-border/70" aria-hidden />
+
+      <Link
+        href={newTrackHref}
+        title="Start a track"
+        aria-label="Start a track"
+        className="flex w-[4.75rem] shrink-0 flex-col items-center justify-center gap-0.5 px-1.5 transition-colors hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50"
+      >
+        <FilePlus2 className="h-4 w-4 text-foreground/80" />
+        <span className="text-center font-headline text-[9px] font-bold uppercase leading-tight tracking-tight text-foreground">
+          Start
+          <br />
+          track
+        </span>
+      </Link>
+    </div>
+  );
+}
+
 export function SceneNavDock({ compact = false, className }: SceneNavDockProps) {
   const { summary, loading } = useGamification();
   const { total: alertCount } = useSocialAlerts();
@@ -52,6 +158,7 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
 
   const isLive = Boolean(summary.publicProfile && summary.profileSlug);
   const profileHref = summary.profileSlug ? `/profile/${summary.profileSlug}` : null;
+  const newTrackHref = `${VAULT_PATH}?create=track`;
 
   const items: DockItem[] = [
     {
@@ -63,15 +170,6 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       tone: 'border-primary/45 bg-gradient-to-r from-primary/15 via-card/85 to-card/70 hover:border-primary/70',
       iconTone: 'border-primary/50 bg-primary/15 text-primary',
       primary: true,
-    },
-    {
-      key: 'write',
-      href: lastTrackPath ?? `${VAULT_PATH}?create=track`,
-      label: lastTrackPath ? 'Keep writing' : 'Start a track',
-      sub: lastTrackPath ? 'Back to your last sheet' : 'Open a fresh sheet',
-      icon: PenLine,
-      tone: 'border-border/70 bg-card/55 hover:border-muted-foreground/40',
-      iconTone: 'border-muted-foreground/30 bg-muted/40 text-foreground/80',
     },
     ...(isLive && profileHref
       ? [
@@ -92,8 +190,8 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       label: 'Edit Public Page',
       sub: isLive ? 'Skin · modules · rooms' : 'Set up your page',
       icon: Settings2,
-      tone: 'border-border/70 bg-card/55 hover:border-muted-foreground/40',
-      iconTone: 'border-muted-foreground/30 bg-muted/40 text-foreground/80',
+      tone: writeTone,
+      iconTone: writeIconTone,
     },
     {
       key: 'leaderboard',
@@ -120,8 +218,8 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       label: 'Ink store',
       sub: 'Top up your Ink',
       icon: Droplets,
-      tone: 'border-border/70 bg-card/55 hover:border-muted-foreground/40',
-      iconTone: 'border-muted-foreground/30 bg-muted/40 text-foreground/80',
+      tone: writeTone,
+      iconTone: writeIconTone,
     },
   ];
 
@@ -138,51 +236,27 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       aria-label="Scene shortcuts"
       data-tour={compact ? 'scene-nav-mobile' : 'scene-nav-desktop'}
     >
-      {items.map((item) => {
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.key}
-            href={item.href}
-            className={cn(
-              'group relative flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-all duration-300',
-              'shadow-[0_8px_28px_rgba(0,0,0,0.14)] backdrop-blur-md hover:-translate-y-0.5',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-              item.tone
-            )}
-          >
-            <span
-              className={cn(
-                'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border',
-                item.iconTone
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {Boolean(item.badge && item.badge > 0) && (
-                <span
-                  className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-500 px-1 text-[9px] font-bold text-black shadow-[0_0_10px_rgba(16,185,129,0.55)]"
-                  aria-label={`${item.badge} social alerts`}
-                >
-                  {item.badge! > 99 ? '99+' : item.badge}
-                </span>
-              )}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span
-                className={cn(
-                  'block truncate font-headline text-xs font-bold uppercase leading-tight tracking-tight',
-                  item.primary ? 'text-primary' : 'text-foreground'
-                )}
-              >
-                {item.label}
-              </span>
-              <span className="mt-0.5 block truncate font-code text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground/70">
-                {item.sub}
-              </span>
-            </span>
-          </Link>
-        );
-      })}
+      <DockLink item={items[0]!} />
+
+      {lastTrackPath ? (
+        <WriteSplitButton lastTrackPath={lastTrackPath} newTrackHref={newTrackHref} />
+      ) : (
+        <DockLink
+          item={{
+            key: 'new-track',
+            href: newTrackHref,
+            label: 'Start a track',
+            sub: 'Open a fresh sheet',
+            icon: FilePlus2,
+            tone: writeTone,
+            iconTone: writeIconTone,
+          }}
+        />
+      )}
+
+      {items.slice(1).map((item) => (
+        <DockLink key={item.key} item={item} />
+      ))}
     </nav>
   );
 }

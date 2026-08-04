@@ -315,13 +315,10 @@ async function syncPublicProfile(
   }
 
   const badgeIds = Object.keys(summary.unlockedAchievements);
-  const albumCoverUrls = await getPublicAlbumCoverUrls(uid);
+  const albumCoverUrls = await getPublicAlbumCoverUrls(uid, summary.profileCollageAlbumIds);
   const profilePhotoMode = summary.profilePhotoMode === 'custom' ? 'custom' : 'collage';
-  const profilePhotoUrl =
-    profilePhotoMode === 'custom' && typeof summary.profilePhotoUrl === 'string'
-      ? summary.profilePhotoUrl
-      : null;
-  // Artist Home skin/config — re-mirrored so slug renames never lose it.
+  // Custom hero photos stay on the private summary doc — mirroring the data URL
+  // into publicProfiles blows past Firestore's 1MB limit next to Artist Home banners.
   const artistHomeSnap = await db.doc(`users/${uid}/gamification/artistHome`).get();
   const artistHome = artistHomeSnap.exists ? artistHomeSnap.data() : null;
   await db.doc(`publicProfiles/${summary.profileSlug}`).set(
@@ -336,7 +333,10 @@ async function syncPublicProfile(
       badgeIds,
       albumCoverUrls,
       profilePhotoMode,
-      profilePhotoUrl,
+      profilePhotoUrl: FieldValue.delete(),
+      ...(summary.profileCollageAlbumIds?.length
+        ? { profileCollageAlbumIds: summary.profileCollageAlbumIds }
+        : { profileCollageAlbumIds: FieldValue.delete() }),
       ...(artistHome ? { artistHome } : {}),
       updatedAt: new Date().toISOString(),
     },
@@ -598,6 +598,8 @@ export async function updateGamificationSettings(
     displayName?: string;
     profilePhotoMode?: 'collage' | 'custom';
     profilePhotoUrl?: string | null;
+    /** Ordered album IDs for collage (max 9). Pass `null` or `[]` to clear (auto covers). */
+    profileCollageAlbumIds?: string[] | null;
   }
 ): Promise<GamificationSummary> {
   const db = await getDb();
@@ -623,6 +625,19 @@ export async function updateGamificationSettings(
     summary.profilePhotoUrl = settings.profilePhotoUrl.trim();
     summary.profilePhotoMode = 'custom';
   }
+  let clearCollageIds = false;
+  if (settings.profileCollageAlbumIds === null) {
+    clearCollageIds = true;
+    delete summary.profileCollageAlbumIds;
+  } else if (Array.isArray(settings.profileCollageAlbumIds)) {
+    const cleaned = await sanitizeCollageAlbumIds(userId, settings.profileCollageAlbumIds);
+    if (cleaned.length === 0) {
+      clearCollageIds = true;
+      delete summary.profileCollageAlbumIds;
+    } else {
+      summary.profileCollageAlbumIds = cleaned;
+    }
+  }
   if (summary.publicProfile && !summary.profileSlug) {
     const userSnap = await db.doc(`users/${userId}`).get();
     const name = settings.displayName || userSnap.data()?.displayName || 'Artist';
@@ -631,12 +646,19 @@ export async function updateGamificationSettings(
 
   summary.updatedAt = new Date().toISOString();
   const summaryRef = db.doc(`users/${userId}/gamification/summary`);
+  const deleteFields: Record<string, unknown> = {};
   if (settings.profilePhotoUrl === null) {
+    deleteFields.profilePhotoUrl = FieldValue.delete();
+    deleteFields.profilePhotoMode = 'collage';
+  }
+  if (clearCollageIds) {
+    deleteFields.profileCollageAlbumIds = FieldValue.delete();
+  }
+  if (Object.keys(deleteFields).length > 0) {
     await summaryRef.set(
       {
         ...summary,
-        profilePhotoUrl: FieldValue.delete(),
-        profilePhotoMode: 'collage',
+        ...deleteFields,
       },
       { merge: true }
     );
@@ -654,6 +676,25 @@ export async function updateGamificationSettings(
   await syncLeaderboardEntry(userId, summary, displayName);
 
   return summary;
+}
+
+const MAX_COLLAGE_ALBUMS = 9;
+
+async function sanitizeCollageAlbumIds(userId: string, rawIds: string[]): Promise<string[]> {
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+  for (const raw of rawIds) {
+    if (typeof raw !== 'string') continue;
+    const id = raw.trim();
+    if (!id || id === 'unassigned' || seen.has(id)) continue;
+    seen.add(id);
+    candidates.push(id);
+    if (candidates.length >= MAX_COLLAGE_ALBUMS) break;
+  }
+  if (candidates.length === 0) return [];
+
+  const meta = await getPublicAlbumMeta(userId);
+  return candidates.filter((id) => meta.coverByAlbumId.has(id));
 }
 
 export async function getGamificationSummaryForUser(userId: string): Promise<GamificationSummary> {
@@ -904,18 +945,38 @@ export async function getPublicProfile(slug: string) {
   const userId = String(data.userId || '');
   if (!userId) return { ...data, albumCoverUrls: [], liveDnaDrops: [] };
 
-  const [albumMeta, liveDnaDrops, referralCode] = await Promise.all([
+  const [albumMeta, liveDnaDrops, referralCode, summarySnap] = await Promise.all([
     getPublicAlbumMeta(userId),
     getLiveDnaDropsForUser(userId),
     ensureReferralCode(db, userId).catch(() => null),
+    db.doc(`users/${userId}/gamification/summary`).get(),
   ]);
+
+  const summary = mergeSummary((summarySnap.data() as Partial<GamificationSummary>) || {});
+  const profilePhotoMode = summary.profilePhotoMode === 'custom' ? 'custom' : 'collage';
+  const profilePhotoUrl =
+    profilePhotoMode === 'custom' && typeof summary.profilePhotoUrl === 'string'
+      ? summary.profilePhotoUrl
+      : null;
+
+  let albumCoverUrls = albumMeta.coverUrls;
+  if (Array.isArray(summary.profileCollageAlbumIds) && summary.profileCollageAlbumIds.length > 0) {
+    const picked: string[] = [];
+    for (const id of summary.profileCollageAlbumIds.slice(0, MAX_COLLAGE_ALBUMS)) {
+      const url = albumMeta.coverByAlbumId.get(id);
+      if (url) picked.push(url);
+    }
+    if (picked.length > 0) albumCoverUrls = picked;
+  }
 
   const artistHome = enrichAlbumRoomsWithLiveCovers(data.artistHome, albumMeta);
 
   return {
     ...data,
     artistHome,
-    albumCoverUrls: albumMeta.coverUrls,
+    albumCoverUrls,
+    profilePhotoMode,
+    profilePhotoUrl,
     liveDnaDrops,
     ...(referralCode ? { referralCode } : {}),
   };
@@ -1033,8 +1094,20 @@ async function getPublicAlbumMeta(userId: string): Promise<PublicAlbumMeta> {
   return { coverUrls, coverByAlbumId, coverByTitle };
 }
 
-export async function getPublicAlbumCoverUrls(userId: string): Promise<string[]> {
-  return (await getPublicAlbumMeta(userId)).coverUrls;
+export async function getPublicAlbumCoverUrls(
+  userId: string,
+  collageAlbumIds?: string[] | null
+): Promise<string[]> {
+  const meta = await getPublicAlbumMeta(userId);
+  if (Array.isArray(collageAlbumIds) && collageAlbumIds.length > 0) {
+    const urls: string[] = [];
+    for (const id of collageAlbumIds.slice(0, MAX_COLLAGE_ALBUMS)) {
+      const url = meta.coverByAlbumId.get(id);
+      if (url) urls.push(url);
+    }
+    if (urls.length > 0) return urls;
+  }
+  return meta.coverUrls;
 }
 
 export type PublicArtistSearchHit = {

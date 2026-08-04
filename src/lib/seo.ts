@@ -9,12 +9,14 @@ export const SEO = {
   /** Default document title (tab + PWA window suffix). Match appName to avoid duplicate title bar text. */
   title: 'Bar 4 Bar',
   /** Open Graph / structured data — one clear line for search & shares. */
-  titleLong: 'Bar 4 Bar DNA Notebook — AI Rhyme Workstation & Shareable Artist Home',
+  titleLong: 'Bar 4 Bar — Your Scene, Your Studio & Shareable Artist Home',
   description:
-    'Your scene and your studio: sign in to The Scene — friends, discover, your shareable Artist Home — with a bar-by-bar AI workstation, creative DNA strains, and a cloud vault one click in. Free tier; Studio Pro available.',
+    'Your scene and your studio: claim a free Artist Home, land on The Scene with friends and discover, and open the bar-by-bar AI workstation one click in. Creative DNA, vault, DNA Drops. Free tier; Studio Pro available.',
   keywords: [
     'bar 4 bar',
     'bar4bar',
+    'artist home',
+    'the scene',
     'DNA notebook',
     'AI rhyme book',
     'lyric notebook',

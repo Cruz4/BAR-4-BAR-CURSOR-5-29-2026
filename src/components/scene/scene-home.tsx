@@ -20,6 +20,7 @@ import { VaultStudioProgress } from '@/components/gamification/vault-studio-prog
 import { SceneNavDock } from '@/components/scene/scene-nav-dock';
 import { SceneBoothCard } from '@/components/scene/scene-booth-card';
 import { SceneDiscoverCard } from '@/components/scene/scene-discover-card';
+import { SceneBlockAtmosphere } from '@/components/scene/scene-block-atmosphere';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
@@ -108,7 +109,7 @@ function SceneComposer({
         <Input
           value={embedUrl}
           onChange={(e) => setEmbedUrl(e.target.value)}
-          placeholder="YouTube / SoundCloud / Spotify link (optional)"
+          placeholder="YouTube / TikTok / Instagram / Facebook link (optional)"
           className="mt-2 h-9 border-border/60 bg-background/60 text-xs"
         />
       )}
@@ -269,6 +270,11 @@ export function SceneHome() {
     });
   }, [discover, posts, blockedIds]);
 
+  // Drives the Scene Block atmosphere — the skyline gets busier as your
+  // circle does, not on a canned timer.
+  const sceneEnergy =
+    friendCount + posts.length + discoverCards.length + incomingRequests.length * 2;
+
   const onPosted = useCallback((post: ProfilePost) => {
     setPosts((prev) => [post, ...prev]);
   }, []);
@@ -300,6 +306,7 @@ export function SceneHome() {
   return (
     <TooltipProvider>
     <div className="flex-grow w-full relative min-h-screen selection:bg-primary/30 font-code">
+      <SceneBlockAtmosphere energy={sceneEnergy} pulseKey={posts.length} />
       <div className="relative z-20 w-full min-w-0 max-w-[100vw] xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,44rem)_minmax(0,1fr)] xl:grid-rows-[auto_auto] xl:items-start">
         {/* Header — middle column */}
         <div className="relative min-w-0 w-full xl:col-start-2 xl:row-start-1 px-4 sm:px-6 pt-6">

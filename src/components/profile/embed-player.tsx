@@ -2,7 +2,11 @@
 
 import React from 'react';
 import { ExternalLink, Music } from 'lucide-react';
-import { parseEmbedUrl, EMBED_PROVIDER_LABELS } from '@/lib/profile/embeds';
+import {
+  parseEmbedUrl,
+  EMBED_PROVIDER_LABELS,
+  type EmbedProvider,
+} from '@/lib/profile/embeds';
 
 /**
  * Plays a whitelisted provider link right on the page (iframe embed).
@@ -14,6 +18,16 @@ import { parseEmbedUrl, EMBED_PROVIDER_LABELS } from '@/lib/profile/embeds';
  */
 const EMBED_SANDBOX =
   'allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox';
+
+const OPEN_LABELS: Record<EmbedProvider, string> = {
+  youtube: 'Watch on YouTube',
+  spotify: 'Open in Spotify',
+  soundcloud: 'Open in SoundCloud',
+  suno: 'Open in Suno',
+  tiktok: 'Watch on TikTok',
+  instagram: 'Open on Instagram',
+  facebook: 'Open on Facebook',
+};
 
 export function EmbedPlayer({ url, title }: { url: string; title?: string }) {
   const parsed = parseEmbedUrl(url);
@@ -43,26 +57,24 @@ export function EmbedPlayer({ url, title }: { url: string; title?: string }) {
     );
   }
 
-  const openLabel =
-    parsed.provider === 'youtube'
-      ? 'Watch on YouTube'
-      : parsed.provider === 'spotify'
-        ? 'Open in Spotify'
-        : parsed.provider === 'soundcloud'
-          ? 'Open in SoundCloud'
-          : 'Open in Suno';
+  const openLabel = OPEN_LABELS[parsed.provider];
+  const aspectPad = parsed.aspectPaddingPercent ?? 56.25;
+  const portrait = aspectPad > 70;
 
   return (
     <div className="overflow-hidden rounded-[var(--ph-radius,16px)] border border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/40">
       {parsed.isVideo ? (
-        <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+        <div
+          className={portrait ? 'relative mx-auto w-full max-w-[420px]' : 'relative w-full'}
+          style={{ paddingBottom: `${aspectPad}%` }}
+        >
           <iframe
             src={parsed.src}
             title={title || `${EMBED_PROVIDER_LABELS[parsed.provider]} player`}
             className="absolute inset-0 h-full w-full"
             loading="lazy"
             referrerPolicy="strict-origin-when-cross-origin"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
             allowFullScreen
             sandbox={EMBED_SANDBOX}
           />
@@ -72,10 +84,10 @@ export function EmbedPlayer({ url, title }: { url: string; title?: string }) {
           src={parsed.src}
           title={title || `${EMBED_PROVIDER_LABELS[parsed.provider]} player`}
           className="w-full"
-          style={{ height: parsed.height ?? 166 }}
+          style={{ height: parsed.height ?? 166, maxHeight: '80vh' }}
           loading="lazy"
           referrerPolicy="strict-origin-when-cross-origin"
-          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
+          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; fullscreen"
           sandbox={EMBED_SANDBOX}
         />
       )}

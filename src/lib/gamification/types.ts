@@ -41,6 +41,11 @@ export type GamificationSummary = {
   profilePhotoMode?: 'collage' | 'custom';
   /** Square JPEG/PNG data URL or https URL when profilePhotoMode is custom. */
   profilePhotoUrl?: string;
+  /**
+   * Optional ordered album IDs for the hero collage (1–9).
+   * When empty/absent, newest album covers are used automatically.
+   */
+  profileCollageAlbumIds?: string[];
   leaderboardHidden: boolean;
   bonusInkGrantedThisMonth: number;
   bonusInkMonthKey: string;

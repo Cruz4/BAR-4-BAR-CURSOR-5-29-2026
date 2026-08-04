@@ -6,8 +6,15 @@ export const runtime = 'nodejs';
 
 export async function PATCH(req: Request) {
   try {
-    const { userId, publicProfile, leaderboardHidden, displayName, profilePhotoMode, profilePhotoUrl } =
-      await req.json();
+    const {
+      userId,
+      publicProfile,
+      leaderboardHidden,
+      displayName,
+      profilePhotoMode,
+      profilePhotoUrl,
+      profileCollageAlbumIds,
+    } = await req.json();
     if (!userId) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
@@ -27,10 +34,21 @@ export async function PATCH(req: Request) {
       displayName,
       profilePhotoMode,
       profilePhotoUrl,
+      profileCollageAlbumIds,
     });
     return NextResponse.json({ summary });
   } catch (err) {
     console.error('[gamification/settings]', err);
+    const message = err instanceof Error ? err.message : '';
+    if (/exceeds the maximum allowed size/i.test(message)) {
+      return NextResponse.json(
+        {
+          error:
+            'Profile media is too large to save. Try a smaller hero photo, or remove a room banner.',
+        },
+        { status: 413 }
+      );
+    }
     return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });
   }
 }

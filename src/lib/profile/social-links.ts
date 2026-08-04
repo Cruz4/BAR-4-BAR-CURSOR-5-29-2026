@@ -5,6 +5,7 @@
 export type SocialProviderId =
   | 'instagram'
   | 'tiktok'
+  | 'youtube'
   | 'myspace'
   | 'snapchat'
   | 'suno'
@@ -37,6 +38,31 @@ export const SOCIAL_PROVIDERS: Array<{
     placeholder: '@handle or tiktok.com/@...',
     toUrl: (raw) =>
       socialUrl(raw, 'tiktok.com', (h) => `https://www.tiktok.com/@${h.replace(/^@/, '')}`),
+  },
+  {
+    id: 'youtube',
+    label: 'YouTube',
+    short: 'YT',
+    placeholder: '@handle, channel URL, or youtube.com/...',
+    toUrl: (raw) => {
+      const trimmed = raw.trim();
+      if (!trimmed) return null;
+      if (/^https?:\/\//i.test(trimmed)) {
+        try {
+          const u = new URL(trimmed);
+          const host = u.hostname.toLowerCase();
+          if (!host.includes('youtube.com') && host !== 'youtu.be' && host !== 'm.youtube.com') {
+            return null;
+          }
+          return u.toString();
+        } catch {
+          return null;
+        }
+      }
+      const handle = trimmed.replace(/^@/, '').split(/[/?#]/)[0];
+      if (!handle || handle.length > 64 || /[\s<>"']/.test(handle)) return null;
+      return `https://www.youtube.com/@${encodeURIComponent(handle.replace(/^@/, ''))}`;
+    },
   },
   {
     id: 'spotify',

@@ -6,17 +6,19 @@
  * artist's own writing; this panel only mixes what the engine composes.
  */
 
-import React, { useContext, useEffect, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowDown,
   ArrowUp,
+  Camera,
   Check,
   Disc3,
   Dna,
   DoorOpen,
   ExternalLink,
   Fingerprint,
+  LayoutGrid,
   Loader2,
   Quote,
   Save,
@@ -29,6 +31,7 @@ import {
   Link2,
   ImagePlus,
   Trash2,
+  Shuffle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,7 +50,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { DataContext } from '@/context/data-context';
 import { cn } from '@/lib/utils';
 import type { Album, Track } from '@/lib/types';
-import { processAlbumRoomBannerFile } from '@/lib/cover-art';
+import { processAlbumRoomBannerFile, processProfilePhotoFile } from '@/lib/cover-art';
 import {
   pressTokens,
   pressingCssVars,
@@ -65,12 +68,15 @@ import {
 import { parseEmbedUrl, EMBED_HELP_TEXT } from '@/lib/profile/embeds';
 import { SOCIAL_PROVIDERS } from '@/lib/profile/social-links';
 import { EmbedPlayer } from '@/components/profile/embed-player';
+import { AlbumCoverCollage } from '@/components/gamification/album-cover-collage';
 import { StudioLoader } from '@/components/studio-loader';
 import {
   fetchArtistHomeConfig,
   saveArtistHomeConfigClient,
 } from '@/lib/profile/artist-home-client';
-import { fetchGamificationSummary } from '@/lib/gamification-client';
+import { fetchGamificationSummary, patchGamificationSettings } from '@/lib/gamification-client';
+
+const MAX_HERO_COLLAGE = 9;
 
 // ---------------------------------------------------------------------------
 // Vault flattening helpers
@@ -216,11 +222,16 @@ function BarPicker({
   );
 }
 
+/** UI labels for pressing faders — keys stay stable in saved config. */
 const FADER_META: Array<{ key: keyof PressingFaders; label: string; low: string; high: string }> = [
-  { key: 'heat', label: 'Heat', low: 'muted', high: 'blazing' },
-  { key: 'grain', label: 'Grain', low: 'clean', high: 'textured' },
-  { key: 'pace', label: 'Pace', low: 'still', high: 'restless' },
-  { key: 'ink', label: 'Ink', low: 'lifted', high: 'pitch black' },
+  // heat → saturation (+ a little layer punch)
+  { key: 'heat', label: 'Color', low: 'washed', high: 'vivid' },
+  // grain → film grain opacity + mesh warp
+  { key: 'grain', label: 'Texture', low: 'clean', high: 'gritty' },
+  // pace → motion / breath cycle speed
+  { key: 'pace', label: 'Motion', low: 'calm', high: 'restless' },
+  // ink → background darkness (not studio Ink currency)
+  { key: 'ink', label: 'Depth', low: 'lifted', high: 'deep night' },
 ];
 
 function PressingPreview({ config, displayName }: { config: ArtistHomeConfig; displayName: string }) {
@@ -286,6 +297,11 @@ export function PressDesk() {
   const [profileLive, setProfileLive] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [photoMode, setPhotoMode] = useState<'collage' | 'custom'>('collage');
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [collageAlbumIds, setCollageAlbumIds] = useState<string[]>([]);
+  const [heroBusy, setHeroBusy] = useState(false);
+  const heroFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -295,12 +311,39 @@ export function PressDesk() {
     void fetchGamificationSummary(user.id).then((summary) => {
       if (summary?.profileSlug) setProfileSlug(summary.profileSlug);
       setProfileLive(Boolean(summary?.publicProfile));
+      setPhotoMode(summary?.profilePhotoMode === 'custom' ? 'custom' : 'collage');
+      setPhotoUrl(summary?.profilePhotoUrl?.trim() ? summary.profilePhotoUrl : null);
+      setCollageAlbumIds(
+        Array.isArray(summary?.profileCollageAlbumIds)
+          ? summary.profileCollageAlbumIds.filter((id): id is string => typeof id === 'string')
+          : []
+      );
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   const vaultBars = useMemo(() => collectVaultBars(albums), [albums]);
   const dnaCandidates = useMemo(() => collectDnaCandidates(albums), [albums]);
+  const albumsWithCovers = useMemo(
+    () =>
+      albums.filter(
+        (a) => a.id !== 'unassigned' && typeof a.coverArtUrl === 'string' && a.coverArtUrl.trim()
+      ),
+    [albums]
+  );
+  const heroCollageUrls = useMemo(() => {
+    if (collageAlbumIds.length > 0) {
+      const byId = new Map(albumsWithCovers.map((a) => [a.id, a.coverArtUrl!.trim()]));
+      return collageAlbumIds.map((id) => byId.get(id)).filter((u): u is string => Boolean(u));
+    }
+    return albumsWithCovers
+      .slice()
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+      .map((a) => a.coverArtUrl!.trim())
+      .slice(0, MAX_HERO_COLLAGE);
+  }, [albumsWithCovers, collageAlbumIds]);
+  const useCustomHero =
+    photoMode === 'custom' && typeof photoUrl === 'string' && photoUrl.trim().length > 0;
   const allTracks = useMemo(() => {
     const seen = new Set<string>();
     const out: Array<{ album: Album; track: Track; key: string }> = [];
@@ -338,6 +381,88 @@ export function PressDesk() {
       return next;
     });
     setDirty(true);
+  };
+
+  const saveHero = async (next: {
+    profilePhotoMode?: 'collage' | 'custom';
+    profilePhotoUrl?: string | null;
+    profileCollageAlbumIds?: string[] | null;
+  }) => {
+    setHeroBusy(true);
+    try {
+      const data = await patchGamificationSettings(next);
+      const summary = data.summary;
+      if (summary) {
+        setPhotoMode(summary.profilePhotoMode === 'custom' ? 'custom' : 'collage');
+        setPhotoUrl(summary.profilePhotoUrl?.trim() ? summary.profilePhotoUrl : null);
+        setCollageAlbumIds(
+          Array.isArray(summary.profileCollageAlbumIds)
+            ? summary.profileCollageAlbumIds.filter((id: unknown): id is string => typeof id === 'string')
+            : []
+        );
+      } else {
+        if (next.profilePhotoMode) setPhotoMode(next.profilePhotoMode);
+        if (next.profilePhotoUrl !== undefined) setPhotoUrl(next.profilePhotoUrl);
+        if (next.profileCollageAlbumIds !== undefined) {
+          setCollageAlbumIds(
+            Array.isArray(next.profileCollageAlbumIds) ? next.profileCollageAlbumIds : []
+          );
+        }
+      }
+      toast({
+        title:
+          next.profilePhotoMode === 'custom'
+            ? 'Custom photo saved'
+            : next.profileCollageAlbumIds !== undefined
+              ? 'Collage updated'
+              : 'Using album collage',
+      });
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not save hero photo',
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setHeroBusy(false);
+    }
+  };
+
+  const handleHeroUpload = async (file: File) => {
+    setHeroBusy(true);
+    try {
+      const { dataUrl } = await processProfilePhotoFile(file);
+      await saveHero({ profilePhotoMode: 'custom', profilePhotoUrl: dataUrl });
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Image not accepted',
+        description: e instanceof Error ? e.message : 'Could not process image.',
+      });
+      setHeroBusy(false);
+    }
+  };
+
+  const toggleCollageAlbum = (albumId: string) => {
+    setCollageAlbumIds((prev) => {
+      if (prev.includes(albumId)) return prev.filter((id) => id !== albumId);
+      if (prev.length >= MAX_HERO_COLLAGE) {
+        toast({
+          title: `Up to ${MAX_HERO_COLLAGE} covers`,
+          description: 'Deselect one to add another.',
+        });
+        return prev;
+      }
+      return [...prev, albumId];
+    });
+  };
+
+  const applyCollageSelection = () => {
+    void saveHero({
+      profilePhotoMode: 'collage',
+      profilePhotoUrl: null,
+      profileCollageAlbumIds: collageAlbumIds.length > 0 ? collageAlbumIds : null,
+    });
   };
 
   const save = async () => {
@@ -445,28 +570,53 @@ export function PressDesk() {
               onCheckedChange={(checked) => update((d) => void (d.theme.autoDrift = checked))}
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {FADER_META.map((fader) => (
-              <div key={fader.key} className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">
-                    {fader.label}
-                  </span>
-                  <span className="text-[9px] uppercase tracking-widest text-muted-foreground">
-                    {fader.low} ⟷ {fader.high}
-                  </span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">
+                Mix faders
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1.5 font-bold uppercase"
+                onClick={() =>
+                  update((d) => {
+                    d.theme.faders = {
+                      heat: Math.floor(Math.random() * 101),
+                      grain: Math.floor(Math.random() * 101),
+                      pace: Math.floor(Math.random() * 101),
+                      ink: Math.floor(Math.random() * 101),
+                    };
+                  })
+                }
+              >
+                <Shuffle className="h-3.5 w-3.5" /> Randomize
+              </Button>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {FADER_META.map((fader) => (
+                <div key={fader.key} className="space-y-1.5">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">
+                      {fader.label}
+                    </span>
+                    <span className="text-[9px] uppercase tracking-widest text-muted-foreground">
+                      {fader.low} ⟷ {fader.high}
+                    </span>
+                  </div>
+                  <Slider
+                    value={[config.theme.faders[fader.key]]}
+                    min={0}
+                    max={100}
+                    step={1}
+                    onValueChange={([value]) =>
+                      update((d) => void (d.theme.faders[fader.key] = value))
+                    }
+                  />
                 </div>
-                <Slider
-                  value={[config.theme.faders[fader.key]]}
-                  min={0}
-                  max={100}
-                  step={1}
-                  onValueChange={([value]) =>
-                    update((d) => void (d.theme.faders[fader.key] = value))
-                  }
-                />
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </DeskSection>
@@ -489,6 +639,155 @@ export function PressDesk() {
             placeholder="Short bio (600 chars)"
             className="bg-black/30 text-sm"
           />
+        </div>
+      </DeskSection>
+
+      {/* 2a. Hero photo */}
+      <DeskSection
+        icon={Camera}
+        title="Hero photo"
+        hint="Custom square photo, or a collage of your album covers (pick up to 9, or leave auto)."
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+          <div className="mx-auto w-full max-w-[11rem] shrink-0 sm:mx-0">
+            <div className="aspect-square overflow-hidden rounded-2xl border border-white/15 bg-black/40 shadow-lg">
+              {useCustomHero ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photoUrl!} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <AlbumCoverCollage
+                  urls={heroCollageUrls}
+                  displayName={displayName}
+                  className="h-full w-full border-0 shadow-none"
+                />
+              )}
+            </div>
+            <p className="mt-2 text-center text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+              {useCustomHero
+                ? 'Custom photo'
+                : collageAlbumIds.length > 0
+                  ? `${heroCollageUrls.length} cover collage`
+                  : 'Auto collage'}
+            </p>
+          </div>
+
+          <div className="min-w-0 flex-1 space-y-3">
+            <input
+              ref={heroFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleHeroUpload(file);
+                e.target.value = '';
+              }}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-9 gap-1.5 font-bold uppercase"
+                disabled={heroBusy}
+                onClick={() => heroFileRef.current?.click()}
+              >
+                {heroBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                Upload photo
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={photoMode === 'collage' && !useCustomHero ? 'default' : 'ghost'}
+                className="h-9 gap-1.5 font-bold uppercase"
+                disabled={heroBusy || (photoMode === 'collage' && !useCustomHero)}
+                onClick={() =>
+                  void saveHero({
+                    profilePhotoMode: 'collage',
+                    profilePhotoUrl: null,
+                    profileCollageAlbumIds: collageAlbumIds.length > 0 ? collageAlbumIds : null,
+                  })
+                }
+              >
+                <LayoutGrid className="h-3.5 w-3.5" /> Use collage
+              </Button>
+            </div>
+
+            <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/80">
+                  Collage covers
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-[9px] font-bold uppercase"
+                    disabled={heroBusy || collageAlbumIds.length === 0}
+                    onClick={() => setCollageAlbumIds([])}
+                  >
+                    Clear picks
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-7 px-2.5 text-[9px] font-bold uppercase"
+                    disabled={heroBusy}
+                    onClick={applyCollageSelection}
+                  >
+                    Apply collage
+                  </Button>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Tap covers to include them (order = tap order). Empty picks = newest albums automatically.
+                Covers are set on each album in The Vault.
+              </p>
+              {albumsWithCovers.length === 0 ? (
+                <p className="text-[11px] text-amber-300/90">
+                  No album covers yet — add cover art in The Vault, then pick them here.
+                </p>
+              ) : (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {albumsWithCovers.map((album) => {
+                    const selected = collageAlbumIds.includes(album.id);
+                    const order = selected ? collageAlbumIds.indexOf(album.id) + 1 : null;
+                    return (
+                      <button
+                        key={album.id}
+                        type="button"
+                        disabled={heroBusy}
+                        onClick={() => toggleCollageAlbum(album.id)}
+                        className={cn(
+                          'group relative aspect-square overflow-hidden rounded-lg border transition-all',
+                          selected
+                            ? 'border-primary ring-2 ring-primary/40'
+                            : 'border-white/10 opacity-80 hover:opacity-100'
+                        )}
+                        title={album.title}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={album.coverArtUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                        {order != null && (
+                          <span className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                            {order}
+                          </span>
+                        )}
+                        <span className="absolute inset-x-0 bottom-0 truncate bg-black/70 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white">
+                          {album.title}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </DeskSection>
 

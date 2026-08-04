@@ -480,7 +480,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
             value={embedUrl}
             onChange={(e) => setEmbedUrl(e.target.value)}
             maxLength={500}
-            placeholder="Optional: paste a YouTube / SoundCloud / Spotify / Suno link"
+            placeholder="Optional: paste a YouTube / TikTok / Instagram / Facebook / SoundCloud / Spotify / Suno link"
             className="h-9 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 text-sm"
           />
           {embedUrl.trim() && !embedPreview && (

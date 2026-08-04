@@ -302,6 +302,16 @@ export function getReferralFaqAnswer(): string {
   return `Copy your link from Ink Store → Refer a Friend. When a new artist signs up through it, you each get ${REFERRAL_INK_REWARD} Ink (referrers earn up to ${MAX_REFERRAL_REWARDS} bonuses). Referrer bonuses credit after your friend spends 50 Ink on AI tools. On Visitor, referral Ink stacks in your residency pool (capped at ${FREE_RESIDENCY_POOL_CAP}); Pro members receive permanent Ink. One welcome bonus per email — returning identities after self-delete do not re-earn referral welcome Ink.`;
 }
 
+/** Pricing FAQ — is Artist Home / The Scene free */
+export function getArtistHomeFaqAnswer(): string {
+  return 'Yes — every artist gets a free Artist Home: a shareable /profile page with skin, Album Rooms, wall posts, and embeds from TikTok, Instagram, Facebook, and YouTube. It is private by default; flip it live whenever you want eyes on it. Signing in lands you on The Scene — your friends feed, Discover, and Your Booth — with the Vault one click away. Pro does not gate Artist Home; it unlocks the catalog workflow (unlimited albums/tracks, custom DNA vault saves, Performance Mode, Freestyle, and DNA Drop links).';
+}
+
+/** Pricing FAQ — sharing posts */
+export function getPostSharingFaqAnswer(): string {
+  return 'Every post on your Artist Home wall has a Share button — X, Facebook, WhatsApp, email, copy link, or your device share sheet. It links straight back to your public page (deep-linked to that post) so fans and collaborators land on your Artist Home, not a screenshot.';
+}
+
 /** Shown on Ink Store for non-Pro artists */
 export const VISITOR_INK_STORE_NOTICE = {
   headline: 'Visitor — AI lyric tools on Ink',

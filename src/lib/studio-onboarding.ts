@@ -263,7 +263,7 @@ export const SCENE_HOME_TOUR_STEPS: LyricsTourStep[] = [
     mobileCardPlacement: 'bottom',
     title: 'Drop a bar to your wall',
     body: 'Post a line, a thought, or a link. Friends see it on their Scene, and visitors see it on your Artist Home wall.',
-    example: 'Add a YouTube / SoundCloud / Spotify link and it plays inline.',
+    example: 'Add a YouTube / TikTok / Instagram / Facebook link and it plays inline.',
   },
   {
     id: 'scene-booth',

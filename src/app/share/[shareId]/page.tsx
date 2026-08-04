@@ -19,6 +19,7 @@ import {
     Zap,
     Clock,
     LogIn,
+    EyeOff,
 } from 'lucide-react';
 import { StudioLoader } from '@/components/studio-loader';
 import { ShareCoverImage } from '@/components/share-cover-image';
@@ -26,6 +27,7 @@ import { format } from 'date-fns';
 import {
   sharedTrackIntents,
   resolveSharedDirection,
+  findTrackInVault,
   type DnaDropTrackPayload,
   type DnaDropAlbumPayload,
 } from '@/lib/dna-drop';
@@ -49,12 +51,14 @@ export default function SharedProjectPage() {
     const router = useRouter();
     const { toast } = useToast();
     const { user, authReady } = useAuth();
-    const { mergeData, isCloudSyncActive, getAlbumById, getTrackById } = useContext(DataContext);
+    const { mergeData, isCloudSyncActive, getAlbumById, getTrackById, albums, revokeDNA } = useContext(DataContext);
 
     const [share, setShare] = useState<ProjectShare | null>(null);
     const [loading, setLoading] = useState(true);
     const [isImporting, setIsImporting] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
+    const [isTakingOffline, setIsTakingOffline] = useState(false);
+    const [offlineConfirmOpen, setOfflineConfirmOpen] = useState(false);
 
     useEffect(() => {
         const fetchShare = async () => {
@@ -93,11 +97,17 @@ export default function SharedProjectPage() {
         return Boolean(getTrackById('unassigned', project.id).track);
     }, [project, isOwnShare, isAlbum, getAlbumById, getTrackById]);
 
+    const editHref = useMemo(() => {
+        if (!project) return null;
+        if (isAlbum) return `/albums/${project.id}`;
+        const found = findTrackInVault(albums, project.id);
+        return `/albums/${found?.album.id ?? 'unassigned'}/tracks/${project.id}`;
+    }, [project, isAlbum, albums]);
+
     const openInVault = useCallback(() => {
-        if (!project) return;
-        if (isAlbum) router.push(`/albums/${project.id}`);
-        else router.push(`/albums/unassigned/tracks/${project.id}`);
-    }, [project, isAlbum, router]);
+        if (!editHref) return;
+        router.push(editHref);
+    }, [editHref, router]);
 
     const handleImportClick = () => {
         if (!authReady) return;
@@ -152,6 +162,25 @@ export default function SharedProjectPage() {
             });
         } finally {
             setIsImporting(false);
+        }
+    };
+
+    const handleTakeOffline = async () => {
+        if (!share || !project) return;
+        setOfflineConfirmOpen(false);
+        setIsTakingOffline(true);
+        try {
+            await revokeDNA(share.type, project.id, shareId);
+            toast({
+                title: 'DNA Drop offline',
+                description: 'The public link no longer works. Taking you back to the edit page.',
+            });
+            router.push(editHref ?? '/');
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : 'Could not take this DNA Drop offline.';
+            toast({ variant: 'destructive', title: 'Offline failed', description: message });
+        } finally {
+            setIsTakingOffline(false);
         }
     };
 
@@ -211,6 +240,18 @@ export default function SharedProjectPage() {
                             <span className="text-[10px] font-bold">{share.imports.toLocaleString()}</span>
                         </div>
                     </div>
+                    {isOwnShare && (
+                        <Button
+                            onClick={() => setOfflineConfirmOpen(true)}
+                            size="sm"
+                            variant="outline"
+                            className="h-9 px-4 font-bold border-red-500/30 text-red-500 hover:bg-red-500/10"
+                            disabled={isTakingOffline}
+                        >
+                            {isTakingOffline ? <StudioLoader size="sm" /> : <EyeOff className="h-4 w-4 mr-2" />}
+                            Take offline
+                        </Button>
+                    )}
                     <Button onClick={handleImportClick} size="sm" className="h-9 px-4 font-bold shadow-lg" disabled={isImporting}>
                         {isImporting ? (
                             <StudioLoader size="sm" />
@@ -479,6 +520,28 @@ export default function SharedProjectPage() {
                         <AlertDialogCancel className="font-bold">Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={() => void handleConfirmImport()} className="font-bold" disabled={isImporting}>
                             {isImporting ? 'Importing…' : 'Import into vault'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={offlineConfirmOpen} onOpenChange={setOfflineConfirmOpen}>
+                <AlertDialogContent className="bg-card border-2">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="font-headline text-2xl uppercase">Take this DNA Drop offline?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm font-code leading-relaxed">
+                            The public link for <strong className="text-foreground">{project.title}</strong> will stop working immediately.
+                            You&apos;ll be taken back to the edit page — publish again anytime from there.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="font-bold">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => void handleTakeOffline()}
+                            className="font-bold bg-red-500 hover:bg-red-600 text-white"
+                            disabled={isTakingOffline}
+                        >
+                            {isTakingOffline ? 'Taking offline…' : 'Take offline'}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

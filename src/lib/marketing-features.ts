@@ -28,13 +28,51 @@ export const STRAIN_PIPELINE_STEPS = [
   { step: '05', label: 'Draft', detail: 'Remix paths → studio draft' },
 ] as const;
 
+/**
+ * Story order: presence first (Scene / Artist Home), then craft tools that
+ * give the scene teeth (DNA, bars, vault).
+ */
 export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
+  {
+    id: 'artist-home',
+    eyebrow: 'Artist Home & The Scene',
+    title: 'Your Page. Your Block.',
+    description:
+      'Sign in and land on The Scene — friends\u2019 drops, a Discover stream of live Artist Homes, and Your Booth. Every artist gets a public home: living skin, Album Rooms, embeds, live DNA Drops. Write in the vault. Show up on the block.',
+    bullets: [
+      'The Scene home — friends feed + Discover, never an empty room',
+      'Public /profile link you control — private by default until you go live',
+      'Edit Public Page: modules, bio, socials, Album Rooms, wall posts',
+    ],
+    mediaSrc: '/marketing/feature-artist-home.png',
+    mediaType: 'image',
+    mediaAlt: 'Bar 4 Bar Artist Home — shareable public artist page',
+    layout: 'hero-stack',
+    mediaVariant: 'hero-full',
+  },
+  {
+    id: 'cowriter',
+    eyebrow: 'Bar Workstation',
+    title: 'Next Bar. Two Ways.',
+    description:
+      'The studio under the booth. Tap a bar, hit Next — two rhyme-aware options land in seconds. Pick one. It slots into your sheet. No paragraph soup.',
+    bullets: [
+      'Footer co-writer lives on the lyrics sheet',
+      'Opt 1 & Opt 2 with syllable counts',
+      'Accept a line — structure stays intact',
+    ],
+    mediaSrc: '/marketing/hero-workstation.png',
+    mediaType: 'image',
+    mediaAlt: 'Bar Workstation showing two full next-line options',
+    layout: 'split',
+    mediaVariant: 'showcase',
+  },
   {
     id: 'strain-lab',
     eyebrow: 'DNA & Remix',
     title: 'Decode. Save. Remix.',
     description:
-      'Paste rough notes and get the real Calibration Hub — themed strain cards, inject buttons, remix paths with influence sliders, then a studio draft that respects your DNA.',
+      'Paste rough notes and get the real Calibration Hub — themed strain cards, inject buttons, remix paths with influence sliders, then a studio draft that respects your DNA. That\u2019s what you drop back onto the Scene.',
     bullets: [
       'Themes, motifs, shift, emotion, and style cards — not a summary blob',
       '⚡ inject any strain into Creative DNA, Intents, or Style',
@@ -43,8 +81,8 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     mediaSrc: '/marketing/gif-dna-remix.gif',
     mediaType: 'gif',
     mediaAlt: 'DNA and Remix workstation decoding strains and synthesizing a draft',
-    layout: 'hero-stack',
-    mediaVariant: 'hero-full',
+    layout: 'split-reverse',
+    mediaVariant: 'showcase',
   },
   {
     id: 'strain-vault',
@@ -60,23 +98,6 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     mediaSrc: '/marketing/gif-strain-vault.gif',
     mediaType: 'gif',
     mediaAlt: 'DNA Vault save, load, and strain mixer workflow',
-    layout: 'split-reverse',
-    mediaVariant: 'showcase',
-  },
-  {
-    id: 'cowriter',
-    eyebrow: 'Bar Workstation',
-    title: 'Next Bar. Two Ways.',
-    description:
-      'Tap a bar, hit Next — two rhyme-aware options land in seconds. Pick one. It slots into your sheet. No paragraph soup.',
-    bullets: [
-      'Footer co-writer lives on the lyrics sheet',
-      'Opt 1 & Opt 2 with syllable counts',
-      'Accept a line — structure stays intact',
-    ],
-    mediaSrc: '/marketing/hero-workstation.png',
-    mediaType: 'image',
-    mediaAlt: 'Bar Workstation showing two full next-line options',
     layout: 'split',
     mediaVariant: 'showcase',
   },
@@ -120,7 +141,7 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     eyebrow: 'Album Blueprint',
     title: 'Concept Arcs',
     description:
-      'Ordered tracklists, shared Album DNA, one-click DNA Drops — build albums, not one-off prompts.',
+      'Ordered tracklists, shared Album DNA, one-click DNA Drops — build albums, not one-off prompts. Live drops show on your Artist Home automatically.',
     bullets: ['Drag-order tracklist', 'DNA inherits per track', 'DNA Drop for collab'],
     mediaSrc: '/marketing/feature-album-blueprint.png',
     mediaType: 'image',
@@ -128,23 +149,6 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     layout: 'bento',
     mediaVariant: 'bento',
     bentoGroup: 'studio',
-  },
-  {
-    id: 'artist-home',
-    eyebrow: 'Artist Home & The Scene',
-    title: 'Your Page. Your Block.',
-    description:
-      'Sign in and land on The Scene — friends\u2019 drops, a Discover stream of live Artist Homes, and Your Booth. Every artist gets a public home: living skin, Album Rooms, embeds, live DNA Drops. Write in the vault. Show up on the block.',
-    bullets: [
-      'The Scene home — friends feed + Discover, never an empty room',
-      'Public /profile link you control — private by default until you go live',
-      'Edit Public Page: modules, bio, socials, Album Rooms, wall posts',
-    ],
-    mediaSrc: '/marketing/feature-artist-home.png',
-    mediaType: 'image',
-    mediaAlt: 'Bar 4 Bar Artist Home — shareable public artist page',
-    layout: 'split',
-    mediaVariant: 'showcase',
   },
 ];
 
@@ -154,20 +158,20 @@ export const MARKETING_MEDIA_ASPECT = 1000 / 720;
 export const MARKETING_HOW_IT_WORKS = [
   {
     step: '01',
-    title: 'Set the World',
-    body: 'Five DNA questions — setting, emotion, trigger, truth, tone.',
-    media: '/marketing/how-step-dna.png',
+    title: 'Claim Your Booth',
+    body: 'Free Artist Home — private until you go live. Land on The Scene with friends and Discover.',
+    media: '/marketing/feature-artist-home.png',
   },
   {
     step: '02',
     title: 'Write Bar by Bar',
-    body: 'Bar Workstation at the footer — Next, two options, guardrails on.',
+    body: 'Open The Vault — Next, two options, guardrails, DNA that remembers your album.',
     media: '/marketing/how-step-workstation.png',
   },
   {
     step: '03',
     title: 'Show Up on the Scene',
-    body: 'Artist Home, DNA Drops, your block of friends, Studio Progress.',
+    body: 'Post to your wall, drop DNA, visit Artist Homes, build your block.',
     media: '/marketing/how-step-progress.png',
   },
 ] as const;

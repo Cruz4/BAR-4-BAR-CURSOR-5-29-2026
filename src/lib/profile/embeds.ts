@@ -1,11 +1,18 @@
 /**
- * Embed whitelist + URL parsing for Artist Home playable media.
+ * Embed whitelist + URL parsing for Artist Home / Scene playable media.
  *
  * Embeds-only strategy: the provider hosts and streams the media, so profile
  * plays cost Bar 4 Bar nothing. Unsupported URLs fall back to a link card.
  */
 
-export type EmbedProvider = 'youtube' | 'soundcloud' | 'spotify' | 'suno';
+export type EmbedProvider =
+  | 'youtube'
+  | 'soundcloud'
+  | 'spotify'
+  | 'suno'
+  | 'tiktok'
+  | 'instagram'
+  | 'facebook';
 
 export type ParsedEmbed = {
   provider: EmbedProvider;
@@ -15,8 +22,13 @@ export type ParsedEmbed = {
   watchUrl: string;
   /** Fixed iframe height in px (video providers use aspect ratio instead). */
   height?: number;
-  /** True when the embed is 16:9 video. */
+  /** True when the embed is video-like (uses aspect box). */
   isVideo: boolean;
+  /**
+   * Padding-bottom % for the aspect box (default 56.25 = 16:9).
+   * Portrait social video uses ~125–140.
+   */
+  aspectPaddingPercent?: number;
 };
 
 function safeUrl(raw: string): URL | null {
@@ -102,12 +114,114 @@ function parseSuno(url: URL): ParsedEmbed | null {
   };
 }
 
+/** TikTok — official iframe player (full /@user/video/{id} URLs). */
+function parseTikTok(url: URL): ParsedEmbed | null {
+  const host = url.hostname.replace(/^www\./, '').replace(/^m\./, '');
+  if (host !== 'tiktok.com') return null;
+  const parts = url.pathname.split('/').filter(Boolean);
+  // /@handle/video/7650249614154599694
+  const videoIdx = parts.findIndex((p) => p === 'video' || p === 'photo');
+  const id = videoIdx >= 0 ? parts[videoIdx + 1] : null;
+  if (!id || !/^\d{5,25}$/.test(id)) return null;
+  const handle = parts[0]?.startsWith('@') ? parts[0] : null;
+  const watchUrl = handle
+    ? `https://www.tiktok.com/${handle}/video/${id}`
+    : `https://www.tiktok.com/video/${id}`;
+  return {
+    provider: 'tiktok',
+    src: `https://www.tiktok.com/player/v1/${id}`,
+    watchUrl,
+    isVideo: true,
+    aspectPaddingPercent: 130,
+  };
+}
+
+/** Instagram — /p/, /reel/, /reels/, /tv/ → /embed/ iframe. */
+function parseInstagram(url: URL): ParsedEmbed | null {
+  const host = url.hostname.replace(/^www\./, '');
+  if (host !== 'instagram.com' && host !== 'instagr.am') return null;
+  const parts = url.pathname.split('/').filter(Boolean);
+  const kind = parts[0];
+  const code = parts[1];
+  if (!code || !/^[A-Za-z0-9_-]{5,64}$/.test(code)) return null;
+  if (kind !== 'p' && kind !== 'reel' && kind !== 'reels' && kind !== 'tv') return null;
+  const pathKind = kind === 'reels' ? 'reel' : kind;
+  const watchUrl = `https://www.instagram.com/${pathKind}/${code}/`;
+  return {
+    provider: 'instagram',
+    src: `${watchUrl}embed/captioned/`,
+    watchUrl,
+    isVideo: true,
+    aspectPaddingPercent: 125,
+  };
+}
+
+/**
+ * Facebook — posts + videos via plugins iframe.
+ * Supports facebook.com/.../posts|videos|..., /watch/?v=, fb.watch/, /share/v|r/...
+ */
+function parseFacebook(url: URL): ParsedEmbed | null {
+  const host = url.hostname.replace(/^www\./, '').replace(/^m\./, '').replace(/^web\./, '');
+  if (host !== 'facebook.com' && host !== 'fb.com' && host !== 'fb.watch') return null;
+
+  const href = url.toString().split('#')[0];
+  const parts = url.pathname.split('/').filter(Boolean);
+
+  let isVideo = false;
+  if (host === 'fb.watch' || parts[0] === 'watch' || parts.includes('videos') || parts[0] === 'share') {
+    isVideo = parts[0] === 'share' ? parts[1] === 'v' || parts[1] === 'r' : true;
+  }
+  if (url.searchParams.has('v')) isVideo = true;
+
+  // Need a recognizable content path — avoid bare profile URLs.
+  const looksLikeContent =
+    host === 'fb.watch' ||
+    parts.includes('posts') ||
+    parts.includes('videos') ||
+    parts.includes('reel') ||
+    parts.includes('reels') ||
+    parts[0] === 'watch' ||
+    parts[0] === 'story.php' ||
+    parts[0] === 'permalink.php' ||
+    parts[0] === 'photo.php' ||
+    parts[0] === 'share' ||
+    /^\d+$/.test(parts[0] || '');
+
+  if (!looksLikeContent) return null;
+
+  const encoded = encodeURIComponent(href);
+  if (isVideo) {
+    return {
+      provider: 'facebook',
+      src: `https://www.facebook.com/plugins/video.php?href=${encoded}&show_text=false&width=500`,
+      watchUrl: href,
+      isVideo: true,
+      aspectPaddingPercent: 56.25,
+    };
+  }
+  return {
+    provider: 'facebook',
+    src: `https://www.facebook.com/plugins/post.php?href=${encoded}&show_text=true&width=500`,
+    watchUrl: href,
+    height: 480,
+    isVideo: false,
+  };
+}
+
 /** Parse a pasted URL into a playable embed; null means "show a link card". */
 export function parseEmbedUrl(raw: string | undefined | null): ParsedEmbed | null {
   if (!raw || !raw.trim()) return null;
   const url = safeUrl(raw);
   if (!url) return null;
-  return parseYouTube(url) ?? parseSoundCloud(url) ?? parseSpotify(url) ?? parseSuno(url);
+  return (
+    parseYouTube(url) ??
+    parseSoundCloud(url) ??
+    parseSpotify(url) ??
+    parseSuno(url) ??
+    parseTikTok(url) ??
+    parseInstagram(url) ??
+    parseFacebook(url)
+  );
 }
 
 export const EMBED_PROVIDER_LABELS: Record<EmbedProvider, string> = {
@@ -115,7 +229,10 @@ export const EMBED_PROVIDER_LABELS: Record<EmbedProvider, string> = {
   soundcloud: 'SoundCloud',
   spotify: 'Spotify',
   suno: 'Suno',
+  tiktok: 'TikTok',
+  instagram: 'Instagram',
+  facebook: 'Facebook',
 };
 
 export const EMBED_HELP_TEXT =
-  'Paste a YouTube, SoundCloud, Spotify, or Suno link — it plays right on your page. Other links show as a card.';
+  'Paste a YouTube, TikTok, Instagram, Facebook, SoundCloud, Spotify, or Suno link — it plays right on your page. Other links show as a card. Use the full post URL (not a truncated short link when possible).';

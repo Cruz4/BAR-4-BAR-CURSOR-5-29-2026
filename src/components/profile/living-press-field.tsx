@@ -192,9 +192,8 @@ function LayerView({
                   ['--ph-well-o' as string]: String(w.opacity * (0.85 + scroll * 0.25)),
                   opacity: w.opacity,
                   animation: motionOk
-                    ? `ph-well-breath calc(var(--ph-breath) * ${1 + i * 0.25}) ease-in-out infinite`
+                    ? `ph-well-breath calc(var(--ph-breath) * ${1 + i * 0.25}) ease-in-out ${i * 0.4}s infinite`
                     : undefined,
-                  animationDelay: `${i * 0.4}s`,
                 } as React.CSSProperties
               }
             />
@@ -352,9 +351,8 @@ function LayerView({
                     borderColor: stroke,
                     opacity: 0.2,
                     animation: motionOk
-                      ? `ph-ripple calc(var(--ph-breath) * ${1.4 + ring * 0.35}) ease-out infinite`
+                      ? `ph-ripple calc(var(--ph-breath) * ${1.4 + ring * 0.35}) ease-out ${o.delay + ring * 0.55 + scroll * 0.4}s infinite`
                       : undefined,
-                    animationDelay: `${o.delay + ring * 0.55 + scroll * 0.4}s`,
                   }}
                 />
               ))}
@@ -395,9 +393,8 @@ function LayerView({
                 background: fillSoft,
                 opacity: o.opacity,
                 animation: motionOk
-                  ? `ph-mote calc(var(--ph-motion) * ${o.drift}) ease-in-out infinite`
+                  ? `ph-mote calc(var(--ph-motion) * ${o.drift}) ease-in-out ${i * 0.2}s infinite`
                   : undefined,
-                animationDelay: `${i * 0.2}s`,
               }}
             />
           ))}

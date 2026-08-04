@@ -58,6 +58,67 @@ export async function processCoverArtFile(
   }
 }
 
+/**
+ * Artist Home hero photo — smaller than album covers so it fits alongside
+ * Artist Home config on the public profile path (Firestore 1MB doc limit).
+ */
+export const PROFILE_PHOTO_EXPORT_SIZE = 512;
+export const PROFILE_PHOTO_MIN_DIMENSION = 200;
+export const PROFILE_PHOTO_MAX_OUTPUT_BYTES = 140 * 1024;
+
+export async function processProfilePhotoFile(
+  file: File
+): Promise<{ dataUrl: string; width: number; height: number }> {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Please choose a JPG, PNG, or WebP image.');
+  }
+  if (file.size > COVER_ART_MAX_INPUT_BYTES) {
+    throw new Error('Image file is too large (max 10MB).');
+  }
+
+  const blobUrl = URL.createObjectURL(file);
+  try {
+    const img = await loadImage(blobUrl);
+    const minDim = Math.min(img.naturalWidth, img.naturalHeight);
+    if (minDim < PROFILE_PHOTO_MIN_DIMENSION) {
+      throw new Error(
+        `Image is too small (${img.naturalWidth}×${img.naturalHeight}). Use at least ${PROFILE_PHOTO_MIN_DIMENSION}px on the shortest side.`
+      );
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = PROFILE_PHOTO_EXPORT_SIZE;
+    canvas.height = PROFILE_PHOTO_EXPORT_SIZE;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not process image in this browser.');
+
+    const sx = img.naturalWidth > img.naturalHeight ? (img.naturalWidth - img.naturalHeight) / 2 : 0;
+    const sy = img.naturalHeight > img.naturalWidth ? (img.naturalHeight - img.naturalWidth) / 2 : 0;
+    ctx.drawImage(
+      img,
+      sx,
+      sy,
+      minDim,
+      minDim,
+      0,
+      0,
+      PROFILE_PHOTO_EXPORT_SIZE,
+      PROFILE_PHOTO_EXPORT_SIZE
+    );
+
+    let quality = 0.82;
+    let dataUrl = canvas.toDataURL('image/jpeg', quality);
+    while (dataUrl.length > PROFILE_PHOTO_MAX_OUTPUT_BYTES * 1.37 && quality > 0.45) {
+      quality -= 0.07;
+      dataUrl = canvas.toDataURL('image/jpeg', quality);
+    }
+
+    return { dataUrl, width: PROFILE_PHOTO_EXPORT_SIZE, height: PROFILE_PHOTO_EXPORT_SIZE };
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
+}
+
 export function isDataUrl(src?: string | null): boolean {
   return Boolean(src?.startsWith('data:'));
 }
