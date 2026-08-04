@@ -272,7 +272,7 @@ export function VaultStudioProgress({
           <p className={cn('text-muted-foreground font-code leading-snug break-words', isSidebar ? 'text-[11px]' : 'text-[10px]')}>
             {nextRank ? (
               <>
-                {Math.max(0, next - current).toLocaleString()} XP to{' '}
+                {Math.max(0, (next ?? current) - current).toLocaleString()} XP to{' '}
                 <span className="text-primary">{nextRank.label}</span>
               </>
             ) : (

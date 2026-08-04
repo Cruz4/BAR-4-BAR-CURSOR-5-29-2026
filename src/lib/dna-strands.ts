@@ -431,7 +431,7 @@ export function getVaultAnalysisStrains(analysis?: Partial<WizardAnalysis> | nul
     .filter(Boolean)
     .join(' / ');
 
-  return [
+  const rows: Array<{ title: string; content: string | string[] | null }> = [
     { title: 'Themes', content: analysis.themes?.length ? analysis.themes : null },
     { title: 'Motifs', content: analysis.motifs?.length ? analysis.motifs : null },
     { title: 'Emotion', content: emotion || null },
@@ -443,7 +443,11 @@ export function getVaultAnalysisStrains(analysis?: Partial<WizardAnalysis> | nul
     { title: 'Technical Fingerprint', content: analysis.voiceStyle?.trim() || null },
     { title: 'What Makes It Work', content: analysis.whatMakesItWork?.trim() || null },
     { title: 'Style', content: analysis.styleAnalysis?.trim() || null },
-  ].filter((s): s is VaultStrainRow => !!s.content && (!(Array.isArray(s.content)) || s.content.length > 0));
+  ];
+  return rows.flatMap((s) => {
+    if (!s.content || (Array.isArray(s.content) && s.content.length === 0)) return [];
+    return [{ title: s.title, content: s.content }];
+  });
 }
 
 /** Vault UI strains — merges saved intents/style once; never repeats structureGuide blob. */

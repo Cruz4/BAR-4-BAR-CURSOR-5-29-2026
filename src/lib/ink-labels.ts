@@ -15,6 +15,7 @@ export const INK_ACTION_LABELS: Record<InkActionKey, string> = {
   findRhymes: 'Rhyme Pulse',
   improveMyStyle: 'Train AI on Style',
   freestyleTranscription: 'Freestyle Session',
+  freestyleTranscriptionChunk: 'Freestyle Chunk (free)',
   runCreativeEffect: 'Creative Effect',
   aiVideoDirector: 'AI Video Director',
   aiMusicCowriter: 'AI Music Co-Writer',

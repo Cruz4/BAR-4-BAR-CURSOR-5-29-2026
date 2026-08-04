@@ -21,6 +21,8 @@ const TranscribeFreestyleInputSchema = z.object({
   albumTheme: z.string().max(FREESTYLE_CONTEXT_FIELD_MAX).optional(),
   trackVibeSummary: z.string().max(FREESTYLE_CONTEXT_FIELD_MAX).optional(),
   styleProfileSummary: z.string().max(FREESTYLE_STYLE_CONTEXT_MAX).optional(),
+  /** True for the first billable chunk of a recording session — charges the flat "Freestyle Session" fee. */
+  isSessionStart: z.boolean().optional(),
 });
 export type TranscribeFreestyleInput = z.infer<typeof TranscribeFreestyleInputSchema>;
 
@@ -101,16 +103,23 @@ const transcribeFreestyleFlow = ai.defineFlow(
   }
 );
 
-/** Chunk transcription during an active freestyle session (ink charged once on the client). */
+/**
+ * Chunk transcription during an active freestyle session.
+ * Ink is charged once per session, on the first billable chunk (`isSessionStart`) —
+ * that chunk uses the `freestyleTranscription` action name, which resolves to the
+ * flat "Freestyle Session" fee in AI_COSTS. Continuation chunks use
+ * `freestyleTranscriptionChunk`, which is listed at 0 Ink in AI_COSTS.
+ */
 export async function transcribeFreestyleAudio(
   input: TranscribeFreestyleInput & AiSecuredInput
 ): Promise<TranscribeFreestyleOutput> {
-  const flowInput = stripAiAuth(input);
+  const { isSessionStart, ...rest } = input;
+  const flowInput = stripAiAuth(rest);
   return runSecuredAiAction(
     {
       idToken: input.idToken,
       userId: input.userId,
-      actionName: 'freestyleTranscriptionChunk',
+      actionName: isSessionStart ? 'freestyleTranscription' : 'freestyleTranscriptionChunk',
       inkCost: 0,
       customApiKey: input.customApiKey,
     },

@@ -556,7 +556,7 @@ function LoginForm() {
                               type="email"
                               autoComplete="email"
                               placeholder="artist@studio.com"
-                              className="pl-10 h-10 bg-black/40 border-white/10 text-white"
+                              className="pl-10 h-10 bg-background border-border text-foreground dark:bg-black/40 dark:border-white/10 dark:text-white"
                               value={email}
                               onChange={(e) => setEmail(e.target.value)}
                               required
@@ -575,7 +575,7 @@ function LoginForm() {
                               type="password"
                               autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'}
                               placeholder="••••••••"
-                              className="pl-10 h-10 bg-black/40 border-white/10 text-white"
+                              className="pl-10 h-10 bg-background border-border text-foreground dark:bg-black/40 dark:border-white/10 dark:text-white"
                               value={password}
                               onChange={(e) => setPassword(e.target.value)}
                               required

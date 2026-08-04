@@ -244,6 +244,7 @@ import {
   lazyGenerateCoverArt,
   lazyGenerateNextLine,
   lazyImproveMyStyle,
+  lazySuggestTrackTitles,
   lazySuggestVibe,
 } from '@/lib/lazy-ai-flows';
 import { FreestylePad } from '@/components/freestyle-pad';
@@ -736,7 +737,7 @@ function StyleVaultDialog({ open, onOpenChange, album, updateAlbum, onApply, isP
                                         <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500" onClick={() => {
                                           updateAlbum(album.id, {
                                             stylePresets: (album.stylePresets ?? []).filter(
-                                              (x) => !(x.name === s.name && x.createdAt === s.createdAt)
+                                              (x: any) => !(x.name === s.name && x.createdAt === s.createdAt)
                                             ),
                                           });
                                           toast({ title: 'Style DNA Erased' });
@@ -779,6 +780,11 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   const { refundInk, addUsageLog } = useUsage();
   const { getEffectiveCost, tooltip, buttonLabel } = useInkCosts();
   const { runWithInk } = useTouchInkRunner();
+  const [suggestedTitles, setSuggestedTitles] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    setSuggestedTitles(null);
+  }, [track.id]);
 
   const gateGuestInk = (featureLabel: string) => {
     if (!isGuestTryMode) return false;
@@ -805,6 +811,48 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
       } catch (err: any) {
         refundInk(cost);
         toast({ variant: 'destructive', title: 'Vibe Failed', description: err.message });
+      } finally {
+        setGenerating(false);
+      }
+    });
+  };
+
+  const handleSuggestTitles = async (e: any) => {
+    if (gateGuestInk('Suggest Titles')) return;
+    if (trackLocked) {
+      toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
+      return;
+    }
+    const cost = getEffectiveCost('suggestTrackTitles');
+    runWithInk('suggestTrackTitles', cost, 'suggestTrackTitles', e, async () => {
+      setGenerating(true, 'Titling the Track...');
+      try {
+        const fullLyrics = track.sections.flatMap((s: any) => s.bars.map((b: any) => b.text)).join('\n');
+        if (fullLyrics.trim().length < 20) {
+          throw new Error('Write a few lines first — titles need lyrics to work with.');
+        }
+        const res = await lazySuggestTrackTitles(
+          await withAiAuth({
+            lyrics: fullLyrics,
+            vibe: {
+              genre: track.vibe?.genre || 'General',
+              tempoBPM: track.vibe?.tempoBPM || 90,
+              feeling: track.vibe?.feeling?.length ? track.vibe.feeling : ['neutral'],
+            },
+            albumTheme: album.theme || '',
+            mergedDirection: mergeDirection(album.direction, track.direction),
+            negativePrompt: track.guardrails?.enabled ? track.guardrails.negativePrompt : undefined,
+            forbiddenWords: track.guardrails?.enabled ? track.guardrails.forbiddenWords : undefined,
+            mustIncludeWords: track.guardrails?.enabled ? track.guardrails.mustIncludeWords : undefined,
+          })
+        );
+        setSuggestedTitles(res);
+        onUpdateTrack({ suggestedTitlesHistory: [...(track.suggestedTitlesHistory || []), res] });
+        addUsageLog({ flowName: 'suggestTrackTitles', inkCost: cost, status: 'success' });
+        toast({ title: 'Titles Suggested', description: 'Pick one below, or keep your current title.' });
+      } catch (err: any) {
+        refundInk(cost);
+        toast({ variant: 'destructive', title: 'Suggest Titles Failed', description: err.message });
       } finally {
         setGenerating(false);
       }
@@ -935,6 +983,39 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                   <div className="space-y-1">
                     <Label className="text-[10px] uppercase font-bold text-sky-400/70 tracking-widest">Title</Label>
                     <Input value={track.title} onChange={(e) => onUpdateTrack({ title: e.target.value })} disabled={trackLocked} readOnly={trackLocked} className="font-headline border-sky-500/20 bg-background/50 h-9 text-xs disabled:opacity-70" />
+                    <Hint
+                      content={
+                        <p className="text-[9px] font-mono text-primary">{tooltip('suggestTrackTitles')}</p>
+                      }
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={trackLocked}
+                        className="w-full h-7 text-[9px] font-bold uppercase border-sky-500/20 hover:bg-sky-500/10 text-sky-400 disabled:opacity-50"
+                        onClick={(e) => handleSuggestTitles(e)}
+                      >
+                        <Wand2 className="mr-1.5 h-3 w-3 shrink-0" /> {isGuestTryMode ? 'Sign up for Titles' : buttonLabel('suggestTrackTitles')}
+                      </Button>
+                    </Hint>
+                    {suggestedTitles && suggestedTitles.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {suggestedTitles.map((title, i) => (
+                          <button
+                            key={`${title}-${i}`}
+                            type="button"
+                            onClick={() => {
+                              onUpdateTrack({ title });
+                              setSuggestedTitles(null);
+                            }}
+                            className="rounded-full border border-sky-500/25 bg-sky-500/5 px-2.5 py-1 text-[9px] font-medium text-sky-300 hover:bg-sky-500/15 hover:text-sky-200 transition-colors truncate max-w-full"
+                            title={title}
+                          >
+                            {title}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-2 pt-1 border-t border-sky-500/15">
                     <div className="flex items-center justify-between gap-2">
@@ -983,7 +1064,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                       )}
                       onClick={() => {
                         if (tierLocked) {
-                          toast({ variant: 'destructive', ...TIER_LIMIT_LOCKED_TOAST });
+                          toast({ ...TIER_LIMIT_LOCKED_TOAST, variant: 'destructive' });
                           return;
                         }
                         const next = track.status === 'complete' ? 'in_progress' : 'complete';
@@ -1845,7 +1926,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                 <div className="flex max-md:flex-col md:flex-row md:items-center gap-2 mt-0.5 min-w-0 flex-1">
                     {generationOptions ? (
                         <div className="flex-grow flex max-md:flex-col md:flex-row gap-2 animate-in fade-in slide-in-from-bottom-4 min-w-0 py-0.5 w-full">
-                            {generationOptions.map((opt, i) => (
+                            {generationOptions.map((opt: any, i: number) => (
                                 <Button 
                                     key={i} 
                                     variant="outline" 
@@ -2052,7 +2133,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
 
   const handleIntentCheck = (intent: string, checked: boolean) => {
       const current = track.checkedIntents || [];
-      let updated = checked ? [...current, intent] : current.filter(i => i !== intent);
+      let updated = checked ? [...current, intent] : current.filter((i: string) => i !== intent);
       
       const updates: Partial<Track> = { 
         checkedIntents: updated,
@@ -2088,7 +2169,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   const handleConfirmEditIntent = (newValue: string) => {
       if (!album) return;
       const oldIntent = editIntentDialog.intent;
-      const updated = (album.thingsToSay || []).map(i => i === oldIntent ? newValue : i);
+      const updated = (album.thingsToSay || []).map((i: string) => i === oldIntent ? newValue : i);
       updateAlbum(album.id, { thingsToSay: updated });
       if (track.endWith === oldIntent) onUpdateTrack({ endWith: newValue });
       toast({ title: "Motif Updated" });
@@ -2096,10 +2177,10 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
 
   const handleDeleteIntent = (intent: string) => {
       if (!album) return;
-      const updatedThings = (album.thingsToSay || []).filter(i => i !== intent);
+      const updatedThings = (album.thingsToSay || []).filter((i: string) => i !== intent);
       updateAlbum(album.id, { thingsToSay: updatedThings });
       
-      const updatedChecked = (track.checkedIntents || []).filter(i => i !== intent);
+      const updatedChecked = (track.checkedIntents || []).filter((i: string) => i !== intent);
       const updates: Partial<Track> = { 
         checkedIntents: updatedChecked,
         intentsEnabled: updatedChecked.length > 0 ? (track.intentsEnabled ?? true) : false
@@ -3369,7 +3450,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const handleUpdateTrack = useCallback((updates: Partial<Track>) => {
     if (!track) return;
     if (isTrackOverTierLimit(trackId, albumId, albums, user)) {
-      toast({ variant: 'destructive', ...TIER_LIMIT_LOCKED_TOAST });
+      toast({ ...TIER_LIMIT_LOCKED_TOAST, variant: 'destructive' });
       return;
     }
     if (isTrackLocked(track) && !isLockedTrackReopenUpdate(updates)) {
@@ -3382,7 +3463,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   const handleUndo = useCallback(() => {
     if (track && isTrackOverTierLimit(trackId, albumId, albums, user)) {
-      toast({ variant: 'destructive', ...TIER_LIMIT_LOCKED_TOAST });
+      toast({ ...TIER_LIMIT_LOCKED_TOAST, variant: 'destructive' });
       return;
     }
     if (track && isTrackLocked(track)) {
@@ -3415,7 +3496,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       return;
     }
     if (isTrackOverTierLimit(trackId, albumId, albums, user)) {
-      toast({ variant: 'destructive', ...TIER_LIMIT_LOCKED_TOAST });
+      toast({ ...TIER_LIMIT_LOCKED_TOAST, variant: 'destructive' });
       return;
     }
     if (isTrackLocked(track)) {
@@ -3446,7 +3527,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const handleSharedLineGeneration = async (mode: 'next' | 'previous', e: any, sId?: string, bIdx?: number) => {
     if (!track || !album) return;
     if (isTrackOverTierLimit(trackId, albumId, albums, user)) {
-      toast({ variant: 'destructive', ...TIER_LIMIT_LOCKED_TOAST });
+      toast({ ...TIER_LIMIT_LOCKED_TOAST, variant: 'destructive' });
       return;
     }
     if (isTrackLocked(track)) {
@@ -3557,6 +3638,10 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       setGenerating(true, 'Neural Synthesis Active...');
       try {
         const section = track.sections.find((s) => s.id === sectionId);
+        if (!section) {
+          setGenerating(false);
+          return;
+        }
         const priorLines = section.bars.filter((b) => b.idx < barIdx).map((b) => b.text);
         const nextLines = section.bars.filter((b) => b.idx > barIdx).map((b) => b.text);
         const targetLine = section.bars.find((b) => b.idx === barIdx)?.text || '';
@@ -3618,7 +3703,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     (entry: DraftChestEntry, action: 'append' | 'replace') => {
       if (!track || entry.kind !== 'sheet' || !entry.sections?.length) return;
       if (isTrackOverTierLimit(trackId, albumId, albums, user)) {
-        toast({ variant: 'destructive', ...TIER_LIMIT_LOCKED_TOAST });
+        toast({ ...TIER_LIMIT_LOCKED_TOAST, variant: 'destructive' });
         return;
       }
       if (isTrackLocked(track)) {
@@ -3695,7 +3780,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const handleAcceptOption = (line: string) => {
     if (!pendingGenCtx || !track) return;
     if (isTrackOverTierLimit(trackId, albumId, albums, user)) {
-      toast({ variant: 'destructive', ...TIER_LIMIT_LOCKED_TOAST });
+      toast({ ...TIER_LIMIT_LOCKED_TOAST, variant: 'destructive' });
       return;
     }
     if (isTrackLocked(track)) {
@@ -3870,7 +3955,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         open={generateDraftOpen}
         onOpenChange={(open) => {
           if (open && editsLocked) {
-            toast({ variant: 'destructive', ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST) });
+            toast({ ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST), variant: 'destructive' });
             return;
           }
           if (!open) {
@@ -3891,13 +3976,13 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       <FreestylePad open={freestyleOpen} onOpenChange={setFreestyleOpen} onAddFreestyle={(text) => { const lines = text.split('. ').filter(l => l.trim()); const activeS = track.sections.find(s => s.id === activeSectionId) || track.sections[0]; const startIdx = activeS.bars.length + 1; const newBars = lines.map((l, i) => withLineSource({ idx: startIdx + i, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' }, 'written')); handleUpdateTrack({ sections: track.sections.map(s => s.id === activeS.id ? { ...s, bars: [...s.bars, ...newBars] } : s) }); setFreestyleOpen(false); }} disabled={editsLocked} trackVibe={track.vibe} albumTheme={album.theme} styleProfileSummary={effectiveStyleProfile.history[0]?.analysis || ''} isPro={isPro} />
       <SmartStructureDialog
         open={smartStructureOpen}
-        onOpenChange={(open) => { if (open && editsLocked) { toast({ variant: 'destructive', ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST) }); return; } setSmartStructureOpen(open); }}
+        onOpenChange={(open: boolean) => { if (open && editsLocked) { toast({ ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST), variant: 'destructive' }); return; } setSmartStructureOpen(open); }}
         onApply={(sections: any) => {
           handleUpdateTrack({ sections });
           void postGamificationEvent('smart_structure_used');
         }}
       />
-      <ImproveMyStyleDialog open={improveStyleOpen} onOpenChange={(open) => { if (open && editsLocked) { toast({ variant: 'destructive', ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST) }); return; } setImproveStyleOpen(open); }} track={track} onUpdateStyle={(analysis: string, metrics: any) => updateStyleProfile(analysis, metrics)} />
+      <ImproveMyStyleDialog open={improveStyleOpen} onOpenChange={(open: boolean) => { if (open && editsLocked) { toast({ ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST), variant: 'destructive' }); return; } setImproveStyleOpen(open); }} track={track} onUpdateStyle={(analysis: string, metrics: any) => updateStyleProfile(analysis, metrics)} />
       <StyleVaultDialog open={styleVaultOpen} onOpenChange={setStyleVaultOpen} album={album} updateAlbum={updateAlbum} onApply={(analysis: string, metrics: any) => updateStyleProfile(analysis, metrics)} />
       <ArchivalNamingDialog
         open={saveStyleNamingOpen}

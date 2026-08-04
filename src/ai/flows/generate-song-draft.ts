@@ -176,7 +176,7 @@ const generateDraftFlow = ai.defineFlow(
   },
   async (input) => {
     const albumDirection = input.useAlbumDirection ? (input.albumDirection ?? {}) : {};
-    let trackDirection: GenerateDraftInput['trackDirection'];
+    let trackDirection: Parameters<typeof mergeDirection>[1];
     if (input.useTrackDirection) {
       trackDirection = { ...(input.trackDirection ?? {}), inheritFromAlbum: input.useAlbumDirection };
     } else if (input.useAlbumDirection) {

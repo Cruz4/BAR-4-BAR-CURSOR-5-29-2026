@@ -97,3 +97,22 @@ export function resolveStripePriceId(priceKey: string): string | undefined {
 export function isProGatedInkPackKey(priceKey: string): boolean {
   return PRO_GATED_INK_PACK_KEYS.has(priceKey as StripePriceKey);
 }
+
+/** Resolved Stripe price IDs (active + legacy) behind the Pro-gated Ink packs. */
+const PRO_GATED_INK_PACK_PRICE_IDS = new Set<string>(
+  [
+    STRIPE_PRICE_IDS.INK_ARTIST,
+    STRIPE_PRICE_IDS.INK_VAULT,
+    LEGACY_STRIPE_PRICE_INK_ARTIST,
+    LEGACY_STRIPE_PRICE_INK_VAULT,
+  ].filter(Boolean)
+);
+
+/**
+ * Authoritative Pro-gate check keyed off the resolved Stripe price ID rather
+ * than the client-supplied `priceKey` label — a request that sends a raw
+ * `priceId` (skipping `priceKey` entirely) must still be gated correctly.
+ */
+export function isProGatedInkPackPriceId(priceId: string): boolean {
+  return PRO_GATED_INK_PACK_PRICE_IDS.has(priceId);
+}

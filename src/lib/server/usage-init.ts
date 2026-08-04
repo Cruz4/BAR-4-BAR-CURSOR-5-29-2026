@@ -590,48 +590,63 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
   }
 
   if (!isPaidPro && data.lastFreeResidencyGrant !== monthKey) {
-    pools = normalizeInkPools(data);
-    const eligible = isEligibleForFreeMonthlyGrant(userCreatedAt, monthKey);
+    // Atomic claim-and-credit — concurrent /api/usage/init calls (e.g. two tabs
+    // loading at once) could otherwise both read `lastFreeResidencyGrant !==
+    // monthKey` before either write landed and double-grant this month's
+    // residency top-up.
+    const grantDelta = await db.runTransaction(async (tx) => {
+      const freshSnap = await tx.get(balanceRef);
+      const freshData = freshSnap.data() || {};
+      if (freshData.lastFreeResidencyGrant === monthKey) return 0;
 
-    if (!eligible) {
-      await balanceRef.set(
-        {
-          lastFreeResidencyGrant: monthKey,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-    } else {
+      const freshPools = normalizeInkPools(freshData);
+      const eligible = isEligibleForFreeMonthlyGrant(userCreatedAt, monthKey);
+      if (!eligible) {
+        tx.set(
+          balanceRef,
+          { lastFreeResidencyGrant: monthKey, updatedAt: new Date().toISOString() },
+          { merge: true }
+        );
+        return 0;
+      }
+
       const nextResidency = Math.min(
         FREE_RESIDENCY_POOL_CAP,
-        pools.residencyBalance + FREE_MONTHLY_RESIDENCY_INK
+        freshPools.residencyBalance + FREE_MONTHLY_RESIDENCY_INK
       );
-      const grantDelta = nextResidency - pools.residencyBalance;
-      if (grantDelta > 0) {
-        await balanceRef.set(
-          inkBalanceFirestorePatch({ ...pools, residencyBalance: nextResidency }, {
+      const delta = nextResidency - freshPools.residencyBalance;
+      if (delta > 0) {
+        tx.set(
+          balanceRef,
+          inkBalanceFirestorePatch({ ...freshPools, residencyBalance: nextResidency }, {
             lastFreeResidencyGrant: monthKey,
           }),
           { merge: true }
         );
-        await recordInkLedgerEntries(db, userId, [
-          {
-            type: 'credit',
-            pool: 'residency',
-            amount: grantDelta,
-            reason: 'monthly_residency',
-            details: monthKey,
-          },
-        ]);
       } else {
-        await balanceRef.set(
-          {
-            lastFreeResidencyGrant: monthKey,
-            updatedAt: new Date().toISOString(),
-          },
+        tx.set(
+          balanceRef,
+          { lastFreeResidencyGrant: monthKey, updatedAt: new Date().toISOString() },
           { merge: true }
         );
       }
+      return delta;
+    });
+
+    if (grantDelta > 0) {
+      await recordInkLedgerEntries(db, userId, [
+        {
+          type: 'credit',
+          pool: 'residency',
+          amount: grantDelta,
+          reason: 'monthly_residency',
+          details: monthKey,
+        },
+      ]);
+      pools = { ...pools, residencyBalance: Math.min(FREE_RESIDENCY_POOL_CAP, pools.residencyBalance + grantDelta) };
+      data = { ...data, lastFreeResidencyGrant: monthKey, residencyBalance: pools.residencyBalance };
+    } else {
+      data = { ...data, lastFreeResidencyGrant: monthKey };
     }
   }
 

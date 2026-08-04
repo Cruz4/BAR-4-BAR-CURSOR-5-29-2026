@@ -139,20 +139,24 @@ async function grantBonusInk(
 async function loadTrackVerifyContext(
   userId: string,
   metadata: GamificationEventMetadata
-): Promise<AchievementVerifyContext> {
+): Promise<AchievementVerifyContext & { generatedLinesOnTrackVerified: number }> {
   const trackId = String(metadata.trackId || '');
   const albumId = String(metadata.albumId || '');
-  if (!trackId || !albumId) return EMPTY_VERIFY_CTX;
+  if (!trackId || !albumId) return { ...EMPTY_VERIFY_CTX, generatedLinesOnTrackVerified: 0 };
 
   const db = await getDb();
   const trackSnap = await db.doc(`users/${userId}/albums/${albumId}/tracks/${trackId}`).get();
-  if (!trackSnap.exists) return EMPTY_VERIFY_CTX;
+  if (!trackSnap.exists) return { ...EMPTY_VERIFY_CTX, generatedLinesOnTrackVerified: 0 };
 
   const track = trackSnap.data() || {};
   const barsOnTrackVerified = countNonEmptyBars(track.sections);
   const writtenLinesOnTrackVerified = countLinesWithSource(
     track.sections as Parameters<typeof countLinesWithSource>[0],
     'written'
+  );
+  const generatedLinesOnTrackVerified = countLinesWithSource(
+    track.sections as Parameters<typeof countLinesWithSource>[0],
+    'generated'
   );
   let albumTrackCountVerified = 0;
 
@@ -164,10 +168,14 @@ async function loadTrackVerifyContext(
   const minLines = rhymeBarsToLines(ACHIEVEMENT_THRESHOLDS.trackCompleteMinBars);
 
   return {
+    // Always overwritten by the caller with the real value — included here only
+    // to satisfy AchievementVerifyContext's required shape for this partial ctx.
+    tourCompletedVerified: false,
     trackCompleteVerified:
       track.status === 'complete' && barsOnTrackVerified >= minLines,
     barsOnTrackVerified,
     writtenLinesOnTrackVerified,
+    generatedLinesOnTrackVerified,
     albumTrackCountVerified,
     lifetimeCompletedTracksVerified: 0,
     qualifyingAlbumCountVerified: 0,
@@ -381,8 +389,10 @@ export async function processGamificationEvent(
   summary = resetMonthCounters(summary, getMonthKey(now));
   summary = resetDayBarCounter(summary, dayKey);
 
+  let generatedLinesOnTrackVerified = 0;
   if (trigger === 'track_saved') {
     const trackCtx = await loadTrackVerifyContext(userId, metadata);
+    generatedLinesOnTrackVerified = trackCtx.generatedLinesOnTrackVerified;
     const portfolioCtx = await loadPortfolioVerifyContext(
       userId,
       String(metadata.albumId || '')
@@ -447,8 +457,19 @@ export async function processGamificationEvent(
   }
 
   if (trigger === 'track_saved') {
-    const writtenDelta = Math.max(0, Number(metadata.writtenLinesDelta || 0));
-    const generatedDelta = Math.max(0, Number(metadata.generatedLinesDelta || 0));
+    // Clamp client-claimed deltas to the verified line counts actually present on
+    // the track right now — a claimed delta can never legitimately exceed what's
+    // really on the document, which closes off spamming this endpoint directly
+    // with an inflated writtenLinesDelta/generatedLinesDelta to farm XP, lifetime
+    // bar counts, weekly/monthly challenge progress, and personal bests.
+    const writtenDelta = Math.max(
+      0,
+      Math.min(Number(metadata.writtenLinesDelta || 0), verifyCtx.writtenLinesOnTrackVerified)
+    );
+    const generatedDelta = Math.max(
+      0,
+      Math.min(Number(metadata.generatedLinesDelta || 0), generatedLinesOnTrackVerified)
+    );
 
     if (writtenDelta > 0) {
       xpGain += Math.min(writtenDelta * 6, 60);
@@ -473,7 +494,15 @@ export async function processGamificationEvent(
       summary.lifetimeLinesGenerated = (summary.lifetimeLinesGenerated || 0) + generatedDelta;
     }
 
-    const sessionWritten = Number(metadata.sessionWrittenLineCount || metadata.sessionBarCount || 0);
+    // Same verified ceiling — a session can't have more written lines than
+    // currently exist (non-empty) on the track document.
+    const sessionWritten = Math.max(
+      0,
+      Math.min(
+        Number(metadata.sessionWrittenLineCount || metadata.sessionBarCount || 0),
+        verifyCtx.barsOnTrackVerified
+      )
+    );
     if (sessionWritten > (summary.personalBests.barsInSession || 0)) {
       summary.personalBests.barsInSession = sessionWritten;
     }

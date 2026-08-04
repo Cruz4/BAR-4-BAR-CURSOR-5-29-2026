@@ -683,7 +683,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user]);
 
-  const addTrack = useCallback((albumId: string, track: Omit<Track, 'id'>): Track => {
+  const addTrack = useCallback((albumId: string, track: Omit<Track, 'id'> & { id?: string }): Track => {
     if (!canUserAddTrack(albums, user)) {
       throw new FreeTrackLimitError();
     }
@@ -1187,7 +1187,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     if (isBrowserOffline()) {
       pushDeleteTrackOutbox(user.id, fromId, tId);
-      const count = mergeTrackOutbox(user.id, tId, toId, movedTrack as Record<string, unknown>);
+      const count = mergeTrackOutbox(user.id, tId, toId, movedTrack as unknown as Record<string, unknown>);
       setSyncPendingCount(count);
       setCloudSaveStatus('offline');
       return;

@@ -407,7 +407,7 @@ export function getStudioTierPlans(isCloudSyncActive: boolean, subscriptionTier?
       headlinePerks: getVisitorHeadlinePerks(),
       billedText: undefined as string | undefined,
       isCurrent: !isCloudSyncActive,
-      priceKey: null as const,
+      priceKey: null,
       features: [...VISITOR_FEATURES],
       cta: 'Continue Writing',
     },

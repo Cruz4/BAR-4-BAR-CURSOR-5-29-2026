@@ -57,7 +57,7 @@ export async function getTracksForAlbum(albumId: string): Promise<Track[]> {
  * @param trackId The ID of the track to fetch.
  * @returns A promise that resolves to the Track object or null if not found.
  */
-export async function getTrack(trackId: string): Promise<Track | null> {
+export async function getTrack(trackId: string): Promise<(Track & { album?: Partial<Album> }) | null> {
   try {
     const trackRef = doc(db, 'tracks', trackId);
     const trackSnap = await getDoc(trackRef);
@@ -85,8 +85,9 @@ export async function getTrack(trackId: string): Promise<Track | null> {
     return {
       id: trackSnap.id,
       ...trackData,
-      album: albumDetails
-    };
+      // Embedded album summary for share/import UIs (not a Track field).
+      ...(Object.keys(albumDetails).length ? { album: albumDetails } : {}),
+    } as Track & { album?: Partial<Album> };
   } catch (error) {
     console.error(`Error fetching track ${trackId}:`, error);
     // In a real app, you might want to handle this more gracefully

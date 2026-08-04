@@ -87,6 +87,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
     Array<{ blob: Blob; mimeType: string; priorTranscriptTail: string; sessionId: number }>
   >([]);
   const recordingSessionRef = useRef(0);
+  const sessionBilledRef = useRef(false);
   const transcriptRef = useRef('');
   const networkRetryRef = useRef(false);
   const studioFailNotifiedRef = useRef(false);
@@ -125,6 +126,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
 
   const discardStaleStudioWork = useCallback(() => {
     recordingSessionRef.current += 1;
+    sessionBilledRef.current = false;
     studioChunkQueueRef.current = [];
     studioChunkBusyRef.current = false;
     setIsStudioTranscribing(false);
@@ -223,6 +225,11 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       }
       silentChunkStreakRef.current = 0;
       const audioBase64 = await blobToBase64(blob);
+      // Real Ink charge happens server-side, once per session, on the first chunk
+      // that actually reaches (and succeeds through) the AI call — silent/discarded
+      // chunks above never bill, and a failed call auto-refunds server-side, so we
+      // only flip this after a successful response.
+      const isSessionStart = !sessionBilledRef.current;
       const result = await lazyTranscribeFreestyleAudio(
         await withAiAuth({
           audioBase64,
@@ -231,8 +238,10 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
           albumTheme: transcriptionContext.albumTheme || undefined,
           trackVibeSummary: transcriptionContext.trackVibeSummary || undefined,
           styleProfileSummary: transcriptionContext.styleProfileSummary || undefined,
+          isSessionStart,
         })
       );
+      sessionBilledRef.current = true;
       if (sessionId !== recordingSessionRef.current) {
         return;
       }

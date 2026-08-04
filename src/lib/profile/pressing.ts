@@ -265,8 +265,8 @@ function pickLayerKinds(hash: number): FieldLayerKind[] {
     pool.splice(idx, 1);
   }
   // Always include at least one "body" layer if we somehow got only film
-  if (picked.every((k) => k === 'film' || k === 'blade')) {
-    picked[0] = 'grooves';
+  if (picked.length && picked.every((k) => k === 'film' || k === 'blade')) {
+    (picked as FieldLayerKind[])[0] = 'grooves';
   }
   return picked;
 }

@@ -6,8 +6,10 @@ import { useSearchParams } from 'next/navigation';
 import { buildLoginUrl } from '@/lib/login-links';
 
 type LinkProps = React.ComponentProps<typeof Link>;
+/** href is computed internally, so callers should never need to supply it. */
+type OwnHrefLinkProps = Omit<LinkProps, 'href'> & { href?: LinkProps['href'] };
 
-type SignupLinkProps = LinkProps & {
+type SignupLinkProps = OwnHrefLinkProps & {
   /** Optional login intent (e.g. claim_artist_home). */
   intent?: string;
 };
@@ -24,7 +26,7 @@ export function LandingSignupLink({ href: _href, intent, ...props }: SignupLinkP
 }
 
 /** Existing users — sign in without forcing signup tab. */
-export function LandingSignInLink(props: LinkProps) {
+export function LandingSignInLink({ href: _href, ...props }: OwnHrefLinkProps) {
   const searchParams = useSearchParams();
   const href = buildLoginUrl({ marketingRef: searchParams.get('ref') });
   return <Link href={href} {...props} />;

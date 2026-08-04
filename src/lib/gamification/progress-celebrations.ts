@@ -208,7 +208,13 @@ export function detectProgressCelebrations(
 ): ProgressCelebrationItem[] {
   const challenges = detectChallengeCompletions(prev, next, isPro);
   const streakMilestones = detectStreakMilestones(prev, next);
-  const streakValues = new Set(streakMilestones.map((s) => s.streak));
+  const streakValues = new Set(
+    streakMilestones
+      .filter((s): s is Extract<ProgressCelebrationItem, { type: 'streak_milestone' }> =>
+        s.type === 'streak_milestone'
+      )
+      .map((s) => s.streak)
+  );
   const personalBests = detectPersonalBests(next, streakValues, pbState);
 
   return [...challenges, ...streakMilestones, ...personalBests];

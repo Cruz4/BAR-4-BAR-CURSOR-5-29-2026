@@ -38,8 +38,18 @@ interface UsageContextType {
   lastSpent: { amount: number; pressX: number; pressY: number; currentX: number; currentY: number; activeRules?: ActiveRules; actionName?: string } | null;
   mousePos: { x: number; y: number };
   addUsageLog: (log: Omit<AIUsageLog, 'id' | 'timestamp'>) => void;
+  /**
+   * Client-side balance gate + spend animation only.
+   * Real Ink deduction happens server-side in `runSecuredAiAction`.
+   * Returns false when the local balance cannot cover the amount.
+   */
   deductInk: (amount: number, actionName: string, mouseEvent?: any) => boolean;
+  /**
+   * Dismisses the local spend animation after a failed AI call.
+   * Does not credit Ink — server refunds inside `runSecuredAiAction` on failure.
+   */
   refundInk: (amount: number, reason?: string) => void;
+  /** No-op stub — Ink grants are fulfilled server-side (Stripe / residency). */
   addInk: (amount: number) => void;
   saveCustomApiKey: (key: string | null) => void;
   registerAiContext: (ctx: AiSpendContext | null) => void;
@@ -170,7 +180,9 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
   const deductInk = useCallback((amount: number, actionName: string, mouseEvent?: any) => {
     if (!user) return false;
 
-    const finalAmount = Math.max(1, Math.ceil(amount));
+    // Free / zero-cost actions skip the preview animation and balance gate.
+    const finalAmount = Math.max(0, Math.ceil(amount));
+    if (finalAmount <= 0) return true;
 
     if (inkBalance < finalAmount) {
         trackLowInkHit(actionName, finalAmount, inkBalance);
@@ -211,11 +223,13 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
   }, [inkBalance, residencyBalance, trialInkBalance, purchasedBalance, customApiKey, user, toast, mousePos]);
 
   const refundInk = useCallback((_amount: number, _reason: string = 'AI Error') => {
-    // Refunds are handled server-side in runSecuredAiAction when AI fails after ink deduction.
+    // Real refunds happen server-side in runSecuredAiAction when AI fails after deduction.
+    // Clear the floating spend preview so the UI does not look like Ink stayed charged.
+    setLastSpent(null);
   }, []);
 
   const addInk = useCallback((_amount: number) => {
-    // Ink purchases are fulfilled server-side via Stripe webhook.
+    // Ink purchases / grants are fulfilled server-side (Stripe webhook, residency, milestones).
   }, []);
 
   const saveCustomApiKey = useCallback((key: string | null) => {

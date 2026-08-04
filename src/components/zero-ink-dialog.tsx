@@ -57,7 +57,7 @@ export function ZeroInkDialog({
             <Link
               href="/usage?tab=buy-ink"
               onClick={() => {
-                trackUpgradeClick('low_ink', { actionName, cta: 'ink_pack' });
+                trackUpgradeClick('low_ink', { actionName: actionName ?? null, cta: 'ink_pack' });
                 onOpenChange(false);
               }}
             >
@@ -69,7 +69,7 @@ export function ZeroInkDialog({
               <Link
                 href="/usage?tab=cloud"
                 onClick={() => {
-                  trackUpgradeClick('low_ink', { actionName, cta: 'upgrade' });
+                  trackUpgradeClick('low_ink', { actionName: actionName ?? null, cta: 'upgrade' });
                   onOpenChange(false);
                 }}
               >

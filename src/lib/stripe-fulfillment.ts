@@ -66,7 +66,8 @@ export async function fulfillCheckoutSession(
     if (extras?.subscriptionId) userUpdate.subscriptionId = extras.subscriptionId;
     if (extras?.stripeCustomerId) userUpdate.stripeCustomerId = extras.stripeCustomerId;
 
-    batch.update(userRef, userUpdate);
+    // FieldValue.delete() values are valid Firestore update payloads; Admin typing is overly strict here.
+    batch.update(userRef, userUpdate as any);
 
     // Absolute Pro residency refill (1777 monthly / 3444 yearly). Keep other pools.
     poolsWorking = {
@@ -254,12 +255,27 @@ export async function deactivateSubscription(db: Firestore, userId: string) {
   });
 }
 
+/**
+ * Atomic claim — Stripe redelivers events on timeout/retry, and the handlers
+ * behind this (e.g. `invoice.paid` → `refillProResidency`) are not otherwise
+ * idempotent. A get-then-set here would let two concurrent deliveries of the
+ * same event both pass the "not yet processed" check before either write
+ * lands, double-granting a subscription renewal's Ink refill.
+ */
 export async function markWebhookProcessed(db: Firestore, eventId: string) {
   const ref = db.collection('stripe_webhook_events').doc(eventId);
-  const snap = await ref.get();
-  if (snap.exists) return false;
-  await ref.set({ processedAt: FieldValue.serverTimestamp() });
-  return true;
+  try {
+    await ref.create({ processedAt: FieldValue.serverTimestamp() });
+    return true;
+  } catch (err: unknown) {
+    const code = (err as { code?: number | string })?.code;
+    const alreadyExists =
+      code === 6 ||
+      code === 'already-exists' ||
+      /ALREADY_EXISTS|already exists/i.test(String((err as Error)?.message || err));
+    if (alreadyExists) return false;
+    throw err;
+  }
 }
 
 /** Idempotent lock — one fulfillment per Stripe Checkout session (webhook + success redirect). */

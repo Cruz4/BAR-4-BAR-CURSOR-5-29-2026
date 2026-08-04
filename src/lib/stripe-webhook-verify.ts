@@ -38,7 +38,7 @@ export function constructStripeWebhookEvent(
 
   if (test) candidates.push({ secret: test, label: 'test' });
   if (live) {
-    candidates.push({ secret: live, label: live });
+    candidates.push({ secret: live, label: 'live' });
     if (!test) candidates[0] = { secret: live, label: 'legacy' };
   }
 

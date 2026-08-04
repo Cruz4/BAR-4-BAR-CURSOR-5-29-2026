@@ -185,7 +185,7 @@ export function FloatingInkSpent() {
                                     className="rounded-2xl border border-white/10 bg-black/75 backdrop-blur-xl px-5 py-4 shadow-[0_0_32px_rgba(217,70,239,0.25)] max-w-[min(calc(100vw-2rem),360px)] w-full"
                                 >
                                     <DNASynthesisLoader
-                                        size="popup"
+                                        size="compact"
                                         progress={n.dnaProgress ?? 0}
                                         activeRules={n.activeRules}
                                         statusText="Creative Syncing..."

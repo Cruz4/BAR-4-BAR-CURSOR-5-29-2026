@@ -87,3 +87,9 @@ export async function lazyGenerateSongDraft(input: AiFlowInput) {
     Awaited<ReturnType<(typeof import('@/ai/flows/generate-song-draft'))['generateSongDraft']>>
   >('generateSongDraft', input);
 }
+
+export async function lazySuggestTrackTitles(input: AiFlowInput) {
+  return runAiFlow<
+    Awaited<ReturnType<(typeof import('@/ai/flows/suggest-track-titles'))['suggestTrackTitles']>>
+  >('suggestTrackTitles', input);
+}

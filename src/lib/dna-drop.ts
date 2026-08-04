@@ -62,7 +62,8 @@ function styleSnapshot(
 function stripDirectionFields(direction?: Partial<Direction> | null): Partial<Direction> {
   const next: Partial<Direction> = { ...(direction ?? {}) };
   for (const { key } of CREATIVE_DNA_FIELDS) {
-    next[key] = '';
+    // CREATIVE_DNA_FIELDS keys are string DNA slots; cast avoids keyof Direction boolean fields.
+    (next as Record<string, string | boolean | undefined>)[key] = '';
   }
   next.enabled = false;
   return next;

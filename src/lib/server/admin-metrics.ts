@@ -42,6 +42,17 @@ function hoursBetween(a: Date, b: Date): number {
   return Math.abs(b.getTime() - a.getTime()) / (1000 * 60 * 60);
 }
 
+/** Minimal shape of a `users/{id}` doc as read for admin metrics — not the full app User type. */
+type AdminUserDoc = {
+  id: string;
+  status?: string;
+  createdAt?: unknown;
+  signupAttribution?: string;
+  proTrialWinCompletedAt?: string;
+  subscriptionStatus?: 'active' | 'canceled' | 'none';
+  subscriptionTier?: 'monthly' | 'yearly' | 'none';
+};
+
 function buildDailyCounts(dates: Date[], days = 30): DailyCount[] {
   const map = new Map<string, number>();
   for (let i = days - 1; i >= 0; i--) {
@@ -89,7 +100,7 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
   const notes = String(marketing.notes || '');
 
   const users = usersSnap.docs
-    .map((doc) => ({ id: doc.id, ...doc.data() }))
+    .map((doc) => ({ id: doc.id, ...doc.data() }) as AdminUserDoc)
     .filter((u) => u.status !== 'blocked');
 
   const signupDates: Date[] = [];

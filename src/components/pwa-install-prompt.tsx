@@ -227,7 +227,8 @@ export function PwaInstallPrompt() {
     const prompt = deferredPrompt;
     setDeferredPrompt(null);
     try {
-      const { outcome } = await prompt.prompt();
+      await prompt.prompt();
+      const { outcome } = await prompt.userChoice;
       if (outcome === 'accepted') markPwaInstalled();
       hide(outcome === 'accepted');
     } catch {

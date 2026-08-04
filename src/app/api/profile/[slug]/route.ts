@@ -13,11 +13,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    const badges = (profile.badgeIds as string[] || [])
+    const profileData = profile as Record<string, unknown>;
+    const badges = ((profileData.badgeIds as string[]) || [])
       .map((id) => getAchievement(id))
       .filter(Boolean);
 
-    const rank = rankFromXp(Number(profile.xp || 0), true);
+    const rank = rankFromXp(Number(profileData.xp || 0), true);
 
     return NextResponse.json({
       ...profile,

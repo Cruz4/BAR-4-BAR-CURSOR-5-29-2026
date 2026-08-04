@@ -14,7 +14,12 @@ export function hasCreativeDnaContent(direction?: Partial<Direction> | null): bo
   return CREATIVE_DNA_FIELDS.some(({ key }) => String(direction[key] ?? '').trim().length > 0);
 }
 
-export function hasGuardrailsContent(guardrails?: Track['guardrails'] | null): boolean {
+export function hasGuardrailsContent(
+  guardrails?: Pick<
+    NonNullable<Track['guardrails']>,
+    'negativePrompt' | 'forbiddenWords' | 'mustIncludeWords'
+  > | null
+): boolean {
   if (!guardrails) return false;
   if (safeTrim(guardrails.negativePrompt)) return true;
   if ((guardrails.forbiddenWords?.length ?? 0) > 0) return true;

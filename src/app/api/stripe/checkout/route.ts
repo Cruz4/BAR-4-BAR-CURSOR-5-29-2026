@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getCatalogEntry, isProGatedInkPackKey, resolveStripePriceId } from '@/lib/stripe-catalog';
+import { getCatalogEntry, isProGatedInkPackPriceId, resolveStripePriceId } from '@/lib/stripe-catalog';
 import {
   getStripe,
   verifyCheckoutUser,
@@ -90,8 +90,7 @@ export async function POST(req: Request) {
     }
 
     if (
-      typeof priceKey === 'string' &&
-      isProGatedInkPackKey(priceKey.trim()) &&
+      isProGatedInkPackPriceId(priceId) &&
       userData?.subscriptionStatus !== 'active'
     ) {
       return NextResponse.json(

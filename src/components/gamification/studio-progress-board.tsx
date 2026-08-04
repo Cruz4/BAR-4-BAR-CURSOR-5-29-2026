@@ -182,7 +182,7 @@ export function StudioProgressBoard() {
               </div>
               <p className="text-[11px] text-muted-foreground font-code leading-snug break-words">
                 {nextRank
-                  ? `${Math.max(0, next - current).toLocaleString()} XP to ${nextRank.label}`
+                  ? `${Math.max(0, (next ?? current) - current).toLocaleString()} XP to ${nextRank.label}`
                   : 'Top rank — keep building.'}
               </p>
               <div className="flex flex-wrap gap-2 pt-1 text-[10px] font-bold uppercase tracking-wide">

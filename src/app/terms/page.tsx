@@ -16,85 +16,85 @@ export default function TermsPage() {
       <div className="container max-w-3xl mx-auto py-16 px-4 space-y-8">
         <header className="space-y-2">
           <Link href="/" className="text-primary text-sm font-bold uppercase tracking-widest hover:underline">← Back to Studio</Link>
-          <h1 className="font-headline text-4xl font-bold uppercase text-white">Terms of Service</h1>
+          <h1 className="font-headline text-4xl font-bold uppercase text-foreground">Terms of Service</h1>
           <p className="text-sm text-muted-foreground">Last updated: July 27, 2026 · Bar 4 Bar Studio</p>
         </header>
 
         <article className="space-y-6 text-muted-foreground leading-relaxed text-sm font-code">
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wide">1. Agreement</h2>
+            <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">1. Agreement</h2>
             <p>By creating an account, signing in, purchasing Ink or a subscription, or using Bar 4 Bar Studio (&quot;the Service&quot;), you agree to these Terms and our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>. If you do not agree, do not use the Service.</p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wide">2. The Service</h2>
+            <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">2. The Service</h2>
             <p>Bar 4 Bar is a creative workstation for songwriting and lyric organization. AI features — including line suggestions, draft generation, rhyme tools, vibe analysis, and remix workflows — are assistive tools only. They do not replace your creative judgment, legal review, or professional advice.</p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wide">3. Accounts &amp; Ink</h2>
-            <p>You must provide accurate account information and keep credentials secure. <strong className="text-white">Ink</strong> is the Service&apos;s virtual currency for AI actions. Ink has no cash value outside the Service, is non-transferable, and residency Ink may reset per plan terms. Purchases are processed by Stripe; refunds follow our billing policy and applicable law.</p>
+            <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">3. Accounts &amp; Ink</h2>
+            <p>You must provide accurate account information and keep credentials secure. <strong className="text-foreground">Ink</strong> is the Service&apos;s virtual currency for AI actions. Ink has no cash value outside the Service, is non-transferable, and residency Ink may reset per plan terms. Purchases are processed by Stripe; refunds follow our billing policy and applicable law.</p>
             <p>We may log account and studio activity — including product analytics, billing events, and abuse-prevention signals — as described in our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>, to operate the Service, measure performance, prevent Ink and perk farming, and enforce these Terms.</p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wide">4. Your Content &amp; IP</h2>
+            <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">4. Your Content &amp; IP</h2>
             <p>You retain ownership of lyrics and projects you create. You grant us a limited license to host, process, and back up your content solely to operate the Service. You represent that you have the right to upload, remix, or analyze any third-party material you provide. You are solely responsible for copyright, sampling, trademark, and publishing clearance for work you release commercially.</p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wide">5. AI-Generated Content</h2>
+            <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">5. AI-Generated Content</h2>
             <p>The Service uses third-party AI models (including Google Gemini) to produce suggestions, drafts, rhymes, analyses, and other outputs based on your inputs and studio settings. By using AI features, you acknowledge and agree that:</p>
             <ul className="list-disc pl-5 space-y-2">
-              <li><strong className="text-white">Assistive only.</strong> AI output is provided as creative inspiration and drafting aid — not as finished, verified, or publication-ready work.</li>
-              <li><strong className="text-white">No guarantee of quality.</strong> Output may be inaccurate, incomplete, repetitive, off-tone, offensive, or inconsistent with your intent. Bar 4 Bar does not review AI output before it is shown to you.</li>
-              <li><strong className="text-white">No guarantee of originality.</strong> AI suggestions may resemble existing works, common phrases, or material in training data. We do not warrant that output is unique, non-infringing, or safe to publish without further editing and clearance.</li>
-              <li><strong className="text-white">Your responsibility.</strong> You are solely responsible for reviewing, editing, fact-checking, and deciding whether to use, share, perform, record, or monetize any AI-assisted content. You accept full responsibility for lyrics and projects you save, export, or publish from the Service.</li>
-              <li><strong className="text-white">Not legal or professional advice.</strong> Nothing generated by the Service constitutes legal, copyright, clearance, or music-industry advice. Consult qualified professionals before commercial release.</li>
-              <li><strong className="text-white">Ink spent is non-refundable.</strong> Ink consumed by AI actions is spent when the request is processed, regardless of whether you accept or use the result.</li>
+              <li><strong className="text-foreground">Assistive only.</strong> AI output is provided as creative inspiration and drafting aid — not as finished, verified, or publication-ready work.</li>
+              <li><strong className="text-foreground">No guarantee of quality.</strong> Output may be inaccurate, incomplete, repetitive, off-tone, offensive, or inconsistent with your intent. Bar 4 Bar does not review AI output before it is shown to you.</li>
+              <li><strong className="text-foreground">No guarantee of originality.</strong> AI suggestions may resemble existing works, common phrases, or material in training data. We do not warrant that output is unique, non-infringing, or safe to publish without further editing and clearance.</li>
+              <li><strong className="text-foreground">Your responsibility.</strong> You are solely responsible for reviewing, editing, fact-checking, and deciding whether to use, share, perform, record, or monetize any AI-assisted content. You accept full responsibility for lyrics and projects you save, export, or publish from the Service.</li>
+              <li><strong className="text-foreground">Not legal or professional advice.</strong> Nothing generated by the Service constitutes legal, copyright, clearance, or music-industry advice. Consult qualified professionals before commercial release.</li>
+              <li><strong className="text-foreground">Ink spent is non-refundable.</strong> Ink consumed by AI actions is spent when the request is processed, regardless of whether you accept or use the result.</li>
             </ul>
             <p>Bar 4 Bar Studio and its operators are not responsible for AI-generated outputs, how you use them, or any claims arising from your published or distributed work — including copyright disputes, sampling issues, defamation, or contractual obligations with labels, collaborators, or platforms.</p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wide">6. Acceptable Use</h2>
+            <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">6. Acceptable Use</h2>
             <p>You may not use the Service to generate illegal content, harass others, scrape or abuse APIs, circumvent Ink billing, impersonate others, or attempt unauthorized access. We may suspend or terminate accounts that violate these Terms.</p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wide">7. Subscriptions</h2>
+            <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">7. Subscriptions</h2>
             <p>Pro plans renew automatically until cancelled in Settings or via the Stripe Customer Portal. Yearly Pro includes plan-specific Ink residency and pack discounts as described at checkout. Price changes will be communicated in advance where required by law. Features, Ink costs, tier perks, and studio tools may change independently of your subscription billing cycle.</p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wide">8. Changes, Availability &amp; Discontinuation</h2>
+            <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">8. Changes, Availability &amp; Discontinuation</h2>
             <p>Bar 4 Bar Studio is offered on an ongoing basis only. We do not guarantee that the Service, any feature, AI model, Ink economy, or tier benefit will remain available, unchanged, or supported indefinitely.</p>
             <p>We may add, remove, modify, suspend, or discontinue the Service — or any part of it — at any time, including for maintenance, legal compliance, security, abuse prevention, business reasons, or force majeure. Where practical and where not prohibited by law, we will attempt to provide reasonable advance notice before a full shutdown of the Service; however, we may act immediately when required (for example, by court order, platform policy, or an urgent security issue).</p>
             <ul className="list-disc pl-5 space-y-2">
-              <li><strong className="text-white">Your backups.</strong> You are responsible for exporting and backing up your lyrics, albums, and vault data. Pro members may use vault export; we are not liable for loss of access to projects after the Service changes or ends, subject to our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.</li>
-              <li><strong className="text-white">Ink on discontinuation.</strong> Unused Ink has no cash value outside the Service and is not convertible to money if the Service shuts down.</li>
-              <li><strong className="text-white">Subscriptions on discontinuation.</strong> Active subscriptions may be cancelled or handled through Stripe and applicable law; we do not promise refunds beyond what law requires.</li>
+              <li><strong className="text-foreground">Your backups.</strong> You are responsible for exporting and backing up your lyrics, albums, and vault data. Pro members may use vault export; we are not liable for loss of access to projects after the Service changes or ends, subject to our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.</li>
+              <li><strong className="text-foreground">Ink on discontinuation.</strong> Unused Ink has no cash value outside the Service and is not convertible to money if the Service shuts down.</li>
+              <li><strong className="text-foreground">Subscriptions on discontinuation.</strong> Active subscriptions may be cancelled or handled through Stripe and applicable law; we do not promise refunds beyond what law requires.</li>
             </ul>
             <p>We are not liable to you or any third party for any modification, suspension, or discontinuation of the Service.</p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wide">9. Disclaimers</h2>
+            <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">9. Disclaimers</h2>
             <p>THE SERVICE IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT GUARANTEE UNINTERRUPTED SERVICE, ERROR-FREE AI OUTPUT, OR THAT THE SERVICE WILL MEET YOUR CREATIVE OR COMMERCIAL GOALS.</p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wide">10. Limitation of Liability</h2>
+            <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">10. Limitation of Liability</h2>
             <p>TO THE MAXIMUM EXTENT PERMITTED BY LAW, BAR 4 BAR STUDIO AND ITS OPERATORS, AFFILIATES, AND SUPPLIERS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES — INCLUDING LOST PROFITS, LOST DATA, REPUTATIONAL HARM, OR CLAIMS RELATED TO AI-GENERATED CONTENT — ARISING FROM YOUR USE OF THE SERVICE. OUR TOTAL LIABILITY FOR ANY CLAIM SHALL NOT EXCEED THE GREATER OF (A) THE AMOUNT YOU PAID US IN THE TWELVE MONTHS BEFORE THE CLAIM OR (B) FIFTY U.S. DOLLARS ($50).</p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wide">11. Termination</h2>
+            <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">11. Termination</h2>
             <p>You may delete your account at any time in Settings. If you have an active Studio Pro subscription, confirming account deletion also cancels your Stripe subscription so billing stops. We may terminate or suspend your account, or discontinue the Service in whole or in part, for violations of these Terms or for operational reasons described in Section 8. Upon termination, cloud data may be deleted per our Privacy Policy.</p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-white uppercase tracking-wide">12. Contact &amp; Updates</h2>
+            <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">12. Contact &amp; Updates</h2>
             <p>Questions: <a href={SUPPORT_MAILTO} className="text-primary hover:underline">{SUPPORT_EMAIL}</a>. We may update these Terms; material changes will be reflected by the &quot;Last updated&quot; date at the top of this page. Continued use after changes constitutes acceptance.</p>
             <p>In-app features, Ink pricing, tier perks, and studio tools may change at any time without updating the &quot;Last updated&quot; date above — only revisions to this Terms document use that date.</p>
           </section>

@@ -235,7 +235,7 @@ export default function PricingPage() {
           </Button>
         </Link>
         <div className="flex-1 flex justify-center pointer-events-none">
-          <span className="font-headline text-xs sm:text-sm font-bold uppercase tracking-[0.25em] text-white/90">
+          <span className="font-headline text-xs sm:text-sm font-bold uppercase tracking-[0.25em] text-foreground/90">
             Studio Memberships
           </span>
         </div>
@@ -275,7 +275,7 @@ export default function PricingPage() {
               
               <CardHeader className="pb-4 space-y-3">
                 <div className="flex items-center justify-between gap-3">
-                    <CardTitle className="font-headline text-3xl text-white tracking-tight shrink-0">{tier.name}</CardTitle>
+                    <CardTitle className="font-headline text-3xl text-foreground tracking-tight shrink-0">{tier.name}</CardTitle>
                     <Badge variant="outline" className="text-[10px] uppercase tracking-widest font-bold px-2.5 py-0.5 shrink-0">{tier.membership}</Badge>
                 </div>
                 <CardDescription className="font-code text-sm text-foreground/75 leading-relaxed">{tier.description}</CardDescription>
@@ -285,7 +285,7 @@ export default function PricingPage() {
                         "text-5xl font-bold tracking-tighter transition-all duration-700 leading-none",
                         tier.name === 'Studio Pro' 
                           ? (isYearly ? "text-accent drop-shadow-[0_0_15px_rgba(244,63,94,0.6)]" : "text-primary")
-                          : "text-white"
+                          : "text-foreground"
                     )}>
                         {tier.price}
                     </span>
@@ -311,9 +311,9 @@ export default function PricingPage() {
               </CardHeader>
 
               <CardContent className="space-y-6 flex-grow flex flex-col">
-                <div className={cn("flex items-center gap-3 p-4 rounded-xl border border-dashed", tier.popular && isYearly ? "bg-accent/10 border-accent/20" : "bg-white/5 border-white/10")}>
+                <div className={cn("flex items-center gap-3 p-4 rounded-xl border border-dashed", tier.popular && isYearly ? "bg-accent/10 border-accent/20" : "bg-foreground/5 border-foreground/10")}>
                   <div className={cn("p-2 rounded-lg shadow-inner", tier.popular && isYearly ? "bg-accent text-white" : "bg-muted text-muted-foreground")}><Droplets className="h-4 w-4 fill-current animate-pulse"/></div>
-                  <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Studio Capacity</p><p className="text-base font-bold font-code text-white">{tier.ink}</p></div>
+                  <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Studio Capacity</p><p className="text-base font-bold font-code text-foreground">{tier.ink}</p></div>
                 </div>
 
                 <div className="space-y-3 flex-grow">
@@ -341,7 +341,7 @@ export default function PricingPage() {
                       )}><feature.icon className="h-4 w-4" /></div>
                       <span className={cn(
                         "transition-colors leading-relaxed",
-                        feature.icon === Lock ? "text-muted-foreground/50 italic" : "text-foreground/80 group-hover/item:text-white",
+                        feature.icon === Lock ? "text-muted-foreground/50 italic" : "text-foreground/80 group-hover/item:text-foreground",
                         feature.highlight === 'yearly' && "text-accent font-bold",
                         feature.highlight === 'pro' && "text-primary font-semibold"
                       )}>{feature.text}</span>
@@ -353,7 +353,7 @@ export default function PricingPage() {
               </CardContent>
 
               <CardFooter className="pt-6 pb-8">
-                <Button className={cn("w-full h-12 text-sm font-bold shadow-xl rounded-lg group/btn", tier.popular && isYearly ? "bg-accent text-white hover:bg-accent/90" : "bg-white/5 text-white border border-white/10 hover:bg-white/10")} onClick={() => handleSelectPlan(tier.name)}>
+                <Button className={cn("w-full h-12 text-sm font-bold shadow-xl rounded-lg group/btn", tier.popular && isYearly ? "bg-accent text-white hover:bg-accent/90" : "bg-foreground/5 text-foreground border border-foreground/10 hover:bg-foreground/10")} onClick={() => handleSelectPlan(tier.name)}>
                   {tier.cta}<ChevronRight className="ml-1 h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
                 </Button>
               </CardFooter>
@@ -362,7 +362,7 @@ export default function PricingPage() {
         </div>
 
         <section className="max-w-2xl mx-auto py-12 border-t border-white/5">
-          <div className="text-center mb-8 space-y-2"><h2 className="text-2xl md:text-3xl font-headline font-bold text-white tracking-tighter uppercase">Studio Intelligence FAQ</h2><div className="w-12 h-1 bg-primary mx-auto rounded-full" /></div>
+          <div className="text-center mb-8 space-y-2"><h2 className="text-2xl md:text-3xl font-headline font-bold text-foreground tracking-tighter uppercase">Studio Intelligence FAQ</h2><div className="w-12 h-1 bg-primary mx-auto rounded-full" /></div>
           <Accordion type="single" collapsible className="w-full space-y-4">
             {FAQS.map((faq, idx) => (
               <AccordionItem key={idx} value={`item-${idx}`} className="border rounded-lg bg-black/20 px-4 overflow-hidden border-white/5 hover:border-primary/20 transition-colors">

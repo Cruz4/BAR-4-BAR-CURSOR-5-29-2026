@@ -150,7 +150,10 @@ export async function POST(req: Request) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        const result = await fulfillPaidCheckoutSession(db, session);
+        const result = await fulfillPaidCheckoutSession(
+          db,
+          session as unknown as Parameters<typeof fulfillPaidCheckoutSession>[1]
+        );
         if (!result.duplicate) {
           const meta = session.metadata || {};
           const userId = meta.userId || session.client_reference_id || '';

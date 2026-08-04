@@ -303,7 +303,7 @@ export default function SharedProjectPage() {
                                     <Globe className="h-3 w-3" /> {isAlbum ? 'Album Concept' : 'Track Theme'}
                                 </h4>
                                 <p className="text-sm italic text-muted-foreground leading-relaxed">
-                                    &ldquo;{isAlbum ? project.theme : project.vibe?.feeling?.join(', ')}&rdquo;
+                                    &ldquo;{isAlbum ? (project as DnaDropAlbumPayload)?.theme : (project as DnaDropTrackPayload)?.vibe?.feeling?.join(', ')}&rdquo;
                                 </p>
                             </div>
                             {direction && (
@@ -433,7 +433,7 @@ export default function SharedProjectPage() {
                         <CardContent className="p-0 relative z-10">
                             {isAlbum ? (
                                 <div className="p-12 space-y-12">
-                                    {project.tracks?.map((track: Track, idx: number) => (
+                                    {(project as DnaDropAlbumPayload)?.tracks?.map((track: Track, idx: number) => (
                                         <div key={track.id} className="space-y-6">
                                             <h4 className="text-3xl font-headline font-bold text-primary uppercase ml-[120px]">
                                                 {idx + 1}. {track.title}
@@ -460,7 +460,7 @@ export default function SharedProjectPage() {
                                 </div>
                             ) : (
                                 <div className="p-12 space-y-12">
-                                    {project.sections.map((sec: Track['sections'][number]) => (
+                                    {(project as DnaDropTrackPayload)?.sections?.map((sec: Track['sections'][number]) => (
                                         <div key={sec.id} className="space-y-0">
                                             <h4 className="text-2xl font-headline font-bold text-sky-400 uppercase mb-4 ml-[120px]">{sec.type}</h4>
                                             {sec.bars.map((bar) => (

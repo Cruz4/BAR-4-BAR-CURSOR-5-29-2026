@@ -96,7 +96,8 @@ export function mergeAlbumOutbox(userId: string, albumId: string, updates: Recor
 }
 
 export function pushStyleOutbox(userId: string, profile: Record<string, unknown>): number {
-  const entries = readOutbox(userId).filter((e) => e.type !== 'styleProfile');
+  // filter narrows away StyleOutboxPatch — re-widen so we can push a fresh style entry.
+  const entries: OutboxEntry[] = readOutbox(userId).filter((e) => e.type !== 'styleProfile');
   entries.push({ type: 'styleProfile', profile });
   writeOutbox(userId, entries);
   return entries.length;

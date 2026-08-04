@@ -523,7 +523,7 @@ export function DNASynthesisLoader({
       }
     >
       <div
-        ref={logoAnchorRef}
+        ref={logoAnchorRef as React.RefObject<HTMLDivElement> | undefined}
         className="absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0"
         style={logoAnchorStyle}
         aria-hidden

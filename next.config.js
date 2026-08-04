@@ -15,7 +15,8 @@ const contentSecurityPolicy = [
 
 const nextConfig = {
   typescript: {
-    ignoreBuildErrors: true,
+    // Keep false — project typechecks clean; do not hide regressions again.
+    ignoreBuildErrors: false,
   },
   eslint: {
     ignoreDuringBuilds: true,

@@ -1,4 +1,3 @@
-import type { StripePriceKey } from '@/lib/stripe-catalog';
 
 export const PRO_CHECKOUT_KEYS = ['PRO_MONTHLY', 'PRO_YEARLY'] as const;
 export type ProCheckoutPriceKey = (typeof PRO_CHECKOUT_KEYS)[number];
@@ -34,7 +33,7 @@ function parsePathUrl(path: string): URL | null {
   }
 }
 
-export function getCheckoutFromPath(path: string): StripePriceKey | null {
+export function getCheckoutFromPath(path: string): ProCheckoutPriceKey | null {
   const url = parsePathUrl(path);
   const checkout = url?.searchParams.get('checkout') ?? null;
   return isProCheckoutPriceKey(checkout) ? checkout : null;

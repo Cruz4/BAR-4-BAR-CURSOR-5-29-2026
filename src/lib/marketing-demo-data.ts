@@ -3,6 +3,8 @@ import demoJson from '../../public/demo-bar-4-bar-file.json';
 
 const baseAlbums = demoJson as Album[];
 
+const DEMO_VIBE = { genre: 'Lofi-Hop', tempoBPM: 90, feeling: ['demo'] };
+
 /** Demo vault data for marketing capture scenes (no Firebase). */
 export const MARKETING_DEMO_ALBUMS: Album[] = [
   ...baseAlbums,
@@ -31,6 +33,8 @@ export const MARKETING_DEMO_ALBUMS: Album[] = [
         title: 'CHLORINE HALO',
         status: 'in_progress',
         createdAt: '2026-04-02T12:00:00.000Z',
+        vibe: DEMO_VIBE,
+        intentRefs: [],
         sections: [],
       },
     ],
@@ -60,6 +64,8 @@ export const MARKETING_DEMO_ALBUMS: Album[] = [
         title: 'ENCORE ECHO',
         status: 'complete',
         createdAt: '2026-03-15T12:00:00.000Z',
+        vibe: DEMO_VIBE,
+        intentRefs: [],
         sections: [],
       },
       {
@@ -67,8 +73,10 @@ export const MARKETING_DEMO_ALBUMS: Album[] = [
         albumId: 'album-mirror-demo',
         ownerId: 'demo-user-id',
         title: 'GLASS SCRIPT',
-        status: 'planned',
+        status: 'in_progress',
         createdAt: '2026-03-16T12:00:00.000Z',
+        vibe: DEMO_VIBE,
+        intentRefs: [],
         sections: [],
       },
     ],

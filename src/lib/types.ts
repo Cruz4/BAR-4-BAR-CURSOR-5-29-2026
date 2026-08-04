@@ -2,6 +2,8 @@ export interface User {
   id: string;
   displayName: string;
   email?: string;
+  /** Google/Firebase Auth avatar URL, captured on sign-in when available. */
+  photoURL?: string;
   createdAt: string; // ISO 8601 string
   trialStartedAt?: string | null; // Legacy internal trial — no longer set on signup
   albums?: Album[];

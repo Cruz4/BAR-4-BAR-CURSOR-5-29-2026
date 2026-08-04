@@ -32,7 +32,10 @@ export async function POST(req: Request) {
     }
 
     const db = await getDb();
-    const result = await fulfillPaidCheckoutSession(db, session);
+    const result = await fulfillPaidCheckoutSession(
+      db,
+      session as unknown as Parameters<typeof fulfillPaidCheckoutSession>[1]
+    );
 
     return NextResponse.json(result);
   } catch (err: unknown) {

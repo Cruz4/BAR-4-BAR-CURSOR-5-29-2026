@@ -29,14 +29,14 @@ export function useWritingSurface() {
     window.dispatchEvent(new CustomEvent('b4b-writing-surface-change'));
   }, []);
 
-  const colorTheme = resolvedTheme === 'light' ? 'light' : 'dark';
+  const colorTheme: 'light' | 'dark' = resolvedTheme === 'light' ? 'light' : 'dark';
   const effectiveSurface = resolveWritingSurface(mode, ready ? colorTheme : 'dark');
 
   return {
     mode,
     setMode,
     ready,
-    colorTheme: ready ? colorTheme : undefined,
+    colorTheme: (ready ? colorTheme : undefined) as 'light' | 'dark' | undefined,
     effectiveSurface,
     isPaper: effectiveSurface === 'paper',
   };

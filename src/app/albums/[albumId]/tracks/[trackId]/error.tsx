@@ -46,7 +46,7 @@ export default function Error({
                     This is often caused by high demand on the neural engine.
                 </p>
             </div>
-            <div style={{ spaceY: '16px' }}>
+            <div>
                 <div style={{
                   padding: '16px',
                   backgroundColor: 'rgba(0,0,0,0.4)',
