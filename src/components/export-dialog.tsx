@@ -5,7 +5,6 @@ import React, { useRef, useTransition, useState } from 'react';
 import Link from 'next/link';
 import type { Album, Track } from '@/lib/types';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 import {
   Dialog,
@@ -25,61 +24,163 @@ interface ExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   album: Album;
-  tracks: Track[]; 
+  tracks: Track[];
   exportType?: 'album' | 'track';
   /** When false, preview only — downloads locked behind Pro upgrade. */
   allowDownload?: boolean;
 }
 
 interface ExportOptions {
-    includeTrackNumbers: boolean;
-    includeTrackTitles: boolean;
-    includeSectionHeaders: boolean;
+  includeTrackNumbers: boolean;
+  includeTrackTitles: boolean;
+  includeSectionHeaders: boolean;
 }
 
-function formatLyricsForPreview(album: Album, tracks: Track[], options: ExportOptions, exportType: 'album' | 'track') {
+/** Shared typography for preview + PDF (PDF uses pt via jsPDF). */
+const PDF_PREVIEW_STYLES = `
+  #pdf-preview-content {
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    background-color: white;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  #pdf-preview-content h1, #pdf-preview-content h2, #pdf-preview-content h3 {
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    font-weight: 700;
+    color: black;
+  }
+  #pdf-preview-content h1 { font-size: 26px; margin-bottom: 0.35em; }
+  #pdf-preview-content h2 { font-size: 20px; margin-top: 1.75em; margin-bottom: 0.35em; }
+  #pdf-preview-content h3 {
+    font-size: 15px;
+    font-weight: bold;
+    font-style: italic;
+    margin-top: 1.1em;
+    margin-bottom: 0.35em;
+  }
+  #pdf-preview-content p {
+    font-size: 14px;
+    margin: 0;
+    line-height: 1.55;
+    color: black;
+    padding: 1px 0;
+  }
+  #pdf-preview-content hr { margin: 1.75em 0; border-color: #ccc; }
+  #pdf-preview-content .lead { font-size: 14px; color: #333; margin-bottom: 0.5em; }
+`;
+
+const PDF_LAYOUT = {
+  marginX: 16,
+  marginTop: 18,
+  marginBottom: 16,
+  pageWidth: 210,
+  pageHeight: 297,
+  bodySize: 14,
+  bodyLeading: 6.2,
+  h1Size: 22,
+  h2Size: 17,
+  h3Size: 14,
+  titleGap: 8,
+  sectionGap: 5,
+  trackGap: 10,
+} as const;
+
+type PdfFontStyle = 'normal' | 'bold' | 'italic' | 'bolditalic';
+
+function generateLyricsPdf(
+  album: Album,
+  tracks: Track[],
+  options: ExportOptions,
+  exportType: 'album' | 'track'
+): jsPDF {
   const isSingleTrack = exportType === 'track';
-  return (
-    <div id="pdf-preview-content" className="prose prose-sm max-w-none bg-white text-black p-8 font-sans">
-       <style>{`
-        #pdf-preview-content {
-            font-family: 'Helvetica', 'Arial', sans-serif;
-            background-color: white;
-        }
-        #pdf-preview-content h1, #pdf-preview-content h2, #pdf-preview-content h3 {
-             font-family: 'Helvetica', 'Arial', sans-serif;
-             font-weight: 700;
-             color: black;
-        }
-        #pdf-preview-content h1 { font-size: 24px; }
-        #pdf-preview-content h2 { font-size: 18px; margin-top: 2em; }
-        #pdf-preview-content h3 { font-size: 14px; font-weight: bold; font-style: italic; margin-top: 1em; margin-bottom: 0.5em; }
-        #pdf-preview-content p { font-size: 12px; margin: 0; line-height: 1.5; color: black; }
-        #pdf-preview-content hr { margin: 2em 0; }
-      `}</style>
-      {!isSingleTrack && (
-        <>
-          <h1>{album.title}</h1>
-          <p className="lead">{album.theme}</p>
-          <hr />
-        </>
-      )}
-      {Array.isArray(tracks) && tracks.map((track, trackIndex) => (
-        <React.Fragment key={track.id}>
-          {options.includeTrackTitles && <h2>{options.includeTrackNumbers && !isSingleTrack && `${trackIndex + 1}. `}{track.title}</h2>}
-          {Array.isArray(track.sections) && track.sections.map(section => (
-            <div key={section.id}>
-              {options.includeSectionHeaders && <h3 className="capitalize font-bold italic mt-4 mb-2">[{section.type}]</h3>}
-              {Array.isArray(section.bars) && section.bars.map(bar => (
-                <p key={bar.idx} className="m-0">{bar.text || ' '}</p>
-              ))}
-            </div>
-          ))}
-          {!isSingleTrack && trackIndex < tracks.length -1 && <hr className="my-6" />}
-        </React.Fragment>
-      ))}
-    </div>
-  );
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const maxWidth = PDF_LAYOUT.pageWidth - PDF_LAYOUT.marginX * 2;
+  let y = PDF_LAYOUT.marginTop;
+
+  const setStyle = (size: number, style: PdfFontStyle = 'normal') => {
+    pdf.setFontSize(size);
+    pdf.setFont('helvetica', style);
+  };
+
+  const newPage = () => {
+    pdf.addPage();
+    y = PDF_LAYOUT.marginTop;
+  };
+
+  const ensureSpace = (neededMm: number) => {
+    if (y + neededMm > PDF_LAYOUT.pageHeight - PDF_LAYOUT.marginBottom) {
+      newPage();
+    }
+  };
+
+  const addBlock = (
+    text: string,
+    size: number,
+    style: PdfFontStyle,
+    leading: number,
+    gapBefore = 0
+  ) => {
+    if (gapBefore > 0) {
+      ensureSpace(gapBefore);
+      y += gapBefore;
+    }
+    setStyle(size, style);
+    const lines: string[] = pdf.splitTextToSize(text || ' ', maxWidth);
+    for (const line of lines) {
+      ensureSpace(leading);
+      pdf.text(line, PDF_LAYOUT.marginX, y);
+      y += leading;
+    }
+  };
+
+  const addLine = (text: string) => {
+    addBlock(text, PDF_LAYOUT.bodySize, 'normal', PDF_LAYOUT.bodyLeading);
+  };
+
+  if (!isSingleTrack) {
+    addBlock(album.title, PDF_LAYOUT.h1Size, 'bold', PDF_LAYOUT.titleGap);
+    if (album.theme?.trim()) {
+      addBlock(album.theme.trim(), PDF_LAYOUT.bodySize, 'normal', PDF_LAYOUT.bodyLeading, 2);
+    }
+    addBlock('', PDF_LAYOUT.bodySize, 'normal', PDF_LAYOUT.sectionGap, 4);
+  }
+
+  tracks.forEach((track, trackIndex) => {
+    if (options.includeTrackTitles) {
+      const titlePrefix =
+        options.includeTrackNumbers && !isSingleTrack ? `${trackIndex + 1}. ` : '';
+      addBlock(
+        `${titlePrefix}${track.title}`,
+        PDF_LAYOUT.h2Size,
+        'bold',
+        PDF_LAYOUT.titleGap,
+        trackIndex > 0 || !isSingleTrack ? PDF_LAYOUT.trackGap : 0
+      );
+    }
+
+    track.sections?.forEach((section) => {
+      if (options.includeSectionHeaders) {
+        addBlock(
+          `[${section.type}]`,
+          PDF_LAYOUT.h3Size,
+          'bolditalic',
+          PDF_LAYOUT.sectionGap,
+          PDF_LAYOUT.sectionGap
+        );
+      }
+      section.bars?.forEach((bar) => {
+        addLine(bar.text?.trim() ? bar.text : '\u00a0');
+      });
+    });
+
+    if (!isSingleTrack && trackIndex < tracks.length - 1) {
+      ensureSpace(PDF_LAYOUT.trackGap);
+      y += PDF_LAYOUT.trackGap;
+    }
+  });
+
+  return pdf;
 }
 
 function formatLyricsForTxt(album: Album, tracks: Track[], options: ExportOptions, exportType: 'album' | 'track') {
@@ -149,23 +250,9 @@ export function ExportDialog({
       return;
     }
     startTransition(async () => {
-        const input = previewRef.current;
-        if (!input) return;
-        const originalBackgroundColor = input.style.backgroundColor;
-        input.style.backgroundColor = 'white';
-        const canvas = await html2canvas(input, { scale: 2, backgroundColor: '#ffffff', windowWidth: input.scrollWidth, windowHeight: input.scrollHeight, useCORS: true });
-        input.style.backgroundColor = originalBackgroundColor;
-        const imgData = canvas.toDataURL('image/png');
-        const imgWidth = 210; 
-        const pageHeight = 297; 
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        let heightLeft = imgHeight;
-        let position = 0;
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-        heightLeft -= pageHeight;
-        while (heightLeft >= 0) { position = heightLeft - imgHeight; pdf.addPage(); pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST'); heightLeft -= pageHeight; }
-        pdf.save(`${(exportType === 'album' ? album.title : (tracks?.[0]?.title || 'export')).replace(/\s+/g, '_')}_lyrics.pdf`);
+      const pdf = generateLyricsPdf(album, tracks, exportOptions, exportType);
+      const baseName = (exportType === 'album' ? album.title : (tracks?.[0]?.title || 'export')).replace(/\s+/g, '_');
+      pdf.save(`${baseName}_lyrics.pdf`);
     });
   };
 
@@ -238,17 +325,9 @@ export function ExportDialog({
             </div>
           )}
           <ScrollArea className="h-full rounded-md border bg-white shadow-lg">
-            <div ref={previewRef} style={{ width: '210mm' }}>
-              <div id="pdf-preview-content" className="prose prose-sm max-w-none bg-white text-black p-8 font-sans">
-                <style>{`
-                  #pdf-preview-content { font-family: 'Helvetica', 'Arial', sans-serif; background-color: white; }
-                  #pdf-preview-content h1, #pdf-preview-content h2, #pdf-preview-content h3 { font-family: 'Helvetica', 'Arial', sans-serif; font-weight: 700; color: black; }
-                  #pdf-preview-content h1 { font-size: 24px; }
-                  #pdf-preview-content h2 { font-size: 18px; margin-top: 2em; }
-                  #pdf-preview-content h3 { font-size: 14px; font-weight: bold; font-style: italic; margin-top: 1em; margin-bottom: 0.5em; }
-                  #pdf-preview-content p { font-size: 12px; margin: 0; line-height: 1.5; color: black; }
-                  #pdf-preview-content hr { margin: 2em 0; }
-                `}</style>
+            <div ref={previewRef} style={{ width: '210mm', minHeight: '297mm' }}>
+              <div id="pdf-preview-content" className="prose prose-sm max-w-none bg-white text-black px-8 py-10 font-sans">
+                <style>{PDF_PREVIEW_STYLES}</style>
                 {exportType === 'album' && (
                   <>
                     <h1>{album.title}</h1>
