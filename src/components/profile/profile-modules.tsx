@@ -54,6 +54,9 @@ export type ModuleContext = {
   viewerSlug?: string;
   featured: ArtistHomeFeatured;
   badges: AchievementDef[];
+  rankLabel?: string;
+  xp?: number;
+  currentStreak?: number;
   /** Live DNA Drops currently online for this artist. */
   liveDnaDrops?: Array<{ shareId: string; title: string; type: 'album' | 'track' }>;
   /** Die-cut chrome from the living press — every module punches the same sheet. */
@@ -409,6 +412,9 @@ export function ProofWallModule({ ctx }: { ctx: ModuleContext }) {
             achievement={badge}
             displayName={ctx.profileName}
             index={i}
+            rankLabel={ctx.rankLabel}
+            xp={ctx.xp}
+            streak={ctx.currentStreak}
           />
         ))}
       </div>

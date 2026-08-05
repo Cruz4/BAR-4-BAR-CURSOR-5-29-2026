@@ -323,6 +323,9 @@ export function PublicProfileShowcase({
                   achievement={badge}
                   displayName={profile.displayName}
                   index={i}
+                  rankLabel={profile.rankLabel}
+                  xp={profile.xp}
+                  streak={profile.currentStreak}
                 />
               ))}
             </div>
