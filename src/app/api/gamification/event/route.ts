@@ -19,6 +19,10 @@ const ALLOWED: GamificationTrigger[] = [
   'dna_preset_saved',
   'share_created',
   'album_limit_hit',
+  'dna_imported',
+  'friendship_accepted',
+  'wall_post_created',
+  'dna_drop_imported_by_other',
 ];
 
 export async function POST(req: Request) {

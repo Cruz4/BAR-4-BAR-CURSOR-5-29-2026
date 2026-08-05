@@ -8,13 +8,17 @@ import {
   Dna,
   Flame,
   Globe,
+  Import,
   Layers,
   Lock,
+  Megaphone,
   Moon,
   Music,
   PenLine,
+  Radio,
   Sparkles,
   Trophy,
+  Users,
   Waves,
   type LucideIcon,
 } from 'lucide-react';
@@ -36,6 +40,10 @@ const ACHIEVEMENT_ICON_MAP: Record<string, LucideIcon> = {
   dna: Dna,
   globe: Globe,
   lock: Lock,
+  import: Import,
+  users: Users,
+  megaphone: Megaphone,
+  radio: Radio,
 };
 
 export function achievementIcon(iconKey: string): LucideIcon {

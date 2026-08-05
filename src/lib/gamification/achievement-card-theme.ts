@@ -53,6 +53,16 @@ const CATEGORY_THEMES: Record<AchievementDef['category'], Omit<AchievementCardTh
     foil: 'linear-gradient(135deg, rgba(167,139,250,0.55), rgba(99,102,241,0.25), rgba(251,191,36,0.2))',
     categoryLabel: 'Mastery',
   },
+  social: {
+    gradientFrom: '#064e3b',
+    gradientVia: '#0a1f18',
+    gradientTo: '#020807',
+    accent: '#34d399',
+    accentSoft: 'rgba(52, 211, 153, 0.15)',
+    glow: 'rgba(52, 211, 153, 0.42)',
+    foil: 'linear-gradient(135deg, rgba(52,211,153,0.55), rgba(16,185,129,0.2), rgba(56,189,248,0.2))',
+    categoryLabel: 'Social',
+  },
 };
 
 const ACHIEVEMENT_WATERMARKS: Record<string, string> = {
@@ -81,6 +91,17 @@ const ACHIEVEMENT_WATERMARKS: Record<string, string> = {
   bars_2500: '2.5K',
   next_line_50: '50',
   next_line_200: '200',
+  dna_import_first: '↘',
+  dna_import_5: '5↘',
+  dna_import_12: '12↘',
+  circle_formed: '◎',
+  inner_circle: '◉◉',
+  block_captain: '▣',
+  wall_signal: '⌁',
+  wall_residency: '⌁⌁',
+  drop_resonance: '⊚',
+  drop_echo_chamber: '⊚⊚',
+  triple_live: 'Ⅲ',
 };
 
 export function achievementCardBackgroundColor(theme: AchievementCardTheme): string {

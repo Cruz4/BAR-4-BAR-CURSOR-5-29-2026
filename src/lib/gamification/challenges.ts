@@ -18,6 +18,10 @@ export type ChallengeDef = {
     | 'barsWeek'
     | 'generateNextLineWeekCount'
     | 'tracksCompletedWeekCount'
+    | 'dnaImportWeekCount'
+    | 'friendshipWeekCount'
+    | 'wallPostWeekCount'
+    | 'shareCreatedWeekCount'
     | 'barsMonth'
     | 'generateNextLineMonthCount'
     | 'tracksCompletedMonthCount'
@@ -26,6 +30,11 @@ export type ChallengeDef = {
     | 'lifetimeTracksCompleted'
     | 'lifetimeGenerateNextLine'
     | 'lifetimeStudioSessions'
+    | 'lifetimeDnaImports'
+    | 'lifetimeFriendshipsAccepted'
+    | 'lifetimeWallPosts'
+    | 'lifetimeSharesCreated'
+    | 'lifetimeDnaImportsReceived'
     | 'longestStreak'
     | 'xp'
     | 'achievementCount'
@@ -67,6 +76,42 @@ export const WEEKLY_CHALLENGES: ChallengeDef[] = [
     scale: 'weekly',
     tier: 'standard',
     field: 'tracksCompletedWeekCount',
+  },
+  {
+    id: 'dna_import_1',
+    label: 'Import a DNA Drop',
+    description: 'Pull another artist’s DNA Drop into your vault this week.',
+    target: 1,
+    scale: 'weekly',
+    tier: 'epic',
+    field: 'dnaImportWeekCount',
+  },
+  {
+    id: 'friendship_2',
+    label: 'Seal 2 friendships',
+    description: 'Accept (or get accepted on) two friend requests this week.',
+    target: 2,
+    scale: 'weekly',
+    tier: 'epic',
+    field: 'friendshipWeekCount',
+  },
+  {
+    id: 'wall_posts_3',
+    label: 'Post 3 times on the wall',
+    description: 'Publish three Artist Home / Scene wall posts this week.',
+    target: 3,
+    scale: 'weekly',
+    tier: 'standard',
+    field: 'wallPostWeekCount',
+  },
+  {
+    id: 'share_drop_1',
+    label: 'DNA Drop 1 project',
+    description: 'Publish one shareable DNA Drop this week (Pro).',
+    target: 1,
+    scale: 'weekly',
+    tier: 'epic',
+    field: 'shareCreatedWeekCount',
   },
 ];
 
@@ -236,6 +281,60 @@ export const LIFETIME_MILESTONES: ChallengeDef[] = [
     tier: 'legendary',
     field: 'achievementCount',
   },
+  {
+    id: 'life_dna_imports_5',
+    label: 'Strain Archive',
+    description: 'Import five foreign DNA Drops into your vault.',
+    target: 5,
+    scale: 'lifetime',
+    tier: 'epic',
+    field: 'lifetimeDnaImports',
+  },
+  {
+    id: 'life_dna_imports_15',
+    label: 'Cross-Vault Library',
+    description: 'Fifteen artist DNA Drops collected lifetime.',
+    target: 15,
+    scale: 'lifetime',
+    tier: 'legendary',
+    field: 'lifetimeDnaImports',
+  },
+  {
+    id: 'life_friends_10',
+    label: 'Network Ten',
+    description: 'Seal ten artist friendships.',
+    target: 10,
+    scale: 'lifetime',
+    tier: 'epic',
+    field: 'lifetimeFriendshipsAccepted',
+  },
+  {
+    id: 'life_wall_25',
+    label: 'Block Broadcaster',
+    description: 'Twenty-five wall posts across your Artist Home career.',
+    target: 25,
+    scale: 'lifetime',
+    tier: 'epic',
+    field: 'lifetimeWallPosts',
+  },
+  {
+    id: 'life_shares_5',
+    label: 'Five Drops Live',
+    description: 'Publish five DNA Drops lifetime.',
+    target: 5,
+    scale: 'lifetime',
+    tier: 'epic',
+    field: 'lifetimeSharesCreated',
+  },
+  {
+    id: 'life_resonance_10',
+    label: 'Signal Strong',
+    description: 'Ten imports of your DNA Drops by other artists.',
+    target: 10,
+    scale: 'lifetime',
+    tier: 'legendary',
+    field: 'lifetimeDnaImportsReceived',
+  },
 ];
 
 /** Returns ISO date string for Monday of current week (UTC). */
@@ -280,6 +379,14 @@ function resolveFieldProgress(
       return summary.weeklyChallengeWeekKey === getWeekKey() ? summary.generateNextLineWeekCount || 0 : 0;
     case 'tracksCompletedWeekCount':
       return summary.weeklyChallengeWeekKey === getWeekKey() ? summary.tracksCompletedWeekCount || 0 : 0;
+    case 'dnaImportWeekCount':
+      return summary.weeklyChallengeWeekKey === getWeekKey() ? summary.dnaImportWeekCount || 0 : 0;
+    case 'friendshipWeekCount':
+      return summary.weeklyChallengeWeekKey === getWeekKey() ? summary.friendshipWeekCount || 0 : 0;
+    case 'wallPostWeekCount':
+      return summary.weeklyChallengeWeekKey === getWeekKey() ? summary.wallPostWeekCount || 0 : 0;
+    case 'shareCreatedWeekCount':
+      return summary.weeklyChallengeWeekKey === getWeekKey() ? summary.shareCreatedWeekCount || 0 : 0;
     case 'barsMonth':
       return summary.monthlyChallengeMonthKey === getMonthKey()
         ? summary.monthlyChallengeProgress.barsMonth || 0
@@ -298,6 +405,16 @@ function resolveFieldProgress(
       return summary.lifetimeGenerateNextLine || 0;
     case 'lifetimeStudioSessions':
       return summary.lifetimeStudioSessions || 0;
+    case 'lifetimeDnaImports':
+      return summary.lifetimeDnaImports || 0;
+    case 'lifetimeFriendshipsAccepted':
+      return summary.lifetimeFriendshipsAccepted || 0;
+    case 'lifetimeWallPosts':
+      return summary.lifetimeWallPosts || 0;
+    case 'lifetimeSharesCreated':
+      return summary.lifetimeSharesCreated || 0;
+    case 'lifetimeDnaImportsReceived':
+      return summary.lifetimeDnaImportsReceived || 0;
     case 'longestStreak':
       return summary.longestStreak || 0;
     case 'xp':

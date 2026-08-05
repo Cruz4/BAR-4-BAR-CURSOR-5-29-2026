@@ -34,6 +34,8 @@ import {
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { recordShareImport } from '@/lib/share-import-client';
+import { HighlightedText } from '@/components/highlighted-text';
+import { buildClientRhymeGroups } from '@/lib/lyrics-analysis/client-rhyme-groups';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -90,6 +92,28 @@ export default function SharedProjectPage() {
         return sharedTrackIntents(project as DnaDropTrackPayload);
     }, [project, isAlbum]);
     const isOwnShare = Boolean(user && share && user.id === share.ownerId);
+
+    /** Rhyme Pulse–style end-word highlighting for the shared lyrics sheet. */
+    const rhymeGroups = useMemo(() => {
+        if (!project) return [];
+        const lines: string[] = [];
+        if (isAlbum) {
+            for (const track of (project as DnaDropAlbumPayload).tracks || []) {
+                for (const sec of track.sections || []) {
+                    for (const bar of sec.bars || []) {
+                        if (bar.text?.trim()) lines.push(bar.text);
+                    }
+                }
+            }
+        } else {
+            for (const sec of (project as DnaDropTrackPayload).sections || []) {
+                for (const bar of sec.bars || []) {
+                    if (bar.text?.trim()) lines.push(bar.text);
+                }
+            }
+        }
+        return buildClientRhymeGroups(lines);
+    }, [project, isAlbum]);
 
     const alreadyInVault = useMemo(() => {
         if (!project || !isOwnShare) return false;
@@ -478,7 +502,11 @@ export default function SharedProjectPage() {
                                                                     {String(bar.idx).padStart(2, '0')}
                                                                 </span>
                                                                 <p className="text-[14px] md:text-xl lg:text-2xl font-code font-bold leading-[var(--lyrics-lh)] tracking-tight text-foreground/90 break-words whitespace-pre-wrap min-w-0 w-full">
-                                                                    {bar.text || '...'}
+                                                                    {bar.text ? (
+                                                                      <HighlightedText text={bar.text} rhymeGroups={rhymeGroups} />
+                                                                    ) : (
+                                                                      '...'
+                                                                    )}
                                                                 </p>
                                                             </div>
                                                         ))}
@@ -502,7 +530,11 @@ export default function SharedProjectPage() {
                                                         {String(bar.idx).padStart(2, '0')}
                                                     </span>
                                                     <p className="text-[14px] md:text-xl lg:text-2xl font-code font-bold leading-[var(--lyrics-lh)] tracking-tight text-foreground/90 break-words whitespace-pre-wrap min-w-0 w-full">
-                                                        {bar.text || '...'}
+                                                        {bar.text ? (
+                                                          <HighlightedText text={bar.text} rhymeGroups={rhymeGroups} />
+                                                        ) : (
+                                                          '...'
+                                                        )}
                                                     </p>
                                                 </div>
                                             ))}

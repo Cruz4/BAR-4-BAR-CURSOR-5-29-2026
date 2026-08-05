@@ -28,6 +28,7 @@ import {
 import { activityVerb, type ActivityEvent, type ActivityType } from '@/lib/activity/types';
 import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
 import { StudioLoader } from '@/components/studio-loader';
+import { useGamification } from '@/context/gamification-context';
 
 function TypeIcon({ type }: { type: ActivityType }) {
   const className = 'h-3.5 w-3.5 shrink-0';
@@ -62,6 +63,8 @@ export function ActivityNavDropdown({
   unreadCount: number;
 }) {
   const router = useRouter();
+  const { summary } = useGamification();
+  const viewerSlug = summary?.profileSlug;
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<ActivityEvent[]>([]);
@@ -119,7 +122,15 @@ export function ActivityNavDropdown({
     } catch {
       /* still navigate */
     }
-    router.push(event.href || '/activity');
+    let href = event.href || '/activity';
+    if (event.shareId) href = `/share/${event.shareId}`;
+    else if (event.postId) {
+      if (event.href?.includes('#post-')) href = event.href;
+      else if (viewerSlug) href = `/profile/${viewerSlug}#post-${event.postId}`;
+    } else if (event.type === 'friend_accepted' && event.actorSlug) {
+      href = `/profile/${event.actorSlug}`;
+    }
+    router.push(href);
   };
 
   return (

@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StudioLoader } from '@/components/studio-loader';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { useGamification } from '@/context/gamification-context';
 import { cn } from '@/lib/utils';
 import {
   fetchActivityFeed,
@@ -61,22 +62,45 @@ function timeAgo(iso: string): string {
   }
 }
 
+function activityOpenHref(event: ActivityEvent, viewerSlug?: string): string {
+  if (event.shareId) return `/share/${event.shareId}`;
+  if (event.postId) {
+    if (event.href?.includes('#post-')) return event.href;
+    if (event.direction === 'received' && viewerSlug) {
+      return `/profile/${viewerSlug}#post-${event.postId}`;
+    }
+    if (event.href && event.href !== '/activity') return event.href;
+  }
+  if (event.href) return event.href;
+  if (event.type === 'friend_accepted' && event.actorSlug) return `/profile/${event.actorSlug}`;
+  if (event.type === 'friend_request') return '/activity?tab=requests';
+  return '/activity';
+}
+
 function ActivityRow({
   event,
   onRespondRequest,
   busyId,
+  requestResolved,
+  viewerSlug,
 }: {
   event: ActivityEvent;
   onRespondRequest?: (event: ActivityEvent, accept: boolean) => void;
   busyId?: string | null;
+  /** Friend request already accepted/declined — hide Accept/Decline. */
+  requestResolved?: boolean;
+  viewerSlug?: string;
 }) {
   const unread = event.direction === 'received' && !event.readAt;
   const name =
     event.direction === 'received' ? event.actorName : event.targetName || event.actorName;
   const slug = event.direction === 'received' ? event.actorSlug : undefined;
-  const href = event.href || '/activity';
+  const href = activityOpenHref(event, viewerSlug);
   const showRequestActions =
-    event.direction === 'received' && event.type === 'friend_request' && onRespondRequest;
+    event.direction === 'received' &&
+    event.type === 'friend_request' &&
+    onRespondRequest &&
+    !requestResolved;
 
   return (
     <div
@@ -174,9 +198,11 @@ function EmptyState({
 
 function ActivityPageInner() {
   const { user, authReady } = useAuth();
+  const { summary } = useGamification();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const viewerSlug = summary?.profileSlug;
   const initialTab = (searchParams.get('tab') as TabId) || 'inbox';
   const [tab, setTab] = useState<TabId>(
     initialTab === 'requests' || initialTab === 'sent' ? initialTab : 'inbox'
@@ -185,10 +211,11 @@ function ActivityPageInner() {
   const [sent, setSent] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [resolvedRequestIds, setResolvedRequestIds] = useState<Set<string>>(() => new Set());
   const markedOnOpenRef = React.useRef(false);
 
   const load = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id) return;
     setLoading(true);
     markedOnOpenRef.current = false;
     try {
@@ -201,19 +228,19 @@ function ActivityPageInner() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!authReady) return;
-    if (!user) {
+    if (!user?.id) {
       router.replace('/login?next=/activity');
       return;
     }
     void load();
-  }, [authReady, user, router, load]);
+  }, [authReady, user?.id, router, load]);
 
   useEffect(() => {
-    if (!user || loading || markedOnOpenRef.current) return;
+    if (!user?.id || loading || markedOnOpenRef.current) return;
     const unreadIds = inbox.filter((e) => !e.readAt).map((e) => e.id);
     if (!unreadIds.length) {
       markedOnOpenRef.current = true;
@@ -229,11 +256,14 @@ function ActivityPageInner() {
       });
     }, 800);
     return () => window.clearTimeout(t);
-  }, [user, loading, inbox]);
+  }, [user?.id, loading, inbox]);
 
   const requestRows = useMemo(
-    () => inbox.filter((e) => e.type === 'friend_request'),
-    [inbox]
+    () =>
+      inbox.filter(
+        (e) => e.type === 'friend_request' && !resolvedRequestIds.has(e.id)
+      ),
+    [inbox, resolvedRequestIds]
   );
   const unreadRequestCount = requestRows.filter((e) => !e.readAt).length;
 
@@ -258,11 +288,16 @@ function ActivityPageInner() {
         await removeFriendship(friendshipId);
         toast({ title: 'Request declined' });
       }
-      await markActivityEventsRead([event.id]);
+      setResolvedRequestIds((prev) => new Set(prev).add(event.id));
       setInbox((prev) =>
         prev.map((e) => (e.id === event.id ? { ...e, readAt: new Date().toISOString() } : e))
       );
-      refreshActivityAlerts();
+      try {
+        await markActivityEventsRead([event.id]);
+        refreshActivityAlerts();
+      } catch {
+        /* accept already succeeded */
+      }
     } catch (e) {
       toast({
         variant: 'destructive',
@@ -347,6 +382,8 @@ function ActivityPageInner() {
                         event={event}
                         onRespondRequest={handleRespond}
                         busyId={busyId}
+                        requestResolved={resolvedRequestIds.has(event.id)}
+                        viewerSlug={viewerSlug}
                       />
                     ))
                   )}
@@ -366,6 +403,8 @@ function ActivityPageInner() {
                         event={event}
                         onRespondRequest={handleRespond}
                         busyId={busyId}
+                        requestResolved={resolvedRequestIds.has(event.id)}
+                        viewerSlug={viewerSlug}
                       />
                     ))
                   )}
@@ -379,7 +418,9 @@ function ActivityPageInner() {
                       body="Loves, replies, requests, and DNA imports you make are listed here."
                     />
                   ) : (
-                    sent.map((event) => <ActivityRow key={event.id} event={event} />)
+                    sent.map((event) => (
+                      <ActivityRow key={event.id} event={event} viewerSlug={viewerSlug} />
+                    ))
                   )}
                 </TabsContent>
               </>

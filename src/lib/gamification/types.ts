@@ -58,6 +58,20 @@ export type GamificationSummary = {
   generateNextLineWeekCount: number;
   dnaFilledWeekCount: number;
   tracksCompletedWeekCount: number;
+  /** Foreign DNA Drops imported into this vault (lifetime). */
+  lifetimeDnaImports: number;
+  /** Accepted friendships sealed by this user (lifetime). */
+  lifetimeFriendshipsAccepted: number;
+  /** Public wall posts published (lifetime). */
+  lifetimeWallPosts: number;
+  /** DNA Drops this artist published (lifetime). */
+  lifetimeSharesCreated: number;
+  /** Times other artists imported this user's DNA Drops. */
+  lifetimeDnaImportsReceived: number;
+  dnaImportWeekCount: number;
+  friendshipWeekCount: number;
+  wallPostWeekCount: number;
+  shareCreatedWeekCount: number;
   lastGenerateNextLineDayKey: string;
   updatedAt: string;
 };
@@ -80,7 +94,11 @@ export type GamificationTrigger =
   | 'track_saved'
   | 'dna_preset_saved'
   | 'share_created'
-  | 'album_limit_hit';
+  | 'album_limit_hit'
+  | 'dna_imported'
+  | 'friendship_accepted'
+  | 'wall_post_created'
+  | 'dna_drop_imported_by_other';
 
 export const DEFAULT_GAMIFICATION_SUMMARY: GamificationSummary = {
   xp: 0,
@@ -113,6 +131,15 @@ export const DEFAULT_GAMIFICATION_SUMMARY: GamificationSummary = {
   generateNextLineWeekCount: 0,
   dnaFilledWeekCount: 0,
   tracksCompletedWeekCount: 0,
+  lifetimeDnaImports: 0,
+  lifetimeFriendshipsAccepted: 0,
+  lifetimeWallPosts: 0,
+  lifetimeSharesCreated: 0,
+  lifetimeDnaImportsReceived: 0,
+  dnaImportWeekCount: 0,
+  friendshipWeekCount: 0,
+  wallPostWeekCount: 0,
+  shareCreatedWeekCount: 0,
   lastGenerateNextLineDayKey: '',
   updatedAt: new Date().toISOString(),
 };

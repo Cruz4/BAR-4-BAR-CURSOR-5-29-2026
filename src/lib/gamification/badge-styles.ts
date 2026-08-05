@@ -79,6 +79,7 @@ export const ACHIEVEMENT_CATEGORY: Record<AchievementDef['category'], string> = 
   retention: 'border-amber-500/45 bg-amber-500/12 text-amber-800 dark:text-amber-200',
   conversion: 'border-fuchsia-500/45 bg-fuchsia-500/12 text-fuchsia-800 dark:text-fuchsia-200',
   mastery: 'border-violet-500/45 bg-violet-500/12 text-violet-800 dark:text-violet-200',
+  social: 'border-emerald-500/45 bg-emerald-500/12 text-emerald-800 dark:text-emerald-200',
 };
 
 export const ACHIEVEMENT_CATEGORY_LOCKED: Record<AchievementDef['category'], string> = {
@@ -90,4 +91,6 @@ export const ACHIEVEMENT_CATEGORY_LOCKED: Record<AchievementDef['category'], str
     'border-fuchsia-500/30 bg-fuchsia-100/90 text-fuchsia-900/75 dark:border-fuchsia-500/25 dark:bg-fuchsia-950/35 dark:text-slate-200',
   mastery:
     'border-violet-500/30 bg-violet-100/90 text-violet-900/75 dark:border-violet-500/25 dark:bg-violet-950/35 dark:text-slate-200',
+  social:
+    'border-emerald-500/30 bg-emerald-100/90 text-emerald-900/75 dark:border-emerald-500/25 dark:bg-emerald-950/35 dark:text-slate-200',
 };

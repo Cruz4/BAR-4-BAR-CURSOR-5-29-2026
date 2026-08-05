@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { StudioLoader } from '@/components/studio-loader';
 import { PostCard } from '@/components/profile/post-card';
 import { FindArtistsPanel } from '@/components/profile/find-artists-panel';
-import { VaultStudioProgress, SCENE_STUDIO_PROGRESS_EXPANDED_KEY } from '@/components/gamification/vault-studio-progress';
+import { VaultStudioProgress, SCENE_STUDIO_PROGRESS_EXPANDED_KEY, SCENE_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY } from '@/components/gamification/vault-studio-progress';
 import { SceneNavDock } from '@/components/scene/scene-nav-dock';
 import { SceneBoothCard } from '@/components/scene/scene-booth-card';
 import { SceneDiscoverCard } from '@/components/scene/scene-discover-card';
@@ -148,7 +148,7 @@ export function SceneHome() {
   const [tourStep, setTourStep] = useState(0);
   const tourAutoStartRef = useRef(false);
 
-  const viewerSlug = summary.publicProfile && summary.profileSlug ? summary.profileSlug : undefined;
+  const viewerSlug = summary.profileSlug || undefined;
 
   useEffect(() => {
     if (!user?.id) return;
@@ -334,8 +334,9 @@ export function SceneHome() {
             <div data-tour="scene-progress-mobile">
               <VaultStudioProgress
                 variant="banner"
-                defaultExpanded
-                persistExpandedKey={SCENE_STUDIO_PROGRESS_EXPANDED_KEY}
+                defaultExpanded={false}
+                phoneStartsMinimized
+                persistExpandedKey={SCENE_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY}
               />
             </div>
             <SceneNavDock compact />

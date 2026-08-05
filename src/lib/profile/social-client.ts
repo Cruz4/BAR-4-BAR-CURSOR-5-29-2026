@@ -149,6 +149,12 @@ export async function createPost(input: {
   const { id, ...data } = post;
   await setDoc(doc(db, 'posts', id), data);
   trackSocialEvent('profile_post_created', { hasEmbed: Boolean(embedUrl) });
+  try {
+    const { postGamificationEvent } = await import('@/lib/gamification-client');
+    void postGamificationEvent('wall_post_created');
+  } catch {
+    /* ignore */
+  }
   return post;
 }
 
@@ -199,7 +205,7 @@ export async function fetchPostsByOwners(ownerIds: string[], perOwner = 8): Prom
 // Likes
 // ---------------------------------------------------------------------------
 
-export async function likePost(postId: string): Promise<void> {
+export async function likePost(postId: string, actor?: { name?: string; slug?: string }): Promise<void> {
   const user = requireUser();
   await setDoc(doc(db, 'posts', postId, 'likes', user.uid), {
     createdAt: new Date().toISOString(),
@@ -207,7 +213,8 @@ export async function likePost(postId: string): Promise<void> {
   const { emitActivity } = await import('@/lib/activity/client');
   emitActivity({
     type: 'post_love',
-    actorName: user.displayName || 'Artist',
+    actorName: actor?.name || user.displayName || 'Artist',
+    ...(actor?.slug ? { actorSlug: actor.slug } : {}),
     postId,
   });
 }
@@ -363,33 +370,68 @@ export async function sendFriendRequest(
 
 export async function acceptFriendRequest(friendshipId: string): Promise<void> {
   const user = requireUser();
-  const snap = await getDoc(doc(db, 'friendships', friendshipId));
-  await updateDoc(doc(db, 'friendships', friendshipId), {
-    status: 'accepted',
-    respondedAt: new Date().toISOString(),
-  });
-  trackSocialEvent('profile_friend_accept');
-  if (snap.exists()) {
-    const data = snap.data();
-    const requestedBy = String(data.requestedBy || '');
-    if (requestedBy && requestedBy !== user.uid) {
-      const { emitActivity } = await import('@/lib/activity/client');
-      const myProfile = data.profiles?.[user.uid];
-      emitActivity({
-        type: 'friend_accepted',
-        actorName:
-          (myProfile && typeof myProfile === 'object' && typeof myProfile.name === 'string'
-            ? myProfile.name
-            : null) ||
-          user.displayName ||
-          'Artist',
-        ...(myProfile && typeof myProfile === 'object' && typeof myProfile.slug === 'string'
-          ? { actorSlug: myProfile.slug }
-          : {}),
-        recipientId: requestedBy,
-        href: '/friends',
-      });
+  const ref = doc(db, 'friendships', friendshipId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    throw new Error('Friend request not found.');
+  }
+  const data = snap.data() || {};
+  // Already friends — treat as success so Activity / Scene don't show a false error.
+  if (data.status === 'accepted') {
+    return;
+  }
+  if (data.status !== 'pending') {
+    throw new Error('This request is no longer pending.');
+  }
+  const uids = Array.isArray(data.uids) ? data.uids.map(String) : [];
+  if (!uids.includes(user.uid)) {
+    throw new Error('Missing or insufficient permissions.');
+  }
+  if (String(data.requestedBy || '') === user.uid) {
+    throw new Error('You sent this request — wait for them to accept.');
+  }
+
+  try {
+    await updateDoc(ref, {
+      status: 'accepted',
+      respondedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    // Race: already accepted between get and update (rules reject non-pending updates).
+    const again = await getDoc(ref);
+    if (again.exists() && again.data()?.status === 'accepted') {
+      return;
     }
+    throw err;
+  }
+
+  trackSocialEvent('profile_friend_accept');
+  const requestedBy = String(data.requestedBy || '');
+  if (requestedBy && requestedBy !== user.uid) {
+    const { emitActivity } = await import('@/lib/activity/client');
+    const myProfile = data.profiles?.[user.uid];
+    const actorSlug =
+      myProfile && typeof myProfile === 'object' && typeof myProfile.slug === 'string'
+        ? myProfile.slug
+        : undefined;
+    emitActivity({
+      type: 'friend_accepted',
+      actorName:
+        (myProfile && typeof myProfile === 'object' && typeof myProfile.name === 'string'
+          ? myProfile.name
+          : null) ||
+        user.displayName ||
+        'Artist',
+      ...(actorSlug ? { actorSlug } : {}),
+      recipientId: requestedBy,
+      href: actorSlug ? `/profile/${actorSlug}` : '/friends',
+    });
+  }
+  try {
+    const { postGamificationEvent } = await import('@/lib/gamification-client');
+    void postGamificationEvent('friendship_accepted');
+  } catch {
+    /* ignore */
   }
 }
 

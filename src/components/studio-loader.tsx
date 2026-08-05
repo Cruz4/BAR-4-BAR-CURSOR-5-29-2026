@@ -16,8 +16,9 @@ interface StudioLoaderProps {
   /** Optional status line under the pencil (e.g. guest try handoff). */
   message?: string;
   /**
-   * Pin dead-center of the viewport (fixed overlay). Use for page/auth
-   * loading so the pencil never jumps between header-offset layouts.
+   * Fill the viewport and center the pencil. Uses document flow (not
+   * position:fixed) so Next App Router can complete route auto-scroll
+   * without the sticky/fixed skip warning in development.
    */
   fullscreen?: boolean;
 }
@@ -59,7 +60,7 @@ export function StudioLoader({
     return (
       <div
         className={cn(
-          'fixed inset-0 z-[80] flex items-center justify-center bg-background',
+          'flex min-h-[100dvh] w-full flex-1 items-center justify-center bg-background',
           className
         )}
         role="status"

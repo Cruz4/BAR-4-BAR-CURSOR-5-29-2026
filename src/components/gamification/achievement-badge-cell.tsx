@@ -61,6 +61,12 @@ const CATEGORY_CELL: Record<
     icon: 'text-violet-400',
     label: 'border-violet-500/30 bg-violet-500/15 text-violet-300',
   },
+  social: {
+    border: 'border-emerald-500/50',
+    bg: 'bg-emerald-950/35',
+    icon: 'text-emerald-400',
+    label: 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300',
+  },
 };
 
 export function AchievementBadgeCell({

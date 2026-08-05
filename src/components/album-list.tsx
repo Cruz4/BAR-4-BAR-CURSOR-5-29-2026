@@ -100,7 +100,7 @@ import {
 } from '@/lib/subscription';
 import { isDataUrl } from '@/lib/cover-art';
 import { postGamificationEvent } from '@/lib/gamification-client';
-import { VaultStudioProgress } from '@/components/gamification/vault-studio-progress';
+import { VaultStudioProgress, VAULT_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY } from '@/components/gamification/vault-studio-progress';
 import { VaultProfileDock } from '@/components/profile/vault-profile-dock';
 import { VaultChamberAtmosphere } from '@/components/vault-chamber-atmosphere';
 import { trackStudioEvent } from '@/lib/analytics-client';
@@ -906,7 +906,13 @@ export function AlbumList() {
 
             {!loading && user && (
               <div className="xl:hidden mb-4 space-y-3">
-                <VaultStudioProgress variant="banner" tourForceExpanded={vaultProgressTourPinned} />
+                <VaultStudioProgress
+                  variant="banner"
+                  tourForceExpanded={vaultProgressTourPinned}
+                  phoneStartsMinimized
+                  defaultExpanded={false}
+                  persistExpandedKey={VAULT_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY}
+                />
                 <VaultProfileDock compact />
               </div>
             )}

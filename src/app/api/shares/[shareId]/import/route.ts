@@ -39,14 +39,22 @@ export async function POST(
       updatedAt: new Date().toISOString(),
     });
 
+    const share = snap.data() || {};
+    const ownerId = typeof share.ownerId === 'string' ? share.ownerId : '';
+    const isForeignImport = Boolean(ownerId && ownerId !== userId);
+
     try {
       const { emitActivityEvent } = await import('@/lib/server/activity');
-      const share = snap.data() || {};
       let actorName = 'Artist';
+      let actorSlug: string | undefined;
       try {
         const userSnap = await db.collection('users').doc(userId).get();
         if (userSnap.exists && typeof userSnap.data()?.displayName === 'string') {
           actorName = userSnap.data()!.displayName;
+        }
+        const gSnap = await db.doc(`users/${userId}/gamification/summary`).get();
+        if (typeof gSnap.data()?.profileSlug === 'string') {
+          actorSlug = gSnap.data()!.profileSlug;
         }
       } catch {
         /* ignore */
@@ -55,12 +63,28 @@ export async function POST(
         type: 'dna_import',
         actorId: userId,
         actorName,
+        ...(actorSlug ? { actorSlug } : {}),
         shareId: shareId.trim().toUpperCase(),
-        recipientId: typeof share.ownerId === 'string' ? share.ownerId : undefined,
+        recipientId: ownerId || undefined,
         recipientName: typeof share.ownerName === 'string' ? share.ownerName : undefined,
       });
     } catch (activityErr) {
       console.warn('[shares/import activity]', activityErr);
+    }
+
+    if (isForeignImport) {
+      try {
+        const { processGamificationEvent } = await import('@/lib/server/gamification');
+        await processGamificationEvent(userId, 'dna_imported', { shareId: shareId.trim().toUpperCase() });
+        if (ownerId) {
+          await processGamificationEvent(ownerId, 'dna_drop_imported_by_other', {
+            shareId: shareId.trim().toUpperCase(),
+            importerId: userId,
+          });
+        }
+      } catch (gamiErr) {
+        console.warn('[shares/import gamification]', gamiErr);
+      }
     }
 
     return NextResponse.json({ ok: true });

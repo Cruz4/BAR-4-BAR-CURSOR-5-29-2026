@@ -36,8 +36,23 @@ function buildHref(input: EmitActivityInput, recipientSlug?: string): string | u
   if (input.postId && recipientSlug) return `/profile/${recipientSlug}#post-${input.postId}`;
   if (input.postId) return `/activity`;
   if (input.shareId) return `/share/${input.shareId}`;
-  if (input.type === 'friend_request' || input.type === 'friend_accepted') return '/activity?tab=requests';
+  if (input.type === 'friend_request') return '/activity?tab=requests';
+  if (input.type === 'friend_accepted' && input.actorSlug) return `/profile/${input.actorSlug}`;
+  if (input.type === 'friend_accepted') return '/friends';
   return '/activity';
+}
+
+async function resolveProfileSlug(userId: string, known?: string): Promise<string | undefined> {
+  if (known?.trim()) return known.trim();
+  if (!userId) return undefined;
+  try {
+    const db = await getDb();
+    const snap = await db.doc(`users/${userId}/gamification/summary`).get();
+    const slug = snap.data()?.profileSlug;
+    return typeof slug === 'string' && slug.trim() ? slug.trim() : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 async function loadPrefs(userId: string): Promise<ActivityPrefs> {
@@ -114,7 +129,10 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
     const post = postSnap.data() || {};
     recipientId = String(post.ownerId || '');
     recipientName = String(post.ownerName || 'Artist');
-    recipientSlug = typeof post.ownerSlug === 'string' ? post.ownerSlug : undefined;
+    recipientSlug = await resolveProfileSlug(
+      recipientId,
+      typeof post.ownerSlug === 'string' ? post.ownerSlug : undefined
+    );
     if (!preview && typeof post.text === 'string') {
       preview = post.text.trim().slice(0, 120);
     }
@@ -135,6 +153,10 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
 
   if (!recipientId || recipientId === input.actorId) {
     return { ok: true };
+  }
+
+  if (!recipientSlug && (input.type === 'post_love' || input.type === 'post_reply')) {
+    recipientSlug = await resolveProfileSlug(recipientId);
   }
 
   const now = new Date().toISOString();

@@ -31,6 +31,11 @@ type SummarySlice = Pick<
   | 'lifetimeTracksCompleted'
   | 'lifetimeGenerateNextLine'
   | 'lifetimeStudioSessions'
+  | 'lifetimeDnaImports'
+  | 'lifetimeFriendshipsAccepted'
+  | 'lifetimeWallPosts'
+  | 'lifetimeSharesCreated'
+  | 'lifetimeDnaImportsReceived'
   | 'personalBests'
 >;
 
@@ -66,6 +71,14 @@ export function isAchievementActionVerified(
       return trigger === 'share_created';
     case 'second_album':
       return trigger === 'album_limit_hit';
+    case 'dna_import_first':
+      return trigger === 'dna_imported';
+    case 'circle_formed':
+      return trigger === 'friendship_accepted';
+    case 'wall_signal':
+      return trigger === 'wall_post_created';
+    case 'drop_resonance':
+      return trigger === 'dna_drop_imported_by_other';
     case 'ai_trinity':
       return (
         Boolean(analytics.firstGenerateNextLineAt) &&
@@ -157,6 +170,28 @@ export function canUnlockAchievement(
       );
     case 'album_trilogy_done':
       return ctx.albumCompletedTracksVerified >= t.albumCompletedTracks;
+    case 'dna_import_first':
+      return (summary.lifetimeDnaImports || 0) >= t.dnaImportsFirst;
+    case 'dna_import_5':
+      return (summary.lifetimeDnaImports || 0) >= t.dnaImportsCatalog;
+    case 'dna_import_12':
+      return (summary.lifetimeDnaImports || 0) >= t.dnaImportsArchive;
+    case 'circle_formed':
+      return (summary.lifetimeFriendshipsAccepted || 0) >= t.friendshipsFirst;
+    case 'inner_circle':
+      return (summary.lifetimeFriendshipsAccepted || 0) >= t.friendshipsInnerCircle;
+    case 'block_captain':
+      return (summary.lifetimeFriendshipsAccepted || 0) >= t.friendshipsBlockCaptain;
+    case 'wall_signal':
+      return (summary.lifetimeWallPosts || 0) >= t.wallPostsFirst;
+    case 'wall_residency':
+      return (summary.lifetimeWallPosts || 0) >= t.wallPostsResidency;
+    case 'drop_resonance':
+      return (summary.lifetimeDnaImportsReceived || 0) >= t.dnaImportsReceivedFirst;
+    case 'drop_echo_chamber':
+      return (summary.lifetimeDnaImportsReceived || 0) >= t.dnaImportsReceivedEcho;
+    case 'triple_live':
+      return (summary.lifetimeSharesCreated || 0) >= t.sharesCreatedTriple;
     default:
       return isAchievementActionVerified(achievementId, analytics, ctx, trigger);
   }

@@ -71,8 +71,12 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted }: Po
     setLiked(next);
     setLikeCount((c) => Math.max(0, c + (next ? 1 : -1)));
     try {
-      if (next) await likePost(post.id);
-      else await unlikePost(post.id);
+      if (next) {
+        await likePost(post.id, {
+          name: user.displayName || 'Artist',
+          slug: viewerSlug,
+        });
+      } else await unlikePost(post.id);
     } catch {
       setLiked(!next);
       setLikeCount((c) => Math.max(0, c + (next ? -1 : 1)));

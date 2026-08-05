@@ -83,6 +83,10 @@ function resetWeekCounters(summary: GamificationSummary, weekKey: string): Gamif
     generateNextLineWeekCount: 0,
     tracksCompletedWeekCount: 0,
     dnaFilledWeekCount: 0,
+    dnaImportWeekCount: 0,
+    friendshipWeekCount: 0,
+    wallPostWeekCount: 0,
+    shareCreatedWeekCount: 0,
   };
 }
 
@@ -514,6 +518,35 @@ export async function processGamificationEvent(
       summary.tracksCompleted30d = (summary.tracksCompleted30d || 0) + 1;
       summary.lifetimeTracksCompleted = (summary.lifetimeTracksCompleted || 0) + 1;
     }
+  }
+
+  if (trigger === 'dna_imported') {
+    summary.lifetimeDnaImports = (summary.lifetimeDnaImports || 0) + 1;
+    summary.dnaImportWeekCount = (summary.dnaImportWeekCount || 0) + 1;
+    xpGain += 20;
+  }
+
+  if (trigger === 'friendship_accepted') {
+    summary.lifetimeFriendshipsAccepted = (summary.lifetimeFriendshipsAccepted || 0) + 1;
+    summary.friendshipWeekCount = (summary.friendshipWeekCount || 0) + 1;
+    xpGain += 15;
+  }
+
+  if (trigger === 'wall_post_created') {
+    summary.lifetimeWallPosts = (summary.lifetimeWallPosts || 0) + 1;
+    summary.wallPostWeekCount = (summary.wallPostWeekCount || 0) + 1;
+    xpGain += 10;
+  }
+
+  if (trigger === 'share_created') {
+    summary.lifetimeSharesCreated = (summary.lifetimeSharesCreated || 0) + 1;
+    summary.shareCreatedWeekCount = (summary.shareCreatedWeekCount || 0) + 1;
+    xpGain += 15;
+  }
+
+  if (trigger === 'dna_drop_imported_by_other') {
+    summary.lifetimeDnaImportsReceived = (summary.lifetimeDnaImportsReceived || 0) + 1;
+    xpGain += 25;
   }
 
   for (const achievement of ACHIEVEMENTS) {

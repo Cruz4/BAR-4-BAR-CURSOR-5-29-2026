@@ -94,7 +94,8 @@ export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
       return;
     }
     void fetchGamificationSummary(user.id).then((summary) => {
-      if (summary?.publicProfile && summary.profileSlug) setViewerSlug(summary.profileSlug);
+      // Prefer a slug for comment/name links even if Artist Home is private.
+      if (summary?.profileSlug) setViewerSlug(summary.profileSlug);
     });
   }, [user?.id, isOwner, profile.slug]);
 
@@ -122,20 +123,31 @@ export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
   );
 
   const enabledModules = useMemo(() => {
-    const base = config.modules.filter((m) => m.enabled);
-    if (!liveDnaDrops.length) return base;
-    if (base.some((m) => m.id === 'dropShelf')) return base;
-    const shelf =
-      config.modules.find((m) => m.id === 'dropShelf') ||
-      ({ id: 'dropShelf' as const, enabled: true, size: 'M' as const });
-    const insertAt = base.findIndex((m) => m.id === 'albumRooms');
-    if (insertAt >= 0) {
-      const next = [...base];
-      next.splice(insertAt + 1, 0, { ...shelf, enabled: true });
-      return next;
-    }
-    return [...base, { ...shelf, enabled: true }];
-  }, [config.modules, liveDnaDrops.length]);
+    // Respect Edit Public Page toggles — never force-show a disabled module.
+    return config.modules.filter((m) => m.enabled);
+  }, [config.modules]);
+
+  const showLiveDnaDrops = useMemo(
+    () =>
+      liveDnaDrops.length > 0 &&
+      config.modules.some((m) => m.id === 'dropShelf' && m.enabled),
+    [config.modules, liveDnaDrops.length]
+  );
+
+  // Deep-link from Activity Open → #post-{id}
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash;
+    if (!hash.startsWith('#post-')) return;
+    const id = hash.slice(1);
+    const tryScroll = () => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const t1 = window.setTimeout(tryScroll, 80);
+    const t2 = window.setTimeout(tryScroll, 450);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [profile.slug, enabledModules.length]);
 
   return (
     <div
@@ -232,7 +244,7 @@ export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
               <p className="max-w-xl text-sm leading-relaxed text-[var(--ph-muted)]">{config.featured.bio}</p>
             )}
 
-            {liveDnaDrops.length > 0 && (
+            {showLiveDnaDrops && (
               liveDnaDrops.length === 1 ? (
                 <Button
                   asChild
@@ -322,7 +334,10 @@ export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
                   />
                 )}
               </button>
-              <ProfileSocialLinks socials={config.featured.socials} className="mt-3" />
+              <ProfileSocialLinks
+                socials={config.featured.socials}
+                className="relative z-20 mt-3 pointer-events-auto"
+              />
             </motion.div>
           </div>
         </motion.section>
@@ -434,7 +449,7 @@ export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
         />
       )}
 
-      <Dialog open={dropsOpen} onOpenChange={setDropsOpen}>
+      <Dialog open={dropsOpen && showLiveDnaDrops} onOpenChange={setDropsOpen}>
         <DialogContent className="max-w-md border-[var(--ph-border)] bg-[hsl(216_28%_7%)] text-[var(--ph-text,#fff)]">
           <DialogHeader>
             <DialogTitle className="font-headline text-xl uppercase tracking-tight">

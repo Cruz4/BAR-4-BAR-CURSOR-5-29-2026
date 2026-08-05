@@ -248,6 +248,8 @@ export function AchievementUnlockCelebration() {
                     {def.category === 'activation' && 'First steps in the booth — keep building.'}
                     {def.category === 'retention' && 'Momentum unlocked — don’t stop now.'}
                     {def.category === 'conversion' && 'Studio milestone — you’re leveling up.'}
+                    {def.category === 'mastery' && 'Deep craft — the vault remembers this.'}
+                    {def.category === 'social' && 'The block noticed — keep the network hot.'}
                   </p>
                 )}
 

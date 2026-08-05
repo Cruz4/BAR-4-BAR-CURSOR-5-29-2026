@@ -42,6 +42,18 @@ export const ACHIEVEMENT_THRESHOLDS = {
   /** Unique studio days + writing floor (rhyme bars) */
   sessionDaysVeteran: 45,
   sessionVeteranMinBars: 125,
+  /** Social — foreign DNA imports, friendships, wall, resonance */
+  dnaImportsFirst: 1,
+  dnaImportsCatalog: 5,
+  dnaImportsArchive: 12,
+  friendshipsFirst: 1,
+  friendshipsInnerCircle: 5,
+  friendshipsBlockCaptain: 12,
+  wallPostsFirst: 1,
+  wallPostsResidency: 10,
+  dnaImportsReceivedFirst: 1,
+  dnaImportsReceivedEcho: 5,
+  sharesCreatedTriple: 3,
 } as const;
 
 /** Feet-wet trophies — only these are meant to unlock quickly for new artists. */

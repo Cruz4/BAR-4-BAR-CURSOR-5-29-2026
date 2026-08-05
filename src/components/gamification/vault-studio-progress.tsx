@@ -24,8 +24,12 @@ import { CheckCircle2, Circle, Flame, Lock, Trophy, ChevronRight, ChevronDown } 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const RECENT_EARN_MS = 48 * 60 * 60 * 1000;
-/** Scene home — remember expand/collapse across visits. */
+/** Scene home — remember expand/collapse across visits (desktop). */
 export const SCENE_STUDIO_PROGRESS_EXPANDED_KEY = 'b4b-scene-studio-progress-expanded';
+/** Phone Scene banner — separate so desktop expand doesn't force phone open. */
+export const SCENE_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY = 'b4b-scene-studio-progress-mobile-expanded';
+/** Phone Vault banner. */
+export const VAULT_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY = 'b4b-vault-studio-progress-mobile-expanded';
 
 function shortRankLabel(label: string): string {
   const first = label.split(' ')[0] || label;
@@ -58,20 +62,23 @@ export function VaultStudioProgress({
   tourForceExpanded = false,
   /** When set, expand/collapse is remembered (Scene uses this). */
   persistExpandedKey,
-  /** Used when no stored preference yet. Scene defaults open. */
+  /** Used when no stored preference yet. Scene desktop defaults open; phone starts minimized. */
   defaultExpanded = false,
+  /** Phone view: start collapsed and skip auto-open on recent earn. */
+  phoneStartsMinimized = false,
 }: {
   variant?: 'banner' | 'sidebar';
   /** Vault guided tour — expand panel so the spotlight covers the full progress card. */
   tourForceExpanded?: boolean;
   persistExpandedKey?: string;
   defaultExpanded?: boolean;
+  phoneStartsMinimized?: boolean;
 }) {
   const { user } = useAuth();
   const { summary, rankLabel, loading } = useGamification();
   const isSidebar = variant === 'sidebar';
   const [expanded, setExpanded] = useState(() =>
-    readPersistedExpanded(persistExpandedKey, defaultExpanded)
+    readPersistedExpanded(persistExpandedKey, phoneStartsMinimized ? false : defaultExpanded)
   );
   const initializedRef = useRef(false);
   const xpRingGradientId = useId();
@@ -98,21 +105,23 @@ export function VaultStudioProgress({
   }, [unlocked]);
 
   // Vault-only: auto-open once when something was just earned (Scene uses persisted preference).
+  // Phone banners stay minimized until the user opens them.
   useEffect(() => {
-    if (persistExpandedKey) return;
+    if (persistExpandedKey || phoneStartsMinimized) return;
     if (initializedRef.current || loading) return;
     initializedRef.current = true;
     if (hasRecentEarn) setExpanded(true);
-  }, [hasRecentEarn, loading, persistExpandedKey]);
+  }, [hasRecentEarn, loading, persistExpandedKey, phoneStartsMinimized]);
 
   useEffect(() => {
     const onUnlock = () => {
+      if (phoneStartsMinimized) return;
       setExpanded(true);
       writePersistedExpanded(persistExpandedKey, true);
     };
     window.addEventListener('b4b-achievement-unlock', onUnlock);
     return () => window.removeEventListener('b4b-achievement-unlock', onUnlock);
-  }, [persistExpandedKey]);
+  }, [persistExpandedKey, phoneStartsMinimized]);
 
   const { unlockedBadges, lockedPreview } = useMemo(() => {
     const unlockedList = ACHIEVEMENTS.filter((a) => unlocked[a.id]).sort(

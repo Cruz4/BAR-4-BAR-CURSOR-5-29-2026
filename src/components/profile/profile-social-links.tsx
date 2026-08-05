@@ -86,7 +86,7 @@ export function ProfileSocialLinks({
           rel="noopener noreferrer"
           title={link.label}
           aria-label={link.label}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[var(--ph-border)] bg-[var(--ph-plate)] text-[var(--ph-muted)] transition-colors hover:border-[var(--ph-accent)] hover:text-[var(--ph-accent)]"
+          className="relative z-[2] inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--ph-border)] bg-[var(--ph-plate)] text-[var(--ph-muted)] transition-colors hover:border-[var(--ph-accent)] hover:text-[var(--ph-accent)] pointer-events-auto"
         >
           <SocialGlyph id={link.id} className="h-3.5 w-3.5" />
         </a>
