@@ -64,7 +64,7 @@ export default function FeedPage() {
     };
     void load();
     void fetchGamificationSummary(user.id).then((summary) => {
-      if (summary?.publicProfile && summary.profileSlug) setViewerSlug(summary.profileSlug);
+      if (summary?.profileSlug) setViewerSlug(summary.profileSlug);
     });
     return () => {
       cancelled = true;

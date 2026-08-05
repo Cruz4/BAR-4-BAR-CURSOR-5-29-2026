@@ -155,18 +155,20 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
     return { ok: true };
   }
 
-  if (!recipientSlug && (input.type === 'post_love' || input.type === 'post_reply')) {
+  if (!recipientSlug) {
     recipientSlug = await resolveProfileSlug(recipientId);
   }
 
+  const actorSlug = await resolveProfileSlug(input.actorId, input.actorSlug);
+
   const now = new Date().toISOString();
-  const href = buildHref(input, recipientSlug) || '/activity';
+  const href = buildHref({ ...input, actorSlug }, recipientSlug) || '/activity';
   const base = {
     type: input.type,
     createdAt: now,
     actorId: input.actorId,
     actorName: input.actorName || 'Artist',
-    ...(input.actorSlug ? { actorSlug: input.actorSlug } : {}),
+    ...(actorSlug ? { actorSlug } : {}),
     ...(postId ? { postId } : {}),
     ...(shareId ? { shareId } : {}),
     ...(preview ? { preview } : {}),
@@ -189,6 +191,7 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
     direction: 'given',
     targetUserId: recipientId,
     targetName: recipientName,
+    ...(recipientSlug ? { targetSlug: recipientSlug } : {}),
     readAt: now, // given items don't count as unread
   });
   batch.set(

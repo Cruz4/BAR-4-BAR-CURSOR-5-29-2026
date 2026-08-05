@@ -1,8 +1,15 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Lock, LockOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { pickSceneNeonEntry, type SceneNeonEntry } from '@/lib/scene/scene-neon-lexicon';
+import {
+  pinSceneNeonEntry,
+  resolveSceneNeonEntry,
+  unpinSceneNeonEntry,
+  pickSceneNeonEntry,
+  type SceneNeonEntry,
+} from '@/lib/scene/scene-neon-lexicon';
 import { useSceneSky } from '@/hooks/use-scene-sky';
 import {
   cloudIntensity,
@@ -178,6 +185,7 @@ export function SceneBlockAtmosphere({
 
   const [bursts, setBursts] = useState<NoteBurst[]>([]);
   const [neon, setNeon] = useState<SceneNeonEntry | null>(null);
+  const [neonPinned, setNeonPinned] = useState(false);
   const prevPulseRef = useRef<number>(-1);
   const burstIdRef = useRef(0);
 
@@ -188,8 +196,23 @@ export function SceneBlockAtmosphere({
   const showLightning = weather === 'thunderstorm' || weather === 'hail';
 
   useEffect(() => {
-    setNeon(pickSceneNeonEntry());
+    const { entry, pinned } = resolveSceneNeonEntry();
+    setNeon(entry);
+    setNeonPinned(pinned);
   }, []);
+
+  const toggleNeonPin = () => {
+    if (!neon) return;
+    if (neonPinned) {
+      unpinSceneNeonEntry();
+      setNeonPinned(false);
+      // Free the word — roll a new one now so unlock is visible.
+      setNeon(pickSceneNeonEntry());
+      return;
+    }
+    pinSceneNeonEntry(neon);
+    setNeonPinned(true);
+  };
 
   useEffect(() => {
     if (pulseKey <= prevPulseRef.current) {
@@ -218,6 +241,7 @@ export function SceneBlockAtmosphere({
   }, [pulseKey, litWindows]);
 
   return (
+    <>
     <div
       className={cn(
         'scene-block pointer-events-none fixed inset-0 z-[1] overflow-hidden',
@@ -297,23 +321,6 @@ export function SceneBlockAtmosphere({
 
       <div className="scene-block-horizon absolute inset-x-0 bottom-0 h-[55vh]" />
 
-      {neon && (
-        <div
-          className="scene-block-neon absolute right-[3%] top-[4.5rem] hidden max-w-[13rem] text-right sm:block"
-          aria-hidden
-        >
-          <span className="scene-block-neon-text font-headline text-base font-bold uppercase tracking-[0.12em] sm:text-lg">
-            {neon.word}
-          </span>
-          <p className="scene-block-neon-pron mt-1 font-sans text-xs font-medium normal-case tracking-wide sm:text-[13px]">
-            /{neon.pron}/
-          </p>
-          <p className="scene-block-neon-gloss mt-1.5 font-code text-[10px] font-medium leading-snug tracking-wide">
-            {neon.gloss}
-          </p>
-        </div>
-      )}
-
       <div className="absolute inset-x-0 bottom-0" style={{ height: SKYLINE_HEIGHT_PX }}>
         {BACK_BUILDINGS.map((b, i) => (
           <div
@@ -361,5 +368,49 @@ export function SceneBlockAtmosphere({
         ))}
       </div>
     </div>
+
+    {/* Above feed chrome so the pin is clickable; desktop-only (sm+) on purpose. */}
+    {neon && (
+      <div
+        className="scene-block-neon pointer-events-none fixed right-[3%] top-[4.5rem] z-[40] hidden max-w-[14rem] text-right sm:block"
+        data-phase={phase}
+      >
+        <div className="inline-flex items-baseline justify-end gap-1.5">
+          <button
+            type="button"
+            onClick={toggleNeonPin}
+            className={cn(
+              'pointer-events-auto -translate-y-px inline-flex shrink-0 items-center justify-center p-0.5 transition-opacity',
+              neonPinned
+                ? 'text-amber-300/85 opacity-90 hover:opacity-100'
+                : 'text-white/30 opacity-65 hover:opacity-100 hover:text-white/50'
+            )}
+            title={
+              neonPinned
+                ? 'Unlock now — or it frees itself after 24 hours'
+                : 'Lock this word for up to 24 hours'
+            }
+            aria-label={neonPinned ? `Unlock ${neon.word}` : `Lock ${neon.word} for 24 hours`}
+            aria-pressed={neonPinned}
+          >
+            {neonPinned ? (
+              <LockOpen className="h-2.5 w-2.5" strokeWidth={1.6} aria-hidden />
+            ) : (
+              <Lock className="h-2.5 w-2.5" strokeWidth={1.6} aria-hidden />
+            )}
+          </button>
+          <span className="scene-block-neon-text font-headline text-base font-bold uppercase tracking-[0.12em] sm:text-lg">
+            {neon.word}
+          </span>
+        </div>
+        <p className="scene-block-neon-pron mt-1 font-sans text-xs font-medium normal-case tracking-wide sm:text-[13px]">
+          /{neon.pron}/
+        </p>
+        <p className="scene-block-neon-gloss mt-1.5 font-code text-[10px] font-medium leading-snug tracking-wide">
+          {neon.gloss}
+        </p>
+      </div>
+    )}
+    </>
   );
 }

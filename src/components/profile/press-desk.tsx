@@ -17,6 +17,7 @@ import {
   Dna,
   DoorOpen,
   ExternalLink,
+  Eye,
   Fingerprint,
   LayoutGrid,
   Loader2,
@@ -30,6 +31,7 @@ import {
   Orbit,
   Link2,
   ImagePlus,
+  PenLine,
   Trash2,
   Shuffle,
 } from 'lucide-react';
@@ -75,6 +77,19 @@ import {
   saveArtistHomeConfigClient,
 } from '@/lib/profile/artist-home-client';
 import { fetchGamificationSummary, patchGamificationSettings } from '@/lib/gamification-client';
+import type { GamificationSummary } from '@/lib/gamification/types';
+import { STUDIO_RANKS } from '@/lib/gamification/ranks';
+import { getAchievement } from '@/lib/gamification/achievements';
+import { ArtistHome } from '@/components/profile/artist-home';
+import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
+import { VesperfoldForge } from '@/components/profile/vesperfold-forge';
+import {
+  normalizeVesperfoldSeed,
+  sanitizeVesperfoldSlots,
+  unpackVesperfold,
+  VESPERFOLD_SLOT_LIMIT,
+  type VesperfoldSlot,
+} from '@/lib/profile/vesperfold';
 
 const MAX_HERO_COLLAGE = 9;
 
@@ -295,11 +310,18 @@ export function PressDesk() {
   const [config, setConfig] = useState<ArtistHomeConfig | null>(null);
   const [profileSlug, setProfileSlug] = useState<string | null>(null);
   const [profileLive, setProfileLive] = useState(false);
+  const [summary, setSummary] = useState<GamificationSummary | null>(null);
+  const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [photoMode, setPhotoMode] = useState<'collage' | 'custom'>('collage');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [collageAlbumIds, setCollageAlbumIds] = useState<string[]>([]);
+  const [starMarkUseStar, setStarMarkUseStar] = useState(false);
+  const [starMarkSeed, setStarMarkSeed] = useState(0);
+  const [starMarkSlots, setStarMarkSlots] = useState<VesperfoldSlot[]>([]);
+  const [starMarkPinnedSlotId, setStarMarkPinnedSlotId] = useState<string | null>(null);
+  const [starBusy, setStarBusy] = useState(false);
   const [heroBusy, setHeroBusy] = useState(false);
   const heroFileRef = useRef<HTMLInputElement>(null);
 
@@ -308,15 +330,25 @@ export function PressDesk() {
     void fetchArtistHomeConfig()
       .then(setConfig)
       .catch(() => toast({ variant: 'destructive', title: 'Could not load your Artist Home config' }));
-    void fetchGamificationSummary(user.id).then((summary) => {
-      if (summary?.profileSlug) setProfileSlug(summary.profileSlug);
-      setProfileLive(Boolean(summary?.publicProfile));
-      setPhotoMode(summary?.profilePhotoMode === 'custom' ? 'custom' : 'collage');
-      setPhotoUrl(summary?.profilePhotoUrl?.trim() ? summary.profilePhotoUrl : null);
+    void fetchGamificationSummary(user.id).then((next) => {
+      if (!next) return;
+      setSummary(next);
+      if (next.profileSlug) setProfileSlug(next.profileSlug);
+      setProfileLive(Boolean(next.publicProfile));
+      setPhotoMode(next.profilePhotoMode === 'custom' ? 'custom' : 'collage');
+      setPhotoUrl(next.profilePhotoUrl?.trim() ? next.profilePhotoUrl : null);
       setCollageAlbumIds(
-        Array.isArray(summary?.profileCollageAlbumIds)
-          ? summary.profileCollageAlbumIds.filter((id): id is string => typeof id === 'string')
+        Array.isArray(next.profileCollageAlbumIds)
+          ? next.profileCollageAlbumIds.filter((id): id is string => typeof id === 'string')
           : []
+      );
+      setStarMarkUseStar(Boolean(next.starMarkUseStar));
+      setStarMarkSeed(normalizeVesperfoldSeed(next.starMarkSeed ?? 0));
+      setStarMarkSlots(sanitizeVesperfoldSlots(next.starMarkSlots));
+      setStarMarkPinnedSlotId(
+        typeof next.starMarkPinnedSlotId === 'string' && next.starMarkPinnedSlotId.trim()
+          ? next.starMarkPinnedSlotId.trim()
+          : null
       );
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -373,6 +405,54 @@ export function PressDesk() {
     return drops;
   }, [albums]);
 
+  const previewProfile = useMemo((): PublicProfileData | null => {
+    if (!user?.id || !summary) return null;
+    const rank =
+      STUDIO_RANKS.find((r) => r.id === summary.rankId) ?? STUDIO_RANKS[0]!;
+    const badges = Object.keys(summary.unlockedAchievements || {})
+      .map((id) => getAchievement(id))
+      .filter((b): b is NonNullable<typeof b> => Boolean(b));
+    return {
+      displayName: user.displayName || 'Artist',
+      rankLabel: rank.label,
+      rankId: summary.rankId,
+      xp: summary.xp,
+      currentStreak: summary.currentStreak,
+      longestStreak: summary.longestStreak,
+      albumCoverUrls: heroCollageUrls,
+      badges,
+      userId: user.id,
+      profilePhotoMode: photoMode,
+      profilePhotoUrl: photoUrl,
+      slug: summary.profileSlug || profileSlug || 'preview',
+      starMarkUseStar,
+      starMarkSeed,
+      liveDnaDrops: publicShares.map((d) => ({
+        shareId: d.shareId,
+        title: d.title,
+        type: d.kind.startsWith('Album') ? ('album' as const) : ('track' as const),
+      })),
+    };
+  }, [
+    user?.id,
+    user?.displayName,
+    summary,
+    heroCollageUrls,
+    photoMode,
+    photoUrl,
+    profileSlug,
+    publicShares,
+    starMarkUseStar,
+    starMarkSeed,
+  ]);
+
+  const openPreview = () => {
+    setPreviewing(true);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const update = (mutate: (draft: ArtistHomeConfig) => void) => {
     setConfig((prev) => {
       if (!prev) return prev;
@@ -391,13 +471,14 @@ export function PressDesk() {
     setHeroBusy(true);
     try {
       const data = await patchGamificationSettings(next);
-      const summary = data.summary;
-      if (summary) {
-        setPhotoMode(summary.profilePhotoMode === 'custom' ? 'custom' : 'collage');
-        setPhotoUrl(summary.profilePhotoUrl?.trim() ? summary.profilePhotoUrl : null);
+      const nextSummary = data.summary;
+      if (nextSummary) {
+        setSummary(nextSummary);
+        setPhotoMode(nextSummary.profilePhotoMode === 'custom' ? 'custom' : 'collage');
+        setPhotoUrl(nextSummary.profilePhotoUrl?.trim() ? nextSummary.profilePhotoUrl : null);
         setCollageAlbumIds(
-          Array.isArray(summary.profileCollageAlbumIds)
-            ? summary.profileCollageAlbumIds.filter((id: unknown): id is string => typeof id === 'string')
+          Array.isArray(nextSummary.profileCollageAlbumIds)
+            ? nextSummary.profileCollageAlbumIds.filter((id: unknown): id is string => typeof id === 'string')
             : []
         );
       } else {
@@ -465,6 +546,45 @@ export function PressDesk() {
     });
   };
 
+  const persistStarMark = async (next: {
+    starMarkUseStar?: boolean;
+    starMarkSeed?: number;
+    starMarkSlots?: VesperfoldSlot[];
+    starMarkPinnedSlotId?: string | null;
+  }) => {
+    setStarBusy(true);
+    try {
+      const data = await patchGamificationSettings(next);
+      const s = data.summary as GamificationSummary | undefined;
+      if (s) {
+        setSummary(s);
+        setStarMarkUseStar(Boolean(s.starMarkUseStar));
+        setStarMarkSeed(normalizeVesperfoldSeed(s.starMarkSeed ?? 0));
+        setStarMarkSlots(sanitizeVesperfoldSlots(s.starMarkSlots));
+        setStarMarkPinnedSlotId(
+          typeof s.starMarkPinnedSlotId === 'string' && s.starMarkPinnedSlotId.trim()
+            ? s.starMarkPinnedSlotId.trim()
+            : null
+        );
+      } else {
+        if (typeof next.starMarkUseStar === 'boolean') setStarMarkUseStar(next.starMarkUseStar);
+        if (next.starMarkSeed !== undefined) setStarMarkSeed(normalizeVesperfoldSeed(next.starMarkSeed));
+        if (next.starMarkSlots) setStarMarkSlots(sanitizeVesperfoldSlots(next.starMarkSlots));
+        if (next.starMarkPinnedSlotId !== undefined) {
+          setStarMarkPinnedSlotId(next.starMarkPinnedSlotId);
+        }
+      }
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not save your star',
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setStarBusy(false);
+    }
+  };
+
   const save = async () => {
     if (!config) return;
     setSaving(true);
@@ -499,6 +619,52 @@ export function PressDesk() {
     return <StudioLoader size="lg" fullscreen />;
   }
 
+  if (previewing && previewProfile) {
+    return (
+      <div className="relative min-h-screen pb-28">
+        <div className="sticky top-0 z-50 border-b border-primary/25 bg-background/90 backdrop-blur-md">
+          <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-2 px-4 py-2.5 sm:px-6">
+            <p className="font-code text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
+              Full preview
+              {dirty ? ' · unsaved edits' : ' · current draft'}
+              {!profileLive ? ' · not public yet' : ''}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Looks good? Press it — or go back and keep editing.
+            </p>
+          </div>
+        </div>
+        <ArtistHome
+          profile={previewProfile}
+          config={config}
+          isOwner
+          previewMode
+          onExitPreview={() => setPreviewing(false)}
+        />
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-background/95 backdrop-blur-md">
+          <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-10 gap-1.5 font-bold uppercase"
+              onClick={() => setPreviewing(false)}
+            >
+              <PenLine className="h-4 w-4" /> Back to edit
+            </Button>
+            <Button
+              className="h-10 gap-2 px-6 font-bold uppercase"
+              disabled={saving || !dirty}
+              onClick={() => void save()}
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {dirty ? 'Press it' : 'Pressed'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const embedPreview = parseEmbedUrl(config.featured.embedUrl || '');
   const displayName = user.displayName || 'Artist';
 
@@ -517,6 +683,90 @@ export function PressDesk() {
         )}
       </header>
 
+      <VesperfoldForge
+        useStar={starMarkUseStar}
+        seed={starMarkSeed}
+        slots={starMarkSlots}
+        pinnedSlotId={starMarkPinnedSlotId}
+        busy={starBusy}
+        onToggleUseStar={(on) => {
+          if (starMarkPinnedSlotId) return;
+          setStarMarkUseStar(on);
+          void persistStarMark({ starMarkUseStar: on, starMarkSeed });
+        }}
+        onSeedChange={(seed) => {
+          if (starMarkPinnedSlotId) return;
+          setStarMarkSeed(seed);
+          void persistStarMark({ starMarkSeed: seed, starMarkUseStar });
+        }}
+        onLockSlot={() => {
+          if (starMarkPinnedSlotId) return;
+          if (starMarkSlots.length >= VESPERFOLD_SLOT_LIMIT) {
+            toast({
+              title: 'Vault full',
+              description: `You can lock ${VESPERFOLD_SLOT_LIMIT} stars. Clear one to lock another.`,
+            });
+            return;
+          }
+          if (starMarkSlots.some((s) => s.seed === starMarkSeed)) {
+            toast({ title: 'Already locked', description: 'This fold is already in your vault.' });
+            return;
+          }
+          const stack = unpackVesperfold(starMarkSeed);
+          const nextSlots = sanitizeVesperfoldSlots([
+            ...starMarkSlots,
+            {
+              id: `vf-${starMarkSeed}-${Date.now().toString(36)}`,
+              seed: starMarkSeed,
+              lockedAt: new Date().toISOString(),
+              label: stack.label,
+            },
+          ]);
+          setStarMarkSlots(nextSlots);
+          void persistStarMark({
+            starMarkSlots: nextSlots,
+            starMarkSeed,
+            starMarkUseStar: true,
+          }).then(() => toast({ title: 'Star locked', description: stack.label }));
+        }}
+        onLoadSlot={(slot) => {
+          if (starMarkPinnedSlotId) return;
+          setStarMarkSeed(slot.seed);
+          setStarMarkUseStar(true);
+          void persistStarMark({
+            starMarkSeed: slot.seed,
+            starMarkUseStar: true,
+          }).then(() => toast({ title: 'Star loaded', description: slot.label }));
+        }}
+        onPinSlot={(slot) => {
+          setStarMarkPinnedSlotId(slot.id);
+          setStarMarkSeed(slot.seed);
+          setStarMarkUseStar(true);
+          void persistStarMark({
+            starMarkPinnedSlotId: slot.id,
+            starMarkSeed: slot.seed,
+            starMarkUseStar: true,
+          }).then(() =>
+            toast({
+              title: 'Star pinned',
+              description: `${slot.label} stays on until you unlock.`,
+            })
+          );
+        }}
+        onUnpin={() => {
+          setStarMarkPinnedSlotId(null);
+          void persistStarMark({ starMarkPinnedSlotId: null }).then(() =>
+            toast({ title: 'Star unlocked', description: 'You can randomize or switch again.' })
+          );
+        }}
+        onClearSlot={(slotId) => {
+          if (starMarkPinnedSlotId === slotId) return;
+          const nextSlots = starMarkSlots.filter((s) => s.id !== slotId);
+          setStarMarkSlots(nextSlots);
+          void persistStarMark({ starMarkSlots: nextSlots });
+        }}
+      />
+
       {/* 1. The Pressing */}
       <DeskSection
         icon={Sparkles}
@@ -525,6 +775,15 @@ export function PressDesk() {
       >
         <div className="space-y-4">
           <PressingPreview config={config} displayName={displayName} />
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 w-full gap-2 border-primary/40 bg-primary/10 font-bold uppercase tracking-widest text-primary hover:bg-primary/20 hover:text-primary"
+            disabled={!previewProfile}
+            onClick={openPreview}
+          >
+            <Eye className="h-4 w-4" /> Preview full page
+          </Button>
           <Textarea
             value={config.theme.seedText}
             onChange={(e) => update((d) => void (d.theme.seedText = e.target.value.slice(0, 280)))}
@@ -646,7 +905,7 @@ export function PressDesk() {
       <DeskSection
         icon={Camera}
         title="Hero photo"
-        hint="Custom square photo, or a collage of your album covers (pick up to 9, or leave auto)."
+        hint="Artist Home portrait — collage or custom upload. Separate from the feed star mark above."
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <div className="mx-auto w-full max-w-[11rem] shrink-0 sm:mx-0">
@@ -1275,19 +1534,30 @@ export function PressDesk() {
 
       {/* Sticky save bar */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-background/90 backdrop-blur-md">
-        <div className="container mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
-          {profileSlug && profileLive ? (
-            <Link
-              href={`/profile/${profileSlug}`}
-              className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-primary"
+        <div className="container mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 gap-1.5 border-primary/40 bg-primary/10 font-bold uppercase text-primary hover:bg-primary/20 hover:text-primary"
+              disabled={!previewProfile}
+              onClick={openPreview}
             >
-              <ExternalLink className="h-3.5 w-3.5" /> View my page
-            </Link>
-          ) : (
-            <span className="text-xs text-muted-foreground">
-              Your pressing goes live when your public profile is on
-            </span>
-          )}
+              <Eye className="h-3.5 w-3.5" /> Preview
+            </Button>
+            {profileSlug && profileLive ? (
+              <Link
+                href={`/profile/${profileSlug}`}
+                className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-primary"
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> View live page
+              </Link>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                Your pressing goes live when your public profile is on
+              </span>
+            )}
+          </div>
           <Button
             className="h-10 gap-2 px-6 font-bold uppercase"
             disabled={saving || !dirty}

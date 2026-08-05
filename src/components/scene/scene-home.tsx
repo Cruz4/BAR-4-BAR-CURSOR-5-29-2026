@@ -161,10 +161,40 @@ export function SceneHome() {
           fetchBlockedUsers(),
         ]);
         if (cancelled) return;
-        setFriendships(all);
+        // Fill missing requester slugs so friend-request names can open Artist Homes.
+        const pendingLookups = all
+          .filter((f) => f.status === 'pending' && f.requestedBy !== user.id)
+          .map((f) => ({
+            userId: f.requestedBy,
+            slug: f.profiles[f.requestedBy]?.slug,
+          }));
+        let friendshipsForUi = all;
+        if (pendingLookups.length) {
+          const { fetchPublicArtistMetas } = await import('@/lib/profile/social-client');
+          const metas = await fetchPublicArtistMetas(pendingLookups);
+          friendshipsForUi = all.map((f) => {
+            if (f.status !== 'pending' || f.requestedBy === user.id) return f;
+            const meta = metas.get(f.requestedBy);
+            if (!meta?.slug) return f;
+            const existing = f.profiles[f.requestedBy] || { name: 'Artist' };
+            return {
+              ...f,
+              profiles: {
+                ...f.profiles,
+                [f.requestedBy]: {
+                  ...existing,
+                  slug: existing.slug || meta.slug,
+                  name: existing.name || meta.displayName || 'Artist',
+                },
+              },
+            };
+          });
+        }
+        if (cancelled) return;
+        setFriendships(friendshipsForUi);
         setDiscover(discoverData);
         setBlockedIds(new Set(blocked.map((b) => b.blockedUserId)));
-        const friendIds = friendProfilesOf(all, user.id).map((f) => f.userId);
+        const friendIds = friendProfilesOf(friendshipsForUi, user.id).map((f) => f.userId);
         // Your own posts ride the feed too — it's your scene, not a stranger's.
         const feed = await fetchPostsByOwners([user.id, ...friendIds]);
         if (!cancelled) setPosts(feed);
@@ -374,12 +404,13 @@ export function SceneHome() {
               <div className="mt-3 space-y-2">
                 {incomingRequests.map((request) => {
                   const requester = request.profiles[request.requestedBy];
+                  const requesterSlug = requester?.slug;
                   return (
                     <div key={request.id} className="flex items-center gap-3">
                       <div className="min-w-0 flex-1">
-                        {requester?.slug ? (
+                        {requesterSlug ? (
                           <Link
-                            href={`/profile/${requester.slug}`}
+                            href={`/profile/${requesterSlug}`}
                             className="text-sm font-bold text-white hover:text-primary"
                           >
                             {requester?.name || 'Artist'}

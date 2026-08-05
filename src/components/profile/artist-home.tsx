@@ -50,12 +50,17 @@ import { trackGuestSignupCta } from '@/lib/guest-funnel-client';
 import { ProfileSocialLinks } from '@/components/profile/profile-social-links';
 import { ProfileMediaLightbox } from '@/components/profile/profile-media-lightbox';
 import { ArtistHomeGuestClaim } from '@/components/profile/artist-home-guest-claim';
+import { VesperfoldMark } from '@/components/profile/vesperfold-mark';
+import { normalizeVesperfoldSeed } from '@/lib/profile/vesperfold';
 import { buildLoginUrl } from '@/lib/login-links';
 
 type ArtistHomeProps = {
   profile: PublicProfileData;
   config: ArtistHomeConfig;
   isOwner: boolean;
+  /** Full-page draft preview from Edit Public Page (not the live URL). */
+  previewMode?: boolean;
+  onExitPreview?: () => void;
 };
 
 const MODULE_RENDERERS: Record<string, React.ComponentType<{ ctx: ModuleContext }>> = {
@@ -71,7 +76,13 @@ const MODULE_RENDERERS: Record<string, React.ComponentType<{ ctx: ModuleContext 
   guestbook: GuestbookModule,
 };
 
-export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
+export function ArtistHome({
+  profile,
+  config,
+  isOwner,
+  previewMode = false,
+  onExitPreview,
+}: ArtistHomeProps) {
   const { user } = useAuth();
   const [shareOpen, setShareOpen] = useState(false);
   const [dropsOpen, setDropsOpen] = useState(false);
@@ -107,6 +118,8 @@ export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
     profile.profilePhotoMode === 'custom' &&
     typeof profile.profilePhotoUrl === 'string' &&
     profile.profilePhotoUrl.trim().length > 0;
+  const useStarMark = Boolean(profile.starMarkUseStar);
+  const starSeed = normalizeVesperfoldSeed(profile.starMarkSeed ?? 0);
 
   const profileUrl =
     typeof window !== 'undefined' && profile.slug
@@ -170,19 +183,32 @@ export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
         {/* Sheet header */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-dashed border-[var(--ph-border)] pb-4">
           <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-[var(--ph-muted)] transition-colors hover:text-[var(--ph-accent)]"
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1.5 border-[var(--ph-accent)]/45 bg-[var(--ph-accent)]/12 px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ph-accent)] shadow-none hover:bg-[var(--ph-accent)]/22 hover:text-[var(--ph-accent)]"
+              asChild
             >
-              <ChevronLeft className="h-4 w-4" /> Bar 4 Bar Studio
-            </Link>
+              <Link href="/">
+                <ChevronLeft className="h-4 w-4" /> Bar 4 Bar Studio
+              </Link>
+            </Button>
             <span className="hidden font-code text-[9px] uppercase tracking-[0.3em] text-[var(--ph-muted)] sm:inline">
               {tokens.plateSerial}
               {tokens.autoDrift ? ' · restless' : ''}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            {isOwner ? (
+            {previewMode ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 gap-1.5 font-bold uppercase"
+                onClick={onExitPreview}
+              >
+                <PenLine className="h-3.5 w-3.5" /> Back to edit
+              </Button>
+            ) : isOwner ? (
               <>
                 <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
                   <Link href="/profile/customize">
@@ -334,6 +360,20 @@ export function ArtistHome({ profile, config, isOwner }: ArtistHomeProps) {
                   />
                 )}
               </button>
+              {useStarMark && (
+                <div
+                  className="pointer-events-none absolute -bottom-1 -right-1 z-10 flex h-14 w-14 items-center justify-center sm:h-16 sm:w-16"
+                  title="Feed star mark"
+                  aria-hidden
+                >
+                  <span
+                    className="flex h-full w-full items-center justify-center overflow-hidden border border-[var(--ph-border)] bg-black/70 shadow-lg"
+                    style={{ clipPath: 'polygon(50% 0%, 61.8% 35.4%, 98.2% 35.4%, 68.2% 57.6%, 79.4% 91.2%, 50% 71%, 20.6% 91.2%, 31.8% 57.6%, 1.8% 35.4%, 38.2% 35.4%)' }}
+                  >
+                    <VesperfoldMark seed={starSeed} size={64} />
+                  </span>
+                </div>
+              )}
               <ProfileSocialLinks
                 socials={config.featured.socials}
                 className="relative z-20 mt-3 pointer-events-auto"

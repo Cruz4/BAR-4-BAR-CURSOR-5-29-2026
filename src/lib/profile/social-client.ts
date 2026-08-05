@@ -505,6 +505,190 @@ export function friendProfilesOf(
     .filter((p) => p.userId);
 }
 
+export type PublicArtistMeta = {
+  userId: string;
+  slug?: string;
+  avatarUrl?: string;
+  displayName?: string;
+};
+
+function avatarFromPublicDoc(data: Record<string, unknown>): string | undefined {
+  // Prefer explicit custom photo if present on the doc.
+  if (
+    data.profilePhotoMode === 'custom' &&
+    typeof data.profilePhotoUrl === 'string' &&
+    data.profilePhotoUrl.trim()
+  ) {
+    return data.profilePhotoUrl.trim();
+  }
+  if (typeof data.avatarUrl === 'string' && data.avatarUrl.trim()) {
+    return data.avatarUrl.trim();
+  }
+  // Collage mode (or missing custom): first album cover.
+  if (data.profilePhotoMode !== 'custom') {
+    const covers = Array.isArray(data.albumCoverUrls)
+      ? data.albumCoverUrls.filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
+      : [];
+    if (covers[0]) return covers[0];
+  }
+  return undefined;
+}
+
+async function readPublicAvatarAsset(slug: string): Promise<string | undefined> {
+  try {
+    const snap = await getDoc(doc(db, 'publicProfiles', slug, 'assets', 'avatar'));
+    if (!snap.exists()) return undefined;
+    const url = (snap.data() as { url?: unknown })?.url;
+    return typeof url === 'string' && url.trim() ? url.trim() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Resolve live Artist Home slug + avatar for a set of users.
+ * Prefer known slugs (direct doc reads); fall back to userId queries.
+ */
+export async function fetchPublicArtistMetas(
+  profiles: Array<{ userId: string; slug?: string }>
+): Promise<Map<string, PublicArtistMeta>> {
+  const out = new Map<string, PublicArtistMeta>();
+  if (!profiles.length) return out;
+
+  const bySlug = profiles.filter((p) => p.slug);
+  const missing = profiles.filter((p) => !p.slug && p.userId);
+
+  await Promise.all(
+    bySlug.map(async (p) => {
+      try {
+        const [snap, assetUrl] = await Promise.all([
+          getDoc(doc(db, 'publicProfiles', p.slug!)),
+          readPublicAvatarAsset(p.slug!),
+        ]);
+        if (!snap.exists()) {
+          out.set(p.userId, { userId: p.userId, slug: p.slug, avatarUrl: assetUrl });
+          return;
+        }
+        const data = snap.data() as Record<string, unknown>;
+        out.set(p.userId, {
+          userId: p.userId,
+          slug: snap.id,
+          avatarUrl: assetUrl || avatarFromPublicDoc(data),
+          displayName:
+            typeof data.displayName === 'string' && data.displayName.trim()
+              ? data.displayName.trim()
+              : undefined,
+        });
+      } catch {
+        out.set(p.userId, { userId: p.userId, slug: p.slug });
+      }
+    })
+  );
+
+  // Firestore `in` is capped at 30 — chunk missing userIds.
+  for (let i = 0; i < missing.length; i += 30) {
+    const chunk = missing.slice(i, i + 30);
+    await Promise.all(
+      chunk.map(async (p) => {
+        try {
+          const snap = await getDocs(
+            query(collection(db, 'publicProfiles'), where('userId', '==', p.userId), limitTo(1))
+          );
+          const docSnap = snap.docs[0];
+          if (!docSnap) {
+            out.set(p.userId, { userId: p.userId });
+            return;
+          }
+          const data = docSnap.data() as Record<string, unknown>;
+          const assetUrl = await readPublicAvatarAsset(docSnap.id);
+          out.set(p.userId, {
+            userId: p.userId,
+            slug: docSnap.id,
+            avatarUrl: assetUrl || avatarFromPublicDoc(data),
+            displayName:
+              typeof data.displayName === 'string' && data.displayName.trim()
+                ? data.displayName.trim()
+                : undefined,
+          });
+        } catch {
+          out.set(p.userId, { userId: p.userId });
+        }
+      })
+    );
+  }
+
+  return out;
+}
+
+/** Single-slug avatar lookup for feed author chips — custom profile photo preferred. */
+export async function fetchPublicArtistAvatar(slug?: string): Promise<string | undefined> {
+  if (!slug) return undefined;
+  try {
+    const meta = await fetchPublicArtistAvatarMeta(slug);
+    return meta?.avatarUrl;
+  } catch {
+    return undefined;
+  }
+}
+
+export type PublicArtistAvatarMeta = {
+  avatarUrl?: string;
+  starMarkUseStar?: boolean;
+  starMarkSeed?: number;
+};
+
+/** Avatar + optional Vesperfold seed for feed chips. */
+export async function fetchPublicArtistAvatarMeta(
+  slug?: string
+): Promise<PublicArtistAvatarMeta | undefined> {
+  if (!slug) return undefined;
+  try {
+    const assetUrl = await readPublicAvatarAsset(slug);
+    const snap = await getDoc(doc(db, 'publicProfiles', slug));
+    const data = snap.exists() ? (snap.data() as Record<string, unknown>) : null;
+    const useStar = data?.starMarkUseStar === true;
+    const seed =
+      typeof data?.starMarkSeed === 'number'
+        ? data.starMarkSeed
+        : undefined;
+
+    if (useStar) {
+      return {
+        avatarUrl: assetUrl || avatarFromPublicDoc(data || {}),
+        starMarkUseStar: true,
+        starMarkSeed: seed,
+      };
+    }
+
+    if (assetUrl) {
+      return { avatarUrl: assetUrl, starMarkUseStar: false };
+    }
+
+    const res = await fetch(`/api/profile/${encodeURIComponent(slug)}/avatar`);
+    if (res.ok) {
+      const body = (await res.json()) as {
+        avatarUrl?: string | null;
+        starMarkUseStar?: boolean;
+        starMarkSeed?: number | null;
+      };
+      return {
+        avatarUrl:
+          typeof body.avatarUrl === 'string' && body.avatarUrl.trim()
+            ? body.avatarUrl.trim()
+            : undefined,
+        starMarkUseStar: Boolean(body.starMarkUseStar),
+        starMarkSeed:
+          typeof body.starMarkSeed === 'number' ? body.starMarkSeed : undefined,
+      };
+    }
+
+    if (!data) return undefined;
+    return { avatarUrl: avatarFromPublicDoc(data), starMarkUseStar: false };
+  } catch {
+    return undefined;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Guestbook
 // ---------------------------------------------------------------------------

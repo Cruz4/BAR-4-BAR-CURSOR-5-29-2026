@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -75,7 +76,23 @@ export function ActivityNavDropdown({
     setLoading(true);
     try {
       const received = await fetchActivityFeed('received', 40);
-      setItems(received.filter((e) => !e.readAt).slice(0, PREVIEW_LIMIT));
+      const unread = received.filter((e) => !e.readAt).slice(0, PREVIEW_LIMIT);
+      const lookups = unread
+        .filter((e) => !e.actorSlug && e.actorId)
+        .map((e) => ({ userId: e.actorId }));
+      if (lookups.length) {
+        const { fetchPublicArtistMetas } = await import('@/lib/profile/social-client');
+        const metas = await fetchPublicArtistMetas(lookups);
+        setItems(
+          unread.map((e) => {
+            if (e.actorSlug) return e;
+            const slug = metas.get(e.actorId)?.slug;
+            return slug ? { ...e, actorSlug: slug } : e;
+          })
+        );
+      } else {
+        setItems(unread);
+      }
     } catch {
       setItems([]);
     } finally {
@@ -201,7 +218,20 @@ export function ActivityNavDropdown({
                     </span>
                     <span className="min-w-0 flex-1 pr-7">
                       <span className="block text-[12px] leading-snug">
-                        <span className="font-bold text-foreground">{event.actorName}</span>{' '}
+                        {event.actorSlug ? (
+                          <Link
+                            href={`/profile/${event.actorSlug}`}
+                            className="font-bold text-foreground hover:underline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpen(false);
+                            }}
+                          >
+                            {event.actorName}
+                          </Link>
+                        ) : (
+                          <span className="font-bold text-foreground">{event.actorName}</span>
+                        )}{' '}
                         <span className="text-muted-foreground">
                           {activityVerb(event.type, 'received')}
                         </span>

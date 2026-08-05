@@ -11,6 +11,9 @@ export type DiscoverArtist = {
   userId: string;
   slug: string;
   displayName: string;
+  avatarUrl?: string;
+  starMarkUseStar?: boolean;
+  starMarkSeed?: number;
   rankId?: string;
   xp?: number;
   updatedAt: string;
@@ -21,6 +24,10 @@ export type DiscoverDrop = {
   type: 'album' | 'track';
   title: string;
   ownerName: string;
+  ownerSlug?: string;
+  avatarUrl?: string;
+  starMarkUseStar?: boolean;
+  starMarkSeed?: number;
   updatedAt: string;
 };
 
@@ -28,6 +35,9 @@ export type DiscoverRiser = {
   userId: string;
   displayName: string;
   profileSlug?: string;
+  avatarUrl?: string;
+  starMarkUseStar?: boolean;
+  starMarkSeed?: number;
   barsWritten7d: number;
   currentStreak: number;
 };

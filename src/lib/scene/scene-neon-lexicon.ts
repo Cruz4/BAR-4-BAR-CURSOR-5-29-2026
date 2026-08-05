@@ -1,10 +1,10 @@
 /**
- * Scene skyline neon lexicon — one deep word + gloss per calendar day.
+ * Scene skyline neon lexicon — one deep word + gloss per Scene land.
  *
  * Corpus: ~4k craft / night / writing / music words (see scene-neon-lexicon-corpus.ts).
- * Rotation: each calendar month draws a fresh pool of ~300 words (seeded by YYYY-MM).
- * Year lock: once a word is shown this calendar year, it won't return until Jan 1.
- * Sticky day: refreshing The Scene keeps today's word (no reshuffle on remount).
+ * Fresh word each visit by default. Optional lock (opt-in) keeps the word up to 24h,
+ * then auto-expires so the next land can roll a new entry.
+ * Soft year lock: prefer words not shown yet this calendar year; reset when exhausted.
  */
 
 import { SCENE_NEON_CORPUS } from '@/lib/scene/scene-neon-lexicon-corpus';
@@ -24,80 +24,30 @@ export const SCENE_NEON_LEXICON: SceneNeonEntry[] = SCENE_NEON_CORPUS.map((e) =>
   gloss: e.gloss,
 }));
 
-const MONTHLY_POOL_SIZE = 300;
-const DAY_CACHE_KEY = 'b4b-scene-neon-day-v2';
-const YEAR_USED_KEY = 'b4b-scene-neon-year-used-v2';
+/** Max duration a user lock keeps the same neon word. */
+export const SCENE_NEON_LOCK_MS = 24 * 60 * 60 * 1000;
 
-const BY_ID = new Map(SCENE_NEON_LEXICON.map((e) => [e.id, e]));
+const YEAR_USED_KEY = 'b4b-scene-neon-year-used-v3';
+/** Timed user lock — id + lockedAt; auto-clears after SCENE_NEON_LOCK_MS. */
+const PINNED_KEY = 'b4b-scene-neon-pinned-v2';
+const LEGACY_PINNED_KEY = 'b4b-scene-neon-pinned-v1';
+/** Legacy day-sticky cache from v2 — cleared on first pick. */
+const LEGACY_DAY_CACHE_KEY = 'b4b-scene-neon-day-v2';
+const LEGACY_YEAR_USED_KEY = 'b4b-scene-neon-year-used-v2';
 
-function mulberry32(seed: number) {
-  let a = seed >>> 0;
-  return function random() {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function hashString(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-function pad2(n: number): string {
-  return String(n).padStart(2, '0');
-}
-
-function getDayKey(d = new Date()): string {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-}
-
-function getMonthKey(d = new Date()): string {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
-}
+type YearUsedStore = { yearKey: string; ids: string[] };
+type PinnedStore = { id: string; lockedAt: number };
 
 function getYearKey(d = new Date()): string {
   return String(d.getFullYear());
 }
 
-function seededShuffle<T>(items: T[], seed: number): T[] {
-  const rng = mulberry32(seed);
-  const arr = items.slice();
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    const tmp = arr[i]!;
-    arr[i] = arr[j]!;
-    arr[j] = tmp;
-  }
-  return arr;
-}
-
-type DayCache = { dayKey: string; entryId: string };
-type YearUsedStore = { yearKey: string; ids: string[] };
-
-function readDayCache(): DayCache | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(DAY_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<DayCache>;
-    if (typeof parsed.dayKey !== 'string' || typeof parsed.entryId !== 'string') return null;
-    return { dayKey: parsed.dayKey, entryId: parsed.entryId };
-  } catch {
-    return null;
-  }
-}
-
-function writeDayCache(cache: DayCache) {
+function clearLegacyCaches() {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(DAY_CACHE_KEY, JSON.stringify(cache));
+    localStorage.removeItem(LEGACY_DAY_CACHE_KEY);
+    localStorage.removeItem(LEGACY_YEAR_USED_KEY);
+    localStorage.removeItem(LEGACY_PINNED_KEY);
   } catch {
     /* ignore */
   }
@@ -128,51 +78,118 @@ function writeYearUsed(yearKey: string, ids: Set<string>) {
   }
 }
 
-/** Deterministic ~300-word pool for the calendar month (same for every visitor). */
-export function getMonthlyNeonPool(
-  monthKey = getMonthKey(),
-  yearUsed: Set<string> = new Set()
-): SceneNeonEntry[] {
-  const unused = SCENE_NEON_LEXICON.filter((e) => !yearUsed.has(e.id));
-  const source = unused.length >= MONTHLY_POOL_SIZE ? unused : SCENE_NEON_LEXICON;
-  const seed = hashString(`b4b-neon-month:${monthKey}:v2`);
-  return seededShuffle(source, seed).slice(0, Math.min(MONTHLY_POOL_SIZE, source.length));
+export function getSceneNeonEntryById(id: string): SceneNeonEntry | null {
+  return SCENE_NEON_LEXICON.find((e) => e.id === id) ?? null;
+}
+
+function readPinnedStore(now = Date.now()): PinnedStore | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(PINNED_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<PinnedStore>;
+    if (typeof parsed.id !== 'string' || !parsed.id) {
+      unpinSceneNeonEntry();
+      return null;
+    }
+    if (typeof parsed.lockedAt !== 'number' || !Number.isFinite(parsed.lockedAt)) {
+      unpinSceneNeonEntry();
+      return null;
+    }
+    if (now - parsed.lockedAt >= SCENE_NEON_LOCK_MS) {
+      unpinSceneNeonEntry();
+      return null;
+    }
+    return { id: parsed.id, lockedAt: parsed.lockedAt };
+  } catch {
+    return null;
+  }
+}
+
+/** Active lock (not expired), if any. */
+export function getPinnedSceneNeonEntry(now = new Date()): SceneNeonEntry | null {
+  const store = readPinnedStore(now.getTime());
+  if (!store) return null;
+  const entry = getSceneNeonEntryById(store.id);
+  if (!entry) {
+    unpinSceneNeonEntry();
+    return null;
+  }
+  return entry;
+}
+
+export function isSceneNeonPinned(id?: string | null, now = new Date()): boolean {
+  const pinned = getPinnedSceneNeonEntry(now);
+  if (!pinned) return false;
+  if (!id) return true;
+  return pinned.id === id;
+}
+
+/** Ms remaining on the current lock, or 0 if none / expired. */
+export function sceneNeonLockRemainingMs(now = new Date()): number {
+  const store = readPinnedStore(now.getTime());
+  if (!store) return 0;
+  return Math.max(0, SCENE_NEON_LOCK_MS - (now.getTime() - store.lockedAt));
+}
+
+/** Lock a word for up to 24 hours (opt-in; survives logout until expiry / unlock). */
+export function pinSceneNeonEntry(entry: SceneNeonEntry, now = new Date()): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(
+      PINNED_KEY,
+      JSON.stringify({ id: entry.id, lockedAt: now.getTime() } satisfies PinnedStore)
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Clear the lock — next resolve can roll a fresh word. */
+export function unpinSceneNeonEntry(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(PINNED_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
- * Pick today's neon entry.
- * Same calendar day → same word (sticky). Avoids year-repeats when the corpus allows.
+ * Resolve the neon word for this Scene land.
+ * Prefer an unexpired user lock; otherwise pick a fresh word (year soft-dedupe).
+ */
+export function resolveSceneNeonEntry(now = new Date()): {
+  entry: SceneNeonEntry;
+  pinned: boolean;
+} {
+  clearLegacyCaches();
+  const pinned = getPinnedSceneNeonEntry(now);
+  if (pinned) return { entry: pinned, pinned: true };
+  return { entry: pickSceneNeonEntry(now), pinned: false };
+}
+
+/**
+ * Pick a neon entry for this Scene land.
+ * Fresh word each visit; avoids year-repeats until the corpus is exhausted.
+ * Prefer `resolveSceneNeonEntry` when the pin lock should be honored.
  */
 export function pickSceneNeonEntry(now = new Date()): SceneNeonEntry {
-  const dayKey = getDayKey(now);
-  const monthKey = getMonthKey(now);
+  clearLegacyCaches();
+
   const yearKey = getYearKey(now);
-
-  const dayCache = readDayCache();
-  if (dayCache?.dayKey === dayKey) {
-    const sticky = BY_ID.get(dayCache.entryId);
-    if (sticky) return sticky;
-  }
-
   const yearUsed = readYearUsed(yearKey);
-  const monthly = getMonthlyNeonPool(monthKey, yearUsed);
 
-  let candidates = monthly.filter((e) => !yearUsed.has(e.id));
+  let candidates = SCENE_NEON_LEXICON.filter((e) => !yearUsed.has(e.id));
   if (candidates.length === 0) {
-    candidates = SCENE_NEON_LEXICON.filter((e) => !yearUsed.has(e.id));
-  }
-  if (candidates.length === 0) {
-    // Year exhausted (unlikely with 4k corpus) — fall back to monthly pool.
-    candidates = monthly.length > 0 ? monthly : SCENE_NEON_LEXICON;
+    // Year exhausted — reshuffle from the full corpus.
+    candidates = SCENE_NEON_LEXICON;
+    yearUsed.clear();
   }
 
-  // Stable pick for this calendar day inside the candidate set.
-  const idx = hashString(`b4b-neon-day:${dayKey}:v2`) % candidates.length;
-  const entry = candidates[idx] ?? SCENE_NEON_LEXICON[0]!;
-
+  const entry = candidates[Math.floor(Math.random() * candidates.length)] ?? SCENE_NEON_LEXICON[0]!;
   yearUsed.add(entry.id);
   writeYearUsed(yearKey, yearUsed);
-  writeDayCache({ dayKey, entryId: entry.id });
   return entry;
 }
 

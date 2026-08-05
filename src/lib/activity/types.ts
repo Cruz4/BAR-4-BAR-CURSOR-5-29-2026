@@ -25,6 +25,7 @@ export type ActivityEvent = {
   /** The other party when direction is "given" (who received the action). */
   targetUserId?: string;
   targetName?: string;
+  targetSlug?: string;
   postId?: string;
   shareId?: string;
   preview?: string;

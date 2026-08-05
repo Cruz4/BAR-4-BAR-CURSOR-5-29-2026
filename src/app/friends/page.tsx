@@ -5,10 +5,11 @@
  * Also: search/add artists and copy your referral invite from this page.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Ban, Loader2, UserMinus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { StudioLoader } from '@/components/studio-loader';
 import { FindArtistsPanel } from '@/components/profile/find-artists-panel';
 import { useAuth } from '@/hooks/use-auth';
@@ -17,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   fetchBlockedUsers,
   fetchFriendships,
+  fetchPublicArtistMetas,
   friendProfilesOf,
   removeFriendship,
   unblockUser,
@@ -25,24 +27,47 @@ import {
 } from '@/lib/profile/social-client';
 import { cn } from '@/lib/utils';
 
+type FriendRow = {
+  userId: string;
+  name: string;
+  slug?: string;
+  avatarUrl?: string;
+};
+
 export default function FriendsPage() {
   const { user, loading: authLoading } = useAuth();
   const { summary } = useGamification();
   const { toast } = useToast();
   const [friendships, setFriendships] = useState<Friendship[]>([]);
   const [blocked, setBlocked] = useState<BlockedUser[]>([]);
+  const [friends, setFriends] = useState<FriendRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [tab, setTab] = useState<'friends' | 'blocked'>('friends');
 
-  const viewerSlug =
-    summary.publicProfile && summary.profileSlug ? summary.profileSlug : undefined;
+  // Keep slug even when profile isn't live so friendship docs stay linkable later.
+  const viewerSlug = summary.profileSlug || undefined;
 
   const reload = async () => {
     if (!user?.id) return;
     const [all, blocks] = await Promise.all([fetchFriendships(user.id), fetchBlockedUsers()]);
-    setFriendships(all.filter((f) => f.status === 'accepted'));
+    const accepted = all.filter((f) => f.status === 'accepted');
+    setFriendships(accepted);
     setBlocked(blocks);
+
+    const base = friendProfilesOf(accepted, user.id);
+    const metas = await fetchPublicArtistMetas(base);
+    setFriends(
+      base.map((f) => {
+        const meta = metas.get(f.userId);
+        return {
+          userId: f.userId,
+          name: meta?.displayName || f.name,
+          slug: meta?.slug || f.slug,
+          avatarUrl: meta?.avatarUrl,
+        };
+      })
+    );
   };
 
   useEffect(() => {
@@ -60,11 +85,6 @@ export default function FriendsPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
-
-  const friends = useMemo(
-    () => (user?.id ? friendProfilesOf(friendships, user.id) : []),
-    [friendships, user?.id]
-  );
 
   if (authLoading) return <StudioLoader size="lg" fullscreen />;
 
@@ -147,6 +167,20 @@ export default function FriendsPage() {
           <ul className="space-y-2">
             {friends.map((friend) => {
               const friendship = friendships.find((f) => f.uids.includes(friend.userId));
+              const initial = (friend.name.trim().charAt(0) || '?').toUpperCase();
+              const profileInner = (
+                <>
+                  <Avatar className="h-9 w-9 border border-white/10">
+                    {friend.avatarUrl ? <AvatarImage src={friend.avatarUrl} alt="" /> : null}
+                    <AvatarFallback className="bg-primary/15 text-xs font-bold text-primary">
+                      {initial}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="min-w-0 truncate text-sm font-bold text-white group-hover:text-primary">
+                    {friend.name}
+                  </span>
+                </>
+              );
               return (
                 <li
                   key={friend.userId}
@@ -156,12 +190,12 @@ export default function FriendsPage() {
                     {friend.slug ? (
                       <Link
                         href={`/profile/${friend.slug}`}
-                        className="block truncate text-sm font-bold text-white hover:text-primary"
+                        className="group flex items-center gap-3"
                       >
-                        {friend.name}
+                        {profileInner}
                       </Link>
                     ) : (
-                      <span className="block truncate text-sm font-bold text-white">{friend.name}</span>
+                      <div className="flex items-center gap-3">{profileInner}</div>
                     )}
                   </div>
                   {friendship && (
@@ -207,7 +241,16 @@ export default function FriendsPage() {
             >
               <Ban className="h-4 w-4 shrink-0 text-muted-foreground" />
               <div className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-bold text-white">{entry.blockedName}</span>
+                {entry.blockedSlug ? (
+                  <Link
+                    href={`/profile/${entry.blockedSlug}`}
+                    className="block truncate text-sm font-bold text-white hover:text-primary"
+                  >
+                    {entry.blockedName}
+                  </Link>
+                ) : (
+                  <span className="block truncate text-sm font-bold text-white">{entry.blockedName}</span>
+                )}
               </div>
               <Button
                 size="sm"

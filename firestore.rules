@@ -147,6 +147,13 @@ service cloud.firestore {
     match /publicProfiles/{slug} {
       allow read: if true;
       allow write: if false;
+
+      // Compact feed avatar (custom photo or collage cover) — separate from the
+      // main doc so Artist Home banners don't blow the 1MB limit.
+      match /assets/{assetId} {
+        allow read: if true;
+        allow write: if false;
+      }
     }
 
     // Artist Home wall/feed posts — public read, owner writes

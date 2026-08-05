@@ -51,6 +51,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
           userId: data.userId,
           profilePhotoMode: data.profilePhotoMode === 'custom' ? 'custom' : 'collage',
           profilePhotoUrl: data.profilePhotoUrl || null,
+          starMarkUseStar: Boolean(data.starMarkUseStar),
+          starMarkSeed:
+            typeof data.starMarkSeed === 'number' ? data.starMarkSeed : undefined,
           referralCode:
             typeof data.referralCode === 'string' && data.referralCode.trim()
               ? data.referralCode.trim().toUpperCase()

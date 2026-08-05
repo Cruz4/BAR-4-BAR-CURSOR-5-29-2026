@@ -32,10 +32,36 @@ import {
   acceptFriendRequest,
   friendshipIdFor,
   removeFriendship,
+  fetchPublicArtistMetas,
 } from '@/lib/profile/social-client';
 import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
 
 type TabId = 'inbox' | 'requests' | 'sent';
+
+async function withResolvedProfileLinks(events: ActivityEvent[]): Promise<ActivityEvent[]> {
+  const lookups: Array<{ userId: string; slug?: string }> = [];
+  for (const event of events) {
+    if (event.direction === 'received' && !event.actorSlug && event.actorId) {
+      lookups.push({ userId: event.actorId });
+    }
+    if (event.direction === 'given' && !event.targetSlug && event.targetUserId) {
+      lookups.push({ userId: event.targetUserId });
+    }
+  }
+  if (!lookups.length) return events;
+  const metas = await fetchPublicArtistMetas(lookups);
+  return events.map((event) => {
+    if (event.direction === 'received' && !event.actorSlug) {
+      const slug = metas.get(event.actorId)?.slug;
+      return slug ? { ...event, actorSlug: slug } : event;
+    }
+    if (event.direction === 'given' && !event.targetSlug && event.targetUserId) {
+      const slug = metas.get(event.targetUserId)?.slug;
+      return slug ? { ...event, targetSlug: slug } : event;
+    }
+    return event;
+  });
+}
 
 function TypeIcon({ type }: { type: ActivityType }) {
   const className = 'h-4 w-4 shrink-0';
@@ -92,15 +118,25 @@ function ActivityRow({
   viewerSlug?: string;
 }) {
   const unread = event.direction === 'received' && !event.readAt;
-  const name =
+  const primaryName =
     event.direction === 'received' ? event.actorName : event.targetName || event.actorName;
-  const slug = event.direction === 'received' ? event.actorSlug : undefined;
+  const primarySlug =
+    event.direction === 'received' ? event.actorSlug : event.targetSlug || undefined;
   const href = activityOpenHref(event, viewerSlug);
   const showRequestActions =
     event.direction === 'received' &&
     event.type === 'friend_request' &&
     onRespondRequest &&
     !requestResolved;
+
+  const nameLink = (label: string, slug?: string) =>
+    slug ? (
+      <Link href={`/profile/${slug}`} className="font-bold text-foreground hover:underline">
+        {label}
+      </Link>
+    ) : (
+      <span className="font-bold text-foreground">{label}</span>
+    );
 
   return (
     <div
@@ -114,22 +150,17 @@ function ActivityRow({
       </div>
       <div className="min-w-0 flex-1 space-y-1.5">
         <p className="text-sm leading-snug">
-          {slug ? (
-            <Link href={`/profile/${slug}`} className="font-bold text-foreground hover:underline">
-              {name}
-            </Link>
+          {event.direction === 'received' ? (
+            <>
+              {nameLink(primaryName, primarySlug)}{' '}
+              <span className="text-muted-foreground">{activityVerb(event.type, event.direction)}</span>
+            </>
           ) : (
-            <span className="font-bold text-foreground">{name}</span>
-          )}{' '}
-          <span className="text-muted-foreground">
-            {activityVerb(event.type, event.direction)}
-            {event.direction === 'given' && event.targetName ? (
-              <>
-                {' '}
-                <span className="text-foreground/90">{event.targetName}</span>
-              </>
-            ) : null}
-          </span>
+            <span className="text-muted-foreground">
+              {activityVerb(event.type, event.direction)}{' '}
+              {nameLink(primaryName, primarySlug)}
+            </span>
+          )}
         </p>
         {event.preview ? (
           <p className="line-clamp-2 font-code text-[11px] text-muted-foreground/90">
@@ -202,7 +233,7 @@ function ActivityPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const viewerSlug = summary?.profileSlug;
+  const viewerSlug = summary?.profileSlug || undefined;
   const initialTab = (searchParams.get('tab') as TabId) || 'inbox';
   const [tab, setTab] = useState<TabId>(
     initialTab === 'requests' || initialTab === 'sent' ? initialTab : 'inbox'
@@ -223,8 +254,12 @@ function ActivityPageInner() {
         fetchActivityFeed('received'),
         fetchActivityFeed('given'),
       ]);
-      setInbox(received);
-      setSent(given);
+      const [inboxResolved, sentResolved] = await Promise.all([
+        withResolvedProfileLinks(received),
+        withResolvedProfileLinks(given),
+      ]);
+      setInbox(inboxResolved);
+      setSent(sentResolved);
     } finally {
       setLoading(false);
     }

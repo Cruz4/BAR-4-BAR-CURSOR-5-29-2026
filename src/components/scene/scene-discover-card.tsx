@@ -7,11 +7,12 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Dna, Flame, Radio, TrendingUp, UserRound } from 'lucide-react';
+import { Dna, Flame, Radio, TrendingUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PostCard } from '@/components/profile/post-card';
+import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { cn } from '@/lib/utils';
 import type { DiscoverCard } from '@/lib/scene/discover-client';
 
@@ -47,9 +48,15 @@ export function SceneDiscoverCard({ card, viewerSlug }: { card: DiscoverCard; vi
       <Card className="border-sky-500/25 bg-gradient-to-r from-sky-500/[0.07] via-card/85 to-card/70 p-4">
         <DiscoverTag label="Recently live" icon={Radio} tone="text-sky-400/90" />
         <div className="mt-2.5 flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sky-400/45 bg-sky-500/15 text-sky-400">
-            <UserRound className="h-4 w-4" />
-          </span>
+          <ArtistStarAvatar
+            name={artist.displayName}
+            avatarUrl={artist.avatarUrl}
+            useStarMark={artist.starMarkUseStar}
+            starMarkSeed={artist.starMarkSeed}
+            href={`/profile/${artist.slug}`}
+            size={56}
+            toneClass="bg-sky-500/25 text-sky-300"
+          />
           <div className="min-w-0 flex-1">
             <Link
               href={`/profile/${artist.slug}`}
@@ -71,13 +78,20 @@ export function SceneDiscoverCard({ card, viewerSlug }: { card: DiscoverCard; vi
 
   if (card.kind === 'drop') {
     const { drop } = card;
+    const ownerHref = drop.ownerSlug ? `/profile/${drop.ownerSlug}` : undefined;
     return (
       <Card className="border-primary/25 bg-gradient-to-r from-primary/[0.07] via-card/85 to-card/70 p-4">
         <DiscoverTag label="Live DNA Drop" icon={Dna} tone="text-primary/90" />
         <div className="mt-2.5 flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/45 bg-primary/15 text-primary">
-            <Dna className="h-4 w-4" />
-          </span>
+          <ArtistStarAvatar
+            name={drop.ownerName}
+            avatarUrl={drop.avatarUrl}
+            useStarMark={drop.starMarkUseStar}
+            starMarkSeed={drop.starMarkSeed}
+            href={ownerHref}
+            size={56}
+            toneClass="bg-primary/25 text-primary"
+          />
           <div className="min-w-0 flex-1">
             <Link
               href={`/share/${drop.shareId}`}
@@ -86,7 +100,14 @@ export function SceneDiscoverCard({ card, viewerSlug }: { card: DiscoverCard; vi
               {drop.title}
             </Link>
             <p className="font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
-              {drop.type === 'album' ? 'Album' : 'Track'} DNA by {drop.ownerName}
+              {drop.type === 'album' ? 'Album' : 'Track'} DNA by{' '}
+              {ownerHref ? (
+                <Link href={ownerHref} className="text-foreground/90 hover:text-primary">
+                  {drop.ownerName}
+                </Link>
+              ) : (
+                drop.ownerName
+              )}
               {drop.updatedAt ? ` · ${timeAgo(drop.updatedAt)}` : ''}
             </p>
           </div>
@@ -113,6 +134,15 @@ export function SceneDiscoverCard({ card, viewerSlug }: { card: DiscoverCard; vi
             <span className="w-5 shrink-0 text-center font-code text-[10px] font-bold text-amber-400/80">
               {i + 1}
             </span>
+            <ArtistStarAvatar
+              name={riser.displayName}
+              avatarUrl={riser.avatarUrl}
+              useStarMark={riser.starMarkUseStar}
+              starMarkSeed={riser.starMarkSeed}
+              href={riser.profileSlug ? `/profile/${riser.profileSlug}` : undefined}
+              size={44}
+              toneClass="bg-amber-500/25 text-amber-300"
+            />
             {riser.profileSlug ? (
               <Link
                 href={`/profile/${riser.profileSlug}`}

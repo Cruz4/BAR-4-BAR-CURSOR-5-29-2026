@@ -46,6 +46,21 @@ export type GamificationSummary = {
    * When empty/absent, newest album covers are used automatically.
    */
   profileCollageAlbumIds?: string[];
+  /**
+   * Vesperfold Mark — generative feed-star identity (~54M looks).
+   * When `starMarkUseStar` is true, feed chips render the star (not a photo).
+   * Artist Home hero photo stays independent; a small star badge may appear there.
+   */
+  starMarkUseStar?: boolean;
+  starMarkSeed?: number;
+  /** When set, this vault slot stays the active star until unlocked (survives logout). */
+  starMarkPinnedSlotId?: string | null;
+  starMarkSlots?: Array<{
+    id: string;
+    seed: number;
+    lockedAt: string;
+    label: string;
+  }>;
   leaderboardHidden: boolean;
   bonusInkGrantedThisMonth: number;
   bonusInkMonthKey: string;

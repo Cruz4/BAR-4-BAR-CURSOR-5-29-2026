@@ -58,6 +58,15 @@ export async function patchGamificationSettings(settings: {
   profilePhotoMode?: 'collage' | 'custom';
   profilePhotoUrl?: string | null;
   profileCollageAlbumIds?: string[] | null;
+  starMarkUseStar?: boolean;
+  starMarkSeed?: number;
+  starMarkSlots?: Array<{
+    id: string;
+    seed: number;
+    lockedAt: string;
+    label: string;
+  }> | null;
+  starMarkPinnedSlotId?: string | null;
 }) {
   const { user, token } = await authHeaders();
   const res = await fetch('/api/gamification/settings', {

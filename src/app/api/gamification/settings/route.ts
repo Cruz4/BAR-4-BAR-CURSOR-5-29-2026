@@ -14,6 +14,10 @@ export async function PATCH(req: Request) {
       profilePhotoMode,
       profilePhotoUrl,
       profileCollageAlbumIds,
+      starMarkUseStar,
+      starMarkSeed,
+      starMarkSlots,
+      starMarkPinnedSlotId,
     } = await req.json();
     if (!userId) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
@@ -35,6 +39,10 @@ export async function PATCH(req: Request) {
       profilePhotoMode,
       profilePhotoUrl,
       profileCollageAlbumIds,
+      starMarkUseStar,
+      starMarkSeed,
+      starMarkSlots,
+      starMarkPinnedSlotId,
     });
     return NextResponse.json({ summary });
   } catch (err) {

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
+import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { EmbedPlayer } from '@/components/profile/embed-player';
 import { PostShareDialog } from '@/components/profile/post-share-dialog';
 import {
@@ -19,6 +20,7 @@ import {
   fetchCommentCount,
   fetchHasLiked,
   fetchLikeCount,
+  fetchPublicArtistAvatarMeta,
   likePost,
   unlikePost,
   type PostComment,
@@ -53,6 +55,9 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted }: Po
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [authorAvatarUrl, setAuthorAvatarUrl] = useState<string | undefined>(undefined);
+  const [authorStarSeed, setAuthorStarSeed] = useState<number | undefined>(undefined);
+  const [authorUseStar, setAuthorUseStar] = useState(false);
 
   const isOwner = Boolean(user?.id && user.id === post.ownerId);
 
@@ -61,6 +66,25 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted }: Po
     void fetchCommentCount(post.id).then(setCommentCount).catch(() => undefined);
     void fetchHasLiked(post.id).then(setLiked).catch(() => undefined);
   }, [post.id]);
+
+  useEffect(() => {
+    if (!showAuthor || !post.ownerSlug) {
+      setAuthorAvatarUrl(undefined);
+      setAuthorStarSeed(undefined);
+      setAuthorUseStar(false);
+      return;
+    }
+    let cancelled = false;
+    void fetchPublicArtistAvatarMeta(post.ownerSlug).then((meta) => {
+      if (cancelled || !meta) return;
+      setAuthorAvatarUrl(meta.avatarUrl);
+      setAuthorUseStar(Boolean(meta.starMarkUseStar));
+      setAuthorStarSeed(meta.starMarkSeed);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [showAuthor, post.ownerSlug]);
 
   const toggleLike = async () => {
     if (!user) {
@@ -136,18 +160,33 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted }: Po
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           {showAuthor &&
-            (post.ownerSlug ? (
-              <Link
-                href={`/profile/${post.ownerSlug}`}
-                className="text-xs font-bold uppercase tracking-widest text-[var(--ph-accent,#7dd3fc)] hover:underline"
-              >
-                {post.ownerName}
-              </Link>
-            ) : (
-              <span className="text-xs font-bold uppercase tracking-widest text-[var(--ph-accent,#7dd3fc)]">
-                {post.ownerName}
-              </span>
-            ))}
+            (() => {
+              const chip = (
+                <span className="inline-flex items-center gap-2.5">
+                  <ArtistStarAvatar
+                    name={post.ownerName}
+                    avatarUrl={authorAvatarUrl}
+                    useStarMark={authorUseStar}
+                    starMarkSeed={authorStarSeed}
+                    size={56}
+                    toneClass="bg-[var(--ph-accent,#7dd3fc)]/25 text-[var(--ph-accent,#7dd3fc)]"
+                  />
+                  <span className="text-xs font-bold uppercase tracking-widest text-[var(--ph-accent,#7dd3fc)]">
+                    {post.ownerName}
+                  </span>
+                </span>
+              );
+              return post.ownerSlug ? (
+                <Link
+                  href={`/profile/${post.ownerSlug}`}
+                  className="inline-flex hover:opacity-90 hover:underline"
+                >
+                  {chip}
+                </Link>
+              ) : (
+                chip
+              );
+            })()}
           <p className="text-[10px] uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
             {timeAgo(post.createdAt)}
           </p>

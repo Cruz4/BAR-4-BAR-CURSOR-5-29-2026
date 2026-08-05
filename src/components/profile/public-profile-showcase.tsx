@@ -42,6 +42,8 @@ export type PublicProfileData = {
   slug?: string;
   /** Owner's referral code — used when guests claim a profile from this page. */
   referralCode?: string;
+  starMarkUseStar?: boolean;
+  starMarkSeed?: number;
   /** Live public DNA Drops (share docs still online). */
   liveDnaDrops?: Array<{
     shareId: string;
@@ -155,12 +157,16 @@ export function PublicProfileShowcase({
 
       <div className="relative z-10 mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-10 pt-6 sm:pt-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1.5 border-primary/45 bg-primary/12 px-3 text-[11px] font-bold uppercase tracking-widest text-primary shadow-none hover:bg-primary/22 hover:text-primary"
+            asChild
           >
-            <ChevronLeft className="h-4 w-4" /> Bar 4 Bar Studio
-          </Link>
+            <Link href="/">
+              <ChevronLeft className="h-4 w-4" /> Bar 4 Bar Studio
+            </Link>
+          </Button>
 
           {isOwner && (
             <Button

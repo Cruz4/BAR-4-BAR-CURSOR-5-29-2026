@@ -79,6 +79,7 @@ function eventFromDoc(id: string, data: Record<string, unknown>): ActivityEvent 
     actorSlug: typeof data.actorSlug === 'string' ? data.actorSlug : undefined,
     targetUserId: typeof data.targetUserId === 'string' ? data.targetUserId : undefined,
     targetName: typeof data.targetName === 'string' ? data.targetName : undefined,
+    targetSlug: typeof data.targetSlug === 'string' ? data.targetSlug : undefined,
     postId: typeof data.postId === 'string' ? data.postId : undefined,
     shareId: typeof data.shareId === 'string' ? data.shareId : undefined,
     preview: typeof data.preview === 'string' ? data.preview : undefined,

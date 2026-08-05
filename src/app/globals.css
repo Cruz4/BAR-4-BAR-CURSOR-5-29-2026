@@ -1992,7 +1992,8 @@
   }
 
   /* Daytime neon — slightly brighter so it stays readable on blue sky */
-  .scene-block[data-phase='day'] .scene-block-neon-text {
+  .scene-block[data-phase='day'] .scene-block-neon-text,
+  .scene-block-neon[data-phase='day'] .scene-block-neon-text {
     color: rgba(192, 38, 211, 0.95);
     text-shadow:
       0 0 8px rgba(232, 121, 249, 0.55),
@@ -2000,12 +2001,14 @@
       0 1px 0 rgba(255, 255, 255, 0.35);
   }
 
-  .scene-block[data-phase='day'] .scene-block-neon-pron {
+  .scene-block[data-phase='day'] .scene-block-neon-pron,
+  .scene-block-neon[data-phase='day'] .scene-block-neon-pron {
     color: rgba(126, 34, 140, 0.88);
     text-shadow: 0 0 6px rgba(232, 121, 249, 0.2);
   }
 
-  .scene-block[data-phase='day'] .scene-block-neon-gloss {
+  .scene-block[data-phase='day'] .scene-block-neon-gloss,
+  .scene-block-neon[data-phase='day'] .scene-block-neon-gloss {
     color: rgba(88, 50, 120, 0.72);
   }
 

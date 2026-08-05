@@ -23,6 +23,12 @@ import type { AnalyticsEventName } from '@/lib/analytics-events';
 import { countLinesWithSource } from '@/lib/gamification/line-attribution';
 import { countNonEmptyLines, rhymeBarsToLines } from '@/lib/lyrics-units';
 import { ensureReferralCode } from '@/lib/server/referrals';
+import {
+  normalizeVesperfoldSeed,
+  sanitizeVesperfoldSlots,
+  vesperfoldDataUrl,
+  type VesperfoldSlot,
+} from '@/lib/profile/vesperfold';
 
 export const MAX_DAILY_XP = 500;
 
@@ -63,6 +69,13 @@ function mergeSummary(existing: Partial<GamificationSummary>): GamificationSumma
     weeklyChallengeProgress: raw.weeklyChallengeProgress || {},
     monthlyChallengeProgress: raw.monthlyChallengeProgress || {},
     personalBests: { ...DEFAULT_GAMIFICATION_SUMMARY.personalBests, ...(raw.personalBests || {}) },
+    starMarkUseStar: Boolean(raw.starMarkUseStar),
+    starMarkSeed: normalizeVesperfoldSeed(raw.starMarkSeed ?? 0),
+    starMarkSlots: sanitizeVesperfoldSlots(raw.starMarkSlots),
+    starMarkPinnedSlotId:
+      typeof raw.starMarkPinnedSlotId === 'string' && raw.starMarkPinnedSlotId.trim()
+        ? raw.starMarkPinnedSlotId.trim().slice(0, 64)
+        : null,
     // New accounts default private. Existing docs without the field used the old
     // default (visible) — keep them on the board until they opt out.
     leaderboardHidden:
@@ -322,7 +335,14 @@ async function syncPublicProfile(
   const db = await getDb();
   if (!summary.publicProfile || !summary.profileSlug) {
     const snap = await db.collection('publicProfiles').where('userId', '==', uid).limit(1).get();
-    for (const doc of snap.docs) await doc.ref.delete();
+    for (const docSnap of snap.docs) {
+      try {
+        await docSnap.ref.collection('assets').doc('avatar').delete();
+      } catch {
+        /* ignore */
+      }
+      await docSnap.ref.delete();
+    }
     return;
   }
 
@@ -345,7 +365,10 @@ async function syncPublicProfile(
       badgeIds,
       albumCoverUrls,
       profilePhotoMode,
+      // Full custom hero stays off the main public doc (size) — see syncPublicAvatarAsset.
       profilePhotoUrl: FieldValue.delete(),
+      starMarkUseStar: Boolean(summary.starMarkUseStar),
+      starMarkSeed: normalizeVesperfoldSeed(summary.starMarkSeed ?? 0),
       ...(summary.profileCollageAlbumIds?.length
         ? { profileCollageAlbumIds: summary.profileCollageAlbumIds }
         : { profileCollageAlbumIds: FieldValue.delete() }),
@@ -354,6 +377,7 @@ async function syncPublicProfile(
     },
     { merge: true }
   );
+  await syncPublicAvatarAsset(summary.profileSlug, summary, albumCoverUrls);
 }
 
 export async function processGamificationEvent(
@@ -662,6 +686,10 @@ export async function updateGamificationSettings(
     profilePhotoUrl?: string | null;
     /** Ordered album IDs for collage (max 9). Pass `null` or `[]` to clear (auto covers). */
     profileCollageAlbumIds?: string[] | null;
+    starMarkUseStar?: boolean;
+    starMarkSeed?: number;
+    starMarkSlots?: VesperfoldSlot[] | null;
+    starMarkPinnedSlotId?: string | null;
   }
 ): Promise<GamificationSummary> {
   const db = await getDb();
@@ -686,6 +714,45 @@ export async function updateGamificationSettings(
   } else if (typeof settings.profilePhotoUrl === 'string' && settings.profilePhotoUrl.trim()) {
     summary.profilePhotoUrl = settings.profilePhotoUrl.trim();
     summary.profilePhotoMode = 'custom';
+  }
+  if (typeof settings.starMarkUseStar === 'boolean') {
+    summary.starMarkUseStar = settings.starMarkUseStar;
+  }
+  if (settings.starMarkSeed !== undefined) {
+    summary.starMarkSeed = normalizeVesperfoldSeed(settings.starMarkSeed);
+  }
+  if (settings.starMarkSlots === null) {
+    summary.starMarkSlots = [];
+    summary.starMarkPinnedSlotId = null;
+  } else if (Array.isArray(settings.starMarkSlots)) {
+    summary.starMarkSlots = sanitizeVesperfoldSlots(settings.starMarkSlots);
+    if (
+      summary.starMarkPinnedSlotId &&
+      !summary.starMarkSlots.some((s) => s.id === summary.starMarkPinnedSlotId)
+    ) {
+      summary.starMarkPinnedSlotId = null;
+    }
+  }
+  if (settings.starMarkPinnedSlotId === null) {
+    summary.starMarkPinnedSlotId = null;
+  } else if (typeof settings.starMarkPinnedSlotId === 'string') {
+    const pin = settings.starMarkPinnedSlotId.trim().slice(0, 64);
+    const slots = summary.starMarkSlots || [];
+    if (pin && slots.some((s) => s.id === pin)) {
+      summary.starMarkPinnedSlotId = pin;
+    } else {
+      summary.starMarkPinnedSlotId = null;
+    }
+  }
+  // Pinned vault star wins until unlocked — survives logout via summary doc.
+  if (summary.starMarkPinnedSlotId) {
+    const pinned = (summary.starMarkSlots || []).find((s) => s.id === summary.starMarkPinnedSlotId);
+    if (pinned) {
+      summary.starMarkSeed = normalizeVesperfoldSeed(pinned.seed);
+      summary.starMarkUseStar = true;
+    } else {
+      summary.starMarkPinnedSlotId = null;
+    }
   }
   let clearCollageIds = false;
   if (settings.profileCollageAlbumIds === null) {
@@ -715,6 +782,9 @@ export async function updateGamificationSettings(
   }
   if (clearCollageIds) {
     deleteFields.profileCollageAlbumIds = FieldValue.delete();
+  }
+  if (settings.starMarkPinnedSlotId === null) {
+    deleteFields.starMarkPinnedSlotId = FieldValue.delete();
   }
   if (Object.keys(deleteFields).length > 0) {
     await summaryRef.set(
@@ -1039,6 +1109,8 @@ export async function getPublicProfile(slug: string) {
     albumCoverUrls,
     profilePhotoMode,
     profilePhotoUrl,
+    starMarkUseStar: Boolean(summary.starMarkUseStar),
+    starMarkSeed: normalizeVesperfoldSeed(summary.starMarkSeed ?? 0),
     liveDnaDrops,
     ...(referralCode ? { referralCode } : {}),
   };
@@ -1257,10 +1329,172 @@ export async function searchPublicArtists(
 // Scene home Discover stream — light public summaries, no heavy payloads.
 // ---------------------------------------------------------------------------
 
+/**
+ * Public feed/Discover avatar lives on a small subdoc so the main
+ * publicProfiles/{slug} doc stays under Firestore’s size limit (Artist Home
+ * banners + full custom hero don’t fit together).
+ */
+async function syncPublicAvatarAsset(
+  slug: string,
+  summary: GamificationSummary,
+  albumCoverUrls: string[]
+): Promise<void> {
+  const db = await getDb();
+  const avatarRef = db.doc(`publicProfiles/${slug}/assets/avatar`);
+  if (summary.starMarkUseStar) {
+    const seed = normalizeVesperfoldSeed(summary.starMarkSeed ?? 0);
+    await avatarRef.set({
+      url: vesperfoldDataUrl(seed, 128),
+      source: 'vesperfold',
+      starMarkSeed: seed,
+      updatedAt: new Date().toISOString(),
+    });
+    return;
+  }
+  const custom =
+    summary.profilePhotoMode === 'custom' &&
+    typeof summary.profilePhotoUrl === 'string' &&
+    summary.profilePhotoUrl.trim().length > 0
+      ? summary.profilePhotoUrl.trim()
+      : null;
+  const collage = albumCoverUrls.find((u) => typeof u === 'string' && u.trim().length > 0)?.trim();
+  const url = custom || collage;
+  if (!url) {
+    try {
+      await avatarRef.delete();
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
+  await avatarRef.set({
+    url,
+    source: custom ? 'custom' : 'collage',
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+function albumCoverAvatar(data: Record<string, unknown>): string | undefined {
+  const covers = Array.isArray(data.albumCoverUrls)
+    ? data.albumCoverUrls.filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
+    : [];
+  return covers[0];
+}
+
+/** Prefer custom profile photo; fall back to collage cover. */
+export async function resolvePublicAvatar(
+  slug: string,
+  data: Record<string, unknown>
+): Promise<string | undefined> {
+  const db = await getDb();
+  const avatarSnap = await db.doc(`publicProfiles/${slug}/assets/avatar`).get();
+  if (avatarSnap.exists) {
+    const url = avatarSnap.data()?.url;
+    if (typeof url === 'string' && url.trim()) return url.trim();
+  }
+
+  const mode = data.profilePhotoMode === 'custom' ? 'custom' : 'collage';
+  const userId = typeof data.userId === 'string' ? data.userId : '';
+
+  if (data.starMarkUseStar === true) {
+    const seed = normalizeVesperfoldSeed(
+      typeof data.starMarkSeed === 'number' ? data.starMarkSeed : 0
+    );
+    const url = vesperfoldDataUrl(seed, 128);
+    try {
+      await db.doc(`publicProfiles/${slug}/assets/avatar`).set({
+        url,
+        source: 'vesperfold',
+        starMarkSeed: seed,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch {
+      /* ignore */
+    }
+    return url;
+  }
+
+  if (mode === 'custom' && userId) {
+    // Backfill for artists who set a custom photo before assets/avatar existed.
+    const summarySnap = await db.doc(`users/${userId}/gamification/summary`).get();
+    const summary = mergeSummary((summarySnap.data() as Partial<GamificationSummary>) || {});
+    const photo =
+      summary.profilePhotoMode === 'custom' && typeof summary.profilePhotoUrl === 'string'
+        ? summary.profilePhotoUrl.trim()
+        : '';
+    if (photo) {
+      try {
+        await db.doc(`publicProfiles/${slug}/assets/avatar`).set({
+          url: photo,
+          source: 'custom',
+          updatedAt: new Date().toISOString(),
+        });
+      } catch {
+        /* ignore backfill write failures */
+      }
+      return photo;
+    }
+  }
+
+  return albumCoverAvatar(data);
+}
+
+/** Resolve feed/Discover avatar for a public slug (custom photo preferred). */
+export async function getPublicArtistAvatar(slug: string): Promise<string | undefined> {
+  const clean = slug.trim();
+  if (!clean) return undefined;
+  const db = await getDb();
+  const snap = await db.doc(`publicProfiles/${clean}`).get();
+  if (!snap.exists) return undefined;
+  return resolvePublicAvatar(clean, snap.data() as Record<string, unknown>);
+}
+
+/** Batch-resolve public slug + avatar for a set of user ids. */
+async function resolvePublicAvatarsByUserIds(
+  userIds: string[]
+): Promise<
+  Map<string, { slug?: string; avatarUrl?: string; starMarkUseStar?: boolean; starMarkSeed?: number }>
+> {
+  const out = new Map<
+    string,
+    { slug?: string; avatarUrl?: string; starMarkUseStar?: boolean; starMarkSeed?: number }
+  >();
+  const unique = [...new Set(userIds.filter(Boolean))];
+  if (!unique.length) return out;
+  const db = await getDb();
+  for (let i = 0; i < unique.length; i += 30) {
+    const chunk = unique.slice(i, i + 30);
+    const snap = await db.collection('publicProfiles').where('userId', 'in', chunk).get();
+    await Promise.all(
+      snap.docs.map(async (docSnap) => {
+        const data = docSnap.data() as Record<string, unknown>;
+        const userId = typeof data.userId === 'string' ? data.userId : '';
+        if (!userId) return;
+        const avatarUrl = await resolvePublicAvatar(docSnap.id, data);
+        const useStar = data.starMarkUseStar === true;
+        out.set(userId, {
+          slug: docSnap.id,
+          avatarUrl,
+          starMarkUseStar: useStar,
+          starMarkSeed: useStar
+            ? normalizeVesperfoldSeed(
+                typeof data.starMarkSeed === 'number' ? data.starMarkSeed : 0
+              )
+            : undefined,
+        });
+      })
+    );
+  }
+  return out;
+}
+
 export type DiscoverArtistSummary = {
   userId: string;
   slug: string;
   displayName: string;
+  avatarUrl?: string;
+  starMarkSeed?: number;
+  starMarkUseStar?: boolean;
   rankId?: string;
   xp?: number;
   updatedAt: string;
@@ -1277,25 +1511,54 @@ export async function listRecentPublicProfiles(
     .orderBy('updatedAt', 'desc')
     .limit(limit + 4)
     .get();
-  const out: DiscoverArtistSummary[] = [];
-  for (const doc of snap.docs) {
-    const data = doc.data() as Record<string, unknown>;
+  const rows: Array<{
+    userId: string;
+    slug: string;
+    displayName: string;
+    data: Record<string, unknown>;
+    rankId?: string;
+    xp?: number;
+    updatedAt: string;
+  }> = [];
+  for (const docSnap of snap.docs) {
+    const data = docSnap.data() as Record<string, unknown>;
     const userId = typeof data.userId === 'string' ? data.userId : '';
     if (!userId || (opts.excludeUserId && userId === opts.excludeUserId)) continue;
-    out.push({
+    rows.push({
       userId,
-      slug: doc.id,
+      slug: docSnap.id,
       displayName:
         typeof data.displayName === 'string' && data.displayName.trim()
           ? data.displayName.trim()
-          : doc.id,
+          : docSnap.id,
+      data,
       rankId: typeof data.rankId === 'string' ? data.rankId : undefined,
       xp: typeof data.xp === 'number' ? data.xp : undefined,
       updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : '',
     });
-    if (out.length >= limit) break;
+    if (rows.length >= limit) break;
   }
-  return out;
+  return Promise.all(
+    rows.map(async (row) => {
+      const avatarUrl = await resolvePublicAvatar(row.slug, row.data);
+      const useStar = row.data.starMarkUseStar === true;
+      const seed =
+        typeof row.data.starMarkSeed === 'number'
+          ? normalizeVesperfoldSeed(row.data.starMarkSeed)
+          : undefined;
+      return {
+        userId: row.userId,
+        slug: row.slug,
+        displayName: row.displayName,
+        avatarUrl,
+        starMarkUseStar: useStar,
+        starMarkSeed: useStar ? seed : undefined,
+        rankId: row.rankId,
+        xp: row.xp,
+        updatedAt: row.updatedAt,
+      };
+    })
+  );
 }
 
 export type DiscoverShareSummary = {
@@ -1303,6 +1566,10 @@ export type DiscoverShareSummary = {
   type: 'album' | 'track';
   title: string;
   ownerName: string;
+  ownerSlug?: string;
+  avatarUrl?: string;
+  starMarkUseStar?: boolean;
+  starMarkSeed?: number;
   updatedAt: string;
 };
 
@@ -1317,7 +1584,14 @@ export async function listRecentShareSummaries(
     .orderBy('updatedAt', 'desc')
     .limit(limit + 4)
     .get();
-  const out: DiscoverShareSummary[] = [];
+  const rows: Array<{
+    shareId: string;
+    type: 'album' | 'track';
+    title: string;
+    ownerId: string;
+    ownerName: string;
+    updatedAt: string;
+  }> = [];
   for (const doc of snap.docs) {
     const data = doc.data() as Record<string, unknown>;
     const ownerId = typeof data.ownerId === 'string' ? data.ownerId : '';
@@ -1330,10 +1604,11 @@ export async function listRecentShareSummaries(
         : type === 'album'
           ? 'Untitled album'
           : 'Untitled track';
-    out.push({
+    rows.push({
       shareId: doc.id,
       type,
       title,
+      ownerId,
       ownerName:
         typeof data.ownerName === 'string' && data.ownerName.trim()
           ? data.ownerName.trim()
@@ -1345,9 +1620,23 @@ export async function listRecentShareSummaries(
             ? data.createdAt
             : '',
     });
-    if (out.length >= limit) break;
+    if (rows.length >= limit) break;
   }
-  return out;
+  const avatars = await resolvePublicAvatarsByUserIds(rows.map((r) => r.ownerId));
+  return rows.map((r) => {
+    const meta = avatars.get(r.ownerId);
+    return {
+      shareId: r.shareId,
+      type: r.type,
+      title: r.title,
+      ownerName: r.ownerName,
+      ownerSlug: meta?.slug,
+      avatarUrl: meta?.avatarUrl,
+      starMarkUseStar: meta?.starMarkUseStar,
+      starMarkSeed: meta?.starMarkSeed,
+      updatedAt: r.updatedAt,
+    };
+  });
 }
 
 export type DiscoverPostSummary = {
@@ -1395,6 +1684,9 @@ export type DiscoverRiserSummary = {
   userId: string;
   displayName: string;
   profileSlug?: string;
+  avatarUrl?: string;
+  starMarkUseStar?: boolean;
+  starMarkSeed?: number;
   barsWritten7d: number;
   currentStreak: number;
 };
@@ -1410,20 +1702,36 @@ export async function listLeaderboardRisers(
     .orderBy('barsWritten7d', 'desc')
     .limit(limit + 3)
     .get();
-  const out: DiscoverRiserSummary[] = [];
+  const rows: Array<{
+    userId: string;
+    displayName: string;
+    profileSlug?: string;
+    barsWritten7d: number;
+    currentStreak: number;
+  }> = [];
   for (const doc of snap.docs) {
     if (opts.excludeUserId && doc.id === opts.excludeUserId) continue;
     const data = doc.data() as Record<string, unknown>;
-    out.push({
+    rows.push({
       userId: doc.id,
       displayName: String(data.displayName || 'Artist'),
       profileSlug: typeof data.profileSlug === 'string' ? data.profileSlug : undefined,
       barsWritten7d: Number(data.barsWritten7d || 0),
       currentStreak: Number(data.currentStreak || 0),
     });
-    if (out.length >= limit) break;
+    if (rows.length >= limit) break;
   }
-  return out;
+  const avatars = await resolvePublicAvatarsByUserIds(rows.map((r) => r.userId));
+  return rows.map((r) => {
+    const meta = avatars.get(r.userId);
+    return {
+      ...r,
+      profileSlug: r.profileSlug || meta?.slug,
+      avatarUrl: meta?.avatarUrl,
+      starMarkUseStar: meta?.starMarkUseStar,
+      starMarkSeed: meta?.starMarkSeed,
+    };
+  });
 }
 
 export { countNonEmptyBars, slugify };
