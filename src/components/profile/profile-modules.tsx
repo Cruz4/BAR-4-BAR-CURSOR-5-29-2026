@@ -32,6 +32,7 @@ import { EmbedPlayer } from '@/components/profile/embed-player';
 import { PostCard } from '@/components/profile/post-card';
 import { PressPlate, type PressPlateChrome } from '@/components/profile/press-plate';
 import { PublicAchievementFoil } from '@/components/profile/public-achievement-foil';
+import { LiveDnaDropsGroupedList } from '@/components/profile/live-dna-drop-card';
 import type { AchievementDef } from '@/lib/gamification/achievements';
 import { ProfileMediaLightbox } from '@/components/profile/profile-media-lightbox';
 import {
@@ -54,11 +55,20 @@ export type ModuleContext = {
   viewerSlug?: string;
   featured: ArtistHomeFeatured;
   badges: AchievementDef[];
+  /** Achievement id → unlock ISO timestamp. */
+  unlockedAchievements?: Record<string, string>;
   rankLabel?: string;
   xp?: number;
   currentStreak?: number;
   /** Live DNA Drops currently online for this artist. */
-  liveDnaDrops?: Array<{ shareId: string; title: string; type: 'album' | 'track' }>;
+  liveDnaDrops?: Array<{
+    shareId: string;
+    title: string;
+    type: 'album' | 'track';
+    albumTitle?: string;
+    albumShareId?: string;
+    trackCount?: number;
+  }>;
   /** Die-cut chrome from the living press — every module punches the same sheet. */
   plate: PressPlateChrome;
   /** Running index so adjacent dies rotate. */
@@ -372,26 +382,7 @@ export function DropShelfModule({ ctx }: { ctx: ModuleContext }) {
 
   return (
     <ModuleShell icon={Dna} title={"Live DNA Drops"} ctx={ctx}>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {drops.map((drop) => (
-          <Link
-            key={drop.shareId}
-            href={`/share/${drop.shareId}`}
-            className={cn(
-              inkWellClass,
-              'group flex items-center gap-3 p-4 transition-colors hover:border-[var(--ph-accent,#7dd3fc)]'
-            )}
-          >
-            <Dna className="h-5 w-5 shrink-0 text-[var(--ph-accent,#7dd3fc)]" />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-[var(--ph-text,#fff)]">{drop.title}</p>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
-                {drop.type === 'album' ? 'Album DNA' : 'Track DNA'} · open drop
-              </p>
-            </div>
-          </Link>
-        ))}
-      </div>
+      <LiveDnaDropsGroupedList drops={drops} layout="shelf" />
     </ModuleShell>
   );
 }
@@ -415,6 +406,7 @@ export function ProofWallModule({ ctx }: { ctx: ModuleContext }) {
             rankLabel={ctx.rankLabel}
             xp={ctx.xp}
             streak={ctx.currentStreak}
+            unlockedAt={ctx.unlockedAchievements?.[badge.id]}
           />
         ))}
       </div>

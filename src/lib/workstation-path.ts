@@ -133,7 +133,7 @@ export function buildDefaultLooseTrack(ownerId: string, title = 'New Track'): Om
     albumId: 'unassigned',
     ownerId,
     title,
-    vibe: { genre: 'Lofi-Hop', tempoBPM: 90, feeling: ['new idea'] },
+    vibe: { genre: 'Lofi-Hop', tempoBPM: 90, feeling: ['new idea'], enabled: false },
     intentRefs: [],
     sections: [
       {

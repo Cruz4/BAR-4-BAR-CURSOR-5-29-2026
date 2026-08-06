@@ -8,6 +8,7 @@ export const AI_COSTS = {
   generateDraftPerBar: 2,
 
   analyzeRelayAssets: 10,
+  extractAlbumDna: 15,
   generateRelayDraft: 2,
 
   suggestTrackTitles: 3,

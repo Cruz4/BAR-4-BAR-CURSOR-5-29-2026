@@ -6,6 +6,7 @@ import {
   CalendarCheck,
   CalendarRange,
   Flame,
+  Radio,
   Sparkles,
   Star,
   Target,
@@ -24,14 +25,20 @@ import {
   type ProgressCelebrationItem,
   type ProgressCelebrationDetail,
 } from '@/lib/gamification/progress-celebrations';
-import { SCALE_LABELS, TIER_LABELS } from '@/lib/gamification/challenges';
+import { SCALE_LABELS, TIER_LABELS, WEEKLY_CHALLENGES, MONTHLY_CHALLENGES, LIFETIME_MILESTONES } from '@/lib/gamification/challenges';
 import { fireProgressConfetti } from '@/lib/gamification/celebration-confetti';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import { useGamification } from '@/context/gamification-context';
+import { useToast } from '@/hooks/use-toast';
+import { createPost } from '@/lib/profile/social-client';
+import { ChallengeGoalFoilCard } from '@/components/gamification/challenge-goal-foil-card';
+import { domNodeToFeedImageDataUrl } from '@/lib/gamification/feed-card-export';
 import {
   loadSeenProgressKeys,
   markProgressCelebrationsSeen,
 } from '@/lib/gamification/celebration-seen';
+import { flushSync } from 'react-dom';
 
 function confettiPalette(item: ProgressCelebrationItem): string[] {
   if (item.type === 'challenge') {
@@ -138,13 +145,17 @@ type CursorEmojiBurst = { id: string; emoji: string; x: number; y: number };
 
 export function ProgressCelebration() {
   const { user } = useAuth();
+  const { summary, rankLabel } = useGamification();
+  const { toast } = useToast();
   const [queue, setQueue] = useState<ProgressCelebrationItem[]>([]);
   const [active, setActive] = useState<ProgressCelebrationItem | null>(null);
   const [cursorEmojis, setCursorEmojis] = useState<CursorEmojiBurst[]>([]);
+  const [postingFeed, setPostingFeed] = useState(false);
   const shownKeysRef = useRef(new Set<string>());
   const pointerRef = useRef({ x: 0, y: 0 });
   const emojiTimersRef = useRef<number[]>([]);
   const dismissButtonRef = useRef<HTMLButtonElement>(null);
+  const goalCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     shownKeysRef.current = user?.id ? loadSeenProgressKeys(user.id) : new Set();
@@ -224,9 +235,68 @@ export function ProgressCelebration() {
 
   const dismiss = () => setActive(null);
   const sub = active ? sublabel(active) : null;
+  const displayName = user?.displayName || 'Studio Artist';
+
+  const activeChallenge =
+    active?.type === 'challenge'
+      ? [...WEEKLY_CHALLENGES, ...MONTHLY_CHALLENGES, ...LIFETIME_MILESTONES].find((c) => c.id === active.id)
+      : undefined;
+
+  const shareGoalToFeed = async () => {
+    if (!active || active.type !== 'challenge' || !activeChallenge || !user) return;
+    flushSync(() => setPostingFeed(true));
+    try {
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      );
+      let cardEl = goalCardRef.current;
+      if (!cardEl) {
+        await new Promise((r) => setTimeout(r, 80));
+        cardEl = goalCardRef.current;
+      }
+      if (!cardEl) throw new Error('Goal card not ready — try again.');
+      const imageUrl = await domNodeToFeedImageDataUrl(cardEl);
+      await createPost({
+        text: [
+          `🎯 ${SCALE_LABELS[activeChallenge.scale]} goal complete: ${activeChallenge.label}`,
+          activeChallenge.description.trim(),
+          '#bar4bar.ink',
+        ].join('\n'),
+        imageUrl,
+        ownerName: displayName,
+        ownerSlug: summary.profileSlug,
+      });
+      toast({
+        title: 'Shared to your feed',
+        description: 'Goal card posted on your wall / The Scene.',
+      });
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not share to feed',
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setPostingFeed(false);
+    }
+  };
 
   return (
     <>
+      {activeChallenge && (
+        <div
+          className="pointer-events-none fixed left-[-99999px] top-0 w-[400px] opacity-0"
+          aria-hidden
+        >
+          <ChallengeGoalFoilCard
+            ref={goalCardRef}
+            challenge={activeChallenge}
+            displayName={displayName}
+            rankLabel={rankLabel}
+          />
+        </div>
+      )}
+
       <CelebrationOverlayPortal>
         <div className={cn('pointer-events-none fixed inset-0', CELEBRATION_EMOJI_Z_CLASS)} aria-hidden>
           <AnimatePresence>
@@ -314,6 +384,20 @@ export function ProgressCelebration() {
                       {sub}
                     </span>
                   </div>
+                )}
+
+                {activeChallenge && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="lg"
+                    className="w-full h-11 font-bold uppercase tracking-widest text-[10px] gap-2"
+                    disabled={postingFeed || !user}
+                    onClick={() => void shareGoalToFeed()}
+                  >
+                    <Radio className="h-4 w-4" />
+                    {postingFeed ? 'Posting foil…' : 'Share to feed'}
+                  </Button>
                 )}
 
                 <Button

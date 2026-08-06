@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,6 +16,7 @@ import { AchievementFoilCard } from '@/components/gamification/achievement-foil-
 import {
   buildAchievementShareText,
   downloadAchievementCardPng,
+  achievementCardToFeedImageDataUrl,
 } from '@/lib/gamification/achievement-card-export';
 import { formatUnlockDate } from '@/lib/gamification/achievement-card-theme';
 import { achievementIcon } from '@/lib/gamification/achievement-icons';
@@ -22,8 +24,9 @@ import { isAchievementStarter, type AchievementDef } from '@/lib/gamification/ac
 import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
 import { useToast } from '@/hooks/use-toast';
+import { createPost } from '@/lib/profile/social-client';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, Copy, Download, Eye, Lock } from 'lucide-react';
+import { CheckCircle2, Copy, Download, Eye, Lock, Radio } from 'lucide-react';
 
 type AchievementBadgeCellProps = {
   achievement: AchievementDef;
@@ -81,6 +84,7 @@ export function AchievementBadgeCell({
   const { toast } = useToast();
   const cardRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
+  const [postingFeed, setPostingFeed] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const starter = isAchievementStarter(achievement.id);
@@ -91,7 +95,9 @@ export function AchievementBadgeCell({
   const streak = summary.currentStreak;
 
   const statusLabel = unlocked
-    ? `Unlocked ${formatUnlockDate(unlockedAt)}`
+    ? unlockedAt
+      ? `Unlocked ${formatUnlockDate(unlockedAt)}`
+      : 'Unlocked'
     : lockedPro
       ? 'Studio Pro required'
       : 'Not unlocked yet';
@@ -116,6 +122,55 @@ export function AchievementBadgeCell({
       toast({ variant: 'destructive', title: 'Download failed — try copy instead' });
     } finally {
       setExporting(false);
+    }
+  };
+
+  const shareToFeed = async () => {
+    if (!user) return;
+    flushSync(() => setPostingFeed(true));
+    try {
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      );
+      let cardEl = cardRef.current;
+      if (!cardEl) {
+        await new Promise((r) => setTimeout(r, 80));
+        cardEl = cardRef.current;
+      }
+      if (!cardEl) throw new Error('Foil card not ready — open Preview and try again.');
+
+      const imageUrl = await achievementCardToFeedImageDataUrl(cardEl, achievement);
+      const rewards: string[] = [];
+      if (achievement.xpReward > 0) rewards.push(`+${achievement.xpReward} XP`);
+      if (achievement.inkReward > 0) rewards.push(`+${achievement.inkReward} Ink`);
+      const text = [
+        `🏆 Unlocked ${achievement.title}`,
+        achievement.description.trim(),
+        rewards.length ? rewards.join(' · ') : '',
+        '#bar4bar.ink',
+      ]
+        .filter(Boolean)
+        .join('\n');
+      await createPost({
+        text,
+        imageUrl,
+        ownerName: displayName,
+        ownerSlug: summary.profileSlug,
+      });
+      toast({
+        title: 'Shared to your feed',
+        description: summary.publicProfile
+          ? 'Foil card posted on your Artist Home wall / The Scene.'
+          : 'Foil card posted to your wall — flip Artist Home live so the block can see it.',
+      });
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not share to feed',
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setPostingFeed(false);
     }
   };
 
@@ -257,34 +312,67 @@ export function AchievementBadgeCell({
           {detailBody}
 
           {unlocked && (
-            <div className="flex gap-2 pt-1 border-t border-white/10">
+            <div className="flex flex-col gap-2 pt-1 border-t border-white/10">
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 h-9 text-[10px] font-bold uppercase"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewOpen(true);
+                  }}
+                >
+                  <Eye className="h-3.5 w-3.5 mr-1.5" /> Preview
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="flex-1 h-9 text-[10px] font-bold uppercase"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewOpen(true);
+                  }}
+                >
+                  <Download className="h-3.5 w-3.5 mr-1.5" /> PNG
+                </Button>
+              </div>
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 size="sm"
-                className="flex-1 h-9 text-[10px] font-bold uppercase"
+                className="w-full h-9 text-[10px] font-bold uppercase"
+                disabled={postingFeed || !user}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setPreviewOpen(true);
+                  void shareToFeed();
                 }}
               >
-                <Eye className="h-3.5 w-3.5 mr-1.5" /> Preview
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                className="flex-1 h-9 text-[10px] font-bold uppercase"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPreviewOpen(true);
-                }}
-              >
-                <Download className="h-3.5 w-3.5 mr-1.5" /> PNG
+                <Radio className="h-3.5 w-3.5 mr-1.5" />
+                {postingFeed ? 'Posting foil…' : 'Share to feed'}
               </Button>
             </div>
           )}
         </TooltipContent>
       </Tooltip>
+
+      {unlocked && !previewOpen && postingFeed && (
+        <div
+          className="pointer-events-none fixed left-[-99999px] top-0 w-[400px] opacity-0"
+          aria-hidden
+        >
+          <AchievementFoilCard
+            ref={cardRef}
+            achievement={achievement}
+            displayName={displayName}
+            rankLabel={rankLabel}
+            xp={xp}
+            streak={streak}
+            unlockedAt={unlockedAt}
+          />
+        </div>
+      )}
 
       {unlocked && (
         <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
@@ -294,7 +382,8 @@ export function AchievementBadgeCell({
                 {achievement.title}
               </DialogTitle>
               <DialogDescription>
-                Preview your foil card, then copy text or download a PNG when you’re ready. No lyrics included.
+                Preview your foil card, then share the image to your feed, copy text, or download a PNG.
+                No lyrics included.
               </DialogDescription>
             </DialogHeader>
 
@@ -326,7 +415,16 @@ export function AchievementBadgeCell({
                 unlockedAt={unlockedAt}
               />
 
-              <div className="flex gap-2 justify-end">
+              <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={postingFeed || !user}
+                  onClick={() => void shareToFeed()}
+                >
+                  <Radio className="h-4 w-4 mr-2" />
+                  {postingFeed ? 'Posting foil…' : 'Share to feed'}
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => void copySummary()}>
                   <Copy className="h-4 w-4 mr-2" /> Copy text
                 </Button>

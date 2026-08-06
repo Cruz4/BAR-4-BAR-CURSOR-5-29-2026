@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useGamification } from '@/context/gamification-context';
 import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
 import { isProUser } from '@/lib/subscription';
 import { vaultHref } from '@/lib/scene-home';
-import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
+import { ACHIEVEMENTS, type AchievementDef } from '@/lib/gamification/achievements';
 import { rankFromXp, STUDIO_RANKS, xpProgressInRank } from '@/lib/gamification/ranks';
 import {
   rankBadgeClass,
@@ -19,17 +20,40 @@ import { AchievementBadgeCell } from '@/components/gamification/achievement-badg
 import { ChallengeGoalsPanel } from '@/components/gamification/challenge-goals-panel';
 import { StudioSharingSection } from '@/components/gamification/studio-profile-section';
 import { LeaderboardCompareCard } from '@/components/gamification/challenge-row';
+import { StudioStandingFoilCard } from '@/components/gamification/studio-standing-foil-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { StudioLoader } from '@/components/studio-loader';
 import { cn } from '@/lib/utils';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
+import { createPost } from '@/lib/profile/social-client';
 import {
+  domNodeToFeedImageDataUrl,
+  downloadDomNodePng,
+} from '@/lib/gamification/feed-card-export';
+import {
+  ArrowUpDown,
   ChevronLeft,
+  Download,
   ExternalLink,
   Flame,
+  Radio,
   Share2,
   Sparkles,
   Trophy,
@@ -49,16 +73,110 @@ type LeaderboardPayload = {
   };
 };
 
+type TrophySortId =
+  | 'default'
+  | 'earned-new'
+  | 'earned-old'
+  | 'ink-high'
+  | 'ink-low'
+  | 'xp-high'
+  | 'category'
+  | 'unlocked-first'
+  | 'locked-first'
+  | 'title';
+
+const TROPHY_SORT_STORAGE_KEY = 'b4b-studio-trophy-sort';
+
+const TROPHY_SORT_OPTIONS: Array<{ id: TrophySortId; label: string }> = [
+  { id: 'default', label: 'Catalog order' },
+  { id: 'earned-new', label: 'Date earned · newest' },
+  { id: 'earned-old', label: 'Date earned · oldest' },
+  { id: 'ink-high', label: 'Ink reward · high → low' },
+  { id: 'ink-low', label: 'Ink reward · low → high' },
+  { id: 'xp-high', label: 'XP reward · high → low' },
+  { id: 'unlocked-first', label: 'Unlocked first' },
+  { id: 'locked-first', label: 'Locked first' },
+  { id: 'category', label: 'Category' },
+  { id: 'title', label: 'Title A–Z' },
+];
+
+const CATEGORY_ORDER: Record<AchievementDef['category'], number> = {
+  activation: 0,
+  retention: 1,
+  conversion: 2,
+  mastery: 3,
+  social: 4,
+};
+
+type TrophyRow = AchievementDef & {
+  unlocked: boolean;
+  lockedPro: boolean;
+  unlockedAt?: string;
+};
+
+function parseTrophySort(raw: string | null): TrophySortId {
+  if (TROPHY_SORT_OPTIONS.some((o) => o.id === raw)) return raw as TrophySortId;
+  return 'default';
+}
+
+function compareTrophyRows(a: TrophyRow, b: TrophyRow, sort: TrophySortId): number {
+  const unlockCmp = Number(b.unlocked) - Number(a.unlocked);
+  const dateA = a.unlockedAt || '';
+  const dateB = b.unlockedAt || '';
+
+  switch (sort) {
+    case 'earned-new':
+      if (a.unlocked !== b.unlocked) return unlockCmp;
+      return dateB.localeCompare(dateA) || a.title.localeCompare(b.title);
+    case 'earned-old':
+      if (a.unlocked !== b.unlocked) return unlockCmp;
+      return dateA.localeCompare(dateB) || a.title.localeCompare(b.title);
+    case 'ink-high':
+      return b.inkReward - a.inkReward || b.xpReward - a.xpReward || a.title.localeCompare(b.title);
+    case 'ink-low':
+      return a.inkReward - b.inkReward || a.xpReward - b.xpReward || a.title.localeCompare(b.title);
+    case 'xp-high':
+      return b.xpReward - a.xpReward || b.inkReward - a.inkReward || a.title.localeCompare(b.title);
+    case 'unlocked-first':
+      return unlockCmp || a.title.localeCompare(b.title);
+    case 'locked-first':
+      return -unlockCmp || a.title.localeCompare(b.title);
+    case 'category':
+      return (
+        CATEGORY_ORDER[a.category] - CATEGORY_ORDER[b.category] || a.title.localeCompare(b.title)
+      );
+    case 'title':
+      return a.title.localeCompare(b.title);
+    case 'default':
+    default:
+      return 0;
+  }
+}
 
 export function StudioProgressBoard() {
   const { user } = useAuth();
   const { summary, rankLabel, loading } = useGamification();
+  const { toast } = useToast();
   const [leaderboard, setLeaderboard] = useState<LeaderboardPayload | null>(null);
   const [lbLoading, setLbLoading] = useState(true);
   const [profileShareOpen, setProfileShareOpen] = useState(false);
+  const [standingShareOpen, setStandingShareOpen] = useState(false);
+  const [postingStanding, setPostingStanding] = useState(false);
+  const [exportingStanding, setExportingStanding] = useState(false);
+  const [trophySort, setTrophySort] = useState<TrophySortId>('default');
+  const standingCardRef = useRef<HTMLDivElement>(null);
 
   const isPro = isProUser(user);
   const unlocked = summary?.unlockedAchievements || {};
+  const displayName = user?.displayName || 'Studio Artist';
+
+  useEffect(() => {
+    try {
+      setTrophySort(parseTrophySort(localStorage.getItem(TROPHY_SORT_STORAGE_KEY)));
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -80,16 +198,26 @@ export function StudioProgressBoard() {
     };
   }, [user?.id]);
 
-  const badgeGrid = useMemo(
-    () =>
-      ACHIEVEMENTS.map((a) => ({
-        ...a,
-        unlocked: Boolean(unlocked[a.id]),
-        lockedPro: Boolean(a.proOnly && !isPro),
-        unlockedAt: unlocked[a.id],
-      })),
-    [unlocked, isPro]
-  );
+  const badgeGrid = useMemo(() => {
+    const rows: TrophyRow[] = ACHIEVEMENTS.map((a) => ({
+      ...a,
+      unlocked: Boolean(unlocked[a.id]),
+      lockedPro: Boolean(a.proOnly && !isPro),
+      unlockedAt: unlocked[a.id],
+    }));
+    if (trophySort === 'default') return rows;
+    return [...rows].sort((a, b) => compareTrophyRows(a, b, trophySort));
+  }, [unlocked, isPro, trophySort]);
+
+  const handleTrophySortChange = (value: string) => {
+    const next = parseTrophySort(value);
+    setTrophySort(next);
+    try {
+      localStorage.setItem(TROPHY_SORT_STORAGE_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  };
 
   if (!user || loading) {
     return <StudioLoader size="lg" fullscreen />;
@@ -102,6 +230,56 @@ export function StudioProgressBoard() {
   const achievementCount = Object.keys(unlocked).length;
   const ranks = leaderboard?.userRanks;
   const hidden = summary.leaderboardHidden;
+
+  const shareStandingToFeed = async () => {
+    setPostingStanding(true);
+    try {
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      );
+      const cardEl = standingCardRef.current;
+      if (!cardEl) throw new Error('Standing card not ready — try again.');
+      const imageUrl = await domNodeToFeedImageDataUrl(cardEl);
+      await createPost({
+        text: [
+          `🎤 Studio Standing — ${displayName}`,
+          `${rankLabel} · ${summary.xp.toLocaleString()} XP · ${summary.currentStreak}d streak`,
+          `${achievementCount}/${ACHIEVEMENTS.length} trophies · ${linesToRhymeBars(summary.lifetimeBarsWritten).toLocaleString()} bars written`,
+          '#bar4bar.ink',
+        ].join('\n'),
+        imageUrl,
+        ownerName: displayName,
+        ownerSlug: summary.profileSlug,
+      });
+      toast({
+        title: 'Shared to your feed',
+        description: 'Standing plate posted on your wall / The Scene.',
+      });
+      setStandingShareOpen(false);
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not share to feed',
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setPostingStanding(false);
+    }
+  };
+
+  const downloadStanding = async () => {
+    const cardEl = standingCardRef.current;
+    if (!cardEl) return;
+    setExportingStanding(true);
+    try {
+      await downloadDomNodePng(cardEl, `bar4bar-standing-${rank.id}.png`);
+      toast({ title: 'Standing plate downloaded' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Download failed' });
+    } finally {
+      setExportingStanding(false);
+    }
+  };
 
   return (
     <TooltipProvider delayDuration={280} disableHoverableContent={false}>
@@ -120,7 +298,8 @@ export function StudioProgressBoard() {
             </h1>
             <p className="text-base text-muted-foreground mt-1.5 max-w-2xl leading-relaxed">
               Weekly goals, monthly arcs, lifetime milestones, and trophies — plus how you stack up against the
-              community. Writing goals count <strong className="text-foreground/90 font-semibold">hand-typed</strong> lines only; AI-generated lines are tracked separately.
+              community. Writing goals count <strong className="text-foreground/90 font-semibold">hand-typed</strong>{' '}
+              lines only; AI-generated lines are tracked separately.
             </p>
           </div>
           <div className="flex flex-col items-stretch sm:items-end gap-2">
@@ -158,8 +337,17 @@ export function StudioProgressBoard() {
         </div>
 
         <Card className="border-primary/20 bg-gradient-to-br from-primary/[0.08] via-card/50 to-violet-500/[0.06]">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
             <CardTitle className="text-base font-headline uppercase">Your studio standing</CardTitle>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-8 gap-1.5 text-[10px] font-bold uppercase tracking-wide"
+              onClick={() => setStandingShareOpen(true)}
+            >
+              <Share2 className="h-3.5 w-3.5" /> Share standing
+            </Button>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
             <div className="rounded-lg border border-primary/15 bg-gradient-to-br from-muted/80 to-sky-100/60 dark:from-black/40 dark:to-sky-950/20 px-3.5 py-3 space-y-2.5 md:col-span-2 min-w-0 overflow-hidden">
@@ -274,9 +462,29 @@ export function StudioProgressBoard() {
                 </p>
               </div>
             </div>
-            <Badge variant="outline" className="text-xs shrink-0 font-mono">
-              {achievementCount}/{ACHIEVEMENTS.length} earned
-            </Badge>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5">
+                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                <Select value={trophySort} onValueChange={handleTrophySortChange}>
+                  <SelectTrigger
+                    className="h-8 w-[min(100%,13.5rem)] text-[10px] font-bold uppercase tracking-wide bg-black/30 border-white/10"
+                    aria-label="Sort trophies"
+                  >
+                    <SelectValue placeholder="Sort trophies" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TROPHY_SORT_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.id} value={opt.id} className="text-xs">
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Badge variant="outline" className="text-xs shrink-0 font-mono">
+                {achievementCount}/{ACHIEVEMENTS.length} earned
+              </Badge>
+            </div>
           </div>
           <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 min-w-0">
             {badgeGrid.map((b) => (
@@ -336,6 +544,53 @@ export function StudioProgressBoard() {
             }}
           />
         )}
+
+        <Dialog open={standingShareOpen} onOpenChange={setStandingShareOpen}>
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-headline uppercase tracking-wide">
+                Studio Standing plate
+              </DialogTitle>
+              <DialogDescription>
+                A unique level card for your current rank — share it to your wall or download the PNG.
+              </DialogDescription>
+            </DialogHeader>
+            <StudioStandingFoilCard
+              ref={standingCardRef}
+              displayName={displayName}
+              rankId={rank.id}
+              rankLabel={rankLabel}
+              xp={summary.xp}
+              streak={summary.currentStreak}
+              longestStreak={summary.longestStreak}
+              lifetimeBarsWritten={summary.lifetimeBarsWritten}
+              lifetimeLinesGenerated={summary.lifetimeLinesGenerated || 0}
+              badgeCount={achievementCount}
+              totalBadges={ACHIEVEMENTS.length}
+              isPro={isPro}
+            />
+            <div className="flex flex-col sm:flex-row gap-2 sm:justify-end pt-1">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={postingStanding || !user}
+                onClick={() => void shareStandingToFeed()}
+              >
+                <Radio className="h-4 w-4 mr-2" />
+                {postingStanding ? 'Posting foil…' : 'Share to feed'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={exportingStanding}
+                onClick={() => void downloadStanding()}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {exportingStanding ? 'Saving…' : 'Download PNG'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );

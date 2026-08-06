@@ -63,8 +63,8 @@ export function FirstSongHero() {
       setIsCreating(true);
       try {
         const vibe = options.guided
-          ? { genre: genre.genre, tempoBPM: genre.tempoBPM, feeling: ['first session'] }
-          : { genre: 'Lofi-Hop', tempoBPM: 90, feeling: ['new idea'] };
+          ? { genre: genre.genre, tempoBPM: genre.tempoBPM, feeling: ['first session'], enabled: false }
+          : { genre: 'Lofi-Hop', tempoBPM: 90, feeling: ['new idea'], enabled: false };
 
         const carried = options.lines ?? demoLines;
         const title = options.fromDemo ? 'My Demo Track' : 'My First Song';

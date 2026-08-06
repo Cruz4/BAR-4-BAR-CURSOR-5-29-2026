@@ -147,7 +147,7 @@ const FAQS = [
     },
     {
       q: "How do I save a DNA profile from extraction?",
-      a: "Generation Workstation → DNA & REMIX → paste or Sync Current Lyrics → extract. On Analysis Step, Save DNA Profile archives everything. ⚡ on a strain injects just that field into this remix. DNA Suite also lets you type or edit the five Creative Direction questions after load/extract."
+      a: "Generation Workstation → DNA & REMIX → paste or Sync Current Lyrics → extract. On Analysis Step, Save DNA Profile archives everything. ⚡ on a strain injects just that field into this remix. DNA Suite also lets you type or edit the five Creative Direction questions after load/extract. On an album page, Pro can Extract Album DNA to fill World Building / Emotional Core / Message Truth from all tracks, then Save / Load those profiles."
     },
     {
       q: "What is the difference between ⚡ inject and loading a DNA Profile?",
@@ -223,7 +223,7 @@ const FAQS = [
     },
     {
       q: "What is included in a DNA Drop?",
-      a: "Lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when toggled on. Album drops add album DNA presets and motifs."
+      a: "Lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when toggled on. Album drops add album DNA presets and motifs. Optional links & embeds (YouTube, Spotify, etc.) attach from the DNA Drop dialog and play on the public page."
     },
     {
       q: "Is my DNA Drop live-synced when I edit?",

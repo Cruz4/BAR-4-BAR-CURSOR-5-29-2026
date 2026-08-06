@@ -401,10 +401,12 @@ const ARCHIVE_PROFILE_LABEL: Record<ArchiveProfileKind, string> = {
 /** Default vault name when archiving from a track (e.g. "Night Shift — DNA Profile"). */
 export function suggestArchiveProfileName(
   kind: ArchiveProfileKind,
-  sourceTrackTitle?: string | null
+  sourceTrackTitle?: string | null,
+  options?: { label?: string | null }
 ): string {
   const base = sourceTrackTitle?.trim() || 'Studio';
-  return `${base} — ${ARCHIVE_PROFILE_LABEL[kind]}`;
+  const label = options?.label?.trim() || ARCHIVE_PROFILE_LABEL[kind];
+  return `${base} — ${label}`;
 }
 
 export type VaultStrainRow = { title: string; content: string | string[] };

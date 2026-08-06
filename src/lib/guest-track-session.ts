@@ -17,7 +17,7 @@ export function createBlankGuestTrack(): Track {
     albumId: GUEST_TRY_ALBUM_ID,
     ownerId: 'guest',
     title: 'My First Bars',
-    vibe: { genre: 'Lofi-Hop', tempoBPM: 90, feeling: ['new idea'] },
+    vibe: { genre: 'Lofi-Hop', tempoBPM: 90, feeling: ['new idea'], enabled: false },
     intentRefs: [],
     checkedIntents: [],
     intentsEnabled: true,

@@ -733,6 +733,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           ? { ...a, tracks: a.tracks.map((t) => (t.id === trackId ? { ...t, ...updates } : t)) }
           : a
       );
+      albumsRef.current = next;
       if (!user && isGuestTryAlbumId(albumId) && isGuestTrySheetEnabled()) {
         const guestTrack = next
           .find((a) => a.id === albumId)
@@ -756,7 +757,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }, [user, performTrackSync]);
 
   const updateAlbum = useCallback((albumId: string, updates: Partial<Album>) => {
-    setAlbums(prev => prev.map(a => (a.id === albumId ? { ...a, ...updates } : a)));
+    setAlbums((prev) => {
+      const next = prev.map((a) => (a.id === albumId ? { ...a, ...updates } : a));
+      albumsRef.current = next;
+      return next;
+    });
     if (user) {
       pendingAlbumUpdates.current[albumId] = { ...pendingAlbumUpdates.current[albumId], ...updates };
       if (isBrowserOffline()) {
@@ -829,21 +834,23 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const resolveTrackForDrop = useCallback(
     (trackId: string, albumId?: string) => {
+      const vault = albumsRef.current;
       if (albumId) {
-        const { track, album } = getTrackById(albumId, trackId);
-        if (track) return { track, album };
+        const album = vault.find((a) => a.id === albumId);
+        const track = album?.tracks?.find((t) => t.id === trackId);
+        if (track && album) return { track, album };
       }
-      const found = findTrackInVault(albums, trackId);
+      const found = findTrackInVault(vault, trackId);
       if (found) return found;
       return { track: undefined, album: undefined };
     },
-    [albums, getTrackById]
+    []
   );
 
   const buildDropPayload = useCallback(
     (type: 'album' | 'track', id: string, albumId?: string) => {
       if (type === 'album') {
-        const album = getAlbumById(id);
+        const album = albumsRef.current.find((a) => a.id === id);
         if (!album) throw new Error('Album not found in your vault.');
         return buildAlbumDropPayload(album, styleProfile);
       }
@@ -851,7 +858,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (!track) throw new Error('Track not found in your vault.');
       return buildTrackDropPayload(track, album, styleProfile);
     },
-    [getAlbumById, resolveTrackForDrop, styleProfile]
+    [resolveTrackForDrop, styleProfile]
   );
 
   const persistProjectShareId = useCallback(
@@ -937,7 +944,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (!user) throw new Error('Artist Session Required.');
       const albumId = options?.albumId;
       const existingShareId =
-        type === 'album' ? getAlbumById(id)?.shareId : resolveTrackForDrop(id, albumId).track?.shareId;
+        type === 'album'
+          ? albumsRef.current.find((a) => a.id === id)?.shareId
+          : resolveTrackForDrop(id, albumId).track?.shareId;
 
       if (existingShareId) {
         return updateDNA(type, id, existingShareId, options);
@@ -964,7 +973,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       void postGamificationEvent('share_created');
       return shareId;
     },
-    [user, getAlbumById, resolveTrackForDrop, buildDropPayload, persistProjectShareId, updateDNA]
+    [user, resolveTrackForDrop, buildDropPayload, persistProjectShareId, updateDNA]
   );
 
   const revokeDNA = useCallback(

@@ -134,6 +134,7 @@ import {
   isGuardrailsToggleOn,
   isLooseTrackAlbum,
   isTrackDnaToggleOn,
+  resolveTrackIntentPool,
   formatGuardrailsCsv,
   parseGuardrailsCsv,
   getWorkstationRuleBadgeClass,
@@ -1184,11 +1185,12 @@ export function GenerateSongDraftDialog({
       if (profile.intents?.length) {
           setHubIntents(profile.intents);
           setIntentsEnabled(true);
-          const existingMotifs = album.thingsToSay || [];
-          const novel = profile.intents.filter((m) => !existingMotifs.includes(m));
-          if (novel.length) {
-              updateAlbum(album.id, { thingsToSay: [...existingMotifs, ...novel] });
-          }
+          const pool = [...new Set([...resolveTrackIntentPool(track, album), ...profile.intents])];
+          updateTrack(track.albumId, track.id, {
+            intentRefs: pool,
+            checkedIntents: profile.intents,
+            intentsEnabled: true,
+          });
       }
       if (profile.structureGuide) {
           setHubStructureGuide(profile.structureGuide);
@@ -1216,13 +1218,12 @@ export function GenerateSongDraftDialog({
       if (intents.length) {
           setHubIntents(intents);
           setIntentsEnabled(true);
-          if (album) {
-              const existing = album.thingsToSay || [];
-              const novel = intents.filter((m) => !existing.includes(m));
-              if (novel.length) {
-                  updateAlbum(album.id, { thingsToSay: [...existing, ...novel] });
-              }
-          }
+          const pool = [...new Set([...resolveTrackIntentPool(track, album), ...intents])];
+          updateTrack(track.albumId, track.id, {
+            intentRefs: pool,
+            checkedIntents: intents,
+            intentsEnabled: true,
+          });
       }
       if (preset.structure?.length) {
           setHubSections(preset.structure.map((s: { name: string; bars: number; enabled: boolean }) => ({ ...s })));
@@ -1278,13 +1279,8 @@ export function GenerateSongDraftDialog({
 
       if (target.kind === 'intents') {
           const motifs = Array.isArray(content) ? content : [content];
-          if (album) {
-              const existing = album.thingsToSay || [];
-              const novel = motifs.filter((m) => !existing.includes(m));
-              if (novel.length) {
-                  updateAlbum(album.id, { thingsToSay: [...existing, ...novel] });
-              }
-          }
+          const pool = [...new Set([...resolveTrackIntentPool(track, album), ...hubIntents, ...motifs])];
+          updateTrack(track.albumId, track.id, { intentRefs: pool });
           setHubIntents((prev) => [...new Set([...prev, ...motifs])]);
           setIntentsEnabled(true);
           markHubSeeded('intents');
@@ -1435,12 +1431,13 @@ export function GenerateSongDraftDialog({
   };
 
   const handleAddHubIntent = () => {
-      if (!newHubIntent.trim() || !album) return;
-      const existing = album.thingsToSay || [];
-      updateAlbum(album.id, { thingsToSay: [...existing, newHubIntent.trim()] });
-      setHubIntents(prev => [...prev, newHubIntent.trim()]);
+      if (!newHubIntent.trim()) return;
+      const label = newHubIntent.trim();
+      const pool = [...new Set([...resolveTrackIntentPool(track, album), ...hubIntents, label])];
+      updateTrack(track.albumId, track.id, { intentRefs: pool });
+      setHubIntents((prev) => (prev.includes(label) ? prev : [...prev, label]));
       setNewHubIntent('');
-      toast({ title: "Motif Added" });
+      toast({ title: 'Motif Added' });
   };
 
   const handleRelayDraftSynthesis = async (e: any) => {
@@ -2349,7 +2346,7 @@ export function GenerateSongDraftDialog({
                                   <Card className={cn(coWriterEffectPanel('sky'), 'p-3 transition-opacity', !intentsEnabled && 'opacity-50 pointer-events-none')}>
                                       <div className="space-y-3">
                                           <div className="flex flex-wrap gap-1.5 max-h-[min(14vh,120px)] overflow-y-auto studio-scrollbar pr-1">
-                                                  {(album?.thingsToSay || []).map(intent => {
+                                                  {[...new Set([...resolveTrackIntentPool(track, album), ...hubIntents])].map(intent => {
                                                       const isSelected = hubIntents.includes(intent);
                                                       return (
                                                           <Badge 

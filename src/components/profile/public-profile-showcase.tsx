@@ -36,6 +36,8 @@ export type PublicProfileData = {
   longestStreak: number;
   albumCoverUrls?: string[];
   badges: AchievementDef[];
+  /** Achievement id → unlock ISO timestamp (for Proof Wall foil cards). */
+  unlockedAchievements?: Record<string, string>;
   userId?: string;
   profilePhotoMode?: 'collage' | 'custom';
   profilePhotoUrl?: string | null;
@@ -49,6 +51,9 @@ export type PublicProfileData = {
     shareId: string;
     title: string;
     type: 'album' | 'track';
+    albumTitle?: string;
+    albumShareId?: string;
+    trackCount?: number;
   }>;
 };
 
@@ -326,6 +331,7 @@ export function PublicProfileShowcase({
                   rankLabel={profile.rankLabel}
                   xp={profile.xp}
                   streak={profile.currentStreak}
+                  unlockedAt={profile.unlockedAchievements?.[badge.id]}
                 />
               ))}
             </div>

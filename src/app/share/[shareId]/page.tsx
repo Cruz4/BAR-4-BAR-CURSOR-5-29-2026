@@ -20,6 +20,11 @@ import {
     Clock,
     LogIn,
     EyeOff,
+    ExternalLink,
+    Link2,
+    ChevronLeft,
+    Pencil,
+    Disc3,
 } from 'lucide-react';
 import { StudioLoader } from '@/components/studio-loader';
 import { ShareCoverImage } from '@/components/share-cover-image';
@@ -28,14 +33,19 @@ import {
   sharedTrackIntents,
   resolveSharedDirection,
   findTrackInVault,
+  normalizeDnaDropMedia,
   type DnaDropTrackPayload,
   type DnaDropAlbumPayload,
 } from '@/lib/dna-drop';
+import { DnaDropAlbumHub } from '@/components/dna-drop-album-hub';
+import { EmbedPlayer } from '@/components/profile/embed-player';
+import { parseEmbedUrl } from '@/lib/profile/embeds';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { recordShareImport } from '@/lib/share-import-client';
 import { HighlightedText } from '@/components/highlighted-text';
 import { buildClientRhymeGroups } from '@/lib/lyrics-analysis/client-rhyme-groups';
+import { vaultHref } from '@/lib/scene-home';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +56,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import Link from 'next/link';
 
 export default function SharedProjectPage() {
     const params = useParams();
@@ -53,7 +64,7 @@ export default function SharedProjectPage() {
     const router = useRouter();
     const { toast } = useToast();
     const { user, authReady } = useAuth();
-    const { mergeData, isCloudSyncActive, getAlbumById, getTrackById, albums, revokeDNA } = useContext(DataContext);
+    const { mergeData, isCloudSyncActive, getAlbumById, albums, revokeDNA } = useContext(DataContext);
 
     const [share, setShare] = useState<ProjectShare | null>(null);
     const [loading, setLoading] = useState(true);
@@ -91,25 +102,24 @@ export default function SharedProjectPage() {
         if (isAlbum) return (project as DnaDropAlbumPayload).thingsToSay ?? [];
         return sharedTrackIntents(project as DnaDropTrackPayload);
     }, [project, isAlbum]);
+    const dropMedia = useMemo(
+      () => normalizeDnaDropMedia(project?.dnaDropMedia),
+      [project]
+    );
     const isOwnShare = Boolean(user && share && user.id === share.ownerId);
 
-    /** Rhyme Pulse–style end-word highlighting for the shared lyrics sheet. */
+    const vaultTrack = useMemo(() => {
+        if (!project || isAlbum) return null;
+        return findTrackInVault(albums, project.id);
+    }, [project, isAlbum, albums]);
+
+    /** Rhyme Pulse–style end-word highlighting for the shared lyrics sheet (track drops only). */
     const rhymeGroups = useMemo(() => {
-        if (!project) return [];
+        if (!project || isAlbum) return [];
         const lines: string[] = [];
-        if (isAlbum) {
-            for (const track of (project as DnaDropAlbumPayload).tracks || []) {
-                for (const sec of track.sections || []) {
-                    for (const bar of sec.bars || []) {
-                        if (bar.text?.trim()) lines.push(bar.text);
-                    }
-                }
-            }
-        } else {
-            for (const sec of (project as DnaDropTrackPayload).sections || []) {
-                for (const bar of sec.bars || []) {
-                    if (bar.text?.trim()) lines.push(bar.text);
-                }
+        for (const sec of (project as DnaDropTrackPayload).sections || []) {
+            for (const bar of sec.bars || []) {
+                if (bar.text?.trim()) lines.push(bar.text);
             }
         }
         return buildClientRhymeGroups(lines);
@@ -118,20 +128,31 @@ export default function SharedProjectPage() {
     const alreadyInVault = useMemo(() => {
         if (!project || !isOwnShare) return false;
         if (isAlbum) return Boolean(getAlbumById(project.id));
-        return Boolean(getTrackById('unassigned', project.id).track);
-    }, [project, isOwnShare, isAlbum, getAlbumById, getTrackById]);
+        return Boolean(vaultTrack);
+    }, [project, isOwnShare, isAlbum, getAlbumById, vaultTrack]);
 
     const editHref = useMemo(() => {
         if (!project) return null;
         if (isAlbum) return `/albums/${project.id}`;
-        const found = findTrackInVault(albums, project.id);
-        return `/albums/${found?.album.id ?? 'unassigned'}/tracks/${project.id}`;
-    }, [project, isAlbum, albums]);
+        return `/albums/${vaultTrack?.album.id ?? 'unassigned'}/tracks/${project.id}`;
+    }, [project, isAlbum, vaultTrack]);
+
+    const ownerEditLabel = isAlbum ? 'Open album' : 'Edit track sheet';
 
     const openInVault = useCallback(() => {
         if (!editHref) return;
         router.push(editHref);
     }, [editHref, router]);
+
+    const homeHref = user ? vaultHref() : '/';
+
+    const handleLeavePage = useCallback(() => {
+        if (typeof window !== 'undefined' && window.history.length > 1) {
+            router.back();
+            return;
+        }
+        router.push(homeHref);
+    }, [router, homeHref]);
 
     const handleImportClick = () => {
         if (!authReady) return;
@@ -147,10 +168,6 @@ export default function SharedProjectPage() {
         }
 
         if (isOwnShare && alreadyInVault) {
-            toast({
-                title: 'Already in your vault',
-                description: 'This DNA Drop is yours — opening the project in your studio.',
-            });
             openInVault();
             return;
         }
@@ -240,8 +257,10 @@ export default function SharedProjectPage() {
     const importLabel = !user
         ? 'Sign in to Import'
         : isOwnShare && alreadyInVault
-          ? 'Open in My Vault'
+          ? ownerEditLabel
           : 'Import Setup';
+
+    const OwnerEditIcon = isAlbum ? Disc3 : Pencil;
 
     return (
         <div className="min-h-screen relative selection:bg-primary/30 overflow-x-hidden font-code">
@@ -249,12 +268,30 @@ export default function SharedProjectPage() {
                 <div className="h-full w-full bg-[repeating-linear-gradient(theme(colors.border),theme(colors.border)_1px,transparent_1px,transparent_24px)]" />
             </div>
 
-            <header className="sticky top-0 z-[100] min-h-14 border-b bg-background/80 backdrop-blur-md px-3 sm:px-6 py-2 flex items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <header className="sticky top-0 z-[100] min-h-14 border-b bg-background/80 backdrop-blur-md px-3 sm:px-6 py-2 relative flex items-center justify-between gap-2">
+                <div className="relative z-10 flex shrink-0 items-center">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleLeavePage}
+                        className="h-8 sm:h-9 shrink-0 px-2 font-bold text-muted-foreground hover:text-foreground"
+                        aria-label="Go back"
+                        title="Go back"
+                    >
+                        <ChevronLeft className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline text-[10px] uppercase tracking-widest">Back</span>
+                    </Button>
+                </div>
+                <Link
+                    href={homeHref}
+                    className="absolute left-1/2 top-1/2 z-[5] flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 sm:gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    title={user ? 'Go to vault' : 'Go to Bar 4 Bar'}
+                >
                     <div className="shrink-0 overflow-hidden rounded-lg h-8 w-8 sm:h-9 sm:w-9 border border-primary/20 bg-black">
                         <img src="/Logo.png" alt="Bar 4 Bar" className="h-full w-full object-contain" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 hidden sm:block">
                         <h1 className="truncate font-headline text-sm sm:text-lg font-bold leading-none tracking-tight text-foreground">
                             BAR 4 BAR
                         </h1>
@@ -262,8 +299,8 @@ export default function SharedProjectPage() {
                             DNA Drop Snapshot
                         </p>
                     </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+                </Link>
+                <div className="relative z-10 flex shrink-0 items-center gap-1.5 sm:gap-3 ml-auto">
                     <div className="hidden md:flex items-center gap-4 mr-2 text-muted-foreground">
                         <div className="flex items-center gap-1.5">
                             <Eye className="h-3.5 w-3.5" />
@@ -291,20 +328,22 @@ export default function SharedProjectPage() {
                     <Button
                         onClick={handleImportClick}
                         size="sm"
-                        className="h-8 sm:h-9 px-2.5 sm:px-4 font-bold shadow-lg max-w-[9.5rem] sm:max-w-none"
+                        className="h-8 sm:h-9 px-2.5 sm:px-4 font-bold shadow-lg max-w-[11rem] sm:max-w-none"
                         disabled={isImporting}
                     >
                         {isImporting ? (
                             <StudioLoader size="sm" />
                         ) : !user ? (
                             <LogIn className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                        ) : isOwnShare && alreadyInVault ? (
+                            <OwnerEditIcon className="h-3.5 w-3.5 mr-1.5 shrink-0" />
                         ) : (
                             <Import className="h-3.5 w-3.5 mr-1.5 shrink-0" />
                         )}
                         <span className="truncate text-[10px] sm:text-sm">
                             {isOwnShare && alreadyInVault ? (
                                 <>
-                                    <span className="sm:hidden">Open</span>
+                                    <span className="sm:hidden">{isAlbum ? 'Album' : 'Edit'}</span>
                                     <span className="hidden sm:inline">{importLabel}</span>
                                 </>
                             ) : (
@@ -319,7 +358,9 @@ export default function SharedProjectPage() {
                 <div className="container max-w-7xl mx-auto px-4 pt-4 relative z-10">
                     <Card className="border-primary/25 bg-primary/5">
                         <CardContent className="p-4 text-[11px] font-code text-muted-foreground leading-relaxed">
-                            Import Setup copies this snapshot — lyrics, structure, Creative DNA, intents, vibe, guardrails, special instructions, and Style DNA when shared — into your Bar 4 Bar vault.
+                            {isAlbum
+                              ? 'Import Setup copies this album snapshot — album DNA plus every track’s lyrics & structure — into your Bar 4 Bar vault. Open a live song card for that track’s public DNA Drop page.'
+                              : 'Import Setup copies this snapshot — lyrics, structure, Creative DNA, intents, vibe, guardrails, special instructions, and Style DNA when shared — into your Bar 4 Bar vault.'}
                             {' '}
                             <button type="button" className="text-primary underline underline-offset-2 font-bold" onClick={() => router.push(`/login?next=${encodeURIComponent(`/share/${shareId}`)}&intent=dna-import`)}>
                                 Sign in or create a free account
@@ -350,7 +391,7 @@ export default function SharedProjectPage() {
                         <CardContent className="p-4 sm:p-6 space-y-6">
                             <div>
                                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-2">
-                                    <Globe className="h-3 w-3" /> {isAlbum ? 'Album Concept' : 'Track Theme'}
+                                    <Globe className="h-3 w-3" /> {isAlbum ? 'Album DNA' : 'Track Theme'}
                                 </h4>
                                 <p className="text-sm italic text-muted-foreground leading-relaxed">
                                     &ldquo;{isAlbum ? (project as DnaDropAlbumPayload)?.theme : (project as DnaDropTrackPayload)?.vibe?.feeling?.join(', ')}&rdquo;
@@ -385,8 +426,60 @@ export default function SharedProjectPage() {
                                     )}
                                 </div>
                             )}
+                            {dropMedia.length > 0 && (
+                                <div className="space-y-3 border-t pt-4">
+                                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                                        <Link2 className="h-3 w-3" /> Links &amp; embeds
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {dropMedia.map((url) =>
+                                            parseEmbedUrl(url) ? (
+                                                <EmbedPlayer key={url} url={url} />
+                                            ) : (
+                                                <a
+                                                    key={url}
+                                                    href={url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer nofollow"
+                                                    className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-primary hover:border-primary/40"
+                                                >
+                                                    <span className="min-w-0 flex-1 truncate">{url}</span>
+                                                    <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                                                </a>
+                                            )
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
+
+                    {isOwnShare && alreadyInVault && editHref && (
+                        <Card className="border-emerald-500/35 bg-emerald-500/5">
+                            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="min-w-0 space-y-1">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-400">
+                                        Your DNA Drop
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {isAlbum
+                                          ? 'Jump back into this album in your vault to edit tracks, cover, and DNA.'
+                                          : 'Open the writable lyric sheet for this track in your vault.'}
+                                    </p>
+                                </div>
+                                <Button
+                                    asChild
+                                    size="sm"
+                                    className="h-9 shrink-0 gap-1.5 font-bold uppercase tracking-wider"
+                                >
+                                    <Link href={editHref}>
+                                        <OwnerEditIcon className="h-3.5 w-3.5" />
+                                        {ownerEditLabel}
+                                    </Link>
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     <Card className="border-sky-500/30 bg-sky-500/5">
                         <CardHeader className="p-4">
@@ -461,6 +554,12 @@ export default function SharedProjectPage() {
                 </div>
 
                 <div className="lg:col-span-8 space-y-8">
+                    {isAlbum ? (
+                        <DnaDropAlbumHub
+                            album={project as DnaDropAlbumPayload}
+                            ownerName={share.ownerName}
+                        />
+                    ) : (
                     <Card className="border-2 shadow-2xl relative overflow-hidden bg-notebook min-h-[60vh] md:min-h-[80vh] [--lyrics-gutter:2.75rem] md:[--lyrics-gutter:100px] [--lyrics-lh:20px] md:[--lyrics-lh:32px]">
                         <style>{`
                             .bg-notebook {
@@ -482,41 +581,6 @@ export default function SharedProjectPage() {
                             </div>
                         </CardHeader>
                         <CardContent className="p-0 relative z-10">
-                            {isAlbum ? (
-                                <div className="px-3 py-6 sm:px-6 sm:py-8 md:p-12 space-y-8 md:space-y-12">
-                                    {(project as DnaDropAlbumPayload)?.tracks?.map((track: Track, idx: number) => (
-                                        <div key={track.id} className="space-y-4 md:space-y-6">
-                                            <h4 className="text-base sm:text-xl md:text-3xl font-headline font-bold text-primary uppercase pl-[calc(var(--lyrics-gutter)+0.5rem)]">
-                                                {idx + 1}. {track.title}
-                                            </h4>
-                                            <div className="space-y-6 md:space-y-8">
-                                                {track.sections.map((sec) => (
-                                                    <div key={sec.id} className="space-y-0">
-                                                        <h5 className="text-[10px] sm:text-sm font-bold text-sky-400 uppercase mb-1.5 md:mb-2 pl-[calc(var(--lyrics-gutter)+0.5rem)]">[{sec.type}]</h5>
-                                                        {sec.bars.map((bar) => (
-                                                            <div
-                                                                key={bar.idx}
-                                                                className="relative flex items-start min-h-[var(--lyrics-lh)] pl-[calc(var(--lyrics-gutter)+0.5rem)] pr-2"
-                                                            >
-                                                                <span className="absolute left-0 w-[var(--lyrics-gutter)] pr-1.5 text-right font-mono text-[10px] md:text-sm text-muted-foreground/40 leading-[var(--lyrics-lh)] font-bold tabular-nums">
-                                                                    {String(bar.idx).padStart(2, '0')}
-                                                                </span>
-                                                                <p className="text-[14px] md:text-xl lg:text-2xl font-code font-bold leading-[var(--lyrics-lh)] tracking-tight text-foreground/90 break-words whitespace-pre-wrap min-w-0 w-full">
-                                                                    {bar.text ? (
-                                                                      <HighlightedText text={bar.text} rhymeGroups={rhymeGroups} />
-                                                                    ) : (
-                                                                      '...'
-                                                                    )}
-                                                                </p>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
                                 <div className="px-3 py-6 sm:px-6 sm:py-8 md:p-12 space-y-8 md:space-y-12">
                                     {(project as DnaDropTrackPayload)?.sections?.map((sec: Track['sections'][number]) => (
                                         <div key={sec.id} className="space-y-0">
@@ -541,9 +605,9 @@ export default function SharedProjectPage() {
                                         </div>
                                     ))}
                                 </div>
-                            )}
                         </CardContent>
                     </Card>
+                    )}
                 </div>
             </main>
 

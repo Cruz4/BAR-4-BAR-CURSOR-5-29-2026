@@ -47,7 +47,7 @@ function buildPostShareText(post: ProfilePost, shareUrl: string): string {
   const line = snippet
     ? `"${snippet}${snippet.length >= 160 ? '…' : ''}" — ${who} on Bar 4 Bar`
     : `${who} dropped something on Bar 4 Bar`;
-  return `${line}\n${shareUrl}\n#Bar4Bar`;
+  return `${line}\n${shareUrl}\n#bar4bar.ink`;
 }
 
 export function PostShareDialog({ open, onOpenChange, post }: PostShareDialogProps) {

@@ -210,6 +210,18 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted }: Po
         </p>
       )}
 
+      {post.imageUrl && (
+        <div className="mt-3 mb-1 flex justify-center overflow-visible">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={post.imageUrl}
+            alt="Shared studio card"
+            className="block h-auto w-full max-w-[420px] rounded-xl object-contain shadow-[0_8px_28px_rgba(0,0,0,0.45)] sm:max-w-[480px]"
+            style={{ imageRendering: 'auto' }}
+          />
+        </div>
+      )}
+
       {post.embedUrl && (
         <div className="mt-3">
           <EmbedPlayer url={post.embedUrl} />

@@ -119,6 +119,50 @@ export function isVibeActive(track: Track): boolean {
   return track.vibe?.enabled ?? true;
 }
 
+/** Unique motif strings for this track only (library + checked). */
+export function trackIntentPool(track: Pick<Track, 'intentRefs' | 'checkedIntents'>): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of [...(track.intentRefs ?? []), ...(track.checkedIntents ?? [])]) {
+    if (typeof raw !== 'string') continue;
+    const s = raw.trim();
+    if (!s) continue;
+    const key = s.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(s);
+  }
+  return out;
+}
+
+/**
+ * Prefer this track's intent library. An explicit `intentRefs` array
+ * (including empty) is always per-track — never shared with siblings.
+ * Only legacy tracks missing `intentRefs` fall back to album `thingsToSay`
+ * for display until they are forked onto the track.
+ */
+export function resolveTrackIntentPool(
+  track: Pick<Track, 'intentRefs' | 'checkedIntents'> & { intentRefs?: string[] | null },
+  album?: Pick<Album, 'thingsToSay'> | null
+): string[] {
+  if (Array.isArray(track.intentRefs)) {
+    return trackIntentPool(track);
+  }
+  const legacy = album?.thingsToSay ?? [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of legacy) {
+    if (typeof raw !== 'string') continue;
+    const s = raw.trim();
+    if (!s) continue;
+    const key = s.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(s);
+  }
+  return out;
+}
+
 /** Master switch on the Intents card (can be on with zero motifs checked). */
 export function isIntentsMasterEnabled(track: Track): boolean {
   const hasIntents = (track.checkedIntents?.length ?? 0) > 0;

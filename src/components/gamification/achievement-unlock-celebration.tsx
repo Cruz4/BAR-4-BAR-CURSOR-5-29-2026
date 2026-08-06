@@ -2,27 +2,54 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Trophy, Zap, Droplets } from 'lucide-react';
+import {
+  Copy,
+  Download,
+  Droplets,
+  Facebook,
+  Mail,
+  MessageCircle,
+  Radio,
+  Share2,
+  Sparkles,
+  Trophy,
+  Zap,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   CelebrationOverlayPortal,
   CELEBRATION_EMOJI_Z_CLASS,
   CELEBRATION_MODAL_Z_CLASS,
   CELEBRATION_OVERLAY_Z_CLASS,
 } from '@/components/gamification/celebration-overlay-portal';
+import { AchievementFoilCard } from '@/components/gamification/achievement-foil-card';
 import {
   ACHIEVEMENT_UNLOCK_EVENT,
   type AchievementUnlockDetail,
 } from '@/lib/gamification/unlock-events';
 import type { GamificationUnlock } from '@/lib/gamification/types';
-import { getAchievement } from '@/lib/gamification/achievements';
+import { getAchievement, type AchievementDef } from '@/lib/gamification/achievements';
+import {
+  buildAchievementShareText,
+  downloadAchievementCardPng,
+  achievementCardToFeedImageDataUrl,
+} from '@/lib/gamification/achievement-card-export';
 import {
   fireAchievementConfetti,
   stopCelebrationConfetti,
 } from '@/lib/gamification/celebration-confetti';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import { useGamification } from '@/context/gamification-context';
+import { useToast } from '@/hooks/use-toast';
+import { createPost } from '@/lib/profile/social-client';
 import {
   loadSeenAchievementIds,
   markAchievementsSeen,
@@ -37,15 +64,43 @@ type CursorEmojiBurst = {
   y: number;
 };
 
+function XIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.727-8.833L1.254 2.25H8.08l4.259 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" />
+    </svg>
+  );
+}
+
+function buildUnlockFeedText(item: CelebrationItem, def?: AchievementDef | null): string {
+  const title = def?.title || item.title;
+  const desc = def?.description || item.description;
+  const bits = [`🏆 Unlocked ${title}`];
+  if (desc?.trim()) bits.push(desc.trim());
+  const rewards: string[] = [];
+  if (item.xpReward > 0) rewards.push(`+${item.xpReward} XP`);
+  if (item.inkReward > 0) rewards.push(`+${item.inkReward} Ink`);
+  if (rewards.length) bits.push(rewards.join(' · '));
+  bits.push('#bar4bar.ink');
+  return bits.join('\n');
+}
+
 export function AchievementUnlockCelebration() {
   const { user } = useAuth();
+  const { summary, rankLabel } = useGamification();
+  const { toast } = useToast();
   const [queue, setQueue] = useState<CelebrationItem[]>([]);
   const [active, setActive] = useState<CelebrationItem | null>(null);
   const [cursorEmojis, setCursorEmojis] = useState<CursorEmojiBurst[]>([]);
+  const [foilOpen, setFoilOpen] = useState(false);
+  const [postingFeed, setPostingFeed] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const shownIdsRef = useRef(new Set<string>());
   const pointerRef = useRef({ x: 0, y: 0 });
   const emojiTimersRef = useRef<number[]>([]);
   const dismissButtonRef = useRef<HTMLButtonElement>(null);
+  const foilCardRef = useRef<HTMLDivElement>(null);
+  const exportCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     shownIdsRef.current = user?.id ? loadSeenAchievementIds(user.id) : new Set();
@@ -128,20 +183,147 @@ export function AchievementUnlockCelebration() {
     const [next, ...rest] = queue;
     setQueue(rest);
     setActive(next);
+    setFoilOpen(false);
     spawnCursorEmojiSequence();
     fireAchievementConfetti();
   }, [active, queue, spawnCursorEmojiSequence]);
 
   const dismiss = () => {
     stopCelebrationConfetti();
+    setFoilOpen(false);
     setActive(null);
   };
 
   const def = active ? getAchievement(active.id) : undefined;
   const totalXp = (active?.xpReward ?? 0) + (active?.actionXpGain ?? 0);
+  const displayName = user?.displayName || 'Studio Artist';
+  const unlockedAt =
+    active && summary.unlockedAchievements?.[active.id]
+      ? summary.unlockedAchievements[active.id]
+      : new Date().toISOString();
+
+  const shareText = active
+    ? buildAchievementShareText(
+        def,
+        displayName,
+        rankLabel,
+        summary.xp,
+        summary.currentStreak,
+        unlockedAt
+      )
+    : '';
+
+  const profileUrl =
+    typeof window !== 'undefined' && summary.profileSlug
+      ? `${window.location.origin}/profile/${summary.profileSlug}`
+      : typeof window !== 'undefined'
+        ? window.location.origin
+        : '';
+
+  const handleShareToFeed = async () => {
+    if (!active || !user) return;
+    setPostingFeed(true);
+    try {
+      // Let the offscreen foil card paint before capture.
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      );
+      const cardEl = exportCardRef.current;
+      if (!cardEl) throw new Error('Foil card not ready — try again.');
+      const imageUrl = await achievementCardToFeedImageDataUrl(cardEl, def || null);
+      await createPost({
+        text: buildUnlockFeedText(active, def),
+        imageUrl,
+        ownerName: displayName,
+        ownerSlug: summary.profileSlug,
+      });
+      toast({
+        title: 'Shared to your feed',
+        description: summary.publicProfile
+          ? 'Foil card posted on your Artist Home wall / The Scene.'
+          : 'Foil card posted to your wall — flip Artist Home live so the block can see it.',
+      });
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not share to feed',
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setPostingFeed(false);
+    }
+  };
+
+  const handleCopyShare = async () => {
+    try {
+      await navigator.clipboard.writeText(
+        profileUrl ? `${shareText}\n${profileUrl}` : shareText
+      );
+      toast({ title: 'Copied', description: 'Paste anywhere — X, IG, Discord…' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Copy failed' });
+    }
+  };
+
+  const handleDownloadFoil = async () => {
+    if (!active) return;
+    const cardEl = foilCardRef.current || exportCardRef.current;
+    if (!cardEl) return;
+    setExporting(true);
+    try {
+      await downloadAchievementCardPng(cardEl, def || null);
+      toast({ title: 'Foil card downloaded' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Download failed — try copy instead' });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const openExternalShare = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer,width=640,height=720');
+  };
+
+  const handleNativeShare = async () => {
+    if (!navigator.share) return;
+    try {
+      await navigator.share({
+        title: `${active?.title || 'Achievement'} — Bar 4 Bar`,
+        text: shareText,
+        url: profileUrl || undefined,
+      });
+    } catch {
+      /* cancelled */
+    }
+  };
+
+  const encodedText = encodeURIComponent(
+    profileUrl ? `${shareText}\n${profileUrl}` : shareText
+  );
+  const encodedUrl = encodeURIComponent(profileUrl || '');
+  const canNativeShare =
+    typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
   return (
     <>
+      {active && (
+        <div
+          className="pointer-events-none fixed left-[-99999px] top-0 w-[400px] opacity-0"
+          aria-hidden
+        >
+          <AchievementFoilCard
+            ref={exportCardRef}
+            achievement={def || null}
+            displayName={displayName}
+            rankLabel={rankLabel}
+            xp={summary.xp}
+            streak={summary.currentStreak}
+            unlockedAt={unlockedAt}
+            locked={false}
+          />
+        </div>
+      )}
+
       <CelebrationOverlayPortal>
         <div className={cn('pointer-events-none fixed inset-0', CELEBRATION_EMOJI_Z_CLASS)} aria-hidden>
           <AnimatePresence>
@@ -253,6 +435,28 @@ export function AchievementUnlockCelebration() {
                   </p>
                 )}
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-11 font-bold uppercase text-[10px] tracking-widest gap-2"
+                    disabled={postingFeed || !user}
+                    onClick={() => void handleShareToFeed()}
+                  >
+                    <Radio className="h-4 w-4" />
+                    {postingFeed ? 'Posting foil…' : 'Share to feed'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 font-bold uppercase text-[10px] tracking-widest gap-2 border-amber-500/35 text-amber-200 hover:bg-amber-500/10"
+                    onClick={() => setFoilOpen(true)}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Share foil card
+                  </Button>
+                </div>
+
                 <Button
                   ref={dismissButtonRef}
                   size="lg"
@@ -267,6 +471,141 @@ export function AchievementUnlockCelebration() {
                 </Button>
               </div>
             </motion.div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={foilOpen && !!active}
+        onOpenChange={(open) => {
+          setFoilOpen(open);
+        }}
+      >
+        <DialogContent
+          overlayClassName={cn(CELEBRATION_OVERLAY_Z_CLASS, 'bg-black/85')}
+          className={cn(
+            'z-[7002]',
+            'sm:max-w-lg max-h-[90vh] overflow-y-auto border-amber-500/30 bg-[hsl(216_28%_7%)] text-white'
+          )}
+        >
+          {active && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-headline uppercase tracking-wide">
+                  {active.title}
+                </DialogTitle>
+                <DialogDescription className="text-white/55">
+                  Foil achievement card — view, download, or share. No lyrics included.
+                </DialogDescription>
+              </DialogHeader>
+
+              <AchievementFoilCard
+                ref={foilCardRef}
+                achievement={def || null}
+                displayName={displayName}
+                rankLabel={rankLabel}
+                xp={summary.xp}
+                streak={summary.currentStreak}
+                unlockedAt={unlockedAt}
+                locked={false}
+              />
+
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-10 font-bold uppercase text-[10px] gap-2 col-span-2"
+                  disabled={postingFeed || !user}
+                  onClick={() => void handleShareToFeed()}
+                >
+                  <Radio className="h-4 w-4" />
+                  {postingFeed ? 'Posting foil…' : 'Share foil to feed'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-10 font-bold uppercase text-[10px] gap-2"
+                  disabled={exporting}
+                  onClick={() => void handleDownloadFoil()}
+                >
+                  <Download className="h-4 w-4" />
+                  {exporting ? 'Saving…' : 'Download PNG'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 font-bold uppercase text-[10px] gap-2"
+                  onClick={() => void handleCopyShare()}
+                >
+                  <Copy className="h-4 w-4" /> Copy text
+                </Button>
+              </div>
+
+              <div className="space-y-2 border-t border-white/10 pt-3">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-white/45 flex items-center gap-1.5">
+                  <Share2 className="h-3.5 w-3.5" /> Share elsewhere
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-9 text-[10px] font-bold uppercase gap-1.5"
+                    onClick={() =>
+                      openExternalShare(`https://twitter.com/intent/tweet?text=${encodedText}`)
+                    }
+                  >
+                    <XIcon className="h-3.5 w-3.5" /> X
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-9 text-[10px] font-bold uppercase gap-1.5"
+                    onClick={() =>
+                      openExternalShare(
+                        `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl || encodeURIComponent('https://bar4bar.ink')}&quote=${encodedText}`
+                      )
+                    }
+                  >
+                    <Facebook className="h-3.5 w-3.5" /> Facebook
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-9 text-[10px] font-bold uppercase gap-1.5"
+                    onClick={() => openExternalShare(`https://wa.me/?text=${encodedText}`)}
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-9 text-[10px] font-bold uppercase gap-1.5"
+                    onClick={() =>
+                      openExternalShare(
+                        `mailto:?subject=${encodeURIComponent(`${active.title} — Bar 4 Bar`)}&body=${encodedText}`
+                      )
+                    }
+                  >
+                    <Mail className="h-3.5 w-3.5" /> Email
+                  </Button>
+                  {canNativeShare && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="h-9 text-[10px] font-bold uppercase gap-1.5 col-span-2 sm:col-span-1"
+                      onClick={() => void handleNativeShare()}
+                    >
+                      <Share2 className="h-3.5 w-3.5" /> Device share
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>

@@ -226,6 +226,7 @@ import {
   guardrailsWithSyncedEnabled,
   formatGuardrailsCsv,
   parseGuardrailsCsv,
+  resolveTrackIntentPool,
 } from '@/lib/co-writer-rules';
 import { buildAlbumAlreadyUsed } from '@/lib/album-already-used';
 import {
@@ -491,17 +492,13 @@ function createCoWriterDnaInjectHandlers(deps: {
 
     if (target.kind === 'intents') {
       const motifs = Array.isArray(content) ? content : [content];
+      const nextChecked = [...new Set([...(track.checkedIntents ?? []), ...motifs])];
+      const nextPool = [...new Set([...resolveTrackIntentPool(track, album), ...motifs])];
       onUpdateTrack({
-        checkedIntents: [...new Set([...(track.checkedIntents ?? []), ...motifs])],
+        checkedIntents: nextChecked,
+        intentRefs: nextPool,
         intentsEnabled: true,
       });
-      if (album) {
-        const existing = album.thingsToSay || [];
-        const novel = motifs.filter((m) => !existing.includes(m));
-        if (novel.length) {
-          updateAlbum?.(album.id, { thingsToSay: [...existing, ...novel] });
-        }
-      }
       openCoWriterSections?.('intents');
       toast({ title: `Motifs injected (${motifs.length})` });
       return;
@@ -2092,6 +2089,18 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
     setForbiddenWordsDraft(formatGuardrailsCsv(track.guardrails?.forbiddenWords));
     setMustIncludeWordsDraft(formatGuardrailsCsv(track.guardrails?.mustIncludeWords));
   }, [track.id]);
+
+  // Fork legacy album-wide motifs onto this track once (only if intentRefs
+  // was never set — empty [] means this track already owns an empty library).
+  useEffect(() => {
+    if (Array.isArray(track.intentRefs)) return;
+    const legacy = (album?.thingsToSay ?? []).filter(
+      (s: string) => typeof s === 'string' && s.trim().length > 0
+    );
+    if (!legacy.length) return;
+    onUpdateTrack({ intentRefs: [...new Set(legacy)] });
+  }, [track.id]);
+
   const dnaInjectHandlers = useMemo(
     () =>
       createCoWriterDnaInjectHandlers({
@@ -2159,35 +2168,47 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   };
 
   const handleAddIntent = () => {
-    if (!newIntent.trim() || !album) return;
-    const existing = album.thingsToSay || [];
-    updateAlbum(album.id, { thingsToSay: [...existing, newIntent.trim()] });
+    if (!newIntent.trim()) return;
+    const label = newIntent.trim();
+    const pool = resolveTrackIntentPool(track, album);
+    if (pool.some((i) => i.toLowerCase() === label.toLowerCase())) {
+      toast({ variant: 'destructive', title: 'Already on this track' });
+      return;
+    }
+    onUpdateTrack({ intentRefs: [...pool, label] });
     setNewIntent('');
-    toast({ title: "Intent Added" });
+    toast({ title: 'Intent Added' });
   };
 
   const handleConfirmEditIntent = (newValue: string) => {
-      if (!album) return;
       const oldIntent = editIntentDialog.intent;
-      const updated = (album.thingsToSay || []).map((i: string) => i === oldIntent ? newValue : i);
-      updateAlbum(album.id, { thingsToSay: updated });
-      if (track.endWith === oldIntent) onUpdateTrack({ endWith: newValue });
-      toast({ title: "Motif Updated" });
+      const trimmed = newValue.trim();
+      if (!trimmed) return;
+      const pool = resolveTrackIntentPool(track, album).map((i) =>
+        i === oldIntent ? trimmed : i
+      );
+      const updatedChecked = (track.checkedIntents || []).map((i) =>
+        i === oldIntent ? trimmed : i
+      );
+      onUpdateTrack({
+        intentRefs: pool,
+        checkedIntents: updatedChecked,
+        ...(track.endWith === oldIntent ? { endWith: trimmed } : {}),
+      });
+      toast({ title: 'Motif Updated' });
   };
 
   const handleDeleteIntent = (intent: string) => {
-      if (!album) return;
-      const updatedThings = (album.thingsToSay || []).filter((i: string) => i !== intent);
-      updateAlbum(album.id, { thingsToSay: updatedThings });
-      
-      const updatedChecked = (track.checkedIntents || []).filter((i: string) => i !== intent);
-      const updates: Partial<Track> = { 
+      const pool = resolveTrackIntentPool(track, album).filter((i) => i !== intent);
+      const updatedChecked = (track.checkedIntents || []).filter((i) => i !== intent);
+      const updates: Partial<Track> = {
+        intentRefs: pool,
         checkedIntents: updatedChecked,
-        intentsEnabled: updatedChecked.length > 0 ? (track.intentsEnabled ?? true) : false
+        intentsEnabled: updatedChecked.length > 0 ? (track.intentsEnabled ?? true) : false,
       };
       if (track.endWith === intent) updates.endWith = null;
       onUpdateTrack(updates);
-      toast({ title: "Motif Deleted" });
+      toast({ title: 'Motif Deleted' });
   };
 
   const handleConfirmSaveDNA = (name: string) => {
@@ -2239,6 +2260,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   const dnaCollapsedInherit = !sectionOpen.dna && inheritFromAlbumOn;
   const vibeActive = isVibeActive(track);
   const intentsMasterOn = isIntentsMasterEnabled(track);
+  const trackIntents = resolveTrackIntentPool(track, album);
   const guardActive = isGuardrailsActive(track);
   const styleActive = isStyleActive(track);
 
@@ -2626,7 +2648,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                 <CollapsibleContent>
                     <CardContent className="space-y-4 p-4 pt-4 min-w-0">
                         <div className="space-y-2 min-w-0">
-                            {(album?.thingsToSay || []).map((intent: string) => {
+                            {trackIntents.map((intent: string) => {
                                 const isLocked = track.endWith === intent;
                                 const isChecked = (track.checkedIntents || []).includes(intent);
                                 const isActiveForTrack = isChecked || isLocked;
@@ -2977,6 +2999,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           onUpdateTrack({
             direction: { ...(track.direction ?? {}), ...p.mapping, enabled: true },
             checkedIntents: intents,
+            intentRefs: [...new Set([...resolveTrackIntentPool(track, album), ...intents])],
             intentsEnabled: intents.length > 0,
             styleEnabled: !!(p.styleAnalysis?.trim() || p.analysis?.styleAnalysis?.trim()),
             ...(() => {
@@ -2991,13 +3014,6 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
               };
             })(),
           });
-          if (album && intents.length) {
-            const existing = album.thingsToSay || [];
-            const novel = intents.filter((m) => !existing.includes(m));
-            if (novel.length) {
-              updateAlbum(album.id, { thingsToSay: [...existing, ...novel] });
-            }
-          }
           const savedStyle = p.styleAnalysis?.trim() || p.analysis?.styleAnalysis?.trim();
           if (savedStyle) {
             updateStyleProfile(savedStyle, p.styleMetrics ?? p.analysis?.styleMetrics ?? DEFAULT_STYLE_METRICS);

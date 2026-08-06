@@ -142,7 +142,7 @@ export function getAchievementSerial(achievementId: string, displayName: string)
 }
 
 export function formatUnlockDate(iso?: string): string {
-  if (!iso) return 'In progress';
+  if (!iso) return 'Unlocked';
   try {
     return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(
       new Date(iso)

@@ -37,7 +37,7 @@ type StudioTip = {
 const STUDIO_TIPS: StudioTip[] = [
   { id: 1, icon: MousePointer2, title: "3-WAY SYSTEM", text: "Hover over any line on the sheet to reveal hidden generation triggers. Add a bar next, previous, or delete instantly.", color: "text-primary" },
   { id: 2, icon: Target, title: "PRECISION LOCK", text: "Hover over any Intent in the Right Panel and click the Arrow to force the AI to land exactly on that phrase for its next suggestion.", color: "text-sky-600" },
-  { id: 3, icon: BrainCircuit, title: "DNA HIERARCHY", text: "The AI prioritizes Track DNA over Album DNA. Use Track DNA to surgically override big themes for a single song.", color: "text-green-600" },
+  { id: 3, icon: BrainCircuit, title: "DNA HIERARCHY", text: "The AI prioritizes Track DNA over Album DNA. Use Track DNA to surgically override big themes for a single song. On the album page, Pro can Extract Album DNA to fill World / Emotion / Message from every track in order.", color: "text-green-600" },
   { id: 4, icon: Shield, title: "GUARDRAILS", text: "Struggling with cliches? Add forbidden words in the Guardrails section (Right Panel) to force the AI into new vocabulary.", color: "text-rose-600" },
   { id: 5, icon: Wand2, title: "CREATIVE EFFECTS", text: "Free artists get Simile, Metaphor & Sound-Alike. Studio Pro unlocks Twist, Image Chain, POV, and more in the Right Panel.", color: "text-indigo-600" },
   { id: 7, icon: Palette, title: "BEAT PROMPTS", text: `Click 'Analyze Vibe' in the Left Panel to generate a deep production string you can use in music AIs like Suno or Udio (${AI_COSTS.suggestVibe} Ink).`, color: "text-amber-600" },

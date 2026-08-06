@@ -171,7 +171,7 @@ export function VesperfoldForge({
             </p>
           ) : (
             <p className="text-[11px] text-primary/90">
-              Live on the feed as a round mark. A small star badge also shows on your Artist Home —
+              Live on the feed as a round mark. A small round badge also shows on your Artist Home —
               your hero photo is unchanged.
             </p>
           )}

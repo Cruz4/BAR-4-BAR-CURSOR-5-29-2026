@@ -165,7 +165,10 @@ service cloud.firestore {
         && request.resource.data.text.size() <= 1000
         && (!('embedUrl' in request.resource.data)
           || (request.resource.data.embedUrl is string
-            && request.resource.data.embedUrl.size() <= 500));
+            && request.resource.data.embedUrl.size() <= 500))
+        && (!('imageUrl' in request.resource.data)
+          || (request.resource.data.imageUrl is string
+            && request.resource.data.imageUrl.size() <= 900000));
       allow update: if request.auth != null
         && resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerId == resource.data.ownerId;

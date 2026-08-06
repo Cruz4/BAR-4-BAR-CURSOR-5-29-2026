@@ -19,6 +19,22 @@ export function hasActiveDnaDrop(shareId?: string | null): boolean {
   return typeof shareId === 'string' && shareId.trim().length > 0;
 }
 
+/** Tracks in an album that do not yet have a live DNA Drop link. */
+export function tracksMissingDnaDrop(album: Pick<Album, 'tracks'> | null | undefined): Track[] {
+  return (album?.tracks ?? []).filter((t) => !hasActiveDnaDrop(t.shareId));
+}
+
+/** Non-empty lyric bar count — used on album hub track cards. */
+export function trackLyricBarCount(track: Pick<Track, 'sections'>): number {
+  let n = 0;
+  for (const sec of track.sections ?? []) {
+    for (const bar of sec.bars ?? []) {
+      if (bar.text?.trim()) n += 1;
+    }
+  }
+  return n;
+}
+
 /** Style frozen at drop time — StyleProfile lives on the user, not the track doc. */
 export type DnaDropStyleSnapshot = {
   analysis: string;
@@ -48,6 +64,34 @@ export type DnaDropAlbumPayload = Album & {
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
+
+const MAX_DNA_DROP_MEDIA = 6;
+
+/** Normalize / cap DNA Drop media URLs for snapshot + storage. */
+export function normalizeDnaDropMedia(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (typeof item !== 'string') continue;
+    const url = item.trim();
+    if (!url) continue;
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') continue;
+    } catch {
+      continue;
+    }
+    const key = url.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(url);
+    if (out.length >= MAX_DNA_DROP_MEDIA) break;
+  }
+  return out;
+}
+
+export const DNA_DROP_MEDIA_LIMIT = MAX_DNA_DROP_MEDIA;
 
 function styleSnapshot(
   styleProfile: StyleProfile | null | undefined
@@ -144,6 +188,10 @@ function sanitizeTrackForSnapshot(
   if (instructions) payload.specialInstructions = instructions;
   else delete payload.specialInstructions;
 
+  const media = normalizeDnaDropMedia(track.dnaDropMedia);
+  if (media.length) payload.dnaDropMedia = media;
+  else delete payload.dnaDropMedia;
+
   if (album && !isLooseTrackAlbum(album)) {
     const ctx: DnaDropAlbumContext = {
       title: album.title,
@@ -177,7 +225,18 @@ function sanitizeAlbumForSnapshot(
     payload.direction = { ...stripDirectionFields(album.direction), enabled: false };
   }
 
-  payload.tracks = (album.tracks ?? []).map((t) => sanitizeTrackForSnapshot(t, styleProfile, album));
+  const media = normalizeDnaDropMedia(album.dnaDropMedia);
+  if (media.length) payload.dnaDropMedia = media;
+  else delete payload.dnaDropMedia;
+
+  // Preserve each track's live shareId so the public album hub can link
+  // into that song's DNA Drop page (lyrics stay in the snapshot for import).
+  payload.tracks = (album.tracks ?? []).map((t) => {
+    const sanitized = sanitizeTrackForSnapshot(t, styleProfile, album);
+    if (hasActiveDnaDrop(t.shareId)) sanitized.shareId = t.shareId!.trim();
+    else delete sanitized.shareId;
+    return sanitized;
+  });
   return payload;
 }
 

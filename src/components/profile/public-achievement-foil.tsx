@@ -38,6 +38,8 @@ type PublicAchievementFoilProps = {
   rankLabel?: string;
   xp?: number;
   streak?: number;
+  /** ISO unlock timestamp — Proof Wall badges are always unlocked. */
+  unlockedAt?: string;
 };
 
 export function PublicAchievementFoil({
@@ -47,6 +49,7 @@ export function PublicAchievementFoil({
   rankLabel = 'Writer',
   xp = 0,
   streak = 0,
+  unlockedAt,
 }: PublicAchievementFoilProps) {
   const [open, setOpen] = useState(false);
   const theme = getAchievementCardTheme(achievement);
@@ -188,6 +191,8 @@ export function PublicAchievementFoil({
             rankLabel={rankLabel}
             xp={xp}
             streak={streak}
+            unlockedAt={unlockedAt}
+            locked={false}
           />
         </DialogContent>
       </Dialog>

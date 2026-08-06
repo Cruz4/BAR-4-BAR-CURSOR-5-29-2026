@@ -81,6 +81,7 @@ import type { GamificationSummary } from '@/lib/gamification/types';
 import { STUDIO_RANKS } from '@/lib/gamification/ranks';
 import { getAchievement } from '@/lib/gamification/achievements';
 import { ArtistHome } from '@/components/profile/artist-home';
+import { LiveDnaDropsManage } from '@/components/scene/scene-live-drops-strip';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
 import { VesperfoldForge } from '@/components/profile/vesperfold-forge';
 import {
@@ -391,18 +392,49 @@ export function PressDesk() {
     return out;
   }, [albums]);
   const publicShares = useMemo(() => {
-    const drops: Array<{ shareId: string; title: string; kind: string }> = [];
+    const byId = new Map<
+      string,
+      {
+        shareId: string;
+        title: string;
+        kind: 'Album DNA' | 'Track DNA';
+        albumTitle?: string;
+        albumShareId?: string;
+        trackCount?: number;
+      }
+    >();
+
     for (const album of albums) {
       if (album.isPublic && album.shareId) {
-        drops.push({ shareId: album.shareId, title: album.title, kind: 'Album DNA' });
+        byId.set(album.shareId, {
+          shareId: album.shareId,
+          title: album.title,
+          kind: 'Album DNA',
+          trackCount: (album.tracks || []).length,
+        });
       }
+      // Tracks under a live album nest under that album on the Drop Shelf.
+      const albumLive = Boolean(album.isPublic && album.shareId);
       for (const track of album.tracks || []) {
-        if (track.isPublic && track.shareId) {
-          drops.push({ shareId: track.shareId, title: track.title, kind: 'Track DNA' });
-        }
+        if (!(track.isPublic && track.shareId)) continue;
+        const existing = byId.get(track.shareId);
+        byId.set(track.shareId, {
+          shareId: track.shareId,
+          title: track.title,
+          kind: 'Track DNA',
+          ...(albumLive || existing?.albumTitle
+            ? { albumTitle: albumLive ? album.title : existing?.albumTitle }
+            : {}),
+          ...(albumLive && album.shareId
+            ? { albumShareId: album.shareId }
+            : existing?.albumShareId
+              ? { albumShareId: existing.albumShareId }
+              : {}),
+        });
       }
     }
-    return drops;
+
+    return [...byId.values()];
   }, [albums]);
 
   const previewProfile = useMemo((): PublicProfileData | null => {
@@ -421,6 +453,7 @@ export function PressDesk() {
       longestStreak: summary.longestStreak,
       albumCoverUrls: heroCollageUrls,
       badges,
+      unlockedAchievements: summary.unlockedAchievements || {},
       userId: user.id,
       profilePhotoMode: photoMode,
       profilePhotoUrl: photoUrl,
@@ -431,6 +464,9 @@ export function PressDesk() {
         shareId: d.shareId,
         title: d.title,
         type: d.kind.startsWith('Album') ? ('album' as const) : ('track' as const),
+        ...(d.albumTitle ? { albumTitle: d.albumTitle } : {}),
+        ...(d.albumShareId ? { albumShareId: d.albumShareId } : {}),
+        ...(typeof d.trackCount === 'number' ? { trackCount: d.trackCount } : {}),
       })),
     };
   }, [
@@ -1408,31 +1444,13 @@ export function PressDesk() {
         )}
       </DeskSection>
 
-      {/* 8. Live DNA Drops — auto on Artist Home */}
+      {/* 8. Live DNA Drops — manage + auto on Artist Home */}
       <DeskSection
         icon={Dna}
         title="Live DNA Drops"
-        hint="Any album or track with an active DNA Drop shows on your Artist Home automatically — as a count under your bio and in the Live DNA Drops module."
+        hint="Any album or track with an active DNA Drop shows on your Artist Home automatically — as a count under your bio and in the Live DNA Drops module. Open Manage to jump to a drop or the vault."
       >
-        {publicShares.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            No live DNA Drops yet — publish one from an album or track in the studio.
-          </p>
-        ) : (
-          <ul className="space-y-1.5">
-            {publicShares.map((drop) => (
-              <li
-                key={drop.shareId}
-                className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white/80"
-              >
-                <span className="truncate">{drop.title}</span>
-                <span className="ml-auto shrink-0 text-[9px] uppercase tracking-widest text-emerald-400/90">
-                  Live · {drop.kind}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <LiveDnaDropsManage />
       </DeskSection>
 
       {/* 9. Module deck */}

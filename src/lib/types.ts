@@ -85,6 +85,11 @@ export interface Album {
   }>;
   isPublic?: boolean;
   shareId?: string;
+  /**
+   * Links / embeds on the public DNA Drop page (YouTube, Spotify, etc.).
+   * Included in the published snapshot; edit from the DNA Drop dialog.
+   */
+  dnaDropMedia?: string[];
 }
 
 export interface TrackVibe {
@@ -132,6 +137,11 @@ export interface Track {
   suggestedTitlesHistory?: string[][];
   isPublic?: boolean;
   shareId?: string;
+  /**
+   * Links / embeds on the public DNA Drop page (YouTube, Spotify, etc.).
+   * Included in the published snapshot; edit from the DNA Drop dialog.
+   */
+  dnaDropMedia?: string[];
 }
 
 /** How a lyric line was added — used for Studio Progress (written vs AI-generated). */

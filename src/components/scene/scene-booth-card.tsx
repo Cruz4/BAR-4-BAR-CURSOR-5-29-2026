@@ -8,10 +8,11 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink, Globe, Settings2, UserRound } from 'lucide-react';
+import { ExternalLink, Globe, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
+import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
 import { patchGamificationSettings } from '@/lib/gamification-client';
@@ -33,6 +34,14 @@ export function SceneBoothCard({ className }: { className?: string }) {
 
   const isLive = Boolean(publicProfile && summary.profileSlug);
   const profileHref = summary.profileSlug ? `/profile/${summary.profileSlug}` : null;
+  const useStarMark = Boolean(summary.starMarkUseStar);
+  const avatarUrl =
+    !useStarMark &&
+    summary.profilePhotoMode === 'custom' &&
+    typeof summary.profilePhotoUrl === 'string' &&
+    summary.profilePhotoUrl.trim()
+      ? summary.profilePhotoUrl.trim()
+      : undefined;
 
   const toggleLive = async (next: boolean) => {
     setPublicProfile(next);
@@ -68,16 +77,24 @@ export function SceneBoothCard({ className }: { className?: string }) {
       data-tour="scene-booth"
     >
       <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-        <span
-          className={cn(
-            'flex h-11 w-11 shrink-0 items-center justify-center rounded-full border',
+        <ArtistStarAvatar
+          name={user.displayName || 'Artist'}
+          useStarMark={useStarMark}
+          starMarkSeed={summary.starMarkSeed}
+          avatarUrl={avatarUrl}
+          size={44}
+          href={profileHref || undefined}
+          toneClass={
             isLive
-              ? 'border-sky-400/50 bg-sky-500/15 text-sky-400 shadow-[0_0_18px_rgba(14,165,233,0.25)]'
-              : 'border-muted-foreground/25 bg-muted/40 text-muted-foreground/70'
-          )}
-        >
-          <UserRound className="h-5 w-5" />
-        </span>
+              ? 'bg-sky-500/15 text-sky-400'
+              : 'bg-muted/40 text-muted-foreground/70'
+          }
+          className={
+            isLive
+              ? 'border-sky-400/50 shadow-[0_0_18px_rgba(14,165,233,0.25)]'
+              : undefined
+          }
+        />
 
         <div className="min-w-0 flex-1">
           <p className="font-code text-[9px] font-bold uppercase tracking-[0.28em] text-muted-foreground/70">

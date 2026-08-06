@@ -41,6 +41,10 @@ import {
   Move,
   Sparkles,
   Globe,
+  ScanLine,
+  Save,
+  FolderOpen,
+  Loader2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -113,11 +117,21 @@ import { getAlbumLimitBanner } from '@/lib/free-vault-copy';
 import { VisitorVaultBanner } from '@/components/visitor-vault-banner';
 import { DowngradeTrackPickerDialog } from '@/components/downgrade-track-picker-dialog';
 import { LockedProFeatureButton, ProCreateTrackSlot, proLockText } from '@/components/pro-lock';
+import { ArchivalNamingDialog } from '@/components/archival-naming-dialog';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { trackUpgradeClick } from '@/lib/conversion-analytics';
 import { format } from 'date-fns';
 import { countRhymeBars } from '@/lib/lyrics-units';
+import { withAiAuth } from '@/lib/ai-client';
+import { lazyExtractAlbumDna } from '@/lib/lazy-ai-flows';
+import {
+  albumDnaFieldsHaveContent,
+  buildAlbumDnaCorpus,
+} from '@/lib/album-dna-extract';
+import { buildDnaPresetFromDirection } from '@/lib/dna-strands';
+import { AI_COSTS } from '@/lib/costs';
+import { inkTooltip } from '@/lib/ink-labels';
 import { cn } from '@/lib/utils';
 import {
   studioVaultCard,
@@ -171,7 +185,7 @@ function CreateTrackDialog({
                 albumId,
                 ownerId: user.id,
                 title: title || 'Untitled Track',
-                vibe: { genre: 'Lofi-Hop', tempoBPM: 90, feeling: ['new idea'] },
+                vibe: { genre: 'Lofi-Hop', tempoBPM: 90, feeling: ['new idea'], enabled: false },
                 intentRefs: [],
                 sections: [{ id: `section-${Date.now()}`, type: 'verse', bars: [{ idx: 1, text: '', accepted: true, syllables: 0, rhymeKey: '?' }] }],
                 status: 'in_progress',
@@ -690,7 +704,11 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const [downgradePickerDone, setDowngradePickerDone] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  
+  const [extractingAlbumDna, setExtractingAlbumDna] = useState(false);
+  const [saveAlbumDnaOpen, setSaveAlbumDnaOpen] = useState(false);
+  const [confirmExtractOpen, setConfirmExtractOpen] = useState(false);
+  const [confirmLoadPresetIdx, setConfirmLoadPresetIdx] = useState<number | null>(null);
+
   const handleAlbumUpdate = (updates: Partial<Album>) => {
     if (!album) return;
     if (albumTierLocked) {
@@ -701,6 +719,151 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   };
   const handleDirectionUpdate = (field: keyof Direction, value: string) => {
     if (album) handleAlbumUpdate({ direction: { ...(album.direction || {}), [field]: value } });
+  };
+
+  const applyAlbumDnaFields = (fields: {
+    setting_world?: string;
+    emotion_core?: string;
+    message_truth?: string;
+  }) => {
+    if (!album) return;
+    handleAlbumUpdate({
+      direction: {
+        ...(album.direction || {}),
+        setting_world: fields.setting_world ?? album.direction?.setting_world,
+        emotion_core: fields.emotion_core ?? album.direction?.emotion_core,
+        message_truth: fields.message_truth ?? album.direction?.message_truth,
+        enabled: true,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+  };
+
+  const runExtractAlbumDna = async () => {
+    if (!album || albumTierLocked) {
+      if (albumTierLocked) toast(TIER_LIMIT_LOCKED_TOAST);
+      return;
+    }
+    if (!isPro) {
+      toast({
+        variant: 'destructive',
+        title: 'Studio Pro required',
+        description: 'Extract Album DNA is a Pro feature.',
+      });
+      return;
+    }
+    setExtractingAlbumDna(true);
+    try {
+      const { corpus, trackCount, truncated } = buildAlbumDnaCorpus(album);
+      const result = await lazyExtractAlbumDna(
+        await withAiAuth({
+          albumTitle: album.title,
+          albumTheme: album.theme || undefined,
+          tracksCorpus: corpus,
+          userName: user?.displayName,
+        })
+      );
+      applyAlbumDnaFields({
+        setting_world: result.setting_world,
+        emotion_core: result.emotion_core,
+        message_truth: result.message_truth,
+      });
+      toast({
+        title: 'Album DNA extracted',
+        description: truncated
+          ? `Filled World / Emotion / Message from ${trackCount} tracks (lyrics truncated to fit).`
+          : `Filled World / Emotion / Message from ${trackCount} tracks.`,
+      });
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Extract failed',
+        description: e instanceof Error ? e.message : 'Could not extract Album DNA.',
+      });
+    } finally {
+      setExtractingAlbumDna(false);
+    }
+  };
+
+  const requestExtractAlbumDna = () => {
+    if (!album || albumTierLocked) {
+      if (albumTierLocked) toast(TIER_LIMIT_LOCKED_TOAST);
+      return;
+    }
+    if (!isPro) {
+      toast({
+        variant: 'destructive',
+        title: 'Studio Pro required',
+        description: 'Extract Album DNA is a Pro feature.',
+      });
+      return;
+    }
+    try {
+      buildAlbumDnaCorpus(album);
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Nothing to extract',
+        description: e instanceof Error ? e.message : 'Add track lyrics first.',
+      });
+      return;
+    }
+    if (albumDnaFieldsHaveContent(album.direction)) {
+      setConfirmExtractOpen(true);
+      return;
+    }
+    void runExtractAlbumDna();
+  };
+
+  const handleSaveAlbumDna = (name: string) => {
+    if (!album || !isPro) return;
+    const mapping = {
+      setting_world: album.direction?.setting_world || '',
+      emotion_core: album.direction?.emotion_core || '',
+      message_truth: album.direction?.message_truth || '',
+    };
+    if (
+      !mapping.setting_world.trim() &&
+      !mapping.emotion_core.trim() &&
+      !mapping.message_truth.trim()
+    ) {
+      toast({
+        variant: 'destructive',
+        title: 'Nothing to save',
+        description: 'Fill or extract World Building, Emotional Core, or Message Truth first.',
+      });
+      return;
+    }
+    const profile = buildDnaPresetFromDirection({
+      name,
+      sourceTrackTitle: 'Album extract',
+      direction: mapping,
+    });
+    const existing = album.dnaPresets || [];
+    handleAlbumUpdate({ dnaPresets: [...existing, profile] });
+    toast({ title: 'Album DNA saved', description: `"${name}" stored in this album’s vault.` });
+  };
+
+  const applyLoadAlbumDnaPreset = (idx: number) => {
+    if (!album) return;
+    const preset = album.dnaPresets?.[idx];
+    if (!preset?.mapping) return;
+    applyAlbumDnaFields({
+      setting_world: preset.mapping.setting_world || '',
+      emotion_core: preset.mapping.emotion_core || '',
+      message_truth: preset.mapping.message_truth || '',
+    });
+    toast({ title: 'Album DNA loaded', description: `"${preset.name}" applied to World / Emotion / Message.` });
+    setConfirmLoadPresetIdx(null);
+  };
+
+  const requestLoadAlbumDnaPreset = (idx: number) => {
+    if (!album || !isPro) return;
+    if (albumDnaFieldsHaveContent(album.direction)) {
+      setConfirmLoadPresetIdx(idx);
+      return;
+    }
+    applyLoadAlbumDnaPreset(idx);
   };
 
   const handleReorderTrack = (id: string, direction: 'up' | 'down') => {
@@ -1028,14 +1191,107 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                     <>
                     {!isUnassignedVault && (
                         <Card className="bg-emerald-500/5 border-emerald-500/20 shadow-2xl rounded-2xl">
-                            <CardHeader className="flex flex-row items-center justify-between p-8">
+                            <CardHeader className="flex flex-col gap-4 p-8 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="flex flex-col">
                                     <CardTitle className="font-headline text-2xl flex items-center gap-3 text-emerald-500 uppercase tracking-tighter"><Compass className="h-6 w-6" /> Album DNA</CardTitle>
                                     <CardDescription className="text-[9px] uppercase font-bold tracking-widest text-emerald-600/60 mt-1">Foundational Alignment</CardDescription>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-10 w-10 text-emerald-600 hover:bg-emerald-500/10 rounded-xl" onClick={() => setStrainMixerOpen(true)} disabled={albumTierLocked}>
-                                    <ArrowRightLeft className="h-5 w-5" />
-                                </Button>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {isPro ? (
+                                      <>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          disabled={albumTierLocked || extractingAlbumDna}
+                                          title={inkTooltip('extractAlbumDna')}
+                                          className="h-9 gap-1.5 border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-500/10"
+                                          onClick={requestExtractAlbumDna}
+                                        >
+                                          {extractingAlbumDna ? (
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                          ) : (
+                                            <ScanLine className="h-3.5 w-3.5" />
+                                          )}
+                                          Extract
+                                          <span className="text-[9px] opacity-70">{AI_COSTS.extractAlbumDna} Ink</span>
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          disabled={albumTierLocked}
+                                          className="h-9 gap-1.5 border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-500/10"
+                                          onClick={() => setSaveAlbumDnaOpen(true)}
+                                        >
+                                          <Save className="h-3.5 w-3.5" /> Save
+                                        </Button>
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button
+                                              type="button"
+                                              size="sm"
+                                              variant="outline"
+                                              disabled={albumTierLocked || !(album.dnaPresets?.length)}
+                                              className="h-9 gap-1.5 border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-500/10"
+                                            >
+                                              <FolderOpen className="h-3.5 w-3.5" /> Load
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end" className="max-w-[min(100vw-2rem,20rem)]">
+                                            {(album.dnaPresets || []).map((p, i) => (
+                                              <DropdownMenuItem
+                                                key={`${p.name}-${p.createdAt}-${i}`}
+                                                className="text-[10px] font-bold uppercase"
+                                                onClick={() => requestLoadAlbumDnaPreset(i)}
+                                              >
+                                                {p.name}
+                                                {p.sourceTrackTitle ? (
+                                                  <span className="ml-2 font-normal normal-case text-muted-foreground">
+                                                    · {p.sourceTrackTitle}
+                                                  </span>
+                                                ) : null}
+                                              </DropdownMenuItem>
+                                            ))}
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <LockedProFeatureButton
+                                          feature="Extract Album DNA"
+                                          benefit="Synthesize World Building, Emotional Core, and Message Truth from every track in order."
+                                          example="Pro reads the full album arc, then fills the three Album DNA fields."
+                                          icon={ScanLine}
+                                          label="Extract"
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-9 text-[10px] font-bold uppercase tracking-wider"
+                                        />
+                                        <LockedProFeatureButton
+                                          feature="Save Album DNA"
+                                          benefit="Archive World / Emotion / Message profiles on this album for later load."
+                                          icon={Save}
+                                          label="Save"
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-9 text-[10px] font-bold uppercase tracking-wider"
+                                        />
+                                        <LockedProFeatureButton
+                                          feature="Load Album DNA"
+                                          benefit="Reload a saved Album DNA profile into World / Emotion / Message."
+                                          icon={FolderOpen}
+                                          label="Load"
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-9 text-[10px] font-bold uppercase tracking-wider"
+                                        />
+                                      </>
+                                    )}
+                                    <Button variant="ghost" size="icon" className="h-10 w-10 text-emerald-600 hover:bg-emerald-500/10 rounded-xl" onClick={() => setStrainMixerOpen(true)} disabled={albumTierLocked}>
+                                        <ArrowRightLeft className="h-5 w-5" />
+                                    </Button>
+                                </div>
                             </CardHeader>
                             <CardContent className={cn('px-8 pb-10 space-y-6 font-code', albumTierLocked && 'opacity-70 pointer-events-none')}>
                                 {[
@@ -1121,6 +1377,73 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
               </AlertDialogFooter>
           </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={confirmExtractOpen} onOpenChange={setConfirmExtractOpen}>
+        <AlertDialogContent className="bg-card border-2">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-headline text-xl uppercase text-emerald-500">
+              Overwrite Album DNA?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm font-code">
+              Extract will replace World Building, Emotional Core, and Message Truth with a new
+              album-wide synthesis ({AI_COSTS.extractAlbumDna} Ink).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-bold">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="font-bold bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => {
+                setConfirmExtractOpen(false);
+                void runExtractAlbumDna();
+              }}
+            >
+              Extract & overwrite
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={confirmLoadPresetIdx !== null}
+        onOpenChange={(o) => !o && setConfirmLoadPresetIdx(null)}
+      >
+        <AlertDialogContent className="bg-card border-2">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-headline text-xl uppercase text-emerald-500">
+              Load Album DNA?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm font-code">
+              This will overwrite World Building, Emotional Core, and Message Truth with the saved
+              profile
+              {confirmLoadPresetIdx != null && album.dnaPresets?.[confirmLoadPresetIdx]
+                ? ` “${album.dnaPresets[confirmLoadPresetIdx].name}”`
+                : ''}
+              .
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-bold">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="font-bold bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => {
+                if (confirmLoadPresetIdx != null) applyLoadAlbumDnaPreset(confirmLoadPresetIdx);
+              }}
+            >
+              Load & overwrite
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <ArchivalNamingDialog
+        open={saveAlbumDnaOpen}
+        onOpenChange={setSaveAlbumDnaOpen}
+        type="DNA"
+        sourceTrackTitle={album.title}
+        profileLabel="ALBUM DNA Profile"
+        onConfirm={handleSaveAlbumDna}
+      />
 
       {user && showDowngradePicker && (
         <DowngradeTrackPickerDialog

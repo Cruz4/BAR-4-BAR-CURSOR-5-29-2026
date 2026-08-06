@@ -93,3 +93,9 @@ export async function lazySuggestTrackTitles(input: AiFlowInput) {
     Awaited<ReturnType<(typeof import('@/ai/flows/suggest-track-titles'))['suggestTrackTitles']>>
   >('suggestTrackTitles', input);
 }
+
+export async function lazyExtractAlbumDna(input: AiFlowInput) {
+  return runAiFlow<
+    Awaited<ReturnType<(typeof import('@/ai/flows/extract-album-dna'))['extractAlbumDna']>>
+  >('extractAlbumDna', input);
+}

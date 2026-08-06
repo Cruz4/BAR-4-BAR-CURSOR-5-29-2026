@@ -23,6 +23,8 @@ type ArchivalNamingDialogProps = {
   onConfirm: (name: string) => void;
   type: ArchiveProfileKind;
   sourceTrackTitle?: string | null;
+  /** Overrides the default “… — DNA Profile” suffix (e.g. album saves). */
+  profileLabel?: string | null;
 };
 
 export function ArchivalNamingDialog({
@@ -31,23 +33,24 @@ export function ArchivalNamingDialog({
   onConfirm,
   type,
   sourceTrackTitle,
+  profileLabel,
 }: ArchivalNamingDialogProps) {
   const [name, setName] = useState('');
 
   useEffect(() => {
     if (open) {
-      setName(suggestArchiveProfileName(type, sourceTrackTitle));
+      setName(suggestArchiveProfileName(type, sourceTrackTitle, { label: profileLabel }));
     }
-  }, [open, type, sourceTrackTitle]);
+  }, [open, type, sourceTrackTitle, profileLabel]);
 
-  const example = suggestArchiveProfileName(type, 'My Track');
+  const example = suggestArchiveProfileName(type, 'My Track', { label: profileLabel });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-card border-2 z-[3000]">
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl flex items-center gap-2">
-            <Save className="text-primary" /> Save {type} Profile
+            <Save className="text-primary" /> Save {profileLabel?.trim() || `${type} Profile`}
           </DialogTitle>
           <DialogDescription className="text-xs uppercase tracking-tight">
             Name this saved {type.toLowerCase()} profile for your album vault.

@@ -1,108 +1,83 @@
-'use client';
+import type { Metadata } from 'next';
+import { PublicProfilePageClient } from '@/components/profile/public-profile-page-client';
+import { getPublicProfile } from '@/lib/server/gamification';
+import { rankFromXp } from '@/lib/gamification/ranks';
+import { absoluteUrl, SEO } from '@/lib/seo';
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { StudioLoader } from '@/components/studio-loader';
-import { ArtistHome } from '@/components/profile/artist-home';
-import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
-import { trackShareCardEvent } from '@/lib/gamification-client';
-import { getAchievement } from '@/lib/gamification/achievements';
-import type { AchievementDef } from '@/lib/gamification/achievements';
-import { normalizeArtistHomeConfig, type ArtistHomeConfig } from '@/lib/profile/modules';
-import { useAuth } from '@/hooks/use-auth';
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-export default function PublicProfilePage({ params }: { params: Promise<{ slug: string }> }) {
-  const { user } = useAuth();
-  const [slug, setSlug] = useState<string | null>(null);
-  const [profile, setProfile] = useState<PublicProfileData | null>(null);
-  const [config, setConfig] = useState<ArtistHomeConfig | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+type PageProps = { params: Promise<{ slug: string }> };
 
-  useEffect(() => {
-    void params.then((p) => setSlug(p.slug));
-  }, [params]);
+function profileShareCopy(data: Record<string, unknown>, slug: string) {
+  const displayName =
+    typeof data.displayName === 'string' && data.displayName.trim()
+      ? data.displayName.trim()
+      : slug;
+  const xp = Number(data.xp || 0);
+  const rank = rankFromXp(xp, true);
+  const rankLabel =
+    typeof data.rankLabel === 'string' && data.rankLabel.trim()
+      ? data.rankLabel.trim()
+      : rank.label;
+  const title = `${displayName} · ${rankLabel}`;
+  const description = `${displayName}'s Artist Home on Bar 4 Bar — ${rankLabel}, studio trophies, and live DNA Drops. Open their page on bar4bar.ink.`;
+  return { displayName, rankLabel, title, description };
+}
 
-  useEffect(() => {
-    if (!slug) return;
-    const load = async () => {
-      try {
-        const res = await fetch(`/api/profile/${slug}`);
-        if (!res.ok) {
-          setError(true);
-          return;
-        }
-        const data = await res.json();
-        const badges: AchievementDef[] =
-          data.badges ||
-          (data.badgeIds || [])
-            .map((id: string) => getAchievement(id))
-            .filter(Boolean);
-
-        setProfile({
-          displayName: data.displayName,
-          rankLabel: data.rankLabel,
-          rankId: data.rankId,
-          xp: data.xp,
-          currentStreak: data.currentStreak,
-          longestStreak: data.longestStreak,
-          albumCoverUrls: data.albumCoverUrls,
-          badges,
-          userId: data.userId,
-          profilePhotoMode: data.profilePhotoMode === 'custom' ? 'custom' : 'collage',
-          profilePhotoUrl: data.profilePhotoUrl || null,
-          starMarkUseStar: Boolean(data.starMarkUseStar),
-          starMarkSeed:
-            typeof data.starMarkSeed === 'number' ? data.starMarkSeed : undefined,
-          referralCode:
-            typeof data.referralCode === 'string' && data.referralCode.trim()
-              ? data.referralCode.trim().toUpperCase()
-              : undefined,
-          liveDnaDrops: Array.isArray(data.liveDnaDrops)
-            ? data.liveDnaDrops
-                .filter(
-                  (d: { shareId?: string }) =>
-                    typeof d?.shareId === 'string' && d.shareId.trim().length > 0
-                )
-                .map((d: { shareId: string; title?: string; type?: string }) => ({
-                  shareId: d.shareId,
-                  title: typeof d.title === 'string' && d.title.trim() ? d.title : 'Untitled drop',
-                  type: d.type === 'album' ? 'album' : 'track',
-                }))
-            : [],
-          slug,
-        });
-        setConfig(normalizeArtistHomeConfig(data.artistHome));
-        void trackShareCardEvent('share_card_opened', { slug });
-      } finally {
-        setLoading(false);
-      }
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug: rawSlug } = await params;
+  const slug = rawSlug?.trim() || '';
+  if (!slug) {
+    return {
+      title: 'Artist Home',
+      description: SEO.description,
     };
-    void load();
-  }, [slug]);
-
-  if (loading) {
-    return (
-      <StudioLoader
-        size="lg"
-        fullscreen
-        className="!bg-[hsl(216_28%_5%)]"
-      />
-    );
   }
 
-  if (error || !profile || !config) {
-    return (
-      <div className="container mx-auto max-w-lg py-20 px-4 text-center space-y-4">
-        <p className="text-muted-foreground">This public profile is not available.</p>
-        <Link href="/" className="text-primary text-sm font-bold uppercase">
-          Back to studio
-        </Link>
-      </div>
-    );
+  try {
+    const profile = await getPublicProfile(slug);
+    if (!profile) {
+      return {
+        title: 'Artist Home',
+        description: 'This Bar 4 Bar Artist Home is not available.',
+        robots: { index: false, follow: false },
+      };
+    }
+
+    const data = profile as Record<string, unknown>;
+    const { displayName, title, description } = profileShareCopy(data, slug);
+    const canonical = absoluteUrl(`/profile/${slug}`);
+    const ogTitle = `${displayName} on Bar 4 Bar`;
+
+    return {
+      title,
+      description,
+      alternates: { canonical },
+      openGraph: {
+        type: 'profile',
+        locale: 'en_US',
+        url: canonical,
+        siteName: SEO.siteName,
+        title: ogTitle,
+        description,
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: ogTitle,
+        description,
+      },
+    };
+  } catch (err) {
+    console.error('[profile/slug metadata]', err);
+    return {
+      title: 'Artist Home',
+      description: SEO.description,
+    };
   }
+}
 
-  const isOwner = Boolean(user?.id && profile.userId && user.id === profile.userId);
-
-  return <ArtistHome profile={profile} config={config} isOwner={isOwner} />;
+export default async function PublicProfilePage({ params }: PageProps) {
+  const { slug } = await params;
+  return <PublicProfilePageClient slug={slug} />;
 }

@@ -19,6 +19,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
 import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
+import { LiveDnaDropsGroupedList } from '@/components/profile/live-dna-drop-card';
 import { AlbumCoverCollage } from '@/components/gamification/album-cover-collage';
 import { rankBadgeClass, rankIdFromLabel } from '@/lib/gamification/badge-styles';
 import { FriendButton } from '@/components/profile/friend-button';
@@ -270,20 +271,31 @@ export function ArtistHome({
               <p className="max-w-xl text-sm leading-relaxed text-[var(--ph-muted)]">{config.featured.bio}</p>
             )}
 
-            {showLiveDnaDrops && (
-              liveDnaDrops.length === 1 ? (
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
-                >
-                  <Link href={`/share/${liveDnaDrops[0].shareId}`}>
-                    <Dna className="h-3.5 w-3.5" />
-                    1 DNA drop live
-                  </Link>
-                </Button>
-              ) : (
+            {showLiveDnaDrops && (() => {
+              const albumCount = liveDnaDrops.filter((d) => d.type === 'album').length;
+              const trackCount = liveDnaDrops.filter((d) => d.type === 'track').length;
+              if (liveDnaDrops.length === 1) {
+                return (
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
+                  >
+                    <Link href={`/share/${liveDnaDrops[0].shareId}`}>
+                      <Dna className="h-3.5 w-3.5" />
+                      {liveDnaDrops[0].type === 'album' ? '1 album DNA live' : '1 track DNA live'}
+                    </Link>
+                  </Button>
+                );
+              }
+              const label =
+                albumCount > 0 && trackCount > 0
+                  ? `${albumCount} album${albumCount === 1 ? '' : 's'} · ${trackCount} track${trackCount === 1 ? '' : 's'} live`
+                  : albumCount > 0
+                    ? `${albumCount} album DNA live`
+                    : `${trackCount} track DNA live`;
+              return (
                 <Button
                   type="button"
                   variant="outline"
@@ -292,10 +304,10 @@ export function ArtistHome({
                   onClick={() => setDropsOpen(true)}
                 >
                   <Dna className="h-3.5 w-3.5" />
-                  {liveDnaDrops.length} DNA drops live
+                  {label}
                 </Button>
-              )
-            )}
+              );
+            })()}
 
             <div className="grid max-w-md grid-cols-3 gap-2">
               {[
@@ -362,15 +374,12 @@ export function ArtistHome({
               </button>
               {useStarMark && (
                 <div
-                  className="pointer-events-none absolute -bottom-1 -right-1 z-10 flex h-14 w-14 items-center justify-center sm:h-16 sm:w-16"
+                  className="pointer-events-none absolute bottom-3 right-3 z-10 flex h-11 w-11 items-center justify-center sm:bottom-4 sm:right-4 sm:h-[3.25rem] sm:w-[3.25rem]"
                   title="Feed star mark"
                   aria-hidden
                 >
-                  <span
-                    className="flex h-full w-full items-center justify-center overflow-hidden border border-[var(--ph-border)] bg-black/70 shadow-lg"
-                    style={{ clipPath: 'polygon(50% 0%, 61.8% 35.4%, 98.2% 35.4%, 68.2% 57.6%, 79.4% 91.2%, 50% 71%, 20.6% 91.2%, 31.8% 57.6%, 1.8% 35.4%, 38.2% 35.4%)' }}
-                  >
-                    <VesperfoldMark seed={starSeed} size={64} />
+                  <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-white/20 bg-black/70 shadow-[0_8px_24px_rgba(0,0,0,0.45)] ring-2 ring-black/40">
+                    <VesperfoldMark seed={starSeed} size={52} />
                   </span>
                 </div>
               )}
@@ -395,6 +404,7 @@ export function ArtistHome({
               viewerSlug,
               featured: config.featured,
               badges: profile.badges,
+              unlockedAchievements: profile.unlockedAchievements,
               rankLabel: profile.rankLabel,
               xp: profile.xp,
               currentStreak: profile.currentStreak,
@@ -499,25 +509,13 @@ export function ArtistHome({
               Live DNA Drops
             </DialogTitle>
           </DialogHeader>
-          <ul className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
-            {liveDnaDrops.map((drop) => (
-              <li key={drop.shareId}>
-                <Link
-                  href={`/share/${drop.shareId}`}
-                  onClick={() => setDropsOpen(false)}
-                  className="flex items-center gap-3 rounded-lg border border-white/10 bg-black/30 px-3 py-3 transition-colors hover:border-[var(--ph-accent,#7dd3fc)]"
-                >
-                  <Dna className="h-4 w-4 shrink-0 text-[var(--ph-accent,#7dd3fc)]" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold">{drop.title}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
-                      {drop.type === 'album' ? 'Album DNA' : 'Track DNA'}
-                    </span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <div className="max-h-[60vh] overflow-y-auto pr-1">
+            <LiveDnaDropsGroupedList
+              drops={liveDnaDrops}
+              layout="dialog"
+              onNavigate={() => setDropsOpen(false)}
+            />
+          </div>
         </DialogContent>
       </Dialog>
     </div>

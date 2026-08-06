@@ -102,6 +102,7 @@ import { isDataUrl } from '@/lib/cover-art';
 import { postGamificationEvent } from '@/lib/gamification-client';
 import { VaultStudioProgress, VAULT_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY } from '@/components/gamification/vault-studio-progress';
 import { VaultProfileDock } from '@/components/profile/vault-profile-dock';
+import { LiveDnaDropsManage } from '@/components/scene/scene-live-drops-strip';
 import { VaultChamberAtmosphere } from '@/components/vault-chamber-atmosphere';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
@@ -202,7 +203,7 @@ function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenC
                 albumId: 'unassigned',
                 ownerId: user.id,
                 title: title,
-                vibe: { genre: 'Lofi-Hop', tempoBPM: 90, feeling: ['new idea'] },
+                vibe: { genre: 'Lofi-Hop', tempoBPM: 90, feeling: ['new idea'], enabled: false },
                 intentRefs: [],
                 sections: [{ id: `section-${Date.now()}`, type: 'verse', bars: [{ idx: 1, text: '', accepted: true, syllables: 0, rhymeKey: '?' }] }],
                 status: 'in_progress',
@@ -937,6 +938,7 @@ export function AlbumList() {
           )}
 
           <div className="relative min-w-0 w-full xl:col-start-2 xl:row-start-2 px-4 sm:px-6 pb-10">
+            {!loading && user && <LiveDnaDropsManage className="mb-4" />}
             {user && isEmpty && !searchResults && <FirstSongHero />}
             {searchResults ? (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">

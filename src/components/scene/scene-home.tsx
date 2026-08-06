@@ -20,6 +20,7 @@ import { VaultStudioProgress, SCENE_STUDIO_PROGRESS_EXPANDED_KEY, SCENE_STUDIO_P
 import { SceneNavDock } from '@/components/scene/scene-nav-dock';
 import { SceneBoothCard } from '@/components/scene/scene-booth-card';
 import { SceneDiscoverCard } from '@/components/scene/scene-discover-card';
+import { SceneLiveDropsStrip } from '@/components/scene/scene-live-drops-strip';
 import { SceneBlockAtmosphere } from '@/components/scene/scene-block-atmosphere';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/use-auth';
@@ -446,6 +447,8 @@ export function SceneHome() {
           <SceneComposer profileSlug={summary.profileSlug} onPosted={onPosted} />
 
           <SceneBoothCard />
+
+          <SceneLiveDropsStrip />
 
           {!loaded ? (
             <div className="flex min-h-[30vh] items-center justify-center">

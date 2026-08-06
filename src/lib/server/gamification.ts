@@ -1112,6 +1112,7 @@ export async function getPublicProfile(slug: string) {
     starMarkUseStar: Boolean(summary.starMarkUseStar),
     starMarkSeed: normalizeVesperfoldSeed(summary.starMarkSeed ?? 0),
     liveDnaDrops,
+    unlockedAchievements: summary.unlockedAchievements || {},
     ...(referralCode ? { referralCode } : {}),
   };
 }
@@ -1164,40 +1165,122 @@ export type LiveDnaDropSummary = {
   shareId: string;
   title: string;
   type: 'album' | 'track';
+  /** Set on track drops that also sit under a live album DNA drop. */
+  albumTitle?: string;
+  /** Parent album DNA share id when this track is nested under that album. */
+  albumShareId?: string;
+  /** Live track count on album cards. */
+  trackCount?: number;
 };
+
+type LiveDnaDropDraft = LiveDnaDropSummary & { updatedAt: string };
 
 /** Active public DNA Drops for a user (shares collection = live). */
 export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDropSummary[]> {
   if (!userId) return [];
   const db = await getDb();
   const snap = await db.collection('shares').where('ownerId', '==', userId).get();
-  const drops = snap.docs
-    .map((doc) => {
-      const data = doc.data();
-      const type = data.type === 'album' ? ('album' as const) : ('track' as const);
-      const title =
-        typeof data?.data?.title === 'string' && data.data.title.trim()
-          ? data.data.title.trim()
-          : type === 'album'
-            ? 'Untitled album'
-            : 'Untitled track';
-      const updatedAt =
-        typeof data.updatedAt === 'string'
-          ? data.updatedAt
-          : typeof data.createdAt === 'string'
-            ? data.createdAt
-            : '';
-      return {
-        shareId: doc.id,
-        title: title.slice(0, 120),
-        type,
-        updatedAt,
-      };
+
+  const byShareId = new Map<string, LiveDnaDropDraft>();
+
+  for (const doc of snap.docs) {
+    const data = doc.data();
+    const type = data.type === 'album' ? ('album' as const) : ('track' as const);
+    const title =
+      typeof data?.data?.title === 'string' && data.data.title.trim()
+        ? data.data.title.trim()
+        : type === 'album'
+          ? 'Untitled album'
+          : 'Untitled track';
+    const updatedAt =
+      typeof data.updatedAt === 'string'
+        ? data.updatedAt
+        : typeof data.createdAt === 'string'
+          ? data.createdAt
+          : '';
+
+    const entry: LiveDnaDropDraft = {
+      shareId: doc.id,
+      title: title.slice(0, 120),
+      type,
+      updatedAt,
+    };
+
+    if (type === 'album') {
+      const tracks = Array.isArray(data?.data?.tracks) ? data.data.tracks : [];
+      entry.trackCount = tracks.length;
+    }
+
+    byShareId.set(doc.id, entry);
+  }
+
+  // Nest live tracks under their album DNA so the Drop Shelf can group them.
+  for (const doc of snap.docs) {
+    const data = doc.data();
+    if (data.type !== 'album') continue;
+    const albumShareId = doc.id;
+    const albumTitle =
+      typeof data?.data?.title === 'string' && data.data.title.trim()
+        ? data.data.title.trim().slice(0, 120)
+        : 'Untitled album';
+    const albumUpdatedAt =
+      typeof data.updatedAt === 'string'
+        ? data.updatedAt
+        : typeof data.createdAt === 'string'
+          ? data.createdAt
+          : '';
+    const tracks = Array.isArray(data?.data?.tracks) ? data.data.tracks : [];
+
+    for (const track of tracks) {
+      if (!track || typeof track !== 'object') continue;
+      const shareId =
+        typeof (track as { shareId?: unknown }).shareId === 'string'
+          ? (track as { shareId: string }).shareId.trim()
+          : '';
+      if (!shareId) continue;
+
+      const trackTitle =
+        typeof (track as { title?: unknown }).title === 'string' &&
+        (track as { title: string }).title.trim()
+          ? (track as { title: string }).title.trim().slice(0, 120)
+          : 'Untitled track';
+
+      const existing = byShareId.get(shareId);
+      if (existing) {
+        byShareId.set(shareId, {
+          ...existing,
+          type: 'track',
+          albumTitle: existing.albumTitle || albumTitle,
+          albumShareId,
+          updatedAt: existing.updatedAt || albumUpdatedAt,
+        });
+      } else {
+        byShareId.set(shareId, {
+          shareId,
+          title: trackTitle,
+          type: 'track',
+          albumTitle,
+          albumShareId,
+          updatedAt: albumUpdatedAt,
+        });
+      }
+    }
+  }
+
+  return [...byShareId.values()]
+    .sort((a, b) => {
+      if (a.type !== b.type) return a.type === 'album' ? -1 : 1;
+      return b.updatedAt.localeCompare(a.updatedAt);
     })
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    .slice(0, 24)
-    .map(({ shareId, title, type }) => ({ shareId, title, type }));
-  return drops;
+    .slice(0, 48)
+    .map(({ shareId, title, type, albumTitle, albumShareId, trackCount }) => ({
+      shareId,
+      title,
+      type,
+      ...(albumTitle ? { albumTitle } : {}),
+      ...(albumShareId ? { albumShareId } : {}),
+      ...(typeof trackCount === 'number' ? { trackCount } : {}),
+    }));
 }
 
 async function getPublicAlbumMeta(userId: string): Promise<PublicAlbumMeta> {

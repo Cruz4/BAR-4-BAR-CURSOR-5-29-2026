@@ -50,7 +50,7 @@ function RedditIcon({ className }: { className?: string }) {
 }
 
 export function buildProfileShareText(displayName: string, rankLabel: string, profileUrl: string) {
-  return `${displayName} · ${rankLabel} on Bar 4 Bar\n${profileUrl}\n#Bar4Bar`;
+  return `${displayName} · ${rankLabel} on Bar 4 Bar\n${profileUrl}\n#bar4bar.ink`;
 }
 
 export function ProfileShareDialog({ open, onOpenChange, profile }: ProfileShareDialogProps) {

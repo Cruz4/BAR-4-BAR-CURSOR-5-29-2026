@@ -18,6 +18,7 @@ const FLOW_LOADERS = {
   generateRelayDraft: () => import('@/ai/flows/writers-relay').then((m) => m.generateRelayDraft),
   generateSongDraft: () => import('@/ai/flows/generate-song-draft').then((m) => m.generateSongDraft),
   suggestTrackTitles: () => import('@/ai/flows/suggest-track-titles').then((m) => m.suggestTrackTitles),
+  extractAlbumDna: () => import('@/ai/flows/extract-album-dna').then((m) => m.extractAlbumDna),
 } as const;
 
 type FlowAction = keyof typeof FLOW_LOADERS;

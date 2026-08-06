@@ -35,6 +35,8 @@ export type ProfilePost = {
   text: string;
   embedUrl?: string;
   embedProvider?: EmbedProvider;
+  /** Inline image (data URL or https) — e.g. achievement foil card. */
+  imageUrl?: string;
   createdAt: string;
 };
 
@@ -72,6 +74,8 @@ export type GuestbookEntry = {
 const MAX_POST_TEXT = 1000;
 const MAX_COMMENT_TEXT = 500;
 const MAX_GUESTBOOK_TEXT = 240;
+/** Firestore doc budget — keep foil JPEGs under this. */
+const MAX_POST_IMAGE_URL = 900_000;
 
 function requireUser() {
   const user = auth.currentUser;
@@ -127,13 +131,18 @@ function chronoId(): string {
 export async function createPost(input: {
   text: string;
   embedUrl?: string;
+  imageUrl?: string;
   ownerName: string;
   ownerSlug?: string;
 }): Promise<ProfilePost> {
   const user = requireUser();
   const text = input.text.trim().slice(0, MAX_POST_TEXT);
   const embedUrl = input.embedUrl?.trim() || undefined;
-  if (!text && !embedUrl) throw new Error('Write something or add a link.');
+  const imageUrl = input.imageUrl?.trim() || undefined;
+  if (imageUrl && imageUrl.length > MAX_POST_IMAGE_URL) {
+    throw new Error('Image is too large to post.');
+  }
+  if (!text && !embedUrl && !imageUrl) throw new Error('Write something, add a link, or attach an image.');
 
   const parsed = parseEmbedUrl(embedUrl);
   const post: ProfilePost = {
@@ -144,11 +153,15 @@ export async function createPost(input: {
     text,
     ...(embedUrl ? { embedUrl } : {}),
     ...(parsed ? { embedProvider: parsed.provider } : {}),
+    ...(imageUrl ? { imageUrl } : {}),
     createdAt: new Date().toISOString(),
   };
   const { id, ...data } = post;
   await setDoc(doc(db, 'posts', id), data);
-  trackSocialEvent('profile_post_created', { hasEmbed: Boolean(embedUrl) });
+  trackSocialEvent('profile_post_created', {
+    hasEmbed: Boolean(embedUrl),
+    hasImage: Boolean(imageUrl),
+  });
   try {
     const { postGamificationEvent } = await import('@/lib/gamification-client');
     void postGamificationEvent('wall_post_created');
@@ -172,6 +185,7 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
     text: String(data.text || ''),
     embedUrl: typeof data.embedUrl === 'string' ? data.embedUrl : undefined,
     embedProvider: data.embedProvider as EmbedProvider | undefined,
+    imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : undefined,
     createdAt: String(data.createdAt || ''),
   };
 }

@@ -26,46 +26,24 @@ function Barcode({ accent }: { accent: string }) {
   );
 }
 
-/** SVG pill — html2canvas mis-measures HTML text baselines in rounded badges. */
+/** HTML pill — flex-centered so feed/PNG capture keeps label in the middle. */
 function CategoryBadge({ label, accent, accentSoft }: { label: string; accent: string; accentSoft: string }) {
-  const text = label.toUpperCase();
-  const height = 24;
-  const width = Math.max(58, Math.ceil(text.length * 5.1 + 18));
-
   return (
-    <svg
+    <span
       data-achievement-pill
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      className="shrink-0 self-start overflow-visible"
-      role="img"
-      aria-label={text}
+      className="inline-block h-6 shrink-0 self-start rounded-full border px-2.5 text-center text-[8px] font-bold uppercase tracking-wide"
+      style={{
+        color: accent,
+        background: accentSoft,
+        borderColor: `${accent}55`,
+        height: 22,
+        lineHeight: '22px',
+        verticalAlign: 'middle',
+        whiteSpace: 'nowrap',
+      }}
     >
-      <rect
-        x={0.5}
-        y={0.5}
-        width={width - 1}
-        height={height - 1}
-        rx={height / 2}
-        fill={accentSoft}
-        stroke={accent}
-        strokeOpacity={0.33}
-        strokeWidth={1}
-      />
-      <text
-        x={width / 2}
-        y={height / 2}
-        fill={accent}
-        fontSize={8}
-        fontWeight={700}
-        fontFamily="Inter, system-ui, sans-serif"
-        textAnchor="middle"
-        dominantBaseline="central"
-      >
-        {text}
-      </text>
-    </svg>
+      {label.toUpperCase()}
+    </span>
   );
 }
 
@@ -143,10 +121,10 @@ export const AchievementFoilCard = React.forwardRef<HTMLDivElement, AchievementF
           </div>
         )}
 
-        <div className="relative overflow-hidden rounded-2xl p-[3px]" style={{ background: theme.foil }}>
+        <div className="relative overflow-visible rounded-2xl p-[3px]" style={{ background: theme.foil }}>
           <div
             data-achievement-inner
-            className={cn('rounded-[13px] space-y-4', compact ? 'p-3.5 pb-4' : 'p-5 pb-6')}
+            className={cn('rounded-[13px] space-y-4', compact ? 'p-3.5' : 'p-5')}
             style={{ backgroundColor: 'rgba(2, 6, 23, 0.72)' }}
           >
             <div className="flex items-start justify-between gap-2">
@@ -234,7 +212,7 @@ export const AchievementFoilCard = React.forwardRef<HTMLDivElement, AchievementF
               </div>
             )}
 
-            <div className="border-t border-dashed pt-3 pb-1 space-y-2.5" style={{ borderColor: `${theme.accent}44` }}>
+            <div className="border-t border-dashed pt-3 pb-2 space-y-3" style={{ borderColor: `${theme.accent}44` }}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p

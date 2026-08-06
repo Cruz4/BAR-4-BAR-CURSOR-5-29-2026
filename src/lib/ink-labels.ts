@@ -7,6 +7,7 @@ export const INK_ACTION_LABELS: Record<InkActionKey, string> = {
   generateNextLine: 'Next / Previous Line',
   generateDraftPerBar: 'Studio Draft (per bar)',
   analyzeRelayAssets: 'Extract DNA Profile',
+  extractAlbumDna: 'Extract Album DNA',
   generateRelayDraft: 'DNA Remix (per bar)',
   suggestTrackTitles: 'Suggest Track Titles',
   suggestVibe: 'Analyze Vibe',

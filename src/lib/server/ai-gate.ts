@@ -50,6 +50,7 @@ const PRO_ONLY_AI_ACTIONS = new Set([
   'improveMyStyle',
   'aiVideoDirector',
   'aiMusicCowriter',
+  'extractAlbumDna',
 ]);
 
 async function enforceProOnlyAiAction(uid: string, actionName: string): Promise<void> {
