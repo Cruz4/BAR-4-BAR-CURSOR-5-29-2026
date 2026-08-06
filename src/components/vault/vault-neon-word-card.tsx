@@ -1,8 +1,9 @@
 'use client';
 
 /**
- * Vault neon word — identical placement + markup to Scene/feed neon.
- * Fixed overlay only; Vault docks stay untouched.
+ * Vault neon word — same Scene fixed spot (right-[3%] top-[4.5rem]).
+ * Artist Home / Activity docks are not moved. On xl+, max-width is capped
+ * so the definition’s left edge never crosses those buttons while scrolling.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -42,11 +43,18 @@ export function VaultNeonWordCard() {
 
   return (
     <div
-      className="scene-block-neon pointer-events-none fixed right-[3%] top-[4.5rem] z-[40] hidden max-w-[16rem] text-right sm:block sm:max-w-[18rem]"
+      className={cn(
+        'scene-block-neon pointer-events-none fixed right-[3%] top-[4.5rem] z-[40] hidden overflow-hidden text-right sm:block',
+        // Scene widths below xl (no side dock)
+        'max-w-[16rem] sm:max-w-[18rem]',
+        // xl+: keep Scene right/top anchor; shrink so left edge clears the dock
+        // (50% - 36rem = right gutter; minus dock+gap minus right-[3%])
+        'xl:max-w-[min(18rem,max(0px,calc(50%-36rem-5.75rem-3%)))]'
+      )}
       data-phase="night"
       aria-label={`Neon word ${neon.word}`}
     >
-      <div className="inline-flex items-baseline justify-end gap-1.5">
+      <div className="inline-flex max-w-full items-baseline justify-end gap-1.5">
         <button
           type="button"
           onClick={togglePin}
@@ -70,14 +78,14 @@ export function VaultNeonWordCard() {
             <Lock className="h-2.5 w-2.5" strokeWidth={1.6} aria-hidden />
           )}
         </button>
-        <span className="scene-block-neon-text font-headline text-base font-bold uppercase tracking-[0.12em] sm:text-lg">
+        <span className="scene-block-neon-text min-w-0 font-headline text-base font-bold uppercase tracking-[0.12em] sm:text-lg">
           {neon.word}
         </span>
       </div>
-      <p className="scene-block-neon-pron mt-1 font-sans text-xs font-medium normal-case tracking-wide sm:text-[13px]">
+      <p className="scene-block-neon-pron mt-1 max-w-full font-sans text-xs font-medium normal-case tracking-wide sm:text-[13px]">
         /{neon.pron}/
       </p>
-      <p className="scene-block-neon-gloss mt-1.5 max-w-[18rem] font-code text-[12px] font-medium leading-relaxed tracking-wide sm:max-w-[22rem] sm:text-[13px]">
+      <p className="scene-block-neon-gloss mt-1.5 w-full max-w-full break-words font-code text-[11px] font-medium leading-relaxed tracking-wide sm:text-[12px]">
         {neon.gloss}
       </p>
     </div>
