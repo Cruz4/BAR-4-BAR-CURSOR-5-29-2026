@@ -356,10 +356,15 @@ export function ShareDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md bg-card border-2 max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent
+          className={cn(
+            'flex w-[calc(100vw-1.25rem)] max-w-lg flex-col gap-0 overflow-hidden p-0',
+            'max-h-[min(92vh,880px)] bg-card border-2 sm:rounded-xl'
+          )}
+        >
+          <DialogHeader className="shrink-0 space-y-1.5 border-b border-white/10 px-5 pb-3 pt-6 pr-12 sm:px-6">
             <DialogTitle className="font-headline text-3xl flex items-center gap-3">
-              <Globe className="text-primary h-8 w-8" /> DNA DROP
+              <Globe className="text-primary h-8 w-8 shrink-0" /> DNA DROP
             </DialogTitle>
             <DialogDescription className="font-code text-[10px] uppercase tracking-widest text-muted-foreground">
               Public snapshot of <span className="text-foreground">{title}</span>
@@ -367,7 +372,8 @@ export function ShareDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4 space-y-5">
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-5 py-4 sm:px-6">
+            <div className="space-y-5 min-w-0">
             {!shareId ? (
               <div className="space-y-4 text-center px-2">
                 <div className="p-5 bg-primary/5 border border-primary/20 rounded-xl space-y-3 text-left">
@@ -388,12 +394,12 @@ export function ShareDialog({
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
-                <div className="space-y-2">
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 min-w-0">
+                <div className="space-y-2 min-w-0">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-primary">
                     Public Studio Link
                   </Label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 min-w-0">
                     <a
                       href={shareUrl}
                       target="_blank"
@@ -453,10 +459,10 @@ export function ShareDialog({
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <Button
                     variant="secondary"
-                    className="h-10 text-[10px] font-bold uppercase gap-2"
+                    className="h-10 flex-1 text-[10px] font-bold uppercase gap-2"
                     onClick={handleUpdateDNA}
                     disabled={isWorking}
                   >
@@ -469,7 +475,7 @@ export function ShareDialog({
                   </Button>
                   <Button
                     variant="outline"
-                    className="h-10 text-[10px] font-bold uppercase gap-2 border-red-500/30 text-red-500 hover:bg-red-500/10"
+                    className="h-10 flex-1 text-[10px] font-bold uppercase gap-2 border-red-500/30 text-red-500 hover:bg-red-500/10"
                     onClick={handleRevokeDNA}
                     disabled={isWorking}
                   >
@@ -479,20 +485,20 @@ export function ShareDialog({
               </div>
             )}
 
-            <div className="space-y-3 border-t border-white/10 pt-4">
+            <div className="space-y-3 border-t border-white/10 pt-4 min-w-0">
               <div className="flex items-center gap-2">
-                <Link2 className="h-4 w-4 text-primary" />
+                <Link2 className="h-4 w-4 text-primary shrink-0" />
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-primary">
                   Links &amp; embeds
                 </Label>
               </div>
               <p className="text-[10px] text-muted-foreground leading-relaxed">{EMBED_HELP_TEXT}</p>
-              <div className="flex gap-2">
+              <div className="flex gap-2 min-w-0">
                 <Input
                   value={mediaInput}
                   onChange={(e) => setMediaInput(e.target.value)}
                   placeholder="https://youtube.com/watch?v=…"
-                  className="h-9 font-code text-xs bg-background/50"
+                  className="h-9 min-w-0 flex-1 font-code text-xs bg-background/50"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -513,16 +519,16 @@ export function ShareDialog({
                 </Button>
               </div>
               {mediaDraft.length > 0 && (
-                <ul className="space-y-3">
+                <ul className="space-y-3 min-w-0">
                   {mediaDraft.map((url, idx) => {
                     const embeddable = Boolean(parseEmbedUrl(url));
                     return (
                       <li
                         key={`${url}-${idx}`}
-                        className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-2"
+                        className="min-w-0 space-y-2 overflow-hidden rounded-lg border border-white/10 bg-black/20 p-2"
                       >
-                        <div className="flex items-start gap-2">
-                          <p className="min-w-0 flex-1 truncate font-code text-[10px] text-muted-foreground">
+                        <div className="flex items-start gap-2 min-w-0">
+                          <p className="min-w-0 flex-1 break-all font-code text-[10px] text-muted-foreground">
                             {url}
                           </p>
                           <Button
@@ -537,7 +543,9 @@ export function ShareDialog({
                           </Button>
                         </div>
                         {embeddable ? (
-                          <EmbedPlayer url={url} />
+                          <div className="min-w-0 max-w-full overflow-hidden">
+                            <EmbedPlayer url={url} />
+                          </div>
                         ) : (
                           <a
                             href={url}
@@ -565,9 +573,10 @@ export function ShareDialog({
                 {shareId ? 'Save media to live drop' : 'Save media for next drop'}
               </Button>
             </div>
+            </div>
           </div>
 
-          <DialogFooter className="sm:justify-start">
+          <DialogFooter className="shrink-0 border-t border-white/10 px-5 py-3 sm:justify-start sm:px-6">
             <p className="text-[9px] text-muted-foreground font-code uppercase text-center w-full leading-relaxed">
               Import copies the snapshot into another artist&apos;s vault. Take offline to close the link entirely.
             </p>

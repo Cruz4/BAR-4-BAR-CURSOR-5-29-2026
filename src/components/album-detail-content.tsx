@@ -82,7 +82,9 @@ import {
 import {
     Select,
     SelectContent,
+    SelectGroup,
     SelectItem,
+    SelectLabel,
     SelectTrigger,
     SelectValue,
   } from "@/components/ui/select";
@@ -129,7 +131,11 @@ import {
   albumDnaFieldsHaveContent,
   buildAlbumDnaCorpus,
 } from '@/lib/album-dna-extract';
-import { buildDnaPresetFromDirection } from '@/lib/dna-strands';
+import {
+  buildDnaPresetFromDirection,
+  partitionDnaPresetsBySource,
+} from '@/lib/dna-strands';
+import type { DnaPreset } from '@/lib/types';
 import { AI_COSTS } from '@/lib/costs';
 import { inkTooltip } from '@/lib/ink-labels';
 import { cn } from '@/lib/utils';
@@ -267,9 +273,168 @@ function CreateTrackDialog({
     );
 }
 
+function formatPresetSavedAt(iso: string): string {
+  try {
+    return format(new Date(iso), 'MMM d, yyyy');
+  } catch {
+    return 'Saved';
+  }
+}
+
+function AlbumDnaVaultDialog({
+  open,
+  onOpenChange,
+  presets,
+  onLoad,
+  onDelete,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  presets: DnaPreset[];
+  onLoad: (index: number) => void;
+  onDelete: (index: number) => void;
+}) {
+  const { album: albumEntries, track: trackEntries } = useMemo(
+    () => partitionDnaPresetsBySource(presets),
+    [presets]
+  );
+  const [confirmDeleteIdx, setConfirmDeleteIdx] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!open) setConfirmDeleteIdx(null);
+  }, [open]);
+
+  const renderSection = (
+    title: string,
+    hint: string,
+    entries: Array<{ preset: DnaPreset; index: number }>,
+    empty: string
+  ) => (
+    <section className="space-y-2">
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-500">{title}</p>
+        <p className="mt-0.5 text-[10px] text-muted-foreground font-code leading-relaxed">{hint}</p>
+      </div>
+      {entries.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-border/60 bg-muted/20 px-3 py-4 text-[11px] text-muted-foreground">
+          {empty}
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {entries.map(({ preset, index }) => (
+            <li
+              key={`${preset.name}-${preset.createdAt}-${index}`}
+              className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold">{preset.name}</p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">
+                    {preset.sourceTrackTitle ? `${preset.sourceTrackTitle} · ` : ''}
+                    {formatPresetSavedAt(preset.createdAt)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="h-8 text-[10px] font-bold uppercase"
+                    onClick={() => onLoad(index)}
+                  >
+                    Load
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-2 text-red-500 hover:bg-red-500/10 hover:text-red-400"
+                    aria-label={`Delete ${preset.name}`}
+                    onClick={() => setConfirmDeleteIdx(index)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto border-emerald-500/25 bg-card">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-2xl uppercase tracking-tight text-emerald-500">
+              Load Album DNA
+            </DialogTitle>
+            <DialogDescription className="font-code text-[11px] leading-relaxed">
+              Album profiles fill World / Emotion / Message from album saves. Track DNA profiles apply those
+              same fields from a track you saved earlier. Delete anything you no longer need.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-1">
+            {renderSection(
+              'Album DNA',
+              'Saved from this album’s Extract / Save flow.',
+              albumEntries,
+              'No album DNA profiles saved yet.'
+            )}
+            {renderSection(
+              'Track DNA',
+              'Saved from a track sheet or workstation — apply World / Emotion / Message from that profile.',
+              trackEntries,
+              'No track DNA profiles in this album vault yet.'
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={confirmDeleteIdx !== null}
+        onOpenChange={(o) => !o && setConfirmDeleteIdx(null)}
+      >
+        <AlertDialogContent className="bg-card border-2">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-headline text-xl uppercase text-red-500">
+              Delete DNA profile?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm font-code">
+              Remove
+              {confirmDeleteIdx != null && presets[confirmDeleteIdx]
+                ? ` “${presets[confirmDeleteIdx].name}”`
+                : ' this profile'}{' '}
+              from this album’s vault. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-bold">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="font-bold bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (confirmDeleteIdx != null) onDelete(confirmDeleteIdx);
+                setConfirmDeleteIdx(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 function DNAStrainMixerDialog({ open, onOpenChange, album, onApply }: { open: boolean, onOpenChange: (open: boolean) => void, album: Album, onApply: (dir: Partial<Direction>) => void }) {
     const { user } = useAuth();
     const presets = album.dnaPresets || [];
+    const { album: albumEntries, track: trackEntries } = useMemo(
+      () => partitionDnaPresetsBySource(presets),
+      [presets]
+    );
     const [mixedStrains, setMixedStrains] = useState<Partial<Direction>>({});
     const { toast } = useToast();
 
@@ -311,7 +476,7 @@ function DNAStrainMixerDialog({ open, onOpenChange, album, onApply }: { open: bo
                     <DialogTitle className="font-headline text-4xl flex items-center gap-3 text-emerald-500 tracking-tighter">
                         <ArrowRightLeft className="h-10 w-10" /> DNA STRAIN MIXER
                     </DialogTitle>
-                    <DialogDescription className="font-code text-[11px] uppercase tracking-[0.3em] text-emerald-600/60 mt-1">Select individual strains from your saved profiles to build a hybrid foundation.</DialogDescription>
+                    <DialogDescription className="font-code text-[11px] uppercase tracking-[0.3em] text-emerald-600/60 mt-1">Select individual strains from album or track DNA saves to build a hybrid foundation.</DialogDescription>
                 </DialogHeader>
                 <div className="flex-1 overflow-y-auto studio-scrollbar p-8">
                     <div className="grid grid-cols-1 gap-8 max-w-4xl mx-auto pb-12">
@@ -324,9 +489,36 @@ function DNAStrainMixerDialog({ open, onOpenChange, album, onApply }: { open: bo
                                             <SelectValue placeholder="LOAD STRAIN FROM VAULT" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {presets.map((p, i) => (
-                                                <SelectItem key={i} value={String(i)} className="text-[10px] font-bold uppercase">{p.name}</SelectItem>
-                                            ))}
+                                            {albumEntries.length > 0 && (
+                                              <SelectGroup>
+                                                <SelectLabel className="text-[9px] uppercase tracking-widest text-emerald-500/80">
+                                                  Album DNA
+                                                </SelectLabel>
+                                                {albumEntries.map(({ preset, index }) => (
+                                                  <SelectItem key={`a-${index}`} value={String(index)} className="text-[10px] font-bold uppercase">
+                                                    {preset.name}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectGroup>
+                                            )}
+                                            {trackEntries.length > 0 && (
+                                              <SelectGroup>
+                                                <SelectLabel className="text-[9px] uppercase tracking-widest text-sky-400/80">
+                                                  Track DNA
+                                                </SelectLabel>
+                                                {trackEntries.map(({ preset, index }) => (
+                                                  <SelectItem key={`t-${index}`} value={String(index)} className="text-[10px] font-bold uppercase">
+                                                    {preset.name}
+                                                    {preset.sourceTrackTitle ? ` · ${preset.sourceTrackTitle}` : ''}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectGroup>
+                                            )}
+                                            {presets.length === 0 && (
+                                              <SelectItem value="__none" disabled className="text-[10px]">
+                                                No saved DNA yet
+                                              </SelectItem>
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -707,6 +899,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const [extractingAlbumDna, setExtractingAlbumDna] = useState(false);
   const [saveAlbumDnaOpen, setSaveAlbumDnaOpen] = useState(false);
   const [confirmExtractOpen, setConfirmExtractOpen] = useState(false);
+  const [loadDnaVaultOpen, setLoadDnaVaultOpen] = useState(false);
   const [confirmLoadPresetIdx, setConfirmLoadPresetIdx] = useState<number | null>(null);
 
   const handleAlbumUpdate = (updates: Partial<Album>) => {
@@ -836,7 +1029,8 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
     }
     const profile = buildDnaPresetFromDirection({
       name,
-      sourceTrackTitle: 'Album extract',
+      sourceTrackTitle: `Album · ${album.title}`,
+      sourceKind: 'album',
       direction: mapping,
     });
     const existing = album.dnaPresets || [];
@@ -855,6 +1049,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
     });
     toast({ title: 'Album DNA loaded', description: `"${preset.name}" applied to World / Emotion / Message.` });
     setConfirmLoadPresetIdx(null);
+    setLoadDnaVaultOpen(false);
   };
 
   const requestLoadAlbumDnaPreset = (idx: number) => {
@@ -864,6 +1059,18 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
       return;
     }
     applyLoadAlbumDnaPreset(idx);
+  };
+
+  const handleDeleteDnaPreset = (idx: number) => {
+    if (!album || !isPro) return;
+    const existing = album.dnaPresets || [];
+    const removed = existing[idx];
+    if (!removed) return;
+    handleAlbumUpdate({ dnaPresets: existing.filter((_, i) => i !== idx) });
+    toast({
+      title: 'DNA profile deleted',
+      description: `"${removed.name}" removed from this album’s vault.`,
+    });
   };
 
   const handleReorderTrack = (id: string, direction: 'up' | 'down') => {
@@ -1226,35 +1433,16 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                         >
                                           <Save className="h-3.5 w-3.5" /> Save
                                         </Button>
-                                        <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                            <Button
-                                              type="button"
-                                              size="sm"
-                                              variant="outline"
-                                              disabled={albumTierLocked || !(album.dnaPresets?.length)}
-                                              className="h-9 gap-1.5 border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-500/10"
-                                            >
-                                              <FolderOpen className="h-3.5 w-3.5" /> Load
-                                            </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end" className="max-w-[min(100vw-2rem,20rem)]">
-                                            {(album.dnaPresets || []).map((p, i) => (
-                                              <DropdownMenuItem
-                                                key={`${p.name}-${p.createdAt}-${i}`}
-                                                className="text-[10px] font-bold uppercase"
-                                                onClick={() => requestLoadAlbumDnaPreset(i)}
-                                              >
-                                                {p.name}
-                                                {p.sourceTrackTitle ? (
-                                                  <span className="ml-2 font-normal normal-case text-muted-foreground">
-                                                    · {p.sourceTrackTitle}
-                                                  </span>
-                                                ) : null}
-                                              </DropdownMenuItem>
-                                            ))}
-                                          </DropdownMenuContent>
-                                        </DropdownMenu>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          disabled={albumTierLocked || !(album.dnaPresets?.length)}
+                                          className="h-9 gap-1.5 border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-500/10"
+                                          onClick={() => setLoadDnaVaultOpen(true)}
+                                        >
+                                          <FolderOpen className="h-3.5 w-3.5" /> Load
+                                        </Button>
                                       </>
                                     ) : (
                                       <>
@@ -1337,6 +1525,14 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
       </div>
       
       {strainMixerOpen && <DNAStrainMixerDialog open={strainMixerOpen} onOpenChange={setStrainMixerOpen} album={album} onApply={(dir) => handleAlbumUpdate({ direction: { ...album.direction, ...dir } })} />}
+
+      <AlbumDnaVaultDialog
+        open={loadDnaVaultOpen}
+        onOpenChange={setLoadDnaVaultOpen}
+        presets={album.dnaPresets || []}
+        onLoad={requestLoadAlbumDnaPreset}
+        onDelete={handleDeleteDnaPreset}
+      />
       {editCoverArtDialogOpen && <EditCoverArtDialog album={album} onOpenChange={setEditCoverArtDialogOpen} />}
       {createTrackOpen && (
         <CreateTrackDialog

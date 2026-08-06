@@ -53,6 +53,7 @@ export type PublicProfileData = {
     type: 'album' | 'track';
     albumTitle?: string;
     albumShareId?: string;
+    trackIndex?: number;
     trackCount?: number;
   }>;
 };

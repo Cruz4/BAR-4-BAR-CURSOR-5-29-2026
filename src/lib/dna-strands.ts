@@ -334,10 +334,12 @@ export function buildDnaPresetFromDirection(options: {
   sourceTrackTitle: string;
   direction: Partial<Direction>;
   intents?: string[];
+  sourceKind?: 'album' | 'track';
 }): DnaPreset {
   return {
     name: options.name.trim(),
     createdAt: new Date().toISOString(),
+    sourceKind: options.sourceKind ?? 'track',
     sourceTrackTitle: options.sourceTrackTitle,
     analysis: emptyWizardAnalysis(),
     mapping: JSON.parse(JSON.stringify({ enabled: true, ...options.direction })) as Direction,
@@ -356,6 +358,7 @@ export function buildDnaPresetPayload(
     hubStyleMetrics?: StyleMetrics;
     name: string;
     sourceTrackTitle: string;
+    sourceKind?: 'album' | 'track';
   }
 ): DnaPreset {
   const mapping = buildDirectionMappingFromAnalysis(
@@ -380,6 +383,7 @@ export function buildDnaPresetPayload(
   return {
     name: options.name.trim(),
     createdAt: new Date().toISOString(),
+    sourceKind: options.sourceKind ?? 'track',
     sourceTrackTitle: options.sourceTrackTitle,
     analysis,
     mapping,
@@ -388,6 +392,29 @@ export function buildDnaPresetPayload(
     ...(structureGuide ? { structureGuide } : {}),
     ...(styleAnalysis ? { styleAnalysis, styleMetrics: styleMetrics ?? DEFAULT_STYLE_METRICS } : {}),
   };
+}
+
+/** Classify vault DNA for album Load UI (legacy presets inferred from title). */
+export function getDnaPresetSourceKind(preset: DnaPreset): 'album' | 'track' {
+  if (preset.sourceKind === 'album' || preset.sourceKind === 'track') return preset.sourceKind;
+  const src = (preset.sourceTrackTitle || '').trim().toLowerCase();
+  if (!src || src === 'album extract' || src === 'album dna' || src.startsWith('album ')) {
+    return 'album';
+  }
+  return 'track';
+}
+
+export function partitionDnaPresetsBySource(presets: DnaPreset[]): {
+  album: Array<{ preset: DnaPreset; index: number }>;
+  track: Array<{ preset: DnaPreset; index: number }>;
+} {
+  const album: Array<{ preset: DnaPreset; index: number }> = [];
+  const track: Array<{ preset: DnaPreset; index: number }> = [];
+  presets.forEach((preset, index) => {
+    if (getDnaPresetSourceKind(preset) === 'album') album.push({ preset, index });
+    else track.push({ preset, index });
+  });
+  return { album, track };
 }
 
 export type ArchiveProfileKind = 'DNA' | 'Vibe' | 'Style';

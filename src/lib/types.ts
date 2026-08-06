@@ -271,6 +271,8 @@ export type StyleMetrics = {
 export type DnaPreset = {
   name: string;
   createdAt: string;
+  /** Where this vault entry was saved from — drives album Load sections. */
+  sourceKind?: 'album' | 'track';
   sourceTrackTitle?: string;
   analysis?: WizardAnalysis | Partial<WizardAnalysis>;
   mapping: Direction;

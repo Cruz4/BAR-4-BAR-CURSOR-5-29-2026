@@ -62,16 +62,16 @@ export function EmbedPlayer({ url, title }: { url: string; title?: string }) {
   const portrait = aspectPad > 70;
 
   return (
-    <div className="overflow-hidden rounded-[var(--ph-radius,16px)] border border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/40">
+    <div className="min-w-0 max-w-full overflow-hidden rounded-[var(--ph-radius,16px)] border border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/40">
       {parsed.isVideo ? (
         <div
-          className={portrait ? 'relative mx-auto w-full max-w-[420px]' : 'relative w-full'}
+          className={portrait ? 'relative mx-auto w-full max-w-[420px]' : 'relative w-full min-w-0'}
           style={{ paddingBottom: `${aspectPad}%` }}
         >
           <iframe
             src={parsed.src}
             title={title || `${EMBED_PROVIDER_LABELS[parsed.provider]} player`}
-            className="absolute inset-0 h-full w-full"
+            className="absolute inset-0 h-full w-full max-w-full border-0"
             loading="lazy"
             referrerPolicy="strict-origin-when-cross-origin"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
@@ -83,7 +83,7 @@ export function EmbedPlayer({ url, title }: { url: string; title?: string }) {
         <iframe
           src={parsed.src}
           title={title || `${EMBED_PROVIDER_LABELS[parsed.provider]} player`}
-          className="w-full"
+          className="w-full max-w-full border-0"
           style={{ height: parsed.height ?? 166, maxHeight: '80vh' }}
           loading="lazy"
           referrerPolicy="strict-origin-when-cross-origin"

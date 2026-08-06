@@ -17,6 +17,8 @@ export type LiveDnaDropItem = {
   albumTitle?: string;
   /** Parent album DNA share id when nested under that album. */
   albumShareId?: string;
+  /** 0-based album tracklist position (set order). */
+  trackIndex?: number;
   trackCount?: number;
 };
 
@@ -148,13 +150,21 @@ export function groupLiveDnaDrops(drops: LiveDnaDropItem[]): {
     }
   }
 
-  const albumGroups: AlbumDnaGroup[] = albums.map((album) => ({
-    album: {
-      ...album,
-      trackCount: grouped.get(album.shareId)?.length ?? album.trackCount,
-    },
-    tracks: grouped.get(album.shareId) || [],
-  }));
+  const albumGroups: AlbumDnaGroup[] = albums.map((album) => {
+    const nested = (grouped.get(album.shareId) || []).slice().sort((a, b) => {
+      const ai = typeof a.trackIndex === 'number' ? a.trackIndex : Number.POSITIVE_INFINITY;
+      const bi = typeof b.trackIndex === 'number' ? b.trackIndex : Number.POSITIVE_INFINITY;
+      if (ai !== bi) return ai - bi;
+      return a.title.localeCompare(b.title);
+    });
+    return {
+      album: {
+        ...album,
+        trackCount: nested.length || album.trackCount,
+      },
+      tracks: nested,
+    };
+  });
 
   return { albumGroups, standaloneTracks: standalone };
 }

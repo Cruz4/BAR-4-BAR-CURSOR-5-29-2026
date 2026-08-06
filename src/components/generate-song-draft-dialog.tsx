@@ -1177,6 +1177,7 @@ export function GenerateSongDraftDialog({
           hubStyleMetrics,
           name: name.trim(),
           sourceTrackTitle: track.title,
+          sourceKind: 'track',
         })
       );
       const existing = album.dnaPresets || [];

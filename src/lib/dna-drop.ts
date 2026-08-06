@@ -48,9 +48,28 @@ export type DnaDropStyleSnapshot = {
 export type DnaDropAlbumContext = {
   title: string;
   theme?: string;
+  /** Album cover when the track has no art of its own — used on public snapshot pages. */
+  coverArtUrl?: string;
   direction?: Album['direction'];
   thingsToSay?: string[];
 };
+
+/** Track cover first; else album cover from drop context or a live vault fallback. */
+export function resolveDnaDropCoverArt(
+  project: {
+    coverArtUrl?: string | null;
+    sharedAlbumContext?: Pick<DnaDropAlbumContext, 'coverArtUrl'> | null;
+  },
+  fallbackAlbumCover?: string | null
+): string | undefined {
+  const own = project.coverArtUrl?.trim();
+  if (own) return own;
+  const fromCtx = project.sharedAlbumContext?.coverArtUrl?.trim();
+  if (fromCtx) return fromCtx;
+  const fromAlbum = fallbackAlbumCover?.trim();
+  if (fromAlbum) return fromAlbum;
+  return undefined;
+}
 
 export type DnaDropTrackPayload = Track & {
   sharedStyle?: DnaDropStyleSnapshot;
@@ -197,6 +216,8 @@ function sanitizeTrackForSnapshot(
       title: album.title,
       theme: album.theme,
     };
+    const albumCover = album.coverArtUrl?.trim();
+    if (albumCover) ctx.coverArtUrl = albumCover;
     if (isAlbumDnaActive(track, album) && album.direction?.enabled) {
       ctx.direction = album.direction;
     }

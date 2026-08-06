@@ -69,6 +69,7 @@ export function PublicProfilePageClient({ slug }: { slug: string }) {
                   type?: string;
                   albumTitle?: string;
                   albumShareId?: string;
+                  trackIndex?: number;
                   trackCount?: number;
                 }) => ({
                   shareId: d.shareId,
@@ -80,6 +81,7 @@ export function PublicProfilePageClient({ slug }: { slug: string }) {
                   ...(typeof d.albumShareId === 'string' && d.albumShareId.trim()
                     ? { albumShareId: d.albumShareId.trim() }
                     : {}),
+                  ...(typeof d.trackIndex === 'number' ? { trackIndex: d.trackIndex } : {}),
                   ...(typeof d.trackCount === 'number' ? { trackCount: d.trackCount } : {}),
                 }))
             : [],

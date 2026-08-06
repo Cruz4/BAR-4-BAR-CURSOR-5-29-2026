@@ -400,6 +400,7 @@ export function PressDesk() {
         kind: 'Album DNA' | 'Track DNA';
         albumTitle?: string;
         albumShareId?: string;
+        trackIndex?: number;
         trackCount?: number;
       }
     >();
@@ -415,8 +416,8 @@ export function PressDesk() {
       }
       // Tracks under a live album nest under that album on the Drop Shelf.
       const albumLive = Boolean(album.isPublic && album.shareId);
-      for (const track of album.tracks || []) {
-        if (!(track.isPublic && track.shareId)) continue;
+      (album.tracks || []).forEach((track, trackIndex) => {
+        if (!(track.isPublic && track.shareId)) return;
         const existing = byId.get(track.shareId);
         byId.set(track.shareId, {
           shareId: track.shareId,
@@ -426,12 +427,17 @@ export function PressDesk() {
             ? { albumTitle: albumLive ? album.title : existing?.albumTitle }
             : {}),
           ...(albumLive && album.shareId
-            ? { albumShareId: album.shareId }
+            ? { albumShareId: album.shareId, trackIndex }
             : existing?.albumShareId
-              ? { albumShareId: existing.albumShareId }
+              ? {
+                  albumShareId: existing.albumShareId,
+                  ...(typeof existing.trackIndex === 'number'
+                    ? { trackIndex: existing.trackIndex }
+                    : {}),
+                }
               : {}),
         });
-      }
+      });
     }
 
     return [...byId.values()];
@@ -466,6 +472,7 @@ export function PressDesk() {
         type: d.kind.startsWith('Album') ? ('album' as const) : ('track' as const),
         ...(d.albumTitle ? { albumTitle: d.albumTitle } : {}),
         ...(d.albumShareId ? { albumShareId: d.albumShareId } : {}),
+        ...(typeof d.trackIndex === 'number' ? { trackIndex: d.trackIndex } : {}),
         ...(typeof d.trackCount === 'number' ? { trackCount: d.trackCount } : {}),
       })),
     };

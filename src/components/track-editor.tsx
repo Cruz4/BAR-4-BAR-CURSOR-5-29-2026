@@ -2220,6 +2220,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
       const profile = buildDnaPresetFromDirection({
           name,
           sourceTrackTitle: track.title,
+          sourceKind: 'track',
           direction: track.direction ?? { enabled: true },
           intents: track.checkedIntents,
       });

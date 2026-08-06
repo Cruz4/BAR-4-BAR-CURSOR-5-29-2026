@@ -1169,6 +1169,8 @@ export type LiveDnaDropSummary = {
   albumTitle?: string;
   /** Parent album DNA share id when this track is nested under that album. */
   albumShareId?: string;
+  /** 0-based position in the parent album tracklist (set order). */
+  trackIndex?: number;
   /** Live track count on album cards. */
   trackCount?: number;
 };
@@ -1231,7 +1233,8 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
           : '';
     const tracks = Array.isArray(data?.data?.tracks) ? data.data.tracks : [];
 
-    for (const track of tracks) {
+    for (let trackIndex = 0; trackIndex < tracks.length; trackIndex++) {
+      const track = tracks[trackIndex];
       if (!track || typeof track !== 'object') continue;
       const shareId =
         typeof (track as { shareId?: unknown }).shareId === 'string'
@@ -1252,6 +1255,7 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
           type: 'track',
           albumTitle: existing.albumTitle || albumTitle,
           albumShareId,
+          trackIndex,
           updatedAt: existing.updatedAt || albumUpdatedAt,
         });
       } else {
@@ -1261,6 +1265,7 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
           type: 'track',
           albumTitle,
           albumShareId,
+          trackIndex,
           updatedAt: albumUpdatedAt,
         });
       }
@@ -1270,15 +1275,27 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
   return [...byShareId.values()]
     .sort((a, b) => {
       if (a.type !== b.type) return a.type === 'album' ? -1 : 1;
+      // Nested tracks keep album set order; otherwise newest first.
+      if (
+        a.type === 'track' &&
+        b.type === 'track' &&
+        a.albumShareId &&
+        a.albumShareId === b.albumShareId
+      ) {
+        const ai = typeof a.trackIndex === 'number' ? a.trackIndex : Number.POSITIVE_INFINITY;
+        const bi = typeof b.trackIndex === 'number' ? b.trackIndex : Number.POSITIVE_INFINITY;
+        if (ai !== bi) return ai - bi;
+      }
       return b.updatedAt.localeCompare(a.updatedAt);
     })
     .slice(0, 48)
-    .map(({ shareId, title, type, albumTitle, albumShareId, trackCount }) => ({
+    .map(({ shareId, title, type, albumTitle, albumShareId, trackIndex, trackCount }) => ({
       shareId,
       title,
       type,
       ...(albumTitle ? { albumTitle } : {}),
       ...(albumShareId ? { albumShareId } : {}),
+      ...(typeof trackIndex === 'number' ? { trackIndex } : {}),
       ...(typeof trackCount === 'number' ? { trackCount } : {}),
     }));
 }

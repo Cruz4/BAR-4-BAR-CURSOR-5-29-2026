@@ -32,11 +32,13 @@ import { format } from 'date-fns';
 import {
   sharedTrackIntents,
   resolveSharedDirection,
+  resolveDnaDropCoverArt,
   findTrackInVault,
   normalizeDnaDropMedia,
   type DnaDropTrackPayload,
   type DnaDropAlbumPayload,
 } from '@/lib/dna-drop';
+import { isLooseTrackAlbum } from '@/lib/co-writer-rules';
 import { DnaDropAlbumHub } from '@/components/dna-drop-album-hub';
 import { EmbedPlayer } from '@/components/profile/embed-player';
 import { parseEmbedUrl } from '@/lib/profile/embeds';
@@ -112,6 +114,16 @@ export default function SharedProjectPage() {
         if (!project || isAlbum) return null;
         return findTrackInVault(albums, project.id);
     }, [project, isAlbum, albums]);
+
+    /** Track art first; else album cover from snapshot context (or vault for older drops). */
+    const coverArtSrc = useMemo(() => {
+        if (!project) return undefined;
+        if (isAlbum) return (project as DnaDropAlbumPayload).coverArtUrl;
+        const vaultAlbum = vaultTrack?.album;
+        const vaultAlbumCover =
+          vaultAlbum && !isLooseTrackAlbum(vaultAlbum) ? vaultAlbum.coverArtUrl : undefined;
+        return resolveDnaDropCoverArt(project as DnaDropTrackPayload, vaultAlbumCover);
+    }, [project, isAlbum, vaultTrack]);
 
     /** Rhyme Pulse–style end-word highlighting for the shared lyrics sheet (track drops only). */
     const rhymeGroups = useMemo(() => {
@@ -376,7 +388,7 @@ export default function SharedProjectPage() {
                     <Card className="border-2 overflow-hidden bg-card/80">
                         <div className="aspect-square relative w-full border-b bg-neutral-950">
                             <ShareCoverImage
-                                src={project.coverArtUrl}
+                                src={coverArtSrc}
                                 alt={project.title || 'Project Snapshot'}
                                 priority
                             />

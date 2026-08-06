@@ -67,6 +67,7 @@ export type ModuleContext = {
     type: 'album' | 'track';
     albumTitle?: string;
     albumShareId?: string;
+    trackIndex?: number;
     trackCount?: number;
   }>;
   /** Die-cut chrome from the living press — every module punches the same sheet. */
