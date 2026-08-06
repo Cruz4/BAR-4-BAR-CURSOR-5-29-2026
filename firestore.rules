@@ -128,6 +128,16 @@ service cloud.firestore {
         allow delete: if isOwner(userId);
       }
 
+      // Reverb pointers — which original posts this artist has Reverbed
+      match /reverbs/{originalPostId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && request.resource.data.wallPostId is string
+          && request.resource.data.wallPostId.size() <= 80
+          && request.resource.data.createdAt is string;
+        allow delete: if isOwner(userId);
+      }
+
       // Activity inbox — Admin SDK writes events; owner reads / marks read / manages prefs+push
       match /activity/{eventId} {
         allow read: if isOwner(userId);
@@ -168,7 +178,38 @@ service cloud.firestore {
             && request.resource.data.embedUrl.size() <= 500))
         && (!('imageUrl' in request.resource.data)
           || (request.resource.data.imageUrl is string
-            && request.resource.data.imageUrl.size() <= 900000));
+            && request.resource.data.imageUrl.size() <= 900000))
+        && (!('isReverb' in request.resource.data)
+          || request.resource.data.isReverb == true)
+        && (!('reverbPostId' in request.resource.data)
+          || (request.resource.data.reverbPostId is string
+            && request.resource.data.reverbPostId.size() <= 80))
+        && (!('reverbOwnerId' in request.resource.data)
+          || (request.resource.data.reverbOwnerId is string
+            && request.resource.data.reverbOwnerId.size() <= 128))
+        && (!('reverbOwnerName' in request.resource.data)
+          || (request.resource.data.reverbOwnerName is string
+            && request.resource.data.reverbOwnerName.size() <= 120))
+        && (!('reverbOwnerSlug' in request.resource.data)
+          || (request.resource.data.reverbOwnerSlug is string
+            && request.resource.data.reverbOwnerSlug.size() <= 80))
+        && (!('reverbText' in request.resource.data)
+          || (request.resource.data.reverbText is string
+            && request.resource.data.reverbText.size() <= 1000))
+        && (!('reverbEmbedUrl' in request.resource.data)
+          || (request.resource.data.reverbEmbedUrl is string
+            && request.resource.data.reverbEmbedUrl.size() <= 500))
+        && (!('reverbImageUrl' in request.resource.data)
+          || (request.resource.data.reverbImageUrl is string
+            && request.resource.data.reverbImageUrl.size() <= 900000))
+        && (
+          request.resource.data.text.size() > 0
+          || ('embedUrl' in request.resource.data && request.resource.data.embedUrl.size() > 0)
+          || ('imageUrl' in request.resource.data && request.resource.data.imageUrl.size() > 0)
+          || (request.resource.data.isReverb == true
+            && 'reverbPostId' in request.resource.data
+            && request.resource.data.reverbPostId.size() > 0)
+        );
       allow update: if request.auth != null
         && resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerId == resource.data.ownerId;

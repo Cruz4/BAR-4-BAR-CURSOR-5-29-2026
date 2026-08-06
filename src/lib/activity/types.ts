@@ -7,6 +7,7 @@ export const ACTIVITY_TYPES = [
   'friend_accepted',
   'post_love',
   'post_reply',
+  'post_reverb',
   'dna_import',
 ] as const;
 
@@ -66,6 +67,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     friend_accepted: 'accepted your friend request',
     post_love: 'loved your post',
     post_reply: 'replied to your post',
+    post_reverb: 'Reverbed your post',
     dna_import: 'imported your DNA Drop',
   };
   const given: Record<ActivityType, string> = {
@@ -73,6 +75,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     friend_accepted: 'you accepted a friend request from',
     post_love: 'you loved a post by',
     post_reply: 'you replied to a post by',
+    post_reverb: 'you Reverbed a post by',
     dna_import: 'you imported a DNA Drop from',
   };
   return direction === 'received' ? received[type] : given[type];
@@ -89,6 +92,8 @@ export function prefsAllowsPush(prefs: ActivityPrefs, type: ActivityType): boole
       return prefs.postLoves;
     case 'post_reply':
       return prefs.postReplies;
+    case 'post_reverb':
+      return prefs.postLoves;
     case 'dna_import':
       return prefs.dnaImports;
     default:

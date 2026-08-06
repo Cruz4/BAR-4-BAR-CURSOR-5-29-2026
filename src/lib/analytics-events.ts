@@ -22,6 +22,7 @@ export const ANALYTICS_EVENTS = {
   USER_ACTIVATED: 'user_activated',
   // Artist Home social surfaces
   PROFILE_POST_CREATED: 'profile_post_created',
+  PROFILE_REVERB: 'profile_reverb',
   PROFILE_FRIEND_REQUEST: 'profile_friend_request',
   PROFILE_FRIEND_ACCEPT: 'profile_friend_accept',
   PROFILE_GUESTBOOK_SIGNED: 'profile_guestbook_signed',

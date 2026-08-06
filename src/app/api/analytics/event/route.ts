@@ -32,6 +32,7 @@ const ALLOWED_EVENTS: AnalyticsEventName[] = [
   'share_card_opened',
   'leaderboard_view',
   'profile_post_created',
+  'profile_reverb',
   'profile_friend_request',
   'profile_friend_accept',
   'profile_guestbook_signed',

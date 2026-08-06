@@ -1747,6 +1747,15 @@ export type DiscoverPostSummary = {
   text: string;
   embedUrl?: string;
   embedProvider?: string;
+  imageUrl?: string;
+  isReverb?: boolean;
+  reverbPostId?: string;
+  reverbOwnerId?: string;
+  reverbOwnerName?: string;
+  reverbOwnerSlug?: string;
+  reverbText?: string;
+  reverbEmbedUrl?: string;
+  reverbImageUrl?: string;
   createdAt: string;
 };
 
@@ -1754,10 +1763,10 @@ export type DiscoverPostSummary = {
 export async function listRecentPublicPosts(
   opts: { limit?: number; excludeOwnerId?: string } = {}
 ): Promise<DiscoverPostSummary[]> {
-  const limit = Math.min(Math.max(opts.limit ?? 10, 1), 30);
+  const limit = Math.min(Math.max(opts.limit ?? 10, 1), 40);
   const db = await getDb();
   // Post ids are lexicographically newest-first, so document-id order = recency.
-  const snap = await db.collection('posts').limit(60).get();
+  const snap = await db.collection('posts').limit(Math.max(80, limit * 3)).get();
   const out: DiscoverPostSummary[] = [];
   for (const doc of snap.docs) {
     const data = doc.data() as Record<string, unknown>;
@@ -1773,6 +1782,23 @@ export async function listRecentPublicPosts(
       text: String(data.text || ''),
       embedUrl: typeof data.embedUrl === 'string' ? data.embedUrl : undefined,
       embedProvider: typeof data.embedProvider === 'string' ? data.embedProvider : undefined,
+      imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : undefined,
+      ...(data.isReverb === true ? { isReverb: true } : {}),
+      ...(typeof data.reverbPostId === 'string' ? { reverbPostId: data.reverbPostId } : {}),
+      ...(typeof data.reverbOwnerId === 'string' ? { reverbOwnerId: data.reverbOwnerId } : {}),
+      ...(typeof data.reverbOwnerName === 'string'
+        ? { reverbOwnerName: data.reverbOwnerName }
+        : {}),
+      ...(typeof data.reverbOwnerSlug === 'string'
+        ? { reverbOwnerSlug: data.reverbOwnerSlug }
+        : {}),
+      ...(typeof data.reverbText === 'string' ? { reverbText: data.reverbText } : {}),
+      ...(typeof data.reverbEmbedUrl === 'string'
+        ? { reverbEmbedUrl: data.reverbEmbedUrl }
+        : {}),
+      ...(typeof data.reverbImageUrl === 'string'
+        ? { reverbImageUrl: data.reverbImageUrl }
+        : {}),
       createdAt: String(data.createdAt || ''),
     });
     if (out.length >= limit) break;

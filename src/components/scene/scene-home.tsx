@@ -40,6 +40,7 @@ import {
 import { markBlockSeen } from '@/lib/profile/social-alerts';
 import {
   buildDiscoverCards,
+  DISCOVER_HOME_MAX_CARDS,
   fetchDiscover,
   type DiscoverCard,
   type DiscoverData,
@@ -297,7 +298,7 @@ export function SceneHome() {
     return buildDiscoverCards(discover, {
       excludePostIds: new Set(posts.map((p) => p.id)),
       excludeUserIds: blockedIds,
-      maxCards: 10,
+      maxCards: DISCOVER_HOME_MAX_CARDS,
     });
   }, [discover, posts, blockedIds]);
 
@@ -484,6 +485,14 @@ export function SceneHome() {
                       Discover the scene
                     </span>
                     <span className="h-px flex-1 bg-border/60" />
+                  </div>
+                  <div className="flex justify-end -mt-1">
+                    <Link
+                      href="/discover"
+                      className="font-code text-[9px] font-bold uppercase tracking-[0.22em] text-primary/80 hover:text-primary"
+                    >
+                      View all →
+                    </Link>
                   </div>
                   {discoverCards.map((card) => (
                     <SceneDiscoverCard key={card.key} card={card} viewerSlug={viewerSlug} />

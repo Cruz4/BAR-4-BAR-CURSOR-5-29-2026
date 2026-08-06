@@ -38,6 +38,15 @@ export type ProfilePost = {
   /** Inline image (data URL or https) — e.g. achievement foil card. */
   imageUrl?: string;
   createdAt: string;
+  /** True when this wall post is a Reverb (repost) of another artist's post. */
+  isReverb?: boolean;
+  reverbPostId?: string;
+  reverbOwnerId?: string;
+  reverbOwnerName?: string;
+  reverbOwnerSlug?: string;
+  reverbText?: string;
+  reverbEmbedUrl?: string;
+  reverbImageUrl?: string;
 };
 
 export type PostComment = {
@@ -89,7 +98,8 @@ function trackSocialEvent(
     | 'profile_post_created'
     | 'profile_friend_request'
     | 'profile_friend_accept'
-    | 'profile_guestbook_signed',
+    | 'profile_guestbook_signed'
+    | 'profile_reverb',
   metadata: Record<string, string | number | boolean | null> = {}
 ): void {
   const user = auth.currentUser;
@@ -172,7 +182,25 @@ export async function createPost(input: {
 }
 
 export async function deletePost(postId: string): Promise<void> {
-  requireUser();
+  const user = requireUser();
+  try {
+    const snap = await getDoc(doc(db, 'posts', postId));
+    if (snap.exists()) {
+      const data = snap.data() as Record<string, unknown>;
+      if (
+        data.isReverb === true &&
+        typeof data.reverbPostId === 'string' &&
+        data.reverbPostId &&
+        data.ownerId === user.uid
+      ) {
+        await deleteDoc(doc(db, 'users', user.uid, 'reverbs', data.reverbPostId)).catch(
+          () => undefined
+        );
+      }
+    }
+  } catch {
+    /* still attempt post delete */
+  }
   await deleteDoc(doc(db, 'posts', postId));
 }
 
@@ -187,6 +215,18 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
     embedProvider: data.embedProvider as EmbedProvider | undefined,
     imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : undefined,
     createdAt: String(data.createdAt || ''),
+    ...(data.isReverb === true ? { isReverb: true } : {}),
+    ...(typeof data.reverbPostId === 'string' ? { reverbPostId: data.reverbPostId } : {}),
+    ...(typeof data.reverbOwnerId === 'string' ? { reverbOwnerId: data.reverbOwnerId } : {}),
+    ...(typeof data.reverbOwnerName === 'string'
+      ? { reverbOwnerName: data.reverbOwnerName }
+      : {}),
+    ...(typeof data.reverbOwnerSlug === 'string'
+      ? { reverbOwnerSlug: data.reverbOwnerSlug }
+      : {}),
+    ...(typeof data.reverbText === 'string' ? { reverbText: data.reverbText } : {}),
+    ...(typeof data.reverbEmbedUrl === 'string' ? { reverbEmbedUrl: data.reverbEmbedUrl } : {}),
+    ...(typeof data.reverbImageUrl === 'string' ? { reverbImageUrl: data.reverbImageUrl } : {}),
   };
 }
 
@@ -201,6 +241,109 @@ export async function fetchPostsByOwner(ownerId: string, max = 20): Promise<Prof
   } catch (err) {
     console.warn('[posts]', err);
     return [];
+  }
+}
+
+/** Reverbs only — same owner query, filtered client-side (no extra index). */
+export async function fetchReverbsByOwner(ownerId: string, max = 40): Promise<ProfilePost[]> {
+  const posts = await fetchPostsByOwner(ownerId, Math.max(max, 60));
+  return posts.filter((p) => p.isReverb && p.reverbPostId).slice(0, max);
+}
+
+/**
+ * Reverb (repost) another artist's post onto your wall.
+ * Snapshots the original content so the Reverb stays readable if the source is deleted.
+ * Toggle: if you already Reverbed this post, removes your Reverb instead.
+ */
+export async function toggleReverb(
+  source: ProfilePost,
+  me: { name: string; slug?: string }
+): Promise<{ status: 'created' | 'removed'; post?: ProfilePost }> {
+  const user = requireUser();
+  if (source.ownerId === user.uid) {
+    throw new Error('You already own this post.');
+  }
+
+  // Unwrap if someone Reverbed a Reverb — always point at the root post.
+  const rootPostId = source.isReverb && source.reverbPostId ? source.reverbPostId : source.id;
+  const rootOwnerId =
+    source.isReverb && source.reverbOwnerId ? source.reverbOwnerId : source.ownerId;
+  const rootOwnerName =
+    source.isReverb && source.reverbOwnerName ? source.reverbOwnerName : source.ownerName;
+  const rootOwnerSlug =
+    source.isReverb && source.reverbOwnerSlug ? source.reverbOwnerSlug : source.ownerSlug;
+  const rootText =
+    source.isReverb && typeof source.reverbText === 'string' ? source.reverbText : source.text;
+  const rootEmbed =
+    source.isReverb && source.reverbEmbedUrl
+      ? source.reverbEmbedUrl
+      : source.embedUrl;
+  const rootImage =
+    source.isReverb && source.reverbImageUrl
+      ? source.reverbImageUrl
+      : source.imageUrl;
+
+  const pointerRef = doc(db, 'users', user.uid, 'reverbs', rootPostId);
+  const existing = await getDoc(pointerRef);
+  if (existing.exists()) {
+    const wallPostId =
+      typeof existing.data()?.wallPostId === 'string' ? existing.data()!.wallPostId : '';
+    if (wallPostId) {
+      try {
+        await deleteDoc(doc(db, 'posts', wallPostId));
+      } catch {
+        /* wall post may already be gone */
+      }
+    }
+    await deleteDoc(pointerRef);
+    return { status: 'removed' };
+  }
+
+  const post: ProfilePost = {
+    id: newestFirstId(),
+    ownerId: user.uid,
+    ownerName: me.name || user.displayName || 'Artist',
+    ...(me.slug ? { ownerSlug: me.slug } : {}),
+    text: '',
+    createdAt: new Date().toISOString(),
+    isReverb: true,
+    reverbPostId: rootPostId,
+    reverbOwnerId: rootOwnerId,
+    reverbOwnerName: rootOwnerName,
+    ...(rootOwnerSlug ? { reverbOwnerSlug: rootOwnerSlug } : {}),
+    ...(rootText?.trim() ? { reverbText: rootText.trim().slice(0, MAX_POST_TEXT) } : {}),
+    ...(rootEmbed ? { reverbEmbedUrl: rootEmbed.slice(0, 500) } : {}),
+    ...(rootImage && rootImage.length <= MAX_POST_IMAGE_URL
+      ? { reverbImageUrl: rootImage }
+      : {}),
+  };
+
+  const { id, ...data } = post;
+  await setDoc(doc(db, 'posts', id), data);
+  await setDoc(pointerRef, { wallPostId: id, createdAt: post.createdAt });
+
+  trackSocialEvent('profile_reverb', { originalOwnerId: rootOwnerId });
+  const { emitActivity } = await import('@/lib/activity/client');
+  emitActivity({
+    type: 'post_reverb',
+    actorName: post.ownerName,
+    ...(post.ownerSlug ? { actorSlug: post.ownerSlug } : {}),
+    postId: rootPostId,
+    preview: (rootText || rootOwnerName || 'a post').slice(0, 120),
+    href: post.ownerSlug ? `/profile/${post.ownerSlug}#post-${id}` : undefined,
+  });
+
+  return { status: 'created', post };
+}
+
+export async function fetchHasReverbed(originalPostId: string): Promise<boolean> {
+  const user = auth.currentUser;
+  if (!user || !originalPostId) return false;
+  try {
+    const snap = await getDoc(doc(db, 'users', user.uid, 'reverbs', originalPostId));
+    return snap.exists();
+  } catch {
+    return false;
   }
 }
 

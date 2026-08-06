@@ -55,14 +55,23 @@ export type DiscoverCard =
   | { kind: 'drop'; key: string; drop: DiscoverDrop }
   | { kind: 'risers'; key: string; risers: DiscoverRiser[] };
 
+/** Cards on the Scene home Discover strip. */
+export const DISCOVER_HOME_MAX_CARDS = 12;
+/** Cards on the full Discover page. */
+export const DISCOVER_ALL_MAX_CARDS = 40;
+
 const EMPTY: DiscoverData = { artists: [], posts: [], drops: [], risers: [] };
 
-export async function fetchDiscover(excludeUserId?: string): Promise<DiscoverData> {
+export async function fetchDiscover(
+  excludeUserId?: string,
+  opts?: { view?: 'home' | 'all' }
+): Promise<DiscoverData> {
   try {
-    const params = excludeUserId
-      ? `?excludeUserId=${encodeURIComponent(excludeUserId)}`
-      : '';
-    const res = await fetch(`/api/discover${params}`);
+    const params = new URLSearchParams();
+    if (excludeUserId) params.set('excludeUserId', excludeUserId);
+    if (opts?.view === 'all') params.set('view', 'all');
+    const qs = params.toString();
+    const res = await fetch(`/api/discover${qs ? `?${qs}` : ''}`);
     if (!res.ok) return EMPTY;
     const data = (await res.json()) as Partial<DiscoverData>;
     return {
@@ -81,9 +90,17 @@ export async function fetchDiscover(excludeUserId?: string): Promise<DiscoverDat
   }
 }
 
+function cardTimestamp(card: DiscoverCard): string {
+  if (card.kind === 'post') return card.post.createdAt || '';
+  if (card.kind === 'artist') return card.artist.updatedAt || '';
+  if (card.kind === 'drop') return card.drop.updatedAt || '';
+  return '';
+}
+
 /**
- * Turn grouped Discover data into an interleaved card list.
+ * Turn grouped Discover data into a newest-first card list.
  * Excludes ids already present in the friends feed and blocked/hidden users.
+ * Rising-this-week is pinned near the top (not time-sorted).
  */
 export function buildDiscoverCards(
   data: DiscoverData,
@@ -97,7 +114,7 @@ export function buildDiscoverCards(
 ): DiscoverCard[] {
   const excludePostIds = opts.excludePostIds ?? new Set<string>();
   const excludeUserIds = opts.excludeUserIds ?? new Set<string>();
-  const maxCards = opts.maxCards ?? 12;
+  const maxCards = opts.maxCards ?? DISCOVER_HOME_MAX_CARDS;
 
   const artists = data.artists.filter((a) => !excludeUserIds.has(a.userId));
   const posts = data.posts.filter(
@@ -106,30 +123,33 @@ export function buildDiscoverCards(
   const drops = data.drops;
   const risers = data.risers.filter((r) => !excludeUserIds.has(r.userId));
 
-  const cards: DiscoverCard[] = [];
-  let ai = 0;
-  let pi = 0;
-  let di = 0;
+  const timed: DiscoverCard[] = [
+    ...posts.map(
+      (post): DiscoverCard => ({ kind: 'post', key: `post-${post.id}`, post })
+    ),
+    ...artists.map(
+      (artist): DiscoverCard => ({
+        kind: 'artist',
+        key: `artist-${artist.slug}`,
+        artist,
+      })
+    ),
+    ...drops.map(
+      (drop): DiscoverCard => ({
+        kind: 'drop',
+        key: `drop-${drop.shareId}`,
+        drop,
+      })
+    ),
+  ];
 
-  // Rotate post → artist → drop so no single source dominates the stream.
-  while (cards.length < maxCards && (ai < artists.length || pi < posts.length || di < drops.length)) {
-    if (pi < posts.length) {
-      const post = posts[pi++];
-      cards.push({ kind: 'post', key: `post-${post.id}`, post });
-    }
-    if (cards.length < maxCards && ai < artists.length) {
-      const artist = artists[ai++];
-      cards.push({ kind: 'artist', key: `artist-${artist.slug}`, artist });
-    }
-    if (cards.length < maxCards && di < drops.length) {
-      const drop = drops[di++];
-      cards.push({ kind: 'drop', key: `drop-${drop.shareId}`, drop });
-    }
-  }
+  timed.sort((a, b) => cardTimestamp(b).localeCompare(cardTimestamp(a)));
 
-  // One risers card near the top (position 2) when there's leaderboard motion.
+  const cards = timed.slice(0, Math.max(0, maxCards - (risers.length > 0 ? 1 : 0)));
+
+  // Pin Rising this week near the top without breaking relative chrono of the rest.
   if (risers.length > 0) {
-    cards.splice(Math.min(2, cards.length), 0, {
+    cards.splice(Math.min(1, cards.length), 0, {
       kind: 'risers',
       key: 'risers-week',
       risers,

@@ -8,7 +8,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Crown, Dna, Flame, Globe, PenLine, Settings2, Share2, Trophy, Zap } from 'lucide-react';
+import { ChevronLeft, Crown, Dna, Flame, Globe, PenLine, Repeat2, Settings2, Share2, Trophy, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -308,6 +308,14 @@ export function ArtistHome({
                 </Button>
               );
             })()}
+
+            <Link
+              href={`/profile/${profile.slug}/reverbs`}
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-violet-400/25 bg-violet-500/[0.07] px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200/90 transition-colors hover:border-violet-400/45 hover:bg-violet-500/15"
+            >
+              <Repeat2 className="h-3.5 w-3.5" />
+              Reverbs
+            </Link>
 
             <div className="grid max-w-md grid-cols-3 gap-2">
               {[

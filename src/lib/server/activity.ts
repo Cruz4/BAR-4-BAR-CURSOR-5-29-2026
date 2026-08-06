@@ -123,7 +123,7 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
   let shareId = input.shareId?.trim().toUpperCase() || undefined;
   const postId = input.postId?.trim() || undefined;
 
-  if ((input.type === 'post_love' || input.type === 'post_reply') && postId) {
+  if ((input.type === 'post_love' || input.type === 'post_reply' || input.type === 'post_reverb') && postId) {
     const postSnap = await db.collection('posts').doc(postId).get();
     if (!postSnap.exists) return { ok: false };
     const post = postSnap.data() || {};
@@ -214,7 +214,9 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
           ? `${input.actorName} loved your post`
           : input.type === 'post_reply'
             ? `${input.actorName} replied to your post`
-            : `${input.actorName} imported your DNA Drop`;
+            : input.type === 'post_reverb'
+              ? `${input.actorName} Reverbed your post`
+              : `${input.actorName} imported your DNA Drop`;
 
   void maybePush(recipientId, input.type, title, body, href);
 

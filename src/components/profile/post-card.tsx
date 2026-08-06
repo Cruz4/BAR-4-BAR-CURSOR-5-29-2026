@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Heart, MessageCircle, Send, Share2, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Repeat2, Send, Share2, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,9 +19,11 @@ import {
   fetchComments,
   fetchCommentCount,
   fetchHasLiked,
+  fetchHasReverbed,
   fetchLikeCount,
   fetchPublicArtistAvatarMeta,
   likePost,
+  toggleReverb,
   unlikePost,
   type PostComment,
   type ProfilePost,
@@ -33,6 +35,7 @@ type PostCardProps = {
   showAuthor?: boolean;
   viewerSlug?: string;
   onDeleted?: (postId: string) => void;
+  onReverbed?: (post: ProfilePost) => void;
 };
 
 function timeAgo(iso: string): string {
@@ -43,7 +46,49 @@ function timeAgo(iso: string): string {
   }
 }
 
-export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted }: PostCardProps) {
+function ReverbSourceBody({ post }: { post: ProfilePost }) {
+  const name = post.reverbOwnerName || 'Artist';
+  const slug = post.reverbOwnerSlug;
+  return (
+    <div className="mt-2 rounded-xl border border-[var(--ph-border,rgba(255,255,255,0.14))] bg-black/30 p-3">
+      <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+        Original ·{' '}
+        {slug ? (
+          <Link href={`/profile/${slug}`} className="text-[var(--ph-accent,#7dd3fc)] hover:underline">
+            {name}
+          </Link>
+        ) : (
+          name
+        )}
+      </p>
+      {post.reverbText ? (
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--ph-text,#fff)]/90">
+          {post.reverbText}
+        </p>
+      ) : null}
+      {post.reverbImageUrl ? (
+        <div className="mt-2 flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={post.reverbImageUrl}
+            alt="Reverbed studio card"
+            className="block h-auto w-full max-w-[360px] rounded-lg object-contain"
+          />
+        </div>
+      ) : null}
+      {post.reverbEmbedUrl ? (
+        <div className="mt-2">
+          <EmbedPlayer url={post.reverbEmbedUrl} />
+        </div>
+      ) : null}
+      {!post.reverbText && !post.reverbImageUrl && !post.reverbEmbedUrl ? (
+        <p className="text-xs italic text-[var(--ph-muted,rgba(255,255,255,0.5))]">Original post</p>
+      ) : null}
+    </div>
+  );
+}
+
+export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onReverbed }: PostCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [liked, setLiked] = useState(false);
@@ -55,17 +100,29 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted }: Po
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [reverbed, setReverbed] = useState(false);
   const [authorAvatarUrl, setAuthorAvatarUrl] = useState<string | undefined>(undefined);
   const [authorStarSeed, setAuthorStarSeed] = useState<number | undefined>(undefined);
   const [authorUseStar, setAuthorUseStar] = useState(false);
 
   const isOwner = Boolean(user?.id && user.id === post.ownerId);
+  const rootIdForReverb =
+    post.isReverb && post.reverbPostId ? post.reverbPostId : post.id;
+  const canReverb = Boolean(user && !isOwner && rootIdForReverb);
 
   useEffect(() => {
     void fetchLikeCount(post.id).then(setLikeCount).catch(() => undefined);
     void fetchCommentCount(post.id).then(setCommentCount).catch(() => undefined);
     void fetchHasLiked(post.id).then(setLiked).catch(() => undefined);
   }, [post.id]);
+
+  useEffect(() => {
+    if (!canReverb) {
+      setReverbed(false);
+      return;
+    }
+    void fetchHasReverbed(rootIdForReverb).then(setReverbed).catch(() => undefined);
+  }, [canReverb, rootIdForReverb]);
 
   useEffect(() => {
     if (!showAuthor || !post.ownerSlug) {
@@ -104,6 +161,37 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted }: Po
     } catch {
       setLiked(!next);
       setLikeCount((c) => Math.max(0, c + (next ? -1 : 1)));
+    }
+  };
+
+  const handleReverb = async () => {
+    if (!user) {
+      toast({ title: 'Sign in to Reverb' });
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await toggleReverb(post, {
+        name: user.displayName || 'Artist',
+        slug: viewerSlug,
+      });
+      setReverbed(result.status === 'created');
+      toast({
+        title: result.status === 'created' ? 'Reverb live' : 'Reverb removed',
+        description:
+          result.status === 'created'
+            ? 'This post now echoes on your wall and Reverbs page.'
+            : 'Taken off your Reverbs.',
+      });
+      if (result.status === 'created' && result.post) onReverbed?.(result.post);
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not Reverb',
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -157,6 +245,11 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted }: Po
       id={`post-${post.id}`}
       className="scroll-mt-24 border border-dashed border-[var(--ph-border)] bg-black/20 p-4"
     >
+      {post.isReverb && (
+        <p className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-violet-300/90">
+          <Repeat2 className="h-3 w-3" /> Reverb
+        </p>
+      )}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           {showAuthor &&
@@ -210,7 +303,9 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted }: Po
         </p>
       )}
 
-      {post.imageUrl && (
+      {post.isReverb ? <ReverbSourceBody post={post} /> : null}
+
+      {!post.isReverb && post.imageUrl && (
         <div className="mt-3 mb-1 flex justify-center overflow-visible">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -222,7 +317,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted }: Po
         </div>
       )}
 
-      {post.embedUrl && (
+      {!post.isReverb && post.embedUrl && (
         <div className="mt-3">
           <EmbedPlayer url={post.embedUrl} />
         </div>
@@ -250,6 +345,23 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted }: Po
           <MessageCircle className="h-3.5 w-3.5" />
           {commentCount > 0 ? commentCount : 'Reply'}
         </button>
+        {canReverb && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void handleReverb()}
+            className={cn(
+              'flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors',
+              reverbed
+                ? 'text-violet-300'
+                : 'text-[var(--ph-muted,rgba(255,255,255,0.55))] hover:text-violet-300'
+            )}
+            title="Reverb — pass this post onto your wall (like a repost)"
+          >
+            <Repeat2 className={cn('h-3.5 w-3.5', reverbed && 'stroke-[2.5]')} />
+            {reverbed ? 'Reverbed' : 'Reverb'}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setShareOpen(true)}

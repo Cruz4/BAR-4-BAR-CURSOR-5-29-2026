@@ -11,6 +11,7 @@ import {
   Heart,
   Import,
   MessageCircle,
+  Repeat2,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -73,6 +74,8 @@ function TypeIcon({ type }: { type: ActivityType }) {
       return <Heart className={cn(className, 'text-rose-400')} />;
     case 'post_reply':
       return <MessageCircle className={cn(className, 'text-sky-400')} />;
+    case 'post_reverb':
+      return <Repeat2 className={cn(className, 'text-violet-400')} />;
     case 'dna_import':
       return <Import className={cn(className, 'text-amber-400')} />;
     default:
