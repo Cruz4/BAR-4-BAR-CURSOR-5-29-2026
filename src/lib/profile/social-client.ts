@@ -535,6 +535,22 @@ export async function acceptFriendRequest(friendshipId: string): Promise<void> {
   const data = snap.data() || {};
   // Already friends — treat as success so Activity / Scene don't show a false error.
   if (data.status === 'accepted') {
+    const peer =
+      String(data.requestedBy || '') ||
+      (Array.isArray(data.uids) ? data.uids.map(String).find((u) => u !== user.uid) : '') ||
+      '';
+    if (peer) {
+      const { clearFriendRequestActivityFromPeer, notifyFriendshipChanged } = await import(
+        '@/lib/activity/client'
+      );
+      const clearedActivityIds = await clearFriendRequestActivityFromPeer(peer);
+      notifyFriendshipChanged({
+        friendshipId,
+        peerUserId: peer,
+        action: 'accepted',
+        clearedActivityIds,
+      });
+    }
     return;
   }
   if (data.status !== 'pending') {
@@ -548,6 +564,8 @@ export async function acceptFriendRequest(friendshipId: string): Promise<void> {
     throw new Error('You sent this request — wait for them to accept.');
   }
 
+  const requestedBy = String(data.requestedBy || '');
+
   try {
     await updateDoc(ref, {
       status: 'accepted',
@@ -557,15 +575,16 @@ export async function acceptFriendRequest(friendshipId: string): Promise<void> {
     // Race: already accepted between get and update (rules reject non-pending updates).
     const again = await getDoc(ref);
     if (again.exists() && again.data()?.status === 'accepted') {
-      return;
+      /* fall through to activity cleanup */
+    } else {
+      throw err;
     }
-    throw err;
   }
 
   trackSocialEvent('profile_friend_accept');
-  const requestedBy = String(data.requestedBy || '');
   if (requestedBy && requestedBy !== user.uid) {
-    const { emitActivity } = await import('@/lib/activity/client');
+    const { emitActivity, clearFriendRequestActivityFromPeer, notifyFriendshipChanged } =
+      await import('@/lib/activity/client');
     const myProfile = data.profiles?.[user.uid];
     const actorSlug =
       myProfile && typeof myProfile === 'object' && typeof myProfile.slug === 'string'
@@ -583,6 +602,13 @@ export async function acceptFriendRequest(friendshipId: string): Promise<void> {
       recipientId: requestedBy,
       href: actorSlug ? `/profile/${actorSlug}` : '/friends',
     });
+    const clearedActivityIds = await clearFriendRequestActivityFromPeer(requestedBy);
+    notifyFriendshipChanged({
+      friendshipId,
+      peerUserId: requestedBy,
+      action: 'accepted',
+      clearedActivityIds,
+    });
   }
   try {
     const { postGamificationEvent } = await import('@/lib/gamification-client');
@@ -594,8 +620,43 @@ export async function acceptFriendRequest(friendshipId: string): Promise<void> {
 
 /** Decline a request, cancel one you sent, or unfriend. */
 export async function removeFriendship(friendshipId: string): Promise<void> {
-  requireUser();
-  await deleteDoc(doc(db, 'friendships', friendshipId));
+  const user = requireUser();
+  const ref = doc(db, 'friendships', friendshipId);
+  let peerUserId: string | undefined;
+  let wasIncomingPending = false;
+  try {
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data() || {};
+      const uids = Array.isArray(data.uids) ? data.uids.map(String) : [];
+      peerUserId = uids.find((u) => u !== user.uid);
+      wasIncomingPending =
+        data.status === 'pending' && String(data.requestedBy || '') !== user.uid;
+    }
+  } catch {
+    /* still attempt delete */
+  }
+  await deleteDoc(ref);
+
+  if (wasIncomingPending && peerUserId) {
+    const { clearFriendRequestActivityFromPeer, notifyFriendshipChanged } = await import(
+      '@/lib/activity/client'
+    );
+    const clearedActivityIds = await clearFriendRequestActivityFromPeer(peerUserId);
+    notifyFriendshipChanged({
+      friendshipId,
+      peerUserId,
+      action: 'removed',
+      clearedActivityIds,
+    });
+  } else {
+    const { notifyFriendshipChanged } = await import('@/lib/activity/client');
+    notifyFriendshipChanged({
+      friendshipId,
+      peerUserId,
+      action: 'removed',
+    });
+  }
 }
 
 export async function fetchFriendshipWith(otherUserId: string): Promise<Friendship | null> {
@@ -670,7 +731,7 @@ export type PublicArtistMeta = {
 };
 
 function avatarFromPublicDoc(data: Record<string, unknown>): string | undefined {
-  // Prefer explicit custom photo if present on the doc.
+  // Feed chip: custom upload only. Collage stays on Artist Home — stock = initials star.
   if (
     data.profilePhotoMode === 'custom' &&
     typeof data.profilePhotoUrl === 'string' &&
@@ -680,13 +741,6 @@ function avatarFromPublicDoc(data: Record<string, unknown>): string | undefined 
   }
   if (typeof data.avatarUrl === 'string' && data.avatarUrl.trim()) {
     return data.avatarUrl.trim();
-  }
-  // Collage mode (or missing custom): first album cover.
-  if (data.profilePhotoMode !== 'custom') {
-    const covers = Array.isArray(data.albumCoverUrls)
-      ? data.albumCoverUrls.filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
-      : [];
-    if (covers[0]) return covers[0];
   }
   return undefined;
 }

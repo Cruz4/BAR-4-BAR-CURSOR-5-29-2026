@@ -183,12 +183,22 @@ function shorten(s) {
   out = (cut ? cut[0] : out).replace(/[.;]\s*$/, '').trim();
   // Drop trailing parenthetical junk when the core is long enough.
   if (out.length > 40) out = out.replace(/\s*\([^)]*\)\s*$/, '').trim();
-  if (out.length > 88) {
-    out = out.slice(0, 85).replace(/\s+\S*$/, '').replace(/[,:;–—-]\s*$/, '') + '…';
+  out = out.replace(/[\s.…]+$/u, '').replace(/[.!?]+$/u, '').trim();
+  const maxLen = 64;
+  if (out.length > maxLen) {
+    let slice = out.slice(0, maxLen);
+    const space = slice.lastIndexOf(' ');
+    if (space > maxLen * 0.45) slice = slice.slice(0, space);
+    out = slice;
+  } else if (out.length > 18) {
+    // Even short defs stay unfinished teasers.
+    const cutAt = Math.max(18, Math.floor(out.length * 0.7));
+    const space = out.lastIndexOf(' ', cutAt);
+    out = space > 12 ? out.slice(0, space) : out.slice(0, cutAt);
   }
+  out = out.replace(/[,:;–—\-(\[{]+\s*$/u, '').trim();
   if (out) out = out.charAt(0).toUpperCase() + out.slice(1);
-  if (out && !/[.!?…]$/.test(out)) out += '.';
-  return out;
+  return out ? `${out}…` : '…';
 }
 
 function isBadDef(s) {

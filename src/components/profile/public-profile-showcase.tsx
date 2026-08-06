@@ -39,7 +39,7 @@ export type PublicProfileData = {
   /** Achievement id → unlock ISO timestamp (for Proof Wall foil cards). */
   unlockedAchievements?: Record<string, string>;
   userId?: string;
-  profilePhotoMode?: 'collage' | 'custom';
+  profilePhotoMode?: 'collage' | 'custom' | 'initials';
   profilePhotoUrl?: string | null;
   slug?: string;
   /** Owner's referral code — used when guests claim a profile from this page. */

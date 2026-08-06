@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
@@ -24,13 +24,17 @@ import {
 import { cn } from '@/lib/utils';
 import {
   fetchActivityFeed,
+  FRIENDSHIP_CHANGED_EVENT,
   markActivityEventsRead,
   markAllActivityEventsRead,
+  type FriendshipChangedDetail,
 } from '@/lib/activity/client';
 import { activityVerb, type ActivityEvent, type ActivityType } from '@/lib/activity/types';
 import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
+import { useAuth } from '@/hooks/use-auth';
 import { StudioLoader } from '@/components/studio-loader';
 import { useGamification } from '@/context/gamification-context';
+import { fetchFriendships } from '@/lib/profile/social-client';
 
 function TypeIcon({ type }: { type: ActivityType }) {
   const className = 'h-3.5 w-3.5 shrink-0';
@@ -67,6 +71,7 @@ export function ActivityNavDropdown({
   unreadCount: number;
 }) {
   const router = useRouter();
+  const { user } = useAuth();
   const { summary } = useGamification();
   const viewerSlug = summary?.profileSlug;
   const [open, setOpen] = useState(false);
@@ -76,10 +81,31 @@ export function ActivityNavDropdown({
   const [markingAll, setMarkingAll] = useState(false);
 
   const loadUnread = useCallback(async () => {
+    if (!user?.id) {
+      setItems([]);
+      return;
+    }
     setLoading(true);
     try {
-      const received = await fetchActivityFeed('received', 40);
-      const unread = received.filter((e) => !e.readAt).slice(0, PREVIEW_LIMIT);
+      const uid = user.id;
+      const [received, pendingFriends] = await Promise.all([
+        fetchActivityFeed('received', 40),
+        fetchFriendships(uid, 'pending').catch(() => []),
+      ]);
+      const pendingRequesters = new Set(
+        pendingFriends
+          .filter((f) => f.status === 'pending' && f.requestedBy !== uid)
+          .map((f) => f.requestedBy)
+      );
+      // Drop friend_request rows already answered elsewhere (still unread in activity).
+      const unread = received
+        .filter((e) => !e.readAt)
+        .filter(
+          (e) =>
+            e.type !== 'friend_request' ||
+            (e.direction === 'received' && pendingRequesters.has(e.actorId))
+        )
+        .slice(0, PREVIEW_LIMIT);
       const lookups = unread
         .filter((e) => !e.actorSlug && e.actorId)
         .map((e) => ({ userId: e.actorId }));
@@ -101,6 +127,28 @@ export function ActivityNavDropdown({
     } finally {
       setLoading(false);
     }
+  }, [user?.id]);
+
+  useEffect(() => {
+    const onFriendshipChanged = (ev: Event) => {
+      const detail = (ev as CustomEvent<FriendshipChangedDetail>).detail;
+      if (!detail || (detail.action !== 'accepted' && detail.action !== 'removed')) return;
+      setItems((prev) =>
+        prev.filter((e) => {
+          if (detail.clearedActivityIds?.includes(e.id)) return false;
+          if (
+            e.type === 'friend_request' &&
+            detail.peerUserId &&
+            e.actorId === detail.peerUserId
+          ) {
+            return false;
+          }
+          return true;
+        })
+      );
+    };
+    window.addEventListener(FRIENDSHIP_CHANGED_EVENT, onFriendshipChanged);
+    return () => window.removeEventListener(FRIENDSHIP_CHANGED_EVENT, onFriendshipChanged);
   }, []);
 
   const handleOpenChange = (next: boolean) => {

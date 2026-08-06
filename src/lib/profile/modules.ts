@@ -13,13 +13,14 @@ import {
   type PressingConfig,
 } from '@/lib/profile/pressing';
 import { normalizeSocials, type ArtistHomeSocials } from '@/lib/profile/social-links';
+import { normalizeTheCatch, type TheCatch } from '@/lib/profile/the-catch';
 
 export type ProfileModuleId =
   | 'nowPlaying'
   | 'barOfWeek'
   | 'dnaStrip'
   | 'rhymeFingerprint'
-  | 'albumRooms'
+  | 'theCatch'
   | 'dropShelf'
   | 'proofWall'
   | 'wall'
@@ -34,18 +35,13 @@ export type ProfileModuleSetting = {
   size: ModuleSize;
 };
 
+/** @deprecated Replaced by The Catch. Kept so old publicProfiles still normalize. */
 export type AlbumRoomCard = {
   title: string;
-  /** Vault album id — used to resolve live cover art when no custom banner. */
   albumId?: string;
   theme?: string;
-  /**
-   * Custom wide door image (persisted). Prefer this over the album vinyl cover.
-   */
   roomImageUrl?: string;
-  /** Live-resolved album cover fallback (not persisted on save). */
   coverArtUrl?: string;
-  /** Public DNA Drop share id — the "enter the room" door. */
   shareId?: string;
   sampleBar?: string;
 };
@@ -56,7 +52,10 @@ export type RhymeFingerprint = {
   rhyme: number[];
   /** Syllable count per line. */
   syllables: number[];
+  /** Display label, e.g. "Album · Track". */
   sourceLabel?: string;
+  /** Stable picker key: `${albumId}::${trackId}`. */
+  sourceKey?: string;
 };
 
 export type ArtistHomeFeatured = {
@@ -71,6 +70,9 @@ export type ArtistHomeFeatured = {
   /** Up to 2 revealed Creative DNA lines. */
   dnaLines?: string[];
   fingerprint?: RhymeFingerprint;
+  /** Interactive rhyme hunt — ordered bars + decoy end-sounds. */
+  theCatch?: TheCatch;
+  /** @deprecated Prefer theCatch. */
   albumRooms?: AlbumRoomCard[];
   /** @deprecated Live DNA Drops auto-list from shares; kept for older configs. */
   dropShelfShareIds?: string[];
@@ -113,10 +115,10 @@ export const MODULE_META: Record<
     defaultSize: 'S',
     defaultEnabled: true,
   },
-  albumRooms: {
-    label: 'Album Rooms',
-    description: 'Albums as doors — cover, theme, one sample bar.',
-    defaultSize: 'M',
+  theCatch: {
+    label: 'The Catch',
+    description: 'Plant a bar chain — visitors hunt end-sounds to unlock each next bar.',
+    defaultSize: 'L',
     defaultEnabled: true,
   },
   dropShelf: {
@@ -156,7 +158,7 @@ export const MODULE_ORDER_DEFAULT: ProfileModuleId[] = [
   'barOfWeek',
   'dnaStrip',
   'wall',
-  'albumRooms',
+  'theCatch',
   'rhymeFingerprint',
   'dropShelf',
   'proofWall',
@@ -205,14 +207,21 @@ function isModuleId(id: unknown): id is ProfileModuleId {
   return typeof id === 'string' && id in MODULE_META;
 }
 
+/** Old saves used albumRooms — map to theCatch slot. */
+function coerceModuleId(id: unknown): ProfileModuleId | null {
+  if (id === 'albumRooms') return 'theCatch';
+  if (isModuleId(id)) return id;
+  return null;
+}
+
 function normalizeModules(raw: unknown): ProfileModuleSetting[] {
   const base = defaultModules();
   if (!Array.isArray(raw)) return base;
   const seen = new Set<ProfileModuleId>();
   const ordered: ProfileModuleSetting[] = [];
   for (const entry of raw) {
-    const id = (entry as { id?: unknown })?.id;
-    if (!isModuleId(id) || seen.has(id)) continue;
+    const id = coerceModuleId((entry as { id?: unknown })?.id);
+    if (!id || seen.has(id)) continue;
     seen.add(id);
     const size = (entry as { size?: unknown }).size;
     ordered.push({
@@ -238,7 +247,12 @@ function normalizeFingerprint(raw: unknown): RhymeFingerprint | undefined {
     .slice(0, MAX_FINGERPRINT_LINES)
     .map((n) => Math.max(0, Math.min(32, Math.round(Number(n)) || 0)));
   if (!rhyme.length || rhyme.length !== syllables.length) return undefined;
-  return { rhyme, syllables, sourceLabel: cleanString(obj.sourceLabel, 60) };
+  const fingerprint: RhymeFingerprint = { rhyme, syllables };
+  const sourceLabel = cleanString(obj.sourceLabel, 120);
+  if (sourceLabel) fingerprint.sourceLabel = sourceLabel;
+  const sourceKey = cleanString(obj.sourceKey, 160);
+  if (sourceKey) fingerprint.sourceKey = sourceKey;
+  return fingerprint;
 }
 
 function normalizeFeatured(raw: unknown): ArtistHomeFeatured {
@@ -269,6 +283,9 @@ function normalizeFeatured(raw: unknown): ArtistHomeFeatured {
   const fingerprint = normalizeFingerprint(obj.fingerprint);
   if (fingerprint) featured.fingerprint = fingerprint;
 
+  const theCatch = normalizeTheCatch(obj.theCatch);
+  if (theCatch) featured.theCatch = theCatch;
+
   if (Array.isArray(obj.albumRooms)) {
     const rooms = obj.albumRooms
       .map((room): AlbumRoomCard | null => {
@@ -281,7 +298,6 @@ function normalizeFeatured(raw: unknown): ArtistHomeFeatured {
         if (theme) card.theme = theme;
         const roomImage = cleanString((room as AlbumRoomCard).roomImageUrl, 400000);
         if (roomImage) card.roomImageUrl = roomImage;
-        // Live covers are attached at profile-read time; keep if present (display).
         const cover = cleanString((room as AlbumRoomCard).coverArtUrl, 400000);
         if (cover) card.coverArtUrl = cover;
         const shareId = cleanString((room as AlbumRoomCard).shareId, 40);

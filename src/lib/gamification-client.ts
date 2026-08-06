@@ -55,7 +55,7 @@ export async function patchGamificationSettings(settings: {
   publicProfile?: boolean;
   leaderboardHidden?: boolean;
   displayName?: string;
-  profilePhotoMode?: 'collage' | 'custom';
+  profilePhotoMode?: 'collage' | 'custom' | 'initials';
   profilePhotoUrl?: string | null;
   profileCollageAlbumIds?: string[] | null;
   starMarkUseStar?: boolean;

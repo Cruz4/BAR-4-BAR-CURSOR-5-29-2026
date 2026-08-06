@@ -17,11 +17,46 @@ export type SceneNeonEntry = {
   gloss: string;
 };
 
+/** Soft cap for neon teaser glosses — always cut mid-thought, never a finished sentence. */
+export const SCENE_NEON_GLOSS_TEASE_MAX = 64;
+
+/**
+ * Scene neon definitions are teasers only: truncate mid-phrase and end with …
+ * so the skyline word never feels fully explained.
+ */
+export function teaseSceneNeonGloss(
+  raw: string,
+  maxLen = SCENE_NEON_GLOSS_TEASE_MAX
+): string {
+  let s = (raw || '').trim();
+  // Strip prior ellipsis / terminal punctuation from corpus entries.
+  s = s.replace(/[\s.…]+$/u, '').replace(/[.!?]+$/u, '').trim();
+  if (!s) return '…';
+
+  const limit = Math.max(24, maxLen);
+  if (s.length > limit) {
+    let slice = s.slice(0, limit);
+    const space = slice.lastIndexOf(' ');
+    if (space > limit * 0.45) slice = slice.slice(0, space);
+    s = slice;
+  } else {
+    // Short but complete defs still get clipped so they feel unfinished.
+    const cutAt = Math.max(18, Math.floor(s.length * 0.7));
+    const space = s.lastIndexOf(' ', cutAt);
+    if (space > 12) s = s.slice(0, space);
+    else s = s.slice(0, cutAt);
+  }
+
+  s = s.replace(/[,:;–—\-(\[{]+\s*$/u, '').trim();
+  if (!s) return '…';
+  return `${s}…`;
+}
+
 export const SCENE_NEON_LEXICON: SceneNeonEntry[] = SCENE_NEON_CORPUS.map((e) => ({
   id: e.id,
   word: e.word,
   pron: e.pron,
-  gloss: e.gloss,
+  gloss: teaseSceneNeonGloss(e.gloss),
 }));
 
 /** Max duration a user lock keeps the same neon word. */

@@ -127,7 +127,7 @@ const FAQS = [
     },
     {
       q: "What is Artist Home and Edit Public Page?",
-      a: "Artist Home is your shareable page at /profile/your-slug (skin, modules, Album Rooms, embeds, socials, wall, friends, live DNA Drops). On the Scene dock, Artist Home | Edit page is one split control — view live, or customize. Also reachable from Your Booth, Vault dock, or Studio Progress → Sharing. Private by default; never shows private lyrics unless you publish a DNA Drop."
+      a: "Artist Home is your shareable page at /profile/your-slug (skin, modules, The Catch, embeds, socials, wall, friends, live DNA Drops). On the Scene dock, Artist Home | Edit page is one split control — view live, or customize. Also reachable from Your Booth, Vault dock, or Studio Progress → Sharing. Private by default; never shows private lyrics unless you publish a DNA Drop."
     },
     {
       q: "What is The Block?",
@@ -335,7 +335,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 <div className="grid gap-4 md:grid-cols-2">
                   <ChapterCard icon={<Globe className="text-fuchsia-400" />} title="Artist Home" colorClass="border-l-fuchsia-500 text-fuchsia-400">
                     <p className="text-sm">
-                      Public page at <code className="text-primary">/profile/your-slug</code> — skin, modules, Album Rooms,
+                      Public page at <code className="text-primary">/profile/your-slug</code> — skin, modules, The Catch,
                       embeds, wall, friends, live DNA Drops. Off until you flip Public on.
                     </p>
                     <p className="text-xs text-muted-foreground">

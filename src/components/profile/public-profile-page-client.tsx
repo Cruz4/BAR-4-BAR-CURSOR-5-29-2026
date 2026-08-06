@@ -48,7 +48,12 @@ export function PublicProfilePageClient({ slug }: { slug: string }) {
               ? data.unlockedAchievements
               : undefined,
           userId: data.userId,
-          profilePhotoMode: data.profilePhotoMode === 'custom' ? 'custom' : 'collage',
+          profilePhotoMode:
+            data.profilePhotoMode === 'custom'
+              ? 'custom'
+              : data.profilePhotoMode === 'initials'
+                ? 'initials'
+                : 'collage',
           profilePhotoUrl: data.profilePhotoUrl || null,
           starMarkUseStar: Boolean(data.starMarkUseStar),
           starMarkSeed:

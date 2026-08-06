@@ -188,6 +188,48 @@ export async function markAllActivityEventsRead(): Promise<void> {
   });
 }
 
+/**
+ * After accept/decline: mark every inbox `friend_request` from that peer as read
+ * so badge + dropdown + Activity stop treating it as pending action.
+ */
+export async function clearFriendRequestActivityFromPeer(fromUserId: string): Promise<string[]> {
+  const peer = fromUserId.trim();
+  if (!peer) return [];
+  const events = await fetchPendingRequestActivity(80);
+  const ids = events.filter((e) => e.actorId === peer).map((e) => e.id);
+  if (ids.length) {
+    try {
+      await markActivityEventsRead(ids);
+    } catch (err) {
+      console.warn('[clearFriendRequestActivityFromPeer]', err);
+    }
+  }
+  return ids;
+}
+
+export const FRIENDSHIP_CHANGED_EVENT = 'b4b-friendship-changed';
+
+export type FriendshipChangedDetail = {
+  friendshipId: string;
+  /** The other user in the friendship (requester when you respond). */
+  peerUserId?: string;
+  action: 'accepted' | 'removed' | 'requested';
+  /** Activity event ids cleared when resolving an incoming request. */
+  clearedActivityIds?: string[];
+};
+
+/** Notify open Activity / Scene / badge UIs that a friendship changed. */
+export function notifyFriendshipChanged(detail: FriendshipChangedDetail): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(FRIENDSHIP_CHANGED_EVENT, { detail }));
+  try {
+    // Dynamic import avoids circular deps with the alerts hook.
+    void import('@/hooks/use-activity-alerts').then((m) => m.refreshActivityAlerts());
+  } catch {
+    /* ignore */
+  }
+}
+
 export async function fetchActivityPrefs(): Promise<ActivityPrefs> {
   const user = auth.currentUser;
   if (!user) return { ...DEFAULT_ACTIVITY_PREFS };

@@ -25,12 +25,15 @@ import { useGamification } from '@/context/gamification-context';
 import { cn } from '@/lib/utils';
 import {
   fetchActivityFeed,
+  FRIENDSHIP_CHANGED_EVENT,
   markActivityEventsRead,
   markAllActivityEventsRead,
+  type FriendshipChangedDetail,
 } from '@/lib/activity/client';
 import { activityVerb, type ActivityEvent, type ActivityType } from '@/lib/activity/types';
 import {
   acceptFriendRequest,
+  fetchFriendships,
   friendshipIdFor,
   removeFriendship,
   fetchPublicArtistMetas,
@@ -245,6 +248,8 @@ function ActivityPageInner() {
   const [sent, setSent] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  /** Actor user ids whose incoming friend request is still pending in Firestore. */
+  const [pendingRequesterIds, setPendingRequesterIds] = useState<Set<string>>(() => new Set());
   const [resolvedRequestIds, setResolvedRequestIds] = useState<Set<string>>(() => new Set());
   const markedOnOpenRef = React.useRef(false);
 
@@ -253,9 +258,10 @@ function ActivityPageInner() {
     setLoading(true);
     markedOnOpenRef.current = false;
     try {
-      const [received, given] = await Promise.all([
+      const [received, given, friendships] = await Promise.all([
         fetchActivityFeed('received'),
         fetchActivityFeed('given'),
+        fetchFriendships(user.id, 'pending').catch(() => []),
       ]);
       const [inboxResolved, sentResolved] = await Promise.all([
         withResolvedProfileLinks(received),
@@ -263,6 +269,13 @@ function ActivityPageInner() {
       ]);
       setInbox(inboxResolved);
       setSent(sentResolved);
+      setPendingRequesterIds(
+        new Set(
+          friendships
+            .filter((f) => f.status === 'pending' && f.requestedBy !== user.id)
+            .map((f) => f.requestedBy)
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -276,6 +289,53 @@ function ActivityPageInner() {
     }
     void load();
   }, [authReady, user?.id, router, load]);
+
+  // Accept/decline from Scene, profile, or elsewhere — drop Accept/Decline here too.
+  useEffect(() => {
+    const onFriendshipChanged = (ev: Event) => {
+      const detail = (ev as CustomEvent<FriendshipChangedDetail>).detail;
+      if (!detail) return;
+      if (detail.action !== 'accepted' && detail.action !== 'removed') return;
+
+      if (detail.peerUserId) {
+        const peer = detail.peerUserId;
+        setPendingRequesterIds((prev) => {
+          if (!prev.has(peer)) return prev;
+          const next = new Set(prev);
+          next.delete(peer);
+          return next;
+        });
+        setInbox((prev) =>
+          prev.map((e) =>
+            e.type === 'friend_request' && e.actorId === peer
+              ? { ...e, readAt: e.readAt || new Date().toISOString() }
+              : e
+          )
+        );
+        setResolvedRequestIds((prev) => {
+          const next = new Set(prev);
+          if (detail.clearedActivityIds?.length) {
+            detail.clearedActivityIds.forEach((id) => next.add(id));
+          }
+          return next;
+        });
+      } else if (detail.clearedActivityIds?.length) {
+        const cleared = new Set(detail.clearedActivityIds);
+        setResolvedRequestIds((prev) => {
+          const next = new Set(prev);
+          cleared.forEach((id) => next.add(id));
+          return next;
+        });
+        setInbox((prev) =>
+          prev.map((e) =>
+            cleared.has(e.id) ? { ...e, readAt: e.readAt || new Date().toISOString() } : e
+          )
+        );
+      }
+    };
+    window.addEventListener(FRIENDSHIP_CHANGED_EVENT, onFriendshipChanged);
+    return () => window.removeEventListener(FRIENDSHIP_CHANGED_EVENT, onFriendshipChanged);
+  }, []);
 
   useEffect(() => {
     if (!user?.id || loading || markedOnOpenRef.current) return;
@@ -296,12 +356,18 @@ function ActivityPageInner() {
     return () => window.clearTimeout(t);
   }, [user?.id, loading, inbox]);
 
+  const isRequestActionable = useCallback(
+    (event: ActivityEvent) =>
+      event.type === 'friend_request' &&
+      event.direction === 'received' &&
+      pendingRequesterIds.has(event.actorId) &&
+      !resolvedRequestIds.has(event.id),
+    [pendingRequesterIds, resolvedRequestIds]
+  );
+
   const requestRows = useMemo(
-    () =>
-      inbox.filter(
-        (e) => e.type === 'friend_request' && !resolvedRequestIds.has(e.id)
-      ),
-    [inbox, resolvedRequestIds]
+    () => inbox.filter((e) => isRequestActionable(e)),
+    [inbox, isRequestActionable]
   );
   const unreadRequestCount = requestRows.filter((e) => !e.readAt).length;
 
@@ -327,15 +393,18 @@ function ActivityPageInner() {
         toast({ title: 'Request declined' });
       }
       setResolvedRequestIds((prev) => new Set(prev).add(event.id));
+      setPendingRequesterIds((prev) => {
+        const next = new Set(prev);
+        next.delete(event.actorId);
+        return next;
+      });
       setInbox((prev) =>
-        prev.map((e) => (e.id === event.id ? { ...e, readAt: new Date().toISOString() } : e))
+        prev.map((e) =>
+          e.id === event.id || (e.type === 'friend_request' && e.actorId === event.actorId)
+            ? { ...e, readAt: new Date().toISOString() }
+            : e
+        )
       );
-      try {
-        await markActivityEventsRead([event.id]);
-        refreshActivityAlerts();
-      } catch {
-        /* accept already succeeded */
-      }
     } catch (e) {
       toast({
         variant: 'destructive',
@@ -420,7 +489,7 @@ function ActivityPageInner() {
                         event={event}
                         onRespondRequest={handleRespond}
                         busyId={busyId}
-                        requestResolved={resolvedRequestIds.has(event.id)}
+                        requestResolved={!isRequestActionable(event)}
                         viewerSlug={viewerSlug}
                       />
                     ))
@@ -441,7 +510,7 @@ function ActivityPageInner() {
                         event={event}
                         onRespondRequest={handleRespond}
                         busyId={busyId}
-                        requestResolved={resolvedRequestIds.has(event.id)}
+                        requestResolved={!isRequestActionable(event)}
                         viewerSlug={viewerSlug}
                       />
                     ))

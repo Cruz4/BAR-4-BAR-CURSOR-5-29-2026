@@ -663,6 +663,7 @@ export function AlbumList() {
   // Login and route transitions can leave the window scrolled mid-page before vault content paints.
   useEffect(() => {
     if (!isVaultPath(pathname) || loading) return;
+    const previous = 'scrollRestoration' in history ? history.scrollRestoration : undefined;
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     const resetScroll = () => {
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
@@ -671,6 +672,13 @@ export function AlbumList() {
     };
     resetScroll();
     requestAnimationFrame(() => requestAnimationFrame(resetScroll));
+    return () => {
+      // Leave manual mode only while on the vault — otherwise album/track
+      // navigations keep the vault's scrollY and open mid/bottom page.
+      if ('scrollRestoration' in history && previous !== undefined) {
+        history.scrollRestoration = previous;
+      }
+    };
   }, [pathname, loading]);
 
   // Unified Sorting Logic

@@ -406,7 +406,7 @@ export function SceneBlockAtmosphere({
         <p className="scene-block-neon-pron mt-1 font-sans text-xs font-medium normal-case tracking-wide sm:text-[13px]">
           /{neon.pron}/
         </p>
-        <p className="scene-block-neon-gloss mt-1.5 font-code text-[10px] font-medium leading-snug tracking-wide">
+        <p className="scene-block-neon-gloss mt-1.5 line-clamp-2 font-code text-[10px] font-medium leading-snug tracking-wide">
           {neon.gloss}
         </p>
       </div>

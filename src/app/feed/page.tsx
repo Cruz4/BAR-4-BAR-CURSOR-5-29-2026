@@ -26,6 +26,7 @@ import {
   type Friendship,
   type ProfilePost,
 } from '@/lib/profile/social-client';
+import { FRIENDSHIP_CHANGED_EVENT, type FriendshipChangedDetail } from '@/lib/activity/client';
 import { markBlockSeen } from '@/lib/profile/social-alerts';
 
 export default function FeedPage() {
@@ -70,6 +71,24 @@ export default function FeedPage() {
       cancelled = true;
     };
   }, [user?.id]);
+
+  useEffect(() => {
+    const onFriendshipChanged = (ev: Event) => {
+      const detail = (ev as CustomEvent<FriendshipChangedDetail>).detail;
+      if (!detail) return;
+      if (detail.action === 'accepted') {
+        setFriendships((prev) =>
+          prev.map((f) =>
+            f.id === detail.friendshipId ? { ...f, status: 'accepted' as const } : f
+          )
+        );
+      } else if (detail.action === 'removed') {
+        setFriendships((prev) => prev.filter((f) => f.id !== detail.friendshipId));
+      }
+    };
+    window.addEventListener(FRIENDSHIP_CHANGED_EVENT, onFriendshipChanged);
+    return () => window.removeEventListener(FRIENDSHIP_CHANGED_EVENT, onFriendshipChanged);
+  }, []);
 
   const incomingRequests = useMemo(
     () =>

@@ -14,6 +14,7 @@ import {
   Dna,
   DoorOpen,
   Fingerprint,
+  Fish,
   PenLine,
   Quote,
   Send,
@@ -26,7 +27,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
-import type { ArtistHomeFeatured, RhymeFingerprint } from '@/lib/profile/modules';
+import type { ArtistHomeFeatured } from '@/lib/profile/modules';
+import { FingerprintSvg } from '@/components/profile/rhyme-fingerprint-svg';
+import { TheCatchGame } from '@/components/profile/the-catch-module';
 import { parseEmbedUrl, EMBED_HELP_TEXT } from '@/lib/profile/embeds';
 import { EmbedPlayer } from '@/components/profile/embed-player';
 import { PostCard } from '@/components/profile/post-card';
@@ -34,7 +37,6 @@ import { PressPlate, type PressPlateChrome } from '@/components/profile/press-pl
 import { PublicAchievementFoil } from '@/components/profile/public-achievement-foil';
 import { LiveDnaDropsGroupedList } from '@/components/profile/live-dna-drop-card';
 import type { AchievementDef } from '@/lib/gamification/achievements';
-import { ProfileMediaLightbox } from '@/components/profile/profile-media-lightbox';
 import {
   createPost,
   deleteGuestbookEntry,
@@ -175,47 +177,6 @@ export function DnaStripModule({ ctx }: { ctx: ModuleContext }) {
 // Rhyme Fingerprint
 // ---------------------------------------------------------------------------
 
-function FingerprintSvg({ fingerprint }: { fingerprint: RhymeFingerprint }) {
-  const { rhyme, syllables } = fingerprint;
-  const rows = rhyme.length;
-  const maxSyl = Math.max(...syllables, 8);
-  const width = 280;
-  const rowH = 16;
-  const height = rows * rowH + 8;
-
-  return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      className="w-full max-w-sm"
-      role="img"
-      aria-label="Rhyme fingerprint — abstract cadence pattern"
-    >
-      {rhyme.map((group, i) => {
-        const barW = Math.max(24, (syllables[i] / maxSyl) * (width - 60));
-        const hueShift = (group * 47) % 360;
-        return (
-          <g key={i} transform={`translate(0, ${i * rowH + 4})`}>
-            <rect
-              x={0}
-              y={0}
-              width={barW}
-              height={rowH - 6}
-              rx={4}
-              fill={`hsl(calc(var(--ph-hue, 200) + ${hueShift}) 70% 60% / 0.75)`}
-            />
-            <circle
-              cx={barW + 12}
-              cy={(rowH - 6) / 2}
-              r={4}
-              fill={`hsl(calc(var(--ph-hue, 200) + ${hueShift}) 80% 65%)`}
-            />
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
 export function RhymeFingerprintModule({ ctx }: { ctx: ModuleContext }) {
   const fp = ctx.featured.fingerprint;
   if (!fp) return null;
@@ -231,143 +192,18 @@ export function RhymeFingerprintModule({ ctx }: { ctx: ModuleContext }) {
 }
 
 // ---------------------------------------------------------------------------
-// Album Rooms
+// The Catch
 // ---------------------------------------------------------------------------
 
-const ALBUM_ROOM_LOGO = '/Logo.png';
-
-function AlbumRoomCover({
-  customSrc,
-  albumCoverSrc,
-  title,
-  onExpand,
-}: {
-  customSrc?: string;
-  albumCoverSrc?: string;
-  title: string;
-  /** Opens the media lightbox when the cover has a real image. */
-  onExpand?: () => void;
-}) {
-  const [failed, setFailed] = useState(false);
-  const custom = customSrc?.trim() || '';
-  const album = albumCoverSrc?.trim() || '';
-  const src = custom || album;
-  const showLogo = !src || failed;
-  const fitContain = !custom && Boolean(album);
-  const canExpand = Boolean(onExpand && !showLogo);
-
+export function TheCatchModule({ ctx }: { ctx: ModuleContext }) {
+  const data = ctx.featured.theCatch;
+  if (!data?.links || data.links.length < 3) return null;
   return (
-    <div className="relative aspect-[2/1] w-full overflow-hidden bg-neutral-950">
-      {showLogo ? (
-        <div className="flex h-full w-full items-center justify-center bg-neutral-900">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={ALBUM_ROOM_LOGO}
-            alt=""
-            className="h-14 w-14 object-contain opacity-25 sm:h-16 sm:w-16"
-          />
-        </div>
-      ) : canExpand ? (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onExpand?.();
-          }}
-          aria-label={`View ${title} larger`}
-          className="group/cover relative block h-full w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ph-accent,#7dd3fc)]"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={src}
-            alt={title}
-            className={cn(
-              'h-full w-full transition-transform group-hover/cover:scale-[1.03]',
-              fitContain ? 'object-contain' : 'object-cover'
-            )}
-            onError={() => setFailed(true)}
-          />
-        </button>
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={src}
-          alt={title}
-          className={cn(
-            'h-full w-full transition-transform group-hover:scale-[1.03]',
-            fitContain ? 'object-contain' : 'object-cover'
-          )}
-          onError={() => setFailed(true)}
-        />
-      )}
-    </div>
-  );
-}
-
-export function AlbumRoomsModule({ ctx }: { ctx: ModuleContext }) {
-  const rooms = ctx.featured.albumRooms;
-  const [lightbox, setLightbox] = useState<{ src: string; title: string } | null>(null);
-
-  if (!rooms?.length) return null;
-
-  return (
-    <ModuleShell icon={DoorOpen} title={"Album Rooms"} ctx={ctx}>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {rooms.map((room, i) => {
-          const expandSrc = (room.roomImageUrl || room.coverArtUrl || '').trim();
-          const openExpand = expandSrc
-            ? () => setLightbox({ src: expandSrc, title: room.title })
-            : undefined;
-
-          return (
-            <div
-              key={i}
-              className={cn(
-                inkWellClass,
-                'group flex h-full flex-col overflow-hidden transition-transform hover:-translate-y-0.5'
-              )}
-            >
-              <AlbumRoomCover
-                customSrc={room.roomImageUrl}
-                albumCoverSrc={room.coverArtUrl}
-                title={room.title}
-                onExpand={openExpand}
-              />
-              <div className="flex flex-1 flex-col gap-1.5 p-4">
-                <p className="font-headline text-base uppercase tracking-tight text-[var(--ph-text,#fff)]">
-                  {room.title}
-                </p>
-                {room.theme && (
-                  <p className="text-xs text-[var(--ph-muted,rgba(255,255,255,0.6))]">{room.theme}</p>
-                )}
-                {room.sampleBar && (
-                  <p className="mt-1 text-sm italic text-[var(--ph-text,#fff)]/80">
-                    &ldquo;{room.sampleBar}&rdquo;
-                  </p>
-                )}
-                {room.shareId && (
-                  <Link
-                    href={`/share/${room.shareId}`}
-                    className="mt-auto pt-2 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-accent,#7dd3fc)] hover:underline"
-                  >
-                    Enter the room →
-                  </Link>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <ProfileMediaLightbox
-        open={Boolean(lightbox)}
-        onOpenChange={(open) => {
-          if (!open) setLightbox(null);
-        }}
-        title={lightbox?.title || 'Album Room'}
-        src={lightbox?.src}
-        fit="contain"
+    <ModuleShell icon={Fish} title={"The Catch"} ctx={ctx}>
+      <TheCatchGame
+        data={data}
+        profileUserId={ctx.profileUserId}
+        profileName={ctx.profileName}
       />
     </ModuleShell>
   );

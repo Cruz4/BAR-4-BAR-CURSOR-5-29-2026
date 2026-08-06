@@ -347,8 +347,16 @@ async function syncPublicProfile(
   }
 
   const badgeIds = Object.keys(summary.unlockedAchievements);
-  const albumCoverUrls = await getPublicAlbumCoverUrls(uid, summary.profileCollageAlbumIds);
-  const profilePhotoMode = summary.profilePhotoMode === 'custom' ? 'custom' : 'collage';
+  const albumCoverUrls =
+    summary.profilePhotoMode === 'initials'
+      ? []
+      : await getPublicAlbumCoverUrls(uid, summary.profileCollageAlbumIds);
+  const profilePhotoMode =
+    summary.profilePhotoMode === 'custom'
+      ? 'custom'
+      : summary.profilePhotoMode === 'initials'
+        ? 'initials'
+        : 'collage';
   // Custom hero photos stay on the private summary doc — mirroring the data URL
   // into publicProfiles blows past Firestore's 1MB limit next to Artist Home banners.
   const artistHomeSnap = await db.doc(`users/${uid}/gamification/artistHome`).get();
@@ -377,7 +385,7 @@ async function syncPublicProfile(
     },
     { merge: true }
   );
-  await syncPublicAvatarAsset(summary.profileSlug, summary, albumCoverUrls);
+  await syncPublicAvatarAsset(summary.profileSlug, summary);
 }
 
 export async function processGamificationEvent(
@@ -682,7 +690,7 @@ export async function updateGamificationSettings(
     publicProfile?: boolean;
     leaderboardHidden?: boolean;
     displayName?: string;
-    profilePhotoMode?: 'collage' | 'custom';
+    profilePhotoMode?: 'collage' | 'custom' | 'initials';
     profilePhotoUrl?: string | null;
     /** Ordered album IDs for collage (max 9). Pass `null` or `[]` to clear (auto covers). */
     profileCollageAlbumIds?: string[] | null;
@@ -705,15 +713,25 @@ export async function updateGamificationSettings(
   if (settings.displayName) {
     summary.profileSlug = slugify(settings.displayName, userId);
   }
-  if (settings.profilePhotoMode === 'collage' || settings.profilePhotoMode === 'custom') {
+  if (
+    settings.profilePhotoMode === 'collage' ||
+    settings.profilePhotoMode === 'custom' ||
+    settings.profilePhotoMode === 'initials'
+  ) {
     summary.profilePhotoMode = settings.profilePhotoMode;
   }
   if (settings.profilePhotoUrl === null) {
-    summary.profilePhotoMode = 'collage';
     delete summary.profilePhotoUrl;
+    // Clearing the URL alone (no mode) falls back to collage; explicit `initials` wins.
+    if (settings.profilePhotoMode === undefined) {
+      summary.profilePhotoMode = 'collage';
+    }
   } else if (typeof settings.profilePhotoUrl === 'string' && settings.profilePhotoUrl.trim()) {
     summary.profilePhotoUrl = settings.profilePhotoUrl.trim();
     summary.profilePhotoMode = 'custom';
+  }
+  if (summary.profilePhotoMode === 'initials') {
+    delete summary.profilePhotoUrl;
   }
   if (typeof settings.starMarkUseStar === 'boolean') {
     summary.starMarkUseStar = settings.starMarkUseStar;
@@ -776,12 +794,20 @@ export async function updateGamificationSettings(
   summary.updatedAt = new Date().toISOString();
   const summaryRef = db.doc(`users/${userId}/gamification/summary`);
   const deleteFields: Record<string, unknown> = {};
-  if (settings.profilePhotoUrl === null) {
+  if (settings.profilePhotoUrl === null || summary.profilePhotoMode === 'initials') {
     deleteFields.profilePhotoUrl = FieldValue.delete();
-    deleteFields.profilePhotoMode = 'collage';
   }
-  if (clearCollageIds) {
+  // Persist mode explicitly so initials isn't overwritten by the null-URL collage default.
+  if (
+    settings.profilePhotoMode === 'collage' ||
+    settings.profilePhotoMode === 'custom' ||
+    settings.profilePhotoMode === 'initials'
+  ) {
+    deleteFields.profilePhotoMode = settings.profilePhotoMode;
+  }
+  if (clearCollageIds || summary.profilePhotoMode === 'initials') {
     deleteFields.profileCollageAlbumIds = FieldValue.delete();
+    delete summary.profileCollageAlbumIds;
   }
   if (settings.starMarkPinnedSlotId === null) {
     deleteFields.starMarkPinnedSlotId = FieldValue.delete();
@@ -1085,14 +1111,24 @@ export async function getPublicProfile(slug: string) {
   ]);
 
   const summary = mergeSummary((summarySnap.data() as Partial<GamificationSummary>) || {});
-  const profilePhotoMode = summary.profilePhotoMode === 'custom' ? 'custom' : 'collage';
+  const profilePhotoMode =
+    summary.profilePhotoMode === 'custom'
+      ? 'custom'
+      : summary.profilePhotoMode === 'initials'
+        ? 'initials'
+        : 'collage';
   const profilePhotoUrl =
     profilePhotoMode === 'custom' && typeof summary.profilePhotoUrl === 'string'
       ? summary.profilePhotoUrl
       : null;
 
-  let albumCoverUrls = albumMeta.coverUrls;
-  if (Array.isArray(summary.profileCollageAlbumIds) && summary.profileCollageAlbumIds.length > 0) {
+  let albumCoverUrls =
+    profilePhotoMode === 'initials' ? ([] as string[]) : albumMeta.coverUrls;
+  if (
+    profilePhotoMode !== 'initials' &&
+    Array.isArray(summary.profileCollageAlbumIds) &&
+    summary.profileCollageAlbumIds.length > 0
+  ) {
     const picked: string[] = [];
     for (const id of summary.profileCollageAlbumIds.slice(0, MAX_COLLAGE_ALBUMS)) {
       const url = albumMeta.coverByAlbumId.get(id);
@@ -1433,11 +1469,12 @@ export async function searchPublicArtists(
  * Public feed/Discover avatar lives on a small subdoc so the main
  * publicProfiles/{slug} doc stays under Firestore’s size limit (Artist Home
  * banners + full custom hero don’t fit together).
+ * Sources: generative Vesperfold, or custom photo upload. No collage —
+ * missing asset → client shows stock initials star.
  */
 async function syncPublicAvatarAsset(
   slug: string,
-  summary: GamificationSummary,
-  albumCoverUrls: string[]
+  summary: GamificationSummary
 ): Promise<void> {
   const db = await getDb();
   const avatarRef = db.doc(`publicProfiles/${slug}/assets/avatar`);
@@ -1451,15 +1488,14 @@ async function syncPublicAvatarAsset(
     });
     return;
   }
+  // Feed chip: custom upload only. No collage fallback — stock = initials star.
   const custom =
     summary.profilePhotoMode === 'custom' &&
     typeof summary.profilePhotoUrl === 'string' &&
     summary.profilePhotoUrl.trim().length > 0
       ? summary.profilePhotoUrl.trim()
       : null;
-  const collage = albumCoverUrls.find((u) => typeof u === 'string' && u.trim().length > 0)?.trim();
-  const url = custom || collage;
-  if (!url) {
+  if (!custom) {
     try {
       await avatarRef.delete();
     } catch {
@@ -1468,20 +1504,13 @@ async function syncPublicAvatarAsset(
     return;
   }
   await avatarRef.set({
-    url,
-    source: custom ? 'custom' : 'collage',
+    url: custom,
+    source: 'custom',
     updatedAt: new Date().toISOString(),
   });
 }
 
-function albumCoverAvatar(data: Record<string, unknown>): string | undefined {
-  const covers = Array.isArray(data.albumCoverUrls)
-    ? data.albumCoverUrls.filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
-    : [];
-  return covers[0];
-}
-
-/** Prefer custom profile photo; fall back to collage cover. */
+/** Resolve feed avatar: generative star, custom photo, or undefined (stock initials). */
 export async function resolvePublicAvatar(
   slug: string,
   data: Record<string, unknown>
@@ -1536,7 +1565,8 @@ export async function resolvePublicAvatar(
     }
   }
 
-  return albumCoverAvatar(data);
+  // No custom photo / generative star → client shows stock initials star.
+  return undefined;
 }
 
 /** Resolve feed/Discover avatar for a public slug (custom photo preferred). */

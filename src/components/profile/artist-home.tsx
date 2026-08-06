@@ -21,6 +21,7 @@ import type { PublicProfileData } from '@/components/profile/public-profile-show
 import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
 import { LiveDnaDropsGroupedList } from '@/components/profile/live-dna-drop-card';
 import { AlbumCoverCollage } from '@/components/gamification/album-cover-collage';
+import { ProfileInitialsStar } from '@/components/profile/profile-initials-star';
 import { rankBadgeClass, rankIdFromLabel } from '@/lib/gamification/badge-styles';
 import { FriendButton } from '@/components/profile/friend-button';
 import {
@@ -33,7 +34,6 @@ import {
 import { LivingPressField } from '@/components/profile/living-press-field';
 import type { ArtistHomeConfig } from '@/lib/profile/modules';
 import {
-  AlbumRoomsModule,
   BarOfWeekModule,
   DnaStripModule,
   DropShelfModule,
@@ -42,6 +42,7 @@ import {
   NowPlayingModule,
   ProofWallModule,
   RhymeFingerprintModule,
+  TheCatchModule,
   WallModule,
   type ModuleContext,
 } from '@/components/profile/profile-modules';
@@ -69,7 +70,7 @@ const MODULE_RENDERERS: Record<string, React.ComponentType<{ ctx: ModuleContext 
   barOfWeek: BarOfWeekModule,
   dnaStrip: DnaStripModule,
   rhymeFingerprint: RhymeFingerprintModule,
-  albumRooms: AlbumRoomsModule,
+  theCatch: TheCatchModule,
   dropShelf: DropShelfModule,
   proofWall: ProofWallModule,
   wall: WallModule,
@@ -119,6 +120,7 @@ export function ArtistHome({
     profile.profilePhotoMode === 'custom' &&
     typeof profile.profilePhotoUrl === 'string' &&
     profile.profilePhotoUrl.trim().length > 0;
+  const useInitialsHero = profile.profilePhotoMode === 'initials';
   const useStarMark = Boolean(profile.starMarkUseStar);
   const starSeed = normalizeVesperfoldSeed(profile.starMarkSeed ?? 0);
 
@@ -376,6 +378,11 @@ export function ArtistHome({
                 {useCustomPhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={profile.profilePhotoUrl!} alt="" className="h-full w-full object-cover" />
+                ) : useInitialsHero ? (
+                  <ProfileInitialsStar
+                    displayName={profile.displayName}
+                    className="h-full w-full border-0"
+                  />
                 ) : (
                   <AlbumCoverCollage
                     urls={profile.albumCoverUrls || []}

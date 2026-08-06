@@ -15,10 +15,10 @@ import {
   Check,
   Disc3,
   Dna,
-  DoorOpen,
   ExternalLink,
   Eye,
   Fingerprint,
+  Fish,
   LayoutGrid,
   Loader2,
   Quote,
@@ -30,10 +30,10 @@ import {
   RotateCcw,
   Orbit,
   Link2,
-  ImagePlus,
   PenLine,
   Trash2,
   Shuffle,
+  Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,7 +52,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { DataContext } from '@/context/data-context';
 import { cn } from '@/lib/utils';
 import type { Album, Track } from '@/lib/types';
-import { processAlbumRoomBannerFile, processProfilePhotoFile } from '@/lib/cover-art';
+import { processProfilePhotoFile } from '@/lib/cover-art';
 import {
   pressTokens,
   pressingCssVars,
@@ -70,7 +70,16 @@ import {
 import { parseEmbedUrl, EMBED_HELP_TEXT } from '@/lib/profile/embeds';
 import { SOCIAL_PROVIDERS } from '@/lib/profile/social-links';
 import { EmbedPlayer } from '@/components/profile/embed-player';
+import { FingerprintSvg } from '@/components/profile/rhyme-fingerprint-svg';
+import { TheCatchGame } from '@/components/profile/the-catch-module';
+import {
+  CATCH_MAX_LINKS,
+  CATCH_MIN_LINKS,
+  endSoundFromBar,
+  type CatchLink,
+} from '@/lib/profile/the-catch';
 import { AlbumCoverCollage } from '@/components/gamification/album-cover-collage';
+import { ProfileInitialsStar } from '@/components/profile/profile-initials-star';
 import { StudioLoader } from '@/components/studio-loader';
 import {
   fetchArtistHomeConfig,
@@ -103,6 +112,7 @@ type VaultBar = {
   albumTitle: string;
   trackTitle: string;
   trackShareId?: string;
+  rhymeKey?: string;
 };
 
 function collectVaultBars(albums: Album[]): VaultBar[] {
@@ -114,7 +124,13 @@ function collectVaultBars(albums: Album[]): VaultBar[] {
         for (const bar of section.bars || []) {
           const text = (bar.text || '').trim();
           if (!text) continue;
-          bars.push({ text, albumTitle: album.title, trackTitle: track.title, trackShareId: shareId });
+          bars.push({
+            text,
+            albumTitle: album.title,
+            trackTitle: track.title,
+            trackShareId: shareId,
+            rhymeKey: bar.rhymeKey,
+          });
         }
       }
     }
@@ -147,7 +163,10 @@ function collectDnaCandidates(albums: Album[]): DnaCandidate[] {
   return candidates.slice(0, 12);
 }
 
-function computeFingerprint(track: Track): RhymeFingerprint | null {
+function computeFingerprint(
+  track: Track,
+  meta?: { sourceLabel?: string; sourceKey?: string }
+): RhymeFingerprint | null {
   const bars = (track.sections || [])
     .flatMap((s) => s.bars || [])
     .filter((b) => (b.text || '').trim())
@@ -162,7 +181,12 @@ function computeFingerprint(track: Track): RhymeFingerprint | null {
     rhyme.push(groupByKey.get(key)!);
     syllables.push(Math.max(1, Math.min(32, bar.syllables || 8)));
   }
-  return { rhyme, syllables, sourceLabel: track.title };
+  return {
+    rhyme,
+    syllables,
+    sourceLabel: meta?.sourceLabel || track.title.trim() || 'Untitled',
+    sourceKey: meta?.sourceKey,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -299,6 +323,61 @@ function PressingPreview({ config, displayName }: { config: ArtistHomeConfig; di
   );
 }
 
+/** Live mini of Artist Home hero copy — tagline / name / bio. */
+function IdentityPreview({ config, displayName }: { config: ArtistHomeConfig; displayName: string }) {
+  const tokens = useMemo(() => pressTokens(config.theme), [config.theme]);
+  const vars = useMemo(() => pressingCssVars(tokens), [tokens]);
+  const tagline = (config.featured.tagline || '').trim();
+  const bio = (config.featured.bio || '').trim();
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-xl border p-4 sm:p-5"
+      style={{
+        ...(vars as React.CSSProperties),
+        backgroundColor: 'var(--ph-bg)',
+        borderColor: 'var(--ph-border)',
+      }}
+      aria-live="polite"
+    >
+      <LivingPressField config={config.theme} compact />
+      <div className="relative space-y-3">
+        <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-[var(--ph-muted)]">
+          Hero preview
+        </p>
+        {tagline ? (
+          <p
+            className="text-[10px] font-bold uppercase tracking-[0.35em] sm:text-[11px] sm:tracking-[0.4em]"
+            style={{ color: 'var(--ph-accent)' }}
+          >
+            {tagline}
+          </p>
+        ) : (
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[var(--ph-muted)]/50">
+            Your tagline appears here
+          </p>
+        )}
+        <h3
+          className={cn(
+            'text-[clamp(1.65rem,5vw,2.35rem)] font-bold leading-[0.94]',
+            pressingTypeClass(tokens.typeVariant)
+          )}
+          style={{ color: 'var(--ph-text)' }}
+        >
+          {displayName}
+        </h3>
+        {bio ? (
+          <p className="max-w-xl text-xs leading-relaxed sm:text-sm" style={{ color: 'var(--ph-muted)' }}>
+            {bio}
+          </p>
+        ) : (
+          <p className="text-xs italic text-[var(--ph-muted)]/45">Your short bio appears under the name</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // The desk
 // ---------------------------------------------------------------------------
@@ -315,7 +394,7 @@ export function PressDesk() {
   const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const [photoMode, setPhotoMode] = useState<'collage' | 'custom'>('collage');
+  const [photoMode, setPhotoMode] = useState<'collage' | 'custom' | 'initials'>('collage');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [collageAlbumIds, setCollageAlbumIds] = useState<string[]>([]);
   const [starMarkUseStar, setStarMarkUseStar] = useState(false);
@@ -336,7 +415,13 @@ export function PressDesk() {
       setSummary(next);
       if (next.profileSlug) setProfileSlug(next.profileSlug);
       setProfileLive(Boolean(next.publicProfile));
-      setPhotoMode(next.profilePhotoMode === 'custom' ? 'custom' : 'collage');
+      setPhotoMode(
+        next.profilePhotoMode === 'custom'
+          ? 'custom'
+          : next.profilePhotoMode === 'initials'
+            ? 'initials'
+            : 'collage'
+      );
       setPhotoUrl(next.profilePhotoUrl?.trim() ? next.profilePhotoUrl : null);
       setCollageAlbumIds(
         Array.isArray(next.profileCollageAlbumIds)
@@ -377,6 +462,7 @@ export function PressDesk() {
   }, [albumsWithCovers, collageAlbumIds]);
   const useCustomHero =
     photoMode === 'custom' && typeof photoUrl === 'string' && photoUrl.trim().length > 0;
+  const useInitialsHero = photoMode === 'initials';
   const allTracks = useMemo(() => {
     const seen = new Set<string>();
     const out: Array<{ album: Album; track: Track; key: string }> = [];
@@ -457,7 +543,7 @@ export function PressDesk() {
       xp: summary.xp,
       currentStreak: summary.currentStreak,
       longestStreak: summary.longestStreak,
-      albumCoverUrls: heroCollageUrls,
+      albumCoverUrls: useInitialsHero ? [] : heroCollageUrls,
       badges,
       unlockedAchievements: summary.unlockedAchievements || {},
       userId: user.id,
@@ -481,6 +567,7 @@ export function PressDesk() {
     user?.displayName,
     summary,
     heroCollageUrls,
+    useInitialsHero,
     photoMode,
     photoUrl,
     profileSlug,
@@ -507,7 +594,7 @@ export function PressDesk() {
   };
 
   const saveHero = async (next: {
-    profilePhotoMode?: 'collage' | 'custom';
+    profilePhotoMode?: 'collage' | 'custom' | 'initials';
     profilePhotoUrl?: string | null;
     profileCollageAlbumIds?: string[] | null;
   }) => {
@@ -517,7 +604,13 @@ export function PressDesk() {
       const nextSummary = data.summary;
       if (nextSummary) {
         setSummary(nextSummary);
-        setPhotoMode(nextSummary.profilePhotoMode === 'custom' ? 'custom' : 'collage');
+        setPhotoMode(
+          nextSummary.profilePhotoMode === 'custom'
+            ? 'custom'
+            : nextSummary.profilePhotoMode === 'initials'
+              ? 'initials'
+              : 'collage'
+        );
         setPhotoUrl(nextSummary.profilePhotoUrl?.trim() ? nextSummary.profilePhotoUrl : null);
         setCollageAlbumIds(
           Array.isArray(nextSummary.profileCollageAlbumIds)
@@ -535,11 +628,19 @@ export function PressDesk() {
       }
       toast({
         title:
-          next.profilePhotoMode === 'custom'
-            ? 'Custom photo saved'
-            : next.profileCollageAlbumIds !== undefined
-              ? 'Collage updated'
-              : 'Using album collage',
+          next.profilePhotoMode === 'initials'
+            ? 'Initials star'
+            : next.profilePhotoMode === 'custom'
+              ? 'Custom photo saved'
+              : next.profileCollageAlbumIds !== undefined
+                ? 'Collage updated'
+                : next.profilePhotoUrl === null
+                  ? 'Photo cleared'
+                  : 'Using album collage',
+        description:
+          next.profilePhotoMode === 'initials'
+            ? 'Artist Home portrait is your 2-letter initials star. Feed uses the same stock mark unless your feed star is on.'
+            : undefined,
       });
     } catch (e) {
       toast({
@@ -731,6 +832,8 @@ export function PressDesk() {
         seed={starMarkSeed}
         slots={starMarkSlots}
         pinnedSlotId={starMarkPinnedSlotId}
+        displayName={displayName}
+        photoUrl={useCustomHero ? photoUrl : null}
         busy={starBusy}
         onToggleUseStar={(on) => {
           if (starMarkPinnedSlotId) return;
@@ -808,9 +911,220 @@ export function PressDesk() {
           setStarMarkSlots(nextSlots);
           void persistStarMark({ starMarkSlots: nextSlots });
         }}
+        onUseStockStar={() => {
+          setStarMarkPinnedSlotId(null);
+          setStarMarkUseStar(false);
+          void persistStarMark({
+            starMarkUseStar: false,
+            starMarkPinnedSlotId: null,
+          }).then(() =>
+            toast({
+              title: useCustomHero ? 'Photo on feed' : 'Initials star on feed',
+              description: useCustomHero
+                ? 'Feed star off — Scene shows your square photo. Artist Home portrait unchanged.'
+                : 'Feed star off — Scene shows your stock initials star until you upload a photo.',
+            })
+          );
+        }}
       />
 
-      {/* 1. The Pressing */}
+      {/* 2. Hero photo */}
+      <DeskSection
+        icon={Camera}
+        title="Hero photo"
+        hint="Artist Home portrait (the big photo on your profile). Clear it anytime for a stock 2-letter initials star. Pairs with the feed star mark above."
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+          <div className="mx-auto w-full max-w-[11rem] shrink-0 sm:mx-0">
+            <div className="aspect-square overflow-hidden rounded-2xl border border-white/15 bg-black/40 shadow-lg">
+              {useCustomHero ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photoUrl!} alt="" className="h-full w-full object-cover" />
+              ) : useInitialsHero ? (
+                <ProfileInitialsStar
+                  displayName={displayName}
+                  className="h-full w-full border-0 shadow-none"
+                  active
+                />
+              ) : (
+                <AlbumCoverCollage
+                  urls={heroCollageUrls}
+                  displayName={displayName}
+                  className="h-full w-full border-0 shadow-none"
+                />
+              )}
+            </div>
+            <p className="mt-2 text-center text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+              {useCustomHero
+                ? 'Custom photo'
+                : useInitialsHero
+                  ? 'Initials star'
+                  : collageAlbumIds.length > 0
+                    ? `${heroCollageUrls.length} cover collage`
+                    : 'Auto collage'}
+            </p>
+          </div>
+
+          <div className="min-w-0 flex-1 space-y-3">
+            <input
+              ref={heroFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleHeroUpload(file);
+                e.target.value = '';
+              }}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-9 gap-1.5 font-bold uppercase"
+                disabled={heroBusy}
+                onClick={() => heroFileRef.current?.click()}
+              >
+                {heroBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                Upload photo
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={photoMode === 'collage' && !useCustomHero ? 'default' : 'ghost'}
+                className="h-9 gap-1.5 font-bold uppercase"
+                disabled={heroBusy || (photoMode === 'collage' && !useCustomHero && !useInitialsHero)}
+                onClick={() =>
+                  void saveHero({
+                    profilePhotoMode: 'collage',
+                    profilePhotoUrl: null,
+                    profileCollageAlbumIds: collageAlbumIds.length > 0 ? collageAlbumIds : null,
+                  })
+                }
+              >
+                <LayoutGrid className="h-3.5 w-3.5" /> Use collage
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={useInitialsHero ? 'default' : 'ghost'}
+                className="h-9 gap-1.5 font-bold uppercase"
+                disabled={heroBusy || useInitialsHero}
+                onClick={() =>
+                  void saveHero({
+                    profilePhotoMode: 'initials',
+                    profilePhotoUrl: null,
+                    profileCollageAlbumIds: null,
+                  })
+                }
+              >
+                <Star className="h-3.5 w-3.5" /> Initials star
+              </Button>
+              {(useCustomHero || (!useInitialsHero && heroCollageUrls.length > 0)) && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-9 gap-1.5 font-bold uppercase text-red-300 hover:text-red-200"
+                  disabled={heroBusy}
+                  onClick={() =>
+                    void saveHero({
+                      profilePhotoMode: 'initials',
+                      profilePhotoUrl: null,
+                      profileCollageAlbumIds: null,
+                    })
+                  }
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Clear hero
+                </Button>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              <strong className="text-foreground">Clear hero / Initials star</strong> removes any
+              uploaded photo and collage so Artist Home shows your 2-letter initials star (e.g. NS).
+              You can switch back to collage or upload anytime.
+            </p>
+
+            <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/80">
+                  Collage covers
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-[9px] font-bold uppercase"
+                    disabled={heroBusy || collageAlbumIds.length === 0}
+                    onClick={() => setCollageAlbumIds([])}
+                  >
+                    Clear picks
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-7 px-2.5 text-[9px] font-bold uppercase"
+                    disabled={heroBusy}
+                    onClick={applyCollageSelection}
+                  >
+                    Apply collage
+                  </Button>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Tap covers to include them (order = tap order). Empty picks = newest albums automatically.
+                Covers are set on each album in The Vault.
+              </p>
+              {albumsWithCovers.length === 0 ? (
+                <p className="text-[11px] text-amber-300/90">
+                  No album covers yet — add cover art in The Vault, then pick them here.
+                </p>
+              ) : (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {albumsWithCovers.map((album) => {
+                    const selected = collageAlbumIds.includes(album.id);
+                    const order = selected ? collageAlbumIds.indexOf(album.id) + 1 : null;
+                    return (
+                      <button
+                        key={album.id}
+                        type="button"
+                        disabled={heroBusy}
+                        onClick={() => toggleCollageAlbum(album.id)}
+                        className={cn(
+                          'group relative aspect-square overflow-hidden rounded-lg border transition-all',
+                          selected
+                            ? 'border-primary ring-2 ring-primary/40'
+                            : 'border-white/10 opacity-80 hover:opacity-100'
+                        )}
+                        title={album.title}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={album.coverArtUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                        {order != null && (
+                          <span className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                            {order}
+                          </span>
+                        )}
+                        <span className="absolute inset-x-0 bottom-0 truncate bg-black/70 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white">
+                          {album.title}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </DeskSection>
+
+      {/* 3. The Pressing */}
       <DeskSection
         icon={Sparkles}
         title="The Pressing"
@@ -923,9 +1237,10 @@ export function PressDesk() {
         </div>
       </DeskSection>
 
-      {/* 2. Identity */}
+      {/* 4. Identity */}
       <DeskSection icon={User} title="Identity" hint="One line above your name, a short bio below it.">
         <div className="space-y-3">
+          <IdentityPreview config={config} displayName={displayName} />
           <Input
             value={config.featured.tagline || ''}
             onChange={(e) => update((d) => void (d.featured.tagline = e.target.value.slice(0, 120)))}
@@ -944,156 +1259,7 @@ export function PressDesk() {
         </div>
       </DeskSection>
 
-      {/* 2a. Hero photo */}
-      <DeskSection
-        icon={Camera}
-        title="Hero photo"
-        hint="Artist Home portrait — collage or custom upload. Separate from the feed star mark above."
-      >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-          <div className="mx-auto w-full max-w-[11rem] shrink-0 sm:mx-0">
-            <div className="aspect-square overflow-hidden rounded-2xl border border-white/15 bg-black/40 shadow-lg">
-              {useCustomHero ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={photoUrl!} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <AlbumCoverCollage
-                  urls={heroCollageUrls}
-                  displayName={displayName}
-                  className="h-full w-full border-0 shadow-none"
-                />
-              )}
-            </div>
-            <p className="mt-2 text-center text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-              {useCustomHero
-                ? 'Custom photo'
-                : collageAlbumIds.length > 0
-                  ? `${heroCollageUrls.length} cover collage`
-                  : 'Auto collage'}
-            </p>
-          </div>
-
-          <div className="min-w-0 flex-1 space-y-3">
-            <input
-              ref={heroFileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void handleHeroUpload(file);
-                e.target.value = '';
-              }}
-            />
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-9 gap-1.5 font-bold uppercase"
-                disabled={heroBusy}
-                onClick={() => heroFileRef.current?.click()}
-              >
-                {heroBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
-                Upload photo
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={photoMode === 'collage' && !useCustomHero ? 'default' : 'ghost'}
-                className="h-9 gap-1.5 font-bold uppercase"
-                disabled={heroBusy || (photoMode === 'collage' && !useCustomHero)}
-                onClick={() =>
-                  void saveHero({
-                    profilePhotoMode: 'collage',
-                    profilePhotoUrl: null,
-                    profileCollageAlbumIds: collageAlbumIds.length > 0 ? collageAlbumIds : null,
-                  })
-                }
-              >
-                <LayoutGrid className="h-3.5 w-3.5" /> Use collage
-              </Button>
-            </div>
-
-            <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/80">
-                  Collage covers
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 text-[9px] font-bold uppercase"
-                    disabled={heroBusy || collageAlbumIds.length === 0}
-                    onClick={() => setCollageAlbumIds([])}
-                  >
-                    Clear picks
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-7 px-2.5 text-[9px] font-bold uppercase"
-                    disabled={heroBusy}
-                    onClick={applyCollageSelection}
-                  >
-                    Apply collage
-                  </Button>
-                </div>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                Tap covers to include them (order = tap order). Empty picks = newest albums automatically.
-                Covers are set on each album in The Vault.
-              </p>
-              {albumsWithCovers.length === 0 ? (
-                <p className="text-[11px] text-amber-300/90">
-                  No album covers yet — add cover art in The Vault, then pick them here.
-                </p>
-              ) : (
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {albumsWithCovers.map((album) => {
-                    const selected = collageAlbumIds.includes(album.id);
-                    const order = selected ? collageAlbumIds.indexOf(album.id) + 1 : null;
-                    return (
-                      <button
-                        key={album.id}
-                        type="button"
-                        disabled={heroBusy}
-                        onClick={() => toggleCollageAlbum(album.id)}
-                        className={cn(
-                          'group relative aspect-square overflow-hidden rounded-lg border transition-all',
-                          selected
-                            ? 'border-primary ring-2 ring-primary/40'
-                            : 'border-white/10 opacity-80 hover:opacity-100'
-                        )}
-                        title={album.title}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={album.coverArtUrl}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                        {order != null && (
-                          <span className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                            {order}
-                          </span>
-                        )}
-                        <span className="absolute inset-x-0 bottom-0 truncate bg-black/70 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white">
-                          {album.title}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </DeskSection>
-
-      {/* 2b. Outbound socials */}
+      {/* 5. Outbound socials */}
       <DeskSection
         icon={Link2}
         title="Links out"
@@ -1249,206 +1415,246 @@ export function PressDesk() {
         title="Rhyme Fingerprint"
         hint="Pick a track — its rhyme scheme and cadence become an abstract visual. No lyrics are shown."
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={
+        <div className="space-y-3">
+          {(() => {
+            const fp = config.featured.fingerprint;
+            const selectedKey =
+              (fp?.sourceKey && allTracks.some((t) => t.key === fp.sourceKey) && fp.sourceKey) ||
               allTracks.find(
                 ({ album, track }) =>
-                  config.featured.fingerprint?.sourceLabel ===
-                  `${album.title} · ${track.title.trim() || 'Untitled'}`
-              )?.key
-            }
-            onValueChange={(key) => {
+                  fp?.sourceLabel === `${album.title} · ${track.title.trim() || 'Untitled'}`
+              )?.key ||
+              '';
+
+            const pickTrack = (key: string) => {
               const entry = allTracks.find((t) => t.key === key);
               if (!entry) return;
-              const fingerprint = computeFingerprint(entry.track);
+              const label = `${entry.album.title} · ${entry.track.title.trim() || 'Untitled'}`;
+              const fingerprint = computeFingerprint(entry.track, {
+                sourceLabel: label,
+                sourceKey: entry.key,
+              });
               if (!fingerprint) {
                 toast({ title: 'That track needs at least 2 written bars' });
                 return;
               }
-              fingerprint.sourceLabel = `${entry.album.title} · ${entry.track.title.trim() || 'Untitled'}`;
               update((d) => void (d.featured.fingerprint = fingerprint));
-            }}
-          >
-            <SelectTrigger className="w-64 bg-black/30 text-sm">
-              <SelectValue placeholder="Choose a track" />
-            </SelectTrigger>
-            <SelectContent>
-              {allTracks.map(({ album, track, key }) => (
-                <SelectItem key={key} value={key}>
-                  {album.title} · {track.title.trim() || 'Untitled'}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {config.featured.fingerprint && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 text-xs font-bold uppercase"
-              onClick={() => update((d) => void (d.featured.fingerprint = undefined))}
-            >
-              Clear
-            </Button>
-          )}
+            };
+
+            if (!allTracks.length) {
+              return (
+                <p className="text-xs text-muted-foreground">
+                  Add tracks with written bars to press a fingerprint.
+                </p>
+              );
+            }
+
+            return (
+              <>
+                {fp && (
+                  <div className="rounded-xl border border-primary/50 bg-primary/10 p-3">
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <p className="flex min-w-0 items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-primary">
+                        <Check className="h-3.5 w-3.5 shrink-0" />
+                        <span className="shrink-0">Active</span>
+                        {fp.sourceLabel ? (
+                          <span className="truncate font-normal normal-case tracking-normal text-primary/85">
+                            · {fp.sourceLabel}
+                          </span>
+                        ) : null}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 shrink-0 text-[10px] font-bold uppercase"
+                        onClick={() => update((d) => void (d.featured.fingerprint = undefined))}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    <FingerprintSvg fingerprint={fp} />
+                    <p className="mt-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+                      Preview — bars &amp; end-rhymes as shape · no lyrics
+                    </p>
+                  </div>
+                )}
+
+                <div className="max-h-52 space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-black/20 p-1.5">
+                  {allTracks.map(({ album, track, key }) => {
+                    const active = key === selectedKey;
+                    const label = `${album.title} · ${track.title.trim() || 'Untitled'}`;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => pickTrack(key)}
+                        className={cn(
+                          'flex w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-xs transition-colors',
+                          active
+                            ? 'border-primary/60 bg-primary/15 text-primary'
+                            : 'border-transparent text-white/80 hover:border-white/15 hover:bg-white/[0.04]'
+                        )}
+                      >
+                        {active ? (
+                          <Check className="h-3.5 w-3.5 shrink-0" />
+                        ) : (
+                          <Fingerprint className="h-3.5 w-3.5 shrink-0 opacity-40" />
+                        )}
+                        <span className="min-w-0 flex-1 truncate">{label}</span>
+                        {active && (
+                          <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider">
+                            Selected
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            );
+          })()}
         </div>
       </DeskSection>
 
-      {/* 7. Album Rooms */}
+      {/* 7. The Catch */}
       <DeskSection
-        icon={DoorOpen}
-        title="Album Rooms"
-        hint="Up to 4 albums as doors. Upload a wide banner for each room — vinyl covers are square and get letterboxed if you skip a custom image."
+        icon={Fish}
+        title="The Catch"
+        hint="Plant 3–5 bars in order. Visitors see the first (the cast), then hunt floating end-sounds to unlock each next bar. Beat their best time. Completing the run can open a DNA Drop."
       >
-        <div className="grid gap-2 sm:grid-cols-2">
-          {albums
-            .filter((a) => a.id !== 'unassigned')
-            .map((album) => {
-              const selected = Boolean(
-                config.featured.albumRooms?.some(
-                  (room) => room.albumId === album.id || room.title === album.title
-                )
-              );
-              return (
-                <button
-                  key={album.id}
-                  type="button"
-                  onClick={() =>
-                    update((d) => {
-                      const rooms = d.featured.albumRooms || [];
-                      if (selected) {
-                        d.featured.albumRooms = rooms.filter(
-                          (room) => room.albumId !== album.id && room.title !== album.title
-                        );
-                        return;
-                      }
-                      if (rooms.length >= 4) return;
-                      const sampleBar = (album.tracks || [])
-                        .flatMap((t) => t.sections || [])
-                        .flatMap((s) => s.bars || [])
-                        .map((b) => (b.text || '').trim())
-                        .find(Boolean);
-                      d.featured.albumRooms = [
-                        ...rooms,
-                        {
-                          title: album.title,
-                          albumId: album.id,
-                          theme: album.theme || undefined,
-                          shareId: album.isPublic && album.shareId ? album.shareId : undefined,
-                          sampleBar: sampleBar ? sampleBar.slice(0, 280) : undefined,
-                        },
-                      ];
-                    })
-                  }
-                  className={cn(
-                    'flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition-colors',
-                    selected
-                      ? 'border-primary/60 bg-primary/10 text-primary'
-                      : 'border-white/10 bg-white/[0.03] text-white/80 hover:border-white/25'
-                  )}
-                >
-                  {selected && <Check className="h-3.5 w-3.5 shrink-0" />}
-                  <span className="truncate">{album.title}</span>
-                </button>
-              );
-            })}
-        </div>
-        {albums.filter((a) => a.id !== 'unassigned').length === 0 && (
-          <p className="text-xs text-muted-foreground">Create albums in the studio to open rooms.</p>
-        )}
-
-        {(config.featured.albumRooms?.length || 0) > 0 && (
-          <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">
-              Room door images
-            </p>
-            {config.featured.albumRooms!.map((room, roomIndex) => (
+        <div className="space-y-4">
+          {(config.featured.theCatch?.links?.length || 0) >= CATCH_MIN_LINKS && (
+            <div className="rounded-xl border border-primary/40 bg-primary/10 p-3">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-primary">
+                Live preview · play it like a visitor
+              </p>
               <div
-                key={room.albumId || room.title}
-                className="flex flex-col gap-2 rounded-xl border border-white/10 bg-black/25 p-3 sm:flex-row sm:items-center"
+                className="rounded-lg border border-white/10 bg-black/40 p-3"
+                style={
+                  {
+                    ['--ph-hue' as string]: '200',
+                    ['--ph-accent' as string]: '#7dd3fc',
+                    ['--ph-accent2' as string]: '#a5b4fc',
+                    ['--ph-text' as string]: '#fff',
+                    ['--ph-muted' as string]: 'rgba(255,255,255,0.55)',
+                    ['--ph-border' as string]: 'rgba(255,255,255,0.15)',
+                  } as React.CSSProperties
+                }
               >
-                <div className="relative aspect-[2/1] w-full overflow-hidden rounded-lg bg-neutral-950 sm:w-40 sm:shrink-0">
-                  {room.roomImageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={room.roomImageUrl}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                      No custom image
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1 space-y-2">
-                  <p className="truncate text-sm font-bold text-white">{room.title}</p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-8 gap-1.5 font-bold uppercase"
-                      onClick={() => {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.accept = 'image/jpeg,image/png,image/webp';
-                        input.onchange = () => {
-                          const file = input.files?.[0];
-                          if (!file) return;
-                          void (async () => {
-                            try {
-                              const { dataUrl } = await processAlbumRoomBannerFile(file);
-                              update((d) => {
-                                const rooms = [...(d.featured.albumRooms || [])];
-                                if (!rooms[roomIndex]) return;
-                                rooms[roomIndex] = {
-                                  ...rooms[roomIndex],
-                                  roomImageUrl: dataUrl,
-                                };
-                                d.featured.albumRooms = rooms;
-                              });
-                              toast({ title: 'Room image set', description: room.title });
-                            } catch (e) {
-                              toast({
-                                variant: 'destructive',
-                                title: 'Could not use that image',
-                                description: e instanceof Error ? e.message : undefined,
-                              });
-                            }
-                          })();
-                        };
-                        input.click();
-                      }}
-                    >
-                      <ImagePlus className="h-3.5 w-3.5" />
-                      {room.roomImageUrl ? 'Change' : 'Upload'}
-                    </Button>
-                    {room.roomImageUrl && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 gap-1.5 font-bold uppercase text-muted-foreground"
-                        onClick={() =>
-                          update((d) => {
-                            const rooms = [...(d.featured.albumRooms || [])];
-                            if (!rooms[roomIndex]) return;
-                            const { roomImageUrl: _drop, ...rest } = rooms[roomIndex];
-                            rooms[roomIndex] = rest;
-                            d.featured.albumRooms = rooms;
-                          })
-                        }
-                      >
-                        <Trash2 className="h-3.5 w-3.5" /> Clear
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                <TheCatchGame
+                  data={config.featured.theCatch!}
+                  profileUserId={user.id}
+                  profileName={displayName}
+                  compact
+                />
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          )}
+
+          {(config.featured.theCatch?.links?.length || 0) > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">
+                Your chain ({config.featured.theCatch!.links.length}/{CATCH_MAX_LINKS})
+              </p>
+              {config.featured.theCatch!.links.map((link, i) => (
+                <div
+                  key={`${i}-${link.text.slice(0, 20)}`}
+                  className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-2"
+                >
+                  <span className="mt-0.5 w-14 shrink-0 text-[9px] font-bold uppercase tracking-wider text-primary">
+                    {i === 0 ? 'Cast' : `Catch ${i}`}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-white/90 line-clamp-2">{link.text}</p>
+                    <p className="mt-0.5 font-code text-[10px] text-primary/80">—{link.endSound}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 shrink-0 px-2 text-[10px] font-bold uppercase"
+                    onClick={() =>
+                      update((d) => {
+                        const links = [...(d.featured.theCatch?.links || [])];
+                        links.splice(i, 1);
+                        if (!links.length) {
+                          d.featured.theCatch = undefined;
+                          return;
+                        }
+                        d.featured.theCatch = {
+                          links,
+                          decoys: d.featured.theCatch?.decoys || [],
+                        };
+                      })
+                    }
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-8 text-xs font-bold uppercase"
+                onClick={() => update((d) => void (d.featured.theCatch = undefined))}
+              >
+                Clear chain
+              </Button>
+            </div>
+          )}
+
+          {(config.featured.theCatch?.links?.length || 0) < CATCH_MAX_LINKS && (
+            <div>
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Add bar {(config.featured.theCatch?.links?.length || 0) + 1}
+                {(config.featured.theCatch?.links?.length || 0) === 0
+                  ? ' · this is the cast (always visible)'
+                  : ' · its end-sound becomes a lure'}
+              </p>
+              <BarPicker
+                bars={vaultBars}
+                emptyHint="Write at least a few bars in the studio, then plant a Catch chain here."
+                onPick={(bar) => {
+                  const endSound = endSoundFromBar(bar.text, bar.rhymeKey);
+                  const link: CatchLink = {
+                    text: bar.text.slice(0, 280),
+                    endSound,
+                    sourceLabel: `${bar.albumTitle} · ${bar.trackTitle}`,
+                  };
+                  if (bar.trackShareId) link.shareId = bar.trackShareId;
+
+                  update((d) => {
+                    const prev = d.featured.theCatch?.links || [];
+                    if (prev.length >= CATCH_MAX_LINKS) return;
+                    const links = [...prev, link];
+                    // Harvest decoys from other vault endings (not in this chain).
+                    const chainSounds = new Set(links.map((l) => l.endSound.toLowerCase()));
+                    const decoys: string[] = [];
+                    for (const vb of vaultBars) {
+                      const s = endSoundFromBar(vb.text, vb.rhymeKey).toLowerCase();
+                      if (!s || chainSounds.has(s) || decoys.includes(s)) continue;
+                      decoys.push(s);
+                      if (decoys.length >= 10) break;
+                    }
+                    d.featured.theCatch = { links, decoys };
+                    // Drop legacy album rooms when Catch is set.
+                    d.featured.albumRooms = undefined;
+                  });
+                }}
+              />
+            </div>
+          )}
+
+          {(config.featured.theCatch?.links?.length || 0) > 0 &&
+            (config.featured.theCatch?.links?.length || 0) < CATCH_MIN_LINKS && (
+              <p className="text-xs text-amber-400/90">
+                Add {CATCH_MIN_LINKS - (config.featured.theCatch?.links?.length || 0)} more bar
+                {(CATCH_MIN_LINKS - (config.featured.theCatch?.links?.length || 0)) === 1 ? '' : 's'}{' '}
+                to go live (need {CATCH_MIN_LINKS}–{CATCH_MAX_LINKS}).
+              </p>
+            )}
+        </div>
       </DeskSection>
 
       {/* 8. Live DNA Drops — manage + auto on Artist Home */}

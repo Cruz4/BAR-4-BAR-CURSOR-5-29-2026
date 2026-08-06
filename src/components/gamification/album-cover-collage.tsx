@@ -3,6 +3,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { buildAlbumCoverCollageLayout } from '@/lib/album-cover-collage';
+import { getInitials } from '@/lib/gamification/studio-pass';
 
 type AlbumCoverCollageProps = {
   urls: string[];
@@ -23,7 +24,7 @@ export function AlbumCoverCollage({ urls, displayName, className }: AlbumCoverCo
         aria-hidden
       >
         <span className="font-headline text-4xl font-bold uppercase text-primary">
-          {displayName.slice(0, 2)}
+          {getInitials(displayName)}
         </span>
       </div>
     );

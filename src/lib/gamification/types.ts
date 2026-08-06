@@ -35,10 +35,12 @@ export type GamificationSummary = {
   publicProfile: boolean;
   profileSlug?: string;
   /**
-   * Public profile hero art. `collage` (default) uses album covers;
-   * `custom` uses profilePhotoUrl when set.
+   * Artist Home hero portrait source.
+   * - `custom` — uploaded photo
+   * - `collage` — album cover collage (auto or picked)
+   * - `initials` — stock star with 2-letter initials (no photo / collage)
    */
-  profilePhotoMode?: 'collage' | 'custom';
+  profilePhotoMode?: 'collage' | 'custom' | 'initials';
   /** Square JPEG/PNG data URL or https URL when profilePhotoMode is custom. */
   profilePhotoUrl?: string;
   /**
@@ -48,8 +50,10 @@ export type GamificationSummary = {
   profileCollageAlbumIds?: string[];
   /**
    * Vesperfold Mark — generative feed-star identity (~54M looks).
-   * When `starMarkUseStar` is true, feed chips render the star (not a photo).
-   * Artist Home hero photo stays independent; a small star badge may appear there.
+   * When `starMarkUseStar` is true, feed chips show the generative star (round).
+   * When off + custom photo, feed chips show a square photo.
+   * When off + no photo, feed chips show the stock initials star.
+   * Artist Home hero photo stays independent; a small star badge appears there when generative is on.
    */
   starMarkUseStar?: boolean;
   starMarkSeed?: number;

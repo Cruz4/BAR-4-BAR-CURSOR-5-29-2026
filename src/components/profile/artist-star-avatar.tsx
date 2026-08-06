@@ -2,8 +2,9 @@
 
 /**
  * Feed avatar chip:
- * - Star system on → generative Vesperfold in a round chip
- * - Star system off → square photo / initial
+ * - Generative on → round Vesperfold mark (feed star)
+ * - Generative off + photo → square photo
+ * - Generative off + no photo → stock initials in a 5-point star
  */
 
 import React from 'react';
@@ -11,6 +12,11 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { VesperfoldMark } from '@/components/profile/vesperfold-mark';
 import { normalizeVesperfoldSeed } from '@/lib/profile/vesperfold';
+import { getInitials } from '@/lib/gamification/studio-pass';
+
+/** Classic 5-point star clip — stock initials only (no photo, no generative). */
+export const ARTIST_STAR_CLIP =
+  'polygon(50% 0%, 61.8% 35.4%, 98.2% 35.4%, 68.2% 57.6%, 79.4% 91.2%, 50% 71%, 20.6% 91.2%, 31.8% 57.6%, 1.8% 35.4%, 38.2% 35.4%)';
 
 type ArtistStarAvatarProps = {
   name: string;
@@ -33,46 +39,61 @@ export function ArtistStarAvatar({
   className,
   toneClass = 'bg-primary/20 text-primary',
 }: ArtistStarAvatarProps) {
-  const initial = name.trim().slice(0, 1).toUpperCase() || '?';
+  const initials = getInitials(name);
   const seed = normalizeVesperfoldSeed(starMarkSeed ?? 0);
 
-  const mark = useStarMark ? (
-    <span
-      className={cn(
-        'relative inline-flex shrink-0 overflow-hidden rounded-full border border-white/15',
-        className
-      )}
-      style={{ width: size, height: size }}
-      aria-hidden={!href}
-    >
-      <span className={cn('absolute inset-0', toneClass)} />
-      <span className="relative flex h-full w-full items-center justify-center bg-black/40">
-        <VesperfoldMark seed={seed} size={Math.round(size * 1.05)} />
-      </span>
-    </span>
-  ) : (
-    <span
-      className={cn(
-        'relative inline-flex shrink-0 overflow-hidden rounded-md border border-white/15',
-        className,
-        !avatarUrl && toneClass
-      )}
-      style={{ width: size, height: size }}
-      aria-hidden={!href}
-    >
-      {avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-      ) : (
-        <span
-          className="flex h-full w-full items-center justify-center font-bold uppercase"
-          style={{ fontSize: Math.max(11, Math.round(size * 0.32)) }}
-        >
-          {initial}
+  let mark: React.ReactNode;
+
+  if (useStarMark) {
+    mark = (
+      <span
+        className={cn(
+          'relative inline-flex shrink-0 overflow-hidden rounded-full border border-white/15',
+          className
+        )}
+        style={{ width: size, height: size }}
+        aria-hidden={!href}
+      >
+        <span className={cn('absolute inset-0', toneClass)} />
+        <span className="relative flex h-full w-full items-center justify-center bg-black/40">
+          <VesperfoldMark seed={seed} size={Math.round(size * 1.05)} />
         </span>
-      )}
-    </span>
-  );
+      </span>
+    );
+  } else if (avatarUrl) {
+    mark = (
+      <span
+        className={cn(
+          'relative inline-flex shrink-0 overflow-hidden rounded-md border border-white/15',
+          className
+        )}
+        style={{ width: size, height: size }}
+        aria-hidden={!href}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+      </span>
+    );
+  } else {
+    mark = (
+      <span
+        className={cn(
+          'relative inline-flex shrink-0 items-center justify-center overflow-hidden border border-white/20',
+          toneClass,
+          className
+        )}
+        style={{ width: size, height: size, clipPath: ARTIST_STAR_CLIP }}
+        aria-hidden={!href}
+      >
+        <span
+          className="flex h-full w-full items-center justify-center font-bold uppercase tracking-tight"
+          style={{ fontSize: Math.max(10, Math.round(size * (initials.length > 1 ? 0.26 : 0.32))) }}
+        >
+          {initials}
+        </span>
+      </span>
+    );
+  }
 
   if (href) {
     return (

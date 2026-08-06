@@ -452,22 +452,24 @@ export function StudioProgressBoard() {
         </Card>
 
         <section className="rounded-xl border border-violet-500/20 bg-card/40 overflow-hidden min-w-0">
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 border-b border-white/5 bg-black/20 min-w-0">
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <Sparkles className="h-5 w-5 text-violet-300 shrink-0" />
-              <div className="min-w-0 overflow-hidden">
-                <h2 className="text-lg font-headline font-bold uppercase tracking-tight">Studio trophies</h2>
-                <p className="text-xs text-muted-foreground leading-snug break-words mt-0.5">
+          <div className="flex flex-col gap-3 px-4 py-4 border-b border-white/5 bg-black/20 min-w-0 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="flex w-full min-w-0 items-start gap-2.5 sm:flex-1 sm:items-center">
+              <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-violet-300 sm:mt-0" />
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg font-headline font-bold uppercase tracking-tight leading-tight">
+                  Studio trophies
+                </h2>
+                <p className="mt-0.5 text-xs text-muted-foreground leading-snug break-words">
                   Green border + Done = unlocked · dashed border + Locked = still earning · hover for details and share
                 </p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <div className="flex items-center gap-1.5">
-                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+            <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
+              <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:flex-initial">
+                <ArrowUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
                 <Select value={trophySort} onValueChange={handleTrophySortChange}>
                   <SelectTrigger
-                    className="h-8 w-[min(100%,13.5rem)] text-[10px] font-bold uppercase tracking-wide bg-black/30 border-white/10"
+                    className="h-8 w-full min-w-0 text-[10px] font-bold uppercase tracking-wide bg-black/30 border-white/10 sm:w-[13.5rem]"
                     aria-label="Sort trophies"
                   >
                     <SelectValue placeholder="Sort trophies" />

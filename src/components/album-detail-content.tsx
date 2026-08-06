@@ -889,6 +889,18 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
     }
   }, [albumId, loading, getAlbumById, router]);
 
+  // Vault can leave window mid-scroll (manual scrollRestoration). Always land at top.
+  useEffect(() => {
+    if (loading || !album || album.id !== albumId) return;
+    const resetScroll = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    resetScroll();
+    requestAnimationFrame(() => requestAnimationFrame(resetScroll));
+  }, [albumId, loading, album?.id]);
+
   const [editCoverArtDialogOpen, setEditCoverArtDialogOpen] = useState(false);
   const [strainMixerOpen, setStrainMixerOpen] = useState(false);
   const [createTrackOpen, setCreateTrackOpen] = useState(false);
