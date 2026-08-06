@@ -309,33 +309,36 @@ export function ArtistHome({
               );
             })()}
 
-            <Link
-              href={`/profile/${profile.slug}/reverbs`}
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-violet-400/25 bg-violet-500/[0.07] px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200/90 transition-colors hover:border-violet-400/45 hover:bg-violet-500/15"
-            >
-              <Repeat2 className="h-3.5 w-3.5" />
-              Reverbs
-            </Link>
-
-            <div className="grid max-w-md grid-cols-3 gap-2">
-              {[
-                { label: 'Total XP', value: profile.xp.toLocaleString(), icon: Zap },
-                { label: 'Live streak', value: `${profile.currentStreak}d`, icon: Flame },
-                { label: 'Best streak', value: `${profile.longestStreak}d`, icon: Trophy },
-              ].map((stat) => (
-                <div
-                  key={stat.label}
-                  className="flex flex-col items-center justify-center border border-[var(--ph-border)] bg-[var(--ph-plate)] px-2 py-2.5 text-center"
+            <div className="max-w-md space-y-3">
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: 'Total XP', value: profile.xp.toLocaleString(), icon: Zap },
+                  { label: 'Live streak', value: `${profile.currentStreak}d`, icon: Flame },
+                  { label: 'Best streak', value: `${profile.longestStreak}d`, icon: Trophy },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="flex flex-col items-center justify-center border border-[var(--ph-border)] bg-[var(--ph-plate)] px-2 py-2.5 text-center"
+                  >
+                    <stat.icon className="mb-1 h-3.5 w-3.5 text-[var(--ph-accent)]" />
+                    <p className="font-code text-base font-bold leading-none tracking-tight text-[var(--ph-text)] tabular-nums sm:text-lg">
+                      {stat.value}
+                    </p>
+                    <p className="mt-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--ph-muted)] sm:text-[10px]">
+                      {stat.label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <Link
+                  href={`/profile/${profile.slug}/reverbs`}
+                  className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-md border border-violet-400/25 bg-violet-500/[0.07] px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200/90 transition-colors hover:border-violet-400/45 hover:bg-violet-500/15"
                 >
-                  <stat.icon className="mb-1 h-3.5 w-3.5 text-[var(--ph-accent)]" />
-                  <p className="font-code text-base font-bold leading-none tracking-tight text-[var(--ph-text)] tabular-nums sm:text-lg">
-                    {stat.value}
-                  </p>
-                  <p className="mt-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--ph-muted)] sm:text-[10px]">
-                    {stat.label}
-                  </p>
-                </div>
-              ))}
+                  <Repeat2 className="h-3.5 w-3.5 shrink-0" />
+                  Reverbs
+                </Link>
+              </div>
             </div>
           </div>
 
