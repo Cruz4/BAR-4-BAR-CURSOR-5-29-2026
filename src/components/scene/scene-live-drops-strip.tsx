@@ -20,32 +20,32 @@ import { DataContext } from '@/context/data-context';
 import { hasActiveDnaDrop } from '@/lib/dna-drop';
 import { cn } from '@/lib/utils';
 
-type ManagedDrop =
-  | {
-      kind: 'album';
-      shareId: string;
-      title: string;
-      trackCount: number;
-      liveTrackCount: number;
-      albumId: string;
-    }
-  | {
-      kind: 'track';
-      shareId: string;
-      title: string;
-      albumTitle: string;
-      albumId: string;
-      trackId: string;
-      fromAlbumHub: boolean;
-    };
+type ManagedAlbumDrop = {
+  kind: 'album';
+  shareId: string;
+  title: string;
+  trackCount: number;
+  liveTrackCount: number;
+  albumId: string;
+};
+
+type ManagedTrackDrop = {
+  kind: 'track';
+  shareId: string;
+  title: string;
+  albumTitle: string;
+  albumId: string;
+  trackId: string;
+  fromAlbumHub: boolean;
+};
 
 export function SceneLiveDropsStrip({ className }: { className?: string }) {
   const { albums, loading } = useContext(DataContext);
   const [open, setOpen] = useState(false);
 
   const { albumDrops, trackDrops, total } = useMemo(() => {
-    const albumsOut: ManagedDrop[] = [];
-    const tracksOut: ManagedDrop[] = [];
+    const albumsOut: ManagedAlbumDrop[] = [];
+    const tracksOut: ManagedTrackDrop[] = [];
     const seenTracks = new Set<string>();
 
     for (const album of albums) {

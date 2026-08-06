@@ -2187,7 +2187,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
       const pool = resolveTrackIntentPool(track, album).map((i) =>
         i === oldIntent ? trimmed : i
       );
-      const updatedChecked = (track.checkedIntents || []).map((i) =>
+      const updatedChecked = (track.checkedIntents || []).map((i: string) =>
         i === oldIntent ? trimmed : i
       );
       onUpdateTrack({
@@ -2200,7 +2200,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
 
   const handleDeleteIntent = (intent: string) => {
       const pool = resolveTrackIntentPool(track, album).filter((i) => i !== intent);
-      const updatedChecked = (track.checkedIntents || []).filter((i) => i !== intent);
+      const updatedChecked = (track.checkedIntents || []).filter((i: string) => i !== intent);
       const updates: Partial<Track> = {
         intentRefs: pool,
         checkedIntents: updatedChecked,
