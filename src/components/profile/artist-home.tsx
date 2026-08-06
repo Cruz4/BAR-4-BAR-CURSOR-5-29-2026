@@ -258,56 +258,57 @@ export function ArtistHome({
             >
               {profile.displayName}
             </h1>
-            <div
-              className={cn(
-                'inline-flex items-center gap-2 border px-4 py-2',
-                rankBadgeClass(rankId)
-              )}
-            >
-              <Crown className="h-4 w-4" />
-              <span className="text-xs font-bold uppercase tracking-[0.25em]">{profile.rankLabel}</span>
+            <div className="flex flex-wrap items-center gap-3">
+              <div
+                className={cn(
+                  'inline-flex items-center gap-2 border px-4 py-2',
+                  rankBadgeClass(rankId)
+                )}
+              >
+                <Crown className="h-4 w-4" />
+                <span className="text-xs font-bold uppercase tracking-[0.25em]">{profile.rankLabel}</span>
+              </div>
+              {showLiveDnaDrops && (() => {
+                const albumCount = liveDnaDrops.filter((d) => d.type === 'album').length;
+                const trackCount = liveDnaDrops.filter((d) => d.type === 'track').length;
+                if (liveDnaDrops.length === 1) {
+                  return (
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
+                    >
+                      <Link href={`/share/${liveDnaDrops[0].shareId}`}>
+                        <Dna className="h-3.5 w-3.5" />
+                        {liveDnaDrops[0].type === 'album' ? '1 album DNA live' : '1 track DNA live'}
+                      </Link>
+                    </Button>
+                  );
+                }
+                const label =
+                  albumCount > 0 && trackCount > 0
+                    ? `${albumCount} album${albumCount === 1 ? '' : 's'} · ${trackCount} track${trackCount === 1 ? '' : 's'} live`
+                    : albumCount > 0
+                      ? `${albumCount} album DNA live`
+                      : `${trackCount} track DNA live`;
+                return (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
+                    onClick={() => setDropsOpen(true)}
+                  >
+                    <Dna className="h-3.5 w-3.5" />
+                    {label}
+                  </Button>
+                );
+              })()}
             </div>
             {config.featured.bio && (
               <p className="max-w-xl text-sm leading-relaxed text-[var(--ph-muted)]">{config.featured.bio}</p>
             )}
-
-            {showLiveDnaDrops && (() => {
-              const albumCount = liveDnaDrops.filter((d) => d.type === 'album').length;
-              const trackCount = liveDnaDrops.filter((d) => d.type === 'track').length;
-              if (liveDnaDrops.length === 1) {
-                return (
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
-                  >
-                    <Link href={`/share/${liveDnaDrops[0].shareId}`}>
-                      <Dna className="h-3.5 w-3.5" />
-                      {liveDnaDrops[0].type === 'album' ? '1 album DNA live' : '1 track DNA live'}
-                    </Link>
-                  </Button>
-                );
-              }
-              const label =
-                albumCount > 0 && trackCount > 0
-                  ? `${albumCount} album${albumCount === 1 ? '' : 's'} · ${trackCount} track${trackCount === 1 ? '' : 's'} live`
-                  : albumCount > 0
-                    ? `${albumCount} album DNA live`
-                    : `${trackCount} track DNA live`;
-              return (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
-                  onClick={() => setDropsOpen(true)}
-                >
-                  <Dna className="h-3.5 w-3.5" />
-                  {label}
-                </Button>
-              );
-            })()}
 
             <div className="max-w-md space-y-3">
               <div className="grid grid-cols-3 gap-2">
@@ -333,7 +334,7 @@ export function ArtistHome({
               <div className="grid grid-cols-3 gap-2">
                 <Link
                   href={`/profile/${profile.slug}/reverbs`}
-                  className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-md border border-violet-400/25 bg-violet-500/[0.07] px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200/90 transition-colors hover:border-violet-400/45 hover:bg-violet-500/15"
+                  className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-violet-400/40 bg-violet-500/15 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.12)] transition-all hover:border-violet-300/70 hover:bg-violet-500/25 hover:text-violet-100 hover:shadow-[0_0_16px_rgba(139,92,246,0.25)]"
                 >
                   <Repeat2 className="h-3.5 w-3.5 shrink-0" />
                   Reverbs
