@@ -17,46 +17,49 @@ export type SceneNeonEntry = {
   gloss: string;
 };
 
-/** Soft cap for neon teaser glosses — always cut mid-thought, never a finished sentence. */
-export const SCENE_NEON_GLOSS_TEASE_MAX = 64;
+/** Soft max for a complete first-sentence gloss (characters). */
+export const SCENE_NEON_GLOSS_MAX = 220;
 
 /**
- * Scene neon definitions are teasers only: truncate mid-phrase and end with …
- * so the skyline word never feels fully explained.
+ * Normalize a neon gloss for display — keep a complete thought.
+ * Does not mid-cut or force teasers.
  */
-export function teaseSceneNeonGloss(
-  raw: string,
-  maxLen = SCENE_NEON_GLOSS_TEASE_MAX
-): string {
-  let s = (raw || '').trim();
-  // Strip prior ellipsis / terminal punctuation from corpus entries.
-  s = s.replace(/[\s.…]+$/u, '').replace(/[.!?]+$/u, '').trim();
-  if (!s) return '…';
+export function normalizeSceneNeonGloss(raw: string, maxLen = SCENE_NEON_GLOSS_MAX): string {
+  let s = (raw || '').replace(/\s+/g, ' ').trim();
+  if (!s) return '';
 
-  const limit = Math.max(24, maxLen);
+  // Prefer the first full sentence when multiple are present.
+  const sentence = s.match(/^[^.!?]+[.!?]?/);
+  if (sentence) s = sentence[0].trim();
+
+  // Drop trailing ellipsis left from older teaser corpus rows.
+  s = s.replace(/[\s.…]+$/u, '').replace(/\.{2,}$/u, '').trim();
+
+  const limit = Math.max(48, maxLen);
   if (s.length > limit) {
     let slice = s.slice(0, limit);
     const space = slice.lastIndexOf(' ');
-    if (space > limit * 0.45) slice = slice.slice(0, space);
-    s = slice;
-  } else {
-    // Short but complete defs still get clipped so they feel unfinished.
-    const cutAt = Math.max(18, Math.floor(s.length * 0.7));
-    const space = s.lastIndexOf(' ', cutAt);
-    if (space > 12) s = s.slice(0, space);
-    else s = s.slice(0, cutAt);
+    if (space > limit * 0.5) slice = slice.slice(0, space);
+    s = slice.trim();
   }
 
   s = s.replace(/[,:;–—\-(\[{]+\s*$/u, '').trim();
-  if (!s) return '…';
-  return `${s}…`;
+  if (!s) return '';
+  if (!/[.!?]$/.test(s)) s = `${s}.`;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** @deprecated Use normalizeSceneNeonGloss — kept for any external imports. */
+export const SCENE_NEON_GLOSS_TEASE_MAX = SCENE_NEON_GLOSS_MAX;
+export function teaseSceneNeonGloss(raw: string, maxLen = SCENE_NEON_GLOSS_MAX): string {
+  return normalizeSceneNeonGloss(raw, maxLen);
 }
 
 export const SCENE_NEON_LEXICON: SceneNeonEntry[] = SCENE_NEON_CORPUS.map((e) => ({
   id: e.id,
   word: e.word,
   pron: e.pron,
-  gloss: teaseSceneNeonGloss(e.gloss),
+  gloss: normalizeSceneNeonGloss(e.gloss),
 }));
 
 /** Max duration a user lock keeps the same neon word. */

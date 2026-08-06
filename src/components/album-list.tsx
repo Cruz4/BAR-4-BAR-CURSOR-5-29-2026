@@ -102,6 +102,7 @@ import { isDataUrl } from '@/lib/cover-art';
 import { postGamificationEvent } from '@/lib/gamification-client';
 import { VaultStudioProgress, VAULT_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY } from '@/components/gamification/vault-studio-progress';
 import { VaultProfileDock } from '@/components/profile/vault-profile-dock';
+import { VaultNeonWordCard } from '@/components/vault/vault-neon-word-card';
 import { LiveDnaDropsManage } from '@/components/scene/scene-live-drops-strip';
 import { VaultChamberAtmosphere } from '@/components/vault-chamber-atmosphere';
 import { trackStudioEvent } from '@/lib/analytics-client';
@@ -944,6 +945,8 @@ export function AlbumList() {
               <VaultProfileDock />
             </aside>
           )}
+
+          {!loading && user && <VaultNeonWordCard />}
 
           <div className="relative min-w-0 w-full xl:col-start-2 xl:row-start-2 px-4 sm:px-6 pb-10">
             {!loading && user && <LiveDnaDropsManage className="mb-4" />}

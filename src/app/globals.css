@@ -1987,8 +1987,8 @@
   }
 
   .scene-block-neon-gloss {
-    color: rgba(214, 204, 255, 0.58);
-    text-shadow: none;
+    color: rgba(226, 218, 255, 0.82);
+    text-shadow: 0 0 10px rgba(167, 139, 250, 0.12);
   }
 
   /* Daytime neon — slightly brighter so it stays readable on blue sky */
@@ -2009,7 +2009,7 @@
 
   .scene-block[data-phase='day'] .scene-block-neon-gloss,
   .scene-block-neon[data-phase='day'] .scene-block-neon-gloss {
-    color: rgba(88, 50, 120, 0.72);
+    color: rgba(76, 40, 110, 0.88);
   }
 
   .scene-block-building-back {

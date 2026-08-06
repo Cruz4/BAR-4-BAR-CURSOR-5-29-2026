@@ -87,7 +87,7 @@ export function ArtistStarAvatar({
       >
         <span
           className="flex h-full w-full items-center justify-center font-bold uppercase tracking-tight"
-          style={{ fontSize: Math.max(10, Math.round(size * (initials.length > 1 ? 0.26 : 0.32))) }}
+          style={{ fontSize: Math.max(9, Math.round(size * (initials.length > 1 ? 0.23 : 0.28))) }}
         >
           {initials}
         </span>

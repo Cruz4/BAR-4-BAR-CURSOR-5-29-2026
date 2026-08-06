@@ -20,7 +20,8 @@ type ProfileInitialsStarProps = {
 
 export function ProfileInitialsStar({ displayName, className, active }: ProfileInitialsStarProps) {
   const initials = getInitials(displayName);
-  const fontSize = initials.length > 1 ? 28 : 34;
+  // Star indent is tight — keep glyphs inside the inner pentagon with breathing room.
+  const fontSize = initials.length > 1 ? 22 : 26;
 
   return (
     <div
@@ -47,7 +48,7 @@ export function ProfileInitialsStar({ displayName, className, active }: ProfileI
           fill="currentColor"
           fontSize={fontSize}
           fontWeight="700"
-          letterSpacing={initials.length > 1 ? 1.2 : 0}
+          letterSpacing={initials.length > 1 ? 0.5 : 0}
           style={{
             fontFamily:
               'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',

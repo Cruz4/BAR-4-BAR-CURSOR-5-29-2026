@@ -1,5 +1,5 @@
 /**
- * Refill scene neon corpus glosses with short dictionary definitions.
+ * Refill scene neon corpus glosses with complete dictionary definitions.
  * Primary: Free Dictionary API. Fallback: Datamuse. Then curated / safe fallback.
  * Run: node scripts/refill-scene-neon-definitions.mjs
  */
@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPUS_PATH = join(__dirname, '../src/lib/scene/scene-neon-lexicon-corpus.ts');
 const CACHE_PATH = join(__dirname, 'scene-neon-definitions-cache.json');
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 
 /** Hand defs for craft / foreign / compound words dictionaries often miss. */
 const CURATED = {
@@ -176,29 +176,39 @@ function cacheKey(q) {
   return q.replace(/\s+/g, '');
 }
 
+function isIncompleteGloss(s) {
+  const t = String(s || '').trim();
+  if (!t || t === '__MISS__') return true;
+  if (/…|\.\.\.$/.test(t)) return true;
+  // Mid-cut teasers often lack terminal punctuation and end on a dangling article/preposition.
+  if (/\b(a|an|the|to|of|or|and|by|for|with|in|on|from|into|as|so)$/i.test(t.replace(/[.!?]+$/, ''))) {
+    return true;
+  }
+  return false;
+}
+
 function shorten(s) {
   let out = String(s || '').replace(/\s+/g, ' ').trim();
-  // Prefer first clause / sentence.
-  const cut = out.match(/^[^.;]+[.;]?/);
-  out = (cut ? cut[0] : out).replace(/[.;]\s*$/, '').trim();
+  // Prefer first full sentence.
+  const cut = out.match(/^[^.!?]+[.!?]?/);
+  out = (cut ? cut[0] : out).trim();
   // Drop trailing parenthetical junk when the core is long enough.
   if (out.length > 40) out = out.replace(/\s*\([^)]*\)\s*$/, '').trim();
   out = out.replace(/[\s.…]+$/u, '').replace(/[.!?]+$/u, '').trim();
-  const maxLen = 64;
+
+  const maxLen = 200;
   if (out.length > maxLen) {
     let slice = out.slice(0, maxLen);
     const space = slice.lastIndexOf(' ');
-    if (space > maxLen * 0.45) slice = slice.slice(0, space);
-    out = slice;
-  } else if (out.length > 18) {
-    // Even short defs stay unfinished teasers.
-    const cutAt = Math.max(18, Math.floor(out.length * 0.7));
-    const space = out.lastIndexOf(' ', cutAt);
-    out = space > 12 ? out.slice(0, space) : out.slice(0, cutAt);
+    if (space > maxLen * 0.5) slice = slice.slice(0, space);
+    out = slice.trim();
   }
+
   out = out.replace(/[,:;–—\-(\[{]+\s*$/u, '').trim();
-  if (out) out = out.charAt(0).toUpperCase() + out.slice(1);
-  return out ? `${out}…` : '…';
+  if (!out) return '';
+  if (!/[.!?]$/.test(out)) out = `${out}.`;
+  out = out.charAt(0).toUpperCase() + out.slice(1);
+  return out;
 }
 
 function isBadDef(s) {
@@ -286,7 +296,10 @@ function loadCache() {
   if (!existsSync(CACHE_PATH)) return { v: CACHE_VERSION, defs: {} };
   try {
     const raw = JSON.parse(readFileSync(CACHE_PATH, 'utf8'));
-    if (raw?.v === CACHE_VERSION && raw.defs && typeof raw.defs === 'object') return raw;
+    if (raw?.defs && typeof raw.defs === 'object') {
+      // Keep prior defs across version bumps; incomplete rows are refetched.
+      return { v: CACHE_VERSION, defs: raw.defs };
+    }
   } catch {
     /* ignore */
   }
@@ -340,8 +353,10 @@ async function main() {
     const key = cacheKey(q);
     if (CURATED[e.id] || CURATED[key] || CURATED[q]) return false;
     const hit = cache.defs[key];
-    if (hit && hit !== '__MISS__' && !isBadDef(hit)) return false;
-    return true;
+    if (hit && hit !== '__MISS__' && !isBadDef(hit) && !isIncompleteGloss(hit)) return false;
+    // Also refetch if corpus still has a teaser ellipsis even when cache looks fine.
+    if (isIncompleteGloss(e.gloss)) return true;
+    return !hit || hit === '__MISS__' || isBadDef(hit) || isIncompleteGloss(hit);
   });
 
   console.log(`Corpus: ${entries.length} words; fetching ${needs.length} defs…`);
@@ -376,7 +391,12 @@ async function main() {
       CURATED[e.id] ||
       CURATED[key] ||
       CURATED[q] ||
-      (cached && cached !== '__MISS__' && !isBadDef(cached) ? cached : null) ||
+      (cached &&
+      cached !== '__MISS__' &&
+      !isBadDef(cached) &&
+      !isIncompleteGloss(cached)
+        ? cached
+        : null) ||
       fallback(e.word);
     return { ...e, gloss };
   });
