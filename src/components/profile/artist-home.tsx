@@ -430,8 +430,10 @@ export function ArtistHome({
               liveDnaDrops,
               plate: plateChrome,
               moduleIndex: i,
+              size: setting.size,
             };
-            const fullBleed = setting.size === 'L';
+            const fullBleed =
+              setting.size === 'L' || (setting.id === 'proofWall' && setting.size === 'M');
             return (
               <motion.div
                 key={setting.id}

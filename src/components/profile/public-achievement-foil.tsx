@@ -20,7 +20,11 @@ import { motion } from 'framer-motion';
 
 const TILTS = ['-2.5deg', '1.5deg', '-1deg', '2deg', '-0.5deg', '1.25deg'] as const;
 
-function bentoSpan(achievement: AchievementDef): string {
+export type FoilDensity = 'compact' | 'cozy' | 'roomy';
+
+function bentoSpan(achievement: AchievementDef, density: FoilDensity): string {
+  // Only roomy (L / full-bleed) walls use bento spans — narrow S/M columns clip otherwise.
+  if (density !== 'roomy') return 'col-span-1';
   if (achievement.xpReward >= 90 || achievement.id === 'streak_30') {
     return 'col-span-2 row-span-2 sm:col-span-2 sm:row-span-2';
   }
@@ -40,6 +44,8 @@ type PublicAchievementFoilProps = {
   streak?: number;
   /** ISO unlock timestamp — Proof Wall badges are always unlocked. */
   unlockedAt?: string;
+  /** Visual density from Proof Wall module size (S/M/L). */
+  density?: FoilDensity;
 };
 
 export function PublicAchievementFoil({
@@ -50,13 +56,17 @@ export function PublicAchievementFoil({
   xp = 0,
   streak = 0,
   unlockedAt,
+  density = 'roomy',
 }: PublicAchievementFoilProps) {
   const [open, setOpen] = useState(false);
   const theme = getAchievementCardTheme(achievement);
   const Icon = achievementIcon(achievement.icon);
   const serial = getAchievementSerial(achievement.id, displayName);
-  const isLarge = achievement.xpReward >= 90 || achievement.id === 'streak_30';
+  const isLarge =
+    density === 'roomy' && (achievement.xpReward >= 90 || achievement.id === 'streak_30');
   const tilt = TILTS[index % TILTS.length];
+  const compact = density === 'compact';
+  const cozy = density === 'cozy';
 
   return (
     <>
@@ -78,9 +88,10 @@ export function PublicAchievementFoil({
           }
         }}
         className={cn(
-          'group relative min-h-[148px] cursor-pointer overflow-hidden rounded-2xl outline-none',
+          'group relative cursor-pointer overflow-hidden rounded-2xl outline-none',
           'focus-visible:ring-2 focus-visible:ring-[var(--ph-accent,#7dd3fc)] focus-visible:ring-offset-2 focus-visible:ring-offset-black',
-          bentoSpan(achievement)
+          compact ? 'min-h-[128px]' : 'min-h-[148px]',
+          bentoSpan(achievement, density)
         )}
         style={{
           boxShadow: `0 12px 40px ${theme.glow}, inset 0 1px 0 rgba(255,255,255,0.08)`,
@@ -99,7 +110,10 @@ export function PublicAchievementFoil({
         >
           <div
             className="pointer-events-none absolute -right-4 -top-6 select-none font-headline font-bold leading-none opacity-[0.09]"
-            style={{ color: theme.accent, fontSize: isLarge ? '7rem' : '4.5rem' }}
+            style={{
+              color: theme.accent,
+              fontSize: isLarge ? '7rem' : compact ? '3.25rem' : '4.5rem',
+            }}
             aria-hidden
           >
             {theme.watermark}
@@ -111,10 +125,18 @@ export function PublicAchievementFoil({
             aria-hidden
           />
 
-          <div className={cn('relative flex flex-1 flex-col', isLarge ? 'p-5 sm:p-6' : 'p-4')}>
+          <div
+            className={cn(
+              'relative flex flex-1 flex-col',
+              isLarge ? 'p-5 sm:p-6' : compact ? 'p-3' : cozy ? 'p-3.5' : 'p-4'
+            )}
+          >
             <div className="flex items-start justify-between gap-2">
               <span
-                className="rounded-full border px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.2em]"
+                className={cn(
+                  'rounded-full border font-bold uppercase tracking-[0.2em]',
+                  compact ? 'px-1.5 py-0.5 text-[7px]' : 'px-2 py-0.5 text-[8px]'
+                )}
                 style={{
                   borderColor: `${theme.accent}55`,
                   color: theme.accent,
@@ -126,7 +148,7 @@ export function PublicAchievementFoil({
               <div
                 className={cn(
                   'flex shrink-0 items-center justify-center rounded-xl border',
-                  isLarge ? 'h-12 w-12' : 'h-10 w-10'
+                  isLarge ? 'h-12 w-12' : compact ? 'h-8 w-8' : 'h-10 w-10'
                 )}
                 style={{
                   borderColor: `${theme.accent}44`,
@@ -134,15 +156,18 @@ export function PublicAchievementFoil({
                   boxShadow: `0 0 24px ${theme.glow}`,
                 }}
               >
-                <Icon className={isLarge ? 'h-6 w-6' : 'h-5 w-5'} style={{ color: theme.accent }} />
+                <Icon
+                  className={isLarge ? 'h-6 w-6' : compact ? 'h-4 w-4' : 'h-5 w-5'}
+                  style={{ color: theme.accent }}
+                />
               </div>
             </div>
 
-            <div className="mt-auto space-y-2 pt-4">
+            <div className={cn('mt-auto space-y-1.5', compact ? 'pt-2.5' : 'pt-4')}>
               <h3
                 className={cn(
                   'font-headline font-bold uppercase leading-tight text-white',
-                  isLarge ? 'text-lg sm:text-xl' : 'text-sm'
+                  isLarge ? 'text-lg sm:text-xl' : compact ? 'text-xs' : 'text-sm'
                 )}
               >
                 {achievement.title}
@@ -150,7 +175,11 @@ export function PublicAchievementFoil({
               <p
                 className={cn(
                   'leading-snug text-white/65',
-                  isLarge ? 'text-xs sm:text-sm line-clamp-3' : 'text-[11px] line-clamp-2'
+                  isLarge
+                    ? 'text-xs sm:text-sm line-clamp-3'
+                    : compact
+                      ? 'text-[10px] line-clamp-2'
+                      : 'text-[11px] line-clamp-2'
                 )}
               >
                 {achievement.description}
@@ -159,14 +188,35 @@ export function PublicAchievementFoil({
           </div>
 
           <div
-            className="relative flex items-center justify-between gap-2 border-t px-4 py-2.5"
+            className={cn(
+              'relative flex min-w-0 items-center justify-between gap-2 border-t',
+              compact ? 'px-2.5 py-2' : 'px-4 py-2.5'
+            )}
             style={{ borderColor: `${theme.accent}22`, backgroundColor: 'rgba(0,0,0,0.35)' }}
           >
-            <span className="font-code text-[9px] uppercase tracking-widest text-white/45">{serial}</span>
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] font-bold uppercase text-white/40">+{achievement.xpReward} XP</span>
+            <span
+              className={cn(
+                'min-w-0 flex-1 truncate font-code uppercase tracking-widest text-white/45',
+                compact ? 'text-[8px]' : 'text-[9px]'
+              )}
+              title={serial}
+            >
+              {serial}
+            </span>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <span
+                className={cn(
+                  'font-bold uppercase text-white/40',
+                  compact ? 'text-[8px]' : 'text-[9px]'
+                )}
+              >
+                +{achievement.xpReward} XP
+              </span>
               {achievement.inkReward > 0 && (
-                <span className="text-[9px] font-bold uppercase" style={{ color: theme.accent }}>
+                <span
+                  className={cn('font-bold uppercase', compact ? 'text-[8px]' : 'text-[9px]')}
+                  style={{ color: theme.accent }}
+                >
                   +{achievement.inkReward} Ink
                 </span>
               )}

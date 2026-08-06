@@ -27,7 +27,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
-import type { ArtistHomeFeatured } from '@/lib/profile/modules';
+import type { ArtistHomeFeatured, ModuleSize } from '@/lib/profile/modules';
 import { FingerprintSvg } from '@/components/profile/rhyme-fingerprint-svg';
 import { TheCatchGame } from '@/components/profile/the-catch-module';
 import { parseEmbedUrl, EMBED_HELP_TEXT } from '@/lib/profile/embeds';
@@ -76,6 +76,8 @@ export type ModuleContext = {
   plate: PressPlateChrome;
   /** Running index so adjacent dies rotate. */
   moduleIndex: number;
+  /** S/M/L from Edit Public Page — modules that care about density use this. */
+  size: ModuleSize;
 };
 
 function ModuleShell({
@@ -228,18 +230,44 @@ export function DropShelfModule({ ctx }: { ctx: ModuleContext }) {
 // Proof Wall (badges)
 // ---------------------------------------------------------------------------
 
+const PROOF_WALL_LAYOUT: Record<
+  ModuleSize,
+  { limit: number; density: 'compact' | 'cozy' | 'roomy'; grid: string }
+> = {
+  // Half-column plate: 2-up, compact chrome (4-up was clipping serials/copy).
+  S: {
+    limit: 4,
+    density: 'compact',
+    grid: 'grid grid-cols-2 gap-2.5 auto-rows-[minmax(128px,auto)]',
+  },
+  // Full-width plate: roomier 3-up wall.
+  M: {
+    limit: 6,
+    density: 'cozy',
+    grid: 'grid grid-cols-2 gap-3.5 sm:grid-cols-3 auto-rows-[minmax(148px,auto)]',
+  },
+  // Full-bleed: densest wall + bento spans.
+  L: {
+    limit: 8,
+    density: 'roomy',
+    grid: 'grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 auto-rows-[minmax(148px,auto)]',
+  },
+};
+
 export function ProofWallModule({ ctx }: { ctx: ModuleContext }) {
   const badges = [...ctx.badges].sort((a, b) => b.xpReward - a.xpReward);
   if (!badges.length) return null;
+  const layout = PROOF_WALL_LAYOUT[ctx.size] ?? PROOF_WALL_LAYOUT.M;
   return (
     <ModuleShell icon={BookOpen} title={"Proof Wall"} ctx={ctx}>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 auto-rows-[minmax(148px,auto)]">
-        {badges.slice(0, 8).map((badge, i) => (
+      <div className={layout.grid}>
+        {badges.slice(0, layout.limit).map((badge, i) => (
           <PublicAchievementFoil
             key={badge.id}
             achievement={badge}
             displayName={ctx.profileName}
             index={i}
+            density={layout.density}
             rankLabel={ctx.rankLabel}
             xp={ctx.xp}
             streak={ctx.currentStreak}
