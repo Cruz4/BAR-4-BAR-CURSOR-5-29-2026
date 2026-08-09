@@ -22,6 +22,7 @@ import { SceneBoothCard } from '@/components/scene/scene-booth-card';
 import { SceneDiscoverCard } from '@/components/scene/scene-discover-card';
 import { SceneLiveDropsStrip } from '@/components/scene/scene-live-drops-strip';
 import { SceneBlockAtmosphere } from '@/components/scene/scene-block-atmosphere';
+import { LockClaimBootstrap } from '@/components/lock/lock-claim-bootstrap';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
@@ -358,6 +359,7 @@ export function SceneHome() {
   return (
     <TooltipProvider>
     <div className="flex-grow w-full relative min-h-screen selection:bg-primary/30 font-code">
+      <LockClaimBootstrap />
       <SceneBlockAtmosphere energy={sceneEnergy} pulseKey={posts.length} />
       <div className="relative z-20 w-full min-w-0 max-w-[100vw] xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,44rem)_minmax(0,1fr)] xl:grid-rows-[auto_auto] xl:items-start">
         {/* Header — middle column */}

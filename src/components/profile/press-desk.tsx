@@ -21,6 +21,7 @@ import {
   Fish,
   LayoutGrid,
   Loader2,
+  Lock,
   Quote,
   Save,
   SlidersHorizontal,
@@ -91,6 +92,7 @@ import { STUDIO_RANKS } from '@/lib/gamification/ranks';
 import { getAchievement } from '@/lib/gamification/achievements';
 import { ArtistHome } from '@/components/profile/artist-home';
 import { LiveDnaDropsManage } from '@/components/scene/scene-live-drops-strip';
+import { PublishOpenLockPanel } from '@/components/lock/publish-open-lock-panel';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
 import { VesperfoldForge } from '@/components/profile/vesperfold-forge';
 import {
@@ -1655,6 +1657,27 @@ export function PressDesk() {
               </p>
             )}
         </div>
+      </DeskSection>
+
+      {/* 7b. Open LOCK */}
+      <DeskSection
+        icon={Lock}
+        title="Open LOCK"
+        hint="Publish an unfinished bar dare. Visitors lock the next line. Enable the Open LOCK module in the deck above. Requires NEXT_PUBLIC_LOCK=1."
+      >
+        <PublishOpenLockPanel
+          currentLockId={config.featured.openLockId}
+          onPublished={(lockId) => {
+            setConfig((prev) => {
+              if (!prev) return prev;
+              const next = structuredClone(prev);
+              next.featured.openLockId = lockId;
+              const mod = next.modules.find((m) => m.id === 'openLock');
+              if (mod) mod.enabled = true;
+              return next;
+            });
+          }}
+        />
       </DeskSection>
 
       {/* 8. Live DNA Drops — manage + auto on Artist Home */}

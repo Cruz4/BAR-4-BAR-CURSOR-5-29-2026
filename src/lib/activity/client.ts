@@ -245,6 +245,7 @@ export async function fetchActivityPrefs(): Promise<ActivityPrefs> {
       postLoves: data.postLoves !== false,
       postReplies: data.postReplies !== false,
       dnaImports: data.dnaImports !== false,
+      lockCasts: data.lockCasts !== false,
     };
   } catch {
     return { ...DEFAULT_ACTIVITY_PREFS };

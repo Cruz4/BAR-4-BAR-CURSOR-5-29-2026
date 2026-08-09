@@ -1,10 +1,9 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { LockScaffoldPage } from '@/components/lock/lock-scaffold-page';
+import { LockPublicPage } from '@/components/lock/lock-public-page';
 import { LOCK_HOUSE_ID } from '@/lib/lock-feature';
 
-/** Dynamic LOCK — /lock/[lockId] (placeholder shell; no DB). */
 export default function LockByIdPage() {
   const params = useParams();
   const raw = params?.lockId;
@@ -15,5 +14,5 @@ export default function LockByIdPage() {
         ? raw[0].trim()
         : LOCK_HOUSE_ID;
 
-  return <LockScaffoldPage lockId={lockId || LOCK_HOUSE_ID} />;
+  return <LockPublicPage lockId={lockId || LOCK_HOUSE_ID} />;
 }

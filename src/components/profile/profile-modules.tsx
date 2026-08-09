@@ -15,6 +15,7 @@ import {
   DoorOpen,
   Fingerprint,
   Fish,
+  Lock,
   PenLine,
   Quote,
   Send,
@@ -207,6 +208,33 @@ export function TheCatchModule({ ctx }: { ctx: ModuleContext }) {
         profileUserId={ctx.profileUserId}
         profileName={ctx.profileName}
       />
+    </ModuleShell>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Open LOCK
+// ---------------------------------------------------------------------------
+
+export function OpenLockModule({ ctx }: { ctx: ModuleContext }) {
+  const lockId = ctx.featured.openLockId;
+  if (!lockId) {
+    return (
+      <ModuleShell icon={Lock} title="Open LOCK" ctx={ctx}>
+        <p className="text-sm text-muted-foreground">
+          No live LOCK yet. Publish one from Edit Public Page when LOCK is enabled.
+        </p>
+      </ModuleShell>
+    );
+  }
+  return (
+    <ModuleShell icon={Lock} title="Open LOCK" ctx={ctx}>
+      <p className="text-sm text-muted-foreground mb-3">
+        Finish the unfinished bar — lock your echo into the bloodline.
+      </p>
+      <Button asChild className="w-full font-bold uppercase tracking-wide">
+        <Link href={`/lock/${lockId}`}>Enter LOCK</Link>
+      </Button>
     </ModuleShell>
   );
 }

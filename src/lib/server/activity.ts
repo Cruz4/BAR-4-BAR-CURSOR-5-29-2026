@@ -21,6 +21,7 @@ export type EmitActivityInput = {
   recipientName?: string;
   postId?: string;
   shareId?: string;
+  lockId?: string;
   preview?: string;
   href?: string;
 };
@@ -33,6 +34,7 @@ function chronoId(): string {
 
 function buildHref(input: EmitActivityInput, recipientSlug?: string): string | undefined {
   if (input.href) return input.href;
+  if (input.lockId) return `/lock/${input.lockId}`;
   if (input.postId && recipientSlug) return `/profile/${recipientSlug}#post-${input.postId}`;
   if (input.postId) return `/activity`;
   if (input.shareId) return `/share/${input.shareId}`;
@@ -68,6 +70,7 @@ async function loadPrefs(userId: string): Promise<ActivityPrefs> {
     postLoves: data.postLoves !== false,
     postReplies: data.postReplies !== false,
     dnaImports: data.dnaImports !== false,
+    lockCasts: data.lockCasts !== false,
   };
 }
 
@@ -171,6 +174,7 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
     ...(actorSlug ? { actorSlug } : {}),
     ...(postId ? { postId } : {}),
     ...(shareId ? { shareId } : {}),
+    ...(input.lockId ? { lockId: input.lockId } : {}),
     ...(preview ? { preview } : {}),
     href,
   };
@@ -216,7 +220,13 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
             ? `${input.actorName} replied to your post`
             : input.type === 'post_reverb'
               ? `${input.actorName} Reverbed your post`
-              : `${input.actorName} imported your DNA Drop`;
+              : input.type === 'lock_answered'
+                ? `${input.actorName} locked a bar on a LOCK you watch`
+                : input.type === 'artist_pick'
+                  ? `${input.actorName} picked your echo`
+                  : input.type === 'lock_clear_offer'
+                    ? `${input.actorName} sent you a clear-for-release offer`
+                    : `${input.actorName} imported your DNA Drop`;
 
   void maybePush(recipientId, input.type, title, body, href);
 

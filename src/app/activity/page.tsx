@@ -10,8 +10,10 @@ import {
   CheckCheck,
   Heart,
   Import,
+  Lock,
   MessageCircle,
   Repeat2,
+  Star,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -81,6 +83,12 @@ function TypeIcon({ type }: { type: ActivityType }) {
       return <Repeat2 className={cn(className, 'text-violet-400')} />;
     case 'dna_import':
       return <Import className={cn(className, 'text-amber-400')} />;
+    case 'lock_answered':
+      return <Lock className={cn(className, 'text-emerald-400')} />;
+    case 'artist_pick':
+      return <Star className={cn(className, 'text-amber-400')} />;
+    case 'lock_clear_offer':
+      return <Lock className={cn(className, 'text-sky-400')} />;
     default:
       return <Bell className={className} />;
   }
@@ -95,6 +103,8 @@ function timeAgo(iso: string): string {
 }
 
 function activityOpenHref(event: ActivityEvent, viewerSlug?: string): string {
+  if (event.lockId) return `/lock/${event.lockId}`;
+  if (event.href?.startsWith('/lock/')) return event.href;
   if (event.shareId) return `/share/${event.shareId}`;
   if (event.postId) {
     if (event.href?.includes('#post-')) return event.href;

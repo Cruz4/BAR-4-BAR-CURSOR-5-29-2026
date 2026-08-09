@@ -21,6 +21,7 @@ export type ProfileModuleId =
   | 'dnaStrip'
   | 'rhymeFingerprint'
   | 'theCatch'
+  | 'openLock'
   | 'dropShelf'
   | 'proofWall'
   | 'wall'
@@ -72,6 +73,8 @@ export type ArtistHomeFeatured = {
   fingerprint?: RhymeFingerprint;
   /** Interactive rhyme hunt — ordered bars + decoy end-sounds. */
   theCatch?: TheCatch;
+  /** Active Open LOCK id shown on Artist Home (when LOCK flag is on). */
+  openLockId?: string;
   /** @deprecated Prefer theCatch. */
   albumRooms?: AlbumRoomCard[];
   /** @deprecated Live DNA Drops auto-list from shares; kept for older configs. */
@@ -121,6 +124,12 @@ export const MODULE_META: Record<
     defaultSize: 'L',
     defaultEnabled: true,
   },
+  openLock: {
+    label: 'Open LOCK',
+    description: 'Public unfinished bar dare — visitors lock the next line (kill-flagged).',
+    defaultSize: 'L',
+    defaultEnabled: false,
+  },
   dropShelf: {
     label: 'Live DNA Drops',
     description: 'Auto-lists every active DNA Drop share while the link is online.',
@@ -158,6 +167,7 @@ export const MODULE_ORDER_DEFAULT: ProfileModuleId[] = [
   'barOfWeek',
   'dnaStrip',
   'wall',
+  'openLock',
   'theCatch',
   'rhymeFingerprint',
   'dropShelf',
@@ -285,6 +295,8 @@ function normalizeFeatured(raw: unknown): ArtistHomeFeatured {
 
   const theCatch = normalizeTheCatch(obj.theCatch);
   if (theCatch) featured.theCatch = theCatch;
+  const openLockId = cleanString(obj.openLockId, 40);
+  if (openLockId) featured.openLockId = openLockId;
 
   if (Array.isArray(obj.albumRooms)) {
     const rooms = obj.albumRooms

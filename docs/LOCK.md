@@ -1,65 +1,49 @@
-# LOCK scaffold (kill-flagged)
+# LOCK — full social engagement (kill-flagged)
 
-Public unfinished-bar dare surface. Scaffold only — no DNA score, bloodline DB, Artist Pick, or audio storage yet.
+Unfinished-bar dares with DNA LOCK stamps, echo bloodlines, watch/Activity push, Artist Home + Scene, Artist Pick, studio handoff, and clear-for-release offers.
 
-## Kill flag
+## Kill flag / restore
 
 | | Behavior |
 |--|--|
-| `NEXT_PUBLIC_LOCK` unset / empty / `0` | **OFF (default)** — `/` unchanged (guest try or marketing); `/lock/*` redirects home |
-| `NEXT_PUBLIC_LOCK=1` | **ON** — logged-out `/` → `/lock/house`; scaffold UI on `/lock/*` |
+| `NEXT_PUBLIC_LOCK` unset / `0` | **OFF (default)** — `/` unchanged; `/lock/*` redirects home |
+| `NEXT_PUBLIC_LOCK=1` | **ON** — logged-out `/` → `/lock/house`; full LOCK product live |
 
 ```env
-# Local experiment only (.env.local) — do not enable in production until ready
+# .env.local
 NEXT_PUBLIC_LOCK=1
 ```
 
-Redeploy / restart Next after changing the flag.
+**Soft kill:** set `NEXT_PUBLIC_LOCK=0` (or unset) + restart/redeploy.  
+**Hard rollback:** `git checkout pre-lock` or `checkpoint/pre-lock`.  
+Feature branch: `feat/lock`. Do not merge to `main` until ready.
 
-## Soft revert (no git)
+## Product loop
 
-```env
-NEXT_PUBLIC_LOCK=0
-```
+1. Artist publishes Open LOCK (Press Desk → Open LOCK) or use house LOCK  
+2. Anyone writes next bar (no account) → **LOCK score stamp** + share card  
+3. **Name your echo** (signup) → claim + **watch** → Activity/push on answers & picks  
+4. Artist **Pick** + optional **Clear for release** split/credit offer  
+5. Scene Discover shows live LOCKs; Artist Home module links in  
+6. **Open in studio** deepens into the sheet (optional)
 
-Or remove the variable. Logged-out users get today’s door again.
+## Rights
 
-## Hard rollback
-
-- Tag: `pre-lock`
-- Branch: `checkpoint/pre-lock`
-
-```bash
-git checkout pre-lock
-# or
-git checkout checkpoint/pre-lock
-```
-
-Feature work lives on `feat/lock`. Leave `main` alone until you deliberately merge.
+- Submit = display license only  
+- Artist Pick = credit  
+- Clear for release = optional split offer (accept/decline)  
+- No music gen · no audio storage (embed URLs only)
 
 ## Routes
 
-| Path | Flag OFF | Flag ON |
-|------|----------|---------|
-| `/` (logged out) | Guest try or marketing (unchanged) | Redirect → `/lock/house` |
-| `/lock/house` | Redirect → `/` | House LOCK scaffold |
-| `/lock/[lockId]` | Redirect → `/` | Same scaffold shell (placeholder id) |
-| `/try` | Guest sheet | Guest sheet (escape hatch) |
-| `/welcome` | Marketing | Marketing |
+| Path | Role |
+|------|------|
+| `/lock/house` | Platform house dare |
+| `/lock/[id]` | Public LOCK |
+| `/lock/[id]/bloodline` | Strain tree / filters |
+| `/lock/[id]/manage` | Owner pick + clear |
+| `/api/lock/*` | Persist / watch / pick / clear |
 
 ## Home priority (logged out)
 
-1. LOCK (if on) → `/lock/house`
-2. Guest try sheet (if on) → `/albums/try/tracks/guest-sheet`
-3. Else → public marketing landing
-
-## Scaffold UI
-
-- Seed bar placeholder + one textarea + **LOCK IT** (no-op until later)
-- Rights microcopy (display only; no ownership by submitting)
-- Links to `/welcome` and `/try`
-- No Firestore writes, no audio upload, no music gen
-
-## Invite gate
-
-`/lock/` is invite-gate exempt (same idea as `/share/`) so public LOCK URLs work during private beta when the flag is on.
+LOCK (if on) → guest try → marketing landing. `/try` always remains the full-sheet escape.

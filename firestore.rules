@@ -41,6 +41,25 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
     }
 
+    // Open LOCK — public read; mutations via Admin SDK APIs only
+    match /locks/{lockId} {
+      allow read: if true;
+      allow write: if false;
+
+      match /echoes/{echoId} {
+        allow read: if true;
+        allow write: if false;
+      }
+      match /watchers/{userId} {
+        allow read: if isOwnerOrAdmin(userId);
+        allow write: if false;
+      }
+      match /clearOffers/{userId} {
+        allow read: if isOwnerOrAdmin(userId);
+        allow write: if false;
+      }
+    }
+
     match /referrals/{referralId} {
       allow read, write: if false;
     }

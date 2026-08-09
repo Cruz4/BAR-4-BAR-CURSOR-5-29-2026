@@ -40,6 +40,7 @@ import {
   FriendsModule,
   GuestbookModule,
   NowPlayingModule,
+  OpenLockModule,
   ProofWallModule,
   RhymeFingerprintModule,
   TheCatchModule,
@@ -55,6 +56,7 @@ import { ArtistHomeGuestClaim } from '@/components/profile/artist-home-guest-cla
 import { VesperfoldMark } from '@/components/profile/vesperfold-mark';
 import { normalizeVesperfoldSeed } from '@/lib/profile/vesperfold';
 import { buildLoginUrl } from '@/lib/login-links';
+import { isLockEnabled } from '@/lib/lock-feature';
 
 type ArtistHomeProps = {
   profile: PublicProfileData;
@@ -71,6 +73,7 @@ const MODULE_RENDERERS: Record<string, React.ComponentType<{ ctx: ModuleContext 
   dnaStrip: DnaStripModule,
   rhymeFingerprint: RhymeFingerprintModule,
   theCatch: TheCatchModule,
+  openLock: OpenLockModule,
   dropShelf: DropShelfModule,
   proofWall: ProofWallModule,
   wall: WallModule,
@@ -140,7 +143,11 @@ export function ArtistHome({
 
   const enabledModules = useMemo(() => {
     // Respect Edit Public Page toggles — never force-show a disabled module.
-    return config.modules.filter((m) => m.enabled);
+    return config.modules.filter((m) => {
+      if (!m.enabled) return false;
+      if (m.id === 'openLock' && !isLockEnabled()) return false;
+      return true;
+    });
   }, [config.modules]);
 
   const showLiveDnaDrops = useMemo(

@@ -9,6 +9,9 @@ export const ACTIVITY_TYPES = [
   'post_reply',
   'post_reverb',
   'dna_import',
+  'lock_answered',
+  'artist_pick',
+  'lock_clear_offer',
 ] as const;
 
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
@@ -29,6 +32,7 @@ export type ActivityEvent = {
   targetSlug?: string;
   postId?: string;
   shareId?: string;
+  lockId?: string;
   preview?: string;
   href?: string;
   readAt?: string | null;
@@ -41,6 +45,8 @@ export type ActivityPrefs = {
   postLoves: boolean;
   postReplies: boolean;
   dnaImports: boolean;
+  /** Open LOCK casts — answered / pick / clear offers. */
+  lockCasts: boolean;
 };
 
 export const DEFAULT_ACTIVITY_PREFS: ActivityPrefs = {
@@ -50,6 +56,7 @@ export const DEFAULT_ACTIVITY_PREFS: ActivityPrefs = {
   postLoves: true,
   postReplies: true,
   dnaImports: true,
+  lockCasts: true,
 };
 
 export type ActivitySummary = {
@@ -69,6 +76,9 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     post_reply: 'replied to your post',
     post_reverb: 'Reverbed your post',
     dna_import: 'imported your DNA Drop',
+    lock_answered: 'locked a bar on a LOCK you watch',
+    artist_pick: 'picked your echo',
+    lock_clear_offer: 'cleared a LOCK with an offer for you',
   };
   const given: Record<ActivityType, string> = {
     friend_request: 'you sent a friend request to',
@@ -77,6 +87,9 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     post_reply: 'you replied to a post by',
     post_reverb: 'you Reverbed a post by',
     dna_import: 'you imported a DNA Drop from',
+    lock_answered: 'you locked a bar on',
+    artist_pick: 'you picked an echo by',
+    lock_clear_offer: 'you sent a clear offer to',
   };
   return direction === 'received' ? received[type] : given[type];
 }
@@ -96,6 +109,10 @@ export function prefsAllowsPush(prefs: ActivityPrefs, type: ActivityType): boole
       return prefs.postLoves;
     case 'dna_import':
       return prefs.dnaImports;
+    case 'lock_answered':
+    case 'artist_pick':
+    case 'lock_clear_offer':
+      return prefs.lockCasts !== false;
     default:
       return false;
   }

@@ -42,17 +42,28 @@ export type DiscoverRiser = {
   currentStreak: number;
 };
 
+export type DiscoverLock = {
+  id: string;
+  ownerName: string;
+  ownerSlug?: string;
+  seedBar: string;
+  echoCount: number;
+  updatedAt: string;
+};
+
 export type DiscoverData = {
   artists: DiscoverArtist[];
   posts: ProfilePost[];
   drops: DiscoverDrop[];
   risers: DiscoverRiser[];
+  locks: DiscoverLock[];
 };
 
 export type DiscoverCard =
   | { kind: 'artist'; key: string; artist: DiscoverArtist }
   | { kind: 'post'; key: string; post: ProfilePost }
   | { kind: 'drop'; key: string; drop: DiscoverDrop }
+  | { kind: 'lock'; key: string; lock: DiscoverLock }
   | { kind: 'risers'; key: string; risers: DiscoverRiser[] };
 
 /** Cards on the Scene home Discover strip. */
@@ -60,7 +71,7 @@ export const DISCOVER_HOME_MAX_CARDS = 12;
 /** Cards on the full Discover page. */
 export const DISCOVER_ALL_MAX_CARDS = 40;
 
-const EMPTY: DiscoverData = { artists: [], posts: [], drops: [], risers: [] };
+const EMPTY: DiscoverData = { artists: [], posts: [], drops: [], risers: [], locks: [] };
 
 export async function fetchDiscover(
   excludeUserId?: string,
@@ -84,6 +95,9 @@ export async function fetchDiscover(
         : [],
       drops: Array.isArray(data.drops) ? data.drops : [],
       risers: Array.isArray(data.risers) ? data.risers : [],
+      locks: Array.isArray((data as { locks?: DiscoverLock[] }).locks)
+        ? ((data as { locks: DiscoverLock[] }).locks)
+        : [],
     };
   } catch {
     return EMPTY;
@@ -94,6 +108,7 @@ function cardTimestamp(card: DiscoverCard): string {
   if (card.kind === 'post') return card.post.createdAt || '';
   if (card.kind === 'artist') return card.artist.updatedAt || '';
   if (card.kind === 'drop') return card.drop.updatedAt || '';
+  if (card.kind === 'lock') return card.lock.updatedAt || '';
   return '';
 }
 
@@ -121,6 +136,7 @@ export function buildDiscoverCards(
     (p) => !excludePostIds.has(p.id) && !excludeUserIds.has(p.ownerId)
   );
   const drops = data.drops;
+  const locks = data.locks || [];
   const risers = data.risers.filter((r) => !excludeUserIds.has(r.userId));
 
   const timed: DiscoverCard[] = [
@@ -139,6 +155,13 @@ export function buildDiscoverCards(
         kind: 'drop',
         key: `drop-${drop.shareId}`,
         drop,
+      })
+    ),
+    ...locks.map(
+      (lock): DiscoverCard => ({
+        kind: 'lock',
+        key: `lock-${lock.id}`,
+        lock,
       })
     ),
   ];
