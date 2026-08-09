@@ -18,13 +18,15 @@ import { auth } from '@/lib/firebase/client/firebase';
 
 type LockPublicPageProps = {
   lockId: string;
+  /** Server-passed; when true, skip client env check (Next often fails to inline NEXT_PUBLIC_LOCK). */
+  lockEnabled?: boolean;
 };
 
-export function LockPublicPage({ lockId }: LockPublicPageProps) {
+export function LockPublicPage({ lockId, lockEnabled }: LockPublicPageProps) {
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
-  const enabled = isLockEnabled();
+  const enabled = lockEnabled === true || isLockEnabled();
   const id = lockId === 'house' ? LOCK_HOUSE_ID : lockId;
 
   const [lock, setLock] = useState<LockDoc | null>(null);
@@ -37,10 +39,12 @@ export function LockPublicPage({ lockId }: LockPublicPageProps) {
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Prefer server-passed lockEnabled / lock layout gate. Only bounce if explicitly off.
+    if (lockEnabled === true) return;
     if (!enabled) {
       router.replace('/');
     }
-  }, [enabled, router]);
+  }, [enabled, lockEnabled, router]);
 
   const load = useCallback(async () => {
     setLoading(true);

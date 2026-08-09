@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { isLockEnabled, LOCK_HOUSE_ID } from '@/lib/lock-feature';
+import { LOCK_HOUSE_ID } from '@/lib/lock-feature';
 import type { LockDoc, LockEcho } from '@/lib/lock/types';
 import { Star } from 'lucide-react';
 
@@ -12,19 +12,13 @@ type Filter = 'new' | 'score' | 'pick' | 'wild';
 
 export default function LockBloodlinePage() {
   const params = useParams();
-  const router = useRouter();
   const raw = typeof params?.lockId === 'string' ? params.lockId : LOCK_HOUSE_ID;
   const id = raw === 'house' ? LOCK_HOUSE_ID : raw;
-  const enabled = isLockEnabled();
 
   const [lock, setLock] = useState<LockDoc | null>(null);
   const [echoes, setEchoes] = useState<LockEcho[]>([]);
   const [filter, setFilter] = useState<Filter>('score');
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!enabled) router.replace('/');
-  }, [enabled, router]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -42,8 +36,8 @@ export default function LockBloodlinePage() {
   }, [id]);
 
   useEffect(() => {
-    if (enabled) void load();
-  }, [enabled, load]);
+    void load();
+  }, [load]);
 
   const sorted = useMemo(() => {
     const list = [...echoes];
@@ -53,7 +47,7 @@ export default function LockBloodlinePage() {
     return list.sort((a, b) => b.lockScore - a.lockScore);
   }, [echoes, filter, lock?.artistPickEchoId]);
 
-  if (!enabled || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center font-code text-sm text-muted-foreground">
         Loading bloodline…

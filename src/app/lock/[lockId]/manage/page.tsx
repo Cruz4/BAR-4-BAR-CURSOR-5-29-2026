@@ -2,33 +2,27 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { isLockEnabled, LOCK_HOUSE_ID } from '@/lib/lock-feature';
+import { LOCK_HOUSE_ID } from '@/lib/lock-feature';
 import type { LockDoc, LockEcho } from '@/lib/lock/types';
 import { auth } from '@/lib/firebase/client/firebase';
 import { Star } from 'lucide-react';
 
 export default function LockManagePage() {
   const params = useParams();
-  const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
   const raw = typeof params?.lockId === 'string' ? params.lockId : LOCK_HOUSE_ID;
   const id = raw === 'house' ? LOCK_HOUSE_ID : raw;
-  const enabled = isLockEnabled();
 
   const [lock, setLock] = useState<LockDoc | null>(null);
   const [echoes, setEchoes] = useState<LockEcho[]>([]);
   const [clearPercent, setClearPercent] = useState('5');
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!enabled) router.replace('/');
-  }, [enabled, router]);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/lock/${encodeURIComponent(id)}/bloodline`);
@@ -40,8 +34,8 @@ export default function LockManagePage() {
   }, [id]);
 
   useEffect(() => {
-    if (enabled) void load();
-  }, [enabled, load]);
+    void load();
+  }, [load]);
 
   const pick = async (echoId: string) => {
     if (!user) return;

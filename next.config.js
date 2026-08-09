@@ -14,6 +14,10 @@ const contentSecurityPolicy = [
 ].join('; ');
 
 const nextConfig = {
+  // Force public env into the Next runtime (server + client compile).
+  env: {
+    NEXT_PUBLIC_LOCK: process.env.NEXT_PUBLIC_LOCK ?? '',
+  },
   typescript: {
     // Keep false — project typechecks clean; do not hide regressions again.
     ignoreBuildErrors: false,

@@ -9,33 +9,36 @@ import { SocialRefSignupRedirect } from '@/components/marketing/social-ref-signu
 import { GuestTryHandoffScreen } from '@/components/guest-try-handoff-screen';
 import { useAuth } from '@/hooks/use-auth';
 import { GUEST_TRY_PATH, isGuestTrySheetEnabled } from '@/lib/guest-try';
-import { isLockEnabled, LOCK_HOUSE_PATH } from '@/lib/lock-feature';
+import { LOCK_HOUSE_PATH } from '@/lib/lock-feature';
 import { SCENE_HOME_ENABLED } from '@/lib/scene-home';
 
-function GuestHomeEntry() {
+function LockHandoffScreen() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-2 bg-background text-foreground font-code">
+      <p className="text-sm font-bold uppercase tracking-widest text-primary">Opening LOCK</p>
+      <p className="text-[11px] text-muted-foreground">Finish the bar.</p>
+    </div>
+  );
+}
+
+function GuestHomeEntry({ lockEnabled }: { lockEnabled: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const lockOn = isLockEnabled();
   const guestTry = isGuestTrySheetEnabled();
 
   // Priority: LOCK (if on) → guest try (if on) → PublicHomeLanding
   useEffect(() => {
     const qs = searchParams.toString();
-    if (lockOn) {
+    if (lockEnabled) {
       router.replace(qs ? `${LOCK_HOUSE_PATH}?${qs}` : LOCK_HOUSE_PATH);
       return;
     }
     if (!guestTry) return;
     router.replace(qs ? `${GUEST_TRY_PATH}?${qs}` : GUEST_TRY_PATH);
-  }, [lockOn, guestTry, router, searchParams]);
+  }, [lockEnabled, guestTry, router, searchParams]);
 
-  if (lockOn) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-2 bg-background text-foreground font-code">
-        <p className="text-sm font-bold uppercase tracking-widest text-primary">Opening LOCK</p>
-        <p className="text-[11px] text-muted-foreground">Finish the bar.</p>
-      </div>
-    );
+  if (lockEnabled) {
+    return <LockHandoffScreen />;
   }
 
   if (guestTry) {
@@ -49,15 +52,20 @@ function GuestHomeEntry() {
   );
 }
 
-export function HomePage() {
+type HomePageProps = {
+  /** From server `page.tsx` — authoritative kill-flag (do not rely on client env inlining). */
+  lockEnabled?: boolean;
+};
+
+export function HomePage({ lockEnabled = false }: HomePageProps) {
   const { user } = useAuth();
   if (user) {
     // Scene home pivot — flip SCENE_HOME_ENABLED off to restore the Vault at /.
     return SCENE_HOME_ENABLED ? <SceneHome /> : <AlbumList />;
   }
   return (
-    <Suspense fallback={<GuestTryHandoffScreen />}>
-      <GuestHomeEntry />
+    <Suspense fallback={lockEnabled ? <LockHandoffScreen /> : <GuestTryHandoffScreen />}>
+      <GuestHomeEntry lockEnabled={lockEnabled} />
     </Suspense>
   );
 }
