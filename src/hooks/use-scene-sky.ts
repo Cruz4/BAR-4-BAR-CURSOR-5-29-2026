@@ -59,7 +59,7 @@ async function requestGeo(): Promise<GeoCache> {
   if (cached?.denied) return cached;
   if (geoFresh(cached)) return cached!;
 
-  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+  if (typeof navigator === 'undefined' || !navigator.geolocation || !isGeolocationAllowedByPolicy()) {
     const denied: GeoCache = { lat: 0, lon: 0, savedAt: Date.now(), denied: true };
     writeGeoCache(denied);
     return denied;
@@ -84,6 +84,27 @@ async function requestGeo(): Promise<GeoCache> {
       { enableHighAccuracy: false, maximumAge: GEO_TTL_MS, timeout: 12_000 }
     );
   });
+}
+
+/** Avoid calling getCurrentPosition when Permissions-Policy has geolocation=() (console spam). */
+function isGeolocationAllowedByPolicy(): boolean {
+  if (typeof document === 'undefined') return false;
+  try {
+    const policy =
+      (document as Document & {
+        permissionsPolicy?: { allowsFeature: (f: string) => boolean };
+        featurePolicy?: { allowsFeature: (f: string) => boolean };
+      }).permissionsPolicy ??
+      (document as Document & { featurePolicy?: { allowsFeature: (f: string) => boolean } })
+        .featurePolicy;
+    if (policy && typeof policy.allowsFeature === 'function') {
+      return policy.allowsFeature('geolocation');
+    }
+  } catch {
+    /* ignore */
+  }
+  // next.config sets geolocation=() — treat unknown as blocked to skip the call.
+  return false;
 }
 
 type WeatherApiPayload = {

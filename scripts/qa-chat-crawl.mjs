@@ -172,6 +172,28 @@ async function main() {
       entry.bodyHint = summarizeBody(await page.locator('body').innerText().catch(() => ''));
       entry.ok = (res?.status() ?? 500) < 400;
 
+      const redirectedToLogin =
+        report.loginOk &&
+        path !== '/login' &&
+        /\/login(?:\?|$)/.test(entry.finalUrl) &&
+        !path.startsWith('/try') &&
+        !path.startsWith('/pricing') &&
+        !path.startsWith('/terms') &&
+        !path.startsWith('/privacy') &&
+        !path.startsWith('/welcome');
+
+      if (redirectedToLogin) {
+        entry.ok = false;
+        report.issues.push({
+          severity: 'high',
+          route: path,
+          name,
+          kind: 'auth_redirect_while_logged_in',
+          detail: `Expected authenticated page, got ${entry.finalUrl}`,
+          url: entry.finalUrl,
+        });
+      }
+
       const crash =
         /Application error|Something went wrong|Unhandled Runtime Error|This page could not be found/i.test(
           entry.bodyHint
@@ -186,7 +208,7 @@ async function main() {
           url: entry.finalUrl,
         });
       }
-      if (!entry.ok) {
+      if (!entry.ok && !redirectedToLogin) {
         report.issues.push({
           severity: 'high',
           route: path,
@@ -220,11 +242,14 @@ async function main() {
   await visit('/login', 'Login page');
 
   try {
-    await page.locator('#email').fill(email, { timeout: 15000 });
+    // TabsTrigger also says "Sign In"; submit CTA is "Enter Studio"
+    await page.getByRole('tab', { name: /^Sign In$/i }).click({ timeout: 10000 }).catch(() => {});
+    await page.locator('#email').waitFor({ state: 'visible', timeout: 20000 });
+    await page.locator('#email').fill(email);
     await page.locator('#password').fill(password);
-    await page.getByRole('button', { name: /^Sign In$/i }).click();
-    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 45000 });
-    await page.waitForTimeout(2500);
+    await page.getByRole('button', { name: /^Enter Studio$/i }).click({ timeout: 15000 });
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 60000 });
+    await page.waitForTimeout(3000);
     report.loginOk = !page.url().includes('/login');
     if (!report.loginOk) {
       report.issues.push({
@@ -232,22 +257,27 @@ async function main() {
         route: '/login',
         name: 'Login',
         kind: 'login_stuck',
-        detail: `Still on ${page.url()} after Sign In`,
+        detail: `Still on ${page.url()} after Enter Studio`,
         url: page.url(),
       });
     } else {
       console.log(`Login OK → ${page.url()}`);
     }
   } catch (err) {
+    const toastText = await page
+      .locator('[data-sonner-toast], [role="status"], .destructive')
+      .allInnerTexts()
+      .then((t) => t.join(' | ').slice(0, 300))
+      .catch(() => '');
     report.issues.push({
       severity: 'critical',
       route: '/login',
       name: 'Login',
       kind: 'login_failed',
-      detail: String(err?.message || err).slice(0, 400),
+      detail: `${String(err?.message || err).slice(0, 350)}${toastText ? ` | UI: ${toastText}` : ''}`,
       url: page.url(),
     });
-    console.error('Login failed:', err?.message || err);
+    console.error('Login failed:', err?.message || err, toastText);
   }
 
   // Screenshot after login attempt

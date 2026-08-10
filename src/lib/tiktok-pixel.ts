@@ -34,6 +34,9 @@ export function isTikTokPixelEnabled(): boolean {
   return isTikTokPixelEnabledForBuild();
 }
 
+/** Fired after the cookie banner is accepted so deferred tours can start. */
+export const COOKIE_CONSENT_CHANGED_EVENT = 'b4b-cookie-consent-changed';
+
 export function hasMarketingCookieConsent(): boolean {
   if (typeof window === 'undefined') return false;
   try {
@@ -41,6 +44,11 @@ export function hasMarketingCookieConsent(): boolean {
   } catch {
     return false;
   }
+}
+
+export function dispatchCookieConsentChanged() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(COOKIE_CONSENT_CHANGED_EVENT));
 }
 
 /** No-op — base code loads from layout head; kept for cookie banner hook. */

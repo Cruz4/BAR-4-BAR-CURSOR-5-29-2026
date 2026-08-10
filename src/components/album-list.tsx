@@ -135,6 +135,10 @@ import {
   queueStudioPrivacyIntro,
   setVaultTourRunning,
 } from '@/lib/studio-privacy-intro';
+import {
+  COOKIE_CONSENT_CHANGED_EVENT,
+  hasMarketingCookieConsent,
+} from '@/lib/tiktok-pixel';
 import { getEditableAlbumIds, getEditableTrackIds, needsFreeEditableTrackPicker } from '@/lib/tier-limits';
 import type { User } from '@/lib/types';
 import { VisitorVaultBanner } from '@/components/visitor-vault-banner';
@@ -607,16 +611,36 @@ export function AlbumList() {
     // FirstSongHero empty-vault auto-open — don't start vault tour mid-handoff.
     if (albums.length === 0) return;
 
-    vaultTourAutoStartRef.current = true;
-    setVaultTourRunning(true);
+    let cancelled = false;
+    let activateTimer = 0;
+    let armed = false;
     let activated = false;
-    const t = setTimeout(() => {
-      activated = true;
-      setVaultTourActive(true);
-    }, 1000);
+
+    const tryStart = () => {
+      if (cancelled || vaultTourAutoStartRef.current || armed) return;
+      if (!hasMarketingCookieConsent()) return;
+      // Re-check handoff in case it flipped while waiting on cookie consent.
+      try {
+        if (sessionStorage.getItem('b4b-demo-handoff-inflight') === '1') return;
+      } catch {
+        /* ignore */
+      }
+      armed = true;
+      vaultTourAutoStartRef.current = true;
+      setVaultTourRunning(true);
+      activateTimer = window.setTimeout(() => {
+        activated = true;
+        if (!cancelled) setVaultTourActive(true);
+      }, 1000);
+    };
+
+    tryStart();
+    window.addEventListener(COOKIE_CONSENT_CHANGED_EVENT, tryStart);
     return () => {
-      clearTimeout(t);
-      if (!activated) setVaultTourRunning(false);
+      cancelled = true;
+      window.removeEventListener(COOKIE_CONSENT_CHANGED_EVENT, tryStart);
+      if (activateTimer) window.clearTimeout(activateTimer);
+      if (armed && !activated) setVaultTourRunning(false);
     };
   }, [user, pathname, loading, authLoading, albums.length]);
 

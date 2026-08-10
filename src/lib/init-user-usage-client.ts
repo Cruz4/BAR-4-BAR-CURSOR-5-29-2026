@@ -8,7 +8,7 @@ const inflightByUid = new Map<string, Promise<boolean>>();
 /** Bootstrap welcome Ink + monthly grants — prefers fresh ID token after email verify. */
 export async function syncUserUsageBootstrap(forceRefresh = false): Promise<boolean> {
   const user = auth.currentUser;
-  if (!user) return false;
+  if (!user?.uid) return false;
 
   const userId = user.uid;
   const existing = inflightByUid.get(userId);
@@ -16,6 +16,7 @@ export async function syncUserUsageBootstrap(forceRefresh = false): Promise<bool
 
   const run = (async () => {
     const idToken = await user.getIdToken(forceRefresh);
+    if (!idToken) return false;
 
     try {
       const res = await fetch('/api/usage/init', {

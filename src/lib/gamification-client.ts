@@ -95,6 +95,7 @@ export async function patchGamificationSettings(settings: {
 }
 
 export async function fetchGamificationSummary(userId: string): Promise<GamificationSummary | null> {
+  if (!userId?.trim()) return null;
   try {
     const { token } = await authHeaders();
     const res = await fetch(`/api/gamification/summary?userId=${encodeURIComponent(userId)}`, {

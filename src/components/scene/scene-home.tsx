@@ -60,6 +60,10 @@ import {
   queueStudioPrivacyIntro,
   setVaultTourRunning,
 } from '@/lib/studio-privacy-intro';
+import {
+  COOKIE_CONSENT_CHANGED_EVENT,
+  hasMarketingCookieConsent,
+} from '@/lib/tiktok-pixel';
 import { postGamificationEvent } from '@/lib/gamification-client';
 
 function SceneComposer({
@@ -257,20 +261,35 @@ export function SceneHome() {
     return () => window.removeEventListener(REPLAY_SCENE_TOUR_EVENT, onReplay);
   }, []);
 
-  // First-visit auto-start once the feed has painted.
+  // First-visit auto-start once the feed has painted — after cookie consent so banners don't stack.
   useEffect(() => {
     if (!user || authLoading || !loaded || tourAutoStartRef.current) return;
     if (user.sceneTutorialCompletedAt) return;
-    tourAutoStartRef.current = true;
-    setVaultTourRunning(true);
+
+    let cancelled = false;
+    let activateTimer = 0;
+    let armed = false;
     let activated = false;
-    const t = setTimeout(() => {
-      activated = true;
-      setTourActive(true);
-    }, 1000);
+
+    const tryStart = () => {
+      if (cancelled || tourAutoStartRef.current || armed) return;
+      if (!hasMarketingCookieConsent()) return;
+      armed = true;
+      tourAutoStartRef.current = true;
+      setVaultTourRunning(true);
+      activateTimer = window.setTimeout(() => {
+        activated = true;
+        if (!cancelled) setTourActive(true);
+      }, 1000);
+    };
+
+    tryStart();
+    window.addEventListener(COOKIE_CONSENT_CHANGED_EVENT, tryStart);
     return () => {
-      clearTimeout(t);
-      if (!activated) setVaultTourRunning(false);
+      cancelled = true;
+      window.removeEventListener(COOKIE_CONSENT_CHANGED_EVENT, tryStart);
+      if (activateTimer) window.clearTimeout(activateTimer);
+      if (armed && !activated) setVaultTourRunning(false);
     };
   }, [user, authLoading, loaded]);
 
