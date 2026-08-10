@@ -402,7 +402,7 @@ function GuestPressingLandingInner() {
       </div>
 
       {/* Full Artist Home — same composition as a real profile */}
-      <div className="pb-[min(28vh,11.5rem)] pt-[6.5rem] sm:pb-[min(42vh,22rem)] sm:pt-[7.25rem]">
+      <div className="pb-[min(30vh,13.5rem)] pt-[6.5rem] sm:pb-[min(42vh,22rem)] sm:pt-[7.25rem]">
         <ArtistHome
           profile={profile}
           config={config}
@@ -614,7 +614,7 @@ function GuestPressingLandingInner() {
                 aria-label="The Pressing — skins this page"
                 className={cn(
                   'resize-none border-white/15 bg-black/50 text-sm leading-snug transition-shadow',
-                  'h-8 min-h-8 max-h-8 overflow-y-auto py-1.5 sm:h-auto sm:min-h-[2.75rem] sm:max-h-none sm:overflow-visible sm:py-2',
+                  'h-[3.25rem] min-h-[3.25rem] max-h-[3.25rem] overflow-hidden py-1.5 sm:h-auto sm:min-h-[2.75rem] sm:max-h-none sm:overflow-visible sm:py-2',
                   pressingPulse && 'ring-2 ring-primary/70 shadow-[0_0_24px_rgba(59,130,246,0.35)]'
                 )}
               />
