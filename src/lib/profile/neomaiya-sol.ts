@@ -5,8 +5,8 @@
 export const NEOMAIYA_SOL = {
   email: 'neomaiyasol@gmail.com',
   displayName: 'Neomaiya Sol',
-  /** Best-effort public slug when live profile isn't resolved yet. */
-  slug: 'neomaiya-sol',
+  /** Canonical live Artist Home slug (bar4bar.ink/profile/…). */
+  slug: 'neomaiya-sol-paQXxm',
 } as const;
 
 /** Guestbook lines Neo leaves on new / guest profiles (no dashes). */

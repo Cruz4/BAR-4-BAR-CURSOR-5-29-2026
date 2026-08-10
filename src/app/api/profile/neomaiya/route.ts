@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuth, getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
 import { NEOMAIYA_SOL } from '@/lib/profile/neomaiya-sol';
+import { resolveNeomaiyaPublicSlug } from '@/lib/server/neomaiya-profile';
 
 export const runtime = 'nodejs';
 
@@ -28,37 +29,8 @@ export async function GET() {
     }
 
     const displayName = neo.displayName?.trim() || NEOMAIYA_SOL.displayName;
-    let slug: string = NEOMAIYA_SOL.slug;
-    try {
-      const gamSnap = await db.doc(`users/${neo.uid}/gamification/summary`).get();
-      const fromSummary = gamSnap.data()?.profileSlug;
-      if (typeof fromSummary === 'string' && fromSummary.trim()) {
-        slug = fromSummary.trim();
-      }
-    } catch {
-      /* keep fallback slug */
-    }
-
-    // Prefer a publicProfiles doc that actually exists for this user.
-    try {
-      const byUser = await db
-        .collection('publicProfiles')
-        .where('userId', '==', neo.uid)
-        .limit(1)
-        .get();
-      if (!byUser.empty) {
-        slug = byUser.docs[0].id;
-      } else {
-        const exact = await db.doc(`publicProfiles/${slug}`).get();
-        if (!exact.exists) {
-          return NextResponse.json({ slug: NEOMAIYA_SOL.slug, displayName });
-        }
-      }
-    } catch {
-      /* keep slug from summary */
-    }
-
-    return NextResponse.json({ slug, displayName });
+    const slug = await resolveNeomaiyaPublicSlug(db, neo.uid);
+    return NextResponse.json({ slug, displayName, userId: neo.uid });
   } catch (err) {
     console.warn('[profile/neomaiya]', err);
     return NextResponse.json(fallback);
