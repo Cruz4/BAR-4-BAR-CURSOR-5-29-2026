@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import type { MouseEvent } from 'react';
 import { cn } from '@/lib/utils';
 import { APP_NAME, APP_TAGLINE, BRAND_ARIA_LABEL } from '@/lib/brand';
 
@@ -9,6 +10,8 @@ type BrandLockupProps = {
   className?: string;
   linkHref?: string;
   titleTag?: 'span' | 'h1';
+  /** Optional click (e.g. scroll-to-top when already on home). */
+  onLinkClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
 };
 
 export function BrandLockup({
@@ -16,6 +19,7 @@ export function BrandLockup({
   className,
   linkHref,
   titleTag = 'span',
+  onLinkClick,
 }: BrandLockupProps) {
   const isMarketing = variant === 'marketing';
   const TitleTag = titleTag;
@@ -66,6 +70,7 @@ export function BrandLockup({
     return (
       <Link
         href={linkHref}
+        onClick={onLinkClick}
         className={cn('group flex min-w-0 max-w-full', className)}
         aria-label={BRAND_ARIA_LABEL}
       >

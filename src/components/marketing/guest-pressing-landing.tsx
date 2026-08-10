@@ -334,7 +334,21 @@ function GuestPressingLandingInner() {
       </Dialog>
 
       <header className="fixed top-0 left-0 right-0 z-[200] flex h-14 items-center justify-between gap-2 border-b border-white/[0.06] bg-background/55 px-3 backdrop-blur-xl sm:h-16 sm:px-6">
-        <BrandLockup variant="marketing" titleTag="h1" linkHref="/" className="max-w-[10rem] sm:max-w-none" />
+        <BrandLockup
+          variant="marketing"
+          titleTag="h1"
+          linkHref="/"
+          className="max-w-[10rem] sm:max-w-none"
+          onLinkClick={(e) => {
+            // Already on the landing — scroll the page shell to top (same-route Link is a no-op).
+            e.preventDefault();
+            const shell = e.currentTarget.closest('main') || document.documentElement;
+            if ('scrollTo' in shell) {
+              (shell as HTMLElement).scrollTo({ top: 0, behavior: 'smooth' });
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
         <nav className="flex shrink-0 items-center gap-2 sm:gap-4">
           <Link
             href="/pricing"

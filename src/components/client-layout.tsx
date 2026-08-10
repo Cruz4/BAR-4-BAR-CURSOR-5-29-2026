@@ -89,6 +89,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const isSettingsRoute = pathname === '/usage' || pathname.startsWith('/usage/') || pathname === '/admin';
   const showAppHeader =
     !isMarketingShell && !isPerformPage && !isSharePage && !isPublicProfilePage && !isMarketingCapture;
+  // Public home / login / profile / share need document scroll — overflow-hidden
+  // traps the Pressing landing and makes the brand mark feel dead.
+  const allowPageScroll =
+    isMarketingShell || isPublicProfilePage || isSharePage || isMarketingCapture;
 
   return (
     <InviteGateGuard>
@@ -107,7 +111,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
               ) : (
                 <StudioPageBackground />
               )}
-              <div className="relative z-10 flex min-h-screen flex-col flex-1 overflow-hidden">
+              <div
+                className={cn(
+                  'relative z-10 flex min-h-screen flex-col flex-1',
+                  allowPageScroll ? 'overflow-x-hidden overflow-y-auto' : 'overflow-hidden'
+                )}
+              >
                 {showAppHeader && <Header />}
                 {showAppHeader && <EmailVerificationBanner />}
                 {showAppHeader && <ProFeaturePreviewBanner />}
@@ -115,7 +124,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 <main
                   className={cn(
                     'flex-1 flex flex-col',
-                    isPublicProfilePage || isSharePage ? 'overflow-y-auto' : 'overflow-hidden'
+                    allowPageScroll ? 'overflow-x-hidden overflow-y-auto' : 'overflow-hidden'
                   )}
                 >
                   {children}
