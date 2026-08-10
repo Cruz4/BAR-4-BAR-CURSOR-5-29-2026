@@ -25,6 +25,13 @@ export async function getArtistHomeConfig(userId: string): Promise<ArtistHomeCon
   return normalizeArtistHomeConfig(snap.data());
 }
 
+/** True when the artist has already persisted an Artist Home doc. */
+export async function hasPersistedArtistHomeConfig(userId: string): Promise<boolean> {
+  const db = await getDb();
+  const snap = await db.doc(CONFIG_DOC(userId)).get();
+  return snap.exists;
+}
+
 export async function saveArtistHomeConfig(
   userId: string,
   config: ArtistHomeConfig

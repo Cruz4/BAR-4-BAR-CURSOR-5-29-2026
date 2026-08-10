@@ -24,7 +24,7 @@ export default function TryRedirectInner() {
       return;
     }
     if (!isGuestTrySheetEnabled()) {
-      router.replace(`/welcome${suffix}`);
+      router.replace(qs ? `/?${qs}` : '/');
       return;
     }
     router.replace(`${GUEST_TRY_PATH}${suffix}`);

@@ -1,9 +1,10 @@
 /**
  * The Pressing — Living Field composition engine.
  *
- * Each Artist Home is a unique stack of visual layers (grooves, wells, ribbons,
- * mesh, ghosts, curtains, facets, ripples, arcs, motes, blade, film). Seed ×
- * faders pick which layers + their geometry — vast combination space.
+ * Each Artist Home is a unique stack of visual layers from a 24-kind vocabulary
+ * (classic groove/mesh/ghost stack + futuristic lattice, beams, orbitals, scan,
+ * constellation, prisms, aurora, horizon, signal, spires, nova, circuit).
+ * Seed × faders pick which layers + their geometry — vast combination space.
  *
  * Hue is locked to the seed. Scroll drives parallax / phase only — never recolor.
  * Pure + client-safe.
@@ -49,7 +50,19 @@ export type FieldLayerKind =
   | 'arcs'
   | 'motes'
   | 'blade'
-  | 'film';
+  | 'film'
+  | 'lattice'
+  | 'beams'
+  | 'orbitals'
+  | 'scan'
+  | 'constellation'
+  | 'prisms'
+  | 'aurora'
+  | 'horizon'
+  | 'signal'
+  | 'spires'
+  | 'nova'
+  | 'circuit';
 
 export type FieldLayer =
   | {
@@ -118,6 +131,83 @@ export type FieldLayer =
       depth: number;
       side: 'left' | 'right' | 'both';
       opacity: number;
+    }
+  | {
+      kind: 'lattice';
+      depth: number;
+      cells: Array<{ cx: number; cy: number; r: number; opacity: number }>;
+    }
+  | {
+      kind: 'beams';
+      depth: number;
+      focus: { x: number; y: number };
+      rays: Array<{ angle: number; length: number; width: number; opacity: number }>;
+    }
+  | {
+      kind: 'orbitals';
+      depth: number;
+      cx: number;
+      cy: number;
+      rings: Array<{ r: number; opacity: number }>;
+      nodes: Array<{ angle: number; orbit: number; size: number; opacity: number }>;
+      spinSec: number;
+    }
+  | {
+      kind: 'scan';
+      depth: number;
+      lineCount: number;
+      opacity: number;
+      sweepOpacity: number;
+      periodSec: number;
+    }
+  | {
+      kind: 'constellation';
+      depth: number;
+      stars: Array<{ x: number; y: number; r: number; opacity: number }>;
+      edges: Array<{ d: string; opacity: number }>;
+    }
+  | {
+      kind: 'prisms';
+      depth: number;
+      shards: Array<{ points: string; opacity: number }>;
+    }
+  | {
+      kind: 'aurora';
+      depth: number;
+      bands: Array<{ x: number; width: number; opacity: number; skew: number }>;
+    }
+  | {
+      kind: 'horizon';
+      depth: number;
+      vanishY: number;
+      rows: number;
+      cols: number;
+      opacity: number;
+    }
+  | {
+      kind: 'signal';
+      depth: number;
+      traces: Array<{ d: string; opacity: number; width: number }>;
+    }
+  | {
+      kind: 'spires';
+      depth: number;
+      needles: Array<{ x: number; height: number; width: number; opacity: number }>;
+    }
+  | {
+      kind: 'nova';
+      depth: number;
+      cx: number;
+      cy: number;
+      rays: number;
+      opacity: number;
+      spinSec: number;
+    }
+  | {
+      kind: 'circuit';
+      depth: number;
+      traces: Array<{ d: string; opacity: number }>;
+      nodes: Array<{ x: number; y: number; r: number; opacity: number }>;
     };
 
 export type PressingTokens = {
@@ -171,7 +261,22 @@ const ALL_KINDS: FieldLayerKind[] = [
   'motes',
   'blade',
   'film',
+  'lattice',
+  'beams',
+  'orbitals',
+  'scan',
+  'constellation',
+  'prisms',
+  'aurora',
+  'horizon',
+  'signal',
+  'spires',
+  'nova',
+  'circuit',
 ];
+
+/** Accent-only stacks feel empty — force a body layer if we landed here. */
+const ACCENT_ONLY = new Set<FieldLayerKind>(['film', 'blade', 'scan', 'motes', 'spires']);
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
@@ -253,7 +358,7 @@ function groovePathAtRadius(
 }
 
 function pickLayerKinds(hash: number): FieldLayerKind[] {
-  // 2–4 distinct layers from 12 kinds → C(12,2)+…+C(12,4) × order variants ≈ huge space
+  // 2–4 distinct layers from 24 kinds → combination space ~8× the prior 12-kind pool
   const count = 2 + ((hash >>> 3) % 3);
   const pool = [...ALL_KINDS];
   const picked: FieldLayerKind[] = [];
@@ -264,8 +369,7 @@ function pickLayerKinds(hash: number): FieldLayerKind[] {
     picked.push(pool[idx]);
     pool.splice(idx, 1);
   }
-  // Always include at least one "body" layer if we somehow got only film
-  if (picked.length && picked.every((k) => k === 'film' || k === 'blade')) {
+  if (picked.length && picked.every((k) => ACCENT_ONLY.has(k))) {
     (picked as FieldLayerKind[])[0] = 'grooves';
   }
   return picked;
@@ -426,6 +530,191 @@ function buildLayer(
         angle: ((hash >>> 6) % 160) - 30,
         opacity: Number((0.08 + faders.heat * 0.0007).toFixed(3)),
       };
+    case 'lattice': {
+      const cells: Array<{ cx: number; cy: number; r: number; opacity: number }> = [];
+      const cols = 4 + ((hash >>> 3) % 3);
+      const rows = 3 + ((hash >>> 5) % 3);
+      const r = 5.5 + ((hash >>> 7) % 4);
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const offset = row % 2 === 0 ? 0 : r * 0.9;
+          cells.push({
+            cx: 8 + offset + col * ((84 - offset) / Math.max(cols - 1, 1)),
+            cy: 12 + row * (76 / Math.max(rows - 1, 1)),
+            r,
+            opacity: Number((0.05 + ((hash >>> (col + row * 3)) % 10) / 100).toFixed(3)),
+          });
+        }
+      }
+      return { kind, depth, cells };
+    }
+    case 'beams': {
+      const focus = {
+        x: 20 + ((hash >>> 4) % 60),
+        y: 8 + ((hash >>> 8) % 30),
+      };
+      const count = 5 + ((hash >>> 2) % 6);
+      const rays = Array.from({ length: count }, (_, i) => ({
+        angle: -70 + i * (140 / Math.max(count - 1, 1)) + (((hash >>> i) % 9) - 4),
+        length: 55 + ((hash >>> (i + 3)) % 35),
+        width: Number((1.2 + ((hash >>> (i * 2)) % 8) * 0.35).toFixed(2)),
+        opacity: Number((0.06 + ((hash >>> (i + 5)) % 10) / 100).toFixed(3)),
+      }));
+      return { kind, depth, focus, rays };
+    }
+    case 'orbitals': {
+      const cx = 42 + ((hash >>> 4) % 16);
+      const cy = 40 + ((hash >>> 6) % 14);
+      const rings = Array.from({ length: 3 + ((hash >>> 3) % 3) }, (_, i) => ({
+        r: 10 + i * 9 + ((hash >>> (i + 2)) % 4),
+        opacity: Number((0.08 + i * 0.03).toFixed(3)),
+      }));
+      const nodes = Array.from({ length: 4 + ((hash >>> 5) % 5) }, (_, i) => ({
+        angle: ((hash >>> (i * 4)) % 360) + i * 37,
+        orbit: rings[i % rings.length]?.r ?? 18,
+        size: 0.6 + ((hash >>> (i + 1)) % 8) / 10,
+        opacity: Number((0.12 + ((hash >>> i) % 10) / 100).toFixed(3)),
+      }));
+      return {
+        kind,
+        depth,
+        cx,
+        cy,
+        rings,
+        nodes,
+        spinSec: Number(clamp(breathSec * 2.2, 10, 28).toFixed(2)),
+      };
+    }
+    case 'scan':
+      return {
+        kind,
+        depth,
+        lineCount: 18 + ((hash >>> 4) % 14),
+        opacity: Number((0.04 + faders.grain * 0.0005).toFixed(3)),
+        sweepOpacity: Number((0.1 + faders.heat * 0.0006).toFixed(3)),
+        periodSec: Number(clamp(breathSec * 1.1, 4, 14).toFixed(2)),
+      };
+    case 'constellation': {
+      const count = 6 + ((hash >>> 3) % 6);
+      const stars = Array.from({ length: count }, (_, i) => ({
+        x: 8 + ((hash >>> (i * 5)) % 84),
+        y: 10 + ((hash >>> (i * 7 + 2)) % 72),
+        r: 0.35 + ((hash >>> (i * 2)) % 10) / 12,
+        opacity: Number((0.12 + ((hash >>> i) % 12) / 100).toFixed(3)),
+      }));
+      const edges: Array<{ d: string; opacity: number }> = [];
+      for (let i = 0; i < stars.length - 1; i++) {
+        if (((hash >>> (i + 9)) % 3) === 0) continue;
+        const a = stars[i];
+        const b = stars[(i + 1 + ((hash >>> i) % 2)) % stars.length];
+        edges.push({
+          d: `M ${a.x} ${a.y} L ${b.x} ${b.y}`,
+          opacity: Number((0.06 + (i % 3) * 0.02).toFixed(3)),
+        });
+      }
+      return { kind, depth, stars, edges };
+    }
+    case 'prisms': {
+      const count = 3 + ((hash >>> 4) % 4);
+      const shards = Array.from({ length: count }, (_, i) => {
+        const cx = 15 + ((hash >>> (i * 5)) % 70);
+        const cy = 12 + ((hash >>> (i * 6 + 1)) % 60);
+        const len = 14 + ((hash >>> (i * 3)) % 18);
+        const w = 3 + ((hash >>> (i * 2)) % 5);
+        const a = (((hash >>> (i * 4)) % 360) * Math.PI) / 180;
+        const tipX = cx + Math.cos(a) * len;
+        const tipY = cy + Math.sin(a) * len;
+        const ox = Math.cos(a + Math.PI / 2) * w;
+        const oy = Math.sin(a + Math.PI / 2) * w;
+        return {
+          points: `${cx.toFixed(1)},${cy.toFixed(1)} ${(tipX + ox).toFixed(1)},${(tipY + oy).toFixed(1)} ${(tipX - ox).toFixed(1)},${(tipY - oy).toFixed(1)}`,
+          opacity: Number((0.05 + i * 0.02).toFixed(3)),
+        };
+      });
+      return { kind, depth, shards };
+    }
+    case 'aurora': {
+      const count = 3 + ((hash >>> 5) % 3);
+      const bands = Array.from({ length: count }, (_, i) => ({
+        x: 10 + i * 22 + ((hash >>> (i * 3)) % 12),
+        width: 14 + ((hash >>> (i * 2)) % 16) + faders.heat * 0.06,
+        opacity: Number((0.07 + ((hash >>> (i + 4)) % 10) / 100).toFixed(3)),
+        skew: (((hash >>> (i * 5)) % 24) - 12) / 2,
+      }));
+      return { kind, depth, bands };
+    }
+    case 'horizon':
+      return {
+        kind,
+        depth,
+        vanishY: 28 + ((hash >>> 6) % 18),
+        rows: 6 + ((hash >>> 3) % 5),
+        cols: 8 + ((hash >>> 5) % 6),
+        opacity: Number((0.07 + faders.grain * 0.0004).toFixed(3)),
+      };
+    case 'signal': {
+      const count = 2 + ((hash >>> 4) % 3);
+      const traces = Array.from({ length: count }, (_, i) => {
+        const y = 28 + i * 22 + ((hash >>> (i * 2)) % 8);
+        const amp = 4 + ((hash >>> (i + 3)) % 8) + faders.pace * 0.04;
+        const pts: string[] = [];
+        for (let x = 0; x <= 100; x += 4) {
+          const wave =
+            Math.sin((x / 100) * Math.PI * (3 + (hash % 4)) + i) * amp +
+            Math.sin((x / 100) * Math.PI * 7 + ((hash >>> i) % 5)) * (amp * 0.35);
+          pts.push(`${x} ${(y + wave).toFixed(2)}`);
+        }
+        return {
+          d: `M ${pts.join(' L ')}`,
+          opacity: Number((0.1 + i * 0.04).toFixed(3)),
+          width: Number((0.35 + ((hash >>> i) % 5) * 0.08).toFixed(2)),
+        };
+      });
+      return { kind, depth, traces };
+    }
+    case 'spires': {
+      const count = 7 + ((hash >>> 3) % 8);
+      const needles = Array.from({ length: count }, (_, i) => ({
+        x: 4 + i * (92 / Math.max(count - 1, 1)) + (((hash >>> i) % 5) - 2),
+        height: 18 + ((hash >>> (i * 3)) % 55) + faders.ink * 0.12,
+        width: Number((0.35 + ((hash >>> (i + 2)) % 6) * 0.12).toFixed(2)),
+        opacity: Number((0.06 + ((hash >>> (i + 4)) % 10) / 100).toFixed(3)),
+      }));
+      return { kind, depth, needles };
+    }
+    case 'nova':
+      return {
+        kind,
+        depth,
+        cx: 40 + ((hash >>> 5) % 20),
+        cy: 32 + ((hash >>> 7) % 24),
+        rays: 10 + ((hash >>> 3) % 10),
+        opacity: Number((0.07 + faders.heat * 0.0005).toFixed(3)),
+        spinSec: Number(clamp(48 - faders.pace * 0.22, 16, 48).toFixed(2)),
+      };
+    case 'circuit': {
+      const count = 4 + ((hash >>> 4) % 5);
+      const traces: Array<{ d: string; opacity: number }> = [];
+      const nodes: Array<{ x: number; y: number; r: number; opacity: number }> = [];
+      for (let i = 0; i < count; i++) {
+        const x0 = 8 + ((hash >>> (i * 5)) % 40);
+        const y0 = 10 + ((hash >>> (i * 6 + 1)) % 70);
+        const x1 = x0 + 12 + ((hash >>> (i * 3)) % 30);
+        const y1 = y0 + (((hash >>> (i + 2)) % 2 === 0 ? 1 : -1) * (8 + ((hash >>> i) % 18)));
+        const x2 = Math.min(96, x1 + 10 + ((hash >>> (i * 4)) % 22));
+        traces.push({
+          d: `M ${x0} ${y0} H ${x1} V ${y1} H ${x2}`,
+          opacity: Number((0.08 + (i % 3) * 0.03).toFixed(3)),
+        });
+        nodes.push(
+          { x: x0, y: y0, r: 0.7, opacity: 0.18 },
+          { x: x1, y: y0, r: 0.55, opacity: 0.14 },
+          { x: x1, y: y1, r: 0.55, opacity: 0.14 },
+          { x: x2, y: y1, r: 0.7, opacity: 0.16 }
+        );
+      }
+      return { kind, depth, traces, nodes };
+    }
     case 'film':
     default:
       return {

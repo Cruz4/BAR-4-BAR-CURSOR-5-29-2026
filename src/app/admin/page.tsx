@@ -49,6 +49,7 @@ import { StudioLoader } from '@/components/studio-loader';
 import { AdminMetricsTab } from '@/components/admin-metrics-tab';
 import { AdminAchievementsTab } from '@/components/admin-achievements-tab';
 import { AdminInviteGateCard } from '@/components/admin-invite-gate-card';
+import { AdminLockFeatureCard } from '@/components/admin-lock-feature-card';
 import type { AdminGamificationRosterEntry } from '@/lib/gamification/admin-roster-types';
 import { format } from 'date-fns';
 import { formatUserJoinDate, userDateSortValue } from '@/lib/user-date';
@@ -820,6 +821,7 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="config" className="space-y-8">
+            <AdminLockFeatureCard />
             <AdminInviteGateCard />
             <Card className="bg-card border-2 shadow-2xl">
                 <CardHeader className="border-b"><CardTitle className="font-headline text-2xl uppercase">Global Task Economics</CardTitle></CardHeader>

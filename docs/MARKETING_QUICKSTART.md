@@ -10,6 +10,8 @@
 
 ## Positioning (copy/paste everywhere)
 
+**Bar 4 Bar** — your Scene, your studio, and a shareable Artist Home. Bar-by-bar rhyme book + AI co-writer (not full-song ChatGPT dumps). Guest home is a live **Pressing** playground; writing demo sits at `/try`.
+
 > Bar 4 Bar is the rhyme book + co-writer for rappers and songwriters who think in **bars**—not paragraphs.
 
 **Bio line 1:** Rhyme book + AI co-writer for rappers & songwriters  

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { listRecentOpenLocks } from '@/lib/server/lock';
-import { isLockEnabled } from '@/lib/lock-feature';
+import { isLockFeatureEnabled } from '@/lib/server/lock-feature';
 import {
   listLeaderboardRisers,
   listRecentPublicPosts,
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
         excludeOwnerId: excludeUserId,
       }),
       listLeaderboardRisers({ limit: 5, excludeUserId }),
-      isLockEnabled()
+      (await isLockFeatureEnabled())
         ? listRecentOpenLocks(viewAll ? 12 : 6).catch(() => [])
         : Promise.resolve([]),
     ]);

@@ -20,6 +20,17 @@ export async function fetchArtistHomeConfig(): Promise<ArtistHomeConfig> {
   return normalizeArtistHomeConfig(data.config);
 }
 
+/** Whether this user already has a saved Artist Home config doc. */
+export async function fetchArtistHomePersisted(): Promise<boolean> {
+  const { user, token } = await authHeaders();
+  const res = await fetch(`/api/profile/config?userId=${encodeURIComponent(user.uid)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('Failed to load profile config');
+  const data = await res.json();
+  return Boolean(data.persisted);
+}
+
 export async function saveArtistHomeConfigClient(
   config: ArtistHomeConfig
 ): Promise<ArtistHomeConfig> {

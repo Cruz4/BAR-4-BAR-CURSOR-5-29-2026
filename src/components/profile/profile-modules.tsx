@@ -6,7 +6,7 @@
  * artist's world on Bar4Bar.ink (share pages, DNA drops, the studio itself).
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   BookOpen,
@@ -14,7 +14,7 @@ import {
   Dna,
   DoorOpen,
   Fingerprint,
-  Fish,
+  LayoutGrid,
   Lock,
   PenLine,
   Quote,
@@ -30,7 +30,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import type { ArtistHomeFeatured, ModuleSize } from '@/lib/profile/modules';
 import { FingerprintSvg } from '@/components/profile/rhyme-fingerprint-svg';
-import { TheCatchGame } from '@/components/profile/the-catch-module';
+import { BarBoardView } from '@/components/profile/bar-board-module';
 import { parseEmbedUrl, EMBED_HELP_TEXT } from '@/lib/profile/embeds';
 import { EmbedPlayer } from '@/components/profile/embed-player';
 import { PostCard } from '@/components/profile/post-card';
@@ -79,6 +79,24 @@ export type ModuleContext = {
   moduleIndex: number;
   /** S/M/L from Edit Public Page — modules that care about density use this. */
   size: ModuleSize;
+  /**
+   * Guest Pressing playground — local Wall posts (no Firestore).
+   * When set, Wall uses these instead of fetching and allows posting via callback.
+   */
+  playgroundWall?: {
+    posts: ProfilePost[];
+    onPost: (input: { text: string; embedUrl?: string }) => void;
+    onDelete?: (id: string) => void;
+  };
+  /** Guest landing — local friends list (no Firestore). */
+  playgroundFriends?: Array<{ userId: string; name: string; slug?: string }>;
+  /** Guest landing — local guestbook entries (no Firestore). */
+  playgroundGuestbook?: GuestbookEntry[];
+  /** Guest Pressing playground — edit Bar of the Week on the page. */
+  playgroundBarOfWeek?: {
+    text: string;
+    onChange: (text: string) => void;
+  };
 };
 
 function ModuleShell({
@@ -133,21 +151,106 @@ export function NowPlayingModule({ ctx }: { ctx: ModuleContext }) {
 // Bar of the Week
 // ---------------------------------------------------------------------------
 
+/** Same look as the live quote — click to type (no input chrome). */
+function PlaygroundBarOfWeekQuote({
+  value,
+  onChange,
+  maxLength = 280,
+}: {
+  value: string;
+  onChange: (text: string) => void;
+  maxLength?: number;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const focusedRef = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || focusedRef.current) return;
+    if (el.textContent !== value) el.textContent = value;
+  }, [value]);
+
+  const commit = (raw: string) => {
+    const next = raw.replace(/\u00a0/g, ' ').slice(0, maxLength);
+    onChange(next);
+    return next;
+  };
+
+  return (
+    <blockquote className="font-headline text-[clamp(1.4rem,3.5vw,2.4rem)] leading-tight text-[var(--ph-text,#fff)]">
+      &ldquo;
+      <span
+        ref={ref}
+        role="textbox"
+        aria-label="Bar of the Week"
+        contentEditable
+        suppressContentEditableWarning
+        className={cn(
+          'cursor-text outline-none empty:inline-block empty:min-w-[0.6em]',
+          'focus-visible:rounded-sm focus-visible:ring-1 focus-visible:ring-[var(--ph-accent,#7dd3fc)]/50'
+        )}
+        onFocus={() => {
+          focusedRef.current = true;
+        }}
+        onBlur={() => {
+          focusedRef.current = false;
+          const next = commit(ref.current?.textContent || '');
+          if (ref.current && ref.current.textContent !== next) {
+            ref.current.textContent = next;
+          }
+        }}
+        onInput={() => {
+          const el = ref.current;
+          if (!el) return;
+          let raw = el.textContent || '';
+          if (raw.length > maxLength) {
+            raw = raw.slice(0, maxLength);
+            el.textContent = raw;
+            const range = document.createRange();
+            const sel = window.getSelection();
+            range.selectNodeContents(el);
+            range.collapse(false);
+            sel?.removeAllRanges();
+            sel?.addRange(range);
+          }
+          commit(raw);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.preventDefault();
+        }}
+        onPaste={(e) => {
+          e.preventDefault();
+          const pasted = e.clipboardData.getData('text/plain').replace(/\s+/g, ' ');
+          document.execCommand('insertText', false, pasted);
+        }}
+      />
+      &rdquo;
+    </blockquote>
+  );
+}
+
 export function BarOfWeekModule({ ctx }: { ctx: ModuleContext }) {
-  const bar = ctx.featured.barOfWeek;
-  if (!bar) return null;
+  const playground = ctx.playgroundBarOfWeek;
+  const bar = playground ? playground.text : ctx.featured.barOfWeek;
+  if (!playground && !bar) return null;
   return (
     <ModuleShell icon={Quote} title={"Bar of the Week"} ctx={ctx}>
-      <blockquote className="font-headline text-[clamp(1.4rem,3.5vw,2.4rem)] leading-tight text-[var(--ph-text,#fff)]">
-        &ldquo;{bar}&rdquo;
-      </blockquote>
-      {ctx.featured.barOfWeekShareId && (
-        <Link
-          href={`/share/${ctx.featured.barOfWeekShareId}`}
-          className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[var(--ph-accent,#7dd3fc)] hover:underline"
-        >
-          <DoorOpen className="h-3.5 w-3.5" /> Read it in the sheet
-        </Link>
+      {playground ? (
+        <PlaygroundBarOfWeekQuote value={playground.text} onChange={playground.onChange} />
+      ) : (
+        <>
+          <blockquote className="font-headline text-[clamp(1.4rem,3.5vw,2.4rem)] leading-tight text-[var(--ph-text,#fff)]">
+            &ldquo;{bar}&rdquo;
+          </blockquote>
+          {ctx.featured.barOfWeekShareId && (
+            <Link
+              href={`/share/${ctx.featured.barOfWeekShareId}`}
+              className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[var(--ph-accent,#7dd3fc)] hover:underline"
+            >
+              <DoorOpen className="h-3.5 w-3.5" /> Read it in the sheet
+            </Link>
+          )}
+        </>
       )}
     </ModuleShell>
   );
@@ -195,45 +298,45 @@ export function RhymeFingerprintModule({ ctx }: { ctx: ModuleContext }) {
 }
 
 // ---------------------------------------------------------------------------
-// The Catch
+// The Board
 // ---------------------------------------------------------------------------
 
-export function TheCatchModule({ ctx }: { ctx: ModuleContext }) {
-  const data = ctx.featured.theCatch;
-  if (!data?.links || data.links.length < 3) return null;
+export function BarBoardModule({ ctx }: { ctx: ModuleContext }) {
+  const data = ctx.featured.barBoard;
+  if (!data?.pins?.length) return null;
   return (
-    <ModuleShell icon={Fish} title={"The Catch"} ctx={ctx}>
-      <TheCatchGame
+    <ModuleShell icon={LayoutGrid} title="The Board" ctx={ctx}>
+      <BarBoardView
         data={data}
         profileUserId={ctx.profileUserId}
-        profileName={ctx.profileName}
+        viewerSlug={ctx.viewerSlug}
       />
     </ModuleShell>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Open LOCK
+// Finish this bar (Open LOCK)
 // ---------------------------------------------------------------------------
 
 export function OpenLockModule({ ctx }: { ctx: ModuleContext }) {
   const lockId = ctx.featured.openLockId;
   if (!lockId) {
     return (
-      <ModuleShell icon={Lock} title="Open LOCK" ctx={ctx}>
+      <ModuleShell icon={Lock} title="Finish this bar" ctx={ctx}>
         <p className="text-sm text-muted-foreground">
-          No live LOCK yet. Publish one from Edit Public Page when LOCK is enabled.
+          No live unfinished bar yet. Publish one from Edit Public Page when the feature is on.
         </p>
       </ModuleShell>
     );
   }
   return (
-    <ModuleShell icon={Lock} title="Open LOCK" ctx={ctx}>
+    <ModuleShell icon={Lock} title="Finish this bar" ctx={ctx}>
       <p className="text-sm text-muted-foreground mb-3">
-        Finish the unfinished bar — lock your echo into the bloodline.
+        Drop the next line on their unfinished bar — then keep writing in Studio.
       </p>
       <Button asChild className="w-full font-bold uppercase tracking-wide">
-        <Link href={`/lock/${lockId}`}>Enter LOCK</Link>
+        <Link href={`/lock/${lockId}`}>Finish this bar</Link>
       </Button>
     </ModuleShell>
   );
@@ -314,22 +417,49 @@ export function ProofWallModule({ ctx }: { ctx: ModuleContext }) {
 export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [posts, setPosts] = useState<ProfilePost[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const playground = ctx.playgroundWall;
+  const [posts, setPosts] = useState<ProfilePost[]>(playground?.posts || []);
+  const [loaded, setLoaded] = useState(Boolean(playground));
   const [text, setText] = useState('');
   const [embedUrl, setEmbedUrl] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (playground) {
+      setPosts(playground.posts);
+      setLoaded(true);
+      return;
+    }
     fetchPostsByOwner(ctx.profileUserId)
       .then(setPosts)
       .catch(() => undefined)
       .finally(() => setLoaded(true));
-  }, [ctx.profileUserId]);
+  }, [ctx.profileUserId, playground]);
 
   const embedPreview = useMemo(() => parseEmbedUrl(embedUrl), [embedUrl]);
+  const canCompose = Boolean(playground) || (ctx.isOwner && user);
 
   const submit = async () => {
+    if (playground) {
+      const clean = text.trim();
+      const link = embedUrl.trim();
+      if (!clean && !link) return;
+      if (link && !parseEmbedUrl(link)) {
+        toast({
+          variant: 'destructive',
+          title: 'Unsupported link',
+          description: EMBED_HELP_TEXT,
+        });
+        return;
+      }
+      playground.onPost({
+        text: clean,
+        ...(link ? { embedUrl: link.slice(0, 500) } : {}),
+      });
+      setText('');
+      setEmbedUrl('');
+      return;
+    }
     if (!user) return;
     setBusy(true);
     try {
@@ -353,18 +483,22 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
     }
   };
 
-  if (!ctx.isOwner && loaded && posts.length === 0) return null;
+  if (!canCompose && loaded && posts.length === 0) return null;
 
   return (
     <ModuleShell icon={PenLine} title={"The Wall"} ctx={ctx}>
-      {ctx.isOwner && (
+      {canCompose && (
         <div className={cn(inkWellClass, 'mb-5 space-y-2 p-4')}>
           <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             maxLength={1000}
             rows={2}
-            placeholder="Drop a thought, a release, a moment..."
+            placeholder={
+              playground
+                ? 'Try a wall post — claim your profile to keep it…'
+                : 'Drop a thought, a release, a moment...'
+            }
             className="border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 text-sm"
           />
           <Input
@@ -380,6 +514,11 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
             </p>
           )}
           {embedPreview && <EmbedPlayer url={embedUrl} />}
+          {playground ? (
+            <p className="text-[10px] text-[var(--ph-muted,rgba(255,255,255,0.5))]">
+              Demo wall — text and links stay here until you claim your free profile.
+            </p>
+          ) : null}
           <div className="flex justify-end">
             <Button
               size="sm"
@@ -395,14 +534,28 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
 
       <div className="space-y-4">
         {posts.map((post) => (
-          <PostCard
-            key={post.id}
-            post={post}
-            viewerSlug={ctx.viewerSlug}
-            onDeleted={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
-          />
+          <div key={post.id} className="relative">
+            <PostCard
+              post={post}
+              viewerSlug={ctx.viewerSlug}
+              onDeleted={
+                playground
+                  ? undefined
+                  : (id) => setPosts((prev) => prev.filter((p) => p.id !== id))
+              }
+            />
+            {playground?.onDelete ? (
+              <button
+                type="button"
+                className="absolute top-2 right-2 text-[10px] uppercase tracking-wider text-[var(--ph-muted)] hover:text-rose-400"
+                onClick={() => playground.onDelete?.(post.id)}
+              >
+                Remove
+              </button>
+            ) : null}
+          </div>
         ))}
-        {loaded && posts.length === 0 && ctx.isOwner && (
+        {loaded && posts.length === 0 && canCompose && (
           <p className="py-6 text-center text-sm text-[var(--ph-muted,rgba(255,255,255,0.55))]">
             Your wall is blank — post your first drop.
           </p>
@@ -417,15 +570,23 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
 // ---------------------------------------------------------------------------
 
 export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
-  const [friends, setFriends] = useState<Array<{ userId: string; name: string; slug?: string }>>([]);
-  const [loaded, setLoaded] = useState(false);
+  const playground = ctx.playgroundFriends;
+  const [friends, setFriends] = useState<Array<{ userId: string; name: string; slug?: string }>>(
+    playground || []
+  );
+  const [loaded, setLoaded] = useState(Boolean(playground));
 
   useEffect(() => {
+    if (playground) {
+      setFriends(playground);
+      setLoaded(true);
+      return;
+    }
     fetchFriendships(ctx.profileUserId, 'accepted')
       .then((list) => setFriends(friendProfilesOf(list, ctx.profileUserId)))
       .catch(() => undefined)
       .finally(() => setLoaded(true));
-  }, [ctx.profileUserId]);
+  }, [ctx.profileUserId, playground]);
 
   if (loaded && friends.length === 0) return null;
 
@@ -435,7 +596,7 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
       title={`Friends${friends.length ? ` · ${friends.length}` : ''}`}
       ctx={ctx}
       action={
-        ctx.isOwner ? (
+        ctx.isOwner && !playground ? (
           <Link
             href="/friends"
             className="text-[10px] font-bold uppercase tracking-widest text-[var(--ph-accent,#7dd3fc)] hover:underline"
@@ -476,21 +637,26 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
 export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [entries, setEntries] = useState<GuestbookEntry[]>([]);
+  const playground = ctx.playgroundGuestbook;
+  const [entries, setEntries] = useState<GuestbookEntry[]>(playground || []);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (playground) {
+      setEntries(playground);
+      return;
+    }
     fetchGuestbook(ctx.profileUserId)
       .then(setEntries)
       .catch(() => undefined);
-  }, [ctx.profileUserId]);
+  }, [ctx.profileUserId, playground]);
 
-  const canSign = Boolean(user && user.id !== ctx.profileUserId);
+  const canSign = !playground && Boolean(user && user.id !== ctx.profileUserId);
   const myEntry = user ? entries.find((e) => e.authorId === user.id) : undefined;
 
   const sign = async () => {
-    if (!user) return;
+    if (!user || playground) return;
     setBusy(true);
     try {
       const entry = await setGuestbookEntry(ctx.profileUserId, draft, {
@@ -538,7 +704,7 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
           </Button>
         </div>
       )}
-      {!user && (
+      {!user && !playground && (
         <p className="mb-4 text-xs text-[var(--ph-muted,rgba(255,255,255,0.55))]">
           <Link href="/login" className="text-[var(--ph-accent,#7dd3fc)] hover:underline">
             Sign in
@@ -546,6 +712,11 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
           to leave one line in the book.
         </p>
       )}
+      {playground ? (
+        <p className="mb-4 text-xs text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+          Guestbook preview — tap Neomaiya Sol to open her real Artist Home.
+        </p>
+      ) : null}
       <div className="space-y-2.5">
         {entries.slice(0, 20).map((entry) => (
           <div key={entry.id} className="flex items-start gap-2 text-sm">
@@ -564,7 +735,7 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
               )}
               <span className="italic text-[var(--ph-text,#fff)]/85">&ldquo;{entry.text}&rdquo;</span>
             </div>
-            {user?.id && (user.id === entry.authorId || ctx.isOwner) && (
+            {!playground && user?.id && (user.id === entry.authorId || ctx.isOwner) && (
               <button
                 type="button"
                 className="text-[var(--ph-muted,rgba(255,255,255,0.4))] hover:text-red-400"

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
+import { RefreshCw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SIGNUP_INK } from '@/lib/subscription';
 import { prepareGuestTrackForSignup } from '@/lib/guest-track-session';
@@ -16,10 +16,15 @@ import {
 type GuestTrySaveBannerProps = {
   /** Live remaining count from the editor after a gen (optional). */
   remainingOverride?: number | null;
+  /** Reshuffle Architect starter on bar 1 and clear bar 2. */
+  onNewStarter?: () => void;
 };
 
-/** Soft gate — write freely; demo AI is capped and separate from signup Ink. */
-export function GuestTrySaveBanner({ remainingOverride = null }: GuestTrySaveBannerProps) {
+/** Soft gate — finish the Architect starter; demo AI capped; signup saves. */
+export function GuestTrySaveBanner({
+  remainingOverride = null,
+  onNewStarter,
+}: GuestTrySaveBannerProps) {
   const searchParams = useSearchParams();
   const [remaining, setRemaining] = useState<number | null>(null);
 
@@ -84,11 +89,13 @@ export function GuestTrySaveBanner({ remainingOverride = null }: GuestTrySaveBan
               </>
             ) : (
               <>
-                <span className="font-bold text-emerald-200">Try sheet — no account yet.</span>{' '}
-                Write freely. <span className="text-emerald-100/90">Rhyme Pulse</span> is live & free.
+                <span className="font-bold text-emerald-200">Finish this bar</span>
+                {' — '}
+                deep Lyrical Architect starter on line 1. Drop yours on line 2.{' '}
+                <span className="text-emerald-100/90">Rhyme Pulse</span> is free.
                 {' '}
                 <span className="text-emerald-100/90">Generate Next</span> — up to {GUEST_DEMO_MAX_USES}{' '}
-                demo assists (not Ink). Other AI tools unlock after signup.
+                demo assists.
               </>
             )}
           </p>
@@ -99,15 +106,27 @@ export function GuestTrySaveBanner({ remainingOverride = null }: GuestTrySaveBan
               <>
                 <span className="text-emerald-300 font-bold">{left}</span> demo assist
                 {left === 1 ? '' : 's'} left
-                {' · '}Sign up → save + {SIGNUP_INK} Ink for the full studio
+                {' · '}Sign up → save + {SIGNUP_INK} Ink
               </>
             ) : (
-              <>Sign up to save this track and unlock {SIGNUP_INK} Ink for the full Co-Writer.</>
+              <>Sign up to save this track and unlock the full Co-Writer.</>
             )}
           </p>
         </div>
       </div>
       <div className="flex items-center gap-1.5 md:gap-2 shrink-0 self-stretch md:self-auto">
+        {onNewStarter && !outOfDemo ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 md:h-8 px-2 md:px-2.5 text-[9px] md:text-[10px] font-bold uppercase tracking-wide border-emerald-500/40 text-emerald-100 hover:bg-emerald-500/20 gap-1"
+            onClick={onNewStarter}
+          >
+            <RefreshCw className="h-3 w-3" />
+            New starter
+          </Button>
+        ) : null}
         <Button
           asChild
           size="sm"
@@ -122,7 +141,7 @@ export function GuestTrySaveBanner({ remainingOverride = null }: GuestTrySaveBan
           </Link>
         </Button>
         <Button asChild variant="ghost" size="sm" className="h-7 md:h-8 px-2 text-[9px] md:text-[10px] font-bold uppercase text-muted-foreground">
-          <Link href="/welcome">About</Link>
+          <Link href="/">Home</Link>
         </Button>
       </div>
     </div>

@@ -123,7 +123,7 @@ export function SceneDiscoverCard({ card, viewerSlug }: { card: DiscoverCard; vi
     const { lock } = card;
     return (
       <Card className="border-emerald-500/25 bg-gradient-to-r from-emerald-500/[0.07] via-card/85 to-card/70 p-4">
-        <DiscoverTag label="Open LOCK" icon={Lock} tone="text-emerald-400/90" />
+        <DiscoverTag label="Finish this bar" icon={Lock} tone="text-emerald-400/90" />
         <div className="mt-2.5 space-y-2">
           <p className="font-headline text-sm font-bold uppercase tracking-tight">
             {lock.ownerName}
@@ -131,7 +131,7 @@ export function SceneDiscoverCard({ card, viewerSlug }: { card: DiscoverCard; vi
           <p className="text-sm leading-snug text-foreground/90 line-clamp-2">“{lock.seedBar}”</p>
           <div className="flex items-center justify-between gap-2">
             <p className="font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
-              {lock.echoCount} echoes
+              {lock.echoCount} replies
               {lock.updatedAt ? ` · ${timeAgo(lock.updatedAt)}` : ''}
             </p>
             <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>

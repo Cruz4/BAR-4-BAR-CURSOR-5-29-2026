@@ -293,6 +293,20 @@ service cloud.firestore {
         && (request.auth.uid == authorUid || request.auth.uid == ownerUid || isAdmin());
     }
 
+    // The Board — one reply per visitor per pin (doc id == author uid)
+    match /boardReplies/{ownerUid}/pins/{pinId}/entries/{authorUid} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && request.auth.uid == authorUid
+        && request.auth.uid != ownerUid
+        && request.resource.data.authorId == authorUid
+        && request.resource.data.pinId == pinId
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 160;
+      allow delete: if request.auth != null
+        && (request.auth.uid == authorUid || request.auth.uid == ownerUid || isAdmin());
+    }
+
     match /leaderboard_weekly/{weekId} {
       allow read: if true;
       allow write: if false;
@@ -341,6 +355,14 @@ service cloud.firestore {
     }
 
     match /studio_landing_hits/{hitId} {
+      allow read, write: if false;
+    }
+
+    match /studio_lock_funnel_events/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /studio_guest_funnel_events/{eventId} {
       allow read, write: if false;
     }
   }

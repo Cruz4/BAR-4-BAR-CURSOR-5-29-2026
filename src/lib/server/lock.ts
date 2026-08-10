@@ -218,6 +218,41 @@ async function notifyLockAnswered(input: {
   }
 }
 
+/** Author or cast owner may remove a reply. Decrements echoCount; clears pick if needed. */
+export async function deleteEcho(input: {
+  lockId: string;
+  echoId: string;
+  requesterId: string;
+}): Promise<void> {
+  const lock = await getLock(input.lockId);
+  if (!lock) throw new Error('Cast not found');
+
+  const db = await getDb();
+  const echoRef = db.collection('locks').doc(lock.id).collection('echoes').doc(input.echoId);
+  const snap = await echoRef.get();
+  if (!snap.exists) throw new Error('Reply not found');
+
+  const data = (snap.data() || {}) as Record<string, unknown>;
+  const authorId = typeof data.authorId === 'string' ? data.authorId : null;
+  const isOwner = lock.ownerId === input.requesterId && lock.ownerId !== 'system';
+  const isAuthor = Boolean(authorId && authorId === input.requesterId);
+  if (!isOwner && !isAuthor) {
+    throw new Error('Only the writer or the casting artist can delete this reply');
+  }
+
+  const now = new Date().toISOString();
+  const batch = db.batch();
+  batch.delete(echoRef);
+  batch.update(db.collection('locks').doc(lock.id), {
+    echoCount: FieldValue.increment(-1),
+    updatedAt: now,
+    ...(lock.artistPickEchoId === input.echoId
+      ? { artistPickEchoId: FieldValue.delete() }
+      : {}),
+  });
+  await batch.commit();
+}
+
 export async function claimEchoAuthor(input: {
   lockId: string;
   echoId: string;
@@ -299,6 +334,25 @@ export async function createLock(input: {
   };
   await db.collection('locks').doc(id).set(doc);
   return { id, ...doc };
+}
+
+export async function closeLock(input: {
+  lockId: string;
+  ownerId: string;
+}): Promise<LockDoc> {
+  const lock = await getLock(input.lockId);
+  if (!lock) throw new Error('LOCK not found');
+  if (lock.ownerId !== input.ownerId) throw new Error('Only the casting artist can close this LOCK');
+  if (lock.isHouse || lock.ownerId === 'system') {
+    throw new Error('The house LOCK stays open — publish your own cast to close one');
+  }
+  const db = await getDb();
+  const now = new Date().toISOString();
+  await db.collection('locks').doc(lock.id).update({
+    status: 'closed',
+    updatedAt: now,
+  });
+  return { ...lock, status: 'closed', updatedAt: now };
 }
 
 export async function setArtistPick(input: {

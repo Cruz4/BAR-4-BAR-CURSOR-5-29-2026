@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { isLockEnabled, lockPath } from '@/lib/lock-feature';
+import { useLockFeature } from '@/hooks/use-lock-feature';
+import { lockPath } from '@/lib/lock-feature';
 import { auth } from '@/lib/firebase/client/firebase';
 import { useGamification } from '@/context/gamification-context';
 
@@ -20,14 +21,20 @@ export function PublishOpenLockPanel({ onPublished, currentLockId }: PublishOpen
   const { user } = useAuth();
   const { toast } = useToast();
   const { summary } = useGamification();
+  const { enabled: lockOn, loading: lockLoading } = useLockFeature();
   const [seedBar, setSeedBar] = useState('');
   const [embedUrl, setEmbedUrl] = useState('');
   const [busy, setBusy] = useState(false);
 
-  if (!isLockEnabled()) {
+  if (lockLoading) {
+    return <p className="text-xs text-muted-foreground">Checking finish-the-bar…</p>;
+  }
+
+  if (!lockOn) {
     return (
       <p className="text-xs text-muted-foreground">
-        Open LOCK is off. Set <code className="text-foreground">NEXT_PUBLIC_LOCK=1</code> to publish.
+        Finish-the-bar is off. Turn it on in{' '}
+        <strong className="text-foreground">Admin → Config → LOCK System</strong>.
       </p>
     );
   }
@@ -55,7 +62,7 @@ export function PublishOpenLockPanel({ onPublished, currentLockId }: PublishOpen
       if (!res.ok) throw new Error(data.error || 'Publish failed');
       onPublished?.(data.lock.id);
       toast({
-        title: 'Open LOCK live',
+        title: 'Unfinished bar is live',
         description: lockPath(data.lock.id),
       });
       setSeedBar('');
@@ -83,7 +90,7 @@ export function PublishOpenLockPanel({ onPublished, currentLockId }: PublishOpen
       <Textarea
         value={seedBar}
         onChange={(e) => setSeedBar(e.target.value)}
-        placeholder="Seed bar — the unfinished line…"
+        placeholder="The unfinished line visitors will rhyme with…"
         rows={2}
         className="text-sm"
       />
@@ -94,7 +101,7 @@ export function PublishOpenLockPanel({ onPublished, currentLockId }: PublishOpen
         className="text-sm"
       />
       <Button type="button" disabled={busy || !seedBar.trim()} onClick={() => void publish()}>
-        Publish Open LOCK
+        Publish unfinished bar
       </Button>
     </div>
   );

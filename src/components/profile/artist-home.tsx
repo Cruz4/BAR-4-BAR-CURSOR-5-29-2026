@@ -43,7 +43,7 @@ import {
   OpenLockModule,
   ProofWallModule,
   RhymeFingerprintModule,
-  TheCatchModule,
+  BarBoardModule,
   WallModule,
   type ModuleContext,
 } from '@/components/profile/profile-modules';
@@ -56,7 +56,7 @@ import { ArtistHomeGuestClaim } from '@/components/profile/artist-home-guest-cla
 import { VesperfoldMark } from '@/components/profile/vesperfold-mark';
 import { normalizeVesperfoldSeed } from '@/lib/profile/vesperfold';
 import { buildLoginUrl } from '@/lib/login-links';
-import { isLockEnabled } from '@/lib/lock-feature';
+import { useLockFeature } from '@/hooks/use-lock-feature';
 
 type ArtistHomeProps = {
   profile: PublicProfileData;
@@ -65,6 +65,14 @@ type ArtistHomeProps = {
   /** Full-page draft preview from Edit Public Page (not the live URL). */
   previewMode?: boolean;
   onExitPreview?: () => void;
+  /**
+   * Guest landing playground — local Wall posts (no Firestore).
+   * Wired into WallModule via ModuleContext.
+   */
+  playgroundWall?: ModuleContext['playgroundWall'];
+  playgroundFriends?: ModuleContext['playgroundFriends'];
+  playgroundGuestbook?: ModuleContext['playgroundGuestbook'];
+  playgroundBarOfWeek?: ModuleContext['playgroundBarOfWeek'];
 };
 
 const MODULE_RENDERERS: Record<string, React.ComponentType<{ ctx: ModuleContext }>> = {
@@ -72,7 +80,8 @@ const MODULE_RENDERERS: Record<string, React.ComponentType<{ ctx: ModuleContext 
   barOfWeek: BarOfWeekModule,
   dnaStrip: DnaStripModule,
   rhymeFingerprint: RhymeFingerprintModule,
-  theCatch: TheCatchModule,
+  barBoard: BarBoardModule,
+  theCatch: BarBoardModule,
   openLock: OpenLockModule,
   dropShelf: DropShelfModule,
   proofWall: ProofWallModule,
@@ -87,8 +96,13 @@ export function ArtistHome({
   isOwner,
   previewMode = false,
   onExitPreview,
+  playgroundWall,
+  playgroundFriends,
+  playgroundGuestbook,
+  playgroundBarOfWeek,
 }: ArtistHomeProps) {
   const { user } = useAuth();
+  const { enabled: lockOn } = useLockFeature();
   const [shareOpen, setShareOpen] = useState(false);
   const [dropsOpen, setDropsOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
@@ -145,10 +159,10 @@ export function ArtistHome({
     // Respect Edit Public Page toggles — never force-show a disabled module.
     return config.modules.filter((m) => {
       if (!m.enabled) return false;
-      if (m.id === 'openLock' && !isLockEnabled()) return false;
+      if (m.id === 'openLock' && !lockOn) return false;
       return true;
     });
-  }, [config.modules]);
+  }, [config.modules, lockOn]);
 
   const showLiveDnaDrops = useMemo(
     () =>
@@ -209,7 +223,7 @@ export function ArtistHome({
             </span>
           </div>
           <div className="flex items-center gap-2">
-            {previewMode ? (
+            {previewMode && onExitPreview ? (
               <Button
                 size="sm"
                 variant="outline"
@@ -218,7 +232,7 @@ export function ArtistHome({
               >
                 <PenLine className="h-3.5 w-3.5" /> Back to edit
               </Button>
-            ) : isOwner ? (
+            ) : previewMode ? null : isOwner ? (
               <>
                 <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
                   <Link href="/profile/customize">
@@ -340,15 +354,17 @@ export function ArtistHome({
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <Link
-                  href={`/profile/${profile.slug}/reverbs`}
-                  className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-violet-400/40 bg-violet-500/15 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.12)] transition-all hover:border-violet-300/70 hover:bg-violet-500/25 hover:text-violet-100 hover:shadow-[0_0_16px_rgba(139,92,246,0.25)]"
-                >
-                  <Repeat2 className="h-3.5 w-3.5 shrink-0" />
-                  Reverbs
-                </Link>
-              </div>
+              {!previewMode ? (
+                <div className="grid grid-cols-3 gap-2">
+                  <Link
+                    href={`/profile/${profile.slug}/reverbs`}
+                    className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-violet-400/40 bg-violet-500/15 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.12)] transition-all hover:border-violet-300/70 hover:bg-violet-500/25 hover:text-violet-100 hover:shadow-[0_0_16px_rgba(139,92,246,0.25)]"
+                  >
+                    <Repeat2 className="h-3.5 w-3.5 shrink-0" />
+                    Reverbs
+                  </Link>
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -438,6 +454,10 @@ export function ArtistHome({
               plate: plateChrome,
               moduleIndex: i,
               size: setting.size,
+              ...(playgroundWall ? { playgroundWall } : {}),
+              ...(playgroundFriends ? { playgroundFriends } : {}),
+              ...(playgroundGuestbook ? { playgroundGuestbook } : {}),
+              ...(playgroundBarOfWeek ? { playgroundBarOfWeek } : {}),
             };
             const fullBleed =
               setting.size === 'L' || (setting.id === 'proofWall' && setting.size === 'M');
@@ -497,10 +517,12 @@ export function ArtistHome({
         </footer>
       </div>
 
-      <ArtistHomeGuestClaim
-        artistName={profile.displayName}
-        referralCode={profile.referralCode}
-      />
+      {!previewMode ? (
+        <ArtistHomeGuestClaim
+          artistName={profile.displayName}
+          referralCode={profile.referralCode}
+        />
+      ) : null}
 
       <ProfileMediaLightbox
         open={photoOpen}

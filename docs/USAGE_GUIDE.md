@@ -17,6 +17,8 @@ See `src/lib/lyrics-units.ts` for conversion helpers.
 ## 3. Cloud Sync
 Signed-in artists sync to Firestore and land on **The Scene** (`/`) — friends feed, Discover stream, and Your Booth — with The Vault (albums, tracks, workstation) at `/vault`. Visitors get the full AI workstation on Ink (system DNA presets only), plus Artist Home and The Scene. Pro unlocks unlimited albums/tracks, custom DNA/Vibe/Style saves, Performance Mode, Freestyle, vault import/export, and DNA Drop share links. New signups receive a 3-day Pro trial with workflow access and 400 bonus Ink.
 
+**Logged out:** `/` is the Pressing / Artist Home playground (claim to save). `/try` is the free writing sheet. Demo Friends/Guestbook link to Neomaiya Sol’s live profile. Details: [GUEST_TRY_SHEET.md](./GUEST_TRY_SHEET.md).
+
 ## 4. Cost Reference Table
 
 | Category | Action | Ink Cost | Pro Monthly (~1,777 Ink) |

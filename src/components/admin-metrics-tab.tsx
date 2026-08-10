@@ -175,7 +175,7 @@ export function AdminMetricsTab() {
 
   if (!metrics) return null;
 
-  const { funnel, retention, monetization, freeTierPressure, acquisition, gamification, signupAttribution, guestTryFunnel } =
+  const { funnel, retention, monetization, freeTierPressure, acquisition, gamification, signupAttribution, guestTryFunnel, lockFunnel } =
     metrics;
   const attribution = signupAttribution ?? {
     taggedSignups: 0,
@@ -203,6 +203,27 @@ export function AdminMetricsTab() {
     aiToAcceptPercent: 0,
     openToCtaPercent: 0,
     openToSignupPercent: 0,
+  };
+  const lockStats = lockFunnel ?? {
+    opens: 0,
+    opensLast7Days: 0,
+    opensLast30Days: 0,
+    typed: 0,
+    submits: 0,
+    branches: 0,
+    shareCards: 0,
+    nameCtas: 0,
+    whereNext: 0,
+    studioOpens: 0,
+    writeAnother: 0,
+    bloodlineOpens: 0,
+    signupCtas: 0,
+    openToTypedPercent: 0,
+    typedToSubmitPercent: 0,
+    openToSubmitPercent: 0,
+    branchOfSubmitPercent: 0,
+    openToNameCtaPercent: 0,
+    openToSignupCtaPercent: 0,
   };
 
   const cacheLabel = metrics.cache
@@ -379,6 +400,46 @@ export function AdminMetricsTab() {
             <RateBar label="AI success → accepted line" value={guestFunnel.aiToAcceptPercent} />
             <RateBar label="Open → signup CTA" value={guestFunnel.openToCtaPercent} />
             <RateBar label="Open → signup" value={guestFunnel.openToSignupPercent} />
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* LOCK / finish-the-bar funnel */}
+      <section>
+        <h3 className="text-[10px] font-bold uppercase tracking-[0.35em] text-muted-foreground mb-4 flex items-center gap-2">
+          <Target className="h-3 w-3 text-emerald-400" /> Finish-the-bar funnel
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <MetricCard label="Opens (90d)" value={lockStats.opens} sub={`${lockStats.opensLast7Days} last 7d`} accent="text-emerald-400" />
+          <MetricCard label="Typed a bar" value={lockStats.typed} sub={`${lockStats.openToTypedPercent}% of opens`} />
+          <MetricCard label="Locked (submit)" value={lockStats.submits} sub={`${lockStats.openToSubmitPercent}% of opens`} accent="text-sky-400" />
+          <MetricCard
+            label="Answered after someone"
+            value={lockStats.branches}
+            sub={`${lockStats.branchOfSubmitPercent}% of submits`}
+            accent="text-amber-300"
+          />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <MetricCard label="Name echo CTA" value={lockStats.nameCtas} sub={`${lockStats.openToNameCtaPercent}% of opens`} />
+          <MetricCard label="Signup CTA" value={lockStats.signupCtas} sub={`${lockStats.openToSignupCtaPercent}% of opens`} accent="text-amber-400" />
+          <MetricCard label="Where next taps" value={lockStats.whereNext} sub={`${lockStats.bloodlineOpens} all replies · ${lockStats.studioOpens} studio`} />
+          <MetricCard label="Share card" value={lockStats.shareCards} sub={`${lockStats.writeAnother} write another`} />
+        </div>
+        <Card className="bg-card/40 border-emerald-500/15">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm uppercase tracking-widest">LOCK drop-off ladder</CardTitle>
+            <CardDescription className="text-[10px]">
+              Where visitors fall off before naming / signup. Telegram fires on opens, locks, branches, name CTA, etc.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-2">
+            <RateBar label="Open → typed" value={lockStats.openToTypedPercent} />
+            <RateBar label="Typed → locked" value={lockStats.typedToSubmitPercent} />
+            <RateBar label="Open → locked" value={lockStats.openToSubmitPercent} />
+            <RateBar label="Submit → branched (answered someone)" value={lockStats.branchOfSubmitPercent} />
+            <RateBar label="Open → name CTA" value={lockStats.openToNameCtaPercent} />
+            <RateBar label="Open → signup CTA" value={lockStats.openToSignupCtaPercent} />
           </CardContent>
         </Card>
       </section>

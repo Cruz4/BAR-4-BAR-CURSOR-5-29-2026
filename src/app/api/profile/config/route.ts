@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
-import { getArtistHomeConfig, saveArtistHomeConfig } from '@/lib/server/artist-home';
+import { getArtistHomeConfig, saveArtistHomeConfig, hasPersistedArtistHomeConfig } from '@/lib/server/artist-home';
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
 
 export const runtime = 'nodejs';
@@ -21,8 +21,11 @@ export async function GET(req: Request) {
       }
       throw e;
     }
-    const config = await getArtistHomeConfig(userId);
-    return NextResponse.json({ config });
+    const [config, persisted] = await Promise.all([
+      getArtistHomeConfig(userId),
+      hasPersistedArtistHomeConfig(userId),
+    ]);
+    return NextResponse.json({ config, persisted });
   } catch (err) {
     console.error('[profile/config GET]', err);
     return NextResponse.json({ error: 'Failed to load profile config' }, { status: 500 });

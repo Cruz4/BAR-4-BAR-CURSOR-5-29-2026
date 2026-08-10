@@ -6,7 +6,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { isLockEnabled } from '@/lib/lock-feature';
+import { useLockFeature } from '@/hooks/use-lock-feature';
 import { claimLockHandoff } from '@/lib/lock/session';
 import { auth } from '@/lib/firebase/client/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -14,10 +14,11 @@ import { useToast } from '@/hooks/use-toast';
 export function LockClaimBootstrap() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { enabled: lockOn } = useLockFeature();
   const ran = useRef(false);
 
   useEffect(() => {
-    if (!isLockEnabled() || !user || ran.current) return;
+    if (!lockOn || !user || ran.current) return;
     const handoff = claimLockHandoff();
     if (!handoff) return;
     ran.current = true;
@@ -40,15 +41,15 @@ export function LockClaimBootstrap() {
         });
         if (res.ok) {
           toast({
-            title: 'Echo named — watching',
-            description: `LOCK ${handoff.lockScore} saved. We’ll ping you when this cast moves.`,
+            title: 'Echo named — you’re on The Scene',
+            description: `LOCK ${handoff.lockScore} claimed. Watch this cast from Activity; Discover shows live LOCKs.`,
           });
         }
       } catch {
         /* ignore */
       }
     })();
-  }, [user, toast]);
+  }, [user, toast, lockOn]);
 
   return null;
 }

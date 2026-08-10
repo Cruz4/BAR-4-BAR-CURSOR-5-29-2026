@@ -18,7 +18,6 @@ import {
   ExternalLink,
   Eye,
   Fingerprint,
-  Fish,
   LayoutGrid,
   Loader2,
   Lock,
@@ -72,13 +71,11 @@ import { parseEmbedUrl, EMBED_HELP_TEXT } from '@/lib/profile/embeds';
 import { SOCIAL_PROVIDERS } from '@/lib/profile/social-links';
 import { EmbedPlayer } from '@/components/profile/embed-player';
 import { FingerprintSvg } from '@/components/profile/rhyme-fingerprint-svg';
-import { TheCatchGame } from '@/components/profile/the-catch-module';
+import { BarBoardView } from '@/components/profile/bar-board-module';
 import {
-  CATCH_MAX_LINKS,
-  CATCH_MIN_LINKS,
-  endSoundFromBar,
-  type CatchLink,
-} from '@/lib/profile/the-catch';
+  BOARD_MAX_PINS,
+  createBoardPin,
+} from '@/lib/profile/bar-board';
 import { AlbumCoverCollage } from '@/components/gamification/album-cover-collage';
 import { ProfileInitialsStar } from '@/components/profile/profile-initials-star';
 import { StudioLoader } from '@/components/studio-loader';
@@ -1164,7 +1161,7 @@ export function PressDesk() {
                 <Wind className="h-3.5 w-3.5 text-primary" /> Alive — Living Field
               </p>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
-                Seed builds a unique stack of layers (grooves, wells, mesh, ghosts…). Scroll moves depth —
+                Seed builds a unique stack from 24 layer vocabularies (grooves, lattice, orbitals, signal…). Scroll moves depth —
                 color stays locked.
               </p>
             </div>
@@ -1518,17 +1515,17 @@ export function PressDesk() {
         </div>
       </DeskSection>
 
-      {/* 7. The Catch */}
+      {/* 7. The Board */}
       <DeskSection
-        icon={Fish}
-        title="The Catch"
-        hint="Plant 3–5 bars in order. Visitors see the first (the cast), then hunt floating end-sounds to unlock each next bar. Beat their best time. Completing the run can open a DNA Drop."
+        icon={LayoutGrid}
+        title="The Board"
+        hint="Pin 1–5 bars visitors can read, copy, open a DNA Drop, and leave a short reply under. No guessing games."
       >
         <div className="space-y-4">
-          {(config.featured.theCatch?.links?.length || 0) >= CATCH_MIN_LINKS && (
+          {(config.featured.barBoard?.pins?.length || 0) > 0 && (
             <div className="rounded-xl border border-primary/40 bg-primary/10 p-3">
               <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-primary">
-                Live preview · play it like a visitor
+                Live preview
               </p>
               <div
                 className="rounded-lg border border-white/10 bg-black/40 p-3"
@@ -1543,32 +1540,33 @@ export function PressDesk() {
                   } as React.CSSProperties
                 }
               >
-                <TheCatchGame
-                  data={config.featured.theCatch!}
+                <BarBoardView
+                  data={config.featured.barBoard!}
                   profileUserId={user.id}
-                  profileName={displayName}
                   compact
                 />
               </div>
             </div>
           )}
 
-          {(config.featured.theCatch?.links?.length || 0) > 0 && (
+          {(config.featured.barBoard?.pins?.length || 0) > 0 && (
             <div className="space-y-1.5">
               <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">
-                Your chain ({config.featured.theCatch!.links.length}/{CATCH_MAX_LINKS})
+                Pinned ({config.featured.barBoard!.pins.length}/{BOARD_MAX_PINS})
               </p>
-              {config.featured.theCatch!.links.map((link, i) => (
+              {config.featured.barBoard!.pins.map((pin, i) => (
                 <div
-                  key={`${i}-${link.text.slice(0, 20)}`}
+                  key={pin.id}
                   className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-2"
                 >
-                  <span className="mt-0.5 w-14 shrink-0 text-[9px] font-bold uppercase tracking-wider text-primary">
-                    {i === 0 ? 'Cast' : `Catch ${i}`}
+                  <span className="mt-0.5 w-10 shrink-0 text-[9px] font-bold uppercase tracking-wider text-primary">
+                    #{i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs text-white/90 line-clamp-2">{link.text}</p>
-                    <p className="mt-0.5 font-code text-[10px] text-primary/80">—{link.endSound}</p>
+                    <p className="text-xs text-white/90 line-clamp-2">{pin.text}</p>
+                    {pin.sourceLabel ? (
+                      <p className="mt-0.5 text-[10px] text-white/50">{pin.sourceLabel}</p>
+                    ) : null}
                   </div>
                   <Button
                     type="button"
@@ -1577,16 +1575,13 @@ export function PressDesk() {
                     className="h-7 shrink-0 px-2 text-[10px] font-bold uppercase"
                     onClick={() =>
                       update((d) => {
-                        const links = [...(d.featured.theCatch?.links || [])];
-                        links.splice(i, 1);
-                        if (!links.length) {
-                          d.featured.theCatch = undefined;
+                        const pins = [...(d.featured.barBoard?.pins || [])];
+                        pins.splice(i, 1);
+                        if (!pins.length) {
+                          d.featured.barBoard = undefined;
                           return;
                         }
-                        d.featured.theCatch = {
-                          links,
-                          decoys: d.featured.theCatch?.decoys || [],
-                        };
+                        d.featured.barBoard = { pins };
                       })
                     }
                   >
@@ -1599,71 +1594,48 @@ export function PressDesk() {
                 size="sm"
                 variant="ghost"
                 className="h-8 text-xs font-bold uppercase"
-                onClick={() => update((d) => void (d.featured.theCatch = undefined))}
+                onClick={() => update((d) => void (d.featured.barBoard = undefined))}
               >
-                Clear chain
+                Clear board
               </Button>
             </div>
           )}
 
-          {(config.featured.theCatch?.links?.length || 0) < CATCH_MAX_LINKS && (
+          {(config.featured.barBoard?.pins?.length || 0) < BOARD_MAX_PINS && (
             <div>
               <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Add bar {(config.featured.theCatch?.links?.length || 0) + 1}
-                {(config.featured.theCatch?.links?.length || 0) === 0
-                  ? ' · this is the cast (always visible)'
-                  : ' · its end-sound becomes a lure'}
+                Add a pin
               </p>
               <BarPicker
                 bars={vaultBars}
-                emptyHint="Write at least a few bars in the studio, then plant a Catch chain here."
+                emptyHint="Write bars in the studio, then pin them here for visitors."
                 onPick={(bar) => {
-                  const endSound = endSoundFromBar(bar.text, bar.rhymeKey);
-                  const link: CatchLink = {
+                  const pin = createBoardPin({
                     text: bar.text.slice(0, 280),
-                    endSound,
                     sourceLabel: `${bar.albumTitle} · ${bar.trackTitle}`,
-                  };
-                  if (bar.trackShareId) link.shareId = bar.trackShareId;
-
+                    shareId: bar.trackShareId,
+                  });
                   update((d) => {
-                    const prev = d.featured.theCatch?.links || [];
-                    if (prev.length >= CATCH_MAX_LINKS) return;
-                    const links = [...prev, link];
-                    // Harvest decoys from other vault endings (not in this chain).
-                    const chainSounds = new Set(links.map((l) => l.endSound.toLowerCase()));
-                    const decoys: string[] = [];
-                    for (const vb of vaultBars) {
-                      const s = endSoundFromBar(vb.text, vb.rhymeKey).toLowerCase();
-                      if (!s || chainSounds.has(s) || decoys.includes(s)) continue;
-                      decoys.push(s);
-                      if (decoys.length >= 10) break;
-                    }
-                    d.featured.theCatch = { links, decoys };
-                    // Drop legacy album rooms when Catch is set.
+                    const prev = d.featured.barBoard?.pins || [];
+                    if (prev.length >= BOARD_MAX_PINS) return;
+                    d.featured.barBoard = { pins: [...prev, pin] };
+                    d.featured.theCatch = undefined;
                     d.featured.albumRooms = undefined;
+                    const mod = d.modules.find((m) => m.id === 'barBoard');
+                    if (mod) mod.enabled = true;
                   });
                 }}
               />
             </div>
           )}
-
-          {(config.featured.theCatch?.links?.length || 0) > 0 &&
-            (config.featured.theCatch?.links?.length || 0) < CATCH_MIN_LINKS && (
-              <p className="text-xs text-amber-400/90">
-                Add {CATCH_MIN_LINKS - (config.featured.theCatch?.links?.length || 0)} more bar
-                {(CATCH_MIN_LINKS - (config.featured.theCatch?.links?.length || 0)) === 1 ? '' : 's'}{' '}
-                to go live (need {CATCH_MIN_LINKS}–{CATCH_MAX_LINKS}).
-              </p>
-            )}
         </div>
       </DeskSection>
 
-      {/* 7b. Open LOCK */}
+      {/* 7b. Finish this bar */}
       <DeskSection
         icon={Lock}
-        title="Open LOCK"
-        hint="Publish an unfinished bar dare. Visitors lock the next line. Enable the Open LOCK module in the deck above. Requires NEXT_PUBLIC_LOCK=1."
+        title="Finish this bar"
+        hint="Publish an unfinished line. Visitors drop the next bar. Enable the Finish this bar module in the deck above. Requires Admin → Config → LOCK System on."
       >
         <PublishOpenLockPanel
           currentLockId={config.featured.openLockId}

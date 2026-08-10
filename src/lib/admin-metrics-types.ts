@@ -49,6 +49,32 @@ export type GuestTryFunnelStats = {
   openToSignupPercent: number;
 };
 
+/** LOCK / finish-the-bar funnel (guest + signed-in). */
+export type LockFunnelStats = {
+  opens: number;
+  opensLast7Days: number;
+  opensLast30Days: number;
+  typed: number;
+  submits: number;
+  branches: number;
+  shareCards: number;
+  nameCtas: number;
+  whereNext: number;
+  studioOpens: number;
+  writeAnother: number;
+  bloodlineOpens: number;
+  signupCtas: number;
+  /** Drop-off: opened but never typed */
+  openToTypedPercent: number;
+  /** Typed but never locked */
+  typedToSubmitPercent: number;
+  openToSubmitPercent: number;
+  /** Share of submits that answered someone else's echo */
+  branchOfSubmitPercent: number;
+  openToNameCtaPercent: number;
+  openToSignupCtaPercent: number;
+};
+
 export type AdminMetricsSnapshot = {
   generatedAt: string;
   funnel: {
@@ -120,6 +146,7 @@ export type AdminMetricsSnapshot = {
   };
   signupAttribution: SignupAttributionStats;
   guestTryFunnel: GuestTryFunnelStats;
+  lockFunnel: LockFunnelStats;
   recentEvents: Array<{
     timestamp: string;
     event: string;

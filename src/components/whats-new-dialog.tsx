@@ -15,6 +15,7 @@ import {
   Gift,
   Globe,
   LayoutGrid,
+  Lock,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,7 @@ import {
 import { isStudioOnboardingBusy } from '@/lib/studio-privacy-intro';
 import { SIGNUP_INK } from '@/lib/subscription';
 import { getProCheckoutCtaLine } from '@/lib/studio-tiers';
+import { useLockFeature } from '@/hooks/use-lock-feature';
 
 function isVaultLanding(pathname: string | null): boolean {
   if (!pathname) return false;
@@ -48,6 +50,7 @@ export function WhatsNewDialog() {
   const pathname = usePathname();
   const { user, authReady, loading } = useAuth();
   const scheduledRef = useRef(false);
+  const { enabled: lockOn } = useLockFeature();
 
   const whatsNewItems = useMemo(
     () =>
@@ -60,8 +63,26 @@ export function WhatsNewDialog() {
           bgColor: 'bg-emerald-500/5',
         },
         {
+          title: 'Press your Artist Home',
+          desc: 'Logged-out home is a live Pressing playground — type your name and a bar, watch the page change, claim to save. Try writing free opens an Architect-style unfinished starter on the sheet.',
+          icon: Globe,
+          color: 'text-fuchsia-400',
+          bgColor: 'bg-fuchsia-500/5',
+        },
+        ...(lockOn
+          ? [
+              {
+                title: 'Finish this bar (social)',
+                desc: 'Optional /lock casts: Fit score + share. Try sheet also finishes an Architect starter. Never the guest home door.',
+                icon: Lock,
+                color: 'text-amber-300',
+                bgColor: 'bg-amber-500/5',
+              } as const,
+            ]
+          : []),
+        {
           title: 'Artist Home & The Block',
-          desc: 'Your shareable public page — living skin, Album Rooms, embeds, friends feed. Flip it live from Your Booth on the Scene or Studio Progress → Sharing.',
+          desc: 'Your shareable public page — living skin, The Board, embeds, friends feed. Flip it live from Your Booth on the Scene or Studio Progress → Sharing.',
           icon: Globe,
           color: 'text-fuchsia-400',
           bgColor: 'bg-fuchsia-500/5',
@@ -88,7 +109,7 @@ export function WhatsNewDialog() {
           bgColor: 'bg-amber-500/5',
         },
       ] as const,
-    []
+    [lockOn]
   );
 
   const dismiss = useCallback(() => {

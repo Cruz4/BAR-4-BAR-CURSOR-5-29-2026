@@ -119,15 +119,27 @@ const ChapterCard = ({ icon, title, children, colorClass }: { icon: React.ReactN
 const FAQS = [
     {
       q: "What is The Scene (my home page)?",
-      a: "Signing in lands you on The Scene — friends' wall posts, Discover (live Artist Homes, public drops, DNA Drops, leaderboard risers), your Booth, and the right dock. The skyline follows your local day/night and optional live weather. Vault and Activity are also in the top nav."
+      a: "Signing in lands you on The Scene — friends' wall posts, Discover (live Artist Homes, public drops, DNA Drops, finish-the-bar casts when enabled, leaderboard risers), your Booth, and the right dock. The skyline follows your local day/night and optional live weather. Vault and Activity are also in the top nav."
+    },
+    {
+      q: "What is Finish this bar?",
+      a: "Two places: (1) Guest try sheet at /try starts with a deep Lyrical Architect unfinished line — drop yours under it. (2) Optional social casts (Admin → Config → LOCK System) at /lock/… where anyone can reply with a Fit score. Logged-out home is the Pressing playground (live Artist Home), not a LOCK page. Replies on social casts can be deleted by the writer or cast owner."
+    },
+    {
+      q: "What do I see when I open the app logged out?",
+      a: "A live Pressing / Artist Home playground — type your name and a bar, watch the page skin update, then Claim to save or Try writing free for the Architect-seeded sheet. Friends and Guestbook preview Neomaiya Sol; tap her name to open her real Artist Home. Sign in anytime from the header."
+    },
+    {
+      q: "Why sign in after dropping a bar?",
+      a: "Writing is free and instant. Without an account your reply shows as Anonymous. Sign in to put your display name on it, get Activity when someone answers you, and use Clear-for-release if you get Artist Pick. After that you can keep writing in Studio with your bars preloaded."
     },
     {
       q: "Where are The Vault and Activity?",
-      a: "Vault (albums & tracks) is at /vault — sky archive icon in the top nav, or top of the Scene dock. Activity (emerald bell) opens an unread dropdown: mark one or all read, or View all for the full Activity page (/activity) with Inbox · Requests · Sent. Push/settings live under Ink Store → Settings when available."
+      a: "Vault (albums & tracks) is at /vault — sky archive icon in the top nav, or top of the Scene dock. Activity (emerald bell) opens an unread dropdown: mark one or all read, or View all for the full Activity page (/activity) with Inbox · Requests · Sent. Push/settings live under Ink Store → Settings when available. Finish-the-bar watchers get Activity when a named reply lands or you get Artist Pick / clear offers."
     },
     {
       q: "What is Artist Home and Edit Public Page?",
-      a: "Artist Home is your shareable page at /profile/your-slug (skin, modules, The Catch, embeds, socials, wall, friends, live DNA Drops). On the Scene dock, Artist Home | Edit page is one split control — view live, or customize. Also reachable from Your Booth, Vault dock, or Studio Progress → Sharing. Private by default; never shows private lyrics unless you publish a DNA Drop."
+      a: "Artist Home is your shareable page at /profile/your-slug (skin, modules, The Board, embeds, socials, wall, friends, guestbook, live DNA Drops). New accounts often get Neomaiya Sol as a first friend with a guestbook welcome. On the Scene dock, Artist Home | Edit page is one split control — view live, or customize. Also reachable from Your Booth, Vault dock, or Studio Progress → Sharing. Private by default; never shows private lyrics unless you publish a DNA Drop."
     },
     {
       q: "What is The Block?",
@@ -207,7 +219,7 @@ const FAQS = [
     },
     {
       q: "What shows on the leaderboard and public profile?",
-      a: "Weekly board: display name, rank, XP, bars (7 days), streak, tracks completed — never lyrics. Opt in via Studio Progress → Sharing. Artist Home is off by default; when live it can show modules, socials, rooms, drops, friends, and wall — still never private lyrics unless you DNA Drop."
+      a: "Weekly board: display name, rank, XP, bars (7 days), streak, tracks completed — never lyrics. Opt in via Studio Progress → Sharing. Artist Home is off by default; when live it can show modules, socials, rooms, drops, friends, guestbook, and wall — still never private lyrics unless you DNA Drop."
     },
     {
       q: "What is DNA Drop?",
@@ -321,6 +333,18 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                   </div>
                 </ChapterCard>
 
+                <ChapterCard icon={<Lock className="text-amber-300" />} title="Finish this bar" colorClass="border-l-amber-500 text-amber-300">
+                  <p className="text-sm text-foreground/90">
+                    Optional casts (Admin → Config → LOCK System): drop one bar with no account → Fit score + share card.
+                    Keep writing in Studio anytime. Sign in only to put your name on the reply.
+                  </p>
+                  <ul className="list-disc list-inside space-y-1.5 text-xs">
+                    <li><strong>After you drop</strong> — Keep writing in Studio, share your reply, or see all replies.</li>
+                    <li><strong>Reply to this bar</strong> — answer someone else&apos;s line, not only the unfinished seed.</li>
+                    <li><strong>Casting artists</strong> — Press Desk → Finish this bar; Manage → Pick, Clear for release, Close.</li>
+                  </ul>
+                </ChapterCard>
+
                 <ChapterCard icon={<MousePointer2 className="text-primary" />} title="Write in 60 seconds" colorClass="border-l-primary text-primary">
                   <ol className="list-decimal list-inside space-y-2 text-sm">
                     <li><strong>Open a sheet</strong> — Vault, or Keep writing / Start track on the Scene dock.</li>
@@ -335,8 +359,8 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 <div className="grid gap-4 md:grid-cols-2">
                   <ChapterCard icon={<Globe className="text-fuchsia-400" />} title="Artist Home" colorClass="border-l-fuchsia-500 text-fuchsia-400">
                     <p className="text-sm">
-                      Public page at <code className="text-primary">/profile/your-slug</code> — skin, modules, The Catch,
-                      embeds, wall, friends, live DNA Drops. Off until you flip Public on.
+                      Public page at <code className="text-primary">/profile/your-slug</code> — skin, modules, The Board,
+                      embeds, wall, friends, guestbook, live DNA Drops. Off until you flip Public on. New pages often meet Neomaiya Sol first.
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Scene dock: <strong>Artist Home | Edit page</strong> (one control). Also Booth, Vault dock, or Studio Progress → Sharing.

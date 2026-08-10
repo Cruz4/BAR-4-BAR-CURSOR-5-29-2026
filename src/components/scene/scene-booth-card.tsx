@@ -139,7 +139,7 @@ export function SceneBoothCard({ className }: { className?: string }) {
         ) : (
           <>
             <p className="w-full text-xs leading-snug text-muted-foreground">
-              Your Artist Home is your page on the scene — skin, The Catch, wall, friends.
+              Your Artist Home is your page on the scene — skin, The Board, wall, friends.
               Lyrics are never published. Flip it live and start decorating.
             </p>
             <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>

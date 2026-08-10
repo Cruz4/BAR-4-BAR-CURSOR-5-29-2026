@@ -714,4 +714,27 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
       { merge: true }
     );
   }
+
+  // Default first friend + guestbook welcome from Neomaiya Sol (idempotent).
+  try {
+    const { ensureDefaultFounderWelcome } = await import('@/lib/server/default-founder-friend');
+    let profileSlug: string | undefined;
+    try {
+      const gamSnap = await db.doc(`users/${userId}/gamification/summary`).get();
+      const slug = gamSnap.data()?.profileSlug;
+      if (typeof slug === 'string' && slug.trim()) profileSlug = slug.trim();
+    } catch {
+      /* optional */
+    }
+    const displayName =
+      (typeof userData?.displayName === 'string' && userData.displayName.trim()) ||
+      authDisplayName ||
+      'Artist';
+    await ensureDefaultFounderWelcome(db, auth, userId, {
+      name: displayName,
+      ...(profileSlug ? { slug: profileSlug } : {}),
+    });
+  } catch (founderErr) {
+    console.warn('[usage-init] founder welcome seed skipped', founderErr);
+  }
 }

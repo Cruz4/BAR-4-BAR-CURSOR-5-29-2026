@@ -13,14 +13,14 @@ import {
   type PressingConfig,
 } from '@/lib/profile/pressing';
 import { normalizeSocials, type ArtistHomeSocials } from '@/lib/profile/social-links';
-import { normalizeTheCatch, type TheCatch } from '@/lib/profile/the-catch';
+import { normalizeBarBoard, type BarBoard } from '@/lib/profile/bar-board';
 
 export type ProfileModuleId =
   | 'nowPlaying'
   | 'barOfWeek'
   | 'dnaStrip'
   | 'rhymeFingerprint'
-  | 'theCatch'
+  | 'barBoard'
   | 'openLock'
   | 'dropShelf'
   | 'proofWall'
@@ -36,7 +36,7 @@ export type ProfileModuleSetting = {
   size: ModuleSize;
 };
 
-/** @deprecated Replaced by The Catch. Kept so old publicProfiles still normalize. */
+/** @deprecated Replaced by The Board. Kept so old publicProfiles still normalize. */
 export type AlbumRoomCard = {
   title: string;
   albumId?: string;
@@ -71,11 +71,13 @@ export type ArtistHomeFeatured = {
   /** Up to 2 revealed Creative DNA lines. */
   dnaLines?: string[];
   fingerprint?: RhymeFingerprint;
-  /** Interactive rhyme hunt — ordered bars + decoy end-sounds. */
-  theCatch?: TheCatch;
-  /** Active Open LOCK id shown on Artist Home (when LOCK flag is on). */
+  /** Pinned bars visitors can read / reply under. */
+  barBoard?: BarBoard;
+  /** Active unfinished-bar cast id on Artist Home (when finish-the-bar flag is on). */
   openLockId?: string;
-  /** @deprecated Prefer theCatch. */
+  /** @deprecated Migrated into barBoard. */
+  theCatch?: unknown;
+  /** @deprecated Prefer barBoard. */
   albumRooms?: AlbumRoomCard[];
   /** @deprecated Live DNA Drops auto-list from shares; kept for older configs. */
   dropShelfShareIds?: string[];
@@ -118,15 +120,15 @@ export const MODULE_META: Record<
     defaultSize: 'S',
     defaultEnabled: true,
   },
-  theCatch: {
-    label: 'The Catch',
-    description: 'Plant a bar chain — visitors hunt end-sounds to unlock each next bar.',
+  barBoard: {
+    label: 'The Board',
+    description: 'Pin 1–5 bars visitors can read, share, and reply under.',
     defaultSize: 'L',
     defaultEnabled: true,
   },
   openLock: {
-    label: 'Open LOCK',
-    description: 'Public unfinished bar dare — visitors lock the next line (kill-flagged).',
+    label: 'Finish this bar',
+    description: 'Public unfinished bar — visitors drop the next line (kill-flagged).',
     defaultSize: 'L',
     defaultEnabled: false,
   },
@@ -168,7 +170,7 @@ export const MODULE_ORDER_DEFAULT: ProfileModuleId[] = [
   'dnaStrip',
   'wall',
   'openLock',
-  'theCatch',
+  'barBoard',
   'rhymeFingerprint',
   'dropShelf',
   'proofWall',
@@ -217,9 +219,9 @@ function isModuleId(id: unknown): id is ProfileModuleId {
   return typeof id === 'string' && id in MODULE_META;
 }
 
-/** Old saves used albumRooms — map to theCatch slot. */
+/** Old saves used albumRooms / theCatch — map to The Board. */
 function coerceModuleId(id: unknown): ProfileModuleId | null {
-  if (id === 'albumRooms') return 'theCatch';
+  if (id === 'albumRooms' || id === 'theCatch') return 'barBoard';
   if (isModuleId(id)) return id;
   return null;
 }
@@ -293,8 +295,8 @@ function normalizeFeatured(raw: unknown): ArtistHomeFeatured {
   const fingerprint = normalizeFingerprint(obj.fingerprint);
   if (fingerprint) featured.fingerprint = fingerprint;
 
-  const theCatch = normalizeTheCatch(obj.theCatch);
-  if (theCatch) featured.theCatch = theCatch;
+  const barBoard = normalizeBarBoard(obj.barBoard, obj.theCatch);
+  if (barBoard) featured.barBoard = barBoard;
   const openLockId = cleanString(obj.openLockId, 40);
   if (openLockId) featured.openLockId = openLockId;
 

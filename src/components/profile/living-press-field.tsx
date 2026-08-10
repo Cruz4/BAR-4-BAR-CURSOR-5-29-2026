@@ -3,7 +3,7 @@
 /**
  * Living Field — multi-layer composition + scroll parallax.
  *
- * Seed picks a unique stack from 12 layer vocabularies. Scroll shifts depth /
+ * Seed picks a unique stack from 24 layer vocabularies. Scroll shifts depth /
  * phase (inviting, reactive). Hue never changes with scroll.
  */
 
@@ -39,8 +39,7 @@ const LIVING_CSS = `
 }
 @keyframes ph-ripple {
   0% { transform: scale(0.35); opacity: 0.35; }
-  70% { opacity: 0.08; }
-  100% { transform: scale(1.55); opacity: 0; }
+  100% { transform: scale(1.45); opacity: 0.06; }
 }
 @keyframes ph-mote {
   0%, 100% { transform: translate3d(0,0,0); }
@@ -53,6 +52,25 @@ const LIVING_CSS = `
 }
 @keyframes ph-stylus-glow {
   0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+@keyframes ph-scan-sweep {
+  0% { transform: translateY(0%); opacity: 0.2; }
+  50% { opacity: 0.55; }
+  100% { transform: translateY(88%); opacity: 0.2; }
+}
+@keyframes ph-orbit-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes ph-aurora-shift {
+  0%, 100% { opacity: 0.55; filter: blur(28px) hue-rotate(0deg); }
+  50% { opacity: 0.95; filter: blur(34px) hue-rotate(8deg); }
+}
+@keyframes ph-signal-pulse {
+  0%, 100% { stroke-opacity: 0.45; }
+  50% { stroke-opacity: 1; }
+}
+@keyframes ph-nova-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes ph-circuit-blink {
+  0%, 100% { opacity: 0.45; }
   50% { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -145,7 +163,7 @@ function LayerView({
               style={{
                 transformOrigin: '50px 50px',
                 animation: motionOk
-                  ? `${ring.reverse ? 'ph-groove-spin-rev' : 'ph-groove-spin'} ${ring.rotateSec * speedMul}s linear infinite`
+                  ? `${ring.reverse ? 'ph-groove-spin-rev' : 'ph-groove-spin'} ${ring.rotateSec * speedMul}s linear infinite alternate`
                   : undefined,
               }}
             >
@@ -160,12 +178,15 @@ function LayerView({
             </g>
           ))}
           {motionOk && layer.stylusPath && (
-            <g className="ph-living-anim" style={{ animation: 'ph-stylus-glow var(--ph-breath) ease-in-out infinite' }}>
+            <g className="ph-living-anim" style={{ animation: 'ph-stylus-glow var(--ph-breath) ease-in-out infinite alternate' }}>
               <circle r={compact ? 0.55 : 0.85} fill={fillSoft}>
                 <animateMotion
-                  dur={`${layer.stylusSec * speedMul}s`}
+                  dur={`${layer.stylusSec * speedMul * 2}s`}
                   repeatCount="indefinite"
                   path={layer.stylusPath}
+                  keyPoints="0;1;0"
+                  keyTimes="0;0.5;1"
+                  calcMode="linear"
                 />
               </circle>
             </g>
@@ -192,7 +213,7 @@ function LayerView({
                   ['--ph-well-o' as string]: String(w.opacity * (0.85 + scroll * 0.25)),
                   opacity: w.opacity,
                   animation: motionOk
-                    ? `ph-well-breath calc(var(--ph-breath) * ${1 + i * 0.25}) ease-in-out ${i * 0.4}s infinite`
+                    ? `ph-well-breath calc(var(--ph-breath) * ${1 + i * 0.25}) ease-in-out ${i * 0.4}s infinite alternate`
                     : undefined,
                 } as React.CSSProperties
               }
@@ -216,7 +237,7 @@ function LayerView({
               className={motionOk ? 'ph-living-anim' : undefined}
               style={{
                 animation: motionOk
-                  ? `ph-ribbon-flow calc(var(--ph-motion) * ${0.8 + i * 0.2}) ease-in-out infinite`
+                  ? `ph-ribbon-flow calc(var(--ph-motion) * ${0.8 + i * 0.2}) ease-in-out infinite alternate`
                   : undefined,
               }}
             />
@@ -281,7 +302,7 @@ function LayerView({
                 transform: `rotate(${w.rot}deg)`,
                 mixBlendMode: 'soft-light',
                 animation: motionOk
-                  ? `ph-ghost-drift calc(var(--ph-motion) * ${1.1 + i * 0.3}) ease-in-out infinite`
+                  ? `ph-ghost-drift calc(var(--ph-motion) * ${1.1 + i * 0.3}) ease-in-out infinite alternate`
                   : undefined,
               }}
             >
@@ -351,7 +372,7 @@ function LayerView({
                     borderColor: stroke,
                     opacity: 0.2,
                     animation: motionOk
-                      ? `ph-ripple calc(var(--ph-breath) * ${1.4 + ring * 0.35}) ease-out ${o.delay + ring * 0.55 + scroll * 0.4}s infinite`
+                      ? `ph-ripple calc(var(--ph-breath) * ${1.4 + ring * 0.35}) ease-in-out ${o.delay + ring * 0.55}s infinite alternate`
                       : undefined,
                   }}
                 />
@@ -393,7 +414,7 @@ function LayerView({
                 background: fillSoft,
                 opacity: o.opacity,
                 animation: motionOk
-                  ? `ph-mote calc(var(--ph-motion) * ${o.drift}) ease-in-out ${i * 0.2}s infinite`
+                  ? `ph-mote calc(var(--ph-motion) * ${o.drift}) ease-in-out ${i * 0.2}s infinite alternate`
                   : undefined,
               }}
             />
@@ -412,7 +433,7 @@ function LayerView({
               opacity: layer.opacity,
               filter: 'blur(12px)',
               mixBlendMode: 'screen',
-              animation: motionOk ? `ph-blade-sweep calc(var(--ph-motion) * 0.9) ease-in-out infinite` : undefined,
+              animation: motionOk ? `ph-blade-sweep calc(var(--ph-motion) * 0.9) ease-in-out infinite alternate` : undefined,
             } as React.CSSProperties
           }
         />
@@ -444,6 +465,366 @@ function LayerView({
         </div>
       );
     }
+
+    case 'lattice':
+      return wrap(
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+          {layer.cells.map((c, i) => {
+            const pts = [0, 1, 2, 3, 4, 5]
+              .map((k) => {
+                const a = (Math.PI / 3) * k - Math.PI / 6;
+                return `${(c.cx + Math.cos(a) * c.r).toFixed(2)},${(c.cy + Math.sin(a) * c.r * 0.92).toFixed(2)}`;
+              })
+              .join(' ');
+            return (
+              <polygon
+                key={i}
+                points={pts}
+                fill="none"
+                stroke={stroke}
+                strokeOpacity={c.opacity * (0.75 + scroll * 0.4)}
+                strokeWidth={0.22}
+              />
+            );
+          })}
+        </svg>
+      );
+
+    case 'beams': {
+      const { focus, rays } = layer;
+      return wrap(
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+          {rays.map((ray, i) => {
+            const rad = (ray.angle * Math.PI) / 180;
+            const x2 = focus.x + Math.cos(rad) * ray.length;
+            const y2 = focus.y + Math.sin(rad) * ray.length;
+            return (
+              <line
+                key={i}
+                x1={focus.x}
+                y1={focus.y}
+                x2={x2}
+                y2={y2}
+                stroke={stroke}
+                strokeOpacity={ray.opacity * (0.7 + scroll * 0.45)}
+                strokeWidth={ray.width}
+                strokeLinecap="round"
+                style={{ filter: 'blur(0.6px)' }}
+              />
+            );
+          })}
+          <circle
+            cx={focus.x}
+            cy={focus.y}
+            r={1.8}
+            fill={fillSoft}
+            fillOpacity={0.25 + scroll * 0.2}
+          />
+        </svg>
+      );
+    }
+
+    case 'orbitals':
+      return wrap(
+        <svg
+          className="absolute left-1/2 top-[42%] h-[min(95vw,780px)] w-[min(95vw,780px)] -translate-x-1/2 -translate-y-1/2"
+          viewBox="0 0 100 100"
+        >
+          <g
+            className={motionOk ? 'ph-living-anim' : undefined}
+            style={{
+              transformOrigin: `${layer.cx}px ${layer.cy}px`,
+              animation: motionOk
+                ? `ph-orbit-spin ${layer.spinSec * speedMul}s linear infinite alternate`
+                : undefined,
+            }}
+          >
+            {layer.rings.map((ring, i) => (
+              <circle
+                key={`r${i}`}
+                cx={layer.cx}
+                cy={layer.cy}
+                r={ring.r}
+                fill="none"
+                stroke={stroke}
+                strokeOpacity={ring.opacity}
+                strokeWidth={0.25}
+                strokeDasharray={i % 2 === 0 ? undefined : '1.2 1.8'}
+              />
+            ))}
+            {layer.nodes.map((n, i) => {
+              const rad = (n.angle * Math.PI) / 180;
+              const x = layer.cx + Math.cos(rad) * n.orbit;
+              const y = layer.cy + Math.sin(rad) * n.orbit;
+              return (
+                <circle
+                  key={`n${i}`}
+                  cx={x}
+                  cy={y}
+                  r={n.size}
+                  fill={fillSoft}
+                  fillOpacity={n.opacity}
+                />
+              );
+            })}
+          </g>
+        </svg>
+      );
+
+    case 'scan':
+      return wrap(
+        <div className="absolute inset-0 overflow-hidden mix-blend-soft-light">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+                to bottom,
+                ${stroke} 0 1px,
+                transparent 1px ${100 / layer.lineCount}%
+              )`,
+              opacity: layer.opacity * (0.8 + scroll * 0.35),
+            }}
+          />
+          {motionOk ? (
+            <div
+              className="ph-living-anim absolute left-0 right-0 h-[12%]"
+              style={{
+                background: `linear-gradient(180deg, transparent, ${fillSoft}, transparent)`,
+                opacity: layer.sweepOpacity,
+                filter: 'blur(10px)',
+                animation: `ph-scan-sweep ${layer.periodSec * speedMul}s ease-in-out infinite alternate`,
+              }}
+            />
+          ) : null}
+        </div>
+      );
+
+    case 'constellation':
+      return wrap(
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+          {layer.edges.map((e, i) => (
+            <path
+              key={`e${i}`}
+              d={e.d}
+              fill="none"
+              stroke={stroke}
+              strokeOpacity={e.opacity * (0.7 + scroll * 0.4)}
+              strokeWidth={0.2}
+            />
+          ))}
+          {layer.stars.map((s, i) => (
+            <circle
+              key={`s${i}`}
+              cx={s.x}
+              cy={s.y + scroll * 4}
+              r={s.r}
+              fill={fillSoft}
+              fillOpacity={s.opacity}
+            />
+          ))}
+        </svg>
+      );
+
+    case 'prisms':
+      return wrap(
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+          {layer.shards.map((p, i) => (
+            <polygon
+              key={i}
+              points={p.points}
+              fill={fillSoft}
+              fillOpacity={p.opacity * (0.55 + scroll * 0.35)}
+              stroke={stroke}
+              strokeOpacity={p.opacity * 1.6}
+              strokeWidth={0.18}
+            />
+          ))}
+        </svg>
+      );
+
+    case 'aurora':
+      return wrap(
+        <div className="absolute inset-0 overflow-hidden">
+          {layer.bands.map((b, i) => (
+            <div
+              key={i}
+              className={cn('absolute top-[-10%] h-[120%]', motionOk && 'ph-living-anim')}
+              style={{
+                left: `${b.x + scroll * (i % 2 === 0 ? -3 : 3)}%`,
+                width: `${b.width}%`,
+                marginLeft: `-${b.width / 2}%`,
+                background: `linear-gradient(180deg, transparent 0%, ${fillSoft} 35%, hsl(${tokens.hue2} ${Math.round(tokens.saturation * 0.7)}% 62%) 55%, transparent 100%)`,
+                opacity: b.opacity,
+                transform: `skewX(${b.skew}deg)`,
+                mixBlendMode: 'screen',
+                animation: motionOk
+                  ? `ph-aurora-shift calc(var(--ph-breath) * ${1.2 + i * 0.35}) ease-in-out ${i * 0.5}s infinite alternate`
+                  : undefined,
+              }}
+            />
+          ))}
+        </div>
+      );
+
+    case 'horizon': {
+      const lines: React.ReactNode[] = [];
+      const vanishY = layer.vanishY;
+      for (let r = 0; r <= layer.rows; r++) {
+        const t = r / layer.rows;
+        const y = vanishY + t * t * (100 - vanishY);
+        lines.push(
+          <line
+            key={`h${r}`}
+            x1={0}
+            y1={y}
+            x2={100}
+            y2={y}
+            stroke={stroke}
+            strokeOpacity={layer.opacity * (0.4 + t * 0.8)}
+            strokeWidth={0.15 + t * 0.15}
+          />
+        );
+      }
+      for (let c = 0; c <= layer.cols; c++) {
+        const t = c / layer.cols;
+        const xTop = 50 + (t - 0.5) * 18;
+        const xBot = t * 100;
+        lines.push(
+          <line
+            key={`v${c}`}
+            x1={xTop}
+            y1={vanishY}
+            x2={xBot}
+            y2={100}
+            stroke={stroke}
+            strokeOpacity={layer.opacity * 0.75}
+            strokeWidth={0.18}
+          />
+        );
+      }
+      return wrap(
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+          {lines}
+        </svg>
+      );
+    }
+
+    case 'signal':
+      return wrap(
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+          {layer.traces.map((t, i) => (
+            <path
+              key={i}
+              d={t.d}
+              fill="none"
+              stroke={stroke}
+              strokeOpacity={t.opacity * (0.7 + scroll * 0.4)}
+              strokeWidth={t.width}
+              strokeLinecap="round"
+              className={motionOk ? 'ph-living-anim' : undefined}
+              style={{
+                animation: motionOk
+                  ? `ph-signal-pulse calc(var(--ph-breath) * ${0.9 + i * 0.25}) ease-in-out infinite alternate`
+                  : undefined,
+              }}
+            />
+          ))}
+        </svg>
+      );
+
+    case 'spires':
+      return wrap(
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+          {layer.needles.map((n, i) => (
+            <line
+              key={i}
+              x1={n.x}
+              y1={100}
+              x2={n.x}
+              y2={100 - n.height}
+              stroke={stroke}
+              strokeOpacity={n.opacity * (0.75 + scroll * 0.35)}
+              strokeWidth={n.width}
+              strokeLinecap="round"
+            />
+          ))}
+        </svg>
+      );
+
+    case 'nova': {
+      const rays: React.ReactNode[] = [];
+      for (let i = 0; i < layer.rays; i++) {
+        const a = (i / layer.rays) * Math.PI * 2;
+        const len = 28 + (i % 3) * 8;
+        rays.push(
+          <line
+            key={i}
+            x1={layer.cx}
+            y1={layer.cy}
+            x2={layer.cx + Math.cos(a) * len}
+            y2={layer.cy + Math.sin(a) * len}
+            stroke={stroke}
+            strokeOpacity={layer.opacity * (i % 2 === 0 ? 1 : 0.55)}
+            strokeWidth={0.2 + (i % 3) * 0.08}
+            strokeLinecap="round"
+          />
+        );
+      }
+      return wrap(
+        <svg
+          className="absolute left-1/2 top-[38%] h-[min(90vw,720px)] w-[min(90vw,720px)] -translate-x-1/2 -translate-y-1/2"
+          viewBox="0 0 100 100"
+        >
+          <g
+            className={motionOk ? 'ph-living-anim' : undefined}
+            style={{
+              transformOrigin: `${layer.cx}px ${layer.cy}px`,
+              animation: motionOk
+                ? `ph-nova-spin ${layer.spinSec * speedMul}s linear infinite alternate`
+                : undefined,
+            }}
+          >
+            {rays}
+            <circle cx={layer.cx} cy={layer.cy} r={1.4} fill={fillSoft} fillOpacity={0.35} />
+          </g>
+        </svg>
+      );
+    }
+
+    case 'circuit':
+      return wrap(
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+          {layer.traces.map((t, i) => (
+            <path
+              key={`t${i}`}
+              d={t.d}
+              fill="none"
+              stroke={stroke}
+              strokeOpacity={t.opacity * (0.7 + scroll * 0.35)}
+              strokeWidth={0.35}
+              strokeLinejoin="round"
+              strokeLinecap="square"
+            />
+          ))}
+          {layer.nodes.map((n, i) => (
+            <circle
+              key={`n${i}`}
+              cx={n.x}
+              cy={n.y}
+              r={n.r}
+              fill={fillSoft}
+              fillOpacity={n.opacity}
+              className={motionOk && i % 3 === 0 ? 'ph-living-anim' : undefined}
+              style={{
+                animation:
+                  motionOk && i % 3 === 0
+                    ? `ph-circuit-blink calc(var(--ph-breath) * ${1 + (i % 4) * 0.2}) ease-in-out infinite alternate`
+                    : undefined,
+              }}
+            />
+          ))}
+        </svg>
+      );
 
     default:
       return null;

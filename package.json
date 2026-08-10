@@ -36,7 +36,7 @@
     "stripe:create-ink-packs": "node scripts/stripe-create-ink-packs.mjs",
     "stripe:create-test-yearly-ink-coupon": "node scripts/stripe-create-test-yearly-ink-coupon.mjs",
     "firebase:deploy:rules": "npx firebase deploy --only firestore:rules",
-    "firebase:deploy": "npx firebase deploy",
+    "firebase:deploy": "node scripts/firebase-deploy.mjs",
     "cap:sync": "npx cap sync",
     "cap:android": "npx cap open android",
     "cap:ios": "npx cap open ios",

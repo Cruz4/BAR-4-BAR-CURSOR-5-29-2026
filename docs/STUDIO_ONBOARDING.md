@@ -7,6 +7,7 @@ This document describes how Bar 4 Bar teaches new systems to artists in-app. Sou
 - Signing in lands on **The Scene** (`/`) — friends feed + Discover stream + Your Booth + nav dock. The Vault moved to **`/vault`**.
 - Kill switch: `SCENE_HOME_ENABLED` in `src/lib/scene-home.ts` — set `false` to restore the Vault at `/` (`/vault` then redirects home, `/feed` works again).
 - Onboarding order: Scene tour (first home visit) → visibility intro → Vault tour (first `/vault` visit) → workstation tour (first track open).
+- **Logged-out `/`** is the Pressing playground (not Scene). See [GUEST_TRY_SHEET.md](./GUEST_TRY_SHEET.md). New accounts may get Neomaiya Sol as first friend + guestbook welcome (usage-init).
 
 ## Guided tour (Scene home)
 

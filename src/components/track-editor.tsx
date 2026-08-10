@@ -161,6 +161,7 @@ import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-
 import { GuestTrySaveBanner } from '@/components/guest-try-save-banner';
 import { GuestDemoSignupRequiredDialog } from '@/components/guest-demo-signup-required-dialog';
 import { GUEST_DEMO_MAX_USES, isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
+import { reshuffleGuestStarter } from '@/lib/guest-track-session';
 import { vaultHref } from '@/lib/scene-home';
 import { GUEST_FUNNEL_EVENTS } from '@/lib/guest-funnel-events';
 import {
@@ -3876,7 +3877,22 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] max-md:h-[calc(100dvh-3.5rem)] w-full overflow-hidden max-md:pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))]">
-      {isGuestTryMode ? <GuestTrySaveBanner remainingOverride={guestDemoRemaining} /> : <FreeTierExpectationsBanner user={user} />}
+      {isGuestTryMode ? (
+        <GuestTrySaveBanner
+          remainingOverride={guestDemoRemaining}
+          onNewStarter={() => {
+            if (!track) return;
+            const next = reshuffleGuestStarter(track);
+            handleUpdateTrack({ sections: next.sections, title: next.title });
+            toast({
+              title: 'New starter line',
+              description: 'Finish under the new Architect line on bar 2.',
+            });
+          }}
+        />
+      ) : (
+        <FreeTierExpectationsBanner user={user} />
+      )}
       {isGuestTryMode && (
         <GuestDemoSignupRequiredDialog
           open={guestSignupRequiredOpen}

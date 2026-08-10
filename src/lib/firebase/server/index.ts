@@ -169,11 +169,6 @@ export function getAdminApp(): App {
   return getOrInitApp();
 }
 
-// Warm Admin SDK on Cloud Run cold starts before the first server action.
-if (isCloudRuntime() && getApps().length === 0) {
-  try {
-    getOrInitApp();
-  } catch (error) {
-    console.error('[firebase-admin] eager cloud init failed:', error);
-  }
-}
+// Do NOT eagerly init Admin here. Firebase deploy discovery sets FIREBASE_CONFIG
+// and times out (10s) if module load blocks on applicationDefault() / network.
+// Init lazily on first getDb() / getAuth() / getAdminApp() call instead.

@@ -1,13 +1,18 @@
 import { redirect } from 'next/navigation';
-import { isLockEnabled } from '@/lib/lock-feature';
+import { isLockFeatureEnabled } from '@/lib/server/lock-feature';
+
+export const dynamic = 'force-dynamic';
 
 /**
  * Server gate for all /lock/* routes.
- * Ensures .env.local NEXT_PUBLIC_LOCK is honored even when the client bundle
- * fails to inline the public env var (common on this Windows + next dev setup).
+ * Honors Admin Panel → Config → LOCK System (and LOCK_FORCE_OFF).
  */
-export default function LockSectionLayout({ children }: { children: React.ReactNode }) {
-  if (!isLockEnabled()) {
+export default async function LockSectionLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  if (!(await isLockFeatureEnabled())) {
     redirect('/');
   }
   return children;

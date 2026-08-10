@@ -107,6 +107,7 @@ Chapters:
 ### Outro (4:20–end)
 
 > Link in description — free demo. If you’re serious about bars, try one verse tonight.  
+> Or open bar4bar.ink logged out and **press** a live Artist Home first — Friends and Guestbook preview the social side.  
 > Comment what you want the next tutorial to cover: Freestyle pad, DNA Drop, or Performance Mode.
 
 ---

@@ -11,6 +11,8 @@ export const GUEST_FUNNEL_EVENTS = {
   OPTION_DISMISS: 'guest_demo_option_dismiss',
   LOCKED_FEATURE: 'guest_locked_feature_tap',
   SIGNUP_CTA: 'guest_signup_cta_click',
+  PRESSING_OPEN: 'guest_pressing_open',
+  PRESSING_CLAIM_CTA: 'guest_pressing_claim_cta',
 } as const;
 
 export type GuestFunnelEventName = (typeof GUEST_FUNNEL_EVENTS)[keyof typeof GUEST_FUNNEL_EVENTS];

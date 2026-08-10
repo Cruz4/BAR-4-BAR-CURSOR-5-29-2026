@@ -961,6 +961,85 @@ export async function deleteGuestbookEntry(
 }
 
 // ---------------------------------------------------------------------------
+// The Board — one reply per visitor per pin
+// ---------------------------------------------------------------------------
+
+export type BoardPinReply = {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorSlug?: string;
+  text: string;
+  createdAt: string;
+  pinId: string;
+};
+
+const MAX_BOARD_REPLY = 160;
+
+export async function setBoardPinReply(
+  profileOwnerId: string,
+  pinId: string,
+  text: string,
+  author: { name: string; slug?: string }
+): Promise<BoardPinReply> {
+  const user = requireUser();
+  if (profileOwnerId === user.uid) throw new Error('Reply under someone else’s pin from the wall instead.');
+  const clean = text.trim().slice(0, MAX_BOARD_REPLY);
+  if (!clean) throw new Error('Say something first.');
+  if (!pinId.trim()) throw new Error('Missing pin.');
+  const entry: BoardPinReply = {
+    id: user.uid,
+    authorId: user.uid,
+    authorName: author.name || user.displayName || 'Artist',
+    ...(author.slug ? { authorSlug: author.slug } : {}),
+    text: clean,
+    createdAt: new Date().toISOString(),
+    pinId: pinId.trim().slice(0, 40),
+  };
+  const { id, ...data } = entry;
+  await setDoc(doc(db, 'boardReplies', profileOwnerId, 'pins', entry.pinId, 'entries', id), data);
+  return entry;
+}
+
+export async function fetchBoardPinReplies(
+  profileOwnerId: string,
+  pinId: string,
+  max = 20
+): Promise<BoardPinReply[]> {
+  if (!profileOwnerId || !pinId) return [];
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'boardReplies', profileOwnerId, 'pins', pinId, 'entries'), limitTo(max))
+    );
+    return snap.docs
+      .map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          authorId: String(data.authorId || d.id),
+          authorName: String(data.authorName || 'Artist'),
+          authorSlug: typeof data.authorSlug === 'string' ? data.authorSlug : undefined,
+          text: String(data.text || ''),
+          createdAt: String(data.createdAt || ''),
+          pinId: String(data.pinId || pinId),
+        };
+      })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteBoardPinReply(
+  profileOwnerId: string,
+  pinId: string,
+  entryId: string
+): Promise<void> {
+  requireUser();
+  await deleteDoc(doc(db, 'boardReplies', profileOwnerId, 'pins', pinId, 'entries', entryId));
+}
+
+// ---------------------------------------------------------------------------
 // Blocks
 // ---------------------------------------------------------------------------
 

@@ -11,11 +11,13 @@ import type {
   AdminMetricsSnapshot,
   DailyCount,
   GuestTryFunnelStats,
+  LockFunnelStats,
   SignupAttributionRow,
   SignupAttributionStats,
 } from '@/lib/admin-metrics-types';
 import { marketingRefLabel, normalizeMarketingRef } from '@/lib/marketing-attribution';
 import { GUEST_FUNNEL_EVENTS } from '@/lib/guest-funnel-events';
+import { LOCK_FUNNEL_EVENTS } from '@/lib/lock-funnel-events';
 
 export type { AdminMetricsSnapshot, DailyCount } from '@/lib/admin-metrics-types';
 
@@ -77,7 +79,7 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
   const d30 = daysAgo(30);
   const d90 = daysAgo(90);
 
-  const [usersSnap, eventsSnap, logsSnap, marketingSnap, landingHitsSnap, guestFunnelSnap] =
+  const [usersSnap, eventsSnap, logsSnap, marketingSnap, landingHitsSnap, guestFunnelSnap, lockFunnelSnap] =
     await Promise.all([
       db.collection('users').get(),
       db.collection('analytics_events').orderBy('timestamp', 'desc').limit(500).get(),
@@ -90,6 +92,14 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
         .get()
         .catch((err) => {
           console.warn('[admin-metrics] guest funnel query failed', err);
+          return { docs: [] as { data: () => Record<string, unknown> }[] };
+        }),
+      db
+        .collection('studio_lock_funnel_events')
+        .where('timestamp', '>=', d90.toISOString())
+        .get()
+        .catch((err) => {
+          console.warn('[admin-metrics] lock funnel query failed', err);
           return { docs: [] as { data: () => Record<string, unknown> }[] };
         }),
     ]);
@@ -236,6 +246,41 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
     else if (ev === GUEST_FUNNEL_EVENTS.OPTION_DISMISS) guestOptionDismisses += 1;
     else if (ev === GUEST_FUNNEL_EVENTS.LOCKED_FEATURE) guestLockedFeatureTaps += 1;
     else if (ev === GUEST_FUNNEL_EVENTS.SIGNUP_CTA) guestSignupCtaClicks += 1;
+  }
+
+  let lockOpens = 0;
+  let lockOpensLast7 = 0;
+  let lockOpensLast30 = 0;
+  let lockTyped = 0;
+  let lockSubmits = 0;
+  let lockBranches = 0;
+  let lockShareCards = 0;
+  let lockNameCtas = 0;
+  let lockWhereNext = 0;
+  let lockStudio = 0;
+  let lockWriteAnother = 0;
+  let lockBloodline = 0;
+  let lockSignupCtas = 0;
+
+  for (const funnelDoc of lockFunnelSnap.docs) {
+    const data = funnelDoc.data();
+    const ev = String(data.event || '');
+    const at = parseDate(data.timestamp);
+    if (!at) continue;
+    if (ev === LOCK_FUNNEL_EVENTS.OPEN) {
+      lockOpens += 1;
+      if (at >= d7) lockOpensLast7 += 1;
+      if (at >= d30) lockOpensLast30 += 1;
+    } else if (ev === LOCK_FUNNEL_EVENTS.TYPED) lockTyped += 1;
+    else if (ev === LOCK_FUNNEL_EVENTS.SUBMIT) lockSubmits += 1;
+    else if (ev === LOCK_FUNNEL_EVENTS.BRANCH) lockBranches += 1;
+    else if (ev === LOCK_FUNNEL_EVENTS.SHARE_CARD) lockShareCards += 1;
+    else if (ev === LOCK_FUNNEL_EVENTS.NAME_CTA) lockNameCtas += 1;
+    else if (ev === LOCK_FUNNEL_EVENTS.WHERE_NEXT) lockWhereNext += 1;
+    else if (ev === LOCK_FUNNEL_EVENTS.STUDIO) lockStudio += 1;
+    else if (ev === LOCK_FUNNEL_EVENTS.WRITE_ANOTHER) lockWriteAnother += 1;
+    else if (ev === LOCK_FUNNEL_EVENTS.BLOODLINE) lockBloodline += 1;
+    else if (ev === LOCK_FUNNEL_EVENTS.SIGNUP_CTA) lockSignupCtas += 1;
   }
 
   let guestTrySignups = 0;
@@ -545,6 +590,28 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
     openToSignupPercent: pct(guestTrySignups, guestOpens),
   };
 
+  const lockFunnel: LockFunnelStats = {
+    opens: lockOpens,
+    opensLast7Days: lockOpensLast7,
+    opensLast30Days: lockOpensLast30,
+    typed: lockTyped,
+    submits: lockSubmits,
+    branches: lockBranches,
+    shareCards: lockShareCards,
+    nameCtas: lockNameCtas,
+    whereNext: lockWhereNext,
+    studioOpens: lockStudio,
+    writeAnother: lockWriteAnother,
+    bloodlineOpens: lockBloodline,
+    signupCtas: lockSignupCtas,
+    openToTypedPercent: pct(lockTyped, lockOpens),
+    typedToSubmitPercent: pct(lockSubmits, lockTyped),
+    openToSubmitPercent: pct(lockSubmits, lockOpens),
+    branchOfSubmitPercent: pct(lockBranches, lockSubmits),
+    openToNameCtaPercent: pct(lockNameCtas, lockOpens),
+    openToSignupCtaPercent: pct(lockSignupCtas, lockOpens),
+  };
+
   const recentEvents = eventsSnap.docs.slice(0, 25).map((doc) => {
     const data = doc.data();
     return {
@@ -623,6 +690,7 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
     },
     signupAttribution,
     guestTryFunnel,
+    lockFunnel,
     recentEvents,
     gamification: {
       usersWithAchievements,
@@ -716,6 +784,27 @@ function emptyMetrics(notes: string): AdminMetricsSnapshot {
       aiToAcceptPercent: 0,
       openToCtaPercent: 0,
       openToSignupPercent: 0,
+    },
+    lockFunnel: {
+      opens: 0,
+      opensLast7Days: 0,
+      opensLast30Days: 0,
+      typed: 0,
+      submits: 0,
+      branches: 0,
+      shareCards: 0,
+      nameCtas: 0,
+      whereNext: 0,
+      studioOpens: 0,
+      writeAnother: 0,
+      bloodlineOpens: 0,
+      signupCtas: 0,
+      openToTypedPercent: 0,
+      typedToSubmitPercent: 0,
+      openToSubmitPercent: 0,
+      branchOfSubmitPercent: 0,
+      openToNameCtaPercent: 0,
+      openToSignupCtaPercent: 0,
     },
     recentEvents: [],
     gamification: {

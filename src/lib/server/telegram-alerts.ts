@@ -22,6 +22,7 @@ const KIND_HEADLINE: Record<AdminAlertKind, string> = {
   pricing_view: '💰 Pricing page',
   checkout_started: '🛒 Checkout started',
   guest_try: '🎤 Demo sheet',
+  lock_funnel: '🔐 Finish-the-bar',
 };
 
 function telegramConfigured(): boolean {
@@ -40,7 +41,7 @@ function formatTelegramText(input: TelegramAlertInput): string {
   if (input.kind === 'signup' && input.guestAlias) {
     lines.push(`converted from: ${input.guestAlias}`);
   }
-  if (input.kind === 'guest_try' && input.guestAlias) {
+  if ((input.kind === 'guest_try' || input.kind === 'lock_funnel') && input.guestAlias) {
     lines.push(`guest: ${input.guestAlias}`);
   }
   if (input.ref) lines.push(`ref: ${input.ref}`);

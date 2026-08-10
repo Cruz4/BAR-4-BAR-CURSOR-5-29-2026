@@ -128,11 +128,13 @@ export function getGuestSignupHref(options?: {
 export async function trackGuestFunnelEvent(
   event: GuestFunnelEventName,
   metadata: GuestFunnelMetadata = {},
-  options?: { oncePerSession?: boolean; ref?: string | null }
+  options?: { oncePerSession?: boolean; ref?: string | null; markTrySession?: boolean }
 ): Promise<void> {
   if (typeof window === 'undefined') return;
 
-  markGuestTrySession();
+  if (options?.markTrySession !== false) {
+    markGuestTrySession();
+  }
 
   if (options?.oncePerSession) {
     try {

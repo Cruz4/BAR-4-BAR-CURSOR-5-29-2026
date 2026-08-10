@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 import { claimEchoAuthor, watchLock } from '@/lib/server/lock';
-import { isLockEnabled, LOCK_HOUSE_ID } from '@/lib/lock-feature';
+import { LOCK_HOUSE_ID } from '@/lib/lock-feature';
+import { isLockFeatureEnabled } from '@/lib/server/lock-feature';
 
 export const runtime = 'nodejs';
 
@@ -10,7 +11,7 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ lockId: string }> }
 ) {
-  if (!isLockEnabled()) {
+  if (!(await isLockFeatureEnabled())) {
     return NextResponse.json({ error: 'LOCK is off' }, { status: 404 });
   }
   try {

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/server/rate-limit';
 import { submitEcho } from '@/lib/server/lock';
-import { isLockEnabled, LOCK_HOUSE_ID } from '@/lib/lock-feature';
+import { LOCK_HOUSE_ID } from '@/lib/lock-feature';
+import { isLockFeatureEnabled } from '@/lib/server/lock-feature';
 import { getAuth } from '@/lib/firebase/server';
 
 export const runtime = 'nodejs';
@@ -16,7 +17,7 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ lockId: string }> }
 ) {
-  if (!isLockEnabled()) {
+  if (!(await isLockFeatureEnabled())) {
     return NextResponse.json({ error: 'LOCK is off' }, { status: 404 });
   }
   try {
@@ -58,6 +59,28 @@ export async function POST(
       authorId,
       authorName,
     });
+
+    // Server-side funnel (Telegram) — reliable even if client beacon fails
+    try {
+      const { recordLockFunnelEvent } = await import('@/lib/server/record-lock-funnel-event');
+      const { LOCK_FUNNEL_EVENTS } = await import('@/lib/lock-funnel-events');
+      const branched = Boolean(parentEchoId);
+      const meta = {
+        lockId,
+        lockScore: result.echo.lockScore,
+        branched,
+        authorName: authorName || null,
+        userId: authorId || null,
+        userName: authorName || null,
+        isHouse: lockId === LOCK_HOUSE_ID,
+      };
+      await recordLockFunnelEvent(LOCK_FUNNEL_EVENTS.SUBMIT, { metadata: meta });
+      if (branched) {
+        await recordLockFunnelEvent(LOCK_FUNNEL_EVENTS.BRANCH, { metadata: meta });
+      }
+    } catch (e) {
+      console.warn('[lock echo] funnel', e);
+    }
 
     return NextResponse.json(result);
   } catch (err) {

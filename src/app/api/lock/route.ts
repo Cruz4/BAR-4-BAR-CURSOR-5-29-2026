@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 import { createLock } from '@/lib/server/lock';
-import { isLockEnabled } from '@/lib/lock-feature';
+import { isLockFeatureEnabled } from '@/lib/server/lock-feature';
 import type { LockDnaSnapshot } from '@/lib/lock/types';
 import { parseEmbedUrl } from '@/lib/profile/embeds';
 
@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
 
 /** Publish a new Open LOCK (authenticated artist). */
 export async function POST(req: Request) {
-  if (!isLockEnabled()) {
+  if (!(await isLockFeatureEnabled())) {
     return NextResponse.json({ error: 'LOCK is off' }, { status: 404 });
   }
   try {
