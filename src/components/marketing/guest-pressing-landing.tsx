@@ -325,6 +325,9 @@ function GuestPressingLandingInner() {
             >
               Got it
             </Button>
+            <Button asChild variant="outline" className="border-white/20 font-bold">
+              <Link href="/welcome">About Bar 4 Bar</Link>
+            </Button>
             <Button type="button" className="font-bold gap-1.5" onClick={() => dismissTip(true)}>
               Try The Pressing
               <ArrowRight className="h-4 w-4" />
@@ -333,23 +336,22 @@ function GuestPressingLandingInner() {
         </DialogContent>
       </Dialog>
 
-      <header className="fixed top-0 left-0 right-0 z-[200] flex h-14 items-center justify-between gap-2 border-b border-white/[0.06] bg-background/55 px-3 backdrop-blur-xl sm:h-16 sm:px-6">
+      <header className="fixed top-0 left-0 right-0 z-[200] grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-white/[0.06] bg-background/55 px-3 backdrop-blur-xl sm:h-16 sm:px-6">
+        <div aria-hidden className="min-w-0" />
+
         <BrandLockup
           variant="marketing"
           titleTag="h1"
-          linkHref="/"
-          className="max-w-[10rem] sm:max-w-none"
-          onLinkClick={(e) => {
-            // Already on the landing — scroll the page shell to top (same-route Link is a no-op).
-            e.preventDefault();
-            const shell = e.currentTarget.closest('main') || document.documentElement;
-            if ('scrollTo' in shell) {
-              (shell as HTMLElement).scrollTo({ top: 0, behavior: 'smooth' });
-            }
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
+          className="justify-center max-w-[min(100%,14rem)] sm:max-w-none"
         />
-        <nav className="flex shrink-0 items-center gap-2 sm:gap-4">
+
+        <nav className="flex min-w-0 shrink-0 items-center justify-end gap-2 sm:gap-4">
+          <Link
+            href="/welcome"
+            className="hidden text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-primary sm:inline"
+          >
+            About
+          </Link>
           <Link
             href="/pricing"
             className="hidden text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-primary sm:inline"
@@ -381,13 +383,21 @@ function GuestPressingLandingInner() {
               Try The Pressing at the bottom to customize the skin.
             </span>
           </p>
-          <button
-            type="button"
-            onClick={() => setTipOpen(true)}
-            className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-primary hover:underline"
-          >
-            How it works
-          </button>
+          <div className="flex shrink-0 items-center gap-3">
+            <Link
+              href="/welcome"
+              className="text-[10px] font-bold uppercase tracking-wider text-zinc-300 hover:text-primary hover:underline"
+            >
+              About
+            </Link>
+            <button
+              type="button"
+              onClick={() => setTipOpen(true)}
+              className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-primary hover:underline"
+            >
+              How it works
+            </button>
+          </div>
         </div>
       </div>
 
@@ -402,6 +412,8 @@ function GuestPressingLandingInner() {
           playgroundFriends={playgroundFriends}
           playgroundGuestbook={playgroundGuestbook}
           playgroundBarOfWeek={playgroundBarOfWeek}
+          studioHomeHref="/welcome"
+          studioHomeLabel="About Bar 4 Bar"
         />
       </div>
 

@@ -37,7 +37,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { BrandLockup } from '@/components/brand-lockup';
-import { BRAND_ARIA_LABEL } from '@/lib/brand';
 import { StudioThemeControls } from '@/components/studio-theme-controls';
 import { useSocialAlerts } from '@/hooks/use-social-alerts';
 import { isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
@@ -121,9 +120,7 @@ export function Header() {
       <div className="relative h-14 w-full px-2 sm:px-4 md:px-6">
             {/* Logo centered — tablet/desktop only (mobile uses left column to avoid theme-toggle overlap) */}
             <div className="pointer-events-none absolute inset-0 z-20 hidden md:flex items-center justify-center px-24 lg:px-32">
-                <Link href={isGuestTry ? '/welcome' : '/'} className="pointer-events-auto min-w-0 max-w-full group" aria-label={BRAND_ARIA_LABEL}>
-                    <BrandLockup variant="app" />
-                </Link>
+                <BrandLockup variant="app" className="pointer-events-auto min-w-0 max-w-full" />
             </div>
 
             <div className="relative z-10 flex h-14 items-center justify-between gap-1 min-w-0 pointer-events-none [&_button]:pointer-events-auto [&_a]:pointer-events-auto">
@@ -139,9 +136,7 @@ export function Header() {
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
                 )}
-                <Link href={isGuestTry ? '/welcome' : '/'} className="min-w-0 flex-1 md:hidden group overflow-hidden" aria-label={BRAND_ARIA_LABEL}>
-                    <BrandLockup variant="app" className="max-w-full" />
-                </Link>
+                <BrandLockup variant="app" className="min-w-0 flex-1 md:hidden max-w-full overflow-hidden" />
                 {albumId && trackId && (
                   <Button 
                     variant="ghost" 

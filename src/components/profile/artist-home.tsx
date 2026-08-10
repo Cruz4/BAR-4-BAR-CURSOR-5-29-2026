@@ -73,6 +73,9 @@ type ArtistHomeProps = {
   playgroundFriends?: ModuleContext['playgroundFriends'];
   playgroundGuestbook?: ModuleContext['playgroundGuestbook'];
   playgroundBarOfWeek?: ModuleContext['playgroundBarOfWeek'];
+  /** Where the top-left studio / about control goes (guest sandbox → `/welcome`). */
+  studioHomeHref?: string;
+  studioHomeLabel?: string;
 };
 
 const MODULE_RENDERERS: Record<string, React.ComponentType<{ ctx: ModuleContext }>> = {
@@ -100,6 +103,8 @@ export function ArtistHome({
   playgroundFriends,
   playgroundGuestbook,
   playgroundBarOfWeek,
+  studioHomeHref = '/',
+  studioHomeLabel = 'Bar 4 Bar Studio',
 }: ArtistHomeProps) {
   const { user } = useAuth();
   const { enabled: lockOn } = useLockFeature();
@@ -213,8 +218,8 @@ export function ArtistHome({
               className="h-8 gap-1.5 border-[var(--ph-accent)]/45 bg-[var(--ph-accent)]/12 px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ph-accent)] shadow-none hover:bg-[var(--ph-accent)]/22 hover:text-[var(--ph-accent)]"
               asChild
             >
-              <Link href="/">
-                <ChevronLeft className="h-4 w-4" /> Bar 4 Bar Studio
+              <Link href={studioHomeHref}>
+                <ChevronLeft className="h-4 w-4" /> {studioHomeLabel}
               </Link>
             </Button>
             <span className="hidden font-code text-[9px] uppercase tracking-[0.3em] text-[var(--ph-muted)] sm:inline">

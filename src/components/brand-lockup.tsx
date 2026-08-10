@@ -1,31 +1,45 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
 import { cn } from '@/lib/utils';
 import { APP_NAME, APP_TAGLINE, BRAND_ARIA_LABEL } from '@/lib/brand';
 
+/** Canonical brand-home for the nav logo everywhere (Pressing / Scene). */
+export const BRAND_HOME_HREF = '/';
+
 type BrandLockupProps = {
   variant?: 'app' | 'marketing';
   className?: string;
+  /** Defaults to the shared brand home (`/`). */
   linkHref?: string;
   titleTag?: 'span' | 'h1';
-  /** Optional click (e.g. scroll-to-top when already on home). */
   onLinkClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
 };
+
+function scrollPageTop() {
+  const main = document.querySelector('main');
+  if (main && 'scrollTo' in main) {
+    (main as HTMLElement).scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 export function BrandLockup({
   variant = 'app',
   className,
-  linkHref,
+  linkHref = BRAND_HOME_HREF,
   titleTag = 'span',
   onLinkClick,
 }: BrandLockupProps) {
+  const pathname = usePathname();
   const isMarketing = variant === 'marketing';
   const TitleTag = titleTag;
+  const targetPath = linkHref.split('?')[0] || BRAND_HOME_HREF;
 
   const content = (
-    <div className={cn('flex min-w-0 items-center gap-2 sm:gap-4', !linkHref && className)}>
+    <div className="flex min-w-0 items-center gap-2 sm:gap-4">
       <div
         className={cn(
           'shrink-0 overflow-hidden rounded-xl flex items-center justify-center',
@@ -66,18 +80,22 @@ export function BrandLockup({
     </div>
   );
 
-  if (linkHref) {
-    return (
-      <Link
-        href={linkHref}
-        onClick={onLinkClick}
-        className={cn('group flex min-w-0 max-w-full', className)}
-        aria-label={BRAND_ARIA_LABEL}
-      >
-        {content}
-      </Link>
-    );
-  }
-
-  return content;
+  return (
+    <Link
+      href={linkHref}
+      onClick={(e) => {
+        onLinkClick?.(e);
+        if (e.defaultPrevented) return;
+        // Same route: still give feedback by scrolling home to the top.
+        if (pathname === targetPath) {
+          e.preventDefault();
+          scrollPageTop();
+        }
+      }}
+      className={cn('group flex min-w-0 max-w-full', className)}
+      aria-label={BRAND_ARIA_LABEL}
+    >
+      {content}
+    </Link>
+  );
 }

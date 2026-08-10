@@ -24,7 +24,7 @@ export function PublicHomeLanding() {
       <header className="fixed top-0 left-0 right-0 h-16 border-b border-white/[0.06] bg-background/40 backdrop-blur-xl z-[200] grid grid-cols-[1fr_auto_1fr] items-center px-3 sm:px-6 gap-2">
         <div aria-hidden className="min-w-0" />
 
-        <BrandLockup variant="marketing" titleTag="h1" linkHref="/" className="justify-center max-w-[min(100%,14rem)] sm:max-w-none" />
+        <BrandLockup variant="marketing" titleTag="h1" className="justify-center max-w-[min(100%,14rem)] sm:max-w-none" />
 
         <nav className="flex items-center justify-end gap-2 sm:gap-4 min-w-0">
           <a
@@ -132,6 +132,9 @@ export function PublicHomeLanding() {
                 <LandingSignupLink intent="claim_artist_home">
                   Claim your free Artist Home
                 </LandingSignupLink>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="h-12 px-8 font-bold rounded-full border-primary/40">
+                <Link href="/">Press your profile</Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="h-12 px-8 font-bold rounded-full border-emerald-500/40">
                 <Link href="/try?src=landing">Try writing free</Link>

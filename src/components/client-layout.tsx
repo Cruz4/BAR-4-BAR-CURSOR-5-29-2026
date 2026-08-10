@@ -79,8 +79,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const isLoginPage = pathname === '/login';
+  const isWelcomePage = pathname === '/welcome';
   const isPublicHome = pathname === '/' && !user;
-  const isMarketingShell = isLoginPage || isPublicHome;
+  const isMarketingShell = isLoginPage || isPublicHome || isWelcomePage;
   const isPerformPage = pathname.endsWith('/perform');
   const isSharePage = pathname.startsWith('/share/');
   // /profile/customize is Edit Public Page — an app page, not the public profile

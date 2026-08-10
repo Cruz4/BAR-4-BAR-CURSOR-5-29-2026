@@ -373,7 +373,7 @@ function LoginForm() {
             </Link>
           </nav>
 
-          <BrandLockup variant="marketing" linkHref="/" className="justify-center max-w-[min(100%,14rem)] sm:max-w-none" />
+          <BrandLockup variant="marketing" className="justify-center max-w-[min(100%,14rem)] sm:max-w-none" />
 
           <nav className="flex items-center justify-end gap-2 sm:gap-4 min-w-0">
             <Link href="/#features" className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Features</Link>
