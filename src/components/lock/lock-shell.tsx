@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { buildLoginUrl } from '@/lib/login-links';
 
 /**
- * Finish-this-bar stage — readable atmosphere, clear exits (not a locked terminal).
+ * Finish-this-bar stage — one dare, clear exits.
  */
 export function LockShell({
   children,
@@ -31,31 +31,39 @@ export function LockShell({
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_-20%,hsl(var(--primary)/0.14),transparent_55%)]"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_-10%,hsl(var(--primary)/0.16),transparent_52%)]"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 opacity-[0.035] [background-image:radial-gradient(rgba(255,255,255,0.45)_0.6px,transparent_0.6px)] [background-size:4px_4px]"
+        className="pointer-events-none absolute inset-0 -z-10 opacity-[0.03] [background-image:radial-gradient(rgba(255,255,255,0.5)_0.55px,transparent_0.55px)] [background-size:5px_5px]"
       />
 
-      <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#0a0c10]/90 backdrop-blur-md px-4 py-3 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
+      <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#0a0c10]/88 backdrop-blur-md px-4 py-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
           <Link
             href="/"
-            className="text-xs font-headline tracking-wide text-zinc-200 hover:text-white transition-colors shrink-0"
+            className="font-headline text-sm tracking-wide text-zinc-100 hover:text-white transition-colors shrink-0"
           >
             Bar 4 Bar
           </Link>
-          <span className="hidden sm:inline text-[10px] uppercase tracking-[0.2em] text-zinc-500 truncate">
-            {badge || 'Finish this bar'}
-          </span>
+          {badge ? (
+            <span className="truncate text-[11px] text-zinc-500">
+              <span className="text-zinc-700" aria-hidden>
+                ·
+              </span>{' '}
+              {badge}
+            </span>
+          ) : null}
         </div>
-        <div className="flex items-center gap-3 sm:gap-4 text-[11px] shrink-0">
+        <div className="flex items-center gap-3 sm:gap-4 text-[12px] shrink-0">
           {right}
-          <Link href="/try" className="text-zinc-400 hover:text-primary transition-colors">
-            Writing tools
+          <Link href="/try" className="text-zinc-500 hover:text-zinc-300 transition-colors">
+            Studio
           </Link>
-          <Link href={signInHref} className="text-primary hover:text-primary/80 transition-colors font-medium">
+          <Link
+            href={signInHref}
+            className="font-medium text-primary hover:text-primary/80 transition-colors"
+          >
             Sign in
           </Link>
         </div>
@@ -82,7 +90,7 @@ export function LockPlate({
     danger: 'border-rose-500/30 bg-rose-500/[0.05]',
   } as const;
   return (
-    <div className={cn('rounded-lg border', tones[tone], className)}>{children}</div>
+    <div className={cn('rounded-xl border', tones[tone], className)}>{children}</div>
   );
 }
 

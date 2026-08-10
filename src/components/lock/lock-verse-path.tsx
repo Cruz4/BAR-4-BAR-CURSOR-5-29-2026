@@ -42,8 +42,8 @@ export function LockVersePath({
         </p>
         <p className="mt-0.5 text-[11px] text-zinc-500">
           {path.length <= 1
-            ? 'Seed only — pick a fork or write the next bar.'
-            : `${path.length - 1} reply${path.length - 1 === 1 ? '' : 'ies'} in this strain.`}
+            ? 'Opening line — write the next one.'
+            : `${path.length - 1} reply${path.length - 1 === 1 ? '' : 'ies'} on this path.`}
         </p>
       </div>
       <ol className={cn('space-y-0', compact ? 'p-3' : 'p-4')}>
@@ -90,14 +90,14 @@ export function LockVersePath({
                   <span className="mb-0.5 flex flex-wrap items-center gap-2">
                     <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">
                       {line.isSeed
-                        ? 'Unfinished bar'
+                        ? 'Opening line'
                         : isTip
-                          ? 'Tip — reply from here'
-                          : `Bar ${i}`}
+                          ? 'Reply from here'
+                          : `Line ${i}`}
                     </span>
                     {line.echo ? (
                       <span className="text-[10px] tabular-nums text-primary/80">
-                        Fit {line.echo.lockScore}
+                        {line.echo.lockScore}
                       </span>
                     ) : null}
                     {canStep ? (
@@ -134,7 +134,7 @@ export function LockVersePath({
             className="text-[11px] text-zinc-500 transition-colors hover:text-zinc-300"
             onClick={() => onSelectLine(LOCK_SEED_NODE_ID)}
           >
-            Reset to unfinished bar
+            Reset to opening line
           </button>
         </div>
       ) : null}

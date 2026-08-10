@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { EmbedPlayer } from '@/components/profile/embed-player';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -12,7 +13,7 @@ import { persistDemoLines } from '@/lib/demo-session';
 import type { LockDoc, LockEcho } from '@/lib/lock/types';
 import { buildLoginUrl } from '@/lib/login-links';
 import { auth } from '@/lib/firebase/client/firebase';
-import { LockPlate, LockShell } from '@/components/lock/lock-shell';
+import { LockShell } from '@/components/lock/lock-shell';
 import { LockVersePath } from '@/components/lock/lock-verse-path';
 import { cn } from '@/lib/utils';
 import {
@@ -23,7 +24,6 @@ import {
   LOCK_SEED_NODE_ID,
   type LockPathLine,
 } from '@/lib/lock/bloodline-tree';
-import { GitBranch, PenLine } from 'lucide-react';
 import {
   trackLockBloodline,
   trackLockNameCta,
@@ -159,8 +159,8 @@ function LockPublicPageInner({ lockId, lockEnabled }: LockPublicPageProps) {
     setParentEchoId(echo.id);
     setResult(null);
     toast({
-      title: 'Replying on this strain',
-      description: 'Your next line continues from their bar — prior lines stay above.',
+      title: 'Replying after this line',
+      description: 'Your bar continues from theirs.',
     });
     requestAnimationFrame(() => {
       composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -170,7 +170,7 @@ function LockPublicPageInner({ lockId, lockEnabled }: LockPublicPageProps) {
 
   const clearBranch = () => {
     setParentEchoId(null);
-    toast({ title: 'Back to the unfinished bar' });
+    toast({ title: 'Back to the opening line' });
   };
 
   const onPathSelect = (lineId: string) => {
@@ -371,7 +371,11 @@ function LockPublicPageInner({ lockId, lockEnabled }: LockPublicPageProps) {
   const isClosed = lock.status !== 'open';
   const ownerHome = lock.ownerSlug ? `/profile/${lock.ownerSlug}` : null;
   const named = watching || Boolean(user && result?.authorName);
-  const houseLabel = lock.isHouse ? 'House prompt · Bar 4 Bar' : `@${lock.ownerSlug || lock.ownerName}`;
+  const fromLabel = lock.isHouse
+    ? 'Bar 4 Bar'
+    : lock.ownerSlug
+      ? `@${lock.ownerSlug}`
+      : lock.ownerName;
   const branched = Boolean(parentEchoId && path.length > 1);
 
   return (
@@ -381,164 +385,144 @@ function LockPublicPageInner({ lockId, lockEnabled }: LockPublicPageProps) {
         <Link
           href={`/lock/${id}/bloodline`}
           onClick={() => trackLockBloodline(id)}
-          className="hidden items-center gap-1.5 text-zinc-400 transition-colors hover:text-primary sm:inline-flex"
+          className="hidden text-zinc-500 transition-colors hover:text-zinc-300 sm:inline"
         >
-          <GitBranch className="h-3.5 w-3.5" />
-          Verse Tree
+          All paths
         </Link>
       }
     >
-      <main className="relative mx-auto max-w-xl px-4 pb-16 sm:px-6">
-        {/* Atmosphere accent behind hero */}
+      <main className="relative mx-auto max-w-xl px-4 pb-20 sm:px-6">
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-8 left-1/2 h-56 w-[120%] -translate-x-1/2 bg-[radial-gradient(ellipse_at_center,hsl(var(--primary)/0.18),transparent_65%)]"
+          className="pointer-events-none absolute -top-4 left-1/2 h-72 w-[140%] -translate-x-1/2 bg-[radial-gradient(ellipse_at_center,hsl(var(--primary)/0.22),transparent_60%)]"
         />
 
         {!result ? (
           <div className="relative space-y-8 py-10 sm:py-14">
-            <div className="space-y-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-primary/90">
-                {houseLabel}
+            <div className="space-y-5">
+              <p className="text-[11px] font-medium tracking-wide text-zinc-500">
+                {fromLabel}
                 {lock.echoCount > 0 ? (
-                  <span className="font-normal text-zinc-600"> · {lock.echoCount} replies</span>
+                  <span className="text-zinc-600">
+                    {' '}
+                    · {lock.echoCount} {lock.echoCount === 1 ? 'reply' : 'replies'}
+                  </span>
                 ) : null}
               </p>
-              <h1 className="font-headline text-3xl font-bold leading-[1.05] tracking-tight text-zinc-50 sm:text-4xl md:text-[2.75rem]">
-                Finish this bar.
-              </h1>
-              <p className="max-w-md text-sm leading-relaxed text-zinc-400">
-                Drop the next line. It joins the Verse Tree with a Fit score. Explore every branch
-                people wrote after each other — or answer from the tip of a strain.
-              </p>
+
+              {branched ? (
+                <LockVersePath path={path} onSelectLine={onPathSelect} compact />
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <h1 className="font-headline text-[1.85rem] font-bold leading-[1.12] tracking-tight text-zinc-50 sm:text-4xl md:text-[2.65rem]">
+                    {lock.seedBar}
+                  </h1>
+                </motion.div>
+              )}
+
               {isClosed ? (
-                <p className="text-sm text-rose-400/90">This cast is closed — no new replies.</p>
-              ) : null}
+                <p className="text-sm text-rose-400/90">This one’s closed — no new replies.</p>
+              ) : (
+                <p className="text-sm text-zinc-400">Your turn — write the next line.</p>
+              )}
             </div>
 
-            {branched ? (
-              <LockVersePath path={path} onSelectLine={onPathSelect} compact />
-            ) : (
-              <LockPlate tone="primary" className="relative overflow-hidden p-5 sm:p-6">
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-primary/20 blur-3xl"
-                />
-                <p className="relative text-[10px] font-bold uppercase tracking-[0.22em] text-primary/80">
-                  The unfinished bar
-                </p>
-                <p className="relative mt-3 font-headline text-xl leading-snug tracking-tight text-zinc-50 sm:text-2xl">
-                  {lock.seedBar}
-                </p>
-              </LockPlate>
-            )}
-
             {lock.embedUrl ? (
-              <div className="overflow-hidden rounded-lg border border-white/[0.08] opacity-90">
+              <div className="overflow-hidden rounded-xl border border-white/[0.08] opacity-90">
                 <EmbedPlayer url={lock.embedUrl} title="bed" />
               </div>
             ) : null}
 
             {!isClosed ? (
-              <div className="space-y-3">
-                <label
-                  htmlFor="lock-bar"
-                  className="flex items-center gap-2 text-sm font-medium text-zinc-200"
+              <div className="space-y-4">
+                <motion.div
+                  animate={
+                    bar.trim()
+                      ? { boxShadow: '0 0 0 0 rgba(0,0,0,0)' }
+                      : {
+                          boxShadow: [
+                            '0 0 0 0 rgba(59,130,246,0)',
+                            '0 0 0 3px rgba(59,130,246,0.22)',
+                            '0 0 0 0 rgba(59,130,246,0)',
+                          ],
+                        }
+                  }
+                  transition={
+                    bar.trim()
+                      ? { duration: 0.2 }
+                      : { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }
+                  }
+                  className="rounded-xl"
                 >
-                  <PenLine className="h-3.5 w-3.5 text-primary" />
-                  {branched ? 'Your next bar on this strain' : 'Your next bar'}
-                </label>
-                <textarea
-                  ref={composerRef}
-                  id="lock-bar"
-                  value={bar}
-                  rows={3}
-                  disabled={submitting}
-                  placeholder="Go ahead — give it a shot…"
-                  className="w-full resize-none rounded-lg border border-white/15 bg-black/50 px-3 py-3 text-base leading-relaxed text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  onChange={(e) => {
-                    const next = e.target.value;
-                    setBar(next);
-                    if (next.trim()) trackLockTyped(id);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                      e.preventDefault();
-                      void onDropBar();
-                    }
-                  }}
-                />
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs text-zinc-600">Ctrl/⌘ + Enter to send</p>
+                  <textarea
+                    ref={composerRef}
+                    id="lock-bar"
+                    value={bar}
+                    rows={4}
+                    disabled={submitting}
+                    aria-label={branched ? 'Your next line on this path' : 'Your next line'}
+                    placeholder="…"
+                    className="w-full resize-none rounded-xl border border-white/20 bg-black/55 px-4 py-4 text-lg leading-relaxed text-zinc-50 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-primary/45 sm:text-xl"
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setBar(next);
+                      if (next.trim()) trackLockTyped(id);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                        e.preventDefault();
+                        void onDropBar();
+                      }
+                    }}
+                  />
+                </motion.div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <button
                     type="button"
                     disabled={!bar.trim() || submitting}
                     onClick={() => void onDropBar()}
                     className={cn(
-                      'rounded-md px-5 py-2.5 text-sm font-bold transition-colors',
+                      'w-full rounded-lg px-6 py-3.5 text-sm font-bold uppercase tracking-[0.14em] transition-colors sm:w-auto sm:min-w-[10rem]',
                       bar.trim() && !submitting
                         ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                         : 'pointer-events-none bg-zinc-800 text-zinc-500'
                     )}
                   >
-                    {submitting ? 'Saving…' : 'Drop your bar'}
+                    {submitting ? 'Saving…' : 'Drop it'}
                   </button>
+                  {branched ? (
+                    <button
+                      type="button"
+                      onClick={clearBranch}
+                      className="text-sm text-zinc-500 hover:text-zinc-300"
+                    >
+                      Back to the opening line
+                    </button>
+                  ) : (
+                    <p className="text-xs text-zinc-600 sm:text-right">Ctrl / ⌘ + Enter</p>
+                  )}
                 </div>
-                {branched ? (
-                  <button
-                    type="button"
-                    onClick={clearBranch}
-                    className="text-xs text-zinc-500 hover:text-zinc-300"
-                  >
-                    Answer the unfinished bar instead
-                  </button>
-                ) : null}
               </div>
             ) : null}
 
-            <Link
-              href={`/lock/${id}/bloodline`}
-              onClick={() => trackLockBloodline(id)}
-              className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/[0.07] px-4 py-3 transition-colors hover:border-primary/50 hover:bg-primary/[0.12]"
-            >
-              <span className="flex items-center gap-2 text-sm font-medium text-zinc-100">
-                <GitBranch className="h-4 w-4 text-primary" />
-                Explore the Verse Tree
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-primary/80">
-                Paths →
-              </span>
-            </Link>
-
             {topEchoes.length > 0 ? (
-              <section className="space-y-4 border-t border-white/[0.08] pt-6">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-sm font-medium text-zinc-200">Recent replies</h2>
-                  <Link
-                    href={`/lock/${id}/bloodline`}
-                    onClick={() => trackLockBloodline(id)}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    Open tree
-                  </Link>
-                </div>
+              <section className="space-y-3 border-t border-white/[0.06] pt-8">
+                <p className="text-xs text-zinc-500">
+                  {topEchoes.length === 1
+                    ? 'Someone already replied'
+                    : `${Math.min(topEchoes.length, 8)} recent replies`}
+                </p>
                 <ul className="space-y-4">
-                  {topEchoes.map((e) => {
+                  {topEchoes.slice(0, 8).map((e) => {
                     const selected = parentEchoId === e.id;
                     return (
-                      <li key={e.id} className="space-y-1.5">
-                        <p className="text-xs text-zinc-500">
-                          <span className="tabular-nums text-primary/90">Fit {e.lockScore}</span>
-                          {e.isPick ? ' · picked' : ''}
-                          {' · '}
-                          {e.authorName || 'Anonymous'}
-                        </p>
-                        <p
-                          className={cn(
-                            'text-sm leading-snug text-zinc-300',
-                            selected && 'text-amber-100'
-                          )}
-                        >
+                      <li key={e.id} className="space-y-1">
+                        <p className="text-sm leading-snug text-zinc-300">
+                          <span className="text-zinc-500">{e.authorName || 'Anonymous'} · </span>
                           {e.text}
                         </p>
                         <div className="flex flex-wrap gap-3">
@@ -548,7 +532,7 @@ function LockPublicPageInner({ lockId, lockEnabled }: LockPublicPageProps) {
                               className="text-xs text-zinc-500 hover:text-primary"
                               onClick={() => (selected ? clearBranch() : answerFrom(e))}
                             >
-                              {selected ? 'Cancel reply' : 'Continue from here'}
+                              {selected ? 'Cancel' : 'Reply after this'}
                             </button>
                           ) : null}
                           {canDelete(e) ? (
@@ -566,17 +550,34 @@ function LockPublicPageInner({ lockId, lockEnabled }: LockPublicPageProps) {
                     );
                   })}
                 </ul>
+                <Link
+                  href={`/lock/${id}/bloodline`}
+                  onClick={() => trackLockBloodline(id)}
+                  className="inline-block pt-1 text-xs text-zinc-500 hover:text-zinc-300"
+                >
+                  See every path →
+                </Link>
               </section>
-            ) : (
-              <p className="pt-2 text-sm text-zinc-600">No replies yet — be the first.</p>
-            )}
+            ) : !isClosed ? (
+              <p className="text-sm text-zinc-600">No replies yet — be first.</p>
+            ) : null}
+
+            {!topEchoes.length ? (
+              <Link
+                href={`/lock/${id}/bloodline`}
+                onClick={() => trackLockBloodline(id)}
+                className="inline-block text-xs text-zinc-600 hover:text-zinc-400"
+              >
+                See every path →
+              </Link>
+            ) : null}
 
             {user?.id === lock.ownerId ? (
               <Link
                 href={`/lock/${id}/manage`}
-                className="inline-block text-xs text-zinc-500 hover:text-zinc-300"
+                className="inline-block text-xs text-zinc-600 hover:text-zinc-400"
               >
-                Manage this cast
+                Manage
               </Link>
             ) : null}
           </div>
@@ -584,10 +585,16 @@ function LockPublicPageInner({ lockId, lockEnabled }: LockPublicPageProps) {
           <div className="space-y-8 py-12 sm:py-16">
             <div
               ref={cardRef}
-              className="space-y-4 rounded-lg border border-primary/30 bg-black/50 p-6"
+              className="space-y-5 rounded-xl border border-primary/30 bg-black/50 p-6 sm:p-7"
             >
-              <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-                Your reply · {lock.ownerName}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="space-y-5"
+              >
+              <p className="text-xs text-zinc-500">
+                Your line · {lock.isHouse ? 'Bar 4 Bar' : lock.ownerName}
               </p>
               {path.length > 1 ? (
                 <div className="space-y-1 border-l border-white/10 pl-3">
@@ -608,29 +615,35 @@ function LockPublicPageInner({ lockId, lockEnabled }: LockPublicPageProps) {
                   {lock.seedBar}
                 </p>
               )}
-              <p className="text-lg leading-snug text-zinc-100">{result.text}</p>
-              <div className="pt-2">
-                <p className="font-headline text-5xl tracking-tight text-primary tabular-nums">
+              <p className="font-headline text-xl leading-snug tracking-tight text-zinc-50 sm:text-2xl">
+                {result.text}
+              </p>
+              <div className="pt-1">
+                <motion.p
+                  initial={{ opacity: 0, scale: 0.88 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 18, delay: 0.12 }}
+                  className="font-headline text-5xl tracking-tight text-primary tabular-nums sm:text-6xl"
+                >
                   {result.lockScore}
-                </p>
-                <p className="mt-1 text-xs text-zinc-500">
-                  Fit score — how close your rhyme sits to this bar
-                </p>
+                </motion.p>
+                <p className="mt-1.5 text-xs text-zinc-500">How tight the rhyme sits</p>
               </div>
+              </motion.div>
             </div>
 
             <div className="space-y-3">
               <button
                 type="button"
                 onClick={openStudio}
-                className="w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                className="w-full rounded-lg bg-primary px-4 py-3.5 text-sm font-bold uppercase tracking-[0.12em] text-primary-foreground hover:bg-primary/90"
               >
                 Keep writing in Studio
               </button>
               <button
                 type="button"
                 onClick={() => void downloadCard()}
-                className="w-full rounded-md border border-white/15 px-4 py-3 text-sm text-zinc-200 hover:border-primary/40 hover:text-primary"
+                className="w-full rounded-lg border border-white/15 px-4 py-3 text-sm text-zinc-200 hover:border-primary/40 hover:text-primary"
               >
                 Share your reply
               </button>
@@ -640,42 +653,39 @@ function LockPublicPageInner({ lockId, lockEnabled }: LockPublicPageProps) {
                   onClick={() => void onWatch()}
                   className="w-full py-2 text-sm text-zinc-400 hover:text-zinc-200"
                 >
-                  {user ? 'Save your name on this reply' : 'Sign in to put your name on this reply'}
+                  {user ? 'Put your name on this' : 'Sign in to put your name on this'}
                 </button>
               ) : (
-                <p className="text-center text-xs text-primary/80">
-                  Name saved · watching for Activity
-                </p>
+                <p className="text-center text-xs text-primary/80">Name saved</p>
               )}
             </div>
 
-            <div className="space-y-2 border-t border-white/[0.08] pt-6">
-              <p className="mb-2 text-xs uppercase tracking-[0.18em] text-zinc-600">Also</p>
-              <NavRow
-                label="Verse Tree"
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-white/[0.06] pt-6 text-sm text-zinc-500">
+              <Link
                 href={`/lock/${id}/bloodline`}
-                onNavigate={() => {
+                onClick={() => {
                   trackLockWhereNext(id, 'bloodline');
                   trackLockBloodline(id);
                 }}
-              />
-              <NavRow label="The Scene" href="/" onNavigate={() => trackLockWhereNext(id, 'scene')} />
+                className="hover:text-zinc-300"
+              >
+                All paths
+              </Link>
+              <Link
+                href="/"
+                onClick={() => trackLockWhereNext(id, 'scene')}
+                className="hover:text-zinc-300"
+              >
+                The Scene
+              </Link>
               {ownerHome ? (
-                <NavRow
-                  label="Artist Home"
+                <Link
                   href={ownerHome}
-                  onNavigate={() => trackLockWhereNext(id, 'artist_home')}
-                />
-              ) : null}
-              {canDelete(result) ? (
-                <button
-                  type="button"
-                  disabled={deletingId === result.id}
-                  onClick={() => void deleteReply(result.id)}
-                  className="py-1 text-sm text-rose-400/80 hover:text-rose-300"
+                  onClick={() => trackLockWhereNext(id, 'artist_home')}
+                  className="hover:text-zinc-300"
                 >
-                  Delete my reply
-                </button>
+                  Artist Home
+                </Link>
               ) : null}
               <button
                 type="button"
@@ -685,34 +695,24 @@ function LockPublicPageInner({ lockId, lockEnabled }: LockPublicPageProps) {
                   setParentEchoId(null);
                   setWatching(false);
                 }}
-                className="py-1 text-sm text-zinc-500 hover:text-zinc-300"
+                className="hover:text-zinc-300"
               >
                 Write another
               </button>
+              {canDelete(result) ? (
+                <button
+                  type="button"
+                  disabled={deletingId === result.id}
+                  onClick={() => void deleteReply(result.id)}
+                  className="text-rose-400/80 hover:text-rose-300"
+                >
+                  Delete
+                </button>
+              ) : null}
             </div>
           </div>
         )}
       </main>
     </LockShell>
-  );
-}
-
-function NavRow({
-  href,
-  label,
-  onNavigate,
-}: {
-  href: string;
-  label: string;
-  onNavigate?: () => void;
-}) {
-  return (
-    <Link
-      href={href}
-      onClick={() => onNavigate?.()}
-      className="block py-1 text-sm text-zinc-300 transition-colors hover:text-primary"
-    >
-      {label}
-    </Link>
   );
 }

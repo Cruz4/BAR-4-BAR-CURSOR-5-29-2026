@@ -159,6 +159,9 @@ export function SceneHome() {
 
   const viewerSlug = summary.profileSlug || undefined;
 
+  const sceneProgressTourPinned =
+    tourActive && SCENE_HOME_TOUR_STEPS[tourStep]?.id === 'scene-progress';
+
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
@@ -406,14 +409,14 @@ export function SceneHome() {
 
           {/* < xl: progress banner + nav strip stacked above the feed */}
           <div className="xl:hidden mb-4 space-y-3">
-            <div data-tour="scene-progress-mobile">
-              <VaultStudioProgress
-                variant="banner"
-                defaultExpanded={false}
-                phoneStartsMinimized
-                persistExpandedKey={SCENE_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY}
-              />
-            </div>
+            <VaultStudioProgress
+              variant="banner"
+              tourId="scene-progress-mobile"
+              tourForceExpanded={sceneProgressTourPinned}
+              defaultExpanded={false}
+              phoneStartsMinimized
+              persistExpandedKey={SCENE_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY}
+            />
             <SceneNavDock compact />
           </div>
         </div>
@@ -422,10 +425,11 @@ export function SceneHome() {
         <aside
           className="hidden xl:flex xl:col-start-1 xl:row-start-2 justify-end items-start self-start pr-2 2xl:pr-3 sticky top-[5.25rem] z-30 pointer-events-none [&>*]:pointer-events-auto"
           aria-label="Studio progress"
-          data-tour="scene-progress-desktop"
         >
           <VaultStudioProgress
             variant="sidebar"
+            tourId="scene-progress-desktop"
+            tourForceExpanded={sceneProgressTourPinned}
             defaultExpanded
             persistExpandedKey={SCENE_STUDIO_PROGRESS_EXPANDED_KEY}
           />

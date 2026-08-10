@@ -135,7 +135,7 @@ export function SceneDiscoverCard({ card, viewerSlug }: { card: DiscoverCard; vi
               {lock.updatedAt ? ` · ${timeAgo(lock.updatedAt)}` : ''}
             </p>
             <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>
-              <Link href={`/lock/${lock.id}`}>Finish this</Link>
+              <Link href={`/lock/${lock.id}`}>Finish it</Link>
             </Button>
           </div>
         </div>

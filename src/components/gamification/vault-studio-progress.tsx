@@ -66,6 +66,8 @@ export function VaultStudioProgress({
   defaultExpanded = false,
   /** Phone view: start collapsed and skip auto-open on recent earn. */
   phoneStartsMinimized = false,
+  /** Override default vault-progress-* tour anchor (Scene uses scene-progress-*). */
+  tourId,
 }: {
   variant?: 'banner' | 'sidebar';
   /** Vault guided tour — expand panel so the spotlight covers the full progress card. */
@@ -73,6 +75,7 @@ export function VaultStudioProgress({
   persistExpandedKey?: string;
   defaultExpanded?: boolean;
   phoneStartsMinimized?: boolean;
+  tourId?: string;
 }) {
   const { user } = useAuth();
   const { summary, rankLabel, loading } = useGamification();
@@ -490,7 +493,7 @@ export function VaultStudioProgress({
     return (
       <div
         className="mr-40 2xl:mr-48 shrink-0 -translate-y-2 2xl:-translate-y-4"
-        data-tour="vault-progress-desktop"
+        data-tour={tourId ?? 'vault-progress-desktop'}
       >
         {sidebarBubble}
       </div>
@@ -499,7 +502,7 @@ export function VaultStudioProgress({
 
   return (
     <Card
-      data-tour={isSidebar ? 'vault-progress-desktop' : 'vault-progress-mobile'}
+      data-tour={tourId ?? (isSidebar ? 'vault-progress-desktop' : 'vault-progress-mobile')}
       className={cn(
         cardClassName,
         isSidebar && 'animate-in fade-in slide-in-from-left-2 duration-200',

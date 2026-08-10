@@ -32,8 +32,12 @@ const MOBILE_MAX_SPOTLIGHT_VH = 0.24;
 const MOBILE_SPOTLIGHT_VH_BY_STEP: Record<string, number> = {
   sheet: 0.52,
 };
-/** Sticky/fixed targets — auto-scroll fights the spotlight and causes jitter. */
-const NO_AUTO_SCROLL_STEP_IDS = new Set([
+/**
+ * Sticky/fixed rail targets — skip auto-scroll only when already in view.
+ * Scene/Vault rails live under overflow-hidden shells that often break sticky,
+ * so off-screen rails must still scroll back into the spotlight.
+ */
+const STICKY_RAIL_STEP_IDS = new Set([
   'vault-progress',
   'vault-social-dock',
   'scene-progress',
@@ -41,6 +45,13 @@ const NO_AUTO_SCROLL_STEP_IDS = new Set([
 ]);
 /** Tab/panel switches need extra time before the target is visible on phone. */
 const PANEL_SWITCH_STEP_IDS = new Set(['generation', 'dna', 'dna-drop', 'save']);
+/** Targets that may mount late (gamification loading) or sit off-screen after feed scroll. */
+const LATE_MOUNT_STEP_IDS = new Set([
+  'scene-progress',
+  'scene-nav',
+  'vault-progress',
+  'vault-social-dock',
+]);
 
 function panelSwitchMeasureDelays(stepId: string): number[] {
   if (stepId === 'dna-drop') return [360, 560, 820, 1080];
@@ -91,6 +102,28 @@ function clampMobileSpotlightRect(rect: DOMRect, stepId?: string): DOMRect {
   const maxH = window.innerHeight * maxVh;
   if (rect.height <= maxH) return rect;
   return new DOMRect(rect.x, rect.y, rect.width, maxH);
+}
+
+function elementHasLayoutSize(el: Element): boolean {
+  const probe = el.getBoundingClientRect();
+  return probe.width > 0 && probe.height > 0;
+}
+
+/** Visible intersection area with the viewport (0 when fully off-screen). */
+function elementVisibleArea(el: Element): number {
+  const r = el.getBoundingClientRect();
+  const vh = window.innerHeight;
+  const vw = window.innerWidth;
+  const visibleH = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
+  const visibleW = Math.max(0, Math.min(r.right, vw) - Math.max(r.left, 0));
+  return visibleH * visibleW;
+}
+
+function stickyRailInView(el: HTMLElement): boolean {
+  const r = el.getBoundingClientRect();
+  const vh = window.innerHeight;
+  const visible = Math.min(r.bottom, vh) - Math.max(r.top, 72);
+  return visible >= Math.min(80, r.height * 0.35);
 }
 
 function scrollTargetIntoMobileSafeBand(el: HTMLElement, placement: 'top' | 'bottom') {
@@ -280,16 +313,16 @@ export function StudioGuidedTour({
         : [];
 
     const trySelectors = (list: string[]) => {
+      const candidates: HTMLElement[] = [];
       for (const selector of list) {
         const candidate = document.querySelector(selector);
-        if (!candidate) continue;
-        const probe = candidate.getBoundingClientRect();
-        if (probe.width > 0 && probe.height > 0) {
-          return candidate as HTMLElement;
-        }
+        if (!candidate || !elementHasLayoutSize(candidate)) continue;
+        candidates.push(candidate as HTMLElement);
       }
-      const first = list[0] ? document.querySelector(list[0]) : null;
-      return first ? (first as HTMLElement) : null;
+      if (candidates.length === 0) return null;
+      // Prefer the target actually on screen (hidden xl duplicates are 0×0 and skipped above).
+      candidates.sort((a, b) => elementVisibleArea(b) - elementVisibleArea(a));
+      return candidates[0] ?? null;
     };
 
     return trySelectors(selectors) ?? trySelectors(fallbacks);
@@ -326,7 +359,10 @@ export function StudioGuidedTour({
           ? TOUR_CARD_HEIGHT_ESTIMATE + 24
           : 24;
 
-      const allowAutoScroll = shouldScroll && !hasAutoScrolledRef.current && !NO_AUTO_SCROLL_STEP_IDS.has(step!.id);
+      const skipScrollBecauseStickyInView =
+        STICKY_RAIL_STEP_IDS.has(step!.id) && stickyRailInView(htmlEl);
+      const allowAutoScroll =
+        shouldScroll && !hasAutoScrolledRef.current && !skipScrollBecauseStickyInView;
       if (allowAutoScroll) {
         if (compact) {
           htmlEl.style.scrollMarginTop = `${placement === 'top' ? MOBILE_TOP_CLEARANCE : MOBILE_HEADER_RESERVE + 16}px`;
@@ -363,21 +399,27 @@ export function StudioGuidedTour({
         targetElRef.current = null;
         setRect(null);
         const panelSwitchMissing = PANEL_SWITCH_STEP_IDS.has(step!.id);
-        if (panelSwitchMissing && shouldScroll) {
-          measureTimersRef.current.push(
-            window.setTimeout(() => {
-              const el = resolveTargetEl();
-              if (!el) return;
-              clearScrollMargins();
-              targetElRef.current = el;
-              if (window.innerWidth < MOBILE_BREAKPOINT) {
-                scrollStyledElRef.current = el;
-              }
-              hasAutoScrolledRef.current = false;
-              captureRect(el, true);
-              measureTimersRef.current.push(window.setTimeout(() => captureRect(el, false), 420));
-            }, step!.id === 'dna-drop' ? 360 : 280)
-          );
+        const lateMountMissing = LATE_MOUNT_STEP_IDS.has(step!.id);
+        if ((panelSwitchMissing || lateMountMissing) && shouldScroll) {
+          const retryDelays = lateMountMissing && !panelSwitchMissing
+            ? [120, 320, 640, 1100]
+            : [step!.id === 'dna-drop' ? 360 : 280];
+          retryDelays.forEach((ms) => {
+            measureTimersRef.current.push(
+              window.setTimeout(() => {
+                const el = resolveTargetEl();
+                if (!el) return;
+                clearScrollMargins();
+                targetElRef.current = el;
+                if (window.innerWidth < MOBILE_BREAKPOINT) {
+                  scrollStyledElRef.current = el;
+                }
+                hasAutoScrolledRef.current = false;
+                captureRect(el, true);
+                measureTimersRef.current.push(window.setTimeout(() => captureRect(el, false), 420));
+              }, ms)
+            );
+          });
         }
         return;
       }
@@ -412,7 +454,11 @@ export function StudioGuidedTour({
             }, step!.id === 'dna-drop' ? 360 : 260)
           );
         }
-        const delays = panelSwitch ? panelSwitchMeasureDelays(step!.id) : [180, 420];
+        const delays = panelSwitch
+          ? panelSwitchMeasureDelays(step!.id)
+          : LATE_MOUNT_STEP_IDS.has(step!.id)
+            ? [180, 420, 700]
+            : [180, 420];
         delays.forEach((ms) => {
           measureTimersRef.current.push(window.setTimeout(() => runCapture(false), ms));
         });

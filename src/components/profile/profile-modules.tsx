@@ -325,7 +325,7 @@ export function OpenLockModule({ ctx }: { ctx: ModuleContext }) {
     return (
       <ModuleShell icon={Lock} title="Finish this bar" ctx={ctx}>
         <p className="text-sm text-muted-foreground">
-          No live unfinished bar yet. Publish one from Edit Public Page when the feature is on.
+          No live unfinished line yet. Publish one from Edit Public Page when the feature is on.
         </p>
       </ModuleShell>
     );
@@ -333,7 +333,7 @@ export function OpenLockModule({ ctx }: { ctx: ModuleContext }) {
   return (
     <ModuleShell icon={Lock} title="Finish this bar" ctx={ctx}>
       <p className="text-sm text-muted-foreground mb-3">
-        Drop the next line on their unfinished bar — then keep writing in Studio.
+        They left a line open. Write the next one.
       </p>
       <Button asChild className="w-full font-bold uppercase tracking-wide">
         <Link href={`/lock/${lockId}`}>Finish this bar</Link>

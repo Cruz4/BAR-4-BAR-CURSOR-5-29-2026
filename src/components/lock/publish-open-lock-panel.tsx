@@ -33,8 +33,7 @@ export function PublishOpenLockPanel({ onPublished, currentLockId }: PublishOpen
   if (!lockOn) {
     return (
       <p className="text-xs text-muted-foreground">
-        Finish-the-bar is off. Turn it on in{' '}
-        <strong className="text-foreground">Admin → Config → LOCK System</strong>.
+        Finish this bar is off right now.
       </p>
     );
   }

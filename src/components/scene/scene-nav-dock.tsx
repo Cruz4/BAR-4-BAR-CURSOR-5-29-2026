@@ -252,7 +252,16 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
     },
   ];
 
-  if (loading && !compact) return null;
+  if (loading && !compact) {
+    return (
+      <nav
+        className={cn('flex w-56 flex-col gap-2.5 min-h-[12rem]', className)}
+        aria-label="Scene shortcuts"
+        aria-busy
+        data-tour="scene-nav-desktop"
+      />
+    );
+  }
 
   return (
     <nav

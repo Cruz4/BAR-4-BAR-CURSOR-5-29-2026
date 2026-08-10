@@ -402,7 +402,7 @@ function GuestPressingLandingInner() {
       </div>
 
       {/* Full Artist Home — same composition as a real profile */}
-      <div className="pb-[min(42vh,22rem)] pt-[6.5rem] sm:pt-[7.25rem]">
+      <div className="pb-[min(28vh,11.5rem)] pt-[6.5rem] sm:pb-[min(42vh,22rem)] sm:pt-[7.25rem]">
         <ArtistHome
           profile={profile}
           config={config}
@@ -418,46 +418,55 @@ function GuestPressingLandingInner() {
       </div>
 
       {/* Live Pressing dock — type here, page updates underneath */}
-      <div className="fixed inset-x-0 bottom-0 z-[190] border-t border-white/10 bg-black/80 backdrop-blur-xl">
-        <div className="mx-auto max-w-[1200px] px-3 py-3 sm:px-6 sm:py-4">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
-              Customize your profile — The Pressing
+      <div className="fixed inset-x-0 bottom-0 z-[190] border-t border-white/10 bg-black/80 pb-[max(0px,env(safe-area-inset-bottom))] backdrop-blur-xl">
+        <div className="mx-auto max-w-[1200px] px-3 py-1.5 sm:px-6 sm:py-4">
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-1 sm:mb-2 sm:gap-2">
+            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-primary sm:text-[10px] sm:tracking-[0.22em]">
+              <span className="sm:hidden">The Pressing</span>
+              <span className="hidden sm:inline">Customize your profile — The Pressing</span>
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0.5 sm:gap-2">
               <Button
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="h-7 gap-1 px-2 text-[10px] font-bold uppercase tracking-wider"
+                className="h-6 gap-0.5 px-1.5 text-[9px] font-bold uppercase tracking-wider sm:h-7 sm:gap-1 sm:px-2 sm:text-[10px]"
                 onClick={() => setTipOpen(true)}
               >
-                <Sparkles className="h-3.5 w-3.5" />
+                <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 Tip
               </Button>
               <Button
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="h-7 gap-1 px-2 text-[10px] font-bold uppercase tracking-wider"
+                className="h-6 gap-0.5 px-1.5 text-[9px] font-bold uppercase tracking-wider sm:h-7 sm:gap-1 sm:px-2 sm:text-[10px]"
                 onClick={() => setMixOpen((o) => !o)}
               >
-                <Wind className="h-3.5 w-3.5" />
-                Mix & sizes
-                <ChevronUp className={cn('h-3.5 w-3.5 transition-transform', mixOpen ? '' : 'rotate-180')} />
+                <Wind className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                <span className="sm:hidden">Mix</span>
+                <span className="hidden sm:inline">Mix & sizes</span>
+                <ChevronUp className={cn('h-3 w-3 transition-transform sm:h-3.5 sm:w-3.5', mixOpen ? '' : 'rotate-180')} />
               </Button>
-              <Button asChild size="sm" variant="outline" className="h-7 gap-1 border-emerald-500/40 bg-emerald-500/10 px-2 text-[10px] font-bold text-emerald-100">
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                className="h-6 gap-0.5 border-emerald-500/40 bg-emerald-500/10 px-1.5 text-[9px] font-bold text-emerald-100 sm:h-7 sm:gap-1 sm:px-2 sm:text-[10px]"
+              >
                 <Link href="/try?src=pressing_landing">
-                  <PenLine className="h-3 w-3" /> Write free
+                  <PenLine className="h-3 w-3" />
+                  <span className="sm:hidden">Write</span>
+                  <span className="hidden sm:inline">Write free</span>
                 </Link>
               </Button>
             </div>
           </div>
 
           {mixOpen ? (
-            <div className="mb-3 max-h-[min(42vh,22rem)] space-y-3 overflow-y-auto rounded-lg border border-white/10 bg-black/40 p-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
+            <div className="mb-2 max-h-[min(36vh,16rem)] space-y-2 overflow-y-auto rounded-lg border border-white/10 bg-black/40 p-2 sm:mb-3 sm:max-h-[min(42vh,22rem)] sm:space-y-3 sm:p-3">
+              <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+                <div className="space-y-1 sm:space-y-1.5">
                   <label htmlFor="guest-tagline" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Tagline
                   </label>
@@ -466,10 +475,10 @@ function GuestPressingLandingInner() {
                     value={draft.tagline || ''}
                     onChange={(e) => update({ tagline: e.target.value.slice(0, 120) })}
                     placeholder="One line under your name"
-                    className="h-9 border-white/15 bg-black/40"
+                    className="h-8 border-white/15 bg-black/40 sm:h-9"
                   />
                 </div>
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 sm:py-2">
                   <div className="min-w-0">
                     <p className="text-[10px] font-bold uppercase tracking-widest">Alive</p>
                     <p className="text-[11px] text-muted-foreground">Page breathes with the bar.</p>
@@ -478,7 +487,7 @@ function GuestPressingLandingInner() {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1 sm:space-y-1.5">
                 <label htmlFor="guest-bar-week" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   Bar of the Week
                 </label>
@@ -488,9 +497,9 @@ function GuestPressingLandingInner() {
                   onChange={(e) => update({ barOfWeek: e.target.value.slice(0, 280) })}
                   rows={2}
                   placeholder="A featured bar for this week (separate from The Pressing)…"
-                  className="min-h-[2.5rem] resize-none border-white/15 bg-black/40 text-sm"
+                  className="min-h-[2.25rem] resize-none border-white/15 bg-black/40 text-sm sm:min-h-[2.5rem]"
                 />
-                <p className="text-[10px] text-zinc-500">
+                <p className="hidden text-[10px] text-zinc-500 sm:block">
                   Shows as its own section on the page. Clear the text to hide it.
                 </p>
               </div>
@@ -522,21 +531,21 @@ function GuestPressingLandingInner() {
                 </div>
               </div>
 
-              <div className="space-y-2 border-t border-white/10 pt-3">
+              <div className="space-y-2 border-t border-white/10 pt-2 sm:pt-3">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   Section sizes (S / M / L)
                 </p>
-                <p className="text-[10px] text-zinc-500">
+                <p className="hidden text-[10px] text-zinc-500 sm:block">
                   Same controls as Edit Public Page. Watch the layout reflow live.
                 </p>
-                <ul className="space-y-2">
+                <ul className="space-y-1.5 sm:space-y-2">
                   {GUEST_SIZEABLE_MODULES.map((id) => {
                     const size =
                       draft.moduleSizes[id] || MODULE_META[id]?.defaultSize || 'M';
                     return (
                       <li
                         key={id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-white/10 bg-black/30 px-2.5 py-2"
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-white/10 bg-black/30 px-2 py-1.5 sm:px-2.5 sm:py-2"
                       >
                         <span className="text-[11px] font-medium text-zinc-200">
                           {moduleSizeLabel(id)}
@@ -570,23 +579,28 @@ function GuestPressingLandingInner() {
             </div>
           ) : null}
 
-          <div className="grid gap-2 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)_auto] sm:items-end sm:gap-3">
-            <div className="space-y-1">
-              <label htmlFor="guest-name" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          {/* Phone: name + pressing + claim in one tight strip. Desktop: original grid. */}
+          <div className="grid grid-cols-[minmax(0,5.5rem)_minmax(0,1fr)_auto] items-end gap-1.5 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)_auto] sm:gap-3">
+            <div className="min-w-0 space-y-0.5 sm:space-y-1">
+              <label
+                htmlFor="guest-name"
+                className="hidden text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:block"
+              >
                 Your name on the page
               </label>
               <Input
                 id="guest-name"
                 value={draft.displayName}
                 onChange={(e) => update({ displayName: e.target.value.slice(0, 80) })}
-                placeholder="Artist name"
-                className="h-10 border-white/15 bg-black/50"
+                placeholder="Your name"
+                aria-label="Your name on the page"
+                className="h-8 border-white/15 bg-black/50 text-sm sm:h-10"
               />
             </div>
-            <div className="space-y-1">
+            <div className="min-w-0 space-y-0.5 sm:space-y-1">
               <label
                 htmlFor="guest-seed"
-                className="text-[10px] font-bold uppercase tracking-widest text-primary/90"
+                className="hidden text-[10px] font-bold uppercase tracking-widest text-primary/90 sm:block"
               >
                 The Pressing — skins this page
               </label>
@@ -596,27 +610,30 @@ function GuestPressingLandingInner() {
                 value={draft.seedText}
                 onChange={(e) => update({ seedText: e.target.value.slice(0, 280) })}
                 rows={2}
-                placeholder="Type a bar or sentence — the profile skins itself live…"
+                placeholder="Type a bar — skins the page live…"
+                aria-label="The Pressing — skins this page"
                 className={cn(
-                  'min-h-[2.75rem] resize-none border-white/15 bg-black/50 text-sm transition-shadow',
+                  'resize-none border-white/15 bg-black/50 text-sm leading-snug transition-shadow',
+                  'h-8 min-h-8 max-h-8 overflow-y-auto py-1.5 sm:h-auto sm:min-h-[2.75rem] sm:max-h-none sm:overflow-visible sm:py-2',
                   pressingPulse && 'ring-2 ring-primary/70 shadow-[0_0_24px_rgba(59,130,246,0.35)]'
                 )}
               />
             </div>
             <Button
               asChild
-              size="lg"
-              className="h-10 gap-2 font-bold sm:h-[2.75rem]"
+              size="sm"
+              className="h-8 shrink-0 gap-1 px-2.5 text-xs font-bold sm:h-[2.75rem] sm:gap-2 sm:px-4 sm:text-sm"
               onClick={onClaim}
             >
               <LandingSignupLink intent="claim_artist_home">
-                <Globe className="h-4 w-4" />
-                Claim free
-                <ArrowRight className="h-4 w-4" />
+                <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="sm:hidden">Claim</span>
+                <span className="hidden sm:inline">Claim free</span>
+                <ArrowRight className="hidden h-4 w-4 sm:inline" />
               </LandingSignupLink>
             </Button>
           </div>
-          <p className="mt-2 text-[11px] text-muted-foreground">
+          <p className="mt-2 hidden text-[11px] text-muted-foreground sm:block">
             This preview is your Artist Home. Type above for The Pressing. Click Bar of the Week on
             the page to edit it. Mix & sizes still has faders and S/M/L. Claim keeps your look.
           </p>

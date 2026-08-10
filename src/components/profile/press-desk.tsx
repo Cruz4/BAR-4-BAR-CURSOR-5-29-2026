@@ -1635,7 +1635,7 @@ export function PressDesk() {
       <DeskSection
         icon={Lock}
         title="Finish this bar"
-        hint="Publish an unfinished line. Visitors drop the next bar. Enable the Finish this bar module in the deck above. Requires Admin → Config → LOCK System on."
+        hint="Put one unfinished line on your page. Visitors write the next."
       >
         <PublishOpenLockPanel
           currentLockId={config.featured.openLockId}
