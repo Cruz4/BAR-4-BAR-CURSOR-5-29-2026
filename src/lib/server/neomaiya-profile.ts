@@ -3,18 +3,35 @@ import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
 import { NEOMAIYA_SOL } from '@/lib/profile/neomaiya-sol';
 
+async function profileDocExists(db: Firestore, slug: string): Promise<boolean> {
+  try {
+    const snap = await db.doc(`publicProfiles/${slug}`).get();
+    return snap.exists;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Resolve Neomaiya Sol's live public slug for the Auth user that owns
- * {@link NEOMAIYA_SOL.email}. Prefers an existing publicProfiles doc owned by
- * her uid — especially the canonical slug — over a stale summary field.
+ * {@link NEOMAIYA_SOL.email}.
+ *
+ * Always prefer the canonical Artist Home (`NEOMAIYA_SOL.slug`) when that
+ * publicProfiles doc exists. Toggling public on/off can mint a new
+ * `neomaiya-sol-{uid}` slug in gamification summary that 404s — never ship
+ * those dead links to the guest sandbox or founder-friend chips.
  */
 export async function resolveNeomaiyaPublicSlug(
   db: Firestore,
   neoUid: string
 ): Promise<string> {
   const canonical = NEOMAIYA_SOL.slug;
-  let summarySlug: string | undefined;
 
+  if (await profileDocExists(db, canonical)) {
+    return canonical;
+  }
+
+  let summarySlug: string | undefined;
   try {
     const gamSnap = await db.doc(`users/${neoUid}/gamification/summary`).get();
     const fromSummary = gamSnap.data()?.profileSlug;
@@ -37,7 +54,6 @@ export async function resolveNeomaiyaPublicSlug(
         if (summaryDoc) return summaryDoc.id;
       }
 
-      // Prefer the newest mirror if she has orphaned slug docs from renames.
       const sorted = [...docs].sort((a, b) => {
         const aAt = String(a.data()?.updatedAt || '');
         const bAt = String(b.data()?.updatedAt || '');
@@ -49,23 +65,10 @@ export async function resolveNeomaiyaPublicSlug(
     /* fall through */
   }
 
-  if (summarySlug) {
-    try {
-      const exact = await db.doc(`publicProfiles/${summarySlug}`).get();
-      if (exact.exists && exact.data()?.userId === neoUid) return summarySlug;
-    } catch {
-      /* ignore */
-    }
+  if (summarySlug && (await profileDocExists(db, summarySlug))) {
+    return summarySlug;
   }
 
-  try {
-    const canonicalSnap = await db.doc(`publicProfiles/${canonical}`).get();
-    if (canonicalSnap.exists && canonicalSnap.data()?.userId === neoUid) {
-      return canonical;
-    }
-  } catch {
-    /* ignore */
-  }
-
-  return summarySlug || canonical;
+  // Stable product URL even if the mirror is briefly missing.
+  return canonical;
 }

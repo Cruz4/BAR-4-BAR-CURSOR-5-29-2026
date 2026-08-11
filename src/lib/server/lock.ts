@@ -7,6 +7,7 @@ import {
   HOUSE_OWNER_NAME,
   HOUSE_SEED_BAR,
   type LockClearOffer,
+  type LockContribution,
   type LockDnaSnapshot,
   type LockDoc,
   type LockEcho,
@@ -22,6 +23,10 @@ function chronoId(): string {
 function cleanText(value: unknown, max: number): string {
   if (typeof value !== 'string') return '';
   return value.trim().slice(0, max);
+}
+
+function contributionDocId(lockId: string, echoId: string): string {
+  return `${lockId}_${echoId}`.slice(0, 700);
 }
 
 function mapLock(id: string, data: Record<string, unknown>): LockDoc {
@@ -169,8 +174,19 @@ export async function submitEcho(input: {
   });
   await batch.commit();
 
+  const echo = mapEcho(echoId, echoData as Record<string, unknown>);
+
   // Notify watchers when a *named* echo lands (anon skips Activity to avoid junk actors)
   if (input.authorId?.trim()) {
+    try {
+      await upsertLockContributionMirror({
+        userId: input.authorId.trim(),
+        lock,
+        echo,
+      });
+    } catch (e) {
+      console.warn('[lock] contribution mirror', e);
+    }
     try {
       await notifyLockAnswered({
         lock,
@@ -185,7 +201,7 @@ export async function submitEcho(input: {
 
   return {
     lock: { ...lock, echoCount: lock.echoCount + 1, updatedAt: now },
-    echo: mapEcho(echoId, echoData as Record<string, unknown>),
+    echo,
   };
 }
 
@@ -251,6 +267,18 @@ export async function deleteEcho(input: {
       : {}),
   });
   await batch.commit();
+
+  if (authorId) {
+    try {
+      await deleteLockContributionMirror({
+        userId: authorId,
+        lockId: lock.id,
+        echoId: input.echoId,
+      });
+    } catch (e) {
+      console.warn('[lock] contribution mirror delete', e);
+    }
+  }
 }
 
 export async function claimEchoAuthor(input: {
@@ -271,11 +299,24 @@ export async function claimEchoAuthor(input: {
     authorId: input.userId,
     authorName: input.displayName.slice(0, 80),
   });
-  return mapEcho(input.echoId, {
+  const echo = mapEcho(input.echoId, {
     ...(data as Record<string, unknown>),
     authorId: input.userId,
     authorName: input.displayName,
   });
+  const lock = await getLock(input.lockId);
+  if (lock) {
+    try {
+      await upsertLockContributionMirror({
+        userId: input.userId,
+        lock,
+        echo,
+      });
+    } catch (e) {
+      console.warn('[lock] contribution mirror on claim', e);
+    }
+  }
+  return echo;
 }
 
 export async function watchLock(input: {
@@ -427,6 +468,130 @@ export async function listRecentOpenLocks(limit = 12): Promise<LockDoc[]> {
       .map((d) => mapLock(d.id, (d.data() || {}) as Record<string, unknown>))
       .filter((l) => l.status === 'open')
       .slice(0, limit);
+  }
+}
+
+export async function listLocksByOwner(
+  ownerId: string,
+  options?: { openOnly?: boolean; limit?: number }
+): Promise<LockDoc[]> {
+  const uid = ownerId.trim();
+  if (!uid || uid === 'system') return [];
+  const lim = Math.min(60, Math.max(1, options?.limit ?? 40));
+  const db = await getDb();
+
+  try {
+    if (options?.openOnly) {
+      const snap = await db
+        .collection('locks')
+        .where('ownerId', '==', uid)
+        .where('status', '==', 'open')
+        .orderBy('updatedAt', 'desc')
+        .limit(lim)
+        .get();
+      return snap.docs.map((d) => mapLock(d.id, (d.data() || {}) as Record<string, unknown>));
+    }
+    const snap = await db
+      .collection('locks')
+      .where('ownerId', '==', uid)
+      .orderBy('updatedAt', 'desc')
+      .limit(lim)
+      .get();
+    return snap.docs.map((d) => mapLock(d.id, (d.data() || {}) as Record<string, unknown>));
+  } catch {
+    const snap = await db.collection('locks').where('ownerId', '==', uid).limit(80).get();
+    let rows = snap.docs.map((d) => mapLock(d.id, (d.data() || {}) as Record<string, unknown>));
+    if (options?.openOnly) rows = rows.filter((l) => l.status === 'open');
+    rows.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    return rows.slice(0, lim);
+  }
+}
+
+export async function listOpenLocksByOwner(ownerId: string, limit = 24): Promise<LockDoc[]> {
+  return listLocksByOwner(ownerId, { openOnly: true, limit });
+}
+
+async function upsertLockContributionMirror(input: {
+  userId: string;
+  lock: LockDoc;
+  echo: LockEcho;
+}): Promise<void> {
+  const uid = input.userId.trim();
+  if (!uid) return;
+  const db = await getDb();
+  const id = contributionDocId(input.lock.id, input.echo.id);
+  const data: LockContribution = {
+    lockId: input.lock.id,
+    echoId: input.echo.id,
+    text: input.echo.text,
+    lockScore: input.echo.lockScore,
+    seedBar: input.lock.seedBar,
+    ownerName: input.lock.ownerName,
+    ...(input.lock.ownerSlug ? { ownerSlug: input.lock.ownerSlug } : {}),
+    createdAt: input.echo.createdAt || new Date().toISOString(),
+  };
+  await db.doc(`users/${uid}/lockContributions/${id}`).set(data, { merge: true });
+}
+
+async function deleteLockContributionMirror(input: {
+  userId: string;
+  lockId: string;
+  echoId: string;
+}): Promise<void> {
+  const uid = input.userId.trim();
+  if (!uid) return;
+  const db = await getDb();
+  await db.doc(`users/${uid}/lockContributions/${contributionDocId(input.lockId, input.echoId)}`).delete();
+}
+
+export async function listMyLockContributions(
+  userId: string,
+  limit = 40
+): Promise<LockContribution[]> {
+  const uid = userId.trim();
+  if (!uid) return [];
+  const lim = Math.min(80, Math.max(1, limit));
+  const db = await getDb();
+  try {
+    const snap = await db
+      .collection(`users/${uid}/lockContributions`)
+      .orderBy('createdAt', 'desc')
+      .limit(lim)
+      .get();
+    return snap.docs.map((d) => {
+      const data = (d.data() || {}) as Record<string, unknown>;
+      return {
+        lockId: String(data.lockId || ''),
+        echoId: String(data.echoId || ''),
+        text: String(data.text || ''),
+        lockScore: typeof data.lockScore === 'number' ? data.lockScore : 0,
+        seedBar: String(data.seedBar || ''),
+        ownerName: String(data.ownerName || 'Artist'),
+        ...(typeof data.ownerSlug === 'string' && data.ownerSlug
+          ? { ownerSlug: data.ownerSlug }
+          : {}),
+        createdAt: String(data.createdAt || ''),
+      };
+    });
+  } catch {
+    const snap = await db.collection(`users/${uid}/lockContributions`).limit(lim).get();
+    return snap.docs
+      .map((d) => {
+        const data = (d.data() || {}) as Record<string, unknown>;
+        return {
+          lockId: String(data.lockId || ''),
+          echoId: String(data.echoId || ''),
+          text: String(data.text || ''),
+          lockScore: typeof data.lockScore === 'number' ? data.lockScore : 0,
+          seedBar: String(data.seedBar || ''),
+          ownerName: String(data.ownerName || 'Artist'),
+          ...(typeof data.ownerSlug === 'string' && data.ownerSlug
+            ? { ownerSlug: data.ownerSlug }
+            : {}),
+          createdAt: String(data.createdAt || ''),
+        };
+      })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 }
 

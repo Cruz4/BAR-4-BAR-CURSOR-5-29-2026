@@ -671,6 +671,11 @@ function LockPublicPageInner({ lockId, lockEnabled }: LockPublicPageProps) {
               >
                 All paths
               </Link>
+              {user ? (
+                <Link href="/lock/desk" className="hover:text-zinc-300">
+                  Your Finish this bar desk
+                </Link>
+              ) : null}
               <Link
                 href="/"
                 onClick={() => trackLockWhereNext(id, 'scene')}

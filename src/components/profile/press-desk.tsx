@@ -1637,6 +1637,22 @@ export function PressDesk() {
         title="Finish this bar"
         hint="Put one unfinished line on your page. Visitors write the next."
       >
+        <div className="mb-3 flex flex-wrap items-center gap-3 text-xs">
+          <Link
+            href="/lock/desk"
+            className="font-bold uppercase tracking-wider text-primary hover:underline"
+          >
+            Manage all →
+          </Link>
+          {config.featured.openLockId ? (
+            <Link
+              href={`/lock/${config.featured.openLockId}/manage`}
+              className="font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:underline"
+            >
+              Manage featured
+            </Link>
+          ) : null}
+        </div>
         <PublishOpenLockPanel
           currentLockId={config.featured.openLockId}
           onPublished={(lockId) => {

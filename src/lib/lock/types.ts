@@ -52,6 +52,18 @@ export type LockClearOffer = {
   updatedAt?: string;
 };
 
+/** Named reply mirror under users/{uid}/lockContributions/{lockId}_{echoId}. */
+export type LockContribution = {
+  lockId: string;
+  echoId: string;
+  text: string;
+  lockScore: number;
+  seedBar: string;
+  ownerName: string;
+  ownerSlug?: string;
+  createdAt: string;
+};
+
 export type LockPublicPayload = {
   lock: LockDoc;
   echoes: LockEcho[];

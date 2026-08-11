@@ -11,6 +11,7 @@ import Link from 'next/link';
 import {
   Archive,
   FilePlus2,
+  Lock,
   PenLine,
   Settings2,
   Trophy,
@@ -22,6 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useGamification } from '@/context/gamification-context';
 import { useSocialAlerts } from '@/hooks/use-social-alerts';
+import { useLockFeature } from '@/hooks/use-lock-feature';
 import { getLastWorkedTrackPath } from '@/lib/studio-tips-session';
 import { VAULT_PATH } from '@/lib/scene-home';
 
@@ -192,6 +194,7 @@ function ArtistHomeSplitButton({
 export function SceneNavDock({ compact = false, className }: SceneNavDockProps) {
   const { summary, loading } = useGamification();
   const { total: alertCount } = useSocialAlerts();
+  const { enabled: lockOn } = useLockFeature();
   const [lastTrackPath, setLastTrackPath] = useState<string | null>(null);
 
   useEffect(() => {
@@ -307,6 +310,20 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
           }}
         />
       )}
+
+      {lockOn ? (
+        <DockLink
+          item={{
+            key: 'finish-bar',
+            href: '/lock/desk',
+            label: 'Finish this bar',
+            sub: 'Yours · replies',
+            icon: Lock,
+            tone: 'border-emerald-500/35 bg-card/55 hover:border-emerald-400/55',
+            iconTone: 'border-emerald-400/45 bg-emerald-500/15 text-emerald-400',
+          }}
+        />
+      ) : null}
 
       {items.slice(1).map((item) => (
         <DockLink key={item.key} item={item} />

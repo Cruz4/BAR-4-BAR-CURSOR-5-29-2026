@@ -159,15 +159,29 @@ function GuestPressingLandingInner() {
   }, []);
 
   // Resolve Neomaiya's live public profile slug for guestbook / friends links.
+  // Never replace the canonical slug with a dead/regenerated one (public on/off
+  // can mint neomaiya-sol-{uid} mirrors that 404 while paQXxm stays live).
   useEffect(() => {
     let cancelled = false;
     void fetch('/api/profile/neomaiya')
       .then((r) => r.json())
-      .then((data: { slug?: string }) => {
+      .then(async (data: { slug?: string }) => {
         if (cancelled) return;
-        if (typeof data?.slug === 'string' && data.slug.trim()) {
-          setNeoSlug(data.slug.trim());
+        const next = typeof data?.slug === 'string' ? data.slug.trim() : '';
+        if (!next || next === NEOMAIYA_SOL.slug) {
+          setNeoSlug(NEOMAIYA_SOL.slug);
+          return;
         }
+        try {
+          const check = await fetch(`/api/profile/${encodeURIComponent(next)}`, { method: 'GET' });
+          if (!cancelled && check.ok) {
+            setNeoSlug(next);
+            return;
+          }
+        } catch {
+          /* keep canonical */
+        }
+        if (!cancelled) setNeoSlug(NEOMAIYA_SOL.slug);
       })
       .catch(() => undefined);
     return () => {
@@ -305,11 +319,11 @@ function GuestPressingLandingInner() {
           <ul className="mt-2 space-y-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-3 text-[13px] text-zinc-300">
             <li className="flex gap-2">
               <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-              Type in <span className="font-medium text-zinc-100">The Pressing — skins this page</span>
+              Type in <span className="font-medium text-zinc-100">The Pressing</span> — skins this page live
             </li>
             <li className="flex gap-2">
               <PenLine className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-              Watch color, motion, and chrome shift as you write
+              Hit <span className="font-medium text-emerald-200">Write free</span> to try the rhyme sheet
             </li>
             <li className="flex gap-2">
               <Globe className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
@@ -325,8 +339,10 @@ function GuestPressingLandingInner() {
             >
               Got it
             </Button>
-            <Button asChild variant="outline" className="border-white/20 font-bold">
-              <Link href="/welcome">About Bar 4 Bar</Link>
+            <Button asChild variant="outline" className="border-emerald-500/40 bg-emerald-500/10 font-bold text-emerald-100">
+              <Link href="/try?src=pressing_tip" onClick={() => dismissTip(false)}>
+                Write free
+              </Link>
             </Button>
             <Button type="button" className="font-bold gap-1.5" onClick={() => dismissTip(true)}>
               Try The Pressing
@@ -336,13 +352,17 @@ function GuestPressingLandingInner() {
         </DialogContent>
       </Dialog>
 
-      <header className="fixed top-0 left-0 right-0 z-[200] grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-white/[0.06] bg-background/55 px-3 backdrop-blur-xl sm:h-16 sm:px-6">
-        <div aria-hidden className="min-w-0" />
+      <header className="fixed top-0 left-0 right-0 z-[200] grid h-14 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 border-b border-white/[0.06] bg-background/55 px-3 backdrop-blur-xl sm:h-16 sm:gap-2 sm:px-6">
+        <nav className="flex min-w-0 items-center justify-start">
+          <LandingSignInLink className="truncate text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-primary sm:hidden">
+            Sign in
+          </LandingSignInLink>
+        </nav>
 
         <BrandLockup
           variant="marketing"
           titleTag="h1"
-          className="justify-center max-w-[min(100%,14rem)] sm:max-w-none"
+          className="justify-center max-w-[min(100%,11.5rem)] sm:max-w-none"
         />
 
         <nav className="flex min-w-0 shrink-0 items-center justify-end gap-2 sm:gap-4">
@@ -364,18 +384,21 @@ function GuestPressingLandingInner() {
           <StudioThemeControls className="hidden sm:inline-flex" />
           <Button
             asChild
-            className="h-9 rounded-md bg-primary px-3 text-xs font-bold text-white hover:bg-primary/90 sm:px-4 sm:text-sm"
+            className="h-8 rounded-md bg-primary px-2.5 text-[11px] font-bold text-white hover:bg-primary/90 sm:h-9 sm:px-4 sm:text-sm"
             onClick={onClaim}
           >
-            <LandingSignupLink intent="claim_artist_home">Claim profile</LandingSignupLink>
+            <LandingSignupLink intent="claim_artist_home">
+              <span className="sm:hidden">Claim</span>
+              <span className="hidden sm:inline">Claim profile</span>
+            </LandingSignupLink>
           </Button>
         </nav>
       </header>
 
       {/* Profile framing strip */}
-      <div className="fixed left-0 right-0 top-14 z-[195] border-b border-primary/25 bg-primary/15 px-3 py-2 backdrop-blur-md sm:top-16 sm:px-6">
-        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-2">
-          <p className="text-[11px] leading-snug text-zinc-200 sm:text-xs">
+      <div className="fixed left-0 right-0 top-14 z-[195] border-b border-primary/25 bg-primary/15 px-3 py-1.5 backdrop-blur-md sm:top-16 sm:px-6 sm:py-2">
+        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <p className="min-w-0 flex-1 text-[11px] leading-snug text-zinc-200 sm:text-xs">
             <span className="font-bold text-primary">Live preview</span>
             <span className="text-zinc-400"> — this is what your Bar 4 Bar profile page would look like.</span>
             {' '}
@@ -383,12 +406,18 @@ function GuestPressingLandingInner() {
               Try The Pressing at the bottom to customize the skin.
             </span>
           </p>
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
             <Link
               href="/welcome"
               className="text-[10px] font-bold uppercase tracking-wider text-zinc-300 hover:text-primary hover:underline"
             >
               About
+            </Link>
+            <Link
+              href="/pricing"
+              className="text-[10px] font-bold uppercase tracking-wider text-zinc-300 hover:text-primary hover:underline sm:hidden"
+            >
+              Pricing
             </Link>
             <button
               type="button"

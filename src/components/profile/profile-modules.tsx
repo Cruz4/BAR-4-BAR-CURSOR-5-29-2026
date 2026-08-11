@@ -320,24 +320,112 @@ export function BarBoardModule({ ctx }: { ctx: ModuleContext }) {
 // ---------------------------------------------------------------------------
 
 export function OpenLockModule({ ctx }: { ctx: ModuleContext }) {
-  const lockId = ctx.featured.openLockId;
-  if (!lockId) {
-    return (
-      <ModuleShell icon={Lock} title="Finish this bar" ctx={ctx}>
-        <p className="text-sm text-muted-foreground">
-          No live unfinished line yet. Publish one from Edit Public Page when the feature is on.
-        </p>
-      </ModuleShell>
-    );
-  }
+  const featuredId = ctx.featured.openLockId;
+  const [locks, setLocks] = useState<
+    Array<{ id: string; seedBar: string; echoCount: number; status?: string }>
+  >([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoaded(false);
+    void fetch(`/api/lock/by-owner?userId=${encodeURIComponent(ctx.profileUserId)}`)
+      .then(async (res) => {
+        if (!res.ok) return [];
+        const data = await res.json();
+        return Array.isArray(data.locks) ? data.locks : [];
+      })
+      .then((rows) => {
+        if (cancelled) return;
+        setLocks(
+          rows.map((l: { id?: string; seedBar?: string; echoCount?: number; status?: string }) => ({
+            id: String(l.id || ''),
+            seedBar: String(l.seedBar || ''),
+            echoCount: typeof l.echoCount === 'number' ? l.echoCount : 0,
+            status: typeof l.status === 'string' ? l.status : 'open',
+          })).filter((l: { id: string }) => l.id)
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setLocks([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ctx.profileUserId]);
+
+  const ordered = useMemo(() => {
+    if (!featuredId) return locks;
+    const pin = locks.find((l) => l.id === featuredId);
+    const rest = locks.filter((l) => l.id !== featuredId);
+    return pin ? [pin, ...rest] : locks;
+  }, [locks, featuredId]);
+
+  // Fallback: featured id only (API empty / lag) so the module still links somewhere.
+  const rows =
+    ordered.length > 0
+      ? ordered
+      : featuredId
+        ? [{ id: featuredId, seedBar: '', echoCount: 0 }]
+        : [];
+
   return (
     <ModuleShell icon={Lock} title="Finish this bar" ctx={ctx}>
-      <p className="text-sm text-muted-foreground mb-3">
-        They left a line open. Write the next one.
-      </p>
-      <Button asChild className="w-full font-bold uppercase tracking-wide">
-        <Link href={`/lock/${lockId}`}>Finish this bar</Link>
-      </Button>
+      {!loaded ? (
+        <p className="text-sm text-muted-foreground">Loading open lines…</p>
+      ) : rows.length === 0 ? (
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">No open line right now.</p>
+          {ctx.isOwner ? (
+            <Button asChild variant="outline" size="sm" className="font-bold uppercase">
+              <Link href="/lock/desk">Publish one →</Link>
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <ul className="space-y-2.5">
+          {rows.map((lock) => {
+            const featured = Boolean(featuredId && lock.id === featuredId);
+            return (
+              <li key={lock.id}>
+                <Link
+                  href={`/lock/${lock.id}`}
+                  className={cn(
+                    'block rounded-lg border px-3 py-3 transition-colors',
+                    'border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/25',
+                    'hover:border-[var(--ph-accent,#7dd3fc)] hover:bg-black/40'
+                  )}
+                >
+                  {featured ? (
+                    <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.2em] text-[var(--ph-accent,#7dd3fc)]">
+                      Featured
+                    </p>
+                  ) : null}
+                  <p className="font-headline text-sm font-bold leading-snug tracking-tight text-[var(--ph-text,#fff)] sm:text-base">
+                    {lock.seedBar || 'Open unfinished line →'}
+                  </p>
+                  <p className="mt-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+                    {lock.echoCount === 1
+                      ? '1 reply · Finish it'
+                      : `${lock.echoCount} replies · Finish it`}
+                  </p>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {ctx.isOwner && loaded ? (
+        <Link
+          href="/lock/desk"
+          className="mt-3 inline-block text-[10px] font-bold uppercase tracking-widest text-[var(--ph-accent,#7dd3fc)] hover:underline"
+        >
+          Manage your lines →
+        </Link>
+      ) : null}
     </ModuleShell>
   );
 }
