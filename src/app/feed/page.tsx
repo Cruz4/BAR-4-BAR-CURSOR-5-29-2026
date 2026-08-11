@@ -52,7 +52,10 @@ export default function FeedPage() {
         const all = await fetchFriendships(user.id);
         if (cancelled) return;
         setFriendships(all);
-        const friendIds = friendProfilesOf(all, user.id).map((f) => f.userId);
+        const friendIds = friendProfilesOf(all, user.id, {
+          email: user.email,
+          displayName: user.displayName,
+        }).map((f) => f.userId);
         // Your own posts ride the feed too — it's your block, not a stranger's.
         const feed = await fetchPostsByOwners([user.id, ...friendIds]);
         if (!cancelled) setPosts(feed);
@@ -70,25 +73,40 @@ export default function FeedPage() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [user?.id, user?.email, user?.displayName]);
 
   useEffect(() => {
+    if (!user?.id) return;
     const onFriendshipChanged = (ev: Event) => {
       const detail = (ev as CustomEvent<FriendshipChangedDetail>).detail;
       if (!detail) return;
       if (detail.action === 'accepted') {
-        setFriendships((prev) =>
-          prev.map((f) =>
+        setFriendships((prev) => {
+          const next = prev.map((f) =>
             f.id === detail.friendshipId ? { ...f, status: 'accepted' as const } : f
-          )
-        );
+          );
+          const friendIds = friendProfilesOf(next, user.id, {
+            email: user.email,
+            displayName: user.displayName,
+          }).map((f) => f.userId);
+          void fetchPostsByOwners([user.id, ...friendIds]).then(setPosts);
+          return next;
+        });
       } else if (detail.action === 'removed') {
-        setFriendships((prev) => prev.filter((f) => f.id !== detail.friendshipId));
+        setFriendships((prev) => {
+          const next = prev.filter((f) => f.id !== detail.friendshipId);
+          const friendIds = friendProfilesOf(next, user.id, {
+            email: user.email,
+            displayName: user.displayName,
+          }).map((f) => f.userId);
+          void fetchPostsByOwners([user.id, ...friendIds]).then(setPosts);
+          return next;
+        });
       }
     };
     window.addEventListener(FRIENDSHIP_CHANGED_EVENT, onFriendshipChanged);
     return () => window.removeEventListener(FRIENDSHIP_CHANGED_EVENT, onFriendshipChanged);
-  }, []);
+  }, [user?.id, user?.email, user?.displayName]);
 
   const incomingRequests = useMemo(
     () =>
@@ -98,8 +116,14 @@ export default function FeedPage() {
     [friendships, user?.id]
   );
   const friendCount = useMemo(
-    () => (user?.id ? friendProfilesOf(friendships, user.id).length : 0),
-    [friendships, user?.id]
+    () =>
+      user?.id
+        ? friendProfilesOf(friendships, user.id, {
+            email: user.email,
+            displayName: user.displayName,
+          }).length
+        : 0,
+    [friendships, user?.id, user?.email, user?.displayName]
   );
 
   if (SCENE_HOME_ENABLED || authLoading) {

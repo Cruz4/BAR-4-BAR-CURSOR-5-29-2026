@@ -53,7 +53,18 @@ export function isStudioOnboardingBusy(): boolean {
   return (
     isVaultTourRunning() ||
     hasPendingStudioPrivacyIntro() ||
-    isStudioPrivacyIntroOpen()
+    isStudioPrivacyIntroOpen() ||
+    (typeof window !== 'undefined' &&
+      (() => {
+        try {
+          return (
+            sessionStorage.getItem('b4b-pending-activity-push-intro') === '1' ||
+            sessionStorage.getItem('b4b-activity-push-intro-open') === '1'
+          );
+        } catch {
+          return false;
+        }
+      })())
   );
 }
 

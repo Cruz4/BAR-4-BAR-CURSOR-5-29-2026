@@ -29,6 +29,7 @@ import {
   snoozeStudioPrivacyIntro,
   STUDIO_PRIVACY_INTRO_ELIGIBLE_EVENT,
 } from '@/lib/studio-privacy-intro';
+import { dispatchActivityPushIntroEligible } from '@/lib/activity-push-intro';
 
 export function StudioPrivacyIntroDialog() {
   const pathname = usePathname();
@@ -63,11 +64,14 @@ export function StudioPrivacyIntroDialog() {
     } catch (e) {
       console.warn('[StudioPrivacyIntro] failed to mark complete', e);
     }
+    // Next: optional Activity push opt-in (Scene tour already queued it).
+    window.setTimeout(() => dispatchActivityPushIntroEligible(), 450);
   }, [user?.id]);
 
   const remindLater = useCallback(() => {
     snoozeStudioPrivacyIntro();
     setOpen(false);
+    window.setTimeout(() => dispatchActivityPushIntroEligible(), 450);
   }, []);
 
   const clearOpenTimer = useCallback(() => {

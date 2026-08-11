@@ -55,7 +55,10 @@ export default function FriendsPage() {
     setFriendships(accepted);
     setBlocked(blocks);
 
-    const base = friendProfilesOf(accepted, user.id);
+    const base = friendProfilesOf(accepted, user.id, {
+      email: user.email,
+      displayName: user.displayName,
+    });
     const metas = await fetchPublicArtistMetas(base);
     setFriends(
       base.map((f) => {

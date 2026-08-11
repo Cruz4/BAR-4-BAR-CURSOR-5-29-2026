@@ -1,6 +1,6 @@
-/* Bar 4 Bar Studio — PWA shell + visited routes for offline studio */
-const CACHE_NAME = 'b4b-static-v8';
-const SHELL_CACHE = 'b4b-shell-v8';
+/* Bar 4 Bar Studio — PWA shell + FCM. Do NOT cache Next.js build chunks. */
+const CACHE_NAME = 'b4b-static-v9';
+const SHELL_CACHE = 'b4b-shell-v9';
 const STATIC_ASSETS = ['/Logo.png', '/B4B_Font.otf', '/YUSRB_font.ttf'];
 
 // Firebase Cloud Messaging (Activity push) — no-ops if messaging isn't used yet.
@@ -78,6 +78,7 @@ self.addEventListener('activate', (event) => {
       .keys()
       .then((keys) =>
         Promise.all(
+          // Drop every previous shell/static cache — old HTML points at deleted /_next chunks.
           keys.filter((k) => k !== CACHE_NAME && k !== SHELL_CACHE).map((k) => caches.delete(k))
         )
       )
@@ -107,8 +108,10 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Never intercept API, auth, or manifest — avoids breaking invite gate + RSC
+  // Never intercept Next build output, APIs, auth, or the SW itself.
+  // Intercepting /_next after a deploy causes mass chunk ERR_FAILED (stale HTML → gone hashes).
   if (
+    url.pathname.startsWith('/_next/') ||
     url.pathname.startsWith('/api/') ||
     url.pathname === '/manifest.webmanifest' ||
     url.pathname === '/sw.js'
@@ -133,6 +136,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Navigations: network-only while online. Cache only as offline last resort —
+  // never prefer cached HTML over a live Next document (chunk hashes change every deploy).
   if (event.request.mode === 'navigate' && isStudioRoute(url.pathname)) {
     event.respondWith(
       fetch(event.request)
@@ -161,21 +166,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (response.ok && event.request.mode === 'navigate') {
-          const clone = response.clone();
-          caches.open(SHELL_CACHE).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      })
-      .catch(() =>
-        caches.match(event.request).then((cached) => {
-          if (cached) return cached;
-          if (event.request.mode === 'navigate') return caches.match('/');
-          return Response.error();
-        })
-      )
-  );
+  // Everything else: network only (no SW Response.error() mask on failures).
+  event.respondWith(fetch(event.request));
 });

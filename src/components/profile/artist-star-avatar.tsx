@@ -3,7 +3,7 @@
 /**
  * Feed avatar chip:
  * - Generative on → round Vesperfold mark (feed star)
- * - Generative off + photo → square photo
+ * - Generative off + photo (https or data:image) → square photo
  * - Generative off + no photo → stock initials in a 5-point star
  */
 
@@ -66,13 +66,14 @@ function StockInitialsStar({
   );
 }
 
-/** Only real hosted photos belong in <img> — data URLs are generative marks. */
+/** Custom / hosted photos for <img> — not generative Vesperfold data URLs. */
 function usablePhotoUrl(url?: string): string | undefined {
   if (!url || !url.trim()) return undefined;
   const trimmed = url.trim();
-  if (trimmed.startsWith('data:')) return undefined;
-  if (!/^https?:\/\//i.test(trimmed)) return undefined;
-  return trimmed;
+  // Hero uploads are often data:image/*; generative marks use VesperfoldMark instead.
+  if (/^data:image\//i.test(trimmed)) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return undefined;
 }
 
 export function ArtistStarAvatar({

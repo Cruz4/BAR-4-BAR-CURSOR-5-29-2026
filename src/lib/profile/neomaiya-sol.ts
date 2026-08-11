@@ -39,6 +39,23 @@ export const NEOMAIYA_PLAYGROUND_FRIEND = {
   slug: NEOMAIYA_SOL.slug,
 } as const;
 
+/** Name/slug heuristics for Neo (and stale Neo clone chips). */
+export function looksLikeNeomaiyaSol(name?: string, slug?: string): boolean {
+  const n = (name || '').trim().toLowerCase();
+  const s = (slug || '').trim().toLowerCase();
+  return n === 'neomaiya sol' || s === 'neomaiya-sol' || s.startsWith('neomaiya-sol-');
+}
+
+export function isNeomaiyaSolViewer(viewer?: {
+  email?: string | null;
+  displayName?: string | null;
+}): boolean {
+  if (!viewer) return false;
+  const email = (viewer.email || '').trim().toLowerCase();
+  if (email && email === NEOMAIYA_SOL.email.toLowerCase()) return true;
+  return (viewer.displayName || '').trim().toLowerCase() === 'neomaiya sol';
+}
+
 function clampIndex(n: number, len: number): number {
   if (len <= 0) return 0;
   const v = Math.abs(Math.floor(n)) % len;

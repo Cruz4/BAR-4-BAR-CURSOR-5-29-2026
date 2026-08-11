@@ -26,6 +26,11 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client/firebase';
 import { parseEmbedUrl, type EmbedProvider } from '@/lib/profile/embeds';
+import {
+  NEOMAIYA_PLAYGROUND_FRIEND,
+  isNeomaiyaSolViewer,
+  looksLikeNeomaiyaSol,
+} from '@/lib/profile/neomaiya-sol';
 
 export type ProfilePost = {
   id: string;
@@ -495,6 +500,12 @@ export async function sendFriendRequest(
 ): Promise<Friendship> {
   const user = requireUser();
   if (target.userId === user.uid) throw new Error('That is you.');
+  if (
+    isNeomaiyaSolViewer({ email: user.email, displayName: user.displayName }) &&
+    looksLikeNeomaiyaSol(target.name, target.slug)
+  ) {
+    throw new Error('That is you.');
+  }
   if (await isUserBlocked(target.userId)) {
     throw new Error('You blocked this artist. Unblock them first.');
   }
@@ -711,8 +722,10 @@ export async function fetchFriendships(
 /** The "other side" of accepted friendships, ready for display. */
 export function friendProfilesOf(
   friendships: Friendship[],
-  userId: string
+  userId: string,
+  viewer?: { email?: string | null; displayName?: string | null }
 ): Array<{ userId: string; name: string; slug?: string }> {
+  const hideNeoMirrors = isNeomaiyaSolViewer(viewer);
   return friendships
     .filter((f) => f.status === 'accepted')
     .map((f) => {
@@ -720,7 +733,11 @@ export function friendProfilesOf(
       const profile = f.profiles[otherId];
       return { userId: otherId, name: profile?.name || 'Artist', slug: profile?.slug };
     })
-    .filter((p) => p.userId);
+    .filter((p) => Boolean(p.userId) && p.userId !== userId)
+    // Guest playground Neo is not a real Auth account — never list as a friend.
+    .filter((p) => p.userId !== NEOMAIYA_PLAYGROUND_FRIEND.userId)
+    // Neo must not see stale Neo-clone rows labeled as herself.
+    .filter((p) => !(hideNeoMirrors && looksLikeNeomaiyaSol(p.name, p.slug)));
 }
 
 export type PublicArtistMeta = {
@@ -739,8 +756,8 @@ function avatarFromPublicDoc(data: Record<string, unknown>): string | undefined 
     data.profilePhotoUrl.trim()
   ) {
     const url = data.profilePhotoUrl.trim();
-    // Ignore non-http leftovers (data URLs belong to generative marks).
-    if (/^https?:\/\//i.test(url)) return url;
+    // Custom hero uploads are often data:image/*; https hosted URLs also ok.
+    if (/^https?:\/\//i.test(url) || /^data:image\//i.test(url)) return url;
   }
   return undefined;
 }
@@ -766,12 +783,19 @@ async function readPublicAvatarAsset(slug: string): Promise<PublicAvatarAsset | 
   }
 }
 
-/** Custom feed photo only — never generative data URLs (those use VesperfoldMark). */
+/** Custom feed photo only — never generative Vesperfold marks (those use VesperfoldMark). */
 function customFeedPhotoUrl(asset: PublicAvatarAsset | undefined): string | undefined {
   if (!asset?.url) return undefined;
   if (asset.source === 'vesperfold') return undefined;
-  if (asset.url.startsWith('data:')) return undefined;
-  if (asset.source === 'custom' || /^https?:\/\//i.test(asset.url)) return asset.url;
+  const url = asset.url.trim();
+  if (!url) return undefined;
+  // Explicit custom source (often data:image from Press Desk) or hosted https.
+  if (asset.source === 'custom') {
+    if (/^https?:\/\//i.test(url) || /^data:image\//i.test(url)) return url;
+    return undefined;
+  }
+  if (/^https?:\/\//i.test(url)) return url;
+  if (/^data:image\//i.test(url)) return url;
   return undefined;
 }
 
@@ -917,8 +941,8 @@ export async function fetchPublicArtistAvatarMeta(
         typeof body.avatarUrl === 'string' && body.avatarUrl.trim()
           ? body.avatarUrl.trim()
           : undefined;
-      // API may still return generative data URLs — never feed those to <img>.
-      if (apiUrl && !apiUrl.startsWith('data:') && /^https?:\/\//i.test(apiUrl)) {
+      // Skip generative Vesperfold payloads; allow custom https + data:image photos.
+      if (apiUrl && !apiUrl.startsWith('data:image/svg') && (/^https?:\/\//i.test(apiUrl) || /^data:image\//i.test(apiUrl))) {
         return { avatarUrl: apiUrl, starMarkUseStar: false };
       }
       return { starMarkUseStar: false };

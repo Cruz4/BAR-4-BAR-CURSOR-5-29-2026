@@ -13,6 +13,9 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: '#050a1e',
     theme_color: '#2563eb',
     categories: ['music', 'productivity', 'entertainment'],
+    // Required by Chrome for FCM web push (fixed Firebase value — not your project sender id).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...({ gcm_sender_id: '103953800507' } as any),
     icons: [
       {
         src: SEO.faviconIcoPath,
@@ -39,5 +42,5 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'maskable',
       },
     ],
-  }
+  };
 }

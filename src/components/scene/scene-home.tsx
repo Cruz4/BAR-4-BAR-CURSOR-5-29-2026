@@ -61,6 +61,10 @@ import {
   setVaultTourRunning,
 } from '@/lib/studio-privacy-intro';
 import {
+  dispatchActivityPushIntroEligible,
+  queueActivityPushIntro,
+} from '@/lib/activity-push-intro';
+import {
   COOKIE_CONSENT_CHANGED_EVENT,
   hasMarketingCookieConsent,
 } from '@/lib/tiktok-pixel';
@@ -163,6 +167,15 @@ export function SceneHome() {
   const sceneProgressTourPinned =
     tourActive && SCENE_HOME_TOUR_STEPS[tourStep]?.id === 'scene-progress';
 
+  const reloadBlockFeed = useCallback(async (nextFriendships: Friendship[], viewerId: string) => {
+    const friendIds = friendProfilesOf(nextFriendships, viewerId, {
+      email: user?.email,
+      displayName: user?.displayName,
+    }).map((f) => f.userId);
+    const feed = await fetchPostsByOwners([viewerId, ...friendIds]);
+    setPosts(feed);
+  }, [user?.email, user?.displayName]);
+
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
@@ -207,10 +220,7 @@ export function SceneHome() {
         setFriendships(friendshipsForUi);
         setDiscover(discoverData);
         setBlockedIds(new Set(blocked.map((b) => b.blockedUserId)));
-        const friendIds = friendProfilesOf(friendshipsForUi, user.id).map((f) => f.userId);
-        // Your own posts ride the feed too — it's your scene, not a stranger's.
-        const feed = await fetchPostsByOwners([user.id, ...friendIds]);
-        if (!cancelled) setPosts(feed);
+        await reloadBlockFeed(friendshipsForUi, user.id);
       } finally {
         if (!cancelled) {
           setLoaded(true);
@@ -222,26 +232,33 @@ export function SceneHome() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [user?.id, reloadBlockFeed]);
 
   // Accept/decline on Activity or profile — clear the Scene request strip too.
   useEffect(() => {
+    if (!user?.id) return;
     const onFriendshipChanged = (ev: Event) => {
       const detail = (ev as CustomEvent<FriendshipChangedDetail>).detail;
       if (!detail) return;
       if (detail.action === 'accepted') {
-        setFriendships((prev) =>
-          prev.map((f) =>
+        setFriendships((prev) => {
+          const next = prev.map((f) =>
             f.id === detail.friendshipId ? { ...f, status: 'accepted' as const } : f
-          )
-        );
+          );
+          void reloadBlockFeed(next, user.id);
+          return next;
+        });
       } else if (detail.action === 'removed') {
-        setFriendships((prev) => prev.filter((f) => f.id !== detail.friendshipId));
+        setFriendships((prev) => {
+          const next = prev.filter((f) => f.id !== detail.friendshipId);
+          void reloadBlockFeed(next, user.id);
+          return next;
+        });
       }
     };
     window.addEventListener(FRIENDSHIP_CHANGED_EVENT, onFriendshipChanged);
     return () => window.removeEventListener(FRIENDSHIP_CHANGED_EVENT, onFriendshipChanged);
-  }, []);
+  }, [user?.id, reloadBlockFeed]);
 
   // Replay requested from another page (Studio Manual navigates here first).
   useEffect(() => {
@@ -352,10 +369,16 @@ export function SceneHome() {
       if (!skipped) {
         void postGamificationEvent('tour_complete');
       }
+      // Queue push opt-in for after privacy (or right away if privacy already done).
+      if (user) {
+        queueActivityPushIntro();
+      }
       // Visibility choice lives on the Scene now — offer it right after the tour.
       if (user && !user.studioPrivacyIntroCompletedAt) {
         queueStudioPrivacyIntro();
         window.setTimeout(() => dispatchStudioPrivacyIntroEligible(), 400);
+      } else if (user) {
+        window.setTimeout(() => dispatchActivityPushIntroEligible(), 500);
       }
     },
     [user]
@@ -369,8 +392,14 @@ export function SceneHome() {
     [friendships, user?.id]
   );
   const friendCount = useMemo(
-    () => (user?.id ? friendProfilesOf(friendships, user.id).length : 0),
-    [friendships, user?.id]
+    () =>
+      user?.id
+        ? friendProfilesOf(friendships, user.id, {
+            email: user.email,
+            displayName: user.displayName,
+          }).length
+        : 0,
+    [friendships, user?.id, user?.email, user?.displayName]
   );
 
   const discoverCards: DiscoverCard[] = useMemo(() => {
@@ -396,15 +425,24 @@ export function SceneHome() {
   }, []);
 
   const respond = async (friendship: Friendship, accept: boolean) => {
+    if (!user?.id) return;
     try {
       if (accept) {
         await acceptFriendRequest(friendship.id);
-        setFriendships((prev) =>
-          prev.map((f) => (f.id === friendship.id ? { ...f, status: 'accepted' as const } : f))
-        );
+        setFriendships((prev) => {
+          const next = prev.map((f) =>
+            f.id === friendship.id ? { ...f, status: 'accepted' as const } : f
+          );
+          void reloadBlockFeed(next, user.id);
+          return next;
+        });
       } else {
         await removeFriendship(friendship.id);
-        setFriendships((prev) => prev.filter((f) => f.id !== friendship.id));
+        setFriendships((prev) => {
+          const next = prev.filter((f) => f.id !== friendship.id);
+          void reloadBlockFeed(next, user.id);
+          return next;
+        });
       }
     } catch {
       toast({ variant: 'destructive', title: 'Could not update request' });

@@ -2,17 +2,16 @@ import 'server-only';
 
 import type { Auth } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
-import { NEOMAIYA_SOL, pickNeomaiyaGuestbookWelcome } from '@/lib/profile/neomaiya-sol';
+import {
+  NEOMAIYA_PLAYGROUND_FRIEND,
+  NEOMAIYA_SOL,
+  looksLikeNeomaiyaSol,
+  pickNeomaiyaGuestbookWelcome,
+} from '@/lib/profile/neomaiya-sol';
 import { resolveNeomaiyaPublicSlug } from '@/lib/server/neomaiya-profile';
 
 function friendshipIdFor(uidA: string, uidB: string): string {
   return [uidA, uidB].sort().join('_');
-}
-
-function looksLikeNeomaiyaProfile(name?: string, slug?: string): boolean {
-  const n = (name || '').trim().toLowerCase();
-  const s = (slug || '').trim().toLowerCase();
-  return n === 'neomaiya sol' || s === 'neomaiya-sol' || s.startsWith('neomaiya-sol-');
 }
 
 /**
@@ -41,7 +40,7 @@ async function cleanupStaleNeomaiyaFriendships(
     if (!otherId || otherId === realNeoUid) continue;
 
     const profile = data.profiles?.[otherId];
-    if (!looksLikeNeomaiyaProfile(profile?.name, profile?.slug)) continue;
+    if (!looksLikeNeomaiyaSol(profile?.name, profile?.slug)) continue;
 
     try {
       const other = await auth.getUser(otherId);
@@ -53,6 +52,38 @@ async function cleanupStaleNeomaiyaFriendships(
     }
 
     await docSnap.ref.delete();
+  }
+}
+
+/**
+ * Neo should never see herself (or playground / stale Neo mirrors) in her circle.
+ */
+async function cleanupNeomaiyaOwnCircle(db: Firestore, neoUid: string): Promise<void> {
+  const snap = await db
+    .collection('friendships')
+    .where('uids', 'array-contains', neoUid)
+    .limit(120)
+    .get();
+
+  for (const docSnap of snap.docs) {
+    const data = docSnap.data() as {
+      uids?: string[];
+      profiles?: Record<string, { name?: string; slug?: string }>;
+    };
+    const uids = data.uids || [];
+    const otherId = uids.find((u) => u !== neoUid);
+
+    // Broken self-pair or playground Neo.
+    if (!otherId || otherId === neoUid || otherId === NEOMAIYA_PLAYGROUND_FRIEND.userId) {
+      await docSnap.ref.delete();
+      continue;
+    }
+
+    const profile = data.profiles?.[otherId];
+    // Stale Neo clone accounts still labeled as Neomaiya Sol in her circle.
+    if (looksLikeNeomaiyaSol(profile?.name, profile?.slug)) {
+      await docSnap.ref.delete();
+    }
   }
 }
 
@@ -77,7 +108,10 @@ export async function ensureDefaultFounderWelcome(
     return;
   }
 
-  if (neo.uid === newUserId) return;
+  if (neo.uid === newUserId) {
+    await cleanupNeomaiyaOwnCircle(db, neo.uid);
+    return;
+  }
 
   await cleanupStaleNeomaiyaFriendships(db, auth, newUserId, neo.uid);
 
