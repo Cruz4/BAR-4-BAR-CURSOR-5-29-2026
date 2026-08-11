@@ -47,8 +47,8 @@ import { GUEST_FUNNEL_EVENTS } from '@/lib/guest-funnel-events';
 import type { ProfilePost } from '@/lib/profile/social-client';
 import { parseEmbedUrl } from '@/lib/profile/embeds';
 import {
-  NEOMAIYA_PLAYGROUND_FRIEND,
   NEOMAIYA_SOL,
+  neomaiyaFriendChip,
   neomaiyaPlaygroundGuestbookEntry,
 } from '@/lib/profile/neomaiya-sol';
 import { cn } from '@/lib/utils';
@@ -140,6 +140,8 @@ function GuestPressingLandingInner() {
   const [tipOpen, setTipOpen] = useState(false);
   const [pressingPulse, setPressingPulse] = useState(false);
   const [neoSlug, setNeoSlug] = useState<string>(NEOMAIYA_SOL.slug);
+  const [neoUserId, setNeoUserId] = useState<string | undefined>(undefined);
+  const [neoDisplayName, setNeoDisplayName] = useState<string>(NEOMAIYA_SOL.displayName);
   const seedRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -158,15 +160,23 @@ function GuestPressingLandingInner() {
     }
   }, []);
 
-  // Resolve Neomaiya's live public profile slug for guestbook / friends links.
+  // Resolve Neomaiya's live Auth account for guestbook / friends (real uid + slug).
   // Never replace the canonical slug with a dead/regenerated one (public on/off
   // can mint neomaiya-sol-{uid} mirrors that 404 while paQXxm stays live).
   useEffect(() => {
     let cancelled = false;
     void fetch('/api/profile/neomaiya')
       .then((r) => r.json())
-      .then(async (data: { slug?: string }) => {
+      .then(async (data: { slug?: string; userId?: string; displayName?: string }) => {
         if (cancelled) return;
+        const uid = typeof data?.userId === 'string' ? data.userId.trim() : '';
+        if (uid) setNeoUserId(uid);
+        const name =
+          typeof data?.displayName === 'string' && data.displayName.trim()
+            ? data.displayName.trim()
+            : NEOMAIYA_SOL.displayName;
+        setNeoDisplayName(name);
+
         const next = typeof data?.slug === 'string' ? data.slug.trim() : '';
         if (!next || next === NEOMAIYA_SOL.slug) {
           setNeoSlug(NEOMAIYA_SOL.slug);
@@ -256,8 +266,14 @@ function GuestPressingLandingInner() {
   );
 
   const playgroundFriends = useMemo(
-    () => [{ ...NEOMAIYA_PLAYGROUND_FRIEND, slug: neoSlug }],
-    [neoSlug]
+    () => [
+      neomaiyaFriendChip({
+        userId: neoUserId,
+        slug: neoSlug,
+        name: neoDisplayName,
+      }),
+    ],
+    [neoUserId, neoSlug, neoDisplayName]
   );
   const playgroundGuestbook = useMemo(() => {
     let seed = 'guest-pressing';
@@ -271,9 +287,14 @@ function GuestPressingLandingInner() {
     } catch {
       /* ignore */
     }
-    const entry = neomaiyaPlaygroundGuestbookEntry(new Date(), seed);
-    return [{ ...entry, authorSlug: neoSlug }];
-  }, [neoSlug]);
+    return [
+      neomaiyaPlaygroundGuestbookEntry(new Date(), seed, {
+        userId: neoUserId,
+        slug: neoSlug,
+        name: neoDisplayName,
+      }),
+    ];
+  }, [neoUserId, neoSlug, neoDisplayName]);
 
   const playgroundBarOfWeek = useMemo(
     () => ({

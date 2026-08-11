@@ -296,3 +296,46 @@ export async function markAllActivityRead(userId: string): Promise<number> {
   await batch.commit();
   return snap.size;
 }
+
+/**
+ * Mark inbox friend_request rows from a given actor as read (Admin SDK).
+ * Used when Neo's invite is upgraded to an accepted friendship so Accept UI dies.
+ */
+export async function clearFriendRequestActivityFromActor(
+  recipientId: string,
+  actorId: string
+): Promise<number> {
+  if (!recipientId || !actorId || recipientId === actorId) return 0;
+  const db = await getDb();
+  const snap = await db
+    .collection(`users/${recipientId}/activity`)
+    .where('direction', '==', 'received')
+    .where('type', '==', 'friend_request')
+    .where('actorId', '==', actorId)
+    .limit(40)
+    .get();
+
+  if (snap.empty) return 0;
+
+  const now = new Date().toISOString();
+  let marked = 0;
+  const batch = db.batch();
+  for (const d of snap.docs) {
+    const data = d.data() || {};
+    if (data.readAt) continue;
+    batch.update(d.ref, { readAt: now });
+    marked += 1;
+  }
+  if (marked > 0) {
+    batch.set(
+      db.doc(`users/${recipientId}/activityMeta/summary`),
+      {
+        unreadReceived: FieldValue.increment(-marked),
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+  }
+  await batch.commit();
+  return marked;
+}

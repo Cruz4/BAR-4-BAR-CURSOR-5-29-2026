@@ -658,6 +658,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
 // ---------------------------------------------------------------------------
 
 export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
+  const { user } = useAuth();
   const playground = ctx.playgroundFriends;
   const [friends, setFriends] = useState<Array<{ userId: string; name: string; slug?: string }>>(
     playground || []
@@ -671,10 +672,17 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
       return;
     }
     fetchFriendships(ctx.profileUserId, 'accepted')
-      .then((list) => setFriends(friendProfilesOf(list, ctx.profileUserId)))
+      .then((list) =>
+        setFriends(
+          friendProfilesOf(list, ctx.profileUserId, {
+            email: user?.email,
+            displayName: user?.displayName,
+          })
+        )
+      )
       .catch(() => undefined)
       .finally(() => setLoaded(true));
-  }, [ctx.profileUserId, playground]);
+  }, [ctx.profileUserId, playground, user?.email, user?.displayName]);
 
   if (loaded && friends.length === 0) return null;
 

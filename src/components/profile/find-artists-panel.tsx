@@ -133,10 +133,17 @@ export function FindArtistsPanel({ viewerSlug, className }: FindArtistsPanelProp
           }
         );
         setFriendshipByUser((prev) => ({ ...prev, [artist.userId]: created }));
-        toast({
-          title: 'Friend invite sent',
-          description: `Waiting on ${artist.displayName} to accept.`,
-        });
+        toast(
+          created.status === 'accepted'
+            ? {
+                title: 'Friends',
+                description: `You and ${artist.displayName} are connected.`,
+              }
+            : {
+                title: 'Friend invite sent',
+                description: `Waiting on ${artist.displayName} to accept.`,
+              }
+        );
       } catch (e) {
         toast({
           variant: 'destructive',

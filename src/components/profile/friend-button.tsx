@@ -15,6 +15,7 @@ import {
   unblockUser,
   type Friendship,
 } from '@/lib/profile/social-client';
+import { looksLikeNeomaiyaSol } from '@/lib/profile/neomaiya-sol';
 
 type FriendButtonProps = {
   targetUserId: string;
@@ -41,14 +42,37 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
       setLoaded(true);
       return;
     }
+    let cancelled = false;
     void Promise.all([fetchFriendshipWith(targetUserId), isUserBlocked(targetUserId)])
-      .then(([f, b]) => {
-        setFriendship(f);
+      .then(async ([f, b]) => {
+        if (cancelled) return;
         setBlocked(b);
+        // Neo founder invites should never sit as Accept — auto-heal to Friends.
+        if (
+          f?.status === 'pending' &&
+          f.requestedBy === targetUserId &&
+          looksLikeNeomaiyaSol(targetName, targetSlug)
+        ) {
+          try {
+            await acceptFriendRequest(f.id);
+            if (!cancelled) {
+              setFriendship({ ...f, status: 'accepted' });
+            }
+            return;
+          } catch {
+            /* show Accept as fallback */
+          }
+        }
+        if (!cancelled) setFriendship(f);
       })
       .catch(() => undefined)
-      .finally(() => setLoaded(true));
-  }, [user?.id, targetUserId]);
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, targetUserId, targetName, targetSlug]);
 
   if (!loaded || (user?.id && user.id === targetUserId)) return null;
 
@@ -134,7 +158,12 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
                 { userId: targetUserId, name: targetName, slug: targetSlug }
               );
               setFriendship(created);
-              toast({ title: 'Friend request sent' });
+              toast({
+                title:
+                  created.status === 'accepted'
+                    ? `You and ${targetName} are friends now`
+                    : 'Friend request sent',
+              });
             }, 'Could not send request')
           }
         >

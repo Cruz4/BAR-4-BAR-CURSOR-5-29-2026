@@ -257,7 +257,10 @@ service cloud.firestore {
     // pending requests visible only to the two participants.
     // Split get/list so list queries with array-contains + status filters are provable.
     match /friendships/{pairId} {
-      allow get: if resource.data.status == 'accepted'
+      // Missing docs must be readable so clients can probe "are we friends?" /
+      // send a request without a false permissions error.
+      allow get: if !exists(/databases/$(database)/documents/friendships/$(pairId))
+        || resource.data.status == 'accepted'
         || (request.auth != null && request.auth.uid in resource.data.uids);
       allow list: if resource.data.status == 'accepted'
         || (request.auth != null && request.auth.uid in resource.data.uids);
@@ -277,6 +280,21 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'respondedAt']);
       allow delete: if request.auth != null
         && (request.auth.uid in resource.data.uids || isAdmin());
+    }
+
+    // After unfriending Neo (or Neo unfriending you), block founder-welcome from
+    // recreating the accepted edge on the next usage-init.
+    match /founderFriendDismissals/{pairId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.uids;
+      allow create: if request.auth != null
+        && request.resource.data.uids is list
+        && request.resource.data.uids.size() == 2
+        && request.auth.uid in request.resource.data.uids
+        && request.resource.data.dismissedBy == request.auth.uid
+        && request.resource.data.dismissedAt is string;
+      allow delete: if request.auth != null
+        && request.auth.uid in resource.data.uids;
+      allow update: if false;
     }
 
     // Profile guestbook — one line per visitor (doc id == author uid);

@@ -20,6 +20,7 @@ import {
   getDocs,
   limit as limitTo,
   query,
+  runTransaction,
   setDoc,
   updateDoc,
   where,
@@ -28,6 +29,7 @@ import { auth, db } from '@/lib/firebase/client/firebase';
 import { parseEmbedUrl, type EmbedProvider } from '@/lib/profile/embeds';
 import {
   NEOMAIYA_PLAYGROUND_FRIEND,
+  NEOMAIYA_SOL,
   isNeomaiyaSolViewer,
   looksLikeNeomaiyaSol,
 } from '@/lib/profile/neomaiya-sol';
@@ -500,6 +502,9 @@ export async function sendFriendRequest(
 ): Promise<Friendship> {
   const user = requireUser();
   if (target.userId === user.uid) throw new Error('That is you.');
+  if (target.userId === NEOMAIYA_PLAYGROUND_FRIEND.userId) {
+    throw new Error('That artist is not available.');
+  }
   if (
     isNeomaiyaSolViewer({ email: user.email, displayName: user.displayName }) &&
     looksLikeNeomaiyaSol(target.name, target.slug)
@@ -510,6 +515,60 @@ export async function sendFriendRequest(
     throw new Error('You blocked this artist. Unblock them first.');
   }
   const id = friendshipIdFor(user.uid, target.userId);
+  const ref = doc(db, 'friendships', id);
+
+  // Existing edge — never downgrade accepted/pending. Missing docs can 403 under
+  // older friendship get rules; treat that as "no friendship yet".
+  try {
+    const existingSnap = await getDoc(ref);
+    if (existingSnap.exists()) {
+      const existing = friendshipFromDoc(existingSnap.id, existingSnap.data());
+      if (existing.status === 'accepted' || existing.status === 'pending') {
+        return existing;
+      }
+    }
+  } catch {
+    /* proceed to create / founder seed */
+  }
+
+  // Neo connecting a legacy artist (pre-auto-welcome): Admin-seed accepted friendship.
+  if (isNeomaiyaSolViewer({ email: user.email, displayName: user.displayName })) {
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/profile/founder-friend', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          targetUserId: target.userId,
+          targetName: target.name,
+          ...(target.slug ? { targetSlug: target.slug } : {}),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        seeded?: boolean;
+        reason?: string;
+        friendship?: Record<string, unknown>;
+      };
+      if (res.ok && data.friendship && typeof data.friendship === 'object') {
+        const seeded = friendshipFromDoc(String(data.friendship.id || id), data.friendship);
+        // Re-read so we never return stale pending after an upgrade.
+        try {
+          const again = await getDoc(ref);
+          if (again.exists()) return friendshipFromDoc(again.id, again.data());
+        } catch {
+          /* use seeded payload */
+        }
+        return seeded;
+      }
+      // dismissed / skipped → fall through to a normal pending request
+    } catch {
+      /* fall through to pending create */
+    }
+  }
+
   const friendship: Friendship = {
     id,
     uids: [user.uid, target.userId].sort() as [string, string],
@@ -521,8 +580,36 @@ export async function sendFriendRequest(
     },
     createdAt: new Date().toISOString(),
   };
-  const { id: _id, ...data } = friendship;
-  await setDoc(doc(db, 'friendships', id), data);
+  const { id: _id, ...payload } = friendship;
+
+  // Create-only — never overwrite an accepted/pending edge (founder seed race).
+  let result: Friendship = friendship;
+  let created = false;
+  try {
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      if (snap.exists()) {
+        result = friendshipFromDoc(snap.id, snap.data() as Record<string, unknown>);
+        return;
+      }
+      tx.set(ref, payload);
+      created = true;
+    });
+  } catch (err) {
+    // Fallback: final get — if accepted/pending exists, return it instead of failing.
+    try {
+      const snap = await getDoc(ref);
+      if (snap.exists()) return friendshipFromDoc(snap.id, snap.data());
+    } catch {
+      /* ignore */
+    }
+    throw err;
+  }
+
+  if (!created) {
+    return result;
+  }
+
   trackSocialEvent('profile_friend_request');
   const { emitActivity } = await import('@/lib/activity/client');
   emitActivity({
@@ -621,6 +708,12 @@ export async function acceptFriendRequest(friendshipId: string): Promise<void> {
       clearedActivityIds,
     });
   }
+  // Clear founder-welcome dismissal so a later unfriend can be recorded cleanly.
+  try {
+    await deleteDoc(doc(db, 'founderFriendDismissals', friendshipId));
+  } catch {
+    /* optional */
+  }
   try {
     const { postGamificationEvent } = await import('@/lib/gamification-client');
     void postGamificationEvent('friendship_accepted');
@@ -635,6 +728,7 @@ export async function removeFriendship(friendshipId: string): Promise<void> {
   const ref = doc(db, 'friendships', friendshipId);
   let peerUserId: string | undefined;
   let wasIncomingPending = false;
+  let peerLookedLikeNeo = false;
   try {
     const snap = await getDoc(ref);
     if (snap.exists()) {
@@ -643,11 +737,46 @@ export async function removeFriendship(friendshipId: string): Promise<void> {
       peerUserId = uids.find((u) => u !== user.uid);
       wasIncomingPending =
         data.status === 'pending' && String(data.requestedBy || '') !== user.uid;
+      const peerProfile =
+        peerUserId && data.profiles && typeof data.profiles === 'object'
+          ? (data.profiles as Friendship['profiles'])[peerUserId]
+          : undefined;
+      peerLookedLikeNeo = looksLikeNeomaiyaSol(peerProfile?.name, peerProfile?.slug);
     }
   } catch {
     /* still attempt delete */
   }
   await deleteDoc(ref);
+
+  // Remember welcome was already granted so usage-init won't re-add Neo after unfriend.
+  const neoInvolved =
+    peerLookedLikeNeo ||
+    isNeomaiyaSolViewer({ email: user.email, displayName: user.displayName });
+  if (neoInvolved && peerUserId) {
+    const nowIso = new Date().toISOString();
+    try {
+      await setDoc(
+        doc(db, 'users', user.uid),
+        {
+          founderWelcome: { friendshipSeededAt: nowIso },
+          updatedAt: nowIso,
+        },
+        { merge: true }
+      );
+    } catch {
+      /* rules may block — dismissal doc below is the durable signal */
+    }
+    try {
+      const pairId = friendshipIdFor(user.uid, peerUserId);
+      await setDoc(doc(db, 'founderFriendDismissals', pairId), {
+        uids: [user.uid, peerUserId].sort(),
+        dismissedBy: user.uid,
+        dismissedAt: nowIso,
+      });
+    } catch {
+      /* ignore */
+    }
+  }
 
   if (wasIncomingPending && peerUserId) {
     const { clearFriendRequestActivityFromPeer, notifyFriendshipChanged } = await import(
@@ -726,7 +855,7 @@ export function friendProfilesOf(
   viewer?: { email?: string | null; displayName?: string | null }
 ): Array<{ userId: string; name: string; slug?: string }> {
   const hideNeoMirrors = isNeomaiyaSolViewer(viewer);
-  return friendships
+  const mapped = friendships
     .filter((f) => f.status === 'accepted')
     .map((f) => {
       const otherId = f.uids.find((u) => u !== userId) || '';
@@ -735,9 +864,33 @@ export function friendProfilesOf(
     })
     .filter((p) => Boolean(p.userId) && p.userId !== userId)
     // Guest playground Neo is not a real Auth account — never list as a friend.
-    .filter((p) => p.userId !== NEOMAIYA_PLAYGROUND_FRIEND.userId)
-    // Neo must not see stale Neo-clone rows labeled as herself.
-    .filter((p) => !(hideNeoMirrors && looksLikeNeomaiyaSol(p.name, p.slug)));
+    .filter((p) => p.userId !== NEOMAIYA_PLAYGROUND_FRIEND.userId);
+
+  // Prefer the live Neo chip when stale clones / mirrors also appear.
+  const ranked = [...mapped].sort((a, b) => {
+    const aNeo = looksLikeNeomaiyaSol(a.name, a.slug);
+    const bNeo = looksLikeNeomaiyaSol(b.name, b.slug);
+    if (aNeo && bNeo) {
+      if (a.slug === NEOMAIYA_SOL.slug && b.slug !== NEOMAIYA_SOL.slug) return -1;
+      if (b.slug === NEOMAIYA_SOL.slug && a.slug !== NEOMAIYA_SOL.slug) return 1;
+    }
+    return 0;
+  });
+
+  const out: Array<{ userId: string; name: string; slug?: string }> = [];
+  const seenIds = new Set<string>();
+  let neoKept = false;
+  for (const p of ranked) {
+    if (seenIds.has(p.userId)) continue;
+    if (hideNeoMirrors && looksLikeNeomaiyaSol(p.name, p.slug)) continue;
+    if (looksLikeNeomaiyaSol(p.name, p.slug)) {
+      if (neoKept) continue;
+      neoKept = true;
+    }
+    seenIds.add(p.userId);
+    out.push(p);
+  }
+  return out;
 }
 
 export type PublicArtistMeta = {

@@ -91,6 +91,9 @@ async function cleanupNeomaiyaOwnCircle(db: Firestore, neoUid: string): Promise<
  * Every new (and returning-without-seed) artist starts with Neomaiya Sol as
  * an accepted friend, plus her guestbook welcome on their Artist Home.
  * Admin-only writes — client rules cannot create accepted friendships.
+ *
+ * Seed once: if the artist later unfriends Neo, do not recreate the edge on
+ * every usage-init. They can send a normal request to reconnect.
  */
 export async function ensureDefaultFounderWelcome(
   db: Firestore,
@@ -131,6 +134,19 @@ export async function ensureDefaultFounderWelcome(
   const pairId = friendshipIdFor(newUserId, neo.uid);
   const friendshipRef = db.doc(`friendships/${pairId}`);
   const friendshipSnap = await friendshipRef.get();
+  const userRef = db.doc(`users/${newUserId}`);
+  const userSnap = await userRef.get();
+  const alreadySeeded = Boolean(
+    (userSnap.data() as { founderWelcome?: { friendshipSeededAt?: string } } | undefined)
+      ?.founderWelcome?.friendshipSeededAt
+  );
+  let dismissed = false;
+  try {
+    const dismissalSnap = await db.doc(`founderFriendDismissals/${pairId}`).get();
+    dismissed = dismissalSnap.exists;
+  } catch {
+    /* ignore */
+  }
 
   const neoProfile = {
     name: neoName,
@@ -142,30 +158,48 @@ export async function ensureDefaultFounderWelcome(
   };
 
   if (!friendshipSnap.exists) {
-    const uids = [newUserId, neo.uid].sort() as [string, string];
-    await friendshipRef.set({
-      uids,
-      requestedBy: neo.uid,
-      status: 'accepted',
-      profiles: {
-        [newUserId]: meProfile,
-        [neo.uid]: neoProfile,
-      },
-      createdAt: now,
-      respondedAt: now,
-      seededBy: 'founder-welcome',
-    });
+    if (alreadySeeded || dismissed) {
+      // Artist or Neo removed the friendship after the welcome seed — respect it.
+    } else {
+      const uids = [newUserId, neo.uid].sort() as [string, string];
+      await friendshipRef.set({
+        uids,
+        requestedBy: neo.uid,
+        status: 'accepted',
+        profiles: {
+          [newUserId]: meProfile,
+          [neo.uid]: neoProfile,
+        },
+        createdAt: now,
+        respondedAt: now,
+        seededBy: 'founder-welcome',
+      });
+      await userRef.set(
+        { founderWelcome: { friendshipSeededAt: now }, updatedAt: now },
+        { merge: true }
+      );
+    }
   } else {
-    // Keep accepted + refresh Neo's live slug/name (fixes stale neomaiya-sol-* chips).
+    // Refresh Neo's live slug/name (fixes stale neomaiya-sol-* chips).
+    // Neo-originated pending invites are upgraded to accepted — she is the
+    // founder welcome, not a normal request that needs Accept.
+    const prev = friendshipSnap.data() || {};
+    const neoPending =
+      prev.status === 'pending' && String(prev.requestedBy || '') === neo.uid;
+
     await friendshipRef.set(
       {
-        status: 'accepted',
-        respondedAt: friendshipSnap.data()?.respondedAt || now,
-        seededBy: friendshipSnap.data()?.seededBy || 'founder-welcome',
+        ...(neoPending
+          ? {
+              status: 'accepted',
+              respondedAt: now,
+              seededBy: prev.seededBy || 'founder-welcome',
+            }
+          : {}),
         profiles: {
-          ...(friendshipSnap.data()?.profiles || {}),
+          ...(prev.profiles || {}),
           [newUserId]: {
-            ...(friendshipSnap.data()?.profiles?.[newUserId] || {}),
+            ...(prev.profiles?.[newUserId] || {}),
             ...meProfile,
           },
           [neo.uid]: neoProfile,
@@ -173,6 +207,20 @@ export async function ensureDefaultFounderWelcome(
       },
       { merge: true }
     );
+    if (!alreadySeeded) {
+      await userRef.set(
+        { founderWelcome: { friendshipSeededAt: now }, updatedAt: now },
+        { merge: true }
+      );
+    }
+    if (neoPending) {
+      try {
+        const { clearFriendRequestActivityFromActor } = await import('@/lib/server/activity');
+        await clearFriendRequestActivityFromActor(newUserId, neo.uid);
+      } catch {
+        /* optional */
+      }
+    }
   }
 
   const guestbookRef = db.doc(`guestbooks/${newUserId}/entries/${neo.uid}`);

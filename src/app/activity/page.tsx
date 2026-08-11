@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import {
   fetchActivityFeed,
   FRIENDSHIP_CHANGED_EVENT,
+  clearFriendRequestActivityFromPeer,
   markActivityEventsRead,
   markAllActivityEventsRead,
   type FriendshipChangedDetail,
@@ -40,6 +41,7 @@ import {
   removeFriendship,
   fetchPublicArtistMetas,
 } from '@/lib/profile/social-client';
+import { looksLikeNeomaiyaSol } from '@/lib/profile/neomaiya-sol';
 import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
 
 type TabId = 'inbox' | 'requests' | 'sent';
@@ -268,10 +270,11 @@ function ActivityPageInner() {
     setLoading(true);
     markedOnOpenRef.current = false;
     try {
-      const [received, given, friendships] = await Promise.all([
+      const [received, given, pendingFriends, acceptedFriends] = await Promise.all([
         fetchActivityFeed('received'),
         fetchActivityFeed('given'),
         fetchFriendships(user.id, 'pending').catch(() => []),
+        fetchFriendships(user.id, 'accepted').catch(() => []),
       ]);
       const [inboxResolved, sentResolved] = await Promise.all([
         withResolvedProfileLinks(received),
@@ -279,10 +282,69 @@ function ActivityPageInner() {
       ]);
       setInbox(inboxResolved);
       setSent(sentResolved);
+
+      const acceptedPeerIds = new Set(
+        acceptedFriends
+          .filter((f) => f.status === 'accepted')
+          .map((f) => f.uids.find((u) => u !== user.id) || '')
+          .filter(Boolean)
+      );
+
+      // Auto-heal: Neo (or anyone) already accepted — drop Accept UI + clear activity.
+      const staleRequestActors = inboxResolved
+        .filter(
+          (e) =>
+            e.type === 'friend_request' &&
+            e.direction === 'received' &&
+            acceptedPeerIds.has(e.actorId)
+        )
+        .map((e) => e.actorId);
+      for (const actorId of [...new Set(staleRequestActors)]) {
+        void clearFriendRequestActivityFromPeer(actorId).catch(() => undefined);
+      }
+
+      // Auto-heal Neo pending invites still sitting as Accept.
+      const healedNeoRequesters = new Set<string>();
+      const neoPending = pendingFriends.filter(
+        (f) =>
+          f.status === 'pending' &&
+          f.requestedBy !== user.id &&
+          looksLikeNeomaiyaSol(
+            f.profiles[f.requestedBy]?.name,
+            f.profiles[f.requestedBy]?.slug
+          )
+      );
+      for (const f of neoPending) {
+        try {
+          await acceptFriendRequest(f.id);
+          acceptedPeerIds.add(f.requestedBy);
+          healedNeoRequesters.add(f.requestedBy);
+        } catch {
+          /* leave actionable */
+        }
+      }
+
+      if (healedNeoRequesters.size || staleRequestActors.length) {
+        const clearActors = new Set([...healedNeoRequesters, ...staleRequestActors]);
+        setInbox(
+          inboxResolved.map((e) =>
+            e.type === 'friend_request' && clearActors.has(e.actorId)
+              ? { ...e, readAt: e.readAt || new Date().toISOString() }
+              : e
+          )
+        );
+      }
+
       setPendingRequesterIds(
         new Set(
-          friendships
-            .filter((f) => f.status === 'pending' && f.requestedBy !== user.id)
+          pendingFriends
+            .filter(
+              (f) =>
+                f.status === 'pending' &&
+                f.requestedBy !== user.id &&
+                !acceptedPeerIds.has(f.requestedBy) &&
+                !healedNeoRequesters.has(f.requestedBy)
+            )
             .map((f) => f.requestedBy)
         )
       );

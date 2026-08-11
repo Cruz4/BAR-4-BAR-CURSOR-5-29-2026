@@ -33,11 +33,37 @@ export const NEOMAIYA_GUESTBOOK_WELCOMES = [
   'You are early. Finish signup and turn this demo into your home.',
 ] as const;
 
+/**
+ * Fallback chip id when `/api/profile/neomaiya` has no Auth uid yet.
+ * Prefer the live `userId` from that API so sandbox Friends/Guestbook are her
+ * real account (not a second fake Neo in anyone's circle).
+ */
 export const NEOMAIYA_PLAYGROUND_FRIEND = {
   userId: 'neomaiya-sol-playground',
   name: NEOMAIYA_SOL.displayName,
   slug: NEOMAIYA_SOL.slug,
 } as const;
+
+/** Build the sandbox Friends chip — real Auth uid when known. */
+export function neomaiyaFriendChip(opts?: {
+  userId?: string | null;
+  slug?: string | null;
+  name?: string | null;
+}): { userId: string; name: string; slug: string } {
+  const userId =
+    typeof opts?.userId === 'string' && opts.userId.trim()
+      ? opts.userId.trim()
+      : NEOMAIYA_PLAYGROUND_FRIEND.userId;
+  const slug =
+    typeof opts?.slug === 'string' && opts.slug.trim()
+      ? opts.slug.trim()
+      : NEOMAIYA_SOL.slug;
+  const name =
+    typeof opts?.name === 'string' && opts.name.trim()
+      ? opts.name.trim()
+      : NEOMAIYA_SOL.displayName;
+  return { userId, name, slug };
+}
 
 /** Name/slug heuristics for Neo (and stale Neo clone chips). */
 export function looksLikeNeomaiyaSol(name?: string, slug?: string): boolean {
@@ -76,12 +102,17 @@ export function pickNeomaiyaGuestbookWelcome(seed?: string): string {
   return list[clampIndex(hash >>> 0, list.length)];
 }
 
-export function neomaiyaPlaygroundGuestbookEntry(now = new Date(), seed?: string) {
+export function neomaiyaPlaygroundGuestbookEntry(
+  now = new Date(),
+  seed?: string,
+  author?: { userId?: string | null; slug?: string | null; name?: string | null }
+) {
+  const chip = neomaiyaFriendChip(author);
   return {
-    id: NEOMAIYA_PLAYGROUND_FRIEND.userId,
-    authorId: NEOMAIYA_PLAYGROUND_FRIEND.userId,
-    authorName: NEOMAIYA_SOL.displayName,
-    authorSlug: NEOMAIYA_SOL.slug,
+    id: chip.userId,
+    authorId: chip.userId,
+    authorName: chip.name,
+    authorSlug: chip.slug,
     text: pickNeomaiyaGuestbookWelcome(seed),
     createdAt: now.toISOString(),
   };
