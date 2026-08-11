@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
@@ -15,6 +15,7 @@ import { LockKicker, LockPlate, LockShell } from '@/components/lock/lock-shell';
 
 export default function LockManagePage() {
   const params = useParams();
+  const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
   const raw = typeof params?.lockId === 'string' ? params.lockId : LOCK_HOUSE_ID;
@@ -103,6 +104,46 @@ export default function LockManagePage() {
         description: e instanceof Error ? e.message : 'Try again',
       });
     } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteCast = async () => {
+    if (!user || !lock) return;
+    if (lock.isHouse || lock.ownerId === 'system') {
+      toast({
+        variant: 'destructive',
+        title: 'House prompt cannot be deleted',
+      });
+      return;
+    }
+    const ok = window.confirm(
+      lock.echoCount > 0
+        ? `Delete this cast and all ${lock.echoCount} replies? This cannot be undone.`
+        : 'Delete this cast? This cannot be undone.'
+    );
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch(`/api/lock/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Delete failed');
+      toast({ title: 'Cast deleted' });
+      router.push('/lock/desk');
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not delete',
+        description: e instanceof Error ? e.message : 'Try again',
+      });
       setBusy(false);
     }
   };
@@ -253,6 +294,25 @@ export default function LockManagePage() {
             </Button>
           </LockPlate>
         )}
+
+        {!lock.isHouse && lock.ownerId !== 'system' ? (
+          <LockPlate tone="danger" className="p-4 space-y-3">
+            <LockKicker>Delete cast</LockKicker>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Permanently remove this unfinished bar and every reply. Prefer Close if you only want to
+              stop new lines.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-rose-500/40 text-rose-300 hover:bg-rose-500/10"
+              disabled={busy}
+              onClick={() => void deleteCast()}
+            >
+              Delete cast
+            </Button>
+          </LockPlate>
+        ) : null}
 
         <div className="space-y-3">
           <LockKicker>Artist pick</LockKicker>

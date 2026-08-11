@@ -5,7 +5,7 @@
  * posts, live DNA Drops, and this week's leaderboard risers.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { Dna, Flame, Lock, Radio, TrendingUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -13,6 +13,9 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PostCard } from '@/components/profile/post-card';
 import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
+import { auth } from '@/lib/firebase/client/firebase';
 import { cn } from '@/lib/utils';
 import type { DiscoverCard } from '@/lib/scene/discover-client';
 
@@ -32,7 +35,20 @@ function DiscoverTag({ label, icon: Icon, tone }: { label: string; icon: React.C
   );
 }
 
-export function SceneDiscoverCard({ card, viewerSlug }: { card: DiscoverCard; viewerSlug?: string }) {
+export function SceneDiscoverCard({
+  card,
+  viewerSlug,
+  onLockRemoved,
+}: {
+  card: DiscoverCard;
+  viewerSlug?: string;
+  /** Called after the viewer deletes their own Finish this bar cast. */
+  onLockRemoved?: (lockId: string) => void;
+}) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [busy, setBusy] = useState(false);
+
   if (card.kind === 'post') {
     return (
       <div className="space-y-1.5">
@@ -121,22 +137,90 @@ export function SceneDiscoverCard({ card, viewerSlug }: { card: DiscoverCard; vi
 
   if (card.kind === 'lock') {
     const { lock } = card;
+    const isOwner = Boolean(
+      user?.id &&
+        ((lock.ownerId && lock.ownerId === user.id) ||
+          (viewerSlug && lock.ownerSlug && viewerSlug === lock.ownerSlug))
+    );
+
+    const deleteCast = async () => {
+      if (!user?.id || busy) return;
+      const ok = window.confirm(
+        lock.echoCount > 0
+          ? `Delete this Finish this bar cast and all ${lock.echoCount} replies? This cannot be undone.`
+          : 'Delete this Finish this bar cast? This cannot be undone.'
+      );
+      if (!ok) return;
+      setBusy(true);
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        if (!token) throw new Error('Sign in required');
+        const res = await fetch(`/api/lock/${encodeURIComponent(lock.id)}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ userId: user.id }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Delete failed');
+        toast({ title: 'Cast deleted' });
+        onLockRemoved?.(lock.id);
+      } catch (e) {
+        toast({
+          variant: 'destructive',
+          title: 'Could not delete',
+          description: e instanceof Error ? e.message : 'Try again',
+        });
+      } finally {
+        setBusy(false);
+      }
+    };
+
     return (
       <Card className="border-emerald-500/25 bg-gradient-to-r from-emerald-500/[0.07] via-card/85 to-card/70 p-4">
-        <DiscoverTag label="Finish this bar" icon={Lock} tone="text-emerald-400/90" />
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <DiscoverTag label="Finish this bar" icon={Lock} tone="text-emerald-400/90" />
+          {isOwner ? (
+            <span className="font-code text-[9px] font-bold uppercase tracking-[0.24em] text-primary/90">
+              Yours
+            </span>
+          ) : null}
+        </div>
         <div className="mt-2.5 space-y-2">
           <p className="font-headline text-sm font-bold uppercase tracking-tight">
             {lock.ownerName}
           </p>
           <p className="text-sm leading-snug text-foreground/90 line-clamp-2">“{lock.seedBar}”</p>
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
               {lock.echoCount} replies
               {lock.updatedAt ? ` · ${timeAgo(lock.updatedAt)}` : ''}
             </p>
-            <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>
-              <Link href={`/lock/${lock.id}`}>Finish it</Link>
-            </Button>
+            {isOwner ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>
+                  <Link href={`/lock/${lock.id}/manage`}>Manage</Link>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 shrink-0 font-bold uppercase text-rose-300 hover:bg-rose-500/10 hover:text-rose-200"
+                  disabled={busy}
+                  onClick={() => void deleteCast()}
+                >
+                  Delete
+                </Button>
+                <Button size="sm" variant="ghost" className="h-8 shrink-0 font-bold uppercase" asChild>
+                  <Link href={`/lock/${lock.id}`}>Open</Link>
+                </Button>
+              </div>
+            ) : (
+              <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>
+                <Link href={`/lock/${lock.id}`}>Finish it</Link>
+              </Button>
+            )}
           </div>
         </div>
       </Card>

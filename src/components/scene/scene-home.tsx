@@ -65,6 +65,7 @@ import {
   hasMarketingCookieConsent,
 } from '@/lib/tiktok-pixel';
 import { postGamificationEvent } from '@/lib/gamification-client';
+import { BLOCK_SECTION_ID } from '@/lib/scene-home';
 
 function SceneComposer({
   profileSlug,
@@ -302,6 +303,41 @@ export function SceneHome() {
     return () => setVaultTourRunning(false);
   }, [tourActive]);
 
+  // Client navigations to `/#your-block` often skip native hash scroll — pin The Block header.
+  useEffect(() => {
+    if (!loaded || typeof window === 'undefined') return;
+
+    const scrollToBlock = () => {
+      if (window.location.hash !== `#${BLOCK_SECTION_ID}`) return;
+      const el = document.getElementById(BLOCK_SECTION_ID);
+      if (!el) return;
+      requestAnimationFrame(() => {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    };
+
+    scrollToBlock();
+    const retry = window.setTimeout(scrollToBlock, 150);
+    window.addEventListener('hashchange', scrollToBlock);
+    return () => {
+      window.clearTimeout(retry);
+      window.removeEventListener('hashchange', scrollToBlock);
+    };
+  }, [loaded]);
+
+  const handleTourBeforeStep = useCallback((step: { id: string }) => {
+    if (step.id !== 'scene-progress' && step.id !== 'scene-nav') return;
+    // Feed steps scroll deep; rails live above. Nudge toward top before measure.
+    if (typeof window === 'undefined') return;
+    if (window.innerWidth >= 1280) return;
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    if (y > 120) {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+  }, []);
+
   const handleTourComplete = useCallback(
     async (skipped: boolean) => {
       setTourActive(false);
@@ -408,7 +444,7 @@ export function SceneHome() {
           </header>
 
           {/* < xl: progress banner + nav strip stacked above the feed */}
-          <div className="xl:hidden mb-4 space-y-3">
+          <div className="xl:hidden mb-4 space-y-3" data-tour="scene-rails-mobile">
             <VaultStudioProgress
               variant="banner"
               tourId="scene-progress-mobile"
@@ -503,7 +539,19 @@ export function SceneHome() {
               <StudioLoader size="lg" />
             </div>
           ) : (
-            <div className="space-y-4" data-tour="scene-feed">
+            <div
+              id={BLOCK_SECTION_ID}
+              className="scroll-mt-[5.5rem] space-y-4"
+              data-tour="scene-feed"
+            >
+              <div className="flex items-center gap-3 pt-1">
+                <span className="h-px flex-1 bg-border/60" />
+                <span className="font-code text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground/70">
+                  Your Block
+                </span>
+                <span className="h-px flex-1 bg-border/60" />
+              </div>
+
               {posts.length > 0 ? (
                 posts.map((post) => (
                   <PostCard
@@ -542,7 +590,18 @@ export function SceneHome() {
                     </Link>
                   </div>
                   {discoverCards.map((card) => (
-                    <SceneDiscoverCard key={card.key} card={card} viewerSlug={viewerSlug} />
+                    <SceneDiscoverCard
+                      key={card.key}
+                      card={card}
+                      viewerSlug={viewerSlug}
+                      onLockRemoved={(lockId) => {
+                        setDiscover((prev) =>
+                          prev
+                            ? { ...prev, locks: prev.locks.filter((l) => l.id !== lockId) }
+                            : prev
+                        );
+                      }}
+                    />
                   ))}
                 </div>
               )}
@@ -560,6 +619,7 @@ export function SceneHome() {
         stepIndex={tourStep}
         onStepChange={setTourStep}
         onComplete={handleTourComplete}
+        onBeforeStep={handleTourBeforeStep}
         steps={SCENE_HOME_TOUR_STEPS}
       />
     </div>

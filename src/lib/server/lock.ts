@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, type DocumentReference } from 'firebase-admin/firestore';
 import { getDb } from '@/lib/firebase/server';
 import { scoreEchoAgainstLock } from '@/lib/lock/score-echo';
 import {
@@ -394,6 +394,64 @@ export async function closeLock(input: {
     updatedAt: now,
   });
   return { ...lock, status: 'closed', updatedAt: now };
+}
+
+/** Owner hard-deletes a cast (echoes, watchers, clear offers, contribution mirrors). */
+export async function deleteLock(input: {
+  lockId: string;
+  ownerId: string;
+}): Promise<void> {
+  const lock = await getLock(input.lockId);
+  if (!lock) throw new Error('LOCK not found');
+  if (lock.ownerId !== input.ownerId) {
+    throw new Error('Only the casting artist can delete this LOCK');
+  }
+  if (lock.isHouse || lock.ownerId === 'system') {
+    throw new Error('The house LOCK cannot be deleted');
+  }
+
+  const db = await getDb();
+  const lockRef = db.collection('locks').doc(lock.id);
+
+  const [echoSnap, watcherSnap, offerSnap] = await Promise.all([
+    lockRef.collection('echoes').get(),
+    lockRef.collection('watchers').get(),
+    lockRef.collection('clearOffers').get(),
+  ]);
+
+  const mirrorJobs: Array<{ userId: string; echoId: string }> = [];
+  for (const doc of echoSnap.docs) {
+    const data = (doc.data() || {}) as Record<string, unknown>;
+    const authorId = typeof data.authorId === 'string' ? data.authorId : '';
+    if (authorId) mirrorJobs.push({ userId: authorId, echoId: doc.id });
+  }
+
+  const flushBatch = async (refs: DocumentReference[]) => {
+    for (let i = 0; i < refs.length; i += 400) {
+      const batch = db.batch();
+      for (const ref of refs.slice(i, i + 400)) batch.delete(ref);
+      await batch.commit();
+    }
+  };
+
+  await flushBatch([
+    ...echoSnap.docs.map((d) => d.ref),
+    ...watcherSnap.docs.map((d) => d.ref),
+    ...offerSnap.docs.map((d) => d.ref),
+  ]);
+  await lockRef.delete();
+
+  for (const job of mirrorJobs) {
+    try {
+      await deleteLockContributionMirror({
+        userId: job.userId,
+        lockId: lock.id,
+        echoId: job.echoId,
+      });
+    } catch (e) {
+      console.warn('[lock] contribution mirror delete on cast delete', e);
+    }
+  }
 }
 
 export async function setArtistPick(input: {

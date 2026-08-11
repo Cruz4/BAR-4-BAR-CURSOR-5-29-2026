@@ -42,6 +42,7 @@ export async function GET(req: Request) {
 
     const lockCards = (locks || []).map((l) => ({
       id: l.id,
+      ownerId: l.ownerId,
       ownerName: l.ownerName,
       ownerSlug: l.ownerSlug,
       seedBar: l.seedBar,

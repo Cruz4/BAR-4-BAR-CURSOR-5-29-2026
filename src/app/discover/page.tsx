@@ -98,7 +98,18 @@ export default function DiscoverPage() {
       ) : (
         <div className="space-y-4">
           {cards.map((card) => (
-            <SceneDiscoverCard key={card.key} card={card} viewerSlug={viewerSlug} />
+            <SceneDiscoverCard
+              key={card.key}
+              card={card}
+              viewerSlug={viewerSlug}
+              onLockRemoved={(lockId) => {
+                setDiscover((prev) =>
+                  prev
+                    ? { ...prev, locks: prev.locks.filter((l) => l.id !== lockId) }
+                    : prev
+                );
+              }}
+            />
           ))}
         </div>
       )}

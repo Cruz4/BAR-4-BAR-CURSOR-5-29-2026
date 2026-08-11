@@ -13,6 +13,9 @@ export const VAULT_PATH = '/vault';
 
 export const SCENE_HOME_PATH = '/';
 
+/** Anchor for friends posts on Scene home (after Live DNA Drops). */
+export const BLOCK_SECTION_ID = 'your-block';
+
 /** True when the pathname is the Vault surface (respects the flag). */
 export function isVaultPath(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
@@ -27,5 +30,5 @@ export function vaultHref(): string {
 
 /** Where "open The Block / friends feed" intents should navigate. */
 export function blockFeedHref(): string {
-  return SCENE_HOME_ENABLED ? '/' : '/feed';
+  return SCENE_HOME_ENABLED ? `/#${BLOCK_SECTION_ID}` : '/feed';
 }

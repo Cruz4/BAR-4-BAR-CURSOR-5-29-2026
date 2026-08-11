@@ -44,6 +44,7 @@ export type DiscoverRiser = {
 
 export type DiscoverLock = {
   id: string;
+  ownerId?: string;
   ownerName: string;
   ownerSlug?: string;
   seedBar: string;

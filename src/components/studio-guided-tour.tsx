@@ -122,8 +122,54 @@ function elementVisibleArea(el: Element): number {
 function stickyRailInView(el: HTMLElement): boolean {
   const r = el.getBoundingClientRect();
   const vh = window.innerHeight;
-  const visible = Math.min(r.bottom, vh) - Math.max(r.top, 72);
-  return visible >= Math.min(80, r.height * 0.35);
+  // Must be substantially on-screen — partial peek at the top edge is not enough.
+  if (r.bottom <= 88 || r.top >= vh - 48) return false;
+  const visible = Math.min(r.bottom, vh - 24) - Math.max(r.top, 72);
+  const need = Math.min(120, Math.max(64, r.height * 0.45));
+  return visible >= need;
+}
+
+function pageScrollY(): number {
+  return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+}
+
+function setPageScrollY(top: number) {
+  const y = Math.max(0, top);
+  window.scrollTo(0, y);
+  document.documentElement.scrollTop = y;
+  document.body.scrollTop = y;
+}
+
+/**
+ * Bring a tour target into the viewport. Prefer manual page scroll — overflow:hidden
+ * ancestors (app shell) often make scrollIntoView a no-op.
+ */
+function forceBringIntoView(el: HTMLElement, topReserve: number, bottomReserve: number) {
+  const rect = el.getBoundingClientRect();
+  const vh = window.innerHeight;
+  const maxBottom = vh - bottomReserve;
+  const needsUp = rect.top < topReserve - SCROLL_DEADBAND_PX;
+  const needsDown = rect.bottom > maxBottom + SCROLL_DEADBAND_PX;
+  if (!needsUp && !needsDown) return;
+
+  const parent = getScrollParent(el);
+  if (parent) {
+    if (needsUp) parent.scrollBy({ top: rect.top - topReserve - 8, behavior: 'auto' });
+    else parent.scrollBy({ top: rect.bottom - maxBottom + 8, behavior: 'auto' });
+  }
+
+  const afterParent = el.getBoundingClientRect();
+  const stillNeedsUp = afterParent.top < topReserve - SCROLL_DEADBAND_PX;
+  const stillNeedsDown = afterParent.bottom > maxBottom + SCROLL_DEADBAND_PX;
+  if (!stillNeedsUp && !stillNeedsDown) return;
+
+  const absoluteTop = afterParent.top + pageScrollY();
+  if (stillNeedsUp) {
+    setPageScrollY(absoluteTop - topReserve - 8);
+  } else {
+    const absoluteBottom = afterParent.bottom + pageScrollY();
+    setPageScrollY(absoluteBottom - maxBottom + 8);
+  }
 }
 
 function scrollTargetIntoMobileSafeBand(el: HTMLElement, placement: 'top' | 'bottom') {
@@ -132,11 +178,12 @@ function scrollTargetIntoMobileSafeBand(el: HTMLElement, placement: 'top' | 'bot
   const topClear = placement === 'top' ? MOBILE_TOP_CLEARANCE : MOBILE_HEADER_RESERVE + 16;
   const bottomClear =
     placement === 'bottom' ? MOBILE_BOTTOM_CHROME + cardH + 24 : MOBILE_BOTTOM_CHROME + 16;
-  const idealCenter = (topClear + vh - bottomClear) / 2;
+  forceBringIntoView(el, topClear, bottomClear);
+
   const rect = el.getBoundingClientRect();
+  const idealCenter = (topClear + vh - bottomClear) / 2;
   const elCenter = rect.top + Math.min(rect.height, vh * MOBILE_MAX_SPOTLIGHT_VH) / 2;
   const delta = elCenter - idealCenter;
-
   if (Math.abs(delta) < SCROLL_DEADBAND_PX) return;
 
   const parent = getScrollParent(el);
@@ -144,40 +191,16 @@ function scrollTargetIntoMobileSafeBand(el: HTMLElement, placement: 'top' | 'bot
     parent.scrollBy({ top: delta, behavior: 'auto' });
     return;
   }
-  window.scrollBy({ top: delta, behavior: 'auto' });
+  setPageScrollY(pageScrollY() + delta);
 }
 
 function scrollTargetVisible(
   el: HTMLElement,
   topReserve: number,
   bottomReserve: number,
-  preferEnd: boolean
+  _preferEnd: boolean
 ) {
-  const parent = getScrollParent(el);
-  if (parent) {
-    const elRect = el.getBoundingClientRect();
-    const maxBottom = window.innerHeight - bottomReserve;
-    if (elRect.top < topReserve - SCROLL_DEADBAND_PX) {
-      parent.scrollBy({ top: elRect.top - topReserve - 8, behavior: 'auto' });
-    } else if (elRect.bottom > maxBottom + SCROLL_DEADBAND_PX) {
-      parent.scrollBy({ top: elRect.bottom - maxBottom + 8, behavior: 'auto' });
-    }
-    return;
-  }
-
-  const elRect = el.getBoundingClientRect();
-  const maxBottom = window.innerHeight - bottomReserve;
-  const needsScroll =
-    elRect.top < topReserve - SCROLL_DEADBAND_PX || elRect.bottom > maxBottom + SCROLL_DEADBAND_PX;
-  if (!needsScroll) return;
-
-  el.scrollIntoView({ block: preferEnd ? 'end' : 'start', behavior: 'auto' });
-  const after = el.getBoundingClientRect();
-  if (after.bottom > maxBottom + SCROLL_DEADBAND_PX) {
-    window.scrollBy({ top: after.bottom - maxBottom + 8, behavior: 'auto' });
-  } else if (after.top < topReserve - SCROLL_DEADBAND_PX) {
-    window.scrollBy({ top: after.top - topReserve - 8, behavior: 'auto' });
-  }
+  forceBringIntoView(el, topReserve, bottomReserve);
 }
 
 function tourCardOverlapsTarget(
@@ -364,21 +387,39 @@ export function StudioGuidedTour({
       const allowAutoScroll =
         shouldScroll && !hasAutoScrolledRef.current && !skipScrollBecauseStickyInView;
       if (allowAutoScroll) {
+        // Stacked Scene/Vault rails live above the feed — jump toward page top first
+        // so overflow:hidden shells can't leave the spotlight stranded mid-feed.
+        if (STICKY_RAIL_STEP_IDS.has(step!.id) && window.innerWidth < 1280) {
+          const y = pageScrollY();
+          if (y > 80) setPageScrollY(Math.max(0, y * 0.15));
+        }
         if (compact) {
           htmlEl.style.scrollMarginTop = `${placement === 'top' ? MOBILE_TOP_CLEARANCE : MOBILE_HEADER_RESERVE + 16}px`;
           htmlEl.style.scrollMarginBottom = `${placement === 'bottom' ? bottomCardReserve : MOBILE_BOTTOM_CHROME + 16}px`;
           scrollTargetIntoMobileSafeBand(htmlEl, placement);
         } else {
-          const preferEndScroll =
-            step!.id === 'dna-drop' || (step!.id === 'save' ? false : placement === 'top');
-          scrollTargetVisible(htmlEl, topReserve, bottomReserve, preferEndScroll);
+          scrollTargetVisible(htmlEl, topReserve, bottomReserve, false);
         }
+        // Second pass after layout settles (expand/sticky).
+        forceBringIntoView(htmlEl, topReserve, bottomReserve);
         hasAutoScrolledRef.current = true;
       } else if (shouldScroll) {
         hasAutoScrolledRef.current = true;
       }
 
       const spotlight = htmlEl.getBoundingClientRect();
+      // Never paint an off-screen spotlight hole — looks like a full dim overlay.
+      if (elementVisibleArea(htmlEl) < 80) {
+        if (shouldScroll) {
+          forceBringIntoView(htmlEl, topReserve, bottomReserve);
+          const retry = htmlEl.getBoundingClientRect();
+          if (elementVisibleArea(htmlEl) >= 80) {
+            setRect(compact ? clampMobileSpotlightRect(retry, step!.id) : retry);
+          }
+          // else leave previous/null; delayed measureTarget timers will retry
+        }
+        return;
+      }
       setRect(compact ? clampMobileSpotlightRect(spotlight, step!.id) : spotlight);
     },
     [step]
@@ -457,10 +498,20 @@ export function StudioGuidedTour({
         const delays = panelSwitch
           ? panelSwitchMeasureDelays(step!.id)
           : LATE_MOUNT_STEP_IDS.has(step!.id)
-            ? [180, 420, 700]
+            ? [120, 280, 520, 900]
             : [180, 420];
-        delays.forEach((ms) => {
-          measureTimersRef.current.push(window.setTimeout(() => runCapture(false), ms));
+        delays.forEach((ms, i) => {
+          measureTimersRef.current.push(
+            window.setTimeout(() => {
+              // Rail steps often need a second scroll after expand / layout.
+              if (LATE_MOUNT_STEP_IDS.has(step!.id) && i < 3) {
+                hasAutoScrolledRef.current = false;
+                runCapture(true);
+              } else {
+                runCapture(false);
+              }
+            }, ms)
+          );
         });
       }
     },

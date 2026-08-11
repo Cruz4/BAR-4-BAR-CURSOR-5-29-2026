@@ -9,7 +9,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Check, Trophy, UserPlus, Users, X } from 'lucide-react';
-import { SCENE_HOME_ENABLED } from '@/lib/scene-home';
+import { BLOCK_SECTION_ID, SCENE_HOME_ENABLED } from '@/lib/scene-home';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -40,7 +40,7 @@ export default function FeedPage() {
 
   // The Block now lives on the Scene home feed.
   useEffect(() => {
-    if (SCENE_HOME_ENABLED) router.replace('/');
+    if (SCENE_HOME_ENABLED) router.replace(`/#${BLOCK_SECTION_ID}`);
   }, [router]);
 
   useEffect(() => {

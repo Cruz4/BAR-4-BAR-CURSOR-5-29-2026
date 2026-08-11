@@ -81,6 +81,41 @@ export default function LockDeskPage() {
     }
   };
 
+  const deleteOwned = async (lockId: string, echoCount: number) => {
+    if (!user || deleting) return;
+    const ok = window.confirm(
+      echoCount > 0
+        ? `Delete this cast and all ${echoCount} replies? This cannot be undone.`
+        : 'Delete this cast? This cannot be undone.'
+    );
+    if (!ok) return;
+    setDeleting(lockId);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('Sign in required');
+      const res = await fetch(`/api/lock/${encodeURIComponent(lockId)}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Delete failed');
+      setOwned((prev) => prev.filter((l) => l.id !== lockId));
+      toast({ title: 'Cast deleted' });
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not delete',
+        description: e instanceof Error ? e.message : 'Try again',
+      });
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   const signInHref = buildLoginUrl({
     mode: 'signin',
     next: '/lock/desk',
@@ -175,6 +210,14 @@ export default function LockDeskPage() {
                         >
                           Manage
                         </Link>
+                        <button
+                          type="button"
+                          className="font-bold text-rose-400/90 hover:text-rose-300 hover:underline disabled:opacity-50"
+                          disabled={deleting === lock.id}
+                          onClick={() => void deleteOwned(lock.id, lock.echoCount)}
+                        >
+                          {deleting === lock.id ? 'Deleting…' : 'Delete'}
+                        </button>
                         <Link
                           href={`/lock/${lock.id}/bloodline`}
                           className="text-zinc-500 hover:text-zinc-300 hover:underline"
