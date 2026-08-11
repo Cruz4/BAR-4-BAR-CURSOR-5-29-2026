@@ -731,29 +731,48 @@ export type PublicArtistMeta = {
 };
 
 function avatarFromPublicDoc(data: Record<string, unknown>): string | undefined {
-  // Feed chip: custom upload only. Collage stays on Artist Home — stock = initials star.
+  // Feed chip: custom upload only. Collage / legacy avatarUrl stay off the chip —
+  // missing custom photo → stock initials star (not a broken/empty <img>).
   if (
     data.profilePhotoMode === 'custom' &&
     typeof data.profilePhotoUrl === 'string' &&
     data.profilePhotoUrl.trim()
   ) {
-    return data.profilePhotoUrl.trim();
-  }
-  if (typeof data.avatarUrl === 'string' && data.avatarUrl.trim()) {
-    return data.avatarUrl.trim();
+    const url = data.profilePhotoUrl.trim();
+    // Ignore non-http leftovers (data URLs belong to generative marks).
+    if (/^https?:\/\//i.test(url)) return url;
   }
   return undefined;
 }
 
-async function readPublicAvatarAsset(slug: string): Promise<string | undefined> {
+type PublicAvatarAsset = {
+  url: string;
+  source?: string;
+};
+
+async function readPublicAvatarAsset(slug: string): Promise<PublicAvatarAsset | undefined> {
   try {
     const snap = await getDoc(doc(db, 'publicProfiles', slug, 'assets', 'avatar'));
     if (!snap.exists()) return undefined;
-    const url = (snap.data() as { url?: unknown })?.url;
-    return typeof url === 'string' && url.trim() ? url.trim() : undefined;
+    const data = snap.data() as { url?: unknown; source?: unknown };
+    const url = typeof data.url === 'string' && data.url.trim() ? data.url.trim() : '';
+    if (!url) return undefined;
+    return {
+      url,
+      source: typeof data.source === 'string' ? data.source : undefined,
+    };
   } catch {
     return undefined;
   }
+}
+
+/** Custom feed photo only — never generative data URLs (those use VesperfoldMark). */
+function customFeedPhotoUrl(asset: PublicAvatarAsset | undefined): string | undefined {
+  if (!asset?.url) return undefined;
+  if (asset.source === 'vesperfold') return undefined;
+  if (asset.url.startsWith('data:')) return undefined;
+  if (asset.source === 'custom' || /^https?:\/\//i.test(asset.url)) return asset.url;
+  return undefined;
 }
 
 /**
@@ -772,19 +791,23 @@ export async function fetchPublicArtistMetas(
   await Promise.all(
     bySlug.map(async (p) => {
       try {
-        const [snap, assetUrl] = await Promise.all([
+        const [snap, asset] = await Promise.all([
           getDoc(doc(db, 'publicProfiles', p.slug!)),
           readPublicAvatarAsset(p.slug!),
         ]);
         if (!snap.exists()) {
-          out.set(p.userId, { userId: p.userId, slug: p.slug, avatarUrl: assetUrl });
+          out.set(p.userId, {
+            userId: p.userId,
+            slug: p.slug,
+            avatarUrl: customFeedPhotoUrl(asset),
+          });
           return;
         }
         const data = snap.data() as Record<string, unknown>;
         out.set(p.userId, {
           userId: p.userId,
           slug: snap.id,
-          avatarUrl: assetUrl || avatarFromPublicDoc(data),
+          avatarUrl: customFeedPhotoUrl(asset) || avatarFromPublicDoc(data),
           displayName:
             typeof data.displayName === 'string' && data.displayName.trim()
               ? data.displayName.trim()
@@ -811,11 +834,11 @@ export async function fetchPublicArtistMetas(
             return;
           }
           const data = docSnap.data() as Record<string, unknown>;
-          const assetUrl = await readPublicAvatarAsset(docSnap.id);
+          const asset = await readPublicAvatarAsset(docSnap.id);
           out.set(p.userId, {
             userId: p.userId,
             slug: docSnap.id,
-            avatarUrl: assetUrl || avatarFromPublicDoc(data),
+            avatarUrl: customFeedPhotoUrl(asset) || avatarFromPublicDoc(data),
             displayName:
               typeof data.displayName === 'string' && data.displayName.trim()
                 ? data.displayName.trim()
@@ -854,10 +877,11 @@ export async function fetchPublicArtistAvatarMeta(
 ): Promise<PublicArtistAvatarMeta | undefined> {
   if (!slug) return undefined;
   try {
-    const assetUrl = await readPublicAvatarAsset(slug);
+    const asset = await readPublicAvatarAsset(slug);
     const snap = await getDoc(doc(db, 'publicProfiles', slug));
     const data = snap.exists() ? (snap.data() as Record<string, unknown>) : null;
-    const useStar = data?.starMarkUseStar === true;
+    const useStar =
+      data?.starMarkUseStar === true || asset?.source === 'vesperfold';
     const seed =
       typeof data?.starMarkSeed === 'number'
         ? data.starMarkSeed
@@ -865,14 +889,14 @@ export async function fetchPublicArtistAvatarMeta(
 
     if (useStar) {
       return {
-        avatarUrl: assetUrl || avatarFromPublicDoc(data || {}),
         starMarkUseStar: true,
         starMarkSeed: seed,
       };
     }
 
-    if (assetUrl) {
-      return { avatarUrl: assetUrl, starMarkUseStar: false };
+    const customUrl = customFeedPhotoUrl(asset) || avatarFromPublicDoc(data || {});
+    if (customUrl) {
+      return { avatarUrl: customUrl, starMarkUseStar: false };
     }
 
     const res = await fetch(`/api/profile/${encodeURIComponent(slug)}/avatar`);
@@ -882,15 +906,22 @@ export async function fetchPublicArtistAvatarMeta(
         starMarkUseStar?: boolean;
         starMarkSeed?: number | null;
       };
-      return {
-        avatarUrl:
-          typeof body.avatarUrl === 'string' && body.avatarUrl.trim()
-            ? body.avatarUrl.trim()
-            : undefined,
-        starMarkUseStar: Boolean(body.starMarkUseStar),
-        starMarkSeed:
-          typeof body.starMarkSeed === 'number' ? body.starMarkSeed : undefined,
-      };
+      if (body.starMarkUseStar) {
+        return {
+          starMarkUseStar: true,
+          starMarkSeed:
+            typeof body.starMarkSeed === 'number' ? body.starMarkSeed : undefined,
+        };
+      }
+      const apiUrl =
+        typeof body.avatarUrl === 'string' && body.avatarUrl.trim()
+          ? body.avatarUrl.trim()
+          : undefined;
+      // API may still return generative data URLs — never feed those to <img>.
+      if (apiUrl && !apiUrl.startsWith('data:') && /^https?:\/\//i.test(apiUrl)) {
+        return { avatarUrl: apiUrl, starMarkUseStar: false };
+      }
+      return { starMarkUseStar: false };
     }
 
     if (!data) return undefined;

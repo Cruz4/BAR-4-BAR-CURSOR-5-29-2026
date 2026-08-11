@@ -161,7 +161,7 @@ import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-
 import { GuestTrySaveBanner } from '@/components/guest-try-save-banner';
 import { GuestDemoSignupRequiredDialog } from '@/components/guest-demo-signup-required-dialog';
 import { GUEST_DEMO_MAX_USES, isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
-import { reshuffleGuestStarter } from '@/lib/guest-track-session';
+import { seedArchitectStarterOnTrack, trackHasWrittenLyrics } from '@/lib/guest-track-session';
 import { vaultHref } from '@/lib/scene-home';
 import { GUEST_FUNNEL_EVENTS } from '@/lib/guest-funnel-events';
 import {
@@ -1298,14 +1298,17 @@ function lineGenInkKey(mode: 'next' | 'previous', sectionId: string, barIdx: num
   return `generateNextLine-${mode}-${sectionId}-${barIdx}`;
 }
 
-function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, rhymePulseArmed = false, isInkArmed, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false, isGuestTryMode = false }: any) {
+function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, rhymePulseArmed = false, isInkArmed, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false, isGuestTryMode = false, onNewStarter }: any) {
   const isPhoneView = useIsMobile();
   const [fontSize, setFontSize] = useState<'xs' | 'sm' | 'md' | 'lg'>('md');
   const phoneDefaultSizeAppliedRef = useRef(false);
   const lyricsViewportRef = useRef<HTMLDivElement>(null);
+  const emptySheetFocusRef = useRef(false);
   const { user } = useAuth();
   const { tooltip, buttonLabel, getCost, getEffectiveCost } = useInkCosts();
   const { toast } = useToast();
+
+  const sheetEmpty = !trackHasWrittenLyrics(track);
 
   // Phone / narrow view: open the sheet on the second-smallest lyrics size. Desktop stays medium.
   useEffect(() => {
@@ -1313,6 +1316,40 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
     phoneDefaultSizeAppliedRef.current = true;
     setFontSize('sm');
   }, [isPhoneView]);
+
+  // Empty sheet: select line 01 so the bar workstation is ready to type into.
+  useEffect(() => {
+    if (trackLocked || !sheetEmpty) {
+      emptySheetFocusRef.current = false;
+      return;
+    }
+    const section = track.sections?.[0];
+    const firstBar = section?.bars?.[0];
+    if (!section || !firstBar) return;
+    if (
+      activeGeneratorBar?.sectionId === section.id &&
+      activeGeneratorBar?.idx === firstBar.idx
+    ) {
+      return;
+    }
+    if (emptySheetFocusRef.current && activeGeneratorBar) return;
+    emptySheetFocusRef.current = true;
+    setActiveGeneratorBar({ sectionId: section.id, idx: firstBar.idx });
+    setActiveBarText(firstBar.text || '');
+    window.setTimeout(() => {
+      const el = document.getElementById(
+        `bar-input-${section.id}-${firstBar.idx}`
+      ) as HTMLTextAreaElement | null;
+      el?.focus();
+    }, 80);
+  }, [
+    sheetEmpty,
+    trackLocked,
+    track.sections,
+    activeGeneratorBar,
+    setActiveGeneratorBar,
+    setActiveBarText,
+  ]);
   
   const fontSizes = { xs: 'text-[14px]', sm: 'text-[16px]', md: 'text-[24px]', lg: 'text-[36px]' };
   const lineHeights = { xs: '20px', sm: '22px', md: '32px', lg: '40px' };
@@ -1727,6 +1764,12 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                 </div>
                 {(section.bars || []).map((bar: any) => {
                     const isSelected = activeGeneratorBar?.sectionId === section.id && activeGeneratorBar?.idx === bar.idx;
+                    const showEmptyStarterCta =
+                      sheetEmpty &&
+                      !trackLocked &&
+                      typeof onNewStarter === 'function' &&
+                      bar.idx === 1 &&
+                      !(bar.text || '').trim();
                     return (
                         <div
                           key={`${section.id}-${bar.idx}`}
@@ -1784,15 +1827,40 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                             }} 
                             className={cn(
                                 "border-0 bg-transparent p-0 focus-visible:ring-0 font-code font-bold w-full shadow-none z-10 tracking-normal resize-none overflow-hidden whitespace-pre-wrap break-words",
-                                "pr-14 max-md:indent-0",
+                                showEmptyStarterCta ? "pr-[7.5rem] max-md:pr-[6.75rem]" : "pr-14 max-md:indent-0",
                                 "md:pr-24 md:pl-[145px] md:-indent-[25px]",
+                                showEmptyStarterCta && "md:pr-[11.5rem]",
                                 "antialiased text-rendering-geometric",
                                 trackLocked && "opacity-80 cursor-not-allowed",
                                 fontSizes[fontSize]
                             )} 
                             style={barTextStyle}
-                            placeholder={trackLocked ? 'Locked — reopen track to edit' : '...'} 
+                            placeholder={
+                              trackLocked
+                                ? 'Locked — reopen track to edit'
+                                : showEmptyStarterCta
+                                  ? 'Type your first bar…'
+                                  : '...'
+                            } 
                             />
+                            {showEmptyStarterCta ? (
+                              <div className="absolute right-1 top-0 z-20 flex h-[var(--lyrics-line-h)] items-center md:right-4">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 gap-1 px-2 text-[9px] font-bold uppercase tracking-wide border-emerald-500/45 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    onNewStarter();
+                                  }}
+                                >
+                                  <RefreshCw className="h-3 w-3" />
+                                  New starter
+                                </Button>
+                              </div>
+                            ) : null}
                             {track.rhymeHighlightingEnabled && bar.text && (
                             <div className="absolute inset-0 pointer-events-none flex items-start pl-[calc(var(--lyrics-gutter)+0.5rem)] md:pl-0 pr-14 md:pr-24 z-0 h-full overflow-hidden">
                                 <p className={cn(
@@ -1810,6 +1878,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
 
                         <div className={cn(
                           "flex gap-0.5 shrink-0 transition-opacity z-20 absolute right-1 top-0 h-[var(--lyrics-line-h)] items-center md:right-4 md:h-full",
+                          showEmptyStarterCta && "hidden",
                           isSelected ? "opacity-100" : "opacity-0 pointer-events-none max-md:opacity-0",
                           !isSelected && "md:group-hover:opacity-100 md:group-hover:pointer-events-auto md:opacity-0"
                         )}
@@ -1946,7 +2015,13 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                     ) : (
                         <div className="flex max-md:flex-col md:flex-row md:items-center gap-2 min-w-0 w-full flex-1 max-md:overflow-visible">
                             <textarea 
-                                placeholder="Tap to edit active line..."
+                                placeholder={
+                                  trackLocked
+                                    ? 'Locked — reopen track to edit'
+                                    : sheetEmpty
+                                      ? 'Type your first bar here — or tap New starter on line 01'
+                                      : 'Tap to edit active line...'
+                                }
                                 value={activeBarText} 
                                 onKeyDown={handleBarSyncEnter}
                                 readOnly={trackLocked}
@@ -1957,6 +2032,18 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                 }} 
                                 className={cn("bg-background/40 border border-white/10 w-full md:flex-1 md:min-w-[5rem] px-3 py-2 font-code font-bold text-sm shadow-inner rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 tracking-tight resize-none h-14 max-h-14 shrink-0 min-w-0", trackLocked && "opacity-70 cursor-not-allowed")}
                             />
+                            {sheetEmpty && typeof onNewStarter === 'function' && !trackLocked ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-10 md:h-14 shrink-0 gap-1.5 px-3 text-[10px] font-bold uppercase tracking-wide border-emerald-500/45 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20 max-md:w-full"
+                                onClick={() => onNewStarter()}
+                              >
+                                <RefreshCw className="h-3.5 w-3.5" />
+                                New starter
+                              </Button>
+                            ) : null}
                             <div className={cn(
                               "flex flex-row flex-nowrap items-end gap-1.5 shrink-0 min-w-0 max-md:w-full max-md:overflow-x-auto studio-scrollbar md:overflow-visible md:max-w-[min(100%,22rem)] lg:max-w-none py-0.5 max-md:py-1",
                               !activeGeneratorBar && "max-md:hidden"
@@ -3880,13 +3967,25 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       {isGuestTryMode ? (
         <GuestTrySaveBanner
           remainingOverride={guestDemoRemaining}
+          sheetEmpty={!trackHasWrittenLyrics(track)}
           onNewStarter={() => {
             if (!track) return;
-            const next = reshuffleGuestStarter(track);
+            const next = seedArchitectStarterOnTrack(track);
             handleUpdateTrack({ sections: next.sections, title: next.title });
+            const section = next.sections?.[0];
+            if (section?.bars?.[1]) {
+              setActiveGeneratorBar({ sectionId: section.id, idx: 2 });
+              setActiveBarText('');
+              window.setTimeout(() => {
+                const el = document.getElementById(
+                  `bar-input-${section.id}-2`
+                ) as HTMLTextAreaElement | null;
+                el?.focus();
+              }, 80);
+            }
             toast({
               title: 'New starter line',
-              description: 'Finish under the new Architect line on bar 2.',
+              description: 'Finish under the Architect line on bar 2 — or keep typing.',
             });
           }}
         />
@@ -3946,7 +4045,26 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
           return;
         }
         setSmartStructureOpen(open);
-      }} isRhymeLoading={isRhymeLoading} rhymePulseArmed={isArmed('findRhymes')} isInkArmed={isArmed} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleDismissGenerationOptions={handleDismissGenerationOptions} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={isMobileLayout && mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} isGuestTryMode={isGuestTryMode} />
+      }} isRhymeLoading={isRhymeLoading} rhymePulseArmed={isArmed('findRhymes')} isInkArmed={isArmed} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleDismissGenerationOptions={handleDismissGenerationOptions} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={isMobileLayout && mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} isGuestTryMode={isGuestTryMode} onNewStarter={() => {
+        if (!track || editsLocked) return;
+        const next = seedArchitectStarterOnTrack(track);
+        handleUpdateTrack({ sections: next.sections });
+        const section = next.sections?.[0];
+        if (section?.bars?.[1]) {
+          setActiveGeneratorBar({ sectionId: section.id, idx: 2 });
+          setActiveBarText('');
+          window.setTimeout(() => {
+            const el = document.getElementById(
+              `bar-input-${section.id}-2`
+            ) as HTMLTextAreaElement | null;
+            el?.focus();
+          }, 80);
+        }
+        toast({
+          title: 'New starter line',
+          description: 'Finish under the Architect line on bar 2 — or keep typing.',
+        });
+      }} />
       <RightPanel 
         track={track} 
         album={album} 

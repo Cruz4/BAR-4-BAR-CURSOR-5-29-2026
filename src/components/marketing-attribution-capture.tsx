@@ -2,7 +2,8 @@
 
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { captureMarketingRefFromUrl } from '@/lib/marketing-attribution';
+import { captureMarketingRefFromUrl, getStoredMarketingRef } from '@/lib/marketing-attribution';
+import { getOrCreateGuestIdentity } from '@/lib/guest-identity';
 import { reportLandingHitIfNeeded } from '@/lib/landing-hit-client';
 import { useAuth } from '@/hooks/use-auth';
 
@@ -16,6 +17,13 @@ export function MarketingAttributionCapture() {
     // Wait for auth state to resolve (logged in or not). authReady is only true when
     // signed in — using it blocked all anonymous landing/ref visit alerts.
     if (loading) return;
+    // Ensure a stable Guest-* alias exists for attributed traffic before the hit fires.
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('ref') || getStoredMarketingRef()) {
+        getOrCreateGuestIdentity();
+      }
+    }
     void reportLandingHitIfNeeded(pathname || '/');
   }, [pathname, loading]);
 

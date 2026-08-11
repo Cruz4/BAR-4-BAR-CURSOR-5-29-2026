@@ -551,14 +551,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           void trackStudioEvent(ANALYTICS_EVENTS.SIGNUP, {
             method: 'profile_bootstrap',
             ...(signupRef ? { ref: signupRef } : {}),
+            ...(guestMeta.guestId ? { guestId: guestMeta.guestId } : {}),
+            ...(guestMeta.guestAlias ? { guestAlias: guestMeta.guestAlias } : {}),
             ...(guestMeta.fromGuestTry || guestMeta.guestId
               ? {
-                  fromGuestTry: true,
-                  intent: 'guest_try',
+                  fromGuestTry: Boolean(guestMeta.fromGuestTry),
+                  ...(guestMeta.fromGuestTry ? { intent: 'guest_try' } : {}),
                   ...(guestMeta.barsWritten != null ? { barsWritten: guestMeta.barsWritten } : {}),
                   ...(guestMeta.assistsUsed != null ? { assistsUsed: guestMeta.assistsUsed } : {}),
-                  ...(guestMeta.guestId ? { guestId: guestMeta.guestId } : {}),
-                  ...(guestMeta.guestAlias ? { guestAlias: guestMeta.guestAlias } : {}),
                 }
               : {}),
           });

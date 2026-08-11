@@ -542,6 +542,8 @@ export function PressDesk() {
       xp: summary.xp,
       currentStreak: summary.currentStreak,
       longestStreak: summary.longestStreak,
+      lifetimeBarsWritten: summary.lifetimeBarsWritten,
+      lifetimeLinesGenerated: summary.lifetimeLinesGenerated || 0,
       albumCoverUrls: useInitialsHero ? [] : heroCollageUrls,
       badges,
       unlockedAchievements: summary.unlockedAchievements || {},

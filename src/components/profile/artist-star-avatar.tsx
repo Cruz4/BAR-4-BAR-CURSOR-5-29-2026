@@ -7,7 +7,7 @@
  * - Generative off + no photo → stock initials in a 5-point star
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { VesperfoldMark } from '@/components/profile/vesperfold-mark';
@@ -29,6 +29,52 @@ type ArtistStarAvatarProps = {
   toneClass?: string;
 };
 
+function StockInitialsStar({
+  name,
+  size,
+  className,
+  toneClass,
+}: {
+  name: string;
+  size: number;
+  className?: string;
+  toneClass: string;
+}) {
+  const initials = getInitials(name);
+  return (
+    <span
+      className={cn(
+        'relative inline-flex shrink-0 items-center justify-center overflow-hidden border border-white/25',
+        toneClass,
+        className
+      )}
+      style={{
+        width: size,
+        height: size,
+        clipPath: ARTIST_STAR_CLIP,
+        WebkitClipPath: ARTIST_STAR_CLIP,
+      }}
+      aria-hidden
+    >
+      <span
+        className="flex h-full w-full items-center justify-center font-bold uppercase tracking-tight text-sky-300"
+        style={{ fontSize: Math.max(9, Math.round(size * (initials.length > 1 ? 0.23 : 0.28))) }}
+      >
+        {initials}
+      </span>
+    </span>
+  );
+}
+
+/** Only real hosted photos belong in <img> — data URLs are generative marks. */
+function usablePhotoUrl(url?: string): string | undefined {
+  if (!url || !url.trim()) return undefined;
+  const trimmed = url.trim();
+  if (trimmed.startsWith('data:')) return undefined;
+  if (!/^https?:\/\//i.test(trimmed)) return undefined;
+  return trimmed;
+}
+
 export function ArtistStarAvatar({
   name,
   avatarUrl,
@@ -37,10 +83,15 @@ export function ArtistStarAvatar({
   href,
   size = 56,
   className,
-  toneClass = 'bg-primary/20 text-primary',
+  toneClass = 'bg-sky-500/25 text-sky-300',
 }: ArtistStarAvatarProps) {
-  const initials = getInitials(name);
   const seed = normalizeVesperfoldSeed(starMarkSeed ?? 0);
+  const photoUrl = usablePhotoUrl(avatarUrl);
+  const [imgFailed, setImgFailed] = useState(false);
+
+  useEffect(() => {
+    setImgFailed(false);
+  }, [photoUrl]);
 
   let mark: React.ReactNode;
 
@@ -60,7 +111,7 @@ export function ArtistStarAvatar({
         </span>
       </span>
     );
-  } else if (avatarUrl) {
+  } else if (photoUrl && !imgFailed) {
     mark = (
       <span
         className={cn(
@@ -71,27 +122,17 @@ export function ArtistStarAvatar({
         aria-hidden={!href}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+        <img
+          src={photoUrl}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={() => setImgFailed(true)}
+        />
       </span>
     );
   } else {
     mark = (
-      <span
-        className={cn(
-          'relative inline-flex shrink-0 items-center justify-center overflow-hidden border border-white/20',
-          toneClass,
-          className
-        )}
-        style={{ width: size, height: size, clipPath: ARTIST_STAR_CLIP }}
-        aria-hidden={!href}
-      >
-        <span
-          className="flex h-full w-full items-center justify-center font-bold uppercase tracking-tight"
-          style={{ fontSize: Math.max(9, Math.round(size * (initials.length > 1 ? 0.23 : 0.28))) }}
-        >
-          {initials}
-        </span>
-      </span>
+      <StockInitialsStar name={name} size={size} className={className} toneClass={toneClass} />
     );
   }
 
@@ -99,7 +140,7 @@ export function ArtistStarAvatar({
     return (
       <Link
         href={href}
-        className="shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="inline-flex shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label={`${name} profile`}
       >
         {mark}

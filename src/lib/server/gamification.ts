@@ -1149,6 +1149,8 @@ export async function getPublicProfile(slug: string) {
     starMarkSeed: normalizeVesperfoldSeed(summary.starMarkSeed ?? 0),
     liveDnaDrops,
     unlockedAchievements: summary.unlockedAchievements || {},
+    lifetimeBarsWritten: summary.lifetimeBarsWritten || 0,
+    lifetimeLinesGenerated: summary.lifetimeLinesGenerated || 0,
     ...(referralCode ? { referralCode } : {}),
   };
 }

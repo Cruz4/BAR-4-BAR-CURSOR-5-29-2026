@@ -29,11 +29,13 @@ function buildMessage(input: EnqueueInput): string {
         : input.userEmail || input.userName || 'New artist';
     const via = refLabel ? ` via ${refLabel}` : '';
     const method = input.method ? ` (${input.method})` : '';
-    const converted = input.guestAlias ? ` · was ${input.guestAlias}` : '';
-    return `${who} signed up${converted}${via}${method}`;
+    if (input.guestAlias) {
+      return `${input.guestAlias} converted → ${who} signed up${via}${method}`;
+    }
+    return `${who} signed up${via}${method}`;
   }
   if (input.kind === 'pricing_view') {
-    const who = input.userEmail || 'Visitor';
+    const who = input.userEmail || input.guestAlias || 'Visitor';
     const via = refLabel ? ` (${refLabel})` : '';
     return `${who} opened Pricing${via}`;
   }
@@ -53,8 +55,9 @@ function buildMessage(input: EnqueueInput): string {
     return `${input.method || 'LOCK activity'}${via}${detail}`;
   }
   const page = input.path || '/';
+  const who = input.guestAlias || 'Visitor';
   const via = refLabel ? ` from ${refLabel}` : '';
-  return `Page visit${via} on ${page}`;
+  return `${who} visited${via} on ${page}`;
 }
 
 export async function enqueueAdminAlert(input: EnqueueInput): Promise<void> {

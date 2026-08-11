@@ -6,7 +6,6 @@ import { motion } from 'framer-motion';
 import {
   Camera,
   ChevronLeft,
-  Crown,
   Flame,
   LayoutGrid,
   Loader2,
@@ -25,6 +24,8 @@ import { cn } from '@/lib/utils';
 import { processProfilePhotoFile } from '@/lib/cover-art';
 import { patchGamificationSettings } from '@/lib/gamification-client';
 import { rankBadgeClass, rankIdFromLabel } from '@/lib/gamification/badge-styles';
+import { StudioStandingRankBadge } from '@/components/gamification/studio-standing-foil-dialog';
+import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { useToast } from '@/hooks/use-toast';
 
 export type PublicProfileData = {
@@ -34,6 +35,8 @@ export type PublicProfileData = {
   xp: number;
   currentStreak: number;
   longestStreak: number;
+  lifetimeBarsWritten?: number;
+  lifetimeLinesGenerated?: number;
   albumCoverUrls?: string[];
   badges: AchievementDef[];
   /** Achievement id → unlock ISO timestamp (for Proof Wall foil cards). */
@@ -198,17 +201,24 @@ export function PublicProfileShowcase({
             <h1 className="font-headline text-[clamp(2.5rem,8vw,5.5rem)] font-bold uppercase leading-[0.92] tracking-tight text-white">
               {profile.displayName}
             </h1>
-            <div
-              className={cn(
-                'inline-flex items-center gap-2 rounded-full border px-4 py-2',
-                rankBadgeClass(rankId)
-              )}
-            >
-              <Crown className="h-4 w-4" />
-              <span className="text-xs font-bold uppercase tracking-[0.25em]">
-                {profile.rankLabel}
-              </span>
-            </div>
+            <StudioStandingRankBadge
+              variant="pill"
+              allowShare={Boolean(isOwner)}
+              badgeClassName={cn('rounded-full', rankBadgeClass(rankId))}
+              stats={{
+                displayName: profile.displayName,
+                rankId,
+                rankLabel: profile.rankLabel,
+                xp: profile.xp,
+                streak: profile.currentStreak,
+                longestStreak: profile.longestStreak,
+                lifetimeBarsWritten: profile.lifetimeBarsWritten,
+                lifetimeLinesGenerated: profile.lifetimeLinesGenerated,
+                badgeCount: profile.badges?.length || Object.keys(profile.unlockedAchievements || {}).length,
+                totalBadges: ACHIEVEMENTS.length,
+                profileSlug: profile.slug,
+              }}
+            />
 
             <div className="grid grid-cols-3 gap-3 sm:gap-4 max-w-xl">
               {[

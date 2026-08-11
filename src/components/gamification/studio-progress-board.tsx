@@ -352,9 +352,22 @@ export function StudioProgressBoard() {
           <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
             <div className="rounded-lg border border-primary/15 bg-gradient-to-br from-muted/80 to-sky-100/60 dark:from-black/40 dark:to-sky-950/20 px-3.5 py-3 space-y-2.5 md:col-span-2 min-w-0 overflow-hidden">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className={cn('text-[10px] font-bold uppercase', rankBadgeClass(rank.id))}>
-                  {rankLabel}
-                </Badge>
+                <button
+                  type="button"
+                  onClick={() => setStandingShareOpen(true)}
+                  className="inline-flex rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`View ${rankLabel} Studio Standing plate`}
+                >
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'pointer-events-none text-[10px] font-bold uppercase cursor-pointer',
+                      rankBadgeClass(rank.id)
+                    )}
+                  >
+                    {rankLabel}
+                  </Badge>
+                </button>
                 {summary.currentStreak > 0 && (
                   <Badge variant="outline" className={cn('text-[10px] gap-1', STREAK_BADGE)}>
                     <Flame className="h-3.5 w-3.5" /> {summary.currentStreak}d streak

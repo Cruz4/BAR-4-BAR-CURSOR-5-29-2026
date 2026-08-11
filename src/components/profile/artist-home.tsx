@@ -8,7 +8,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Crown, Dna, Flame, Globe, PenLine, Repeat2, Settings2, Share2, Trophy, Zap } from 'lucide-react';
+import { ChevronLeft, Dna, Flame, Globe, PenLine, Repeat2, Settings2, Share2, Trophy, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -23,6 +23,8 @@ import { LiveDnaDropsGroupedList } from '@/components/profile/live-dna-drop-card
 import { AlbumCoverCollage } from '@/components/gamification/album-cover-collage';
 import { ProfileInitialsStar } from '@/components/profile/profile-initials-star';
 import { rankBadgeClass, rankIdFromLabel } from '@/lib/gamification/badge-styles';
+import { StudioStandingRankBadge } from '@/components/gamification/studio-standing-foil-dialog';
+import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { FriendButton } from '@/components/profile/friend-button';
 import {
   dieCutClip,
@@ -287,15 +289,24 @@ export function ArtistHome({
               {profile.displayName}
             </h1>
             <div className="flex flex-wrap items-center gap-3">
-              <div
-                className={cn(
-                  'inline-flex items-center gap-2 border px-4 py-2',
-                  rankBadgeClass(rankId)
-                )}
-              >
-                <Crown className="h-4 w-4" />
-                <span className="text-xs font-bold uppercase tracking-[0.25em]">{profile.rankLabel}</span>
-              </div>
+              <StudioStandingRankBadge
+                variant="pill"
+                allowShare={isOwner}
+                badgeClassName={rankBadgeClass(rankId)}
+                stats={{
+                  displayName: profile.displayName,
+                  rankId,
+                  rankLabel: profile.rankLabel,
+                  xp: profile.xp,
+                  streak: profile.currentStreak,
+                  longestStreak: profile.longestStreak,
+                  lifetimeBarsWritten: profile.lifetimeBarsWritten,
+                  lifetimeLinesGenerated: profile.lifetimeLinesGenerated,
+                  badgeCount: profile.badges?.length || Object.keys(profile.unlockedAchievements || {}).length,
+                  totalBadges: ACHIEVEMENTS.length,
+                  profileSlug: profile.slug,
+                }}
+              />
               {showLiveDnaDrops && (() => {
                 const albumCount = liveDnaDrops.filter((d) => d.type === 'album').length;
                 const trackCount = liveDnaDrops.filter((d) => d.type === 'track').length;

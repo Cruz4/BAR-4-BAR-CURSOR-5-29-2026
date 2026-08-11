@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { normalizeMarketingRef } from '@/lib/marketing-attribution';
+import { guestAliasFromId, normalizeGuestAlias, normalizeGuestId } from '@/lib/guest-identity';
 import { enqueueAdminAlert } from '@/lib/server/admin-alerts';
 import { recordLandingHit } from '@/lib/server/record-landing-hit';
 import { checkRateLimit } from '@/lib/server/rate-limit';
@@ -8,7 +9,7 @@ export const runtime = 'nodejs';
 
 const WINDOW_MS = 5 * 60_000;
 const MAX_PER_WINDOW = 12;
-const VISIT_ALERT_PATHS = new Set(['/', '/pricing']);
+const VISIT_ALERT_PATHS = new Set(['/', '/pricing', '/login', '/welcome']);
 
 function clientIp(req: Request): string {
   const forwarded = req.headers.get('x-forwarded-for');
@@ -35,14 +36,27 @@ export async function POST(req: Request) {
         : normalizeMarketingRef(typeof body?.ref === 'string' ? body.ref : null);
     if (!ref) ref = 'organic';
 
+    const guestId = normalizeGuestId(body?.guestId);
+    const guestAlias =
+      normalizeGuestAlias(body?.guestAlias) || (guestId ? guestAliasFromId(guestId) : null);
+
     const ip = clientIp(req);
-    const { allowed } = checkRateLimit(`landing-hit:${ip}:${ref}:${path}`, MAX_PER_WINDOW, WINDOW_MS);
+    const rateKey = guestId
+      ? `landing-hit:${guestId}:${ref}:${path}`
+      : `landing-hit:${ip}:${ref}:${path}`;
+    const { allowed } = checkRateLimit(rateKey, MAX_PER_WINDOW, WINDOW_MS);
     if (!allowed) {
       return NextResponse.json({ ok: true, throttled: true });
     }
 
-    await enqueueAdminAlert({ kind: 'landing_hit', ref, path });
-    await recordLandingHit(ref, path);
+    await enqueueAdminAlert({
+      kind: 'landing_hit',
+      ref,
+      path,
+      guestId,
+      guestAlias,
+    });
+    await recordLandingHit(ref, path, { guestId, guestAlias });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[analytics/landing-hit]', err);

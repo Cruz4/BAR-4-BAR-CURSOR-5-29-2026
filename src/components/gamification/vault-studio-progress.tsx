@@ -22,6 +22,7 @@ import {
 import { isProUser } from '@/lib/subscription';
 import { CheckCircle2, Circle, Flame, Lock, Trophy, ChevronRight, ChevronDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { StudioStandingRankBadge } from '@/components/gamification/studio-standing-foil-dialog';
 
 const RECENT_EARN_MS = 48 * 60 * 60 * 1000;
 /** Scene home — remember expand/collapse across visits (desktop). */
@@ -289,16 +290,27 @@ export function VaultStudioProgress({
     >
         <div className="rounded-lg border border-primary/15 bg-gradient-to-br from-muted/80 to-sky-100/60 dark:from-black/40 dark:to-sky-950/20 px-2.5 py-2 space-y-1.5 min-w-0 overflow-hidden">
           <div className="flex flex-wrap items-center gap-1.5">
-            <Badge
-              variant="outline"
-              className={cn(
+            <StudioStandingRankBadge
+              allowShare
+              showTrophy
+              badgeClassName={cn(
                 isSidebar ? 'text-[10px] font-bold uppercase gap-1 px-2 py-0 h-5' : 'text-[9px] font-bold uppercase gap-1 px-2 py-0 h-5',
                 rankBadgeClass(rank.id)
               )}
-            >
-              <Trophy className="h-3 w-3" />
-              {rankLabel}
-            </Badge>
+              stats={{
+                displayName: user.displayName || 'Artist',
+                rankId: rank.id,
+                rankLabel,
+                xp: summary.xp,
+                streak: summary.currentStreak,
+                longestStreak: summary.longestStreak,
+                lifetimeBarsWritten: summary.lifetimeBarsWritten,
+                lifetimeLinesGenerated: summary.lifetimeLinesGenerated || 0,
+                badgeCount: achievementCount,
+                isPro,
+                profileSlug: summary.profileSlug,
+              }}
+            />
             {summary.currentStreak > 0 && (
               <Badge
                 variant="outline"

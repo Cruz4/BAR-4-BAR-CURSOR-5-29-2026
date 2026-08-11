@@ -69,8 +69,13 @@ export async function POST(req: Request) {
     if (event === 'signup') {
       const ref = typeof metadata?.ref === 'string' ? metadata.ref : null;
       const method = typeof metadata?.method === 'string' ? metadata.method : null;
-      const guestId = typeof metadata?.guestId === 'string' ? metadata.guestId : null;
-      const guestAlias = typeof metadata?.guestAlias === 'string' ? metadata.guestAlias : null;
+      const { guestAliasFromId, normalizeGuestAlias, normalizeGuestId } = await import(
+        '@/lib/guest-identity'
+      );
+      const guestId = normalizeGuestId(metadata?.guestId);
+      const guestAlias =
+        normalizeGuestAlias(metadata?.guestAlias) ||
+        (guestId ? guestAliasFromId(guestId) : null);
       const barsWritten =
         typeof metadata?.barsWritten === 'number'
           ? metadata.barsWritten

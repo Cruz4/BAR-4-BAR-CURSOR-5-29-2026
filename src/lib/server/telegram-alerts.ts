@@ -38,10 +38,25 @@ function telegramConfigured(): boolean {
 
 function formatTelegramText(input: TelegramAlertInput): string {
   const lines: string[] = [KIND_HEADLINE[input.kind], input.message];
-  if (input.kind === 'signup' && input.guestAlias) {
-    lines.push(`converted from: ${input.guestAlias}`);
+  if (input.kind === 'signup') {
+    if (input.guestAlias) {
+      lines.push(`converted from: ${input.guestAlias}`);
+    }
+    if (input.userName || input.userEmail) {
+      const who =
+        input.userName && input.userEmail
+          ? `${input.userName} <${input.userEmail}>`
+          : input.userEmail || input.userName || '';
+      if (who) lines.push(`now user: ${who}`);
+    }
   }
-  if ((input.kind === 'guest_try' || input.kind === 'lock_funnel') && input.guestAlias) {
+  if (
+    (input.kind === 'guest_try' ||
+      input.kind === 'lock_funnel' ||
+      input.kind === 'landing_hit' ||
+      input.kind === 'pricing_view') &&
+    input.guestAlias
+  ) {
     lines.push(`guest: ${input.guestAlias}`);
   }
   if (input.ref) lines.push(`ref: ${input.ref}`);

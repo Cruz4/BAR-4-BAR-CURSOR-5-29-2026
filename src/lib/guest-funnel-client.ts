@@ -86,7 +86,12 @@ export function consumeGuestTrySignupMeta(): {
   }
   try {
     const fromGuestTry = sessionStorage.getItem(SESSION_FLAG) === '1';
-    const identity = peekGuestIdentity() || (fromGuestTry ? getOrCreateGuestIdentity() : null);
+    const hasMarketingRef = Boolean(getStoredMarketingRef());
+    // Prefer existing alias from landing/ref/try activity; create one for attributed
+    // signups so Telegram can still say Guest-X → user even without a try sheet.
+    const identity =
+      peekGuestIdentity() ||
+      (fromGuestTry || hasMarketingRef ? getOrCreateGuestIdentity() : null);
     const barsRaw = sessionStorage.getItem(BARS_WRITTEN_KEY);
     const assistsRaw = sessionStorage.getItem(ASSISTS_USED_KEY);
     const barsWritten = barsRaw != null ? Number.parseInt(barsRaw, 10) : null;
@@ -95,7 +100,7 @@ export function consumeGuestTrySignupMeta(): {
     sessionStorage.removeItem(BARS_WRITTEN_KEY);
     sessionStorage.removeItem(ASSISTS_USED_KEY);
     return {
-      fromGuestTry: fromGuestTry || Boolean(identity),
+      fromGuestTry,
       barsWritten: Number.isFinite(barsWritten) ? barsWritten : null,
       assistsUsed: Number.isFinite(assistsUsed) ? assistsUsed : null,
       guestId: identity?.guestId ?? null,

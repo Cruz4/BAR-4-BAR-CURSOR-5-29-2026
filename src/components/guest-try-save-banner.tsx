@@ -16,13 +16,16 @@ import {
 type GuestTrySaveBannerProps = {
   /** Live remaining count from the editor after a gen (optional). */
   remainingOverride?: number | null;
-  /** Reshuffle Architect starter on bar 1 and clear bar 2. */
+  /** Sheet has no written lyrics yet. */
+  sheetEmpty?: boolean;
+  /** Reshuffle / seed Architect starter on bar 1 and clear bar 2. */
   onNewStarter?: () => void;
 };
 
-/** Soft gate — finish the Architect starter; demo AI capped; signup saves. */
+/** Soft gate — start blank or finish Architect starter; demo AI capped; signup saves. */
 export function GuestTrySaveBanner({
   remainingOverride = null,
+  sheetEmpty = false,
   onNewStarter,
 }: GuestTrySaveBannerProps) {
   const searchParams = useSearchParams();
@@ -86,6 +89,15 @@ export function GuestTrySaveBanner({
               <>
                 <span className="font-bold text-amber-200">Your bars are ready to keep.</span>{' '}
                 Demo assists are used — sign up free to save this sheet and unlock {SIGNUP_INK} Ink.
+              </>
+            ) : sheetEmpty ? (
+              <>
+                <span className="font-bold text-emerald-200">Start your sheet</span>
+                {' — '}
+                tap <span className="text-emerald-100/90">New starter</span> on line 01 for a deep
+                Architect line, or type your own in the sheet / bar workstation below.{' '}
+                <span className="text-emerald-100/90">Generate Next</span> — up to {GUEST_DEMO_MAX_USES}{' '}
+                demo assists.
               </>
             ) : (
               <>

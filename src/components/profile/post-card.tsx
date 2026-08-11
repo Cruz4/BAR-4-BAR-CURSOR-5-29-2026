@@ -254,30 +254,31 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         <div className="min-w-0">
           {showAuthor &&
             (() => {
-              const chip = (
+              const profileHref = post.ownerSlug ? `/profile/${post.ownerSlug}` : undefined;
+              return (
                 <span className="inline-flex items-center gap-2.5">
                   <ArtistStarAvatar
                     name={post.ownerName}
                     avatarUrl={authorAvatarUrl}
                     useStarMark={authorUseStar}
                     starMarkSeed={authorStarSeed}
+                    href={profileHref}
                     size={56}
-                    toneClass="bg-[var(--ph-accent,#7dd3fc)]/25 text-[var(--ph-accent,#7dd3fc)]"
+                    toneClass="bg-sky-500/30 text-sky-300"
                   />
-                  <span className="text-xs font-bold uppercase tracking-widest text-[var(--ph-accent,#7dd3fc)]">
-                    {post.ownerName}
-                  </span>
+                  {profileHref ? (
+                    <Link
+                      href={profileHref}
+                      className="text-xs font-bold uppercase tracking-widest text-sky-300 hover:underline"
+                    >
+                      {post.ownerName}
+                    </Link>
+                  ) : (
+                    <span className="text-xs font-bold uppercase tracking-widest text-sky-300">
+                      {post.ownerName}
+                    </span>
+                  )}
                 </span>
-              );
-              return post.ownerSlug ? (
-                <Link
-                  href={`/profile/${post.ownerSlug}`}
-                  className="inline-flex hover:opacity-90 hover:underline"
-                >
-                  {chip}
-                </Link>
-              ) : (
-                chip
               );
             })()}
           <p className="text-[10px] uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">

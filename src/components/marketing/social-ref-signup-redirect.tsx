@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { captureMarketingRefFromUrl, isSocialMarketingRef } from '@/lib/marketing-attribution';
 import { buildLoginUrl } from '@/lib/login-links';
+import { getOrCreateGuestIdentity } from '@/lib/guest-identity';
 import { StudioLoader } from '@/components/studio-loader';
 
 /**
@@ -21,6 +22,8 @@ export function SocialRefSignupRedirect({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!isSocialRef) return;
     captureMarketingRefFromUrl();
+    // Mint guest alias before signup so Telegram can link visit → conversion.
+    getOrCreateGuestIdentity();
     router.replace(
       buildLoginUrl({
         mode: 'signup',

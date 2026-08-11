@@ -115,6 +115,12 @@ function LoginForm() {
 
   useEffect(() => {
     captureMarketingRefFromUrl();
+    const marketing = normalizeMarketingRef(searchParams.get('ref'));
+    if (marketing) {
+      void import('@/lib/guest-identity').then(({ getOrCreateGuestIdentity }) => {
+        getOrCreateGuestIdentity();
+      });
+    }
     const ref = normalizeReferralCode(searchParams.get('ref'));
     if (ref) {
       try {
@@ -213,14 +219,14 @@ function LoginForm() {
           await trackStudioEvent(ANALYTICS_EVENTS.SIGNUP, {
             method: signupMethod,
             ...(signupRef ? { ref: signupRef } : {}),
-            ...(guestMeta.fromGuestTry || guestTryIntent || guestMeta.guestId
+            ...(guestMeta.guestId ? { guestId: guestMeta.guestId } : {}),
+            ...(guestMeta.guestAlias ? { guestAlias: guestMeta.guestAlias } : {}),
+            ...(guestMeta.fromGuestTry || guestTryIntent
               ? {
                   fromGuestTry: true,
                   intent: 'guest_try',
                   ...(guestMeta.barsWritten != null ? { barsWritten: guestMeta.barsWritten } : {}),
                   ...(guestMeta.assistsUsed != null ? { assistsUsed: guestMeta.assistsUsed } : {}),
-                  ...(guestMeta.guestId ? { guestId: guestMeta.guestId } : {}),
-                  ...(guestMeta.guestAlias ? { guestAlias: guestMeta.guestAlias } : {}),
                 }
               : {}),
           });

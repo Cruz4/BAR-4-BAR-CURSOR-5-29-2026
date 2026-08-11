@@ -41,6 +41,12 @@ export function PublicProfilePageClient({ slug }: { slug: string }) {
           xp: data.xp,
           currentStreak: data.currentStreak,
           longestStreak: data.longestStreak,
+          lifetimeBarsWritten:
+            typeof data.lifetimeBarsWritten === 'number' ? data.lifetimeBarsWritten : undefined,
+          lifetimeLinesGenerated:
+            typeof data.lifetimeLinesGenerated === 'number'
+              ? data.lifetimeLinesGenerated
+              : undefined,
           albumCoverUrls: data.albumCoverUrls,
           badges,
           unlockedAchievements:
