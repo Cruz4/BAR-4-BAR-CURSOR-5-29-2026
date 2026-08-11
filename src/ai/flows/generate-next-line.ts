@@ -52,6 +52,10 @@ const GenerateNextLineInputSchema = z.object({
   negativePrompt: z.string().optional(),
   forbiddenWords: z.array(z.string()).optional(),
   mustIncludeWords: z.array(z.string()).optional(),
+  /** Freeform Co-Writer special instructions when the Instructions rail is on. */
+  customInstructions: z.string().optional(),
+  /** True when generating an opening starter (empty prior bars). */
+  isOpeningStarter: z.boolean().optional(),
 });
 export type GenerateNextLineInput = z.infer<typeof GenerateNextLineInputSchema>;
 
@@ -63,8 +67,11 @@ const DEFAULT_VIBE: GenerateNextLineInput['vibe'] = {
 
 function normalizeGenerateNextLineInput(input: GenerateNextLineInput): GenerateNextLineInput {
   const vibe = input.vibe ?? DEFAULT_VIBE;
+  const priorLines = input.priorLines ?? [];
   return {
     ...input,
+    priorLines,
+    isOpeningStarter: input.isOpeningStarter ?? priorLines.filter((l) => l.trim()).length === 0,
     vibe: {
       genre: vibe.genre || DEFAULT_VIBE.genre,
       tempoBPM: typeof vibe.tempoBPM === 'number' ? vibe.tempoBPM : DEFAULT_VIBE.tempoBPM,
@@ -112,9 +119,15 @@ const nextLinePrompt = ai.definePrompt({
   prompt: `You are a Professional Phonetic Rhyme Engine. Your primary goal is to generate TWO single-line options that PERFECTLY fit the provided rhyme scheme, context, and selected motifs.
 
 **STRICT PHONETIC PROTOCOL:**
+{{#if isOpeningStarter}}
+1. **OPENING STARTER (NO PRIOR BARS)**: Write TWO unfinished opening bars — Lyrical Architect style. Mid-thought / invitation lines the artist will finish under on the next bar. Prefer trailing ellipsis (…) or a hanging setup; do NOT write a closed punchline couplet.
+2. **NO RHYME PARTNER REQUIRED**: There is no prior end-word to match. Set up a strong phonetic landing pad for the next bar instead.
+3. **ZERO REPETITION**: NEVER repeat phrases from the DNA questions literally.
+{{else}}
 1. **RHYME TARGET**: If generating a "Next Line", you MUST rhyme with the last word of the LAST line in 'priorLines'. If generating a "Previous Line", rhyme with the FIRST line of 'nextLines'.
 2. **SCHEME AWARENESS**: Look at the pattern in 'priorLines'. If it's AABB or ABAB, ensure your suggestion maintains that meter and phonetic consistency.
 3. **ZERO REPETITION**: NEVER repeat the last word of any recent bars. NEVER repeat phrases from the DNA questions literally.
+{{/if}}
 
 **INTENT MOTIFS (TOPIC GUIDANCE):**
 You MUST weave the following motifs into your suggestions: {{#each intents}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}. 
@@ -123,6 +136,13 @@ Ensure the generated line is primarily about these concepts or imagery while mai
 **STYLE FIDELITY:**
 Mimic the technical patterns found in this profile: {{styleProfileSummary}}. 
 **IMPORTANT**: Focus on the flow, vocabulary level, and rhyme complexity. **NEVER** reuse literal phrases or recurring words found in the style profile description. 
+
+**VIBE:**
+- Genre: {{vibe.genre}}
+- Tempo: {{vibe.tempoBPM}} BPM
+- Feeling: {{#each vibe.feeling}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+{{#if vibe.instrumentation}}- Instrumentation: {{vibe.instrumentation}}{{/if}}
+{{#if vibe.productionNotes}}- Production: {{vibe.productionNotes}}{{/if}}
 
 **DIRECTION (ATMOSPHERE ONLY):**
 - World: {{mergedDirection.setting_world}}
@@ -136,8 +156,15 @@ Mimic the technical patterns found in this profile: {{styleProfileSummary}}.
 
 **CONTEXT:**
 - Section: {{sectionType}}
+- Theme: {{theme}}
+- Rhyme mode: {{rhymeMode}}
 - Prior Bars: {{#each priorLines}}- {{{this}}} {{/each}}
 - Next Bars: {{#each nextLines}}- {{{this}}} {{/each}}
+
+{{#if customInstructions}}
+**SPECIAL INSTRUCTIONS (HIGHEST PRIORITY WHEN PRESENT):**
+"{{{customInstructions}}}"
+{{/if}}
 
 {{#if negativePrompt}}
 **NEGATIVE PROMPT (AVOID THESE THEMES/IDEAS):**

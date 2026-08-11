@@ -26,7 +26,7 @@ export function guestInkFeatureLockedToast(featureLabel: string): {
 } {
   return {
     title: 'Sign up to unlock',
-    description: `${featureLabel} uses real Ink after signup. On the try sheet, only Generate Next is free (${GUEST_DEMO_MAX_USES} assists / browser) — separate from the ${SIGNUP_INK} Ink you get when you create an account.`,
+    description: `${featureLabel} uses real Ink after signup. On the try sheet, Generate Next and New starter share ${GUEST_DEMO_MAX_USES} free demo assists / browser — separate from the ${SIGNUP_INK} Ink you get when you create an account.`,
   };
 }
 

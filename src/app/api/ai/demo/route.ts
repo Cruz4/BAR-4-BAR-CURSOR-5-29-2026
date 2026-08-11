@@ -155,8 +155,15 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   let body: {
     lines?: unknown;
+    mode?: unknown;
     endWith?: unknown;
     intents?: unknown;
+    vibe?: unknown;
+    direction?: unknown;
+    negativePrompt?: unknown;
+    forbiddenWords?: unknown;
+    mustIncludeWords?: unknown;
+    customInstructions?: unknown;
     ref?: unknown;
     guestId?: unknown;
     guestAlias?: unknown;
@@ -169,6 +176,7 @@ export async function POST(req: Request) {
 
   const ref = resolveDemoRef(body.ref);
   const guest = resolveDemoGuest(body);
+  const mode = body.mode === 'starter' ? 'starter' : 'next';
 
   if (!Array.isArray(body.lines)) {
     return NextResponse.json({ error: 'Missing lines' }, { status: 400 });
@@ -178,7 +186,7 @@ export async function POST(req: Request) {
     .map((l) => l.trim().slice(0, MAX_LINE_CHARS))
     .filter(Boolean)
     .slice(-MAX_LINES);
-  if (lines.length === 0) {
+  if (mode === 'next' && lines.length === 0) {
     return NextResponse.json({ error: 'Write a bar first' }, { status: 400 });
   }
   const endWith =
@@ -190,10 +198,81 @@ export async function POST(req: Request) {
         .filter(Boolean)
         .slice(0, 6)
     : [];
+  const forbiddenWords = Array.isArray(body.forbiddenWords)
+    ? body.forbiddenWords
+        .filter((w): w is string => typeof w === 'string')
+        .map((w) => w.trim().slice(0, 40))
+        .filter(Boolean)
+        .slice(0, 12)
+    : [];
+  const mustIncludeWords = Array.isArray(body.mustIncludeWords)
+    ? body.mustIncludeWords
+        .filter((w): w is string => typeof w === 'string')
+        .map((w) => w.trim().slice(0, 40))
+        .filter(Boolean)
+        .slice(0, 8)
+    : [];
+  const negativePrompt =
+    typeof body.negativePrompt === 'string' ? body.negativePrompt.trim().slice(0, 240) : '';
+  const customInstructions =
+    typeof body.customInstructions === 'string'
+      ? body.customInstructions.trim().slice(0, 280)
+      : '';
+
+  let vibe:
+    | {
+        genre?: string;
+        tempoBPM?: number;
+        feeling?: string[];
+        instrumentation?: string;
+        productionNotes?: string;
+      }
+    | undefined;
+  if (body.vibe && typeof body.vibe === 'object') {
+    const v = body.vibe as Record<string, unknown>;
+    vibe = {
+      genre: typeof v.genre === 'string' ? v.genre.trim().slice(0, 64) : undefined,
+      tempoBPM:
+        typeof v.tempoBPM === 'number' && Number.isFinite(v.tempoBPM) ? v.tempoBPM : undefined,
+      feeling: Array.isArray(v.feeling)
+        ? v.feeling
+            .filter((f): f is string => typeof f === 'string')
+            .map((f) => f.trim().slice(0, 48))
+            .filter(Boolean)
+            .slice(0, 6)
+        : undefined,
+      instrumentation:
+        typeof v.instrumentation === 'string' ? v.instrumentation.trim().slice(0, 120) : undefined,
+      productionNotes:
+        typeof v.productionNotes === 'string' ? v.productionNotes.trim().slice(0, 160) : undefined,
+    };
+  }
+
+  let direction:
+    | {
+        setting_world?: string;
+        emotion_core?: string;
+        trigger_moment?: string;
+        message_truth?: string;
+        tone_palette?: string;
+      }
+    | undefined;
+  if (body.direction && typeof body.direction === 'object') {
+    const d = body.direction as Record<string, unknown>;
+    const pick = (key: string) =>
+      typeof d[key] === 'string' ? (d[key] as string).trim().slice(0, 120) : undefined;
+    direction = {
+      setting_world: pick('setting_world'),
+      emotion_core: pick('emotion_core'),
+      trigger_moment: pick('trigger_moment'),
+      message_truth: pick('message_truth'),
+      tone_palette: pick('tone_palette'),
+    };
+  }
 
   void recordGuestFunnelEvent(GUEST_FUNNEL_EVENTS.DEMO_AI_REQUEST, {
     ref,
-    metadata: guestMeta({ lineCount: lines.length }, guest),
+    metadata: guestMeta({ lineCount: lines.length, mode }, guest),
   });
 
   const uses = readUses(getCookie(req, COOKIE_NAME));
@@ -232,11 +311,24 @@ export async function POST(req: Request) {
   }
 
   try {
-    const options = await generateGuestDemoNextLine(lines, endWith || null, intents);
+    const options = await generateGuestDemoNextLine(
+      lines,
+      {
+        endWith: endWith || null,
+        intents,
+        vibe,
+        direction,
+        negativePrompt: negativePrompt || null,
+        forbiddenWords,
+        mustIncludeWords,
+        customInstructions: customInstructions || null,
+      },
+      mode
+    );
     if (options.length === 0) {
       await recordGuestFunnelEvent(GUEST_FUNNEL_EVENTS.DEMO_AI_ERROR, {
         ref,
-        metadata: guestMeta({ reason: 'empty_options' }, guest),
+        metadata: guestMeta({ reason: 'empty_options', mode }, guest),
       });
       return NextResponse.json({ error: 'No suggestions this time — try again' }, { status: 502 });
     }
@@ -246,7 +338,7 @@ export async function POST(req: Request) {
     await recordGuestFunnelEvent(GUEST_FUNNEL_EVENTS.DEMO_AI_SUCCESS, {
       ref,
       metadata: guestMeta(
-        { remaining, useNumber: nextUses, optionCount: options.length },
+        { remaining, useNumber: nextUses, optionCount: options.length, mode },
         guest
       ),
     });
@@ -255,6 +347,7 @@ export async function POST(req: Request) {
       remaining,
       endWith: endWith || null,
       intents,
+      mode,
     });
     res.cookies.set(COOKIE_NAME, signUses(nextUses), {
       httpOnly: true,
@@ -269,7 +362,7 @@ export async function POST(req: Request) {
     console.error('[api/ai/demo] generation failed:', message, error);
     await recordGuestFunnelEvent(GUEST_FUNNEL_EVENTS.DEMO_AI_ERROR, {
       ref,
-      metadata: guestMeta({ reason: 'generation_failed' }, guest),
+      metadata: guestMeta({ reason: 'generation_failed', mode }, guest),
     });
     return NextResponse.json({ error: message }, { status: 500 });
   }

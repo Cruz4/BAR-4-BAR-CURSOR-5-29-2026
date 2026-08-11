@@ -29,6 +29,7 @@ export function UpgradeTooltip({
     <Hint
       side={side}
       delayDuration={200}
+      actionSafe={false}
       className="max-w-[280px] p-4 bg-card border-pink-400/40 shadow-[0_0_24px_rgba(244,114,182,0.25)]"
       content={
         <div className="space-y-2">

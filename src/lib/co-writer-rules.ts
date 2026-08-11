@@ -348,6 +348,38 @@ export function getWorkstationRuleBadgeClass(id: string, active: boolean): strin
   return WORKSTATION_BADGE_ACTIVE.VIBE;
 }
 
+/** Hover / tap copy for Bar Workstation active-rule badges. */
+export function getWorkstationRuleBadgeTooltip(id: string): string {
+  switch (id) {
+    case 'INHERIT':
+    case 'FROM ALBUM':
+    case 'INHERIT ALBUM':
+      return 'Inherit From Album is on — album Creative DNA feeds this track.';
+    case 'TRACK DNA':
+      return 'Track DNA is on — this track’s Creative Direction guides AI gens.';
+    case 'ALBUM DNA':
+      return 'Album DNA is on — album Creative Direction is active for AI gens.';
+    case 'VIBE':
+      return 'Track Vibe is on — genre, BPM, and atmosphere guide AI gens.';
+    case 'INTENTS':
+      return 'Intents are on — checked motifs weave into AI suggestions.';
+    case 'END WITH':
+      return 'Precision Lock is on — the next generated line must end with your locked phrase.';
+    case 'GUARD':
+    case 'GUARDRAILS':
+      return 'Guardrails are on — forbidden / must-include words and avoid themes apply.';
+    case 'STYLE':
+    case 'STYLE DNA':
+      return 'Style DNA is on — your trained cadence profile shapes AI gens.';
+    case 'SPECIAL INSTRUCTIONS':
+      return 'Special Instructions are on — freeform rules take priority in gens.';
+    case 'REMIX PATHS':
+      return 'Remix Paths are active in the Calibration Hub.';
+    default:
+      return `${id} is on for AI generation.`;
+  }
+}
+
 export function coWriterEffectPanel(accent: EffectAccentKey): string {
   return cn('rounded-xl shadow-sm', EFFECT_ACCENT[accent].panel);
 }

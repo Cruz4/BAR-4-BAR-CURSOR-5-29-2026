@@ -49,18 +49,53 @@ function timeAgo(iso: string): string {
 function ReverbSourceBody({ post }: { post: ProfilePost }) {
   const name = post.reverbOwnerName || 'Artist';
   const slug = post.reverbOwnerSlug;
+  const profileHref = slug ? `/profile/${slug}` : undefined;
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
+  const [starSeed, setStarSeed] = useState<number | undefined>(undefined);
+  const [useStar, setUseStar] = useState(false);
+
+  useEffect(() => {
+    if (!slug) {
+      setAvatarUrl(undefined);
+      setStarSeed(undefined);
+      setUseStar(false);
+      return;
+    }
+    let cancelled = false;
+    void fetchPublicArtistAvatarMeta(slug).then((meta) => {
+      if (cancelled || !meta) return;
+      setAvatarUrl(meta.avatarUrl);
+      setUseStar(Boolean(meta.starMarkUseStar));
+      setStarSeed(meta.starMarkSeed);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
   return (
     <div className="mt-2 rounded-xl border border-[var(--ph-border,rgba(255,255,255,0.14))] bg-black/30 p-3">
-      <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
-        Original ·{' '}
-        {slug ? (
-          <Link href={`/profile/${slug}`} className="text-[var(--ph-accent,#7dd3fc)] hover:underline">
-            {name}
-          </Link>
-        ) : (
-          name
-        )}
-      </p>
+      <div className="mb-1.5 flex items-center gap-2">
+        <ArtistStarAvatar
+          name={name}
+          avatarUrl={avatarUrl}
+          useStarMark={useStar}
+          starMarkSeed={starSeed}
+          href={profileHref}
+          size={42}
+          toneClass="bg-sky-500/30 text-sky-300"
+        />
+        <p className="min-w-0 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+          Original ·{' '}
+          {profileHref ? (
+            <Link href={profileHref} className="text-[var(--ph-accent,#7dd3fc)] hover:underline">
+              {name}
+            </Link>
+          ) : (
+            <span className="text-[var(--ph-accent,#7dd3fc)]">{name}</span>
+          )}
+        </p>
+      </div>
       {post.reverbText ? (
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--ph-text,#fff)]/90">
           {post.reverbText}

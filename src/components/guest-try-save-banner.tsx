@@ -18,7 +18,7 @@ type GuestTrySaveBannerProps = {
   remainingOverride?: number | null;
   /** Sheet has no written lyrics yet. */
   sheetEmpty?: boolean;
-  /** Reshuffle / seed Architect starter on bar 1 and clear bar 2. */
+  /** Reshuffle / AI-generate starter on bar 1 (uses active rails) and clear bar 2. */
   onNewStarter?: () => void;
 };
 
@@ -94,8 +94,8 @@ export function GuestTrySaveBanner({
               <>
                 <span className="font-bold text-emerald-200">Start your sheet</span>
                 {' — '}
-                tap <span className="text-emerald-100/90">New starter</span> on line 01 for a deep
-                Architect line, or type your own in the sheet / bar workstation below.{' '}
+                tap <span className="text-emerald-100/90">New starter</span> on line 01 for an AI
+                opening bar using any rails you have on (DNA, vibe, intents…), or type your own.{' '}
                 <span className="text-emerald-100/90">Generate Next</span> — up to {GUEST_DEMO_MAX_USES}{' '}
                 demo assists.
               </>
@@ -103,7 +103,7 @@ export function GuestTrySaveBanner({
               <>
                 <span className="font-bold text-emerald-200">Finish this bar</span>
                 {' — '}
-                deep Lyrical Architect starter on line 1. Drop yours on line 2.{' '}
+                starter on line 1 uses your active rails. Drop yours on line 2.{' '}
                 <span className="text-emerald-100/90">Rhyme Pulse</span> is free.
                 {' '}
                 <span className="text-emerald-100/90">Generate Next</span> — up to {GUEST_DEMO_MAX_USES}{' '}

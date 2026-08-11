@@ -3,7 +3,7 @@
 /**
  * Scene Nav Dock — right rail of the Scene home.
  * Fast lanes: Vault, write split (keep / new), Artist Home split (view / edit),
- * Leaderboard, Activity, Your circle, Ink store.
+ * Leaderboard, Activity|Circle split, Ink store.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -191,6 +191,69 @@ function ArtistHomeSplitButton({
   );
 }
 
+function ActivityCircleSplitButton({
+  alertCount,
+  className,
+}: {
+  alertCount: number;
+  className?: string;
+}) {
+  const badgeLabel =
+    alertCount > 0 ? `${alertCount > 99 ? '99+' : alertCount} new` : 'Loves · replies · requests';
+
+  return (
+    <div
+      className={cn(
+        splitShell,
+        'border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-card/85 to-sky-500/10 hover:border-emerald-400/45',
+        className
+      )}
+    >
+      <Link
+        href="/activity"
+        className={cn(
+          'relative flex min-w-0 flex-1 items-center gap-2 px-2.5 text-left transition-colors hover:bg-emerald-500/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-400/50 sm:gap-2.5 sm:px-3'
+        )}
+        aria-label={alertCount > 0 ? `Activity, ${alertCount} new` : 'Activity'}
+      >
+        <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-emerald-400/45 bg-emerald-500/15 text-emerald-400">
+          <Bell className="h-4 w-4" />
+          {alertCount > 0 && (
+            <span
+              className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-500 px-1 text-[9px] font-bold text-black shadow-[0_0_10px_rgba(16,185,129,0.55)]"
+              aria-hidden
+            >
+              {alertCount > 99 ? '99+' : alertCount}
+            </span>
+          )}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className={splitTitle}>Activity</span>
+          <span className={splitSub}>{badgeLabel}</span>
+        </span>
+      </Link>
+
+      <div className="my-2 w-px shrink-0 self-stretch bg-border/70" aria-hidden />
+
+      <Link
+        href="/friends"
+        className={cn(
+          'flex min-w-0 flex-1 items-center gap-2 px-2.5 text-left transition-colors hover:bg-sky-500/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400/50 sm:gap-2.5 sm:px-3'
+        )}
+        aria-label="Your circle"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sky-400/45 bg-sky-500/15 text-sky-400">
+          <Users className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className={splitTitle}>Your circle</span>
+          <span className={splitSub}>Friends & blocks</span>
+        </span>
+      </Link>
+    </div>
+  );
+}
+
 export function SceneNavDock({ compact = false, className }: SceneNavDockProps) {
   const { summary, loading } = useGamification();
   const { total: alertCount } = useSocialAlerts();
@@ -224,25 +287,6 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       icon: Trophy,
       tone: 'border-amber-500/30 bg-card/55 hover:border-amber-400/50',
       iconTone: 'border-amber-400/45 bg-amber-500/15 text-amber-400',
-    },
-    {
-      key: 'activity',
-      href: '/activity',
-      label: 'Activity',
-      sub: alertCount > 0 ? `${alertCount > 99 ? '99+' : alertCount} new` : 'Loves · replies · requests',
-      icon: Bell,
-      tone: 'border-emerald-500/30 bg-card/55 hover:border-emerald-400/50',
-      iconTone: 'border-emerald-400/45 bg-emerald-500/15 text-emerald-400',
-      badge: alertCount,
-    },
-    {
-      key: 'circle',
-      href: '/friends',
-      label: 'Your circle',
-      sub: 'Friends & blocks',
-      icon: Users,
-      tone: 'border-sky-500/30 bg-card/55 hover:border-sky-400/50',
-      iconTone: 'border-sky-400/45 bg-sky-500/15 text-sky-400',
     },
     {
       key: 'ink',
@@ -325,9 +369,12 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
         />
       ) : null}
 
-      {items.slice(1).map((item) => (
-        <DockLink key={item.key} item={item} />
-      ))}
+      <DockLink item={items[1]!} />
+      <ActivityCircleSplitButton
+        alertCount={alertCount}
+        className={compact ? 'col-span-2 sm:col-span-3' : undefined}
+      />
+      <DockLink item={items[2]!} />
     </nav>
   );
 }

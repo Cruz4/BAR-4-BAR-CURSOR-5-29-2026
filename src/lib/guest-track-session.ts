@@ -2,8 +2,8 @@
  * Persist the anonymous try-sheet track for signup handoff.
  * Also mirrors non-empty bar lines into demo-session for FirstSongHero.
  *
- * Fresh sessions open blank on line 01 — tap New starter for an Architect
- * unfinished line (bar 2 left open to finish under it), or type your own.
+ * Fresh sessions open blank on line 01 — tap New starter for an AI opening
+ * line (uses active rails; bar 2 left open to finish under it), or type your own.
  */
 
 import type { Album, Track } from '@/lib/types';

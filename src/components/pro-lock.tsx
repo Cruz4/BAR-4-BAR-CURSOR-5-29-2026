@@ -110,6 +110,7 @@ export function LockedSaveButton({
   size = 'sm',
   icon: Icon = Lock,
   iconClassName,
+  side = 'left',
 }: {
   feature: string;
   benefit: string;
@@ -118,6 +119,7 @@ export function LockedSaveButton({
   size?: 'sm' | 'md';
   icon?: LucideIcon;
   iconClassName?: string;
+  side?: 'top' | 'bottom' | 'left' | 'right';
 }) {
   const dim = size === 'sm' ? 'h-7 w-7' : 'h-9 w-9';
   const iconDim = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4';
@@ -126,6 +128,7 @@ export function LockedSaveButton({
       feature={feature}
       benefit={benefit}
       example={example ?? `Example: save "${feature}" on this track and reuse it on every song in the album.`}
+      side={side}
     >
       <Button
         variant="ghost"
@@ -138,6 +141,7 @@ export function LockedSaveButton({
           className
         )}
         onClick={(e) => e.stopPropagation()}
+        aria-label={`${feature} — Studio Pro`}
       >
         <Icon className={cn(iconDim, iconClassName)} aria-hidden />
       </Button>
