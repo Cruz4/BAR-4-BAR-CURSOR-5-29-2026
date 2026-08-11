@@ -10,6 +10,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   TrendingUp,
   Users,
   Zap,
@@ -22,8 +29,17 @@ import {
   Megaphone,
   Save,
   Link2,
+  Download,
+  Copy,
+  Check,
 } from 'lucide-react';
 import type { AdminMetricsResponse } from '@/lib/admin-metrics-types';
+import {
+  DEFAULT_METRICS_RANGE,
+  METRICS_RANGES,
+  type MetricsRangeKey,
+} from '@/lib/admin-metrics-range';
+import { formatAdminMetricsJson, formatAdminMetricsMarkdown } from '@/lib/admin-metrics-export';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -92,20 +108,24 @@ export function AdminMetricsTab() {
   const [metrics, setMetrics] = useState<AdminMetricsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [range, setRange] = useState<MetricsRangeKey>(DEFAULT_METRICS_RANGE);
   const [adSpend30d, setAdSpend30d] = useState('0');
   const [adSpend90d, setAdSpend90d] = useState('0');
   const [notes, setNotes] = useState('');
   const [savingMarketing, setSavingMarketing] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  const fetchMetrics = useCallback(async (forceRefresh = false) => {
+  const fetchMetrics = useCallback(async (forceRefresh = false, rangeKey: MetricsRangeKey = range) => {
     setLoading(true);
     setError(null);
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Sign in required');
       const token = await user.getIdToken();
-      const qs = forceRefresh ? '?refresh=1' : '';
-      const res = await fetch(`/api/admin/metrics${qs}`, {
+      const params = new URLSearchParams();
+      params.set('range', rangeKey);
+      if (forceRefresh) params.set('refresh', '1');
+      const res = await fetch(`/api/admin/metrics?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -122,11 +142,45 @@ export function AdminMetricsTab() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [range]);
 
   useEffect(() => {
-    fetchMetrics();
-  }, [fetchMetrics]);
+    fetchMetrics(false, range);
+  }, [range]); // eslint-disable-line react-hooks/exhaustive-deps -- reload when range changes
+
+  const downloadText = (filename: string, content: string, mime: string) => {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportStamp = () => {
+    const key = metrics?.period?.key || range;
+    const day = format(new Date(), 'yyyy-MM-dd');
+    return `bar4bar-growth-metrics-${key}-${day}`;
+  };
+
+  const handleCopyMarkdown = async () => {
+    if (!metrics) return;
+    const md = formatAdminMetricsMarkdown(metrics);
+    await navigator.clipboard.writeText(md);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadMarkdown = () => {
+    if (!metrics) return;
+    downloadText(`${exportStamp()}.md`, formatAdminMetricsMarkdown(metrics), 'text/markdown;charset=utf-8');
+  };
+
+  const handleDownloadJson = () => {
+    if (!metrics) return;
+    downloadText(`${exportStamp()}.json`, formatAdminMetricsJson(metrics), 'application/json;charset=utf-8');
+  };
 
   const saveMarketing = async () => {
     setSavingMarketing(true);
@@ -146,7 +200,7 @@ export function AdminMetricsTab() {
           notes,
         }),
       });
-      await fetchMetrics();
+      await fetchMetrics(true, range);
     } finally {
       setSavingMarketing(false);
     }
@@ -165,7 +219,7 @@ export function AdminMetricsTab() {
       <Card className="border-red-500/30 bg-red-500/5">
         <CardContent className="py-10 text-center space-y-4">
           <p className="text-red-400 text-sm">{error}</p>
-          <Button variant="outline" onClick={() => fetchMetrics(true)} className="gap-2">
+          <Button variant="outline" onClick={() => fetchMetrics(true, range)} className="gap-2">
             <RefreshCw className="h-4 w-4" /> Retry
           </Button>
         </CardContent>
@@ -182,12 +236,14 @@ export function AdminMetricsTab() {
     organicSignups: 0,
     totalLandingHits: 0,
     landingHitsLast30Days: 0,
+    landingHitsLast90Days: 0,
     byRef: [],
   };
   const guestFunnel = guestTryFunnel ?? {
     opens: 0,
     opensLast7Days: 0,
     opensLast30Days: 0,
+    opensLast90Days: 0,
     wroteBar: 0,
     demoAiRequests: 0,
     demoAiSuccesses: 0,
@@ -208,6 +264,7 @@ export function AdminMetricsTab() {
     opens: 0,
     opensLast7Days: 0,
     opensLast30Days: 0,
+    opensLast90Days: 0,
     typed: 0,
     submits: 0,
     branches: 0,
@@ -232,26 +289,93 @@ export function AdminMetricsTab() {
       }`
     : format(new Date(metrics.generatedAt), 'MMM d, yyyy · h:mm a');
 
+  const period = metrics.period ?? {
+    key: range,
+    label: METRICS_RANGES.find((r) => r.key === range)?.label || 'All time',
+    days: null as number | null,
+    startAt: null as string | null,
+    endAt: metrics.generatedAt,
+  };
+  const periodDays = period.days;
+  const show7 = periodDays == null || periodDays >= 7;
+  const show30 = periodDays == null || periodDays >= 30;
+  const show90 = periodDays == null || periodDays >= 90;
+  const periodSub =
+    periodDays == null
+      ? 'All-time (day 1 → now)'
+      : `${period.label} · through ${format(new Date(period.endAt), 'MMM d, yyyy')}`;
+
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-headline font-bold uppercase text-white flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" /> 90-Day Growth Metrics
-          </h2>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
-            {cacheLabel}
-          </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-3 min-w-0">
+          <div>
+            <h2 className="text-xl font-headline font-bold uppercase text-white flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" /> Growth Metrics
+            </h2>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
+              {periodSub} · {cacheLabel}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Label className="text-[9px] uppercase tracking-[0.25em] text-muted-foreground">Time range</Label>
+            <Select
+              value={range}
+              onValueChange={(v) => setRange(v as MetricsRangeKey)}
+            >
+              <SelectTrigger className="w-[180px] h-9 text-[11px] uppercase tracking-wider">
+                <SelectValue placeholder="Select range" />
+              </SelectTrigger>
+              <SelectContent>
+                {METRICS_RANGES.map((r) => (
+                  <SelectItem key={r.key} value={r.key} className="text-[11px] uppercase tracking-wider">
+                    {r.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => fetchMetrics(true)}
-          disabled={loading}
-          className="gap-2 text-[10px] uppercase tracking-widest"
-        >
-          <RefreshCw className={cn('h-3 w-3', loading && 'animate-spin')} /> Recompute
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyMarkdown}
+            disabled={!metrics}
+            className="gap-2 text-[10px] uppercase tracking-widest"
+            title="Copy full Markdown dump for AI analysis"
+          >
+            {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+            {copied ? 'Copied' : 'Copy for AI'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadMarkdown}
+            disabled={!metrics}
+            className="gap-2 text-[10px] uppercase tracking-widest"
+          >
+            <Download className="h-3 w-3" /> MD
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadJson}
+            disabled={!metrics}
+            className="gap-2 text-[10px] uppercase tracking-widest"
+          >
+            <Download className="h-3 w-3" /> JSON
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchMetrics(true, range)}
+            disabled={loading}
+            className="gap-2 text-[10px] uppercase tracking-widest"
+          >
+            <RefreshCw className={cn('h-3 w-3', loading && 'animate-spin')} /> Recompute
+          </Button>
+        </div>
       </div>
 
       {/* Top funnel KPIs */}
@@ -260,14 +384,16 @@ export function AdminMetricsTab() {
           <Users className="h-3 w-3" /> Top of funnel
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <MetricCard label="Total signups" value={funnel.totalSignups} sub="All-time roster" />
-          <MetricCard label="Last 7 days" value={funnel.signupsLast7Days} accent="text-sky-400" />
-          <MetricCard label="Last 30 days" value={funnel.signupsLast30Days} accent="text-sky-400" />
-          <MetricCard label="Last 90 days" value={funnel.signupsLast90Days} accent="text-sky-400" />
+          <MetricCard label="Signups in period" value={funnel.totalSignups} sub={period.label} />
+          {show7 && <MetricCard label="Last 7 days" value={funnel.signupsLast7Days} accent="text-sky-400" />}
+          {show30 && <MetricCard label="Last 30 days" value={funnel.signupsLast30Days} accent="text-sky-400" />}
+          {show90 && <MetricCard label="Last 90 days" value={funnel.signupsLast90Days} accent="text-sky-400" />}
         </div>
         <Card className="mt-4 bg-card/40 border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm uppercase tracking-widest">Signups — last 30 days</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-widest">
+              Signups by day{periodDays != null && periodDays <= 90 ? ` — ${period.label}` : ' — chart window'}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <SignupsChart data={funnel.signupsByDay} />
@@ -282,27 +408,32 @@ export function AdminMetricsTab() {
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <MetricCard
-            label="Landing hits (90d)"
+            label="Landing hits (period)"
             value={attribution.totalLandingHits}
             sub="Tagged ?ref= visits"
             accent="text-amber-400"
           />
-          <MetricCard
-            label="Landing hits (30d)"
-            value={attribution.landingHitsLast30Days}
-            sub="Recent ad / bio traffic"
-            accent="text-amber-400"
-          />
+          {show90 && (
+            <MetricCard
+              label="Landing hits (90d)"
+              value={attribution.landingHitsLast90Days}
+              sub="Recent ad / bio traffic"
+              accent="text-amber-400"
+            />
+          )}
+          {show30 && (
+            <MetricCard
+              label="Landing hits (30d)"
+              value={attribution.landingHitsLast30Days}
+              sub="This month’s window"
+              accent="text-amber-400"
+            />
+          )}
           <MetricCard
             label="Tagged signups"
             value={attribution.taggedSignups}
-            sub="Arrived with ?ref= at signup"
+            sub={`${attribution.organicSignups} organic / direct`}
             accent="text-sky-400"
-          />
-          <MetricCard
-            label="Organic / direct"
-            value={attribution.organicSignups}
-            sub="No ref captured at signup"
           />
         </div>
         <Card className="bg-card/40 border-white/10">
@@ -319,7 +450,8 @@ export function AdminMetricsTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Ref</TableHead>
-                  <TableHead className="text-right">Landings</TableHead>
+                  <TableHead className="text-right">Land all</TableHead>
+                  <TableHead className="text-right">Land 90d</TableHead>
                   <TableHead className="text-right">Land 30d</TableHead>
                   <TableHead className="text-right">Signups</TableHead>
                   <TableHead className="text-right">Conv %</TableHead>
@@ -344,6 +476,9 @@ export function AdminMetricsTab() {
                         {row.landingHitsTotal}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                        {row.landingHitsLast90Days}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
                         {row.landingHitsLast30Days}
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm">{row.signupsTotal}</TableCell>
@@ -359,7 +494,7 @@ export function AdminMetricsTab() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-20 text-center text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+                    <TableCell colSpan={9} className="h-20 text-center text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
                       No ref traffic yet — use Promote URL <span className="font-mono">?ref=tiktok</span>
                     </TableCell>
                   </TableRow>
@@ -376,7 +511,19 @@ export function AdminMetricsTab() {
           <Target className="h-3 w-3" /> Guest try sheet (pre-signup)
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-          <MetricCard label="Opens (90d)" value={guestFunnel.opens} sub={`${guestFunnel.opensLast7Days} last 7d`} accent="text-emerald-400" />
+          <MetricCard
+            label="Opens (period)"
+            value={guestFunnel.opens}
+            sub={
+              [
+                show90 ? `${guestFunnel.opensLast90Days} last 90d` : null,
+                show7 ? `${guestFunnel.opensLast7Days} last 7d` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ') || period.label
+            }
+            accent="text-emerald-400"
+          />
           <MetricCard label="Wrote a bar" value={guestFunnel.wroteBar} sub={`${guestFunnel.openToWrotePercent}% of opens`} />
           <MetricCard label="Demo AI success" value={guestFunnel.demoAiSuccesses} sub={`${guestFunnel.demoAiLimits} hit limit · ${guestFunnel.demoAiErrors} errors`} accent="text-sky-400" />
           <MetricCard label="Accepted a line" value={guestFunnel.optionAccepts} sub={`${guestFunnel.aiToAcceptPercent}% of AI wins`} />
@@ -410,7 +557,19 @@ export function AdminMetricsTab() {
           <Target className="h-3 w-3 text-emerald-400" /> Finish-the-bar funnel
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-          <MetricCard label="Opens (90d)" value={lockStats.opens} sub={`${lockStats.opensLast7Days} last 7d`} accent="text-emerald-400" />
+          <MetricCard
+            label="Opens (period)"
+            value={lockStats.opens}
+            sub={
+              [
+                show90 ? `${lockStats.opensLast90Days} last 90d` : null,
+                show7 ? `${lockStats.opensLast7Days} last 7d` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ') || period.label
+            }
+            accent="text-emerald-400"
+          />
           <MetricCard label="Typed a bar" value={lockStats.typed} sub={`${lockStats.openToTypedPercent}% of opens`} />
           <MetricCard label="Locked (submit)" value={lockStats.submits} sub={`${lockStats.openToSubmitPercent}% of opens`} accent="text-sky-400" />
           <MetricCard

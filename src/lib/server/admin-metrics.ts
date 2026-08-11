@@ -15,6 +15,11 @@ import type {
   SignupAttributionRow,
   SignupAttributionStats,
 } from '@/lib/admin-metrics-types';
+import {
+  buildMetricsPeriod,
+  DEFAULT_METRICS_RANGE,
+  type MetricsRangeKey,
+} from '@/lib/admin-metrics-range';
 import { marketingRefLabel, normalizeMarketingRef } from '@/lib/marketing-attribution';
 import { GUEST_FUNNEL_EVENTS } from '@/lib/guest-funnel-events';
 import { LOCK_FUNNEL_EVENTS } from '@/lib/lock-funnel-events';
@@ -68,16 +73,38 @@ function buildDailyCounts(dates: Date[], days = 30): DailyCount[] {
   return Array.from(map.entries()).map(([date, count]) => ({ date, count }));
 }
 
-export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
+function inPeriod(at: Date | null, periodStart: Date | null): boolean {
+  if (!at) return false;
+  if (!periodStart) return true;
+  return at >= periodStart;
+}
+
+function windowStart(days: number, periodStart: Date | null): Date {
+  const w = daysAgo(days);
+  if (!periodStart) return w;
+  return w > periodStart ? w : periodStart;
+}
+
+export type ComputeAdminMetricsOptions = {
+  range?: MetricsRangeKey;
+};
+
+export async function computeAdminMetrics(
+  options: ComputeAdminMetricsOptions = {}
+): Promise<AdminMetricsSnapshot> {
+  const rangeKey = options.range ?? DEFAULT_METRICS_RANGE;
+  const period = buildMetricsPeriod(rangeKey);
   if (!hasAdminFirestoreCredentials()) {
-    return emptyMetrics('Firebase Admin credentials required to load metrics.');
+    return emptyMetrics('Firebase Admin credentials required to load metrics.', rangeKey);
   }
 
   const db = await getDb();
   const now = new Date();
-  const d7 = daysAgo(7);
-  const d30 = daysAgo(30);
-  const d90 = daysAgo(90);
+  const periodStart = period.startAt ? new Date(period.startAt) : null;
+  const d7 = windowStart(7, periodStart);
+  const d30 = windowStart(30, periodStart);
+  const d90 = windowStart(90, periodStart);
+  const chartDays = Math.min(90, period.days ?? 30);
 
   const [usersSnap, eventsSnap, logsSnap, marketingSnap, landingHitsSnap, guestFunnelSnap, lockFunnelSnap] =
     await Promise.all([
@@ -85,10 +112,10 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
       db.collection('analytics_events').orderBy('timestamp', 'desc').limit(500).get(),
       db.collection('system').doc('logs').collection('entries').orderBy('timestamp', 'desc').limit(1000).get(),
       db.doc('studioMetrics/marketing').get(),
-      db.collection('studio_landing_hits').where('timestamp', '>=', d90.toISOString()).get(),
+      // All-time landing / funnel event scans — windows (7/30/90d) are derived in memory.
+      db.collection('studio_landing_hits').get(),
       db
         .collection('studio_guest_funnel_events')
-        .where('timestamp', '>=', d90.toISOString())
         .get()
         .catch((err) => {
           console.warn('[admin-metrics] guest funnel query failed', err);
@@ -96,7 +123,6 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
         }),
       db
         .collection('studio_lock_funnel_events')
-        .where('timestamp', '>=', d90.toISOString())
         .get()
         .catch((err) => {
           console.warn('[admin-metrics] lock funnel query failed', err);
@@ -114,6 +140,7 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
     .filter((u) => u.status !== 'blocked');
 
   const signupDates: Date[] = [];
+  let cohortCount = 0;
   let activatedUsers = 0;
   let totalHoursToFirstAi = 0;
   let firstAiCount = 0;
@@ -206,18 +233,19 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
     const refKey = refRaw ? normalizeMarketingRef(refRaw) || refRaw.trim().toLowerCase() : null;
     if (!refKey) continue;
     const hitAt = parseDate(data.timestamp);
-    if (!hitAt) continue;
+    if (!inPeriod(hitAt, periodStart)) continue;
     bumpLanding(refKey, {
       hitsTotal: 1,
-      hitsLast7Days: hitAt >= d7 ? 1 : 0,
-      hitsLast30Days: hitAt >= d30 ? 1 : 0,
-      hitsLast90Days: hitAt >= d90 ? 1 : 0,
+      hitsLast7Days: hitAt && hitAt >= d7 ? 1 : 0,
+      hitsLast30Days: hitAt && hitAt >= d30 ? 1 : 0,
+      hitsLast90Days: hitAt && hitAt >= d90 ? 1 : 0,
     });
   }
 
   let guestOpens = 0;
   let guestOpensLast7 = 0;
   let guestOpensLast30 = 0;
+  let guestOpensLast90 = 0;
   let guestWroteBar = 0;
   let guestDemoAiRequests = 0;
   let guestDemoAiSuccesses = 0;
@@ -232,11 +260,12 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
     const data = funnelDoc.data();
     const ev = String(data.event || '');
     const at = parseDate(data.timestamp);
-    if (!at) continue;
+    if (!inPeriod(at, periodStart)) continue;
     if (ev === GUEST_FUNNEL_EVENTS.OPEN) {
       guestOpens += 1;
-      if (at >= d7) guestOpensLast7 += 1;
-      if (at >= d30) guestOpensLast30 += 1;
+      if (at && at >= d7) guestOpensLast7 += 1;
+      if (at && at >= d30) guestOpensLast30 += 1;
+      if (at && at >= d90) guestOpensLast90 += 1;
     } else if (ev === GUEST_FUNNEL_EVENTS.WROTE_BAR) guestWroteBar += 1;
     else if (ev === GUEST_FUNNEL_EVENTS.DEMO_AI_REQUEST) guestDemoAiRequests += 1;
     else if (ev === GUEST_FUNNEL_EVENTS.DEMO_AI_SUCCESS) guestDemoAiSuccesses += 1;
@@ -251,6 +280,7 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
   let lockOpens = 0;
   let lockOpensLast7 = 0;
   let lockOpensLast30 = 0;
+  let lockOpensLast90 = 0;
   let lockTyped = 0;
   let lockSubmits = 0;
   let lockBranches = 0;
@@ -266,11 +296,12 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
     const data = funnelDoc.data();
     const ev = String(data.event || '');
     const at = parseDate(data.timestamp);
-    if (!at) continue;
+    if (!inPeriod(at, periodStart)) continue;
     if (ev === LOCK_FUNNEL_EVENTS.OPEN) {
       lockOpens += 1;
-      if (at >= d7) lockOpensLast7 += 1;
-      if (at >= d30) lockOpensLast30 += 1;
+      if (at && at >= d7) lockOpensLast7 += 1;
+      if (at && at >= d30) lockOpensLast30 += 1;
+      if (at && at >= d90) lockOpensLast90 += 1;
     } else if (ev === LOCK_FUNNEL_EVENTS.TYPED) lockTyped += 1;
     else if (ev === LOCK_FUNNEL_EVENTS.SUBMIT) lockSubmits += 1;
     else if (ev === LOCK_FUNNEL_EVENTS.BRANCH) lockBranches += 1;
@@ -297,82 +328,94 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
       parseDate(u.createdAt) ||
       parseDate(summary.signupAt) ||
       null;
-    if (createdAt) signupDates.push(createdAt);
-
-    const rawAttribution =
-      typeof (u as { signupAttribution?: unknown }).signupAttribution === 'string'
-        ? (u as { signupAttribution: string }).signupAttribution
-        : null;
-    const refKey = rawAttribution?.trim()
-      ? normalizeMarketingRef(rawAttribution) || rawAttribution.trim().toLowerCase()
-      : 'organic';
-    bumpAttribution(refKey, {
-      signupsTotal: 1,
-      signupsLast7Days: createdAt && createdAt >= d7 ? 1 : 0,
-      signupsLast30Days: createdAt && createdAt >= d30 ? 1 : 0,
-      signupsLast90Days: createdAt && createdAt >= d90 ? 1 : 0,
-    });
-
-    const firstAiAt = parseDate(summary.firstAiAt);
-    if (firstAiAt && createdAt) {
-      activatedUsers += 1;
-      totalHoursToFirstAi += hoursBetween(createdAt, firstAiAt);
-      firstAiCount += 1;
-      bumpAttribution(refKey, { activated: 1 });
-    }
-
-    const firstLineAt = parseDate(summary.firstGenerateNextLineAt);
-    if (firstLineAt && createdAt) {
-      totalHoursToFirstLine += hoursBetween(createdAt, firstLineAt);
-      firstLineCount += 1;
-    }
-
-    if (summary.firstTrackEditorAt) trackEditorOpens += 1;
-    pricingPageViews += Number(summary.pricingViews || 0);
-    checkoutStarts += Number(summary.checkoutStarts || 0);
-    checkoutCompletions += Number(summary.checkoutCompletions || 0);
-    freeLimitHitEvents += Number(summary.freeLimitHits || 0);
-    lowInkHitEvents += Number(summary.lowInkHits || 0);
-    inkDepletionEvents += Number(summary.inkDepletions || 0);
-    if ((u as { proTrialWinCompletedAt?: string }).proTrialWinCompletedAt) {
-      usersTrialQuestComplete += 1;
-    }
-
-    const inkDepletedAt = parseDate(summary.inkDepletedAt);
-    if (inkDepletedAt && (!u.subscriptionStatus || u.subscriptionStatus !== 'active')) {
-      usersInkDepleted += 1;
-      const depletedDay = inkDepletedAt.toISOString().slice(0, 10);
-      const sessionDates: string[] = summary.sessionDates || [];
-      const returnedAfterDepletion = sessionDates.some((day) => day > depletedDay);
-      const lastActive = parseDate(summary.lastActiveAt);
-      const inactive30d = !lastActive || lastActive < d30;
-      if (!returnedAfterDepletion && inactive30d) inkDepletedChurned30d += 1;
-    }
-
     const lastActive = parseDate(summary.lastActiveAt);
+    const inSignupCohort = !periodStart || inPeriod(createdAt, periodStart);
+    const activeInPeriod = !periodStart || (lastActive != null && lastActive >= periodStart);
+
     if (lastActive) {
       if (lastActive >= d7) activeLast7Days += 1;
       if (lastActive >= d30) activeLast30Days += 1;
     }
 
-    const sessionDates: string[] = summary.sessionDates || [];
-    if (createdAt && sessionDates.length >= 2) {
-      const signupDay = createdAt.toISOString().slice(0, 10);
-      const returnedWithin7 = sessionDates.some((day) => {
-        if (day <= signupDay) return false;
-        const diff = (new Date(day).getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
-        return diff > 0 && diff <= 7;
+    if (!inSignupCohort && !activeInPeriod) {
+      continue;
+    }
+
+    if (inSignupCohort) {
+      cohortCount += 1;
+      if (createdAt) signupDates.push(createdAt);
+
+      const rawAttribution =
+        typeof (u as { signupAttribution?: unknown }).signupAttribution === 'string'
+          ? (u as { signupAttribution: string }).signupAttribution
+          : null;
+      const refKey = rawAttribution?.trim()
+        ? normalizeMarketingRef(rawAttribution) || rawAttribution.trim().toLowerCase()
+        : 'organic';
+      bumpAttribution(refKey, {
+        signupsTotal: 1,
+        signupsLast7Days: createdAt && createdAt >= d7 ? 1 : 0,
+        signupsLast30Days: createdAt && createdAt >= d30 ? 1 : 0,
+        signupsLast90Days: createdAt && createdAt >= d90 ? 1 : 0,
       });
-      if (returnedWithin7) usersWith7DayReturn += 1;
+
+      const firstAiAt = parseDate(summary.firstAiAt);
+      if (firstAiAt && createdAt) {
+        activatedUsers += 1;
+        totalHoursToFirstAi += hoursBetween(createdAt, firstAiAt);
+        firstAiCount += 1;
+        bumpAttribution(refKey, { activated: 1 });
+      }
+
+      const firstLineAt = parseDate(summary.firstGenerateNextLineAt);
+      if (firstLineAt && createdAt) {
+        totalHoursToFirstLine += hoursBetween(createdAt, firstLineAt);
+        firstLineCount += 1;
+      }
+
+      if (summary.firstTrackEditorAt) trackEditorOpens += 1;
+      pricingPageViews += Number(summary.pricingViews || 0);
+      checkoutStarts += Number(summary.checkoutStarts || 0);
+      checkoutCompletions += Number(summary.checkoutCompletions || 0);
+      freeLimitHitEvents += Number(summary.freeLimitHits || 0);
+      lowInkHitEvents += Number(summary.lowInkHits || 0);
+      inkDepletionEvents += Number(summary.inkDepletions || 0);
+      if ((u as { proTrialWinCompletedAt?: string }).proTrialWinCompletedAt) {
+        usersTrialQuestComplete += 1;
+      }
+
+      const inkDepletedAt = parseDate(summary.inkDepletedAt);
+      if (inkDepletedAt && (!u.subscriptionStatus || u.subscriptionStatus !== 'active')) {
+        usersInkDepleted += 1;
+        const depletedDay = inkDepletedAt.toISOString().slice(0, 10);
+        const sessionDates: string[] = summary.sessionDates || [];
+        const returnedAfterDepletion = sessionDates.some((day) => day > depletedDay);
+        const inactive30d = !lastActive || lastActive < d30;
+        if (!returnedAfterDepletion && inactive30d) inkDepletedChurned30d += 1;
+      }
+
+      const sessionDates: string[] = summary.sessionDates || [];
+      if (createdAt && sessionDates.length >= 2) {
+        const signupDay = createdAt.toISOString().slice(0, 10);
+        const returnedWithin7 = sessionDates.some((day) => {
+          if (day <= signupDay) return false;
+          const diff = (new Date(day).getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+          return diff > 0 && diff <= 7;
+        });
+        if (returnedWithin7) usersWith7DayReturn += 1;
+      }
+
+      if (u.subscriptionStatus === 'active') {
+        if (u.subscriptionTier === 'yearly') activeProYearly += 1;
+        else activeProMonthly += 1;
+        bumpAttribution(refKey, { proActive: 1 });
+      }
     }
 
-    if (u.subscriptionStatus === 'active') {
-      if (u.subscriptionTier === 'yearly') activeProYearly += 1;
-      else activeProMonthly += 1;
-      bumpAttribution(refKey, { proActive: 1 });
-    }
-
-    if (!u.subscriptionStatus || u.subscriptionStatus !== 'active') {
+    if (
+      activeInPeriod &&
+      (!u.subscriptionStatus || u.subscriptionStatus !== 'active')
+    ) {
       const albumsSnap = await db.collection('users').doc(u.id).collection('albums').get();
       const albumCount = albumsSnap.size;
       let trackCount = 0;
@@ -393,6 +436,8 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
 
   for (const doc of eventsSnap.docs) {
     const data = doc.data();
+    const at = parseDate(data.timestamp);
+    if (!inPeriod(at, periodStart)) continue;
     const ev = String(data.event || '');
     const metadata = (data.metadata as Record<string, unknown>) || {};
 
@@ -425,7 +470,10 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
   let shareCardOpened = 0;
   let leaderboardViews = 0;
   for (const doc of eventsSnap.docs) {
-    const ev = String(doc.data().event || '');
+    const data = doc.data();
+    const at = parseDate(data.timestamp);
+    if (!inPeriod(at, periodStart)) continue;
+    const ev = String(data.event || '');
     if (ev === 'achievement_unlocked') achievementUnlockEvents += 1;
     if (ev === 'streak_milestone') streakMilestoneEvents += 1;
     if (ev === 'share_card_generated') shareCardGenerated += 1;
@@ -439,8 +487,19 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
   let usersWithAchievements = 0;
   let streakSum = 0;
   let streakCount = 0;
-  for (const snap of gamSnaps) {
-    const g = snap.data() || {};
+  for (let i = 0; i < users.length; i++) {
+    const u = users[i];
+    const summary = summarySnaps[i].data() || {};
+    const createdAt =
+      parseDate(u.createdAt) ||
+      parseDate(summary.signupAt) ||
+      null;
+    const lastActive = parseDate(summary.lastActiveAt);
+    const inSignupCohort = !periodStart || inPeriod(createdAt, periodStart);
+    const activeInPeriod = !periodStart || (lastActive != null && lastActive >= periodStart);
+    if (!inSignupCohort && !activeInPeriod) continue;
+
+    const g = gamSnaps[i].data() || {};
     if (g.unlockedAchievements && Object.keys(g.unlockedAchievements).length > 0) {
       usersWithAchievements += 1;
     }
@@ -465,21 +524,21 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
     const log = doc.data();
     if (log.type !== 'transaction') continue;
     const ts = parseDate(log.timestamp);
-    if (!ts) continue;
+    if (!inPeriod(ts, periodStart)) continue;
     const gross = parseFloat(String(log.details || '').replace(/[^\d.]/g, '')) || Math.abs(log.usdCost || 0);
     const action = String(log.action || '');
-    if (ts >= d30) {
+    if (ts && ts >= d30) {
       if (action === 'Ink Pack Purchase') inkPackRevenue30d += gross;
       if (action === 'Pro Membership') subscriptionRevenue30d += gross;
     }
-    if (ts >= d90 && action === 'Ink Pack Purchase') inkPackRevenue90d += gross;
+    if (ts && ts >= d90 && action === 'Ink Pack Purchase') inkPackRevenue90d += gross;
     if (log.userId) payingUsers.add(log.userId);
   }
 
   const estimatedMrr =
     activeProMonthly * PRO_MONTHLY_PRICE_AMOUNT + activeProYearly * PRO_YEARLY_PRICE_AMOUNT;
 
-  const totalSignups = users.length;
+  const totalSignups = cohortCount;
   const activationRatePercent =
     totalSignups > 0 ? Math.round((activatedUsers / totalSignups) * 1000) / 10 : 0;
   const sevenDayReturnRatePercent =
@@ -494,7 +553,7 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
       ? Math.round(((activeProMonthly + activeProYearly) / totalSignups) * 1000) / 10
       : 0;
 
-  const totalSignupsForAttribution = users.length;
+  const totalSignupsForAttribution = totalSignups;
   const allRefKeys = new Set<string>([
     ...attributionByRef.keys(),
     ...landingByRef.keys(),
@@ -554,15 +613,18 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
   const organicSignups = attributionByRef.get('organic')?.signupsTotal || 0;
   let totalLandingHits = 0;
   let landingHitsLast30Days = 0;
+  let landingHitsLast90Days = 0;
   for (const landing of landingByRef.values()) {
     totalLandingHits += landing.hitsTotal;
     landingHitsLast30Days += landing.hitsLast30Days;
+    landingHitsLast90Days += landing.hitsLast90Days;
   }
   const signupAttribution: SignupAttributionStats = {
     taggedSignups: totalSignupsForAttribution - organicSignups,
     organicSignups,
     totalLandingHits,
     landingHitsLast30Days,
+    landingHitsLast90Days,
     byRef: attributionRows,
   };
 
@@ -573,6 +635,7 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
     opens: guestOpens,
     opensLast7Days: guestOpensLast7,
     opensLast30Days: guestOpensLast30,
+    opensLast90Days: guestOpensLast90,
     wroteBar: guestWroteBar,
     demoAiRequests: guestDemoAiRequests,
     demoAiSuccesses: guestDemoAiSuccesses,
@@ -594,6 +657,7 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
     opens: lockOpens,
     opensLast7Days: lockOpensLast7,
     opensLast30Days: lockOpensLast30,
+    opensLast90Days: lockOpensLast90,
     typed: lockTyped,
     submits: lockSubmits,
     branches: lockBranches,
@@ -612,25 +676,29 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
     openToSignupCtaPercent: pct(lockSignupCtas, lockOpens),
   };
 
-  const recentEvents = eventsSnap.docs.slice(0, 25).map((doc) => {
-    const data = doc.data();
-    return {
-      timestamp: String(data.timestamp || ''),
-      event: String(data.event || ''),
-      userId: String(data.userId || ''),
-      userName: data.userName ? String(data.userName) : null,
-      metadata: (data.metadata as Record<string, unknown>) || {},
-    };
-  });
+  const recentEvents = eventsSnap.docs
+    .filter((doc) => inPeriod(parseDate(doc.data().timestamp), periodStart))
+    .slice(0, 25)
+    .map((doc) => {
+      const data = doc.data();
+      return {
+        timestamp: String(data.timestamp || ''),
+        event: String(data.event || ''),
+        userId: String(data.userId || ''),
+        userName: data.userName ? String(data.userName) : null,
+        metadata: (data.metadata as Record<string, unknown>) || {},
+      };
+    });
 
   return {
     generatedAt: now.toISOString(),
+    period,
     funnel: {
       totalSignups,
       signupsLast7Days: signupsLast7,
       signupsLast30Days: signupsLast30,
       signupsLast90Days: signupsLast90,
-      signupsByDay: buildDailyCounts(signupDates, 30),
+      signupsByDay: buildDailyCounts(signupDates, chartDays),
       activatedUsers,
       activationRatePercent,
       avgHoursToFirstAi: firstAiCount > 0 ? Math.round((totalHoursToFirstAi / firstAiCount) * 10) / 10 : null,
@@ -704,9 +772,10 @@ export async function computeAdminMetrics(): Promise<AdminMetricsSnapshot> {
   };
 }
 
-function emptyMetrics(notes: string): AdminMetricsSnapshot {
+function emptyMetrics(notes: string, rangeKey: MetricsRangeKey = DEFAULT_METRICS_RANGE): AdminMetricsSnapshot {
   return {
     generatedAt: new Date().toISOString(),
+    period: buildMetricsPeriod(rangeKey),
     funnel: {
       totalSignups: 0,
       signupsLast7Days: 0,
@@ -764,11 +833,19 @@ function emptyMetrics(notes: string): AdminMetricsSnapshot {
       freeLimitHitsByType: { album: 0, track: 0 },
     },
     acquisition: { adSpend30d: 0, adSpend90d: 0, costPerSignup: null, costPerActivatedUser: null, notes },
-    signupAttribution: { taggedSignups: 0, organicSignups: 0, totalLandingHits: 0, landingHitsLast30Days: 0, byRef: [] },
+    signupAttribution: {
+      taggedSignups: 0,
+      organicSignups: 0,
+      totalLandingHits: 0,
+      landingHitsLast30Days: 0,
+      landingHitsLast90Days: 0,
+      byRef: [],
+    },
     guestTryFunnel: {
       opens: 0,
       opensLast7Days: 0,
       opensLast30Days: 0,
+      opensLast90Days: 0,
       wroteBar: 0,
       demoAiRequests: 0,
       demoAiSuccesses: 0,
@@ -789,6 +866,7 @@ function emptyMetrics(notes: string): AdminMetricsSnapshot {
       opens: 0,
       opensLast7Days: 0,
       opensLast30Days: 0,
+      opensLast90Days: 0,
       typed: 0,
       submits: 0,
       branches: 0,

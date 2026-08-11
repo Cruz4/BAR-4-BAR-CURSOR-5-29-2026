@@ -30,6 +30,8 @@ import {
     LineChart,
     Trophy,
     ArrowUpDown,
+    ChevronLeft,
+    ChevronRight,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { User, SystemLog } from '@/lib/types';
@@ -66,6 +68,7 @@ type RosterSortKey = 'artist' | 'tier' | 'rank' | 'trophies' | 'streak' | 'joine
 type SortDir = 'asc' | 'desc';
 
 const TOTAL_ACHIEVEMENTS = ACHIEVEMENTS.length;
+const OPS_LOG_PAGE_SIZE = 50;
 
 const TIER_SORT_ORDER: Record<string, number> = {
   yearly: 3,
@@ -86,6 +89,7 @@ export default function AdminPage() {
   const [blockedUsers, setBlockedUsers] = useState<User[]>([]);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
   const [opsLogFilter, setOpsLogFilter] = useState<'all' | 'transaction' | 'achievement' | 'ai_request'>('all');
+  const [opsLogPage, setOpsLogPage] = useState(1);
   const [backfillingAchievements, setBackfillingAchievements] = useState(false);
   const [balances, setBalances] = useState<Record<string, { res: number, pur: number }>>({});
   const [gamificationStats, setGamificationStats] = useState<Record<string, AdminGamificationStats>>({});
@@ -135,6 +139,13 @@ export default function AdminPage() {
     return systemLogs.filter((log) => log.type === opsLogFilter);
   }, [systemLogs, opsLogFilter]);
 
+  const opsLogPageCount = Math.max(1, Math.ceil(filteredOpsLogs.length / OPS_LOG_PAGE_SIZE));
+  const safeOpsLogPage = Math.min(opsLogPage, opsLogPageCount);
+  const pagedOpsLogs = useMemo(() => {
+    const start = (safeOpsLogPage - 1) * OPS_LOG_PAGE_SIZE;
+    return filteredOpsLogs.slice(start, start + OPS_LOG_PAGE_SIZE);
+  }, [filteredOpsLogs, safeOpsLogPage]);
+
   const opsLogCounts = useMemo(() => {
     let transaction = 0;
     let achievement = 0;
@@ -146,6 +157,14 @@ export default function AdminPage() {
     }
     return { all: systemLogs.length, transaction, achievement, ai_request };
   }, [systemLogs]);
+
+  useEffect(() => {
+    setOpsLogPage(1);
+  }, [opsLogFilter]);
+
+  useEffect(() => {
+    if (opsLogPage > opsLogPageCount) setOpsLogPage(opsLogPageCount);
+  }, [opsLogPage, opsLogPageCount]);
 
   const toggleRosterSort = (key: RosterSortKey) => {
     setRosterSort((prev) =>
@@ -873,7 +892,10 @@ export default function AdminPage() {
                         size="sm"
                         variant={opsLogFilter === f.id ? 'default' : 'outline'}
                         className="h-8 text-[10px] font-bold uppercase tracking-wider"
-                        onClick={() => setOpsLogFilter(f.id)}
+                        onClick={() => {
+                          setOpsLogFilter(f.id);
+                          setOpsLogPage(1);
+                        }}
                       >
                         {f.label}
                         <span className="ml-1.5 opacity-70">{opsLogCounts[f.id]}</span>
@@ -899,7 +921,7 @@ export default function AdminPage() {
                                 </TableCell>
                               </TableRow>
                             ) : null}
-                            {filteredOpsLogs.map(log => {
+                            {pagedOpsLogs.map(log => {
                                 const rosterUser = users.find((u) => u.id === log.userId)
                                   || blockedUsers.find((u) => u.id === log.userId);
                                 const artistLabel =
@@ -940,6 +962,46 @@ export default function AdminPage() {
                             })}
                         </TableBody>
                     </Table>
+                    {filteredOpsLogs.length > 0 ? (
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3">
+                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                          Showing{' '}
+                          <span className="font-bold text-foreground">
+                            {(safeOpsLogPage - 1) * OPS_LOG_PAGE_SIZE + 1}
+                            –
+                            {Math.min(safeOpsLogPage * OPS_LOG_PAGE_SIZE, filteredOpsLogs.length)}
+                          </span>{' '}
+                          of <span className="font-bold text-foreground">{filteredOpsLogs.length}</span>
+                          {' · '}
+                          {OPS_LOG_PAGE_SIZE} per page
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-8 gap-1 text-[10px] font-bold uppercase tracking-wider"
+                            disabled={safeOpsLogPage <= 1}
+                            onClick={() => setOpsLogPage((p) => Math.max(1, p - 1))}
+                          >
+                            <ChevronLeft className="h-3.5 w-3.5" /> Prev
+                          </Button>
+                          <span className="min-w-[5.5rem] text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Page {safeOpsLogPage} / {opsLogPageCount}
+                          </span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-8 gap-1 text-[10px] font-bold uppercase tracking-wider"
+                            disabled={safeOpsLogPage >= opsLogPageCount}
+                            onClick={() => setOpsLogPage((p) => Math.min(opsLogPageCount, p + 1))}
+                          >
+                            Next <ChevronRight className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
                 </CardContent>
             </Card>
         </TabsContent>

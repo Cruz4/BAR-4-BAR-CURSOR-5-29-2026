@@ -21,16 +21,20 @@ export type SignupAttributionRow = {
 export type SignupAttributionStats = {
   taggedSignups: number;
   organicSignups: number;
+  /** Tagged ?ref= landing hits in the selected period. */
   totalLandingHits: number;
   landingHitsLast30Days: number;
+  landingHitsLast90Days: number;
   byRef: SignupAttributionRow[];
 };
 
 /** Anonymous guest try-sheet funnel (pre-signup). */
 export type GuestTryFunnelStats = {
+  /** Opens in the selected period. */
   opens: number;
   opensLast7Days: number;
   opensLast30Days: number;
+  opensLast90Days: number;
   wroteBar: number;
   demoAiRequests: number;
   demoAiSuccesses: number;
@@ -51,9 +55,11 @@ export type GuestTryFunnelStats = {
 
 /** LOCK / finish-the-bar funnel (guest + signed-in). */
 export type LockFunnelStats = {
+  /** Opens in the selected period. */
   opens: number;
   opensLast7Days: number;
   opensLast30Days: number;
+  opensLast90Days: number;
   typed: number;
   submits: number;
   branches: number;
@@ -75,8 +81,14 @@ export type LockFunnelStats = {
   openToSignupCtaPercent: number;
 };
 
+import type { AdminMetricsPeriod } from '@/lib/admin-metrics-range';
+
+export type { AdminMetricsPeriod, MetricsRangeKey } from '@/lib/admin-metrics-range';
+
 export type AdminMetricsSnapshot = {
   generatedAt: string;
+  /** Selected lookback window for this snapshot (day 1 → now when all-time). */
+  period: AdminMetricsPeriod;
   funnel: {
     totalSignups: number;
     signupsLast7Days: number;
