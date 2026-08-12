@@ -718,6 +718,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
           <div key={post.id} className="relative">
             <PostCard
               post={post}
+              showAuthor
               viewerSlug={ctx.viewerSlug}
               onDeleted={
                 playground

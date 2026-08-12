@@ -33,7 +33,7 @@ import { Hint } from '@/components/ui/tooltip';
 
 type PostCardProps = {
   post: ProfilePost;
-  /** Show the author name/link header (used in the feed; hidden on own wall). */
+  /** Show the author name/avatar header (feed, wall, and reverbs). */
   showAuthor?: boolean;
   viewerSlug?: string;
   onDeleted?: (postId: string) => void;
