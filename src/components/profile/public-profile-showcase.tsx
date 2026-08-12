@@ -17,6 +17,7 @@ import {
 import type { AchievementDef } from '@/lib/gamification/achievements';
 import type { RankId } from '@/lib/gamification/types';
 import { AlbumCoverCollage } from '@/components/gamification/album-cover-collage';
+import { ProfileInitialsStar } from '@/components/profile/profile-initials-star';
 import { PublicAchievementFoil } from '@/components/profile/public-achievement-foil';
 import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
 import { Button } from '@/components/ui/button';
@@ -110,13 +111,22 @@ export function PublicProfileShowcase({
   const fileRef = useRef<HTMLInputElement>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
-  const [localMode, setLocalMode] = useState<'collage' | 'custom'>(
-    profile.profilePhotoMode === 'custom' ? 'custom' : 'collage'
+  const [localMode, setLocalMode] = useState<'collage' | 'custom' | 'initials'>(
+    profile.profilePhotoMode === 'custom'
+      ? 'custom'
+      : profile.profilePhotoMode === 'initials'
+        ? 'initials'
+        : 'collage'
   );
   const [localPhotoUrl, setLocalPhotoUrl] = useState<string | null>(profile.profilePhotoUrl || null);
 
+  const coverUrls = (profile.albumCoverUrls || []).filter(
+    (u) => typeof u === 'string' && u.trim().length > 0
+  );
   const useCustom =
     localMode === 'custom' && typeof localPhotoUrl === 'string' && localPhotoUrl.trim().length > 0;
+  const useCollage = localMode === 'collage' && coverUrls.length > 0;
+  const useInitials = !useCustom && !useCollage;
 
   const profileUrl =
     typeof window !== 'undefined' && profile.slug
@@ -270,9 +280,14 @@ export function PublicProfileShowcase({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={localPhotoUrl!} alt="" className="h-full w-full object-cover" />
                 </div>
+              ) : useInitials ? (
+                <ProfileInitialsStar
+                  displayName={profile.displayName}
+                  className="relative h-auto w-full max-w-md aspect-square rounded-[1.75rem] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+                />
               ) : (
                 <AlbumCoverCollage
-                  urls={profile.albumCoverUrls || []}
+                  urls={coverUrls}
                   displayName={profile.displayName}
                   className="relative h-auto w-full max-w-md aspect-square rounded-[1.75rem] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
                 />

@@ -3,31 +3,21 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { buildAlbumCoverCollageLayout } from '@/lib/album-cover-collage';
-import { getInitials } from '@/lib/gamification/studio-pass';
+import { ProfileInitialsStar } from '@/components/profile/profile-initials-star';
 
 type AlbumCoverCollageProps = {
   urls: string[];
-  displayName: string;
+  displayName?: string | null;
   className?: string;
 };
 
 export function AlbumCoverCollage({ urls, displayName, className }: AlbumCoverCollageProps) {
   const layout = buildAlbumCoverCollageLayout(urls);
+  const name = displayName?.trim() || 'Artist';
 
+  // No covers (or collage mode with nothing to tile) → stock initials star, not a letter box.
   if (!layout) {
-    return (
-      <div
-        className={cn(
-          'flex aspect-square items-center justify-center rounded-2xl border border-primary/30 bg-black/50 shadow-[0_0_40px_rgba(59,130,246,0.25)]',
-          className
-        )}
-        aria-hidden
-      >
-        <span className="font-headline text-4xl font-bold uppercase text-primary">
-          {getInitials(displayName)}
-        </span>
-      </div>
-    );
+    return <ProfileInitialsStar displayName={name} className={className} />;
   }
 
   return (
@@ -37,7 +27,7 @@ export function AlbumCoverCollage({ urls, displayName, className }: AlbumCoverCo
         className
       )}
       role="img"
-      aria-label={`${displayName} album cover collage`}
+      aria-label={`${name} album cover collage`}
     >
       <div
         className={cn('grid h-full w-full', layout.gridClass)}

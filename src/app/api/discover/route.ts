@@ -23,20 +23,21 @@ export async function GET(req: Request) {
 
     const [artists, posts, drops, risers, locks] = await Promise.all([
       listRecentPublicProfiles({
-        limit: viewAll ? 24 : 8,
+        // Home: Scene strip (40/page, up to 80). All: /discover (40/page, up to 120).
+        limit: viewAll ? 40 : 32,
         excludeUserId,
       }),
       listRecentPublicPosts({
-        limit: viewAll ? 24 : 10,
+        limit: viewAll ? 48 : 40,
         excludeOwnerId: excludeUserId,
       }),
       listRecentShareSummaries({
-        limit: viewAll ? 18 : 6,
+        limit: viewAll ? 28 : 24,
         excludeOwnerId: excludeUserId,
       }),
       listLeaderboardRisers({ limit: 5, excludeUserId }),
       (await isLockFeatureEnabled())
-        ? listRecentOpenLocks(viewAll ? 12 : 6).catch(() => [])
+        ? listRecentOpenLocks(viewAll ? 18 : 14).catch(() => [])
         : Promise.resolve([]),
     ]);
 

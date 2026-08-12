@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
+import { ArtistHomeLink, useLiveArtistHomeSlug } from '@/components/profile/artist-home-link';
 import { EmbedPlayer } from '@/components/profile/embed-player';
 import { PostShareDialog } from '@/components/profile/post-share-dialog';
 import {
@@ -21,7 +22,6 @@ import {
   fetchHasLiked,
   fetchHasReverbed,
   fetchLikeCount,
-  fetchLivePublicProfileByUserId,
   fetchPublicArtistAvatarMeta,
   likePost,
   toggleReverb,
@@ -29,7 +29,7 @@ import {
   type PostComment,
   type ProfilePost,
 } from '@/lib/profile/social-client';
-import { profileHref } from '@/lib/profile/profile-slug';
+import { Hint } from '@/components/ui/tooltip';
 
 type PostCardProps = {
   post: ProfilePost;
@@ -50,27 +50,13 @@ function timeAgo(iso: string): string {
 
 function ReverbSourceBody({ post }: { post: ProfilePost }) {
   const name = post.reverbOwnerName || 'Artist';
-  const [liveSlug, setLiveSlug] = useState<string | undefined>(post.reverbOwnerSlug);
-  const href = profileHref(liveSlug);
+  const { liveSlug, href, resolved, isLive } = useLiveArtistHomeSlug(
+    post.reverbOwnerId,
+    post.reverbOwnerSlug
+  );
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
   const [starSeed, setStarSeed] = useState<number | undefined>(undefined);
   const [useStar, setUseStar] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    const ownerId = post.reverbOwnerId;
-    if (ownerId) {
-      void fetchLivePublicProfileByUserId(ownerId).then((live) => {
-        if (cancelled || !live?.slug) return;
-        setLiveSlug(live.slug);
-      });
-    } else {
-      setLiveSlug(post.reverbOwnerSlug);
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [post.reverbOwnerId, post.reverbOwnerSlug]);
 
   useEffect(() => {
     if (!liveSlug) {
@@ -94,24 +80,39 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
   return (
     <div className="mt-2 rounded-xl border border-[var(--ph-border,rgba(255,255,255,0.14))] bg-black/30 p-3">
       <div className="mb-1.5 flex items-center gap-2">
-        <ArtistStarAvatar
-          name={name}
-          avatarUrl={avatarUrl}
-          useStarMark={useStar}
-          starMarkSeed={starSeed}
-          href={href}
-          size={42}
-          toneClass="bg-sky-500/30 text-sky-300"
-        />
+        {resolved && !isLive && (post.reverbOwnerId || post.reverbOwnerSlug) ? (
+          <Hint content="Artist Home offline" side="top">
+            <span className="inline-flex cursor-default">
+              <ArtistStarAvatar
+                name={name}
+                avatarUrl={avatarUrl}
+                useStarMark={useStar}
+                starMarkSeed={starSeed}
+                size={42}
+                toneClass="bg-sky-500/30 text-sky-300"
+              />
+            </span>
+          </Hint>
+        ) : (
+          <ArtistStarAvatar
+            name={name}
+            avatarUrl={avatarUrl}
+            useStarMark={useStar}
+            starMarkSeed={starSeed}
+            href={href}
+            size={42}
+            toneClass="bg-sky-500/30 text-sky-300"
+          />
+        )}
         <p className="min-w-0 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
           Original ·{' '}
-          {href ? (
-            <Link href={href} className="text-[var(--ph-accent,#7dd3fc)] hover:underline">
-              {name}
-            </Link>
-          ) : (
-            <span className="text-[var(--ph-accent,#7dd3fc)]">{name}</span>
-          )}
+          <ArtistHomeLink
+            userId={post.reverbOwnerId}
+            slug={post.reverbOwnerSlug}
+            className="text-[var(--ph-accent,#7dd3fc)] hover:underline"
+          >
+            {name}
+          </ArtistHomeLink>
         </p>
       </div>
       {post.reverbText ? (
@@ -157,7 +158,12 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   const [authorAvatarUrl, setAuthorAvatarUrl] = useState<string | undefined>(undefined);
   const [authorStarSeed, setAuthorStarSeed] = useState<number | undefined>(undefined);
   const [authorUseStar, setAuthorUseStar] = useState(false);
-  const [liveAuthorSlug, setLiveAuthorSlug] = useState<string | undefined>(post.ownerSlug);
+  const {
+    liveSlug: liveAuthorSlug,
+    href: authorHref,
+    resolved: authorResolved,
+    isLive: authorIsLive,
+  } = useLiveArtistHomeSlug(showAuthor ? post.ownerId : undefined, showAuthor ? post.ownerSlug : undefined);
 
   const isOwner = Boolean(user?.id && user.id === post.ownerId);
   const rootIdForReverb =
@@ -177,24 +183,6 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     }
     void fetchHasReverbed(rootIdForReverb).then(setReverbed).catch(() => undefined);
   }, [canReverb, rootIdForReverb]);
-
-  useEffect(() => {
-    if (!showAuthor) {
-      setLiveAuthorSlug(undefined);
-      return;
-    }
-    let cancelled = false;
-    setLiveAuthorSlug(post.ownerSlug);
-    if (post.ownerId) {
-      void fetchLivePublicProfileByUserId(post.ownerId).then((live) => {
-        if (cancelled || !live?.slug) return;
-        setLiveAuthorSlug(live.slug);
-      });
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [showAuthor, post.ownerId, post.ownerSlug]);
 
   useEffect(() => {
     if (!showAuthor || !liveAuthorSlug) {
@@ -324,35 +312,41 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
       )}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          {showAuthor &&
-            (() => {
-              const authorHref = profileHref(liveAuthorSlug);
-              return (
-                <span className="inline-flex items-center gap-2.5">
-                  <ArtistStarAvatar
-                    name={post.ownerName}
-                    avatarUrl={authorAvatarUrl}
-                    useStarMark={authorUseStar}
-                    starMarkSeed={authorStarSeed}
-                    href={authorHref}
-                    size={56}
-                    toneClass="bg-sky-500/30 text-sky-300"
-                  />
-                  {authorHref ? (
-                    <Link
-                      href={authorHref}
-                      className="text-xs font-bold uppercase tracking-widest text-sky-300 hover:underline"
-                    >
-                      {post.ownerName}
-                    </Link>
-                  ) : (
-                    <span className="text-xs font-bold uppercase tracking-widest text-sky-300">
-                      {post.ownerName}
-                    </span>
-                  )}
-                </span>
-              );
-            })()}
+          {showAuthor && (
+            <span className="inline-flex items-center gap-2.5">
+              {authorResolved && !authorIsLive ? (
+                <Hint content="Artist Home offline" side="top">
+                  <span className="inline-flex cursor-default">
+                    <ArtistStarAvatar
+                      name={post.ownerName}
+                      avatarUrl={authorAvatarUrl}
+                      useStarMark={authorUseStar}
+                      starMarkSeed={authorStarSeed}
+                      size={56}
+                      toneClass="bg-sky-500/30 text-sky-300"
+                    />
+                  </span>
+                </Hint>
+              ) : (
+                <ArtistStarAvatar
+                  name={post.ownerName}
+                  avatarUrl={authorAvatarUrl}
+                  useStarMark={authorUseStar}
+                  starMarkSeed={authorStarSeed}
+                  href={authorHref}
+                  size={56}
+                  toneClass="bg-sky-500/30 text-sky-300"
+                />
+              )}
+              <ArtistHomeLink
+                userId={post.ownerId}
+                slug={post.ownerSlug}
+                className="text-xs font-bold uppercase tracking-widest text-sky-300 hover:underline"
+              >
+                {post.ownerName}
+              </ArtistHomeLink>
+            </span>
+          )}
           <p className="text-[10px] uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
             {timeAgo(post.createdAt)}
           </p>
@@ -452,18 +446,13 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
           {comments.map((comment) => (
             <div key={comment.id} className="flex items-start gap-2 text-sm">
               <div className="min-w-0 flex-1">
-                {comment.authorSlug ? (
-                  <Link
-                    href={profileHref(comment.authorSlug) || '#'}
-                    className="mr-2 text-[11px] font-bold uppercase tracking-wider text-[var(--ph-accent2,#fbbf24)] hover:underline"
-                  >
-                    {comment.authorName}
-                  </Link>
-                ) : (
-                  <span className="mr-2 text-[11px] font-bold uppercase tracking-wider text-[var(--ph-accent2,#fbbf24)]">
-                    {comment.authorName}
-                  </span>
-                )}
+                <ArtistHomeLink
+                  userId={comment.authorId}
+                  slug={comment.authorSlug}
+                  className="mr-2 text-[11px] font-bold uppercase tracking-wider text-[var(--ph-accent2,#fbbf24)] hover:underline"
+                >
+                  {comment.authorName}
+                </ArtistHomeLink>
                 <span className="text-[var(--ph-text,#fff)]/90">{comment.text}</span>
               </div>
               {user?.id && (user.id === comment.authorId || isOwner) && (

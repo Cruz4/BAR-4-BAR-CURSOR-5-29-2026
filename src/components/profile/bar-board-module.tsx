@@ -18,6 +18,7 @@ import {
   setBoardPinReply,
   type BoardPinReply,
 } from '@/lib/profile/social-client';
+import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 import { cn } from '@/lib/utils';
 
 export function BarBoardView({
@@ -197,18 +198,13 @@ function BoardPinCard({
             {replies.slice(0, 8).map((r) => (
               <li key={r.id} className="flex items-start gap-2 text-xs">
                 <div className="min-w-0 flex-1">
-                  {r.authorSlug ? (
-                    <Link
-                      href={`/profile/${r.authorSlug}`}
-                      className="mr-1.5 font-semibold text-[var(--ph-accent2,#fbbf24)] hover:underline"
-                    >
-                      {r.authorName}
-                    </Link>
-                  ) : (
-                    <span className="mr-1.5 font-semibold text-[var(--ph-accent2,#fbbf24)]">
-                      {r.authorName}
-                    </span>
-                  )}
+                  <ArtistHomeLink
+                    userId={r.authorId}
+                    slug={r.authorSlug}
+                    className="mr-1.5 font-semibold text-[var(--ph-accent2,#fbbf24)] hover:underline"
+                  >
+                    {r.authorName}
+                  </ArtistHomeLink>
                   <span className="text-[var(--ph-muted,rgba(255,255,255,0.7))]">{r.text}</span>
                 </div>
                 {user && (user.id === r.authorId || user.id === profileUserId) ? (

@@ -32,6 +32,8 @@ import {
     ArrowUpDown,
     ChevronLeft,
     ChevronRight,
+    EyeOff,
+    Globe,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { User, SystemLog } from '@/lib/types';
@@ -104,6 +106,7 @@ export default function AdminPage() {
   const [studioConfig, setStudioConfig] = useState<any>(AI_COSTS);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [resettingGamification, setResettingGamification] = useState<string | null>(null);
+  const [moderatingPublicId, setModeratingPublicId] = useState<string | null>(null);
   const [gamificationRefreshing, setGamificationRefreshing] = useState(false);
   const [rosterSort, setRosterSort] = useState<{ key: RosterSortKey; dir: SortDir }>({ key: 'joined', dir: 'desc' });
   const rosterLoadedRef = useRef(false);
@@ -610,6 +613,67 @@ export default function AdminPage() {
       }
   };
 
+  const handleTogglePublicProfile = async (targetUser: User, nextPublic: boolean) => {
+    const action = nextPublic ? 'make public' : 'take offline (no public profile)';
+    if (
+      !confirm(
+        `${nextPublic ? 'Make' : 'Take'} ${targetUser.displayName} ${nextPublic ? 'public' : 'offline'}?\n\n${
+          nextPublic
+            ? 'Their Artist Home will go live on the Scene (if a slug is available).'
+            : 'Removes them from public friends lists, Discover, and /profile until they go live again.'
+        }`
+      )
+    ) {
+      return;
+    }
+
+    setModeratingPublicId(targetUser.id);
+    try {
+      const res = await adminApiFetch('/api/admin/gamification/moderate', {
+        method: 'POST',
+        body: JSON.stringify({ targetUserId: targetUser.id, publicProfile: nextPublic }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body.error || `Could not ${action} (${res.status})`);
+      }
+
+      setGamificationStats((prev) => ({
+        ...prev,
+        [targetUser.id]: {
+          ...(prev[targetUser.id] || {
+            displayName: targetUser.displayName,
+            email: targetUser.email,
+            status: targetUser.status || 'active',
+            xp: 0,
+            rankId: 'open_mic',
+            currentStreak: 0,
+            longestStreak: 0,
+            lifetimeBarsWritten: 0,
+            unlockedAchievements: {},
+            publicProfile: false,
+          }),
+          publicProfile: Boolean(body.publicProfile),
+          profileSlug:
+            typeof body.profileSlug === 'string' && body.profileSlug
+              ? body.profileSlug
+              : prev[targetUser.id]?.profileSlug,
+        },
+      }));
+
+      toast({
+        title: nextPublic ? 'Artist Home live' : 'Taken offline',
+        description: nextPublic
+          ? `${targetUser.displayName} is public again.`
+          : `${targetUser.displayName} has no public profile now.`,
+      });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Visibility update failed', description: e.message });
+    } finally {
+      setModeratingPublicId(null);
+    }
+  };
+
   const handleResetGamification = async (targetUser: User) => {
     if (
       !confirm(
@@ -641,6 +705,7 @@ export default function AdminPage() {
             displayName: targetUser.displayName,
             email: targetUser.email,
             status: targetUser.status || 'active',
+            publicProfile: false,
           }),
           xp: 0,
           rankId: 'open_mic',
@@ -781,6 +846,21 @@ export default function AdminPage() {
                               className="text-[8px] leading-none px-1.5 py-0.5 border-fuchsia-500/40 text-fuchsia-300 uppercase font-bold tracking-wide"
                             >
                               Admin
+                            </Badge>
+                          )}
+                          {gam?.publicProfile ? (
+                            <Badge
+                              variant="outline"
+                              className="text-[8px] leading-none px-1.5 py-0.5 border-sky-500/40 text-sky-300 uppercase font-bold tracking-wide"
+                            >
+                              Public
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="text-[8px] leading-none px-1.5 py-0.5 border-white/20 text-muted-foreground uppercase font-bold tracking-wide"
+                            >
+                              Offline
                             </Badge>
                           )}
                         </div>
@@ -951,6 +1031,37 @@ export default function AdminPage() {
                                       </Tooltip>
                                     );
                                   })()}
+                                  <Tooltip>
+                                      <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className={cn(
+                                              'h-8 w-8 hover:bg-sky-500/10',
+                                              gam?.publicProfile
+                                                ? 'text-sky-400'
+                                                : 'text-muted-foreground hover:text-sky-300'
+                                            )}
+                                            disabled={moderatingPublicId === u.id}
+                                            onClick={() =>
+                                              void handleTogglePublicProfile(u, !Boolean(gam?.publicProfile))
+                                            }
+                                          >
+                                            {gam?.publicProfile ? (
+                                              <EyeOff className="h-4 w-4" />
+                                            ) : (
+                                              <Globe className="h-4 w-4" />
+                                            )}
+                                          </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p className="text-[10px] font-bold">
+                                          {gam?.publicProfile
+                                            ? 'Take offline (no public profile)'
+                                            : 'Make public'}
+                                        </p>
+                                      </TooltipContent>
+                                  </Tooltip>
                                   <Tooltip>
                                       <TooltipTrigger asChild>
                                           <Button

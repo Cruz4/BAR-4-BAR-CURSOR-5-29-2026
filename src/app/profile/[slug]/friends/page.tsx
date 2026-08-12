@@ -2,6 +2,8 @@
 
 /**
  * Public circle for an Artist Home — full friends list with search.
+ * Only friends with a live public Artist Home appear here.
+ * Private / offline friends are personal-circle only (`/friends`).
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -16,17 +18,12 @@ import { useAuth } from '@/hooks/use-auth';
 import {
   enrichFriendProfilesWithLiveSlugs,
   fetchFriendships,
-  fetchPublicArtistMetas,
   friendProfilesOf,
+  resolveCircleFriends,
+  visibleCircleFriends,
+  type CircleFriendRow,
 } from '@/lib/profile/social-client';
 import { profileHref } from '@/lib/profile/profile-slug';
-
-type FriendRow = {
-  userId: string;
-  name: string;
-  slug?: string;
-  avatarUrl?: string;
-};
 
 export default function ProfileFriendsPage() {
   const params = useParams();
@@ -34,7 +31,7 @@ export default function ProfileFriendsPage() {
   const { user } = useAuth();
   const [displayName, setDisplayName] = useState('Artist');
   const [ownerId, setOwnerId] = useState<string | null>(null);
-  const [friends, setFriends] = useState<FriendRow[]>([]);
+  const [friends, setFriends] = useState<CircleFriendRow[]>([]);
   const [query, setQuery] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [missing, setMissing] = useState(false);
@@ -78,30 +75,13 @@ export default function ProfileFriendsPage() {
         }
 
         try {
-          const metas = await fetchPublicArtistMetas(base);
+          const resolved = await resolveCircleFriends(base);
           if (cancelled) return;
-          setFriends(
-            base.map((f) => {
-              const meta = metas.get(f.userId);
-              return {
-                userId: f.userId,
-                name: meta?.displayName || f.name,
-                slug: meta?.slug || f.slug,
-                avatarUrl: meta?.avatarUrl,
-              };
-            })
-          );
+          // Public Artist Home circle: live-public only (no offline).
+          setFriends(visibleCircleFriends(resolved, false));
         } catch (err) {
-          console.warn('[profile-friends] meta failed', err);
-          if (!cancelled) {
-            setFriends(
-              base.map((f) => ({
-                userId: f.userId,
-                name: f.name,
-                slug: f.slug,
-              }))
-            );
-          }
+          console.warn('[profile-friends] resolve failed', err);
+          if (!cancelled) setFriends([]);
         }
       } catch {
         if (!cancelled) setMissing(true);

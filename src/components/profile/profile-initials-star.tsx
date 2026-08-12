@@ -12,14 +12,15 @@ import { ARTIST_STAR_CLIP } from '@/components/profile/artist-star-avatar';
 import { getInitials } from '@/lib/gamification/studio-pass';
 
 type ProfileInitialsStarProps = {
-  displayName: string;
+  displayName?: string | null;
   className?: string;
   /** Emphasize as the active hero choice in the editor. */
   active?: boolean;
 };
 
 export function ProfileInitialsStar({ displayName, className, active }: ProfileInitialsStarProps) {
-  const initials = getInitials(displayName);
+  const name = displayName?.trim() || 'Artist';
+  const initials = getInitials(name);
   // Star indent is tight — keep glyphs inside the inner pentagon with breathing room.
   const fontSize = initials.length > 1 ? 22 : 26;
 
@@ -31,7 +32,7 @@ export function ProfileInitialsStar({ displayName, className, active }: ProfileI
         className
       )}
       role="img"
-      aria-label={`${displayName} initials`}
+      aria-label={`${name} initials`}
     >
       <svg
         viewBox="0 0 100 100"

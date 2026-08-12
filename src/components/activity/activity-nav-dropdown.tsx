@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -22,6 +21,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 import {
   fetchActivityFeed,
   FRIENDSHIP_CHANGED_EVENT,
@@ -195,6 +195,15 @@ export function ActivityNavDropdown({
     else if (event.postId) {
       if (event.href?.includes('#post-')) href = event.href;
       else if (viewerSlug) href = `/profile/${viewerSlug}#post-${event.postId}`;
+    } else if (event.type === 'friend_accepted' && event.actorId) {
+      try {
+        const { fetchLivePublicProfileByUserId } = await import('@/lib/profile/social-client');
+        const live = await fetchLivePublicProfileByUserId(event.actorId);
+        if (live?.slug) href = `/profile/${live.slug}`;
+        else href = '/friends';
+      } catch {
+        href = event.actorSlug ? `/profile/${event.actorSlug}` : '/friends';
+      }
     } else if (event.type === 'friend_accepted' && event.actorSlug) {
       href = `/profile/${event.actorSlug}`;
     }
@@ -269,20 +278,14 @@ export function ActivityNavDropdown({
                     </span>
                     <span className="min-w-0 flex-1 pr-7">
                       <span className="block text-[12px] leading-snug">
-                        {event.actorSlug ? (
-                          <Link
-                            href={`/profile/${event.actorSlug}`}
-                            className="font-bold text-foreground hover:underline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpen(false);
-                            }}
-                          >
-                            {event.actorName}
-                          </Link>
-                        ) : (
-                          <span className="font-bold text-foreground">{event.actorName}</span>
-                        )}{' '}
+                        <ArtistHomeLink
+                          userId={event.actorId}
+                          slug={event.actorSlug}
+                          className="font-bold text-foreground hover:underline"
+                          onNavigate={() => setOpen(false)}
+                        >
+                          {event.actorName}
+                        </ArtistHomeLink>{' '}
                         <span className="text-muted-foreground">
                           {activityVerb(event.type, 'received')}
                         </span>

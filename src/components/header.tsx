@@ -194,15 +194,23 @@ export function Header() {
                 {SCENE_HOME_ENABLED && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="relative h-8 w-8 md:h-9 md:w-9 text-sky-400 hover:bg-sky-500/10 shrink-0"
-                        onClick={() => router.push(VAULT_PATH)}
-                        aria-label="The Vault"
-                      >
-                        <Archive className="h-4 w-4 md:h-5 md:w-5" />
-                      </Button>
+                      <div className="relative h-8 w-8 shrink-0 md:h-9 md:w-9">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="relative h-full w-full text-sky-400 hover:bg-sky-500/10"
+                          onClick={() => router.push(VAULT_PATH)}
+                          aria-label="The Vault"
+                        >
+                          <Archive className="h-4 w-4 md:h-5 md:w-5" />
+                        </Button>
+                        <span
+                          aria-hidden
+                          className="pointer-events-none absolute left-1/2 top-[calc(100%-2px)] -translate-x-1/2 text-[7px] font-bold uppercase leading-none tracking-[0.14em] text-white"
+                        >
+                          vault
+                        </span>
+                      </div>
                     </TooltipTrigger>
                     <TooltipContent><p>The Vault</p></TooltipContent>
                   </Tooltip>

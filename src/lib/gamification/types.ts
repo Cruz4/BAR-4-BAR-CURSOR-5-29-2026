@@ -54,6 +54,7 @@ export type GamificationSummary = {
    * - `custom` — uploaded photo
    * - `collage` — album cover collage (auto or picked)
    * - `initials` — stock star with 2-letter initials (no photo / collage)
+   * Default when unset: `initials` (until the artist picks collage/custom).
    */
   profilePhotoMode?: 'collage' | 'custom' | 'initials';
   /** Square JPEG/PNG data URL or https URL when profilePhotoMode is custom. */
@@ -154,7 +155,7 @@ export const DEFAULT_GAMIFICATION_SUMMARY: GamificationSummary = {
   lifetimeStudioSessions: 0,
   personalBests: { barsInDay: 0, longestStreak: 0, barsInSession: 0 },
   publicProfile: false,
-  profilePhotoMode: 'collage',
+  profilePhotoMode: 'initials',
   /** Private by default — appear on leaderboard only when the artist opts in. */
   leaderboardHidden: true,
   bonusInkGrantedThisMonth: 0,
@@ -178,3 +179,12 @@ export const DEFAULT_GAMIFICATION_SUMMARY: GamificationSummary = {
   lastGenerateNextLineDayKey: '',
   updatedAt: new Date().toISOString(),
 };
+
+/** Resolve hero portrait mode — unset / unknown → stock initials star. */
+export function normalizeProfilePhotoMode(
+  mode: unknown
+): 'collage' | 'custom' | 'initials' {
+  if (mode === 'custom') return 'custom';
+  if (mode === 'collage') return 'collage';
+  return 'initials';
+}

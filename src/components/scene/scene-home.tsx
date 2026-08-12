@@ -8,7 +8,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Check, Radio, Send, UserPlus, X } from 'lucide-react';
+import { Check, ChevronDown, Radio, Send, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,6 +23,7 @@ import { SceneBoothCard } from '@/components/scene/scene-booth-card';
 import { SceneDiscoverCard } from '@/components/scene/scene-discover-card';
 import { SceneLiveDropsStrip } from '@/components/scene/scene-live-drops-strip';
 import { SceneBlockAtmosphere } from '@/components/scene/scene-block-atmosphere';
+import { SectionPager } from '@/components/scene/section-pager';
 import { LockClaimBootstrap } from '@/components/lock/lock-claim-bootstrap';
 import { GuestPressingClaimBootstrap } from '@/components/profile/guest-pressing-claim-bootstrap';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -41,10 +42,11 @@ import {
   type ProfilePost,
 } from '@/lib/profile/social-client';
 import { FRIENDSHIP_CHANGED_EVENT, type FriendshipChangedDetail } from '@/lib/activity/client';
-import { markBlockSeen } from '@/lib/profile/social-alerts';
+import { getBlockLastSeenAt, markBlockSeen } from '@/lib/profile/social-alerts';
 import {
   buildDiscoverCards,
   DISCOVER_HOME_MAX_CARDS,
+  discoverCardTimestamp,
   fetchDiscover,
   type DiscoverCard,
   type DiscoverData,
@@ -70,10 +72,33 @@ import {
   hasMarketingCookieConsent,
 } from '@/lib/tiktok-pixel';
 import { postGamificationEvent } from '@/lib/gamification-client';
-import { BLOCK_SECTION_ID } from '@/lib/scene-home';
+import { BLOCK_SECTION_ID, DISCOVER_SECTION_ID } from '@/lib/scene-home';
+import {
+  BLOCK_PAGE_SIZE,
+  DISCOVER_PAGE_SIZE,
+  SCENE_BLOCK_EXPANDED_KEY,
+  SCENE_DISCOVER_EXPANDED_KEY,
+  getDiscoverLastSeenAt,
+  markDiscoverSeen,
+  readPersistedExpanded,
+  writePersistedExpanded,
+} from '@/lib/scene/scene-section-prefs';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 const SCENE_BLOCK_SHOW_MINE_KEY = 'b4b.scene.block.showMine';
+
+function SoftNewBubble({ count, label }: { count: number; label: string }) {
+  if (count <= 0) return null;
+  return (
+    <span
+      className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-500/90 px-1 text-[9px] font-bold tabular-nums text-black shadow-[0_0_10px_rgba(16,185,129,0.45)]"
+      aria-label={`${count} new in ${label}`}
+    >
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+}
 
 function SceneComposer({
   profileSlug,
@@ -165,6 +190,12 @@ export function SceneHome() {
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
   const [showMine, setShowMine] = useState(true);
+  const [blockExpanded, setBlockExpanded] = useState(true);
+  const [discoverExpanded, setDiscoverExpanded] = useState(true);
+  const [blockPage, setBlockPage] = useState(0);
+  const [discoverPage, setDiscoverPage] = useState(0);
+  const [blockLastSeen, setBlockLastSeen] = useState<string | null>(null);
+  const [discoverLastSeen, setDiscoverLastSeen] = useState<string | null>(null);
   const tourAutoStartRef = useRef(false);
 
   const viewerSlug = summary.profileSlug || undefined;
@@ -177,15 +208,45 @@ export function SceneHome() {
     } catch {
       /* ignore */
     }
+    setBlockExpanded(readPersistedExpanded(SCENE_BLOCK_EXPANDED_KEY, true));
+    setDiscoverExpanded(readPersistedExpanded(SCENE_DISCOVER_EXPANDED_KEY, true));
+    setBlockLastSeen(getBlockLastSeenAt());
+    setDiscoverLastSeen(getDiscoverLastSeenAt());
   }, []);
 
   const setShowMinePersist = useCallback((next: boolean) => {
     setShowMine(next);
+    setBlockPage(0);
     try {
       localStorage.setItem(SCENE_BLOCK_SHOW_MINE_KEY, next ? '1' : '0');
     } catch {
       /* ignore */
     }
+  }, []);
+
+  const setBlockExpandedPersist = useCallback((next: boolean) => {
+    setBlockExpanded(next);
+    writePersistedExpanded(SCENE_BLOCK_EXPANDED_KEY, next);
+    if (next) {
+      markBlockSeen();
+      setBlockLastSeen(new Date().toISOString());
+    }
+  }, []);
+
+  const setDiscoverExpandedPersist = useCallback((next: boolean) => {
+    setDiscoverExpanded(next);
+    writePersistedExpanded(SCENE_DISCOVER_EXPANDED_KEY, next);
+    if (next) {
+      markDiscoverSeen();
+      setDiscoverLastSeen(new Date().toISOString());
+    }
+  }, []);
+
+  const scrollToSection = useCallback((id: string) => {
+    if (typeof document === 'undefined') return;
+    window.requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   }, []);
 
   const sceneProgressTourPinned =
@@ -248,7 +309,15 @@ export function SceneHome() {
       } finally {
         if (!cancelled) {
           setLoaded(true);
-          markBlockSeen();
+          // Only clear “new” when that section is currently expanded.
+          if (readPersistedExpanded(SCENE_BLOCK_EXPANDED_KEY, true)) {
+            markBlockSeen();
+            setBlockLastSeen(new Date().toISOString());
+          }
+          if (readPersistedExpanded(SCENE_DISCOVER_EXPANDED_KEY, true)) {
+            markDiscoverSeen();
+            setDiscoverLastSeen(new Date().toISOString());
+          }
         }
       }
     };
@@ -344,40 +413,55 @@ export function SceneHome() {
     return () => setVaultTourRunning(false);
   }, [tourActive]);
 
-  // Client navigations to `/#your-block` often skip native hash scroll — pin The Block header.
+  // Client navigations to `/#your-block` / `#discover-scene` often skip native hash scroll.
   useEffect(() => {
     if (!loaded || typeof window === 'undefined') return;
 
-    const scrollToBlock = () => {
-      if (window.location.hash !== `#${BLOCK_SECTION_ID}`) return;
-      const el = document.getElementById(BLOCK_SECTION_ID);
+    const scrollToHashSection = () => {
+      const hash = window.location.hash.replace(/^#/, '');
+      if (hash === BLOCK_SECTION_ID) {
+        setBlockExpandedPersist(true);
+      } else if (hash === DISCOVER_SECTION_ID) {
+        setDiscoverExpandedPersist(true);
+      } else {
+        return;
+      }
+      const el = document.getElementById(hash);
       if (!el) return;
       requestAnimationFrame(() => {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     };
 
-    scrollToBlock();
-    const retry = window.setTimeout(scrollToBlock, 150);
-    window.addEventListener('hashchange', scrollToBlock);
+    scrollToHashSection();
+    const retry = window.setTimeout(scrollToHashSection, 150);
+    window.addEventListener('hashchange', scrollToHashSection);
     return () => {
       window.clearTimeout(retry);
-      window.removeEventListener('hashchange', scrollToBlock);
+      window.removeEventListener('hashchange', scrollToHashSection);
     };
-  }, [loaded]);
+  }, [loaded, setBlockExpandedPersist, setDiscoverExpandedPersist]);
 
-  const handleTourBeforeStep = useCallback((step: { id: string }) => {
-    if (step.id !== 'scene-progress' && step.id !== 'scene-nav') return;
-    // Feed steps scroll deep; rails live above. Nudge toward top before measure.
-    if (typeof window === 'undefined') return;
-    if (window.innerWidth >= 1280) return;
-    const y = window.scrollY || document.documentElement.scrollTop || 0;
-    if (y > 120) {
-      window.scrollTo(0, 0);
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    }
-  }, []);
+  const handleTourBeforeStep = useCallback(
+    (step: { id: string }) => {
+      if (step.id === 'scene-feed') {
+        setBlockExpandedPersist(true);
+        setDiscoverExpandedPersist(true);
+        return;
+      }
+      if (step.id !== 'scene-progress' && step.id !== 'scene-nav') return;
+      // Feed steps scroll deep; rails live above. Nudge toward top before measure.
+      if (typeof window === 'undefined') return;
+      if (window.innerWidth >= 1280) return;
+      const y = window.scrollY || document.documentElement.scrollTop || 0;
+      if (y > 120) {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      }
+    },
+    [setBlockExpandedPersist, setDiscoverExpandedPersist]
+  );
 
   const handleTourComplete = useCallback(
     async (skipped: boolean) => {
@@ -440,6 +524,41 @@ export function SceneHome() {
     return posts.filter((p) => p.ownerId !== user.id);
   }, [posts, showMine, user?.id]);
 
+  const blockPageCount = Math.max(1, Math.ceil(blockPosts.length / BLOCK_PAGE_SIZE) || 1);
+  const safeBlockPage = Math.min(Math.max(0, blockPage), blockPageCount - 1);
+  const pageBlockPosts = blockPosts.slice(
+    safeBlockPage * BLOCK_PAGE_SIZE,
+    safeBlockPage * BLOCK_PAGE_SIZE + BLOCK_PAGE_SIZE
+  );
+
+  const discoverPageCount = Math.max(1, Math.ceil(discoverCards.length / DISCOVER_PAGE_SIZE) || 1);
+  const safeDiscoverPage = Math.min(Math.max(0, discoverPage), discoverPageCount - 1);
+  const pageDiscoverCards = discoverCards.slice(
+    safeDiscoverPage * DISCOVER_PAGE_SIZE,
+    safeDiscoverPage * DISCOVER_PAGE_SIZE + DISCOVER_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    if (blockPage !== safeBlockPage) setBlockPage(safeBlockPage);
+  }, [blockPage, safeBlockPage]);
+
+  useEffect(() => {
+    if (discoverPage !== safeDiscoverPage) setDiscoverPage(safeDiscoverPage);
+  }, [discoverPage, safeDiscoverPage]);
+
+  const newBlockCount = useMemo(() => {
+    if (blockExpanded || !user?.id || !blockLastSeen) return 0;
+    return posts.filter((p) => p.ownerId !== user.id && p.createdAt > blockLastSeen).length;
+  }, [blockExpanded, blockLastSeen, posts, user?.id]);
+
+  const newDiscoverCount = useMemo(() => {
+    if (discoverExpanded || !discoverLastSeen) return 0;
+    return discoverCards.filter((c) => {
+      const ts = discoverCardTimestamp(c);
+      return Boolean(ts) && ts > discoverLastSeen;
+    }).length;
+  }, [discoverCards, discoverExpanded, discoverLastSeen]);
+
   // Drives the Scene Block atmosphere — the skyline gets busier as your
   // circle does, not on a canned timer.
   const sceneEnergy =
@@ -447,11 +566,28 @@ export function SceneHome() {
 
   const onPosted = useCallback((post: ProfilePost) => {
     setPosts((prev) => [post, ...prev]);
+    setBlockPage(0);
   }, []);
 
   const onPostDeleted = useCallback((postId: string) => {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
   }, []);
+
+  const goBlockPage = useCallback(
+    (next: number) => {
+      setBlockPage(next);
+      scrollToSection(BLOCK_SECTION_ID);
+    },
+    [scrollToSection]
+  );
+
+  const goDiscoverPage = useCallback(
+    (next: number) => {
+      setDiscoverPage(next);
+      scrollToSection(DISCOVER_SECTION_ID);
+    },
+    [scrollToSection]
+  );
 
   const respond = async (friendship: Friendship, accept: boolean) => {
     if (!user?.id) return;
@@ -606,6 +742,7 @@ export function SceneHome() {
               <StudioLoader size="lg" />
             </div>
           ) : (
+            <>
             <div
               id={BLOCK_SECTION_ID}
               className="scroll-mt-[5.5rem] space-y-4"
@@ -613,82 +750,152 @@ export function SceneHome() {
             >
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-1">
                 <span className="h-px min-w-[2rem] flex-1 bg-border/60" />
-                <span className="font-code text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground/70">
-                  Your Block
-                </span>
-                <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-2 py-1">
-                  <Checkbox
-                    id="scene-block-show-mine"
-                    checked={showMine}
-                    onCheckedChange={(v) => setShowMinePersist(v === true)}
-                    className="h-3.5 w-3.5 border-white/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                <button
+                  type="button"
+                  onClick={() => setBlockExpandedPersist(!blockExpanded)}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/25 px-2.5 py-1 transition-colors hover:border-primary/40 hover:bg-black/40"
+                  aria-expanded={blockExpanded}
+                  aria-controls="scene-block-body"
+                >
+                  <SoftNewBubble count={newBlockCount} label="Your Block" />
+                  <span className="font-code text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground/90">
+                    Your Block
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      'h-3.5 w-3.5 text-muted-foreground transition-transform',
+                      blockExpanded && 'rotate-180'
+                    )}
                   />
-                  <Label
-                    htmlFor="scene-block-show-mine"
-                    className="cursor-pointer font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/80"
-                  >
-                    Incl. mine
-                  </Label>
-                </div>
+                </button>
+                {blockExpanded ? (
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-2 py-1">
+                    <Checkbox
+                      id="scene-block-show-mine"
+                      checked={showMine}
+                      onCheckedChange={(v) => setShowMinePersist(v === true)}
+                      className="h-3.5 w-3.5 border-white/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                    />
+                    <Label
+                      htmlFor="scene-block-show-mine"
+                      className="cursor-pointer font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/80"
+                    >
+                      Incl. mine
+                    </Label>
+                  </div>
+                ) : null}
                 <span className="h-px min-w-[2rem] flex-1 bg-border/60" />
               </div>
 
-              {blockPosts.length > 0 ? (
-                blockPosts.map((post) => (
-                  <PostCard
-                    key={post.id}
-                    post={post}
-                    showAuthor
-                    viewerSlug={viewerSlug}
-                    onDeleted={onPostDeleted}
+              {blockExpanded ? (
+                <div id="scene-block-body" className="space-y-4">
+                  {pageBlockPosts.length > 0 ? (
+                    pageBlockPosts.map((post) => (
+                      <PostCard
+                        key={post.id}
+                        post={post}
+                        showAuthor
+                        viewerSlug={viewerSlug}
+                        onDeleted={onPostDeleted}
+                      />
+                    ))
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-white/15 bg-black/20 px-6 py-8 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        {posts.length > 0 && !showMine
+                          ? 'Your own posts are off — turn on Incl. mine to see them here.'
+                          : friendCount === 0
+                            ? 'Your circle is quiet so far — the scene below is live right now. Visit a page, add a friend, drop a bar.'
+                            : 'Quiet block. Post something above to get it moving.'}
+                      </p>
+                    </div>
+                  )}
+                  <SectionPager
+                    page={safeBlockPage}
+                    pageCount={blockPageCount}
+                    total={blockPosts.length}
+                    unit="posts"
+                    onPrev={() => goBlockPage(Math.max(0, safeBlockPage - 1))}
+                    onNext={() => goBlockPage(Math.min(blockPageCount - 1, safeBlockPage + 1))}
                   />
-                ))
-              ) : (
-                <div className="rounded-2xl border border-dashed border-white/15 bg-black/20 px-6 py-8 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    {posts.length > 0 && !showMine
-                      ? 'Your own posts are off — turn on Incl. mine to see them here.'
-                      : friendCount === 0
-                        ? 'Your circle is quiet so far — the scene below is live right now. Visit a page, add a friend, drop a bar.'
-                        : 'Quiet block. Post something above to get it moving.'}
-                  </p>
                 </div>
-              )}
-
-              {discoverCards.length > 0 && (
-                <div className="space-y-4" data-tour="scene-discover">
-                  <div className="flex items-center gap-3 pt-2">
-                    <span className="h-px flex-1 bg-border/60" />
-                    <span className="font-code text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground/70">
-                      Discover the scene
-                    </span>
-                    <span className="h-px flex-1 bg-border/60" />
-                  </div>
-                  <div className="flex justify-end -mt-1">
-                    <Link
-                      href="/discover"
-                      className="font-code text-[9px] font-bold uppercase tracking-[0.22em] text-primary/80 hover:text-primary"
-                    >
-                      View all →
-                    </Link>
-                  </div>
-                  {discoverCards.map((card) => (
-                    <SceneDiscoverCard
-                      key={card.key}
-                      card={card}
-                      viewerSlug={viewerSlug}
-                      onLockRemoved={(lockId) => {
-                        setDiscover((prev) =>
-                          prev
-                            ? { ...prev, locks: prev.locks.filter((l) => l.id !== lockId) }
-                            : prev
-                        );
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
+              ) : null}
             </div>
+
+            <div
+              id={DISCOVER_SECTION_ID}
+              className="scroll-mt-[5.5rem] space-y-4"
+              data-tour="scene-discover"
+            >
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-2">
+                <span className="h-px min-w-[2rem] flex-1 bg-border/60" />
+                <button
+                  type="button"
+                  onClick={() => setDiscoverExpandedPersist(!discoverExpanded)}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/25 px-2.5 py-1 transition-colors hover:border-primary/40 hover:bg-black/40"
+                  aria-expanded={discoverExpanded}
+                  aria-controls="scene-discover-body"
+                >
+                  <SoftNewBubble count={newDiscoverCount} label="Discover the scene" />
+                  <span className="font-code text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground/90">
+                    Discover the scene
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      'h-3.5 w-3.5 text-muted-foreground transition-transform',
+                      discoverExpanded && 'rotate-180'
+                    )}
+                  />
+                </button>
+                {discoverExpanded ? (
+                  <Link
+                    href="/discover"
+                    className="font-code text-[9px] font-bold uppercase tracking-[0.22em] text-primary/80 hover:text-primary"
+                  >
+                    View all →
+                  </Link>
+                ) : null}
+                <span className="h-px min-w-[2rem] flex-1 bg-border/60" />
+              </div>
+
+              {discoverExpanded ? (
+                <div id="scene-discover-body" className="space-y-4">
+                  {pageDiscoverCards.length > 0 ? (
+                    pageDiscoverCards.map((card) => (
+                      <SceneDiscoverCard
+                        key={card.key}
+                        card={card}
+                        viewerSlug={viewerSlug}
+                        onLockRemoved={(lockId) => {
+                          setDiscover((prev) =>
+                            prev
+                              ? { ...prev, locks: prev.locks.filter((l) => l.id !== lockId) }
+                              : prev
+                          );
+                        }}
+                      />
+                    ))
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-white/15 bg-black/20 px-6 py-8 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Nothing live in Discover yet — check back as the scene wakes up.
+                      </p>
+                    </div>
+                  )}
+                  <SectionPager
+                    page={safeDiscoverPage}
+                    pageCount={discoverPageCount}
+                    total={discoverCards.length}
+                    unit="cards"
+                    onPrev={() => goDiscoverPage(Math.max(0, safeDiscoverPage - 1))}
+                    onNext={() =>
+                      goDiscoverPage(Math.min(discoverPageCount - 1, safeDiscoverPage + 1))
+                    }
+                  />
+                </div>
+              ) : null}
+            </div>
+            </>
           )}
 
           <div data-tour="scene-find-artists">

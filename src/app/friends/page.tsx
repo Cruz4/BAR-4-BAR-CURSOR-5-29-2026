@@ -19,22 +19,16 @@ import {
   enrichFriendProfilesWithLiveSlugs,
   fetchBlockedUsers,
   fetchFriendships,
-  fetchPublicArtistMetas,
   friendProfilesOf,
   removeFriendship,
+  resolveCircleFriends,
   unblockUser,
   type BlockedUser,
+  type CircleFriendRow,
   type Friendship,
 } from '@/lib/profile/social-client';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
-
-type FriendRow = {
-  userId: string;
-  name: string;
-  slug?: string;
-  avatarUrl?: string;
-};
 
 export default function FriendsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -42,7 +36,7 @@ export default function FriendsPage() {
   const { toast } = useToast();
   const [friendships, setFriendships] = useState<Friendship[]>([]);
   const [blocked, setBlocked] = useState<BlockedUser[]>([]);
-  const [friends, setFriends] = useState<FriendRow[]>([]);
+  const [friends, setFriends] = useState<CircleFriendRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [tab, setTab] = useState<'friends' | 'blocked'>('friends');
@@ -72,25 +66,14 @@ export default function FriendsPage() {
       }
 
       try {
-        const metas = await fetchPublicArtistMetas(base);
-        setFriends(
-          base.map((f) => {
-            const meta = metas.get(f.userId);
-            return {
-              userId: f.userId,
-              name: meta?.displayName || f.name,
-              slug: meta?.slug || f.slug,
-              avatarUrl: meta?.avatarUrl,
-            };
-          })
-        );
+        setFriends(await resolveCircleFriends(base));
       } catch (err) {
-        console.warn('[friends] meta lookup failed', err);
+        console.warn('[friends] resolve failed', err);
         setFriends(
           base.map((f) => ({
             userId: f.userId,
             name: f.name,
-            slug: f.slug,
+            isLivePublic: false,
           }))
         );
       }
@@ -202,6 +185,8 @@ export default function FriendsPage() {
             {friends.map((friend) => {
               const friendship = friendships.find((f) => f.uids.includes(friend.userId));
               const initial = (friend.name.trim().charAt(0) || '?').toUpperCase();
+              const href =
+                friend.isLivePublic && friend.slug ? profileHref(friend.slug) : undefined;
               const profileInner = (
                 <>
                   <Avatar className="h-9 w-9 border border-white/10">
@@ -212,6 +197,11 @@ export default function FriendsPage() {
                   </Avatar>
                   <span className="min-w-0 truncate text-sm font-bold text-white group-hover:text-primary">
                     {friend.name}
+                    {!friend.isLivePublic ? (
+                      <span className="ml-1.5 font-medium text-muted-foreground group-hover:text-muted-foreground">
+                        (offline)
+                      </span>
+                    ) : null}
                   </span>
                 </>
               );
@@ -221,11 +211,8 @@ export default function FriendsPage() {
                   className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3 py-2.5"
                 >
                   <div className="min-w-0 flex-1">
-                    {friend.slug ? (
-                      <Link
-                        href={profileHref(friend.slug) || '#'}
-                        className="group flex items-center gap-3"
-                      >
+                    {href ? (
+                      <Link href={href} className="group flex items-center gap-3">
                         {profileInner}
                       </Link>
                     ) : (

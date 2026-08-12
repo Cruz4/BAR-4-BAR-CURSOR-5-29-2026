@@ -393,7 +393,7 @@ export function PressDesk() {
   const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const [photoMode, setPhotoMode] = useState<'collage' | 'custom' | 'initials'>('collage');
+  const [photoMode, setPhotoMode] = useState<'collage' | 'custom' | 'initials'>('initials');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [collageAlbumIds, setCollageAlbumIds] = useState<string[]>([]);
   const [starMarkUseStar, setStarMarkUseStar] = useState(false);
@@ -417,9 +417,9 @@ export function PressDesk() {
       setPhotoMode(
         next.profilePhotoMode === 'custom'
           ? 'custom'
-          : next.profilePhotoMode === 'initials'
-            ? 'initials'
-            : 'collage'
+          : next.profilePhotoMode === 'collage'
+            ? 'collage'
+            : 'initials'
       );
       setPhotoUrl(next.profilePhotoUrl?.trim() ? next.profilePhotoUrl : null);
       setCollageAlbumIds(
@@ -461,7 +461,9 @@ export function PressDesk() {
   }, [albumsWithCovers, collageAlbumIds]);
   const useCustomHero =
     photoMode === 'custom' && typeof photoUrl === 'string' && photoUrl.trim().length > 0;
-  const useInitialsHero = photoMode === 'initials';
+  // Empty collage (common on older accounts) → same stock star as explicit initials.
+  const useCollageHero = photoMode === 'collage' && heroCollageUrls.length > 0;
+  const useInitialsHero = !useCustomHero && !useCollageHero;
   const allTracks = useMemo(() => {
     const seen = new Set<string>();
     const out: Array<{ album: Album; track: Track; key: string }> = [];
@@ -608,9 +610,9 @@ export function PressDesk() {
         setPhotoMode(
           nextSummary.profilePhotoMode === 'custom'
             ? 'custom'
-            : nextSummary.profilePhotoMode === 'initials'
-              ? 'initials'
-              : 'collage'
+            : nextSummary.profilePhotoMode === 'collage'
+              ? 'collage'
+              : 'initials'
         );
         setPhotoUrl(nextSummary.profilePhotoUrl?.trim() ? nextSummary.profilePhotoUrl : null);
         setCollageAlbumIds(

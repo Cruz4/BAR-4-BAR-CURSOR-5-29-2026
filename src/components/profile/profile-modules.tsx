@@ -49,10 +49,13 @@ import {
   fetchGuestbook,
   fetchPostsByOwner,
   friendProfilesOf,
+  resolveCircleFriends,
   setGuestbookEntry,
+  visibleCircleFriends,
   type GuestbookEntry,
   type ProfilePost,
 } from '@/lib/profile/social-client';
+import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 
 export type ModuleContext = {
   profileUserId: string;
@@ -799,26 +802,33 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
       return;
     }
     setPage(0);
-    fetchFriendships(ctx.profileUserId, 'accepted')
-      .then((list) =>
-        friendProfilesOf(list, ctx.profileUserId, {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const list = await fetchFriendships(ctx.profileUserId, 'accepted');
+        const chips = friendProfilesOf(list, ctx.profileUserId, {
           email: user?.email,
           displayName: user?.displayName,
-        })
-      )
-      .then(async (chips) => {
+        });
+        let base = chips;
         try {
-          return await enrichFriendProfilesWithLiveSlugs(chips);
+          base = await enrichFriendProfilesWithLiveSlugs(chips);
         } catch (err) {
           console.warn('[friends-module] enrich failed', err);
-          return chips;
         }
-      })
-      .then(setFriends)
-      .catch((err) => {
+        // Artist Home lists: live-public friends only — never show private/offline here.
+        const resolved = await resolveCircleFriends(base);
+        if (cancelled) return;
+        setFriends(visibleCircleFriends(resolved, false));
+      } catch (err) {
         console.warn('[friends-module]', err);
-      })
-      .finally(() => setLoaded(true));
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [ctx.profileUserId, playground, user?.email, user?.displayName]);
 
   const pageCount = Math.max(1, Math.ceil(friends.length / FRIENDS_PAGE_SIZE) || 1);
@@ -1009,18 +1019,13 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
         {entries.slice(0, 20).map((entry) => (
           <div key={entry.id} className="flex items-start gap-2 text-sm">
             <div className="min-w-0 flex-1">
-              {entry.authorSlug ? (
-                <Link
-                  href={profileHref(entry.authorSlug) || '#'}
-                  className="mr-2 text-[11px] font-bold uppercase tracking-wider text-[var(--ph-accent2,#fbbf24)] hover:underline"
-                >
-                  {entry.authorName}
-                </Link>
-              ) : (
-                <span className="mr-2 text-[11px] font-bold uppercase tracking-wider text-[var(--ph-accent2,#fbbf24)]">
-                  {entry.authorName}
-                </span>
-              )}
+              <ArtistHomeLink
+                userId={entry.authorId}
+                slug={entry.authorSlug}
+                className="mr-2 text-[11px] font-bold uppercase tracking-wider text-[var(--ph-accent2,#fbbf24)] hover:underline"
+              >
+                {entry.authorName}
+              </ArtistHomeLink>
               <span className="italic text-[var(--ph-text,#fff)]/85">&ldquo;{entry.text}&rdquo;</span>
             </div>
             {!playground && user?.id && (user.id === entry.authorId || ctx.isOwner) && (

@@ -10,6 +10,7 @@ import { trackShareCardEvent } from '@/lib/gamification-client';
 import { getAchievement } from '@/lib/gamification/achievements';
 import type { AchievementDef } from '@/lib/gamification/achievements';
 import { normalizeArtistHomeConfig, type ArtistHomeConfig } from '@/lib/profile/modules';
+import { normalizeProfilePhotoMode } from '@/lib/gamification/types';
 import { useAuth } from '@/hooks/use-auth';
 
 export function PublicProfilePageClient({ slug }: { slug: string }) {
@@ -52,12 +53,15 @@ export function PublicProfilePageClient({ slug }: { slug: string }) {
             .filter(Boolean);
 
         setProfile({
-          displayName: data.displayName,
+          displayName:
+            typeof data.displayName === 'string' && data.displayName.trim()
+              ? data.displayName.trim()
+              : 'Artist',
           rankLabel: data.rankLabel,
           rankId: data.rankId,
-          xp: data.xp,
-          currentStreak: data.currentStreak,
-          longestStreak: data.longestStreak,
+          xp: Number(data.xp) || 0,
+          currentStreak: Number(data.currentStreak) || 0,
+          longestStreak: Number(data.longestStreak) || 0,
           lifetimeBarsWritten:
             typeof data.lifetimeBarsWritten === 'number' ? data.lifetimeBarsWritten : undefined,
           lifetimeLinesGenerated:
@@ -71,12 +75,7 @@ export function PublicProfilePageClient({ slug }: { slug: string }) {
               ? data.unlockedAchievements
               : undefined,
           userId: data.userId,
-          profilePhotoMode:
-            data.profilePhotoMode === 'custom'
-              ? 'custom'
-              : data.profilePhotoMode === 'initials'
-                ? 'initials'
-                : 'collage',
+          profilePhotoMode: normalizeProfilePhotoMode(data.profilePhotoMode),
           profilePhotoUrl: data.profilePhotoUrl || null,
           starMarkUseStar: Boolean(data.starMarkUseStar),
           starMarkSeed:

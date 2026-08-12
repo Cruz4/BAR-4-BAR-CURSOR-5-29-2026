@@ -10,4 +10,7 @@ export type AdminGamificationRosterEntry = {
   longestStreak: number;
   lifetimeBarsWritten: number;
   unlockedAchievements: Record<string, string>;
+  /** Artist Home live on the public Scene. */
+  publicProfile: boolean;
+  profileSlug?: string;
 };

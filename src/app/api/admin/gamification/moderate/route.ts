@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
 import { verifyAdminRequest, AdminAuthError } from '@/lib/server/admin-auth';
-import { getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
+import { hasAdminFirestoreCredentials } from '@/lib/firebase/server';
+import { updateGamificationSettings } from '@/lib/server/gamification';
 
 export const runtime = 'nodejs';
 
-/** Admin: hide a user from public leaderboard */
+/**
+ * Admin: moderate public visibility.
+ * - `publicProfile: false` takes Artist Home offline and prunes publicProfiles.
+ * - `publicProfile: true` flips live (requires / allocates a profile slug via settings).
+ * - `hidden` still toggles leaderboardHidden.
+ */
 export async function POST(req: Request) {
   try {
     await verifyAdminRequest(req);
@@ -19,16 +25,35 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Admin credentials required' }, { status: 503 });
   }
 
-  const { targetUserId, hidden } = await req.json();
-  if (!targetUserId || typeof hidden !== 'boolean') {
+  const body = await req.json().catch(() => ({}));
+  const targetUserId =
+    typeof body.targetUserId === 'string' ? body.targetUserId.trim() : '';
+  const hasPublic =
+    typeof body.publicProfile === 'boolean' ? (body.publicProfile as boolean) : undefined;
+  const hasHidden = typeof body.hidden === 'boolean' ? (body.hidden as boolean) : undefined;
+
+  if (!targetUserId || (hasPublic === undefined && hasHidden === undefined)) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   }
 
-  const db = await getDb();
-  await db.doc(`users/${targetUserId}/gamification/summary`).set(
-    { leaderboardHidden: hidden, updatedAt: new Date().toISOString() },
-    { merge: true }
-  );
+  try {
+    const summary = await updateGamificationSettings(targetUserId, {
+      ...(hasPublic !== undefined ? { publicProfile: hasPublic } : {}),
+      ...(hasHidden !== undefined ? { leaderboardHidden: hasHidden } : {}),
+    });
 
-  return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      publicProfile: Boolean(summary.publicProfile),
+      leaderboardHidden: Boolean(summary.leaderboardHidden),
+      profileSlug: summary.profileSlug || null,
+    });
+  } catch (err) {
+    console.error('[admin/gamification/moderate]', err);
+    const message = err instanceof Error ? err.message : 'Moderate failed';
+    if (/already taken|not allowed|reserved|at least 2|32 characters|lowercase/i.test(message)) {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

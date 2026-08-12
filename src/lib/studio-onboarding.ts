@@ -278,7 +278,7 @@ export const SCENE_HOME_TOUR_STEPS: LyricsTourStep[] = [
     target: '[data-tour="scene-feed"]',
     mobileCardPlacement: 'top',
     title: 'The feed',
-    body: 'Your circle posts up here. Below it, Discover keeps the block alive — recently live Artist Homes, public drops, and this week\u2019s risers.',
+    body: 'Your Block is your circle. Collapse it when you want quiet — Discover sits just below with live Artist Homes, public drops, and this week\u2019s risers.',
     example: 'See someone interesting? Visit their page and send a friend request.',
   },
   {

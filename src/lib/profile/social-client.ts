@@ -1259,6 +1259,48 @@ export async function fetchPublicArtistMetas(
   return out;
 }
 
+/** Friend chip for circle UIs — live public vs private (“offline”). */
+export type CircleFriendRow = {
+  userId: string;
+  name: string;
+  /** Only set when they have a live public Artist Home. */
+  slug?: string;
+  avatarUrl?: string;
+  /** True when publicProfiles exists (publicProfile on). */
+  isLivePublic: boolean;
+};
+
+/**
+ * Resolve friend chips against live publicProfiles.
+ * Never falls back to friendship-baked slugs — those leak private / stale vanity URLs.
+ */
+export async function resolveCircleFriends(
+  chips: Array<{ userId: string; name: string; slug?: string }>
+): Promise<CircleFriendRow[]> {
+  if (!chips.length) return [];
+  const metas = await fetchPublicArtistMetas(chips);
+  return chips.map((f) => {
+    const meta = metas.get(f.userId);
+    const isLivePublic = Boolean(meta?.slug);
+    return {
+      userId: f.userId,
+      name: (meta?.displayName || f.name || 'Artist').trim() || 'Artist',
+      slug: isLivePublic ? meta?.slug : undefined,
+      avatarUrl: isLivePublic ? meta?.avatarUrl : undefined,
+      isLivePublic,
+    };
+  });
+}
+
+/** Strangers / Artist Home lists: live-public only. Personal `/friends` can pass true for offline. */
+export function visibleCircleFriends(
+  rows: CircleFriendRow[],
+  canSeeOffline: boolean
+): CircleFriendRow[] {
+  if (canSeeOffline) return rows;
+  return rows.filter((r) => r.isLivePublic);
+}
+
 /** Single-slug avatar lookup for feed author chips — custom profile photo preferred. */
 export async function fetchPublicArtistAvatar(slug?: string): Promise<string | undefined> {
   if (!slug) return undefined;

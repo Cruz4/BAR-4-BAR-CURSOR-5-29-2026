@@ -19,6 +19,7 @@ import {
 } from '@/lib/gamification/prestige';
 import {
   DEFAULT_GAMIFICATION_SUMMARY,
+  normalizeProfilePhotoMode,
   type GamificationSummary,
   type GamificationTrigger,
   type GamificationUnlock,
@@ -364,16 +365,11 @@ async function syncPublicProfile(
   }
 
   const badgeIds = Object.keys(summary.unlockedAchievements);
+  const profilePhotoMode = normalizeProfilePhotoMode(summary.profilePhotoMode);
   const albumCoverUrls =
-    summary.profilePhotoMode === 'initials'
+    profilePhotoMode === 'initials'
       ? []
       : await getPublicAlbumCoverUrls(uid, summary.profileCollageAlbumIds);
-  const profilePhotoMode =
-    summary.profilePhotoMode === 'custom'
-      ? 'custom'
-      : summary.profilePhotoMode === 'initials'
-        ? 'initials'
-        : 'collage';
   // Custom hero photos stay on the private summary doc — mirroring the data URL
   // into publicProfiles blows past Firestore's 1MB limit next to Artist Home banners.
   const artistHomeSnap = await db.doc(`users/${uid}/gamification/artistHome`).get();
@@ -749,9 +745,9 @@ export async function updateGamificationSettings(
   }
   if (settings.profilePhotoUrl === null) {
     delete summary.profilePhotoUrl;
-    // Clearing the URL alone (no mode) falls back to collage; explicit `initials` wins.
+    // Clearing the URL alone (no mode) falls back to initials; explicit mode wins.
     if (settings.profilePhotoMode === undefined) {
-      summary.profilePhotoMode = 'collage';
+      summary.profilePhotoMode = 'initials';
     }
   } else if (typeof settings.profilePhotoUrl === 'string' && settings.profilePhotoUrl.trim()) {
     summary.profilePhotoUrl = settings.profilePhotoUrl.trim();
@@ -944,6 +940,7 @@ export async function getAdminGamificationRoster(): Promise<Record<string, Admin
             longestStreak: 0,
             lifetimeBarsWritten: 0,
             unlockedAchievements: {},
+            publicProfile: false,
           },
         ] as const;
       }
@@ -959,6 +956,11 @@ export async function getAdminGamificationRoster(): Promise<Record<string, Admin
           longestStreak: data.longestStreak || 0,
           lifetimeBarsWritten: data.lifetimeBarsWritten || 0,
           unlockedAchievements: data.unlockedAchievements || {},
+          publicProfile: Boolean(data.publicProfile),
+          profileSlug:
+            typeof data.profileSlug === 'string' && data.profileSlug.trim()
+              ? data.profileSlug.trim()
+              : undefined,
         },
       ] as const;
     })
@@ -1185,12 +1187,7 @@ export async function getPublicProfile(slug: string) {
     liveSlug = summary.profileSlug.trim();
   }
 
-  const profilePhotoMode =
-    summary.profilePhotoMode === 'custom'
-      ? 'custom'
-      : summary.profilePhotoMode === 'initials'
-        ? 'initials'
-        : 'collage';
+  const profilePhotoMode = normalizeProfilePhotoMode(summary.profilePhotoMode);
   const profilePhotoUrl =
     profilePhotoMode === 'custom' && typeof summary.profilePhotoUrl === 'string'
       ? summary.profilePhotoUrl
@@ -1211,6 +1208,12 @@ export async function getPublicProfile(slug: string) {
     if (picked.length > 0) albumCoverUrls = picked;
   }
 
+  // Retroactive: "collage" with nothing to show → treat as stock initials star.
+  const effectivePhotoMode =
+    profilePhotoMode === 'collage' && albumCoverUrls.length === 0
+      ? 'initials'
+      : profilePhotoMode;
+
   const artistHome = enrichAlbumRoomsWithLiveCovers(data.artistHome, albumMeta);
 
   return {
@@ -1218,9 +1221,20 @@ export async function getPublicProfile(slug: string) {
     slug: liveSlug,
     requestedSlug: slug,
     artistHome,
-    albumCoverUrls,
-    profilePhotoMode,
-    profilePhotoUrl,
+    albumCoverUrls: effectivePhotoMode === 'initials' ? [] : albumCoverUrls,
+    profilePhotoMode: effectivePhotoMode,
+    profilePhotoUrl: effectivePhotoMode === 'custom' ? profilePhotoUrl : null,
+    // Prefer live summary stats — older publicProfiles docs may omit xp/streaks.
+    xp: typeof summary.xp === 'number' ? summary.xp : Number(data.xp) || 0,
+    currentStreak:
+      typeof summary.currentStreak === 'number'
+        ? summary.currentStreak
+        : Number(data.currentStreak) || 0,
+    longestStreak:
+      typeof summary.longestStreak === 'number'
+        ? summary.longestStreak
+        : Number(data.longestStreak) || 0,
+    rankId: summary.rankId || data.rankId,
     starMarkUseStar: Boolean(summary.starMarkUseStar),
     starMarkSeed: normalizeVesperfoldSeed(summary.starMarkSeed ?? 0),
     liveDnaDrops,

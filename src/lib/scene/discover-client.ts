@@ -68,10 +68,10 @@ export type DiscoverCard =
   | { kind: 'lock'; key: string; lock: DiscoverLock }
   | { kind: 'risers'; key: string; risers: DiscoverRiser[] };
 
-/** Cards on the Scene home Discover strip. */
-export const DISCOVER_HOME_MAX_CARDS = 12;
-/** Cards on the full Discover page. */
-export const DISCOVER_ALL_MAX_CARDS = 40;
+/** Max Discover cards kept in the Scene home pool (paged at DISCOVER_PAGE_SIZE). */
+export const DISCOVER_HOME_MAX_CARDS = 80;
+/** Max cards on the full Discover page (paged at DISCOVER_PAGE_SIZE). */
+export const DISCOVER_ALL_MAX_CARDS = 120;
 
 const EMPTY: DiscoverData = { artists: [], posts: [], drops: [], risers: [], locks: [] };
 
@@ -115,6 +115,11 @@ function cardTimestamp(card: DiscoverCard): string {
   if (card.kind === 'drop') return card.drop.updatedAt || '';
   if (card.kind === 'lock') return card.lock.updatedAt || '';
   return '';
+}
+
+/** Public for soft “new” badges on minimized Discover. */
+export function discoverCardTimestamp(card: DiscoverCard): string {
+  return cardTimestamp(card);
 }
 
 /**

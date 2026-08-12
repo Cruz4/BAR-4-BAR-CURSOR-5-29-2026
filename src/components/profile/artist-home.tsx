@@ -143,9 +143,17 @@ export function ArtistHome({
     profile.profilePhotoMode === 'custom' &&
     typeof profile.profilePhotoUrl === 'string' &&
     profile.profilePhotoUrl.trim().length > 0;
-  const useInitialsHero = profile.profilePhotoMode === 'initials';
+  // Retroactive: old accounts often still say "collage" with zero covers → stock star.
+  const collageUrls = (profile.albumCoverUrls || []).filter(
+    (u) => typeof u === 'string' && u.trim().length > 0
+  );
+  const useCollageHero = profile.profilePhotoMode === 'collage' && collageUrls.length > 0;
+  const useInitialsHero = !useCustomPhoto && !useCollageHero;
   const useStarMark = Boolean(profile.starMarkUseStar);
   const starSeed = normalizeVesperfoldSeed(profile.starMarkSeed ?? 0);
+  const totalXp = Number(profile.xp) || 0;
+  const liveStreak = Number(profile.currentStreak) || 0;
+  const bestStreak = Number(profile.longestStreak) || 0;
 
   const profileUrl =
     typeof window !== 'undefined' && profile.slug
@@ -346,9 +354,9 @@ export function ArtistHome({
             <div className="max-w-md space-y-3">
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { label: 'Total XP', value: profile.xp.toLocaleString(), icon: Zap },
-                  { label: 'Live streak', value: `${profile.currentStreak}d`, icon: Flame },
-                  { label: 'Best streak', value: `${profile.longestStreak}d`, icon: Trophy },
+                  { label: 'Total XP', value: totalXp.toLocaleString(), icon: Zap },
+                  { label: 'Live streak', value: `${liveStreak}d`, icon: Flame },
+                  { label: 'Best streak', value: `${bestStreak}d`, icon: Trophy },
                 ].map((stat) => (
                   <div
                     key={stat.label}
@@ -413,7 +421,7 @@ export function ArtistHome({
                   />
                 ) : (
                   <AlbumCoverCollage
-                    urls={profile.albumCoverUrls || []}
+                    urls={collageUrls}
                     displayName={profile.displayName}
                     className="h-full w-full border-0 shadow-none"
                   />
@@ -534,11 +542,18 @@ export function ArtistHome({
         fit="contain"
       >
         {!useCustomPhoto ? (
-          <AlbumCoverCollage
-            urls={profile.albumCoverUrls || []}
-            displayName={profile.displayName}
-            className="mx-auto w-full max-w-md border-white/20 shadow-[0_0_60px_rgba(59,130,246,0.2)]"
-          />
+          useInitialsHero ? (
+            <ProfileInitialsStar
+              displayName={profile.displayName}
+              className="mx-auto w-full max-w-md border-white/20"
+            />
+          ) : (
+            <AlbumCoverCollage
+              urls={collageUrls}
+              displayName={profile.displayName}
+              className="mx-auto w-full max-w-md border-white/20 shadow-[0_0_60px_rgba(59,130,246,0.2)]"
+            />
+          )
         ) : null}
       </ProfileMediaLightbox>
 
