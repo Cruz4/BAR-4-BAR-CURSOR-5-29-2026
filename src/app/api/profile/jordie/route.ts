@@ -28,7 +28,7 @@ export async function GET() {
       return NextResponse.json(fallback);
     }
 
-    let slug = JORDIE_CRUZ.slug;
+    let slug: string = JORDIE_CRUZ.slug;
     try {
       const { resolveLiveUnderscoreProfileSlug } = await import('@/lib/server/profile-slug');
       const live = await resolveLiveUnderscoreProfileSlug(db, jordie.uid, {
