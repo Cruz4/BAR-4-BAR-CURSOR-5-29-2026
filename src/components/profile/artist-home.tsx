@@ -7,7 +7,6 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { ChevronLeft, Dna, Flame, Globe, PenLine, Repeat2, Settings2, Share2, Trophy, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -268,12 +267,7 @@ export function ArtistHome({
         </div>
 
         {/* Hero — original scale */}
-        <motion.section
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mt-8 grid gap-8 lg:grid-cols-12 lg:items-end"
-        >
+        <section className="mt-8 grid gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 lg:grid-cols-12 lg:items-end">
           <div className="space-y-5 lg:col-span-7">
             {config.featured.tagline && (
               <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-[var(--ph-accent)]">
@@ -385,12 +379,7 @@ export function ArtistHome({
           </div>
 
           <div className="flex justify-center lg:col-span-5 lg:justify-end">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.55, delay: 0.08 }}
-              className="relative w-full max-w-sm"
-            >
+            <div className="relative w-full max-w-sm animate-in fade-in zoom-in-95 duration-500">
               {tokens.alive && (
                 <div
                   aria-hidden
@@ -445,9 +434,9 @@ export function ArtistHome({
                 socials={config.featured.socials}
                 className="relative z-20 mt-3 pointer-events-auto"
               />
-            </motion.div>
+            </div>
           </div>
-        </motion.section>
+        </section>
 
         {/* Module deck — original width, masonry so S/M don't leave holes */}
         <div className="mt-12 columns-1 gap-5 lg:columns-2 lg:gap-5">
@@ -478,19 +467,16 @@ export function ArtistHome({
             const fullBleed =
               setting.size === 'L' || (setting.id === 'proofWall' && setting.size === 'M');
             return (
-              <motion.div
+              <div
                 key={setting.id}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-40px' }}
-                transition={{ duration: 0.4, delay: Math.min(i * 0.04, 0.2) }}
                 className={cn(
-                  'mb-5 break-inside-avoid',
+                  'mb-5 break-inside-avoid animate-in fade-in slide-in-from-bottom-2 duration-500',
                   fullBleed && 'lg:[column-span:all]'
                 )}
+                style={{ animationDelay: `${Math.min(i * 40, 200)}ms` }}
               >
                 <Renderer ctx={ctx} />
-              </motion.div>
+              </div>
             );
           })}
         </div>

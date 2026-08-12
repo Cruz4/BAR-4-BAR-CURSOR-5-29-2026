@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { ChevronLeft } from 'lucide-react';
 import { LockShell } from '@/components/lock/lock-shell';
 import { PublishOpenLockPanel } from '@/components/lock/publish-open-lock-panel';
 import { Button } from '@/components/ui/button';
@@ -132,13 +133,26 @@ export default function LockDeskPage() {
       }
     >
       <main className="mx-auto max-w-xl px-4 py-10 sm:px-6 sm:py-14">
-        <div className="mb-8 space-y-2">
-          <h1 className="font-headline text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
-            Finish this bar
-          </h1>
-          <p className="text-sm text-zinc-400">
-            Lines you published, and lines you put your name on.
-          </p>
+        <div className="mb-8 space-y-3">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1.5 border-white/10 bg-white/5 font-bold uppercase tracking-wider text-zinc-200 hover:bg-white/10 hover:text-white"
+            asChild
+          >
+            <Link href="/">
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Back
+            </Link>
+          </Button>
+          <div className="space-y-2">
+            <h1 className="font-headline text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
+              Finish this bar
+            </h1>
+            <p className="text-sm text-zinc-400">
+              Lines you published, and lines you put your name on.
+            </p>
+          </div>
         </div>
 
         {authLoading ? (

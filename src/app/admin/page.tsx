@@ -55,6 +55,7 @@ import { AdminLockFeatureCard } from '@/components/admin-lock-feature-card';
 import type { AdminGamificationRosterEntry } from '@/lib/gamification/admin-roster-types';
 import { format } from 'date-fns';
 import { formatUserJoinDate, userDateSortValue } from '@/lib/user-date';
+import { isMasterAdminEmail } from '@/lib/master-admin';
 import {
   Tooltip,
   TooltipContent,
@@ -91,6 +92,10 @@ export default function AdminPage() {
   const [opsLogFilter, setOpsLogFilter] = useState<'all' | 'transaction' | 'achievement' | 'ai_request'>('all');
   const [opsLogPage, setOpsLogPage] = useState(1);
   const [backfillingAchievements, setBackfillingAchievements] = useState(false);
+  const [repairingNeomaiya, setRepairingNeomaiya] = useState(false);
+  const [reseedingNeoCircle, setReseedingNeoCircle] = useState(false);
+  const [reseedingJordieCircle, setReseedingJordieCircle] = useState(false);
+  const [updatingRoleId, setUpdatingRoleId] = useState<string | null>(null);
   const [balances, setBalances] = useState<Record<string, { res: number, pur: number }>>({});
   const [gamificationStats, setGamificationStats] = useState<Record<string, AdminGamificationStats>>({});
   const [inkAdjustment, setInkAdjustment] = useState<Record<string, string>>({});
@@ -414,6 +419,69 @@ export default function AdminPage() {
     }
   };
 
+  const handleRepairNeomaiya = async () => {
+    setRepairingNeomaiya(true);
+    try {
+      const res = await adminApiFetch('/api/admin/neomaiya/repair', { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'Repair failed');
+      toast({
+        title: 'Neomaiya Sol identity repaired',
+        description: `Canonical ${body.canonicalEmail || 'plotformaiplan@gmail.com'} · Neo ↔ ${body.circleReseeded ?? body.artistsReseeded ?? 0} · Jordie ↔ ${body.jordieReseeded ?? 0} · Neo friends ${body.neoFriendCount ?? '?'} · Jordie friends ${body.jordieFriendCount ?? '?'}`,
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Neo repair failed',
+        description: err instanceof Error ? err.message : 'Could not repair Neomaiya identity',
+      });
+    } finally {
+      setRepairingNeomaiya(false);
+    }
+  };
+
+  const handleReseedNeoCircle = async () => {
+    setReseedingNeoCircle(true);
+    try {
+      const res = await adminApiFetch('/api/admin/neomaiya/reseed-circle', { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'Reseed failed');
+      toast({
+        title: 'Neo circle restored',
+        description: `Linked Neo ↔ ${body.reseeded ?? 0} artists (of ${body.attempted ?? 0}) · Neo now has ${body.neoFriendCount ?? '?'} accepted friends · skipped ${body.skipped ?? 0}`,
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Neo circle reseed failed',
+        description: err instanceof Error ? err.message : 'Could not restore Neo friendships',
+      });
+    } finally {
+      setReseedingNeoCircle(false);
+    }
+  };
+
+  const handleReseedJordieCircle = async () => {
+    setReseedingJordieCircle(true);
+    try {
+      const res = await adminApiFetch('/api/admin/jordie/reseed-circle', { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'Reseed failed');
+      toast({
+        title: 'Jordie circle restored',
+        description: `Linked Jordie ↔ ${body.reseeded ?? 0} artists · Jordie friends ${body.jordieFriendCount ?? '?'} · guestbook moved ${body.guestbookMoved ?? 0} · skipped ${body.skipped ?? 0}`,
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Jordie circle reseed failed',
+        description: err instanceof Error ? err.message : 'Could not restore Jordie friendships',
+      });
+    } finally {
+      setReseedingJordieCircle(false);
+    }
+  };
+
   const handleUpdateTier = async (targetUser: User, tier: 'none' | 'monthly' | 'yearly') => {
     const status = tier === 'none' ? 'none' : 'active';
     try {
@@ -424,6 +492,65 @@ export default function AdminPage() {
         toast({ title: "Residency Updated", description: `${targetUser.displayName} is now on ${tier.toUpperCase()} Pro.` });
     } catch (e: any) {
         toast({ variant: 'destructive', title: "Update Failed", description: e.message });
+    }
+  };
+
+  const handleUpdateRole = async (targetUser: User, role: 'admin' | 'artist') => {
+    if (targetUser.id === user?.id && role === 'artist') {
+      toast({
+        variant: 'destructive',
+        title: 'Blocked',
+        description: 'You cannot demote yourself.',
+      });
+      return;
+    }
+    if (role === 'artist' && isMasterAdminEmail(targetUser.email)) {
+      toast({
+        variant: 'destructive',
+        title: 'Blocked',
+        description: 'Master admin cannot be demoted.',
+      });
+      return;
+    }
+    const label = role === 'admin' ? 'admin' : 'artist';
+    if (
+      !confirm(
+        role === 'admin'
+          ? `Make ${targetUser.displayName} an admin?\n\nThey will get the Admin Panel after refresh / re-sign-in.`
+          : `Remove admin from ${targetUser.displayName}?\n\nThey will go back to a normal artist account.`
+      )
+    ) {
+      return;
+    }
+
+    setUpdatingRoleId(targetUser.id);
+    try {
+      const res = await adminApiFetch('/api/admin/users/role', {
+        method: 'POST',
+        body: JSON.stringify({ targetUserId: targetUser.id, role }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body.error || `Role update failed (${res.status})`);
+      }
+      setUsers((prev) =>
+        prev.map((u) => (u.id === targetUser.id ? { ...u, role } : u))
+      );
+      setBlockedUsers((prev) =>
+        prev.map((u) => (u.id === targetUser.id ? { ...u, role } : u))
+      );
+      toast({
+        title: role === 'admin' ? 'Admin granted' : 'Admin removed',
+        description: `${targetUser.displayName} is now ${label}.`,
+      });
+    } catch (e: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Role update failed',
+        description: e.message,
+      });
+    } finally {
+      setUpdatingRoleId(null);
     }
   };
 
@@ -645,7 +772,20 @@ export default function AdminPage() {
 
                     return (
                     <TableRow key={u.id} className="hover:bg-white/5 border-b border-white/5">
-                      <TableCell><div className="font-bold text-white uppercase text-xs">{u.displayName}</div><div className="text-[9px] text-muted-foreground uppercase">{u.email}</div></TableCell>
+                      <TableCell>
+                        <div className="font-bold text-white uppercase text-xs flex items-center gap-2 flex-wrap">
+                          <span>{u.displayName}</span>
+                          {(u.role === 'admin' || isMasterAdminEmail(u.email)) && (
+                            <Badge
+                              variant="outline"
+                              className="text-[8px] leading-none px-1.5 py-0.5 border-fuchsia-500/40 text-fuchsia-300 uppercase font-bold tracking-wide"
+                            >
+                              Admin
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-[9px] text-muted-foreground uppercase">{u.email}</div>
+                      </TableCell>
                       <TableCell>
                           <Select value={u.subscriptionTier || 'none'} onValueChange={(val: any) => handleUpdateTier(u, val)}>
                               <SelectTrigger className={cn("h-8 w-32 text-[9px] font-bold uppercase", u.subscriptionTier === 'yearly' ? "border-accent text-accent" : "border-primary text-primary")}>
@@ -760,6 +900,57 @@ export default function AdminPage() {
                       </TableCell>
                       <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
+                                  {(() => {
+                                    const isAdminRow =
+                                      u.role === 'admin' || isMasterAdminEmail(u.email);
+                                    const isMaster = isMasterAdminEmail(u.email);
+                                    const isSelf = u.id === user?.id;
+                                    const busy = updatingRoleId === u.id;
+                                    if (isAdminRow) {
+                                      return (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-8 w-8 text-fuchsia-400 hover:bg-fuchsia-500/10"
+                                              disabled={busy || isMaster || isSelf}
+                                              onClick={() => void handleUpdateRole(u, 'artist')}
+                                            >
+                                              <ShieldX className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="text-[10px] font-bold">
+                                              {isMaster
+                                                ? 'Master admin'
+                                                : isSelf
+                                                  ? 'Cannot demote yourself'
+                                                  : 'Remove admin'}
+                                            </p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      );
+                                    }
+                                    return (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-emerald-400 hover:bg-emerald-500/10"
+                                            disabled={busy}
+                                            onClick={() => void handleUpdateRole(u, 'admin')}
+                                          >
+                                            <ShieldCheck className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p className="text-[10px] font-bold">Make admin</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    );
+                                  })()}
                                   <Tooltip>
                                       <TooltipTrigger asChild>
                                           <Button
@@ -866,17 +1057,57 @@ export default function AdminPage() {
                 <CardHeader className="border-b space-y-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <CardTitle className="font-headline text-2xl uppercase">Neural Operation Stream</CardTitle>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-9 text-[10px] font-bold uppercase tracking-wider"
-                      disabled={backfillingAchievements}
-                      onClick={() => void handleBackfillAchievements()}
-                    >
-                      {backfillingAchievements ? 'Backfilling…' : 'Backfill achievement unlocks'}
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-9 text-[10px] font-bold uppercase tracking-wider"
+                        disabled={backfillingAchievements}
+                        onClick={() => void handleBackfillAchievements()}
+                      >
+                        {backfillingAchievements ? 'Backfilling…' : 'Backfill achievement unlocks'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-9 text-[10px] font-bold uppercase tracking-wider border-fuchsia-500/40 text-fuchsia-200"
+                        disabled={repairingNeomaiya}
+                        onClick={() => void handleRepairNeomaiya()}
+                      >
+                        {repairingNeomaiya ? 'Repairing Neo…' : 'Repair Neomaiya Sol identity'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-9 text-[10px] font-bold uppercase tracking-wider border-emerald-500/40 text-emerald-200"
+                        disabled={reseedingNeoCircle}
+                        onClick={() => void handleReseedNeoCircle()}
+                      >
+                        {reseedingNeoCircle ? 'Restoring Neo ↔ everyone…' : 'Make Neo everyone’s friend'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-9 text-[10px] font-bold uppercase tracking-wider border-amber-500/40 text-amber-200"
+                        disabled={reseedingJordieCircle}
+                        onClick={() => void handleReseedJordieCircle()}
+                      >
+                        {reseedingJordieCircle
+                          ? 'Restoring Jordie ↔ everyone…'
+                          : 'Make Jordie everyone’s friend'}
+                      </Button>
+                    </div>
                   </div>
+                  <p className="text-[11px] text-muted-foreground max-w-2xl">
+                    Signup auto-friends both Neo and Jordie. Guestbook welcome is{' '}
+                    <span className="text-amber-200/90">Jordie Cruz</span> (jordiecruzllc@gmail.com).
+                    Run <span className="text-amber-200/90">Make Jordie everyone’s friend</span> to
+                    retro-link everyone and move welcome guestbook lines off Neo.
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {(
                       [

@@ -10,6 +10,13 @@ import { vaultHref } from '@/lib/scene-home';
 import { ACHIEVEMENTS, type AchievementDef } from '@/lib/gamification/achievements';
 import { rankFromXp, STUDIO_RANKS, xpProgressInRank } from '@/lib/gamification/ranks';
 import {
+  canPrestigeReset,
+  getPrestigeLevel,
+  MAX_PRESTIGE,
+  prestigeTallyLabel,
+} from '@/lib/gamification/prestige';
+import { postPrestigeReset } from '@/lib/gamification-client';
+import {
   rankBadgeClass,
   rankLadderBadgeClass,
   RANK_XP_BAR,
@@ -164,11 +171,15 @@ export function StudioProgressBoard() {
   const [postingStanding, setPostingStanding] = useState(false);
   const [exportingStanding, setExportingStanding] = useState(false);
   const [trophySort, setTrophySort] = useState<TrophySortId>('default');
+  const [prestigeSaving, setPrestigeSaving] = useState(false);
   const standingCardRef = useRef<HTMLDivElement>(null);
 
   const isPro = isProUser(user);
   const unlocked = summary?.unlockedAchievements || {};
   const displayName = user?.displayName || 'Studio Artist';
+  const prestigeLevel = getPrestigeLevel(summary);
+  const prestigeReady = canPrestigeReset(summary, isPro);
+  const prestigeTag = prestigeTallyLabel(prestigeLevel);
 
   useEffect(() => {
     try {
@@ -278,6 +289,29 @@ export function StudioProgressBoard() {
       toast({ variant: 'destructive', title: 'Download failed' });
     } finally {
       setExportingStanding(false);
+    }
+  };
+
+  const runPrestigeReset = async () => {
+    if (!prestigeReady || prestigeSaving) return;
+    const ok = window.confirm(
+      `Prestige to P${prestigeLevel + 1}? This resets XP, plates, and personal trophies so the climb scales harder — social history stays. You can prestige up to ${MAX_PRESTIGE} times.`
+    );
+    if (!ok) return;
+    setPrestigeSaving(true);
+    try {
+      await postPrestigeReset();
+      toast({
+        title: `Prestige ${prestigeLevel + 1} locked in`,
+        description: 'Fresh plates. Higher ceilings. Same booth.',
+      });
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: e instanceof Error ? e.message : 'Prestige reset failed',
+      });
+    } finally {
+      setPrestigeSaving(false);
     }
   };
 
@@ -420,6 +454,36 @@ export function StudioProgressBoard() {
                     </Badge>
                   );
                 })}
+              </div>
+              <div className="mt-2 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2.5 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-amber-200/90">
+                    Prestige {prestigeTag ? `· ${prestigeTag}` : `· 0 / ${MAX_PRESTIGE}`}
+                  </p>
+                  <span className="font-code text-[10px] text-muted-foreground">
+                    {prestigeLevel}/{MAX_PRESTIGE}
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Finish Vault Architect + every personal lifetime milestone, then reset the climb.
+                  Each prestige raises writing ceilings — never a “be P4” gate.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={prestigeReady ? 'default' : 'outline'}
+                  className="h-8 text-[10px] font-bold uppercase"
+                  disabled={!prestigeReady || prestigeSaving || prestigeLevel >= MAX_PRESTIGE}
+                  onClick={() => void runPrestigeReset()}
+                >
+                  {prestigeLevel >= MAX_PRESTIGE
+                    ? 'Max prestige'
+                    : prestigeSaving
+                      ? 'Prestiging…'
+                      : prestigeReady
+                        ? `Prestige to P${prestigeLevel + 1}`
+                        : 'Prestige locked'}
+                </Button>
               </div>
             </div>
 

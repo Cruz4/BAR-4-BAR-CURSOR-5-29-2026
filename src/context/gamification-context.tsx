@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useRef, useState, ReactNod
 import { useAuth } from '@/hooks/use-auth';
 import { DEFAULT_GAMIFICATION_SUMMARY, type GamificationSummary } from '@/lib/gamification/types';
 import { rankFromXp } from '@/lib/gamification/ranks';
+import { prestigeTallyLabel } from '@/lib/gamification/prestige';
 import { getAchievement } from '@/lib/gamification/achievements';
 import { isProUser } from '@/lib/subscription';
 import {
@@ -212,7 +213,9 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     prevSummaryRef.current = summary;
   }, [summary, loading, user]);
 
-  const rankLabel = rankFromXp(summary.xp, isProUser(user)).label;
+  const rank = rankFromXp(summary.xp, isProUser(user));
+  const prestigeTag = prestigeTallyLabel(summary.prestigeLevel);
+  const rankLabel = prestigeTag ? `${rank.label} · ${prestigeTag}` : rank.label;
 
   return (
     <GamificationContext.Provider value={{ summary, rankLabel, loading }}>

@@ -55,6 +55,7 @@ export async function patchGamificationSettings(settings: {
   publicProfile?: boolean;
   leaderboardHidden?: boolean;
   displayName?: string;
+  profileSlug?: string;
   profilePhotoMode?: 'collage' | 'custom' | 'initials';
   profilePhotoUrl?: string | null;
   profileCollageAlbumIds?: string[] | null;
@@ -79,6 +80,33 @@ export async function patchGamificationSettings(settings: {
   });
   if (!res.ok) {
     let message = 'Failed to update profile settings';
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body?.error) message = body.error;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
+  const data = await res.json();
+  if (data.summary) {
+    dispatchGamificationSummaryPatch(data.summary);
+  }
+  return data;
+}
+
+export async function postPrestigeReset() {
+  const { user, token } = await authHeaders();
+  const res = await fetch('/api/gamification/prestige', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ userId: user.uid }),
+  });
+  if (!res.ok) {
+    let message = 'Prestige reset failed';
     try {
       const body = (await res.json()) as { error?: string };
       if (body?.error) message = body.error;

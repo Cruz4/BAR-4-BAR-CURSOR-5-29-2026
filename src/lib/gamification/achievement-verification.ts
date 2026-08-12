@@ -2,6 +2,7 @@
 
 import type { GamificationSummary, GamificationTrigger } from '@/lib/gamification/types';
 import { ACHIEVEMENT_THRESHOLDS } from '@/lib/gamification/achievement-thresholds';
+import { getPrestigeLevel, scaleByPrestige } from '@/lib/gamification/prestige';
 import { rhymeBarsToLines } from '@/lib/lyrics-units';
 
 export type AchievementVerifyContext = {
@@ -37,13 +38,19 @@ type SummarySlice = Pick<
   | 'lifetimeSharesCreated'
   | 'lifetimeDnaImportsReceived'
   | 'personalBests'
+  | 'prestigeLevel'
 >;
+
+function scaled(base: number, prestigeLevel?: number): number {
+  return scaleByPrestige(base, getPrestigeLevel({ prestigeLevel }));
+}
 
 export function isAchievementActionVerified(
   achievementId: string,
   analytics: AnalyticsSummary,
   ctx: AchievementVerifyContext,
-  trigger?: GamificationTrigger
+  trigger?: GamificationTrigger,
+  prestigeLevel = 0
 ): boolean {
   const t = ACHIEVEMENT_THRESHOLDS;
 
@@ -61,10 +68,13 @@ export function isAchievementActionVerified(
     case 'bars_16_session':
       return (
         trigger === 'track_saved' &&
-        ctx.writtenLinesOnTrackVerified >= rhymeBarsToLines(t.sessionBars)
+        ctx.writtenLinesOnTrackVerified >= rhymeBarsToLines(scaled(t.sessionBars, prestigeLevel))
       );
     case 'album_builder':
-      return trigger === 'track_saved' && ctx.albumTrackCountVerified >= t.albumTracks;
+      return (
+        trigger === 'track_saved' &&
+        ctx.albumTrackCountVerified >= scaled(t.albumTracks, prestigeLevel)
+      );
     case 'vault_strain':
       return trigger === 'dna_preset_saved';
     case 'share_drop':
@@ -102,6 +112,8 @@ export function canUnlockAchievement(
   trigger?: GamificationTrigger
 ): boolean {
   const t = ACHIEVEMENT_THRESHOLDS;
+  const prestige = getPrestigeLevel(summary);
+  const S = (n: number) => scaled(n, prestige);
   const lifetimeLines = summary.lifetimeBarsWritten || 0;
   const sessionDays = Array.isArray(analytics.sessionDates)
     ? analytics.sessionDates.length
@@ -111,65 +123,65 @@ export function canUnlockAchievement(
     case 'streak_3':
       return (
         summary.currentStreak >= t.streak3Days &&
-        lifetimeLines >= rhymeBarsToLines(t.streak3MinLifetimeBars)
+        lifetimeLines >= rhymeBarsToLines(S(t.streak3MinLifetimeBars))
       );
     case 'streak_7':
       return (
         summary.currentStreak >= t.streak7Days &&
-        lifetimeLines >= rhymeBarsToLines(t.streak7MinLifetimeBars)
+        lifetimeLines >= rhymeBarsToLines(S(t.streak7MinLifetimeBars))
       );
     case 'streak_30':
       return (
         summary.currentStreak >= t.streak30Days &&
-        lifetimeLines >= rhymeBarsToLines(t.streak30MinLifetimeBars)
+        lifetimeLines >= rhymeBarsToLines(S(t.streak30MinLifetimeBars))
       );
     case 'bars_1000':
-      return lifetimeLines >= rhymeBarsToLines(t.lifetimeBars1k);
+      return lifetimeLines >= rhymeBarsToLines(S(t.lifetimeBars1k));
     case 'bars_2500':
-      return lifetimeLines >= rhymeBarsToLines(t.lifetimeBars2500);
+      return lifetimeLines >= rhymeBarsToLines(S(t.lifetimeBars2500));
     case 'next_line_50':
-      return (summary.lifetimeGenerateNextLine || 0) >= t.lifetimeNextLine50;
+      return (summary.lifetimeGenerateNextLine || 0) >= S(t.lifetimeNextLine50);
     case 'next_line_200':
-      return (summary.lifetimeGenerateNextLine || 0) >= t.lifetimeNextLine200;
+      return (summary.lifetimeGenerateNextLine || 0) >= S(t.lifetimeNextLine200);
     case 'catalog_5_locked':
-      return ctx.lifetimeCompletedTracksVerified >= t.catalogCompleted5;
+      return ctx.lifetimeCompletedTracksVerified >= S(t.catalogCompleted5);
     case 'catalog_12_locked':
-      return ctx.lifetimeCompletedTracksVerified >= t.catalogCompleted12;
+      return ctx.lifetimeCompletedTracksVerified >= S(t.catalogCompleted12);
     case 'track_64_deep':
       return (
-        ctx.barsOnTrackVerified >= rhymeBarsToLines(t.trackBarsDeep) ||
-        ctx.maxBarsOnAnyTrackVerified >= rhymeBarsToLines(t.trackBarsDeep)
+        ctx.barsOnTrackVerified >= rhymeBarsToLines(S(t.trackBarsDeep)) ||
+        ctx.maxBarsOnAnyTrackVerified >= rhymeBarsToLines(S(t.trackBarsDeep))
       );
     case 'track_100_deep':
       return (
-        ctx.barsOnTrackVerified >= rhymeBarsToLines(t.trackBarsCentury) ||
-        ctx.maxBarsOnAnyTrackVerified >= rhymeBarsToLines(t.trackBarsCentury)
+        ctx.barsOnTrackVerified >= rhymeBarsToLines(S(t.trackBarsCentury)) ||
+        ctx.maxBarsOnAnyTrackVerified >= rhymeBarsToLines(S(t.trackBarsCentury))
       );
     case 'album_8_wide':
-      return trigger === 'track_saved' && ctx.albumTrackCountVerified >= t.albumTracksWide;
+      return trigger === 'track_saved' && ctx.albumTrackCountVerified >= S(t.albumTracksWide);
     case 'dual_blueprint':
       return ctx.qualifyingAlbumCountVerified >= 2;
     case 'night_shift':
-      return (summary.personalBests?.barsInDay || 0) >= rhymeBarsToLines(t.barsInDayNight);
+      return (summary.personalBests?.barsInDay || 0) >= rhymeBarsToLines(S(t.barsInDayNight));
     case 'graveyard_shift':
-      return (summary.personalBests?.barsInDay || 0) >= rhymeBarsToLines(t.barsInDayGraveyard);
+      return (summary.personalBests?.barsInDay || 0) >= rhymeBarsToLines(S(t.barsInDayGraveyard));
     case 'flame_14':
       return (
         (summary.longestStreak || 0) >= t.longestStreak14 &&
-        lifetimeLines >= rhymeBarsToLines(t.longestStreak14MinBars)
+        lifetimeLines >= rhymeBarsToLines(S(t.longestStreak14MinBars))
       );
     case 'flame_60':
       return (
         (summary.longestStreak || 0) >= t.longestStreak60 &&
-        lifetimeLines >= rhymeBarsToLines(t.longestStreak60MinBars)
+        lifetimeLines >= rhymeBarsToLines(S(t.longestStreak60MinBars))
       );
     case 'session_veteran':
       return (
-        sessionDays >= t.sessionDaysVeteran &&
-        lifetimeLines >= rhymeBarsToLines(t.sessionVeteranMinBars)
+        sessionDays >= S(t.sessionDaysVeteran) &&
+        lifetimeLines >= rhymeBarsToLines(S(t.sessionVeteranMinBars))
       );
     case 'album_trilogy_done':
-      return ctx.albumCompletedTracksVerified >= t.albumCompletedTracks;
+      return ctx.albumCompletedTracksVerified >= S(t.albumCompletedTracks);
     case 'dna_import_first':
       return (summary.lifetimeDnaImports || 0) >= t.dnaImportsFirst;
     case 'dna_import_5':
@@ -193,6 +205,6 @@ export function canUnlockAchievement(
     case 'triple_live':
       return (summary.lifetimeSharesCreated || 0) >= t.sharesCreatedTriple;
     default:
-      return isAchievementActionVerified(achievementId, analytics, ctx, trigger);
+      return isAchievementActionVerified(achievementId, analytics, ctx, trigger, prestige);
   }
 }

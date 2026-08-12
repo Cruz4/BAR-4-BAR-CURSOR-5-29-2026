@@ -49,8 +49,12 @@ import { parseEmbedUrl } from '@/lib/profile/embeds';
 import {
   NEOMAIYA_SOL,
   neomaiyaFriendChip,
-  neomaiyaPlaygroundGuestbookEntry,
 } from '@/lib/profile/neomaiya-sol';
+import {
+  JORDIE_CRUZ,
+  jordieFriendChip,
+  jordiePlaygroundGuestbookEntry,
+} from '@/lib/profile/jordie-cruz';
 import { cn } from '@/lib/utils';
 
 const PRESSING_TIP_KEY = 'b4b-guest-pressing-tip-seen';
@@ -142,6 +146,9 @@ function GuestPressingLandingInner() {
   const [neoSlug, setNeoSlug] = useState<string>(NEOMAIYA_SOL.slug);
   const [neoUserId, setNeoUserId] = useState<string | undefined>(undefined);
   const [neoDisplayName, setNeoDisplayName] = useState<string>(NEOMAIYA_SOL.displayName);
+  const [jordieSlug, setJordieSlug] = useState<string>(JORDIE_CRUZ.slug);
+  const [jordieUserId, setJordieUserId] = useState<string | undefined>(undefined);
+  const [jordieDisplayName, setJordieDisplayName] = useState<string>(JORDIE_CRUZ.displayName);
   const seedRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -160,9 +167,7 @@ function GuestPressingLandingInner() {
     }
   }, []);
 
-  // Resolve Neomaiya's live Auth account for guestbook / friends (real uid + slug).
-  // Never replace the canonical slug with a dead/regenerated one (public on/off
-  // can mint neomaiya-sol-{uid} mirrors that 404 while paQXxm stays live).
+  // Resolve Jordie (guestbook welcome) + Neo (auto-friend) for sandbox chips.
   useEffect(() => {
     let cancelled = false;
     void fetch('/api/profile/neomaiya')
@@ -194,6 +199,37 @@ function GuestPressingLandingInner() {
         if (!cancelled) setNeoSlug(NEOMAIYA_SOL.slug);
       })
       .catch(() => undefined);
+
+    void fetch('/api/profile/jordie')
+      .then((r) => r.json())
+      .then(async (data: { slug?: string; userId?: string; displayName?: string }) => {
+        if (cancelled) return;
+        const uid = typeof data?.userId === 'string' ? data.userId.trim() : '';
+        if (uid) setJordieUserId(uid);
+        const name =
+          typeof data?.displayName === 'string' && data.displayName.trim()
+            ? data.displayName.trim()
+            : JORDIE_CRUZ.displayName;
+        setJordieDisplayName(name);
+
+        const next = typeof data?.slug === 'string' ? data.slug.trim() : '';
+        if (!next || next === JORDIE_CRUZ.slug) {
+          setJordieSlug(JORDIE_CRUZ.slug);
+          return;
+        }
+        try {
+          const check = await fetch(`/api/profile/${encodeURIComponent(next)}`, { method: 'GET' });
+          if (!cancelled && check.ok) {
+            setJordieSlug(next);
+            return;
+          }
+        } catch {
+          /* keep preferred */
+        }
+        if (!cancelled) setJordieSlug(JORDIE_CRUZ.slug);
+      })
+      .catch(() => undefined);
+
     return () => {
       cancelled = true;
     };
@@ -267,34 +303,39 @@ function GuestPressingLandingInner() {
 
   const playgroundFriends = useMemo(
     () => [
+      jordieFriendChip({
+        userId: jordieUserId,
+        slug: jordieSlug,
+        name: jordieDisplayName,
+      }),
       neomaiyaFriendChip({
         userId: neoUserId,
         slug: neoSlug,
         name: neoDisplayName,
       }),
     ],
-    [neoUserId, neoSlug, neoDisplayName]
+    [jordieUserId, jordieSlug, jordieDisplayName, neoUserId, neoSlug, neoDisplayName]
   );
   const playgroundGuestbook = useMemo(() => {
     let seed = 'guest-pressing';
     try {
-      const existing = sessionStorage.getItem('b4b-neo-guestbook-seed');
+      const existing = sessionStorage.getItem('b4b-jordie-guestbook-seed');
       if (existing) seed = existing;
       else {
         seed = `guest-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-        sessionStorage.setItem('b4b-neo-guestbook-seed', seed);
+        sessionStorage.setItem('b4b-jordie-guestbook-seed', seed);
       }
     } catch {
       /* ignore */
     }
     return [
-      neomaiyaPlaygroundGuestbookEntry(new Date(), seed, {
-        userId: neoUserId,
-        slug: neoSlug,
-        name: neoDisplayName,
+      jordiePlaygroundGuestbookEntry(new Date(), seed, {
+        userId: jordieUserId,
+        slug: jordieSlug,
+        name: jordieDisplayName,
       }),
     ];
-  }, [neoUserId, neoSlug, neoDisplayName]);
+  }, [jordieUserId, jordieSlug, jordieDisplayName]);
 
   const playgroundBarOfWeek = useMemo(
     () => ({

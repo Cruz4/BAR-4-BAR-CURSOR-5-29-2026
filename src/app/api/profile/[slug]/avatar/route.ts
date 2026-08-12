@@ -13,15 +13,18 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
       return NextResponse.json({ avatarUrl: null }, { status: 404 });
     }
     const data = profile as Record<string, unknown>;
+    const liveSlug =
+      typeof data.slug === 'string' && data.slug.trim() ? data.slug.trim() : slug;
     const starMarkUseStar = data.starMarkUseStar === true;
     const starMarkSeed = normalizeVesperfoldSeed(
       typeof data.starMarkSeed === 'number' ? data.starMarkSeed : 0
     );
-    const avatarUrl = await getPublicArtistAvatar(slug);
+    const avatarUrl = await getPublicArtistAvatar(liveSlug);
     return NextResponse.json({
       avatarUrl: avatarUrl ?? null,
       starMarkUseStar,
       starMarkSeed: starMarkUseStar ? starMarkSeed : null,
+      slug: liveSlug,
     });
   } catch (err) {
     console.error('[profile/slug/avatar]', err);

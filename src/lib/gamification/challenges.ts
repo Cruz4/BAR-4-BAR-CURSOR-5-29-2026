@@ -52,18 +52,18 @@ const BAR_LINE_FIELDS = new Set<ChallengeDef['field']>([
 export const WEEKLY_CHALLENGES: ChallengeDef[] = [
   {
     id: 'bars_8',
-    label: 'Write 8 bars this week',
-    description: 'Hand-write eight new rhyme bars (typed lines) across any tracks before Monday reset.',
-    target: 8,
+    label: 'Write 16 bars this week',
+    description: 'Hand-write sixteen new rhyme bars (typed lines) across any tracks before Monday reset.',
+    target: 16,
     scale: 'weekly',
     tier: 'standard',
     field: 'barsWeek',
   },
   {
     id: 'next_line_5',
-    label: 'Generate Next Line 5 times',
-    description: 'Use Bar Workstation AI five times this week.',
-    target: 5,
+    label: 'Generate Next Line 8 times',
+    description: 'Use Bar Workstation AI eight times this week.',
+    target: 8,
     scale: 'weekly',
     tier: 'standard',
     field: 'generateNextLineWeekCount',
@@ -248,8 +248,8 @@ export const LIFETIME_MILESTONES: ChallengeDef[] = [
   {
     id: 'life_xp_1500',
     label: 'Headliner Status',
-    description: 'Earn 1,500 XP and reach Headliner rank.',
-    target: 1500,
+    description: 'Earn Headliner rank on the studio plate ladder.',
+    target: 1,
     scale: 'lifetime',
     tier: 'epic',
     field: 'rankHeadliner',
@@ -257,8 +257,8 @@ export const LIFETIME_MILESTONES: ChallengeDef[] = [
   {
     id: 'life_xp_3500',
     label: 'Vault Architect',
-    description: '3,500 XP — the highest studio rank (Pro overlay at cap).',
-    target: 3500,
+    description: 'Reach Vault Architect — the top studio plate (Pro overlay at cap).',
+    target: 1,
     scale: 'lifetime',
     tier: 'legendary',
     field: 'rankVaultArchitect',
@@ -266,8 +266,8 @@ export const LIFETIME_MILESTONES: ChallengeDef[] = [
   {
     id: 'life_badges_5',
     label: 'Badge Collector',
-    description: 'Unlock five studio achievements.',
-    target: 5,
+    description: 'Unlock eight studio achievements.',
+    target: 8,
     scale: 'lifetime',
     tier: 'standard',
     field: 'achievementCount',
@@ -421,8 +421,12 @@ function resolveFieldProgress(
       return summary.xp || 0;
     case 'achievementCount':
       return achievementCount(summary);
-    case 'rankHeadliner':
-      return summary.xp >= (STUDIO_RANKS.find((r) => r.id === 'headliner')?.minXp || 1500) ? 1 : 0;
+    case 'rankHeadliner': {
+      const rank = rankFromXp(summary.xp, isPro);
+      const headlinerIdx = STUDIO_RANKS.findIndex((r) => r.id === 'headliner');
+      const currentIdx = STUDIO_RANKS.findIndex((r) => r.id === rank.id);
+      return currentIdx >= headlinerIdx && headlinerIdx >= 0 ? 1 : 0;
+    }
     case 'rankVaultArchitect': {
       const rank = rankFromXp(summary.xp, isPro);
       return rank.id === 'vault_architect' ? 1 : 0;

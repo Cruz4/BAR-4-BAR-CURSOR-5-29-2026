@@ -22,9 +22,14 @@ export type StudioPassInput = {
 
 const RANK_CODE: Record<RankId, string> = {
   open_mic: 'OM',
+  soundcheck: 'SC',
   demo_tape: 'DT',
+  cipher_cut: 'CC',
   session_ready: 'SR',
+  green_room: 'GR',
   headliner: 'HL',
+  encore_run: 'ER',
+  catalog_king: 'CK',
   vault_architect: 'VA',
 };
 

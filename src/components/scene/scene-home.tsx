@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { Check, Radio, Send, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { StudioLoader } from '@/components/studio-loader';
@@ -70,6 +71,9 @@ import {
 } from '@/lib/tiktok-pixel';
 import { postGamificationEvent } from '@/lib/gamification-client';
 import { BLOCK_SECTION_ID } from '@/lib/scene-home';
+import { Label } from '@/components/ui/label';
+
+const SCENE_BLOCK_SHOW_MINE_KEY = 'b4b.scene.block.showMine';
 
 function SceneComposer({
   profileSlug,
@@ -160,9 +164,29 @@ export function SceneHome() {
   const [loaded, setLoaded] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
+  const [showMine, setShowMine] = useState(true);
   const tourAutoStartRef = useRef(false);
 
   const viewerSlug = summary.profileSlug || undefined;
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SCENE_BLOCK_SHOW_MINE_KEY);
+      if (raw === '0' || raw === 'false') setShowMine(false);
+      else if (raw === '1' || raw === 'true') setShowMine(true);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const setShowMinePersist = useCallback((next: boolean) => {
+    setShowMine(next);
+    try {
+      localStorage.setItem(SCENE_BLOCK_SHOW_MINE_KEY, next ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const sceneProgressTourPinned =
     tourActive && SCENE_HOME_TOUR_STEPS[tourStep]?.id === 'scene-progress';
@@ -209,8 +233,8 @@ export function SceneHome() {
                 ...f.profiles,
                 [f.requestedBy]: {
                   ...existing,
-                  slug: existing.slug || meta.slug,
-                  name: existing.name || meta.displayName || 'Artist',
+                  slug: meta.slug || existing.slug,
+                  name: meta.displayName || existing.name || 'Artist',
                 },
               },
             };
@@ -411,6 +435,11 @@ export function SceneHome() {
     });
   }, [discover, posts, blockedIds]);
 
+  const blockPosts = useMemo(() => {
+    if (showMine || !user?.id) return posts;
+    return posts.filter((p) => p.ownerId !== user.id);
+  }, [posts, showMine, user?.id]);
+
   // Drives the Scene Block atmosphere — the skyline gets busier as your
   // circle does, not on a canned timer.
   const sceneEnergy =
@@ -582,16 +611,30 @@ export function SceneHome() {
               className="scroll-mt-[5.5rem] space-y-4"
               data-tour="scene-feed"
             >
-              <div className="flex items-center gap-3 pt-1">
-                <span className="h-px flex-1 bg-border/60" />
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-1">
+                <span className="h-px min-w-[2rem] flex-1 bg-border/60" />
                 <span className="font-code text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground/70">
                   Your Block
                 </span>
-                <span className="h-px flex-1 bg-border/60" />
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-2 py-1">
+                  <Checkbox
+                    id="scene-block-show-mine"
+                    checked={showMine}
+                    onCheckedChange={(v) => setShowMinePersist(v === true)}
+                    className="h-3.5 w-3.5 border-white/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                  />
+                  <Label
+                    htmlFor="scene-block-show-mine"
+                    className="cursor-pointer font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/80"
+                  >
+                    Incl. mine
+                  </Label>
+                </div>
+                <span className="h-px min-w-[2rem] flex-1 bg-border/60" />
               </div>
 
-              {posts.length > 0 ? (
-                posts.map((post) => (
+              {blockPosts.length > 0 ? (
+                blockPosts.map((post) => (
                   <PostCard
                     key={post.id}
                     post={post}
@@ -603,9 +646,11 @@ export function SceneHome() {
               ) : (
                 <div className="rounded-2xl border border-dashed border-white/15 bg-black/20 px-6 py-8 text-center">
                   <p className="text-sm text-muted-foreground">
-                    {friendCount === 0
-                      ? 'Your circle is quiet so far — the scene below is live right now. Visit a page, add a friend, drop a bar.'
-                      : 'Quiet block. Post something above to get it moving.'}
+                    {posts.length > 0 && !showMine
+                      ? 'Your own posts are off — turn on Incl. mine to see them here.'
+                      : friendCount === 0
+                        ? 'Your circle is quiet so far — the scene below is live right now. Visit a page, add a friend, drop a bar.'
+                        : 'Quiet block. Post something above to get it moving.'}
                   </p>
                 </div>
               )}

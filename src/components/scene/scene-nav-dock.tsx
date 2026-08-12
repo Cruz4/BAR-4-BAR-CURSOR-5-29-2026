@@ -3,7 +3,7 @@
 /**
  * Scene Nav Dock — right rail of the Scene home.
  * Fast lanes: Vault, write split (keep / new), Artist Home split (view / edit),
- * Leaderboard, Activity|Circle split, Ink store.
+ * Activity|Circle split, Leaderboard, Ink store.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -373,11 +373,11 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
         />
       ) : null}
 
-      <DockLink item={items[1]!} />
       <ActivityCircleSplitButton
         alertCount={alertCount}
         className={compact ? 'col-span-2 sm:col-span-3' : undefined}
       />
+      <DockLink item={items[1]!} />
       <DockLink item={items[2]!} />
     </nav>
   );

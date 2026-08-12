@@ -13,6 +13,11 @@ import {
 } from '@/lib/gamification/achievement-verification';
 import { ACHIEVEMENT_THRESHOLDS } from '@/lib/gamification/achievement-thresholds';
 import {
+  canPrestigeReset,
+  getPrestigeLevel,
+  scaleByPrestige,
+} from '@/lib/gamification/prestige';
+import {
   DEFAULT_GAMIFICATION_SUMMARY,
   type GamificationSummary,
   type GamificationTrigger,
@@ -29,6 +34,10 @@ import {
   vesperfoldDataUrl,
   type VesperfoldSlot,
 } from '@/lib/profile/vesperfold';
+import {
+  allocateUniqueProfileSlug,
+  assertProfileSlugAvailable,
+} from '@/lib/server/profile-slug';
 
 export const MAX_DAILY_XP = 500;
 
@@ -46,13 +55,22 @@ const EMPTY_VERIFY_CTX: AchievementVerifyContext = {
 
 export type GamificationEventMetadata = Record<string, string | number | boolean | null>;
 
-function slugify(name: string, uid: string): string {
-  const base = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 24);
-  return `${base || 'artist'}-${uid.slice(0, 6)}`;
+/** Remove other publicProfiles docs for this user (stale vanity renames). */
+async function pruneOtherPublicProfilesForUser(
+  db: Awaited<ReturnType<typeof getDb>>,
+  uid: string,
+  keepSlug: string | undefined
+): Promise<void> {
+  const snap = await db.collection('publicProfiles').where('userId', '==', uid).get();
+  for (const docSnap of snap.docs) {
+    if (keepSlug && docSnap.id === keepSlug) continue;
+    try {
+      await docSnap.ref.collection('assets').doc('avatar').delete();
+    } catch {
+      /* ignore */
+    }
+    await docSnap.ref.delete();
+  }
 }
 
 function countNonEmptyBars(sections: unknown): number {
@@ -76,6 +94,7 @@ function mergeSummary(existing: Partial<GamificationSummary>): GamificationSumma
       typeof raw.starMarkPinnedSlotId === 'string' && raw.starMarkPinnedSlotId.trim()
         ? raw.starMarkPinnedSlotId.trim().slice(0, 64)
         : null,
+    prestigeLevel: getPrestigeLevel({ prestigeLevel: raw.prestigeLevel }),
     // New accounts default private. Existing docs without the field used the old
     // default (visible) — keep them on the board until they opt out.
     leaderboardHidden:
@@ -155,7 +174,8 @@ async function grantBonusInk(
 
 async function loadTrackVerifyContext(
   userId: string,
-  metadata: GamificationEventMetadata
+  metadata: GamificationEventMetadata,
+  prestigeLevel = 0
 ): Promise<AchievementVerifyContext & { generatedLinesOnTrackVerified: number }> {
   const trackId = String(metadata.trackId || '');
   const albumId = String(metadata.albumId || '');
@@ -182,7 +202,9 @@ async function loadTrackVerifyContext(
     albumTrackCountVerified = tracksSnap.size;
   }
 
-  const minLines = rhymeBarsToLines(ACHIEVEMENT_THRESHOLDS.trackCompleteMinBars);
+  const minLines = rhymeBarsToLines(
+    scaleByPrestige(ACHIEVEMENT_THRESHOLDS.trackCompleteMinBars, prestigeLevel)
+  );
 
   return {
     // Always overwritten by the caller with the real value — included here only
@@ -203,7 +225,8 @@ async function loadTrackVerifyContext(
 
 async function loadPortfolioVerifyContext(
   userId: string,
-  focusAlbumId?: string
+  focusAlbumId?: string,
+  prestigeLevel = 0
 ): Promise<
   Pick<
     AchievementVerifyContext,
@@ -214,8 +237,10 @@ async function loadPortfolioVerifyContext(
   >
 > {
   const db = await getDb();
-  const minLines = rhymeBarsToLines(ACHIEVEMENT_THRESHOLDS.trackCompleteMinBars);
-  const qualifyMin = ACHIEVEMENT_THRESHOLDS.albumQualifyMinTracks;
+  const minLines = rhymeBarsToLines(
+    scaleByPrestige(ACHIEVEMENT_THRESHOLDS.trackCompleteMinBars, prestigeLevel)
+  );
+  const qualifyMin = scaleByPrestige(ACHIEVEMENT_THRESHOLDS.albumQualifyMinTracks, prestigeLevel);
 
   let lifetimeCompleted = 0;
   let qualifyingAlbums = 0;
@@ -334,15 +359,7 @@ async function syncPublicProfile(
 ): Promise<void> {
   const db = await getDb();
   if (!summary.publicProfile || !summary.profileSlug) {
-    const snap = await db.collection('publicProfiles').where('userId', '==', uid).limit(1).get();
-    for (const docSnap of snap.docs) {
-      try {
-        await docSnap.ref.collection('assets').doc('avatar').delete();
-      } catch {
-        /* ignore */
-      }
-      await docSnap.ref.delete();
-    }
+    await pruneOtherPublicProfilesForUser(db, uid, undefined);
     return;
   }
 
@@ -368,6 +385,7 @@ async function syncPublicProfile(
       displayNameLower: displayName.trim().toLowerCase(),
       rankId: summary.rankId,
       xp: summary.xp,
+      prestigeLevel: getPrestigeLevel(summary),
       currentStreak: summary.currentStreak,
       longestStreak: summary.longestStreak,
       badgeIds,
@@ -386,6 +404,7 @@ async function syncPublicProfile(
     { merge: true }
   );
   await syncPublicAvatarAsset(summary.profileSlug, summary);
+  await pruneOtherPublicProfilesForUser(db, uid, summary.profileSlug);
 }
 
 export async function processGamificationEvent(
@@ -426,12 +445,14 @@ export async function processGamificationEvent(
   summary = resetDayBarCounter(summary, dayKey);
 
   let generatedLinesOnTrackVerified = 0;
+  const prestige = getPrestigeLevel(summary);
   if (trigger === 'track_saved') {
-    const trackCtx = await loadTrackVerifyContext(userId, metadata);
+    const trackCtx = await loadTrackVerifyContext(userId, metadata, prestige);
     generatedLinesOnTrackVerified = trackCtx.generatedLinesOnTrackVerified;
     const portfolioCtx = await loadPortfolioVerifyContext(
       userId,
-      String(metadata.albumId || '')
+      String(metadata.albumId || ''),
+      prestige
     );
     verifyCtx = {
       ...trackCtx,
@@ -439,7 +460,7 @@ export async function processGamificationEvent(
       tourCompletedVerified: Boolean(user.lyricsTutorialCompletedAt),
     };
   } else if (trigger === 'session_start') {
-    const portfolioCtx = await loadPortfolioVerifyContext(userId);
+    const portfolioCtx = await loadPortfolioVerifyContext(userId, undefined, prestige);
     verifyCtx = {
       ...verifyCtx,
       ...portfolioCtx,
@@ -599,7 +620,8 @@ export async function processGamificationEvent(
   summary.rankId = rank.id;
 
   if (!summary.profileSlug && displayName) {
-    summary.profileSlug = slugify(displayName, userId);
+    const dbAlloc = await getDb();
+    summary.profileSlug = await allocateUniqueProfileSlug(dbAlloc, displayName, userId);
   }
 
   for (const u of unlocks) {
@@ -690,6 +712,8 @@ export async function updateGamificationSettings(
     publicProfile?: boolean;
     leaderboardHidden?: boolean;
     displayName?: string;
+    /** Vanity Artist Home path: /profile/{profileSlug} */
+    profileSlug?: string;
     profilePhotoMode?: 'collage' | 'custom' | 'initials';
     profilePhotoUrl?: string | null;
     /** Ordered album IDs for collage (max 9). Pass `null` or `[]` to clear (auto covers). */
@@ -703,6 +727,7 @@ export async function updateGamificationSettings(
   const db = await getDb();
   const snap = await db.doc(`users/${userId}/gamification/summary`).get();
   let summary = mergeSummary((snap.data() as Partial<GamificationSummary>) || {});
+  const previousSlug = summary.profileSlug;
 
   if (typeof settings.publicProfile === 'boolean') {
     summary.publicProfile = settings.publicProfile;
@@ -710,8 +735,10 @@ export async function updateGamificationSettings(
   if (typeof settings.leaderboardHidden === 'boolean') {
     summary.leaderboardHidden = settings.leaderboardHidden;
   }
-  if (settings.displayName) {
-    summary.profileSlug = slugify(settings.displayName, userId);
+  // Display name no longer rewrites the vanity URL — artists set the link explicitly.
+  if (typeof settings.profileSlug === 'string') {
+    const claimed = await assertProfileSlugAvailable(db, settings.profileSlug, userId);
+    summary.profileSlug = claimed;
   }
   if (
     settings.profilePhotoMode === 'collage' ||
@@ -788,7 +815,25 @@ export async function updateGamificationSettings(
   if (summary.publicProfile && !summary.profileSlug) {
     const userSnap = await db.doc(`users/${userId}`).get();
     const name = settings.displayName || userSnap.data()?.displayName || 'Artist';
-    summary.profileSlug = slugify(String(name), userId);
+    summary.profileSlug = await allocateUniqueProfileSlug(db, String(name), userId);
+  }
+
+  // Going live with a legacy uid-suffixed link? Prefer a clean name if free.
+  if (
+    summary.publicProfile &&
+    summary.profileSlug &&
+    typeof settings.profileSlug !== 'string' &&
+    settings.publicProfile === true
+  ) {
+    const { looksLikeLegacyUidSlug } = await import('@/lib/profile/profile-slug');
+    if (looksLikeLegacyUidSlug(summary.profileSlug, userId)) {
+      const userSnap = await db.doc(`users/${userId}`).get();
+      const name = settings.displayName || userSnap.data()?.displayName || 'Artist';
+      const clean = await allocateUniqueProfileSlug(db, String(name), userId);
+      if (clean && clean !== summary.profileSlug && !looksLikeLegacyUidSlug(clean, userId)) {
+        summary.profileSlug = clean;
+      }
+    }
   }
 
   summary.updatedAt = new Date().toISOString();
@@ -832,6 +877,11 @@ export async function updateGamificationSettings(
   const displayName = settings.displayName || userSnap.data()?.displayName || 'Artist';
   await syncPublicProfile(userId, summary, displayName);
   await syncLeaderboardEntry(userId, summary, displayName);
+
+  // Extra prune if slug changed while already public.
+  if (previousSlug && summary.profileSlug && previousSlug !== summary.profileSlug) {
+    await pruneOtherPublicProfilesForUser(db, userId, summary.profileSlug);
+  }
 
   return summary;
 }
@@ -1097,11 +1147,31 @@ export async function resetUserGamificationProgress(
 
 export async function getPublicProfile(slug: string) {
   const db = await getDb();
-  const snap = await db.doc(`publicProfiles/${slug}`).get();
+  const { resolvePublicProfileSlugDoc, migrateUserProfileSlugToUnderscore } = await import(
+    '@/lib/server/profile-slug'
+  );
+
+  const resolved = await resolvePublicProfileSlugDoc(db, slug);
+  if (!resolved) return null;
+
+  // Best-effort migrate hyphen / uid-suffix vanity links to underscore form.
+  let liveSlug = resolved.slug;
+  try {
+    const migrated = await migrateUserProfileSlugToUnderscore(db, resolved.userId, {
+      displayName:
+        typeof resolved.data.displayName === 'string' ? resolved.data.displayName : undefined,
+      currentSlugHint: resolved.slug,
+    });
+    if (migrated) liveSlug = migrated;
+  } catch {
+    /* keep resolved slug */
+  }
+
+  const snap = await db.doc(`publicProfiles/${liveSlug}`).get();
   if (!snap.exists) return null;
   const data = snap.data()!;
-  const userId = String(data.userId || '');
-  if (!userId) return { ...data, albumCoverUrls: [], liveDnaDrops: [] };
+  const userId = String(data.userId || resolved.userId || '');
+  if (!userId) return { ...data, slug: liveSlug, albumCoverUrls: [], liveDnaDrops: [] };
 
   const [albumMeta, liveDnaDrops, referralCode, summarySnap] = await Promise.all([
     getPublicAlbumMeta(userId),
@@ -1111,6 +1181,10 @@ export async function getPublicProfile(slug: string) {
   ]);
 
   const summary = mergeSummary((summarySnap.data() as Partial<GamificationSummary>) || {});
+  if (typeof summary.profileSlug === 'string' && summary.profileSlug.trim()) {
+    liveSlug = summary.profileSlug.trim();
+  }
+
   const profilePhotoMode =
     summary.profilePhotoMode === 'custom'
       ? 'custom'
@@ -1141,6 +1215,8 @@ export async function getPublicProfile(slug: string) {
 
   return {
     ...data,
+    slug: liveSlug,
+    requestedSlug: slug,
     artistHome,
     albumCoverUrls,
     profilePhotoMode,
@@ -1419,7 +1495,7 @@ export async function searchPublicArtists(
   };
 
   // Exact slug hit (profile URLs / typed slugs).
-  const slugCandidate = needle.replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '');
+  const slugCandidate = needle.replace(/[^a-z0-9_]+/g, '_').replace(/^_|_$/g, '');
   if (slugCandidate) {
     const exact = await db.doc(`publicProfiles/${slugCandidate}`).get();
     if (exact.exists) pushDoc(exact.id, exact.data() as Record<string, unknown>);
@@ -1585,27 +1661,66 @@ export async function getPublicArtistAvatar(slug: string): Promise<string | unde
 async function resolvePublicAvatarsByUserIds(
   userIds: string[]
 ): Promise<
-  Map<string, { slug?: string; avatarUrl?: string; starMarkUseStar?: boolean; starMarkSeed?: number }>
+  Map<
+    string,
+    {
+      slug?: string;
+      displayName?: string;
+      avatarUrl?: string;
+      starMarkUseStar?: boolean;
+      starMarkSeed?: number;
+    }
+  >
 > {
   const out = new Map<
     string,
-    { slug?: string; avatarUrl?: string; starMarkUseStar?: boolean; starMarkSeed?: number }
+    {
+      slug?: string;
+      displayName?: string;
+      avatarUrl?: string;
+      starMarkUseStar?: boolean;
+      starMarkSeed?: number;
+    }
   >();
   const unique = [...new Set(userIds.filter(Boolean))];
   if (!unique.length) return out;
   const db = await getDb();
+  const { needsVanitySlugUpgrade } = await import('@/lib/profile/profile-slug');
+
   for (let i = 0; i < unique.length; i += 30) {
     const chunk = unique.slice(i, i + 30);
     const snap = await db.collection('publicProfiles').where('userId', 'in', chunk).get();
+    const byUser = new Map<string, typeof snap.docs>();
+    for (const docSnap of snap.docs) {
+      const data = docSnap.data() as Record<string, unknown>;
+      const userId = typeof data.userId === 'string' ? data.userId : '';
+      if (!userId) continue;
+      const list = byUser.get(userId) || [];
+      list.push(docSnap);
+      byUser.set(userId, list);
+    }
+
     await Promise.all(
-      snap.docs.map(async (docSnap) => {
-        const data = docSnap.data() as Record<string, unknown>;
-        const userId = typeof data.userId === 'string' ? data.userId : '';
-        if (!userId) return;
-        const avatarUrl = await resolvePublicAvatar(docSnap.id, data);
+      [...byUser.entries()].map(async ([userId, docs]) => {
+        const ranked = [...docs].sort((a, b) => {
+          const aBad = needsVanitySlugUpgrade(a.id) ? 1 : 0;
+          const bBad = needsVanitySlugUpgrade(b.id) ? 1 : 0;
+          if (aBad !== bBad) return aBad - bBad;
+          const aAt = String((a.data() as Record<string, unknown>)?.updatedAt || '');
+          const bAt = String((b.data() as Record<string, unknown>)?.updatedAt || '');
+          return bAt.localeCompare(aAt);
+        });
+        const best = ranked[0]!;
+        const data = best.data() as Record<string, unknown>;
+        const avatarUrl = await resolvePublicAvatar(best.id, data);
         const useStar = data.starMarkUseStar === true;
+        const displayName =
+          typeof data.displayName === 'string' && data.displayName.trim()
+            ? data.displayName.trim()
+            : undefined;
         out.set(userId, {
-          slug: docSnap.id,
+          slug: best.id,
+          displayName,
           avatarUrl,
           starMarkUseStar: useStar,
           starMarkSeed: useStar
@@ -1638,10 +1753,11 @@ export async function listRecentPublicProfiles(
 ): Promise<DiscoverArtistSummary[]> {
   const limit = Math.min(Math.max(opts.limit ?? 8, 1), 24);
   const db = await getDb();
+  const { needsVanitySlugUpgrade } = await import('@/lib/profile/profile-slug');
   const snap = await db
     .collection('publicProfiles')
     .orderBy('updatedAt', 'desc')
-    .limit(limit + 4)
+    .limit(limit + 12)
     .get();
   const rows: Array<{
     userId: string;
@@ -1652,10 +1768,14 @@ export async function listRecentPublicProfiles(
     xp?: number;
     updatedAt: string;
   }> = [];
+  const seenUsers = new Set<string>();
   for (const docSnap of snap.docs) {
     const data = docSnap.data() as Record<string, unknown>;
     const userId = typeof data.userId === 'string' ? data.userId : '';
     if (!userId || (opts.excludeUserId && userId === opts.excludeUserId)) continue;
+    if (seenUsers.has(userId)) continue;
+    if (needsVanitySlugUpgrade(docSnap.id)) continue;
+    seenUsers.add(userId);
     rows.push({
       userId,
       slug: docSnap.id,
@@ -1791,26 +1911,27 @@ export type DiscoverPostSummary = {
   createdAt: string;
 };
 
-/** Recent public wall posts — only from owners with a live Artist Home (ownerSlug set). */
+/** Recent public wall posts — only from owners with a live Artist Home. */
 export async function listRecentPublicPosts(
   opts: { limit?: number; excludeOwnerId?: string } = {}
 ): Promise<DiscoverPostSummary[]> {
   const limit = Math.min(Math.max(opts.limit ?? 10, 1), 40);
   const db = await getDb();
   // Post ids are lexicographically newest-first, so document-id order = recency.
-  const snap = await db.collection('posts').limit(Math.max(80, limit * 3)).get();
-  const out: DiscoverPostSummary[] = [];
+  // Pull extra so we can drop posts whose owner no longer has a live profile.
+  const snap = await db.collection('posts').limit(Math.max(120, limit * 4)).get();
+  const candidates: DiscoverPostSummary[] = [];
   for (const doc of snap.docs) {
     const data = doc.data() as Record<string, unknown>;
     const ownerId = typeof data.ownerId === 'string' ? data.ownerId : '';
-    const ownerSlug = typeof data.ownerSlug === 'string' ? data.ownerSlug : undefined;
-    if (!ownerId || !ownerSlug) continue;
+    if (!ownerId) continue;
     if (opts.excludeOwnerId && ownerId === opts.excludeOwnerId) continue;
-    out.push({
+    // Keep posts even when baked ownerSlug is stale/missing — live slug resolved below.
+    candidates.push({
       id: doc.id,
       ownerId,
       ownerName: String(data.ownerName || 'Artist'),
-      ownerSlug,
+      ownerSlug: typeof data.ownerSlug === 'string' ? data.ownerSlug : undefined,
       text: String(data.text || ''),
       embedUrl: typeof data.embedUrl === 'string' ? data.embedUrl : undefined,
       embedProvider: typeof data.embedProvider === 'string' ? data.embedProvider : undefined,
@@ -1832,6 +1953,26 @@ export async function listRecentPublicPosts(
         ? { reverbImageUrl: data.reverbImageUrl }
         : {}),
       createdAt: String(data.createdAt || ''),
+    });
+    if (candidates.length >= limit * 3) break;
+  }
+
+  const ownerIds = candidates.flatMap((p) =>
+    [p.ownerId, p.reverbOwnerId].filter((id): id is string => Boolean(id))
+  );
+  const live = await resolvePublicAvatarsByUserIds(ownerIds);
+
+  const out: DiscoverPostSummary[] = [];
+  for (const p of candidates) {
+    const ownerMeta = live.get(p.ownerId);
+    if (!ownerMeta?.slug) continue; // no live Artist Home
+    const reverbMeta = p.reverbOwnerId ? live.get(p.reverbOwnerId) : undefined;
+    out.push({
+      ...p,
+      ownerSlug: ownerMeta.slug,
+      ownerName: ownerMeta.displayName || p.ownerName,
+      ...(reverbMeta?.slug ? { reverbOwnerSlug: reverbMeta.slug } : {}),
+      ...(reverbMeta?.displayName ? { reverbOwnerName: reverbMeta.displayName } : {}),
     });
     if (out.length >= limit) break;
   }
@@ -1884,7 +2025,9 @@ export async function listLeaderboardRisers(
     const meta = avatars.get(r.userId);
     return {
       ...r,
-      profileSlug: r.profileSlug || meta?.slug,
+      // Prefer live publicProfiles slug over baked leaderboard profileSlug.
+      profileSlug: meta?.slug || r.profileSlug,
+      displayName: meta?.displayName || r.displayName,
       avatarUrl: meta?.avatarUrl,
       starMarkUseStar: meta?.starMarkUseStar,
       starMarkSeed: meta?.starMarkSeed,
@@ -1892,4 +2035,66 @@ export async function listLeaderboardRisers(
   });
 }
 
-export { countNonEmptyBars, slugify };
+/**
+ * Prestige reset — available after Vault Architect + all lifetime personal milestones.
+ * Keeps social lifetime counters; clears writing cycle stats + trophies so scaled
+ * ceilings create a fresh climb (never gated on "be prestige N").
+ */
+export async function prestigeResetForUser(userId: string): Promise<GamificationSummary> {
+  if (!hasAdminFirestoreCredentials()) {
+    throw new Error('Server unavailable');
+  }
+  const db = await getDb();
+  const [gamSnap, userSnap] = await Promise.all([
+    db.doc(`users/${userId}/gamification/summary`).get(),
+    db.doc(`users/${userId}`).get(),
+  ]);
+  const summary = mergeSummary((gamSnap.data() as Partial<GamificationSummary>) || {});
+  const isPro = userSnap.data()?.subscriptionStatus === 'active';
+  if (!canPrestigeReset(summary, isPro)) {
+    throw new Error(
+      'Prestige unlocks after Vault Architect plus every personal lifetime milestone.'
+    );
+  }
+
+  const nextLevel = getPrestigeLevel(summary) + 1;
+  const now = new Date().toISOString();
+  const reset: GamificationSummary = {
+    ...summary,
+    prestigeLevel: nextLevel,
+    xp: 0,
+    rankId: 'open_mic',
+    unlockedAchievements: {},
+    lifetimeBarsWritten: 0,
+    lifetimeLinesGenerated: 0,
+    lifetimeTracksCompleted: 0,
+    lifetimeGenerateNextLine: 0,
+    lifetimeStudioSessions: 0,
+    currentStreak: 0,
+    longestStreak: 0,
+    personalBests: { barsInDay: 0, longestStreak: 0, barsInSession: 0 },
+    generateNextLineMonthCount: 0,
+    tracksCompletedMonthCount: 0,
+    monthlyChallengeProgress: {},
+    weeklyChallengeProgress: {},
+    generateNextLineWeekCount: 0,
+    tracksCompletedWeekCount: 0,
+    dnaFilledWeekCount: 0,
+    dnaImportWeekCount: 0,
+    friendshipWeekCount: 0,
+    wallPostWeekCount: 0,
+    shareCreatedWeekCount: 0,
+    barsWrittenToday: 0,
+    barsWritten7d: 0,
+    tracksCompleted30d: 0,
+    updatedAt: now,
+  };
+
+  await db.doc(`users/${userId}/gamification/summary`).set(reset);
+  const displayName = String(userSnap.data()?.displayName || 'Artist');
+  await syncPublicProfile(userId, reset, displayName);
+  await syncLeaderboardEntry(userId, reset, displayName);
+  return reset;
+}
+
+export { countNonEmptyBars };

@@ -3,18 +3,27 @@ import type { RankId } from '@/lib/gamification/types';
 import { STUDIO_RANKS } from '@/lib/gamification/ranks';
 
 /**
- * Studio rank rarity ladder — each tier reads clearly rarer than the last.
- * Common → Uncommon → Rare → Epic → Legendary.
+ * Studio rank rarity ladder — ten plates, each reading rarer than the last.
  */
 export const RANK_BADGE: Record<RankId, string> = {
   open_mic:
     'border-zinc-400/40 bg-zinc-500/10 text-zinc-700 dark:border-zinc-500/35 dark:bg-zinc-500/10 dark:text-zinc-300',
+  soundcheck:
+    'border-stone-400/45 bg-stone-500/12 text-stone-800 dark:border-stone-400/40 dark:bg-stone-500/12 dark:text-stone-300',
   demo_tape:
     'border-emerald-500/50 bg-emerald-500/12 text-emerald-800 dark:border-emerald-400/45 dark:bg-emerald-500/15 dark:text-emerald-300',
+  cipher_cut:
+    'border-teal-500/50 bg-teal-500/12 text-teal-800 dark:border-teal-400/45 dark:bg-teal-500/15 dark:text-teal-300',
   session_ready:
     'border-sky-500/55 bg-sky-500/15 text-sky-800 shadow-[0_0_10px_rgba(14,165,233,0.14)] dark:border-sky-400/50 dark:bg-sky-500/18 dark:text-sky-200 dark:shadow-[0_0_12px_rgba(56,189,248,0.2)]',
+  green_room:
+    'border-indigo-500/55 bg-indigo-500/14 text-indigo-900 shadow-[0_0_12px_rgba(99,102,241,0.18)] dark:border-indigo-400/50 dark:bg-indigo-500/16 dark:text-indigo-200',
   headliner:
     'border-amber-400/60 bg-gradient-to-r from-amber-500/18 to-orange-500/12 text-amber-900 shadow-[0_0_16px_rgba(245,158,11,0.28)] dark:border-amber-300/55 dark:from-amber-500/22 dark:to-orange-500/14 dark:text-amber-100 dark:shadow-[0_0_18px_rgba(251,191,36,0.32)]',
+  encore_run:
+    'border-orange-400/60 bg-gradient-to-r from-orange-500/18 to-rose-500/12 text-orange-950 shadow-[0_0_18px_rgba(249,115,22,0.28)] dark:border-orange-300/55 dark:from-orange-500/20 dark:to-rose-500/14 dark:text-orange-100',
+  catalog_king:
+    'border-rose-400/60 bg-gradient-to-r from-rose-500/18 to-fuchsia-500/12 text-rose-950 shadow-[0_0_20px_rgba(244,63,94,0.3)] dark:border-rose-300/55 dark:from-rose-500/20 dark:to-fuchsia-500/14 dark:text-rose-100',
   vault_architect:
     'border-fuchsia-400/65 bg-gradient-to-r from-violet-600/22 via-fuchsia-500/18 to-amber-400/10 text-fuchsia-950 shadow-[0_0_22px_rgba(217,70,239,0.35)] ring-1 ring-fuchsia-400/30 dark:border-fuchsia-300/60 dark:from-violet-500/28 dark:via-fuchsia-500/20 dark:to-amber-300/12 dark:text-fuchsia-50 dark:shadow-[0_0_26px_rgba(232,121,249,0.4)] dark:ring-fuchsia-300/35',
 };
@@ -22,18 +31,28 @@ export const RANK_BADGE: Record<RankId, string> = {
 /** Unearned ranks in a ladder — keep hue hint, mute presence. */
 export const RANK_BADGE_LOCKED: Record<RankId, string> = {
   open_mic: 'border-zinc-400/20 bg-transparent text-zinc-500/50 dark:text-zinc-500/40 opacity-45 grayscale',
+  soundcheck: 'border-stone-400/20 bg-transparent text-stone-600/45 dark:text-stone-400/35 opacity-45 grayscale',
   demo_tape: 'border-emerald-500/20 bg-transparent text-emerald-700/45 dark:text-emerald-400/35 opacity-45 grayscale',
+  cipher_cut: 'border-teal-500/20 bg-transparent text-teal-700/45 dark:text-teal-400/35 opacity-45 grayscale',
   session_ready: 'border-sky-500/20 bg-transparent text-sky-700/45 dark:text-sky-400/35 opacity-45 grayscale',
+  green_room: 'border-indigo-500/20 bg-transparent text-indigo-700/45 dark:text-indigo-400/35 opacity-45 grayscale',
   headliner: 'border-amber-500/20 bg-transparent text-amber-800/45 dark:text-amber-400/35 opacity-45 grayscale',
+  encore_run: 'border-orange-500/20 bg-transparent text-orange-800/45 dark:text-orange-400/35 opacity-45 grayscale',
+  catalog_king: 'border-rose-500/20 bg-transparent text-rose-800/45 dark:text-rose-400/35 opacity-45 grayscale',
   vault_architect: 'border-fuchsia-500/20 bg-transparent text-fuchsia-800/45 dark:text-fuchsia-400/35 opacity-45 grayscale',
 };
 
 /** Cleared past ranks — tint kept, no glow so current can pop. */
 export const RANK_BADGE_CLEARED: Record<RankId, string> = {
   open_mic: 'border-zinc-400/40 bg-zinc-500/8 text-zinc-600 dark:text-zinc-400',
+  soundcheck: 'border-stone-400/40 bg-stone-500/8 text-stone-700 dark:text-stone-400/80',
   demo_tape: 'border-emerald-500/40 bg-emerald-500/8 text-emerald-700 dark:text-emerald-400/80',
+  cipher_cut: 'border-teal-500/40 bg-teal-500/8 text-teal-700 dark:text-teal-400/80',
   session_ready: 'border-sky-500/40 bg-sky-500/8 text-sky-700 dark:text-sky-300/80',
+  green_room: 'border-indigo-500/40 bg-indigo-500/8 text-indigo-700 dark:text-indigo-300/80',
   headliner: 'border-amber-500/40 bg-amber-500/8 text-amber-800 dark:text-amber-300/80',
+  encore_run: 'border-orange-500/40 bg-orange-500/8 text-orange-800 dark:text-orange-300/80',
+  catalog_king: 'border-rose-500/40 bg-rose-500/8 text-rose-800 dark:text-rose-300/80',
   vault_architect: 'border-fuchsia-500/40 bg-fuchsia-500/8 text-fuchsia-800 dark:text-fuchsia-300/80',
 };
 
@@ -63,9 +82,14 @@ export function rankIdFromLabel(label: string | undefined): RankId {
 /** XP progress fill — hue tracks current rank rarity. */
 export const RANK_XP_BAR: Record<RankId, string> = {
   open_mic: 'bg-gradient-to-r from-zinc-500 to-zinc-400',
+  soundcheck: 'bg-gradient-to-r from-stone-500 to-stone-400',
   demo_tape: 'bg-gradient-to-r from-emerald-600 to-teal-400',
+  cipher_cut: 'bg-gradient-to-r from-teal-600 to-cyan-400',
   session_ready: 'bg-gradient-to-r from-sky-600 to-cyan-400',
+  green_room: 'bg-gradient-to-r from-indigo-600 to-sky-400',
   headliner: 'bg-gradient-to-r from-amber-600 via-amber-400 to-orange-400',
+  encore_run: 'bg-gradient-to-r from-orange-600 via-orange-400 to-rose-400',
+  catalog_king: 'bg-gradient-to-r from-rose-600 via-rose-400 to-fuchsia-400',
   vault_architect: 'bg-gradient-to-r from-violet-600 via-fuchsia-500 to-amber-300',
 };
 

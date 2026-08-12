@@ -715,16 +715,30 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
     );
   }
 
-  // Default first friend + guestbook welcome from Neomaiya Sol (idempotent).
+  // Default friends: Neo + Jordie. Guestbook welcome is Jordie Cruz.
   try {
     const { ensureDefaultFounderWelcome } = await import('@/lib/server/default-founder-friend');
     let profileSlug: string | undefined;
     try {
-      const gamSnap = await db.doc(`users/${userId}/gamification/summary`).get();
-      const slug = gamSnap.data()?.profileSlug;
-      if (typeof slug === 'string' && slug.trim()) profileSlug = slug.trim();
+      const { migrateUserProfileSlugToUnderscore } = await import('@/lib/server/profile-slug');
+      const migrated = await migrateUserProfileSlugToUnderscore(db, userId, {
+        displayName:
+          (typeof userData?.displayName === 'string' && userData.displayName.trim()) ||
+          authDisplayName ||
+          undefined,
+      });
+      if (migrated) profileSlug = migrated;
     } catch {
       /* optional */
+    }
+    if (!profileSlug) {
+      try {
+        const gamSnap = await db.doc(`users/${userId}/gamification/summary`).get();
+        const slug = gamSnap.data()?.profileSlug;
+        if (typeof slug === 'string' && slug.trim()) profileSlug = slug.trim();
+      } catch {
+        /* optional */
+      }
     }
     const displayName =
       (typeof userData?.displayName === 'string' && userData.displayName.trim()) ||

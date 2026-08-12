@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { StudioLoader } from '@/components/studio-loader';
 import { ArtistHome } from '@/components/profile/artist-home';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
@@ -13,6 +14,7 @@ import { useAuth } from '@/hooks/use-auth';
 
 export function PublicProfilePageClient({ slug }: { slug: string }) {
   const { user } = useAuth();
+  const router = useRouter();
   const [profile, setProfile] = useState<PublicProfileData | null>(null);
   const [config, setConfig] = useState<ArtistHomeConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,14 +22,29 @@ export function PublicProfilePageClient({ slug }: { slug: string }) {
 
   useEffect(() => {
     if (!slug) return;
+    let cancelled = false;
+    let redirected = false;
+    setLoading(true);
+    setError(false);
+    setProfile(null);
+    setConfig(null);
+
     const load = async () => {
       try {
-        const res = await fetch(`/api/profile/${slug}`);
+        const res = await fetch(`/api/profile/${encodeURIComponent(slug)}`);
         if (!res.ok) {
-          setError(true);
+          if (!cancelled) setError(true);
           return;
         }
         const data = await res.json();
+        const liveSlug =
+          typeof data.slug === 'string' && data.slug.trim() ? data.slug.trim() : slug;
+        if (liveSlug !== slug) {
+          redirected = true;
+          router.replace(`/profile/${liveSlug}`);
+          return;
+        }
+        if (cancelled) return;
         const badges: AchievementDef[] =
           data.badges ||
           (data.badgeIds || [])
@@ -96,16 +113,20 @@ export function PublicProfilePageClient({ slug }: { slug: string }) {
                   ...(typeof d.trackCount === 'number' ? { trackCount: d.trackCount } : {}),
                 }))
             : [],
-          slug,
+          slug: liveSlug,
         });
         setConfig(normalizeArtistHomeConfig(data.artistHome));
-        void trackShareCardEvent('share_card_opened', { slug });
+        void trackShareCardEvent('share_card_opened', { slug: liveSlug });
       } finally {
-        setLoading(false);
+        // Stay on the loader while the URL is rewritten to the live slug.
+        if (!cancelled && !redirected) setLoading(false);
       }
     };
     void load();
-  }, [slug]);
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, router]);
 
   if (loading) {
     return (

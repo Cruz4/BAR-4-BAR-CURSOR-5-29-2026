@@ -7,10 +7,17 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink, Globe, Settings2, Trophy, UserRound, Bell } from 'lucide-react';
+import { ExternalLink, Globe, Settings2, Trophy, UserRound, Bell, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import {
+  NEOMAIYA_CANONICAL_SLUG,
+  normalizeProfileSlugInput,
+  profileSlugError,
+} from '@/lib/profile/profile-slug';
+import { isNeomaiyaSolViewer } from '@/lib/profile/neomaiya-sol';
 import {
   Dialog,
   DialogContent,
@@ -58,29 +65,64 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
   const [publicProfile, setPublicProfile] = useState(summary.publicProfile);
   const [showOnLeaderboard, setShowOnLeaderboard] = useState(!summary.leaderboardHidden);
   const [saving, setSaving] = useState(false);
+  const [slugDraft, setSlugDraft] = useState(summary.profileSlug || '');
+  const [slugSaving, setSlugSaving] = useState(false);
+  const isNeo = isNeomaiyaSolViewer({ email: user?.email, displayName: user?.displayName });
 
   useEffect(() => {
     setPublicProfile(summary.publicProfile);
     setShowOnLeaderboard(!summary.leaderboardHidden);
-  }, [summary.publicProfile, summary.leaderboardHidden]);
+    setSlugDraft(summary.profileSlug || '');
+  }, [summary.publicProfile, summary.leaderboardHidden, summary.profileSlug]);
 
   if (!user || loading) return null;
 
   const isLive = Boolean(publicProfile && summary.profileSlug);
   const profileHref = summary.profileSlug ? `/profile/${summary.profileSlug}` : null;
 
-  const saveSettings = async (next: { publicProfile?: boolean; leaderboardHidden?: boolean }) => {
+  const saveSettings = async (next: {
+    publicProfile?: boolean;
+    leaderboardHidden?: boolean;
+    profileSlug?: string;
+  }): Promise<boolean> => {
     setSaving(true);
     try {
       await patchGamificationSettings({
         ...next,
         displayName: user.displayName,
       });
-      toast({ title: 'Visibility updated' });
-    } catch {
-      toast({ variant: 'destructive', title: 'Could not save visibility settings' });
+      toast({ title: next.profileSlug ? 'Profile link saved' : 'Visibility updated' });
+      return true;
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: err instanceof Error ? err.message : 'Could not save visibility settings',
+      });
+      return false;
     } finally {
       setSaving(false);
+    }
+  };
+
+  const saveSlug = async () => {
+    const clean = normalizeProfileSlugInput(slugDraft);
+    const err = profileSlugError(clean, {
+      allowReserved: isNeo ? [NEOMAIYA_CANONICAL_SLUG] : [],
+    });
+    if (err) {
+      toast({ variant: 'destructive', title: err });
+      return;
+    }
+    if (clean === (summary.profileSlug || '')) {
+      toast({ title: 'Link unchanged' });
+      return;
+    }
+    setSlugSaving(true);
+    try {
+      const ok = await saveSettings({ profileSlug: clean, publicProfile: true });
+      if (ok) setPublicProfile(true);
+    } finally {
+      setSlugSaving(false);
     }
   };
 
@@ -304,6 +346,43 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
                   void saveSettings({ leaderboardHidden: !c });
                 }}
               />
+            </div>
+
+            <div className="space-y-2 rounded-xl border border-sky-500/25 bg-sky-500/5 px-3.5 py-3">
+              <Label className="flex items-center gap-1.5 text-sm font-bold uppercase">
+                <Link2 className="h-3.5 w-3.5 text-sky-400" /> Profile link
+              </Label>
+              <p className="text-xs text-muted-foreground leading-snug">
+              Choose a clean name link — no random codes.
+            </p>
+            <div className="flex flex-col gap-2">
+              <div className="flex min-w-0 items-center gap-1 rounded-lg border border-border/70 bg-background/60 px-2.5 py-1.5 font-code text-xs">
+                <span className="shrink-0 text-muted-foreground">/profile/</span>
+                <Input
+                  value={slugDraft}
+                  disabled={saving || slugSaving}
+                  onChange={(e) => setSlugDraft(normalizeProfileSlugInput(e.target.value))}
+                  className="h-8 border-0 bg-transparent px-0 font-code text-sm shadow-none focus-visible:ring-0"
+                  placeholder="your_artist_name"
+                    maxLength={32}
+                    aria-label="Profile link slug"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-9 font-bold uppercase"
+                  disabled={saving || slugSaving}
+                  onClick={() => void saveSlug()}
+                >
+                  {slugSaving ? 'Saving…' : 'Save link'}
+                </Button>
+              </div>
+              {summary.profileSlug && (
+                <p className="font-code text-[10px] text-sky-300/90">
+                  bar4bar.ink/profile/{summary.profileSlug}
+                </p>
+              )}
             </div>
 
             <div

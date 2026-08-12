@@ -10,6 +10,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   BookOpen,
+  ChevronLeft,
+  ChevronRight,
   Disc3,
   Dna,
   DoorOpen,
@@ -28,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
+import { profileHref } from '@/lib/profile/profile-slug';
 import type { ArtistHomeFeatured, ModuleSize } from '@/lib/profile/modules';
 import { FingerprintSvg } from '@/components/profile/rhyme-fingerprint-svg';
 import { BarBoardView } from '@/components/profile/bar-board-module';
@@ -41,6 +44,7 @@ import type { AchievementDef } from '@/lib/gamification/achievements';
 import {
   createPost,
   deleteGuestbookEntry,
+  enrichFriendProfilesWithLiveSlugs,
   fetchFriendships,
   fetchGuestbook,
   fetchPostsByOwner,
@@ -319,43 +323,101 @@ export function BarBoardModule({ ctx }: { ctx: ModuleContext }) {
 // Finish this bar (Open LOCK)
 // ---------------------------------------------------------------------------
 
+type OpenLockRow = {
+  id: string;
+  seedBar: string;
+  echoCount: number;
+  status?: string;
+};
+
+async function fetchLockSummary(lockId: string): Promise<OpenLockRow | null> {
+  const id = lockId.trim();
+  if (!id) return null;
+  try {
+    const res = await fetch(`/api/lock/${encodeURIComponent(id)}`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      lock?: { id?: string; seedBar?: string; echoCount?: number; status?: string };
+    };
+    const lock = data.lock;
+    if (!lock?.id) return null;
+    return {
+      id: String(lock.id),
+      seedBar: String(lock.seedBar || '').trim(),
+      echoCount: typeof lock.echoCount === 'number' ? lock.echoCount : 0,
+      status: typeof lock.status === 'string' ? lock.status : 'open',
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function OpenLockModule({ ctx }: { ctx: ModuleContext }) {
   const featuredId = ctx.featured.openLockId;
-  const [locks, setLocks] = useState<
-    Array<{ id: string; seedBar: string; echoCount: number; status?: string }>
-  >([]);
+  const [locks, setLocks] = useState<OpenLockRow[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setLoaded(false);
-    void fetch(`/api/lock/by-owner?userId=${encodeURIComponent(ctx.profileUserId)}`)
-      .then(async (res) => {
-        if (!res.ok) return [];
-        const data = await res.json();
-        return Array.isArray(data.locks) ? data.locks : [];
-      })
-      .then((rows) => {
-        if (cancelled) return;
-        setLocks(
-          rows.map((l: { id?: string; seedBar?: string; echoCount?: number; status?: string }) => ({
-            id: String(l.id || ''),
-            seedBar: String(l.seedBar || ''),
-            echoCount: typeof l.echoCount === 'number' ? l.echoCount : 0,
-            status: typeof l.status === 'string' ? l.status : 'open',
-          })).filter((l: { id: string }) => l.id)
+
+    const load = async () => {
+      let rows: OpenLockRow[] = [];
+      try {
+        const res = await fetch(
+          `/api/lock/by-owner?userId=${encodeURIComponent(ctx.profileUserId)}`
         );
-      })
-      .catch(() => {
-        if (!cancelled) setLocks([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoaded(true);
-      });
+        if (res.ok) {
+          const data = await res.json();
+          const list = Array.isArray(data.locks) ? data.locks : [];
+          rows = list
+            .map((l: { id?: string; seedBar?: string; echoCount?: number; status?: string }) => ({
+              id: String(l.id || ''),
+              seedBar: String(l.seedBar || '').trim(),
+              echoCount: typeof l.echoCount === 'number' ? l.echoCount : 0,
+              status: typeof l.status === 'string' ? l.status : 'open',
+            }))
+            .filter((l: OpenLockRow) => l.id);
+        }
+      } catch {
+        rows = [];
+      }
+
+      // Featured cast always appears, even if the by-owner index lags.
+      if (featuredId && !rows.some((l) => l.id === featuredId)) {
+        rows = [{ id: featuredId, seedBar: '', echoCount: 0 }, ...rows];
+      }
+
+      // Hydrate any row missing the seed bar so the profile shows the line before click-in.
+      const missing = rows.filter((l) => !l.seedBar).map((l) => l.id);
+      if (missing.length) {
+        const extras = await Promise.all(missing.slice(0, 12).map((id) => fetchLockSummary(id)));
+        const byId = new Map(
+          extras.filter((x): x is OpenLockRow => Boolean(x?.id)).map((x) => [x.id, x])
+        );
+        rows = rows.map((l) => {
+          const hit = byId.get(l.id);
+          if (!hit) return l;
+          return {
+            ...l,
+            seedBar: hit.seedBar || l.seedBar,
+            echoCount: hit.echoCount || l.echoCount,
+            status: hit.status || l.status,
+          };
+        });
+      }
+
+      if (!cancelled) {
+        setLocks(rows);
+        setLoaded(true);
+      }
+    };
+
+    void load();
     return () => {
       cancelled = true;
     };
-  }, [ctx.profileUserId]);
+  }, [ctx.profileUserId, featuredId]);
 
   const ordered = useMemo(() => {
     if (!featuredId) return locks;
@@ -364,13 +426,7 @@ export function OpenLockModule({ ctx }: { ctx: ModuleContext }) {
     return pin ? [pin, ...rest] : locks;
   }, [locks, featuredId]);
 
-  // Fallback: featured id only (API empty / lag) so the module still links somewhere.
-  const rows =
-    ordered.length > 0
-      ? ordered
-      : featuredId
-        ? [{ id: featuredId, seedBar: '', echoCount: 0 }]
-        : [];
+  const rows = ordered;
 
   return (
     <ModuleShell icon={Lock} title="Finish this bar" ctx={ctx}>
@@ -389,6 +445,7 @@ export function OpenLockModule({ ctx }: { ctx: ModuleContext }) {
         <ul className="space-y-2.5">
           {rows.map((lock) => {
             const featured = Boolean(featuredId && lock.id === featuredId);
+            const bar = lock.seedBar.trim();
             return (
               <li key={lock.id}>
                 <Link
@@ -400,17 +457,23 @@ export function OpenLockModule({ ctx }: { ctx: ModuleContext }) {
                   )}
                 >
                   {featured ? (
-                    <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.2em] text-[var(--ph-accent,#7dd3fc)]">
+                    <p className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.2em] text-[var(--ph-accent,#7dd3fc)]">
                       Featured
                     </p>
                   ) : null}
-                  <p className="font-headline text-sm font-bold leading-snug tracking-tight text-[var(--ph-text,#fff)] sm:text-base">
-                    {lock.seedBar || 'Open unfinished line →'}
-                  </p>
+                  {bar ? (
+                    <p className="font-headline text-sm font-bold leading-snug tracking-tight text-[var(--ph-text,#fff)] sm:text-base">
+                      &ldquo;{bar}&rdquo;
+                    </p>
+                  ) : (
+                    <p className="text-sm text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+                      Open unfinished line…
+                    </p>
+                  )}
                   <p className="mt-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--ph-muted,rgba(255,255,255,0.55))]">
                     {lock.echoCount === 1
-                      ? '1 reply · Finish it'
-                      : `${lock.echoCount} replies · Finish it`}
+                      ? '1 reply · Finish it →'
+                      : `${lock.echoCount} replies · Finish it →`}
                   </p>
                 </Link>
               </li>
@@ -502,6 +565,10 @@ export function ProofWallModule({ ctx }: { ctx: ModuleContext }) {
 // The Wall (posts)
 // ---------------------------------------------------------------------------
 
+const WALL_PAGE_SIZE = 15;
+/** Enough for ~10 in-module pages without a separate wall route. */
+const WALL_FETCH_MAX = 150;
+
 export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -511,21 +578,42 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const [text, setText] = useState('');
   const [embedUrl, setEmbedUrl] = useState('');
   const [busy, setBusy] = useState(false);
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     if (playground) {
       setPosts(playground.posts);
       setLoaded(true);
+      setPage(0);
       return;
     }
-    fetchPostsByOwner(ctx.profileUserId)
+    setPage(0);
+    fetchPostsByOwner(ctx.profileUserId, WALL_FETCH_MAX)
       .then(setPosts)
       .catch(() => undefined)
       .finally(() => setLoaded(true));
   }, [ctx.profileUserId, playground]);
 
+  // Keep playground posts in sync when the guest sandbox mutates them.
+  useEffect(() => {
+    if (!playground) return;
+    setPosts(playground.posts);
+  }, [playground, playground?.posts]);
+
   const embedPreview = useMemo(() => parseEmbedUrl(embedUrl), [embedUrl]);
   const canCompose = Boolean(playground) || (ctx.isOwner && user);
+
+  const pageCount = Math.max(1, Math.ceil(posts.length / WALL_PAGE_SIZE) || 1);
+  const safePage = Math.min(Math.max(0, page), pageCount - 1);
+  const pagePosts = posts.slice(
+    safePage * WALL_PAGE_SIZE,
+    safePage * WALL_PAGE_SIZE + WALL_PAGE_SIZE
+  );
+  const showPager = posts.length > WALL_PAGE_SIZE;
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage);
+  }, [page, safePage]);
 
   const submit = async () => {
     if (playground) {
@@ -546,6 +634,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       });
       setText('');
       setEmbedUrl('');
+      setPage(0);
       return;
     }
     if (!user) return;
@@ -560,6 +649,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       setPosts((prev) => [post, ...prev]);
       setText('');
       setEmbedUrl('');
+      setPage(0);
     } catch (e) {
       toast({
         variant: 'destructive',
@@ -621,7 +711,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       )}
 
       <div className="space-y-4">
-        {posts.map((post) => (
+        {pagePosts.map((post) => (
           <div key={post.id} className="relative">
             <PostCard
               post={post}
@@ -649,6 +739,39 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
           </p>
         )}
       </div>
+
+      {showPager ? (
+        <div className="mt-5 flex items-center justify-between gap-3 border-t border-dashed border-[var(--ph-border,rgba(255,255,255,0.12))] pt-4">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/20 px-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--ph-text,#fff)] hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]"
+            disabled={safePage <= 0}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            Prev
+          </Button>
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+            {safePage + 1} / {pageCount}
+            <span className="ml-2 font-normal tracking-widest opacity-80">
+              · {posts.length} posts
+            </span>
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/20 px-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--ph-text,#fff)] hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]"
+            disabled={safePage >= pageCount - 1}
+            onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+          >
+            Next
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ) : null}
     </ModuleShell>
   );
 }
@@ -657,6 +780,8 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
 // Friends
 // ---------------------------------------------------------------------------
 
+const FRIENDS_PAGE_SIZE = 20;
+
 export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
   const { user } = useAuth();
   const playground = ctx.playgroundFriends;
@@ -664,25 +789,49 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
     playground || []
   );
   const [loaded, setLoaded] = useState(Boolean(playground));
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     if (playground) {
       setFriends(playground);
       setLoaded(true);
+      setPage(0);
       return;
     }
+    setPage(0);
     fetchFriendships(ctx.profileUserId, 'accepted')
       .then((list) =>
-        setFriends(
-          friendProfilesOf(list, ctx.profileUserId, {
-            email: user?.email,
-            displayName: user?.displayName,
-          })
-        )
+        friendProfilesOf(list, ctx.profileUserId, {
+          email: user?.email,
+          displayName: user?.displayName,
+        })
       )
-      .catch(() => undefined)
+      .then(async (chips) => {
+        try {
+          return await enrichFriendProfilesWithLiveSlugs(chips);
+        } catch (err) {
+          console.warn('[friends-module] enrich failed', err);
+          return chips;
+        }
+      })
+      .then(setFriends)
+      .catch((err) => {
+        console.warn('[friends-module]', err);
+      })
       .finally(() => setLoaded(true));
   }, [ctx.profileUserId, playground, user?.email, user?.displayName]);
+
+  const pageCount = Math.max(1, Math.ceil(friends.length / FRIENDS_PAGE_SIZE) || 1);
+  const safePage = Math.min(Math.max(0, page), pageCount - 1);
+  const pageFriends = friends.slice(
+    safePage * FRIENDS_PAGE_SIZE,
+    safePage * FRIENDS_PAGE_SIZE + FRIENDS_PAGE_SIZE
+  );
+  const showPager = friends.length > FRIENDS_PAGE_SIZE;
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage);
+  }, [page, safePage]);
 
   if (loaded && friends.length === 0) return null;
 
@@ -692,22 +841,22 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
       title={`Friends${friends.length ? ` · ${friends.length}` : ''}`}
       ctx={ctx}
       action={
-        ctx.isOwner && !playground ? (
+        !playground && ctx.profileSlug ? (
           <Link
-            href="/friends"
+            href={`/profile/${ctx.profileSlug}/friends`}
             className="text-[10px] font-bold uppercase tracking-widest text-[var(--ph-accent,#7dd3fc)] hover:underline"
           >
-            Manage →
+            See all →
           </Link>
         ) : undefined
       }
     >
       <div className="flex flex-wrap gap-2">
-        {friends.slice(0, 24).map((friend) =>
+        {pageFriends.map((friend) =>
           friend.slug ? (
             <Link
               key={friend.userId}
-              href={`/profile/${friend.slug}`}
+              href={profileHref(friend.slug) || '#'}
               className="rounded-full border border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 px-3 py-1.5 text-xs font-bold text-[var(--ph-text,#fff)] transition-colors hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]"
             >
               {friend.name}
@@ -722,6 +871,49 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
           )
         )}
       </div>
+
+      {showPager ? (
+        <div className="mt-5 flex items-center justify-between gap-3 border-t border-dashed border-[var(--ph-border,rgba(255,255,255,0.12))] pt-4">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/20 px-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--ph-text,#fff)] hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]"
+            disabled={safePage <= 0}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            Prev
+          </Button>
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+              {safePage + 1} / {pageCount}
+              <span className="ml-2 font-normal tracking-widest opacity-80">
+                · {friends.length} friends
+              </span>
+            </p>
+            {ctx.profileSlug ? (
+              <Link
+                href={`/profile/${ctx.profileSlug}/friends`}
+                className="text-[9px] font-bold uppercase tracking-widest text-[var(--ph-accent,#7dd3fc)] hover:underline"
+              >
+                See all · search
+              </Link>
+            ) : null}
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/20 px-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--ph-text,#fff)] hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]"
+            disabled={safePage >= pageCount - 1}
+            onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+          >
+            Next
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ) : null}
     </ModuleShell>
   );
 }
@@ -819,7 +1011,7 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
             <div className="min-w-0 flex-1">
               {entry.authorSlug ? (
                 <Link
-                  href={`/profile/${entry.authorSlug}`}
+                  href={profileHref(entry.authorSlug) || '#'}
                   className="mr-2 text-[11px] font-bold uppercase tracking-wider text-[var(--ph-accent2,#fbbf24)] hover:underline"
                 >
                   {entry.authorName}

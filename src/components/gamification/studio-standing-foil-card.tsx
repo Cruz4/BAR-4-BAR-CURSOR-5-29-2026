@@ -21,6 +21,14 @@ const RANK_THEME: Record<
     glow: 'rgba(161,161,170,0.25)',
     bg: '#09090b',
   },
+  soundcheck: {
+    from: '#44403c',
+    via: '#292524',
+    to: '#1c1917',
+    accent: '#a8a29e',
+    glow: 'rgba(168,162,158,0.28)',
+    bg: '#1c1917',
+  },
   demo_tape: {
     from: '#064e3b',
     via: '#022c22',
@@ -28,6 +36,14 @@ const RANK_THEME: Record<
     accent: '#34d399',
     glow: 'rgba(52,211,153,0.3)',
     bg: '#021a14',
+  },
+  cipher_cut: {
+    from: '#115e59',
+    via: '#134e4a',
+    to: '#042f2e',
+    accent: '#2dd4bf',
+    glow: 'rgba(45,212,191,0.3)',
+    bg: '#042f2e',
   },
   session_ready: {
     from: '#0c4a6e',
@@ -37,6 +53,14 @@ const RANK_THEME: Record<
     glow: 'rgba(56,189,248,0.32)',
     bg: '#041e2e',
   },
+  green_room: {
+    from: '#312e81',
+    via: '#1e1b4b',
+    to: '#0f172a',
+    accent: '#818cf8',
+    glow: 'rgba(129,140,248,0.32)',
+    bg: '#0f172a',
+  },
   headliner: {
     from: '#78350f',
     via: '#451a03',
@@ -44,6 +68,22 @@ const RANK_THEME: Record<
     accent: '#fbbf24',
     glow: 'rgba(251,191,36,0.35)',
     bg: '#1c0a02',
+  },
+  encore_run: {
+    from: '#9a3412',
+    via: '#7c2d12',
+    to: '#431407',
+    accent: '#fb923c',
+    glow: 'rgba(251,146,60,0.35)',
+    bg: '#431407',
+  },
+  catalog_king: {
+    from: '#9f1239',
+    via: '#881337',
+    to: '#4c0519',
+    accent: '#fb7185',
+    glow: 'rgba(251,113,133,0.35)',
+    bg: '#4c0519',
   },
   vault_architect: {
     from: '#581c87',

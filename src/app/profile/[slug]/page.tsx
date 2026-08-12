@@ -46,8 +46,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
 
     const data = profile as Record<string, unknown>;
-    const { displayName, title, description } = profileShareCopy(data, slug);
-    const canonical = absoluteUrl(`/profile/${slug}`);
+    const liveSlug =
+      typeof data.slug === 'string' && data.slug.trim() ? data.slug.trim() : slug;
+    const { displayName, title, description } = profileShareCopy(data, liveSlug);
+    const canonical = absoluteUrl(`/profile/${liveSlug}`);
     const ogTitle = `${displayName} on Bar 4 Bar`;
 
     return {

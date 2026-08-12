@@ -28,7 +28,7 @@ export async function GET() {
       return NextResponse.json(fallback);
     }
 
-    const displayName = neo.displayName?.trim() || NEOMAIYA_SOL.displayName;
+    const displayName = NEOMAIYA_SOL.displayName;
     const slug = await resolveNeomaiyaPublicSlug(db, neo.uid);
     return NextResponse.json({ slug, displayName, userId: neo.uid });
   } catch (err) {

@@ -21,6 +21,7 @@ import {
   fetchHasLiked,
   fetchHasReverbed,
   fetchLikeCount,
+  fetchLivePublicProfileByUserId,
   fetchPublicArtistAvatarMeta,
   likePost,
   toggleReverb,
@@ -28,6 +29,7 @@ import {
   type PostComment,
   type ProfilePost,
 } from '@/lib/profile/social-client';
+import { profileHref } from '@/lib/profile/profile-slug';
 
 type PostCardProps = {
   post: ProfilePost;
@@ -48,21 +50,37 @@ function timeAgo(iso: string): string {
 
 function ReverbSourceBody({ post }: { post: ProfilePost }) {
   const name = post.reverbOwnerName || 'Artist';
-  const slug = post.reverbOwnerSlug;
-  const profileHref = slug ? `/profile/${slug}` : undefined;
+  const [liveSlug, setLiveSlug] = useState<string | undefined>(post.reverbOwnerSlug);
+  const href = profileHref(liveSlug);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
   const [starSeed, setStarSeed] = useState<number | undefined>(undefined);
   const [useStar, setUseStar] = useState(false);
 
   useEffect(() => {
-    if (!slug) {
+    let cancelled = false;
+    const ownerId = post.reverbOwnerId;
+    if (ownerId) {
+      void fetchLivePublicProfileByUserId(ownerId).then((live) => {
+        if (cancelled || !live?.slug) return;
+        setLiveSlug(live.slug);
+      });
+    } else {
+      setLiveSlug(post.reverbOwnerSlug);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [post.reverbOwnerId, post.reverbOwnerSlug]);
+
+  useEffect(() => {
+    if (!liveSlug) {
       setAvatarUrl(undefined);
       setStarSeed(undefined);
       setUseStar(false);
       return;
     }
     let cancelled = false;
-    void fetchPublicArtistAvatarMeta(slug).then((meta) => {
+    void fetchPublicArtistAvatarMeta(liveSlug).then((meta) => {
       if (cancelled || !meta) return;
       setAvatarUrl(meta.avatarUrl);
       setUseStar(Boolean(meta.starMarkUseStar));
@@ -71,7 +89,7 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [liveSlug]);
 
   return (
     <div className="mt-2 rounded-xl border border-[var(--ph-border,rgba(255,255,255,0.14))] bg-black/30 p-3">
@@ -81,14 +99,14 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
           avatarUrl={avatarUrl}
           useStarMark={useStar}
           starMarkSeed={starSeed}
-          href={profileHref}
+          href={href}
           size={42}
           toneClass="bg-sky-500/30 text-sky-300"
         />
         <p className="min-w-0 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
           Original ·{' '}
-          {profileHref ? (
-            <Link href={profileHref} className="text-[var(--ph-accent,#7dd3fc)] hover:underline">
+          {href ? (
+            <Link href={href} className="text-[var(--ph-accent,#7dd3fc)] hover:underline">
               {name}
             </Link>
           ) : (
@@ -139,6 +157,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   const [authorAvatarUrl, setAuthorAvatarUrl] = useState<string | undefined>(undefined);
   const [authorStarSeed, setAuthorStarSeed] = useState<number | undefined>(undefined);
   const [authorUseStar, setAuthorUseStar] = useState(false);
+  const [liveAuthorSlug, setLiveAuthorSlug] = useState<string | undefined>(post.ownerSlug);
 
   const isOwner = Boolean(user?.id && user.id === post.ownerId);
   const rootIdForReverb =
@@ -160,14 +179,32 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   }, [canReverb, rootIdForReverb]);
 
   useEffect(() => {
-    if (!showAuthor || !post.ownerSlug) {
+    if (!showAuthor) {
+      setLiveAuthorSlug(undefined);
+      return;
+    }
+    let cancelled = false;
+    setLiveAuthorSlug(post.ownerSlug);
+    if (post.ownerId) {
+      void fetchLivePublicProfileByUserId(post.ownerId).then((live) => {
+        if (cancelled || !live?.slug) return;
+        setLiveAuthorSlug(live.slug);
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [showAuthor, post.ownerId, post.ownerSlug]);
+
+  useEffect(() => {
+    if (!showAuthor || !liveAuthorSlug) {
       setAuthorAvatarUrl(undefined);
       setAuthorStarSeed(undefined);
       setAuthorUseStar(false);
       return;
     }
     let cancelled = false;
-    void fetchPublicArtistAvatarMeta(post.ownerSlug).then((meta) => {
+    void fetchPublicArtistAvatarMeta(liveAuthorSlug).then((meta) => {
       if (cancelled || !meta) return;
       setAuthorAvatarUrl(meta.avatarUrl);
       setAuthorUseStar(Boolean(meta.starMarkUseStar));
@@ -176,7 +213,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     return () => {
       cancelled = true;
     };
-  }, [showAuthor, post.ownerSlug]);
+  }, [showAuthor, liveAuthorSlug]);
 
   const toggleLike = async () => {
     if (!user) {
@@ -289,7 +326,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         <div className="min-w-0">
           {showAuthor &&
             (() => {
-              const profileHref = post.ownerSlug ? `/profile/${post.ownerSlug}` : undefined;
+              const authorHref = profileHref(liveAuthorSlug);
               return (
                 <span className="inline-flex items-center gap-2.5">
                   <ArtistStarAvatar
@@ -297,13 +334,13 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
                     avatarUrl={authorAvatarUrl}
                     useStarMark={authorUseStar}
                     starMarkSeed={authorStarSeed}
-                    href={profileHref}
+                    href={authorHref}
                     size={56}
                     toneClass="bg-sky-500/30 text-sky-300"
                   />
-                  {profileHref ? (
+                  {authorHref ? (
                     <Link
-                      href={profileHref}
+                      href={authorHref}
                       className="text-xs font-bold uppercase tracking-widest text-sky-300 hover:underline"
                     >
                       {post.ownerName}
@@ -417,7 +454,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
               <div className="min-w-0 flex-1">
                 {comment.authorSlug ? (
                   <Link
-                    href={`/profile/${comment.authorSlug}`}
+                    href={profileHref(comment.authorSlug) || '#'}
                     className="mr-2 text-[11px] font-bold uppercase tracking-wider text-[var(--ph-accent2,#fbbf24)] hover:underline"
                   >
                     {comment.authorName}

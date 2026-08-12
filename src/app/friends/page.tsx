@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
 import { useToast } from '@/hooks/use-toast';
 import {
+  enrichFriendProfilesWithLiveSlugs,
   fetchBlockedUsers,
   fetchFriendships,
   fetchPublicArtistMetas,
@@ -26,6 +27,7 @@ import {
   type Friendship,
 } from '@/lib/profile/social-client';
 import { cn } from '@/lib/utils';
+import { profileHref } from '@/lib/profile/profile-slug';
 
 type FriendRow = {
   userId: string;
@@ -50,27 +52,56 @@ export default function FriendsPage() {
 
   const reload = async () => {
     if (!user?.id) return;
-    const [all, blocks] = await Promise.all([fetchFriendships(user.id), fetchBlockedUsers()]);
-    const accepted = all.filter((f) => f.status === 'accepted');
-    setFriendships(accepted);
-    setBlocked(blocks);
+    try {
+      const [all, blocks] = await Promise.all([fetchFriendships(user.id), fetchBlockedUsers()]);
+      const accepted = all.filter((f) => f.status === 'accepted');
+      setFriendships(accepted);
+      setBlocked(blocks);
 
-    const base = friendProfilesOf(accepted, user.id, {
-      email: user.email,
-      displayName: user.displayName,
-    });
-    const metas = await fetchPublicArtistMetas(base);
-    setFriends(
-      base.map((f) => {
-        const meta = metas.get(f.userId);
-        return {
-          userId: f.userId,
-          name: meta?.displayName || f.name,
-          slug: meta?.slug || f.slug,
-          avatarUrl: meta?.avatarUrl,
-        };
-      })
-    );
+      const chips = friendProfilesOf(accepted, user.id, {
+        email: user.email,
+        displayName: user.displayName,
+      });
+
+      // Enrich is best-effort — never blank the circle if live-slug lookup fails.
+      let base = chips;
+      try {
+        base = await enrichFriendProfilesWithLiveSlugs(chips);
+      } catch (err) {
+        console.warn('[friends] enrich failed', err);
+      }
+
+      try {
+        const metas = await fetchPublicArtistMetas(base);
+        setFriends(
+          base.map((f) => {
+            const meta = metas.get(f.userId);
+            return {
+              userId: f.userId,
+              name: meta?.displayName || f.name,
+              slug: meta?.slug || f.slug,
+              avatarUrl: meta?.avatarUrl,
+            };
+          })
+        );
+      } catch (err) {
+        console.warn('[friends] meta lookup failed', err);
+        setFriends(
+          base.map((f) => ({
+            userId: f.userId,
+            name: f.name,
+            slug: f.slug,
+          }))
+        );
+      }
+    } catch (err) {
+      console.warn('[friends] reload failed', err);
+      toast({
+        variant: 'destructive',
+        title: 'Could not load friends',
+        description: err instanceof Error ? err.message : 'Try refreshing',
+      });
+    }
   };
 
   useEffect(() => {
@@ -192,7 +223,7 @@ export default function FriendsPage() {
                   <div className="min-w-0 flex-1">
                     {friend.slug ? (
                       <Link
-                        href={`/profile/${friend.slug}`}
+                        href={profileHref(friend.slug) || '#'}
                         className="group flex items-center gap-3"
                       >
                         {profileInner}

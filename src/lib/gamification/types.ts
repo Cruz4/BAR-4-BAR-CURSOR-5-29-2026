@@ -1,10 +1,25 @@
 /** Gamification profile stored at users/{uid}/gamification/summary */
 
-export type RankId = 'open_mic' | 'demo_tape' | 'session_ready' | 'headliner' | 'vault_architect';
+export type RankId =
+  | 'open_mic'
+  | 'soundcheck'
+  | 'demo_tape'
+  | 'cipher_cut'
+  | 'session_ready'
+  | 'green_room'
+  | 'headliner'
+  | 'encore_run'
+  | 'catalog_king'
+  | 'vault_architect';
 
 export type GamificationSummary = {
   xp: number;
   rankId: RankId;
+  /**
+   * Prestige cycles completed (0–5). Raising this scales personal achievement
+   * ceilings — it is never itself a requirement to unlock badges.
+   */
+  prestigeLevel?: number;
   currentStreak: number;
   longestStreak: number;
   /** achievement id → unlockedAt ISO */
@@ -122,6 +137,7 @@ export type GamificationTrigger =
 export const DEFAULT_GAMIFICATION_SUMMARY: GamificationSummary = {
   xp: 0,
   rankId: 'open_mic',
+  prestigeLevel: 0,
   currentStreak: 0,
   longestStreak: 0,
   unlockedAchievements: {},

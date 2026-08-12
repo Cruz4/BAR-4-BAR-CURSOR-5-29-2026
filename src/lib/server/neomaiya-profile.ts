@@ -3,10 +3,15 @@ import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
 import { NEOMAIYA_SOL } from '@/lib/profile/neomaiya-sol';
 
-async function profileDocExists(db: Firestore, slug: string): Promise<boolean> {
+async function profileOwnedBy(
+  db: Firestore,
+  slug: string,
+  neoUid: string
+): Promise<boolean> {
   try {
     const snap = await db.doc(`publicProfiles/${slug}`).get();
-    return snap.exists;
+    if (!snap.exists) return false;
+    return String(snap.data()?.userId || '') === neoUid;
   } catch {
     return false;
   }
@@ -14,12 +19,10 @@ async function profileDocExists(db: Firestore, slug: string): Promise<boolean> {
 
 /**
  * Resolve Neomaiya Sol's live public slug for the Auth user that owns
- * {@link NEOMAIYA_SOL.email}.
+ * {@link NEOMAIYA_SOL.email} (plotformaiplan@gmail.com).
  *
- * Always prefer the canonical Artist Home (`NEOMAIYA_SOL.slug`) when that
- * publicProfiles doc exists. Toggling public on/off can mint a new
- * `neomaiya-sol-{uid}` slug in gamification summary that 404s — never ship
- * those dead links to the guest sandbox or founder-friend chips.
+ * Never return a slug owned by a different uid (e.g. legacy neomaiyasol@
+ * account that still holds `neomaiya-sol-paQXxm`).
  */
 export async function resolveNeomaiyaPublicSlug(
   db: Firestore,
@@ -27,7 +30,7 @@ export async function resolveNeomaiyaPublicSlug(
 ): Promise<string> {
   const canonical = NEOMAIYA_SOL.slug;
 
-  if (await profileDocExists(db, canonical)) {
+  if (await profileOwnedBy(db, canonical, neoUid)) {
     return canonical;
   }
 
@@ -40,6 +43,11 @@ export async function resolveNeomaiyaPublicSlug(
     }
   } catch {
     /* ignore */
+  }
+
+  // Summary already points at the clean Neo link — prefer it even if mirror lags.
+  if (summarySlug === canonical) {
+    return canonical;
   }
 
   try {
@@ -65,10 +73,10 @@ export async function resolveNeomaiyaPublicSlug(
     /* fall through */
   }
 
-  if (summarySlug && (await profileDocExists(db, summarySlug))) {
+  if (summarySlug && (await profileOwnedBy(db, summarySlug, neoUid))) {
     return summarySlug;
   }
 
-  // Stable product URL even if the mirror is briefly missing.
+  // Stable product URL — /profile/neomaiya_sol — even if the mirror is briefly missing.
   return canonical;
 }

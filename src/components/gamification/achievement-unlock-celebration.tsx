@@ -36,6 +36,7 @@ import {
 } from '@/lib/gamification/unlock-events';
 import type { GamificationUnlock } from '@/lib/gamification/types';
 import { getAchievement, type AchievementDef } from '@/lib/gamification/achievements';
+import { isStarterAchievement } from '@/lib/gamification/achievement-thresholds';
 import {
   buildAchievementShareText,
   downloadAchievementCardPng,
@@ -157,14 +158,33 @@ export function AchievementUnlockCelebration() {
           fresh.map((u) => u.id)
         );
       }
-      const items: CelebrationItem[] = fresh.map((u, i) => ({
+
+      const starters = fresh.filter((u) => isStarterAchievement(u.id));
+      const featured = fresh.filter((u) => !isStarterAchievement(u.id));
+
+      if (starters.length) {
+        const titles = starters
+          .map((u) => getAchievement(u.id)?.title || u.title)
+          .filter(Boolean);
+        toast({
+          title: starters.length === 1 ? `Unlocked · ${titles[0]}` : `${starters.length} starter badges unlocked`,
+          description:
+            starters.length === 1
+              ? 'Feet wet. Bigger plates wait in Studio Progress.'
+              : titles.slice(0, 3).join(' · ') + (titles.length > 3 ? '…' : ''),
+        });
+      }
+
+      if (!featured.length) return;
+
+      const items: CelebrationItem[] = featured.map((u, i) => ({
         ...u,
         actionXpGain: i === 0 ? xpGain : 0,
       }));
 
       setQueue((prev) => [...prev, ...items]);
     },
-    [user?.id]
+    [toast, user?.id]
   );
 
   useEffect(() => {
@@ -180,12 +200,17 @@ export function AchievementUnlockCelebration() {
 
   useEffect(() => {
     if (active || queue.length === 0) return;
-    const [next, ...rest] = queue;
-    setQueue(rest);
-    setActive(next);
-    setFoilOpen(false);
-    spawnCursorEmojiSequence();
-    fireAchievementConfetti();
+    // Brief breath between stacked unlocks so they don't feel like spam.
+    const delayMs = 450;
+    const timer = window.setTimeout(() => {
+      const [next, ...rest] = queue;
+      setQueue(rest);
+      setActive(next);
+      setFoilOpen(false);
+      spawnCursorEmojiSequence();
+      fireAchievementConfetti();
+    }, delayMs);
+    return () => window.clearTimeout(timer);
   }, [active, queue, spawnCursorEmojiSequence]);
 
   const dismiss = () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,6 +25,29 @@ export function PublishOpenLockPanel({ onPublished, currentLockId }: PublishOpen
   const [seedBar, setSeedBar] = useState('');
   const [embedUrl, setEmbedUrl] = useState('');
   const [busy, setBusy] = useState(false);
+  const [liveSeedBar, setLiveSeedBar] = useState('');
+
+  useEffect(() => {
+    if (!currentLockId) {
+      setLiveSeedBar('');
+      return;
+    }
+    let cancelled = false;
+    void fetch(`/api/lock/${encodeURIComponent(currentLockId)}`)
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = await res.json();
+        const bar =
+          typeof data?.lock?.seedBar === 'string' ? data.lock.seedBar.trim() : '';
+        if (!cancelled) setLiveSeedBar(bar);
+      })
+      .catch(() => {
+        if (!cancelled) setLiveSeedBar('');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentLockId]);
 
   if (lockLoading) {
     return <p className="text-xs text-muted-foreground">Checking finish-the-bar…</p>;
@@ -64,6 +87,7 @@ export function PublishOpenLockPanel({ onPublished, currentLockId }: PublishOpen
         title: 'Unfinished bar is live',
         description: lockPath(data.lock.id),
       });
+      setLiveSeedBar(seedBar.trim());
       setSeedBar('');
     } catch (e) {
       toast({
@@ -79,12 +103,21 @@ export function PublishOpenLockPanel({ onPublished, currentLockId }: PublishOpen
   return (
     <div className="space-y-3">
       {currentLockId ? (
-        <p className="text-xs text-emerald-400">
-          Live:{' '}
-          <a className="underline" href={lockPath(currentLockId)}>
-            {lockPath(currentLockId)}
+        <div className="space-y-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+            Live on your page
+          </p>
+          {liveSeedBar ? (
+            <p className="font-headline text-sm font-bold leading-snug text-foreground">
+              &ldquo;{liveSeedBar}&rdquo;
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Loading bar…</p>
+          )}
+          <a className="text-xs text-emerald-400 underline" href={lockPath(currentLockId)}>
+            Open cast →
           </a>
-        </p>
+        </div>
       ) : null}
       <Textarea
         value={seedBar}

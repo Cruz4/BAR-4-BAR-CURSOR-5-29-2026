@@ -1,13 +1,34 @@
 /**
- * Neomaiya Sol — default first friend + guestbook welcome for every artist.
+ * Neomaiya Sol — auto-friend for every artist (guestbook welcome is Jordie Cruz).
+ *
+ * Canonical Auth account is {@link NEOMAIYA_SOL.email} only.
+ * Never treat another account as Neo just because the display name matched.
  */
 
 export const NEOMAIYA_SOL = {
-  email: 'neomaiyasol@gmail.com',
+  /** Live founder account (also master admin). */
+  email: 'plotformaiplan@gmail.com',
   displayName: 'Neomaiya Sol',
-  /** Canonical live Artist Home slug (bar4bar.ink/profile/…). */
-  slug: 'neomaiya-sol-paQXxm',
+  /** Canonical live Artist Home slug (bar4bar.ink/profile/neomaiya_sol). */
+  slug: 'neomaiya_sol',
 } as const;
+
+/**
+ * Former mistaken Neo emails — still in Firestore as friendship / guestbook authors.
+ * Repair paths strip these so "Mike Hills" never appears as Neo's welcome.
+ */
+export const NEOMAIYA_SOL_LEGACY_EMAILS = ['neomaiyasol@gmail.com'] as const;
+
+export function isNeomaiyaSolEmail(email?: string | null): boolean {
+  const e = (email || '').trim().toLowerCase();
+  return Boolean(e) && e === NEOMAIYA_SOL.email.toLowerCase();
+}
+
+export function isLegacyNeomaiyaSolEmail(email?: string | null): boolean {
+  const e = (email || '').trim().toLowerCase();
+  if (!e) return false;
+  return (NEOMAIYA_SOL_LEGACY_EMAILS as readonly string[]).some((x) => x.toLowerCase() === e);
+}
 
 /** Guestbook lines Neo leaves on new / guest profiles (no dashes). */
 export const NEOMAIYA_GUESTBOOK_WELCOMES = [
@@ -69,17 +90,22 @@ export function neomaiyaFriendChip(opts?: {
 export function looksLikeNeomaiyaSol(name?: string, slug?: string): boolean {
   const n = (name || '').trim().toLowerCase();
   const s = (slug || '').trim().toLowerCase();
-  return n === 'neomaiya sol' || s === 'neomaiya-sol' || s.startsWith('neomaiya-sol-');
+  return (
+    n === 'neomaiya sol' ||
+    s === 'neomaiya_sol' ||
+    s === 'neomaiya-sol' ||
+    s.startsWith('neomaiya_sol_') ||
+    s.startsWith('neomaiya-sol-')
+  );
 }
 
+/** True only for the canonical Neo Auth email — never display-name alone. */
 export function isNeomaiyaSolViewer(viewer?: {
   email?: string | null;
   displayName?: string | null;
 }): boolean {
   if (!viewer) return false;
-  const email = (viewer.email || '').trim().toLowerCase();
-  if (email && email === NEOMAIYA_SOL.email.toLowerCase()) return true;
-  return (viewer.displayName || '').trim().toLowerCase() === 'neomaiya sol';
+  return isNeomaiyaSolEmail(viewer.email);
 }
 
 function clampIndex(n: number, len: number): number {

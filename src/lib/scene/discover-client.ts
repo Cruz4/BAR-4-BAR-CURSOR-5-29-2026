@@ -6,6 +6,7 @@
 
 import type { EmbedProvider } from '@/lib/profile/embeds';
 import type { ProfilePost } from '@/lib/profile/social-client';
+import { enrichPostsWithLiveSlugs } from '@/lib/profile/social-client';
 
 export type DiscoverArtist = {
   userId: string;
@@ -86,14 +87,17 @@ export async function fetchDiscover(
     const res = await fetch(`/api/discover${qs ? `?${qs}` : ''}`);
     if (!res.ok) return EMPTY;
     const data = (await res.json()) as Partial<DiscoverData>;
+    const rawPosts = Array.isArray(data.posts)
+      ? data.posts.map((p) => ({
+          ...p,
+          embedProvider: p.embedProvider as EmbedProvider | undefined,
+        }))
+      : [];
+    // Retroactive posts may still carry hyphen/uid ownerSlug — rewrite to live.
+    const posts = await enrichPostsWithLiveSlugs(rawPosts as ProfilePost[]);
     return {
       artists: Array.isArray(data.artists) ? data.artists : [],
-      posts: Array.isArray(data.posts)
-        ? data.posts.map((p) => ({
-            ...p,
-            embedProvider: p.embedProvider as EmbedProvider | undefined,
-          }))
-        : [],
+      posts,
       drops: Array.isArray(data.drops) ? data.drops : [],
       risers: Array.isArray(data.risers) ? data.risers : [],
       locks: Array.isArray((data as { locks?: DiscoverLock[] }).locks)

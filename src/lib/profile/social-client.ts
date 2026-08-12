@@ -33,6 +33,8 @@ import {
   isNeomaiyaSolViewer,
   looksLikeNeomaiyaSol,
 } from '@/lib/profile/neomaiya-sol';
+import { JORDIE_PLAYGROUND_FRIEND } from '@/lib/profile/jordie-cruz';
+import { profileHref } from '@/lib/profile/profile-slug';
 
 export type ProfilePost = {
   id: string;
@@ -244,7 +246,12 @@ export async function fetchPostsByOwner(ownerId: string, max = 20): Promise<Prof
     const snap = await getDocs(
       query(collection(db, 'posts'), where('ownerId', '==', ownerId), limitTo(max))
     );
-    return snap.docs.map((d) => postFromDoc(d.id, d.data()));
+    const posts = await enrichPostsWithLiveSlugs(
+      snap.docs.map((d) => postFromDoc(d.id, d.data()))
+    );
+    return posts.sort(
+      (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id)
+    );
   } catch (err) {
     console.warn('[posts]', err);
     return [];
@@ -337,7 +344,7 @@ export async function toggleReverb(
     ...(post.ownerSlug ? { actorSlug: post.ownerSlug } : {}),
     postId: rootPostId,
     preview: (rootText || rootOwnerName || 'a post').slice(0, 120),
-    href: post.ownerSlug ? `/profile/${post.ownerSlug}#post-${id}` : undefined,
+    href: profileHref(post.ownerSlug, `post-${id}`),
   });
 
   return { status: 'created', post };
@@ -360,9 +367,35 @@ export async function fetchPostsByOwners(ownerIds: string[], perOwner = 8): Prom
   const results = await Promise.all(
     unique.map((uid) => fetchPostsByOwner(uid, perOwner).catch(() => [] as ProfilePost[]))
   );
-  return results
-    .flat()
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  // fetchPostsByOwner already live-enriches; sort only.
+  return results.flat().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/**
+ * Rewrite baked-in post ownerSlug / reverbOwnerSlug to the live publicProfiles
+ * slug for that userId (retroactive posts still carry hyphen/uid Neo mirrors).
+ */
+export async function enrichPostsWithLiveSlugs(posts: ProfilePost[]): Promise<ProfilePost[]> {
+  if (!posts.length) return posts;
+  const ids = new Set<string>();
+  for (const p of posts) {
+    if (p.ownerId) ids.add(p.ownerId);
+    if (p.reverbOwnerId) ids.add(p.reverbOwnerId);
+  }
+  if (!ids.size) return posts;
+
+  const metas = await fetchPublicArtistMetas([...ids].map((userId) => ({ userId })));
+  return posts.map((p) => {
+    const owner = metas.get(p.ownerId);
+    const reverb = p.reverbOwnerId ? metas.get(p.reverbOwnerId) : undefined;
+    return {
+      ...p,
+      ...(owner?.slug ? { ownerSlug: owner.slug } : {}),
+      ...(owner?.displayName ? { ownerName: owner.displayName } : {}),
+      ...(reverb?.slug ? { reverbOwnerSlug: reverb.slug } : {}),
+      ...(reverb?.displayName ? { reverbOwnerName: reverb.displayName } : {}),
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -444,7 +477,7 @@ export async function addComment(
 export async function fetchComments(postId: string, max = 50): Promise<PostComment[]> {
   try {
     const snap = await getDocs(query(collection(db, 'posts', postId, 'comments'), limitTo(max)));
-    return snap.docs.map((d) => {
+    const comments = snap.docs.map((d) => {
       const data = d.data();
       return {
         id: d.id,
@@ -453,6 +486,18 @@ export async function fetchComments(postId: string, max = 50): Promise<PostComme
         authorSlug: typeof data.authorSlug === 'string' ? data.authorSlug : undefined,
         text: String(data.text || ''),
         createdAt: String(data.createdAt || ''),
+      };
+    });
+    const ids = [...new Set(comments.map((c) => c.authorId).filter(Boolean))];
+    if (!ids.length) return comments;
+    const metas = await fetchPublicArtistMetas(ids.map((userId) => ({ userId })));
+    return comments.map((c) => {
+      const meta = metas.get(c.authorId);
+      if (!meta?.slug) return c;
+      return {
+        ...c,
+        authorSlug: meta.slug,
+        authorName: meta.displayName || c.authorName,
       };
     });
   } catch {
@@ -483,11 +528,12 @@ export function friendshipIdFor(uidA: string, uidB: string): string {
 }
 
 function friendshipFromDoc(id: string, data: Record<string, unknown>): Friendship {
+  const rawStatus = String(data.status || '').trim().toLowerCase();
   return {
     id,
     uids: (Array.isArray(data.uids) ? data.uids : ['', '']) as [string, string],
     requestedBy: String(data.requestedBy || ''),
-    status: data.status === 'accepted' ? 'accepted' : 'pending',
+    status: rawStatus === 'accepted' ? 'accepted' : 'pending',
     profiles: (data.profiles && typeof data.profiles === 'object'
       ? data.profiles
       : {}) as Friendship['profiles'],
@@ -503,6 +549,9 @@ export async function sendFriendRequest(
   const user = requireUser();
   if (target.userId === user.uid) throw new Error('That is you.');
   if (target.userId === NEOMAIYA_PLAYGROUND_FRIEND.userId) {
+    throw new Error('That artist is not available.');
+  }
+  if (target.userId === JORDIE_PLAYGROUND_FRIEND.userId) {
     throw new Error('That artist is not available.');
   }
   if (
@@ -698,7 +747,7 @@ export async function acceptFriendRequest(friendshipId: string): Promise<void> {
         'Artist',
       ...(actorSlug ? { actorSlug } : {}),
       recipientId: requestedBy,
-      href: actorSlug ? `/profile/${actorSlug}` : '/friends',
+      href: profileHref(actorSlug) || '/friends',
     });
     const clearedActivityIds = await clearFriendRequestActivityFromPeer(requestedBy);
     notifyFriendshipChanged({
@@ -815,15 +864,56 @@ export async function fetchFriendshipWith(otherUserId: string): Promise<Friendsh
 
 /**
  * Friendships for a user.
- * Always constrains `status` so list queries are provable under the OR read rule
- * (accepted = public; pending = only when you're in `uids`).
- * Pass no status to load both accepted + pending for the signed-in user.
+ *
+ * Prefers the Admin-backed `/api/friends` route (avoids client rules/index
+ * failures that blanked every circle). Falls back to direct Firestore reads.
  */
 export async function fetchFriendships(
   userId: string,
   status?: FriendshipStatus
 ): Promise<Friendship[]> {
-  const load = async (s: FriendshipStatus): Promise<Friendship[]> => {
+  if (!userId) return [];
+
+  const sortRows = (rows: Friendship[]) =>
+    [...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  const fromServer = async (): Promise<Friendship[] | null> => {
+    try {
+      const params = new URLSearchParams({ of: userId });
+      if (status) params.set('status', status);
+      const headers: HeadersInit = {};
+      const me = auth.currentUser;
+      if (me) {
+        params.set('userId', me.uid);
+        const token = await me.getIdToken();
+        headers.Authorization = `Bearer ${token}`;
+      }
+      const res = await fetch(`/api/friends?${params.toString()}`, {
+        headers,
+        cache: 'no-store',
+      });
+      if (!res.ok) return null;
+      const data = (await res.json()) as { friendships?: Friendship[] };
+      if (!Array.isArray(data.friendships)) return null;
+      return sortRows(
+        data.friendships.map((f) =>
+          friendshipFromDoc(f.id, f as unknown as Record<string, unknown>)
+        )
+      );
+    } catch (err) {
+      console.warn('[friendships] server list failed', err);
+      return null;
+    }
+  };
+
+  const loadSelfAll = async (): Promise<Friendship[]> => {
+    const snap = await getDocs(
+      query(collection(db, 'friendships'), where('uids', 'array-contains', userId), limitTo(200))
+    );
+    return snap.docs.map((d) => friendshipFromDoc(d.id, d.data() as Record<string, unknown>));
+  };
+
+  const loadByStatus = async (s: FriendshipStatus): Promise<Friendship[]> => {
     const snap = await getDocs(
       query(
         collection(db, 'friendships'),
@@ -832,18 +922,41 @@ export async function fetchFriendships(
         limitTo(120)
       )
     );
-    return snap.docs.map((d) => friendshipFromDoc(d.id, d.data()));
+    return snap.docs.map((d) => friendshipFromDoc(d.id, d.data() as Record<string, unknown>));
   };
 
+  const viaApi = await fromServer();
+  if (viaApi) return viaApi;
+
+  const isSelf = Boolean(auth.currentUser?.uid && auth.currentUser.uid === userId);
+
   try {
-    if (status) {
-      return (await load(status)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    if (isSelf) {
+      let rows = await loadSelfAll();
+      if (status) rows = rows.filter((f) => f.status === status);
+      return sortRows(rows);
     }
-    // Own inbox: two constrained queries (avoids OR-rule list rejection).
-    const [accepted, pending] = await Promise.all([load('accepted'), load('pending')]);
-    return [...accepted, ...pending].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+    if (status) {
+      return sortRows(await loadByStatus(status));
+    }
+
+    const [accepted, pending] = await Promise.all([
+      loadByStatus('accepted').catch(() => [] as Friendship[]),
+      loadByStatus('pending').catch(() => [] as Friendship[]),
+    ]);
+    return sortRows([...accepted, ...pending]);
   } catch (err) {
     console.warn('[friendships]', err);
+    if (isSelf) {
+      try {
+        let rows = await loadSelfAll();
+        if (status) rows = rows.filter((f) => f.status === status);
+        return sortRows(rows);
+      } catch (err2) {
+        console.warn('[friendships] self fallback failed', err2);
+      }
+    }
     return [];
   }
 }
@@ -852,44 +965,149 @@ export async function fetchFriendships(
 export function friendProfilesOf(
   friendships: Friendship[],
   userId: string,
-  viewer?: { email?: string | null; displayName?: string | null }
+  _viewer?: { email?: string | null; displayName?: string | null; uid?: string | null }
 ): Array<{ userId: string; name: string; slug?: string }> {
-  const hideNeoMirrors = isNeomaiyaSolViewer(viewer);
-  const mapped = friendships
-    .filter((f) => f.status === 'accepted')
-    .map((f) => {
-      const otherId = f.uids.find((u) => u !== userId) || '';
-      const profile = f.profiles[otherId];
-      return { userId: otherId, name: profile?.name || 'Artist', slug: profile?.slug };
-    })
-    .filter((p) => Boolean(p.userId) && p.userId !== userId)
-    // Guest playground Neo is not a real Auth account — never list as a friend.
-    .filter((p) => p.userId !== NEOMAIYA_PLAYGROUND_FRIEND.userId);
-
-  // Prefer the live Neo chip when stale clones / mirrors also appear.
-  const ranked = [...mapped].sort((a, b) => {
-    const aNeo = looksLikeNeomaiyaSol(a.name, a.slug);
-    const bNeo = looksLikeNeomaiyaSol(b.name, b.slug);
-    if (aNeo && bNeo) {
-      if (a.slug === NEOMAIYA_SOL.slug && b.slug !== NEOMAIYA_SOL.slug) return -1;
-      if (b.slug === NEOMAIYA_SOL.slug && a.slug !== NEOMAIYA_SOL.slug) return 1;
-    }
-    return 0;
-  });
-
-  const out: Array<{ userId: string; name: string; slug?: string }> = [];
+  // Do NOT drop "Neo-looking" chips here. Stale name/slug leftovers on real artists
+  // used to blank Neo's own circle (and hide Neo on others' lists while she browsed).
+  // Playground uid is filtered; live Neo vs Mike is resolved in enrichFriendProfilesWithLiveSlugs.
   const seenIds = new Set<string>();
-  let neoKept = false;
-  for (const p of ranked) {
-    if (seenIds.has(p.userId)) continue;
-    if (hideNeoMirrors && looksLikeNeomaiyaSol(p.name, p.slug)) continue;
-    if (looksLikeNeomaiyaSol(p.name, p.slug)) {
-      if (neoKept) continue;
-      neoKept = true;
+  const out: Array<{ userId: string; name: string; slug?: string }> = [];
+  for (const f of friendships) {
+    if (f.status !== 'accepted') continue;
+    const otherId = f.uids.find((u) => u !== userId) || '';
+    if (!otherId || otherId === userId) continue;
+    if (otherId === NEOMAIYA_PLAYGROUND_FRIEND.userId) continue;
+    if (otherId === JORDIE_PLAYGROUND_FRIEND.userId) continue;
+    if (seenIds.has(otherId)) continue;
+    seenIds.add(otherId);
+    const profile = f.profiles[otherId];
+    out.push({
+      userId: otherId,
+      name: profile?.name || 'Artist',
+      slug: profile?.slug,
+    });
+  }
+  return out;
+}
+
+type LivePublicMeta = { slug?: string; displayName?: string };
+
+/** Resolve the live publicProfiles slug for a user (ignores stale friendship chips). */
+export async function fetchLivePublicProfileByUserId(
+  userId: string
+): Promise<LivePublicMeta | undefined> {
+  if (!userId) return undefined;
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'publicProfiles'), where('userId', '==', userId), limitTo(8))
+    );
+    if (snap.empty) return undefined;
+    const { needsVanitySlugUpgrade, stripLegacyUidSuffix, normalizeProfileSlugInput } = await import(
+      '@/lib/profile/profile-slug'
+    );
+    const docs = [...snap.docs].sort((a, b) => {
+      const aBad = needsVanitySlugUpgrade(a.id, userId) ? 1 : 0;
+      const bBad = needsVanitySlugUpgrade(b.id, userId) ? 1 : 0;
+      if (aBad !== bBad) return aBad - bBad;
+      const aAt = String(a.data()?.updatedAt || '');
+      const bAt = String(b.data()?.updatedAt || '');
+      return bAt.localeCompare(aAt);
+    });
+    const best = docs[0]!;
+    const dn = best.data()?.displayName;
+    let slug = best.id;
+    // Client can't migrate Firestore docs; still prefer underscore form in chips.
+    if (needsVanitySlugUpgrade(slug, userId)) {
+      slug = stripLegacyUidSuffix(normalizeProfileSlugInput(slug));
     }
-    seenIds.add(p.userId);
+    return {
+      slug,
+      displayName: typeof dn === 'string' && dn.trim() ? dn.trim() : undefined,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Fix friend chips that still point at hyphen/uid Neo mirrors or Mike's old Neo URL.
+ * Always prefer the live publicProfiles doc for that userId.
+ */
+export async function enrichFriendProfilesWithLiveSlugs(
+  friends: Array<{ userId: string; name: string; slug?: string }>
+): Promise<Array<{ userId: string; name: string; slug?: string }>> {
+  let neoUid: string | null = null;
+  let neoSlug: string = NEOMAIYA_SOL.slug;
+  try {
+    const res = await fetch('/api/profile/neomaiya');
+    if (res.ok) {
+      const data = (await res.json()) as { userId?: string; slug?: string };
+      if (typeof data.userId === 'string' && data.userId.trim()) neoUid = data.userId.trim();
+      if (typeof data.slug === 'string' && data.slug.trim()) neoSlug = data.slug.trim();
+    }
+  } catch {
+    /* ignore */
+  }
+
+  const enriched = await Promise.all(
+    friends.map(async (friend) => {
+      // Real Neo account — always the canonical link.
+      if (neoUid && friend.userId === neoUid) {
+        return {
+          userId: friend.userId,
+          name: NEOMAIYA_SOL.displayName,
+          slug: neoSlug,
+        };
+      }
+
+      const live = await fetchLivePublicProfileByUserId(friend.userId);
+      const neoLike = looksLikeNeomaiyaSol(friend.name, friend.slug);
+
+      // Mike (or anyone else) still carrying a Neo slug/name in the friendship chip.
+      if (neoLike) {
+        return {
+          userId: friend.userId,
+          name:
+            live?.displayName ||
+            (friend.name === NEOMAIYA_SOL.displayName ? 'Artist' : friend.name),
+          // Prefer live slug; if missing, omit so we don't open Neo's dead page.
+          slug: live?.slug,
+        };
+      }
+
+      if (live?.slug) {
+        return {
+          userId: friend.userId,
+          name: live.displayName || friend.name,
+          slug: live.slug,
+        };
+      }
+
+      return friend;
+    })
+  );
+
+  // Keep one Neo chip (by Auth uid only). Never promote Mike's leftover Neo slug into Neo.
+  // Put Neo first so every artist's circle clearly shows her.
+  const out: Array<{ userId: string; name: string; slug?: string }> = [];
+  const seen = new Set<string>();
+  let neoChip: { userId: string; name: string; slug?: string } | null = null;
+  for (const p of enriched) {
+    if (!p.userId || seen.has(p.userId)) continue;
+    if (neoUid && p.userId === neoUid) {
+      if (neoChip) continue;
+      seen.add(p.userId);
+      neoChip = {
+        userId: neoUid,
+        name: NEOMAIYA_SOL.displayName,
+        slug: neoSlug,
+      };
+      continue;
+    }
+    seen.add(p.userId);
     out.push(p);
   }
+  if (neoChip) out.unshift(neoChip);
   return out;
 }
 
@@ -954,7 +1172,8 @@ function customFeedPhotoUrl(asset: PublicAvatarAsset | undefined): string | unde
 
 /**
  * Resolve live Artist Home slug + avatar for a set of users.
- * Prefer known slugs (direct doc reads); fall back to userId queries.
+ * Always prefers publicProfiles by userId so stale friendship/activity slugs
+ * (old Neo mirrors, hyphen+uid tails) never win the link.
  */
 export async function fetchPublicArtistMetas(
   profiles: Array<{ userId: string; slug?: string }>
@@ -962,71 +1181,80 @@ export async function fetchPublicArtistMetas(
   const out = new Map<string, PublicArtistMeta>();
   if (!profiles.length) return out;
 
-  const bySlug = profiles.filter((p) => p.slug);
-  const missing = profiles.filter((p) => !p.slug && p.userId);
+  const { needsVanitySlugUpgrade } = await import('@/lib/profile/profile-slug');
 
   await Promise.all(
-    bySlug.map(async (p) => {
+    profiles.map(async (p) => {
+      if (!p.userId) return;
       try {
-        const [snap, asset] = await Promise.all([
-          getDoc(doc(db, 'publicProfiles', p.slug!)),
-          readPublicAvatarAsset(p.slug!),
-        ]);
-        if (!snap.exists()) {
+        // Live doc for this Auth user — ignore friendship chip slug first.
+        const live = await fetchLivePublicProfileByUserId(p.userId);
+        const liveSlug = live?.slug;
+
+        if (liveSlug) {
+          const asset = await readPublicAvatarAsset(liveSlug);
           out.set(p.userId, {
             userId: p.userId,
-            slug: p.slug,
+            slug: liveSlug,
             avatarUrl: customFeedPhotoUrl(asset),
+            displayName: live.displayName,
           });
+          // Prefer custom avatar from live slug; if missing, try named avatar field via doc.
+          try {
+            const snap = await getDoc(doc(db, 'publicProfiles', liveSlug));
+            if (snap.exists()) {
+              const data = snap.data() as Record<string, unknown>;
+              const prev = out.get(p.userId)!;
+              out.set(p.userId, {
+                ...prev,
+                avatarUrl: prev.avatarUrl || avatarFromPublicDoc(data),
+                displayName:
+                  prev.displayName ||
+                  (typeof data.displayName === 'string' && data.displayName.trim()
+                    ? data.displayName.trim()
+                    : undefined),
+              });
+            }
+          } catch {
+            /* keep live meta */
+          }
           return;
         }
-        const data = snap.data() as Record<string, unknown>;
-        out.set(p.userId, {
-          userId: p.userId,
-          slug: snap.id,
-          avatarUrl: customFeedPhotoUrl(asset) || avatarFromPublicDoc(data),
-          displayName:
-            typeof data.displayName === 'string' && data.displayName.trim()
-              ? data.displayName.trim()
-              : undefined,
-        });
+
+        // No live public profile — only trust the chip slug if it isn't a vanity upgrade candidate
+        // and the doc (if any) actually belongs to this userId.
+        if (p.slug && !needsVanitySlugUpgrade(p.slug) && !looksLikeNeomaiyaSol(undefined, p.slug)) {
+          const [snap, asset] = await Promise.all([
+            getDoc(doc(db, 'publicProfiles', p.slug)),
+            readPublicAvatarAsset(p.slug),
+          ]);
+          if (snap.exists()) {
+            const data = snap.data() as Record<string, unknown>;
+            const owner =
+              typeof data.userId === 'string' ? data.userId : typeof data.uid === 'string' ? data.uid : '';
+            if (owner && owner !== p.userId) {
+              out.set(p.userId, { userId: p.userId });
+              return;
+            }
+            out.set(p.userId, {
+              userId: p.userId,
+              slug: snap.id,
+              avatarUrl: customFeedPhotoUrl(asset) || avatarFromPublicDoc(data),
+              displayName:
+                typeof data.displayName === 'string' && data.displayName.trim()
+                  ? data.displayName.trim()
+                  : undefined,
+            });
+            return;
+          }
+        }
+
+        out.set(p.userId, { userId: p.userId });
       } catch {
         out.set(p.userId, { userId: p.userId, slug: p.slug });
       }
     })
   );
-
-  // Firestore `in` is capped at 30 — chunk missing userIds.
-  for (let i = 0; i < missing.length; i += 30) {
-    const chunk = missing.slice(i, i + 30);
-    await Promise.all(
-      chunk.map(async (p) => {
-        try {
-          const snap = await getDocs(
-            query(collection(db, 'publicProfiles'), where('userId', '==', p.userId), limitTo(1))
-          );
-          const docSnap = snap.docs[0];
-          if (!docSnap) {
-            out.set(p.userId, { userId: p.userId });
-            return;
-          }
-          const data = docSnap.data() as Record<string, unknown>;
-          const asset = await readPublicAvatarAsset(docSnap.id);
-          out.set(p.userId, {
-            userId: p.userId,
-            slug: docSnap.id,
-            avatarUrl: customFeedPhotoUrl(asset) || avatarFromPublicDoc(data),
-            displayName:
-              typeof data.displayName === 'string' && data.displayName.trim()
-                ? data.displayName.trim()
-                : undefined,
-          });
-        } catch {
-          out.set(p.userId, { userId: p.userId });
-        }
-      })
-    );
-  }
 
   return out;
 }
@@ -1141,7 +1369,7 @@ export async function fetchGuestbook(profileOwnerId: string, max = 30): Promise<
     const snap = await getDocs(
       query(collection(db, 'guestbooks', profileOwnerId, 'entries'), limitTo(max))
     );
-    return snap.docs
+    const raw = snap.docs
       .map((d) => {
         const data = d.data();
         return {
@@ -1154,10 +1382,49 @@ export async function fetchGuestbook(profileOwnerId: string, max = 30): Promise<
         };
       })
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return healGuestbookNeoAttribution(raw);
   } catch (err) {
     console.warn('[guestbook]', err);
     return [];
   }
+}
+
+/** Drop Mike-as-Neo lines; force real Neo lines to /profile/neomaiya_sol. */
+async function healGuestbookNeoAttribution(entries: GuestbookEntry[]): Promise<GuestbookEntry[]> {
+  let neoUid: string | null = null;
+  let neoSlug: string = NEOMAIYA_SOL.slug;
+  try {
+    const res = await fetch('/api/profile/neomaiya');
+    if (res.ok) {
+      const data = (await res.json()) as { userId?: string; slug?: string };
+      if (typeof data.userId === 'string' && data.userId.trim()) neoUid = data.userId.trim();
+      if (typeof data.slug === 'string' && data.slug.trim()) neoSlug = data.slug.trim();
+    }
+  } catch {
+    /* offline / unavailable */
+  }
+
+  return entries.flatMap((entry) => {
+    const neoLike = looksLikeNeomaiyaSol(entry.authorName, entry.authorSlug);
+    if (!neoLike) return [entry];
+    if (neoUid && entry.authorId !== neoUid) return [];
+    // Legacy uid-suffixed Neo mirrors without a resolved Neo uid — hide.
+    if (
+      !neoUid &&
+      entry.authorSlug &&
+      entry.authorSlug !== neoSlug &&
+      entry.authorSlug !== 'neomaiya-sol'
+    ) {
+      return [];
+    }
+    return [
+      {
+        ...entry,
+        authorName: NEOMAIYA_SOL.displayName,
+        authorSlug: neoSlug,
+      },
+    ];
+  });
 }
 
 export async function deleteGuestbookEntry(

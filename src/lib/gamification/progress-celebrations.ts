@@ -89,23 +89,6 @@ export type ProgressCelebrationDetail = {
 
 export const PROGRESS_CELEBRATION_EVENT = 'b4b-progress-celebration';
 
-const STREAK_MILESTONES = [3, 7, 30] as const;
-
-const STREAK_MILESTONE_COPY: Record<(typeof STREAK_MILESTONES)[number], { label: string; description: string }> = {
-  3: {
-    label: '3-Day Streak',
-    description: 'Three days in a row in the booth. Keep the momentum going.',
-  },
-  7: {
-    label: '7-Day Streak',
-    description: 'A full week of writing. You are building a real habit.',
-  },
-  30: {
-    label: '30-Day Streak',
-    description: 'Thirty consecutive studio days. Legendary discipline.',
-  },
-};
-
 const PERSONAL_BEST_COPY: Record<
   'barsInDay' | 'barsInSession' | 'longestStreak',
   (value: number) => { label: string; description: string }
@@ -134,6 +117,12 @@ function challengeDedupeKey(challenge: ChallengeDef, summary: GamificationSummar
   return `lifetime:${challenge.id}`;
 }
 
+function detectStreakMilestones(_prev: GamificationSummary, _next: GamificationSummary): ProgressCelebrationItem[] {
+  // Streak milestones already fire as achievement unlocks (streak_3 / 7 / 30).
+  // Showing both doubled the modal spam.
+  return [];
+}
+
 function detectChallengeCompletions(
   prev: GamificationSummary,
   next: GamificationSummary,
@@ -142,6 +131,8 @@ function detectChallengeCompletions(
   const all = [...WEEKLY_CHALLENGES, ...MONTHLY_CHALLENGES, ...LIFETIME_MILESTONES];
   return all
     .filter((c) => !isChallengeComplete(prev, c, isPro) && isChallengeComplete(next, c, isPro))
+    // Weekly standard goals toast quietly elsewhere — keep modals for epic/legendary + month/life.
+    .filter((c) => !(c.scale === 'weekly' && c.tier === 'standard'))
     .map((c) => ({
       type: 'challenge' as const,
       dedupeKey: challengeDedupeKey(c, next),
@@ -151,21 +142,6 @@ function detectChallengeCompletions(
       scale: c.scale,
       tier: c.tier,
     }));
-}
-
-function detectStreakMilestones(prev: GamificationSummary, next: GamificationSummary): ProgressCelebrationItem[] {
-  const prevStreak = prev.currentStreak || 0;
-  const nextStreak = next.currentStreak || 0;
-  return STREAK_MILESTONES.filter((m) => prevStreak < m && nextStreak >= m).map((streak) => {
-    const copy = STREAK_MILESTONE_COPY[streak];
-    return {
-      type: 'streak_milestone' as const,
-      dedupeKey: `streak:${streak}`,
-      streak,
-      label: copy.label,
-      description: copy.description,
-    };
-  });
 }
 
 function detectPersonalBests(
