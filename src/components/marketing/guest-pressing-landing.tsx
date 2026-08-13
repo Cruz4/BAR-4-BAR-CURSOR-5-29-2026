@@ -42,8 +42,13 @@ import {
 } from '@/lib/guest-pressing-session';
 import type { ModuleSize } from '@/lib/profile/modules';
 import { MODULE_META } from '@/lib/profile/modules';
-import { trackGuestFunnelEvent } from '@/lib/guest-funnel-client';
-import { GUEST_FUNNEL_EVENTS } from '@/lib/guest-funnel-events';
+import {
+  bindPressingLeaveTracking,
+  startPressingSandboxSession,
+  trackPressingAction,
+  trackPressingClaimCta,
+  trackPressingTrySheet,
+} from '@/lib/guest-pressing-analytics';
 import type { ProfilePost } from '@/lib/profile/social-client';
 import { parseEmbedUrl } from '@/lib/profile/embeds';
 import {
@@ -155,16 +160,24 @@ function GuestPressingLandingInner() {
     const existing = readGuestPressingDraft();
     if (existing) setDraft(existing);
     setReady(true);
-    trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.PRESSING_OPEN, {}, { oncePerSession: true, markTrySession: false });
+    startPressingSandboxSession();
+    const unbindLeave = bindPressingLeaveTracking();
     try {
       if (sessionStorage.getItem(PRESSING_TIP_KEY) !== '1') {
         const t = window.setTimeout(() => setTipOpen(true), 600);
-        return () => window.clearTimeout(t);
+        return () => {
+          window.clearTimeout(t);
+          unbindLeave();
+        };
       }
     } catch {
       const t = window.setTimeout(() => setTipOpen(true), 600);
-      return () => window.clearTimeout(t);
+      return () => {
+        window.clearTimeout(t);
+        unbindLeave();
+      };
     }
+    return () => unbindLeave();
   }, []);
 
   // Resolve Jordie (guestbook welcome) + Neo (auto-friend) for sandbox chips.
@@ -244,6 +257,7 @@ function GuestPressingLandingInner() {
 
   const dismissTip = (focusPressing: boolean) => {
     setTipOpen(false);
+    trackPressingAction('tip');
     try {
       sessionStorage.setItem(PRESSING_TIP_KEY, '1');
     } catch {
@@ -262,6 +276,13 @@ function GuestPressingLandingInner() {
   const profile = useMemo(() => draftToProfile(draft), [draft]);
 
   const update = useCallback((patch: Partial<GuestPressingDraft>) => {
+    if (patch.displayName !== undefined) trackPressingAction('name');
+    if (patch.seedText !== undefined) trackPressingAction('pressing');
+    if (patch.tagline !== undefined) trackPressingAction('tagline');
+    if (patch.barOfWeek !== undefined) trackPressingAction('bar_of_week');
+    if (patch.faders !== undefined) trackPressingAction('fader');
+    if (patch.moduleSizes !== undefined) trackPressingAction('module_size');
+    if (patch.alive !== undefined || patch.autoDrift !== undefined) trackPressingAction('mix');
     setDraft((prev) => ({ ...prev, ...patch }));
   }, []);
 
@@ -269,6 +290,7 @@ function GuestPressingLandingInner() {
     const clean = input.text.trim().slice(0, 1000);
     const link = input.embedUrl?.trim().slice(0, 500);
     if (!clean && !link) return;
+    trackPressingAction('wall');
     const post: GuestWallDraftPost = {
       id: `guest-${Date.now().toString(36)}`,
       text: clean,
@@ -347,11 +369,7 @@ function GuestPressingLandingInner() {
 
   const onClaim = () => {
     persistGuestPressingDraft(draft);
-    trackGuestFunnelEvent(
-      GUEST_FUNNEL_EVENTS.PRESSING_CLAIM_CTA,
-      { source: 'pressing_landing' },
-      { markTrySession: false }
-    );
+    trackPressingClaimCta('pressing_landing');
   };
 
   return (
@@ -402,7 +420,13 @@ function GuestPressingLandingInner() {
               Got it
             </Button>
             <Button asChild variant="outline" className="border-emerald-500/40 bg-emerald-500/10 font-bold text-emerald-100">
-              <Link href="/try?src=pressing_tip" onClick={() => dismissTip(false)}>
+              <Link
+                href="/try?src=pressing_tip"
+                onClick={() => {
+                  trackPressingTrySheet('pressing_tip');
+                  dismissTip(false);
+                }}
+              >
                 Write free
               </Link>
             </Button>
@@ -483,7 +507,10 @@ function GuestPressingLandingInner() {
             </Link>
             <button
               type="button"
-              onClick={() => setTipOpen(true)}
+              onClick={() => {
+                trackPressingAction('how_it_works');
+                setTipOpen(true);
+              }}
               className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-primary hover:underline"
             >
               How it works
@@ -522,7 +549,10 @@ function GuestPressingLandingInner() {
                 size="sm"
                 variant="ghost"
                 className="h-6 gap-0.5 px-1.5 text-[9px] font-bold uppercase tracking-wider sm:h-7 sm:gap-1 sm:px-2 sm:text-[10px]"
-                onClick={() => setTipOpen(true)}
+                onClick={() => {
+                  trackPressingAction('tip');
+                  setTipOpen(true);
+                }}
               >
                 <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 Tip
@@ -532,7 +562,10 @@ function GuestPressingLandingInner() {
                 size="sm"
                 variant="ghost"
                 className="h-6 gap-0.5 px-1.5 text-[9px] font-bold uppercase tracking-wider sm:h-7 sm:gap-1 sm:px-2 sm:text-[10px]"
-                onClick={() => setMixOpen((o) => !o)}
+                onClick={() => {
+                  trackPressingAction('mix');
+                  setMixOpen((o) => !o);
+                }}
               >
                 <Wind className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 <span className="sm:hidden">Mix</span>
@@ -545,7 +578,7 @@ function GuestPressingLandingInner() {
                 variant="outline"
                 className="h-6 gap-0.5 border-emerald-500/40 bg-emerald-500/10 px-1.5 text-[9px] font-bold text-emerald-100 sm:h-7 sm:gap-1 sm:px-2 sm:text-[10px]"
               >
-                <Link href="/try?src=pressing_landing">
+                <Link href="/try?src=pressing_landing" onClick={() => trackPressingTrySheet('pressing_landing')}>
                   <PenLine className="h-3 w-3" />
                   <span className="sm:hidden">Write</span>
                   <span className="hidden sm:inline">Write free</span>

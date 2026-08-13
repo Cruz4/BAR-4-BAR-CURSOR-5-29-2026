@@ -22,7 +22,30 @@ const TELEGRAM_ALERT_EVENTS = new Set<GuestFunnelEventName>([
   GUEST_FUNNEL_EVENTS.OPTION_ACCEPT,
   GUEST_FUNNEL_EVENTS.LOCKED_FEATURE,
   GUEST_FUNNEL_EVENTS.SIGNUP_CTA,
+  // Profile sandbox (/) — skip OPEN (landing_hit already fires); alert engage + leave.
+  GUEST_FUNNEL_EVENTS.PRESSING_INTERACT,
+  GUEST_FUNNEL_EVENTS.PRESSING_CLAIM_CTA,
+  GUEST_FUNNEL_EVENTS.PRESSING_TRY_SHEET,
+  GUEST_FUNNEL_EVENTS.PRESSING_LEAVE,
 ]);
+
+function formatDwell(seconds: unknown): string | null {
+  if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds < 0) return null;
+  const s = Math.round(seconds);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  return rem ? `${m}m ${rem}s` : `${m}m`;
+}
+
+function isPressingTelegramEvent(event: GuestFunnelEventName): boolean {
+  return (
+    event === GUEST_FUNNEL_EVENTS.PRESSING_INTERACT ||
+    event === GUEST_FUNNEL_EVENTS.PRESSING_CLAIM_CTA ||
+    event === GUEST_FUNNEL_EVENTS.PRESSING_TRY_SHEET ||
+    event === GUEST_FUNNEL_EVENTS.PRESSING_LEAVE
+  );
+}
 
 function sanitizeMetadata(meta: GuestFunnelMetadata | undefined): GuestFunnelMetadata {
   if (!meta || typeof meta !== 'object') return {};
@@ -97,6 +120,44 @@ function guestAlertCopy(
       const source = typeof metadata.source === 'string' ? metadata.source : 'cta';
       return { method: 'Tapped signup CTA', detail: source };
     }
+    case GUEST_FUNNEL_EVENTS.PRESSING_INTERACT: {
+      const action = typeof metadata.action === 'string' ? metadata.action : 'edit';
+      const dwell = formatDwell(metadata.dwellSeconds);
+      return {
+        method: 'Engaged sandbox',
+        detail: dwell ? `first: ${action} · after ${dwell}` : `first: ${action}`,
+      };
+    }
+    case GUEST_FUNNEL_EVENTS.PRESSING_CLAIM_CTA: {
+      const dwell = formatDwell(metadata.dwellSeconds);
+      const actions = typeof metadata.actions === 'string' ? metadata.actions : '';
+      const parts = [dwell ? `after ${dwell}` : null, actions ? `did: ${actions}` : 'no edits yet'].filter(
+        Boolean
+      );
+      return { method: 'Tapped Claim profile', detail: parts.join(' · ') || null };
+    }
+    case GUEST_FUNNEL_EVENTS.PRESSING_TRY_SHEET: {
+      const dwell = formatDwell(metadata.dwellSeconds);
+      return {
+        method: 'Tapped Write free',
+        detail: dwell ? `after ${dwell}` : null,
+      };
+    }
+    case GUEST_FUNNEL_EVENTS.PRESSING_LEAVE: {
+      const dwell = formatDwell(metadata.dwellSeconds) || '0s';
+      const engaged = metadata.engaged === true;
+      const actions = typeof metadata.actions === 'string' ? metadata.actions : '';
+      if (!engaged) {
+        return {
+          method: 'Left sandbox (idle)',
+          detail: `stayed ${dwell} · no interaction`,
+        };
+      }
+      return {
+        method: 'Left sandbox',
+        detail: `stayed ${dwell} · ${actions || 'engaged'}`,
+      };
+    }
     default:
       return { method: event, detail: null };
   }
@@ -116,12 +177,13 @@ export async function recordGuestFunnelEvent(
   if (TELEGRAM_ALERT_EVENTS.has(event)) {
     const { method, detail } = guestAlertCopy(event, metadata);
     const who = guestAlias || 'Guest';
+    const pressing = isPressingTelegramEvent(event);
     await enqueueAdminAlert({
-      kind: 'guest_try',
+      kind: pressing ? 'guest_pressing' : 'guest_try',
       ref,
       method: `${who} · ${method}`,
       detail,
-      path: '/albums/try/tracks/guest-sheet',
+      path: pressing ? '/' : '/albums/try/tracks/guest-sheet',
       guestId,
       guestAlias,
     });

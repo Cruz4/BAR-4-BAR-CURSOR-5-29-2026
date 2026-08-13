@@ -49,6 +49,11 @@ function buildMessage(input: EnqueueInput): string {
     const detail = input.detail ? ` — ${input.detail}` : '';
     return `${input.method || 'Try sheet activity'}${via}${detail}`;
   }
+  if (input.kind === 'guest_pressing') {
+    const via = refLabel && input.ref !== 'organic' ? ` · ${refLabel}` : '';
+    const detail = input.detail ? ` — ${input.detail}` : '';
+    return `${input.method || 'Profile sandbox'}${via}${detail}`;
+  }
   if (input.kind === 'lock_funnel') {
     const via = refLabel && input.ref !== 'organic' ? ` · ${refLabel}` : '';
     const detail = input.detail ? ` — ${input.detail}` : '';

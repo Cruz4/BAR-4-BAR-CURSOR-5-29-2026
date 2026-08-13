@@ -22,6 +22,7 @@ const KIND_HEADLINE: Record<AdminAlertKind, string> = {
   pricing_view: '💰 Pricing page',
   checkout_started: '🛒 Checkout started',
   guest_try: '🎤 Demo sheet',
+  guest_pressing: '🏠 Profile sandbox',
   lock_funnel: '🔐 Finish-the-bar',
 };
 
@@ -52,6 +53,7 @@ function formatTelegramText(input: TelegramAlertInput): string {
   }
   if (
     (input.kind === 'guest_try' ||
+      input.kind === 'guest_pressing' ||
       input.kind === 'lock_funnel' ||
       input.kind === 'landing_hit' ||
       input.kind === 'pricing_view') &&

@@ -46,6 +46,7 @@ function alertTitle(kind: AdminAlert['kind']): string {
   if (kind === 'pricing_view') return 'Pricing page';
   if (kind === 'checkout_started') return 'Checkout started';
   if (kind === 'guest_try') return 'Demo sheet';
+  if (kind === 'guest_pressing') return 'Profile sandbox';
   if (kind === 'lock_funnel') return 'LOCK cast';
   return 'Page visit';
 }

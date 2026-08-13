@@ -6,6 +6,7 @@ export type AdminAlertKind =
   | 'pricing_view'
   | 'checkout_started'
   | 'guest_try'
+  | 'guest_pressing'
   | 'lock_funnel';
 
 export type AdminAlert = {

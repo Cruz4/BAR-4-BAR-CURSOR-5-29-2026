@@ -1,4 +1,4 @@
-/** Anonymous guest try-sheet funnel events (no Firebase auth required). */
+/** Anonymous guest try-sheet + profile-sandbox funnel events (no Firebase auth required). */
 
 export const GUEST_FUNNEL_EVENTS = {
   OPEN: 'guest_try_open',
@@ -11,8 +11,15 @@ export const GUEST_FUNNEL_EVENTS = {
   OPTION_DISMISS: 'guest_demo_option_dismiss',
   LOCKED_FEATURE: 'guest_locked_feature_tap',
   SIGNUP_CTA: 'guest_signup_cta_click',
+  /** Guest front door — Artist Home / Pressing sandbox on `/`. */
   PRESSING_OPEN: 'guest_pressing_open',
   PRESSING_CLAIM_CTA: 'guest_pressing_claim_cta',
+  /** First meaningful edit (name, pressing text, mix, wall, bar of week). */
+  PRESSING_INTERACT: 'guest_pressing_interact',
+  /** Tapped Write free → try sheet. */
+  PRESSING_TRY_SHEET: 'guest_pressing_try_sheet',
+  /** Tab hidden / unload — includes dwell seconds + whether they engaged. */
+  PRESSING_LEAVE: 'guest_pressing_leave',
 } as const;
 
 export type GuestFunnelEventName = (typeof GUEST_FUNNEL_EVENTS)[keyof typeof GUEST_FUNNEL_EVENTS];
