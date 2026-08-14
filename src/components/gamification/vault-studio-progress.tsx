@@ -31,6 +31,8 @@ export const SCENE_STUDIO_PROGRESS_EXPANDED_KEY = 'b4b-scene-studio-progress-exp
 export const SCENE_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY = 'b4b-scene-studio-progress-mobile-expanded';
 /** Phone Vault banner. */
 export const VAULT_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY = 'b4b-vault-studio-progress-mobile-expanded';
+/** Vault desktop sidebar — remember expand/collapse; first visit starts as the circle. */
+export const VAULT_STUDIO_PROGRESS_EXPANDED_KEY = 'b4b-vault-studio-progress-expanded';
 
 function shortRankLabel(label: string): string {
   const first = label.split(' ')[0] || label;
@@ -61,7 +63,7 @@ function writePersistedExpanded(key: string | undefined, value: boolean) {
 export function VaultStudioProgress({
   variant = 'banner',
   tourForceExpanded = false,
-  /** When set, expand/collapse is remembered (Scene uses this). */
+  /** When set, expand/collapse is remembered (Scene and Vault desktop). */
   persistExpandedKey,
   /** Used when no stored preference yet. Scene desktop defaults open; phone starts minimized. */
   defaultExpanded = false,
@@ -108,8 +110,8 @@ export function VaultStudioProgress({
     return Object.values(unlocked).some((iso) => now - new Date(iso).getTime() < RECENT_EARN_MS);
   }, [unlocked]);
 
-  // Vault-only: auto-open once when something was just earned (Scene uses persisted preference).
-  // Phone banners stay minimized until the user opens them.
+  // Vault without a persist key: auto-open once when something was just earned.
+  // Scene and Vault desktop use persisted preference; phone banners stay minimized.
   useEffect(() => {
     if (persistExpandedKey || phoneStartsMinimized) return;
     if (initializedRef.current || loading) return;
@@ -120,6 +122,8 @@ export function VaultStudioProgress({
   useEffect(() => {
     const onUnlock = () => {
       if (phoneStartsMinimized) return;
+      // Vault desktop: keep the user's last expand/collapse; the circle still glows on a recent earn.
+      if (persistExpandedKey === VAULT_STUDIO_PROGRESS_EXPANDED_KEY) return;
       setExpanded(true);
       writePersistedExpanded(persistExpandedKey, true);
     };

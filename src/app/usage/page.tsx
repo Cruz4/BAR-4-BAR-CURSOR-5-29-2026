@@ -349,7 +349,7 @@ function UsagePageContent() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8 flex flex-col items-center">
         <TabsList className="grid w-full grid-cols-4 max-w-[800px] bg-muted/50 border mx-auto h-auto p-1 shadow-inner">
           <TabsTrigger value="buy-ink" className="flex items-center gap-2 font-bold py-3 uppercase text-[10px] tracking-widest"><LayoutGrid className="h-4 w-4"/> Ink Store</TabsTrigger>
-          <TabsTrigger value="cloud" className="flex items-center gap-2 font-bold py-3 uppercase text-[10px] tracking-widest"><Star className="h-4 w-4"/> Studio Tier</TabsTrigger>
+          <TabsTrigger value="cloud" className="flex items-center gap-2 font-bold py-3 uppercase text-[10px] tracking-widest data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-sm"><Star className="h-4 w-4"/> Studio Tier</TabsTrigger>
           <TabsTrigger value="history" className="flex items-center gap-2 font-bold py-3 uppercase text-[10px] tracking-widest"><HistoryIcon className="h-4 w-4"/> History</TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2 font-bold py-3 uppercase text-[10px] tracking-widest"><SettingsIcon className="h-4 w-4"/> Settings</TabsTrigger>
         </TabsList>
@@ -546,7 +546,7 @@ function UsagePageContent() {
                     const isProPlan = plan.name !== 'Visitor';
                     const planChrome = isProPlan ? 'pro' as const : 'free' as const;
                     return (
-                    <Card key={plan.name} className={cn("border-accent flex flex-col h-full relative transition-all duration-500 shadow-xl", plan.badge ? "overflow-visible" : "overflow-hidden", plan.isCurrent && studioCurrentPlanRingClass(planChrome))}>
+                    <Card key={plan.name} className={cn("flex flex-col h-full relative transition-all duration-500 shadow-xl", isProPlan ? "border-accent" : "border-transparent", plan.badge ? "overflow-visible" : "overflow-hidden", plan.isCurrent && studioCurrentPlanRingClass(planChrome))}>
                         {plan.badge && (
                           <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 flex max-w-[calc(100%-1.5rem)] justify-center">
                             <Badge className="whitespace-nowrap text-[8px] uppercase tracking-widest font-bold bg-accent px-4 py-1.5 shadow-lg">

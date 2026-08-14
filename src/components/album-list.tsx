@@ -100,7 +100,7 @@ import {
 } from '@/lib/subscription';
 import { isDataUrl } from '@/lib/cover-art';
 import { postGamificationEvent } from '@/lib/gamification-client';
-import { VaultStudioProgress, VAULT_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY } from '@/components/gamification/vault-studio-progress';
+import { VaultStudioProgress, VAULT_STUDIO_PROGRESS_EXPANDED_KEY, VAULT_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY } from '@/components/gamification/vault-studio-progress';
 import { VaultProfileDock } from '@/components/profile/vault-profile-dock';
 import { VaultNeonWordCard } from '@/components/vault/vault-neon-word-card';
 import { LiveDnaDropsManage } from '@/components/scene/scene-live-drops-strip';
@@ -957,7 +957,12 @@ export function AlbumList() {
               className="hidden xl:flex xl:col-start-1 xl:row-start-2 justify-end items-start self-start pr-2 2xl:pr-3 sticky top-[5.25rem] z-30 pointer-events-none [&>*]:pointer-events-auto"
               aria-label="Studio progress"
             >
-              <VaultStudioProgress variant="sidebar" tourForceExpanded={vaultProgressTourPinned} />
+              <VaultStudioProgress
+                variant="sidebar"
+                tourForceExpanded={vaultProgressTourPinned}
+                defaultExpanded={false}
+                persistExpandedKey={VAULT_STUDIO_PROGRESS_EXPANDED_KEY}
+              />
             </aside>
           )}
 
