@@ -58,7 +58,7 @@ export function ProfileInitialsStar({
             points={ARTIST_STAR_POINTS}
             fill="none"
             className="stroke-accent"
-            strokeWidth="1.75"
+            strokeWidth="0.9"
             strokeLinejoin="round"
           />
         ) : null}
