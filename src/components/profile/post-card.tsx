@@ -30,6 +30,7 @@ import {
   type ProfilePost,
 } from '@/lib/profile/social-client';
 import { Hint } from '@/components/ui/tooltip';
+import { parseStudioBadge, studioChromeFromUser, studioNameClass, type StudioNameChrome } from '@/lib/studio-tier-chrome';
 
 type PostCardProps = {
   post: ProfilePost;
@@ -57,12 +58,14 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
   const [starSeed, setStarSeed] = useState<number | undefined>(undefined);
   const [useStar, setUseStar] = useState(false);
+  const [studioChrome, setStudioChrome] = useState<StudioNameChrome | undefined>(undefined);
 
   useEffect(() => {
     if (!liveSlug) {
       setAvatarUrl(undefined);
       setStarSeed(undefined);
       setUseStar(false);
+      setStudioChrome(undefined);
       return;
     }
     let cancelled = false;
@@ -71,6 +74,7 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
       setAvatarUrl(meta.avatarUrl);
       setUseStar(Boolean(meta.starMarkUseStar));
       setStarSeed(meta.starMarkSeed);
+      setStudioChrome(parseStudioBadge(meta.studioBadge));
     });
     return () => {
       cancelled = true;
@@ -90,6 +94,7 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
                 starMarkSeed={starSeed}
                 size={42}
                 toneClass="bg-sky-500/30 text-sky-300"
+                studioChrome={studioChrome}
               />
             </span>
           </Hint>
@@ -102,6 +107,7 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
             href={href}
             size={42}
             toneClass="bg-sky-500/30 text-sky-300"
+            studioChrome={studioChrome}
           />
         )}
         <p className="min-w-0 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
@@ -109,7 +115,10 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
           <ArtistHomeLink
             userId={post.reverbOwnerId}
             slug={post.reverbOwnerSlug}
-            className="text-[var(--ph-accent,#7dd3fc)] hover:underline"
+            className={cn(
+              'hover:underline',
+              studioNameClass(studioChrome)
+            )}
           >
             {name}
           </ArtistHomeLink>
@@ -158,6 +167,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   const [authorAvatarUrl, setAuthorAvatarUrl] = useState<string | undefined>(undefined);
   const [authorStarSeed, setAuthorStarSeed] = useState<number | undefined>(undefined);
   const [authorUseStar, setAuthorUseStar] = useState(false);
+  const [authorStudioChrome, setAuthorStudioChrome] = useState<StudioNameChrome | undefined>(undefined);
   const {
     liveSlug: liveAuthorSlug,
     href: authorHref,
@@ -166,6 +176,8 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   } = useLiveArtistHomeSlug(showAuthor ? post.ownerId : undefined, showAuthor ? post.ownerSlug : undefined);
 
   const isOwner = Boolean(user?.id && user.id === post.ownerId);
+  const authorChrome =
+    authorStudioChrome || (isOwner ? studioChromeFromUser(user) : undefined);
   const rootIdForReverb =
     post.isReverb && post.reverbPostId ? post.reverbPostId : post.id;
   const canReverb = Boolean(user && !isOwner && rootIdForReverb);
@@ -189,6 +201,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
       setAuthorAvatarUrl(undefined);
       setAuthorStarSeed(undefined);
       setAuthorUseStar(false);
+      setAuthorStudioChrome(undefined);
       return;
     }
     let cancelled = false;
@@ -197,6 +210,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
       setAuthorAvatarUrl(meta.avatarUrl);
       setAuthorUseStar(Boolean(meta.starMarkUseStar));
       setAuthorStarSeed(meta.starMarkSeed);
+      setAuthorStudioChrome(parseStudioBadge(meta.studioBadge));
     });
     return () => {
       cancelled = true;
@@ -324,6 +338,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
                       starMarkSeed={authorStarSeed}
                       size={56}
                       toneClass="bg-sky-500/30 text-sky-300"
+                      studioChrome={authorChrome}
                     />
                   </span>
                 </Hint>
@@ -336,12 +351,16 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
                   href={authorHref}
                   size={56}
                   toneClass="bg-sky-500/30 text-sky-300"
+                  studioChrome={authorChrome}
                 />
               )}
               <ArtistHomeLink
                 userId={post.ownerId}
                 slug={post.ownerSlug}
-                className="text-xs font-bold uppercase tracking-widest text-sky-300 hover:underline"
+                className={cn(
+                  'text-xs font-bold uppercase tracking-widest hover:underline',
+                  authorChrome ? studioNameClass(authorChrome) : studioNameClass('free')
+                )}
               >
                 {post.ownerName}
               </ArtistHomeLink>

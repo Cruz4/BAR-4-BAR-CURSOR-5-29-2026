@@ -8,19 +8,27 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { ARTIST_STAR_CLIP } from '@/components/profile/artist-star-avatar';
+import { ARTIST_STAR_CLIP, ARTIST_STAR_POINTS } from '@/components/profile/artist-star-avatar';
 import { getInitials } from '@/lib/gamification/studio-pass';
+import type { StudioNameChrome } from '@/lib/studio-tier-chrome';
 
 type ProfileInitialsStarProps = {
   displayName?: string | null;
   className?: string;
   /** Emphasize as the active hero choice in the editor. */
   active?: boolean;
+  studioChrome?: StudioNameChrome | null;
 };
 
-export function ProfileInitialsStar({ displayName, className, active }: ProfileInitialsStarProps) {
+export function ProfileInitialsStar({
+  displayName,
+  className,
+  active,
+  studioChrome,
+}: ProfileInitialsStarProps) {
   const name = displayName?.trim() || 'Artist';
   const initials = getInitials(name);
+  const isPro = studioChrome === 'pro';
   // Star indent is tight — keep glyphs inside the inner pentagon with breathing room.
   const fontSize = initials.length > 1 ? 22 : 26;
 
@@ -37,10 +45,23 @@ export function ProfileInitialsStar({ displayName, className, active }: ProfileI
       <svg
         viewBox="0 0 100 100"
         className="h-[82%] w-[82%] text-primary"
-        style={{ clipPath: ARTIST_STAR_CLIP }}
+        style={isPro ? undefined : { clipPath: ARTIST_STAR_CLIP }}
         aria-hidden
       >
-        <rect width="100" height="100" className="fill-primary/20" />
+        {isPro ? (
+          <polygon points={ARTIST_STAR_POINTS} className="fill-primary/20" />
+        ) : (
+          <rect width="100" height="100" className="fill-primary/20" />
+        )}
+        {isPro ? (
+          <polygon
+            points={ARTIST_STAR_POINTS}
+            fill="none"
+            className="stroke-accent"
+            strokeWidth="1.75"
+            strokeLinejoin="round"
+          />
+        ) : null}
         <text
           x="50"
           y="52"

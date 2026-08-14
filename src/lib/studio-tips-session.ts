@@ -39,6 +39,11 @@ export function recordTrackSheetEntry(pathname: string): number {
     sessionStorage.setItem(visitKey, String(next));
     sessionStorage.setItem(LAST_TRACK_PATH_KEY, pathname);
     persistLastWorkedTrack(pathname);
+    try {
+      void import('@/lib/activity/client').then((m) => m.persistCraftResume(pathname));
+    } catch {
+      /* ignore */
+    }
     return next;
   } catch {
     return 0;

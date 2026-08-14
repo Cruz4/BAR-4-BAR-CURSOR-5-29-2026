@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { X, Play, Target, BrainCircuit, Shield, Wand2, Palette, Sparkles, Zap, FolderOpen, ClipboardPaste, ArrowRight, ListRestart, Fingerprint, MonitorPlay, RefreshCw, Link2, FilePenLine, GitBranch, Download, Mic, Settings, Rocket, HelpCircle, MousePointer2, Dna, Clock, Trophy, Share2, Gift, Globe, Lightbulb, Layers, FlaskConical, ScanLine, Undo2, Crown, EyeOff, Image, CalendarRange, Upload, Medal, BadgeCheck, Lock, Flame, Hash, Camera, Pencil, ToggleRight, Mail, PanelLeft, Sparkle, Bell } from 'lucide-react';
+import { X, Play, Target, BrainCircuit, Shield, Wand2, Palette, Sparkles, Zap, FolderOpen, ClipboardPaste, ArrowRight, ListRestart, Fingerprint, MonitorPlay, RefreshCw, Link2, FilePenLine, GitBranch, Download, Mic, Settings, Rocket, HelpCircle, MousePointer2, Dna, Clock, Trophy, Share2, Gift, Globe, Lightbulb, Layers, FlaskConical, ScanLine, Undo2, Crown, EyeOff, Image, CalendarRange, Upload, Medal, BadgeCheck, Lock, Flame, Hash, Camera, Pencil, ToggleRight, Mail, PanelLeft, Sparkle, Bell, Radio } from 'lucide-react';
 import { PRO_FEATURE_PREVIEW_DAYS } from '@/lib/subscription';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -100,7 +100,9 @@ const STUDIO_TIPS: StudioTip[] = [
   { id: 61, icon: FilePenLine, title: "KEEP WRITING OR START FRESH", text: "The write button on The Scene dock is split: tap the main side to jump back into your last sheet, or tap the Start Track edge to open a brand new one.", color: "text-primary" },
   { id: 62, kind: 'did-you-know', icon: Share2, title: "SHARE ANY POST", text: "Did you know? Every wall post has a Share button — X, Facebook, WhatsApp, email, or copy link — that deep-links straight back to that post on your Artist Home.", color: "text-sky-400" },
   { id: 63, icon: MonitorPlay, title: "EMBED TIKTOK, IG & FB", text: "Paste a full TikTok, Instagram, or Facebook post URL into a wall post and it plays inline on your Artist Home — short links usually will not parse, use the full post URL.", color: "text-fuchsia-400" },
-  { id: 64, icon: Bell, title: "ACTIVITY INBOX", text: "Loves, replies, friend requests, and DNA Drop imports land in Activity (bell). Open it from the header or Scene dock — optional push under Settings → Notifications.", color: "text-emerald-400" },
+  { id: 64, icon: Bell, title: "ACTIVITY INBOX", text: "Activity is your work ping: “your verse is still open,” “streak dies at midnight,” “someone echoed your bar.” Friend requests and DNA imports still land here — not a dump of feed posts. Optional push under Settings → Notifications.", color: "text-emerald-400" },
+  { id: 65, icon: Radio, title: "HOUSE BAR OF THE DAY", text: "When Studio Ops pins it, The Scene shows one shared unfinished bar for everyone to answer. The line can change daily from Admin → Config.", color: "text-fuchsia-400" },
+  { id: 66, icon: CalendarRange, title: "WEEKLY PUBLIC CHALLENGE", text: "A Scene-wide weekly cypher (hand-written bars, Monday reset) can be pinned, rewritten, or turned off from Admin. Your count shows on the pin.", color: "text-amber-400" },
 ];
 
 export function StudioTips() {

@@ -27,6 +27,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client/firebase';
 import { parseEmbedUrl, type EmbedProvider } from '@/lib/profile/embeds';
+import { parseStudioBadge } from '@/lib/studio-tier-chrome';
 import {
   NEOMAIYA_PLAYGROUND_FRIEND,
   NEOMAIYA_SOL,
@@ -990,7 +991,21 @@ export function friendProfilesOf(
   return out;
 }
 
-type LivePublicMeta = { slug?: string; displayName?: string };
+type LivePublicMeta = { slug?: string; displayName?: string; studioBadge?: 'pro' | 'free' };
+
+/** Live Pro/Visitor chrome — publicProfiles.studioBadge can be stale for older subscribers. */
+async function fetchLiveStudioBadgeFromApi(
+  slug: string
+): Promise<'pro' | 'free' | undefined> {
+  try {
+    const res = await fetch(`/api/profile/${encodeURIComponent(slug)}/avatar`);
+    if (!res.ok) return undefined;
+    const body = (await res.json()) as { studioBadge?: string | null };
+    return parseStudioBadge(body.studioBadge);
+  } catch {
+    return undefined;
+  }
+}
 
 /** Resolve the live publicProfiles slug for a user (ignores stale friendship chips). */
 export async function fetchLivePublicProfileByUserId(
@@ -1020,9 +1035,12 @@ export async function fetchLivePublicProfileByUserId(
     if (needsVanitySlugUpgrade(slug, userId)) {
       slug = stripLegacyUidSuffix(normalizeProfileSlugInput(slug));
     }
+    const studioBadge =
+      (await fetchLiveStudioBadgeFromApi(slug)) || parseStudioBadge(best.data()?.studioBadge);
     return {
       slug,
       displayName: typeof dn === 'string' && dn.trim() ? dn.trim() : undefined,
+      studioBadge,
     };
   } catch {
     return undefined;
@@ -1116,6 +1134,7 @@ export type PublicArtistMeta = {
   slug?: string;
   avatarUrl?: string;
   displayName?: string;
+  studioBadge?: 'pro' | 'free';
 };
 
 function avatarFromPublicDoc(data: Record<string, unknown>): string | undefined {
@@ -1198,6 +1217,7 @@ export async function fetchPublicArtistMetas(
             slug: liveSlug,
             avatarUrl: customFeedPhotoUrl(asset),
             displayName: live.displayName,
+            studioBadge: live.studioBadge,
           });
           // Prefer custom avatar from live slug; if missing, try named avatar field via doc.
           try {
@@ -1213,6 +1233,7 @@ export async function fetchPublicArtistMetas(
                   (typeof data.displayName === 'string' && data.displayName.trim()
                     ? data.displayName.trim()
                     : undefined),
+                studioBadge: prev.studioBadge || parseStudioBadge(data.studioBadge),
               });
             }
           } catch {
@@ -1268,6 +1289,7 @@ export type CircleFriendRow = {
   avatarUrl?: string;
   /** True when publicProfiles exists (publicProfile on). */
   isLivePublic: boolean;
+  studioBadge?: 'pro' | 'free';
 };
 
 /**
@@ -1288,6 +1310,7 @@ export async function resolveCircleFriends(
       slug: isLivePublic ? meta?.slug : undefined,
       avatarUrl: isLivePublic ? meta?.avatarUrl : undefined,
       isLivePublic,
+      studioBadge: meta?.studioBadge,
     };
   });
 }
@@ -1316,6 +1339,7 @@ export type PublicArtistAvatarMeta = {
   avatarUrl?: string;
   starMarkUseStar?: boolean;
   starMarkSeed?: number;
+  studioBadge?: 'pro' | 'free';
 };
 
 /** Avatar + optional Vesperfold seed for feed chips. */
@@ -1334,16 +1358,23 @@ export async function fetchPublicArtistAvatarMeta(
         ? data.starMarkSeed
         : undefined;
 
+    const cachedBadge = parseStudioBadge(data?.studioBadge);
+
+    const resolveBadge = async (): Promise<'pro' | 'free' | undefined> => {
+      return (await fetchLiveStudioBadgeFromApi(slug)) || cachedBadge;
+    };
+
     if (useStar) {
       return {
         starMarkUseStar: true,
         starMarkSeed: seed,
+        studioBadge: await resolveBadge(),
       };
     }
 
     const customUrl = customFeedPhotoUrl(asset) || avatarFromPublicDoc(data || {});
     if (customUrl) {
-      return { avatarUrl: customUrl, starMarkUseStar: false };
+      return { avatarUrl: customUrl, starMarkUseStar: false, studioBadge: await resolveBadge() };
     }
 
     const res = await fetch(`/api/profile/${encodeURIComponent(slug)}/avatar`);
@@ -1352,12 +1383,15 @@ export async function fetchPublicArtistAvatarMeta(
         avatarUrl?: string | null;
         starMarkUseStar?: boolean;
         starMarkSeed?: number | null;
+        studioBadge?: string | null;
       };
+      const apiBadge = parseStudioBadge(body.studioBadge) || cachedBadge;
       if (body.starMarkUseStar) {
         return {
           starMarkUseStar: true,
           starMarkSeed:
             typeof body.starMarkSeed === 'number' ? body.starMarkSeed : undefined,
+          studioBadge: apiBadge,
         };
       }
       const apiUrl =
@@ -1366,13 +1400,13 @@ export async function fetchPublicArtistAvatarMeta(
           : undefined;
       // Skip generative Vesperfold payloads; allow custom https + data:image photos.
       if (apiUrl && !apiUrl.startsWith('data:image/svg') && (/^https?:\/\//i.test(apiUrl) || /^data:image\//i.test(apiUrl))) {
-        return { avatarUrl: apiUrl, starMarkUseStar: false };
+        return { avatarUrl: apiUrl, starMarkUseStar: false, studioBadge: apiBadge };
       }
-      return { starMarkUseStar: false };
+      return { starMarkUseStar: false, studioBadge: apiBadge };
     }
 
     if (!data) return undefined;
-    return { avatarUrl: avatarFromPublicDoc(data), starMarkUseStar: false };
+    return { avatarUrl: avatarFromPublicDoc(data), starMarkUseStar: false, studioBadge: cachedBadge };
   } catch {
     return undefined;
   }

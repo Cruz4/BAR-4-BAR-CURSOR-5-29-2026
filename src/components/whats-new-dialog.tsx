@@ -16,6 +16,9 @@ import {
   Globe,
   LayoutGrid,
   Lock,
+  Bell,
+  Radio,
+  CalendarRange,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -31,6 +34,11 @@ import { isStudioOnboardingBusy } from '@/lib/studio-privacy-intro';
 import { SIGNUP_INK } from '@/lib/subscription';
 import { getProCheckoutCtaLine } from '@/lib/studio-tiers';
 import { useLockFeature } from '@/hooks/use-lock-feature';
+import {
+  DEFAULT_HOUSE_BAR,
+  DEFAULT_WEEKLY_CHALLENGE,
+  type SceneLivePublic,
+} from '@/lib/scene/live-events';
 
 function isVaultLanding(pathname: string | null): boolean {
   if (!pathname) return false;
@@ -51,10 +59,80 @@ export function WhatsNewDialog() {
   const { user, authReady, loading } = useAuth();
   const scheduledRef = useRef(false);
   const { enabled: lockOn } = useLockFeature();
+  const [sceneLive, setSceneLive] = useState<SceneLivePublic | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch('/api/scene/live', { cache: 'no-store' })
+      .then(async (res) => {
+        const data = (await res.json()) as Partial<SceneLivePublic>;
+        if (cancelled) return;
+        setSceneLive({
+          houseBar: { ...DEFAULT_HOUSE_BAR, ...data.houseBar },
+          weeklyChallenge: { ...DEFAULT_WEEKLY_CHALLENGE, ...data.weeklyChallenge },
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSceneLive({
+            houseBar: DEFAULT_HOUSE_BAR,
+            weeklyChallenge: DEFAULT_WEEKLY_CHALLENGE,
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const whatsNewItems = useMemo(
     () =>
       [
+        {
+          title: 'Activity talks about your work',
+          desc: 'Push and the bell now say “your verse is still open,” “streak dies at midnight,” and “someone echoed your bar” — not that the feed has posts. Tune it in Settings → Notifications.',
+          icon: Bell,
+          color: 'text-emerald-400',
+          bgColor: 'bg-emerald-500/5',
+        },
+        ...(sceneLive?.houseBar.enabled
+          ? [
+              {
+                title: sceneLive.houseBar.title || 'House bar of the day',
+                desc: `One shared unfinished bar is pinned on The Scene: “${sceneLive.houseBar.seedBar}” Answer it from the pin — Admin can rewrite or hide it anytime.`,
+                icon: Radio,
+                color: 'text-fuchsia-400',
+                bgColor: 'bg-fuchsia-500/5',
+              } as const,
+            ]
+          : [
+              {
+                title: 'House bar of the day',
+                desc: 'The Scene can pin one shared unfinished bar for everyone to answer. Studio Ops turns it on (and rewrites the line) from Admin → Config — no redeploy.',
+                icon: Radio,
+                color: 'text-fuchsia-400',
+                bgColor: 'bg-fuchsia-500/5',
+              } as const,
+            ]),
+        ...(sceneLive?.weeklyChallenge.enabled
+          ? [
+              {
+                title: sceneLive.weeklyChallenge.title,
+                desc: `${sceneLive.weeklyChallenge.description} Your bar count shows on The Scene. Admin can change or hide the challenge anytime.`,
+                icon: CalendarRange,
+                color: 'text-amber-400',
+                bgColor: 'bg-amber-500/5',
+              } as const,
+            ]
+          : [
+              {
+                title: 'Weekly public challenge',
+                desc: 'A Scene-wide weekly cypher (hand-written bars, Monday reset) can be pinned, rewritten, or turned off from Admin → Config.',
+                icon: CalendarRange,
+                color: 'text-amber-400',
+                bgColor: 'bg-amber-500/5',
+              } as const,
+            ]),
         {
           title: 'The Scene — your new home',
           desc: 'Sign in and land on your block: friends\u2019 wall drops, a Discover stream of who\u2019s live, and Your Booth. The Vault moved to its own room — one click away.',
@@ -109,7 +187,7 @@ export function WhatsNewDialog() {
           bgColor: 'bg-amber-500/5',
         },
       ] as const,
-    [lockOn]
+    [lockOn, sceneLive]
   );
 
   const dismiss = useCallback(() => {
@@ -176,14 +254,15 @@ export function WhatsNewDialog() {
             <Rocket className="h-14 w-14 sm:h-16 sm:w-16" />
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 pr-12">
-            <Badge className="bg-primary/20 text-primary border-primary/20 font-code px-2 text-[10px]">Bar 4 Bar v.05</Badge>
+            <Badge className="bg-primary/20 text-primary border-primary/20 font-code px-2 text-[10px]">Bar 4 Bar v.07</Badge>
             <span className="text-[9px] font-bold uppercase tracking-[0.25em] sm:tracking-[0.3em] text-muted-foreground">Studio Upgrade Notes</span>
           </div>
           <DialogTitle className="font-headline text-2xl sm:text-3xl font-bold tracking-tighter leading-tight pr-4">
             What&apos;s New in the Studio
           </DialogTitle>
           <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed pt-1 max-w-md">
-            A quick read on the latest studio features — dismiss anytime.
+            Activity now pings your verse, streak, and echoes. House bar of the day and the weekly
+            challenge are admin-togglable on The Scene.
           </p>
         </DialogHeader>
 

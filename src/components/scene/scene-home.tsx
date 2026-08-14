@@ -22,6 +22,7 @@ import { SceneNavDock } from '@/components/scene/scene-nav-dock';
 import { SceneBoothCard } from '@/components/scene/scene-booth-card';
 import { SceneDiscoverCard } from '@/components/scene/scene-discover-card';
 import { SceneLiveDropsStrip } from '@/components/scene/scene-live-drops-strip';
+import { SceneLivePrompts } from '@/components/scene/scene-live-prompts';
 import { SceneBlockAtmosphere } from '@/components/scene/scene-block-atmosphere';
 import { SectionPager } from '@/components/scene/section-pager';
 import { LockClaimBootstrap } from '@/components/lock/lock-claim-bootstrap';
@@ -732,6 +733,8 @@ export function SceneHome() {
           )}
 
           <SceneComposer profileSlug={summary.profileSlug} onPosted={onPosted} />
+
+          <SceneLivePrompts />
 
           <SceneBoothCard />
 

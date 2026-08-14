@@ -102,6 +102,27 @@ export async function ensureHouseLock(): Promise<LockDoc> {
   return { id: LOCK_HOUSE_ID, ...doc };
 }
 
+/** Admin house-bar-of-the-day: rewrite the shared seed without wiping echoes. */
+export async function updateHouseLockSeed(seedBar: string): Promise<LockDoc> {
+  const lock = await ensureHouseLock();
+  const text = cleanText(seedBar, 280);
+  if (!text) return lock;
+  const db = await getDb();
+  const now = new Date().toISOString();
+  await db.collection('locks').doc(LOCK_HOUSE_ID).set(
+    {
+      seedBar: text,
+      status: 'open',
+      isHouse: true,
+      ownerId: 'system',
+      ownerName: HOUSE_OWNER_NAME,
+      updatedAt: now,
+    },
+    { merge: true }
+  );
+  return { ...lock, seedBar: text, status: 'open', updatedAt: now };
+}
+
 export async function getLock(lockId: string): Promise<LockDoc | null> {
   const id = lockId.trim();
   if (!id) return null;

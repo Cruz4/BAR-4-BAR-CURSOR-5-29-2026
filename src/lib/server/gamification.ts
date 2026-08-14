@@ -29,6 +29,7 @@ import type { AnalyticsEventName } from '@/lib/analytics-events';
 import { countLinesWithSource } from '@/lib/gamification/line-attribution';
 import { countNonEmptyLines, rhymeBarsToLines } from '@/lib/lyrics-units';
 import { ensureReferralCode } from '@/lib/server/referrals';
+import { parseStudioBadge, studioChromeFromSubscriptionStatus } from '@/lib/studio-tier-chrome';
 import {
   normalizeVesperfoldSeed,
   sanitizeVesperfoldSlots,
@@ -374,6 +375,12 @@ async function syncPublicProfile(
   // into publicProfiles blows past Firestore's 1MB limit next to Artist Home banners.
   const artistHomeSnap = await db.doc(`users/${uid}/gamification/artistHome`).get();
   const artistHome = artistHomeSnap.exists ? artistHomeSnap.data() : null;
+  const userSnap = await db.doc(`users/${uid}`).get();
+  const studioBadge = studioChromeFromSubscriptionStatus(
+    typeof userSnap.data()?.subscriptionStatus === 'string'
+      ? userSnap.data()?.subscriptionStatus
+      : null
+  );
   await db.doc(`publicProfiles/${summary.profileSlug}`).set(
     {
       userId: uid,
@@ -391,6 +398,7 @@ async function syncPublicProfile(
       profilePhotoUrl: FieldValue.delete(),
       starMarkUseStar: Boolean(summary.starMarkUseStar),
       starMarkSeed: normalizeVesperfoldSeed(summary.starMarkSeed ?? 0),
+      studioBadge,
       ...(summary.profileCollageAlbumIds?.length
         ? { profileCollageAlbumIds: summary.profileCollageAlbumIds }
         : { profileCollageAlbumIds: FieldValue.delete() }),
@@ -1175,11 +1183,12 @@ export async function getPublicProfile(slug: string) {
   const userId = String(data.userId || resolved.userId || '');
   if (!userId) return { ...data, slug: liveSlug, albumCoverUrls: [], liveDnaDrops: [] };
 
-  const [albumMeta, liveDnaDrops, referralCode, summarySnap] = await Promise.all([
+  const [albumMeta, liveDnaDrops, referralCode, summarySnap, userSnap] = await Promise.all([
     getPublicAlbumMeta(userId),
     getLiveDnaDropsForUser(userId),
     ensureReferralCode(db, userId).catch(() => null),
     db.doc(`users/${userId}/gamification/summary`).get(),
+    db.doc(`users/${userId}`).get(),
   ]);
 
   const summary = mergeSummary((summarySnap.data() as Partial<GamificationSummary>) || {});
@@ -1216,6 +1225,18 @@ export async function getPublicProfile(slug: string) {
 
   const artistHome = enrichAlbumRoomsWithLiveCovers(data.artistHome, albumMeta);
 
+  const liveBadge = studioChromeFromSubscriptionStatus(
+    typeof userSnap.data()?.subscriptionStatus === 'string'
+      ? userSnap.data()?.subscriptionStatus
+      : null
+  );
+  if (parseStudioBadge(data.studioBadge) !== liveBadge) {
+    await db
+      .doc(`publicProfiles/${liveSlug}`)
+      .set({ studioBadge: liveBadge }, { merge: true })
+      .catch(() => undefined);
+  }
+
   return {
     ...data,
     slug: liveSlug,
@@ -1241,6 +1262,7 @@ export async function getPublicProfile(slug: string) {
     unlockedAchievements: summary.unlockedAchievements || {},
     lifetimeBarsWritten: summary.lifetimeBarsWritten || 0,
     lifetimeLinesGenerated: summary.lifetimeLinesGenerated || 0,
+    studioBadge: liveBadge,
     ...(referralCode ? { referralCode } : {}),
   };
 }
@@ -1478,6 +1500,7 @@ export type PublicArtistSearchHit = {
   slug: string;
   rankId?: string;
   xp?: number;
+  studioBadge?: 'pro' | 'free';
 };
 
 /** Find live public Artist Homes by display name (prefix) or exact slug. */
@@ -1505,6 +1528,7 @@ export async function searchPublicArtists(
       slug,
       rankId: typeof data.rankId === 'string' ? data.rankId : undefined,
       xp: typeof data.xp === 'number' ? data.xp : undefined,
+      studioBadge: parseStudioBadge(data.studioBadge),
     });
   };
 
@@ -1550,7 +1574,24 @@ export async function searchPublicArtists(
     }
   }
 
-  return Array.from(byUserId.values()).slice(0, limit);
+  const hits = Array.from(byUserId.values()).slice(0, limit);
+  const liveBadges = await liveStudioBadgesByUserIds(
+    db,
+    hits.map((hit) => hit.userId)
+  );
+  const stamped = hits.map((hit) => ({
+    ...hit,
+    studioBadge: liveBadges.get(hit.userId) || hit.studioBadge || 'free',
+  }));
+  void persistPublicStudioBadges(
+    db,
+    stamped.map((hit) => ({
+      slug: hit.slug,
+      badge: hit.studioBadge || 'free',
+      current: byUserId.get(hit.userId)?.studioBadge,
+    }))
+  );
+  return stamped;
 }
 
 // ---------------------------------------------------------------------------
@@ -1671,6 +1712,46 @@ export async function getPublicArtistAvatar(slug: string): Promise<string | unde
   return resolvePublicAvatar(clean, snap.data() as Record<string, unknown>);
 }
 
+/** Live Pro/Visitor chrome from user docs — not the denormalized publicProfiles field. */
+async function liveStudioBadgesByUserIds(
+  db: Awaited<ReturnType<typeof getDb>>,
+  userIds: string[]
+): Promise<Map<string, 'pro' | 'free'>> {
+  const out = new Map<string, 'pro' | 'free'>();
+  const unique = [...new Set(userIds.filter(Boolean))];
+  for (let i = 0; i < unique.length; i += 30) {
+    const chunk = unique.slice(i, i + 30);
+    const snaps = await db.getAll(...chunk.map((id) => db.doc(`users/${id}`)));
+    for (const snap of snaps) {
+      if (!snap.exists) continue;
+      const status =
+        typeof snap.data()?.subscriptionStatus === 'string'
+          ? String(snap.data()?.subscriptionStatus)
+          : null;
+      out.set(snap.id, studioChromeFromSubscriptionStatus(status));
+    }
+  }
+  return out;
+}
+
+async function persistPublicStudioBadges(
+  db: Awaited<ReturnType<typeof getDb>>,
+  rows: Array<{ slug?: string; badge: 'pro' | 'free'; current?: unknown }>
+): Promise<void> {
+  const writes = rows.filter(
+    (row) => row.slug && parseStudioBadge(row.current) !== row.badge
+  );
+  if (!writes.length) return;
+  await Promise.all(
+    writes.map((row) =>
+      db
+        .doc(`publicProfiles/${row.slug}`)
+        .set({ studioBadge: row.badge }, { merge: true })
+        .catch(() => undefined)
+    )
+  );
+}
+
 /** Batch-resolve public slug + avatar for a set of user ids. */
 async function resolvePublicAvatarsByUserIds(
   userIds: string[]
@@ -1683,6 +1764,7 @@ async function resolvePublicAvatarsByUserIds(
       avatarUrl?: string;
       starMarkUseStar?: boolean;
       starMarkSeed?: number;
+      studioBadge?: 'pro' | 'free';
     }
   >
 > {
@@ -1694,6 +1776,7 @@ async function resolvePublicAvatarsByUserIds(
       avatarUrl?: string;
       starMarkUseStar?: boolean;
       starMarkSeed?: number;
+      studioBadge?: 'pro' | 'free';
     }
   >();
   const unique = [...new Set(userIds.filter(Boolean))];
@@ -1742,10 +1825,22 @@ async function resolvePublicAvatarsByUserIds(
                 typeof data.starMarkSeed === 'number' ? data.starMarkSeed : 0
               )
             : undefined,
+          studioBadge: parseStudioBadge(data.studioBadge),
         });
       })
     );
   }
+
+  const liveBadges = await liveStudioBadgesByUserIds(db, [...out.keys()]);
+  const persist: Array<{ slug?: string; badge: 'pro' | 'free'; current?: unknown }> = [];
+  for (const [userId, meta] of out) {
+    const live = liveBadges.get(userId);
+    if (!live) continue;
+    persist.push({ slug: meta.slug, badge: live, current: meta.studioBadge });
+    out.set(userId, { ...meta, studioBadge: live });
+  }
+  void persistPublicStudioBadges(db, persist);
+
   return out;
 }
 
@@ -1756,6 +1851,7 @@ export type DiscoverArtistSummary = {
   avatarUrl?: string;
   starMarkSeed?: number;
   starMarkUseStar?: boolean;
+  studioBadge?: 'pro' | 'free';
   rankId?: string;
   xp?: number;
   updatedAt: string;
@@ -1804,7 +1900,11 @@ export async function listRecentPublicProfiles(
     });
     if (rows.length >= limit) break;
   }
-  return Promise.all(
+  const liveBadges = await liveStudioBadgesByUserIds(
+    db,
+    rows.map((row) => row.userId)
+  );
+  const artists = await Promise.all(
     rows.map(async (row) => {
       const avatarUrl = await resolvePublicAvatar(row.slug, row.data);
       const useStar = row.data.starMarkUseStar === true;
@@ -1812,6 +1912,8 @@ export async function listRecentPublicProfiles(
         typeof row.data.starMarkSeed === 'number'
           ? normalizeVesperfoldSeed(row.data.starMarkSeed)
           : undefined;
+      const studioBadge =
+        liveBadges.get(row.userId) || parseStudioBadge(row.data.studioBadge) || 'free';
       return {
         userId: row.userId,
         slug: row.slug,
@@ -1819,12 +1921,22 @@ export async function listRecentPublicProfiles(
         avatarUrl,
         starMarkUseStar: useStar,
         starMarkSeed: useStar ? seed : undefined,
+        studioBadge,
         rankId: row.rankId,
         xp: row.xp,
         updatedAt: row.updatedAt,
       };
     })
   );
+  void persistPublicStudioBadges(
+    db,
+    artists.map((artist, i) => ({
+      slug: artist.slug,
+      badge: artist.studioBadge || 'free',
+      current: rows[i]?.data.studioBadge,
+    }))
+  );
+  return artists;
 }
 
 export type DiscoverShareSummary = {
@@ -1836,6 +1948,7 @@ export type DiscoverShareSummary = {
   avatarUrl?: string;
   starMarkUseStar?: boolean;
   starMarkSeed?: number;
+  studioBadge?: 'pro' | 'free';
   updatedAt: string;
 };
 
@@ -1900,6 +2013,7 @@ export async function listRecentShareSummaries(
       avatarUrl: meta?.avatarUrl,
       starMarkUseStar: meta?.starMarkUseStar,
       starMarkSeed: meta?.starMarkSeed,
+      studioBadge: meta?.studioBadge,
       updatedAt: r.updatedAt,
     };
   });
@@ -2000,6 +2114,7 @@ export type DiscoverRiserSummary = {
   avatarUrl?: string;
   starMarkUseStar?: boolean;
   starMarkSeed?: number;
+  studioBadge?: 'pro' | 'free';
   barsWritten7d: number;
   currentStreak: number;
 };
@@ -2045,6 +2160,7 @@ export async function listLeaderboardRisers(
       avatarUrl: meta?.avatarUrl,
       starMarkUseStar: meta?.starMarkUseStar,
       starMarkSeed: meta?.starMarkSeed,
+      studioBadge: meta?.studioBadge,
     };
   });
 }

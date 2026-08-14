@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/client/firebase';
 import { cn } from '@/lib/utils';
 import type { DiscoverCard } from '@/lib/scene/discover-client';
+import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
 
 function timeAgo(iso: string): string {
   try {
@@ -72,11 +73,15 @@ export function SceneDiscoverCard({
             href={`/profile/${artist.slug}`}
             size={56}
             toneClass="bg-sky-500/25 text-sky-300"
+            studioChrome={parseStudioBadge(artist.studioBadge) || 'free'}
           />
           <div className="min-w-0 flex-1">
             <Link
               href={`/profile/${artist.slug}`}
-              className="block truncate font-headline text-sm font-bold uppercase tracking-tight text-foreground hover:text-sky-300"
+              className={cn(
+                'block truncate font-headline text-sm font-bold uppercase tracking-tight hover:text-sky-300',
+                studioNameClass(parseStudioBadge(artist.studioBadge) || 'free')
+              )}
             >
               {artist.displayName}
             </Link>
@@ -107,6 +112,7 @@ export function SceneDiscoverCard({
             href={ownerHref}
             size={56}
             toneClass="bg-primary/25 text-primary"
+            studioChrome={parseStudioBadge(drop.studioBadge) || 'free'}
           />
           <div className="min-w-0 flex-1">
             <Link
@@ -118,11 +124,19 @@ export function SceneDiscoverCard({
             <p className="font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
               {drop.type === 'album' ? 'Album' : 'Track'} DNA by{' '}
               {ownerHref ? (
-                <Link href={ownerHref} className="text-foreground/90 hover:text-primary">
+                <Link
+                  href={ownerHref}
+                  className={cn(
+                    'hover:text-primary',
+                    studioNameClass(parseStudioBadge(drop.studioBadge) || 'free')
+                  )}
+                >
                   {drop.ownerName}
                 </Link>
               ) : (
-                drop.ownerName
+                <span className={studioNameClass(parseStudioBadge(drop.studioBadge) || 'free')}>
+                  {drop.ownerName}
+                </span>
               )}
               {drop.updatedAt ? ` · ${timeAgo(drop.updatedAt)}` : ''}
             </p>
@@ -251,16 +265,25 @@ export function SceneDiscoverCard({
               href={riser.profileSlug ? `/profile/${riser.profileSlug}` : undefined}
               size={44}
               toneClass="bg-amber-500/25 text-amber-300"
+              studioChrome={parseStudioBadge(riser.studioBadge) || 'free'}
             />
             {riser.profileSlug ? (
               <Link
                 href={`/profile/${riser.profileSlug}`}
-                className="min-w-0 flex-1 truncate text-sm font-bold text-foreground hover:text-amber-300"
+                className={cn(
+                  'min-w-0 flex-1 truncate text-sm font-bold hover:text-amber-300',
+                  studioNameClass(parseStudioBadge(riser.studioBadge) || 'free')
+                )}
               >
                 {riser.displayName}
               </Link>
             ) : (
-              <span className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">
+              <span
+                className={cn(
+                  'min-w-0 flex-1 truncate text-sm font-bold',
+                  studioNameClass(parseStudioBadge(riser.studioBadge) || 'free')
+                )}
+              >
                 {riser.displayName}
               </span>
             )}

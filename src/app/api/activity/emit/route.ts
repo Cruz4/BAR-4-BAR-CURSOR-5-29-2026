@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { emitActivityEvent, type EmitActivityInput } from '@/lib/server/activity';
-import { isActivityType } from '@/lib/activity/types';
+import { isActivityType, isServerOnlyActivityType } from '@/lib/activity/types';
 import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 
 export const runtime = 'nodejs';
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     const actorId = typeof body.actorId === 'string' ? body.actorId : '';
     const type = body.type;
 
-    if (!actorId || !isActivityType(type)) {
+    if (!actorId || !isActivityType(type) || isServerOnlyActivityType(type)) {
       return NextResponse.json({ error: 'Invalid activity payload' }, { status: 400 });
     }
 

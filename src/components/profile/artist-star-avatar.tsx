@@ -13,10 +13,14 @@ import { cn } from '@/lib/utils';
 import { VesperfoldMark } from '@/components/profile/vesperfold-mark';
 import { normalizeVesperfoldSeed } from '@/lib/profile/vesperfold';
 import { getInitials } from '@/lib/gamification/studio-pass';
+import type { StudioNameChrome } from '@/lib/studio-tier-chrome';
 
 /** Classic 5-point star clip — stock initials only (no photo, no generative). */
 export const ARTIST_STAR_CLIP =
   'polygon(50% 0%, 61.8% 35.4%, 98.2% 35.4%, 68.2% 57.6%, 79.4% 91.2%, 50% 71%, 20.6% 91.2%, 31.8% 57.6%, 1.8% 35.4%, 38.2% 35.4%)';
+
+export const ARTIST_STAR_POINTS =
+  '50,0 61.8,35.4 98.2,35.4 68.2,57.6 79.4,91.2 50,71 20.6,91.2 31.8,57.6 1.8,35.4 38.2,35.4';
 
 type ArtistStarAvatarProps = {
   name: string;
@@ -27,6 +31,7 @@ type ArtistStarAvatarProps = {
   size?: number;
   className?: string;
   toneClass?: string;
+  studioChrome?: StudioNameChrome | null;
 };
 
 function StockInitialsStar({
@@ -34,34 +39,54 @@ function StockInitialsStar({
   size,
   className,
   toneClass,
+  studioChrome,
 }: {
   name: string;
   size: number;
   className?: string;
   toneClass: string;
+  studioChrome?: StudioNameChrome | null;
 }) {
   const initials = getInitials(name);
+  const isPro = studioChrome === 'pro';
   return (
     <span
-      className={cn(
-        'relative inline-flex shrink-0 items-center justify-center overflow-hidden border border-white/25',
-        toneClass,
-        className
-      )}
-      style={{
-        width: size,
-        height: size,
-        clipPath: ARTIST_STAR_CLIP,
-        WebkitClipPath: ARTIST_STAR_CLIP,
-      }}
+      className={cn('relative inline-flex shrink-0 items-center justify-center', className)}
+      style={{ width: size, height: size }}
       aria-hidden
     >
       <span
-        className="flex h-full w-full items-center justify-center font-bold uppercase tracking-tight text-sky-300"
-        style={{ fontSize: Math.max(9, Math.round(size * (initials.length > 1 ? 0.23 : 0.28))) }}
+        className={cn(
+          'relative inline-flex h-full w-full items-center justify-center overflow-hidden border border-white/25',
+          toneClass
+        )}
+        style={{
+          clipPath: ARTIST_STAR_CLIP,
+          WebkitClipPath: ARTIST_STAR_CLIP,
+        }}
       >
-        {initials}
+        <span
+          className="flex h-full w-full items-center justify-center font-bold uppercase tracking-tight text-sky-300"
+          style={{ fontSize: Math.max(9, Math.round(size * (initials.length > 1 ? 0.23 : 0.28))) }}
+        >
+          {initials}
+        </span>
       </span>
+      {isPro ? (
+        <svg
+          viewBox="0 0 100 100"
+          className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+          aria-hidden
+        >
+          <polygon
+            points={ARTIST_STAR_POINTS}
+            fill="none"
+            className="stroke-accent"
+            strokeWidth="2.25"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ) : null}
     </span>
   );
 }
@@ -85,6 +110,7 @@ export function ArtistStarAvatar({
   size = 56,
   className,
   toneClass = 'bg-sky-500/25 text-sky-300',
+  studioChrome,
 }: ArtistStarAvatarProps) {
   const seed = normalizeVesperfoldSeed(starMarkSeed ?? 0);
   const photoUrl = usablePhotoUrl(avatarUrl);
@@ -133,7 +159,13 @@ export function ArtistStarAvatar({
     );
   } else {
     mark = (
-      <StockInitialsStar name={name} size={size} className={className} toneClass={toneClass} />
+      <StockInitialsStar
+        name={name}
+        size={size}
+        className={className}
+        toneClass={toneClass}
+        studioChrome={studioChrome}
+      />
     );
   }
 

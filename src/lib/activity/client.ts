@@ -82,6 +82,7 @@ function eventFromDoc(id: string, data: Record<string, unknown>): ActivityEvent 
     targetSlug: typeof data.targetSlug === 'string' ? data.targetSlug : undefined,
     postId: typeof data.postId === 'string' ? data.postId : undefined,
     shareId: typeof data.shareId === 'string' ? data.shareId : undefined,
+    lockId: typeof data.lockId === 'string' ? data.lockId : undefined,
     preview: typeof data.preview === 'string' ? data.preview : undefined,
     href: typeof data.href === 'string' ? data.href : undefined,
     readAt: typeof data.readAt === 'string' ? data.readAt : data.readAt === null ? null : undefined,
@@ -246,6 +247,7 @@ export async function fetchActivityPrefs(): Promise<ActivityPrefs> {
       postReplies: data.postReplies !== false,
       dnaImports: data.dnaImports !== false,
       lockCasts: data.lockCasts !== false,
+      craftReminders: data.craftReminders !== false,
     };
   } catch {
     return { ...DEFAULT_ACTIVITY_PREFS };
@@ -275,4 +277,26 @@ export async function savePushToken(fcmToken: string | null): Promise<void> {
     },
     { merge: true }
   );
+}
+
+/** Persist last sheet so Activity can say “your verse is still open.” */
+export function persistCraftResume(path: string, title?: string): void {
+  void (async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+    if (!/^\/albums\/[^/]+\/tracks\/[^/]+$/.test(path)) return;
+    try {
+      await setDoc(
+        doc(db, 'users', user.uid, 'activityMeta', 'craft'),
+        {
+          lastTrackPath: path,
+          lastTrackTitle: title?.trim().slice(0, 80) || null,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.warn('[persistCraftResume]', err);
+    }
+  })();
 }

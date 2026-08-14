@@ -36,6 +36,11 @@ Feature branch: `feat/lock`. Do not merge to `main` until ready.
 4. Post-submit doors: Keep writing in Studio · Share · All replies · Artist Home  
 5. Artist **Pick** · optional **Close** · **Clear for release**  
 6. Scene Discover can show live casts; Artist Home module links in (when enabled)  
+7. **House bar of the day** (Admin → Config) pins the house seed on The Scene — toggle + rewrite anytime; saving updates `/lock/house`
+
+## House bar of the day
+
+Separate from the LOCK kill switch. Firestore `config/houseBar`. When live, The Scene shows the bar above the feed. Answer CTA goes to `/lock/house` if LOCK is on.  
 
 
 ## Rights

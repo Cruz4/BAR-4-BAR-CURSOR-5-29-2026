@@ -4,20 +4,33 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { buildAlbumCoverCollageLayout } from '@/lib/album-cover-collage';
 import { ProfileInitialsStar } from '@/components/profile/profile-initials-star';
+import type { StudioNameChrome } from '@/lib/studio-tier-chrome';
 
 type AlbumCoverCollageProps = {
   urls: string[];
   displayName?: string | null;
   className?: string;
+  studioChrome?: StudioNameChrome | null;
 };
 
-export function AlbumCoverCollage({ urls, displayName, className }: AlbumCoverCollageProps) {
+export function AlbumCoverCollage({
+  urls,
+  displayName,
+  className,
+  studioChrome,
+}: AlbumCoverCollageProps) {
   const layout = buildAlbumCoverCollageLayout(urls);
   const name = displayName?.trim() || 'Artist';
 
   // No covers (or collage mode with nothing to tile) → stock initials star, not a letter box.
   if (!layout) {
-    return <ProfileInitialsStar displayName={name} className={className} />;
+    return (
+      <ProfileInitialsStar
+        displayName={name}
+        className={className}
+        studioChrome={studioChrome}
+      />
+    );
   }
 
   return (

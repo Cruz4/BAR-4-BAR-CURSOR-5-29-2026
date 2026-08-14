@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase/client/firebase';
-import { collection, query, doc, updateDoc, orderBy, getDoc, limit, setDoc, where } from 'firebase/firestore';
+import { collection, query, doc, updateDoc, orderBy, getDoc, getDocs, limit, setDoc, where } from 'firebase/firestore';
 import { subscribeQuery } from '@/lib/firebase/client/firestore-subscribe';
 import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import { initUserUsageAction } from '@/lib/server/usage-actions';
@@ -41,6 +41,7 @@ import type { RankId } from '@/lib/gamification/types';
 import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { STUDIO_RANKS } from '@/lib/gamification/ranks';
 import { cn } from '@/lib/utils';
+import { studioChromeFromSubscriptionStatus, studioNameClass } from '@/lib/studio-tier-chrome';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
 import { formatOpsLogInkLabel, resolveOpsLogInkDelta } from '@/lib/ops-log-ink';
 import { Input } from '@/components/ui/input';
@@ -54,6 +55,8 @@ import { AdminMetricsTab } from '@/components/admin-metrics-tab';
 import { AdminAchievementsTab } from '@/components/admin-achievements-tab';
 import { AdminInviteGateCard } from '@/components/admin-invite-gate-card';
 import { AdminLockFeatureCard } from '@/components/admin-lock-feature-card';
+import { AdminHouseBarCard } from '@/components/admin-house-bar-card';
+import { AdminWeeklyChallengeCard } from '@/components/admin-weekly-challenge-card';
 import type { AdminGamificationRosterEntry } from '@/lib/gamification/admin-roster-types';
 import { format } from 'date-fns';
 import { formatUserJoinDate, userDateSortValue } from '@/lib/user-date';
@@ -492,6 +495,14 @@ export default function AdminPage() {
             subscriptionStatus: status,
             subscriptionTier: tier
         });
+        try {
+          const pubs = await getDocs(query(collection(db, 'publicProfiles'), where('userId', '==', targetUser.id)));
+          await Promise.all(
+            pubs.docs.map((d) => updateDoc(d.ref, { studioBadge: tier === 'none' ? 'free' : 'pro' }))
+          );
+        } catch {
+          /* public mirror is best-effort */
+        }
         toast({ title: "Residency Updated", description: `${targetUser.displayName} is now on ${tier.toUpperCase()} Pro.` });
     } catch (e: any) {
         toast({ variant: 'destructive', title: "Update Failed", description: e.message });
@@ -839,7 +850,7 @@ export default function AdminPage() {
                     <TableRow key={u.id} className="hover:bg-white/5 border-b border-white/5">
                       <TableCell>
                         <div className="font-bold text-white uppercase text-xs flex items-center gap-2 flex-wrap">
-                          <span>{u.displayName}</span>
+                          <span className={studioNameClass(studioChromeFromSubscriptionStatus(u.subscriptionStatus))}>{u.displayName}</span>
                           {(u.role === 'admin' || isMasterAdminEmail(u.email)) && (
                             <Badge
                               variant="outline"
@@ -868,12 +879,16 @@ export default function AdminPage() {
                       </TableCell>
                       <TableCell>
                           <Select value={u.subscriptionTier || 'none'} onValueChange={(val: any) => handleUpdateTier(u, val)}>
-                              <SelectTrigger className={cn("h-8 w-32 text-[9px] font-bold uppercase", u.subscriptionTier === 'yearly' ? "border-accent text-accent" : "border-primary text-primary")}>
+                              <SelectTrigger className={cn(
+                                "h-8 w-32 text-[9px] font-bold uppercase",
+                                studioNameClass(studioChromeFromSubscriptionStatus(u.subscriptionStatus)),
+                                u.subscriptionStatus === 'active' ? "border-accent" : "border-primary"
+                              )}>
                                   <SelectValue />
                               </SelectTrigger>
                               <SelectContent className="bg-card border-2">
-                                  <SelectItem value="none">LOCAL</SelectItem>
-                                  <SelectItem value="monthly">PRO MO</SelectItem>
+                                  <SelectItem value="none" className="text-[rgb(125,211,252)]">LOCAL</SelectItem>
+                                  <SelectItem value="monthly" className="text-accent">PRO MO</SelectItem>
                                   <SelectItem value="yearly" className="text-accent">PRO YR</SelectItem>
                               </SelectContent>
                           </Select>
@@ -1143,6 +1158,8 @@ export default function AdminPage() {
 
         <TabsContent value="config" className="space-y-8">
             <AdminLockFeatureCard />
+            <AdminHouseBarCard />
+            <AdminWeeklyChallengeCard />
             <AdminInviteGateCard />
             <Card className="bg-card border-2 shadow-2xl">
                 <CardHeader className="border-b"><CardTitle className="font-headline text-2xl uppercase">Global Task Economics</CardTitle></CardHeader>

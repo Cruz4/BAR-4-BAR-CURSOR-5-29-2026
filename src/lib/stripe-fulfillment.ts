@@ -6,6 +6,7 @@ import { getResidencyRefillForTier } from '@/lib/stripe-catalog';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
 import { recordInkLedgerEntries } from '@/lib/server/ink-ledger';
 import { inkBalanceFirestorePatch, normalizeInkPools } from '@/lib/ink-balance';
+import { patchPublicStudioBadge } from '@/lib/server/public-studio-badge';
 
 export type FulfillmentMetadata = {
   userId: string;
@@ -237,6 +238,7 @@ export async function activateOrUpgradeProSubscription(
   };
   if (subscriptionId) userUpdate.subscriptionId = subscriptionId;
   await userRef.update(userUpdate);
+  await patchPublicStudioBadge(db, userId, 'pro');
 
   const newlyActivated = !wasActive;
   const upgradedToYearly = prevTier !== 'yearly' && tier === 'yearly';
@@ -253,6 +255,7 @@ export async function deactivateSubscription(db: Firestore, userId: string) {
     subscriptionStatus: 'canceled',
     updatedAt: FieldValue.serverTimestamp(),
   });
+  await patchPublicStudioBadge(db, userId, 'free');
 }
 
 /**

@@ -12,6 +12,25 @@ NEXT_PUBLIC_FIREBASE_VAPID_KEY=your_vapid_key_here
 
 4. Redeploy. Artists enable push under **Settings → Notifications** and click **Allow** in the browser.
 
+Push copy is craft-first, not a feed dump:
+
+| Event | Title |
+|-------|--------|
+| Unfinished sheet, no write today | **Your verse is still open** |
+| Streak at risk (wrote yesterday, not today) | **Streak dies at midnight** |
+| Named reply on a LOCK you own/watch | **{name} echoed your bar** |
+
+Toggle those under Settings → **Verse still open + streak at midnight** and **Someone echoed your bar**.
+
+## Craft reminder cron (optional)
+
+Same `CRON_SECRET` as metrics. Evening run is best (artists still have hours left in the day):
+
+1. Cloud Scheduler → `https://bar4bar.ink/api/cron/craft-reminders`
+2. Header: `Authorization: Bearer YOUR_CRON_SECRET`
+
+Writes Activity inbox even without push. Skips anyone who already wrote today, and at most once per day per ping type.
+
 ## Troubleshooting
 
 ### “Permission needed”

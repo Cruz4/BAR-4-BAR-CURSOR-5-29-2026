@@ -11,7 +11,7 @@
 | `NEXT_PUBLIC_APP_URL` | Canonical app origin for Stripe redirects |
 | `TRUSTED_APP_ORIGINS` | Comma-separated extra allowed origins for checkout/portal/referrals |
 | `FIREBASE_SERVICE_ACCOUNT_KEY` | Required in production for ink billing, gamification, referrals |
-| `CRON_SECRET` | Optional — Bearer token for `/api/cron/refresh-metrics` (Google Cloud Scheduler) |
+| `CRON_SECRET` | Optional — Bearer token for `/api/cron/refresh-metrics` and `/api/cron/craft-reminders` (Google Cloud Scheduler) |
 | `METRICS_CACHE_TTL_HOURS` | Optional — admin metrics snapshot TTL (default 6) |
 
 When changing the master admin email, update `firestore.rules` `isAdmin()` email check to match, or rely on `role: admin` set via Admin API only.

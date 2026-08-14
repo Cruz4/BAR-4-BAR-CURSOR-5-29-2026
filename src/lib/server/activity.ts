@@ -6,7 +6,10 @@ import { getDb } from '@/lib/firebase/server';
 import { getPublicAppUrl } from '@/lib/app-url';
 import {
   DEFAULT_ACTIVITY_PREFS,
+  SYSTEM_ACTOR_ID,
+  isCraftActivityType,
   prefsAllowsPush,
+  pushCopyForActivity,
   type ActivityPrefs,
   type ActivityType,
 } from '@/lib/activity/types';
@@ -71,6 +74,7 @@ async function loadPrefs(userId: string): Promise<ActivityPrefs> {
     postReplies: data.postReplies !== false,
     dnaImports: data.dnaImports !== false,
     lockCasts: data.lockCasts !== false,
+    craftReminders: data.craftReminders !== false,
   };
 }
 
@@ -154,7 +158,10 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
     if (!preview) preview = title;
   }
 
-  if (!recipientId || recipientId === input.actorId) {
+  if (!recipientId) {
+    return { ok: true };
+  }
+  if (recipientId === input.actorId && input.actorId !== SYSTEM_ACTOR_ID) {
     return { ok: true };
   }
 
@@ -180,7 +187,8 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
   };
 
   const receivedId = chronoId();
-  const givenId = chronoId();
+  const skipGiven =
+    input.actorId === SYSTEM_ACTOR_ID || isCraftActivityType(input.type);
 
   const batch = db.batch();
   batch.set(db.doc(`users/${recipientId}/activity/${receivedId}`), {
@@ -189,15 +197,18 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
     direction: 'received',
     readAt: null,
   });
-  batch.set(db.doc(`users/${input.actorId}/activity/${givenId}`), {
-    ...base,
-    id: givenId,
-    direction: 'given',
-    targetUserId: recipientId,
-    targetName: recipientName,
-    ...(recipientSlug ? { targetSlug: recipientSlug } : {}),
-    readAt: now, // given items don't count as unread
-  });
+  if (!skipGiven) {
+    const givenId = chronoId();
+    batch.set(db.doc(`users/${input.actorId}/activity/${givenId}`), {
+      ...base,
+      id: givenId,
+      direction: 'given',
+      targetUserId: recipientId,
+      targetName: recipientName,
+      ...(recipientSlug ? { targetSlug: recipientSlug } : {}),
+      readAt: now, // given items don't count as unread
+    });
+  }
   batch.set(
     db.doc(`users/${recipientId}/activityMeta/summary`),
     {
@@ -208,25 +219,11 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
   );
   await batch.commit();
 
-  const title = 'Bar 4 Bar';
-  const body =
-    input.type === 'friend_request'
-      ? `${input.actorName} sent you a friend request`
-      : input.type === 'friend_accepted'
-        ? `${input.actorName} accepted your friend request`
-        : input.type === 'post_love'
-          ? `${input.actorName} loved your post`
-          : input.type === 'post_reply'
-            ? `${input.actorName} replied to your post`
-            : input.type === 'post_reverb'
-              ? `${input.actorName} Reverbed your post`
-              : input.type === 'lock_answered'
-                ? `${input.actorName} locked a bar on a LOCK you watch`
-                : input.type === 'artist_pick'
-                  ? `${input.actorName} picked your echo`
-                  : input.type === 'lock_clear_offer'
-                    ? `${input.actorName} sent you a clear-for-release offer`
-                    : `${input.actorName} imported your DNA Drop`;
+  const { title, body } = pushCopyForActivity(
+    input.type,
+    input.actorName || 'Artist',
+    preview
+  );
 
   void maybePush(recipientId, input.type, title, body, href);
 

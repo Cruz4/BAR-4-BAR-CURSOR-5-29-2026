@@ -168,8 +168,8 @@ service cloud.firestore {
       match /activityMeta/{docId} {
         allow read: if isOwner(userId);
         allow create, update: if isOwner(userId)
-          && (docId == 'prefs' || docId == 'push');
-        allow delete: if isOwner(userId) && (docId == 'prefs' || docId == 'push');
+          && (docId == 'prefs' || docId == 'push' || docId == 'craft');
+        allow delete: if isOwner(userId) && (docId == 'prefs' || docId == 'push' || docId == 'craft');
       }
     }
 

@@ -15,6 +15,7 @@ export type DiscoverArtist = {
   avatarUrl?: string;
   starMarkUseStar?: boolean;
   starMarkSeed?: number;
+  studioBadge?: 'pro' | 'free';
   rankId?: string;
   xp?: number;
   updatedAt: string;
@@ -29,6 +30,7 @@ export type DiscoverDrop = {
   avatarUrl?: string;
   starMarkUseStar?: boolean;
   starMarkSeed?: number;
+  studioBadge?: 'pro' | 'free';
   updatedAt: string;
 };
 
@@ -39,6 +41,7 @@ export type DiscoverRiser = {
   avatarUrl?: string;
   starMarkUseStar?: boolean;
   starMarkSeed?: number;
+  studioBadge?: 'pro' | 'free';
   barsWritten7d: number;
   currentStreak: number;
 };

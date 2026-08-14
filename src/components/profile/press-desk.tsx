@@ -91,6 +91,7 @@ import { ArtistHome } from '@/components/profile/artist-home';
 import { LiveDnaDropsManage } from '@/components/scene/scene-live-drops-strip';
 import { PublishOpenLockPanel } from '@/components/lock/publish-open-lock-panel';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
+import { studioChromeFromUser } from '@/lib/studio-tier-chrome';
 import { VesperfoldForge } from '@/components/profile/vesperfold-forge';
 import {
   normalizeVesperfoldSeed,
@@ -553,6 +554,7 @@ export function PressDesk() {
       profilePhotoMode: photoMode,
       profilePhotoUrl: photoUrl,
       slug: summary.profileSlug || profileSlug || 'preview',
+      studioBadge: studioChromeFromUser(user),
       starMarkUseStar,
       starMarkSeed,
       liveDnaDrops: publicShares.map((d) => ({
@@ -568,6 +570,7 @@ export function PressDesk() {
   }, [
     user?.id,
     user?.displayName,
+    user?.subscriptionStatus,
     summary,
     heroCollageUrls,
     useInitialsHero,
@@ -837,6 +840,7 @@ export function PressDesk() {
         pinnedSlotId={starMarkPinnedSlotId}
         displayName={displayName}
         photoUrl={useCustomHero ? photoUrl : null}
+        studioChrome={studioChromeFromUser(user)}
         busy={starBusy}
         onToggleUseStar={(on) => {
           if (starMarkPinnedSlotId) return;
@@ -948,12 +952,14 @@ export function PressDesk() {
                   displayName={displayName}
                   className="h-full w-full border-0 shadow-none"
                   active
+                  studioChrome={studioChromeFromUser(user)}
                 />
               ) : (
                 <AlbumCoverCollage
                   urls={heroCollageUrls}
                   displayName={displayName}
                   className="h-full w-full border-0 shadow-none"
+                  studioChrome={studioChromeFromUser(user)}
                 />
               )}
             </div>

@@ -8,6 +8,8 @@ import {
   Bell,
   Check,
   CheckCheck,
+  FilePenLine,
+  Flame,
   Heart,
   Import,
   Lock,
@@ -33,7 +35,7 @@ import {
   markAllActivityEventsRead,
   type FriendshipChangedDetail,
 } from '@/lib/activity/client';
-import { activityVerb, type ActivityEvent, type ActivityType } from '@/lib/activity/types';
+import { activityShowsActor, activityVerb, type ActivityEvent, type ActivityType } from '@/lib/activity/types';
 import {
   acceptFriendRequest,
   fetchFriendships,
@@ -91,6 +93,10 @@ function TypeIcon({ type }: { type: ActivityType }) {
       return <Star className={cn(className, 'text-amber-400')} />;
     case 'lock_clear_offer':
       return <Lock className={cn(className, 'text-sky-400')} />;
+    case 'verse_open':
+      return <FilePenLine className={cn(className, 'text-sky-400')} />;
+    case 'streak_risk':
+      return <Flame className={cn(className, 'text-amber-400')} />;
     default:
       return <Bell className={className} />;
   }
@@ -169,14 +175,18 @@ function ActivityRow({
       <div className="min-w-0 flex-1 space-y-1.5">
         <p className="text-sm leading-snug">
           {event.direction === 'received' ? (
-            <>
-              {nameLink(primaryName, primarySlug)}{' '}
-              <span className="text-muted-foreground">{activityVerb(event.type, event.direction)}</span>
-            </>
+            activityShowsActor(event.type) ? (
+              <>
+                {nameLink(primaryName, primarySlug)}{' '}
+                <span className="text-muted-foreground">{activityVerb(event.type, event.direction)}</span>
+              </>
+            ) : (
+              <span className="font-bold text-foreground">{activityVerb(event.type, event.direction)}</span>
+            )
           ) : (
             <span className="text-muted-foreground">
               {activityVerb(event.type, event.direction)}{' '}
-              {nameLink(primaryName, primarySlug)}
+              {activityShowsActor(event.type) ? nameLink(primaryName, primarySlug) : null}
             </span>
           )}
         </p>

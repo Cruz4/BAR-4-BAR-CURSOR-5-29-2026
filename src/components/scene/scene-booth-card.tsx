@@ -18,6 +18,7 @@ import { useGamification } from '@/context/gamification-context';
 import { patchGamificationSettings } from '@/lib/gamification-client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { studioChromeFromUser } from '@/lib/studio-tier-chrome';
 
 export function SceneBoothCard({ className }: { className?: string }) {
   const { user } = useAuth();
@@ -89,6 +90,7 @@ export function SceneBoothCard({ className }: { className?: string }) {
               ? 'bg-sky-500/15 text-sky-400'
               : 'bg-muted/40 text-muted-foreground/70'
           }
+          studioChrome={studioChromeFromUser(user)}
           className={
             isLive
               ? 'border-sky-400/50 shadow-[0_0_18px_rgba(14,165,233,0.25)]'
@@ -100,7 +102,7 @@ export function SceneBoothCard({ className }: { className?: string }) {
           <p className="font-code text-[9px] font-bold uppercase tracking-[0.28em] text-muted-foreground/70">
             Your booth
           </p>
-          <p className="truncate font-headline text-base font-bold uppercase tracking-tight text-foreground">
+          <p className="truncate font-headline text-base font-bold uppercase tracking-tight">
             {user.displayName || 'Artist'}
           </p>
           <p

@@ -8,8 +8,11 @@ import {
   Check,
   CheckCheck,
   ChevronRight,
+  FilePenLine,
+  Flame,
   Heart,
   Import,
+  Lock,
   MessageCircle,
   Repeat2,
   UserPlus,
@@ -29,7 +32,7 @@ import {
   markAllActivityEventsRead,
   type FriendshipChangedDetail,
 } from '@/lib/activity/client';
-import { activityVerb, type ActivityEvent, type ActivityType } from '@/lib/activity/types';
+import { activityShowsActor, activityVerb, type ActivityEvent, type ActivityType } from '@/lib/activity/types';
 import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
 import { useAuth } from '@/hooks/use-auth';
 import { StudioLoader } from '@/components/studio-loader';
@@ -50,6 +53,13 @@ function TypeIcon({ type }: { type: ActivityType }) {
       return <Repeat2 className={cn(className, 'text-violet-400')} />;
     case 'dna_import':
       return <Import className={cn(className, 'text-amber-400')} />;
+    case 'lock_answered':
+    case 'lock_clear_offer':
+      return <Lock className={cn(className, 'text-emerald-400')} />;
+    case 'verse_open':
+      return <FilePenLine className={cn(className, 'text-sky-400')} />;
+    case 'streak_risk':
+      return <Flame className={cn(className, 'text-amber-400')} />;
     default:
       return <Bell className={className} />;
   }
@@ -278,17 +288,25 @@ export function ActivityNavDropdown({
                     </span>
                     <span className="min-w-0 flex-1 pr-7">
                       <span className="block text-[12px] leading-snug">
-                        <ArtistHomeLink
-                          userId={event.actorId}
-                          slug={event.actorSlug}
-                          className="font-bold text-foreground hover:underline"
-                          onNavigate={() => setOpen(false)}
-                        >
-                          {event.actorName}
-                        </ArtistHomeLink>{' '}
-                        <span className="text-muted-foreground">
-                          {activityVerb(event.type, 'received')}
-                        </span>
+                        {activityShowsActor(event.type) ? (
+                          <>
+                            <ArtistHomeLink
+                              userId={event.actorId}
+                              slug={event.actorSlug}
+                              className="font-bold text-foreground hover:underline"
+                              onNavigate={() => setOpen(false)}
+                            >
+                              {event.actorName}
+                            </ArtistHomeLink>{' '}
+                            <span className="text-muted-foreground">
+                              {activityVerb(event.type, 'received')}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="font-bold text-foreground">
+                            {activityVerb(event.type, 'received')}
+                          </span>
+                        )}
                       </span>
                       {event.preview ? (
                         <span className="mt-0.5 line-clamp-1 block font-code text-[10px] text-muted-foreground/85">

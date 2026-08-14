@@ -44,6 +44,13 @@ import { SCENE_HOME_ENABLED, VAULT_PATH } from '@/lib/scene-home';
 import { getGuestSignupHref, trackGuestSignupCta } from '@/lib/guest-funnel-client';
 import { prepareGuestTrackForSignup } from '@/lib/guest-track-session';
 import { getStoredMarketingRef } from '@/lib/marketing-attribution';
+import {
+  studioAvatarRingClass,
+  studioChromeFromUser,
+  studioHeaderBadgeClass,
+  studioNameClass,
+  studioTierMenuClass,
+} from '@/lib/studio-tier-chrome';
 
 export function Header() {
   const { user, loading } = useAuth();
@@ -103,6 +110,7 @@ export function Header() {
   
   const isPro = user?.subscriptionStatus === 'active';
   const isYearly = user?.subscriptionTier === 'yearly';
+  const studioChrome = studioChromeFromUser(user);
   const residencyPoolCap = getResidencyPoolCap(user);
   const residencyProgress = getResidencyProgressPercent(residencyBalance, residencyPoolCap);
 
@@ -287,10 +295,8 @@ export function Header() {
                     <DropdownMenuTrigger asChild>
                       <div className="relative cursor-pointer group ml-1">
                         <Avatar className={cn(
-                            "h-8 w-8 md:h-9 md:w-9 border transition-all duration-500 group-hover:scale-105",
-                            isYearly 
-                              ? "border-accent ring-2 ring-accent ring-offset-2 ring-offset-background shadow-[0_0_15px_rgba(217,70,239,0.5)]" 
-                              : (isPro ? "border-primary shadow-[0_0_10px_rgba(37,99,235,0.3)]" : "border-orange-500 shadow-sm")
+                            "h-8 w-8 md:h-9 md:w-9 transition-all duration-500 group-hover:scale-105",
+                            studioAvatarRingClass(studioChrome)
                         )}>
                           {user.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName} />}
                           <AvatarFallback className="text-[10px] md:sm bg-muted">{getInitials(user.displayName)}</AvatarFallback>
@@ -298,9 +304,7 @@ export function Header() {
                         <div className="absolute -bottom-1 -right-1">
                             <Badge className={cn(
                                 "h-4 px-1 text-[8px] font-bold uppercase tracking-tighter border shadow-sm",
-                                isPro 
-                                  ? (isYearly ? "bg-accent text-white border-accent/20" : "bg-primary text-white border-primary-foreground/20") 
-                                  : "bg-orange-500 text-white border-orange-600"
+                                studioHeaderBadgeClass(studioChrome, isYearly)
                             )}>
                                 {isPro ? (isYearly ? 'YEARLY' : 'PRO') : 'FREE'}
                             </Badge>
@@ -310,7 +314,7 @@ export function Header() {
                     <DropdownMenuContent className="w-56" align="end" forceMount>
                       <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
-                          <p className="text-sm font-bold leading-none">{user.displayName}</p>
+                          <p className={cn("text-sm font-bold leading-none", studioNameClass(studioChrome))}>{user.displayName}</p>
                           <p className="text-[10px] leading-none text-muted-foreground font-code">{user.email}</p>
                         </div>
                       </DropdownMenuLabel>
@@ -345,7 +349,10 @@ export function Header() {
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=buy-ink')}><LayoutGrid className="mr-2 h-4 w-4 text-primary" /><span>Ink Store</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=settings')}><Settings className="mr-2 h-4 w-4" /><span>Settings</span></DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => router.push('/usage?tab=cloud')}><Star className="mr-2 h-4 w-4 text-pink-400" /><span>Studio Tier</span></DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => router.push('/usage?tab=cloud')}>
+                        <Star className={cn('mr-2 h-4 w-4', studioTierMenuClass(studioChrome))} />
+                        <span className={studioTierMenuClass(studioChrome)}>Studio Tier</span>
+                      </DropdownMenuItem>
                       {showPwaInstallMenu && (
                         <DropdownMenuItem className="md:hidden" onClick={() => requestPwaInstallPrompt()}>
                           <Smartphone className="mr-2 h-4 w-4 text-primary" /><span>Add to Home Screen</span>

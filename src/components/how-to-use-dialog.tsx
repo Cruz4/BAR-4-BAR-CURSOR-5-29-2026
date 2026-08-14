@@ -119,7 +119,11 @@ const ChapterCard = ({ icon, title, children, colorClass }: { icon: React.ReactN
 const FAQS = [
     {
       q: "What is The Scene (my home page)?",
-      a: "Signing in lands you on The Scene — friends' wall posts, Discover (live Artist Homes, public drops, DNA Drops, finish-the-bar casts when enabled, leaderboard risers), your Booth, and the right dock. The skyline follows your local day/night and optional live weather. Vault and Activity are also in the top nav."
+      a: "Signing in lands you on The Scene — friends' wall posts, Discover, Your Booth, and (when Studio Ops turns them on) House bar of the day plus a weekly public challenge. Vault and Activity are in the top nav. The skyline follows your local day/night and optional live weather."
+    },
+    {
+      q: "What are House bar of the day and the weekly challenge?",
+      a: "Studio Ops can pin them from Admin → Config (toggle + rewrite, no redeploy). House bar is one shared unfinished line for everyone to answer. The weekly challenge is a Scene-wide bar-count cypher (Monday reset) with your progress on the pin. Either can be hidden anytime."
     },
     {
       q: "What is Finish this bar?",
@@ -135,7 +139,7 @@ const FAQS = [
     },
     {
       q: "Where are The Vault and Activity?",
-      a: "Vault (albums & tracks) is at /vault — sky archive icon in the top nav, or top of the Scene dock. Activity (emerald bell) opens an unread dropdown: mark one or all read, or View all for the full Activity page (/activity) with Inbox · Requests · Sent. Push/settings live under Ink Store → Settings when available. Finish-the-bar watchers get Activity when a named reply lands or you get Artist Pick / clear offers."
+      a: "Vault (albums & tracks) is at /vault — sky archive icon in the top nav, or top of the Scene dock. Activity (emerald bell) is for your work: unfinished verse, streak at midnight, someone echoing your bar, plus friends and DNA imports — not a feed dump. Optional push under Settings → Notifications. Finish-the-bar watchers get Activity when a named reply lands."
     },
     {
       q: "What is Artist Home and Edit Public Page?",

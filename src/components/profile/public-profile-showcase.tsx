@@ -28,6 +28,7 @@ import { rankBadgeClass, rankIdFromLabel } from '@/lib/gamification/badge-styles
 import { StudioStandingRankBadge } from '@/components/gamification/studio-standing-foil-dialog';
 import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { useToast } from '@/hooks/use-toast';
+import { parseStudioBadge } from '@/lib/studio-tier-chrome';
 
 export type PublicProfileData = {
   displayName: string;
@@ -50,6 +51,8 @@ export type PublicProfileData = {
   referralCode?: string;
   starMarkUseStar?: boolean;
   starMarkSeed?: number;
+  /** Live Studio Pro / Visitor chrome — from users.subscriptionStatus. */
+  studioBadge?: 'pro' | 'free';
   /** Live public DNA Drops (share docs still online). */
   liveDnaDrops?: Array<{
     shareId: string;
@@ -284,12 +287,14 @@ export function PublicProfileShowcase({
                 <ProfileInitialsStar
                   displayName={profile.displayName}
                   className="relative h-auto w-full max-w-md aspect-square rounded-[1.75rem] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+                  studioChrome={parseStudioBadge(profile.studioBadge)}
                 />
               ) : (
                 <AlbumCoverCollage
                   urls={coverUrls}
                   displayName={profile.displayName}
                   className="relative h-auto w-full max-w-md aspect-square rounded-[1.75rem] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+                  studioChrome={parseStudioBadge(profile.studioBadge)}
                 />
               )}
             </motion.div>

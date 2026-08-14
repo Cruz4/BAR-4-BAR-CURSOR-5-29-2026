@@ -66,6 +66,8 @@ If you want snapshots without clicking Recompute:
 3. Add header: `Authorization: Bearer YOUR_CRON_SECRET`
 4. Set `CRON_SECRET` on the same Cloud Function that runs the app (see `docs/STRIPE_SETUP.md` for where env vars go).
 
+Optional second job (evening): `https://bar4bar.ink/api/cron/craft-reminders` — Activity/push for unfinished verse + streak at midnight. See [ACTIVITY_PUSH.md](./ACTIVITY_PUSH.md).
+
 Manual test:
 
 ```bash

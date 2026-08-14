@@ -96,6 +96,53 @@
   }
 }
 
+/* Visitor chrome: sky blue rgb(125 211 252), flash pink every 7s — avatar ring + Studio Tier row only. */
+@keyframes studio-free-tier-flash {
+  0%,
+  82%,
+  100% {
+    color: rgb(125 211 252);
+  }
+  88%,
+  94% {
+    color: hsl(var(--accent));
+  }
+}
+
+.studio-free-tier-flash {
+  color: rgb(125 211 252);
+  animation: studio-free-tier-flash 7s ease-in-out infinite;
+}
+
+@keyframes studio-free-avatar-flash {
+  0%,
+  82%,
+  100% {
+    border-color: rgb(125 211 252);
+    box-shadow:
+      0 0 0 2px hsl(var(--background)),
+      0 0 0 4px rgb(125 211 252),
+      0 0 10px rgb(125 211 252 / 0.45);
+  }
+  88%,
+  94% {
+    border-color: hsl(var(--accent));
+    box-shadow:
+      0 0 0 2px hsl(var(--background)),
+      0 0 0 4px hsl(var(--accent)),
+      0 0 14px hsl(var(--accent) / 0.55);
+  }
+}
+
+.studio-free-avatar-flash {
+  border-color: rgb(125 211 252);
+  box-shadow:
+    0 0 0 2px hsl(var(--background)),
+    0 0 0 4px rgb(125 211 252),
+    0 0 10px rgb(125 211 252 / 0.45);
+  animation: studio-free-avatar-flash 7s ease-in-out infinite;
+}
+
 @layer utilities {
   .smooth-gradient-layer {
     -webkit-backface-visibility: hidden;

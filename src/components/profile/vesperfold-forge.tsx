@@ -22,6 +22,7 @@ import {
 } from '@/lib/profile/vesperfold';
 import { cn } from '@/lib/utils';
 import { getInitials } from '@/lib/gamification/studio-pass';
+import type { StudioNameChrome } from '@/lib/studio-tier-chrome';
 
 type VesperfoldForgeProps = {
   useStar: boolean;
@@ -33,6 +34,7 @@ type VesperfoldForgeProps = {
   displayName?: string;
   /** Custom hero photo — square on the feed when generative is off. */
   photoUrl?: string | null;
+  studioChrome?: StudioNameChrome | null;
   busy?: boolean;
   onToggleUseStar: (useStar: boolean) => void;
   onSeedChange: (seed: number) => void;
@@ -52,6 +54,7 @@ export function VesperfoldForge({
   pinnedSlotId,
   displayName = 'Artist',
   photoUrl,
+  studioChrome,
   busy,
   onToggleUseStar,
   onSeedChange,
@@ -138,6 +141,7 @@ export function VesperfoldForge({
               name={displayName}
               avatarUrl={hasCustomPhoto ? photoUrl! : undefined}
               size={112}
+              studioChrome={studioChrome}
             />
           )}
           {pinned && (

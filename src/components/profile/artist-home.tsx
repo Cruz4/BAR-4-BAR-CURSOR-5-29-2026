@@ -7,7 +7,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Dna, Flame, Globe, PenLine, Repeat2, Settings2, Share2, Trophy, Zap } from 'lucide-react';
+import { ChevronLeft, Dna, Flame, Globe, PenLine, Repeat2, Settings2, Share2, Star, Trophy, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -58,6 +58,8 @@ import { VesperfoldMark } from '@/components/profile/vesperfold-mark';
 import { normalizeVesperfoldSeed } from '@/lib/profile/vesperfold';
 import { buildLoginUrl } from '@/lib/login-links';
 import { useLockFeature } from '@/hooks/use-lock-feature';
+import { parseStudioBadge } from '@/lib/studio-tier-chrome';
+import { Hint } from '@/components/ui/tooltip';
 
 type ArtistHomeProps = {
   profile: PublicProfileData;
@@ -289,6 +291,17 @@ export function ArtistHome({
               )}
             >
               {profile.displayName}
+              {parseStudioBadge(profile.studioBadge) === 'pro' ? (
+                <Hint content="Studio Pro" skipOnTouch>
+                  <span
+                    className="ml-[0.35em] inline-flex translate-y-[-0.12em] items-center gap-0.5 align-middle text-[10px] font-bold uppercase tracking-[0.22em] text-accent"
+                    aria-label="Studio Pro"
+                  >
+                    <Star className="h-2.5 w-2.5 fill-accent" />
+                    Pro
+                  </span>
+                </Hint>
+              ) : null}
             </h1>
             <div className="flex flex-wrap items-center gap-3">
               <StudioStandingRankBadge
@@ -418,12 +431,14 @@ export function ArtistHome({
                   <ProfileInitialsStar
                     displayName={profile.displayName}
                     className="h-full w-full border-0"
+                    studioChrome={parseStudioBadge(profile.studioBadge)}
                   />
                 ) : (
                   <AlbumCoverCollage
                     urls={collageUrls}
                     displayName={profile.displayName}
                     className="h-full w-full border-0 shadow-none"
+                    studioChrome={parseStudioBadge(profile.studioBadge)}
                   />
                 )}
               </button>
@@ -546,12 +561,14 @@ export function ArtistHome({
             <ProfileInitialsStar
               displayName={profile.displayName}
               className="mx-auto w-full max-w-md border-white/20"
+              studioChrome={parseStudioBadge(profile.studioBadge)}
             />
           ) : (
             <AlbumCoverCollage
               urls={collageUrls}
               displayName={profile.displayName}
               className="mx-auto w-full max-w-md border-white/20 shadow-[0_0_60px_rgba(59,130,246,0.2)]"
+              studioChrome={parseStudioBadge(profile.studioBadge)}
             />
           )
         ) : null}

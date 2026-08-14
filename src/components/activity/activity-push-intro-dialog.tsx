@@ -139,7 +139,7 @@ export function ActivityPushIntroDialog() {
         finish();
         toast({
           title: 'Push on',
-          description: 'You’ll get alerts for friend requests, loves, and more. Change anytime in Settings.',
+          description: 'You’ll get “your verse is still open,” “streak dies at midnight,” and “someone echoed your bar” — not a feed dump. Change anytime in Settings.',
         });
         return;
       }
@@ -183,8 +183,8 @@ export function ActivityPushIntroDialog() {
             Stay in the loop
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
-            Turn on push alerts for friend requests, loves, replies, and DNA imports — even when Bar 4 Bar isn’t open.
-            Your in-app Activity inbox still works either way.
+            Turn on push for the work that matters: your verse still open, streak dying at midnight,
+            someone echoing your bar. Not a stream of feed posts. Activity inbox still works either way.
           </DialogDescription>
         </DialogHeader>
 

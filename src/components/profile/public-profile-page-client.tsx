@@ -11,6 +11,7 @@ import { getAchievement } from '@/lib/gamification/achievements';
 import type { AchievementDef } from '@/lib/gamification/achievements';
 import { normalizeArtistHomeConfig, type ArtistHomeConfig } from '@/lib/profile/modules';
 import { normalizeProfilePhotoMode } from '@/lib/gamification/types';
+import { parseStudioBadge } from '@/lib/studio-tier-chrome';
 import { useAuth } from '@/hooks/use-auth';
 
 export function PublicProfilePageClient({ slug }: { slug: string }) {
@@ -113,6 +114,7 @@ export function PublicProfilePageClient({ slug }: { slug: string }) {
                 }))
             : [],
           slug: liveSlug,
+          studioBadge: parseStudioBadge(data.studioBadge),
         });
         setConfig(normalizeArtistHomeConfig(data.artistHome));
         void trackShareCardEvent('share_card_opened', { slug: liveSlug });

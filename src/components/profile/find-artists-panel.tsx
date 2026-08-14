@@ -20,6 +20,7 @@ import {
 } from '@/lib/profile/social-client';
 import { REFERRAL_INK_REWARD } from '@/lib/referrals';
 import { cn } from '@/lib/utils';
+import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
 
 type ArtistHit = {
   userId: string;
@@ -27,6 +28,7 @@ type ArtistHit = {
   slug: string;
   rankId?: string;
   xp?: number;
+  studioBadge?: 'pro' | 'free';
 };
 
 type FindArtistsPanelProps = {
@@ -219,7 +221,10 @@ export function FindArtistsPanel({ viewerSlug, className }: FindArtistsPanelProp
                 <div className="min-w-0 flex-1">
                   <Link
                     href={`/profile/${artist.slug}`}
-                    className="block truncate text-sm font-bold text-white hover:text-emerald-300"
+                    className={cn(
+                      'block truncate text-sm font-bold hover:text-emerald-300',
+                      studioNameClass(parseStudioBadge(artist.studioBadge) || 'free')
+                    )}
                   >
                     {artist.displayName}
                   </Link>

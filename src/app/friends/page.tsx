@@ -28,6 +28,7 @@ import {
   type Friendship,
 } from '@/lib/profile/social-client';
 import { cn } from '@/lib/utils';
+import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
 import { profileHref } from '@/lib/profile/profile-slug';
 
 export default function FriendsPage() {
@@ -195,7 +196,10 @@ export default function FriendsPage() {
                       {initial}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="min-w-0 truncate text-sm font-bold text-white group-hover:text-primary">
+                  <span className={cn(
+                    'min-w-0 truncate text-sm font-bold group-hover:text-primary',
+                    studioNameClass(parseStudioBadge(friend.studioBadge) || 'free')
+                  )}>
                     {friend.name}
                     {!friend.isLivePublic ? (
                       <span className="ml-1.5 font-medium text-muted-foreground group-hover:text-muted-foreground">

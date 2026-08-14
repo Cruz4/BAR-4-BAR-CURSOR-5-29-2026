@@ -25,6 +25,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
       starMarkUseStar,
       starMarkSeed: starMarkUseStar ? starMarkSeed : null,
       slug: liveSlug,
+      studioBadge:
+        data.studioBadge === 'pro' || data.studioBadge === 'free' ? data.studioBadge : 'free',
     });
   } catch (err) {
     console.error('[profile/slug/avatar]', err);

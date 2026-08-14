@@ -77,6 +77,11 @@ import {
   PRO_GATED_INK_PACK_KEYS,
 } from '@/lib/studio-tiers';
 import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, isProUser } from '@/lib/subscription';
+import {
+  studioChromeFromUser,
+  studioCurrentPlanRingClass,
+  studioHeaderBadgeClass,
+} from '@/lib/studio-tier-chrome';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
 import { InkRefillCountdown } from '@/components/ink-refill-countdown';
 import { TierPriceSummary } from '@/components/tier-price-summary';
@@ -280,8 +285,8 @@ function UsagePageContent() {
             <h1 className="text-4xl font-headline font-bold text-primary tracking-tight">Studio Intelligence</h1>
             <Badge
               className={cn(
-                'uppercase justify-center text-center px-3 shrink-0',
-                isCloudSyncActive ? (isYearlyUser ? 'bg-accent' : 'bg-primary') : 'bg-muted text-muted-foreground'
+                'uppercase justify-center text-center px-3 shrink-0 border',
+                studioHeaderBadgeClass(studioChromeFromUser(user))
               )}
             >
               {paidPro ? (isYearlyUser ? 'Yearly Pro' : 'Monthly Pro') : 'Visitor'}
@@ -381,18 +386,18 @@ function UsagePageContent() {
             </div>
           )}
 
-          <div className={cn("border p-6 rounded-xl flex items-center justify-between gap-6 shadow-lg", isYearlyUser ? "bg-accent/5 border-accent/20" : "bg-primary/5 border-primary/20")}>
-              <div className="flex items-center gap-4">
-                  <div className={cn("p-3 rounded-full", isYearlyUser ? "bg-accent/10" : "bg-primary/10")}><TrendingDown className={cn("h-6 w-6", isYearlyUser ? "text-accent" : "text-primary")} /></div>
-                  <div>
-                      <p className="font-bold text-lg uppercase tracking-tight">Yearly Pro Ink Store Discount</p>
-                      <p className="text-xs text-muted-foreground font-code">
+          <div className={cn("border p-4 sm:p-6 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg overflow-hidden", isYearlyUser ? "bg-accent/5 border-accent/20" : "bg-primary/5 border-primary/20")}>
+              <div className="flex items-start gap-4 min-w-0">
+                  <div className={cn("p-3 rounded-full shrink-0", isYearlyUser ? "bg-accent/10" : "bg-primary/10")}><TrendingDown className={cn("h-6 w-6", isYearlyUser ? "text-accent" : "text-primary")} /></div>
+                  <div className="space-y-1 min-w-0">
+                      <p className="font-bold text-base sm:text-lg uppercase tracking-tight leading-snug">Yearly Pro Ink Store Discount</p>
+                      <p className="text-xs text-muted-foreground font-code leading-relaxed">
                         Yearly Pro members receive a permanent {INK_PACK_YEARLY_DISCOUNT_SHORT} at checkout
                         {isYearlyUser ? ` — ${getYearlyProInkPackCheckoutSummary()}` : '.'}
                       </p>
                   </div>
               </div>
-              {!isYearlyUser && <Button variant="outline" size="sm" onClick={() => setActiveTab('cloud')} className="shrink-0 font-bold text-[10px] uppercase h-10 px-6">Unlock Ink Pack Savings</Button>}
+              {!isYearlyUser && <Button variant="outline" size="sm" onClick={() => setActiveTab('cloud')} className="w-full sm:w-auto shrink-0 font-bold text-[10px] uppercase h-10 px-6">Unlock Ink Pack Savings</Button>}
           </div>
 
           <p className="text-xs text-muted-foreground font-code text-center max-w-2xl mx-auto leading-relaxed">
@@ -537,8 +542,11 @@ function UsagePageContent() {
               </Card>
             )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-                {getStudioTierPlans(isCloudSyncActive, user?.subscriptionTier).map((plan) => (
-                    <Card key={plan.name} className={cn("border-accent flex flex-col h-full relative transition-all duration-500 shadow-xl", plan.badge ? "overflow-visible" : "overflow-hidden", plan.isCurrent && "ring-4 ring-primary/20")}>
+                {getStudioTierPlans(isCloudSyncActive, user?.subscriptionTier).map((plan) => {
+                    const isProPlan = plan.name !== 'Visitor';
+                    const planChrome = isProPlan ? 'pro' as const : 'free' as const;
+                    return (
+                    <Card key={plan.name} className={cn("border-accent flex flex-col h-full relative transition-all duration-500 shadow-xl", plan.badge ? "overflow-visible" : "overflow-hidden", plan.isCurrent && studioCurrentPlanRingClass(planChrome))}>
                         {plan.badge && (
                           <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 flex max-w-[calc(100%-1.5rem)] justify-center">
                             <Badge className="whitespace-nowrap text-[8px] uppercase tracking-widest font-bold bg-accent px-4 py-1.5 shadow-lg">
@@ -546,15 +554,15 @@ function UsagePageContent() {
                             </Badge>
                           </div>
                         )}
-                        <div className={cn("p-6 flex flex-col flex-1 text-center border-b min-h-[400px] overflow-hidden rounded-t-lg", plan.badge && "pt-8", plan.name === 'Pro Yearly' ? "bg-accent/10" : plan.name === 'Visitor' ? "bg-muted/10" : "bg-primary/10")}>
+                        <div className={cn("p-6 flex flex-col flex-1 text-center border-b min-h-[400px] overflow-hidden rounded-t-lg", plan.badge && "pt-8", isProPlan ? "bg-accent/10" : "bg-primary/10")}>
                             <div className="space-y-3 shrink-0">
-                              <h3 className="text-2xl font-headline font-bold uppercase">{plan.name}</h3>
+                              <h3 className={cn("text-2xl font-headline font-bold uppercase", plan.isCurrent && (isProPlan ? "text-accent" : "text-[rgb(125,211,252)]"))}>{plan.name}</h3>
                               <div className="flex flex-col items-center">
-                                  <div><span className={cn("text-5xl font-bold text-white", plan.name === 'Pro Yearly' && "text-accent drop-shadow-[0_0_12px_rgba(244,63,94,0.5)]")}>{plan.price}</span><span className="text-muted-foreground font-code ml-1">{plan.period}</span></div>
+                                  <div><span className={cn("text-5xl font-bold text-white", isProPlan && "text-accent drop-shadow-[0_0_12px_rgba(244,63,94,0.5)]", !isProPlan && plan.isCurrent && "text-[rgb(125,211,252)]")}>{plan.price}</span><span className="text-muted-foreground font-code ml-1">{plan.period}</span></div>
                                   {plan.billedText && (
                                     <p className={cn(
                                       "text-[9px] font-bold uppercase tracking-widest mt-1",
-                                      plan.name === 'Pro Yearly' ? "text-accent/80" : "text-primary/60"
+                                      isProPlan ? "text-accent/80" : "text-primary/60"
                                     )}>
                                       {plan.billedText}
                                     </p>
@@ -605,7 +613,8 @@ function UsagePageContent() {
                           );
                         })}</ul></div>
                     </Card>
-                ))}
+                    );
+                })}
             </div>
         </TabsContent>
 

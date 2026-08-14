@@ -93,8 +93,8 @@ export function NotificationSettingsCard() {
           Notifications
         </CardTitle>
         <CardDescription className="text-sm leading-relaxed">
-          In-app Activity inbox is always on. Push alerts (installed home-screen app / browser) are
-          optional — turn on what you want.
+          In-app Activity inbox is always on. Push is for your craft — unfinished verse,
+          streak at midnight, someone echoing your bar — not a dump of feed posts.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -107,7 +107,7 @@ export function NotificationSettingsCard() {
                 <Label className="text-sm font-bold">Push notifications</Label>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
                   {pushSupported
-                    ? 'Badge on the app icon + system alerts when something new lands.'
+                    ? 'Badge on the app icon + alerts for your verse, streak, and echoes.'
                     : 'Add NEXT_PUBLIC_FIREBASE_VAPID_KEY to enable push. In-app inbox still works.'}
                 </p>
               </div>
@@ -120,6 +120,8 @@ export function NotificationSettingsCard() {
 
             {(
               [
+                ['craftReminders', 'Verse still open + streak at midnight'],
+                ['lockCasts', 'Someone echoed your bar'],
                 ['friendRequests', 'Friend requests'],
                 ['friendAccepted', 'Friend accepted'],
                 ['postLoves', 'Loves on your posts'],
