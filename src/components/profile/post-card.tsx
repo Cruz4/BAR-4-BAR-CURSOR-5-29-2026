@@ -416,7 +416,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
           className={cn(
             'flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors',
             liked
-              ? 'text-[var(--ph-accent,#7dd3fc)]'
+              ? 'text-accent'
               : 'text-[var(--ph-muted,rgba(255,255,255,0.55))] hover:text-[var(--ph-text,#fff)]'
           )}
         >
