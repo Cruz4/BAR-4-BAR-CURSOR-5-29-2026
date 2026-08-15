@@ -10,6 +10,7 @@ import { trackShareCardEvent } from '@/lib/gamification-client';
 import { getAchievement } from '@/lib/gamification/achievements';
 import type { AchievementDef } from '@/lib/gamification/achievements';
 import { normalizeArtistHomeConfig, type ArtistHomeConfig } from '@/lib/profile/modules';
+import { profileHref, sanitizeProfileSlugParam } from '@/lib/profile/profile-slug';
 import { normalizeProfilePhotoMode } from '@/lib/gamification/types';
 import { parseStudioBadge } from '@/lib/studio-tier-chrome';
 import { useAuth } from '@/hooks/use-auth';
@@ -31,19 +32,36 @@ export function PublicProfilePageClient({ slug }: { slug: string }) {
     setProfile(null);
     setConfig(null);
 
+    const { slug: cleanSlug, hash: swallowedHash } = sanitizeProfileSlugParam(slug);
+    if (!cleanSlug) {
+      setError(true);
+      setLoading(false);
+      return;
+    }
+    if (swallowedHash) {
+      const next = profileHref(cleanSlug, swallowedHash);
+      if (next) {
+        router.replace(next);
+        return;
+      }
+    }
+
     const load = async () => {
       try {
-        const res = await fetch(`/api/profile/${encodeURIComponent(slug)}`);
+        const res = await fetch(`/api/profile/${encodeURIComponent(cleanSlug)}`);
         if (!res.ok) {
           if (!cancelled) setError(true);
           return;
         }
         const data = await res.json();
         const liveSlug =
-          typeof data.slug === 'string' && data.slug.trim() ? data.slug.trim() : slug;
-        if (liveSlug !== slug) {
+          typeof data.slug === 'string' && data.slug.trim() ? data.slug.trim() : cleanSlug;
+        if (liveSlug !== cleanSlug) {
           redirected = true;
-          router.replace(`/profile/${liveSlug}`);
+          const hash =
+            swallowedHash ||
+            (typeof window !== 'undefined' ? window.location.hash.replace(/^#/, '') : '');
+          router.replace(profileHref(liveSlug, hash || undefined) || `/profile/${liveSlug}`);
           return;
         }
         if (cancelled) return;

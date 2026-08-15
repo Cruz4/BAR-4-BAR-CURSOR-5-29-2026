@@ -13,6 +13,7 @@ import {
   type ActivityPrefs,
   type ActivityType,
 } from '@/lib/activity/types';
+import { profileHref } from '@/lib/profile/profile-slug';
 
 export type EmitActivityInput = {
   type: ActivityType;
@@ -38,11 +39,15 @@ function chronoId(): string {
 function buildHref(input: EmitActivityInput, recipientSlug?: string): string | undefined {
   if (input.href) return input.href;
   if (input.lockId) return `/lock/${input.lockId}`;
-  if (input.postId && recipientSlug) return `/profile/${recipientSlug}#post-${input.postId}`;
+  if (input.postId && recipientSlug) {
+    return profileHref(recipientSlug, `post-${input.postId}`) || '/activity';
+  }
   if (input.postId) return `/activity`;
   if (input.shareId) return `/share/${input.shareId}`;
   if (input.type === 'friend_request') return '/activity?tab=requests';
-  if (input.type === 'friend_accepted' && input.actorSlug) return `/profile/${input.actorSlug}`;
+  if (input.type === 'friend_accepted' && input.actorSlug) {
+    return profileHref(input.actorSlug) || '/friends';
+  }
   if (input.type === 'friend_accepted') return '/friends';
   return '/activity';
 }

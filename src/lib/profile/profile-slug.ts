@@ -128,11 +128,34 @@ export function profileSlugLookupCandidates(raw: string): string[] {
   const lower = trimmed.toLowerCase();
   const underscored = normalizeProfileSlugInput(trimmed);
   const hyphenated = underscored.replace(/_/g, '-');
+  const stripped = looksLikeLegacyUidSlug(trimmed) ? stripLegacyUidSuffix(underscored) : '';
+  const strippedHyphen = stripped ? stripped.replace(/_/g, '-') : '';
   const out: string[] = [];
-  for (const c of [trimmed, lower, underscored, hyphenated]) {
+  for (const c of [trimmed, lower, underscored, hyphenated, stripped, strippedHyphen]) {
     if (c && !out.includes(c)) out.push(c);
   }
   return out;
+}
+
+/**
+ * Peel a Next.js `[slug]` param that accidentally swallowed `#post-…`
+ * (hash encoded into the path as `%23`).
+ */
+export function sanitizeProfileSlugParam(raw: string): { slug: string; hash?: string } {
+  let s = (raw || '').trim();
+  try {
+    s = decodeURIComponent(s);
+  } catch {
+    /* keep */
+  }
+  const hashIdx = s.indexOf('#');
+  if (hashIdx >= 0) {
+    const slug = s.slice(0, hashIdx).split('?')[0];
+    const hash = s.slice(hashIdx + 1).trim();
+    return hash ? { slug, hash } : { slug };
+  }
+  const q = s.indexOf('?');
+  return { slug: q >= 0 ? s.slice(0, q) : s };
 }
 
 /** Artist Home path helper — prefer underscore vanity in outbound links. */

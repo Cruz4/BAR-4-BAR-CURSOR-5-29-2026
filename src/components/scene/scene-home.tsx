@@ -36,6 +36,7 @@ import {
   createPost,
   fetchBlockedUsers,
   fetchFriendships,
+  fetchPostById,
   fetchPostsByOwners,
   friendProfilesOf,
   removeFriendship,
@@ -538,6 +539,54 @@ export function SceneHome() {
     safeDiscoverPage * DISCOVER_PAGE_SIZE,
     safeDiscoverPage * DISCOVER_PAGE_SIZE + DISCOVER_PAGE_SIZE
   );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!window.location.hash.startsWith('#post-')) return;
+    setShowMinePersist(true);
+    setBlockExpandedPersist(true);
+  }, [setShowMinePersist, setBlockExpandedPersist]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash;
+    if (!hash.startsWith('#post-')) return;
+    const postId = hash.slice('#post-'.length);
+    if (!postId || posts.some((p) => p.id === postId)) return;
+    let cancelled = false;
+    void fetchPostById(postId).then((one) => {
+      if (cancelled || !one) return;
+      setPosts((prev) => (prev.some((p) => p.id === postId) ? prev : [one, ...prev]));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [posts]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash;
+    if (!hash.startsWith('#post-')) return;
+    const postId = hash.slice('#post-'.length);
+    if (!postId) return;
+    const idx = blockPosts.findIndex((p) => p.id === postId);
+    if (idx >= 0) {
+      const page = Math.floor(idx / BLOCK_PAGE_SIZE);
+      if (page !== safeBlockPage) {
+        setBlockPage(page);
+        return;
+      }
+    }
+    const id = hash.slice(1);
+    const tryScroll = () =>
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const t1 = window.setTimeout(tryScroll, 80);
+    const t2 = window.setTimeout(tryScroll, 500);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [blockPosts, safeBlockPage]);
 
   useEffect(() => {
     if (blockPage !== safeBlockPage) setBlockPage(safeBlockPage);

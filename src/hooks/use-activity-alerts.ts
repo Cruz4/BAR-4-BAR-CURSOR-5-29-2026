@@ -26,7 +26,8 @@ export function refreshActivityAlerts() {
 
 /**
  * Unread activity badge — replaces the old localStorage-based social alerts.
- * Still folds in pending friend requests if summary is briefly stale.
+ * Badge follows unread activity only so opening the bell (which marks seen
+ * items read) clears the count. Pending friend requests stay on /activity.
  */
 export function useActivityAlerts() {
   const { user } = useAuth();
@@ -48,7 +49,7 @@ export function useActivityAlerts() {
       ).length;
       // Prefer activity unread; boost with live pending requests if higher
       // (covers the window before emit lands / before inbox open marks read).
-      const total = Math.max(unreadReceived, friendRequests);
+      const total = unreadReceived;
       setSummary({ total, unreadReceived, friendRequests });
       syncAppBadge(total);
     } catch {

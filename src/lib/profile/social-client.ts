@@ -259,6 +259,19 @@ export async function fetchPostsByOwner(ownerId: string, max = 20): Promise<Prof
   }
 }
 
+export async function fetchPostById(postId: string): Promise<ProfilePost | null> {
+  const id = postId.trim();
+  if (!id) return null;
+  try {
+    const snap = await getDoc(doc(db, 'posts', id));
+    if (!snap.exists()) return null;
+    const [post] = await enrichPostsWithLiveSlugs([postFromDoc(snap.id, snap.data())]);
+    return post || null;
+  } catch {
+    return null;
+  }
+}
+
 /** Reverbs only — same owner query, filtered client-side (no extra index). */
 export async function fetchReverbsByOwner(ownerId: string, max = 40): Promise<ProfilePost[]> {
   const posts = await fetchPostsByOwner(ownerId, Math.max(max, 60));
@@ -1031,9 +1044,18 @@ export async function fetchLivePublicProfileByUserId(
     const best = docs[0]!;
     const dn = best.data()?.displayName;
     let slug = best.id;
-    // Client can't migrate Firestore docs; still prefer underscore form in chips.
+    // Prefer underscore vanity only when that publicProfiles doc actually exists.
     if (needsVanitySlugUpgrade(slug, userId)) {
-      slug = stripLegacyUidSuffix(normalizeProfileSlugInput(slug));
+      const cleaned = stripLegacyUidSuffix(normalizeProfileSlugInput(slug));
+      if (cleaned && cleaned !== slug) {
+        const hyphen = cleaned.replace(/_/g, '-');
+        const [cleanSnap, hyphenSnap] = await Promise.all([
+          getDoc(doc(db, 'publicProfiles', cleaned)),
+          hyphen !== cleaned ? getDoc(doc(db, 'publicProfiles', hyphen)) : Promise.resolve(null),
+        ]);
+        if (cleanSnap.exists()) slug = cleaned;
+        else if (hyphenSnap && hyphenSnap.exists()) slug = hyphen;
+      }
     }
     const studioBadge =
       (await fetchLiveStudioBadgeFromApi(slug)) || parseStudioBadge(best.data()?.studioBadge);

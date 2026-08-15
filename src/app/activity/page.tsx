@@ -25,7 +25,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StudioLoader } from '@/components/studio-loader';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { useGamification } from '@/context/gamification-context';
 import { cn } from '@/lib/utils';
 import {
   fetchActivityFeed,
@@ -35,6 +34,7 @@ import {
   markAllActivityEventsRead,
   type FriendshipChangedDetail,
 } from '@/lib/activity/client';
+import { navigateActivityHref, resolveActivityOpenHref } from '@/lib/activity/href';
 import { activityShowsActor, activityVerb, type ActivityEvent, type ActivityType } from '@/lib/activity/types';
 import {
   acceptFriendRequest,
@@ -44,6 +44,7 @@ import {
   fetchPublicArtistMetas,
 } from '@/lib/profile/social-client';
 import { looksLikeNeomaiyaSol } from '@/lib/profile/neomaiya-sol';
+import { profileHref } from '@/lib/profile/profile-slug';
 import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
 
 type TabId = 'inbox' | 'requests' | 'sent';
@@ -110,57 +111,41 @@ function timeAgo(iso: string): string {
   }
 }
 
-function activityOpenHref(event: ActivityEvent, viewerSlug?: string): string {
-  if (event.lockId) return `/lock/${event.lockId}`;
-  if (event.href?.startsWith('/lock/')) return event.href;
-  if (event.shareId) return `/share/${event.shareId}`;
-  if (event.postId) {
-    if (event.href?.includes('#post-')) return event.href;
-    if (event.direction === 'received' && viewerSlug) {
-      return `/profile/${viewerSlug}#post-${event.postId}`;
-    }
-    if (event.href && event.href !== '/activity') return event.href;
-  }
-  if (event.href) return event.href;
-  if (event.type === 'friend_accepted' && event.actorSlug) return `/profile/${event.actorSlug}`;
-  if (event.type === 'friend_request') return '/activity?tab=requests';
-  return '/activity';
-}
-
 function ActivityRow({
   event,
   onRespondRequest,
+  onOpen,
   busyId,
   requestResolved,
-  viewerSlug,
 }: {
   event: ActivityEvent;
   onRespondRequest?: (event: ActivityEvent, accept: boolean) => void;
+  onOpen?: (event: ActivityEvent) => void;
   busyId?: string | null;
   /** Friend request already accepted/declined — hide Accept/Decline. */
   requestResolved?: boolean;
-  viewerSlug?: string;
 }) {
   const unread = event.direction === 'received' && !event.readAt;
   const primaryName =
     event.direction === 'received' ? event.actorName : event.targetName || event.actorName;
   const primarySlug =
     event.direction === 'received' ? event.actorSlug : event.targetSlug || undefined;
-  const href = activityOpenHref(event, viewerSlug);
   const showRequestActions =
     event.direction === 'received' &&
     event.type === 'friend_request' &&
     onRespondRequest &&
     !requestResolved;
 
-  const nameLink = (label: string, slug?: string) =>
-    slug ? (
-      <Link href={`/profile/${slug}`} className="font-bold text-foreground hover:underline">
+  const nameLink = (label: string, slug?: string) => {
+    const profileUrl = profileHref(slug);
+    return profileUrl ? (
+      <Link href={profileUrl} className="font-bold text-foreground hover:underline">
         {label}
       </Link>
     ) : (
       <span className="font-bold text-foreground">{label}</span>
     );
+  };
 
   return (
     <div
@@ -200,12 +185,13 @@ function ActivityRow({
             {timeAgo(event.createdAt)}
           </span>
           {event.type !== 'friend_request' || event.direction === 'given' ? (
-            <Link
-              href={href}
+            <button
+              type="button"
+              onClick={() => onOpen?.(event)}
               className="text-[10px] font-bold uppercase tracking-wider text-primary hover:underline"
             >
               Open
-            </Link>
+            </button>
           ) : null}
         </div>
         {showRequestActions ? (
@@ -257,11 +243,9 @@ function EmptyState({
 
 function ActivityPageInner() {
   const { user, authReady } = useAuth();
-  const { summary } = useGamification();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const viewerSlug = summary?.profileSlug || undefined;
   const initialTab = (searchParams.get('tab') as TabId) || 'inbox';
   const [tab, setTab] = useState<TabId>(
     initialTab === 'requests' || initialTab === 'sent' ? initialTab : 'inbox'
@@ -462,6 +446,11 @@ function ActivityPageInner() {
     toast({ title: 'All caught up' });
   };
 
+  const handleOpen = async (event: ActivityEvent) => {
+    const href = await resolveActivityOpenHref(event, { viewerUserId: user?.id });
+    navigateActivityHref((h) => router.push(h), href);
+  };
+
   const handleRespond = async (event: ActivityEvent, accept: boolean) => {
     if (!user) return;
     setBusyId(event.id);
@@ -570,9 +559,9 @@ function ActivityPageInner() {
                         key={event.id}
                         event={event}
                         onRespondRequest={handleRespond}
+                        onOpen={handleOpen}
                         busyId={busyId}
                         requestResolved={!isRequestActionable(event)}
-                        viewerSlug={viewerSlug}
                       />
                     ))
                   )}
@@ -591,9 +580,9 @@ function ActivityPageInner() {
                         key={event.id}
                         event={event}
                         onRespondRequest={handleRespond}
+                        onOpen={handleOpen}
                         busyId={busyId}
                         requestResolved={!isRequestActionable(event)}
-                        viewerSlug={viewerSlug}
                       />
                     ))
                   )}
@@ -608,7 +597,7 @@ function ActivityPageInner() {
                     />
                   ) : (
                     sent.map((event) => (
-                      <ActivityRow key={event.id} event={event} viewerSlug={viewerSlug} />
+                      <ActivityRow key={event.id} event={event} onOpen={handleOpen} />
                     ))
                   )}
                 </TabsContent>

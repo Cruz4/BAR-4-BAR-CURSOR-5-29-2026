@@ -32,11 +32,11 @@ import {
   markAllActivityEventsRead,
   type FriendshipChangedDetail,
 } from '@/lib/activity/client';
+import { navigateActivityHref, resolveActivityOpenHref } from '@/lib/activity/href';
 import { activityShowsActor, activityVerb, type ActivityEvent, type ActivityType } from '@/lib/activity/types';
 import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
 import { useAuth } from '@/hooks/use-auth';
 import { StudioLoader } from '@/components/studio-loader';
-import { useGamification } from '@/context/gamification-context';
 import { fetchFriendships } from '@/lib/profile/social-client';
 
 function TypeIcon({ type }: { type: ActivityType }) {
@@ -82,13 +82,12 @@ export function ActivityNavDropdown({
 }) {
   const router = useRouter();
   const { user } = useAuth();
-  const { summary } = useGamification();
-  const viewerSlug = summary?.profileSlug;
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<ActivityEvent[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [markingAll, setMarkingAll] = useState(false);
+  const seenTimerRef = React.useRef<number | null>(null);
 
   const loadUnread = useCallback(async () => {
     if (!user?.id) {
@@ -131,6 +130,14 @@ export function ActivityNavDropdown({
         );
       } else {
         setItems(unread);
+      }
+      const ids = unread.map((e) => e.id);
+      if (ids.length) {
+        if (seenTimerRef.current) window.clearTimeout(seenTimerRef.current);
+        seenTimerRef.current = window.setTimeout(() => {
+          seenTimerRef.current = null;
+          void markActivityEventsRead(ids).then(() => refreshActivityAlerts());
+        }, 400);
       }
     } catch {
       setItems([]);
@@ -200,24 +207,8 @@ export function ActivityNavDropdown({
     } catch {
       /* still navigate */
     }
-    let href = event.href || '/activity';
-    if (event.shareId) href = `/share/${event.shareId}`;
-    else if (event.postId) {
-      if (event.href?.includes('#post-')) href = event.href;
-      else if (viewerSlug) href = `/profile/${viewerSlug}#post-${event.postId}`;
-    } else if (event.type === 'friend_accepted' && event.actorId) {
-      try {
-        const { fetchLivePublicProfileByUserId } = await import('@/lib/profile/social-client');
-        const live = await fetchLivePublicProfileByUserId(event.actorId);
-        if (live?.slug) href = `/profile/${live.slug}`;
-        else href = '/friends';
-      } catch {
-        href = event.actorSlug ? `/profile/${event.actorSlug}` : '/friends';
-      }
-    } else if (event.type === 'friend_accepted' && event.actorSlug) {
-      href = `/profile/${event.actorSlug}`;
-    }
-    router.push(href);
+    const href = await resolveActivityOpenHref(event, { viewerUserId: user?.id });
+    navigateActivityHref((h) => router.push(h), href);
   };
 
   return (

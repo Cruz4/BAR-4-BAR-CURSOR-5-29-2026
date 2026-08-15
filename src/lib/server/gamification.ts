@@ -1177,7 +1177,11 @@ export async function getPublicProfile(slug: string) {
     /* keep resolved slug */
   }
 
-  const snap = await db.doc(`publicProfiles/${liveSlug}`).get();
+  let snap = await db.doc(`publicProfiles/${liveSlug}`).get();
+  if (!snap.exists && liveSlug !== resolved.slug) {
+    snap = await db.doc(`publicProfiles/${resolved.slug}`).get();
+    if (snap.exists) liveSlug = resolved.slug;
+  }
   if (!snap.exists) return null;
   const data = snap.data()!;
   const userId = String(data.userId || resolved.userId || '');
@@ -1192,8 +1196,13 @@ export async function getPublicProfile(slug: string) {
   ]);
 
   const summary = mergeSummary((summarySnap.data() as Partial<GamificationSummary>) || {});
-  if (typeof summary.profileSlug === 'string' && summary.profileSlug.trim()) {
-    liveSlug = summary.profileSlug.trim();
+  const claimedSlug =
+    typeof summary.profileSlug === 'string' && summary.profileSlug.trim()
+      ? summary.profileSlug.trim()
+      : '';
+  if (claimedSlug && claimedSlug !== liveSlug) {
+    const claimedSnap = await db.doc(`publicProfiles/${claimedSlug}`).get();
+    if (claimedSnap.exists) liveSlug = claimedSlug;
   }
 
   const profilePhotoMode = normalizeProfilePhotoMode(summary.profilePhotoMode);
