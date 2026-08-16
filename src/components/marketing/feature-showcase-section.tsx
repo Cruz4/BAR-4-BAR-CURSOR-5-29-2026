@@ -10,6 +10,7 @@ import {
 import { MARKETING_BAND_THEMES, type MarketingBandTheme } from '@/lib/marketing-band-themes';
 import { MarketingMediaFrame } from '@/components/marketing/marketing-media-frame';
 import { StrainPipelineStrip } from '@/components/marketing/strain-pipeline-strip';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 
 const FEATURE_TITLE_CLASS =
   'relative z-[1] font-headline text-2xl md:text-[2.35rem] font-bold uppercase leading-[1.08] tracking-tight overflow-visible';
@@ -254,10 +255,14 @@ function BentoGroup({ bands, startIndex }: { bands: MarketingFeatureBand[]; star
 }
 
 export function FeatureShowcaseSection() {
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   const bentoBands = MARKETING_FEATURE_BANDS.filter((b) => b.layout === 'bento');
   const artistHomeBand = MARKETING_FEATURE_BANDS.find((b) => b.id === 'artist-home');
+  const firstDropsBand = firstDropsOn
+    ? MARKETING_FEATURE_BANDS.find((b) => b.id === 'first-drops')
+    : undefined;
   const rowBands = MARKETING_FEATURE_BANDS.filter(
-    (b) => b.layout !== 'bento' && b.id !== 'artist-home'
+    (b) => b.layout !== 'bento' && b.id !== 'artist-home' && b.id !== 'first-drops'
   );
 
   return (
@@ -302,14 +307,40 @@ export function FeatureShowcaseSection() {
                 </span>
               </h2>
               <p className="font-code text-fuchsia-100/75 text-sm md:text-base leading-relaxed max-w-2xl mx-auto">
-                A public page for every artist — living skin, Album Rooms, embeds, friends on The Block, and live DNA
-                Drops. Private until you flip it on.
+                Completely free. A public page for every artist — living skin, Album Rooms, embeds, friends on The
+                Block, and live DNA Drops. Private until you flip it on. Pro is for studio tools, not the page.
               </p>
             </div>
             <FeatureRow
               band={artistHomeBand}
               index={MARKETING_FEATURE_BANDS.indexOf(artistHomeBand)}
               layout={artistHomeBand.layout}
+            />
+          </div>
+        ) : null}
+
+        {firstDropsBand ? (
+          <div className="space-y-8">
+            <div className="text-center max-w-3xl mx-auto space-y-4">
+              <div className="inline-flex items-center gap-2 bg-black/40 backdrop-blur-md border border-fuchsia-500/35 px-5 py-1.5 rounded-full">
+                <span className="text-[10px] font-bold uppercase tracking-[0.35em] text-fuchsia-300">
+                  First Drops
+                </span>
+              </div>
+              <h2 className="font-headline text-3xl md:text-[2.75rem] font-bold uppercase tracking-tight leading-[0.92]">
+                <span className="text-fuchsia-100">Sell the song.</span>
+                <span className="block mt-1 text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-300 via-amber-300 to-fuchsia-200">
+                  Stream it here.
+                </span>
+              </h2>
+              <p className="font-code text-fuchsia-100/75 text-sm md:text-base leading-relaxed max-w-2xl mx-auto">
+                {firstDropsBand.description}
+              </p>
+            </div>
+            <FeatureRow
+              band={firstDropsBand}
+              index={MARKETING_FEATURE_BANDS.indexOf(firstDropsBand)}
+              layout={firstDropsBand.layout}
             />
           </div>
         ) : null}

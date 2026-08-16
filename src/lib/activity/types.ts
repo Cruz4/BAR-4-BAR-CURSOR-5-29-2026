@@ -46,6 +46,7 @@ export type ActivityEvent = {
   targetName?: string;
   targetSlug?: string;
   postId?: string;
+  commentId?: string;
   shareId?: string;
   lockId?: string;
   preview?: string;

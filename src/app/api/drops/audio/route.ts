@@ -1,11 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAuth, getDb } from '@/lib/firebase/server';
-import {
-  audioForPlay,
-  loadShare,
-  signedReadUrl,
-  userCanStreamFull,
-} from '@/lib/server/drop-entitlements';
+import { audioForPlay, loadShare, userCanStreamFull } from '@/lib/server/drop-entitlements';
+import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
+import { dropAudioFileUrl, mintDropAudioTicket } from '@/lib/server/drop-audio-stream';
 
 export const runtime = 'nodejs';
 
@@ -22,6 +19,9 @@ async function optionalUid(req: Request): Promise<string | null> {
 }
 
 export async function GET(req: Request) {
+  if (!(await isFirstDropsEnabled())) {
+    return NextResponse.json({ error: 'First Drops is off' }, { status: 404 });
+  }
   try {
     const { searchParams } = new URL(req.url);
     const shareId = (searchParams.get('shareId') || '').trim();
@@ -42,17 +42,21 @@ export async function GET(req: Request) {
     const path = full ? audio.storagePath : audio.previewPath || audio.storagePath;
     if (!path) return NextResponse.json({ error: 'Audio is not ready.' }, { status: 404 });
 
-    const url = await signedReadUrl(path, full ? 20 : 8);
+    const contentType = full ? audio.contentType || 'audio/mpeg' : 'audio/wav';
+    const ticket = mintDropAudioTicket({ storagePath: path, contentType, full });
     return NextResponse.json({
-      url,
+      url: dropAudioFileUrl(ticket),
       full,
       preview: !full,
       durationSec: audio.durationSec ?? null,
-      contentType: full ? audio.contentType : 'audio/wav',
+      contentType,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Stream failed';
+    const raw = err instanceof Error ? err.message : 'Stream failed';
     console.error('[drops/audio]', err);
+    const message = /iam\.|signBlob|Permission denied/i.test(raw)
+      ? 'Could not open this stream.'
+      : raw;
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

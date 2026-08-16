@@ -13,16 +13,17 @@ import {
 import { CassetteTape, ChevronRight, Lock } from 'lucide-react';
 import { dropPriceSummary, normalizeDropAudio, normalizeDropPrice } from '@/lib/drop-commerce';
 import { cn } from '@/lib/utils';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 
 type DnaDropAlbumHubProps = {
   album: DnaDropAlbumPayload;
   ownerName: string;
 };
 
-function trackSubtitle(track: DnaDropTrackPayload): string {
+function trackSubtitle(track: DnaDropTrackPayload, firstDropsOn: boolean): string {
   const bits: string[] = [];
-  if (normalizeDropAudio(track.dropAudio)) bits.push('Audio');
-  const price = dropPriceSummary(normalizeDropPrice(track.dropPrice));
+  if (firstDropsOn && normalizeDropAudio(track.dropAudio)) bits.push('Audio');
+  const price = firstDropsOn ? dropPriceSummary(normalizeDropPrice(track.dropPrice)) : '';
   if (price) bits.push(price);
   if (track.vibe?.enabled !== false && track.vibe?.genre) bits.push(track.vibe.genre);
   if (track.vibe?.enabled !== false && track.vibe?.tempoBPM) bits.push(`${track.vibe.tempoBPM} BPM`);
@@ -32,6 +33,7 @@ function trackSubtitle(track: DnaDropTrackPayload): string {
 }
 
 export function DnaDropAlbumHub({ album, ownerName }: DnaDropAlbumHubProps) {
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   const tracks = album.tracks ?? [];
   const liveCount = tracks.filter((t) => hasActiveDnaDrop(t.shareId)).length;
 
@@ -94,7 +96,7 @@ export function DnaDropAlbumHub({ album, ownerName }: DnaDropAlbumHubProps) {
                   </div>
                   <div className="p-3 sm:p-4 flex items-center justify-between gap-2">
                     <div className="min-w-0 space-y-1">
-                      <p className="text-[10px] text-muted-foreground truncate">{trackSubtitle(track)}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{trackSubtitle(track, firstDropsOn)}</p>
                       <p className="text-[9px] uppercase tracking-widest text-muted-foreground/70 flex items-center gap-1.5">
                         {live ? (
                           <>

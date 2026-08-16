@@ -1,5 +1,6 @@
 import { profileHref } from '@/lib/profile/profile-slug';
 import type { ActivityEvent } from '@/lib/activity/types';
+import { activityPostHash } from '@/lib/activity/post-deep-link';
 
 /**
  * Rewrite a stored /profile/{slug}[#hash] path through live vanity rules.
@@ -39,8 +40,8 @@ export function activityOpenLinkHref(href: string): string | { pathname: string;
   return { pathname, hash };
 }
 
-function scenePostHref(postId: string): string {
-  return `/#post-${postId}`;
+function scenePostHref(postId: string, hash: string): string {
+  return `/#${hash || activityPostHash(postId)}`;
 }
 
 async function isLivePublicProfileSlug(slug: string): Promise<boolean> {
@@ -54,13 +55,20 @@ async function isLivePublicProfileSlug(slug: string): Promise<boolean> {
   }
 }
 
-async function livePostHref(slug: string | undefined, postId: string): Promise<string | undefined> {
+async function livePostHref(slug: string | undefined, hash: string): Promise<string | undefined> {
   if (!slug) return undefined;
-  const href = profileHref(slug, `post-${postId}`);
+  const href = profileHref(slug, hash);
   if (!href) return undefined;
   const liveSlug = href.match(/^\/profile\/([^/#]+)/)?.[1];
   if (!liveSlug || !(await isLivePublicProfileSlug(liveSlug))) return undefined;
   return href;
+}
+
+function postHashForEvent(event: ActivityEvent): string {
+  return activityPostHash(event.postId || '', {
+    commentId: event.commentId,
+    comments: event.type === 'post_reply',
+  });
 }
 
 export function activityOpenHref(event: ActivityEvent, viewerSlug?: string): string {
@@ -69,19 +77,19 @@ export function activityOpenHref(event: ActivityEvent, viewerSlug?: string): str
   if (event.shareId) return `/share/${event.shareId}`;
 
   if (event.postId) {
-    const hash = `post-${event.postId}`;
+    const hash = postHashForEvent(event);
     if (event.direction === 'received') {
       return (
         profileHref(viewerSlug, hash) ||
         rewriteActivityProfileHref(event.href || '') ||
-        scenePostHref(event.postId)
+        scenePostHref(event.postId, hash)
       );
     }
     return (
       profileHref(event.targetSlug, hash) ||
       rewriteActivityProfileHref(event.href || '') ||
       profileHref(viewerSlug, hash) ||
-      scenePostHref(event.postId)
+      scenePostHref(event.postId, hash)
     );
   }
 
@@ -108,24 +116,28 @@ export async function resolveActivityOpenHref(
   if (event.shareId) return `/share/${event.shareId}`;
 
   if (event.postId) {
+    const hash = postHashForEvent(event);
     const { fetchLivePublicProfileByUserId } = await import('@/lib/profile/social-client');
     const ownerUserId =
       event.direction === 'received' ? opts?.viewerUserId : event.targetUserId;
     if (ownerUserId) {
       const live = await fetchLivePublicProfileByUserId(ownerUserId);
-      const href = await livePostHref(live?.slug, event.postId);
+      const href = await livePostHref(live?.slug, hash);
       if (href) return href;
     }
     const baked =
       event.direction === 'received' ? opts?.viewerSlug : event.targetSlug || opts?.viewerSlug;
-    const fromBaked = await livePostHref(baked, event.postId);
+    const fromBaked = await livePostHref(baked, hash);
     if (fromBaked) return fromBaked;
     const rewritten = rewriteActivityProfileHref(event.href || '');
     if (rewritten) {
       const slug = rewritten.match(/^\/profile\/([^/#]+)/)?.[1];
-      if (slug && (await isLivePublicProfileSlug(slug))) return rewritten;
+      if (slug && (await isLivePublicProfileSlug(slug))) {
+        const withHash = profileHref(slug, hash);
+        return withHash || rewritten;
+      }
     }
-    return scenePostHref(event.postId);
+    return scenePostHref(event.postId, hash);
   }
 
   if (event.type === 'friend_accepted' && event.actorId) {
@@ -147,9 +159,26 @@ export async function resolveActivityOpenHref(
   return activityOpenHref(event, opts?.viewerSlug);
 }
 
-/** Hash links to Scene (`/#post-…`) need a full assign so the hash survives. */
+/** Hash links need a full assign so `#post-…` survives Next.js routing. */
 export function navigateActivityHref(push: (href: string) => void, href: string) {
-  if (href.startsWith('/#') && typeof window !== 'undefined') {
+  if (typeof window === 'undefined') {
+    push(href);
+    return;
+  }
+  if (href.includes('#')) {
+    try {
+      const next = new URL(href, window.location.origin);
+      if (next.pathname === window.location.pathname) {
+        if (window.location.hash === next.hash) {
+          window.dispatchEvent(new HashChangeEvent('hashchange'));
+        } else {
+          window.location.hash = next.hash;
+        }
+        return;
+      }
+    } catch {
+      /* fall through */
+    }
     window.location.assign(href);
     return;
   }

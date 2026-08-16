@@ -33,6 +33,7 @@ export async function POST(req: Request) {
       ...(typeof body.recipientId === 'string' ? { recipientId: body.recipientId } : {}),
       ...(typeof body.recipientName === 'string' ? { recipientName: body.recipientName } : {}),
       ...(typeof body.postId === 'string' ? { postId: body.postId } : {}),
+      ...(typeof body.commentId === 'string' ? { commentId: body.commentId } : {}),
       ...(typeof body.shareId === 'string' ? { shareId: body.shareId } : {}),
       ...(typeof body.preview === 'string' ? { preview: body.preview } : {}),
       ...(typeof body.href === 'string' ? { href: body.href } : {}),

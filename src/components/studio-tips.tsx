@@ -5,12 +5,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { X, Play, Target, BrainCircuit, Shield, Wand2, Palette, Sparkles, Zap, FolderOpen, ClipboardPaste, ArrowRight, ListRestart, Fingerprint, MonitorPlay, RefreshCw, Link2, FilePenLine, GitBranch, Download, Mic, Settings, Rocket, HelpCircle, MousePointer2, Dna, Clock, Trophy, Share2, Gift, Globe, Lightbulb, Layers, FlaskConical, ScanLine, Undo2, Crown, EyeOff, Image, CalendarRange, Upload, Medal, BadgeCheck, Lock, Flame, Hash, Camera, Pencil, ToggleRight, Mail, PanelLeft, Sparkle, Bell, Radio } from 'lucide-react';
+import { X, Play, Target, BrainCircuit, Shield, Wand2, Palette, Sparkles, Zap, FolderOpen, ClipboardPaste, ArrowRight, ListRestart, Fingerprint, MonitorPlay, RefreshCw, Link2, FilePenLine, GitBranch, Download, Mic, Settings, Rocket, HelpCircle, MousePointer2, Dna, Clock, Trophy, Share2, Gift, Globe, Lightbulb, Layers, FlaskConical, ScanLine, Undo2, Crown, EyeOff, Image, CalendarRange, Upload, Medal, BadgeCheck, Lock, Flame, Hash, Camera, Pencil, ToggleRight, Mail, PanelLeft, Sparkle, Bell, Radio, Music, Library } from 'lucide-react';
 import { PRO_FEATURE_PREVIEW_DAYS } from '@/lib/subscription';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
+import { dropPlatformFeeLabel } from '@/lib/drop-commerce';
 import { AI_COSTS } from '@/lib/costs';
 import { STUDIO_DRAFT_INK_TIP, COMPETITOR_ANCHOR_COPY } from '@/lib/studio-tiers';
 import {
@@ -32,6 +34,8 @@ type StudioTip = {
   color: string;
   /** Defaults to Studio Insight; use did-you-know for lighter trivia-style cards. */
   kind?: 'insight' | 'did-you-know';
+  /** Hide when that live admin flag is off. */
+  feature?: 'first-drops';
 };
 
 const STUDIO_TIPS: StudioTip[] = [
@@ -103,11 +107,21 @@ const STUDIO_TIPS: StudioTip[] = [
   { id: 64, icon: Bell, title: "ACTIVITY INBOX", text: "Activity is your work ping: “your verse is still open,” “streak dies at midnight,” “someone echoed your bar.” Friend requests and DNA imports still land here — not a dump of feed posts. Optional push under Settings → Notifications.", color: "text-emerald-400" },
   { id: 65, icon: Radio, title: "HOUSE BAR OF THE DAY", text: "When Studio Ops pins it, The Scene shows one shared unfinished bar for everyone to answer. The line can change daily from Admin → Config.", color: "text-fuchsia-400" },
   { id: 66, icon: CalendarRange, title: "WEEKLY PUBLIC CHALLENGE", text: "A Scene-wide weekly cypher (hand-written bars, Monday reset) can be pinned, rewritten, or turned off from Admin. Your count shows on the pin.", color: "text-amber-400" },
+  { id: 67, icon: Music, title: "FIRST DROP", text: "DNA Drop is the lyric snapshot. First Drop is the record — upload the song in that same dialog, set a price or pay-what-you-want, then Update snapshot. Fans preview 30 seconds on the public page, then buy once to stream in Bar 4 Bar.", color: "text-fuchsia-400", feature: 'first-drops' },
+  { id: 68, kind: 'did-you-know', icon: Music, title: "WE KEEP " + dropPlatformFeeLabel().toUpperCase(), text: `Did you know? First Drop sales are buy-once in-app streams — not Spotify. Bar 4 Bar keeps ${dropPlatformFeeLabel()}. The rest is yours. Ink is never used to buy music.`, color: "text-amber-300", feature: 'first-drops' },
+  { id: 69, icon: Library, title: "DROP LIBRARY", text: "Drops you unlock live in Library on The Scene dock. Open a First Drop anytime and stream it on its share page — same account, no re-buy.", color: "text-fuchsia-400", feature: 'first-drops' },
+  { id: 70, kind: 'did-you-know', icon: Globe, title: "ARTIST HOME IS FREE", text: "Did you know? Artist Home is completely free — claim it, skin it, go live. No Pro required for the page. Pro is for studio tools (custom DNA vault, Performance, DNA Drop links), not the public profile.", color: "text-fuchsia-300" },
+  { id: 71, kind: 'did-you-know', icon: Bell, title: "ACTIVITY OPENS THE POST", text: "Did you know? Tap Open on an Activity love or reply and it jumps to that wall post. If it was a comment, the thread opens on that reply — no hunting the wall.", color: "text-emerald-400" },
 ];
 
 export function StudioTips() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
+  const tipPool = React.useMemo(
+    () => STUDIO_TIPS.filter((t) => t.feature !== 'first-drops' || firstDropsOn),
+    [firstDropsOn]
+  );
   const [currentTipIdx, setCurrentTipIdx] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -135,11 +149,11 @@ export function StudioTips() {
   );
 
   const getRandomIdx = useCallback((excludeIdx: number) => {
-    if (STUDIO_TIPS.length <= 1) return 0;
+    if (tipPool.length <= 1) return 0;
     let newIdx;
-    do { newIdx = Math.floor(Math.random() * STUDIO_TIPS.length); } while (newIdx === excludeIdx);
+    do { newIdx = Math.floor(Math.random() * tipPool.length); } while (newIdx === excludeIdx && tipPool.length > 1);
     return newIdx;
-  }, []);
+  }, [tipPool.length]);
 
   useEffect(() => {
     setIsVisible(false);
@@ -217,7 +231,8 @@ export function StudioTips() {
   }, [progress, isVisible, dismissTip]);
 
   if (!showTipsSetting || !isVisible) return null;
-  const currentTip = STUDIO_TIPS[currentTipIdx];
+  const currentTip = tipPool[currentTipIdx] ?? tipPool[0];
+  if (!currentTip) return null;
 
   return (
     <AnimatePresence>

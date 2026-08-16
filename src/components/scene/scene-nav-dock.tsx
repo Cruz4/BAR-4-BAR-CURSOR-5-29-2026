@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 import { useGamification } from '@/context/gamification-context';
 import { useSocialAlerts } from '@/hooks/use-social-alerts';
 import { useLockFeature } from '@/hooks/use-lock-feature';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { getLastWorkedTrackPath } from '@/lib/studio-tips-session';
 import { VAULT_PATH } from '@/lib/scene-home';
 
@@ -263,6 +264,7 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
   const { summary, loading } = useGamification();
   const { total: alertCount } = useSocialAlerts();
   const { enabled: lockOn } = useLockFeature();
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   const [lastTrackPath, setLastTrackPath] = useState<string | null>(null);
 
   useEffect(() => {
@@ -387,7 +389,7 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
         alertCount={alertCount}
         className={compact ? 'col-span-2 sm:col-span-3' : undefined}
       />
-      <DockLink item={items[1]!} />
+      {firstDropsOn ? <DockLink item={items[1]!} /> : null}
       <DockLink item={items[2]!} />
       <DockLink item={items[3]!} />
     </nav>

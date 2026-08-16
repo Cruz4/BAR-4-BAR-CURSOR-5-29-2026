@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { parseActivityPostHash, scrollActivityPostTarget } from '@/lib/activity/post-deep-link';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
 import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
 import { LiveDnaDropsGroupedList } from '@/components/profile/live-dna-drop-card';
@@ -187,19 +188,19 @@ export function ArtistHome({
     [config.modules, liveDnaDrops.length]
   );
 
-  // Deep-link from Activity Open → #post-{id}
+  // Deep-link from Activity Open → #post-{id}[:comments|:c-{commentId}]
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const hash = window.location.hash;
-    if (!hash.startsWith('#post-')) return;
-    const id = hash.slice(1);
-    const tryScroll = () => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    const t1 = window.setTimeout(tryScroll, 80);
-    const t2 = window.setTimeout(tryScroll, 450);
-    return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
+    const run = () => {
+      const target = parseActivityPostHash(window.location.hash);
+      if (!target) return;
+      const tryScroll = () => scrollActivityPostTarget(target);
+      window.setTimeout(tryScroll, 80);
+      window.setTimeout(tryScroll, 450);
     };
+    run();
+    window.addEventListener('hashchange', run);
+    return () => window.removeEventListener('hashchange', run);
   }, [profile.slug, enabledModules.length]);
 
   return (

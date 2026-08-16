@@ -1,6 +1,5 @@
 import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
-import { getAdminBucket } from '@/lib/firebase/server';
 import {
   normalizeDropAudio,
   normalizeDropPrice,
@@ -150,12 +149,3 @@ export async function grantDropLibrary(
   );
 }
 
-export async function signedReadUrl(storagePath: string, minutes = 12): Promise<string> {
-  const [url] = await getAdminBucket()
-    .file(storagePath)
-    .getSignedUrl({
-      action: 'read',
-      expires: Date.now() + minutes * 60 * 1000,
-    });
-  return url;
-}

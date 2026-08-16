@@ -29,6 +29,7 @@ export type EmitActivityClientInput = {
   recipientId?: string;
   recipientName?: string;
   postId?: string;
+  commentId?: string;
   shareId?: string;
   preview?: string;
   href?: string;
@@ -81,6 +82,7 @@ function eventFromDoc(id: string, data: Record<string, unknown>): ActivityEvent 
     targetName: typeof data.targetName === 'string' ? data.targetName : undefined,
     targetSlug: typeof data.targetSlug === 'string' ? data.targetSlug : undefined,
     postId: typeof data.postId === 'string' ? data.postId : undefined,
+    commentId: typeof data.commentId === 'string' ? data.commentId : undefined,
     shareId: typeof data.shareId === 'string' ? data.shareId : undefined,
     lockId: typeof data.lockId === 'string' ? data.lockId : undefined,
     preview: typeof data.preview === 'string' ? data.preview : undefined,

@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase/server';
 import { CheckoutAuthError, verifyCheckoutUser } from '@/lib/stripe-server';
 import type { DropLibraryEntry } from '@/lib/drop-commerce';
+import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
 
 export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
+  if (!(await isFirstDropsEnabled())) {
+    return NextResponse.json({ error: 'First Drops is off' }, { status: 404 });
+  }
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId') || '';

@@ -8,7 +8,7 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, ChevronUp, Globe, PenLine, Sparkles, Wind } from 'lucide-react';
+import { ArrowRight, ChevronUp, Globe, Music, PenLine, Sparkles, Wind } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -61,6 +61,8 @@ import {
   jordiePlaygroundGuestbookEntry,
 } from '@/lib/profile/jordie-cruz';
 import { cn } from '@/lib/utils';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
+import { dropPlatformFeeLabel, firstDropsPitch } from '@/lib/drop-commerce';
 
 const PRESSING_TIP_KEY = 'b4b-guest-pressing-tip-seen';
 
@@ -143,6 +145,7 @@ function toProfilePosts(
 }
 
 function GuestPressingLandingInner() {
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   const [draft, setDraft] = useState<GuestPressingDraft>(() => defaultGuestPressingDraft());
   const [mixOpen, setMixOpen] = useState(false);
   const [ready, setReady] = useState(false);
@@ -391,7 +394,8 @@ function GuestPressingLandingInner() {
             </DialogTitle>
             <DialogDescription className="text-sm leading-relaxed text-zinc-400">
               Everything behind this tip is a live preview of your public page — Wall, friends,
-              guestbook, the works. At the bottom,{' '}
+              guestbook, the works. <span className="font-medium text-zinc-200">Artist Home is completely free</span>
+              {' '}— no Pro required to claim or go live. At the bottom,{' '}
               <span className="font-medium text-zinc-200">The Pressing</span> is the customization
               tool: type a bar or sentence and the whole page skins itself in real time.
             </DialogDescription>
@@ -409,6 +413,15 @@ function GuestPressingLandingInner() {
               <Globe className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
               Claim free to keep this look on your real profile
             </li>
+            {firstDropsOn ? (
+              <li className="flex gap-2">
+                <Music className="mt-0.5 h-3.5 w-3.5 shrink-0 text-fuchsia-400" />
+                <span>
+                  First Drops — sell the actual song on a DNA Drop. Fans buy once and stream here.
+                  We keep {dropPlatformFeeLabel()}.
+                </span>
+              </li>
+            ) : null}
           </ul>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
@@ -486,10 +499,11 @@ function GuestPressingLandingInner() {
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <p className="min-w-0 flex-1 text-[11px] leading-snug text-zinc-200 sm:text-xs">
             <span className="font-bold text-primary">Live preview</span>
-            <span className="text-zinc-400"> — this is what your Bar 4 Bar profile page would look like.</span>
+            <span className="text-zinc-400"> — this is your free Bar 4 Bar profile page.</span>
             {' '}
             <span className="hidden text-zinc-300 sm:inline">
               Try The Pressing at the bottom to customize the skin.
+              {firstDropsOn ? ` ${firstDropsPitch()}` : ''}
             </span>
           </p>
           <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
@@ -758,8 +772,11 @@ function GuestPressingLandingInner() {
             </Button>
           </div>
           <p className="mt-2 hidden text-[11px] text-muted-foreground sm:block">
-            This preview is your Artist Home. Type above for The Pressing. Click Bar of the Week on
+            This preview is your Artist Home — completely free. Type above for The Pressing. Click Bar of the Week on
             the page to edit it. Mix & sizes still has faders and S/M/L. Claim keeps your look.
+            {firstDropsOn
+              ? ` First Drops: put the song on a DNA Drop, set a price, fans stream here. We keep ${dropPlatformFeeLabel()}.`
+              : ''}
           </p>
         </div>
       </div>

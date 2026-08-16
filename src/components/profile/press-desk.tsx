@@ -21,6 +21,7 @@ import {
   LayoutGrid,
   Loader2,
   Lock,
+  PenLine,
   Quote,
   Save,
   SlidersHorizontal,
@@ -30,7 +31,6 @@ import {
   RotateCcw,
   Orbit,
   Link2,
-  PenLine,
   Trash2,
   Shuffle,
   Star,
@@ -49,6 +49,8 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
+import { dropPlatformFeeLabel, firstDropsPitch } from '@/lib/drop-commerce';
 import { DataContext } from '@/context/data-context';
 import { cn } from '@/lib/utils';
 import type { Album, Track } from '@/lib/types';
@@ -386,6 +388,7 @@ export function PressDesk() {
   const { user } = useAuth();
   const { albums, loading: vaultLoading } = useContext(DataContext);
   const { toast } = useToast();
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
 
   const [config, setConfig] = useState<ArtistHomeConfig | null>(null);
   const [profileSlug, setProfileSlug] = useState<string | null>(null);
@@ -823,7 +826,8 @@ export function PressDesk() {
       <header className="space-y-2">
         <h1 className="font-headline text-3xl font-bold uppercase tracking-tight">Edit Public Page</h1>
         <p className="text-sm text-muted-foreground">
-          Your page is pressed from your own bars — seed one, ride four faders, stack your modules.
+          Artist Home is completely free — no Pro required for the page. Seed a bar, ride four faders, stack your modules.
+          {firstDropsOn ? ` ${firstDropsPitch()}` : ''}
         </p>
         {!profileLive && (
           <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
@@ -1682,7 +1686,11 @@ export function PressDesk() {
       <DeskSection
         icon={Dna}
         title="Live DNA Drops"
-        hint="Any album or track with an active DNA Drop shows on your Artist Home automatically — as a count under your bio and in the Live DNA Drops module. Open Manage to jump to a drop or the vault."
+        hint={
+          firstDropsOn
+            ? `Any album or track with an active DNA Drop shows on your Artist Home automatically. First Drops add the audio: set a price or pay-what-you-want, fans buy once and stream here. Bar 4 Bar keeps ${dropPlatformFeeLabel()}. Open Manage to jump to a drop or the vault.`
+            : 'Any album or track with an active DNA Drop shows on your Artist Home automatically — as a count under your bio and in the Live DNA Drops module. Open Manage to jump to a drop or the vault.'
+        }
       >
         <LiveDnaDropsManage />
       </DeskSection>

@@ -22,6 +22,7 @@ import {
 } from '@/lib/drop-commerce';
 import type { Track } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 
 const MODES: { id: DropPriceMode; label: string }[] = [
   { id: 'hidden', label: 'DNA only' },
@@ -136,6 +137,7 @@ export function DropCommercePanel({
 }) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   const { getAlbumById, updateAlbum, updateTrack } = React.useContext(DataContext);
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -175,6 +177,8 @@ export function DropCommercePanel({
   };
 
   const price = normalizeDropPrice(type === 'album' ? album?.dropPrice : track?.dropPrice);
+
+  if (!firstDropsOn) return null;
 
   return (
     <div className="space-y-3 border-t border-white/10 pt-4 min-w-0">

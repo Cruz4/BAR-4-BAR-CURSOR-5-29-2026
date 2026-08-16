@@ -484,6 +484,7 @@ export async function addComment(
     ...(comment.authorSlug ? { actorSlug: comment.authorSlug } : {}),
     postId,
     preview: clean.slice(0, 120),
+    commentId: id,
   });
   return comment;
 }

@@ -7,16 +7,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { StudioLoader } from '@/components/studio-loader';
 import { useAuth } from '@/hooks/use-auth';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { auth } from '@/lib/firebase/client/firebase';
 import { centsToUsdLabel, type DropLibraryEntry } from '@/lib/drop-commerce';
 import { format } from 'date-fns';
 
 export default function DropLibraryPage() {
   const { user, loading: authLoading } = useAuth();
+  const { enabled: firstDropsOn, loading: featureLoading } = useFirstDropsFeature();
   const [items, setItems] = useState<DropLibraryEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    if (!firstDropsOn) {
+      setLoaded(true);
+      return;
+    }
     if (!user?.id) {
       setLoaded(!authLoading);
       return;
@@ -33,10 +39,29 @@ export default function DropLibraryPage() {
         setLoaded(true);
       }
     })();
-  }, [user?.id, authLoading]);
+  }, [user?.id, authLoading, firstDropsOn]);
 
-  if (authLoading || !loaded) {
+  if (authLoading || featureLoading || !loaded) {
     return <StudioLoader size="lg" fullscreen message="Opening your library..." />;
+  }
+
+  if (!firstDropsOn) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="max-w-md text-center border-2">
+          <CardContent className="p-8 space-y-4">
+            <Library className="h-10 w-10 text-muted-foreground mx-auto" />
+            <h1 className="font-headline text-3xl font-bold uppercase">Library is off</h1>
+            <p className="text-sm text-muted-foreground">
+              First Drops is currently turned off. DNA Drops still work. Purchases stay saved if this comes back.
+            </p>
+            <Button variant="outline" asChild>
+              <Link href="/">Back to The Scene</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   if (!user) {

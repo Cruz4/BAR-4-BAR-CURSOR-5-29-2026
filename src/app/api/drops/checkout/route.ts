@@ -11,12 +11,16 @@ import {
   resolveCheckoutCents,
 } from '@/lib/drop-commerce';
 import { loadShare, priceFromShare } from '@/lib/server/drop-entitlements';
+import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
 import Stripe from 'stripe';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
+  if (!(await isFirstDropsEnabled())) {
+    return NextResponse.json({ error: 'First Drops is off' }, { status: 404 });
+  }
   try {
     const body = await req.json();
     const userId = typeof body.userId === 'string' ? body.userId : '';

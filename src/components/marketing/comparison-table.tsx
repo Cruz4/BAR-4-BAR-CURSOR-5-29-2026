@@ -3,9 +3,14 @@
 import React from 'react';
 import { Check } from 'lucide-react';
 import { MARKETING_COMPARISON } from '@/lib/marketing-features';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 
 export function ComparisonTable() {
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   const { otherLabel, b4bLabel, rows } = MARKETING_COMPARISON;
+  const visibleRows = firstDropsOn
+    ? rows
+    : rows.filter(([, b4b]) => !b4b.toLowerCase().includes('first drop'));
 
   return (
     <section className="py-10 px-4 relative z-10">
@@ -18,7 +23,7 @@ export function ComparisonTable() {
             <div className="p-4 text-muted-foreground font-bold uppercase text-[10px] tracking-widest">{otherLabel}</div>
             <div className="p-4 text-primary font-bold uppercase text-[10px] tracking-widest">{b4bLabel}</div>
           </div>
-          {rows.map(([other, b4b]) => (
+          {visibleRows.map(([other, b4b]) => (
             <div key={other} className="grid grid-cols-2 border-b border-white/[0.04] last:border-b-0">
               <div className="p-4 text-muted-foreground/85 text-[12px] leading-relaxed">{other}</div>
               <div className="p-4 flex items-start gap-2 text-[12px] leading-relaxed">

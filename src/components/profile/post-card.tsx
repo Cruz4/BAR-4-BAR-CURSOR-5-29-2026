@@ -31,6 +31,11 @@ import {
 } from '@/lib/profile/social-client';
 import { Hint } from '@/components/ui/tooltip';
 import { parseStudioBadge, studioChromeFromUser, studioNameClass, type StudioNameChrome } from '@/lib/studio-tier-chrome';
+import {
+  activityCommentElementId,
+  parseActivityPostHash,
+  scrollActivityPostTarget,
+} from '@/lib/activity/post-deep-link';
 
 type PostCardProps = {
   post: ProfilePost;
@@ -189,6 +194,32 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   }, [post.id]);
 
   useEffect(() => {
+    const applyHash = () => {
+      const target = parseActivityPostHash(window.location.hash);
+      if (!target || target.postId !== post.id) return;
+      const reveal = async () => {
+        if (target.openComments) {
+          setCommentsOpen(true);
+          if (!commentsLoaded) {
+            try {
+              setComments(await fetchComments(post.id));
+            } catch {
+              /* ignore */
+            }
+            setCommentsLoaded(true);
+          }
+        }
+        window.setTimeout(() => scrollActivityPostTarget(target), 60);
+        window.setTimeout(() => scrollActivityPostTarget(target), 420);
+      };
+      void reveal();
+    };
+    applyHash();
+    window.addEventListener('hashchange', applyHash);
+    return () => window.removeEventListener('hashchange', applyHash);
+  }, [post.id, commentsLoaded]);
+
+  useEffect(() => {
     if (!canReverb) {
       setReverbed(false);
       return;
@@ -317,7 +348,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   return (
     <article
       id={`post-${post.id}`}
-      className="scroll-mt-24 border border-dashed border-[var(--ph-border)] bg-black/20 p-4"
+      className="scroll-mt-28 border border-dashed border-[var(--ph-border)] bg-black/20 p-4 transition-shadow data-[activity-focus]:ring-2 data-[activity-focus]:ring-fuchsia-400/80"
     >
       {post.isReverb && (
         <p className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-violet-300/90">
@@ -463,7 +494,11 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
       {commentsOpen && (
         <div className="mt-3 space-y-2 border-t border-[var(--ph-border,rgba(255,255,255,0.12))] pt-3">
           {comments.map((comment) => (
-            <div key={comment.id} className="flex items-start gap-2 text-sm">
+            <div
+              key={comment.id}
+              id={activityCommentElementId(comment.id)}
+              className="flex scroll-mt-28 items-start gap-2 rounded-md px-1 py-1 text-sm transition-shadow data-[activity-focus]:ring-2 data-[activity-focus]:ring-fuchsia-400/80"
+            >
               <div className="min-w-0 flex-1">
                 <ArtistHomeLink
                   userId={comment.authorId}

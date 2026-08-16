@@ -75,6 +75,7 @@ import {
 } from '@/lib/tiktok-pixel';
 import { postGamificationEvent } from '@/lib/gamification-client';
 import { BLOCK_SECTION_ID, DISCOVER_SECTION_ID } from '@/lib/scene-home';
+import { parseActivityPostHash, scrollActivityPostTarget } from '@/lib/activity/post-deep-link';
 import {
   BLOCK_PAGE_SIZE,
   DISCOVER_PAGE_SIZE,
@@ -542,16 +543,16 @@ export function SceneHome() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!window.location.hash.startsWith('#post-')) return;
+    if (!parseActivityPostHash(window.location.hash)) return;
     setShowMinePersist(true);
     setBlockExpandedPersist(true);
   }, [setShowMinePersist, setBlockExpandedPersist]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const hash = window.location.hash;
-    if (!hash.startsWith('#post-')) return;
-    const postId = hash.slice('#post-'.length);
+    const target = parseActivityPostHash(window.location.hash);
+    if (!target) return;
+    const postId = target.postId;
     if (!postId || posts.some((p) => p.id === postId)) return;
     let cancelled = false;
     void fetchPostById(postId).then((one) => {
@@ -565,27 +566,24 @@ export function SceneHome() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const hash = window.location.hash;
-    if (!hash.startsWith('#post-')) return;
-    const postId = hash.slice('#post-'.length);
-    if (!postId) return;
-    const idx = blockPosts.findIndex((p) => p.id === postId);
-    if (idx >= 0) {
-      const page = Math.floor(idx / BLOCK_PAGE_SIZE);
-      if (page !== safeBlockPage) {
-        setBlockPage(page);
-        return;
+    const run = () => {
+      const target = parseActivityPostHash(window.location.hash);
+      if (!target) return;
+      const idx = blockPosts.findIndex((p) => p.id === target.postId);
+      if (idx >= 0) {
+        const page = Math.floor(idx / BLOCK_PAGE_SIZE);
+        if (page !== safeBlockPage) {
+          setBlockPage(page);
+          return;
+        }
       }
-    }
-    const id = hash.slice(1);
-    const tryScroll = () =>
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    const t1 = window.setTimeout(tryScroll, 80);
-    const t2 = window.setTimeout(tryScroll, 500);
-    return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
+      const tryScroll = () => scrollActivityPostTarget(target);
+      window.setTimeout(tryScroll, 80);
+      window.setTimeout(tryScroll, 500);
     };
+    run();
+    window.addEventListener('hashchange', run);
+    return () => window.removeEventListener('hashchange', run);
   }, [blockPosts, safeBlockPage]);
 
   useEffect(() => {

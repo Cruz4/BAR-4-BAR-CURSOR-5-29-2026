@@ -14,6 +14,7 @@ import {
   type ActivityType,
 } from '@/lib/activity/types';
 import { profileHref } from '@/lib/profile/profile-slug';
+import { activityPostHash } from '@/lib/activity/post-deep-link';
 
 export type EmitActivityInput = {
   type: ActivityType;
@@ -24,6 +25,7 @@ export type EmitActivityInput = {
   recipientId?: string;
   recipientName?: string;
   postId?: string;
+  commentId?: string;
   shareId?: string;
   lockId?: string;
   preview?: string;
@@ -40,7 +42,11 @@ function buildHref(input: EmitActivityInput, recipientSlug?: string): string | u
   if (input.href) return input.href;
   if (input.lockId) return `/lock/${input.lockId}`;
   if (input.postId && recipientSlug) {
-    return profileHref(recipientSlug, `post-${input.postId}`) || '/activity';
+    const hash = activityPostHash(input.postId, {
+      commentId: input.commentId,
+      comments: input.type === 'post_reply',
+    });
+    return profileHref(recipientSlug, hash) || '/activity';
   }
   if (input.postId) return `/activity`;
   if (input.shareId) return `/share/${input.shareId}`;
@@ -134,6 +140,7 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
   let preview = input.preview?.trim().slice(0, 160) || undefined;
   let shareId = input.shareId?.trim().toUpperCase() || undefined;
   const postId = input.postId?.trim() || undefined;
+  const commentId = input.commentId?.trim() || undefined;
 
   if ((input.type === 'post_love' || input.type === 'post_reply' || input.type === 'post_reverb') && postId) {
     const postSnap = await db.collection('posts').doc(postId).get();
@@ -185,6 +192,7 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
     actorName: input.actorName || 'Artist',
     ...(actorSlug ? { actorSlug } : {}),
     ...(postId ? { postId } : {}),
+    ...(commentId ? { commentId } : {}),
     ...(shareId ? { shareId } : {}),
     ...(input.lockId ? { lockId: input.lockId } : {}),
     ...(preview ? { preview } : {}),

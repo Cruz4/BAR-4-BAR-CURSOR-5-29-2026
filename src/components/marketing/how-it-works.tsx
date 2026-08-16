@@ -2,8 +2,10 @@
 
 import React from 'react';
 import { MARKETING_HOW_IT_WORKS, MARKETING_MEDIA_ASPECT } from '@/lib/marketing-features';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 
 export function HowItWorksSection() {
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   return (
     <section id="how-it-works" className="py-20 px-4 relative z-10">
       <div className="container mx-auto max-w-5xl">
@@ -38,7 +40,9 @@ export function HowItWorksSection() {
               <div className="px-6 sm:px-8 pb-8 pt-2 space-y-2 max-w-2xl">
                 <p className="text-sm font-bold text-primary uppercase tracking-widest">{item.step}</p>
                 <h4 className="font-headline text-2xl font-bold uppercase">{item.title}</h4>
-                <p className="font-code text-sm md:text-base text-muted-foreground leading-relaxed">{item.body}</p>
+                <p className="font-code text-sm md:text-base text-muted-foreground leading-relaxed">
+                  {firstDropsOn ? item.body : item.body.replace(/, sell a First Drop/, '')}
+                </p>
               </div>
             </article>
           ))}

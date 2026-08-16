@@ -19,6 +19,7 @@ import { auth } from '@/lib/firebase/client/firebase';
 import { cn } from '@/lib/utils';
 import type { DiscoverCard } from '@/lib/scene/discover-client';
 import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 
 function timeAgo(iso: string): string {
   try {
@@ -48,6 +49,7 @@ export function SceneDiscoverCard({
 }) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   const [busy, setBusy] = useState(false);
 
   if (card.kind === 'post') {
@@ -100,12 +102,13 @@ export function SceneDiscoverCard({
   if (card.kind === 'drop') {
     const { drop } = card;
     const ownerHref = drop.ownerSlug ? `/profile/${drop.ownerSlug}` : undefined;
+    const firstDrop = firstDropsOn && Boolean(drop.hasDropAudio);
     return (
       <Card className="border-primary/25 bg-gradient-to-r from-primary/[0.07] via-card/85 to-card/70 p-4">
         <DiscoverTag
-          label={drop.hasDropAudio ? 'First Drop' : 'Live DNA Drop'}
-          icon={drop.hasDropAudio ? Flame : Dna}
-          tone={drop.hasDropAudio ? 'text-fuchsia-400/90' : 'text-primary/90'}
+          label={firstDrop ? 'First Drop' : 'Live DNA Drop'}
+          icon={firstDrop ? Flame : Dna}
+          tone={firstDrop ? 'text-fuchsia-400/90' : 'text-primary/90'}
         />
         <div className="mt-2.5 flex items-center gap-3">
           <ArtistStarAvatar
@@ -127,7 +130,7 @@ export function SceneDiscoverCard({
             </Link>
             <p className="font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
               {drop.type === 'album' ? 'Album' : 'Track'}
-              {drop.hasDropAudio ? ' · stream' : ' DNA'} by{' '}
+              {firstDrop ? ' · stream' : ' DNA'} by{' '}
               {ownerHref ? (
                 <Link
                   href={ownerHref}
@@ -144,7 +147,7 @@ export function SceneDiscoverCard({
                 </span>
               )}
               {drop.updatedAt ? ` · ${timeAgo(drop.updatedAt)}` : ''}
-              {drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : ''}
+              {firstDrop && drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : ''}
             </p>
           </div>
           <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>

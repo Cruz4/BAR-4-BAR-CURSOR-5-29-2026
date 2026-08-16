@@ -1,5 +1,7 @@
 /** Landing page feature bands — copy + asset paths. */
 
+import { dropPlatformFeeLabel, firstDropsPitch } from '@/lib/drop-commerce';
+
 export type MarketingMediaType = 'image' | 'gif';
 
 export type ShowcaseLayout = 'hero-stack' | 'split' | 'split-reverse' | 'bento';
@@ -38,17 +40,33 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     eyebrow: 'Artist Home & The Scene',
     title: 'Your Page. Your Block.',
     description:
-      'Sign in and land on The Scene — friends\u2019 drops, a Discover stream of live Artist Homes, and Your Booth. Every artist gets a public home: living skin, Album Rooms, embeds, live DNA Drops. Write in the vault. Show up on the block.',
+      'Sign in and land on The Scene — friends\u2019 drops, a Discover stream of live Artist Homes, and Your Booth. Every artist gets a public home, completely free: living skin, Album Rooms, embeds, live DNA Drops. Write in the vault. Show up on the block.',
     bullets: [
+      'Artist Home is free — claim it, skin it, go live. No Pro required for the page.',
       'The Scene home — friends feed + Discover, never an empty room',
       'Public /profile link you control — private by default until you go live',
-      'Edit Public Page: modules, bio, socials, Album Rooms, wall posts',
     ],
     mediaSrc: '/marketing/feature-artist-home.png',
     mediaType: 'image',
     mediaAlt: 'Bar 4 Bar Artist Home — shareable public artist page',
     layout: 'hero-stack',
     mediaVariant: 'hero-full',
+  },
+  {
+    id: 'first-drops',
+    eyebrow: 'First Drops',
+    title: 'Sell The Song.',
+    description: firstDropsPitch(),
+    bullets: [
+      'Audio on the public drop — 30-second preview until they unlock',
+      'Fixed price or pay-what-you-want, floor $1.00',
+      `Buy once, stream in-app. Library lives on The Scene. ${dropPlatformFeeLabel()} platform fee.`,
+    ],
+    mediaSrc: '/marketing/feature-artist-home-live.jpg',
+    mediaType: 'image',
+    mediaAlt: 'Bar 4 Bar First Drop — sell and stream your song on the public page',
+    layout: 'split',
+    mediaVariant: 'showcase',
   },
   {
     id: 'cowriter',
@@ -159,7 +177,7 @@ export const MARKETING_HOW_IT_WORKS = [
   {
     step: '01',
     title: 'Claim Your Booth',
-    body: 'Free Artist Home — private until you go live. Land on The Scene with friends and Discover.',
+    body: 'Free Artist Home — always. Private until you go live. Land on The Scene with friends and Discover.',
     media: '/marketing/feature-artist-home.png',
   },
   {
@@ -171,7 +189,7 @@ export const MARKETING_HOW_IT_WORKS = [
   {
     step: '03',
     title: 'Show Up on the Scene',
-    body: 'Post to your wall, drop DNA, visit Artist Homes, build your block.',
+    body: 'Post to your wall, drop DNA, sell a First Drop, visit Artist Homes, build your block.',
     media: '/marketing/how-step-progress.png',
   },
 ] as const;
@@ -184,6 +202,10 @@ export const MARKETING_COMPARISON = {
     ['No album context', 'Album DNA on every bar'],
     ['Generic filler lines', 'Guardrails + must-includes'],
     ['Paragraphs and prose', 'Bars, hooks, and rhyme schemes'],
-    ['No artist presence', 'The Scene home + shareable Artist Home + friends on The Block'],
+    ['No artist presence', 'The Scene home + shareable Artist Home (free) + friends on The Block'],
+    [
+      'Nowhere to sell the actual song',
+      `First Drops — set a price, fans buy once, ${dropPlatformFeeLabel()} platform fee`,
+    ],
   ],
 };

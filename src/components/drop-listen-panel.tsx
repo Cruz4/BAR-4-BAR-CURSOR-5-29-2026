@@ -18,6 +18,7 @@ import {
   type DropPrice,
 } from '@/lib/drop-commerce';
 import { Pause, Play, Loader } from 'lucide-react';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 
 async function authHeaders(): Promise<HeadersInit> {
   const user = auth.currentUser;
@@ -44,6 +45,7 @@ export function DropListenPanel({
 }) {
   const { user, authReady } = useAuth();
   const { toast } = useToast();
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   const router = useRouter();
   const searchParams = useSearchParams();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -57,7 +59,7 @@ export function DropListenPanel({
   const isOwner = Boolean(user && user.id === ownerId);
 
   const loadStream = useCallback(async () => {
-    if (!hasAudio) return;
+    if (!firstDropsOn || !hasAudio) return;
     setLoading(true);
     try {
       const headers = await authHeaders();
@@ -69,15 +71,19 @@ export function DropListenPanel({
       setSrc(data.url);
       setFull(Boolean(data.full));
     } catch (e: unknown) {
+      const raw = e instanceof Error ? e.message : undefined;
       toast({
         variant: 'destructive',
         title: 'Audio unavailable',
-        description: e instanceof Error ? e.message : undefined,
+        description:
+          raw && /iam\.|signBlob|Permission/i.test(raw)
+            ? 'Could not open this stream. Refresh and try again.'
+            : raw,
       });
     } finally {
       setLoading(false);
     }
-  }, [hasAudio, shareId, trackId, toast]);
+  }, [firstDropsOn, hasAudio, shareId, trackId, toast]);
 
   useEffect(() => {
     void loadStream();
@@ -182,6 +188,7 @@ export function DropListenPanel({
     void startCheckout(resolveCheckoutCents(normalized));
   };
 
+  if (!firstDropsOn) return null;
   if (!hasAudio && !isCommerceLive(normalized)) return null;
 
   const previewCapped = !full && !isOwner;

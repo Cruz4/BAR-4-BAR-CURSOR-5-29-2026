@@ -94,4 +94,15 @@ export const MARKETING_BAND_THEMES: Record<string, MarketingBandTheme> = {
     bulletText: ['text-fuchsia-50/92', 'text-sky-100/90', 'text-fuchsia-100/88'],
     bulletRails: ['border-l-fuchsia-500/65', 'border-l-sky-500/55', 'border-l-fuchsia-400/45'],
   },
+  'first-drops': {
+    panel: 'border-fuchsia-500/30 bg-gradient-to-br from-fuchsia-500/[0.14] via-black/20 to-amber-500/[0.08]',
+    rule: 'from-fuchsia-400',
+    eyebrow: 'text-fuchsia-200 border-fuchsia-400/40 bg-fuchsia-500/15',
+    titleParts: ['Sell The', 'Song.'],
+    titlePartColors: ['text-fuchsia-100', 'text-amber-300'],
+    description: 'text-fuchsia-100/90',
+    bulletNums: ['text-fuchsia-400', 'text-amber-400', 'text-fuchsia-300'],
+    bulletText: ['text-fuchsia-50/92', 'text-amber-100/90', 'text-fuchsia-100/88'],
+    bulletRails: ['border-l-fuchsia-500/70', 'border-l-amber-500/55', 'border-l-fuchsia-400/45'],
+  },
 };

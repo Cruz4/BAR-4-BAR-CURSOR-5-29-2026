@@ -14,9 +14,12 @@ import { StudioThemeControls } from '@/components/studio-theme-controls';
 import { ProBillingCheckoutCta } from '@/components/marketing/pro-billing-checkout-cta';
 import { getSignupInkMarketingLine } from '@/lib/studio-tiers';
 import { BrandLockup } from '@/components/brand-lockup';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
+import { dropPlatformFeeLabel, firstDropsPitch } from '@/lib/drop-commerce';
 
 /** Public marketing surface — served at `/welcome` (and `/` when guest try sheet is off). */
 export function PublicHomeLanding() {
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   return (
     <div className="min-h-screen flex flex-col selection:bg-primary/30 overflow-x-hidden relative">
       <LoginStudioAtmosphere />
@@ -84,10 +87,21 @@ export function PublicHomeLanding() {
                   Sign in and land on{' '}
                   <span className="bg-fuchsia-500/20 text-fuchsia-300 px-1 rounded-sm font-bold">The Scene</span>
                   — friends, discover, and your shareable{' '}
-                  <span className="bg-fuchsia-500/20 text-fuchsia-300 px-1 rounded-sm font-bold">Artist Home</span>.
+                  <span className="bg-fuchsia-500/20 text-fuchsia-300 px-1 rounded-sm font-bold">Artist Home</span>
+                  {' '}
+                  <span className="text-fuchsia-200/90">— completely free.</span>
                   The Vault is one click away: write bar by bar, train your{' '}
                   <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">DNA</span>, drop what
                   you&apos;re proud of back on the block.
+                  {firstDropsOn ? (
+                    <>
+                      {' '}
+                      <span className="bg-amber-500/20 text-amber-200 px-1 rounded-sm font-bold">First Drops</span>
+                      {' '}
+                      let you put the song on that drop, set a price, and sell the stream here. We keep{' '}
+                      {dropPlatformFeeLabel()}.
+                    </>
+                  ) : null}
                 </p>
 
                 <LandingHeroCtAs />
@@ -107,7 +121,8 @@ export function PublicHomeLanding() {
                   />
                 </div>
                 <p className="mt-2 text-center text-[10px] font-code text-muted-foreground lg:text-left">
-                  Private by default. Flip it live when you&apos;re ready for eyes.
+                  Completely free. Private by default. Flip it live when you&apos;re ready for eyes.
+                  {firstDropsOn ? ` ${firstDropsPitch()}` : ''}
                 </p>
               </div>
             </div>
@@ -123,6 +138,7 @@ export function PublicHomeLanding() {
             </h3>
             <p className="font-code text-xs md:text-sm text-fuchsia-300/90">
               Free Artist Home · The Scene · full studio one click in
+              {firstDropsOn ? ' · First Drops' : ''}
             </p>
             <p className="font-code text-[10px] md:text-xs text-muted-foreground">
               {getSignupInkMarketingLine('landing')}

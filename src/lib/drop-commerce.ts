@@ -1,12 +1,23 @@
 /**
  * Bar 4 Bar First Drops — buy-once, stream-in-app commerce for DNA Drops.
  * Named release: feat/bar4bar-first-drops
+ * Live switch: Admin Panel → Config → First Drops (`config/firstDrops`).
  */
 
 export const BAR4BAR_FIRST_DROPS = 'bar4bar-first-drops' as const;
 
 export const DROP_PAID_MIN_CENTS = 100;
 export const DROP_PLATFORM_FEE_BPS = 1000; // 10%
+export const DROP_PLATFORM_FEE_PERCENT = DROP_PLATFORM_FEE_BPS / 100;
+
+export function dropPlatformFeeLabel(): string {
+  return `${DROP_PLATFORM_FEE_PERCENT}%`;
+}
+
+/** Public selling copy — hide whenever First Drops is toggled off. */
+export function firstDropsPitch(): string {
+  return `Put the actual song on a DNA Drop, set a price or pay-what-you-want, and fans buy once to stream it in Bar 4 Bar. We keep ${dropPlatformFeeLabel()} — the rest is yours.`;
+}
 export const DROP_AUDIO_MAX_BYTES = 40 * 1024 * 1024;
 export const DROP_PREVIEW_SECONDS = 30;
 export const DROP_PRICE_PRESETS_CENTS = [177, 299, 777, 1777] as const;

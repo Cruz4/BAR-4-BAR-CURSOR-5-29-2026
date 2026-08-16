@@ -91,6 +91,8 @@ import {
 } from '@/lib/studio-onboarding';
 import { DataContext } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
+import { dropPlatformFeeLabel, firstDropsPitch } from '@/lib/drop-commerce';
 import { Button } from './ui/button';
 import {
   Accordion,
@@ -143,7 +145,7 @@ const FAQS = [
     },
     {
       q: "What is Artist Home and Edit Public Page?",
-      a: "Artist Home is your shareable page at /profile/your-slug (skin, modules, The Board, embeds, socials, wall, friends, guestbook, live DNA Drops). New accounts often get Neomaiya Sol as a first friend with a guestbook welcome. On the Scene dock, Artist Home | Edit page is one split control — view live, or customize. Also reachable from Your Booth, Vault dock, or Studio Progress → Sharing. Private by default; never shows private lyrics unless you publish a DNA Drop."
+      a: "Artist Home is completely free — no Pro required to claim or go live. Shareable page at /profile/your-slug (skin, modules, The Board, embeds, socials, wall, friends, guestbook, live DNA Drops). New accounts often get Neomaiya Sol as a first friend with a guestbook welcome. On the Scene dock, Artist Home | Edit page is one split control — view live, or customize. Also reachable from Your Booth, Vault dock, or Studio Progress → Sharing. Private by default; never shows private lyrics unless you publish a DNA Drop."
     },
     {
       q: "What is The Block?",
@@ -251,9 +253,26 @@ const FAQS = [
     }
 ];
 
+const FIRST_DROPS_FAQS = [
+  {
+    q: "What is a First Drop?",
+    a: "The audio layer on a DNA Drop. Upload the song (private storage), set a price or pay-what-you-want, and fans buy once to stream it in Bar 4 Bar. Preview is 30 seconds until they unlock. Library is on The Scene. Not a Spotify listing — exclusive in-app stream.",
+  },
+  {
+    q: "How do I sell a First Drop?",
+    a: "Open DNA Drop on a track (or album) → First Drop · audio & price. Upload audio, pick DNA only / free stream / set price / pay-what-you-want, then Confirm or Update snapshot. The public /share page is where fans preview, buy, and stream.",
+  },
+  {
+    q: "What does Bar 4 Bar keep on a First Drop sale?",
+    a: `A ${dropPlatformFeeLabel()} platform fee. The rest is yours. Fans buy once and stream in the app — Ink is not used for music purchases.`,
+  },
+];
+
 export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
   const { albums } = useContext(DataContext);
   const { toast } = useToast();
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
+  const faqs = firstDropsOn ? [...FAQS, ...FIRST_DROPS_FAQS] : FAQS;
 
   const workstationTourPath = useMemo(
     () => resolveWorkstationTourPath(albums),
@@ -297,6 +316,9 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
           <div className="px-4 sm:px-8 border-b bg-muted/10 shrink-0">
             <TabsList className="bg-transparent h-11 sm:h-12 gap-4 sm:gap-8 overflow-x-auto justify-start w-full max-w-full flex-nowrap scrollbar-none">
               <TabsTrigger value="start-here" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Start Here</TabsTrigger>
+              {firstDropsOn ? (
+                <TabsTrigger value="first-drops" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">First Drops</TabsTrigger>
+              ) : null}
               <TabsTrigger value="tiering" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Studio Tiers</TabsTrigger>
               <TabsTrigger value="loop" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">The ∞ Loop</TabsTrigger>
               <TabsTrigger value="power-tools" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Precision Tools</TabsTrigger>
@@ -363,8 +385,9 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 <div className="grid gap-4 md:grid-cols-2">
                   <ChapterCard icon={<Globe className="text-fuchsia-400" />} title="Artist Home" colorClass="border-l-fuchsia-500 text-fuchsia-400">
                     <p className="text-sm">
-                      Public page at <code className="text-primary">/profile/your-slug</code> — skin, modules, The Board,
+                      Completely free. Public page at <code className="text-primary">/profile/your-slug</code> — skin, modules, The Board,
                       embeds, wall, friends, guestbook, live DNA Drops. Off until you flip Public on. New pages often meet Neomaiya Sol first.
+                      Pro is for studio tools, not this page.
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Scene dock: <strong>Artist Home | Edit page</strong> (one control). Also Booth, Vault dock, or Studio Progress → Sharing.
@@ -377,7 +400,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                       <code className="text-primary">/activity</code>.
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Full page tabs: Inbox · Requests · Sent. Notification prefs under Settings when push is enabled.
+                      Full page tabs: Inbox · Requests · Sent. <strong>Open</strong> jumps to the post (and opens the reply if it was a comment). Notification prefs under Settings when push is enabled.
                     </p>
                   </ChapterCard>
                 </div>
@@ -426,6 +449,25 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                   After your first tour, the lyrics page shows one Studio Insight or Did You Know tip per visit (45+ in the pool). Pause or dismiss anytime.
                 </p>
               </TabsContent>
+
+              {firstDropsOn ? (
+                <TabsContent value="first-drops" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                  <ChapterCard icon={<Music className="text-fuchsia-400" />} title="First Drops" colorClass="border-l-fuchsia-500 text-fuchsia-400">
+                    <p className="text-sm text-foreground/90">{firstDropsPitch()}</p>
+                    <ol className="list-decimal list-inside space-y-2 text-sm">
+                      <li><strong>Write the song</strong> in The Vault — lyrics, DNA, vibe as usual.</li>
+                      <li><strong>DNA Drop</strong> on the track (or album) — confirm the lyric snapshot.</li>
+                      <li><strong>First Drop · audio &amp; price</strong> — upload the file, pick DNA only / free stream / set price / pay-what-you-want (floor $1.00).</li>
+                      <li><strong>Update snapshot</strong> so the public /share page has the audio. Fans preview 30 seconds, then buy or unlock to stream in-app.</li>
+                    </ol>
+                    <ul className="list-disc list-inside space-y-1.5 text-xs">
+                      <li><strong>Library</strong> on The Scene lists drops you unlocked. Stream stays in Bar 4 Bar.</li>
+                      <li><strong>Fee</strong> — Bar 4 Bar keeps {dropPlatformFeeLabel()}. The rest is yours. Ink is not used for music purchases.</li>
+                      <li><strong>Admin</strong> can turn First Drops off from Config without taking DNA Drops down.</li>
+                    </ul>
+                  </ChapterCard>
+                </TabsContent>
+              ) : null}
               
               <TabsContent value="tiering" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
                 <ChapterCard icon={<ShieldCheck />} title="Visitor vs Studio Pro" colorClass="border-l-primary text-primary">
@@ -718,7 +760,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                         <HelpCircle className="w-8 h-8 text-primary" /> Studio FAQ
                     </h3>
                     <Accordion type="single" collapsible className="w-full space-y-4">
-                        {FAQS.map((faq, idx) => (
+                        {faqs.map((faq, idx) => (
                             <AccordionItem key={idx} value={`faq-${idx}`} className="border rounded-xl bg-card/50 px-6 overflow-hidden">
                                 <AccordionTrigger className="hover:no-underline font-headline text-lg text-left py-4 hover:text-primary transition-colors">
                                     {faq.q}
