@@ -11,6 +11,7 @@ import {
   type DnaDropTrackPayload,
 } from '@/lib/dna-drop';
 import { CassetteTape, ChevronRight, Lock } from 'lucide-react';
+import { dropPriceSummary, normalizeDropAudio, normalizeDropPrice } from '@/lib/drop-commerce';
 import { cn } from '@/lib/utils';
 
 type DnaDropAlbumHubProps = {
@@ -20,6 +21,9 @@ type DnaDropAlbumHubProps = {
 
 function trackSubtitle(track: DnaDropTrackPayload): string {
   const bits: string[] = [];
+  if (normalizeDropAudio(track.dropAudio)) bits.push('Audio');
+  const price = dropPriceSummary(normalizeDropPrice(track.dropPrice));
+  if (price) bits.push(price);
   if (track.vibe?.enabled !== false && track.vibe?.genre) bits.push(track.vibe.genre);
   if (track.vibe?.enabled !== false && track.vibe?.tempoBPM) bits.push(`${track.vibe.tempoBPM} BPM`);
   const bars = trackLyricBarCount(track);

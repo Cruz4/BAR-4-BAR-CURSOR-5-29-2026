@@ -171,6 +171,12 @@ service cloud.firestore {
           && (docId == 'prefs' || docId == 'push' || docId == 'craft');
         allow delete: if isOwner(userId) && (docId == 'prefs' || docId == 'push' || docId == 'craft');
       }
+
+      // Bar 4 Bar First Drops library — Admin SDK writes; owner reads
+      match /dropLibrary/{shareId} {
+        allow read: if isOwnerOrAdmin(userId);
+        allow write: if false;
+      }
     }
 
     match /publicProfiles/{slug} {

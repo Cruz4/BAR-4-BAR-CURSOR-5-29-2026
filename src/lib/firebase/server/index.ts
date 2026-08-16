@@ -10,6 +10,7 @@ import {
 } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getAuth as getAdminAuth, type Auth } from 'firebase-admin/auth';
+import { getStorage } from 'firebase-admin/storage';
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
@@ -163,6 +164,14 @@ export async function getDb(): Promise<Firestore> {
 
 export async function getAuth(): Promise<Auth> {
   return getAdminAuth(getOrInitApp());
+}
+
+const DEFAULT_STORAGE_BUCKET = 'lyricai-studio-otgxn.firebasestorage.app';
+
+export function getAdminBucket() {
+  const bucketName =
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim() || DEFAULT_STORAGE_BUCKET;
+  return getStorage(getOrInitApp()).bucket(bucketName);
 }
 
 export function getAdminApp(): App {

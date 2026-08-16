@@ -7,12 +7,20 @@ import { recordStudioEvent } from '@/lib/server/studio-analytics';
 import { recordInkLedgerEntries } from '@/lib/server/ink-ledger';
 import { inkBalanceFirestorePatch, normalizeInkPools } from '@/lib/ink-balance';
 import { patchPublicStudioBadge } from '@/lib/server/public-studio-badge';
+import { grantDropLibrary } from '@/lib/server/drop-entitlements';
 
 export type FulfillmentMetadata = {
   userId: string;
   inkAmount?: string;
   type?: string;
   subscriptionTier?: string;
+  shareId?: string;
+  artistId?: string;
+  scope?: string;
+  projectId?: string;
+  trackIds?: string;
+  amountCents?: string;
+  title?: string;
 };
 
 export async function fulfillCheckoutSession(
@@ -325,6 +333,31 @@ export async function fulfillPaidCheckoutSession(
   if (!claimed) {
     const inkAmount = parseInt(metadata?.inkAmount || '0', 10);
     return { fulfilled: true, duplicate: true, inkAmount };
+  }
+
+  if (metadata?.type === 'drop_purchase' && metadata.shareId) {
+    const amountCents = session.amount_total ?? parseInt(metadata.amountCents || '0', 10);
+    const trackIds = (metadata.trackIds || '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
+    await grantDropLibrary(db, userId, {
+      shareId: metadata.shareId,
+      ownerId: metadata.artistId || '',
+      scope: metadata.scope === 'album' ? 'album' : 'track',
+      projectId: metadata.projectId || '',
+      title: metadata.title || 'Drop',
+      trackIds,
+      amountCents,
+      purchasedAt: new Date().toISOString(),
+      stripeSessionId: session.id,
+    });
+    await recordStudioEvent(userId, 'drop_purchase', {
+      shareId: metadata.shareId,
+      amountCents,
+      scope: metadata.scope || 'track',
+    });
+    return { fulfilled: true, duplicate: false, inkAmount: 0 };
   }
 
   const subscriptionId =

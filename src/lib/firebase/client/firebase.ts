@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { registerFirestoreDevRecovery } from '@/lib/firebase/client/firestore-dev-recovery';
 import { registerFirestoreBlockedClientHint } from '@/lib/firebase/client/firestore-blocked-hint';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
 /**
  * Production uses bar4bar.ink as authDomain (custom domain).
@@ -83,3 +84,10 @@ export const db: Firestore =
   typeof window !== 'undefined' ? getClientFirestore() : (null as unknown as Firestore);
 
 export { app, auth, getClientFirestore };
+
+export function getClientStorage(): FirebaseStorage {
+  if (typeof window === 'undefined') {
+    throw new Error('Firebase Storage is only available in the browser.');
+  }
+  return getStorage(app);
+}

@@ -11,6 +11,7 @@ import Link from 'next/link';
 import {
   Archive,
   FilePlus2,
+  Library,
   Lock,
   PenLine,
   Settings2,
@@ -284,6 +285,15 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       primary: true,
     },
     {
+      key: 'library',
+      href: '/library',
+      label: 'Library',
+      sub: 'Drops you unlocked',
+      icon: Library,
+      tone: 'border-fuchsia-500/30 bg-card/55 hover:border-fuchsia-400/50',
+      iconTone: 'border-fuchsia-400/45 bg-fuchsia-500/15 text-fuchsia-400',
+    },
+    {
       key: 'leaderboard',
       href: '/leaderboard',
       label: 'Leaderboard',
@@ -379,6 +389,7 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       />
       <DockLink item={items[1]!} />
       <DockLink item={items[2]!} />
+      <DockLink item={items[3]!} />
     </nav>
   );
 }

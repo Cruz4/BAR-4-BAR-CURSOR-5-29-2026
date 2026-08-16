@@ -41,6 +41,7 @@ import {
   findTrackInVault,
   type DnaDropTrackPayload,
 } from '@/lib/dna-drop';
+import { shareCommerceFlags } from '@/lib/drop-commerce';
 import { canUserAddTrack, FreeTrackLimitError, hasUnlimitedCatalog, isProOrTrial } from '@/lib/subscription';
 import { computeRotatedFreeEditableTrackIds } from '@/lib/tier-limits';
 import { persistFreeEditableTrackIds } from '@/lib/free-editable-tracks';
@@ -915,6 +916,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             data,
             updatedAt: now,
             ownerName: user.displayName,
+            ...shareCommerceFlags(data as { dropAudio?: unknown; dropPrice?: unknown; tracks?: Array<{ dropAudio?: unknown; dropPrice?: unknown }> }),
           },
           { merge: true }
         );
@@ -930,6 +932,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           updatedAt: now,
           views: existing.exists() ? existing.data()?.views ?? 0 : 0,
           imports: existing.exists() ? existing.data()?.imports ?? 0 : 0,
+          ...shareCommerceFlags(data as { dropAudio?: unknown; dropPrice?: unknown; tracks?: Array<{ dropAudio?: unknown; dropPrice?: unknown }> }),
         });
       }
 
@@ -967,6 +970,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         updatedAt: now,
         views: 0,
         imports: 0,
+        ...shareCommerceFlags(data as { dropAudio?: unknown; dropPrice?: unknown; tracks?: Array<{ dropAudio?: unknown; dropPrice?: unknown }> }),
       });
 
       persistProjectShareId(type, id, shareId, albumId);

@@ -26,6 +26,8 @@ export const ANALYTICS_EVENTS = {
   PROFILE_FRIEND_REQUEST: 'profile_friend_request',
   PROFILE_FRIEND_ACCEPT: 'profile_friend_accept',
   PROFILE_GUESTBOOK_SIGNED: 'profile_guestbook_signed',
+  DROP_CHECKOUT_STARTED: 'drop_checkout_started',
+  DROP_PURCHASE: 'drop_purchase',
 } as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS];

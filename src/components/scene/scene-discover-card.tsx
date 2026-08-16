@@ -102,7 +102,11 @@ export function SceneDiscoverCard({
     const ownerHref = drop.ownerSlug ? `/profile/${drop.ownerSlug}` : undefined;
     return (
       <Card className="border-primary/25 bg-gradient-to-r from-primary/[0.07] via-card/85 to-card/70 p-4">
-        <DiscoverTag label="Live DNA Drop" icon={Dna} tone="text-primary/90" />
+        <DiscoverTag
+          label={drop.hasDropAudio ? 'First Drop' : 'Live DNA Drop'}
+          icon={drop.hasDropAudio ? Flame : Dna}
+          tone={drop.hasDropAudio ? 'text-fuchsia-400/90' : 'text-primary/90'}
+        />
         <div className="mt-2.5 flex items-center gap-3">
           <ArtistStarAvatar
             name={drop.ownerName}
@@ -122,7 +126,8 @@ export function SceneDiscoverCard({
               {drop.title}
             </Link>
             <p className="font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
-              {drop.type === 'album' ? 'Album' : 'Track'} DNA by{' '}
+              {drop.type === 'album' ? 'Album' : 'Track'}
+              {drop.hasDropAudio ? ' · stream' : ' DNA'} by{' '}
               {ownerHref ? (
                 <Link
                   href={ownerHref}
@@ -139,6 +144,7 @@ export function SceneDiscoverCard({
                 </span>
               )}
               {drop.updatedAt ? ` · ${timeAgo(drop.updatedAt)}` : ''}
+              {drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : ''}
             </p>
           </div>
           <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>

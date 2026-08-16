@@ -1,0 +1,178 @@
+/**
+ * Bar 4 Bar First Drops — buy-once, stream-in-app commerce for DNA Drops.
+ * Named release: feat/bar4bar-first-drops
+ */
+
+export const BAR4BAR_FIRST_DROPS = 'bar4bar-first-drops' as const;
+
+export const DROP_PAID_MIN_CENTS = 100;
+export const DROP_PLATFORM_FEE_BPS = 1000; // 10%
+export const DROP_AUDIO_MAX_BYTES = 40 * 1024 * 1024;
+export const DROP_PREVIEW_SECONDS = 30;
+export const DROP_PRICE_PRESETS_CENTS = [177, 299, 777, 1777] as const;
+
+export const DROP_AUDIO_ACCEPT =
+  'audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/aac,audio/ogg,audio/flac,audio/webm,.mp3,.wav,.m4a,.aac,.ogg,.flac';
+
+export type DropPriceMode = 'hidden' | 'free' | 'fixed' | 'pwyw';
+
+export type DropPrice = {
+  mode: DropPriceMode;
+  /** Fixed price in cents. */
+  amountCents?: number;
+  /** Pay-what-you-want floor. 0 = free unlock + optional paid tip. */
+  minCents?: number;
+  /** Pay-what-you-want suggested amount. */
+  suggestedCents?: number;
+};
+
+export type DropAudioMeta = {
+  storagePath: string;
+  previewPath?: string;
+  contentType: string;
+  durationSec?: number;
+  byteSize?: number;
+  fileName?: string;
+  uploadedAt: string;
+};
+
+export type DropLibraryEntry = {
+  shareId: string;
+  ownerId: string;
+  scope: 'album' | 'track';
+  projectId: string;
+  title: string;
+  trackIds: string[];
+  amountCents: number;
+  purchasedAt: string;
+  stripeSessionId?: string;
+  free?: boolean;
+};
+
+export function defaultDropPrice(): DropPrice {
+  return { mode: 'hidden' };
+}
+
+export function centsToUsdLabel(cents: number): string {
+  const n = Math.max(0, Math.round(cents)) / 100;
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+}
+
+export function parseUsdToCents(raw: string): number | null {
+  const cleaned = raw.replace(/[^0-9.]/g, '');
+  if (!cleaned) return null;
+  const n = Number(cleaned);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n * 100);
+}
+
+export function normalizeDropPrice(raw: unknown): DropPrice {
+  if (!raw || typeof raw !== 'object') return defaultDropPrice();
+  const o = raw as Record<string, unknown>;
+  const mode: DropPriceMode =
+    o.mode === 'free' || o.mode === 'fixed' || o.mode === 'pwyw' || o.mode === 'hidden'
+      ? o.mode
+      : 'hidden';
+  const amountCents = typeof o.amountCents === 'number' ? Math.round(o.amountCents) : undefined;
+  const minCents = typeof o.minCents === 'number' ? Math.round(o.minCents) : undefined;
+  const suggestedCents =
+    typeof o.suggestedCents === 'number' ? Math.round(o.suggestedCents) : undefined;
+  const next: DropPrice = { mode };
+  if (amountCents != null && amountCents >= 0) next.amountCents = amountCents;
+  if (minCents != null && minCents >= 0) next.minCents = minCents;
+  if (suggestedCents != null && suggestedCents >= 0) next.suggestedCents = suggestedCents;
+  return next;
+}
+
+export function isCommerceLive(price?: DropPrice | null): boolean {
+  return Boolean(price && price.mode !== 'hidden');
+}
+
+export function dropPriceSummary(price?: DropPrice | null): string {
+  if (!price || price.mode === 'hidden') return '';
+  if (price.mode === 'free') return 'Free stream';
+  if (price.mode === 'fixed') {
+    return centsToUsdLabel(price.amountCents ?? DROP_PAID_MIN_CENTS);
+  }
+  const min = price.minCents ?? 0;
+  const sug = price.suggestedCents ?? Math.max(min, 777);
+  if (min <= 0) return `Pay what you want · suggested ${centsToUsdLabel(sug)}`;
+  return `PWYW from ${centsToUsdLabel(min)} · suggested ${centsToUsdLabel(sug)}`;
+}
+
+/** Amount the fan owes for this click. 0 = free claim, no Stripe. */
+export function resolveCheckoutCents(price: DropPrice, fanEnteredCents?: number): number {
+  if (price.mode === 'hidden') return 0;
+  if (price.mode === 'free') return 0;
+  if (price.mode === 'fixed') {
+    return Math.max(DROP_PAID_MIN_CENTS, price.amountCents ?? DROP_PAID_MIN_CENTS);
+  }
+  const min = Math.max(0, price.minCents ?? 0);
+  const suggested = Math.max(min, price.suggestedCents ?? min, min > 0 ? min : 0);
+  const entered =
+    typeof fanEnteredCents === 'number' && Number.isFinite(fanEnteredCents)
+      ? Math.round(fanEnteredCents)
+      : suggested;
+  const charged = Math.max(min, entered);
+  if (charged <= 0) return 0;
+  return Math.max(DROP_PAID_MIN_CENTS, charged);
+}
+
+export function assertPaidAmount(cents: number): void {
+  if (cents < DROP_PAID_MIN_CENTS) {
+    throw new Error(`Paid drops need at least ${centsToUsdLabel(DROP_PAID_MIN_CENTS)}.`);
+  }
+}
+
+export function normalizeDropAudio(raw: unknown): DropAudioMeta | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const o = raw as Record<string, unknown>;
+  const storagePath = typeof o.storagePath === 'string' ? o.storagePath.trim() : '';
+  if (!storagePath) return undefined;
+  const meta: DropAudioMeta = {
+    storagePath,
+    contentType: typeof o.contentType === 'string' && o.contentType.trim() ? o.contentType.trim() : 'audio/mpeg',
+    uploadedAt:
+      typeof o.uploadedAt === 'string' && o.uploadedAt.trim()
+        ? o.uploadedAt
+        : new Date().toISOString(),
+  };
+  if (typeof o.previewPath === 'string' && o.previewPath.trim()) meta.previewPath = o.previewPath.trim();
+  if (typeof o.durationSec === 'number' && o.durationSec > 0) meta.durationSec = o.durationSec;
+  if (typeof o.byteSize === 'number' && o.byteSize > 0) meta.byteSize = o.byteSize;
+  if (typeof o.fileName === 'string' && o.fileName.trim()) meta.fileName = o.fileName.trim();
+  return meta;
+}
+
+export function dropStoragePrefix(userId: string, projectId: string): string {
+  return `drops/${userId}/${projectId}`;
+}
+
+export function publicDropAudio(meta?: DropAudioMeta | null): DropAudioMeta | undefined {
+  const n = normalizeDropAudio(meta);
+  if (!n) return undefined;
+  return {
+    storagePath: n.storagePath,
+    previewPath: n.previewPath,
+    contentType: n.contentType,
+    durationSec: n.durationSec,
+    fileName: n.fileName,
+    uploadedAt: n.uploadedAt,
+    byteSize: n.byteSize,
+  };
+}
+
+export function shareCommerceFlags(payload: {
+  dropAudio?: unknown;
+  dropPrice?: unknown;
+  tracks?: Array<{ dropAudio?: unknown; dropPrice?: unknown }>;
+}): { hasDropAudio: boolean; dropPriceSummary: string } {
+  const ownAudio = Boolean(normalizeDropAudio(payload.dropAudio));
+  const trackAudio = Boolean(payload.tracks?.some((t) => normalizeDropAudio(t.dropAudio)));
+  const price = normalizeDropPrice(payload.dropPrice);
+  const trackPrice = payload.tracks?.map((t) => normalizeDropPrice(t.dropPrice)).find(isCommerceLive);
+  return {
+    hasDropAudio: ownAudio || trackAudio,
+    dropPriceSummary: dropPriceSummary(isCommerceLive(price) ? price : trackPrice) || '',
+  };
+}

@@ -1,0 +1,252 @@
+'use client';
+
+import React, { useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Music, Loader, Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { DataContext } from '@/context/data-context';
+import { uploadDropAudio } from '@/lib/drop-audio-upload';
+import {
+  DROP_AUDIO_ACCEPT,
+  DROP_PAID_MIN_CENTS,
+  DROP_PRICE_PRESETS_CENTS,
+  centsToUsdLabel,
+  defaultDropPrice,
+  normalizeDropPrice,
+  parseUsdToCents,
+  type DropPrice,
+  type DropPriceMode,
+} from '@/lib/drop-commerce';
+import type { Track } from '@/lib/types';
+import { cn } from '@/lib/utils';
+
+const MODES: { id: DropPriceMode; label: string }[] = [
+  { id: 'hidden', label: 'DNA only' },
+  { id: 'free', label: 'Free stream' },
+  { id: 'fixed', label: 'Set price' },
+  { id: 'pwyw', label: 'Pay what you want' },
+];
+
+function PriceEditor({
+  price,
+  onChange,
+  label,
+}: {
+  price: DropPrice;
+  onChange: (next: DropPrice) => void;
+  label: string;
+}) {
+  const [custom, setCustom] = useState('');
+  const amount = price.amountCents ?? 777;
+  const min = price.minCents ?? 0;
+  const suggested = price.suggestedCents ?? 777;
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-[10px] font-bold uppercase tracking-widest text-primary">{label}</Label>
+      <div className="grid grid-cols-2 gap-1.5">
+        {MODES.map((m) => (
+          <Button
+            key={m.id}
+            type="button"
+            size="sm"
+            variant={price.mode === m.id ? 'default' : 'outline'}
+            className="h-8 text-[9px] font-bold uppercase"
+            onClick={() => onChange({ ...price, mode: m.id })}
+          >
+            {m.label}
+          </Button>
+        ))}
+      </div>
+      {price.mode === 'fixed' && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-1.5">
+            {DROP_PRICE_PRESETS_CENTS.map((c) => (
+              <Button
+                key={c}
+                type="button"
+                size="sm"
+                variant={amount === c ? 'secondary' : 'outline'}
+                className="h-7 text-[10px] font-bold"
+                onClick={() => onChange({ ...price, mode: 'fixed', amountCents: c })}
+              >
+                {centsToUsdLabel(c)}
+              </Button>
+            ))}
+          </div>
+          <Input
+            value={custom}
+            onChange={(e) => setCustom(e.target.value)}
+            onBlur={() => {
+              const cents = parseUsdToCents(custom);
+              if (cents == null) return;
+              onChange({ ...price, mode: 'fixed', amountCents: Math.max(DROP_PAID_MIN_CENTS, cents) });
+            }}
+            placeholder="Custom $"
+            className="h-8 font-code text-xs"
+          />
+          <p className="text-[9px] text-muted-foreground">
+            Charged {centsToUsdLabel(Math.max(DROP_PAID_MIN_CENTS, amount))} · min {centsToUsdLabel(DROP_PAID_MIN_CENTS)}
+          </p>
+        </div>
+      )}
+      {price.mode === 'pwyw' && (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <Label className="text-[9px] uppercase text-muted-foreground">Minimum</Label>
+            <Input
+              defaultValue={(min / 100).toFixed(2)}
+              onBlur={(e) => {
+                const cents = parseUsdToCents(e.target.value);
+                onChange({ ...price, mode: 'pwyw', minCents: cents == null ? 0 : cents });
+              }}
+              className="h-8 font-code text-xs"
+            />
+            <p className="text-[8px] text-muted-foreground mt-1">$0 = free + optional tip</p>
+          </div>
+          <div>
+            <Label className="text-[9px] uppercase text-muted-foreground">Suggested</Label>
+            <Input
+              defaultValue={(suggested / 100).toFixed(2)}
+              onBlur={(e) => {
+                const cents = parseUsdToCents(e.target.value);
+                if (cents == null) return;
+                onChange({ ...price, mode: 'pwyw', suggestedCents: Math.max(0, cents) });
+              }}
+              className="h-8 font-code text-xs"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function DropCommercePanel({
+  type,
+  id,
+  albumId,
+}: {
+  type: 'album' | 'track';
+  id: string;
+  albumId?: string;
+}) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { getAlbumById, updateAlbum, updateTrack } = React.useContext(DataContext);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const album = getAlbumById(type === 'album' ? id : albumId || '');
+  const track: Track | undefined =
+    type === 'track' ? album?.tracks?.find((t) => t.id === id) : undefined;
+
+  const saveTrack = (updates: Partial<Track>) => {
+    if (!albumId) {
+      toast({ variant: 'destructive', title: 'Open this song from its album to attach audio.' });
+      return;
+    }
+    updateTrack(albumId, id, updates);
+  };
+
+  const onPickAudio = async (file: File | undefined) => {
+    if (!file || !user) return;
+    setUploading(true);
+    try {
+      const meta = await uploadDropAudio({ userId: user.id, projectId: id, file });
+      if (type === 'track') saveTrack({ dropAudio: meta });
+      toast({
+        title: 'Audio uploaded',
+        description: '30-second preview is ready. Update snapshot to put it on the public drop.',
+      });
+    } catch (e: unknown) {
+      toast({
+        variant: 'destructive',
+        title: 'Upload failed',
+        description: e instanceof Error ? e.message : 'Could not store audio.',
+      });
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const price = normalizeDropPrice(type === 'album' ? album?.dropPrice : track?.dropPrice);
+
+  return (
+    <div className="space-y-3 border-t border-white/10 pt-4 min-w-0">
+      <div className="flex items-center gap-2">
+        <Music className="h-4 w-4 text-primary shrink-0" />
+        <Label className="text-[10px] font-bold uppercase tracking-widest text-primary">
+          First Drop · audio &amp; price
+        </Label>
+      </div>
+      <p className="text-[10px] text-muted-foreground leading-relaxed">
+        Upload the song to Bar 4 Bar (private storage). Fans buy once — set price or pay-what-you-want — then stream it
+        here. Preview is 30 seconds until they pay or you set it free.
+      </p>
+
+      {type === 'track' && (
+        <div className="space-y-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept={DROP_AUDIO_ACCEPT}
+            className="hidden"
+            onChange={(e) => void onPickAudio(e.target.files?.[0])}
+          />
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-9 flex-1 text-[10px] font-bold uppercase"
+              disabled={uploading || !user}
+              onClick={() => fileRef.current?.click()}
+            >
+              {uploading ? <Loader className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Music className="mr-2 h-3.5 w-3.5" />}
+              {track?.dropAudio ? 'Replace audio' : 'Upload song'}
+            </Button>
+            {track?.dropAudio && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 text-red-400"
+                onClick={() => saveTrack({ dropAudio: undefined })}
+                aria-label="Remove audio"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+          {track?.dropAudio && (
+            <p className={cn('text-[10px] font-code text-emerald-400/90')}>
+              {track.dropAudio.fileName || 'Audio on file'}
+              {track.dropAudio.durationSec
+                ? ` · ${Math.round(track.dropAudio.durationSec)}s`
+                : ''}
+            </p>
+          )}
+        </div>
+      )}
+
+      {type === 'album' && (
+        <p className="text-[10px] text-muted-foreground">
+          Upload audio on each song&apos;s DNA Drop. Album price unlocks every track that has audio.
+        </p>
+      )}
+
+      <PriceEditor
+        label={type === 'album' ? 'Album price' : 'Song price'}
+        price={price.mode ? price : defaultDropPrice()}
+        onChange={(next) => {
+          if (type === 'album') updateAlbum(id, { dropPrice: next });
+          else saveTrack({ dropPrice: next });
+        }}
+      />
+    </div>
+  );
+}

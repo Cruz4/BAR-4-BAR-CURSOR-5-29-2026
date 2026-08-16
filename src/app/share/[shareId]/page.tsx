@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useContext, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useContext, useMemo, useCallback, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase/client/firebase';
 import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
@@ -40,6 +40,8 @@ import {
 } from '@/lib/dna-drop';
 import { isLooseTrackAlbum } from '@/lib/co-writer-rules';
 import { DnaDropAlbumHub } from '@/components/dna-drop-album-hub';
+import { DropListenPanel } from '@/components/drop-listen-panel';
+import { normalizeDropAudio, normalizeDropPrice } from '@/lib/drop-commerce';
 import { EmbedPlayer } from '@/components/profile/embed-player';
 import { parseEmbedUrl } from '@/lib/profile/embeds';
 import { useAuth } from '@/hooks/use-auth';
@@ -385,6 +387,27 @@ export default function SharedProjectPage() {
 
             <main className="container max-w-7xl mx-auto py-8 px-4 grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
                 <div className="lg:col-span-4 space-y-6">
+                    <Suspense fallback={null}>
+                      <DropListenPanel
+                        shareId={shareId}
+                        title={project.title || 'Untitled'}
+                        ownerId={share.ownerId}
+                        price={
+                          isAlbum
+                            ? normalizeDropPrice((project as DnaDropAlbumPayload).dropPrice)
+                            : normalizeDropPrice((project as DnaDropTrackPayload).dropPrice)
+                        }
+                        hasAudio={
+                          isAlbum
+                            ? Boolean(
+                                (project as DnaDropAlbumPayload).tracks?.some((t) =>
+                                  normalizeDropAudio(t.dropAudio)
+                                )
+                              )
+                            : Boolean(normalizeDropAudio((project as DnaDropTrackPayload).dropAudio))
+                        }
+                      />
+                    </Suspense>
                     <Card className="border-2 overflow-hidden bg-card/80">
                         <div className="aspect-square relative w-full border-b bg-neutral-950">
                             <ShareCoverImage

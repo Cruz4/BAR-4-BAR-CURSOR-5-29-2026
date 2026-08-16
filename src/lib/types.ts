@@ -1,3 +1,5 @@
+import type { DropAudioMeta, DropPrice } from '@/lib/drop-commerce';
+
 export interface User {
   id: string;
   displayName: string;
@@ -90,6 +92,8 @@ export interface Album {
    * Included in the published snapshot; edit from the DNA Drop dialog.
    */
   dnaDropMedia?: string[];
+  /** Album bundle price for Bar 4 Bar First Drops. */
+  dropPrice?: DropPrice;
 }
 
 export interface TrackVibe {
@@ -142,6 +146,10 @@ export interface Track {
    * Included in the published snapshot; edit from the DNA Drop dialog.
    */
   dnaDropMedia?: string[];
+  /** Private master + 30s preview for Bar 4 Bar First Drops. */
+  dropAudio?: DropAudioMeta;
+  /** Song price for Bar 4 Bar First Drops. */
+  dropPrice?: DropPrice;
 }
 
 /** How a lyric line was added — used for Studio Progress (written vs AI-generated). */
@@ -202,6 +210,9 @@ export interface ProjectShare {
   updatedAt?: string;
   views: number;
   imports: number;
+  /** Lightweight First Drops flags for Discover / share page. */
+  hasDropAudio?: boolean;
+  dropPriceSummary?: string;
 }
 
 export interface SystemLog {

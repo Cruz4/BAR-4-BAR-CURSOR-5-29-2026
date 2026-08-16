@@ -1,0 +1,18 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Bar 4 Bar First Drops — private masters. Playback uses signed URLs from the API.
+    match /drops/{userId}/{allPaths=**} {
+      allow read: if false;
+      allow write: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 40 * 1024 * 1024
+        && request.resource.contentType.matches('audio/.*');
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

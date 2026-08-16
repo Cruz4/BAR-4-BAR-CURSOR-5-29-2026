@@ -45,6 +45,7 @@ import {
 } from '@/lib/dna-drop';
 import { EMBED_HELP_TEXT, parseEmbedUrl } from '@/lib/profile/embeds';
 import { EmbedPlayer } from '@/components/profile/embed-player';
+import { DropCommercePanel } from '@/components/drop-commerce-panel';
 import { cn } from '@/lib/utils';
 import type { Track } from '@/lib/types';
 
@@ -452,7 +453,7 @@ export function ShareDialog({
                     ) : (
                       <>
                         The link stays the same. Use <strong className="text-foreground">Update snapshot</strong> after
-                        you edit lyrics, toggles, DNA, intents, vibe, style, media, or structure — otherwise visitors keep
+                        you edit lyrics, toggles, DNA, intents, vibe, style, media, audio, price, or structure — otherwise visitors keep
                         seeing the last published version.
                       </>
                     )}
@@ -484,6 +485,8 @@ export function ShareDialog({
                 </div>
               </div>
             )}
+
+            <DropCommercePanel type={type} id={id} albumId={type === 'album' ? id : albumId} />
 
             <div className="space-y-3 border-t border-white/10 pt-4 min-w-0">
               <div className="flex items-center gap-2">

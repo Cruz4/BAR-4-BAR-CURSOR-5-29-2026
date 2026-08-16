@@ -13,6 +13,7 @@ import {
   isVibeActive,
 } from '@/lib/co-writer-rules';
 import { hasDirectionContent, mergeDirection } from '@/lib/utils';
+import { normalizeDropPrice, publicDropAudio } from '@/lib/drop-commerce';
 
 /** True when this project has an active public DNA Drop link (shareId persisted on album/track). */
 export function hasActiveDnaDrop(shareId?: string | null): boolean {
@@ -50,6 +51,8 @@ export type DnaDropAlbumContext = {
   theme?: string;
   /** Album cover when the track has no art of its own — used on public snapshot pages. */
   coverArtUrl?: string;
+  /** Parent album DNA Drop share id when the album is live. */
+  shareId?: string;
   direction?: Album['direction'];
   thingsToSay?: string[];
 };
@@ -211,6 +214,11 @@ function sanitizeTrackForSnapshot(
   if (media.length) payload.dnaDropMedia = media;
   else delete payload.dnaDropMedia;
 
+  const audio = publicDropAudio(track.dropAudio);
+  if (audio) payload.dropAudio = audio;
+  else delete payload.dropAudio;
+  payload.dropPrice = normalizeDropPrice(track.dropPrice);
+
   if (album && !isLooseTrackAlbum(album)) {
     const ctx: DnaDropAlbumContext = {
       title: album.title,
@@ -218,6 +226,7 @@ function sanitizeTrackForSnapshot(
     };
     const albumCover = album.coverArtUrl?.trim();
     if (albumCover) ctx.coverArtUrl = albumCover;
+    if (hasActiveDnaDrop(album.shareId)) ctx.shareId = album.shareId!.trim();
     if (isAlbumDnaActive(track, album) && album.direction?.enabled) {
       ctx.direction = album.direction;
     }
@@ -249,6 +258,7 @@ function sanitizeAlbumForSnapshot(
   const media = normalizeDnaDropMedia(album.dnaDropMedia);
   if (media.length) payload.dnaDropMedia = media;
   else delete payload.dnaDropMedia;
+  payload.dropPrice = normalizeDropPrice(album.dropPrice);
 
   // Preserve each track's live shareId so the public album hub can link
   // into that song's DNA Drop page (lyrics stay in the snapshot for import).

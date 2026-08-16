@@ -1959,6 +1959,8 @@ export type DiscoverShareSummary = {
   starMarkSeed?: number;
   studioBadge?: 'pro' | 'free';
   updatedAt: string;
+  hasDropAudio?: boolean;
+  dropPriceSummary?: string;
 };
 
 /** Recent live DNA Drops — summary only, heavy `data` payload stripped. */
@@ -1979,6 +1981,8 @@ export async function listRecentShareSummaries(
     ownerId: string;
     ownerName: string;
     updatedAt: string;
+    hasDropAudio?: boolean;
+    dropPriceSummary?: string;
   }> = [];
   for (const doc of snap.docs) {
     const data = doc.data() as Record<string, unknown>;
@@ -2007,6 +2011,9 @@ export async function listRecentShareSummaries(
           : typeof data.createdAt === 'string'
             ? data.createdAt
             : '',
+      hasDropAudio: data.hasDropAudio === true,
+      dropPriceSummary:
+        typeof data.dropPriceSummary === 'string' ? data.dropPriceSummary : undefined,
     });
     if (rows.length >= limit) break;
   }
@@ -2024,6 +2031,8 @@ export async function listRecentShareSummaries(
       starMarkSeed: meta?.starMarkSeed,
       studioBadge: meta?.studioBadge,
       updatedAt: r.updatedAt,
+      hasDropAudio: r.hasDropAudio,
+      dropPriceSummary: r.dropPriceSummary,
     };
   });
 }

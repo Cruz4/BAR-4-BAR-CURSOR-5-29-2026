@@ -1,0 +1,120 @@
+import { NextResponse } from 'next/server';
+import { getDb } from '@/lib/firebase/server';
+import { CheckoutAuthError, getStripe, verifyCheckoutUser } from '@/lib/stripe-server';
+import { getTrustedAppOrigin } from '@/lib/server/trusted-origin';
+import { getPublicAppUrl } from '@/lib/app-url';
+import {
+  assertPaidAmount,
+  BAR4BAR_FIRST_DROPS,
+  DROP_PLATFORM_FEE_BPS,
+  isCommerceLive,
+  resolveCheckoutCents,
+} from '@/lib/drop-commerce';
+import { loadShare, priceFromShare } from '@/lib/server/drop-entitlements';
+import { recordStudioEvent } from '@/lib/server/studio-analytics';
+import Stripe from 'stripe';
+
+export const runtime = 'nodejs';
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const userId = typeof body.userId === 'string' ? body.userId : '';
+    const shareId = typeof body.shareId === 'string' ? body.shareId.trim() : '';
+    const trackId = typeof body.trackId === 'string' ? body.trackId.trim() : undefined;
+    const fanCents = typeof body.amountCents === 'number' ? Math.round(body.amountCents) : undefined;
+    const email = typeof body.email === 'string' ? body.email : undefined;
+
+    if (!userId || !shareId) {
+      return NextResponse.json({ error: 'Missing user or drop.' }, { status: 400 });
+    }
+
+    try {
+      await verifyCheckoutUser(req, userId);
+    } catch (e) {
+      if (e instanceof CheckoutAuthError) {
+        return NextResponse.json({ error: e.message }, { status: 401 });
+      }
+      throw e;
+    }
+
+    const db = await getDb();
+    const share = await loadShare(db, shareId);
+    if (!share) return NextResponse.json({ error: 'This drop is offline.' }, { status: 404 });
+    if (share.ownerId === userId) {
+      return NextResponse.json({ error: 'This is your drop — it already streams for you.' }, { status: 400 });
+    }
+
+    const priced = priceFromShare(share, share.type === 'album' ? trackId : undefined);
+    if (!isCommerceLive(priced.price)) {
+      return NextResponse.json({ error: 'This drop is not for sale.' }, { status: 400 });
+    }
+
+    const amountCents = resolveCheckoutCents(priced.price, fanCents);
+    if (amountCents <= 0) {
+      return NextResponse.json({ error: 'Use the free claim for this drop.' }, { status: 400 });
+    }
+    assertPaidAmount(amountCents);
+
+    const stripe = getStripe();
+    const origin = getTrustedAppOrigin(req);
+    const scope = share.type === 'album' && !trackId ? 'album' : 'track';
+    const successPath = `/share/${encodeURIComponent(shareId)}?purchased=1&session_id={CHECKOUT_SESSION_ID}`;
+
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+      mode: 'payment',
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: 'usd',
+            unit_amount: amountCents,
+            product_data: {
+              name: priced.title.slice(0, 120),
+              description: `Bar 4 Bar First Drop · ${scope === 'album' ? 'album' : 'song'} stream`,
+            },
+          },
+        },
+      ],
+      success_url: `${origin}${successPath}`,
+      cancel_url: `${origin}/share/${encodeURIComponent(shareId)}?canceled=1`,
+      client_reference_id: userId,
+      metadata: {
+        type: 'drop_purchase',
+        feature: BAR4BAR_FIRST_DROPS,
+        userId,
+        shareId,
+        artistId: share.ownerId,
+        scope,
+        projectId: share.projectId,
+        trackIds: priced.unlockTrackIds.slice(0, 40).join(','),
+        amountCents: String(amountCents),
+        title: priced.title.slice(0, 80),
+        feeBps: String(DROP_PLATFORM_FEE_BPS),
+      },
+      automatic_tax: { enabled: false },
+      consent_collection: { terms_of_service: 'required' },
+      custom_text: {
+        terms_of_service_acceptance: {
+          message: `I agree to the [Terms of Service](${getPublicAppUrl()}/terms) of Bar 4 Bar Studio.`,
+        },
+      },
+      customer_creation: 'always',
+    };
+
+    if (email) sessionParams.customer_email = email;
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
+    await recordStudioEvent(userId, 'drop_checkout_started', {
+      shareId,
+      amountCents,
+      scope,
+    }, email);
+
+    return NextResponse.json({ url: session.url, sessionId: session.id });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Checkout failed';
+    console.error('[drops/checkout]', err);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

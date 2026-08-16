@@ -32,6 +32,8 @@ export type DiscoverDrop = {
   starMarkSeed?: number;
   studioBadge?: 'pro' | 'free';
   updatedAt: string;
+  hasDropAudio?: boolean;
+  dropPriceSummary?: string;
 };
 
 export type DiscoverRiser = {
