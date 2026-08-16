@@ -24,6 +24,52 @@ service cloud.firestore {
       return isOwner(userId) || isAdmin();
     }
 
+    function validVoiceNote(data) {
+      return data is map
+        && data.keys().hasAll(['url', 'storagePath', 'contentType', 'durationSec', 'byteSize'])
+        && data.keys().hasOnly(['url', 'storagePath', 'contentType', 'durationSec', 'byteSize', 'transcript'])
+        && data.url is string
+        && data.url.size() > 8
+        && data.url.size() <= 2000
+        && data.storagePath is string
+        && data.storagePath.size() > 0
+        && data.storagePath.size() <= 400
+        && data.storagePath.matches('voice/' + request.auth.uid + '/.*')
+        && data.contentType is string
+        && data.contentType.size() > 0
+        && data.contentType.size() <= 80
+        && data.contentType.matches('audio/.*')
+        && data.durationSec is number
+        && data.durationSec > 0
+        && data.durationSec <= 90
+        && data.byteSize is number
+        && data.byteSize > 0
+        && data.byteSize <= 5242880
+        && (!('transcript' in data)
+          || (data.transcript is string && data.transcript.size() <= 4000));
+    }
+
+    function validReverbVoiceNote(data) {
+      return data is map
+        && data.keys().hasAll(['url', 'storagePath', 'contentType', 'durationSec', 'byteSize'])
+        && data.keys().hasOnly(['url', 'storagePath', 'contentType', 'durationSec', 'byteSize', 'transcript'])
+        && data.url is string
+        && data.url.size() > 8
+        && data.url.size() <= 2000
+        && data.storagePath is string
+        && data.storagePath.size() > 0
+        && data.storagePath.size() <= 400
+        && data.contentType is string
+        && data.contentType.size() > 0
+        && data.contentType.size() <= 80
+        && data.durationSec is number
+        && data.durationSec > 0
+        && data.byteSize is number
+        && data.byteSize > 0
+        && (!('transcript' in data)
+          || (data.transcript is string && data.transcript.size() <= 4000));
+    }
+
     // Client bootstrap only — privileged billing/admin fields must stay at safe defaults
     function isSafeUserBootstrap() {
       let data = request.resource.data;
@@ -261,10 +307,15 @@ service cloud.firestore {
         && (!('reverbImageUrl' in request.resource.data)
           || (request.resource.data.reverbImageUrl is string
             && request.resource.data.reverbImageUrl.size() <= 900000))
+        && (!('voice' in request.resource.data)
+          || validVoiceNote(request.resource.data.voice))
+        && (!('reverbVoice' in request.resource.data)
+          || validReverbVoiceNote(request.resource.data.reverbVoice))
         && (
           request.resource.data.text.size() > 0
           || ('embedUrl' in request.resource.data && request.resource.data.embedUrl.size() > 0)
           || ('imageUrl' in request.resource.data && request.resource.data.imageUrl.size() > 0)
+          || ('voice' in request.resource.data && validVoiceNote(request.resource.data.voice))
           || (request.resource.data.isReverb == true
             && 'reverbPostId' in request.resource.data
             && request.resource.data.reverbPostId.size() > 0)
@@ -285,7 +336,13 @@ service cloud.firestore {
         allow create: if request.auth != null
           && request.resource.data.authorId == request.auth.uid
           && request.resource.data.text is string
-          && request.resource.data.text.size() <= 500;
+          && request.resource.data.text.size() <= 500
+          && (!('voice' in request.resource.data)
+            || validVoiceNote(request.resource.data.voice))
+          && (
+            request.resource.data.text.size() > 0
+            || ('voice' in request.resource.data && validVoiceNote(request.resource.data.voice))
+          );
         allow delete: if request.auth != null
           && (resource.data.authorId == request.auth.uid
             || get(/databases/$(database)/documents/posts/$(postId)).data.ownerId == request.auth.uid

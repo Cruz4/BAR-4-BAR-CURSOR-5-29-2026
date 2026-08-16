@@ -138,6 +138,7 @@ function stripDirectionFields(direction?: Partial<Direction> | null): Partial<Di
 function stripWorkstationOnlyFields(payload: DnaDropTrackPayload) {
   delete payload.relayData;
   delete payload.draftChest;
+  delete payload.sheetTakes;
   delete payload.approvalDraftBacklog;
   delete payload.suggestedTitlesHistory;
   delete payload.vibePresets;

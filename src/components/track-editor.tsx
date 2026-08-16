@@ -89,6 +89,7 @@ import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreativeEffectsPanel } from './creative-effects-panel';
 import { ScratchPad } from './scratch-pad';
+import { SheetTakesPanel } from './sheet-takes-panel';
 import { DraftChest } from './draft-chest';
 import {
   appendSectionsToSheet,
@@ -3376,6 +3377,17 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
             ref={scratchPadRef}
             isOpen={sectionOpen.scratchPad}
             onOpenChange={(o) => onSectionChange('scratchPad', o)}
+          />
+
+          <SheetTakesPanel
+            key={track.id}
+            takes={track.sheetTakes}
+            trackId={track.id}
+            userId={user?.id}
+            disabled={trackLocked}
+            isOpen={sectionOpen.sheetTakes}
+            onOpenChange={(o) => onSectionChange('sheetTakes', o)}
+            onChange={(sheetTakes) => onUpdateTrack({ sheetTakes })}
           />
 
           <DraftChest

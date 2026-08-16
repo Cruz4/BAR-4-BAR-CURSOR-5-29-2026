@@ -13,6 +13,8 @@ import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { ArtistHomeLink, useLiveArtistHomeSlug } from '@/components/profile/artist-home-link';
 import { EmbedPlayer } from '@/components/profile/embed-player';
 import { PostShareDialog } from '@/components/profile/post-share-dialog';
+import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
+import { VoiceNotePlayer } from '@/components/profile/voice-note-player';
 import {
   addComment,
   deleteComment,
@@ -29,6 +31,7 @@ import {
   type PostComment,
   type ProfilePost,
 } from '@/lib/profile/social-client';
+import { type RecordedVoiceClip } from '@/lib/profile/voice-notes';
 import { Hint } from '@/components/ui/tooltip';
 import { parseStudioBadge, studioChromeFromUser, studioNameClass, type StudioNameChrome } from '@/lib/studio-tier-chrome';
 import {
@@ -149,7 +152,17 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
           <EmbedPlayer url={post.reverbEmbedUrl} />
         </div>
       ) : null}
-      {!post.reverbText && !post.reverbImageUrl && !post.reverbEmbedUrl ? (
+      {post.reverbVoice ? (
+        <div className="mt-2">
+          <VoiceNotePlayer
+            src={post.reverbVoice.url}
+            transcript={post.reverbVoice.transcript}
+            durationSec={post.reverbVoice.durationSec}
+            compact
+          />
+        </div>
+      ) : null}
+      {!post.reverbText && !post.reverbImageUrl && !post.reverbEmbedUrl && !post.reverbVoice ? (
         <p className="text-xs italic text-[var(--ph-muted,rgba(255,255,255,0.5))]">Original post</p>
       ) : null}
     </div>
@@ -166,6 +179,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   const [comments, setComments] = useState<PostComment[]>([]);
   const [commentsLoaded, setCommentsLoaded] = useState(false);
   const [draft, setDraft] = useState('');
+  const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
   const [busy, setBusy] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [reverbed, setReverbed] = useState(false);
@@ -313,16 +327,22 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   };
 
   const submitComment = async () => {
-    if (!user || !draft.trim()) return;
+    if (!user || (!draft.trim() && !voice)) return;
     setBusy(true);
     try {
-      const comment = await addComment(post.id, draft, {
-        name: user.displayName || 'Artist',
-        slug: viewerSlug,
-      });
+      const comment = await addComment(
+        post.id,
+        draft,
+        {
+          name: user.displayName || 'Artist',
+          slug: viewerSlug,
+        },
+        voice || undefined
+      );
       setComments((prev) => [...prev, comment]);
       setCommentCount((c) => c + 1);
       setDraft('');
+      setVoice(null);
     } catch (e) {
       toast({
         variant: 'destructive',
@@ -420,6 +440,16 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         </p>
       )}
 
+      {post.voice ? (
+        <div className="mt-3">
+          <VoiceNotePlayer
+            src={post.voice.url}
+            transcript={post.voice.transcript}
+            durationSec={post.voice.durationSec}
+          />
+        </div>
+      ) : null}
+
       {post.isReverb ? <ReverbSourceBody post={post} /> : null}
 
       {!post.isReverb && post.imageUrl && (
@@ -507,7 +537,19 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
                 >
                   {comment.authorName}
                 </ArtistHomeLink>
-                <span className="text-[var(--ph-text,#fff)]/90">{comment.text}</span>
+                {comment.text ? (
+                  <span className="text-[var(--ph-text,#fff)]/90">{comment.text}</span>
+                ) : null}
+                {comment.voice ? (
+                  <div className="mt-1.5">
+                    <VoiceNotePlayer
+                      src={comment.voice.url}
+                      transcript={comment.voice.transcript}
+                      durationSec={comment.voice.durationSec}
+                      compact
+                    />
+                  </div>
+                ) : null}
               </div>
               {user?.id && (user.id === comment.authorId || isOwner) && (
                 <button
@@ -533,29 +575,37 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
             </p>
           )}
           {user ? (
-            <div className="flex items-center gap-2 pt-1">
-              <Input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    void submitComment();
-                  }
-                }}
-                maxLength={500}
-                placeholder="Say something..."
-                className="h-8 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 text-sm"
+            <div className="space-y-2 pt-1">
+              <VoiceNoteComposer
+                clip={voice}
+                onClipChange={setVoice}
+                disabled={busy}
+                compact
               />
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 shrink-0 text-[var(--ph-accent,#7dd3fc)]"
-                disabled={busy || !draft.trim()}
-                onClick={() => void submitComment()}
-              >
-                <Send className="h-3.5 w-3.5" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      void submitComment();
+                    }
+                  }}
+                  maxLength={500}
+                  placeholder={voice ? 'Add a caption (optional)…' : 'Say something…'}
+                  className="h-8 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 text-sm"
+                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 shrink-0 text-[var(--ph-accent,#7dd3fc)]"
+                  disabled={busy || (!draft.trim() && !voice)}
+                  onClick={() => void submitComment()}
+                >
+                  <Send className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
           ) : (
             <p className="text-xs text-[var(--ph-muted,rgba(255,255,255,0.5))]">

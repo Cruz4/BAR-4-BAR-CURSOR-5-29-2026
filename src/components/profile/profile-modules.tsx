@@ -37,6 +37,7 @@ import { BarBoardView } from '@/components/profile/bar-board-module';
 import { parseEmbedUrl, EMBED_HELP_TEXT } from '@/lib/profile/embeds';
 import { EmbedPlayer } from '@/components/profile/embed-player';
 import { PostCard } from '@/components/profile/post-card';
+import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { PressPlate, type PressPlateChrome } from '@/components/profile/press-plate';
 import { PublicAchievementFoil } from '@/components/profile/public-achievement-foil';
 import { LiveDnaDropsGroupedList } from '@/components/profile/live-dna-drop-card';
@@ -55,6 +56,7 @@ import {
   type GuestbookEntry,
   type ProfilePost,
 } from '@/lib/profile/social-client';
+import { type RecordedVoiceClip } from '@/lib/profile/voice-notes';
 import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 
 export type ModuleContext = {
@@ -580,6 +582,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const [loaded, setLoaded] = useState(Boolean(playground));
   const [text, setText] = useState('');
   const [embedUrl, setEmbedUrl] = useState('');
+  const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
   const [busy, setBusy] = useState(false);
   const [page, setPage] = useState(0);
 
@@ -641,6 +644,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       return;
     }
     if (!user) return;
+    if (!text.trim() && !embedUrl.trim() && !voice) return;
     setBusy(true);
     try {
       const post = await createPost({
@@ -648,10 +652,12 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
         embedUrl: embedUrl.trim() || undefined,
         ownerName: user.displayName || 'Artist',
         ownerSlug: ctx.profileSlug,
+        ...(voice ? { voice } : {}),
       });
       setPosts((prev) => [post, ...prev]);
       setText('');
       setEmbedUrl('');
+      setVoice(null);
       setPage(0);
     } catch (e) {
       toast({
@@ -699,12 +705,14 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
             <p className="text-[10px] text-[var(--ph-muted,rgba(255,255,255,0.5))]">
               Demo wall — text and links stay here until you claim your free profile.
             </p>
-          ) : null}
+          ) : (
+            <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} />
+          )}
           <div className="flex justify-end">
             <Button
               size="sm"
               className="h-9 gap-1.5 font-bold uppercase"
-              disabled={busy || (!text.trim() && !embedUrl.trim())}
+              disabled={busy || (!text.trim() && !embedUrl.trim() && !voice)}
               onClick={() => void submit()}
             >
               <Send className="h-3.5 w-3.5" /> Post

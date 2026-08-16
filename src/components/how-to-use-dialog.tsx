@@ -382,7 +382,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                       <ul className="list-disc list-inside space-y-1 text-xs">
                         <li><strong>Top nav</strong> — Vault (sky) and Activity (emerald bell with unread badge).</li>
                         <li><strong>Dock</strong> — Vault{flags.firstDrops ? ', Library' : ''}, Keep writing | Start track, Artist Home | Edit page{flags.lock ? ', Finish this bar' : ''}, leaderboard, circle, Ink.</li>
-                        <li><strong>Post</strong> — composer at the top; friends see it on their Scene.</li>
+                        <li><strong>Post</strong> — composer at the top; friends see it on their Scene. Hit <strong>Voice</strong> for a 60-second note — listeners tap Read / Listen to switch transcript and playback.</li>
                       </ul>
                     </div>
                     <div className="rounded-lg border border-border/40 bg-muted/20 p-3 space-y-1.5">
@@ -792,6 +792,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                                 <p>• <strong>DNA Suite:</strong> Five Creative Direction questions — type your own or edit after load/extract. <strong>Folder icon</strong> opens the vault. Primary extraction save: DNA &amp; REMIX → Analysis Step.</p>
                                 <p>• <strong>Intents:</strong> Motif management with the <strong>Precision Lock Arrow</strong>.</p>
                                 <p>• <strong>AI Co-Writer:</strong> Neural sharpening tools and Artist Style training.</p>
+                                <p>• <strong>Takes:</strong> Above Draft Chest — record up to 3 vocal memos per track (5 minutes each) and play them back anytime.</p>
                             </AccordionContent>
                         </AccordionItem>
                     </Accordion>

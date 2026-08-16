@@ -6,6 +6,7 @@ export type CoWriterSectionKey =
   | 'coWriter'
   | 'creativeEffects'
   | 'scratchPad'
+  | 'sheetTakes'
   | 'draftChest';
 
 export type CoWriterSections = Record<CoWriterSectionKey, boolean>;
@@ -24,6 +25,7 @@ export const DEFAULT_SECTIONS_CLOSED: CoWriterSections = {
   coWriter: false,
   creativeEffects: false,
   scratchPad: false,
+  sheetTakes: false,
   draftChest: false,
 };
 

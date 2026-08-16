@@ -113,6 +113,8 @@ const STUDIO_TIPS: StudioTip[] = [
   { id: 70, kind: 'did-you-know', icon: Globe, title: "ARTIST HOME IS FREE", text: "Did you know? Artist Home is completely free — claim it, skin it, go live. No Pro required for the page. Pro is for studio tools (custom DNA vault, Performance, DNA Drop links), not the public profile.", color: "text-fuchsia-300" },
   { id: 71, kind: 'did-you-know', icon: Bell, title: "ACTIVITY OPENS THE POST", text: "Did you know? Tap Open on an Activity love or reply and it jumps to that wall post. If it was a comment, the thread opens on that reply — no hunting the wall.", color: "text-emerald-400" },
   { id: 72, icon: Lock, title: "FINISH THIS BAR", text: "Cast one unfinished line from Press Desk. Anyone can reply with a Fit score. Manage your casts from the Scene dock — Finish this bar.", color: "text-emerald-400", feature: 'lock' },
+  { id: 73, kind: 'did-you-know', icon: Mic, title: "VOICE ON THE WALL", text: "Did you know? Wall posts and replies can be voice notes — up to 60 seconds. Hit Voice in the composer, then listeners tap Read to see the transcript or Listen to play it back with controls.", color: "text-sky-300" },
+  { id: 74, kind: 'did-you-know', icon: Mic, title: "SHEET TAKES", text: "Did you know? The right panel has Takes above Draft Chest — record up to 3 vocal memos per track, 5 minutes each. Play them back anytime you open that sheet.", color: "text-sky-400" },
 ];
 
 export function StudioTips() {

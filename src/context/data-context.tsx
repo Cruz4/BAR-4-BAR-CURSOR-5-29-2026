@@ -11,6 +11,7 @@ import { db } from '@/lib/firebase/client/firebase';
 import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import { doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch, deleteField } from 'firebase/firestore';
 import { stripForFirestore } from '@/lib/utils';
+import { deleteVoiceStorage } from '@/lib/profile/voice-notes';
 import { countNonEmptyBars } from '@/lib/gamification/bar-count';
 import {
   buildLineBaseline,
@@ -790,7 +791,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   const deleteTrack = useCallback((albumId: string, trackId: string) => {
+    let takePaths: string[] = [];
     setAlbums((prev) => {
+      const doomed = prev.find((a) => a.id === albumId)?.tracks.find((t) => t.id === trackId);
+      takePaths = (doomed?.sheetTakes ?? [])
+        .map((take) => take.storagePath)
+        .filter((path): path is string => Boolean(path));
       const next = prev.map((a) =>
         a.id === albumId ? { ...a, tracks: a.tracks.filter((t) => t.id !== trackId) } : a
       );
@@ -802,6 +808,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
       return next;
     });
+    if (takePaths.length) {
+      void Promise.all(takePaths.map((path) => deleteVoiceStorage(path)));
+    }
     if (!user) return;
     if (isBrowserOffline()) {
       const count = pushDeleteTrackOutbox(user.id, albumId, trackId);

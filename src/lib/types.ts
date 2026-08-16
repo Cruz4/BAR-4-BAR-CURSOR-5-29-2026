@@ -142,6 +142,8 @@ export interface Track {
   relayData?: WizardState;
   /** Stashed full song drafts (DNA & REMIX) — Draft Chest under Scratch Pad. */
   draftChest?: DraftChestEntry[];
+  /** Private vocal reference recordings for this sheet (max 3). */
+  sheetTakes?: import('@/lib/sheet-takes').SheetTake[];
   /** Persisted DNA/REMIX approval outputs for recovery into Draft Chest (cleared after migrate). */
   approvalDraftBacklog?: import('@/lib/approval-draft-history').ApprovalDraftSnapshot[];
   suggestedTitlesHistory?: string[][];

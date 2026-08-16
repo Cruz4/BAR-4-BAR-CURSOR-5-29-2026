@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { StudioLoader } from '@/components/studio-loader';
 import { PostCard } from '@/components/profile/post-card';
+import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { FindArtistsPanel } from '@/components/profile/find-artists-panel';
 import { VaultStudioProgress, SCENE_STUDIO_PROGRESS_EXPANDED_KEY, SCENE_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY } from '@/components/gamification/vault-studio-progress';
 import { SceneNavDock } from '@/components/scene/scene-nav-dock';
@@ -43,6 +44,7 @@ import {
   type Friendship,
   type ProfilePost,
 } from '@/lib/profile/social-client';
+import { type RecordedVoiceClip } from '@/lib/profile/voice-notes';
 import { FRIENDSHIP_CHANGED_EVENT, type FriendshipChangedDetail } from '@/lib/activity/client';
 import { getBlockLastSeenAt, markBlockSeen } from '@/lib/profile/social-alerts';
 import {
@@ -115,12 +117,13 @@ function SceneComposer({
   const [text, setText] = useState('');
   const [embedUrl, setEmbedUrl] = useState('');
   const [showEmbed, setShowEmbed] = useState(false);
+  const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
   const [busy, setBusy] = useState(false);
 
   if (!user) return null;
 
   const submit = async () => {
-    if (busy || (!text.trim() && !embedUrl.trim())) return;
+    if (busy || (!text.trim() && !embedUrl.trim() && !voice)) return;
     setBusy(true);
     try {
       const post = await createPost({
@@ -128,10 +131,12 @@ function SceneComposer({
         embedUrl: embedUrl.trim() || undefined,
         ownerName: user.displayName || 'Artist',
         ...(profileSlug ? { ownerSlug: profileSlug } : {}),
+        ...(voice ? { voice } : {}),
       });
       setText('');
       setEmbedUrl('');
       setShowEmbed(false);
+      setVoice(null);
       onPosted(post);
       toast({ title: 'Posted to your wall' });
     } catch (e) {
@@ -159,6 +164,7 @@ function SceneComposer({
           className="mt-2 h-9 border-border/60 bg-background/60 text-xs"
         />
       )}
+      <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} />
       <div className="mt-2.5 flex items-center justify-between gap-2">
         <button
           type="button"
@@ -170,7 +176,7 @@ function SceneComposer({
         <Button
           size="sm"
           className="h-9 gap-1.5 font-bold uppercase"
-          disabled={busy || (!text.trim() && !embedUrl.trim())}
+          disabled={busy || (!text.trim() && !embedUrl.trim() && !voice)}
           onClick={() => void submit()}
         >
           <Send className="h-3.5 w-3.5" /> Post

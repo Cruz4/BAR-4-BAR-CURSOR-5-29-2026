@@ -29,6 +29,16 @@ import { auth, db } from '@/lib/firebase/client/firebase';
 import { parseEmbedUrl, type EmbedProvider } from '@/lib/profile/embeds';
 import { parseStudioBadge } from '@/lib/studio-tier-chrome';
 import {
+  deleteVoiceStorage,
+  parseVoiceNote,
+  uploadVoiceClip,
+  voiceCommentStoragePath,
+  voiceNoteToFirestore,
+  voicePostStoragePath,
+  type RecordedVoiceClip,
+  type VoiceNote,
+} from '@/lib/profile/voice-notes';
+import {
   NEOMAIYA_PLAYGROUND_FRIEND,
   NEOMAIYA_SOL,
   isNeomaiyaSolViewer,
@@ -57,6 +67,10 @@ export type ProfilePost = {
   reverbText?: string;
   reverbEmbedUrl?: string;
   reverbImageUrl?: string;
+  /** Optional recorded voice note (playable + stored transcript). */
+  voice?: VoiceNote;
+  /** Snapshot of the original post's voice when this wall item is a Reverb. */
+  reverbVoice?: VoiceNote;
 };
 
 export type PostComment = {
@@ -66,6 +80,7 @@ export type PostComment = {
   authorSlug?: string;
   text: string;
   createdAt: string;
+  voice?: VoiceNote;
 };
 
 export type FriendshipStatus = 'pending' | 'accepted';
@@ -154,6 +169,7 @@ export async function createPost(input: {
   imageUrl?: string;
   ownerName: string;
   ownerSlug?: string;
+  voice?: RecordedVoiceClip;
 }): Promise<ProfilePost> {
   const user = requireUser();
   const text = input.text.trim().slice(0, MAX_POST_TEXT);
@@ -162,11 +178,26 @@ export async function createPost(input: {
   if (imageUrl && imageUrl.length > MAX_POST_IMAGE_URL) {
     throw new Error('Image is too large to post.');
   }
-  if (!text && !embedUrl && !imageUrl) throw new Error('Write something, add a link, or attach an image.');
+  if (!text && !embedUrl && !imageUrl && !input.voice) {
+    throw new Error('Write something, add a link, attach an image, or record a voice note.');
+  }
+
+  const id = newestFirstId();
+  let voice: VoiceNote | undefined;
+  if (input.voice) {
+    try {
+      voice = await uploadVoiceClip({
+        storagePath: voicePostStoragePath(user.uid, id, input.voice.contentType),
+        clip: input.voice,
+      });
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('Could not upload voice note.');
+    }
+  }
 
   const parsed = parseEmbedUrl(embedUrl);
   const post: ProfilePost = {
-    id: newestFirstId(),
+    id,
     ownerId: user.uid,
     ownerName: input.ownerName || user.displayName || 'Artist',
     ...(input.ownerSlug ? { ownerSlug: input.ownerSlug } : {}),
@@ -174,13 +205,20 @@ export async function createPost(input: {
     ...(embedUrl ? { embedUrl } : {}),
     ...(parsed ? { embedProvider: parsed.provider } : {}),
     ...(imageUrl ? { imageUrl } : {}),
+    ...(voice ? { voice } : {}),
     createdAt: new Date().toISOString(),
   };
-  const { id, ...data } = post;
-  await setDoc(doc(db, 'posts', id), data);
+  const { id: postId, ...data } = post;
+  try {
+    await setDoc(doc(db, 'posts', postId), data);
+  } catch (err) {
+    if (voice) await deleteVoiceStorage(voice.storagePath);
+    throw err;
+  }
   trackSocialEvent('profile_post_created', {
     hasEmbed: Boolean(embedUrl),
     hasImage: Boolean(imageUrl),
+    hasVoice: Boolean(voice),
   });
   try {
     const { postGamificationEvent } = await import('@/lib/gamification-client');
@@ -197,6 +235,8 @@ export async function deletePost(postId: string): Promise<void> {
     const snap = await getDoc(doc(db, 'posts', postId));
     if (snap.exists()) {
       const data = snap.data() as Record<string, unknown>;
+      const voice = parseVoiceNote(data.voice);
+      if (voice?.storagePath) await deleteVoiceStorage(voice.storagePath);
       if (
         data.isReverb === true &&
         typeof data.reverbPostId === 'string' &&
@@ -215,6 +255,8 @@ export async function deletePost(postId: string): Promise<void> {
 }
 
 function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
+  const parsedVoice = parseVoiceNote(data.voice);
+  const parsedReverbVoice = parseVoiceNote(data.reverbVoice);
   return {
     id,
     ownerId: String(data.ownerId || ''),
@@ -237,6 +279,8 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
     ...(typeof data.reverbText === 'string' ? { reverbText: data.reverbText } : {}),
     ...(typeof data.reverbEmbedUrl === 'string' ? { reverbEmbedUrl: data.reverbEmbedUrl } : {}),
     ...(typeof data.reverbImageUrl === 'string' ? { reverbImageUrl: data.reverbImageUrl } : {}),
+    ...(parsedVoice ? { voice: parsedVoice } : {}),
+    ...(parsedReverbVoice ? { reverbVoice: parsedReverbVoice } : {}),
   };
 }
 
@@ -310,6 +354,10 @@ export async function toggleReverb(
     source.isReverb && source.reverbImageUrl
       ? source.reverbImageUrl
       : source.imageUrl;
+  const rootVoice =
+    source.isReverb && source.reverbVoice
+      ? source.reverbVoice
+      : source.voice;
 
   const pointerRef = doc(db, 'users', user.uid, 'reverbs', rootPostId);
   const existing = await getDoc(pointerRef);
@@ -344,6 +392,7 @@ export async function toggleReverb(
     ...(rootImage && rootImage.length <= MAX_POST_IMAGE_URL
       ? { reverbImageUrl: rootImage }
       : {}),
+    ...(rootVoice ? { reverbVoice: voiceNoteToFirestore(rootVoice) } : {}),
   };
 
   const { id, ...data } = post;
@@ -462,29 +511,44 @@ export async function fetchHasLiked(postId: string): Promise<boolean> {
 export async function addComment(
   postId: string,
   text: string,
-  author: { name: string; slug?: string }
+  author: { name: string; slug?: string },
+  voiceClip?: RecordedVoiceClip
 ): Promise<PostComment> {
   const user = requireUser();
   const clean = text.trim().slice(0, MAX_COMMENT_TEXT);
-  if (!clean) throw new Error('Comment is empty.');
+  if (!clean && !voiceClip) throw new Error('Comment is empty.');
+  const id = chronoId();
+  let voice: VoiceNote | undefined;
+  if (voiceClip) {
+    voice = await uploadVoiceClip({
+      storagePath: voiceCommentStoragePath(user.uid, postId, id, voiceClip.contentType),
+      clip: voiceClip,
+    });
+  }
   const comment: PostComment = {
-    id: chronoId(),
+    id,
     authorId: user.uid,
     authorName: author.name || user.displayName || 'Artist',
     ...(author.slug ? { authorSlug: author.slug } : {}),
     text: clean,
     createdAt: new Date().toISOString(),
+    ...(voice ? { voice } : {}),
   };
-  const { id, ...data } = comment;
-  await setDoc(doc(db, 'posts', postId, 'comments', id), data);
+  const { id: commentId, ...data } = comment;
+  try {
+    await setDoc(doc(db, 'posts', postId, 'comments', commentId), data);
+  } catch (err) {
+    if (voice) await deleteVoiceStorage(voice.storagePath);
+    throw err;
+  }
   const { emitActivity } = await import('@/lib/activity/client');
   emitActivity({
     type: 'post_reply',
     actorName: comment.authorName,
     ...(comment.authorSlug ? { actorSlug: comment.authorSlug } : {}),
     postId,
-    preview: clean.slice(0, 120),
-    commentId: id,
+    preview: (clean || voice?.transcript || 'Voice note').slice(0, 120),
+    commentId,
   });
   return comment;
 }
@@ -494,6 +558,7 @@ export async function fetchComments(postId: string, max = 50): Promise<PostComme
     const snap = await getDocs(query(collection(db, 'posts', postId, 'comments'), limitTo(max)));
     const comments = snap.docs.map((d) => {
       const data = d.data();
+      const voice = parseVoiceNote(data.voice);
       return {
         id: d.id,
         authorId: String(data.authorId || ''),
@@ -501,6 +566,7 @@ export async function fetchComments(postId: string, max = 50): Promise<PostComme
         authorSlug: typeof data.authorSlug === 'string' ? data.authorSlug : undefined,
         text: String(data.text || ''),
         createdAt: String(data.createdAt || ''),
+        ...(voice ? { voice } : {}),
       };
     });
     const ids = [...new Set(comments.map((c) => c.authorId).filter(Boolean))];
@@ -522,6 +588,15 @@ export async function fetchComments(postId: string, max = 50): Promise<PostComme
 
 export async function deleteComment(postId: string, commentId: string): Promise<void> {
   requireUser();
+  try {
+    const snap = await getDoc(doc(db, 'posts', postId, 'comments', commentId));
+    if (snap.exists()) {
+      const voice = parseVoiceNote(snap.data().voice);
+      if (voice?.storagePath) await deleteVoiceStorage(voice.storagePath);
+    }
+  } catch {
+    /* still attempt comment delete */
+  }
   await deleteDoc(doc(db, 'posts', postId, 'comments', commentId));
 }
 
