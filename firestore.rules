@@ -31,7 +31,8 @@ service cloud.firestore {
       let subOk = !('subscriptionStatus' in data) || data.subscriptionStatus == 'none';
       let tierOk = !('subscriptionTier' in data) || data.subscriptionTier == 'none';
       let statusOk = !('status' in data) || data.status == 'active';
-      return roleOk && subOk && tierOk && statusOk;
+      let connectOk = !('stripeConnectAccountId' in data);
+      return roleOk && subOk && tierOk && statusOk && connectOk;
     }
 
     // Public DNA Drop shares
@@ -94,6 +95,8 @@ service cloud.firestore {
           && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
             'role', 'subscriptionStatus', 'subscriptionTier', 'status',
             'subscriptionId', 'stripeCustomerId', 'referredBy', 'referralCode', 'referralCount',
+            'stripeConnectAccountId', 'stripeConnectCountry', 'stripeConnectDetailsSubmitted',
+            'stripeConnectTransfersActive', 'stripeConnectPayoutsEnabled',
             'returningIdentity', 'proFeaturePreviewExpiresAt', 'pendingWelcomeInk', 'welcomeInkReconciled'
           ]));
       allow delete: if isOwner(userId) || isAdmin();
@@ -176,6 +179,37 @@ service cloud.firestore {
       match /dropLibrary/{shareId} {
         allow read: if isOwnerOrAdmin(userId);
         allow write: if false;
+      }
+
+      // Artist First Drop sales ledger — Admin SDK writes; owner reads
+      match /dropEarnings/{saleId} {
+        allow read: if isOwnerOrAdmin(userId);
+        allow write: if false;
+      }
+
+      match /dropPayouts/{docId} {
+        allow read: if isOwnerOrAdmin(userId);
+        allow write: if false;
+      }
+
+      // The Deck crates (playlists of unlocked drops)
+      match /dropCrates/{crateId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 48
+          && request.resource.data.shareIds is list
+          && request.resource.data.shareIds.size() <= 80
+          && request.resource.data.createdAt is string
+          && request.resource.data.updatedAt is string;
+        allow update: if isOwner(userId)
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 48
+          && request.resource.data.shareIds is list
+          && request.resource.data.shareIds.size() <= 80;
+        allow delete: if isOwner(userId);
       }
     }
 

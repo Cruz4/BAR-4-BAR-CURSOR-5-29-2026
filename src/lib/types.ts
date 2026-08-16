@@ -12,6 +12,12 @@ export interface User {
   role?: 'admin' | 'artist';
   status?: 'active' | 'blocked';
   stripeCustomerId?: string;
+  /** Stripe Connect account for First Drop artist payouts. */
+  stripeConnectAccountId?: string;
+  stripeConnectCountry?: string;
+  stripeConnectDetailsSubmitted?: boolean;
+  stripeConnectTransfersActive?: boolean;
+  stripeConnectPayoutsEnabled?: boolean;
   subscriptionStatus?: 'active' | 'canceled' | 'none';
   subscriptionTier?: 'monthly' | 'yearly' | 'none';
   subscriptionId?: string;

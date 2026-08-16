@@ -4,61 +4,27 @@
  * Scene pins for admin-togglable house bar of the day + weekly public challenge.
  */
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { CalendarRange, Flame, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useGamification } from '@/context/gamification-context';
 import { useLockFeature } from '@/hooks/use-lock-feature';
+import { useSceneLive } from '@/hooks/use-scene-live';
 import { getLastWorkedTrackPath } from '@/lib/studio-tips-session';
 import { VAULT_PATH } from '@/lib/scene-home';
 import { LOCK_HOUSE_PATH } from '@/lib/lock-feature';
 import { getChallengeProgress, WEEKLY_CHALLENGES } from '@/lib/gamification/challenges';
-import {
-  DEFAULT_HOUSE_BAR,
-  DEFAULT_WEEKLY_CHALLENGE,
-  type SceneLivePublic,
-} from '@/lib/scene/live-events';
 import { cn } from '@/lib/utils';
-
-async function fetchSceneLive(): Promise<SceneLivePublic> {
-  try {
-    const res = await fetch('/api/scene/live', { cache: 'no-store' });
-    if (!res.ok) {
-      return { houseBar: DEFAULT_HOUSE_BAR, weeklyChallenge: DEFAULT_WEEKLY_CHALLENGE };
-    }
-    const data = (await res.json()) as Partial<SceneLivePublic>;
-    return {
-      houseBar: { ...DEFAULT_HOUSE_BAR, ...data.houseBar },
-      weeklyChallenge: { ...DEFAULT_WEEKLY_CHALLENGE, ...data.weeklyChallenge },
-    };
-  } catch {
-    return { houseBar: DEFAULT_HOUSE_BAR, weeklyChallenge: DEFAULT_WEEKLY_CHALLENGE };
-  }
-}
 
 export function SceneLivePrompts({ className }: { className?: string }) {
   const { summary } = useGamification();
   const { enabled: lockOn } = useLockFeature();
-  const [live, setLive] = useState<SceneLivePublic | null>(null);
+  const { live, loaded, houseBarOn, weeklyOn } = useSceneLive();
   const writeHref = getLastWorkedTrackPath() || `${VAULT_PATH}?create=track`;
 
-  useEffect(() => {
-    let cancelled = false;
-    void fetchSceneLive().then((data) => {
-      if (!cancelled) setLive(data);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (!live) return null;
-
-  const houseOn = live.houseBar.enabled && live.houseBar.seedBar.trim().length > 0;
-  const weeklyOn = live.weeklyChallenge.enabled;
-  if (!houseOn && !weeklyOn) return null;
+  if (!loaded || (!houseBarOn && !weeklyOn)) return null;
 
   const barsChallenge = WEEKLY_CHALLENGES.find((c) => c.id === 'bars_8');
   const written = barsChallenge
@@ -69,7 +35,7 @@ export function SceneLivePrompts({ className }: { className?: string }) {
 
   return (
     <div className={cn('space-y-3', className)}>
-      {houseOn ? (
+      {houseBarOn ? (
         <Card className="relative overflow-hidden border border-fuchsia-500/35 bg-gradient-to-br from-fuchsia-500/10 via-card/90 to-card/70 p-4 sm:p-5">
           <p className="flex items-center gap-2 font-code text-[9px] font-bold uppercase tracking-[0.28em] text-fuchsia-300">
             <Radio className="h-3.5 w-3.5" />

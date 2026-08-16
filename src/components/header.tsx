@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LogOut, LayoutDashboard, LayoutGrid, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy, Smartphone, Settings, Users, Archive, Bell } from 'lucide-react';
+import { LogOut, LayoutDashboard, LayoutGrid, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy, Smartphone, Settings, Users, Archive, Bell, Banknote } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -39,6 +39,7 @@ import {
 import { BrandLockup } from '@/components/brand-lockup';
 import { StudioThemeControls } from '@/components/studio-theme-controls';
 import { useSocialAlerts } from '@/hooks/use-social-alerts';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
 import { SCENE_HOME_ENABLED, VAULT_PATH } from '@/lib/scene-home';
 import { getGuestSignupHref, trackGuestSignupCta } from '@/lib/guest-funnel-client';
@@ -62,6 +63,7 @@ export function Header() {
   const { isGenerating, generatingMessage } = useUIState();
   const { inkBalance, residencyBalance, trialInkBalance, purchasedBalance } = useUsage();
   const { total: blockAlerts } = useSocialAlerts();
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   const [progress, setProgress] = useState(0);
   const [showPwaInstallMenu, setShowPwaInstallMenu] = useState(false);
 
@@ -348,6 +350,12 @@ export function Header() {
                         <span>Your circle</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=buy-ink')}><LayoutGrid className="mr-2 h-4 w-4 text-primary" /><span>Ink Store</span></DropdownMenuItem>
+                      {firstDropsOn ? (
+                        <DropdownMenuItem onClick={() => router.push('/earnings')}>
+                          <Banknote className="mr-2 h-4 w-4 text-emerald-400" />
+                          <span>Earnings</span>
+                        </DropdownMenuItem>
+                      ) : null}
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=settings')}><Settings className="mr-2 h-4 w-4" /><span>Settings</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=cloud')}>
                         <Star className={cn('mr-2 h-4 w-4', studioTierMenuClass(studioChrome))} />

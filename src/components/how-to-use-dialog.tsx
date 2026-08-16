@@ -91,8 +91,8 @@ import {
 } from '@/lib/studio-onboarding';
 import { DataContext } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
-import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
-import { dropPlatformFeeLabel, firstDropsPitch } from '@/lib/drop-commerce';
+import { useConfigSurfaceFlags, type ConfigSurfaceFlags } from '@/hooks/use-config-surface-flags';
+import { dropArtistShareLabel, firstDropsCashoutLine, firstDropsFeeCashoutLine, firstDropsPitch, getFirstDropsCashoutFaqAnswer, getFirstDropsFeeFaqAnswer, getFirstDropsSellFaqAnswer, getFirstDropsWhatFaqAnswer } from '@/lib/drop-commerce';
 import { Button } from './ui/button';
 import {
   Accordion,
@@ -118,30 +118,14 @@ const ChapterCard = ({ icon, title, children, colorClass }: { icon: React.ReactN
     </Card>
 );
 
-const FAQS = [
-    {
-      q: "What is The Scene (my home page)?",
-      a: "Signing in lands you on The Scene — friends' wall posts, Discover, Your Booth, and (when Studio Ops turns them on) House bar of the day plus a weekly public challenge. Vault and Activity are in the top nav. The skyline follows your local day/night and optional live weather."
-    },
-    {
-      q: "What are House bar of the day and the weekly challenge?",
-      a: "Studio Ops can pin them from Admin → Config (toggle + rewrite, no redeploy). House bar is one shared unfinished line for everyone to answer. The weekly challenge is a Scene-wide bar-count cypher (Monday reset) with your progress on the pin. Either can be hidden anytime."
-    },
-    {
-      q: "What is Finish this bar?",
-      a: "Two places: (1) Guest try sheet at /try starts with a deep Lyrical Architect unfinished line — drop yours under it. (2) Optional social casts (Admin → Config → LOCK System) at /lock/… where anyone can reply with a Fit score. Logged-out home is the Pressing playground (live Artist Home), not a LOCK page. Replies on social casts can be deleted by the writer or cast owner."
-    },
+const CORE_FAQS = [
     {
       q: "What do I see when I open the app logged out?",
       a: "A live Pressing / Artist Home playground — type your name and a bar, watch the page skin update, then Claim to save or Try writing free for the Architect-seeded sheet. Friends and Guestbook preview Neomaiya Sol; tap her name to open her real Artist Home. Sign in anytime from the header."
     },
     {
-      q: "Why sign in after dropping a bar?",
-      a: "Writing is free and instant. Without an account your reply shows as Anonymous. Sign in to put your display name on it, get Activity when someone answers you, and use Clear-for-release if you get Artist Pick. After that you can keep writing in Studio with your bars preloaded."
-    },
-    {
       q: "Where are The Vault and Activity?",
-      a: "Vault (albums & tracks) is at /vault — sky archive icon in the top nav, or top of the Scene dock. Activity (emerald bell) is for your work: unfinished verse, streak at midnight, someone echoing your bar, plus friends and DNA imports — not a feed dump. Optional push under Settings → Notifications. Finish-the-bar watchers get Activity when a named reply lands."
+      a: "Vault (albums & tracks) is at /vault — sky archive icon in the top nav, or top of the Scene dock. Activity (emerald bell) is for your work: unfinished verse, streak at midnight, someone echoing your bar, plus friends and DNA imports — not a feed dump. Optional push under Settings → Notifications.",
     },
     {
       q: "What is Artist Home and Edit Public Page?",
@@ -229,7 +213,7 @@ const FAQS = [
     },
     {
       q: "What is DNA Drop?",
-      a: "Studio Pro — publish a shareable snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live drops list on your Artist Home. Update snapshot after edits; Take offline to revoke."
+      a: "Studio Pro — publish a shareable snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. When First Drops is on, the same dialog can attach audio and a price — cash out those sales on Earnings."
     },
     {
       q: "What happens during Creative Syncing vs DNA Extraction?",
@@ -241,7 +225,7 @@ const FAQS = [
     },
     {
       q: "What is included in a DNA Drop?",
-      a: "Lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when toggled on. Album drops add album DNA presets and motifs. Optional links & embeds (YouTube, Spotify, etc.) attach from the DNA Drop dialog and play on the public page."
+      a: "Lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when toggled on. Album drops add album DNA presets and motifs. Optional links & embeds (YouTube, Spotify, etc.) attach from the DNA Drop dialog and play on the public page. When First Drops is on, that same dialog also holds audio and a price — cash out those sales on Earnings.",
     },
     {
       q: "Is my DNA Drop live-synced when I edit?",
@@ -256,23 +240,77 @@ const FAQS = [
 const FIRST_DROPS_FAQS = [
   {
     q: "What is a First Drop?",
-    a: "The audio layer on a DNA Drop. Upload the song (private storage), set a price or pay-what-you-want, and fans buy once to stream it in Bar 4 Bar. Preview is 30 seconds until they unlock. Library is on The Scene. Not a Spotify listing — exclusive in-app stream.",
+    a: getFirstDropsWhatFaqAnswer(),
   },
   {
     q: "How do I sell a First Drop?",
-    a: "Open DNA Drop on a track (or album) → First Drop · audio & price. Upload audio, pick DNA only / free stream / set price / pay-what-you-want, then Confirm or Update snapshot. The public /share page is where fans preview, buy, and stream.",
+    a: getFirstDropsSellFaqAnswer(),
   },
   {
     q: "What does Bar 4 Bar keep on a First Drop sale?",
-    a: `A ${dropPlatformFeeLabel()} platform fee. The rest is yours. Fans buy once and stream in the app — Ink is not used for music purchases.`,
+    a: getFirstDropsFeeFaqAnswer(),
+  },
+  {
+    q: "How do I cash out after a fan buys my song?",
+    a: getFirstDropsCashoutFaqAnswer(),
   },
 ];
+
+const LOCK_FAQS = [
+  {
+    q: "What is Finish this bar?",
+    a: "Optional social casts (Admin → Config → Finish this bar) at /lock/… — anyone can reply with a Fit score. Guest try at /try is a separate Architect-seeded sheet. Logged-out home is the Pressing playground, not a LOCK page. Replies on social casts can be deleted by the writer or cast owner.",
+  },
+  {
+    q: "Why sign in after dropping a bar?",
+    a: "Writing is free and instant. Without an account your reply shows as Anonymous. Sign in to put your display name on it, get Activity when someone answers you, and use Clear-for-release if you get Artist Pick. After that you can keep writing in Studio with your bars preloaded.",
+  },
+];
+
+function sceneHomeFaq(flags: ConfigSurfaceFlags) {
+  const pins: string[] = [];
+  if (flags.houseBar) pins.push('House bar of the day');
+  if (flags.weeklyChallenge) pins.push('a weekly public challenge');
+  const pinBit = pins.length ? `, plus ${pins.join(' and ')}` : '';
+  return {
+    q: "What is The Scene (my home page)?",
+    a: `Signing in lands you on The Scene — friends' wall posts, Discover, Your Booth${pinBit}. Vault and Activity are in the top nav. The skyline follows your local day/night and optional live weather.`,
+  };
+}
+
+function livePinsFaq(flags: ConfigSurfaceFlags) {
+  if (flags.houseBar && flags.weeklyChallenge) {
+    return {
+      q: "What are House bar of the day and the weekly challenge?",
+      a: "Studio Ops pins them from Admin → Config (toggle + rewrite, no redeploy). House bar is one shared unfinished line for everyone to answer. The weekly challenge is a Scene-wide bar-count cypher (Monday reset) with your progress on the pin.",
+    };
+  }
+  if (flags.houseBar) {
+    return {
+      q: "What is House bar of the day?",
+      a: "One shared unfinished line pinned on The Scene for everyone to answer. Studio Ops can rewrite it anytime from Admin → Config.",
+    };
+  }
+  return {
+    q: "What is the weekly public challenge?",
+    a: "A Scene-wide bar-count cypher (Monday reset) pinned on The Scene, with your progress on the pin. Studio Ops can rewrite or turn it off from Admin → Config.",
+  };
+}
+
+function buildStudioFaqs(flags: ConfigSurfaceFlags) {
+  const faqs = [sceneHomeFaq(flags)];
+  if (flags.houseBar || flags.weeklyChallenge) faqs.push(livePinsFaq(flags));
+  if (flags.lock) faqs.push(...LOCK_FAQS);
+  faqs.push(...CORE_FAQS);
+  if (flags.firstDrops) faqs.push(...FIRST_DROPS_FAQS);
+  return faqs;
+}
 
 export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
   const { albums } = useContext(DataContext);
   const { toast } = useToast();
-  const { enabled: firstDropsOn } = useFirstDropsFeature();
-  const faqs = firstDropsOn ? [...FAQS, ...FIRST_DROPS_FAQS] : FAQS;
+  const flags = useConfigSurfaceFlags();
+  const faqs = useMemo(() => buildStudioFaqs(flags), [flags]);
 
   const workstationTourPath = useMemo(
     () => resolveWorkstationTourPath(albums),
@@ -316,7 +354,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
           <div className="px-4 sm:px-8 border-b bg-muted/10 shrink-0">
             <TabsList className="bg-transparent h-11 sm:h-12 gap-4 sm:gap-8 overflow-x-auto justify-start w-full max-w-full flex-nowrap scrollbar-none">
               <TabsTrigger value="start-here" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Start Here</TabsTrigger>
-              {firstDropsOn ? (
+              {flags.firstDrops ? (
                 <TabsTrigger value="first-drops" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">First Drops</TabsTrigger>
               ) : null}
               <TabsTrigger value="tiering" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Studio Tiers</TabsTrigger>
@@ -343,7 +381,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                       </p>
                       <ul className="list-disc list-inside space-y-1 text-xs">
                         <li><strong>Top nav</strong> — Vault (sky) and Activity (emerald bell with unread badge).</li>
-                        <li><strong>Dock</strong> — Vault, Keep writing | Start track, Artist Home | Edit page, leaderboard, circle, Ink.</li>
+                        <li><strong>Dock</strong> — Vault{flags.firstDrops ? ', Library' : ''}, Keep writing | Start track, Artist Home | Edit page{flags.lock ? ', Finish this bar' : ''}, leaderboard, circle, Ink.</li>
                         <li><strong>Post</strong> — composer at the top; friends see it on their Scene.</li>
                       </ul>
                     </div>
@@ -359,9 +397,10 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                   </div>
                 </ChapterCard>
 
+                {flags.lock ? (
                 <ChapterCard icon={<Lock className="text-amber-300" />} title="Finish this bar" colorClass="border-l-amber-500 text-amber-300">
                   <p className="text-sm text-foreground/90">
-                    Optional casts (Admin → Config → LOCK System): drop one bar with no account → Fit score + share card.
+                    Optional casts (Admin → Config → Finish this bar): drop one bar with no account → Fit score + share card.
                     Keep writing in Studio anytime. Sign in only to put your name on the reply.
                   </p>
                   <ul className="list-disc list-inside space-y-1.5 text-xs">
@@ -370,6 +409,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <li><strong>Casting artists</strong> — Press Desk → Finish this bar; Manage → Pick, Clear for release, Close.</li>
                   </ul>
                 </ChapterCard>
+                ) : null}
 
                 <ChapterCard icon={<MousePointer2 className="text-primary" />} title="Write in 60 seconds" colorClass="border-l-primary text-primary">
                   <ol className="list-decimal list-inside space-y-2 text-sm">
@@ -450,7 +490,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </p>
               </TabsContent>
 
-              {firstDropsOn ? (
+              {flags.firstDrops ? (
                 <TabsContent value="first-drops" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
                   <ChapterCard icon={<Music className="text-fuchsia-400" />} title="First Drops" colorClass="border-l-fuchsia-500 text-fuchsia-400">
                     <p className="text-sm text-foreground/90">{firstDropsPitch()}</p>
@@ -459,10 +499,11 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                       <li><strong>DNA Drop</strong> on the track (or album) — confirm the lyric snapshot.</li>
                       <li><strong>First Drop · audio &amp; price</strong> — upload the file, pick DNA only / free stream / set price / pay-what-you-want (floor $1.00).</li>
                       <li><strong>Update snapshot</strong> so the public /share page has the audio. Fans preview 30 seconds, then buy or unlock to stream in-app.</li>
+                      <li><strong>Cash out</strong> — open Earnings, connect Stripe payouts, then Stripe sends your {dropArtistShareLabel()} share to your bank.</li>
                     </ol>
                     <ul className="list-disc list-inside space-y-1.5 text-xs">
                       <li><strong>Library</strong> on The Scene lists drops you unlocked. Stream stays in Bar 4 Bar.</li>
-                      <li><strong>Fee</strong> — Bar 4 Bar keeps {dropPlatformFeeLabel()}. The rest is yours. Ink is not used for music purchases.</li>
+                      <li><strong>Fee &amp; cash out</strong> — {firstDropsFeeCashoutLine()} Sales before you connect stay held until you finish setup. Ink is not used for music purchases.</li>
                       <li><strong>Admin</strong> can turn First Drops off from Config without taking DNA Drops down.</li>
                     </ul>
                   </ChapterCard>
@@ -713,6 +754,9 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
 
                 <ChapterCard icon={<Link2 className="text-primary" />} title="DNA Drop" colorClass="border-l-primary">
                     <p>Studio Pro — publish a shareable link from the left panel. Collaborators sign in and import lyrics, structure, Creative DNA, vibe, and related strains. Update snapshot after edits; <strong>Take offline</strong> to revoke the link.</p>
+                    {flags.firstDrops ? (
+                      <p className="text-xs text-muted-foreground">When First Drops is on, the same dialog has <strong>audio &amp; price</strong>. {firstDropsCashoutLine()}</p>
+                    ) : null}
                 </ChapterCard>
 
                 <ChapterCard icon={<NotebookText className="text-muted-foreground" />} title="Export Track &amp; Vault Backup" colorClass="border-l-muted-foreground">

@@ -8,6 +8,7 @@ import { recordInkLedgerEntries } from '@/lib/server/ink-ledger';
 import { inkBalanceFirestorePatch, normalizeInkPools } from '@/lib/ink-balance';
 import { patchPublicStudioBadge } from '@/lib/server/public-studio-badge';
 import { grantDropLibrary } from '@/lib/server/drop-entitlements';
+import { recordDropSale, splitDropSale } from '@/lib/server/drop-earnings';
 
 export type FulfillmentMetadata = {
   userId: string;
@@ -20,7 +21,11 @@ export type FulfillmentMetadata = {
   projectId?: string;
   trackIds?: string;
   amountCents?: string;
+  feeCents?: string;
+  netCents?: string;
   title?: string;
+  payoutMode?: string;
+  connectAccountId?: string;
 };
 
 export async function fulfillCheckoutSession(
@@ -352,6 +357,22 @@ export async function fulfillPaidCheckoutSession(
       purchasedAt: new Date().toISOString(),
       stripeSessionId: session.id,
     });
+    if (metadata.artistId && amountCents > 0) {
+      const split = splitDropSale(amountCents);
+      const feeCents = parseInt(metadata.feeCents || '', 10);
+      const netCents = parseInt(metadata.netCents || '', 10);
+      await recordDropSale(db, metadata.artistId, {
+        shareId: metadata.shareId,
+        title: metadata.title || 'Drop',
+        buyerId: userId,
+        amountCents,
+        feeCents: Number.isFinite(feeCents) && feeCents >= 0 ? feeCents : split.feeCents,
+        netCents: Number.isFinite(netCents) && netCents > 0 ? netCents : split.netCents,
+        payoutMode: metadata.payoutMode === 'destination' ? 'destination' : 'held',
+        stripeSessionId: session.id,
+        connectAccountId: metadata.connectAccountId,
+      });
+    }
     await recordStudioEvent(userId, 'drop_purchase', {
       shareId: metadata.shareId,
       amountCents,

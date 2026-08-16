@@ -14,10 +14,61 @@ export function dropPlatformFeeLabel(): string {
   return `${DROP_PLATFORM_FEE_PERCENT}%`;
 }
 
+export function dropArtistSharePercent(): number {
+  return 100 - DROP_PLATFORM_FEE_PERCENT;
+}
+
+export function dropArtistShareLabel(): string {
+  return `${dropArtistSharePercent()}%`;
+}
+
+/** Platform cut of a First Drop sale, in cents. */
+export function dropPlatformFeeCents(amountCents: number): number {
+  const amount = Math.max(0, Math.round(amountCents));
+  const fee = Math.round((amount * DROP_PLATFORM_FEE_BPS) / 10_000);
+  return Math.min(fee, Math.max(0, amount - 1));
+}
+
+/** Artist share after the platform fee. Stripe processing is paid by the platform. */
+export function dropArtistNetCents(amountCents: number): number {
+  const amount = Math.max(0, Math.round(amountCents));
+  return Math.max(0, amount - dropPlatformFeeCents(amount));
+}
+
+export function firstDropsFeeLine(): string {
+  return `We keep ${dropPlatformFeeLabel()} — the rest is yours.`;
+}
+
+export function firstDropsCashoutLine(): string {
+  return 'Connect payouts on Earnings so Stripe can send your share to your bank.';
+}
+
+/** Tight fee + cashout line for banners, hints, and marketing. */
+export function firstDropsFeeCashoutLine(): string {
+  return `We keep ${dropPlatformFeeLabel()}. Cash out the rest on Earnings after you connect payouts.`;
+}
+
 /** Public selling copy — hide whenever First Drops is toggled off. */
 export function firstDropsPitch(): string {
-  return `Put the actual song on a DNA Drop, set a price or pay-what-you-want, and fans buy once to stream it in Bar 4 Bar. We keep ${dropPlatformFeeLabel()} — the rest is yours.`;
+  return `Put the actual song on a DNA Drop, set a price or pay-what-you-want, and fans buy once to stream it in Bar 4 Bar. ${firstDropsFeeLine()} ${firstDropsCashoutLine()}`;
 }
+
+export function getFirstDropsWhatFaqAnswer(): string {
+  return `The audio layer on a DNA Drop. Upload the song (private storage), set a price or pay-what-you-want, and fans buy once to stream it in Bar 4 Bar. Preview is 30 seconds until they unlock. The Deck on The Scene is the in-app player — crates, search, and a four-bar visualizer. Not a Spotify listing — exclusive in-app stream. ${firstDropsFeeLine()} ${firstDropsCashoutLine()} Ink is never used to buy music.`;
+}
+
+export function getFirstDropsSellFaqAnswer(): string {
+  return 'Open DNA Drop on a track (or album) → First Drop · audio & price. Upload audio, pick DNA only / free stream / set price / pay-what-you-want, then Confirm or Update snapshot. The public /share page is where fans preview, buy, and stream. To get paid, open Earnings and connect Stripe payouts.';
+}
+
+export function getFirstDropsFeeFaqAnswer(): string {
+  return `A ${dropPlatformFeeLabel()} platform fee. The rest is yours. ${firstDropsCashoutLine()} Fans buy once and stream in the app — Ink is not used for music purchases.`;
+}
+
+export function getFirstDropsCashoutFaqAnswer(): string {
+  return 'Open Earnings (Scene dock, account menu, Settings → First Drop payouts, or First Drop → Earnings & cash out). Connect Stripe payouts once — identity and bank. New sales go to your Stripe balance automatically; Stripe then pays your bank on its schedule (usually a few days after a sale clears). Sales made before you connect stay Held until you finish setup or tap Send held sales.';
+}
+
 export const DROP_AUDIO_MAX_BYTES = 40 * 1024 * 1024;
 export const DROP_PREVIEW_SECONDS = 30;
 export const DROP_PRICE_PRESETS_CENTS = [177, 299, 777, 1777] as const;

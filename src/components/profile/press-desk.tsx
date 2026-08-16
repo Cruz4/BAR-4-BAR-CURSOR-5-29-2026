@@ -50,7 +50,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
-import { dropPlatformFeeLabel, firstDropsPitch } from '@/lib/drop-commerce';
+import { useLockFeature } from '@/hooks/use-lock-feature';
+import { firstDropsFeeCashoutLine, firstDropsPitch } from '@/lib/drop-commerce';
 import { DataContext } from '@/context/data-context';
 import { cn } from '@/lib/utils';
 import type { Album, Track } from '@/lib/types';
@@ -389,6 +390,7 @@ export function PressDesk() {
   const { albums, loading: vaultLoading } = useContext(DataContext);
   const { toast } = useToast();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
+  const { enabled: lockOn } = useLockFeature();
 
   const [config, setConfig] = useState<ArtistHomeConfig | null>(null);
   const [profileSlug, setProfileSlug] = useState<string | null>(null);
@@ -1645,7 +1647,7 @@ export function PressDesk() {
         </div>
       </DeskSection>
 
-      {/* 7b. Finish this bar */}
+      {lockOn ? (
       <DeskSection
         icon={Lock}
         title="Finish this bar"
@@ -1681,6 +1683,7 @@ export function PressDesk() {
           }}
         />
       </DeskSection>
+      ) : null}
 
       {/* 8. Live DNA Drops — manage + auto on Artist Home */}
       <DeskSection
@@ -1688,7 +1691,7 @@ export function PressDesk() {
         title="Live DNA Drops"
         hint={
           firstDropsOn
-            ? `Any album or track with an active DNA Drop shows on your Artist Home automatically. First Drops add the audio: set a price or pay-what-you-want, fans buy once and stream here. Bar 4 Bar keeps ${dropPlatformFeeLabel()}. Open Manage to jump to a drop or the vault.`
+            ? `Any album or track with an active DNA Drop shows on your Artist Home automatically. First Drops add the audio: set a price or pay-what-you-want, fans buy once and stream here. ${firstDropsFeeCashoutLine()} Open Manage to jump to a drop, the vault, or Earnings.`
             : 'Any album or track with an active DNA Drop shows on your Artist Home automatically — as a count under your bio and in the Live DNA Drops module. Open Manage to jump to a drop or the vault.'
         }
       >
@@ -1722,6 +1725,7 @@ export function PressDesk() {
         </div>
         <div className="space-y-2">
           {config.modules.map((module, index) => {
+            if (module.id === 'openLock' && !lockOn) return null;
             const meta = MODULE_META[module.id];
             return (
               <div

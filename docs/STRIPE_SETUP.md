@@ -137,6 +137,7 @@ Never commit live keys. Set them only in production secrets (below).
    - `invoice.paid`
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
+   - `account.updated` (First Drop artist payouts / Stripe Connect)
 4. Save and **Reveal** the signing secret → `STRIPE_WEBHOOK_SECRET=whsec_...` (Live mode endpoint)
 
 Use the **Dashboard** signing secret in production — not the secret from `stripe listen` (CLI is local-only). For sandbox traffic on the same URL, also set `STRIPE_WEBHOOK_SECRET_TEST` from the **Test mode** endpoint.

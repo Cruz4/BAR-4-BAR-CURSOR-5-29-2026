@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import type { FirstDropsAdminConfig } from '@/lib/first-drops-feature';
+import { dropArtistShareLabel } from '@/lib/drop-commerce';
 
 export function AdminFirstDropsCard() {
   const { toast } = useToast();
@@ -47,8 +48,8 @@ export function AdminFirstDropsCard() {
       toast({
         title: data.enabled ? 'First Drops live' : 'First Drops off',
         description: data.enabled
-          ? 'Audio upload, pricing, buy/stream, Library, and First Drop Discover cards are on.'
-          : 'Commerce is hidden. DNA Drops still work. Existing purchases stay saved if you turn it back on.',
+          ? 'Audio upload, pricing, buy/stream, Library, Earnings cashout, and First Drop Discover cards are on.'
+          : 'Commerce is hidden. DNA Drops still work. Existing purchases and earnings stay saved if you turn it back on.',
       });
     } catch (err) {
       toast({
@@ -72,6 +73,7 @@ export function AdminFirstDropsCard() {
             </CardTitle>
             <CardDescription className="mt-2 max-w-xl">
               Buy-once audio on DNA Drops: upload, set price or pay-what-you-want, stream in-app.
+              Artists cash out {dropArtistShareLabel()} on Earnings after connecting Stripe payouts.
               Toggle live — no redeploy. Emergency:{' '}
               <code className="text-foreground/80">FIRST_DROPS_FORCE_OFF=1</code>.
             </CardDescription>
@@ -98,7 +100,7 @@ export function AdminFirstDropsCard() {
                   Enable First Drops
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 max-w-md">
-                  When off: no audio upload, no checkout, no Library, no First Drop labels. DNA Drop
+                  When off: no audio upload, no checkout, no Library, no Earnings cashout, no First Drop labels. DNA Drop
                   links and lyrics stay.
                 </p>
               </div>
@@ -120,6 +122,7 @@ export function AdminFirstDropsCard() {
               <li>DNA Drop dialog → First Drop · audio &amp; price</li>
               <li>Public /share player + Stripe buy / pay-what-you-want</li>
               <li>Scene Library + Discover “First Drop” cards</li>
+              <li>Earnings — Connect payouts, held sales, Stripe bank cashout</li>
             </ul>
 
             {config?.updatedAt ? (

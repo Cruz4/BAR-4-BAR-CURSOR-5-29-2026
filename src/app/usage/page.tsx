@@ -35,6 +35,7 @@ import {
     Mail,
     Coffee,
     LifeBuoy,
+    Banknote,
 } from 'lucide-react';
 import { StudioLoader } from '@/components/studio-loader';
 import { BUY_ME_COFFEE_URL, SUPPORT_EMAIL, SUPPORT_MAILTO } from '@/lib/support';
@@ -90,6 +91,8 @@ import { StudioThemeSettingsCard } from '@/components/studio-theme-controls';
 import { NotificationSettingsCard } from '@/components/activity/notification-settings-card';
 import { ReferAFriendSection } from '@/components/refer-a-friend-section';
 import { DeleteAccountDialog } from '@/components/delete-account-dialog';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
+import { dropArtistShareLabel } from '@/lib/drop-commerce';
 import {
   buildLoginPath,
   isProCheckoutPriceKey,
@@ -118,6 +121,7 @@ function UsagePageContent() {
   const { usageHistory, inkBalance, residencyBalance, trialInkBalance, purchasedBalance, loading } = useUsage();
   const { isCloudSyncActive } = useContext(DataContext);
   const { user } = useAuth();
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   const { checkout, fulfillCheckoutReturn, openBillingPortal, isCheckingOut } = useStripe();
   const { toast } = useToast();
   const router = useRouter();
@@ -685,6 +689,19 @@ function UsagePageContent() {
                 <PwaInstallGuideCard />
                 <StudioThemeSettingsCard />
                 <NotificationSettingsCard />
+                {firstDropsOn && (
+                <Card className="border-emerald-500/20">
+                    <CardHeader className="pb-4">
+                        <CardTitle className="font-headline text-2xl flex items-center gap-2.5"><Banknote className="text-emerald-400 h-6 w-6"/> First Drop payouts</CardTitle>
+                        <CardDescription className="text-sm uppercase tracking-tight">Connect Stripe and cash out {dropArtistShareLabel()} of each song sale.</CardDescription>
+                    </CardHeader>
+                    <CardFooter className="pt-2">
+                        <Button className="w-full h-12 font-bold uppercase text-xs md:text-sm" variant="outline" asChild>
+                          <Link href="/earnings">Open Earnings</Link>
+                        </Button>
+                    </CardFooter>
+                </Card>
+                )}
                 {isCloudSyncActive && (
                 <Card className="border-primary/20">
                     <CardHeader className="pb-4">

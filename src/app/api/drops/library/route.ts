@@ -3,6 +3,7 @@ import { getDb } from '@/lib/firebase/server';
 import { CheckoutAuthError, verifyCheckoutUser } from '@/lib/stripe-server';
 import type { DropLibraryEntry } from '@/lib/drop-commerce';
 import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
+import { hydrateDropLibraryItems } from '@/lib/server/drop-library-hydrate';
 
 export const runtime = 'nodejs';
 
@@ -26,9 +27,10 @@ export async function GET(req: Request) {
 
     const db = await getDb();
     const snap = await db.collection('users').doc(userId).collection('dropLibrary').get();
-    const items = snap.docs
+    const raw = snap.docs
       .map((d) => d.data() as DropLibraryEntry)
       .sort((a, b) => (b.purchasedAt || '').localeCompare(a.purchasedAt || ''));
+    const items = await hydrateDropLibraryItems(db, raw);
     return NextResponse.json({ items });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Library failed';

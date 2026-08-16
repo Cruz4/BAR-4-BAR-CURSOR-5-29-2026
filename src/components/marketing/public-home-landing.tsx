@@ -15,7 +15,7 @@ import { ProBillingCheckoutCta } from '@/components/marketing/pro-billing-checko
 import { getSignupInkMarketingLine } from '@/lib/studio-tiers';
 import { BrandLockup } from '@/components/brand-lockup';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
-import { dropPlatformFeeLabel, firstDropsPitch } from '@/lib/drop-commerce';
+import { firstDropsFeeCashoutLine, firstDropsPitch } from '@/lib/drop-commerce';
 
 /** Public marketing surface — served at `/welcome` (and `/` when guest try sheet is off). */
 export function PublicHomeLanding() {
@@ -98,8 +98,8 @@ export function PublicHomeLanding() {
                       {' '}
                       <span className="bg-amber-500/20 text-amber-200 px-1 rounded-sm font-bold">First Drops</span>
                       {' '}
-                      let you put the song on that drop, set a price, and sell the stream here. We keep{' '}
-                      {dropPlatformFeeLabel()}.
+                      let you put the song on that drop, set a price, and sell the stream here.{' '}
+                      {firstDropsFeeCashoutLine()}
                     </>
                   ) : null}
                 </p>

@@ -7,12 +7,15 @@ import {
   assertPaidAmount,
   BAR4BAR_FIRST_DROPS,
   DROP_PLATFORM_FEE_BPS,
+  dropArtistNetCents,
+  dropPlatformFeeCents,
   isCommerceLive,
   resolveCheckoutCents,
 } from '@/lib/drop-commerce';
 import { loadShare, priceFromShare } from '@/lib/server/drop-entitlements';
 import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
+import { connectStatusFromUser, isConnectTransferReady } from '@/lib/server/stripe-connect';
 import Stripe from 'stripe';
 
 export const runtime = 'nodejs';
@@ -60,6 +63,13 @@ export async function POST(req: Request) {
     }
     assertPaidAmount(amountCents);
 
+    const feeCents = dropPlatformFeeCents(amountCents);
+    const netCents = dropArtistNetCents(amountCents);
+    const artistSnap = await db.collection('users').doc(share.ownerId).get();
+    const connect = connectStatusFromUser(artistSnap.data());
+    const destinationReady = isConnectTransferReady(connect);
+    const payoutMode = destinationReady ? 'destination' : 'held';
+
     const stripe = getStripe();
     const origin = getTrustedAppOrigin(req);
     const scope = share.type === 'album' && !trackId ? 'album' : 'track';
@@ -93,8 +103,12 @@ export async function POST(req: Request) {
         projectId: share.projectId,
         trackIds: priced.unlockTrackIds.slice(0, 40).join(','),
         amountCents: String(amountCents),
+        feeCents: String(feeCents),
+        netCents: String(netCents),
         title: priced.title.slice(0, 80),
         feeBps: String(DROP_PLATFORM_FEE_BPS),
+        payoutMode,
+        ...(connect.accountId ? { connectAccountId: connect.accountId } : {}),
       },
       automatic_tax: { enabled: false },
       consent_collection: { terms_of_service: 'required' },
@@ -108,7 +122,34 @@ export async function POST(req: Request) {
 
     if (email) sessionParams.customer_email = email;
 
-    const session = await stripe.checkout.sessions.create(sessionParams);
+    if (destinationReady && connect.accountId && feeCents > 0 && netCents > 0) {
+      sessionParams.payment_intent_data = {
+        application_fee_amount: feeCents,
+        transfer_data: { destination: connect.accountId },
+        metadata: {
+          type: 'drop_purchase',
+          artistId: share.ownerId,
+          shareId,
+        },
+      };
+    }
+
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await stripe.checkout.sessions.create(sessionParams);
+    } catch (createErr) {
+      if (sessionParams.payment_intent_data) {
+        console.warn('[drops/checkout] destination charge failed, holding payout', createErr);
+        delete sessionParams.payment_intent_data;
+        sessionParams.metadata = {
+          ...sessionParams.metadata,
+          payoutMode: 'held',
+        };
+        session = await stripe.checkout.sessions.create(sessionParams);
+      } else {
+        throw createErr;
+      }
+    }
     await recordStudioEvent(userId, 'drop_checkout_started', {
       shareId,
       amountCents,

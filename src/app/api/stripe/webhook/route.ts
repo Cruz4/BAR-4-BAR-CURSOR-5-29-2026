@@ -22,6 +22,13 @@ import {
   sendProUpgradeEmail,
   sendRenewalChargeEmail,
 } from '@/lib/server/mail/lifecycle-emails';
+import {
+  connectStatusFromStripeAccount,
+  findUserIdForConnectAccount,
+  isConnectTransferReady,
+  persistConnectStatus,
+} from '@/lib/server/stripe-connect';
+import { releaseHeldDropEarnings } from '@/lib/server/drop-earnings';
 
 export const runtime = 'nodejs';
 
@@ -243,6 +250,22 @@ export async function POST(req: Request) {
             userId,
             eventKey: event.id,
           }).catch((e) => console.warn('[stripe/webhook] cancel email', e));
+        }
+        break;
+      }
+
+      case 'account.updated': {
+        const account = event.data.object as Stripe.Account;
+        const artistId = await findUserIdForConnectAccount(db, account);
+        if (!artistId) break;
+        const connect = connectStatusFromStripeAccount(account);
+        await persistConnectStatus(db, artistId, connect);
+        if (isConnectTransferReady(connect) && connect.accountId) {
+          try {
+            await releaseHeldDropEarnings(db, artistId, connect.accountId);
+          } catch (err) {
+            console.warn('[stripe/webhook] held earnings release', artistId, err);
+          }
         }
         break;
       }

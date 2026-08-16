@@ -70,6 +70,8 @@ import {
   getPostSharingFaqAnswer,
   getProCheckoutCtaLine,
 } from '@/lib/studio-tiers';
+import { getFirstDropsCashoutFaqAnswer, getFirstDropsWhatFaqAnswer } from '@/lib/drop-commerce';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, SIGNUP_INK } from '@/lib/subscription';
 import { TierPriceSummary } from '@/components/tier-price-summary';
 import { trackStudioEvent } from '@/lib/analytics-client';
@@ -101,6 +103,7 @@ export default function PricingPage() {
   const [isYearly, setIsYearly] = useState(true);
   const router = useRouter();
   const { user } = useAuth();
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
 
   useEffect(() => {
     if (!user) return;
@@ -194,6 +197,18 @@ export default function PricingPage() {
       q: 'Is my Artist Home page free?',
       a: getArtistHomeFaqAnswer(),
     },
+    ...(firstDropsOn
+      ? [
+          {
+            q: 'What is a First Drop?',
+            a: getFirstDropsWhatFaqAnswer(),
+          },
+          {
+            q: 'How do I cash out after someone buys my song?',
+            a: getFirstDropsCashoutFaqAnswer(),
+          },
+        ]
+      : []),
     {
       q: 'What is the difference between Residency and Permanent Ink?',
       a: getResidencyVsPermanentFaqAnswer(),

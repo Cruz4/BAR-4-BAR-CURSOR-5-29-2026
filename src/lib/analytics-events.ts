@@ -28,6 +28,8 @@ export const ANALYTICS_EVENTS = {
   PROFILE_GUESTBOOK_SIGNED: 'profile_guestbook_signed',
   DROP_CHECKOUT_STARTED: 'drop_checkout_started',
   DROP_PURCHASE: 'drop_purchase',
+  DROP_SALE_RECORDED: 'drop_sale_recorded',
+  DROP_CONNECT_STARTED: 'drop_connect_started',
 } as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS];

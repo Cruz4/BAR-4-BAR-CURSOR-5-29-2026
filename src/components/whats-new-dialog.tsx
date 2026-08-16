@@ -22,6 +22,7 @@ import {
 } from '@/lib/whats-new-session';
 import { isStudioOnboardingBusy } from '@/lib/studio-privacy-intro';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
+import { useConfigSurfaceFlags } from '@/hooks/use-config-surface-flags';
 
 function isVaultLanding(pathname: string | null): boolean {
   if (!pathname) return false;
@@ -39,14 +40,14 @@ function isBrandNewStudioAccount(createdAt: string | undefined): boolean {
 const WHATS_NEW_ITEMS = [
   {
     title: 'First Drops',
-    desc: 'Put the actual song on a DNA Drop, set a price or pay-what-you-want, and fans stream it here after they buy. Library is on The Scene.',
+    desc: 'Put the actual song on a DNA Drop, set a price, and fans stream it here after they buy. Connect payouts on Earnings so Stripe can send your share to your bank. The Deck on The Scene is their player.',
     icon: Music,
     color: 'text-fuchsia-400',
     bgColor: 'bg-fuchsia-500/5',
   },
   {
     title: 'The Scene',
-    desc: 'Sign-in home: friends, Discover, and Your Booth. Vault is one click away. A house bar and weekly challenge can pin on the block.',
+    desc: 'Sign-in home: friends, Discover, and Your Booth. Vault is one click away.',
     icon: Rocket,
     color: 'text-emerald-400',
     bgColor: 'bg-emerald-500/5',
@@ -72,6 +73,7 @@ export function WhatsNewDialog() {
   const pathname = usePathname();
   const { user, authReady, loading } = useAuth();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
+  const flags = useConfigSurfaceFlags();
   const scheduledRef = useRef(false);
 
   const dismiss = useCallback(() => {
@@ -151,6 +153,21 @@ export function WhatsNewDialog() {
           <ul className="space-y-2.5">
             {WHATS_NEW_ITEMS.filter((item) => firstDropsOn || item.title !== 'First Drops').map((item) => {
               const Icon = item.icon;
+              const desc =
+                item.title === 'The Scene'
+                  ? [
+                      'Sign-in home: friends, Discover, and Your Booth. Vault is one click away.',
+                      flags.houseBar && flags.weeklyChallenge
+                        ? 'A house bar and weekly challenge can pin on the block.'
+                        : flags.houseBar
+                          ? 'A house bar can pin on the block.'
+                          : flags.weeklyChallenge
+                            ? 'A weekly challenge can pin on the block.'
+                            : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')
+                  : item.desc;
               return (
                 <li
                   key={item.title}
@@ -165,7 +182,7 @@ export function WhatsNewDialog() {
                     </div>
                     <div className="space-y-0.5 min-w-0">
                       <h4 className="text-[11px] sm:text-xs font-bold text-foreground uppercase tracking-wide">{item.title}</h4>
-                      <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-snug font-code">{item.desc}</p>
+                      <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-snug font-code">{desc}</p>
                     </div>
                   </div>
                 </li>

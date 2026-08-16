@@ -1,10 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Music, Loader, Trash2 } from 'lucide-react';
+import { Music, Loader, Trash2, Banknote } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { DataContext } from '@/context/data-context';
@@ -15,6 +16,7 @@ import {
   DROP_PRICE_PRESETS_CENTS,
   centsToUsdLabel,
   defaultDropPrice,
+  firstDropsFeeCashoutLine,
   normalizeDropPrice,
   parseUsdToCents,
   type DropPrice,
@@ -190,8 +192,14 @@ export function DropCommercePanel({
       </div>
       <p className="text-[10px] text-muted-foreground leading-relaxed">
         Upload the song to Bar 4 Bar (private storage). Fans buy once — set price or pay-what-you-want — then stream it
-        here. Preview is 30 seconds until they pay or you set it free.
+        here. Preview is 30 seconds until they pay or you set it free. {firstDropsFeeCashoutLine()}
       </p>
+      <Button asChild variant="outline" className="h-8 w-full text-[9px] font-bold uppercase tracking-widest">
+        <Link href="/earnings">
+          <Banknote className="mr-1.5 h-3.5 w-3.5" />
+          Earnings &amp; cash out
+        </Link>
+      </Button>
 
       {type === 'track' && (
         <div className="space-y-2">

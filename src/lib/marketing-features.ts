@@ -1,6 +1,6 @@
 /** Landing page feature bands — copy + asset paths. */
 
-import { dropPlatformFeeLabel, firstDropsPitch } from '@/lib/drop-commerce';
+import { firstDropsFeeCashoutLine, firstDropsPitch } from '@/lib/drop-commerce';
 
 export type MarketingMediaType = 'image' | 'gif';
 
@@ -60,7 +60,7 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     bullets: [
       'Audio on the public drop — 30-second preview until they unlock',
       'Fixed price or pay-what-you-want, floor $1.00',
-      `Buy once, stream in-app. Library lives on The Scene. ${dropPlatformFeeLabel()} platform fee.`,
+      `Buy once, stream in-app. Library lives on The Scene. ${firstDropsFeeCashoutLine()}`,
     ],
     mediaSrc: '/marketing/feature-artist-home-live.jpg',
     mediaType: 'image',
@@ -205,7 +205,7 @@ export const MARKETING_COMPARISON = {
     ['No artist presence', 'The Scene home + shareable Artist Home (free) + friends on The Block'],
     [
       'Nowhere to sell the actual song',
-      `First Drops — set a price, fans buy once, ${dropPlatformFeeLabel()} platform fee`,
+      `First Drops — set a price, fans buy once. ${firstDropsFeeCashoutLine()}`,
     ],
   ],
 };

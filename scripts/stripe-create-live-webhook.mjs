@@ -22,6 +22,7 @@ const EVENTS = [
   'invoice.paid',
   'customer.subscription.updated',
   'customer.subscription.deleted',
+  'account.updated',
 ];
 
 function loadEnv() {

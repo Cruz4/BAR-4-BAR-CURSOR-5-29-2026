@@ -34,6 +34,7 @@ export default function TermsPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">3. Accounts &amp; Ink</h2>
             <p>You must provide accurate account information and keep credentials secure. <strong className="text-foreground">Ink</strong> is the Service&apos;s virtual currency for AI actions. Ink has no cash value outside the Service, is non-transferable, and residency Ink may reset per plan terms. Purchases are processed by Stripe; refunds follow our billing policy and applicable law.</p>
+            <p><strong className="text-foreground">First Drops</strong> are buy-once in-app streams sold through the Service. Bar 4 Bar keeps a platform fee (currently 10%); the remainder is the artist&apos;s share. Artist payouts are processed by Stripe Connect after the artist completes payouts onboarding. Stripe, not Bar 4 Bar, pays the artist&apos;s bank on Stripe&apos;s payout schedule. Sales made before onboarding may be held on the platform and released once payouts are enabled. Chargebacks, refunds, and unpaid negative balances may reduce or reverse an artist&apos;s share.</p>
             <p>We may log account and studio activity — including product analytics, billing events, and abuse-prevention signals — as described in our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>, to operate the Service, measure performance, prevent Ink and perk farming, and enforce these Terms.</p>
           </section>
 

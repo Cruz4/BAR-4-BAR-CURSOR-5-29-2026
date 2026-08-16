@@ -20,6 +20,7 @@ import {
   Users,
   Droplets,
   Bell,
+  Banknote,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGamification } from '@/context/gamification-context';
@@ -290,10 +291,19 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       key: 'library',
       href: '/library',
       label: 'Library',
-      sub: 'Drops you unlocked',
+      sub: 'The Deck · First Drops',
       icon: Library,
       tone: 'border-fuchsia-500/30 bg-card/55 hover:border-fuchsia-400/50',
       iconTone: 'border-fuchsia-400/45 bg-fuchsia-500/15 text-fuchsia-400',
+    },
+    {
+      key: 'earnings',
+      href: '/earnings',
+      label: 'Earnings',
+      sub: 'Cash out First Drops',
+      icon: Banknote,
+      tone: 'border-emerald-500/30 bg-card/55 hover:border-emerald-400/50',
+      iconTone: 'border-emerald-400/45 bg-emerald-500/15 text-emerald-400',
     },
     {
       key: 'leaderboard',
@@ -390,8 +400,9 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
         className={compact ? 'col-span-2 sm:col-span-3' : undefined}
       />
       {firstDropsOn ? <DockLink item={items[1]!} /> : null}
-      <DockLink item={items[2]!} />
+      {firstDropsOn ? <DockLink item={items[2]!} /> : null}
       <DockLink item={items[3]!} />
+      <DockLink item={items[4]!} />
     </nav>
   );
 }

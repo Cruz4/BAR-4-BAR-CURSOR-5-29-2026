@@ -97,3 +97,17 @@ const STRIPE_PRICES = {
     *   `STRIPE_WEBHOOK_SECRET`: (The `whsec_...` from the Webhook page in the Dashboard)
     *   `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: (Your `pk_test_...` or `pk_live_...`)
 6.  Click **NEXT** then **DEPLOY**. (This takes 2 minutes).
+
+---
+
+## 5. First Drop artist payouts (Stripe Connect)
+
+Fans pay Bar 4 Bar Checkout. Artists cash out **90%** through Stripe Connect; the platform keeps **10%**.
+
+1. Stripe Dashboard → **Connect** → get started / enable Connect for this account.
+2. Add webhook event **`account.updated`** on `https://bar4bar.ink/api/stripe/webhook` (plus the existing checkout/subscription events).
+3. Artists open **Earnings** in the app → **Connect payouts** → complete Stripe’s identity + bank form.
+4. After payouts are live, new First Drop sales destination-charge the artist (minus the 10% application fee). Stripe then pays their bank on its schedule.
+5. Sales made before they connect are **held**, then **Send held sales** (or the `account.updated` webhook) transfers the artist share.
+
+You do **not** pay artists from Ink. Platform Stripe payouts (this guide’s earlier checklist) are still how **Bar 4 Bar** receives Ink/Pro revenue.

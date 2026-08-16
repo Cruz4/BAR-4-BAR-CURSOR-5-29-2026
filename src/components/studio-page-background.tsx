@@ -75,3 +75,20 @@ export function LeaderboardHeatBackground() {
     </div>
   );
 }
+
+/** First Drops library — fuchsia lathe glow over the studio mesh. */
+export function DeckNeonBackground() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden isolate" aria-hidden>
+      <MeshOrb
+        className="left-[-8%] top-[-12%] h-[min(55vh,520px)] w-[min(80vw,720px)] bg-fuchsia-500/[0.18] dark:bg-fuchsia-500/[0.14] blur-[100px] sm:blur-[140px]"
+      />
+      <MeshOrb
+        className="right-[-10%] top-[18%] h-[min(48vh,460px)] w-[min(70vw,640px)] bg-cyan-400/[0.12] dark:bg-cyan-400/[0.1] blur-[95px] sm:blur-[130px]"
+      />
+      <MeshOrb
+        className="bottom-[-18%] left-1/3 h-[min(40vh,380px)] w-[min(90vw,800px)] bg-violet-600/[0.12] dark:bg-violet-500/[0.1] blur-[110px] sm:blur-[150px]"
+      />
+    </div>
+  );
+}

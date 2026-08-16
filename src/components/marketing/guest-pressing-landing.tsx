@@ -62,7 +62,7 @@ import {
 } from '@/lib/profile/jordie-cruz';
 import { cn } from '@/lib/utils';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
-import { dropPlatformFeeLabel, firstDropsPitch } from '@/lib/drop-commerce';
+import { firstDropsFeeCashoutLine } from '@/lib/drop-commerce';
 
 const PRESSING_TIP_KEY = 'b4b-guest-pressing-tip-seen';
 
@@ -417,8 +417,8 @@ function GuestPressingLandingInner() {
               <li className="flex gap-2">
                 <Music className="mt-0.5 h-3.5 w-3.5 shrink-0 text-fuchsia-400" />
                 <span>
-                  First Drops — sell the actual song on a DNA Drop. Fans buy once and stream here.
-                  We keep {dropPlatformFeeLabel()}.
+                  First Drops — sell the actual song on a DNA Drop. Fans buy once and stream here.{' '}
+                  {firstDropsFeeCashoutLine()}
                 </span>
               </li>
             ) : null}
@@ -503,7 +503,7 @@ function GuestPressingLandingInner() {
             {' '}
             <span className="hidden text-zinc-300 sm:inline">
               Try The Pressing at the bottom to customize the skin.
-              {firstDropsOn ? ` ${firstDropsPitch()}` : ''}
+              {firstDropsOn ? ` ${firstDropsFeeCashoutLine()}` : ''}
             </span>
           </p>
           <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
@@ -775,7 +775,7 @@ function GuestPressingLandingInner() {
             This preview is your Artist Home — completely free. Type above for The Pressing. Click Bar of the Week on
             the page to edit it. Mix & sizes still has faders and S/M/L. Claim keeps your look.
             {firstDropsOn
-              ? ` First Drops: put the song on a DNA Drop, set a price, fans stream here. We keep ${dropPlatformFeeLabel()}.`
+              ? ` First Drops: put the song on a DNA Drop, set a price, fans stream here. ${firstDropsFeeCashoutLine()}`
               : ''}
           </p>
         </div>
