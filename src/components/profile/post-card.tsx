@@ -156,6 +156,8 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
         <div className="mt-2">
           <VoiceNotePlayer
             src={post.reverbVoice.url}
+            storagePath={post.reverbVoice.storagePath}
+            contentType={post.reverbVoice.contentType}
             transcript={post.reverbVoice.transcript}
             durationSec={post.reverbVoice.durationSec}
             compact
@@ -444,6 +446,8 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         <div className="mt-3">
           <VoiceNotePlayer
             src={post.voice.url}
+            storagePath={post.voice.storagePath}
+            contentType={post.voice.contentType}
             transcript={post.voice.transcript}
             durationSec={post.voice.durationSec}
           />
@@ -544,6 +548,8 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
                   <div className="mt-1.5">
                     <VoiceNotePlayer
                       src={comment.voice.url}
+                      storagePath={comment.voice.storagePath}
+                      contentType={comment.voice.contentType}
                       transcript={comment.voice.transcript}
                       durationSec={comment.voice.durationSec}
                       compact

@@ -23,14 +23,27 @@ export function VoiceNoteComposer({
 }: VoiceNoteComposerProps) {
   const recorder = useVoiceRecorder();
   const activeClip = clip || recorder.clip;
+  const appliedFromRef = React.useRef<RecordedVoiceClip | null>(null);
 
-  const { discard } = recorder;
+  const { discard: discardRecorder } = recorder;
   const hadClipRef = React.useRef(false);
 
   React.useEffect(() => {
-    if (recorder.clip && recorder.clip !== clip) {
-      onClipChange(recorder.clip);
+    if (!recorder.clip) return;
+    const prev = appliedFromRef.current;
+    if (prev?.objectUrl === recorder.clip.objectUrl) {
+      if (prev.transcript !== recorder.clip.transcript) {
+        appliedFromRef.current = recorder.clip;
+        if (clip && clip.objectUrl === recorder.clip.objectUrl) {
+          onClipChange({ ...clip, transcript: recorder.clip.transcript });
+        } else {
+          onClipChange(recorder.clip);
+        }
+      }
+      return;
     }
+    appliedFromRef.current = recorder.clip;
+    onClipChange(recorder.clip);
   }, [clip, onClipChange, recorder.clip]);
 
   React.useEffect(() => {
@@ -40,12 +53,14 @@ export function VoiceNoteComposer({
     }
     if (hadClipRef.current) {
       hadClipRef.current = false;
-      discard();
+      appliedFromRef.current = null;
+      discardRecorder();
     }
-  }, [clip, discard]);
+  }, [clip, discardRecorder]);
 
-  const discard = () => {
-    recorder.discard();
+  const removeClip = () => {
+    discardRecorder();
+    appliedFromRef.current = null;
     onClipChange(null);
   };
 
@@ -56,18 +71,25 @@ export function VoiceNoteComposer({
       <div className={cn('space-y-1.5', compact ? '' : 'pt-1')}>
         <VoiceNotePlayer
           src={activeClip.objectUrl}
+          contentType={activeClip.contentType}
           transcript={activeClip.transcript}
           durationSec={activeClip.durationSec}
           compact={compact}
+          showTranscriptToggle={recorder.status !== 'transcribing'}
         />
-        <button
-          type="button"
-          onClick={discard}
-          disabled={disabled}
-          className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.5))] hover:text-red-400"
-        >
-          <Trash2 className="h-3 w-3" /> Remove voice
-        </button>
+        {recorder.status === 'transcribing' ? (
+          <p className="text-[11px] text-[var(--ph-muted,rgba(255,255,255,0.65))]">Writing transcript…</p>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={removeClip}
+            disabled={disabled}
+            className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.5))] hover:text-red-400"
+          >
+            <Trash2 className="h-3 w-3" /> Remove voice
+          </button>
+        </div>
       </div>
     );
   }

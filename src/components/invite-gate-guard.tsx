@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { StudioLoader } from '@/components/studio-loader';
@@ -10,6 +10,8 @@ import { DEFAULT_INVITE_GATE_COPY } from '@/lib/invite-gate';
 import {
   clearStoredInviteGateUnlock,
   isLocallyUnlockedForVersion,
+  persistInviteGateStatus,
+  readCachedInviteGateStatus,
   readStoredInviteGateVersion,
 } from '@/lib/invite-gate-client';
 
@@ -33,6 +35,29 @@ function resolveUnlocked(
   return false;
 }
 
+function initialGateState(): GateState {
+  const cached = readCachedInviteGateStatus();
+  const stored = readStoredInviteGateVersion();
+  if (!cached) {
+    return {
+      checking: stored === null,
+      gateEnabled: stored !== null,
+      unlocked: stored !== null,
+      copy: DEFAULT_INVITE_GATE_COPY,
+    };
+  }
+  if (!cached.enabled) {
+    return { checking: false, gateEnabled: false, unlocked: true, copy: DEFAULT_INVITE_GATE_COPY };
+  }
+  const unlocked = stored !== null && stored === cached.version;
+  return {
+    checking: false,
+    gateEnabled: true,
+    unlocked,
+    copy: DEFAULT_INVITE_GATE_COPY,
+  };
+}
+
 export function InviteGateGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, loading: authLoading } = useAuth();
@@ -44,6 +69,10 @@ export function InviteGateGuard({ children }: { children: React.ReactNode }) {
     copy: DEFAULT_INVITE_GATE_COPY,
   });
 
+  useLayoutEffect(() => {
+    setState(initialGateState());
+  }, []);
+
   const refreshSession = useCallback(async (optimisticUnlock = false) => {
     if (optimisticUnlock) {
       optimisticRef.current = true;
@@ -51,16 +80,15 @@ export function InviteGateGuard({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const fetchOpts: RequestInit = { cache: 'no-store', credentials: 'include' };
-      const [statusRes, sessionRes] = await Promise.all([
-        fetch('/api/invite-gate/status', fetchOpts),
-        fetch('/api/invite-gate/session', fetchOpts),
-      ]);
-      const status = await statusRes.json().catch(() => ({}));
+      const sessionRes = await fetch('/api/invite-gate/session', {
+        cache: 'default',
+        credentials: 'include',
+      });
       const session = await sessionRes.json().catch(() => ({}));
 
-      const gateEnabled = Boolean(session.gateEnabled ?? status.enabled);
-      const gateVersion = Number(status.version ?? session.version ?? 1);
+      const gateEnabled = Boolean(session.gateEnabled);
+      const gateVersion = Number(session.version ?? 1);
+      persistInviteGateStatus(gateEnabled, Number.isFinite(gateVersion) ? gateVersion : 1);
 
       if (!gateEnabled) {
         clearStoredInviteGateUnlock();
@@ -88,7 +116,7 @@ export function InviteGateGuard({ children }: { children: React.ReactNode }) {
         checking: false,
         gateEnabled,
         unlocked,
-        copy: { ...DEFAULT_INVITE_GATE_COPY, ...(status.copy || {}) },
+        copy: { ...DEFAULT_INVITE_GATE_COPY, ...(session.copy || {}) },
       });
     } catch {
       const localVersion = readStoredInviteGateVersion();
@@ -120,11 +148,14 @@ export function InviteGateGuard({ children }: { children: React.ReactNode }) {
   const isAdmin = user?.role === 'admin';
   const exempt = isInviteGateExemptPath(pathname);
 
-  if (state.checking || (authLoading && state.gateEnabled && !state.unlocked && !isAdmin)) {
+  if (state.checking && !exempt) {
     return <StudioLoader size="lg" fullscreen className="bg-[#030712]" />;
   }
 
   if (state.gateEnabled && !state.unlocked && !isAdmin && !exempt) {
+    if (authLoading && !user) {
+      return <StudioLoader size="lg" fullscreen className="bg-[#030712]" />;
+    }
     return <InviteGateScreen copy={state.copy} onUnlocked={handleUnlocked} />;
   }
 

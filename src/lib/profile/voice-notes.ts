@@ -1,6 +1,7 @@
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { getClientStorage } from '@/lib/firebase/client/firebase';
 import { pickMediaRecorderMimeType } from '@/lib/speech-recognition';
+import { normalizeAudioContentType } from '@/lib/audio-mime';
 
 export const VOICE_MAX_SECONDS = 60;
 export const VOICE_MAX_BYTES = 5 * 1024 * 1024;
@@ -32,11 +33,11 @@ export function voiceRecorderSupported(): boolean {
 }
 
 export function extForVoiceType(contentType: string): string {
-  const type = contentType.toLowerCase();
-  if (type.includes('mp4') || type.includes('m4a') || type.includes('aac')) return 'm4a';
-  if (type.includes('ogg')) return 'ogg';
-  if (type.includes('wav')) return 'wav';
-  if (type.includes('mpeg')) return 'mp3';
+  const type = normalizeAudioContentType(contentType);
+  if (type === 'audio/mp4') return 'm4a';
+  if (type === 'audio/ogg') return 'ogg';
+  if (type === 'audio/wav') return 'wav';
+  if (type === 'audio/mpeg') return 'mp3';
   return 'webm';
 }
 
@@ -80,7 +81,7 @@ export function voiceNoteToFirestore(note: VoiceNote, maxSeconds = VOICE_MAX_SEC
   return {
     url: note.url.slice(0, 2000),
     storagePath: note.storagePath.slice(0, 400),
-    contentType: note.contentType.slice(0, 80),
+    contentType: normalizeAudioContentType(note.contentType).slice(0, 80),
     durationSec: Math.min(maxSeconds + 2, Math.max(0.2, Number(note.durationSec.toFixed(2)))),
     byteSize: note.byteSize,
     ...(note.transcript?.trim()
@@ -111,7 +112,7 @@ export async function uploadVoiceClip(opts: {
   if (opts.clip.durationSec > maxSeconds + 2) {
     throw new Error(`Recordings max out at ${Math.round(maxSeconds / 60)} minutes.`);
   }
-  const contentType = opts.clip.contentType || opts.clip.blob.type || 'audio/webm';
+  const contentType = normalizeAudioContentType(opts.clip.contentType || opts.clip.blob.type || 'audio/webm');
   const storage = getClientStorage();
   const fileRef = ref(storage, opts.storagePath);
   await uploadBytes(fileRef, opts.clip.blob, { contentType });
@@ -139,10 +140,13 @@ export async function deleteVoiceStorage(storagePath: string | undefined): Promi
 }
 
 export function revokeVoiceObjectUrl(clip: RecordedVoiceClip | null | undefined): void {
-  if (!clip?.objectUrl) return;
-  try {
-    URL.revokeObjectURL(clip.objectUrl);
-  } catch {
-    /* ignore */
+  if (!clip) return;
+  const urls = new Set([clip.objectUrl].filter(Boolean));
+  for (const url of urls) {
+    try {
+      URL.revokeObjectURL(url);
+    } catch {
+      /* ignore */
+    }
   }
 }

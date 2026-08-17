@@ -126,7 +126,11 @@ export default function FeedPage() {
     [friendships, user?.id, user?.email, user?.displayName]
   );
 
-  if (SCENE_HOME_ENABLED || authLoading) {
+  if (SCENE_HOME_ENABLED) {
+    return <div className="min-h-screen bg-background" aria-busy="true" />;
+  }
+
+  if (authLoading) {
     return <StudioLoader size="lg" fullscreen />;
   }
 

@@ -105,9 +105,9 @@ const transcribeFreestyleFlow = ai.defineFlow(
 
 /**
  * Chunk transcription during an active freestyle session.
- * Ink is charged once per session, on the first billable chunk (`isSessionStart`) —
+ * Ink is charged once per session, on the 5th billable speech chunk (`isSessionStart`) —
  * that chunk uses the `freestyleTranscription` action name, which resolves to the
- * flat "Freestyle Session" fee in AI_COSTS. Continuation chunks use
+ * flat "Freestyle Session" fee in AI_COSTS. Earlier chunks and continuation chunks use
  * `freestyleTranscriptionChunk`, which is listed at 0 Ink in AI_COSTS.
  */
 export async function transcribeFreestyleAudio(

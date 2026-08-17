@@ -149,6 +149,8 @@ export function SheetTakesPanel({
                 </div>
                 <VoiceNotePlayer
                   src={take.url}
+                  storagePath={take.storagePath}
+                  contentType={take.contentType}
                   durationSec={take.durationSec}
                   compact
                   variant="studio"

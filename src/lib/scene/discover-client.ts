@@ -82,7 +82,7 @@ const EMPTY: DiscoverData = { artists: [], posts: [], drops: [], risers: [], loc
 
 export async function fetchDiscover(
   excludeUserId?: string,
-  opts?: { view?: 'home' | 'all' }
+  opts?: { view?: 'home' | 'all'; enrichSlugs?: boolean }
 ): Promise<DiscoverData> {
   try {
     const params = new URLSearchParams();
@@ -98,8 +98,10 @@ export async function fetchDiscover(
           embedProvider: p.embedProvider as EmbedProvider | undefined,
         }))
       : [];
-    // Retroactive posts may still carry hyphen/uid ownerSlug — rewrite to live.
-    const posts = await enrichPostsWithLiveSlugs(rawPosts as ProfilePost[]);
+    const posts =
+      opts?.enrichSlugs === false
+        ? (rawPosts as ProfilePost[])
+        : await enrichPostsWithLiveSlugs(rawPosts as ProfilePost[]);
     return {
       artists: Array.isArray(data.artists) ? data.artists : [],
       posts,

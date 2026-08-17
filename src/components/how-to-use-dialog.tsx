@@ -736,7 +736,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </ChapterCard>
 
                 <ChapterCard icon={<Mic className="text-primary" />} title="Freestyle Pad" colorClass="border-l-primary">
-                    <p>Studio Pro — open from the footer Bar Workstation. Speak your bars; tap <strong>Add to Editor</strong> to drop transcribed lines directly into the active section ({AI_COSTS.freestyleTranscription} Ink per chunk).</p>
+                    <p>Studio Pro — open from the footer Bar Workstation. Speak your bars; tap <strong>Add to Editor</strong> to drop transcribed lines directly into the active section ({AI_COSTS.freestyleTranscription} Ink after a short pickup, not per clip).</p>
                 </ChapterCard>
 
                 <ChapterCard icon={<Volume2 className="text-amber-500" />} title="Vibe Suggester" colorClass="border-l-amber-500 text-amber-500">

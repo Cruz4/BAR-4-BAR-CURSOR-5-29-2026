@@ -19,10 +19,12 @@ export const AI_COSTS = {
   findRhymes: 10,
   improveMyStyle: 35,
 
-  /** Charged once per freestyle recording session (first successfully transcribed chunk). */
+  /** Charged once per freestyle recording session after several successful speech chunks. */
   freestyleTranscription: 3,
   /** Continuation chunks in an already-billed freestyle session — free. */
   freestyleTranscriptionChunk: 0,
+  /** Wall / comment voice-note transcripts — free. */
+  transcribeVoiceNote: 0,
 
   runCreativeEffect: 10,
 
@@ -34,3 +36,6 @@ export const AI_COSTS = {
   aiVideoDirector: 100,
   aiMusicCowriter: 80,
 } as const;
+
+/** Bill the Freestyle Session fee on this successful speech chunk (~14s of studio pickup). */
+export const FREESTYLE_BILL_AFTER_CHUNKS = 5;

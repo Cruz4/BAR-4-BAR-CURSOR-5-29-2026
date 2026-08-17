@@ -3379,6 +3379,8 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
             onOpenChange={(o) => onSectionChange('scratchPad', o)}
           />
 
+          </fieldset>
+
           <SheetTakesPanel
             key={track.id}
             takes={track.sheetTakes}
@@ -3390,6 +3392,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
             onChange={(sheetTakes) => onUpdateTrack({ sheetTakes })}
           />
 
+          <fieldset disabled={trackLocked} className="min-w-0 border-0 p-0 m-0 space-y-4 disabled:[&_button]:pointer-events-none disabled:[&_input]:pointer-events-none disabled:[&_textarea]:pointer-events-none disabled:[&_[role=switch]]:pointer-events-none">
           <DraftChest
             entries={track.draftChest ?? []}
             disabled={trackLocked}

@@ -5,6 +5,7 @@ import type { Album, StyleProfile, Track, User } from '@/lib/types';
 export const ALBUM_STORAGE_KEY = 'bar4bar-albums';
 export const STYLE_STORAGE_KEY = 'bar4bar-style';
 const USER_PROFILE_CACHE_KEY = 'bar4bar-offline-user-profile';
+const LAST_AUTH_UID_KEY = 'bar4bar-last-auth-uid';
 const VAULT_SNAPSHOT_AT_KEY = 'bar4bar-vault-snapshot-at';
 
 export type CachedUserProfile = Pick<
@@ -85,6 +86,7 @@ export function saveCachedUserProfile(user: CachedUserProfile): void {
   if (typeof window === 'undefined' || !user.id) return;
   try {
     localStorage.setItem(`${USER_PROFILE_CACHE_KEY}-${user.id}`, JSON.stringify(user));
+    saveLastAuthUserId(user.id);
   } catch (error) {
     console.warn('[vault-cache] profile save failed', error);
   }
@@ -98,6 +100,32 @@ export function loadCachedUserProfile(userId: string): CachedUserProfile | null 
   } catch {
     return null;
   }
+}
+
+export function saveLastAuthUserId(userId: string | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (userId) localStorage.setItem(LAST_AUTH_UID_KEY, userId);
+    else localStorage.removeItem(LAST_AUTH_UID_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadLastAuthUserId(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const uid = localStorage.getItem(LAST_AUTH_UID_KEY)?.trim();
+    return uid || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Last signed-in profile on this device — used to skip the boot pencil. */
+export function loadLastCachedUserProfile(): CachedUserProfile | null {
+  const uid = loadLastAuthUserId();
+  return uid ? loadCachedUserProfile(uid) : null;
 }
 
 const WARM_SESSION_PREFIX = 'bar4bar-studio-warm';

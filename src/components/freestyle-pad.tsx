@@ -44,6 +44,7 @@ import {
   truncateFreestyleContextField,
 } from '@/lib/freestyle-transcription-context';
 import { mergeFreestyleTranscriptChunk, sanitizeFreestyleTranscript } from '@/lib/freestyle-transcript';
+import { FREESTYLE_BILL_AFTER_CHUNKS } from '@/lib/costs';
 
 interface FreestylePadProps {
   open: boolean;
@@ -88,6 +89,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   >([]);
   const recordingSessionRef = useRef(0);
   const sessionBilledRef = useRef(false);
+  const speechChunkCountRef = useRef(0);
   const transcriptRef = useRef('');
   const networkRetryRef = useRef(false);
   const studioFailNotifiedRef = useRef(false);
@@ -127,6 +129,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   const discardStaleStudioWork = useCallback(() => {
     recordingSessionRef.current += 1;
     sessionBilledRef.current = false;
+    speechChunkCountRef.current = 0;
     studioChunkQueueRef.current = [];
     studioChunkBusyRef.current = false;
     setIsStudioTranscribing(false);
@@ -138,6 +141,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
     setIsListening(false);
     setRecordingElapsedSec(0);
     recordingStartTimeRef.current = null;
+    if (!sessionBilledRef.current) refundInk(sessionCostRef.current);
 
     if (recognitionRef.current) {
       try {
@@ -165,7 +169,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       studioChunkBusyRef.current || studioChunkQueueRef.current.length > 0;
     setInterimTranscript(stillProcessing ? 'Transcribing your last clip…' : '');
     setIsStudioTranscribing(stillProcessing);
-  }, [releaseMediaStream]);
+  }, [releaseMediaStream, refundInk]);
 
   const enforceSessionLimit = useCallback(() => {
     if (!recordingStartTimeRef.current || isPro) return false;
@@ -225,11 +229,9 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       }
       silentChunkStreakRef.current = 0;
       const audioBase64 = await blobToBase64(blob);
-      // Real Ink charge happens server-side, once per session, on the first chunk
-      // that actually reaches (and succeeds through) the AI call — silent/discarded
-      // chunks above never bill, and a failed call auto-refunds server-side, so we
-      // only flip this after a successful response.
-      const isSessionStart = !sessionBilledRef.current;
+      const isSessionStart =
+        !sessionBilledRef.current &&
+        speechChunkCountRef.current + 1 >= FREESTYLE_BILL_AFTER_CHUNKS;
       const result = await lazyTranscribeFreestyleAudio(
         await withAiAuth({
           audioBase64,
@@ -241,7 +243,8 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
           isSessionStart,
         })
       );
-      sessionBilledRef.current = true;
+      speechChunkCountRef.current += 1;
+      if (isSessionStart) sessionBilledRef.current = true;
       if (sessionId !== recordingSessionRef.current) {
         return;
       }

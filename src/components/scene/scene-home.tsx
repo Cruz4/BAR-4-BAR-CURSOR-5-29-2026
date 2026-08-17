@@ -275,13 +275,19 @@ export function SceneHome() {
     let cancelled = false;
     const load = async () => {
       try {
-        const [all, discoverData, blocked] = await Promise.all([
+        const [all, discoverData, blocked, ownPosts] = await Promise.all([
           fetchFriendships(user.id),
-          fetchDiscover(user.id),
+          fetchDiscover(user.id, { enrichSlugs: false }),
           fetchBlockedUsers(),
+          fetchPostsByOwners([user.id]),
         ]);
         if (cancelled) return;
-        // Fill missing requester slugs so friend-request names can open Artist Homes.
+        setDiscover(discoverData);
+        setBlockedIds(new Set(blocked.map((b) => b.blockedUserId)));
+        setFriendships(all);
+        setPosts(ownPosts);
+        setLoaded(true);
+
         const pendingLookups = all
           .filter((f) => f.status === 'pending' && f.requestedBy !== user.id)
           .map((f) => ({
@@ -292,6 +298,7 @@ export function SceneHome() {
         if (pendingLookups.length) {
           const { fetchPublicArtistMetas } = await import('@/lib/profile/social-client');
           const metas = await fetchPublicArtistMetas(pendingLookups);
+          if (cancelled) return;
           friendshipsForUi = all.map((f) => {
             if (f.status !== 'pending' || f.requestedBy === user.id) return f;
             const meta = metas.get(f.requestedBy);
@@ -312,8 +319,6 @@ export function SceneHome() {
         }
         if (cancelled) return;
         setFriendships(friendshipsForUi);
-        setDiscover(discoverData);
-        setBlockedIds(new Set(blocked.map((b) => b.blockedUserId)));
         await reloadBlockFeed(friendshipsForUi, user.id);
       } finally {
         if (!cancelled) {
@@ -668,8 +673,12 @@ export function SceneHome() {
     }
   };
 
-  if (authLoading || !user) {
+  if (authLoading && !user) {
     return <StudioLoader size="lg" fullscreen />;
+  }
+
+  if (!user) {
+    return <div className="min-h-screen bg-background" aria-busy="true" />;
   }
 
   return (

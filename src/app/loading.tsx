@@ -3,5 +3,5 @@
 import { StudioLoader } from '@/components/studio-loader';
 
 export default function Loading() {
-  return <StudioLoader size="lg" fullscreen message="Opening Workstation..." />;
+  return <StudioLoader size="lg" fullscreen />;
 }

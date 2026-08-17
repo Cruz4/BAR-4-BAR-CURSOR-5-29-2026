@@ -70,6 +70,12 @@ export async function lazyTranscribeFreestyleAudio(input: AiFlowInput) {
   >('transcribeFreestyleAudio', input);
 }
 
+export async function lazyTranscribeVoiceNote(input: AiFlowInput) {
+  return runAiFlow<
+    Awaited<ReturnType<(typeof import('@/ai/flows/transcribe-voice-note'))['transcribeVoiceNote']>>
+  >('transcribeVoiceNote', input);
+}
+
 export async function lazySuggestRelayDirections(input: AiFlowInput) {
   return runAiFlow<
     Awaited<ReturnType<(typeof import('@/ai/flows/writers-relay'))['suggestRelayDirections']>>

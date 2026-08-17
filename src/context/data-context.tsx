@@ -497,8 +497,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       setSyncPendingCount(outboxCount(user.id));
 
       const cached = loadVaultSnapshot(user.id);
+      const onHome =
+        typeof window !== 'undefined' &&
+        (window.location.pathname === '/' || window.location.pathname === '/feed');
       if (cached.albums?.length) {
         applyLocalVault(cached.albums, cached.styleProfile);
+        setLoading(false);
       }
 
       if (offline) {
@@ -507,9 +511,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
+      if (onHome) {
+        await new Promise((resolve) => window.setTimeout(resolve, cached.albums?.length ? 600 : 200));
+      }
+
       const isSameUserReload = vaultLoadedUserIdRef.current === user.id;
       const hasVisibleVault = albumsRef.current.length > 0;
-      if (!isSameUserReload || !hasVisibleVault) {
+      if ((!isSameUserReload || !hasVisibleVault) && !onHome) {
         setLoading(true);
       }
 

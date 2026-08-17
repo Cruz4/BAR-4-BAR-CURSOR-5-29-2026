@@ -31,6 +31,8 @@ import { TikTokPixel } from './tiktok-pixel';
 import { MarketingAttributionCapture } from './marketing-attribution-capture';
 import { AdminAlertListener } from './admin-alert-listener';
 import { InviteGateGuard } from './invite-gate-guard';
+import { DropPlayerProvider, useOptionalDropPlayer } from '@/context/drop-player-context';
+import { DropNowPlayingBar, shouldHideDropNowPlayingBar } from '@/components/library/drop-now-playing-bar';
 import { ProFeaturePreviewBanner } from './pro-feature-preview-banner';
 import { ProTrialWinQuestStrip } from './pro-trial-win-quest-strip';
 import { ProPreviewEndedDialog } from './pro-preview-ended-dialog';
@@ -79,6 +81,9 @@ function useChunkLoadRecovery() {
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user } = useAuth();
+  const dropPlayer = useOptionalDropPlayer();
+  const showDropNowPlaying =
+    Boolean(dropPlayer?.current) && !shouldHideDropNowPlayingBar(pathname);
   const isLoginPage = pathname === '/login';
   const isWelcomePage = pathname === '/welcome';
   const isPublicHome = pathname === '/' && !user;
@@ -118,7 +123,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <div
                 className={cn(
                   'relative z-10 flex min-h-screen flex-col flex-1',
-                  allowPageScroll ? 'overflow-x-hidden overflow-y-auto' : 'overflow-hidden'
+                  allowPageScroll ? 'overflow-x-hidden overflow-y-auto' : 'overflow-hidden',
+                  showDropNowPlaying && 'pb-[4.75rem]'
                 )}
               >
                 {showAppHeader && <Header />}
@@ -145,6 +151,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               </div>
               {!isSharePage && !isPublicProfilePage && !isMarketingCapture && <StudioTips />}
               {!isSharePage && !isPublicProfilePage && <FloatingInkSpent />}
+              <DropNowPlayingBar />
               <Toaster />
               <AchievementUnlockCelebration />
               <ProgressCelebration />
@@ -168,7 +175,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
     >
       <AuthProvider>
-        <AppShell>{children}</AppShell>
+        <DropPlayerProvider>
+          <AppShell>{children}</AppShell>
+        </DropPlayerProvider>
       </AuthProvider>
     </ThemeProvider>
   );

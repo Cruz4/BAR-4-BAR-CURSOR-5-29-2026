@@ -4,6 +4,7 @@ import React, {
   createContext,
   useState,
   useEffect,
+  useLayoutEffect,
   ReactNode,
 } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
@@ -21,7 +22,9 @@ import { clearWhatsNewLoginSession } from '@/lib/whats-new-session';
 import { isBrowserOffline, onNetworkChange } from '@/lib/offline/network';
 import {
   loadCachedUserProfile,
+  loadLastCachedUserProfile,
   saveCachedUserProfile,
+  saveLastAuthUserId,
   type CachedUserProfile,
 } from '@/lib/offline/vault-cache';
 import { isMasterAdminEmail } from '@/lib/master-admin';
@@ -87,6 +90,32 @@ function userFromCachedProfile(
   return userFromFirebase(firebaseUser, cached, isMaster);
 }
 
+function userFromCachedOnly(cached: CachedUserProfile): User {
+  return {
+    id: cached.id,
+    displayName: cached.displayName || 'Anonymous',
+    email: cached.email || '',
+    createdAt: new Date().toISOString(),
+    role: cached.role || 'artist',
+    status: cached.status || 'active',
+    subscriptionStatus: cached.subscriptionStatus || 'none',
+    subscriptionTier: cached.subscriptionTier || 'none',
+    trialStartedAt: cached.trialStartedAt ?? null,
+    returningIdentity: cached.returningIdentity === true,
+    lyricsTutorialCompletedAt: cached.lyricsTutorialCompletedAt,
+    vaultTutorialCompletedAt: cached.vaultTutorialCompletedAt,
+    sceneTutorialCompletedAt: cached.sceneTutorialCompletedAt,
+    proTrialWinCompletedAt: cached.proTrialWinCompletedAt,
+    proTrialWinDismissedAt: cached.proTrialWinDismissedAt,
+    studioPrivacyIntroCompletedAt: undefined,
+    proFeaturePreviewExpiresAt: cached.proFeaturePreviewExpiresAt ?? null,
+    pendingWelcomeInk: cached.pendingWelcomeInk,
+    activatedAt: cached.activatedAt ?? null,
+    freeEditableTrackIds: cached.freeEditableTrackIds,
+    freeEditableSelectionAt: cached.freeEditableSelectionAt,
+  };
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,6 +125,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isBlocked, setIsBlocked] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+
+  useLayoutEffect(() => {
+    const cached = loadLastCachedUserProfile();
+    if (!cached) return;
+    setUser((prev) => prev ?? userFromCachedOnly(cached));
+    setAuthReady(true);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     let unsubscribeDoc: (() => void) | null = null;
@@ -137,6 +174,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (!firebaseUser) {
         clearWhatsNewLoginSession();
+        saveLastAuthUserId(null);
         setUser(null);
         setAuthReady(false);
         setOfflineAuth(false);
@@ -146,6 +184,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const isMaster = isMasterAdminEmail(firebaseUser.email);
       const offline = isBrowserOffline();
+      const cached = loadCachedUserProfile(firebaseUser.uid);
+      if (cached) {
+        setUser(userFromCachedProfile(firebaseUser, cached, isMaster));
+        setAuthReady(true);
+        finishLoading();
+      }
 
       if (offline) {
         applyCachedOfflineUser(firebaseUser);
@@ -331,7 +375,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     trackStudioEvent(ANALYTICS_EVENTS.SESSION_START, { path: pathname });
   }, [user?.id, authReady, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const showLoader = loading || (isRedirecting && !isBrowserOffline());
+  const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
+  const showLoader =
+    (loading && isProtectedRoute && !user) ||
+    (isRedirecting && isProtectedRoute && !isBrowserOffline());
 
   return (
     <AuthContext.Provider value={{ user, loading, authReady, offlineAuth }}>

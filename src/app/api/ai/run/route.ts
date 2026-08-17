@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { AiGateError } from '@/lib/server/ai-gate';
 
 export const runtime = 'nodejs';
+export const maxDuration = 120;
 
 const FLOW_LOADERS = {
   findRhymes: () => import('@/ai/flows/find-rhymes').then((m) => m.findRhymes),
@@ -13,6 +14,8 @@ const FLOW_LOADERS = {
   runCreativeEffect: () => import('@/ai/flows/creative-effects').then((m) => m.runCreativeEffect),
   transcribeFreestyleAudio: () =>
     import('@/ai/flows/transcribe-freestyle-audio').then((m) => m.transcribeFreestyleAudio),
+  transcribeVoiceNote: () =>
+    import('@/ai/flows/transcribe-voice-note').then((m) => m.transcribeVoiceNote),
   suggestRelayDirections: () =>
     import('@/ai/flows/writers-relay').then((m) => m.suggestRelayDirections),
   generateRelayDraft: () => import('@/ai/flows/writers-relay').then((m) => m.generateRelayDraft),

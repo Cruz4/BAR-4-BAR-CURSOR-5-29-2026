@@ -5,6 +5,7 @@ import { Readable } from 'node:stream';
 import { NextResponse } from 'next/server';
 import { getAdminBucket } from '@/lib/firebase/server';
 import { DROP_AUDIO_MAX_BYTES } from '@/lib/drop-commerce';
+import { headerAudioContentType } from '@/lib/audio-mime';
 
 const TICKET_TTL_MS = {
   preview: 12 * 60 * 1000,
@@ -123,10 +124,11 @@ export async function streamDropAudioFile(
     return NextResponse.json({ error: 'Audio is too large to stream.' }, { status: 413 });
   }
 
-  const contentType =
+  const contentType = headerAudioContentType(
     contentTypeHint ||
-    (typeof metadata.contentType === 'string' && metadata.contentType) ||
-    'application/octet-stream';
+      (typeof metadata.contentType === 'string' ? metadata.contentType : '') ||
+      'application/octet-stream'
+  );
 
   const parsed = parseRange(rangeHeader, size);
   if (parsed && 'unsatisfiable' in parsed) {

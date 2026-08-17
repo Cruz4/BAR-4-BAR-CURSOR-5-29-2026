@@ -52,6 +52,9 @@ function docToPublic(data: InviteGateDoc | undefined): InviteGatePublicStatus {
   };
 }
 
+const STATUS_CACHE_TTL_MS = 15_000;
+let statusCache: { at: number; value: InviteGatePublicStatus } | null = null;
+
 export async function readInviteGateDoc(): Promise<InviteGateDoc | undefined> {
   if (!hasAdminFirestoreCredentials()) return undefined;
   const db = await getDb();
@@ -60,8 +63,13 @@ export async function readInviteGateDoc(): Promise<InviteGateDoc | undefined> {
 }
 
 export async function getInviteGatePublicStatus(): Promise<InviteGatePublicStatus> {
+  if (statusCache && Date.now() - statusCache.at < STATUS_CACHE_TTL_MS) {
+    return statusCache.value;
+  }
   const data = await readInviteGateDoc();
-  return docToPublic(data);
+  const value = docToPublic(data);
+  statusCache = { at: Date.now(), value };
+  return value;
 }
 
 export async function getInviteGateAdminConfig(): Promise<InviteGateAdminConfig> {
@@ -108,6 +116,7 @@ export async function saveInviteGateConfig(input: {
   }
 
   await ref.set(patch, { merge: true });
+  statusCache = null;
   return getInviteGateAdminConfig();
 }
 

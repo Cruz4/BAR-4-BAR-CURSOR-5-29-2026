@@ -14,7 +14,7 @@ type HomePageProps = {
 };
 
 export function HomePage(_props: HomePageProps = {}) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   if (user) {
     return (
       <>
@@ -23,13 +23,12 @@ export function HomePage(_props: HomePageProps = {}) {
       </>
     );
   }
+  if (loading) {
+    return <div className="min-h-screen bg-background" aria-busy="true" />;
+  }
   return (
     <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground text-sm">
-          Loading…
-        </div>
-      }
+      fallback={<div className="min-h-screen bg-background" aria-busy="true" />}
     >
       <GuestPressingLanding />
     </Suspense>

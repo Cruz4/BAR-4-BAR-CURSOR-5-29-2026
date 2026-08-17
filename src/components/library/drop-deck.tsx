@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Disc3,
@@ -49,7 +49,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useDropCrates } from '@/hooks/use-drop-crates';
-import { auth } from '@/lib/firebase/client/firebase';
+import { useDropPlayer } from '@/context/drop-player-context';
 import { centsToUsdLabel } from '@/lib/drop-commerce';
 import {
   createDropCrate,
@@ -76,16 +76,6 @@ import {
 import { cn } from '@/lib/utils';
 import { DeckNeonBackground } from '@/components/studio-page-background';
 import { DropVisualizer } from '@/components/library/drop-visualizer';
-
-async function authHeaders(): Promise<HeadersInit> {
-  const user = auth.currentUser;
-  const headers: HeadersInit = { 'Content-Type': 'application/json' };
-  if (!user) return headers;
-  const token = await user.getIdToken();
-  return { ...headers, Authorization: `Bearer ${token}` };
-}
-
-type RepeatMode = 'off' | 'all' | 'one';
 
 function PressingPlate({
   item,
@@ -130,27 +120,34 @@ function PressingPlate({
 export function DropDeck({ userId, items }: { userId: string; items: DropLibraryItem[] }) {
   const { toast } = useToast();
   const { crates } = useDropCrates(userId);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const ctxRef = useRef<AudioContext | null>(null);
+  const {
+    current,
+    playing,
+    loading,
+    elapsed,
+    duration,
+    repeat,
+    setQueue: setPlayerQueue,
+    setRepeat,
+    loadAndPlay,
+    togglePlay,
+    skipNext,
+    prev,
+    seek,
+  } = useDropPlayer();
 
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<DeckSort>('fresh');
   const [group, setGroup] = useState<DeckGroup>('kind');
   const [crateId, setCrateId] = useState<string>('all');
   const [played, setPlayed] = useState(readPlayedMap);
-  const [currentKey, setCurrentKey] = useState<string | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [shuffle, setShuffle] = useState(false);
   const [shuffleKeys, setShuffleKeys] = useState<string[] | null>(null);
-  const [repeat, setRepeat] = useState<RepeatMode>('off');
-  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [crateName, setCrateName] = useState('');
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const currentKey = current?.key ?? null;
 
   const activeCrate = crateId === 'all' ? null : crates.find((c) => c.id === crateId) ?? null;
 
@@ -192,161 +189,23 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
       return item ? [item] : [];
     });
   }, [shuffle, shuffleKeys, playables]);
-  const current = playables.find((item) => item.key === currentKey) || null;
-  const currentIndex = queue.findIndex((item) => item.key === currentKey);
 
-  const ensureGraph = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const AC =
-      window.AudioContext ||
-      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AC) return;
-    if (!ctxRef.current) {
-      const ctx = new AC();
-      const node = ctx.createAnalyser();
-      node.fftSize = 256;
-      node.smoothingTimeConstant = 0.78;
-      const source = ctx.createMediaElementSource(audio);
-      source.connect(node);
-      node.connect(ctx.destination);
-      ctxRef.current = ctx;
-      setAnalyser(node);
-    }
-    if (ctxRef.current.state === 'suspended') void ctxRef.current.resume();
-  }, []);
+  useEffect(() => {
+    setPlayerQueue(queue);
+  }, [queue, setPlayerQueue]);
 
-  const loadAndPlay = useCallback(
-    async (item: DeckPlayable, autoplay = true) => {
-      setCurrentKey(item.key);
+  useEffect(() => {
+    if (!currentKey) return;
+    setPlayed((prev) => markPlayed(prev, currentKey));
+  }, [currentKey]);
+
+  const playItem = useCallback(
+    (item: DeckPlayable) => {
       setPlayed((prev) => markPlayed(prev, item.key));
-      setLoading(true);
-      try {
-        const headers = await authHeaders();
-        const qs = new URLSearchParams({ shareId: item.shareId });
-        if (item.trackId) qs.set('trackId', item.trackId);
-        const res = await fetch(`/api/drops/audio?${qs.toString()}`, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Could not load this drop.');
-        const audio = audioRef.current;
-        if (!audio) return;
-        ensureGraph();
-        audio.src = data.url;
-        if (autoplay) {
-          await audio.play();
-          setPlaying(true);
-        }
-      } catch (e: unknown) {
-        setPlaying(false);
-        toast({
-          variant: 'destructive',
-          title: 'Could not play',
-          description: e instanceof Error ? e.message : undefined,
-        });
-      } finally {
-        setLoading(false);
-      }
+      void loadAndPlay(item);
     },
-    [ensureGraph, toast]
+    [loadAndPlay]
   );
-
-  const playIndex = useCallback(
-    (index: number) => {
-      const item = queue[index];
-      if (item) void loadAndPlay(item);
-    },
-    [queue, loadAndPlay]
-  );
-
-  const togglePlay = useCallback(() => {
-    const audio = audioRef.current;
-    if (!current) {
-      if (queue[0]) void loadAndPlay(queue[0]);
-      return;
-    }
-    if (!audio?.src) {
-      void loadAndPlay(current);
-      return;
-    }
-    ensureGraph();
-    if (audio.paused) {
-      void audio.play().then(() => setPlaying(true));
-    } else {
-      audio.pause();
-      setPlaying(false);
-    }
-  }, [current, queue, loadAndPlay, ensureGraph]);
-
-  const skipNext = useCallback(() => {
-    if (queue.length === 0) return;
-    const i = currentIndex < 0 ? 0 : currentIndex + 1;
-    if (i >= queue.length) {
-      if (repeat !== 'off') playIndex(0);
-      else setPlaying(false);
-      return;
-    }
-    playIndex(i);
-  }, [queue, currentIndex, repeat, playIndex]);
-
-  const handleEnded = useCallback(() => {
-    if (repeat === 'one' && current) {
-      const audio = audioRef.current;
-      if (audio) {
-        audio.currentTime = 0;
-        void audio.play();
-        setPlaying(true);
-        return;
-      }
-    }
-    skipNext();
-  }, [repeat, current, skipNext]);
-
-  const prev = useCallback(() => {
-    const audio = audioRef.current;
-    if (audio && audio.currentTime > 3) {
-      audio.currentTime = 0;
-      return;
-    }
-    if (queue.length === 0) return;
-    const i = currentIndex <= 0 ? queue.length - 1 : currentIndex - 1;
-    playIndex(i);
-  }, [queue, currentIndex, playIndex]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const onTime = () => {
-      setElapsed(audio.currentTime || 0);
-      setDuration(audio.duration && Number.isFinite(audio.duration) ? audio.duration : 0);
-    };
-    const onEnded = () => handleEnded();
-    const onPause = () => setPlaying(false);
-    const onPlay = () => setPlaying(true);
-    audio.addEventListener('timeupdate', onTime);
-    audio.addEventListener('ended', onEnded);
-    audio.addEventListener('pause', onPause);
-    audio.addEventListener('play', onPlay);
-    return () => {
-      audio.removeEventListener('timeupdate', onTime);
-      audio.removeEventListener('ended', onEnded);
-      audio.removeEventListener('pause', onPause);
-      audio.removeEventListener('play', onPlay);
-    };
-  }, [handleEnded]);
-
-  useEffect(() => {
-    if (!current) return;
-    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: current.title,
-      artist: current.artistName,
-      album: current.albumTitle || 'Bar 4 Bar First Drops',
-    });
-    navigator.mediaSession.setActionHandler('play', () => togglePlay());
-    navigator.mediaSession.setActionHandler('pause', () => togglePlay());
-    navigator.mediaSession.setActionHandler('previoustrack', () => prev());
-    navigator.mediaSession.setActionHandler('nexttrack', () => skipNext());
-  }, [current, togglePlay, prev, skipNext]);
 
   const makeCrate = async (seedShareId?: string) => {
     try {
@@ -376,17 +235,9 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
     }
   };
 
-  const seek = (value: number) => {
-    const audio = audioRef.current;
-    if (!audio || !duration) return;
-    audio.currentTime = value;
-    setElapsed(value);
-  };
-
   return (
     <div className="relative flex flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
       <DeckNeonBackground />
-      <audio ref={audioRef} preload="none" className="hidden" />
 
       <header className="relative z-10 shrink-0 border-b border-fuchsia-500/15 px-4 py-4 sm:px-6">
         <div className="mx-auto flex max-w-6xl flex-col gap-4">
@@ -542,7 +393,7 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
 
         <section className="flex min-w-0 flex-1 flex-col gap-4 lg:min-h-0">
           <div className="rounded-2xl border border-fuchsia-400/20 bg-black/35 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-md sm:p-5">
-            <DropVisualizer analyser={analyser} playing={playing}>
+            <DropVisualizer analyser={null} playing={playing}>
               <PressingPlate item={current} playing={playing} />
             </DropVisualizer>
             <div className="mt-4 min-w-0">
@@ -667,7 +518,7 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
                                 className="flex min-w-0 flex-1 items-center gap-3 text-left"
                                 onClick={() => {
                                   if (active) togglePlay();
-                                  else void loadAndPlay(item);
+                                  else playItem(item);
                                 }}
                               >
                                 <span
