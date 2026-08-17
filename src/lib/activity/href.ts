@@ -99,7 +99,11 @@ export function activityOpenHref(event: ActivityEvent, viewerSlug?: string): str
   if (event.type === 'friend_accepted' && event.actorSlug) {
     return profileHref(event.actorSlug) || '/friends';
   }
-  if (event.type === 'friend_request') return '/activity?tab=requests';
+  if (event.type === 'friend_request' || event.type === 'contact_request') return '/activity?tab=requests';
+  if (event.type === 'fold_pass') return event.href || '/folds';
+  if (event.type === 'contact_accepted' && event.actorSlug) {
+    return profileHref(event.actorSlug) || '/activity';
+  }
   return '/activity';
 }
 
@@ -140,20 +144,20 @@ export async function resolveActivityOpenHref(
     return scenePostHref(event.postId, hash);
   }
 
-  if (event.type === 'friend_accepted' && event.actorId) {
+  if ((event.type === 'friend_accepted' || event.type === 'contact_accepted') && event.actorId) {
     try {
       const { fetchLivePublicProfileByUserId } = await import('@/lib/profile/social-client');
       const live = await fetchLivePublicProfileByUserId(event.actorId);
       if (live?.slug && (await isLivePublicProfileSlug(live.slug))) {
-        return profileHref(live.slug) || '/friends';
+        return profileHref(live.slug) || (event.type === 'contact_accepted' ? '/activity' : '/friends');
       }
     } catch {
       /* fall through */
     }
     if (event.actorSlug && (await isLivePublicProfileSlug(event.actorSlug))) {
-      return profileHref(event.actorSlug) || '/friends';
+      return profileHref(event.actorSlug) || (event.type === 'contact_accepted' ? '/activity' : '/friends');
     }
-    return '/friends';
+    return event.type === 'contact_accepted' ? '/activity' : '/friends';
   }
 
   return activityOpenHref(event, opts?.viewerSlug);

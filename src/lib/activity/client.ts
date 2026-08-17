@@ -250,6 +250,7 @@ export async function fetchActivityPrefs(): Promise<ActivityPrefs> {
       dnaImports: data.dnaImports !== false,
       lockCasts: data.lockCasts !== false,
       craftReminders: data.craftReminders !== false,
+      foldBars: data.foldBars !== false,
     };
   } catch {
     return { ...DEFAULT_ACTIVITY_PREFS };

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { fetchActivityUnreadCount } from '@/lib/activity/client';
 import { fetchFriendships } from '@/lib/profile/social-client';
-import { syncAppBadge } from '@/lib/activity/app-badge';
+import { setActivityBadgeCount } from '@/lib/app-badge-counts';
 
 export type ActivityAlertSummary = {
   /** Unread received activity (primary badge). */
@@ -36,7 +36,7 @@ export function useActivityAlerts() {
   const refresh = useCallback(async () => {
     if (!user?.id) {
       setSummary(EMPTY);
-      syncAppBadge(0);
+      setActivityBadgeCount(0);
       return;
     }
     try {
@@ -51,7 +51,7 @@ export function useActivityAlerts() {
       // (covers the window before emit lands / before inbox open marks read).
       const total = unreadReceived;
       setSummary({ total, unreadReceived, friendRequests });
-      syncAppBadge(total);
+      setActivityBadgeCount(total);
     } catch {
       /* keep last good count */
     }

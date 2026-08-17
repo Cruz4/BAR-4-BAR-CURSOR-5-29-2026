@@ -13,8 +13,10 @@ import {
   Heart,
   Import,
   Lock,
+  Mail,
   MessageCircle,
   Repeat2,
+  ScrollText,
   UserPlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -38,6 +40,7 @@ import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
 import { useAuth } from '@/hooks/use-auth';
 import { StudioLoader } from '@/components/studio-loader';
 import { fetchFriendships } from '@/lib/profile/social-client';
+import { fetchPendingContactRequesterIds } from '@/lib/profile/contact-client';
 
 function TypeIcon({ type }: { type: ActivityType }) {
   const className = 'h-3.5 w-3.5 shrink-0';
@@ -45,6 +48,11 @@ function TypeIcon({ type }: { type: ActivityType }) {
     case 'friend_request':
     case 'friend_accepted':
       return <UserPlus className={cn(className, 'text-emerald-400')} />;
+    case 'contact_request':
+    case 'contact_accepted':
+      return <Mail className={cn(className, 'text-sky-400')} />;
+    case 'fold_pass':
+      return <ScrollText className={cn(className, 'text-amber-400')} />;
     case 'post_love':
       return <Heart className={cn(className, 'text-rose-400')} />;
     case 'post_reply':
@@ -97,23 +105,29 @@ export function ActivityNavDropdown({
     setLoading(true);
     try {
       const uid = user.id;
-      const [received, pendingFriends] = await Promise.all([
+      const [received, pendingFriends, pendingContactIds] = await Promise.all([
         fetchActivityFeed('received', 40),
         fetchFriendships(uid, 'pending').catch(() => []),
+        fetchPendingContactRequesterIds().catch(() => []),
       ]);
       const pendingRequesters = new Set(
         pendingFriends
           .filter((f) => f.status === 'pending' && f.requestedBy !== uid)
           .map((f) => f.requestedBy)
       );
-      // Drop friend_request rows already answered elsewhere (still unread in activity).
+      const pendingContact = new Set(pendingContactIds);
+      // Drop request rows already answered elsewhere (still unread in activity).
       const unread = received
         .filter((e) => !e.readAt)
-        .filter(
-          (e) =>
-            e.type !== 'friend_request' ||
-            (e.direction === 'received' && pendingRequesters.has(e.actorId))
-        )
+        .filter((e) => {
+          if (e.type === 'friend_request') {
+            return e.direction === 'received' && pendingRequesters.has(e.actorId);
+          }
+          if (e.type === 'contact_request') {
+            return e.direction === 'received' && pendingContact.has(e.actorId);
+          }
+          return true;
+        })
         .slice(0, PREVIEW_LIMIT);
       const lookups = unread
         .filter((e) => !e.actorSlug && e.actorId)

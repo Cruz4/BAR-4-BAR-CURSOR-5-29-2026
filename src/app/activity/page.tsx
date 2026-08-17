@@ -13,8 +13,10 @@ import {
   Heart,
   Import,
   Lock,
+  Mail,
   MessageCircle,
   Repeat2,
+  ScrollText,
   Star,
   UserPlus,
   Users,
@@ -43,6 +45,10 @@ import {
   removeFriendship,
   fetchPublicArtistMetas,
 } from '@/lib/profile/social-client';
+import {
+  fetchPendingContactRequesterIds,
+  respondArtistContact,
+} from '@/lib/profile/contact-client';
 import { looksLikeNeomaiyaSol } from '@/lib/profile/neomaiya-sol';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
@@ -80,6 +86,11 @@ function TypeIcon({ type }: { type: ActivityType }) {
     case 'friend_request':
     case 'friend_accepted':
       return <UserPlus className={cn(className, 'text-emerald-400')} />;
+    case 'contact_request':
+    case 'contact_accepted':
+      return <Mail className={cn(className, 'text-sky-400')} />;
+    case 'fold_pass':
+      return <ScrollText className={cn(className, 'text-amber-400')} />;
     case 'post_love':
       return <Heart className={cn(className, 'text-rose-400')} />;
     case 'post_reply':
@@ -132,7 +143,7 @@ function ActivityRow({
     event.direction === 'received' ? event.actorSlug : event.targetSlug || undefined;
   const showRequestActions =
     event.direction === 'received' &&
-    event.type === 'friend_request' &&
+    (event.type === 'friend_request' || event.type === 'contact_request') &&
     onRespondRequest &&
     !requestResolved;
 
@@ -184,7 +195,8 @@ function ActivityRow({
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
             {timeAgo(event.createdAt)}
           </span>
-          {event.type !== 'friend_request' || event.direction === 'given' ? (
+          {(event.type !== 'friend_request' && event.type !== 'contact_request') ||
+          event.direction === 'given' ? (
             <button
               type="button"
               onClick={() => onOpen?.(event)}
@@ -256,6 +268,9 @@ function ActivityPageInner() {
   const [busyId, setBusyId] = useState<string | null>(null);
   /** Actor user ids whose incoming friend request is still pending in Firestore. */
   const [pendingRequesterIds, setPendingRequesterIds] = useState<Set<string>>(() => new Set());
+  const [pendingContactRequesterIds, setPendingContactRequesterIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const [resolvedRequestIds, setResolvedRequestIds] = useState<Set<string>>(() => new Set());
   const markedOnOpenRef = React.useRef(false);
 
@@ -264,11 +279,12 @@ function ActivityPageInner() {
     setLoading(true);
     markedOnOpenRef.current = false;
     try {
-      const [received, given, pendingFriends, acceptedFriends] = await Promise.all([
+      const [received, given, pendingFriends, acceptedFriends, pendingContactIds] = await Promise.all([
         fetchActivityFeed('received'),
         fetchActivityFeed('given'),
         fetchFriendships(user.id, 'pending').catch(() => []),
         fetchFriendships(user.id, 'accepted').catch(() => []),
+        fetchPendingContactRequesterIds().catch(() => []),
       ]);
       const [inboxResolved, sentResolved] = await Promise.all([
         withResolvedProfileLinks(received),
@@ -342,6 +358,7 @@ function ActivityPageInner() {
             .map((f) => f.requestedBy)
         )
       );
+      setPendingContactRequesterIds(new Set(pendingContactIds));
     } finally {
       setLoading(false);
     }
@@ -423,12 +440,13 @@ function ActivityPageInner() {
   }, [user?.id, loading, inbox]);
 
   const isRequestActionable = useCallback(
-    (event: ActivityEvent) =>
-      event.type === 'friend_request' &&
-      event.direction === 'received' &&
-      pendingRequesterIds.has(event.actorId) &&
-      !resolvedRequestIds.has(event.id),
-    [pendingRequesterIds, resolvedRequestIds]
+    (event: ActivityEvent) => {
+      if (event.direction !== 'received' || resolvedRequestIds.has(event.id)) return false;
+      if (event.type === 'friend_request') return pendingRequesterIds.has(event.actorId);
+      if (event.type === 'contact_request') return pendingContactRequesterIds.has(event.actorId);
+      return false;
+    },
+    [pendingRequesterIds, pendingContactRequesterIds, resolvedRequestIds]
   );
 
   const requestRows = useMemo(
@@ -455,27 +473,44 @@ function ActivityPageInner() {
     if (!user) return;
     setBusyId(event.id);
     try {
-      const friendshipId = friendshipIdFor(user.id, event.actorId);
-      if (accept) {
-        await acceptFriendRequest(friendshipId);
-        toast({ title: `You and ${event.actorName} are friends now` });
+      if (event.type === 'contact_request') {
+        await respondArtistContact({
+          requesterId: event.actorId,
+          accept,
+          artistName: user.displayName || 'Artist',
+        });
+        toast({
+          title: accept ? `Contact shared with ${event.actorName}` : 'Request declined',
+        });
+        setPendingContactRequesterIds((prev) => {
+          const next = new Set(prev);
+          next.delete(event.actorId);
+          return next;
+        });
       } else {
-        await removeFriendship(friendshipId);
-        toast({ title: 'Request declined' });
+        const friendshipId = friendshipIdFor(user.id, event.actorId);
+        if (accept) {
+          await acceptFriendRequest(friendshipId);
+          toast({ title: `You and ${event.actorName} are friends now` });
+        } else {
+          await removeFriendship(friendshipId);
+          toast({ title: 'Request declined' });
+        }
+        setPendingRequesterIds((prev) => {
+          const next = new Set(prev);
+          next.delete(event.actorId);
+          return next;
+        });
       }
       setResolvedRequestIds((prev) => new Set(prev).add(event.id));
-      setPendingRequesterIds((prev) => {
-        const next = new Set(prev);
-        next.delete(event.actorId);
-        return next;
-      });
       setInbox((prev) =>
         prev.map((e) =>
-          e.id === event.id || (e.type === 'friend_request' && e.actorId === event.actorId)
+          e.id === event.id || (e.type === event.type && e.actorId === event.actorId)
             ? { ...e, readAt: new Date().toISOString() }
             : e
         )
       );
+      void markActivityEventsRead([event.id]).then(() => refreshActivityAlerts());
     } catch (e) {
       toast({
         variant: 'destructive',
@@ -501,7 +536,7 @@ function ActivityPageInner() {
                 <Bell className="h-6 w-6 text-emerald-400" /> Activity
               </CardTitle>
               <CardDescription className="mt-1 text-sm leading-relaxed">
-                Loves, replies, friend requests, and DNA Drop imports — received and sent.
+                Loves, replies, friend and contact requests, and DNA Drop imports — received and sent.
               </CardDescription>
             </div>
             <Button
@@ -571,8 +606,8 @@ function ActivityPageInner() {
                   {requestRows.length === 0 ? (
                     <EmptyState
                       icon={Users}
-                      title="No friend requests"
-                      body="Incoming requests show up here so you can accept or decline."
+                      title="No requests"
+                      body="Friend requests and contact requests show up here so you can accept or decline."
                     />
                   ) : (
                     requestRows.map((event) => (

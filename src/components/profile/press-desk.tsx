@@ -21,6 +21,7 @@ import {
   LayoutGrid,
   Loader2,
   Lock,
+  Mail,
   PenLine,
   Quote,
   Save,
@@ -72,6 +73,7 @@ import {
 } from '@/lib/profile/modules';
 import { parseEmbedUrl, EMBED_HELP_TEXT } from '@/lib/profile/embeds';
 import { SOCIAL_PROVIDERS } from '@/lib/profile/social-links';
+import { CONTACT_MAX_CHARS } from '@/lib/profile/contact';
 import { ProfileVoiceMemoEditor } from '@/components/profile/profile-voice-memo-editor';
 import { deleteVoiceStorage } from '@/lib/profile/voice-notes';
 import { EmbedPlayer } from '@/components/profile/embed-player';
@@ -1282,6 +1284,85 @@ export function PressDesk() {
             placeholder="Short bio (600 chars)"
             className="bg-black/30 text-sm"
           />
+        </div>
+      </DeskSection>
+
+      <DeskSection
+        icon={Mail}
+        title="Contact"
+        hint="Optional. Sits next to Reverbs under your streaks — a short line, or request-to-see."
+      >
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/80">Show on Artist Home</p>
+              <p className="text-[11px] text-muted-foreground">Off by default. Nothing extra if you leave this empty.</p>
+            </div>
+            <Switch
+              checked={Boolean(config.featured.contact)}
+              onCheckedChange={(checked) =>
+                update((d) => {
+                  if (checked) {
+                    d.featured.contact = {
+                      mode: d.featured.contact?.mode || 'request',
+                      value: d.featured.contact?.value || '',
+                    };
+                  } else {
+                    d.featured.contact = undefined;
+                  }
+                })
+              }
+            />
+          </div>
+          {config.featured.contact ? (
+            <>
+              <Input
+                value={config.featured.contact.value || ''}
+                onChange={(e) =>
+                  update((d) => {
+                    if (!d.featured.contact) return;
+                    d.featured.contact = {
+                      ...d.featured.contact,
+                      value: e.target.value.slice(0, CONTACT_MAX_CHARS),
+                    };
+                  })
+                }
+                maxLength={CONTACT_MAX_CHARS}
+                placeholder="Best way to reach you — email, IG, Discord…"
+                className="bg-black/30 text-sm"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Needs a line to publish — empty turns this back off.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {(['public', 'request'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() =>
+                      update((d) => {
+                        if (!d.featured.contact) return;
+                        d.featured.contact = { ...d.featured.contact, mode };
+                      })
+                    }
+                    className={cn(
+                      'rounded-lg border px-3 py-2 text-left text-[11px] leading-snug transition-colors',
+                      config.featured.contact?.mode === mode
+                        ? 'border-primary/50 bg-primary/10 text-foreground'
+                        : 'border-white/10 bg-black/20 text-muted-foreground hover:border-white/20'
+                    )}
+                  >
+                    <span className="block text-[10px] font-bold uppercase tracking-widest">
+                      {mode === 'public' ? 'Show on page' : 'Request to see'}
+                    </span>
+                    {mode === 'public'
+                      ? 'Anyone on your page can see it.'
+                      : 'They tap Request. You approve in Activity.'}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
         </div>
       </DeskSection>
 

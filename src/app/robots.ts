@@ -14,6 +14,8 @@ export default function robots(): MetadataRoute.Robots {
         '/marketing/capture',
         '/studio-progress',
         '/usage',
+        '/folds',
+        '/activity',
       ],
     },
     sitemap: absoluteUrl('/sitemap.xml'),

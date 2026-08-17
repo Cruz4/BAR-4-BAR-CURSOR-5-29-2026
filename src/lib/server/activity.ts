@@ -50,11 +50,16 @@ function buildHref(input: EmitActivityInput, recipientSlug?: string): string | u
   }
   if (input.postId) return `/activity`;
   if (input.shareId) return `/share/${input.shareId}`;
-  if (input.type === 'friend_request') return '/activity?tab=requests';
+  if (input.type === 'friend_request' || input.type === 'contact_request') return '/activity?tab=requests';
+  if (input.type === 'fold_pass' && input.href) return input.href;
+  if (input.type === 'fold_pass') return '/folds';
   if (input.type === 'friend_accepted' && input.actorSlug) {
     return profileHref(input.actorSlug) || '/friends';
   }
   if (input.type === 'friend_accepted') return '/friends';
+  if (input.type === 'contact_accepted' && input.actorSlug) {
+    return profileHref(input.actorSlug) || '/activity';
+  }
   return '/activity';
 }
 
@@ -86,6 +91,7 @@ async function loadPrefs(userId: string): Promise<ActivityPrefs> {
     dnaImports: data.dnaImports !== false,
     lockCasts: data.lockCasts !== false,
     craftReminders: data.craftReminders !== false,
+    foldBars: data.foldBars !== false,
   };
 }
 

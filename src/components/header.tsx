@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LogOut, LayoutDashboard, LayoutGrid, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy, Smartphone, Settings, Users, Archive, Bell, Banknote } from 'lucide-react';
+import { LogOut, LayoutDashboard, LayoutGrid, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy, Smartphone, Settings, Users, Archive, Bell, Banknote, ScrollText } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -30,6 +30,9 @@ import { getResidencyPoolCap, getResidencyProgressPercent, getVisitorPoolHeaderC
 import { InkRefillCountdown } from '@/components/ink-refill-countdown';
 import { HowToUseDialog } from './how-to-use-dialog';
 import { ActivityNavDropdown } from '@/components/activity/activity-nav-dropdown';
+import { FoldNavButton } from '@/components/folds/fold-nav-button';
+import { useFoldInbox } from '@/components/folds/fold-inbox-provider';
+import { useFoldsFeature } from '@/hooks/use-folds-feature';
 import { isMobileInstallPlatform, isStandalonePwa, requestPwaInstallPrompt } from '@/lib/pwa-install';
 import {
   Popover,
@@ -63,6 +66,8 @@ export function Header() {
   const { isGenerating, generatingMessage } = useUIState();
   const { inkBalance, residencyBalance, trialInkBalance, purchasedBalance } = useUsage();
   const { total: blockAlerts } = useSocialAlerts();
+  const { unread: foldUnread } = useFoldInbox();
+  const { enabled: foldsOn } = useFoldsFeature();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const [progress, setProgress] = useState(0);
   const [showPwaInstallMenu, setShowPwaInstallMenu] = useState(false);
@@ -225,6 +230,7 @@ export function Header() {
                     <TooltipContent><p>The Vault</p></TooltipContent>
                   </Tooltip>
                 )}
+                <FoldNavButton />
                 <ActivityNavDropdown unreadCount={blockAlerts} />
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -330,6 +336,17 @@ export function Header() {
                       )}
                       <DropdownMenuItem className="md:hidden" onClick={() => setGuideOpen(true)}><HelpCircle className="mr-2 h-4 w-4 text-primary" /><span>Studio Manual</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/studio-progress')}><Trophy className="mr-2 h-4 w-4 text-amber-400" /><span>Studio Progress</span></DropdownMenuItem>
+                      {foldsOn ? (
+                      <DropdownMenuItem onClick={() => router.push('/folds')}>
+                        <ScrollText className="mr-2 h-4 w-4 text-amber-400" />
+                        <span className="flex-1">Folds</span>
+                        {foldUnread > 0 && (
+                          <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-400 px-1.5 text-[10px] font-bold text-black">
+                            {foldUnread > 99 ? '99+' : foldUnread}
+                          </span>
+                        )}
+                      </DropdownMenuItem>
+                      ) : null}
                       <DropdownMenuItem onClick={() => router.push('/activity')}>
                         <Bell className="mr-2 h-4 w-4 text-emerald-400" />
                         <span className="flex-1">Activity</span>

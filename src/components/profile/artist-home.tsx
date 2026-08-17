@@ -26,6 +26,7 @@ import { rankBadgeClass, rankIdFromLabel } from '@/lib/gamification/badge-styles
 import { StudioStandingRankBadge } from '@/components/gamification/studio-standing-foil-dialog';
 import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { FriendButton } from '@/components/profile/friend-button';
+import { PassBarButton } from '@/components/folds/pass-bar-dialog';
 import {
   dieCutClip,
   pressTokens,
@@ -53,6 +54,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { fetchGamificationSummary } from '@/lib/gamification-client';
 import { trackGuestSignupCta } from '@/lib/guest-funnel-client';
 import { ProfileSocialLinks } from '@/components/profile/profile-social-links';
+import { ProfileContactChip } from '@/components/profile/profile-contact-chip';
 import { ProfileMediaLightbox } from '@/components/profile/profile-media-lightbox';
 import { ArtistHomeGuestClaim } from '@/components/profile/artist-home-guest-claim';
 import { VesperfoldMark } from '@/components/profile/vesperfold-mark';
@@ -266,12 +268,19 @@ export function ArtistHome({
               </>
             ) : (
               profile.userId && (
-                <FriendButton
-                  targetUserId={profile.userId}
-                  targetName={profile.displayName}
-                  targetSlug={profile.slug}
-                  viewerSlug={viewerSlug}
-                />
+                <>
+                  <PassBarButton
+                    peerId={profile.userId}
+                    peerName={profile.displayName}
+                    senderSlug={viewerSlug}
+                  />
+                  <FriendButton
+                    targetUserId={profile.userId}
+                    targetName={profile.displayName}
+                    targetSlug={profile.slug}
+                    viewerSlug={viewerSlug}
+                  />
+                </>
               )
             )}
           </div>
@@ -386,15 +395,35 @@ export function ArtistHome({
                   </div>
                 ))}
               </div>
-              {!previewMode ? (
-                <div className="grid grid-cols-3 gap-2">
-                  <Link
-                    href={`/profile/${profile.slug}/reverbs`}
-                    className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-violet-400/40 bg-violet-500/15 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.12)] transition-all hover:border-violet-300/70 hover:bg-violet-500/25 hover:text-violet-100 hover:shadow-[0_0_16px_rgba(139,92,246,0.25)]"
-                  >
-                    <Repeat2 className="h-3.5 w-3.5 shrink-0" />
-                    Reverbs
-                  </Link>
+              {!previewMode || config.featured.contact ? (
+                <div
+                  className={cn(
+                    'grid gap-2',
+                    config.featured.contact ? 'grid-cols-2' : 'grid-cols-1'
+                  )}
+                >
+                  {!previewMode ? (
+                    <Link
+                      href={`/profile/${profile.slug}/reverbs`}
+                      className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-violet-400/40 bg-violet-500/15 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.12)] transition-all hover:border-violet-300/70 hover:bg-violet-500/25 hover:text-violet-100 hover:shadow-[0_0_16px_rgba(139,92,246,0.25)]"
+                    >
+                      <Repeat2 className="h-3.5 w-3.5 shrink-0" />
+                      Reverbs
+                    </Link>
+                  ) : (
+                    <div />
+                  )}
+                  {config.featured.contact ? (
+                    <ProfileContactChip
+                      artistId={profile.userId}
+                      artistSlug={profile.slug}
+                      contact={config.featured.contact}
+                      isOwner={isOwner}
+                      previewMode={previewMode}
+                      viewerName={user?.displayName || undefined}
+                      viewerSlug={viewerSlug}
+                    />
+                  ) : null}
                 </div>
               ) : null}
             </div>

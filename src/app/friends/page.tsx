@@ -30,6 +30,7 @@ import {
 import { cn } from '@/lib/utils';
 import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
 import { profileHref } from '@/lib/profile/profile-slug';
+import { PassBarButton } from '@/components/folds/pass-bar-dialog';
 
 export default function FriendsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -224,7 +225,14 @@ export default function FriendsPage() {
                     )}
                   </div>
                   {friendship && (
-                    <Button
+                    <>
+                      <PassBarButton
+                        peerId={friend.userId}
+                        peerName={friend.name}
+                        senderSlug={viewerSlug}
+                        size="xs"
+                      />
+                      <Button
                       size="sm"
                       variant="ghost"
                       className="h-8 gap-1 font-bold uppercase"
@@ -247,6 +255,7 @@ export default function FriendsPage() {
                       )}
                       Unfriend
                     </Button>
+                    </>
                   )}
                 </li>
               );

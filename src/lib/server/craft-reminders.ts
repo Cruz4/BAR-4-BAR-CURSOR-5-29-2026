@@ -28,6 +28,7 @@ function loadPrefs(data: Record<string, unknown> | undefined): ActivityPrefs {
     dnaImports: data.dnaImports !== false,
     lockCasts: data.lockCasts !== false,
     craftReminders: data.craftReminders !== false,
+    foldBars: data.foldBars !== false,
   };
 }
 

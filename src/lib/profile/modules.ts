@@ -15,6 +15,11 @@ import {
 import { normalizeSocials, type ArtistHomeSocials } from '@/lib/profile/social-links';
 import { normalizeBarBoard, type BarBoard } from '@/lib/profile/bar-board';
 import type { VoiceNote } from '@/lib/profile/voice-notes';
+import {
+  contactForPublicProfile,
+  normalizeContact,
+  type ArtistHomeContact,
+} from '@/lib/profile/contact';
 
 export type ProfileModuleId =
   | 'nowPlaying'
@@ -86,6 +91,8 @@ export type ArtistHomeFeatured = {
   socials?: ArtistHomeSocials;
   /** Optional 3-second hello — first badge in the social row under the portrait. */
   voiceMemo?: VoiceNote;
+  /** Optional contact line under the streak boxes — public or request-to-see. */
+  contact?: ArtistHomeContact;
 };
 
 export type ArtistHomeConfig = {
@@ -362,6 +369,9 @@ function normalizeFeatured(raw: unknown): ArtistHomeFeatured {
   const voiceMemo = normalizeVoiceMemo(obj.voiceMemo);
   if (voiceMemo) featured.voiceMemo = voiceMemo;
 
+  const contact = normalizeContact(obj.contact);
+  if (contact) featured.contact = contact;
+
   return featured;
 }
 
@@ -374,4 +384,14 @@ export function normalizeArtistHomeConfig(raw: unknown): ArtistHomeConfig {
     modules: normalizeModules(obj.modules),
     featured: normalizeFeatured(obj.featured),
   };
+}
+
+/** Public mirror — drop request-mode contact values so emails never sit on publicProfiles. */
+export function artistHomeForPublic(config: ArtistHomeConfig): ArtistHomeConfig {
+  const next = contactForPublicProfile(config.featured.contact);
+  if (next === config.featured.contact) return config;
+  const featured = { ...config.featured };
+  if (next) featured.contact = next;
+  else delete featured.contact;
+  return { ...config, featured };
 }

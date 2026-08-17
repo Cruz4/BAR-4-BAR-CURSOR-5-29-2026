@@ -13,6 +13,7 @@ import { getDb } from '@/lib/firebase/server';
 import {
   defaultArtistHomeConfig,
   normalizeArtistHomeConfig,
+  artistHomeForPublic,
   type ArtistHomeConfig,
 } from '@/lib/profile/modules';
 
@@ -37,13 +38,21 @@ export async function saveArtistHomeConfig(
   config: ArtistHomeConfig
 ): Promise<ArtistHomeConfig> {
   const db = await getDb();
-  const normalized = stripAlbumRoomCovers(normalizeArtistHomeConfig(config));
+  const normalized = stripEmptyContact(stripAlbumRoomCovers(normalizeArtistHomeConfig(config)));
   await db.doc(CONFIG_DOC(userId)).set(
     { ...normalized, updatedAt: new Date().toISOString() },
     { merge: false }
   );
   await mirrorArtistHomeToPublicProfile(userId, normalized);
   return normalized;
+}
+
+/** Don't persist a request-mode chip with no line to reveal. */
+function stripEmptyContact(config: ArtistHomeConfig): ArtistHomeConfig {
+  if (config.featured.contact?.value) return config;
+  if (!config.featured.contact) return config;
+  const { contact: _drop, ...featured } = config.featured;
+  return { ...config, featured };
 }
 
 /** Album vinyl covers resolve live — strip those. Keep custom room banners. */
@@ -71,7 +80,7 @@ export async function mirrorArtistHomeToPublicProfile(
     | undefined;
   if (!summary?.publicProfile || !summary.profileSlug) return;
 
-  const resolved = config ?? (await getArtistHomeConfig(userId));
+  const resolved = artistHomeForPublic(config ?? (await getArtistHomeConfig(userId)));
   await db
     .doc(`publicProfiles/${summary.profileSlug}`)
     .set({ artistHome: resolved, updatedAt: new Date().toISOString() }, { merge: true });

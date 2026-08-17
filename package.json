@@ -35,7 +35,7 @@
     "stripe:create-live-webhook": "node scripts/stripe-create-live-webhook.mjs",
     "stripe:create-ink-packs": "node scripts/stripe-create-ink-packs.mjs",
     "stripe:create-test-yearly-ink-coupon": "node scripts/stripe-create-test-yearly-ink-coupon.mjs",
-    "firebase:deploy:rules": "npx firebase deploy --only firestore:rules",
+    "firebase:deploy:rules": "npx firebase deploy --only firestore:rules,firestore:indexes",
     "firebase:deploy:storage": "npx firebase deploy --only storage",
     "firebase:deploy": "node scripts/firebase-deploy.mjs",
     "cap:sync": "npx cap sync",

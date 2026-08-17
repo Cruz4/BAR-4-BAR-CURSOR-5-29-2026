@@ -122,7 +122,8 @@ export function NotificationSettingsCard() {
               [
                 ['craftReminders', 'Verse still open + streak at midnight'],
                 ['lockCasts', 'Someone echoed your bar'],
-                ['friendRequests', 'Friend requests'],
+                ['friendRequests', 'Friend + contact requests'],
+                ['foldBars', 'Passed bars on Folds'],
                 ['friendAccepted', 'Friend accepted'],
                 ['postLoves', 'Loves on your posts'],
                 ['postReplies', 'Replies on your posts'],

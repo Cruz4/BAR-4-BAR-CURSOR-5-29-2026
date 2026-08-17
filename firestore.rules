@@ -221,6 +221,13 @@ service cloud.firestore {
         allow delete: if isOwner(userId) && (docId == 'prefs' || docId == 'push' || docId == 'craft');
       }
 
+      // Contact requests — Admin SDK writes; artist + requester can read status.
+      match /contactRequests/{requesterId} {
+        allow read: if request.auth != null
+          && (isOwner(userId) || request.auth.uid == requesterId);
+        allow write: if false;
+      }
+
       // Bar 4 Bar First Drops library — Admin SDK writes; owner reads
       match /dropLibrary/{shareId} {
         allow read: if isOwnerOrAdmin(userId);
@@ -459,6 +466,35 @@ service cloud.firestore {
     match /analytics_events/{eventId} {
       allow create, update, delete: if false;
       allow read: if isAdmin();
+    }
+
+    // Folds — shared lyric sheets. Members read; Admin SDK writes bars.
+    // Presence (viewing / ink moving) is the only client write.
+    match /folds/{foldId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.memberIds;
+      allow write: if false;
+
+      match /bars/{barId} {
+        allow read: if request.auth != null
+          && exists(/databases/$(database)/documents/folds/$(foldId))
+          && request.auth.uid in get(/databases/$(database)/documents/folds/$(foldId)).data.memberIds;
+        allow write: if false;
+      }
+
+      match /presence/{uid} {
+        allow read: if request.auth != null
+          && exists(/databases/$(database)/documents/folds/$(foldId))
+          && request.auth.uid in get(/databases/$(database)/documents/folds/$(foldId)).data.memberIds;
+        allow create, update: if request.auth != null
+          && request.auth.uid == uid
+          && exists(/databases/$(database)/documents/folds/$(foldId))
+          && request.auth.uid in get(/databases/$(database)/documents/folds/$(foldId)).data.memberIds
+          && request.resource.data.keys().hasOnly(['viewing', 'typing', 'at'])
+          && request.resource.data.at is string
+          && request.resource.data.viewing is bool
+          && request.resource.data.typing is bool;
+        allow delete: if request.auth != null && request.auth.uid == uid;
+      }
     }
 
     match /studioMetrics/{docId} {

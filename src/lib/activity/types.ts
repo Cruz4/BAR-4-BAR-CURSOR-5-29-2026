@@ -5,6 +5,9 @@
 export const ACTIVITY_TYPES = [
   'friend_request',
   'friend_accepted',
+  'contact_request',
+  'contact_accepted',
+  'fold_pass',
   'post_love',
   'post_reply',
   'post_reverb',
@@ -27,6 +30,9 @@ export const SYSTEM_ACTOR_NAME = 'Bar 4 Bar';
 export const SERVER_ONLY_ACTIVITY_TYPES: readonly ActivityType[] = [
   'verse_open',
   'streak_risk',
+  'contact_request',
+  'contact_accepted',
+  'fold_pass',
 ];
 
 export function isCraftActivityType(type: ActivityType): boolean {
@@ -65,6 +71,8 @@ export type ActivityPrefs = {
   lockCasts: boolean;
   /** Unfinished verse + streak-at-midnight reminders. */
   craftReminders: boolean;
+  /** Passed bars on Folds (realtime sheet). */
+  foldBars: boolean;
 };
 
 export const DEFAULT_ACTIVITY_PREFS: ActivityPrefs = {
@@ -76,6 +84,7 @@ export const DEFAULT_ACTIVITY_PREFS: ActivityPrefs = {
   dnaImports: true,
   lockCasts: true,
   craftReminders: true,
+  foldBars: true,
 };
 
 export type ActivitySummary = {
@@ -95,6 +104,9 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
   const received: Record<ActivityType, string> = {
     friend_request: 'sent you a friend request',
     friend_accepted: 'accepted your friend request',
+    contact_request: 'asked to see your contact',
+    contact_accepted: 'shared their contact with you',
+    fold_pass: 'passed you a bar',
     post_love: 'loved your post',
     post_reply: 'replied to your post',
     post_reverb: 'Reverbed your post',
@@ -108,6 +120,9 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
   const given: Record<ActivityType, string> = {
     friend_request: 'you sent a friend request to',
     friend_accepted: 'you accepted a friend request from',
+    contact_request: 'you asked to see contact for',
+    contact_accepted: 'you shared your contact with',
+    fold_pass: 'you passed a bar to',
     post_love: 'you loved a post by',
     post_reply: 'you replied to a post by',
     post_reverb: 'you Reverbed a post by',
@@ -168,6 +183,21 @@ export function pushCopyForActivity(
         title: 'Bar 4 Bar',
         body: `${actorName} accepted your friend request`,
       };
+    case 'contact_request':
+      return {
+        title: 'Bar 4 Bar',
+        body: `${actorName} asked to see your contact`,
+      };
+    case 'contact_accepted':
+      return {
+        title: 'Bar 4 Bar',
+        body: snippet || `${actorName} shared their contact with you`,
+      };
+    case 'fold_pass':
+      return {
+        title: `${actorName} passed you a bar`,
+        body: snippet || 'Open Folds to unfold it.',
+      };
     case 'post_love':
       return {
         title: 'Bar 4 Bar',
@@ -200,6 +230,12 @@ export function prefsAllowsPush(prefs: ActivityPrefs, type: ActivityType): boole
       return prefs.friendRequests;
     case 'friend_accepted':
       return prefs.friendAccepted;
+    case 'contact_request':
+      return prefs.friendRequests;
+    case 'contact_accepted':
+      return prefs.friendAccepted;
+    case 'fold_pass':
+      return false;
     case 'post_love':
       return prefs.postLoves;
     case 'post_reply':

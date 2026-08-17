@@ -21,10 +21,13 @@ import {
   Droplets,
   Bell,
   Banknote,
+  ScrollText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGamification } from '@/context/gamification-context';
 import { useSocialAlerts } from '@/hooks/use-social-alerts';
+import { useFoldInbox } from '@/components/folds/fold-inbox-provider';
+import { useFoldsFeature } from '@/hooks/use-folds-feature';
 import { useLockFeature } from '@/hooks/use-lock-feature';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { getLastWorkedTrackPath } from '@/lib/studio-tips-session';
@@ -275,6 +278,8 @@ function leftoverFillClass(countInGroup: number): string | undefined {
 export function SceneNavDock({ compact = false, className }: SceneNavDockProps) {
   const { summary, loading } = useGamification();
   const { total: alertCount } = useSocialAlerts();
+  const { unread: foldUnread } = useFoldInbox();
+  const { enabled: foldsOn } = useFoldsFeature();
   const { enabled: lockOn } = useLockFeature();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const [lastTrackPath, setLastTrackPath] = useState<string | null>(null);
@@ -315,6 +320,16 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       icon: Banknote,
       tone: 'border-emerald-500/30 bg-card/55 hover:border-emerald-400/50',
       iconTone: 'border-emerald-400/45 bg-emerald-500/15 text-emerald-400',
+    },
+    {
+      key: 'folds',
+      href: '/folds',
+      label: 'Folds',
+      sub: foldUnread > 0 ? `${foldUnread > 99 ? '99+' : foldUnread} wet` : 'Passed bars',
+      icon: ScrollText,
+      tone: 'border-amber-500/35 bg-gradient-to-r from-amber-500/10 via-card/85 to-card/70 hover:border-amber-400/55',
+      iconTone: 'border-amber-400/45 bg-amber-500/15 text-amber-300',
+      badge: foldUnread,
     },
     {
       key: 'leaderboard',
@@ -395,10 +410,11 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
   ) : null;
 
   const afterActivity = [
+    foldsOn ? <DockLink key="folds" item={items[3]!} /> : null,
     firstDropsOn ? <DockLink key="library" item={items[1]!} /> : null,
     firstDropsOn ? <DockLink key="earnings" item={items[2]!} /> : null,
-    <DockLink key="leaderboard" item={items[3]!} />,
-    <DockLink key="ink" item={items[4]!} />,
+    <DockLink key="leaderboard" item={items[4]!} />,
+    <DockLink key="ink" item={items[5]!} />,
   ].filter(Boolean) as React.ReactElement[];
 
   const beforeActivity = [

@@ -36,6 +36,7 @@ import {
   vesperfoldDataUrl,
   type VesperfoldSlot,
 } from '@/lib/profile/vesperfold';
+import { artistHomeForPublic, normalizeArtistHomeConfig } from '@/lib/profile/modules';
 import {
   allocateUniqueProfileSlug,
   assertProfileSlugAvailable,
@@ -374,7 +375,9 @@ async function syncPublicProfile(
   // Custom hero photos stay on the private summary doc — mirroring the data URL
   // into publicProfiles blows past Firestore's 1MB limit next to Artist Home banners.
   const artistHomeSnap = await db.doc(`users/${uid}/gamification/artistHome`).get();
-  const artistHome = artistHomeSnap.exists ? artistHomeSnap.data() : null;
+  const artistHome = artistHomeSnap.exists
+    ? artistHomeForPublic(normalizeArtistHomeConfig(artistHomeSnap.data()))
+    : null;
   const userSnap = await db.doc(`users/${uid}`).get();
   const studioBadge = studioChromeFromSubscriptionStatus(
     typeof userSnap.data()?.subscriptionStatus === 'string'
