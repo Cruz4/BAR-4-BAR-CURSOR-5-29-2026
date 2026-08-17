@@ -298,6 +298,19 @@ export function SceneHome() {
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
+    let circleDone = false;
+    let heldDiscover: DiscoverData | null = null;
+
+    const releaseDiscover = (data: DiscoverData) => {
+      if (cancelled) return;
+      setDiscover(data);
+      setDiscoverReady(true);
+      if (readPersistedExpanded(SCENE_DISCOVER_EXPANDED_KEY, true)) {
+        markDiscoverSeen();
+        setDiscoverLastSeen(new Date().toISOString());
+      }
+    };
+
     void fetchPostsByOwners([user.id], 8, { enrichSlugs: false })
       .then((ownPosts) => {
         if (cancelled) return;
@@ -310,32 +323,20 @@ export function SceneHome() {
         setBlockReady(true);
         setLoaded(true);
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id]);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    let cancelled = false;
     void fetchDiscover(user.id, { enrichSlugs: false })
       .then((discoverData) => {
         if (cancelled) return;
-        setDiscover(discoverData);
-        setDiscoverReady(true);
+        if (circleDone) releaseDiscover(discoverData);
+        else heldDiscover = discoverData;
       })
       .catch(() => {
-        if (!cancelled) setDiscoverReady(true);
+        if (cancelled) return;
+        if (circleDone) setDiscoverReady(true);
+        else heldDiscover = { artists: [], posts: [], drops: [], risers: [], locks: [] };
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id]);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    let cancelled = false;
-    const load = async () => {
+    const loadCircle = async () => {
       try {
         setCircleLoading(true);
         const [all, blocked] = await Promise.all([
@@ -346,7 +347,7 @@ export function SceneHome() {
         setBlockedIds(new Set(blocked.map((b) => b.blockedUserId)));
         setFriendships(all);
         await reloadBlockFeed(all, user.id);
-        if (!cancelled) setCircleLoading(false);
+        if (cancelled) return;
 
         const pendingLookups = all
           .filter((f) => f.status === 'pending' && f.requestedBy !== user.id)
@@ -379,21 +380,19 @@ export function SceneHome() {
         );
       } finally {
         if (!cancelled) {
+          circleDone = true;
           setLoaded(true);
+          setBlockReady(true);
           setCircleLoading(false);
-          // Only clear “new” when that section is currently expanded.
+          if (heldDiscover) releaseDiscover(heldDiscover);
           if (readPersistedExpanded(SCENE_BLOCK_EXPANDED_KEY, true)) {
             markBlockSeen();
             setBlockLastSeen(new Date().toISOString());
           }
-          if (readPersistedExpanded(SCENE_DISCOVER_EXPANDED_KEY, true)) {
-            markDiscoverSeen();
-            setDiscoverLastSeen(new Date().toISOString());
-          }
         }
       }
     };
-    void load();
+    void loadCircle();
     return () => {
       cancelled = true;
     };
