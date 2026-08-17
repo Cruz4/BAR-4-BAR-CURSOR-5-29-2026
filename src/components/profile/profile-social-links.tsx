@@ -3,11 +3,13 @@
 import React from 'react';
 import { Github, Instagram, Youtube } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ProfileVoiceMemoBadge } from '@/components/profile/profile-voice-memo-badge';
 import {
   resolvedSocialLinks,
   type ArtistHomeSocials,
   type SocialProviderId,
 } from '@/lib/profile/social-links';
+import type { VoiceNote } from '@/lib/profile/voice-notes';
 
 function XIcon({ className }: { className?: string }) {
   return (
@@ -68,16 +70,19 @@ function SocialGlyph({ id, className }: { id: SocialProviderId; className?: stri
 
 export function ProfileSocialLinks({
   socials,
+  voiceMemo,
   className,
 }: {
   socials?: ArtistHomeSocials | null;
+  voiceMemo?: VoiceNote | null;
   className?: string;
 }) {
   const links = resolvedSocialLinks(socials);
-  if (!links.length) return null;
+  if (!links.length && !voiceMemo) return null;
 
   return (
     <div className={cn('flex flex-wrap items-center justify-center gap-1.5', className)}>
+      {voiceMemo ? <ProfileVoiceMemoBadge memo={voiceMemo} /> : null}
       {links.map((link) => (
         <a
           key={link.id}

@@ -269,6 +269,10 @@ export function useVoiceRecorder(opts?: { maxSeconds?: number; transcribe?: bool
         revokeVoiceObjectUrl(clipRef.current);
         clipRef.current = next;
         setClip(next);
+        if (!transcribeRef.current) {
+          setStatus('recorded');
+          return;
+        }
         setStatus(transcript ? 'recorded' : 'transcribing');
         if (transcript) return;
         try {

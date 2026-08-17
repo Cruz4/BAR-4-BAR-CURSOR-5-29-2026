@@ -72,6 +72,8 @@ import {
 } from '@/lib/profile/modules';
 import { parseEmbedUrl, EMBED_HELP_TEXT } from '@/lib/profile/embeds';
 import { SOCIAL_PROVIDERS } from '@/lib/profile/social-links';
+import { ProfileVoiceMemoEditor } from '@/components/profile/profile-voice-memo-editor';
+import { deleteVoiceStorage } from '@/lib/profile/voice-notes';
 import { EmbedPlayer } from '@/components/profile/embed-player';
 import { FingerprintSvg } from '@/components/profile/rhyme-fingerprint-svg';
 import { BarBoardView } from '@/components/profile/bar-board-module';
@@ -408,12 +410,16 @@ export function PressDesk() {
   const [starMarkPinnedSlotId, setStarMarkPinnedSlotId] = useState<string | null>(null);
   const [starBusy, setStarBusy] = useState(false);
   const [heroBusy, setHeroBusy] = useState(false);
+  const [committedMemoPath, setCommittedMemoPath] = useState<string | undefined>();
   const heroFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user?.id) return;
     void fetchArtistHomeConfig()
-      .then(setConfig)
+      .then((next) => {
+        setConfig(next);
+        setCommittedMemoPath(next.featured.voiceMemo?.storagePath);
+      })
       .catch(() => toast({ variant: 'destructive', title: 'Could not load your Artist Home config' }));
     void fetchGamificationSummary(user.id).then((next) => {
       if (!next) return;
@@ -744,8 +750,13 @@ export function PressDesk() {
     if (!config) return;
     setSaving(true);
     try {
+      const previousMemoPath = committedMemoPath;
       const saved = await saveArtistHomeConfigClient(config);
       setConfig(saved);
+      setCommittedMemoPath(saved.featured.voiceMemo?.storagePath);
+      if (previousMemoPath && previousMemoPath !== saved.featured.voiceMemo?.storagePath) {
+        void deleteVoiceStorage(previousMemoPath);
+      }
       setDirty(false);
       toast({ title: 'Artist Home pressed', description: 'Your page is updated.' });
     } catch (e) {
@@ -1278,34 +1289,47 @@ export function PressDesk() {
       <DeskSection
         icon={Link2}
         title="Links out"
-        hint="Fill any you want — only filled ones show as small buttons under your portrait."
+        hint="Optional 3-second hello plays first under your photo. Fill any socials you want — only filled ones show."
       >
-        <div className="grid gap-3 sm:grid-cols-2">
-          {SOCIAL_PROVIDERS.map((provider) => (
-            <div key={provider.id} className="space-y-1">
-              <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-white/70">
-                <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] text-primary">
-                  {provider.short}
-                </span>
-                {provider.label}
-              </label>
-              <Input
-                value={config.featured.socials?.[provider.id] || ''}
-                onChange={(e) =>
-                  update((d) => {
-                    const next = { ...(d.featured.socials || {}) };
-                    const value = e.target.value.slice(0, 200);
-                    if (value.trim()) next[provider.id] = value;
-                    else delete next[provider.id];
-                    d.featured.socials = Object.keys(next).length ? next : undefined;
-                  })
-                }
-                maxLength={200}
-                placeholder={provider.placeholder}
-                className="bg-black/30 text-sm"
-              />
-            </div>
-          ))}
+        <div className="space-y-5">
+          <ProfileVoiceMemoEditor
+            note={config.featured.voiceMemo}
+            committedStoragePath={committedMemoPath}
+            userId={user.id}
+            disabled={saving}
+            onChange={(voiceMemo) =>
+              update((d) => {
+                d.featured.voiceMemo = voiceMemo;
+              })
+            }
+          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            {SOCIAL_PROVIDERS.map((provider) => (
+              <div key={provider.id} className="space-y-1">
+                <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-white/70">
+                  <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] text-primary">
+                    {provider.short}
+                  </span>
+                  {provider.label}
+                </label>
+                <Input
+                  value={config.featured.socials?.[provider.id] || ''}
+                  onChange={(e) =>
+                    update((d) => {
+                      const next = { ...(d.featured.socials || {}) };
+                      const value = e.target.value.slice(0, 200);
+                      if (value.trim()) next[provider.id] = value;
+                      else delete next[provider.id];
+                      d.featured.socials = Object.keys(next).length ? next : undefined;
+                    })
+                  }
+                  maxLength={200}
+                  placeholder={provider.placeholder}
+                  className="bg-black/30 text-sm"
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </DeskSection>
 

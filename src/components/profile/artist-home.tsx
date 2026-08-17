@@ -456,6 +456,7 @@ export function ArtistHome({
               )}
               <ProfileSocialLinks
                 socials={config.featured.socials}
+                voiceMemo={config.featured.voiceMemo}
                 className="relative z-20 mt-3 pointer-events-auto"
               />
             </div>

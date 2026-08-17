@@ -14,6 +14,7 @@ import {
 } from '@/lib/profile/pressing';
 import { normalizeSocials, type ArtistHomeSocials } from '@/lib/profile/social-links';
 import { normalizeBarBoard, type BarBoard } from '@/lib/profile/bar-board';
+import type { VoiceNote } from '@/lib/profile/voice-notes';
 
 export type ProfileModuleId =
   | 'nowPlaying'
@@ -83,6 +84,8 @@ export type ArtistHomeFeatured = {
   dropShelfShareIds?: string[];
   /** Optional outbound socials — only filled ones appear under the portrait. */
   socials?: ArtistHomeSocials;
+  /** Optional 3-second hello — first badge in the social row under the portrait. */
+  voiceMemo?: VoiceNote;
 };
 
 export type ArtistHomeConfig = {
@@ -267,6 +270,26 @@ function normalizeFingerprint(raw: unknown): RhymeFingerprint | undefined {
   return fingerprint;
 }
 
+function normalizeVoiceMemo(raw: unknown): VoiceNote | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const data = raw as Record<string, unknown>;
+  const url = typeof data.url === 'string' ? data.url.trim().slice(0, 2000) : '';
+  const storagePath = typeof data.storagePath === 'string' ? data.storagePath.trim().slice(0, 400) : '';
+  const contentType = typeof data.contentType === 'string' ? data.contentType.trim().slice(0, 80) : '';
+  const durationSec = typeof data.durationSec === 'number' ? data.durationSec : Number(data.durationSec);
+  const byteSize = typeof data.byteSize === 'number' ? data.byteSize : Number(data.byteSize);
+  if (!url || !storagePath) return undefined;
+  if (!Number.isFinite(durationSec) || durationSec <= 0 || durationSec > 5) return undefined;
+  if (!storagePath.startsWith('voice/') || !storagePath.includes('/profile/')) return undefined;
+  return {
+    url,
+    storagePath,
+    contentType: contentType || 'audio/webm',
+    durationSec,
+    byteSize: Number.isFinite(byteSize) && byteSize > 0 ? byteSize : 0,
+  };
+}
+
 function normalizeFeatured(raw: unknown): ArtistHomeFeatured {
   const obj = (raw && typeof raw === 'object' ? raw : {}) as Partial<ArtistHomeFeatured>;
   const featured: ArtistHomeFeatured = {};
@@ -335,6 +358,9 @@ function normalizeFeatured(raw: unknown): ArtistHomeFeatured {
 
   const socials = normalizeSocials(obj.socials);
   if (socials) featured.socials = socials;
+
+  const voiceMemo = normalizeVoiceMemo(obj.voiceMemo);
+  if (voiceMemo) featured.voiceMemo = voiceMemo;
 
   return featured;
 }

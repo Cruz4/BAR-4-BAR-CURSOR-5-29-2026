@@ -6,6 +6,9 @@ import { normalizeAudioContentType } from '@/lib/audio-mime';
 export const VOICE_MAX_SECONDS = 60;
 export const VOICE_MAX_BYTES = 5 * 1024 * 1024;
 export const VOICE_MAX_TRANSCRIPT = 4000;
+/** Optional hello clip on Artist Home — first badge under the portrait. */
+export const PROFILE_VOICE_MEMO_MAX_SECONDS = 3;
+export const PROFILE_VOICE_MEMO_MAX_BYTES = 1 * 1024 * 1024;
 
 export type VoiceNote = {
   url: string;
@@ -54,6 +57,10 @@ export function voiceCommentStoragePath(
   return `voice/${userId}/comments/${postId}/${commentId}.${extForVoiceType(contentType)}`;
 }
 
+export function voiceProfileMemoStoragePath(userId: string, contentType: string): string {
+  return `voice/${userId}/profile/memo-${Date.now()}.${extForVoiceType(contentType)}`;
+}
+
 export function parseVoiceNote(raw: unknown): VoiceNote | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const data = raw as Record<string, unknown>;
@@ -74,6 +81,23 @@ export function parseVoiceNote(raw: unknown): VoiceNote | undefined {
     durationSec,
     byteSize: Number.isFinite(byteSize) && byteSize > 0 ? byteSize : 0,
     ...(transcript ? { transcript } : {}),
+  };
+}
+
+/** Public 3-second Artist Home hello — no transcript, hard duration cap. */
+export function parseProfileVoiceMemo(raw: unknown): VoiceNote | undefined {
+  const note = parseVoiceNote(raw);
+  if (!note) return undefined;
+  if (note.durationSec > PROFILE_VOICE_MEMO_MAX_SECONDS + 2) return undefined;
+  if (!note.storagePath.startsWith('voice/') || !note.storagePath.includes('/profile/')) {
+    return undefined;
+  }
+  return {
+    url: note.url,
+    storagePath: note.storagePath,
+    contentType: note.contentType,
+    durationSec: note.durationSec,
+    byteSize: note.byteSize,
   };
 }
 
@@ -110,7 +134,11 @@ export async function uploadVoiceClip(opts: {
     throw new Error('That recording is too large. Try a shorter take.');
   }
   if (opts.clip.durationSec > maxSeconds + 2) {
-    throw new Error(`Recordings max out at ${Math.round(maxSeconds / 60)} minutes.`);
+    throw new Error(
+      maxSeconds < 60
+        ? `Keep it under ${maxSeconds} seconds.`
+        : `Recordings max out at ${Math.round(maxSeconds / 60)} minutes.`
+    );
   }
   const contentType = normalizeAudioContentType(opts.clip.contentType || opts.clip.blob.type || 'audio/webm');
   const storage = getClientStorage();
