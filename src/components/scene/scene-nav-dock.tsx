@@ -49,7 +49,7 @@ type DockItem = {
 };
 
 const dockShell =
-  'group relative flex h-[3.75rem] items-center gap-2.5 rounded-xl border px-3 text-left transition-all duration-300 shadow-[0_8px_28px_rgba(0,0,0,0.14)] backdrop-blur-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:gap-3 sm:px-3.5';
+  'group relative flex h-[3.75rem] w-full items-center gap-2.5 rounded-xl border px-3 text-left transition-all duration-300 shadow-[0_8px_28px_rgba(0,0,0,0.14)] backdrop-blur-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:gap-3 sm:px-3.5';
 
 const writeTone =
   'border-border/70 bg-card/55 hover:border-muted-foreground/40';
@@ -94,7 +94,7 @@ function DockLink({ item }: { item: DockItem }) {
 }
 
 const splitShell =
-  'relative flex h-[3.75rem] overflow-hidden rounded-xl border transition-all duration-300 shadow-[0_8px_28px_rgba(0,0,0,0.14)] backdrop-blur-md hover:-translate-y-0.5';
+  'relative flex h-[3.75rem] w-full overflow-hidden rounded-xl border transition-all duration-300 shadow-[0_8px_28px_rgba(0,0,0,0.14)] backdrop-blur-md hover:-translate-y-0.5';
 const splitPrimaryLink =
   'flex min-w-0 flex-1 items-center gap-2 px-2.5 text-left transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50 sm:gap-2.5 sm:px-3';
 const splitSideLink =
@@ -207,7 +207,7 @@ function ActivityCircleSplitButton({
   return (
     <div
       className={cn(
-        'relative flex min-h-[3.75rem] overflow-hidden rounded-xl border transition-all duration-300 shadow-[0_8px_28px_rgba(0,0,0,0.14)] backdrop-blur-md hover:-translate-y-0.5',
+        'relative flex min-h-[3.75rem] w-full overflow-hidden rounded-xl border transition-all duration-300 shadow-[0_8px_28px_rgba(0,0,0,0.14)] backdrop-blur-md hover:-translate-y-0.5',
         'border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-card/85 to-sky-500/10 hover:border-emerald-400/45',
         className
       )}
@@ -258,6 +258,17 @@ function ActivityCircleSplitButton({
         </span>
       </Link>
     </div>
+  );
+}
+
+function leftoverFillClass(countInGroup: number): string | undefined {
+  if (countInGroup <= 0) return undefined;
+  const rem2 = countInGroup % 2;
+  const rem3 = countInGroup % 3;
+  return cn(
+    rem2 === 1 && (rem3 === 0 ? 'col-span-2 sm:col-span-1' : 'col-span-2'),
+    rem3 === 1 && 'sm:col-span-3',
+    rem3 === 2 && 'sm:col-span-2'
   );
 }
 
@@ -336,6 +347,70 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
     );
   }
 
+  const writeTile = lastTrackPath ? (
+    <WriteSplitButton lastTrackPath={lastTrackPath} newTrackHref={newTrackHref} />
+  ) : (
+    <DockLink
+      item={{
+        key: 'new-track',
+        href: newTrackHref,
+        label: 'Start a track',
+        sub: 'Open a fresh sheet',
+        icon: FilePlus2,
+        tone: writeTone,
+        iconTone: writeIconTone,
+      }}
+    />
+  );
+
+  const homeTile =
+    isLive && profileHref ? (
+      <ArtistHomeSplitButton profileHref={profileHref} isLive={isLive} />
+    ) : (
+      <DockLink
+        item={{
+          key: 'customize',
+          href: '/profile/customize',
+          label: 'Edit Public Page',
+          sub: 'Set up your page',
+          icon: Settings2,
+          tone: writeTone,
+          iconTone: writeIconTone,
+        }}
+      />
+    );
+
+  const lockTile = lockOn ? (
+    <DockLink
+      item={{
+        key: 'finish-bar',
+        href: '/lock/desk',
+        label: 'Finish this bar',
+        sub: 'Yours · replies',
+        icon: Lock,
+        tone: 'border-emerald-500/35 bg-card/55 hover:border-emerald-400/55',
+        iconTone: 'border-emerald-400/45 bg-emerald-500/15 text-emerald-400',
+      }}
+    />
+  ) : null;
+
+  const afterActivity = [
+    firstDropsOn ? <DockLink key="library" item={items[1]!} /> : null,
+    firstDropsOn ? <DockLink key="earnings" item={items[2]!} /> : null,
+    <DockLink key="leaderboard" item={items[3]!} />,
+    <DockLink key="ink" item={items[4]!} />,
+  ].filter(Boolean) as React.ReactElement[];
+
+  const beforeActivity = [
+    <DockLink key="vault" item={items[0]!} />,
+    <React.Fragment key="write">{writeTile}</React.Fragment>,
+    <React.Fragment key="home">{homeTile}</React.Fragment>,
+    lockTile ? <React.Fragment key="lock">{lockTile}</React.Fragment> : null,
+  ].filter(Boolean) as React.ReactElement[];
+
+  const fillBefore = compact ? leftoverFillClass(beforeActivity.length) : undefined;
+  const fillAfter = compact ? leftoverFillClass(afterActivity.length) : undefined;
+
   return (
     <nav
       className={cn(
@@ -347,62 +422,34 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       aria-label="Scene shortcuts"
       data-tour={compact ? 'scene-nav-mobile' : 'scene-nav-desktop'}
     >
-      <DockLink item={items[0]!} />
-
-      {lastTrackPath ? (
-        <WriteSplitButton lastTrackPath={lastTrackPath} newTrackHref={newTrackHref} />
-      ) : (
-        <DockLink
-          item={{
-            key: 'new-track',
-            href: newTrackHref,
-            label: 'Start a track',
-            sub: 'Open a fresh sheet',
-            icon: FilePlus2,
-            tone: writeTone,
-            iconTone: writeIconTone,
-          }}
-        />
-      )}
-
-      {isLive && profileHref ? (
-        <ArtistHomeSplitButton profileHref={profileHref} isLive={isLive} />
-      ) : (
-        <DockLink
-          item={{
-            key: 'customize',
-            href: '/profile/customize',
-            label: 'Edit Public Page',
-            sub: 'Set up your page',
-            icon: Settings2,
-            tone: writeTone,
-            iconTone: writeIconTone,
-          }}
-        />
-      )}
-
-      {lockOn ? (
-        <DockLink
-          item={{
-            key: 'finish-bar',
-            href: '/lock/desk',
-            label: 'Finish this bar',
-            sub: 'Yours · replies',
-            icon: Lock,
-            tone: 'border-emerald-500/35 bg-card/55 hover:border-emerald-400/55',
-            iconTone: 'border-emerald-400/45 bg-emerald-500/15 text-emerald-400',
-          }}
-        />
-      ) : null}
+      {beforeActivity.map((tile, i) => (
+        <div
+          key={tile.key ?? i}
+          className={cn(
+            compact && 'min-w-0 w-full',
+            compact && i === beforeActivity.length - 1 && fillBefore
+          )}
+        >
+          {tile}
+        </div>
+      ))}
 
       <ActivityCircleSplitButton
         alertCount={alertCount}
         className={compact ? 'col-span-2 sm:col-span-3' : undefined}
       />
-      {firstDropsOn ? <DockLink item={items[1]!} /> : null}
-      {firstDropsOn ? <DockLink item={items[2]!} /> : null}
-      <DockLink item={items[3]!} />
-      <DockLink item={items[4]!} />
+
+      {afterActivity.map((tile, i) => (
+        <div
+          key={tile.key ?? i}
+          className={cn(
+            compact && 'min-w-0 w-full',
+            compact && i === afterActivity.length - 1 && fillAfter
+          )}
+        >
+          {tile}
+        </div>
+      ))}
     </nav>
   );
 }

@@ -284,16 +284,21 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
   };
 }
 
+type FetchPostsOpts = { enrichSlugs?: boolean };
+
 /** Wall — a single artist's posts, newest first (id-ordered). */
-export async function fetchPostsByOwner(ownerId: string, max = 20): Promise<ProfilePost[]> {
+export async function fetchPostsByOwner(
+  ownerId: string,
+  max = 20,
+  opts?: FetchPostsOpts
+): Promise<ProfilePost[]> {
   if (!ownerId) return [];
   try {
     const snap = await getDocs(
       query(collection(db, 'posts'), where('ownerId', '==', ownerId), limitTo(max))
     );
-    const posts = await enrichPostsWithLiveSlugs(
-      snap.docs.map((d) => postFromDoc(d.id, d.data()))
-    );
+    const raw = snap.docs.map((d) => postFromDoc(d.id, d.data()));
+    const posts = opts?.enrichSlugs === false ? raw : await enrichPostsWithLiveSlugs(raw);
     return posts.sort(
       (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id)
     );
@@ -425,12 +430,15 @@ export async function fetchHasReverbed(originalPostId: string): Promise<boolean>
 }
 
 /** Feed — merged newest-first posts from many friends (parallel queries). */
-export async function fetchPostsByOwners(ownerIds: string[], perOwner = 8): Promise<ProfilePost[]> {
+export async function fetchPostsByOwners(
+  ownerIds: string[],
+  perOwner = 8,
+  opts?: FetchPostsOpts
+): Promise<ProfilePost[]> {
   const unique = [...new Set(ownerIds)].filter(Boolean).slice(0, 60);
   const results = await Promise.all(
-    unique.map((uid) => fetchPostsByOwner(uid, perOwner).catch(() => [] as ProfilePost[]))
+    unique.map((uid) => fetchPostsByOwner(uid, perOwner, opts).catch(() => [] as ProfilePost[]))
   );
-  // fetchPostsByOwner already live-enriches; sort only.
   return results.flat().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 

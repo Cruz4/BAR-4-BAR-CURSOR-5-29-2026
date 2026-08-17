@@ -93,6 +93,28 @@ import { cn } from '@/lib/utils';
 
 const SCENE_BLOCK_SHOW_MINE_KEY = 'b4b.scene.block.showMine';
 
+function mergePosts(prev: ProfilePost[], incoming: ProfilePost[]): ProfilePost[] {
+  if (incoming.length === 0) return prev;
+  const map = new Map(prev.map((post) => [post.id, post]));
+  for (const post of incoming) map.set(post.id, post);
+  return [...map.values()].sort(
+    (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id)
+  );
+}
+
+function FeedCardSkeleton() {
+  return (
+    <div className="animate-pulse rounded-2xl border border-white/10 bg-black/25 p-4">
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-10 shrink-0 rounded-full bg-white/10" />
+        <div className="h-3 w-28 rounded bg-white/10" />
+      </div>
+      <div className="mt-3 h-3 w-full rounded bg-white/10" />
+      <div className="mt-2 h-3 w-2/3 rounded bg-white/10" />
+    </div>
+  );
+}
+
 function SoftNewBubble({ count, label }: { count: number; label: string }) {
   if (count <= 0) return null;
   return (
@@ -196,6 +218,9 @@ export function SceneHome() {
   const [discover, setDiscover] = useState<DiscoverData | null>(null);
   const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
+  const [blockReady, setBlockReady] = useState(false);
+  const [discoverReady, setDiscoverReady] = useState(false);
+  const [circleLoading, setCircleLoading] = useState(true);
   const [tourActive, setTourActive] = useState(false);
   const [tourStep, setTourStep] = useState(0);
   const [showMine, setShowMine] = useState(true);
@@ -266,27 +291,62 @@ export function SceneHome() {
       email: user?.email,
       displayName: user?.displayName,
     }).map((f) => f.userId);
-    const feed = await fetchPostsByOwners([viewerId, ...friendIds]);
-    setPosts(feed);
+    const feed = await fetchPostsByOwners([viewerId, ...friendIds], 8, { enrichSlugs: false });
+    setPosts((prev) => mergePosts(prev, feed));
   }, [user?.email, user?.displayName]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    void fetchPostsByOwners([user.id], 8, { enrichSlugs: false })
+      .then((ownPosts) => {
+        if (cancelled) return;
+        setPosts((prev) => mergePosts(prev, ownPosts));
+        setBlockReady(true);
+        setLoaded(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setBlockReady(true);
+        setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    void fetchDiscover(user.id, { enrichSlugs: false })
+      .then((discoverData) => {
+        if (cancelled) return;
+        setDiscover(discoverData);
+        setDiscoverReady(true);
+      })
+      .catch(() => {
+        if (!cancelled) setDiscoverReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
     const load = async () => {
       try {
-        const [all, discoverData, blocked, ownPosts] = await Promise.all([
+        setCircleLoading(true);
+        const [all, blocked] = await Promise.all([
           fetchFriendships(user.id),
-          fetchDiscover(user.id, { enrichSlugs: false }),
           fetchBlockedUsers(),
-          fetchPostsByOwners([user.id]),
         ]);
         if (cancelled) return;
-        setDiscover(discoverData);
         setBlockedIds(new Set(blocked.map((b) => b.blockedUserId)));
         setFriendships(all);
-        setPosts(ownPosts);
-        setLoaded(true);
+        await reloadBlockFeed(all, user.id);
+        if (!cancelled) setCircleLoading(false);
 
         const pendingLookups = all
           .filter((f) => f.status === 'pending' && f.requestedBy !== user.id)
@@ -294,12 +354,12 @@ export function SceneHome() {
             userId: f.requestedBy,
             slug: f.profiles[f.requestedBy]?.slug,
           }));
-        let friendshipsForUi = all;
-        if (pendingLookups.length) {
-          const { fetchPublicArtistMetas } = await import('@/lib/profile/social-client');
-          const metas = await fetchPublicArtistMetas(pendingLookups);
-          if (cancelled) return;
-          friendshipsForUi = all.map((f) => {
+        if (!pendingLookups.length) return;
+        const { fetchPublicArtistMetas } = await import('@/lib/profile/social-client');
+        const metas = await fetchPublicArtistMetas(pendingLookups);
+        if (cancelled) return;
+        setFriendships(
+          all.map((f) => {
             if (f.status !== 'pending' || f.requestedBy === user.id) return f;
             const meta = metas.get(f.requestedBy);
             if (!meta?.slug) return f;
@@ -315,14 +375,12 @@ export function SceneHome() {
                 },
               },
             };
-          });
-        }
-        if (cancelled) return;
-        setFriendships(friendshipsForUi);
-        await reloadBlockFeed(friendshipsForUi, user.id);
+          })
+        );
       } finally {
         if (!cancelled) {
           setLoaded(true);
+          setCircleLoading(false);
           // Only clear “new” when that section is currently expanded.
           if (readPersistedExpanded(SCENE_BLOCK_EXPANDED_KEY, true)) {
             markBlockSeen();
@@ -802,12 +860,7 @@ export function SceneHome() {
 
           <SceneLiveDropsStrip />
 
-          {!loaded ? (
-            <div className="flex min-h-[30vh] items-center justify-center">
-              <StudioLoader size="lg" />
-            </div>
-          ) : (
-            <>
+          <>
             <div
               id={BLOCK_SECTION_ID}
               className="scroll-mt-[5.5rem] space-y-4"
@@ -854,7 +907,12 @@ export function SceneHome() {
 
               {blockExpanded ? (
                 <div id="scene-block-body" className="space-y-4">
-                  {pageBlockPosts.length > 0 ? (
+                  {!blockReady && pageBlockPosts.length === 0 ? (
+                    <>
+                      <FeedCardSkeleton />
+                      <FeedCardSkeleton />
+                    </>
+                  ) : pageBlockPosts.length > 0 ? (
                     pageBlockPosts.map((post) => (
                       <PostCard
                         key={post.id}
@@ -864,6 +922,11 @@ export function SceneHome() {
                         onDeleted={onPostDeleted}
                       />
                     ))
+                  ) : circleLoading ? (
+                    <>
+                      <FeedCardSkeleton />
+                      <FeedCardSkeleton />
+                    </>
                   ) : (
                     <div className="rounded-2xl border border-dashed border-white/15 bg-black/20 px-6 py-8 text-center">
                       <p className="text-sm text-muted-foreground">
@@ -875,6 +938,11 @@ export function SceneHome() {
                       </p>
                     </div>
                   )}
+                  {circleLoading && pageBlockPosts.length > 0 ? (
+                    <p className="font-code text-[9px] uppercase tracking-[0.22em] text-muted-foreground/70">
+                      Catching up your circle…
+                    </p>
+                  ) : null}
                   <SectionPager
                     page={safeBlockPage}
                     pageCount={blockPageCount}
@@ -925,7 +993,12 @@ export function SceneHome() {
 
               {discoverExpanded ? (
                 <div id="scene-discover-body" className="space-y-4">
-                  {pageDiscoverCards.length > 0 ? (
+                  {!discoverReady && pageDiscoverCards.length === 0 ? (
+                    <>
+                      <FeedCardSkeleton />
+                      <FeedCardSkeleton />
+                    </>
+                  ) : pageDiscoverCards.length > 0 ? (
                     pageDiscoverCards.map((card) => (
                       <SceneDiscoverCard
                         key={card.key}
@@ -960,8 +1033,7 @@ export function SceneHome() {
                 </div>
               ) : null}
             </div>
-            </>
-          )}
+          </>
 
           <div data-tour="scene-find-artists">
             <FindArtistsPanel viewerSlug={viewerSlug} />
