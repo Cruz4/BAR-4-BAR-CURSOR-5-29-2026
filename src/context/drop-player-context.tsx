@@ -13,6 +13,7 @@ import React, {
 import { auth } from '@/lib/firebase/client/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { recordDropSpinClient } from '@/lib/drop-pulse-client';
+import type { DeckPlayable } from '@/lib/drop-library';
 
 export type DropRepeatMode = 'off' | 'all' | 'one';
 
