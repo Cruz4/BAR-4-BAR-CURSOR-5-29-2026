@@ -86,19 +86,36 @@ export function SceneFeedJumpHints({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const header =
-      document.querySelector<HTMLElement>('[data-app-header]') ||
-      document.querySelector<HTMLElement>('[data-app-header-bar]');
     const measure = () => {
+      const header =
+        document.querySelector<HTMLElement>('[data-app-header]') ||
+        document.querySelector<HTMLElement>('[data-app-header-bar]');
       const bottom = header?.getBoundingClientRect().bottom;
-      setHeaderBottom(Math.max(0, Math.round(bottom ?? 56)));
+      setHeaderBottom((prev) => {
+        const next = Math.max(0, Math.round(bottom ?? 56));
+        return prev === next ? prev : next;
+      });
     };
+
+    const headerEl = document.querySelector<HTMLElement>('[data-app-header]');
+    const headerBarEl = document.querySelector<HTMLElement>('[data-app-header-bar]');
+
     measure();
+    const raf1 = window.requestAnimationFrame(measure);
+    const raf2 = window.requestAnimationFrame(() => window.requestAnimationFrame(measure));
     window.addEventListener('resize', measure);
-    const ro = header ? new ResizeObserver(measure) : null;
-    if (header && ro) ro.observe(header);
+    window.addEventListener('scroll', measure, { passive: true });
+    const ro =
+      headerEl || headerBarEl
+        ? new ResizeObserver(measure)
+        : null;
+    if (headerEl && ro) ro.observe(headerEl);
+    if (headerBarEl && ro) ro.observe(headerBarEl);
     return () => {
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
       window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure);
       ro?.disconnect();
     };
   }, []);
