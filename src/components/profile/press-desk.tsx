@@ -517,7 +517,6 @@ export function PressDesk() {
           kind: 'Album DNA',
           trackCount: (album.tracks || []).length,
           ...shareCommerceFlags({
-            dropAudio: album.dropAudio,
             dropPrice: album.dropPrice,
           }),
         });
