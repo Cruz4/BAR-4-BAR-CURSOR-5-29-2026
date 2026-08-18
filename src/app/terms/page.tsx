@@ -40,7 +40,7 @@ export default function TermsPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">4. Your Content &amp; IP</h2>
-            <p>You retain ownership of lyrics and projects you create. You grant us a limited license to host, process, and back up your content solely to operate the Service. You represent that you have the right to upload, remix, or analyze any third-party material you provide. You are solely responsible for copyright, sampling, trademark, and publishing clearance for work you release commercially.</p>
+            <p>You retain ownership of lyrics, recordings, and projects you create — including master recordings you upload to sell a First Drop. Bar 4 Bar is not a label and does not claim your masters or publishing. Uploading a song grants us a limited license to host, process, preview, and stream it in the Service so fans can buy and listen here. You represent that you have the right to upload, remix, or analyze any third-party material you provide. You are solely responsible for copyright, sampling, trademark, and publishing clearance for work you release commercially. On First Drop sales we keep a platform fee (currently 10%) to operate the Service; the remainder is yours.</p>
           </section>
 
           <section className="space-y-3">

@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/use-auth';
 /** Persists ?ref= from landing URLs for signup attribution + admin landing alerts. */
 export function MarketingAttributionCapture() {
   const pathname = usePathname();
-  const { loading } = useAuth();
+  const { loading, user } = useAuth();
 
   useEffect(() => {
     captureMarketingRefFromUrl();
@@ -24,8 +24,8 @@ export function MarketingAttributionCapture() {
         getOrCreateGuestIdentity();
       }
     }
-    void reportLandingHitIfNeeded(pathname || '/');
-  }, [pathname, loading]);
+    void reportLandingHitIfNeeded(pathname || '/', { signedIn: Boolean(user) });
+  }, [pathname, loading, user]);
 
   return null;
 }

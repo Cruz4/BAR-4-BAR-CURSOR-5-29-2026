@@ -3,7 +3,7 @@
 /**
  * Scene Nav Dock — right rail of the Scene home.
  * Fast lanes: Vault, write split (keep / new), Artist Home split (view / edit),
- * Activity|Circle split, Leaderboard, Ink store.
+ * Activity|Circle split, Ink store.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -15,24 +15,22 @@ import {
   Lock,
   PenLine,
   Settings2,
-  Trophy,
   UserRound,
   Users,
   Droplets,
   Bell,
   Banknote,
-  MessageSquare,
+  Disc3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { useGamification } from '@/context/gamification-context';
 import { useSocialAlerts } from '@/hooks/use-social-alerts';
-import { useFoldInbox } from '@/components/folds/fold-inbox-provider';
-import { useFoldsFeature } from '@/hooks/use-folds-feature';
 import { useLockFeature } from '@/hooks/use-lock-feature';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { getLastWorkedTrackPath } from '@/lib/studio-tips-session';
 import { VAULT_PATH } from '@/lib/scene-home';
+import { openFirstDropLathe } from '@/lib/first-drop-lathe';
 
 type SceneNavDockProps = {
   /** Horizontal strip on < xl. */
@@ -265,6 +263,32 @@ function ActivityCircleSplitButton({
   );
 }
 
+function PressSongButton() {
+  return (
+    <button
+      type="button"
+      data-tour="scene-press-song"
+      onClick={() => openFirstDropLathe()}
+      className={cn(
+        dockShell,
+        'border-sky-300/55 bg-gradient-to-r from-sky-300/22 via-card/85 to-card/70 hover:border-sky-200/80'
+      )}
+    >
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sky-300/55 bg-sky-300/20 text-sky-200">
+        <Disc3 className="h-4 w-4" />
+      </span>
+      <span className="min-w-0 flex-1 text-left">
+        <span className="block font-sans text-[11px] font-bold uppercase leading-tight tracking-wide text-sky-100 sm:text-xs">
+          Press a song
+        </span>
+        <span className="mt-0.5 block font-code text-[8px] font-bold uppercase leading-tight tracking-[0.12em] text-sky-200/80 sm:text-[9px] sm:tracking-[0.16em]">
+          Sell · The Lathe
+        </span>
+      </span>
+    </button>
+  );
+}
+
 function leftoverFillClass(countInGroup: number): string | undefined {
   if (countInGroup <= 0) return undefined;
   const rem2 = countInGroup % 2;
@@ -279,8 +303,6 @@ function leftoverFillClass(countInGroup: number): string | undefined {
 export function SceneNavDock({ compact = false, className }: SceneNavDockProps) {
   const { summary, loading } = useGamification();
   const { total: alertCount } = useSocialAlerts();
-  const { unread: foldUnread } = useFoldInbox();
-  const { enabled: foldsOn } = useFoldsFeature();
   const { enabled: lockOn } = useLockFeature();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const [lastTrackPath, setLastTrackPath] = useState<string | null>(null);
@@ -310,8 +332,8 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       label: 'Library',
       sub: 'The Deck · First Drops',
       icon: Library,
-      tone: 'border-fuchsia-500/30 bg-card/55 hover:border-fuchsia-400/50',
-      iconTone: 'border-fuchsia-400/45 bg-fuchsia-500/15 text-fuchsia-400',
+      tone: 'border-amber-400/45 bg-amber-500/10 hover:border-amber-300/60',
+      iconTone: 'border-amber-400/40 bg-amber-500/20 text-amber-200',
     },
     {
       key: 'earnings',
@@ -323,32 +345,13 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       iconTone: 'border-emerald-400/45 bg-emerald-500/15 text-emerald-400',
     },
     {
-      key: 'folds',
-      href: '/folds',
-      label: 'Msgs',
-      sub: foldUnread > 0 ? `${foldUnread > 99 ? '99+' : foldUnread} unread` : 'Messages',
-      icon: MessageSquare,
-      tone: 'border-amber-500/35 bg-gradient-to-r from-amber-500/10 via-card/85 to-card/70 hover:border-amber-400/55',
-      iconTone: 'border-amber-400/45 bg-amber-500/15 text-amber-300',
-      badge: foldUnread,
-    },
-    {
-      key: 'leaderboard',
-      href: '/leaderboard',
-      label: 'Leaderboard',
-      sub: 'Weekly rankings',
-      icon: Trophy,
-      tone: 'border-amber-500/30 bg-card/55 hover:border-amber-400/50',
-      iconTone: 'border-amber-400/45 bg-amber-500/15 text-amber-400',
-    },
-    {
       key: 'ink',
       href: '/usage?tab=buy-ink',
       label: 'Ink store',
       sub: 'Top up your Ink',
       icon: Droplets,
-      tone: writeTone,
-      iconTone: writeIconTone,
+      tone: 'border-fuchsia-500/45 bg-gradient-to-r from-fuchsia-500/18 via-card/85 to-card/70 hover:border-fuchsia-400/70',
+      iconTone: 'border-fuchsia-400/50 bg-fuchsia-500/20 text-fuchsia-300',
     },
   ];
 
@@ -411,16 +414,15 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
   ) : null;
 
   const afterActivity = [
-    foldsOn ? <DockLink key="folds" item={items[3]!} /> : null,
     firstDropsOn ? <DockLink key="library" item={items[1]!} /> : null,
     firstDropsOn ? <DockLink key="earnings" item={items[2]!} /> : null,
-    <DockLink key="leaderboard" item={items[4]!} />,
-    <DockLink key="ink" item={items[5]!} />,
+    <DockLink key="ink" item={items[3]!} />,
   ].filter(Boolean) as React.ReactElement[];
 
   const beforeActivity = [
     <DockLink key="vault" item={items[0]!} />,
     <React.Fragment key="write">{writeTile}</React.Fragment>,
+    firstDropsOn ? <PressSongButton key="press" /> : null,
     <React.Fragment key="home">{homeTile}</React.Fragment>,
     lockTile ? <React.Fragment key="lock">{lockTile}</React.Fragment> : null,
   ].filter(Boolean) as React.ReactElement[];

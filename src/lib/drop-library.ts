@@ -17,6 +17,8 @@ export type DropLibraryItem = DropLibraryEntry & {
   coverArtUrl?: string;
   durationSec?: number;
   tracks?: DropLibraryTrack[];
+  /** Artist's own pressed song (not a purchase). */
+  own?: boolean;
 };
 
 export type DeckSort = 'fresh' | 'az' | 'artist' | 'paid' | 'played';
@@ -32,10 +34,12 @@ export type DeckPlayable = {
   durationSec?: number;
   scope: 'album' | 'track';
   albumTitle?: string;
+  albumId?: string;
   purchasedAt: string;
   amountCents: number;
   free?: boolean;
   ownerId: string;
+  own?: boolean;
 };
 
 export type DeckGroupBucket = {
@@ -92,10 +96,12 @@ export function flattenLibraryItems(items: DropLibraryItem[]): DeckPlayable[] {
           durationSec: track.durationSec ?? item.durationSec,
           scope: 'album',
           albumTitle: item.title,
+          albumId: item.projectId,
           purchasedAt: item.purchasedAt,
           amountCents: item.amountCents,
           free: item.free,
           ownerId: item.ownerId,
+          own: item.own,
         });
       }
       continue;
@@ -103,6 +109,7 @@ export function flattenLibraryItems(items: DropLibraryItem[]): DeckPlayable[] {
     out.push({
       key: item.shareId,
       shareId: item.shareId,
+      trackId: item.trackIds?.[0],
       title: item.title,
       artistName,
       coverArtUrl: item.coverArtUrl,
@@ -112,6 +119,7 @@ export function flattenLibraryItems(items: DropLibraryItem[]): DeckPlayable[] {
       amountCents: item.amountCents,
       free: item.free,
       ownerId: item.ownerId,
+      own: item.own,
     });
   }
   return out;
@@ -175,14 +183,22 @@ export function groupPlayables(items: DeckPlayable[], group: DeckGroup): DeckGro
 
   for (const item of items) {
     if (group === 'kind') {
-      const id = item.scope === 'album' ? 'album' : 'track';
-      ensure(id, id === 'album' ? 'Pressings' : 'Singles').items.push(item);
+      if (item.own) {
+        ensure('yours', 'Your songs').items.push(item);
+      } else {
+        const id = item.scope === 'album' ? 'album' : 'track';
+        ensure(id, id === 'album' ? 'Pressings' : 'Singles').items.push(item);
+      }
     } else if (group === 'artist') {
       const id = item.artistName.toLowerCase() || 'unknown';
       ensure(id, item.artistName || 'Unknown artist').items.push(item);
     } else if (group === 'access') {
-      const id = item.free ? 'free' : 'paid';
-      ensure(id, item.free ? 'Unlocked free' : 'Bought').items.push(item);
+      if (item.own) {
+        ensure('yours', 'Your songs').items.push(item);
+      } else {
+        const id = item.free ? 'free' : 'paid';
+        ensure(id, item.free ? 'Unlocked free' : 'Bought').items.push(item);
+      }
     } else {
       const d = item.purchasedAt ? new Date(item.purchasedAt) : null;
       const valid = d && !Number.isNaN(d.getTime());
@@ -193,10 +209,10 @@ export function groupPlayables(items: DeckPlayable[], group: DeckGroup): DeckGro
   }
 
   if (group === 'kind') {
-    return ['album', 'track'].flatMap((id) => (buckets.get(id) ? [buckets.get(id)!] : []));
+    return ['yours', 'album', 'track'].flatMap((id) => (buckets.get(id) ? [buckets.get(id)!] : []));
   }
   if (group === 'access') {
-    return ['paid', 'free'].flatMap((id) => (buckets.get(id) ? [buckets.get(id)!] : []));
+    return ['yours', 'paid', 'free'].flatMap((id) => (buckets.get(id) ? [buckets.get(id)!] : []));
   }
   if (group === 'month') {
     return [...order].sort((a, b) => b.localeCompare(a)).map((id) => buckets.get(id)!);

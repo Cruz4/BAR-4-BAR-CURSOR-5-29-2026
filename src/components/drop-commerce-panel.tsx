@@ -29,30 +29,32 @@ import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 
 const MODES: { id: DropPriceMode; label: string }[] = [
   { id: 'hidden', label: 'DNA only' },
-  { id: 'free', label: 'Free stream' },
   { id: 'fixed', label: 'Set price' },
   { id: 'pwyw', label: 'Pay what you want' },
 ];
 
-function PriceEditor({
+export function PriceEditor({
   price,
   onChange,
   label,
+  omitHidden = false,
 }: {
   price: DropPrice;
   onChange: (next: DropPrice) => void;
   label: string;
+  omitHidden?: boolean;
 }) {
   const [custom, setCustom] = useState('');
   const amount = price.amountCents ?? 777;
   const min = price.minCents ?? 0;
   const suggested = price.suggestedCents ?? 777;
+  const modes = omitHidden ? MODES.filter((m) => m.id !== 'hidden') : MODES;
 
   return (
     <div className="space-y-2">
       <Label className="text-[10px] font-bold uppercase tracking-widest text-primary">{label}</Label>
       <div className="grid grid-cols-2 gap-1.5">
-        {MODES.map((m) => (
+        {modes.map((m) => (
           <Button
             key={m.id}
             type="button"

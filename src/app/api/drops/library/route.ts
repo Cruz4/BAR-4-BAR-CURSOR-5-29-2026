@@ -3,7 +3,7 @@ import { getDb } from '@/lib/firebase/server';
 import { CheckoutAuthError, verifyCheckoutUser } from '@/lib/stripe-server';
 import type { DropLibraryEntry } from '@/lib/drop-commerce';
 import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
-import { hydrateDropLibraryItems } from '@/lib/server/drop-library-hydrate';
+import { hydrateDropLibraryItems, listOwnerPressedLibraryItems } from '@/lib/server/drop-library-hydrate';
 
 export const runtime = 'nodejs';
 
@@ -30,7 +30,12 @@ export async function GET(req: Request) {
     const raw = snap.docs
       .map((d) => d.data() as DropLibraryEntry)
       .sort((a, b) => (b.purchasedAt || '').localeCompare(a.purchasedAt || ''));
-    const items = await hydrateDropLibraryItems(db, raw);
+    const [bought, own] = await Promise.all([
+      hydrateDropLibraryItems(db, raw),
+      listOwnerPressedLibraryItems(db, userId),
+    ]);
+    const ownIds = new Set(own.map((item) => item.shareId));
+    const items = [...own, ...bought.filter((item) => !ownIds.has(item.shareId))];
     return NextResponse.json({ items });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Library failed';

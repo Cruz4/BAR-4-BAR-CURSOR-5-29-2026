@@ -10,9 +10,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useWritingSurface } from '@/hooks/use-writing-surface';
 import {
+  isTrackLyricSheetPath,
   WRITING_SURFACE_LABELS,
   type WritingSurfaceMode,
 } from '@/lib/studio-theme';
@@ -37,12 +39,13 @@ const SURFACE_OPTIONS: { value: WritingSurfaceMode; label: string; icon: typeof 
 function ThemeControlsBody({ compact = false }: { compact?: boolean }) {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { mode, setMode } = useWritingSurface();
+  const onSheet = isTrackLyricSheetPath(usePathname());
 
   return (
     <div className={cn('space-y-4', compact ? 'p-0' : 'p-1')}>
       <div className="space-y-2">
         <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          App theme
+          Sheet theme
         </Label>
         <div className="grid grid-cols-3 gap-1.5">
           {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
@@ -60,9 +63,11 @@ function ThemeControlsBody({ compact = false }: { compact?: boolean }) {
           ))}
         </div>
         <p className="text-[10px] text-muted-foreground leading-snug">
-          {resolvedTheme === 'light'
-            ? 'Light mode — easier to read outdoors and in glare.'
-            : 'Readable dark — lifted surfaces and brighter secondary text.'}
+          {onSheet
+            ? resolvedTheme === 'light'
+              ? 'Only on this lyrics sheet. Vault, albums, and The Scene stay dark. Light — easier outdoors and in glare.'
+              : 'Only on this lyrics sheet. Vault, albums, and The Scene stay dark.'
+            : 'Saved for the lyrics sheet. Vault, albums, and The Scene stay on the studio dark theme.'}
         </p>
       </div>
 
@@ -133,7 +138,8 @@ export function StudioThemeSettingsCard() {
     <div className="rounded-xl border border-primary/20 bg-card/80 p-5 space-y-1">
       <p className="font-headline text-xl uppercase tracking-tight">Display &amp; readability</p>
       <p className="text-sm text-muted-foreground font-code pb-3">
-        Switch light/dark for the whole app, or use paper mode on the lyrics sheet for outdoor writing.
+        Light/dark is for the lyrics sheet only. Vault, albums, and The Scene stay on the studio dark theme.
+        Paper mode is also sheet-only. Your sheet choice comes back the next time you open a track.
       </p>
       <ThemeControlsBody />
     </div>

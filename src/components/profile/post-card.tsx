@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Heart, MessageCircle, Repeat2, Send, Share2, Trash2 } from 'lucide-react';
+import { Eye, Heart, MessageCircle, Repeat2, Send, Share2, Trash2, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +39,7 @@ import {
   parseActivityPostHash,
   scrollActivityPostTarget,
 } from '@/lib/activity/post-deep-link';
+import { compactReachCount, recordPostViewClient } from '@/lib/post-view-client';
 
 type PostCardProps = {
   post: ProfilePost;
@@ -172,8 +173,9 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
 }
 
 export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onReverbed }: PostCardProps) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const articleRef = useRef<HTMLElement>(null);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
@@ -242,6 +244,36 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     }
     void fetchHasReverbed(rootIdForReverb).then(setReverbed).catch(() => undefined);
   }, [canReverb, rootIdForReverb]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (user?.id && user.id === post.ownerId) return;
+    const el = articleRef.current;
+    if (!el) return;
+    let hold: number | undefined;
+    let sent = false;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const hit = entries.some((e) => e.isIntersecting && e.intersectionRatio >= 0.4);
+        if (hit && !sent) {
+          hold = window.setTimeout(() => {
+            if (sent) return;
+            sent = true;
+            recordPostViewClient(post.id);
+          }, 700);
+        } else if (hold) {
+          window.clearTimeout(hold);
+          hold = undefined;
+        }
+      },
+      { threshold: [0.4] }
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      if (hold) window.clearTimeout(hold);
+    };
+  }, [authLoading, post.id, post.ownerId, user?.id]);
 
   useEffect(() => {
     if (!showAuthor || !liveAuthorSlug) {
@@ -369,6 +401,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
 
   return (
     <article
+      ref={articleRef}
       id={`post-${post.id}`}
       className="scroll-mt-28 border border-dashed border-[var(--ph-border)] bg-black/20 p-4 transition-shadow data-[activity-focus]:ring-2 data-[activity-focus]:ring-fuchsia-400/80"
     >
@@ -474,7 +507,8 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         </div>
       )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-4">
+      <div className="mt-3 flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-4">
         <button
           type="button"
           onClick={() => void toggleLike()}
@@ -521,6 +555,34 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
           <Share2 className="h-3.5 w-3.5" />
           Share
         </button>
+        </div>
+        {isOwner ? (
+          <Hint
+            content={
+              <p className="text-[10px] font-bold leading-snug">
+                {post.viewCount || 0} {post.viewCount === 1 ? 'person saw' : 'people saw'} this
+                {likeCount + commentCount > 0
+                  ? ` · ${likeCount} love${likeCount === 1 ? '' : 's'} · ${commentCount} ${commentCount === 1 ? 'reply' : 'replies'}`
+                  : ''}
+                . Only you see this.
+              </p>
+            }
+            side="top"
+          >
+            <span className="ml-auto inline-flex shrink-0 items-center gap-2 font-code text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.42))]">
+              <span className="inline-flex items-center gap-1">
+                <Eye className="h-3 w-3" />
+                {compactReachCount(post.viewCount || 0)}
+              </span>
+              {likeCount + commentCount > 0 ? (
+                <span className="inline-flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  {compactReachCount(likeCount + commentCount)}
+                </span>
+              ) : null}
+            </span>
+          </Hint>
+        ) : null}
       </div>
 
       <PostShareDialog open={shareOpen} onOpenChange={setShareOpen} post={post} />

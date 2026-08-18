@@ -1,4 +1,7 @@
-/** Track lyric / edit sheet — not album hub, not Perform. */
+/** Track lyric / edit sheet — not album hub, not Perform.
+ * Light/dark from the sheet icon is stored, but the rest of the app stays dark
+ * (`forcedTheme` off this path in ClientLayout).
+ */
 export function isTrackLyricSheetPath(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
   const path = pathname.split('?')[0];

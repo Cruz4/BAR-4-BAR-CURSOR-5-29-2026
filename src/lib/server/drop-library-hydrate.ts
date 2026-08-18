@@ -91,6 +91,116 @@ export async function hydrateDropLibraryItems(
     if (cover) hydrated.coverArtUrl = cover;
     if (durationSec) hydrated.durationSec = durationSec;
     if (tracks.length) hydrated.tracks = tracks;
+    if (item.own) hydrated.own = true;
     return hydrated;
   });
+}
+
+function sharePurchasedAt(data: Record<string, unknown>): string {
+  if (typeof data.updatedAt === 'string') return data.updatedAt;
+  if (typeof data.createdAt === 'string') return data.createdAt;
+  return new Date().toISOString();
+}
+
+function coverFromPayload(payload: Record<string, unknown>): string | undefined {
+  const ctxCover =
+    payload.sharedAlbumContext && typeof payload.sharedAlbumContext === 'object'
+      ? (payload.sharedAlbumContext as { coverArtUrl?: unknown }).coverArtUrl
+      : undefined;
+  const fromOwn =
+    typeof payload.coverArtUrl === 'string' && payload.coverArtUrl.trim()
+      ? payload.coverArtUrl.trim()
+      : undefined;
+  const fromCtx = typeof ctxCover === 'string' && ctxCover.trim() ? ctxCover.trim() : undefined;
+  return publicCoverUrl(fromOwn || fromCtx);
+}
+
+function artistFromShare(data: Record<string, unknown>): string | undefined {
+  return typeof data.ownerName === 'string' && data.ownerName.trim()
+    ? data.ownerName.trim()
+    : undefined;
+}
+
+/** Live First Drops the artist pressed — playable on The Deck without a purchase. */
+export async function listOwnerPressedLibraryItems(
+  db: Firestore,
+  userId: string
+): Promise<DropLibraryItem[]> {
+  if (!userId) return [];
+  const snap = await db.collection('shares').where('ownerId', '==', userId).get();
+  const items: DropLibraryItem[] = [];
+
+  for (const doc of snap.docs) {
+    const data = doc.data() as Record<string, unknown>;
+    const payload = (data.data as Record<string, unknown> | undefined) ?? {};
+    const projectId = typeof data.projectId === 'string' ? data.projectId : '';
+    const purchasedAt = sharePurchasedAt(data);
+    const artistName = artistFromShare(data);
+    const cover = coverFromPayload(payload);
+
+    if (data.type === 'album') {
+      const rows = Array.isArray(payload.tracks) ? payload.tracks : [];
+      const tracks: DropLibraryTrack[] = [];
+      for (const row of rows) {
+        if (!row || typeof row !== 'object') continue;
+        const o = row as Record<string, unknown>;
+        const id = typeof o.id === 'string' ? o.id : '';
+        if (!id) continue;
+        const audio = normalizeDropAudio(o.dropAudio);
+        if (!audio) continue;
+        const title =
+          typeof o.title === 'string' && o.title.trim() ? o.title.trim() : 'Untitled';
+        tracks.push({
+          id,
+          title,
+          durationSec: audio.durationSec,
+        });
+      }
+      if (tracks.length === 0) continue;
+      const title =
+        typeof payload.title === 'string' && payload.title.trim()
+          ? payload.title.trim()
+          : 'Untitled album';
+      const durationSec = tracks.reduce((sum, track) => sum + (track.durationSec || 0), 0) || undefined;
+      items.push({
+        shareId: doc.id,
+        ownerId: userId,
+        scope: 'album',
+        projectId,
+        title,
+        trackIds: tracks.map((track) => track.id),
+        amountCents: 0,
+        purchasedAt,
+        own: true,
+        tracks,
+        ...(artistName ? { artistName } : {}),
+        ...(durationSec ? { durationSec } : {}),
+        ...(cover ? { coverArtUrl: cover } : {}),
+      });
+      continue;
+    }
+
+    const audio = normalizeDropAudio(payload.dropAudio);
+    if (!audio) continue;
+    const title =
+      typeof payload.title === 'string' && payload.title.trim()
+        ? payload.title.trim()
+        : 'Untitled track';
+    items.push({
+      shareId: doc.id,
+      ownerId: userId,
+      scope: 'track',
+      projectId,
+      title,
+      trackIds: projectId ? [projectId] : [],
+      amountCents: 0,
+      purchasedAt,
+      own: true,
+      ...(artistName ? { artistName } : {}),
+      ...(audio.durationSec ? { durationSec: audio.durationSec } : {}),
+      ...(cover ? { coverArtUrl: cover } : {}),
+    });
+  }
+
+  return items.sort((a, b) => (b.purchasedAt || '').localeCompare(a.purchasedAt || ''));
 }

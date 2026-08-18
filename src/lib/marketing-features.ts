@@ -58,7 +58,7 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     title: 'Sell The Song.',
     description: firstDropsPitch(),
     bullets: [
-      'Audio on the public drop — 30-second preview until they unlock',
+      'Press a song from The Scene — upload, price, live. You keep the rights. DNA Drop stays lyrics-only',
       'Fixed price or pay-what-you-want, floor $1.00',
       `Buy once, stream in-app. Library lives on The Scene. ${firstDropsFeeCashoutLine()}`,
     ],

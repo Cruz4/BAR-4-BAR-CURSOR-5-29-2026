@@ -72,7 +72,7 @@ export default function DropLibraryPage() {
             <Library className="h-10 w-10 text-primary mx-auto" />
             <h1 className="font-headline text-3xl font-bold uppercase">The Deck</h1>
             <p className="text-sm text-muted-foreground">
-              Sign in to spin First Drops you bought or unlocked.
+              Sign in to spin songs you pressed, plus First Drops you bought or unlocked.
             </p>
             <Button asChild className="w-full font-bold">
               <Link href="/login?next=/library">

@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { studioChromeFromUser } from '@/lib/studio-tier-chrome';
+import { SCENE_BOOTH_ID } from '@/lib/scene-home';
 
 export function SceneBoothCard({ className }: { className?: string }) {
   const { user } = useAuth();
@@ -69,8 +70,9 @@ export function SceneBoothCard({ className }: { className?: string }) {
 
   return (
     <Card
+      id={SCENE_BOOTH_ID}
       className={cn(
-        'relative overflow-hidden border p-4 sm:p-5 transition-all',
+        'relative scroll-mt-[5.5rem] overflow-hidden border p-4 sm:p-5 transition-all',
         isLive
           ? 'border-sky-500/35 bg-gradient-to-br from-sky-500/10 via-card/90 to-card/70'
           : 'border-border/70 bg-card/60',

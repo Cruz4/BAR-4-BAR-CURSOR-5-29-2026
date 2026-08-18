@@ -26,7 +26,8 @@ import { SceneLiveDropsStrip } from '@/components/scene/scene-live-drops-strip';
 import { SceneOnSaleRail } from '@/components/scene/scene-on-sale-rail';
 import { SceneLivePrompts } from '@/components/scene/scene-live-prompts';
 import { SceneBlockAtmosphere } from '@/components/scene/scene-block-atmosphere';
-import { SectionPager } from '@/components/scene/section-pager';
+import { InfiniteFeedSentinel } from '@/components/scene/infinite-feed-sentinel';
+import { SceneFeedJumpHints } from '@/components/scene/scene-feed-jump-hints';
 import { LockClaimBootstrap } from '@/components/lock/lock-claim-bootstrap';
 import { GuestPressingClaimBootstrap } from '@/components/profile/guest-pressing-claim-bootstrap';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -77,7 +78,12 @@ import {
   hasMarketingCookieConsent,
 } from '@/lib/tiktok-pixel';
 import { postGamificationEvent } from '@/lib/gamification-client';
-import { BLOCK_SECTION_ID, DISCOVER_SECTION_ID } from '@/lib/scene-home';
+import {
+  BLOCK_SECTION_ID,
+  DISCOVER_SECTION_ID,
+  FIND_ARTISTS_SECTION_ID,
+  SCENE_TOP_ID,
+} from '@/lib/scene-home';
 import { parseActivityPostHash, scrollActivityPostTarget } from '@/lib/activity/post-deep-link';
 import {
   BLOCK_PAGE_SIZE,
@@ -228,8 +234,8 @@ export function SceneHome() {
   const [showMine, setShowMine] = useState(true);
   const [blockExpanded, setBlockExpanded] = useState(true);
   const [discoverExpanded, setDiscoverExpanded] = useState(true);
-  const [blockPage, setBlockPage] = useState(0);
-  const [discoverPage, setDiscoverPage] = useState(0);
+  const [blockVisible, setBlockVisible] = useState(BLOCK_PAGE_SIZE);
+  const [discoverVisible, setDiscoverVisible] = useState(DISCOVER_PAGE_SIZE);
   const [blockLastSeen, setBlockLastSeen] = useState<string | null>(null);
   const [discoverLastSeen, setDiscoverLastSeen] = useState<string | null>(null);
   const tourAutoStartRef = useRef(false);
@@ -252,7 +258,7 @@ export function SceneHome() {
 
   const setShowMinePersist = useCallback((next: boolean) => {
     setShowMine(next);
-    setBlockPage(0);
+    setBlockVisible(BLOCK_PAGE_SIZE);
     try {
       localStorage.setItem(SCENE_BLOCK_SHOW_MINE_KEY, next ? '1' : '0');
     } catch {
@@ -276,13 +282,6 @@ export function SceneHome() {
       markDiscoverSeen();
       setDiscoverLastSeen(new Date().toISOString());
     }
-  }, []);
-
-  const scrollToSection = useCallback((id: string) => {
-    if (typeof document === 'undefined') return;
-    window.requestAnimationFrame(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
   }, []);
 
   const sceneProgressTourPinned =
@@ -597,19 +596,8 @@ export function SceneHome() {
     return posts.filter((p) => p.ownerId !== user.id);
   }, [posts, showMine, user?.id]);
 
-  const blockPageCount = Math.max(1, Math.ceil(blockPosts.length / BLOCK_PAGE_SIZE) || 1);
-  const safeBlockPage = Math.min(Math.max(0, blockPage), blockPageCount - 1);
-  const pageBlockPosts = blockPosts.slice(
-    safeBlockPage * BLOCK_PAGE_SIZE,
-    safeBlockPage * BLOCK_PAGE_SIZE + BLOCK_PAGE_SIZE
-  );
-
-  const discoverPageCount = Math.max(1, Math.ceil(discoverCards.length / DISCOVER_PAGE_SIZE) || 1);
-  const safeDiscoverPage = Math.min(Math.max(0, discoverPage), discoverPageCount - 1);
-  const pageDiscoverCards = discoverCards.slice(
-    safeDiscoverPage * DISCOVER_PAGE_SIZE,
-    safeDiscoverPage * DISCOVER_PAGE_SIZE + DISCOVER_PAGE_SIZE
-  );
+  const visibleBlockPosts = blockPosts.slice(0, blockVisible);
+  const visibleDiscoverCards = discoverCards.slice(0, discoverVisible);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -641,11 +629,7 @@ export function SceneHome() {
       if (!target) return;
       const idx = blockPosts.findIndex((p) => p.id === target.postId);
       if (idx >= 0) {
-        const page = Math.floor(idx / BLOCK_PAGE_SIZE);
-        if (page !== safeBlockPage) {
-          setBlockPage(page);
-          return;
-        }
+        setBlockVisible((n) => Math.max(n, idx + 1));
       }
       const tryScroll = () => scrollActivityPostTarget(target);
       window.setTimeout(tryScroll, 80);
@@ -654,15 +638,17 @@ export function SceneHome() {
     run();
     window.addEventListener('hashchange', run);
     return () => window.removeEventListener('hashchange', run);
-  }, [blockPosts, safeBlockPage]);
+  }, [blockPosts]);
 
   useEffect(() => {
-    if (blockPage !== safeBlockPage) setBlockPage(safeBlockPage);
-  }, [blockPage, safeBlockPage]);
+    setBlockVisible((n) => Math.min(Math.max(BLOCK_PAGE_SIZE, n), Math.max(BLOCK_PAGE_SIZE, blockPosts.length)));
+  }, [blockPosts.length]);
 
   useEffect(() => {
-    if (discoverPage !== safeDiscoverPage) setDiscoverPage(safeDiscoverPage);
-  }, [discoverPage, safeDiscoverPage]);
+    setDiscoverVisible((n) =>
+      Math.min(Math.max(DISCOVER_PAGE_SIZE, n), Math.max(DISCOVER_PAGE_SIZE, discoverCards.length))
+    );
+  }, [discoverCards.length]);
 
   const newBlockCount = useMemo(() => {
     if (blockExpanded || !user?.id || !blockLastSeen) return 0;
@@ -684,28 +670,19 @@ export function SceneHome() {
 
   const onPosted = useCallback((post: ProfilePost) => {
     setPosts((prev) => [post, ...prev]);
-    setBlockPage(0);
   }, []);
 
   const onPostDeleted = useCallback((postId: string) => {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
   }, []);
 
-  const goBlockPage = useCallback(
-    (next: number) => {
-      setBlockPage(next);
-      scrollToSection(BLOCK_SECTION_ID);
-    },
-    [scrollToSection]
-  );
+  const loadMoreBlock = useCallback(() => {
+    setBlockVisible((n) => n + BLOCK_PAGE_SIZE);
+  }, []);
 
-  const goDiscoverPage = useCallback(
-    (next: number) => {
-      setDiscoverPage(next);
-      scrollToSection(DISCOVER_SECTION_ID);
-    },
-    [scrollToSection]
-  );
+  const loadMoreDiscover = useCallback(() => {
+    setDiscoverVisible((n) => n + DISCOVER_PAGE_SIZE);
+  }, []);
 
   const respond = async (friendship: Friendship, accept: boolean) => {
     if (!user?.id) return;
@@ -746,10 +723,21 @@ export function SceneHome() {
       <LockClaimBootstrap />
       <GuestPressingClaimBootstrap />
       <SceneBlockAtmosphere energy={sceneEnergy} pulseKey={posts.length} />
+      <SceneFeedJumpHints
+        blockExpanded={blockExpanded}
+        discoverExpanded={discoverExpanded}
+        hidden={tourActive}
+        onEnsureBlock={() => setBlockExpandedPersist(true)}
+        onEnsureDiscover={() => setDiscoverExpandedPersist(true)}
+      />
       <div className="relative z-20 w-full min-w-0 max-w-[100vw] xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,44rem)_minmax(0,1fr)] xl:grid-rows-[auto_auto] xl:items-start">
         {/* Header — middle column */}
         <div className="relative min-w-0 w-full xl:col-start-2 xl:row-start-1 px-4 sm:px-6 pt-6">
-          <header className="mb-6 border-b border-border pb-5" data-tour="scene-header">
+          <header
+            id={SCENE_TOP_ID}
+            className="mb-6 scroll-mt-[5.5rem] border-b border-border pb-5"
+            data-tour="scene-header"
+          >
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
@@ -908,13 +896,13 @@ export function SceneHome() {
 
               {blockExpanded ? (
                 <div id="scene-block-body" className="space-y-4">
-                  {!blockReady && pageBlockPosts.length === 0 ? (
+                  {!blockReady && visibleBlockPosts.length === 0 ? (
                     <>
                       <FeedCardSkeleton />
                       <FeedCardSkeleton />
                     </>
-                  ) : pageBlockPosts.length > 0 ? (
-                    pageBlockPosts.map((post) => (
+                  ) : visibleBlockPosts.length > 0 ? (
+                    visibleBlockPosts.map((post) => (
                       <PostCard
                         key={post.id}
                         post={post}
@@ -939,18 +927,15 @@ export function SceneHome() {
                       </p>
                     </div>
                   )}
-                  {circleLoading && pageBlockPosts.length > 0 ? (
+                  {circleLoading && visibleBlockPosts.length > 0 ? (
                     <p className="font-code text-[9px] uppercase tracking-[0.22em] text-muted-foreground/70">
                       Catching up your circle…
                     </p>
                   ) : null}
-                  <SectionPager
-                    page={safeBlockPage}
-                    pageCount={blockPageCount}
-                    total={blockPosts.length}
-                    unit="posts"
-                    onPrev={() => goBlockPage(Math.max(0, safeBlockPage - 1))}
-                    onNext={() => goBlockPage(Math.min(blockPageCount - 1, safeBlockPage + 1))}
+                  <InfiniteFeedSentinel
+                    key={`block-${blockVisible}`}
+                    disabled={visibleBlockPosts.length >= blockPosts.length}
+                    onVisible={loadMoreBlock}
                   />
                 </div>
               ) : null}
@@ -996,13 +981,13 @@ export function SceneHome() {
 
               {discoverExpanded ? (
                 <div id="scene-discover-body" className="space-y-4">
-                  {!discoverReady && pageDiscoverCards.length === 0 ? (
+                  {!discoverReady && visibleDiscoverCards.length === 0 ? (
                     <>
                       <FeedCardSkeleton />
                       <FeedCardSkeleton />
                     </>
-                  ) : pageDiscoverCards.length > 0 ? (
-                    pageDiscoverCards.map((card) => (
+                  ) : visibleDiscoverCards.length > 0 ? (
+                    visibleDiscoverCards.map((card) => (
                       <SceneDiscoverCard
                         key={card.key}
                         card={card}
@@ -1023,22 +1008,17 @@ export function SceneHome() {
                       </p>
                     </div>
                   )}
-                  <SectionPager
-                    page={safeDiscoverPage}
-                    pageCount={discoverPageCount}
-                    total={discoverCards.length}
-                    unit="cards"
-                    onPrev={() => goDiscoverPage(Math.max(0, safeDiscoverPage - 1))}
-                    onNext={() =>
-                      goDiscoverPage(Math.min(discoverPageCount - 1, safeDiscoverPage + 1))
-                    }
+                  <InfiniteFeedSentinel
+                    key={`discover-${discoverVisible}`}
+                    disabled={visibleDiscoverCards.length >= discoverCards.length}
+                    onVisible={loadMoreDiscover}
                   />
                 </div>
               ) : null}
             </div>
           </>
 
-          <div data-tour="scene-find-artists">
+          <div id={FIND_ARTISTS_SECTION_ID} className="scroll-mt-[5.5rem]" data-tour="scene-find-artists">
             <FindArtistsPanel viewerSlug={viewerSlug} />
           </div>
         </div>

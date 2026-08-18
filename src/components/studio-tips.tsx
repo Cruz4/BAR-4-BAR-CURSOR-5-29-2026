@@ -5,14 +5,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { X, Play, Target, BrainCircuit, Shield, Wand2, Palette, Sparkles, Zap, FolderOpen, ClipboardPaste, ArrowRight, ListRestart, Fingerprint, MonitorPlay, RefreshCw, Link2, FilePenLine, GitBranch, Download, Mic, Settings, Rocket, HelpCircle, MousePointer2, Dna, Clock, Trophy, Share2, Gift, Globe, Lightbulb, Layers, FlaskConical, ScanLine, Undo2, Crown, EyeOff, Image, CalendarRange, Upload, Medal, BadgeCheck, Lock, Flame, Hash, Camera, Pencil, ToggleRight, Mail, PanelLeft, Sparkle, Bell, Radio, Music, Library } from 'lucide-react';
+import { X, Play, Target, BrainCircuit, Shield, Wand2, Palette, Sparkles, Zap, FolderOpen, ClipboardPaste, ArrowRight, ListRestart, Fingerprint, MonitorPlay, RefreshCw, Link2, FilePenLine, GitBranch, Download, Mic, Settings, Rocket, HelpCircle, MousePointer2, Dna, Clock, Trophy, Share2, Gift, Globe, Lightbulb, Layers, FlaskConical, ScanLine, Undo2, Crown, EyeOff, Image, CalendarRange, Upload, Medal, BadgeCheck, Lock, Flame, Hash, Camera, Pencil, ToggleRight, Mail, PanelLeft, Sparkle, Bell, Radio, Music, Library, Eye, Sun } from 'lucide-react';
 import { PRO_FEATURE_PREVIEW_DAYS } from '@/lib/subscription';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useConfigSurfaceFlags, configSurfaceAllows, type ConfigSurfaceFeature } from '@/hooks/use-config-surface-flags';
-import { dropPlatformFeeLabel, firstDropsFeeCashoutLine } from '@/lib/drop-commerce';
+import { firstDropsFeeCashoutLine } from '@/lib/drop-commerce';
 import { AI_COSTS } from '@/lib/costs';
 import { STUDIO_DRAFT_INK_TIP, COMPETITOR_ANCHOR_COPY } from '@/lib/studio-tiers';
 import {
@@ -107,14 +107,16 @@ const STUDIO_TIPS: StudioTip[] = [
   { id: 64, icon: Bell, title: "ACTIVITY INBOX", text: "Activity is your work ping: “your verse is still open,” “streak dies at midnight,” “someone echoed your bar.” Friend requests and DNA imports still land here — not a dump of feed posts. Optional push under Settings → Notifications.", color: "text-emerald-400" },
   { id: 65, icon: Radio, title: "HOUSE BAR OF THE DAY", text: "When Studio Ops pins it, The Scene shows one shared unfinished bar for everyone to answer. The line can change daily from Admin → Config.", color: "text-fuchsia-400", feature: 'house-bar' },
   { id: 66, icon: CalendarRange, title: "WEEKLY PUBLIC CHALLENGE", text: "A Scene-wide weekly cypher (hand-written bars, Monday reset) can be pinned, rewritten, or turned off from Admin. Your count shows on the pin.", color: "text-amber-400", feature: 'weekly-challenge' },
-  { id: 67, icon: Music, title: "FIRST DROP", text: "DNA Drop is the lyric snapshot. First Drop is the record — upload the song in that same dialog, set a price or pay-what-you-want, then Update snapshot. Fans preview 30 seconds on the public page, then buy once to stream in Bar 4 Bar. Cash out on Earnings after you connect payouts.", color: "text-fuchsia-400", feature: 'first-drops' },
-  { id: 68, kind: 'did-you-know', icon: Music, title: "WE KEEP " + dropPlatformFeeLabel().toUpperCase(), text: `Did you know? First Drop sales are buy-once in-app streams — not Spotify. ${firstDropsFeeCashoutLine()} Ink is never used to buy music.`, color: "text-amber-300", feature: 'first-drops' },
+  { id: 67, icon: Music, title: "PRESS A SONG", text: "DNA Drop is lyrics only. To sell, tap Press a song on The Scene (The Lathe) — pick the track, upload the song, set a price, press it live. You keep the rights. Fans preview 30 seconds, then buy once and stream here. Cash out on Earnings after you connect payouts.", color: "text-fuchsia-400", feature: 'first-drops' },
+  { id: 68, kind: 'did-you-know', icon: Music, title: "YOU KEEP THE RIGHTS", text: `Did you know? We are not a label. You keep your lyrics, recordings, and masters. First Drop sales are buy-once in-app streams — not Spotify. ${firstDropsFeeCashoutLine()} Ink is never used to buy music.`, color: "text-amber-300", feature: 'first-drops' },
   { id: 69, icon: Library, title: "THE DECK", text: "Drops you unlock live in Library (The Deck) on The Scene dock. Search, crate, and stream them in-app — same account, no re-buy.", color: "text-fuchsia-400", feature: 'first-drops' },
   { id: 70, kind: 'did-you-know', icon: Globe, title: "ARTIST HOME IS FREE", text: "Did you know? Artist Home is completely free — claim it, skin it, go live. No Pro required for the page. Pro is for studio tools (custom DNA vault, Performance, DNA Drop links), not the public profile.", color: "text-fuchsia-300" },
   { id: 71, kind: 'did-you-know', icon: Bell, title: "ACTIVITY OPENS THE POST", text: "Did you know? Tap Open on an Activity love or reply and it jumps to that wall post. If it was a comment, the thread opens on that reply — no hunting the wall.", color: "text-emerald-400" },
   { id: 72, icon: Lock, title: "FINISH THIS BAR", text: "Cast one unfinished line from Press Desk. Anyone can reply with a Fit score. Manage your casts from the Scene dock — Finish this bar.", color: "text-emerald-400", feature: 'lock' },
   { id: 73, kind: 'did-you-know', icon: Mic, title: "VOICE ON THE WALL", text: "Did you know? Wall posts and replies can be voice notes — up to 60 seconds. Hit Voice in the composer, then listeners tap Read to see the transcript or Listen to play it back with controls.", color: "text-sky-300" },
   { id: 74, kind: 'did-you-know', icon: Mic, title: "SHEET TAKES", text: "Did you know? The right panel has Takes above Draft Chest — record up to 3 vocal memos per track, 5 minutes each. Play them back anytime you open that sheet.", color: "text-sky-400" },
+  { id: 75, icon: Sun, title: "SHEET THEME ONLY", text: "The sun/moon icon on a lyrics sheet is for that sheet only — light, dark, or paper. Leave the track and the rest of the app stays studio dark. Open it again and your sheet choice comes back.", color: "text-amber-300" },
+  { id: 76, kind: 'did-you-know', icon: Eye, title: "YOUR POST REACH", text: "Did you know? On posts and reverbs you posted, a light eye on the bottom-right is unique people who saw it. A people count is loves + replies. Only you see those numbers.", color: "text-fuchsia-300" },
 ];
 
 export function StudioTips() {

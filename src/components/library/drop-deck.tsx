@@ -14,6 +14,7 @@ import {
   Repeat,
   Repeat1,
   Search,
+  Settings2,
   Shuffle,
   SkipBack,
   SkipForward,
@@ -51,6 +52,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useDropCrates } from '@/hooks/use-drop-crates';
 import { useDropPlayer } from '@/context/drop-player-context';
 import { centsToUsdLabel } from '@/lib/drop-commerce';
+import { openFirstDropLathe } from '@/lib/first-drop-lathe';
 import {
   createDropCrate,
   deleteDropCrate,
@@ -250,7 +252,7 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
                 The Deck
               </h1>
               <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                Your unlocked drops on a pressing plate — search, crate, and play without leaving the studio.
+                Songs you pressed, plus First Drops you bought or unlocked — search, crate, play, and manage.
               </p>
             </div>
             <p className="font-code text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
@@ -542,7 +544,11 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
                                   <span className="block truncate font-code text-[10px] uppercase text-muted-foreground">
                                     {item.artistName}
                                     {item.albumTitle ? ` · ${item.albumTitle}` : ` · ${item.scope}`}
-                                    {item.free ? ' · Free' : ` · ${centsToUsdLabel(item.amountCents)}`}
+                                    {item.own
+                                      ? ' · Yours'
+                                      : item.free
+                                        ? ' · Free'
+                                        : ` · ${centsToUsdLabel(item.amountCents)}`}
                                   </span>
                                 </span>
                                 <span className="hidden shrink-0 font-code text-[10px] text-muted-foreground sm:block">
@@ -556,12 +562,39 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
                                     size="icon"
                                     variant="ghost"
                                     className="h-8 w-8 shrink-0 opacity-70 hover:opacity-100"
-                                    aria-label="Add to crate"
+                                    aria-label={item.own ? 'Manage this song' : 'Add to crate'}
                                   >
-                                    <ListPlus className="h-4 w-4" />
+                                    {item.own ? (
+                                      <Settings2 className="h-4 w-4" />
+                                    ) : (
+                                      <ListPlus className="h-4 w-4" />
+                                    )}
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-52">
+                                  {item.own && (
+                                    <>
+                                      <DropdownMenuLabel>Manage</DropdownMenuLabel>
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          openFirstDropLathe({
+                                            trackId: item.trackId,
+                                            albumId: item.albumId,
+                                          })
+                                        }
+                                      >
+                                        <Settings2 className="h-4 w-4" />
+                                        Update press
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem asChild>
+                                        <Link href={`/share/${item.shareId}`}>
+                                          <ExternalLink className="h-4 w-4" />
+                                          Open drop
+                                        </Link>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                    </>
+                                  )}
                                   <DropdownMenuLabel>Add to crate</DropdownMenuLabel>
                                   {crates.length === 0 && (
                                     <DropdownMenuItem onClick={() => void makeCrate(item.shareId)}>

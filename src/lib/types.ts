@@ -154,7 +154,7 @@ export interface Track {
    * Included in the published snapshot; edit from the DNA Drop dialog.
    */
   dnaDropMedia?: string[];
-  /** Private master + 30s preview for Bar 4 Bar First Drops. */
+  /** Private song file + 30s preview for Bar 4 Bar First Drops. */
   dropAudio?: DropAudioMeta;
   /** Song price for Bar 4 Bar First Drops. */
   dropPrice?: DropPrice;

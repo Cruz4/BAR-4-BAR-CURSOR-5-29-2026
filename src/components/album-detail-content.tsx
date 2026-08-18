@@ -45,6 +45,7 @@ import {
   Save,
   FolderOpen,
   Loader2,
+  Disc3,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -94,6 +95,8 @@ import { ShareDialog } from './share-dialog';
 import { TooltipProvider } from './ui/tooltip';
 import { DataContext } from '@/context/data-context';
 import { useAuth } from '@/hooks/use-auth';
+import { openFirstDropLathe } from '@/lib/first-drop-lathe';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { GUEST_TRY_PATH, isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
 import { vaultHref } from '@/lib/scene-home';
 import {
@@ -854,6 +857,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   const isPro = isProOrTrial(user);
   const { getAlbumById, updateAlbum, deleteTrack, loading, moveTrack, deleteAlbum, albums } = useContext(DataContext);
   const totalTrackCount = countUserTracks(albums);
@@ -1281,6 +1285,16 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 >
                                     <FileDown className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Export
                                 </Button>
+                                {!isUnassignedVault && firstDropsOn ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-fuchsia-400/40 rounded-xl bg-fuchsia-500/10 text-fuchsia-200 hover:bg-fuchsia-500/20 flex-1 sm:flex-none min-w-0"
+                                    onClick={() => openFirstDropLathe({ albumId: album.id })}
+                                  >
+                                    <Disc3 className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Press a song
+                                  </Button>
+                                ) : null}
                                 {!isUnassignedVault && (
                                   isPro ? (
                                     <Button variant="outline" size="sm" className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-primary/30 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 flex-1 sm:flex-none min-w-0" onClick={() => setShareDialogOpen(true)}>

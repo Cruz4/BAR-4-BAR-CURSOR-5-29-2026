@@ -43,9 +43,10 @@ import {
   normalizeDnaDropMedia,
   tracksMissingDnaDrop,
 } from '@/lib/dna-drop';
-import { EMBED_HELP_TEXT, parseEmbedUrl } from '@/lib/profile/embeds';
+import { parseEmbedUrl } from '@/lib/profile/embeds';
 import { EmbedPlayer } from '@/components/profile/embed-player';
-import { DropCommercePanel } from '@/components/drop-commerce-panel';
+import { openFirstDropLathe } from '@/lib/first-drop-lathe';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { cn } from '@/lib/utils';
 import type { Track } from '@/lib/types';
 
@@ -80,6 +81,7 @@ export function ShareDialog({
     updateTrack,
   } = useContext(DataContext);
   const { toast } = useToast();
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   const [isWorking, setIsWorking] = useState(false);
   const [shareId, setShareId] = useState(existingShareId || '');
   const [copied, setCopied] = useState(false);
@@ -352,7 +354,7 @@ export function ShareDialog({
   const albumReadyCopy =
     type === 'album'
       ? 'Publishes an album page with your album DNA plus clickable cards for each song. Live tracks open their own DNA Drop (lyrics & rules). Offline tracks stay listed until you drop them.'
-      : 'Publishes a snapshot of lyrics & structure plus only the rules that are toggled on right now — Creative DNA, intents, vibe, guardrails, special instructions, and Style DNA when active.';
+      : 'Publishes a snapshot of lyrics & structure plus only the rules that are toggled on right now — Creative DNA, intents, vibe, guardrails, special instructions, and Style DNA when active. Selling the song is Press a song on The Scene — not this dialog.';
 
   return (
     <>
@@ -368,8 +370,8 @@ export function ShareDialog({
               <Globe className="text-primary h-8 w-8 shrink-0" /> DNA DROP
             </DialogTitle>
             <DialogDescription className="font-code text-[10px] uppercase tracking-widest text-muted-foreground">
-              Public snapshot of <span className="text-foreground">{title}</span>
-              {type === 'album' ? ' · album DNA' : ''}
+              Lyric snapshot of <span className="text-foreground">{title}</span>
+              {type === 'album' ? ' · album DNA' : ' · not the sell desk'}
             </DialogDescription>
           </DialogHeader>
 
@@ -453,8 +455,8 @@ export function ShareDialog({
                     ) : (
                       <>
                         The link stays the same. Use <strong className="text-foreground">Update snapshot</strong> after
-                        you edit lyrics, toggles, DNA, intents, vibe, style, media, audio, price, or structure — otherwise visitors keep
-                        seeing the last published version.
+                        you edit lyrics, toggles, DNA, intents, vibe, style, or structure — otherwise visitors keep
+                        seeing the last published version. To sell the song, press it on The Lathe — not here.
                       </>
                     )}
                   </p>
@@ -486,16 +488,45 @@ export function ShareDialog({
               </div>
             )}
 
-            <DropCommercePanel type={type} id={id} albumId={type === 'album' ? id : albumId} />
+            {firstDropsOn && type === 'track' ? (
+              <Button
+                type="button"
+                className="h-11 w-full bg-fuchsia-400 font-bold uppercase text-black hover:bg-fuchsia-300"
+                onClick={() => {
+                  onOpenChange(false);
+                  openFirstDropLathe({
+                    trackId: id,
+                    albumId: albumId,
+                  });
+                }}
+              >
+                Press this song for sale
+              </Button>
+            ) : null}
+
+            {firstDropsOn && type === 'album' ? (
+              <Button
+                type="button"
+                className="h-11 w-full bg-fuchsia-400 font-bold uppercase text-black hover:bg-fuchsia-300"
+                onClick={() => {
+                  onOpenChange(false);
+                  openFirstDropLathe({ albumId: id });
+                }}
+              >
+                Press a track from this album
+              </Button>
+            ) : null}
 
             <div className="space-y-3 border-t border-white/10 pt-4 min-w-0">
               <div className="flex items-center gap-2">
                 <Link2 className="h-4 w-4 text-primary shrink-0" />
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-primary">
-                  Links &amp; embeds
+                  Lyric page links
                 </Label>
               </div>
-              <p className="text-[10px] text-muted-foreground leading-relaxed">{EMBED_HELP_TEXT}</p>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                Optional embeds on the lyric snapshot. Audio and price are on The Lathe — Press a song — not here.
+              </p>
               <div className="flex gap-2 min-w-0">
                 <Input
                   value={mediaInput}

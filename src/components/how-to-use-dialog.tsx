@@ -92,7 +92,7 @@ import {
 import { DataContext } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
 import { useConfigSurfaceFlags, type ConfigSurfaceFlags } from '@/hooks/use-config-surface-flags';
-import { dropArtistShareLabel, firstDropsCashoutLine, firstDropsFeeCashoutLine, firstDropsPitch, getFirstDropsCashoutFaqAnswer, getFirstDropsFeeFaqAnswer, getFirstDropsSellFaqAnswer, getFirstDropsWhatFaqAnswer } from '@/lib/drop-commerce';
+import { dropArtistShareLabel, firstDropsFeeCashoutLine, firstDropsPitch, getFirstDropsCashoutFaqAnswer, getFirstDropsFeeFaqAnswer, getFirstDropsRightsFaqAnswer, getFirstDropsSellFaqAnswer, getFirstDropsWhatFaqAnswer } from '@/lib/drop-commerce';
 import { Button } from './ui/button';
 import {
   Accordion,
@@ -213,7 +213,7 @@ const CORE_FAQS = [
     },
     {
       q: "What is DNA Drop?",
-      a: "Studio Pro — publish a shareable snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. When First Drops is on, the same dialog can attach audio and a price — cash out those sales on Earnings."
+      a: "Studio Pro — publish a shareable lyric snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live lyric drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. Selling is separate: Press a song on The Scene (The Lathe)."
     },
     {
       q: "What happens during Creative Syncing vs DNA Extraction?",
@@ -225,7 +225,7 @@ const CORE_FAQS = [
     },
     {
       q: "What is included in a DNA Drop?",
-      a: "Lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when toggled on. Album drops add album DNA presets and motifs. Optional links & embeds (YouTube, Spotify, etc.) attach from the DNA Drop dialog and play on the public page. When First Drops is on, that same dialog also holds audio and a price — cash out those sales on Earnings.",
+      a: "Lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when toggled on. Album drops add album DNA presets and motifs. Optional links & embeds (YouTube, etc.) attach from the DNA Drop dialog for the lyric page. Audio and price live on The Lathe — Press a song from The Scene — not in this dialog.",
     },
     {
       q: "Is my DNA Drop live-synced when I edit?",
@@ -234,6 +234,14 @@ const CORE_FAQS = [
     {
       q: "How do I unshare or take a DNA Drop offline?",
       a: "DNA Drop (track left panel or album page) → Take offline. The public link stops immediately. Publish again later with Confirm DNA Drop."
+    },
+    {
+      q: "Why did light mode follow me off the lyrics sheet?",
+      a: "It should not. Light / dark / system on the sun-moon icon is sheet-only. Vault, albums, and The Scene stay on the studio dark theme. Open the same track again and your sheet choice comes back."
+    },
+    {
+      q: "What is the eye count on my wall post?",
+      a: "Only you see it, on posts and reverbs you posted. The eye is unique people who actually viewed it. The people icon is loves + replies. Visitors do not see these numbers."
     }
 ];
 
@@ -245,6 +253,10 @@ const FIRST_DROPS_FAQS = [
   {
     q: "How do I sell a First Drop?",
     a: getFirstDropsSellFaqAnswer(),
+  },
+  {
+    q: "Do I keep the rights to my music?",
+    a: getFirstDropsRightsFaqAnswer(),
   },
   {
     q: "What does Bar 4 Bar keep on a First Drop sale?",
@@ -418,7 +430,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <li><strong>Generate one bar</strong> — select a line → Bar Workstation → Generate Next (~{AI_COSTS.generateNextLine} Ink).</li>
                   </ol>
                   <p className="text-xs border-l-2 border-primary/30 pl-3 italic">
-                    Free: full DNA &amp; REMIX + system presets. Pro: your own vault strains + cloud sync. Edits auto-save; Export Track (left) for PDF.
+                    Free: full DNA &amp; REMIX + system presets. Pro: your own vault strains + cloud sync. Edits auto-save; Export Track (left) for PDF. The sun/moon in the sheet header is light/dark for that sheet only — leaving the track restores studio dark.
                   </p>
                 </ChapterCard>
 
@@ -486,7 +498,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
 
                 <p className="text-[11px] text-muted-foreground font-code border border-border/40 rounded-lg px-3 py-2 bg-muted/10">
                   <Lightbulb className="inline h-3.5 w-3.5 mr-1.5 text-yellow-500 align-text-bottom" />
-                  After your first tour, the lyrics page shows one Studio Insight or Did You Know tip per visit (45+ in the pool). Pause or dismiss anytime.
+                  After your first tour, the lyrics page shows one Studio Insight or Did You Know tip per visit. Pause or dismiss anytime.
                 </p>
               </TabsContent>
 
@@ -496,16 +508,17 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <p className="text-sm text-foreground/90">{firstDropsPitch()}</p>
                     <ol className="list-decimal list-inside space-y-2 text-sm">
                       <li><strong>Write the song</strong> in The Vault — lyrics, DNA, vibe as usual.</li>
-                      <li><strong>DNA Drop</strong> on the track (or album) — confirm the lyric snapshot.</li>
-                      <li><strong>First Drop · audio &amp; price</strong> — upload the file, pick DNA only / free stream / set price / pay-what-you-want (floor $1.00).</li>
-                      <li><strong>Update snapshot</strong> so the public /share page has the audio. Fans preview 30 seconds, then buy or unlock to stream in-app.</li>
-                      <li><strong>Fans find it</strong> on your Artist Home (First Drops strip at the top of the Drop Shelf) and as tagged First Drop cards on The Scene — they do not guess which DNA Drop has the song.</li>
+                      <li><strong>Press a song</strong> on The Scene dock (The Lathe). Pick the track — you do not open DNA Drop to sell.</li>
+                      <li><strong>Upload the song and set a price</strong> — fixed price, or pay-what-you-want (floor $1.00). Then Press it live.</li>
+                      <li><strong>DNA Drop stays lyrics-only</strong> — collaborators import bars and DNA. Selling lives on The Lathe.</li>
+                      <li><strong>Fans find it</strong> as Listen / buy at the top of your Artist Home, on The Scene, and on the share link.</li>
                       <li><strong>Cash out</strong> — open Earnings, connect Stripe payouts, then Stripe sends your {dropArtistShareLabel()} share to your bank.</li>
                     </ol>
                     <ul className="list-disc list-inside space-y-1.5 text-xs">
-                      <li><strong>Manage live ones</strong> from The Scene, Vault, or Edit Public Page → Live drops. DNA-only tracks have Add First Drop; live songs show under First Drops.</li>
+                      <li><strong>Manage live ones</strong> from The Scene, Vault, or Edit Public Page → Live drops. DNA-only tracks have Press this song; live songs show under First Drops.</li>
                       <li><strong>Library</strong> on The Scene lists drops you unlocked. Stream stays in Bar 4 Bar.</li>
                       <li><strong>Heat</strong> — spins and unlocks count on the drop. An unlock bumps it back up on The Scene. First cop is credited on the page. Love, reply, share, or post it to your wall.</li>
+                      <li><strong>Your rights</strong> — you keep the lyrics, the recording, and the masters. We are not a label. A small platform fee on the sale helps run Bar 4 Bar; the rest is yours.</li>
                       <li><strong>Fee &amp; cash out</strong> — {firstDropsFeeCashoutLine()} Sales before you connect stay held until you finish setup. Ink is not used for music purchases.</li>
                       <li><strong>Admin</strong> can turn First Drops off from Config without taking DNA Drops down.</li>
                     </ul>
@@ -616,7 +629,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </ChapterCard>
 
                 <ChapterCard icon={<Zap className="text-primary" />} title="Way 2: Bar Workstation (Footer)" colorClass="border-l-primary">
-                    <p>Select a line to activate the master workstation. Generate <strong>Next</strong> or <strong>Previous</strong> suggestions anchored to your active focus ({AI_COSTS.generateNextLine} Ink each).</p>
+                    <p>Select a line to activate the Bar Workstation. Generate <strong>Next</strong> or <strong>Previous</strong> suggestions anchored to your active focus ({AI_COSTS.generateNextLine} Ink each).</p>
                     <p className="text-xs">Set <strong>End With</strong> to force the next suggestion to land on your punchline. Watch the rule badges light up to see which DNA, Vibes, and Intents are guiding the AI.</p>
                 </ChapterCard>
 
@@ -756,10 +769,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </ChapterCard>
 
                 <ChapterCard icon={<Link2 className="text-primary" />} title="DNA Drop" colorClass="border-l-primary">
-                    <p>Studio Pro — publish a shareable link from the left panel. Collaborators sign in and import lyrics, structure, Creative DNA, vibe, and related strains. Update snapshot after edits; <strong>Take offline</strong> to revoke the link.</p>
-                    {flags.firstDrops ? (
-                      <p className="text-xs text-muted-foreground">When First Drops is on, the same dialog has <strong>audio &amp; price</strong>. {firstDropsCashoutLine()}</p>
-                    ) : null}
+                    <p>Studio Pro — publish a shareable lyric snapshot from the left panel. Collaborators sign in and import lyrics, structure, Creative DNA, vibe, and related strains. Update snapshot after edits; <strong>Take offline</strong> to revoke the link. To sell the song, use <strong>Press a song</strong> on The Scene — DNA Drop is not the sell desk.</p>
                 </ChapterCard>
 
                 <ChapterCard icon={<NotebookText className="text-muted-foreground" />} title="Export Track &amp; Vault Backup" colorClass="border-l-muted-foreground">

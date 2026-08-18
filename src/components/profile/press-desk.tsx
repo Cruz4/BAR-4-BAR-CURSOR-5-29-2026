@@ -1810,7 +1810,7 @@ export function PressDesk() {
         title="Live DNA Drops"
         hint={
           firstDropsOn
-            ? `Any album or track with an active DNA Drop shows on your Artist Home automatically. First Drops add the audio: set a price or pay-what-you-want, fans buy once and stream here. ${firstDropsFeeCashoutLine()} Open Manage to jump to a drop, the vault, or Earnings.`
+            ? `Songs for sale are pressed on The Lathe from The Scene — not inside DNA Drop. Live First Drops show on your Artist Home automatically. ${firstDropsFeeCashoutLine()} Open Manage to jump to a press, the vault, or Earnings.`
             : 'Any album or track with an active DNA Drop shows on your Artist Home automatically — as a count under your bio and in the Live DNA Drops module. Open Manage to jump to a drop or the vault.'
         }
       >

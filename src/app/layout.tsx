@@ -21,7 +21,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('b4b-theme');var dark=true;if(t==='light')dark=false;else if(t==='system')dark=window.matchMedia('(prefers-color-scheme: dark)').matches;var d=document.documentElement;if(dark)d.classList.add('dark');else d.classList.remove('dark');}catch(e){document.documentElement.classList.add('dark')}})();`,
+            __html: `(function(){try{var p=location.pathname.split('?')[0];var sheet=/^\\/albums\\/[^/]+\\/tracks\\/[^/]+\\/?$/.test(p);var t=sheet?localStorage.getItem('b4b-theme'):'dark';var dark=true;if(t==='light')dark=false;else if(sheet&&t==='system')dark=window.matchMedia('(prefers-color-scheme: dark)').matches;var d=document.documentElement;if(dark)d.classList.add('dark');else d.classList.remove('dark');}catch(e){document.documentElement.classList.add('dark')}})();`,
           }}
         />
         <script

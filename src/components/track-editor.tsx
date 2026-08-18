@@ -80,6 +80,7 @@ import {
   Dna,
   Globe,
   Undo2,
+  Disc3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -242,6 +243,8 @@ import { GenerateSongDraftDialog } from './generate-song-draft-dialog';
 import { ExportDialog } from './export-dialog';
 import { ShareDialog } from './share-dialog';
 import { DnaDropLiveIndicator } from './dna-drop-live-indicator';
+import { openFirstDropLathe } from '@/lib/first-drop-lathe';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import {
   lazyAnalyzeStructure,
   lazyFindRhymes,
@@ -775,6 +778,7 @@ function mobileLyricsPanelClass(active: boolean, edge?: 'left' | 'right') {
 function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSectionId, setExportDialogOpen, setShareDialogOpen, onCollapse, leftCollapsed, setGenerateDraftOpen, scratchPadRef, isPro, mobileActive = false, trackLocked = false, tierLocked = false, completeLocked = false, workstationAttention = false, tourMobilePad = false, isGuestTryMode = false }: any) {
   const { user } = useAuth();
   const router = useRouter();
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   const { setGenerating } = useUIState();
   const { toast } = useToast();
   const { refundInk, addUsageLog } = useUsage();
@@ -1140,6 +1144,26 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                     >
                     <Button variant="secondary" size="sm" data-tour="track-export" className="w-full min-w-0 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => setExportDialogOpen(true)}><FileDown className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">{isPro ? 'Export Track' : 'Preview Export'}</span></Button>
                     </Hint>
+                    {firstDropsOn && !isGuestTryMode ? (
+                      <Hint
+                        actionSafe
+                        content={
+                          <p className="text-[10px] font-bold leading-snug">
+                            Sell this track from The Lathe — upload, price, press live. DNA Drop stays lyrics-only.
+                          </p>
+                        }
+                      >
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="w-full min-w-0 bg-fuchsia-500/15 hover:bg-fuchsia-500/25 text-fuchsia-200 border border-fuchsia-400/35 text-[9px] font-bold h-9 uppercase justify-start leading-none pl-2 pr-2.5"
+                          onClick={() => openFirstDropLathe({ albumId: album.id, trackId: track.id })}
+                        >
+                          <Disc3 className="mr-2 h-4 w-4 shrink-0" />
+                          <span className="truncate min-w-0">Press a song</span>
+                        </Button>
+                      </Hint>
+                    ) : null}
                     <div data-tour="dna-drop" className="w-full min-w-0">
                     {isPro ? (
                       <Hint

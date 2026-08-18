@@ -24,6 +24,13 @@ service cloud.firestore {
       return isOwner(userId) || isAdmin();
     }
 
+    // Server-owned counters (Admin SDK). Clients may keep an existing value or omit it.
+    function lockedServerNumber(key) {
+      return !(key in request.resource.data)
+        || (!(key in resource.data) && request.resource.data[key] == 0)
+        || (key in resource.data && request.resource.data[key] == resource.data[key]);
+    }
+
     function validVoiceNote(data) {
       return data is map
         && data.keys().hasAll(['url', 'storagePath', 'contentType', 'durationSec', 'byteSize'])
@@ -351,7 +358,8 @@ service cloud.firestore {
         );
       allow update: if request.auth != null
         && resource.data.ownerId == request.auth.uid
-        && request.resource.data.ownerId == resource.data.ownerId;
+        && request.resource.data.ownerId == resource.data.ownerId
+        && lockedServerNumber('viewCount');
       allow delete: if request.auth != null
         && (resource.data.ownerId == request.auth.uid || isAdmin());
 
@@ -376,6 +384,10 @@ service cloud.firestore {
           && (resource.data.authorId == request.auth.uid
             || get(/databases/$(database)/documents/posts/$(postId)).data.ownerId == request.auth.uid
             || isAdmin());
+      }
+
+      match /viewTicks/{tickId} {
+        allow read, write: if false;
       }
     }
 

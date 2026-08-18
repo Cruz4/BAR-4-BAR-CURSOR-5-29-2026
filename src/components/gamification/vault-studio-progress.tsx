@@ -8,21 +8,21 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useGamification } from '@/context/gamification-context';
 import { useAuth } from '@/hooks/use-auth';
-import { WEEKLY_CHALLENGES, LIFETIME_MILESTONES, getChallengeProgress, isChallengeComplete, resolveChallengeTarget } from '@/lib/gamification/challenges';
+import { WEEKLY_CHALLENGES, LIFETIME_MILESTONES } from '@/lib/gamification/challenges';
 import { rankFromXp, STUDIO_RANKS, xpProgressInRank } from '@/lib/gamification/ranks';
 import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import {
-  ACHIEVEMENT_CATEGORY,
-  ACHIEVEMENT_CATEGORY_LOCKED,
   rankBadgeClass,
   RANK_XP_BAR,
   STREAK_BADGE,
   XP_LABEL,
 } from '@/lib/gamification/badge-styles';
 import { isProUser } from '@/lib/subscription';
-import { CheckCircle2, Circle, Flame, Lock, Trophy, ChevronRight, ChevronDown } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Flame, Trophy, ChevronRight, ChevronDown } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { StudioStandingRankBadge } from '@/components/gamification/studio-standing-foil-dialog';
+import { ProgressGoalRow } from '@/components/gamification/progress-goal-row';
+import { AchievementBadgeCell } from '@/components/gamification/achievement-badge-cell';
 
 const RECENT_EARN_MS = 48 * 60 * 60 * 1000;
 /** Scene home — remember expand/collapse across visits (desktop). */
@@ -248,7 +248,20 @@ export function VaultStudioProgress({
           )}
           aria-hidden
         />
-        <Trophy className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+        <Tooltip delayDuration={200}>
+          <TooltipTrigger asChild>
+            <span className="inline-flex shrink-0">
+              <Trophy className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="z-[2300] max-w-[220px]">
+            <p className="text-[11px] font-bold leading-snug">Studio Progress</p>
+            <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+              Weekly goals, personal milestones, and foil cards. Tap a completed item to post, share, or
+              download.
+            </p>
+          </TooltipContent>
+        </Tooltip>
         <div className="min-w-0 flex-1 overflow-hidden">
           <p
             className={cn(
@@ -267,21 +280,31 @@ export function VaultStudioProgress({
           )}
         </div>
       </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        asChild
-        className={cn(
-          'h-6 px-1.5 font-bold uppercase tracking-wider text-muted-foreground hover:text-primary shrink-0',
-          isSidebar ? 'text-[9px]' : 'text-[8px]'
-        )}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Link href="/studio-progress">
-          {isSidebar ? 'All' : 'View all'}
-          <ChevronRight className="ml-0.5 h-3 w-3" />
-        </Link>
-      </Button>
+      <Tooltip delayDuration={200}>
+        <TooltipTrigger asChild>
+          <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className={cn(
+                'h-6 px-1.5 font-bold uppercase tracking-wider text-muted-foreground hover:text-primary shrink-0',
+                isSidebar ? 'text-[9px]' : 'text-[8px]'
+              )}
+            >
+              <Link href="/studio-progress">
+                {isSidebar ? 'All' : 'View all'}
+                <ChevronRight className="ml-0.5 h-3 w-3" />
+              </Link>
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="z-[2300] max-w-[220px]">
+          <p className="text-[11px] leading-snug">
+            Open the full Studio Progress board — every goal, rank, and foil card.
+          </p>
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 
@@ -294,43 +317,80 @@ export function VaultStudioProgress({
     >
         <div className="rounded-lg border border-primary/15 bg-gradient-to-br from-muted/80 to-sky-100/60 dark:from-black/40 dark:to-sky-950/20 px-2.5 py-2 space-y-1.5 min-w-0 overflow-hidden">
           <div className="flex flex-wrap items-center gap-1.5">
-            <StudioStandingRankBadge
-              allowShare
-              showTrophy
-              badgeClassName={cn(
-                isSidebar ? 'text-[10px] font-bold uppercase gap-1 px-2 py-0 h-5' : 'text-[9px] font-bold uppercase gap-1 px-2 py-0 h-5',
-                rankBadgeClass(rank.id)
-              )}
-              stats={{
-                displayName: user.displayName || 'Artist',
-                rankId: rank.id,
-                rankLabel,
-                xp: summary.xp,
-                streak: summary.currentStreak,
-                longestStreak: summary.longestStreak,
-                lifetimeBarsWritten: summary.lifetimeBarsWritten,
-                lifetimeLinesGenerated: summary.lifetimeLinesGenerated || 0,
-                badgeCount: achievementCount,
-                isPro,
-                profileSlug: summary.profileSlug,
-              }}
-            />
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger asChild>
+                <span className="inline-flex">
+                  <StudioStandingRankBadge
+                    allowShare
+                    showTrophy
+                    badgeClassName={cn(
+                      isSidebar ? 'text-[10px] font-bold uppercase gap-1 px-2 py-0 h-5' : 'text-[9px] font-bold uppercase gap-1 px-2 py-0 h-5',
+                      rankBadgeClass(rank.id)
+                    )}
+                    stats={{
+                      displayName: user.displayName || 'Artist',
+                      rankId: rank.id,
+                      rankLabel,
+                      xp: summary.xp,
+                      streak: summary.currentStreak,
+                      longestStreak: summary.longestStreak,
+                      lifetimeBarsWritten: summary.lifetimeBarsWritten,
+                      lifetimeLinesGenerated: summary.lifetimeLinesGenerated || 0,
+                      badgeCount: achievementCount,
+                      isPro,
+                      profileSlug: summary.profileSlug,
+                    }}
+                  />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="z-[2300] max-w-[220px]">
+                <p className="text-[11px] font-bold leading-snug">{rankLabel}</p>
+                <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                  Earn XP by writing, generating, completing tracks, and unlocking badges. Tap to open
+                  your Studio Standing foil — post to the wall, share, or download.
+                </p>
+              </TooltipContent>
+            </Tooltip>
             {summary.currentStreak > 0 && (
-              <Badge
-                variant="outline"
-                className={cn(
-                  STREAK_BADGE,
-                  'px-2 py-0 h-5',
-                  isSidebar ? 'text-[10px]' : 'text-[9px]'
-                )}
-              >
-                <Flame className="h-3 w-3" />
-                {summary.currentStreak}d
-              </Badge>
+              <Tooltip delayDuration={200}>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        STREAK_BADGE,
+                        'px-2 py-0 h-5',
+                        isSidebar ? 'text-[10px]' : 'text-[9px]'
+                      )}
+                    >
+                      <Flame className="h-3 w-3" />
+                      {summary.currentStreak}d
+                    </Badge>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="z-[2300] max-w-[220px]">
+                  <p className="text-[11px] font-bold leading-snug">Daily streak</p>
+                  <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                    Write in the studio on consecutive days. Miss a day and the streak resets.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
             )}
-            <span className={cn(XP_LABEL, isSidebar ? 'text-[11px]' : 'text-[10px]')}>
-              {summary.xp.toLocaleString()} XP
-            </span>
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger asChild>
+                <span className={cn(XP_LABEL, isSidebar ? 'text-[11px]' : 'text-[10px]')}>
+                  {summary.xp.toLocaleString()} XP
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="z-[2300] max-w-[220px]">
+                <p className="text-[11px] font-bold leading-snug">Studio XP</p>
+                <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                  {nextRank
+                    ? `${Math.max(0, (next ?? current) - current).toLocaleString()} XP to ${nextRank.label}. Write, generate, finish tracks, and unlock badges to rank up.`
+                    : 'Top rank — keep building.'}
+                </p>
+              </TooltipContent>
+            </Tooltip>
           </div>
           <div className="h-1 rounded-full bg-muted overflow-hidden">
             <div
@@ -354,45 +414,48 @@ export function VaultStudioProgress({
         </div>
 
         <div className="rounded-lg border border-emerald-500/15 bg-gradient-to-br from-muted/80 to-emerald-100/50 dark:from-black/40 dark:to-emerald-950/15 px-2.5 py-2 min-w-0 overflow-hidden">
-          <p className={cn('font-bold uppercase tracking-wide text-emerald-800 dark:text-emerald-200 mb-1.5 leading-snug', isSidebar ? 'text-[10px]' : 'text-[9px]')}>
-            <span className="block sm:inline">Weekly goals</span>
-            <span className="block sm:inline font-normal normal-case tracking-normal text-muted-foreground sm:before:content-['·_']">
-              Mon reset
-            </span>
-          </p>
+          <div
+            className={cn(
+              'mb-1.5 flex items-center gap-1 leading-snug',
+              isSidebar ? 'text-[10px]' : 'text-[9px]'
+            )}
+          >
+            <p className="min-w-0 flex-1 font-bold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
+              <span className="block sm:inline">Weekly goals</span>
+              <span className="block sm:inline font-normal normal-case tracking-normal text-muted-foreground sm:before:content-['·_']">
+                Mon reset
+              </span>
+            </p>
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/leaderboard"
+                  aria-label="Weekly leaderboard"
+                  className="flex h-4 w-4 shrink-0 items-center justify-center text-amber-400/80 hover:text-amber-300"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Trophy className="h-3 w-3" aria-hidden />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="z-[2300] max-w-[220px]">
+                <p className="text-[11px] font-bold leading-snug">Leaderboard</p>
+                <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                  See how this week’s goals stack up against the block.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
           <ul className="space-y-1 min-w-0">
-            {WEEKLY_CHALLENGES.map((challenge) => {
-              const progress = getChallengeProgress(summary, challenge, isPro);
-              const done = isChallengeComplete(summary, challenge, isPro);
-              const target = resolveChallengeTarget(challenge, isPro);
-              return (
-                <li key={challenge.id} className="flex items-center gap-2 min-h-[18px] min-w-0">
-                  {done ? (
-                    <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" aria-hidden />
-                  ) : (
-                    <Circle className="h-3 w-3 text-muted-foreground/35 shrink-0" aria-hidden />
-                  )}
-                  <p
-                    className={cn(
-                      'font-code leading-snug truncate flex-1 min-w-0',
-                      isSidebar ? 'text-[11px]' : 'text-[10px]',
-                      done ? 'text-emerald-700 dark:text-emerald-300/95' : 'text-foreground/90'
-                    )}
-                  >
-                    {challenge.label}
-                  </p>
-                  <span
-                    className={cn(
-                      'font-mono shrink-0 tabular-nums whitespace-nowrap',
-                      isSidebar ? 'text-[10px]' : 'text-[9px]',
-                      done ? 'text-emerald-700 dark:text-emerald-400/80' : 'text-muted-foreground'
-                    )}
-                  >
-                    {progress}/{target}
-                  </span>
-                </li>
-              );
-            })}
+            {WEEKLY_CHALLENGES.map((challenge) => (
+              <ProgressGoalRow
+                key={challenge.id}
+                challenge={challenge}
+                summary={summary}
+                isPro={isPro}
+                accent="weekly"
+                compact={!isSidebar}
+              />
+            ))}
           </ul>
         </div>
 
@@ -402,43 +465,16 @@ export function VaultStudioProgress({
               Personal milestones
             </p>
             <ul className="space-y-1 min-w-0">
-              {LIFETIME_MILESTONES.map((challenge) => {
-                const progress = getChallengeProgress(summary, challenge, isPro);
-                const target = resolveChallengeTarget(challenge, isPro);
-                const done = isChallengeComplete(summary, challenge, isPro);
-                const isRankGoal =
-                  challenge.field === 'rankHeadliner' || challenge.field === 'rankVaultArchitect';
-                const progressLabel = isRankGoal
-                  ? done
-                    ? 'Done'
-                    : `${summary.xp.toLocaleString()}/${challenge.target.toLocaleString()}`
-                  : `${progress}/${target}`;
-                return (
-                  <li key={challenge.id} className="flex items-center gap-2 min-h-[18px] min-w-0">
-                    {done ? (
-                      <CheckCircle2 className="h-3 w-3 text-amber-600 dark:text-amber-400 shrink-0" aria-hidden />
-                    ) : (
-                      <Circle className="h-3 w-3 text-muted-foreground/35 shrink-0" aria-hidden />
-                    )}
-                    <p
-                      className={cn(
-                        'text-[11px] font-code leading-snug truncate flex-1 min-w-0',
-                        done ? 'text-amber-800 dark:text-amber-200/95' : 'text-foreground/90'
-                      )}
-                    >
-                      {challenge.label}
-                    </p>
-                    <span
-                      className={cn(
-                        'text-[10px] font-mono shrink-0 tabular-nums whitespace-nowrap',
-                        done ? 'text-amber-700 dark:text-amber-400/80' : 'text-muted-foreground'
-                      )}
-                    >
-                      {progressLabel}
-                    </span>
-                  </li>
-                );
-              })}
+              {LIFETIME_MILESTONES.map((challenge) => (
+                <ProgressGoalRow
+                  key={challenge.id}
+                  challenge={challenge}
+                  summary={summary}
+                  isPro={isPro}
+                  accent="lifetime"
+                  compact={false}
+                />
+              ))}
             </ul>
           </div>
         )}
@@ -459,19 +495,15 @@ export function VaultStudioProgress({
           </div>
           <div className="flex flex-wrap gap-1.5 min-w-0">
             {unlockedBadges.map((a) => (
-              <Badge
+              <AchievementBadgeCell
                 key={a.id}
-                variant="outline"
-                className={cn(
-                  'inline-flex max-w-full min-w-0 h-auto min-h-5 py-0.5 px-2 font-bold uppercase',
-                  isSidebar ? 'text-[9px]' : 'text-[8px]',
-                  ACHIEVEMENT_CATEGORY[a.category]
-                )}
-                title={a.description}
-              >
-                <Trophy className="h-2.5 w-2.5 mr-1 shrink-0 opacity-80" />
-                <span className="truncate">{a.title}</span>
-              </Badge>
+                variant="chip"
+                achievement={a}
+                unlocked
+                lockedPro={false}
+                unlockedAt={unlocked[a.id]}
+                className={isSidebar ? 'text-[9px]' : 'text-[8px]'}
+              />
             ))}
             {unlockedBadges.length === 0 && (
               <p className={cn('text-muted-foreground/80 italic py-0.5 break-words', isSidebar ? 'text-[11px]' : 'text-[10px]')}>
@@ -479,19 +511,14 @@ export function VaultStudioProgress({
               </p>
             )}
             {lockedPreview.map((a) => (
-              <Badge
+              <AchievementBadgeCell
                 key={`locked-${a.id}`}
-                variant="outline"
-                className={cn(
-                  'inline-flex max-w-full min-w-0 h-auto min-h-5 py-0.5 px-2 font-bold uppercase',
-                  isSidebar ? 'text-[9px]' : 'text-[8px]',
-                  ACHIEVEMENT_CATEGORY_LOCKED[a.category]
-                )}
-                title={a.description}
-              >
-                <Lock className="h-2.5 w-2.5 mr-1 shrink-0 text-muted-foreground dark:text-slate-400" />
-                <span className="truncate">{a.title}</span>
-              </Badge>
+                variant="chip"
+                achievement={a}
+                unlocked={false}
+                lockedPro={Boolean(a.proOnly && !isPro)}
+                className={isSidebar ? 'text-[9px]' : 'text-[8px]'}
+              />
             ))}
           </div>
         </div>
@@ -507,26 +534,30 @@ export function VaultStudioProgress({
 
   if (isSidebar && !showExpanded) {
     return (
-      <div
-        className="mr-40 2xl:mr-48 shrink-0 -translate-y-2 2xl:-translate-y-4"
-        data-tour={tourId ?? 'vault-progress-desktop'}
-      >
-        {sidebarBubble}
-      </div>
+      <TooltipProvider delayDuration={200}>
+        <div
+          className="mr-40 2xl:mr-48 shrink-0 -translate-y-2 2xl:-translate-y-4"
+          data-tour={tourId ?? 'vault-progress-desktop'}
+        >
+          {sidebarBubble}
+        </div>
+      </TooltipProvider>
     );
   }
 
   return (
-    <Card
-      data-tour={tourId ?? (isSidebar ? 'vault-progress-desktop' : 'vault-progress-mobile')}
-      className={cn(
-        cardClassName,
-        isSidebar && 'animate-in fade-in slide-in-from-left-2 duration-200',
-        tourForceExpanded && 'ring-2 ring-primary/40 ring-offset-2 ring-offset-background'
-      )}
-    >
-      {headerBlock}
-      {bodyBlock}
-    </Card>
+    <TooltipProvider delayDuration={200}>
+      <Card
+        data-tour={tourId ?? (isSidebar ? 'vault-progress-desktop' : 'vault-progress-mobile')}
+        className={cn(
+          cardClassName,
+          isSidebar && 'animate-in fade-in slide-in-from-left-2 duration-200',
+          tourForceExpanded && 'ring-2 ring-primary/40 ring-offset-2 ring-offset-background'
+        )}
+      >
+        {headerBlock}
+        {bodyBlock}
+      </Card>
+    </TooltipProvider>
   );
 }

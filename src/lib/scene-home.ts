@@ -13,11 +13,20 @@ export const VAULT_PATH = '/vault';
 
 export const SCENE_HOME_PATH = '/';
 
+/** Top of The Scene (header) — jump target from Your Block. */
+export const SCENE_TOP_ID = 'scene-top';
+
+/** Your Booth card on Scene home. */
+export const SCENE_BOOTH_ID = 'your-booth';
+
 /** Anchor for friends posts on Scene home (after Live DNA Drops). */
 export const BLOCK_SECTION_ID = 'your-block';
 
 /** Anchor for Discover the Scene strip on Scene home. */
 export const DISCOVER_SECTION_ID = 'discover-scene';
+
+/** Find artists / find a friend panel under Discover. */
+export const FIND_ARTISTS_SECTION_ID = 'find-artists';
 
 /** True when the pathname is the Vault surface (respects the flag). */
 export function isVaultPath(pathname: string | null | undefined): boolean {

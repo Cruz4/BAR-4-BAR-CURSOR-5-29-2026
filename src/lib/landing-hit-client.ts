@@ -3,6 +3,7 @@
 import { auth } from '@/lib/firebase/client/firebase';
 import { getOrCreateGuestIdentity } from '@/lib/guest-identity';
 import { getStoredMarketingRef, normalizeMarketingRef } from '@/lib/marketing-attribution';
+import { loadLastCachedUserProfile } from '@/lib/offline/vault-cache';
 
 const SENT_PREFIX = 'b4b_landing_hit_sent:';
 const ALERT_PATHS = new Set(['/', '/pricing', '/login', '/welcome']);
@@ -11,8 +12,19 @@ function resolveRef(urlRef: string | null): string {
   return urlRef || getStoredMarketingRef() || 'organic';
 }
 
+function isSignedInSession(explicit?: boolean): boolean {
+  if (explicit) return true;
+  if (auth.currentUser) return true;
+  // AuthProvider hydrates the last profile before Firebase restores currentUser.
+  // Without this, a logged-in Scene visit on / looks like a guest organic hit.
+  return Boolean(loadLastCachedUserProfile());
+}
+
 /** Report a public page visit once per tab session (ref or organic), with guest alias. */
-export async function reportLandingHitIfNeeded(pathname: string): Promise<void> {
+export async function reportLandingHitIfNeeded(
+  pathname: string,
+  opts?: { signedIn?: boolean }
+): Promise<void> {
   if (typeof window === 'undefined') return;
   try {
     const path = pathname || window.location.pathname || '/';
@@ -20,18 +32,18 @@ export async function reportLandingHitIfNeeded(pathname: string): Promise<void> 
 
     const params = new URLSearchParams(window.location.search);
     const urlRef = normalizeMarketingRef(params.get('ref'));
-    const user = auth.currentUser;
+    const signedIn = isSignedInSession(opts?.signedIn);
 
-    // Logged-in vault home: skip organic noise; still alert on explicit ?ref= links.
-    if (path === '/' && user && !urlRef) return;
+    // Logged-in Scene lives at / — skip organic noise; still alert on explicit ?ref= links.
+    if (path === '/' && signedIn && !urlRef) return;
     // Logged-in pricing is reported via analytics pricing_view.
-    if (path === '/pricing' && user) return;
+    if (path === '/pricing' && signedIn) return;
     // Login/welcome: only alert when a marketing ref is present (or stored).
-    if ((path === '/login' || path === '/welcome') && user) return;
+    if ((path === '/login' || path === '/welcome') && signedIn) return;
     if ((path === '/login' || path === '/welcome') && !urlRef && !getStoredMarketingRef()) return;
 
     const ref = resolveRef(urlRef);
-    // Organic login noise — skip; organic / and /pricing still alert.
+    // Organic login noise — skip; organic / and /pricing still alert for real guests.
     if ((path === '/login' || path === '/welcome') && ref === 'organic') return;
 
     const { guestId, guestAlias } = getOrCreateGuestIdentity();

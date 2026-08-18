@@ -15,6 +15,7 @@ import { ProgressCelebration } from '@/components/gamification/progress-celebrat
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { usePathname } from 'next/navigation';
 import { isPublicArtistHomePath } from '@/lib/profile/profile-slug';
+import { isTrackLyricSheetPath } from '@/lib/studio-theme';
 import { StudioTips } from './studio-tips';
 import { FloatingInkSpent } from './floating-ink-spent';
 import { WhatsNewDialog } from './whats-new-dialog';
@@ -35,6 +36,7 @@ import { AdminAlertListener } from './admin-alert-listener';
 import { InviteGateGuard } from './invite-gate-guard';
 import { DropPlayerProvider, useOptionalDropPlayer } from '@/context/drop-player-context';
 import { DropNowPlayingBar, shouldHideDropNowPlayingBar } from '@/components/library/drop-now-playing-bar';
+import { FirstDropLatheHost } from '@/components/first-drop-lathe';
 import { ProFeaturePreviewBanner } from './pro-feature-preview-banner';
 import { ProTrialWinQuestStrip } from './pro-trial-win-quest-strip';
 import { ProPreviewEndedDialog } from './pro-preview-ended-dialog';
@@ -155,6 +157,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               {!isSharePage && !isPublicProfilePage && !isMarketingCapture && <StudioTips />}
               {!isSharePage && !isPublicProfilePage && <FloatingInkSpent />}
               <DropNowPlayingBar />
+              <FirstDropLatheHost />
               <Toaster />
               <AchievementUnlockCelebration />
               <ProgressCelebration />
@@ -169,6 +172,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   useChunkLoadRecovery();
+  const pathname = usePathname();
+  const onLyricSheet = isTrackLyricSheetPath(pathname);
 
   return (
     <ThemeProvider
@@ -177,6 +182,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       enableSystem
       storageKey="b4b-theme"
       disableTransitionOnChange
+      forcedTheme={onLyricSheet ? undefined : 'dark'}
     >
       <AuthProvider>
         <DropPlayerProvider>

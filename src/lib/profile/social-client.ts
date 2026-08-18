@@ -58,6 +58,8 @@ export type ProfilePost = {
   /** Inline image (data URL or https) — e.g. achievement foil card. */
   imageUrl?: string;
   createdAt: string;
+  /** Unique people who saw this post. Owner-only in the UI. */
+  viewCount?: number;
   /** True when this wall post is a Reverb (repost) of another artist's post. */
   isReverb?: boolean;
   reverbPostId?: string;
@@ -267,6 +269,9 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
     embedProvider: data.embedProvider as EmbedProvider | undefined,
     imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : undefined,
     createdAt: String(data.createdAt || ''),
+    ...(typeof data.viewCount === 'number' && data.viewCount > 0
+      ? { viewCount: Math.floor(data.viewCount) }
+      : {}),
     ...(data.isReverb === true ? { isReverb: true } : {}),
     ...(typeof data.reverbPostId === 'string' ? { reverbPostId: data.reverbPostId } : {}),
     ...(typeof data.reverbOwnerId === 'string' ? { reverbOwnerId: data.reverbOwnerId } : {}),

@@ -417,7 +417,7 @@ function GuestPressingLandingInner() {
               <li className="flex gap-2">
                 <Music className="mt-0.5 h-3.5 w-3.5 shrink-0 text-fuchsia-400" />
                 <span>
-                  First Drops — sell the actual song on a DNA Drop. Fans buy once and stream here.{' '}
+                  First Drops — press the song on The Lathe from The Scene. Fans buy once and stream here.{' '}
                   {firstDropsFeeCashoutLine()}
                 </span>
               </li>
@@ -775,7 +775,7 @@ function GuestPressingLandingInner() {
             This preview is your Artist Home — completely free. Type above for The Pressing. Click Bar of the Week on
             the page to edit it. Mix & sizes still has faders and S/M/L. Claim keeps your look.
             {firstDropsOn
-              ? ` First Drops: put the song on a DNA Drop, set a price, fans stream here. ${firstDropsFeeCashoutLine()}`
+              ? ` First Drops: Press a song from The Scene, set a price, fans stream here. ${firstDropsFeeCashoutLine()}`
               : ''}
           </p>
         </div>
