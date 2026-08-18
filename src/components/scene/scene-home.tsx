@@ -25,6 +25,8 @@ import { SceneDiscoverCard } from '@/components/scene/scene-discover-card';
 import { SceneLiveDropsStrip } from '@/components/scene/scene-live-drops-strip';
 import { SceneOnSaleRail } from '@/components/scene/scene-on-sale-rail';
 import { SceneLivePrompts } from '@/components/scene/scene-live-prompts';
+import { SceneWeatherChip } from '@/components/scene/scene-weather-chip';
+import { SceneBoothMemoryCard } from '@/components/scene/scene-booth-memory-card';
 import { SceneBlockAtmosphere } from '@/components/scene/scene-block-atmosphere';
 import { InfiniteFeedSentinel } from '@/components/scene/infinite-feed-sentinel';
 import { SceneFeedJumpHints } from '@/components/scene/scene-feed-jump-hints';
@@ -181,7 +183,7 @@ function SceneComposer({
       <Textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Drop a bar to your wall — friends see it on their Scene."
+        placeholder="Write a post for your wall..."
         rows={2}
         maxLength={1000}
         className="min-h-[3.25rem] resize-none border-border/60 bg-background/60 text-sm"
@@ -753,6 +755,7 @@ export function SceneHome() {
                   </p>
                 </div>
               </div>
+              <SceneWeatherChip />
             </div>
           </header>
 
@@ -842,6 +845,8 @@ export function SceneHome() {
           )}
 
           <SceneComposer profileSlug={summary.profileSlug} onPosted={onPosted} />
+
+          <SceneBoothMemoryCard />
 
           <SceneLivePrompts />
 

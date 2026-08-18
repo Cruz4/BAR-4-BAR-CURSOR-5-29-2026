@@ -133,6 +133,7 @@ import {
   type LyricsTourStep,
 } from '@/lib/studio-onboarding';
 import { persistLastWorkedTrack } from '@/lib/studio-tips-session';
+import { boothMemoryFromTrack, persistBoothMemorySnapshot } from '@/lib/scene/booth-memory';
 import {
   appendQuery,
   clearStaleLastWorkedTrackPath,
@@ -3743,11 +3744,44 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   const workstationAttention = workstationBackgroundActive && !generateDraftOpen && pageVisible;
 
+  const boothMemoryRef = useRef<ReturnType<typeof boothMemoryFromTrack>>(null);
+
   useEffect(() => {
     if (albumId && trackId) {
       persistLastWorkedTrack(`/albums/${albumId}/tracks/${trackId}`);
     }
   }, [albumId, trackId]);
+
+  useEffect(() => {
+    if (!track || !albumId || !trackId || isGuestTryMode) return;
+    const memory = boothMemoryFromTrack({
+      path: `/albums/${albumId}/tracks/${trackId}`,
+      track,
+      albumTitle: album?.title,
+    });
+    if (!memory) return;
+    boothMemoryRef.current = memory;
+    const timer = window.setTimeout(() => persistBoothMemorySnapshot(memory), 2500);
+    return () => window.clearTimeout(timer);
+  }, [album, albumId, isGuestTryMode, track, trackId]);
+
+  useEffect(() => {
+    const flush = () => {
+      if (isGuestTryMode) return;
+      const memory = boothMemoryRef.current;
+      if (memory) persistBoothMemorySnapshot(memory);
+    };
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, [isGuestTryMode]);
 
   useEffect(() => {
     try {

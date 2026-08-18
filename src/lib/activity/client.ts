@@ -21,6 +21,7 @@ import {
   type ActivitySummary,
   type ActivityType,
 } from '@/lib/activity/types';
+import { craftToBoothMemory, readLocalBoothMemory, type BoothMemory } from '@/lib/scene/booth-memory';
 
 export type EmitActivityClientInput = {
   type: ActivityType;
@@ -284,23 +285,55 @@ export async function savePushToken(fcmToken: string | null): Promise<void> {
 }
 
 /** Persist last sheet so Activity can say “your verse is still open.” */
-export function persistCraftResume(path: string, title?: string): void {
+export type CraftResumePatch = {
+  title?: string;
+  albumTitle?: string;
+  lastBarText?: string;
+  barCount?: number;
+};
+
+export function persistCraftResume(path: string, extras?: CraftResumePatch | string): void {
   void (async () => {
     const user = auth.currentUser;
     if (!user) return;
     if (!/^\/albums\/[^/]+\/tracks\/[^/]+$/.test(path)) return;
+    const patch: CraftResumePatch = typeof extras === 'string' ? { title: extras } : extras || {};
+    const payload: Record<string, unknown> = {
+      lastTrackPath: path,
+      updatedAt: new Date().toISOString(),
+    };
+    if (patch.title !== undefined) {
+      payload.lastTrackTitle = patch.title.trim().slice(0, 80) || null;
+    }
+    if (patch.albumTitle !== undefined) {
+      payload.lastAlbumTitle = patch.albumTitle.trim().slice(0, 80) || null;
+    }
+    if (patch.lastBarText !== undefined) {
+      payload.lastBarText = patch.lastBarText.trim().slice(0, 160) || null;
+    }
+    if (typeof patch.barCount === 'number' && Number.isFinite(patch.barCount)) {
+      payload.barCount = Math.max(0, Math.round(patch.barCount));
+    }
     try {
-      await setDoc(
-        doc(db, 'users', user.uid, 'activityMeta', 'craft'),
-        {
-          lastTrackPath: path,
-          lastTrackTitle: title?.trim().slice(0, 80) || null,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
+      await setDoc(doc(db, 'users', user.uid, 'activityMeta', 'craft'), payload, { merge: true });
     } catch (err) {
       console.warn('[persistCraftResume]', err);
     }
   })();
+}
+
+export async function fetchCraftResume(): Promise<BoothMemory | null> {
+  const local = readLocalBoothMemory();
+  const user = auth.currentUser;
+  if (!user) return local;
+  try {
+    const snap = await getDoc(doc(db, 'users', user.uid, 'activityMeta', 'craft'));
+    if (!snap.exists()) return local;
+    const remote = craftToBoothMemory(snap.data() as Parameters<typeof craftToBoothMemory>[0]);
+    if (!remote) return local;
+    if (!local) return remote;
+    return Date.parse(remote.updatedAt) >= Date.parse(local.updatedAt) ? remote : local;
+  } catch {
+    return local;
+  }
 }

@@ -19,6 +19,9 @@ export const SCENE_TOP_ID = 'scene-top';
 /** Your Booth card on Scene home. */
 export const SCENE_BOOTH_ID = 'your-booth';
 
+/** Booth memory — last unfinished sheet on Scene home. */
+export const SCENE_BOOTH_MEMORY_ID = 'booth-memory';
+
 /** Anchor for friends posts on Scene home (after Live DNA Drops). */
 export const BLOCK_SECTION_ID = 'your-block';
 

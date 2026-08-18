@@ -21,3 +21,17 @@ export function rhymeBarsToLines(barCount: number): number {
 export function countRhymeBars(sections: TrackSection[] | undefined): number {
   return linesToRhymeBars(countNonEmptyLines(sections));
 }
+
+/** Last non-empty line on the sheet, walking sections in order. */
+export function lastNonEmptyBarText(sections: TrackSection[] | undefined): string | null {
+  if (!sections?.length) return null;
+  for (let s = sections.length - 1; s >= 0; s -= 1) {
+    const bars = sections[s]?.bars;
+    if (!bars?.length) continue;
+    for (let i = bars.length - 1; i >= 0; i -= 1) {
+      const text = String(bars[i]?.text || '').trim();
+      if (text) return text;
+    }
+  }
+  return null;
+}

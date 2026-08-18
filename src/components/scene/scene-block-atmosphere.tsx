@@ -20,7 +20,7 @@ import {
 } from '@/lib/scene/scene-sky';
 
 /**
- * The Scene Block — skyline driven by local day/night + live weather,
+ * The Scene Block — skyline driven by house-city weather + day/night,
  * with lit windows tracking social activity around the viewer.
  */
 
@@ -132,7 +132,7 @@ const CLOUDS = (() => {
 
 const PRECIP = (() => {
   const rand = mulberry32(31415);
-  return Array.from({ length: 48 }, (_, i) => ({
+  return Array.from({ length: 80 }, (_, i) => ({
     id: i,
     left: rand() * 100,
     delay: rand() * 4,

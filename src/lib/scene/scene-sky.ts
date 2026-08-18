@@ -1,7 +1,18 @@
 /**
  * Scene sky model — day/night phase + weather condition for the skyline.
  * Weather codes follow Open-Meteo / WMO interpretation.
+ *
+ * Live weather uses the house city (not GPS). Geolocation is blocked in
+ * Permissions-Policy; The Scene is a venue, not a weather app.
  */
+
+/** Default city for Scene weather when the client has no coordinates. */
+export const SCENE_HOUSE_CITY = {
+  name: 'New York',
+  shortName: 'NYC',
+  lat: 40.7128,
+  lon: -74.006,
+} as const;
 
 export type SceneSkyPhase = 'day' | 'dusk' | 'night' | 'dawn';
 
@@ -200,4 +211,35 @@ export function precipKind(
     default:
       return 'none';
   }
+}
+
+const PHASE_CHIP: Record<SceneSkyPhase, string> = {
+  dawn: 'dawn',
+  day: 'day',
+  dusk: 'dusk',
+  night: 'night',
+};
+
+const WEATHER_ON_THE_BLOCK: Record<SceneWeather, string> = {
+  clear: 'Clear',
+  partly_cloudy: 'Partly cloudy',
+  cloudy: 'Cloudy',
+  fog: 'Fog on the block',
+  drizzle: 'Drizzle on the block',
+  rain: 'Rain on the block',
+  heavy_rain: 'Heavy rain on the block',
+  thunderstorm: 'Storm on the block',
+  snow: 'Snow on the block',
+  heavy_snow: 'Heavy snow on the block',
+  hail: 'Hail on the block',
+  windy: 'Windy',
+};
+
+/** Short Scene chip: "Rain on the block · night" / "Clear · day". */
+export function sceneWeatherChipLabel(
+  weather: SceneWeather,
+  phase: SceneSkyPhase
+): string {
+  const sky = WEATHER_ON_THE_BLOCK[weather] ?? 'On the block';
+  return `${sky} · ${PHASE_CHIP[phase]}`;
 }

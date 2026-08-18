@@ -87,7 +87,7 @@ export function defaultGuestPressingDraft(): GuestPressingDraft {
     displayName: 'Your Name',
     tagline: 'Your booth. Your bars.',
     seedText: DEFAULT_PRESSING.seedText,
-    barOfWeek: 'One line that owns this week.',
+    barOfWeek: 'ink dries different when the pen tells the truth',
     faders: { ...DEFAULT_FADERS },
     alive: true,
     autoDrift: false,

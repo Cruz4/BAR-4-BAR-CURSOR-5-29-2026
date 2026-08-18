@@ -1871,19 +1871,19 @@
   .scene-block-precip-particle {
     top: -5%;
     border-radius: 9999px;
-    opacity: 0.55;
+    opacity: 0.72;
   }
 
   .scene-block-precip.is-drizzle .scene-block-precip-particle,
   .scene-block-precip.is-rain .scene-block-precip-particle,
   .scene-block-precip.is-heavy-rain .scene-block-precip-particle {
-    background: linear-gradient(180deg, transparent, rgba(186, 210, 255, 0.55));
+    background: linear-gradient(180deg, transparent, rgba(186, 210, 255, 0.85));
     width: 1.5px !important;
     animation: scene-block-rain-fall linear infinite;
   }
 
   .scene-block-precip.is-drizzle .scene-block-precip-particle {
-    opacity: 0.35;
+    opacity: 0.5;
   }
 
   .scene-block-precip.is-heavy-rain .scene-block-precip-particle {

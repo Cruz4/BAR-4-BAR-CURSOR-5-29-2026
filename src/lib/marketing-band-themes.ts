@@ -72,17 +72,6 @@ export const MARKETING_BAND_THEMES: Record<string, MarketingBandTheme> = {
     bulletText: ['text-sky-50/92', 'text-primary/90', 'text-sky-100/88'],
     bulletRails: ['border-l-primary/65', 'border-l-sky-500/55', 'border-l-primary/45'],
   },
-  'rhyme-pulse': {
-    panel: 'border-orange-500/28 bg-gradient-to-br from-orange-500/[0.1] via-black/20 to-primary/[0.06]',
-    rule: 'from-orange-400',
-    eyebrow: 'text-orange-300 border-orange-500/35 bg-orange-500/10',
-    titleParts: ['See the', 'Scheme'],
-    titlePartColors: ['text-orange-100', 'text-orange-400'],
-    description: 'text-orange-100/85',
-    bulletNums: ['text-orange-400', 'text-primary', 'text-orange-300'],
-    bulletText: ['text-orange-50/90', 'text-orange-50/90', 'text-orange-50/90'],
-    bulletRails: ['border-l-orange-500/60', 'border-l-primary/50', 'border-l-orange-400/45'],
-  },
   'artist-home': {
     panel: 'border-fuchsia-500/28 bg-gradient-to-br from-fuchsia-500/[0.1] via-black/20 to-sky-500/[0.07]',
     rule: 'from-fuchsia-400',

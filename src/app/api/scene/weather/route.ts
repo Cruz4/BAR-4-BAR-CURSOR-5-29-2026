@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { buildSceneSkyState } from '@/lib/scene/scene-sky';
+import { buildSceneSkyState, SCENE_HOUSE_CITY } from '@/lib/scene/scene-sky';
 
 export const runtime = 'nodejs';
 
@@ -29,12 +29,8 @@ function parseCoord(raw: string | null, min: number, max: number): number | null
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const lat = parseCoord(url.searchParams.get('lat'), -90, 90);
-    const lon = parseCoord(url.searchParams.get('lon'), -180, 180);
-
-    if (lat == null || lon == null) {
-      return NextResponse.json({ error: 'lat and lon required' }, { status: 400 });
-    }
+    const lat = parseCoord(url.searchParams.get('lat'), -90, 90) ?? SCENE_HOUSE_CITY.lat;
+    const lon = parseCoord(url.searchParams.get('lon'), -180, 180) ?? SCENE_HOUSE_CITY.lon;
 
     const upstream = new URL('https://api.open-meteo.com/v1/forecast');
     upstream.searchParams.set('latitude', lat.toFixed(4));
@@ -71,6 +67,7 @@ export async function GET(req: Request) {
     return NextResponse.json(
       {
         sky,
+        city: SCENE_HOUSE_CITY.shortName,
         raw: {
           wmoCode,
           windspeedKmh,

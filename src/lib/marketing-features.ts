@@ -120,23 +120,6 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     mediaVariant: 'showcase',
   },
   {
-    id: 'rhyme-pulse',
-    eyebrow: 'Rhyme Pulse',
-    title: 'See the Scheme',
-    description:
-      'One tap on the lyrics toolbar. Phonetic scan. Color-coded rhyme groups across verses, hooks, and bridges.',
-    bullets: [
-      'Round button right on the sheet you write on',
-      'Ink cost shown before you scan',
-      'Groups light up — no guessing the scheme',
-    ],
-    mediaSrc: '/marketing/gif-rhyme-pulse.gif',
-    mediaType: 'gif',
-    mediaAlt: 'Rhyme Pulse highlighting rhyme groups on the lyrics sheet',
-    layout: 'split-reverse',
-    mediaVariant: 'showcase',
-  },
-  {
     id: 'vault',
     eyebrow: 'The Vault',
     title: 'Every Bar Has a Home',
