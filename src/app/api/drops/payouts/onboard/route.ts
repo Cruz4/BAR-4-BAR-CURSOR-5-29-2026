@@ -56,10 +56,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ url, ready: false, created });
   } catch (err: unknown) {
     const raw = err instanceof Error ? err.message : 'Could not start payouts';
-    const message = /connect is not enabled|signed up for connect/i.test(raw)
-      ? 'Stripe Connect is not enabled on this studio yet. Turn on Connect in the Stripe Dashboard, then try again.'
+    const connectOff = /connect is not enabled|signed up for connect/i.test(raw);
+    const message = connectOff
+      ? 'Stripe Connect is not turned on for this live Stripe account yet. Open dashboard.stripe.com/connect in Live mode, complete Get started, then tap Connect payouts again. No redeploy needed.'
       : raw;
     console.error('[drops/payouts/onboard]', err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: message,
+        ...(connectOff
+          ? { code: 'connect_not_enabled', dashboardUrl: 'https://dashboard.stripe.com/connect' }
+          : {}),
+      },
+      { status: connectOff ? 409 : 500 }
+    );
   }
 }
