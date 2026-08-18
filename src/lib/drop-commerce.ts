@@ -120,6 +120,7 @@ export type DropLibraryEntry = {
   purchasedAt: string;
   stripeSessionId?: string;
   free?: boolean;
+  own?: boolean;
 };
 
 export function defaultDropPrice(): DropPrice {
