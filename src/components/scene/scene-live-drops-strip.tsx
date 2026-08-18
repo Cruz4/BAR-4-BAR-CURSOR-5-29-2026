@@ -100,28 +100,37 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          'flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card/40 px-3.5 py-2.5 text-left transition-colors',
-          'hover:border-primary/35 hover:bg-card/70',
+          'flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors',
+          firstDropCount > 0
+            ? 'border-fuchsia-500/45 bg-fuchsia-500/10 hover:border-fuchsia-400/60 hover:bg-fuchsia-500/15'
+            : 'border-border/60 bg-card/40 hover:border-primary/35 hover:bg-card/70',
           className
         )}
         data-tour="scene-live-drops"
       >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary/10">
-          <Dna className="h-3.5 w-3.5 text-primary" />
+        <span
+          className={cn(
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border',
+            firstDropCount > 0
+              ? 'border-fuchsia-400/40 bg-fuchsia-500/20 text-fuchsia-200'
+              : 'border-primary/25 bg-primary/10'
+          )}
+        >
+          {firstDropCount > 0 ? <Music className="h-4 w-4" /> : <Dna className="h-3.5 w-3.5 text-primary" />}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block font-code text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground/70">
-            Live drops
+            {firstDropCount > 0 ? 'Your songs for sale' : 'Live drops'}
           </span>
           <span className="block truncate text-xs text-foreground/90">
             {total === 0
-              ? 'None live — DNA Drop a track, then add a First Drop'
+              ? 'None live — publish a track, then add the song + price'
               : firstDropCount > 0
-                ? `${firstDropCount} First Drop${firstDropCount === 1 ? '' : 's'} · ${total} DNA live`
-                : `${albumDrops.length} album${albumDrops.length === 1 ? '' : 's'} · ${trackDrops.length} track${trackDrops.length === 1 ? '' : 's'} · no First Drops yet`}
+                ? `${firstDropCount} on sale · visitors hear these first on your home`
+                : `${albumDrops.length} album${albumDrops.length === 1 ? '' : 's'} · ${trackDrops.length} track${trackDrops.length === 1 ? '' : 's'} · no song for sale yet`}
           </span>
         </span>
-        <span className="shrink-0 font-code text-[9px] font-bold uppercase tracking-[0.18em] text-primary/80">
+        <span className="shrink-0 font-code text-[9px] font-bold uppercase tracking-[0.18em] text-fuchsia-200/90">
           Manage
         </span>
       </button>

@@ -111,6 +111,15 @@ export default function SharedProjectPage() {
       () => normalizeDnaDropMedia(project?.dnaDropMedia),
       [project]
     );
+    const hasFirstDropAudio = useMemo(() => {
+      if (!project) return false;
+      if (isAlbum) {
+        return Boolean(
+          (project as DnaDropAlbumPayload).tracks?.some((t) => normalizeDropAudio(t.dropAudio))
+        );
+      }
+      return Boolean(normalizeDropAudio((project as DnaDropTrackPayload).dropAudio));
+    }, [project, isAlbum]);
     const isOwnShare = Boolean(user && share && user.id === share.ownerId);
 
     const vaultTrack = useMemo(() => {
@@ -311,7 +320,7 @@ export default function SharedProjectPage() {
                             BAR 4 BAR
                         </h1>
                         <p className="text-[7px] sm:text-[8px] text-muted-foreground uppercase tracking-[0.18em] mt-0.5 truncate">
-                            DNA Drop Snapshot
+                            {hasFirstDropAudio ? 'Song · 30s preview · buy to stream' : 'DNA Drop Snapshot'}
                         </p>
                     </div>
                 </Link>
@@ -371,16 +380,36 @@ export default function SharedProjectPage() {
 
             {!user && (
                 <div className="container max-w-7xl mx-auto px-4 pt-4 relative z-10">
-                    <Card className="border-primary/25 bg-primary/5">
+                    <Card className={hasFirstDropAudio ? 'border-fuchsia-500/40 bg-fuchsia-500/10' : 'border-primary/25 bg-primary/5'}>
                         <CardContent className="p-4 text-[11px] font-code text-muted-foreground leading-relaxed">
-                            {isAlbum
-                              ? 'Import Setup copies this album snapshot — album DNA plus every track’s lyrics & structure — into your Bar 4 Bar vault. Open a live song card for that track’s public DNA Drop page.'
-                              : 'Import Setup copies this snapshot — lyrics, structure, Creative DNA, intents, vibe, guardrails, special instructions, and Style DNA when shared — into your Bar 4 Bar vault.'}
+                            {hasFirstDropAudio ? (
+                              <>
+                                Hit play for a 30-second preview. Buy once to stream the full song in Bar 4 Bar — not Spotify.
+                                {' '}
+                                <button type="button" className="text-fuchsia-300 underline underline-offset-2 font-bold" onClick={() => router.push(`/login?next=${encodeURIComponent(`/share/${shareId}`)}`)}>
+                                  Sign in to unlock
+                                </button>
+                                {'. Lyrics and DNA are on this same page if you want them.'}
+                              </>
+                            ) : isAlbum ? (
+                              <>
+                            Import Setup copies this album snapshot — album DNA plus every track’s lyrics & structure — into your Bar 4 Bar vault. Open a live song card for that track’s public DNA Drop page.
                             {' '}
                             <button type="button" className="text-primary underline underline-offset-2 font-bold" onClick={() => router.push(`/login?next=${encodeURIComponent(`/share/${shareId}`)}&intent=dna-import`)}>
                                 Sign in or create a free account
                             </button>
                             {' '}to import. Studio Pro is required to import DNA Drops from other artists.
+                              </>
+                            ) : (
+                              <>
+                            Import Setup copies this snapshot — lyrics, structure, Creative DNA, intents, vibe, guardrails, special instructions, and Style DNA when shared — into your Bar 4 Bar vault.
+                            {' '}
+                            <button type="button" className="text-primary underline underline-offset-2 font-bold" onClick={() => router.push(`/login?next=${encodeURIComponent(`/share/${shareId}`)}&intent=dna-import`)}>
+                                Sign in or create a free account
+                            </button>
+                            {' '}to import. Studio Pro is required to import DNA Drops from other artists.
+                              </>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
@@ -398,15 +427,7 @@ export default function SharedProjectPage() {
                             ? normalizeDropPrice((project as DnaDropAlbumPayload).dropPrice)
                             : normalizeDropPrice((project as DnaDropTrackPayload).dropPrice)
                         }
-                        hasAudio={
-                          isAlbum
-                            ? Boolean(
-                                (project as DnaDropAlbumPayload).tracks?.some((t) =>
-                                  normalizeDropAudio(t.dropAudio)
-                                )
-                              )
-                            : Boolean(normalizeDropAudio((project as DnaDropTrackPayload).dropAudio))
-                        }
+                        hasAudio={hasFirstDropAudio}
                       />
                     </Suspense>
                     <DropSocialPanel

@@ -23,6 +23,7 @@ import { SceneNavDock } from '@/components/scene/scene-nav-dock';
 import { SceneBoothCard } from '@/components/scene/scene-booth-card';
 import { SceneDiscoverCard } from '@/components/scene/scene-discover-card';
 import { SceneLiveDropsStrip } from '@/components/scene/scene-live-drops-strip';
+import { SceneOnSaleRail } from '@/components/scene/scene-on-sale-rail';
 import { SceneLivePrompts } from '@/components/scene/scene-live-prompts';
 import { SceneBlockAtmosphere } from '@/components/scene/scene-block-atmosphere';
 import { SectionPager } from '@/components/scene/section-pager';
@@ -954,6 +955,8 @@ export function SceneHome() {
                 </div>
               ) : null}
             </div>
+
+            <SceneOnSaleRail drops={discover?.drops || []} />
 
             <div
               id={DISCOVER_SECTION_ID}

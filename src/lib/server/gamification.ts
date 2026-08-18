@@ -37,7 +37,7 @@ import {
   type VesperfoldSlot,
 } from '@/lib/profile/vesperfold';
 import { artistHomeForPublic, normalizeArtistHomeConfig } from '@/lib/profile/modules';
-import { shareCommerceFlags } from '@/lib/drop-commerce';
+import { shareCommerceFlags, shareDocCommerceFlags } from '@/lib/drop-commerce';
 import {
   allocateUniqueProfileSlug,
   assertProfileSlugAvailable,
@@ -2016,7 +2016,7 @@ export async function listRecentShareSummaries(
   const snap = await db
     .collection('shares')
     .orderBy('updatedAt', 'desc')
-    .limit(limit + 4)
+    .limit(Math.max(48, limit * 3))
     .get();
   const rows: Array<{
     shareId: string;
@@ -2038,6 +2038,11 @@ export async function listRecentShareSummaries(
     if (opts.excludeOwnerId && ownerId === opts.excludeOwnerId) continue;
     const type = data.type === 'album' ? ('album' as const) : ('track' as const);
     const payload = (data.data ?? {}) as Record<string, unknown>;
+    const flags = shareDocCommerceFlags(type, {
+      dropAudio: payload.dropAudio,
+      dropPrice: payload.dropPrice,
+    });
+    const hasDropAudio = type === 'track' && (flags.hasDropAudio || data.hasDropAudio === true);
     const title =
       typeof payload.title === 'string' && payload.title.trim()
         ? payload.title.trim().slice(0, 120)
@@ -2059,9 +2064,8 @@ export async function listRecentShareSummaries(
           : typeof data.createdAt === 'string'
             ? data.createdAt
             : '',
-      hasDropAudio: data.hasDropAudio === true,
-      dropPriceSummary:
-        typeof data.dropPriceSummary === 'string' ? data.dropPriceSummary : undefined,
+      ...(hasDropAudio ? { hasDropAudio: true } : {}),
+      dropPriceSummary: flags.dropPriceSummary || (typeof data.dropPriceSummary === 'string' ? data.dropPriceSummary : undefined),
       playCount: Number(data.playCount) > 0 ? Number(data.playCount) : undefined,
       previewCount: Number(data.previewCount) > 0 ? Number(data.previewCount) : undefined,
       purchaseCount: Number(data.purchaseCount) > 0 ? Number(data.purchaseCount) : undefined,
@@ -2070,10 +2074,12 @@ export async function listRecentShareSummaries(
           ? data.firstBuyerName.trim().slice(0, 80)
           : undefined,
     });
-    if (rows.length >= limit) break;
   }
-  const avatars = await resolvePublicAvatarsByUserIds(rows.map((r) => r.ownerId));
-  return rows.map((r) => {
+  const sale = rows.filter((r) => r.hasDropAudio && r.type === 'track');
+  const rest = rows.filter((r) => !(r.hasDropAudio && r.type === 'track'));
+  const pinned = [...sale, ...rest].slice(0, limit);
+  const avatars = await resolvePublicAvatarsByUserIds(pinned.map((r) => r.ownerId));
+  return pinned.map((r) => {
     const meta = avatars.get(r.ownerId);
     return {
       shareId: r.shareId,

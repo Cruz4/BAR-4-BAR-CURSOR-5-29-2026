@@ -195,10 +195,10 @@ export function DropListenPanel({
   const previewCapped = !full && !isOwner;
 
   return (
-    <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 space-y-3">
+    <div className="rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-4 space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
-          {full || isOwner ? 'Full stream' : hasAudio ? '30-second preview' : 'First Drop'}
+        <p className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-200">
+          {full || isOwner ? 'Full stream' : hasAudio ? 'Play preview · 30 seconds' : 'On sale'}
         </p>
         {dropPriceSummary(normalized) ? (
           <span className="text-[10px] font-code text-muted-foreground">{dropPriceSummary(normalized)}</span>
@@ -269,7 +269,7 @@ export function DropListenPanel({
             />
           )}
           <Button
-            className="w-full h-10 font-bold uppercase"
+            className="w-full h-11 font-bold uppercase bg-fuchsia-400 text-black hover:bg-fuchsia-300"
             disabled={busy}
             onClick={buy}
           >

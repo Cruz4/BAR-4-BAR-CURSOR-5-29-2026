@@ -96,9 +96,10 @@ export function PublicHomeLanding() {
                   {firstDropsOn ? (
                     <>
                       {' '}
-                      <span className="bg-amber-500/20 text-amber-200 px-1 rounded-sm font-bold">First Drops</span>
+                      When the song is ready, put it on that page.{' '}
+                      <span className="bg-amber-500/20 text-amber-200 px-1 rounded-sm font-bold">Listen / buy</span>
                       {' '}
-                      let you put the song on that drop, set a price, and sell the stream here.{' '}
+                      sits at the top of your Artist Home so a first-time visitor does not have to hunt. Preview 30 seconds, buy once, stream here.{' '}
                       {firstDropsFeeCashoutLine()}
                     </>
                   ) : null}

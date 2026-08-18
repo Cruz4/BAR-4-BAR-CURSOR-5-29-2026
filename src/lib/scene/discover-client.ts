@@ -157,6 +157,8 @@ export function buildDiscoverCards(
     (p) => !excludePostIds.has(p.id) && !excludeUserIds.has(p.ownerId)
   );
   const drops = data.drops;
+  const saleDrops = drops.filter((d) => d.hasDropAudio && d.type === 'track');
+  const otherDrops = drops.filter((d) => !(d.hasDropAudio && d.type === 'track'));
   const locks = data.locks || [];
   const risers = data.risers.filter((r) => !excludeUserIds.has(r.userId));
 
@@ -171,7 +173,7 @@ export function buildDiscoverCards(
         artist,
       })
     ),
-    ...drops.map(
+    ...otherDrops.map(
       (drop): DiscoverCard => ({
         kind: 'drop',
         key: `drop-${drop.shareId}`,
@@ -189,7 +191,13 @@ export function buildDiscoverCards(
 
   timed.sort((a, b) => cardTimestamp(b).localeCompare(cardTimestamp(a)));
 
-  const cards = timed.slice(0, Math.max(0, maxCards - (risers.length > 0 ? 1 : 0)));
+  const saleCards: DiscoverCard[] = saleDrops.map((drop) => ({
+    kind: 'drop',
+    key: `drop-${drop.shareId}`,
+    drop,
+  }));
+
+  const cards = timed.slice(0, Math.max(0, maxCards - (risers.length > 0 ? 1 : 0) - saleCards.length));
 
   // Pin Rising this week near the top without breaking relative chrono of the rest.
   if (risers.length > 0) {
@@ -200,5 +208,5 @@ export function buildDiscoverCards(
     });
   }
 
-  return cards.slice(0, maxCards);
+  return [...saleCards, ...cards].slice(0, maxCards);
 }

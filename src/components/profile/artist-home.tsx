@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 import { parseActivityPostHash, scrollActivityPostTarget } from '@/lib/activity/post-deep-link';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
 import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
-import { LiveDnaDropsGroupedList } from '@/components/profile/live-dna-drop-card';
+import { FirstDropsStorefront, LiveDnaDropsGroupedList, firstDropTracks } from '@/components/profile/live-dna-drop-card';
 import { AlbumCoverCollage } from '@/components/gamification/album-cover-collage';
 import { ProfileInitialsStar } from '@/components/profile/profile-initials-star';
 import { rankBadgeClass, rankIdFromLabel } from '@/lib/gamification/badge-styles';
@@ -62,6 +62,7 @@ import { normalizeVesperfoldSeed } from '@/lib/profile/vesperfold';
 import { profileHref, profileReverbsHref } from '@/lib/profile/profile-slug';
 import { buildLoginUrl } from '@/lib/login-links';
 import { useLockFeature } from '@/hooks/use-lock-feature';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { parseStudioBadge } from '@/lib/studio-tier-chrome';
 import { Hint } from '@/components/ui/tooltip';
 
@@ -115,6 +116,7 @@ export function ArtistHome({
 }: ArtistHomeProps) {
   const { user } = useAuth();
   const { enabled: lockOn } = useLockFeature();
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   const [shareOpen, setShareOpen] = useState(false);
   const [dropsOpen, setDropsOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
@@ -144,6 +146,10 @@ export function ArtistHome({
   const cssVars = useMemo(() => pressingCssVars(tokens), [tokens]);
   const rankId = profile.rankId ?? rankIdFromLabel(profile.rankLabel);
   const liveDnaDrops = profile.liveDnaDrops || [];
+  const saleDrops = useMemo(
+    () => (firstDropsOn ? firstDropTracks(liveDnaDrops) : []),
+    [firstDropsOn, liveDnaDrops]
+  );
 
   const useCustomPhoto =
     profile.profilePhotoMode === 'custom' &&
@@ -190,6 +196,7 @@ export function ArtistHome({
       config.modules.some((m) => m.id === 'dropShelf' && m.enabled),
     [config.modules, liveDnaDrops.length]
   );
+  const showFirstDropsStorefront = saleDrops.length > 0;
 
   // Deep-link from Activity Open → #post-{id}[:comments|:c-{commentId}]
   useEffect(() => {
@@ -333,11 +340,37 @@ export function ArtistHome({
                   profileSlug: profile.slug,
                 }}
               />
+              {showFirstDropsStorefront && (
+                saleDrops.length === 1 ? (
+                  <Button
+                    asChild
+                    size="sm"
+                    className="h-9 gap-1.5 bg-fuchsia-400 px-4 font-bold uppercase tracking-wider text-black hover:bg-fuchsia-300"
+                  >
+                    <Link href={`/share/${saleDrops[0].shareId}`}>
+                      <Music className="h-3.5 w-3.5" />
+                      Listen
+                      {saleDrops[0].dropPriceSummary ? ` · ${saleDrops[0].dropPriceSummary}` : ''}
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    asChild
+                    size="sm"
+                    className="h-9 gap-1.5 bg-fuchsia-400 px-4 font-bold uppercase tracking-wider text-black hover:bg-fuchsia-300"
+                  >
+                    <a href="#first-drops">
+                      <Music className="h-3.5 w-3.5" />
+                      Listen · {saleDrops.length} songs
+                    </a>
+                  </Button>
+                )
+              )}
               {showLiveDnaDrops && (() => {
                 const albumCount = liveDnaDrops.filter((d) => d.type === 'album').length;
-                const trackCount = liveDnaDrops.filter((d) => d.type === 'track').length;
-                const firstCount = liveDnaDrops.filter((d) => d.hasDropAudio).length;
-                if (liveDnaDrops.length === 1) {
+                const trackCount = liveDnaDrops.filter((d) => d.type === 'track' && !d.hasDropAudio).length;
+                if (showFirstDropsStorefront && albumCount === 0 && trackCount === 0) return null;
+                if (liveDnaDrops.length === 1 && !showFirstDropsStorefront) {
                   return (
                     <Button
                       asChild
@@ -346,29 +379,18 @@ export function ArtistHome({
                       className="h-8 gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
                     >
                       <Link href={`/share/${liveDnaDrops[0].shareId}`}>
-                        {liveDnaDrops[0].hasDropAudio ? (
-                          <>
-                            <Music className="h-3.5 w-3.5" />
-                            First Drop live
-                          </>
-                        ) : (
-                          <>
-                            <Dna className="h-3.5 w-3.5" />
-                            {liveDnaDrops[0].type === 'album' ? '1 album DNA live' : '1 track DNA live'}
-                          </>
-                        )}
+                        <Dna className="h-3.5 w-3.5" />
+                        {liveDnaDrops[0].type === 'album' ? '1 album DNA live' : '1 track DNA live'}
                       </Link>
                     </Button>
                   );
                 }
                 const label =
-                  firstCount > 0
-                    ? `${firstCount} First Drop${firstCount === 1 ? '' : 's'}`
-                    : albumCount > 0 && trackCount > 0
-                    ? `${albumCount} album${albumCount === 1 ? '' : 's'} · ${trackCount} track${trackCount === 1 ? '' : 's'} live`
+                  albumCount > 0 && trackCount > 0
+                    ? `${albumCount} album${albumCount === 1 ? '' : 's'} · ${trackCount} lyric drop${trackCount === 1 ? '' : 's'}`
                     : albumCount > 0
                       ? `${albumCount} album DNA live`
-                      : `${trackCount} track DNA live`;
+                      : `${trackCount} lyric drop${trackCount === 1 ? '' : 's'}`;
                 return (
                   <Button
                     type="button"
@@ -377,7 +399,7 @@ export function ArtistHome({
                     className="h-8 gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
                     onClick={() => setDropsOpen(true)}
                   >
-                    {firstCount > 0 ? <Music className="h-3.5 w-3.5" /> : <Dna className="h-3.5 w-3.5" />}
+                    <Dna className="h-3.5 w-3.5" />
                     {label}
                   </Button>
                 );
@@ -504,6 +526,10 @@ export function ArtistHome({
             </div>
           </div>
         </section>
+
+        {showFirstDropsStorefront ? (
+          <FirstDropsStorefront drops={liveDnaDrops} isOwner={isOwner} />
+        ) : null}
 
         {/* Module deck — original width, masonry so S/M don't leave holes */}
         <div className="mt-12 columns-1 gap-5 lg:columns-2 lg:gap-5">
@@ -634,7 +660,7 @@ export function ArtistHome({
         <DialogContent className="max-w-md border-[var(--ph-border)] bg-[hsl(216_28%_7%)] text-[var(--ph-text,#fff)]">
           <DialogHeader>
             <DialogTitle className="font-headline text-xl uppercase tracking-tight">
-              Live DNA Drops
+              {showFirstDropsStorefront ? 'Lyric drops' : 'Live DNA Drops'}
             </DialogTitle>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto pr-1">

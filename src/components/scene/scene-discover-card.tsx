@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Dna, Flame, Lock, Radio, TrendingUp } from 'lucide-react';
+import { Dna, Flame, Lock, Music, Radio, TrendingUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -107,10 +107,10 @@ export function SceneDiscoverCard({
     const firstDrop = firstDropsOn && Boolean(drop.hasDropAudio);
     const pulse = formatDropPulseLine(drop);
     return (
-      <Card className="border-primary/25 bg-gradient-to-r from-primary/[0.07] via-card/85 to-card/70 p-4">
+      <Card className="border-fuchsia-500/40 bg-gradient-to-r from-fuchsia-500/[0.12] via-card/85 to-card/70 p-4">
         <DiscoverTag
-          label={firstDrop ? 'First Drop' : 'Live DNA Drop'}
-          icon={firstDrop ? Flame : Dna}
+          label={firstDrop ? 'On sale' : 'Live DNA Drop'}
+          icon={firstDrop ? Music : Dna}
           tone={firstDrop ? 'text-fuchsia-400/90' : 'text-primary/90'}
         />
         <div className="mt-2.5 flex items-center gap-3">
@@ -121,7 +121,7 @@ export function SceneDiscoverCard({
             starMarkSeed={drop.starMarkSeed}
             href={ownerHref}
             size={56}
-            toneClass="bg-primary/25 text-primary"
+            toneClass={firstDrop ? 'bg-fuchsia-500/25 text-fuchsia-300' : 'bg-primary/25 text-primary'}
             studioChrome={parseStudioBadge(drop.studioBadge) || 'free'}
           />
           <div className="min-w-0 flex-1">
@@ -132,7 +132,7 @@ export function SceneDiscoverCard({
               {drop.title}
             </Link>
             <p className="font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
-              {drop.type === 'album' ? 'Album' : 'Track'}
+              {firstDrop ? 'Song' : drop.type === 'album' ? 'Album' : 'Track'}
               {firstDrop ? ' · stream' : ' DNA'} by{' '}
               {ownerHref ? (
                 <Link
@@ -155,8 +155,8 @@ export function SceneDiscoverCard({
               {drop.firstBuyerName ? ` · first cop ${drop.firstBuyerName}` : ''}
             </p>
           </div>
-          <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>
-            <Link href={`/share/${drop.shareId}`}>Open</Link>
+          <Button size="sm" className={firstDrop ? 'h-8 shrink-0 bg-fuchsia-400 font-bold uppercase text-black hover:bg-fuchsia-300' : 'h-8 shrink-0 font-bold uppercase'} variant={firstDrop ? 'default' : 'outline'} asChild>
+            <Link href={`/share/${drop.shareId}`}>{firstDrop ? 'Listen' : 'Open'}</Link>
           </Button>
         </div>
       </Card>

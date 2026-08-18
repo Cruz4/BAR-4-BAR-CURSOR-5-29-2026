@@ -40,7 +40,8 @@ import { PostCard } from '@/components/profile/post-card';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { PressPlate, type PressPlateChrome } from '@/components/profile/press-plate';
 import { PublicAchievementFoil } from '@/components/profile/public-achievement-foil';
-import { LiveDnaDropsGroupedList } from '@/components/profile/live-dna-drop-card';
+import { firstDropTracks, LiveDnaDropsGroupedList } from '@/components/profile/live-dna-drop-card';
+import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import type { AchievementDef } from '@/lib/gamification/achievements';
 import {
   createPost,
@@ -149,15 +150,34 @@ const inkWellClass =
 // ---------------------------------------------------------------------------
 
 export function NowPlayingModule({ ctx }: { ctx: ModuleContext }) {
-  if (!ctx.featured.embedUrl) return null;
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
+  if (ctx.featured.embedUrl) {
+    return (
+      <ModuleShell icon={Disc3} title={"Now Playing"} ctx={ctx}>
+        {ctx.featured.embedTitle && (
+          <p className="mb-3 font-headline text-lg text-[var(--ph-text,#fff)]">
+            {ctx.featured.embedTitle}
+          </p>
+        )}
+        <EmbedPlayer url={ctx.featured.embedUrl} title={ctx.featured.embedTitle} />
+      </ModuleShell>
+    );
+  }
+  const featuredDrop = firstDropsOn ? firstDropTracks(ctx.liveDnaDrops || [])[0] : undefined;
+  if (!featuredDrop) return null;
   return (
     <ModuleShell icon={Disc3} title={"Now Playing"} ctx={ctx}>
-      {ctx.featured.embedTitle && (
-        <p className="mb-3 font-headline text-lg text-[var(--ph-text,#fff)]">
-          {ctx.featured.embedTitle}
-        </p>
-      )}
-      <EmbedPlayer url={ctx.featured.embedUrl} title={ctx.featured.embedTitle} />
+      <p className="mb-3 font-headline text-lg text-[var(--ph-text,#fff)]">{featuredDrop.title}</p>
+      <Link
+        href={`/share/${featuredDrop.shareId}`}
+        className="inline-flex h-11 items-center gap-2 rounded-full bg-fuchsia-400 px-5 text-[11px] font-bold uppercase tracking-widest text-black hover:bg-fuchsia-300"
+      >
+        Listen
+        {featuredDrop.dropPriceSummary ? ` · ${featuredDrop.dropPriceSummary}` : ''}
+      </Link>
+      <p className="mt-2 text-[11px] text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+        Preview 30 seconds · buy once to stream here
+      </p>
     </ModuleShell>
   );
 }
@@ -510,16 +530,26 @@ export function OpenLockModule({ ctx }: { ctx: ModuleContext }) {
 
 export function DropShelfModule({ ctx }: { ctx: ModuleContext }) {
   const drops = ctx.liveDnaDrops || [];
+  const { enabled: firstDropsOn } = useFirstDropsFeature();
   if (!drops.length) return null;
-  const firstCount = drops.filter((d) => d.hasDropAudio && d.type === 'track').length;
+  const firstCount = firstDropTracks(drops).length;
+  const hideFirstDropStrip = firstDropsOn && firstCount > 0;
+  if (hideFirstDropStrip) {
+    const hasDnaOnly = drops.some((d) => d.type === 'album' || !d.hasDropAudio);
+    if (!hasDnaOnly) return null;
+  }
 
   return (
     <ModuleShell
       icon={Dna}
-      title={firstCount > 0 ? 'First Drops & DNA' : 'Live DNA Drops'}
+      title={hideFirstDropStrip ? 'Lyric DNA Drops' : firstCount > 0 ? 'Listen / Buy' : 'Live DNA Drops'}
       ctx={ctx}
     >
-      <LiveDnaDropsGroupedList drops={drops} layout="shelf" />
+      <LiveDnaDropsGroupedList
+        drops={drops}
+        layout="shelf"
+        hideFirstDropStrip={hideFirstDropStrip}
+      />
     </ModuleShell>
   );
 }

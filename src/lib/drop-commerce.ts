@@ -57,7 +57,7 @@ export function firstDropsFeeCashoutLine(): string {
 
 /** Public selling copy — hide whenever First Drops is toggled off. */
 export function firstDropsPitch(): string {
-  return `Put the actual song on a DNA Drop, set a price or pay-what-you-want, and fans buy once to stream it in Bar 4 Bar. ${firstDropsFeeLine()} ${firstDropsCashoutLine()}`;
+  return `When the song is on sale, Listen / buy sits at the top of your Artist Home, on The Scene, and on the share link. Preview 30 seconds, buy once, stream here. ${firstDropsFeeLine()} ${firstDropsCashoutLine()}`;
 }
 
 export function getFirstDropsWhatFaqAnswer(): string {
@@ -65,7 +65,7 @@ export function getFirstDropsWhatFaqAnswer(): string {
 }
 
 export function getFirstDropsSellFaqAnswer(): string {
-  return 'First Drop lives on a DNA Drop — same public page, plus the song. Open a track in the vault → DNA Drop → First Drop · audio & price. Upload audio, pick DNA only / free stream / set price / pay-what-you-want, then Confirm or Update snapshot. Manage live ones from The Scene, Vault, or Edit Public Page (Live drops). Fans see a First Drops strip on your Artist Home and tagged cards on The Scene — they do not have to guess which DNA Drop has the song. To get paid, open Earnings and connect Stripe payouts.';
+  return 'The song sits on the same public page as the lyrics. Open a track in the vault → DNA Drop → First Drop · audio & price. Upload audio, pick DNA only / free stream / set price / pay-what-you-want, then Confirm or Update snapshot. Visitors see Listen / buy at the top of your Artist Home, on The Scene, and on the share link — they do not have to guess which DNA Drop has the song. To get paid, open Earnings and connect Stripe payouts.';
 }
 
 export function getFirstDropsFeeFaqAnswer(): string {
@@ -244,4 +244,22 @@ export function shareCommerceFlags(payload: {
     hasDropAudio: ownAudio || trackAudio,
     dropPriceSummary: dropPriceSummary(isCommerceLive(price) ? price : trackPrice) || '',
   };
+}
+
+/**
+ * Flags written onto the share document for Discover.
+ * Album hubs do not inherit nested-track audio — the song lives on the track page.
+ */
+export function shareDocCommerceFlags(
+  type: 'album' | 'track',
+  payload: {
+    dropAudio?: unknown;
+    dropPrice?: unknown;
+    tracks?: Array<{ dropAudio?: unknown; dropPrice?: unknown }>;
+  }
+): { hasDropAudio: boolean; dropPriceSummary: string } {
+  if (type === 'album') {
+    return shareCommerceFlags({ dropAudio: payload.dropAudio, dropPrice: payload.dropPrice });
+  }
+  return shareCommerceFlags({ dropAudio: payload.dropAudio, dropPrice: payload.dropPrice });
 }

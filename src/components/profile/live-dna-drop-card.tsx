@@ -91,7 +91,7 @@ export function LiveDnaDropLinkCard({
               firstDrop ? 'text-fuchsia-300/90' : isAlbum ? 'text-violet-300/90' : 'text-emerald-300/90'
             )}
           >
-            {firstDrop ? 'First Drop' : isAlbum ? 'Album DNA' : 'Track DNA'}
+            {firstDrop ? 'On sale' : isAlbum ? 'Album DNA' : 'Track DNA'}
             {drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : null}
             {pulse ? ` · ${pulse}` : null}
             {isAlbum && typeof drop.trackCount === 'number'
@@ -115,16 +115,16 @@ export function LiveDnaDropLinkCard({
           ) : (
             <p className="text-[10px] text-[var(--ph-muted,rgba(255,255,255,0.45))]">
               {firstDrop
-                ? 'Preview 30s · buy once to stream'
+                ? 'Play 30s · buy once to stream here'
                 : isAlbum
                   ? 'Open album · or pick a track below'
-                  : 'Open track DNA Drop'}
+                  : 'Lyrics snapshot'}
             </p>
           ))}
         {nested && (
           <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-300/70">
             {drop.hasDropAudio
-              ? `First Drop${drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : ''}`
+              ? `Listen${drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : ''}`
               : 'Track DNA · open'}
           </p>
         )}
@@ -197,23 +197,34 @@ type LiveDnaDropsGroupedListProps = {
   onNavigate?: () => void;
   /** Wider shelf grid vs compact dialog stack. */
   layout?: 'shelf' | 'dialog';
+  /** Hide the First Drops strip when a dedicated storefront is already on the page. */
+  hideFirstDropStrip?: boolean;
 };
+
+export function firstDropTracks(drops: LiveDnaDropItem[]): LiveDnaDropItem[] {
+  return drops.filter((d) => d.hasDropAudio && d.type === 'track');
+}
 
 export function LiveDnaDropsGroupedList({
   drops,
   onNavigate,
   layout = 'shelf',
+  hideFirstDropStrip = false,
 }: LiveDnaDropsGroupedListProps) {
   const { albumGroups, standaloneTracks } = groupLiveDnaDrops(drops);
-  const firstDrops = drops.filter((d) => d.hasDropAudio && d.type === 'track');
-  if (!albumGroups.length && !standaloneTracks.length) return null;
+  const firstDrops = firstDropTracks(drops);
+  const visibleStandalone = hideFirstDropStrip
+    ? standaloneTracks.filter((d) => !d.hasDropAudio)
+    : standaloneTracks;
+  const showFirst = firstDrops.length > 0 && !hideFirstDropStrip;
+  if (!albumGroups.length && !visibleStandalone.length && !showFirst) return null;
 
   return (
     <div className="space-y-5">
-      {firstDrops.length > 0 && (
+      {firstDrops.length > 0 && !hideFirstDropStrip && (
         <div className="space-y-2">
           <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-fuchsia-300/90">
-            First Drops · {firstDrops.length} — listen / buy
+            On sale · {firstDrops.length} — listen / buy
           </p>
           <div
             className={cn(
@@ -273,10 +284,10 @@ export function LiveDnaDropsGroupedList({
         </div>
       )}
 
-      {standaloneTracks.length > 0 && (
+      {visibleStandalone.length > 0 && (
         <div className="space-y-2">
           <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-emerald-300/80">
-            Track DNA · {standaloneTracks.length}
+            Track DNA · {visibleStandalone.length}
             {albumGroups.length > 0 ? ' · not on an album drop' : ''}
           </p>
           <div
@@ -285,12 +296,76 @@ export function LiveDnaDropsGroupedList({
               layout === 'shelf' ? 'sm:grid-cols-2' : 'grid-cols-1'
             )}
           >
-            {standaloneTracks.map((drop) => (
+            {visibleStandalone.map((drop) => (
               <LiveDnaDropLinkCard key={drop.shareId} drop={drop} onNavigate={onNavigate} />
             ))}
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+/** Always-on Artist Home storefront — not a module the artist can bury. */
+export function FirstDropsStorefront({
+  drops,
+  isOwner = false,
+  onNavigate,
+}: {
+  drops: LiveDnaDropItem[];
+  isOwner?: boolean;
+  onNavigate?: () => void;
+}) {
+  const sale = firstDropTracks(drops);
+  if (!sale.length) return null;
+
+  return (
+    <section
+      id="first-drops"
+      className="mt-10 scroll-mt-24 rounded-2xl border border-fuchsia-400/45 bg-gradient-to-br from-fuchsia-500/18 via-black/40 to-black/20 p-4 sm:p-5"
+    >
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-fuchsia-200">
+            Listen · buy once
+          </p>
+          <h2 className="mt-1 font-headline text-2xl font-bold uppercase tracking-tight text-[var(--ph-text,#fff)] sm:text-3xl">
+            {sale.length === 1 ? sale[0].title : `${sale.length} songs on sale`}
+          </h2>
+          <p className="mt-1 max-w-xl text-sm text-[var(--ph-muted,rgba(255,255,255,0.6))]">
+            Preview 30 seconds. Unlock to stream in Bar 4 Bar.
+          </p>
+        </div>
+        {isOwner ? (
+          <p className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-300/80">
+            Pinned at the top of your home
+          </p>
+        ) : null}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {sale.map((drop) => (
+          <Link
+            key={drop.shareId}
+            href={`/share/${drop.shareId}`}
+            onClick={onNavigate}
+            className="group flex items-center gap-3 rounded-xl border border-fuchsia-400/40 bg-black/35 p-3.5 transition-colors hover:border-fuchsia-300/70 hover:bg-fuchsia-500/10"
+          >
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/20 text-fuchsia-200">
+              <Music className="h-6 w-6" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-bold text-[var(--ph-text,#fff)]">{drop.title}</p>
+              <p className="text-[11px] text-fuchsia-200/85">
+                {drop.dropPriceSummary || 'Stream here'}
+                {drop.albumTitle ? ` · ${drop.albumTitle}` : ''}
+              </p>
+            </div>
+            <span className="shrink-0 rounded-full bg-fuchsia-400 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-black group-hover:bg-fuchsia-300">
+              Listen
+            </span>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }

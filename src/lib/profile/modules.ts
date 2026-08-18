@@ -143,9 +143,9 @@ export const MODULE_META: Record<
     defaultEnabled: false,
   },
   dropShelf: {
-    label: 'Live DNA Drops',
-    description: 'Auto-lists every active DNA Drop share while the link is online.',
-    defaultSize: 'M',
+    label: 'Live drops',
+    description: 'Songs for sale sit at the top of your home automatically. This shelf also lists lyric DNA Drops.',
+    defaultSize: 'L',
     defaultEnabled: true,
   },
   proofWall: {
@@ -176,13 +176,13 @@ export const MODULE_META: Record<
 
 export const MODULE_ORDER_DEFAULT: ProfileModuleId[] = [
   'nowPlaying',
+  'dropShelf',
   'barOfWeek',
   'dnaStrip',
   'wall',
   'openLock',
   'barBoard',
   'rhymeFingerprint',
-  'dropShelf',
   'proofWall',
   'friends',
   'guestbook',
