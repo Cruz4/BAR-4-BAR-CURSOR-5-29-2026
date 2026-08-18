@@ -1,0 +1,363 @@
+{
+  "startedAt": "2026-08-10T06:02:07.127Z",
+  "base": "http://127.0.0.1:9002",
+  "email": "agent.demo@bar4bar.ink",
+  "loginOk": true,
+  "routes": [
+    {
+      "name": "Login page",
+      "path": "/login",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/login",
+      "title": "",
+      "bodyHint": "",
+      "waitMs": 20593,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Scene home",
+      "path": "/",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/",
+      "title": "",
+      "bodyHint": "",
+      "waitMs": 2144,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Vault",
+      "path": "/vault",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/vault",
+      "title": "",
+      "bodyHint": "",
+      "waitMs": 4549,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Vault create track",
+      "path": "/vault?create=track",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/vault?create=track",
+      "title": "The Vault | Bar 4 Bar DNA Notebook",
+      "bodyHint": "Bar 4 Bar DNA NOTEBOOK GENERATING... 9,990 A( YEARLY We use essential cookies and local storage to run the studio, plus optional analytics and advertising measurement (including TikTok and AdSense on public pages). See o",
+      "waitMs": 4703,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Leaderboard",
+      "path": "/leaderboard",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/leaderboard",
+      "title": "Studio Leaderboard | Bar 4 Bar DNA Notebook",
+      "bodyHint": "Bar 4 Bar DNA NOTEBOOK GENERATING... 9,990 A( YEARLY We use essential cookies and local storage to run the studio, plus optional analytics and advertising measurement (including TikTok and AdSense on public pages). See o",
+      "waitMs": 3479,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Activity",
+      "path": "/activity",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/activity",
+      "title": "Activity | Bar 4 Bar DNA Notebook",
+      "bodyHint": "Bar 4 Bar DNA NOTEBOOK GENERATING... 9,990 A( YEARLY ACTIVITY Loves, replies, friend requests, and DNA Drop imports — received and sent. MARK ALL READ INBOX REQUESTS SENT NOTHING YET When someone loves your post, replies",
+      "waitMs": 6165,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Friends / circle",
+      "path": "/friends",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/friends",
+      "title": "Your circle | Bar 4 Bar DNA Notebook",
+      "bodyHint": "Bar 4 Bar DNA NOTEBOOK GENERATING... 9,990 A( YEARLY YOUR CIRCLE Add artists, share your referral invite, manage friends, and unblock anyone you cut. FIND ARTISTS Search by artist name, send a friend invite, or share you",
+      "waitMs": 4287,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Usage / Ink",
+      "path": "/usage",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/usage",
+      "title": "Ink & Studio Usage | Bar 4 Bar DNA Notebook",
+      "bodyHint": "Bar 4 Bar DNA NOTEBOOK GENERATING... 9,990 A( YEARLY Studio Intelligence YEARLY PRO Permanent ink never expires — used after your monthly residency pool runs out. Unlike Suno or Udio, Bar 4 Bar is a lyric and rhyme works",
+      "waitMs": 5926,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Ink store tab",
+      "path": "/usage?tab=buy-ink",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/usage?tab=buy-ink",
+      "title": "Ink & Studio Usage | Bar 4 Bar DNA Notebook",
+      "bodyHint": "Bar 4 Bar DNA NOTEBOOK GENERATING... 9,990 A( YEARLY Studio Intelligence YEARLY PRO Permanent ink never expires — used after your monthly residency pool runs out. Unlike Suno or Udio, Bar 4 Bar is a lyric and rhyme works",
+      "waitMs": 1899,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Pricing",
+      "path": "/pricing",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/pricing",
+      "title": "Studio Memberships & Pricing | Bar 4 Bar DNA Notebook",
+      "bodyHint": "Bar 4 Bar DNA NOTEBOOK GENERATING... 9,990 A( YEARLY Back to Studio STUDIO MEMBERSHIPS FROM DEMO ROOM TO PROFESSIONAL SUITE. SAVE 43% ON YEARLY · MOST POPULAR MONTHLY YEARLY Visitor FREE ARTIST Full AI lyric tools on 250",
+      "waitMs": 3874,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Discover",
+      "path": "/discover",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/discover",
+      "title": "Bar 4 Bar",
+      "bodyHint": "Bar 4 Bar DNA NOTEBOOK GENERATING... 9,990 A( YEARLY We use essential cookies and local storage to run the studio, plus optional analytics and advertising measurement (including TikTok and AdSense on public pages). See o",
+      "waitMs": 3812,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Profile customize",
+      "path": "/profile/customize",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/profile/customize",
+      "title": "",
+      "bodyHint": "",
+      "waitMs": 6715,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Guest try",
+      "path": "/try",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/vault",
+      "title": "The Vault | Bar 4 Bar DNA Notebook",
+      "bodyHint": "Bar 4 Bar DNA NOTEBOOK GENERATING... 9,990 A( YEARLY OPENING WORKSTATION... We use essential cookies and local storage to run the studio, plus optional analytics and advertising measurement (including TikTok and AdSense ",
+      "waitMs": 9317,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Welcome",
+      "path": "/welcome",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/",
+      "title": "Bar 4 Bar",
+      "bodyHint": "Bar 4 Bar DNA NOTEBOOK GENERATING... 9,990 A( YEARLY OPENING WORKSTATION... We use essential cookies and local storage to run the studio, plus optional analytics and advertising measurement (including TikTok and AdSense ",
+      "waitMs": 4453,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Studio progress",
+      "path": "/studio-progress",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/studio-progress",
+      "title": "Studio Progress & Achievements | Bar 4 Bar DNA Notebook",
+      "bodyHint": "Bar 4 Bar DNA NOTEBOOK GENERATING... 0 A( YEARLY VAULT STUDIO PROGRESS Weekly goals, monthly arcs, lifetime milestones, and trophies — plus how you stack up against the community. Writing goals count hand-typed lines onl",
+      "waitMs": 6625,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Feed",
+      "path": "/feed",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/",
+      "title": "Bar 4 Bar",
+      "bodyHint": "Bar 4 Bar DNA NOTEBOOK GENERATING... 9,990 A( YEARLY OPENING WORKSTATION... We use essential cookies and local storage to run the studio, plus optional analytics and advertising measurement (including TikTok and AdSense ",
+      "waitMs": 4536,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Terms",
+      "path": "/terms",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/terms",
+      "title": "Terms of Service | Bar 4 Bar DNA Notebook",
+      "bodyHint": "Bar 4 Bar DNA NOTEBOOK GENERATING... 9,990 A( YEARLY ← BACK TO STUDIO TERMS OF SERVICE Last updated: July 27, 2026 · Bar 4 Bar Studio 1. AGREEMENT By creating an account, signing in, purchasing Ink or a subscription, or ",
+      "waitMs": 6026,
+      "error": null,
+      "status": 200
+    },
+    {
+      "name": "Privacy",
+      "path": "/privacy",
+      "ok": true,
+      "finalUrl": "http://127.0.0.1:9002/privacy",
+      "title": "Privacy Policy | Bar 4 Bar DNA Notebook",
+      "bodyHint": "Bar 4 Bar DNA NOTEBOOK GENERATING... 9,990 A( YEARLY ← BACK TO STUDIO PRIVACY POLICY Last updated: July 27, 2026 · Bar 4 Bar Studio 1. OVERVIEW Bar 4 Bar Studio (\"we\", \"us\") respects your creative privacy. This policy ex",
+      "waitMs": 4332,
+      "error": null,
+      "status": 200
+    }
+  ],
+  "clicks": [
+    {
+      "label": "The VaultAlbums · tracks · DNA",
+      "href": "/vault",
+      "ok": false,
+      "error": "locator.click: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('[data-tour=\"scene-nav-desktop\"] a, [data-tour=\"scene-nav-mobile\"] a').first()\n    - locator resolved to <a href=\"/vault\" class=\"group relative flex h-[3.75rem] items-center gap-2.5 rounded-xl border px-3 text-left transition",
+      "urlAfter": ""
+    },
+    {
+      "label": "Start a trackOpen a fresh sheet",
+      "href": "/vault?create=track",
+      "ok": false,
+      "error": "locator.click: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('[data-tour=\"scene-nav-desktop\"] a, [data-tour=\"scene-nav-mobile\"] a').nth(1)\n    - locator resolved to <a href=\"/vault?create=track\" class=\"group relative flex h-[3.75rem] items-center gap-2.5 rounded-xl border px-3 text-lef",
+      "urlAfter": ""
+    },
+    {
+      "label": "Edit Public PageSet up your page",
+      "href": "/profile/customize",
+      "ok": false,
+      "error": "locator.click: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('[data-tour=\"scene-nav-desktop\"] a, [data-tour=\"scene-nav-mobile\"] a').nth(2)\n    - locator resolved to <a href=\"/profile/customize\" class=\"group relative flex h-[3.75rem] items-center gap-2.5 rounded-xl border px-3 text-left",
+      "urlAfter": ""
+    },
+    {
+      "label": "LeaderboardWeekly rankings",
+      "href": "/leaderboard",
+      "ok": false,
+      "error": "locator.click: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('[data-tour=\"scene-nav-desktop\"] a, [data-tour=\"scene-nav-mobile\"] a').nth(3)\n    - locator resolved to <a href=\"/leaderboard\" class=\"group relative flex h-[3.75rem] items-center gap-2.5 rounded-xl border px-3 text-left trans",
+      "urlAfter": ""
+    },
+    {
+      "label": "ActivityLoves · replies · requests",
+      "href": "/activity",
+      "ok": false,
+      "error": "locator.click: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('[data-tour=\"scene-nav-desktop\"] a, [data-tour=\"scene-nav-mobile\"] a').nth(4)\n    - locator resolved to <a href=\"/activity\" class=\"group relative flex h-[3.75rem] items-center gap-2.5 rounded-xl border px-3 text-left transiti",
+      "urlAfter": ""
+    },
+    {
+      "label": "Your circleFriends & blocks",
+      "href": "/friends",
+      "ok": false,
+      "error": "locator.click: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('[data-tour=\"scene-nav-desktop\"] a, [data-tour=\"scene-nav-mobile\"] a').nth(5)\n    - locator resolved to <a href=\"/friends\" class=\"group relative flex h-[3.75rem] items-center gap-2.5 rounded-xl border px-3 text-left transitio",
+      "urlAfter": ""
+    },
+    {
+      "label": "Ink storeTop up your Ink",
+      "href": "/usage?tab=buy-ink",
+      "ok": false,
+      "error": "locator.click: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('[data-tour=\"scene-nav-desktop\"] a, [data-tour=\"scene-nav-mobile\"] a').nth(6)\n    - locator resolved to <a href=\"/usage?tab=buy-ink\" class=\"group relative flex h-[3.75rem] items-center gap-2.5 rounded-xl border px-3 text-left",
+      "urlAfter": ""
+    },
+    {
+      "label": "THE VAULT ALBUMS · TRACKS · DNA",
+      "href": "/vault",
+      "ok": true,
+      "error": null,
+      "urlAfter": "http://127.0.0.1:9002/vault"
+    }
+  ],
+  "discoveries": [
+    {
+      "kind": "album_links",
+      "hrefs": []
+    },
+    {
+      "kind": "track_links",
+      "hrefs": []
+    }
+  ],
+  "issues": [
+    {
+      "severity": "medium",
+      "route": "/vault",
+      "name": "Nav click: The VaultAlbums · tracks · DNA",
+      "kind": "click_failed",
+      "detail": "locator.click: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('[data-tour=\"scene-nav-desktop\"] a, [data-tour=\"scene-nav-mobile\"] a').first()\n    - locator resolved to <a href=\"/vault\" class=\"group relative flex h-[3.75rem] items-center gap-2.5 rounded-xl border px-3 text-left transition",
+      "url": "http://127.0.0.1:9002/"
+    },
+    {
+      "severity": "medium",
+      "route": "/vault?create=track",
+      "name": "Nav click: Start a trackOpen a fresh sheet",
+      "kind": "click_failed",
+      "detail": "locator.click: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('[data-tour=\"scene-nav-desktop\"] a, [data-tour=\"scene-nav-mobile\"] a').nth(1)\n    - locator resolved to <a href=\"/vault?create=track\" class=\"group relative flex h-[3.75rem] items-center gap-2.5 rounded-xl border px-3 text-lef",
+      "url": "http://127.0.0.1:9002/"
+    },
+    {
+      "severity": "medium",
+      "route": "/profile/customize",
+      "name": "Nav click: Edit Public PageSet up your page",
+      "kind": "click_failed",
+      "detail": "locator.click: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('[data-tour=\"scene-nav-desktop\"] a, [data-tour=\"scene-nav-mobile\"] a').nth(2)\n    - locator resolved to <a href=\"/profile/customize\" class=\"group relative flex h-[3.75rem] items-center gap-2.5 rounded-xl border px-3 text-left",
+      "url": "http://127.0.0.1:9002/"
+    },
+    {
+      "severity": "medium",
+      "route": "/leaderboard",
+      "name": "Nav click: LeaderboardWeekly rankings",
+      "kind": "click_failed",
+      "detail": "locator.click: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('[data-tour=\"scene-nav-desktop\"] a, [data-tour=\"scene-nav-mobile\"] a').nth(3)\n    - locator resolved to <a href=\"/leaderboard\" class=\"group relative flex h-[3.75rem] items-center gap-2.5 rounded-xl border px-3 text-left trans",
+      "url": "http://127.0.0.1:9002/"
+    },
+    {
+      "severity": "medium",
+      "route": "/activity",
+      "name": "Nav click: ActivityLoves · replies · requests",
+      "kind": "click_failed",
+      "detail": "locator.click: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('[data-tour=\"scene-nav-desktop\"] a, [data-tour=\"scene-nav-mobile\"] a').nth(4)\n    - locator resolved to <a href=\"/activity\" class=\"group relative flex h-[3.75rem] items-center gap-2.5 rounded-xl border px-3 text-left transiti",
+      "url": "http://127.0.0.1:9002/"
+    },
+    {
+      "severity": "medium",
+      "route": "/friends",
+      "name": "Nav click: Your circleFriends & blocks",
+      "kind": "click_failed",
+      "detail": "locator.click: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('[data-tour=\"scene-nav-desktop\"] a, [data-tour=\"scene-nav-mobile\"] a').nth(5)\n    - locator resolved to <a href=\"/friends\" class=\"group relative flex h-[3.75rem] items-center gap-2.5 rounded-xl border px-3 text-left transitio",
+      "url": "http://127.0.0.1:9002/"
+    },
+    {
+      "severity": "medium",
+      "route": "/usage?tab=buy-ink",
+      "name": "Nav click: Ink storeTop up your Ink",
+      "kind": "click_failed",
+      "detail": "locator.click: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('[data-tour=\"scene-nav-desktop\"] a, [data-tour=\"scene-nav-mobile\"] a').nth(6)\n    - locator resolved to <a href=\"/usage?tab=buy-ink\" class=\"group relative flex h-[3.75rem] items-center gap-2.5 rounded-xl border px-3 text-left",
+      "url": "http://127.0.0.1:9002/"
+    }
+  ],
+  "consoleErrors": [
+    {
+      "text": "Failed to load resource: the server responded with a status of 400 ()",
+      "url": "http://127.0.0.1:9002/usage",
+      "at": "2026-08-10T06:03:18.345Z"
+    },
+    {
+      "text": "Failed to load resource: the server responded with a status of 400 ()",
+      "url": "http://127.0.0.1:9002/usage?tab=buy-ink",
+      "at": "2026-08-10T06:03:20.099Z"
+    },
+    {
+      "text": "Permissions policy violation: Geolocation access has been blocked because of a permissions policy applied to the current document. See https://crbug.com/414348233 for more details.",
+      "url": "http://127.0.0.1:9002/",
+      "at": "2026-08-10T06:03:49.094Z"
+    }
+  ],
+  "pageErrors": [],
+  "failedRequests": [],
+  "finishedAt": "2026-08-10T06:05:40.636Z",
+  "summary": {
+    "loginOk": true,
+    "routesTried": 18,
+    "routesFailed": 0,
+    "clicksTried": 8,
+    "clicksFailed": 7,
+    "issueCount": 7,
+    "consoleErrorCount": 3,
+    "pageErrorCount": 0,
+    "failedRequestCount": 0
+  }
+}

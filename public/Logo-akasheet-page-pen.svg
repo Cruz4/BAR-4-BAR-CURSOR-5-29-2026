@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AKAsheet">
+  <rect width="64" height="64" rx="14" fill="#050a1e"/>
+  <circle cx="32" cy="32" r="21" fill="none" stroke="#f4f4f5" stroke-width="2.75"/>
+  <path fill="#f4f4f5" d="M22 18h16l8 8v20a4 4 0 0 1-4 4H22a4 4 0 0 1-4-4V22a4 4 0 0 1 4-4Z"/>
+  <path fill="#E11D8A" d="M38 18v8h8Z"/>
+  <!-- pen on the sheet -->
+  <g transform="rotate(-36 30.5 38)">
+    <rect x="27.8" y="27.5" width="5.4" height="17" rx="1.7" fill="#050a1e"/>
+    <rect x="28.6" y="30" width="3.8" height="1.8" rx="0.5" fill="#f4f4f5"/>
+    <path fill="#E11D8A" d="M27.8 44.2h5.4L30.5 49.4Z"/>
+  </g>
+</svg>

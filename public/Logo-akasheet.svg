@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AKAsheet">
+  <!-- 2026-simple: one ring (akasha/record) + an open book (the sheets). No type. -->
+  <rect width="64" height="64" rx="14" fill="#050a1e"/>
+  <circle cx="32" cy="33" r="21" fill="none" stroke="#f4f4f5" stroke-width="2.75"/>
+  <!-- left page -->
+  <path fill="#f4f4f5" d="M31 22c-6.2 1.4-11 3.2-14 4.2V42c3.2-1.1 8.2-2.9 14-4.2V22Z"/>
+  <!-- right page -->
+  <path fill="#f4f4f5" d="M33 22c6.2 1.4 11 3.2 14 4.2V42c-3.2-1.1-8.2-2.9-14-4.2V22Z"/>
+  <!-- spine -->
+  <rect x="30.6" y="21.5" width="2.8" height="17.2" rx="0.8" fill="#E11D8A"/>
+</svg>

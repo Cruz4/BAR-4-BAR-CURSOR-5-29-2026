@@ -166,6 +166,25 @@ const CURATED = {
   distract: 'To pull attention away from something.',
   declaim: 'To speak or recite rhetorically.',
   counter: 'A surface for serving; also, to oppose.',
+  aegis: 'Protection, support, or sponsorship.',
+  forget: 'To fail to remember.',
+  function: 'The purpose or role something serves.',
+  giraffe: 'A very tall African mammal with a long neck.',
+  ignore: 'To refuse to notice or pay attention to.',
+  modify: 'To change partly rather than completely.',
+  peasant: 'A rural farm worker or laborer.',
+  penguin: 'A flightless seabird of the Southern Hemisphere.',
+  problem: 'A matter that is difficult to solve or deal with.',
+  replace: 'To take the place of something else.',
+  reputation: 'The general opinion people have about someone or something.',
+  samsara: 'The cycle of death and rebirth in some Eastern religions.',
+  satire: 'The use of humor or exaggeration to expose folly.',
+  simulate: 'To imitate the appearance or behavior of something.',
+  south: 'The direction opposite north.',
+  spleen: 'An organ that filters blood and supports the immune system.',
+  sulfur: 'A yellow chemical element often associated with a sharp smell.',
+  theory: 'An explanation supported by observation, reasoning, or evidence.',
+  trunk: 'The main stem of a tree.',
 };
 
 function queryWord(entryWord, id) {
@@ -179,6 +198,7 @@ function cacheKey(q) {
 function isIncompleteGloss(s) {
   const t = String(s || '').trim();
   if (!t || t === '__MISS__') return true;
+  if (/^short take:/i.test(t)) return true;
   if (/…|\.\.\.$/.test(t)) return true;
   // Mid-cut teasers often lack terminal punctuation and end on a dangling article/preposition.
   if (/\b(a|an|the|to|of|or|and|by|for|with|in|on|from|into|as|so)$/i.test(t.replace(/[.!?]+$/, ''))) {
@@ -215,7 +235,7 @@ function isBadDef(s) {
   const lower = s.toLowerCase();
   return (
     lower.length < 12 ||
-    /surname|placename|university|video game|the sims|\(slang\)|vulgar|offensive|trademark|a testicle|group of clowns|debeige|parsley\.?$|butter\.?$|gait\.?$|antiphon\.?$|anaemic\.?$|didgeridoo|worldly sailor|a husband\.?$|a bank\.?$|a mug\.?$|ugly\.?$|a dessert\.?$|a love interest\.?$|second mowing|a placename/i.test(
+    /short take:|steal it for a bar|surname|placename|university|video game|the sims|\(slang\)|vulgar|offensive|trademark|a testicle|group of clowns|debeige|parsley\.?$|butter\.?$|gait\.?$|antiphon\.?$|anaemic\.?$|didgeridoo|worldly sailor|a husband\.?$|a bank\.?$|a mug\.?$|ugly\.?$|a dessert\.?$|a love interest\.?$|second mowing|a placename/i.test(
       lower
     )
   );
@@ -381,7 +401,7 @@ async function main() {
 
   writeFileSync(CACHE_PATH, JSON.stringify(cache));
 
-  const fallback = (word) => `Short take: ${word} — steal it for a bar.`;
+  const fallback = (word) => `${word} in the Bar 4 Bar neon lexicon.`;
 
   const next = entries.map((e) => {
     const q = queryWord(e.word, e.id);

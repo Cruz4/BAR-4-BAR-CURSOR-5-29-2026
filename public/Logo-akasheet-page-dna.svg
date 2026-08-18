@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AKAsheet">
+  <rect width="64" height="64" rx="14" fill="#050a1e"/>
+  <circle cx="32" cy="32" r="21" fill="none" stroke="#f4f4f5" stroke-width="2.75"/>
+  <path fill="#f4f4f5" d="M22 18h16l8 8v20a4 4 0 0 1-4 4H22a4 4 0 0 1-4-4V22a4 4 0 0 1 4-4Z"/>
+  <path fill="#E11D8A" d="M38 18v8h8Z"/>
+  <!-- DNA helix on the sheet -->
+  <g fill="none" stroke="#E11D8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M27 28c0 2.8 6 3.2 6 6s-6 3.2-6 6 6 3.2 6 6"/>
+    <path d="M37 28c0 2.8-6 3.2-6 6s6 3.2 6 6-6 3.2-6 6"/>
+    <path d="M27.5 31.2h9"/>
+    <path d="M27.5 37.2h9"/>
+    <path d="M27.5 43.2h9"/>
+  </g>
+</svg>
