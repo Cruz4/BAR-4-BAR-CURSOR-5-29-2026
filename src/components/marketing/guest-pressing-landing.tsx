@@ -417,7 +417,7 @@ function GuestPressingLandingInner() {
               <li className="flex gap-2">
                 <Music className="mt-0.5 h-3.5 w-3.5 shrink-0 text-fuchsia-400" />
                 <span>
-                  First Drops — press the song on The Lathe from The Scene. Fans buy once and stream here.{' '}
+                  First Drops — press the song from The Scene. Fans buy once and stream here.{' '}
                   {firstDropsFeeCashoutLine()}
                 </span>
               </li>

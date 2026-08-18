@@ -282,7 +282,7 @@ function PressSongButton() {
           Press a song
         </span>
         <span className="mt-0.5 block font-code text-[8px] font-bold uppercase leading-tight tracking-[0.12em] text-sky-200/80 sm:text-[9px] sm:tracking-[0.16em]">
-          Sell · The Lathe
+          Sell · First Drops
         </span>
       </span>
     </button>

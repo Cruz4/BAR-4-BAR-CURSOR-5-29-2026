@@ -56,6 +56,8 @@ import {
   studioNameClass,
   studioTierMenuClass,
 } from '@/lib/studio-tier-chrome';
+import { useOptionalDropPlayer } from '@/context/drop-player-context';
+import { TopNavDropMiniPlayer } from '@/components/top-nav-drop-mini-player';
 
 export function Header() {
   const { user, loading } = useAuth();
@@ -71,6 +73,7 @@ export function Header() {
   const { unread: foldUnread } = useFoldInbox();
   const { enabled: foldsOn } = useFoldsFeature();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
+  const dropPlayer = useOptionalDropPlayer();
   const [progress, setProgress] = useState(0);
   const [showPwaInstallMenu, setShowPwaInstallMenu] = useState(false);
 
@@ -126,7 +129,7 @@ export function Header() {
 
   return (
     <>
-    <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header data-app-header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       {progress > 0 && progress < 100 && (
           <div className="absolute bottom-0 left-0 w-full h-[2px] z-50 overflow-hidden bg-amber-950/30">
               <div
@@ -135,7 +138,7 @@ export function Header() {
               />
           </div>
       )}
-      <div className="relative h-14 w-full px-2 sm:px-4 md:px-6">
+      <div data-app-header-bar className="relative h-14 w-full px-2 sm:px-4 md:px-6">
             {/* Logo centered — tablet/desktop only (mobile uses left column to avoid theme-toggle overlap) */}
             <div className="pointer-events-none absolute inset-0 z-20 hidden md:flex items-center justify-center px-24 lg:px-32">
                 <BrandLockup variant="app" className="pointer-events-auto min-w-0 max-w-full" />
@@ -401,6 +404,7 @@ export function Header() {
           </nav>
             </div>
       </div>
+      {dropPlayer?.current ? <TopNavDropMiniPlayer /> : null}
     </header>
     <BugReportDialog open={bugReportOpen} onOpenChange={setBugReportOpen} />
     <HowToUseDialog open={guideOpen} onOpenChange={setGuideOpen} />

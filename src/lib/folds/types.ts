@@ -21,6 +21,8 @@ export type FoldDoc = {
   lastSenderId: string;
   lastBarId: string;
   unread: Record<string, number>;
+  /** Per-user inbox soft delete flag (hides thread from that user's inbox). */
+  deletedFor: Record<string, boolean>;
   foldedBack: Record<string, boolean>;
   lastReadAt: Record<string, string>;
   barCount: number;

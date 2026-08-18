@@ -213,7 +213,7 @@ const CORE_FAQS = [
     },
     {
       q: "What is DNA Drop?",
-      a: "Studio Pro — publish a shareable lyric snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live lyric drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. Selling is separate: Press a song on The Scene (The Lathe)."
+      a: "Studio Pro — publish a shareable lyric snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live lyric drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. Selling is separate: Press a song on The Scene."
     },
     {
       q: "What happens during Creative Syncing vs DNA Extraction?",
@@ -225,7 +225,7 @@ const CORE_FAQS = [
     },
     {
       q: "What is included in a DNA Drop?",
-      a: "Lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when toggled on. Album drops add album DNA presets and motifs. Optional links & embeds (YouTube, etc.) attach from the DNA Drop dialog for the lyric page. Audio and price live on The Lathe — Press a song from The Scene — not in this dialog.",
+      a: "Lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when toggled on. Album drops add album DNA presets and motifs. Optional links & embeds (YouTube, etc.) attach from the DNA Drop dialog for the lyric page. Audio and price live on First Drops — Press a song from The Scene — not in this dialog.",
     },
     {
       q: "Is my DNA Drop live-synced when I edit?",
@@ -508,9 +508,9 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <p className="text-sm text-foreground/90">{firstDropsPitch()}</p>
                     <ol className="list-decimal list-inside space-y-2 text-sm">
                       <li><strong>Write the song</strong> in The Vault — lyrics, DNA, vibe as usual.</li>
-                      <li><strong>Press a song</strong> on The Scene dock (The Lathe). Pick the track — you do not open DNA Drop to sell.</li>
+                      <li><strong>Press a song</strong> on The Scene dock. Pick the track — you do not open DNA Drop to sell.</li>
                       <li><strong>Upload the song and set a price</strong> — fixed price, or pay-what-you-want (floor $1.00). Then Press it live.</li>
-                      <li><strong>DNA Drop stays lyrics-only</strong> — collaborators import bars and DNA. Selling lives on The Lathe.</li>
+                      <li><strong>DNA Drop stays lyrics-only</strong> — collaborators import bars and DNA. Selling lives on First Drops.</li>
                       <li><strong>Fans find it</strong> as Listen / buy at the top of your Artist Home, on The Scene, and on the share link.</li>
                       <li><strong>Cash out</strong> — open Earnings, connect Stripe payouts, then Stripe sends your {dropArtistShareLabel()} share to your bank.</li>
                     </ol>

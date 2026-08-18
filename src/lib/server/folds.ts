@@ -37,6 +37,10 @@ function asFold(id: string, data: FirebaseFirestore.DocumentData | undefined): F
     lastSenderId: String(data.lastSenderId || ''),
     lastBarId: String(data.lastBarId || ''),
     unread: (data.unread && typeof data.unread === 'object' ? data.unread : {}) as Record<string, number>,
+    deletedFor:
+      data.deletedFor && typeof data.deletedFor === 'object'
+        ? data.deletedFor
+        : ({} as Record<string, boolean>),
     foldedBack:
       data.foldedBack && typeof data.foldedBack === 'object'
         ? data.foldedBack
@@ -170,6 +174,23 @@ export async function declineFold(opts: { foldId: string; userId: string }): Pro
   return (await getFold(opts.foldId)) as FoldDoc;
 }
 
+export async function deleteFoldForUser(opts: { foldId: string; userId: string }): Promise<FoldDoc> {
+  const fold = await getFold(opts.foldId);
+  if (!fold) throw new Error('Conversation not found.');
+  assertMember(fold, opts.userId);
+  const db = await getDb();
+  await db.doc(`folds/${opts.foldId}`).set(
+    {
+      [`deletedFor.${opts.userId}`]: true,
+      [`unread.${opts.userId}`]: 0,
+      [`foldedBack.${opts.userId}`]: false,
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true }
+  );
+  return (await getFold(opts.foldId)) as FoldDoc;
+}
+
 export async function passBar(opts: {
   senderId: string;
   senderName: string;
@@ -267,6 +288,8 @@ export async function passBar(opts: {
     lastBarId: barId,
     [`unread.${opts.peerId}`]: FieldValue.increment(1),
     [`unread.${opts.senderId}`]: 0,
+    [`deletedFor.${opts.senderId}`]: false,
+    [`deletedFor.${opts.peerId}`]: false,
     [`foldedBack.${opts.senderId}`]: false,
     [`foldedBack.${opts.peerId}`]: false,
     barCount: FieldValue.increment(1),

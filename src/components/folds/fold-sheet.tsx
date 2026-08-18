@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
 import {
   acceptFoldClient,
+  deleteFoldFromInboxClient,
   declineFoldClient,
   foldBackClient,
   markFoldReadClient,
@@ -324,6 +325,25 @@ export function FoldSheet({ foldId }: { foldId: string }) {
               }
             >
               Mark unread
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={() =>
+                void deleteFoldFromInboxClient(foldId)
+                  .then(() => {
+                    toast({ title: 'Deleted from inbox' });
+                    router.push('/folds');
+                  })
+                  .catch((e) =>
+                    toast({
+                      variant: 'destructive',
+                      title: 'Could not delete',
+                      description: e instanceof Error ? e.message : undefined,
+                    })
+                  )
+              }
+            >
+              Delete from inbox
             </DropdownMenuItem>
             {sealedForMe ? (
               <DropdownMenuItem onClick={() => void acceptFoldClient(foldId)}>Accept</DropdownMenuItem>

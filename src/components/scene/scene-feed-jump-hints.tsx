@@ -11,22 +11,17 @@ import {
   BLOCK_SECTION_ID,
   DISCOVER_SECTION_ID,
   FIND_ARTISTS_SECTION_ID,
-  SCENE_BOOTH_ID,
-  SCENE_TOP_ID,
 } from '@/lib/scene-home';
 import { cn } from '@/lib/utils';
 
 type FeedLane = 'block' | 'discover';
 
-const FADE_AFTER_MS = 3700;
-const HEADER_H = '3.5rem';
-const EDGE = '0.2rem';
+const FADE_AFTER_MS = 1850;
+const EDGE_PX = 3;
 
 function scrollToId(id: string) {
   if (typeof document === 'undefined') return;
-  const el =
-    document.getElementById(id) ||
-    (id === SCENE_BOOTH_ID ? document.getElementById(SCENE_TOP_ID) : null);
+  const el = document.getElementById(id);
   const reduce =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -35,6 +30,14 @@ function scrollToId(id: string) {
     el.scrollIntoView({ behavior, block: 'start' });
     return;
   }
+  window.scrollTo({ top: 0, behavior });
+}
+
+function scrollToTop() {
+  const reduce =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const behavior: ScrollBehavior = reduce ? 'auto' : 'smooth';
   window.scrollTo({ top: 0, behavior });
 }
 
@@ -52,7 +55,7 @@ function JumpLabel({
       type="button"
       onClick={onClick}
       className={cn(
-        'pointer-events-auto max-w-[min(22rem,calc(100vw-2rem))] px-2 text-center font-code text-[10px] font-bold uppercase tracking-[0.22em] text-white/40 transition-colors hover:text-white/80 sm:text-[11px]',
+        'pointer-events-auto m-0 h-auto min-h-0 appearance-none border-0 bg-transparent p-0 leading-none text-center font-code text-[10px] font-bold uppercase tracking-[0.18em] text-white/40 transition-colors hover:text-white/80 sm:text-[11px]',
         placement === 'top' && 'drop-shadow-[0_1px_8px_rgba(0,0,0,0.7)]',
         placement === 'bottom' && 'drop-shadow-[0_-1px_8px_rgba(0,0,0,0.7)]'
       )}
@@ -78,7 +81,27 @@ export function SceneFeedJumpHints({
   const [lane, setLane] = useState<FeedLane | null>(null);
   const [findReached, setFindReached] = useState(false);
   const [awake, setAwake] = useState(false);
+  const [headerBottom, setHeaderBottom] = useState(56);
   const fadeTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const header =
+      document.querySelector<HTMLElement>('[data-app-header]') ||
+      document.querySelector<HTMLElement>('[data-app-header-bar]');
+    const measure = () => {
+      const bottom = header?.getBoundingClientRect().bottom;
+      setHeaderBottom(Math.max(0, Math.round(bottom ?? 56)));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    const ro = header ? new ResizeObserver(measure) : null;
+    if (header && ro) ro.observe(header);
+    return () => {
+      window.removeEventListener('resize', measure);
+      ro?.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -125,7 +148,7 @@ export function SceneFeedJumpHints({
   }, [blockExpanded, discoverExpanded]);
 
   const goBooth = useCallback(() => {
-    scrollToId(SCENE_BOOTH_ID);
+    scrollToTop();
   }, []);
 
   const goBlock = useCallback(() => {
@@ -149,15 +172,15 @@ export function SceneFeedJumpHints({
     <>
       <div
         className={cn(
-          'pointer-events-none fixed left-1/2 z-[25] -translate-x-1/2 transition-opacity duration-500',
+          'pointer-events-none fixed left-1/2 z-[35] -translate-x-1/2 transition-opacity duration-500',
           show ? 'opacity-100 [&_button]:pointer-events-auto' : 'opacity-0 [&_button]:pointer-events-none'
         )}
-        style={{ top: `calc(${HEADER_H} + ${EDGE})` }}
+        style={{ top: Math.max(0, headerBottom - 2) }}
         aria-hidden={!show}
       >
         {lane === 'block' ? (
           <JumpLabel placement="top" onClick={goBooth}>
-            ↑ Top of the Scene / Your Booth
+            ↑ Top of Scene
           </JumpLabel>
         ) : (
           <JumpLabel placement="top" onClick={goBlock}>
@@ -172,7 +195,7 @@ export function SceneFeedJumpHints({
             ? 'opacity-100 [&_button]:pointer-events-auto'
             : 'opacity-0 [&_button]:pointer-events-none'
         )}
-        style={{ bottom: `max(${EDGE}, env(safe-area-inset-bottom, 0px))` }}
+        style={{ bottom: `max(${EDGE_PX}px, env(safe-area-inset-bottom, 0px))` }}
         aria-hidden={!show || !showBottom}
       >
         {lane === 'block' ? (

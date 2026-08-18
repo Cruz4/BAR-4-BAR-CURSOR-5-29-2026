@@ -144,14 +144,14 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
             </DialogTitle>
             <DialogDescription>
               DNA Drops are the public lyric pages. First Drops are the song on those pages — upload audio
-              and set a price on The Lathe. Fans find them on your Artist Home and The Scene.
+              and set a price on First Drops. Fans find them on your Artist Home and The Scene.
             </DialogDescription>
           </DialogHeader>
 
           {total === 0 ? (
             <div className="space-y-3 rounded-xl border border-dashed border-border/70 bg-muted/20 p-4">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Nothing live yet. Tap Press a song on The Scene (The Lathe) to upload a song and put it on
+                Nothing live yet. Tap Press a song on The Scene to upload a song and put it on
                 sale. DNA Drop is only for sharing lyrics — not for selling.
               </p>
               <div className="flex flex-wrap gap-2">
@@ -265,7 +265,7 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
                     <CassetteTape className="h-3.5 w-3.5" /> Track DNA · no song yet
                   </p>
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    Lyrics are live. Press the song on The Lathe to sell it — you do not go back through DNA Drop.
+                    Lyrics are live. Press the song on First Drops to sell it — you do not go back through DNA Drop.
                   </p>
                   <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {trackDrops

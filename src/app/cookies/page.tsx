@@ -16,7 +16,7 @@ export default function CookiesPage() {
         <header className="space-y-2">
           <Link href="/" className="text-primary text-sm font-bold uppercase tracking-widest hover:underline">← Back to Studio</Link>
           <h1 className="font-headline text-4xl font-bold uppercase text-foreground">Cookie Policy</h1>
-          <p className="text-sm text-muted-foreground">Last updated: July 27, 2026</p>
+          <p className="text-sm text-muted-foreground">Last updated: August 18, 2026</p>
         </header>
 
         <article className="space-y-6 text-muted-foreground leading-relaxed text-sm font-code">
@@ -27,7 +27,7 @@ export default function CookiesPage() {
             <ul className="list-disc pl-5 space-y-2">
               <li><strong className="text-foreground">Firebase Auth session</strong> — keeps you signed in.</li>
               <li><strong className="text-foreground">sidebar_state</strong> — remembers sidebar open/closed preference.</li>
-              <li><strong className="text-foreground">bar4bar-* keys</strong> — local mirrors of albums, scratch pad, and UI preferences for faster load and offline resilience.</li>
+              <li><strong className="text-foreground">bar4bar-* / b4b-* keys</strong> — local mirrors of albums, scratch pad, UI preferences, Deck play history, Studio Progress expand state, and similar keys for faster load and offline resilience.</li>
               <li><strong className="text-foreground">b4b-cookie-consent</strong> — records that you acknowledged this notice.</li>
               <li><strong className="text-foreground">Marketing attribution</strong> — short-lived session/local tags from campaign links (for example <code className="text-foreground/80">?ref=</code>) so we can attribute signups.</li>
             </ul>

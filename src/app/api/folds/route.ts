@@ -4,6 +4,7 @@ import { checkRateLimit } from '@/lib/server/rate-limit';
 import {
   acceptFold,
   declineFold,
+  deleteFoldForUser,
   foldBackUnread,
   getFold,
   markFoldRead,
@@ -107,6 +108,10 @@ export async function POST(req: Request) {
     }
     if (action === 'decline') {
       const fold = await declineFold({ foldId, userId });
+      return NextResponse.json({ fold });
+    }
+    if (action === 'delete') {
+      const fold = await deleteFoldForUser({ foldId, userId });
       return NextResponse.json({ fold });
     }
 

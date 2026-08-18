@@ -456,7 +456,7 @@ export function ShareDialog({
                       <>
                         The link stays the same. Use <strong className="text-foreground">Update snapshot</strong> after
                         you edit lyrics, toggles, DNA, intents, vibe, style, or structure — otherwise visitors keep
-                        seeing the last published version. To sell the song, press it on The Lathe — not here.
+                        seeing the last published version. To sell the song, press it from The Scene — not here.
                       </>
                     )}
                   </p>
@@ -525,7 +525,7 @@ export function ShareDialog({
                 </Label>
               </div>
               <p className="text-[10px] text-muted-foreground leading-relaxed">
-                Optional embeds on the lyric snapshot. Audio and price are on The Lathe — Press a song — not here.
+                Optional embeds on the lyric snapshot. Audio and price are on First Drops — Press a song — not here.
               </p>
               <div className="flex gap-2 min-w-0">
                 <Input

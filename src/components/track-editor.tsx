@@ -1149,7 +1149,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                         actionSafe
                         content={
                           <p className="text-[10px] font-bold leading-snug">
-                            Sell this track from The Lathe — upload, price, press live. DNA Drop stays lyrics-only.
+                            Sell this song: upload audio, set a price, and press it live.
                           </p>
                         }
                       >

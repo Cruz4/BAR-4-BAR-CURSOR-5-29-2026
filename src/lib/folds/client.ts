@@ -38,6 +38,10 @@ function foldFromData(id: string, data: Record<string, unknown>): FoldDoc {
     lastSenderId: String(data.lastSenderId || ''),
     lastBarId: String(data.lastBarId || ''),
     unread: (data.unread && typeof data.unread === 'object' ? data.unread : {}) as Record<string, number>,
+    deletedFor:
+      data.deletedFor && typeof data.deletedFor === 'object'
+        ? (data.deletedFor as Record<string, boolean>)
+        : {},
     foldedBack:
       data.foldedBack && typeof data.foldedBack === 'object'
         ? (data.foldedBack as Record<string, boolean>)
@@ -173,7 +177,10 @@ export async function passBarClient(opts: {
   return { fold: data.fold, bar: data.bar };
 }
 
-async function foldAction(action: 'read' | 'unread' | 'accept' | 'decline', foldId: string): Promise<FoldDoc> {
+async function foldAction(
+  action: 'read' | 'unread' | 'accept' | 'decline' | 'delete',
+  foldId: string
+): Promise<FoldDoc> {
   const user = auth.currentUser;
   if (!user) throw new Error('Sign in required');
   const res = await fetch('/api/folds', {
@@ -190,3 +197,4 @@ export const markFoldReadClient = (foldId: string) => foldAction('read', foldId)
 export const foldBackClient = (foldId: string) => foldAction('unread', foldId);
 export const acceptFoldClient = (foldId: string) => foldAction('accept', foldId);
 export const declineFoldClient = (foldId: string) => foldAction('decline', foldId);
+export const deleteFoldFromInboxClient = (foldId: string) => foldAction('delete', foldId);

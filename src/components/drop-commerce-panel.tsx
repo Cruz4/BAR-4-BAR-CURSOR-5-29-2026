@@ -60,7 +60,12 @@ export function PriceEditor({
             type="button"
             size="sm"
             variant={price.mode === m.id ? 'default' : 'outline'}
-            className="h-8 text-[9px] font-bold uppercase"
+            className={cn(
+              'h-9 px-2 text-[11px] font-black uppercase tracking-wide',
+              price.mode === m.id
+                ? 'text-white'
+                : 'border-white/30 bg-black/35 text-white/90 hover:bg-white/10 hover:text-white'
+            )}
             onClick={() => onChange({ ...price, mode: m.id })}
           >
             {m.label}

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * The Lathe — press a song for sale without opening DNA Drop.
+ * Press a song — sell without opening DNA Drop.
  * Pick a vault track, upload the song, set a price, go live.
  * The public page still carries lyrics; this is the sell desk.
  */

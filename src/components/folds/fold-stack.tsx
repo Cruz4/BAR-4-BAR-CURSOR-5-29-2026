@@ -3,14 +3,19 @@
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StudioLoader } from '@/components/studio-loader';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useFoldInbox } from '@/components/folds/fold-inbox-provider';
 import { PassBarDialog } from '@/components/folds/pass-bar-dialog';
-import { acceptFoldClient, declineFoldClient, foldBackClient } from '@/lib/folds/client';
+import {
+  acceptFoldClient,
+  declineFoldClient,
+  deleteFoldFromInboxClient,
+  foldBackClient,
+} from '@/lib/folds/client';
 import { peerIdOf, unreadFor, type FoldDoc } from '@/lib/folds/types';
 import { cn } from '@/lib/utils';
 import { fetchFriendships, friendProfilesOf } from '@/lib/profile/social-client';
@@ -30,6 +35,7 @@ function FoldCard({
   onAccept,
   onDecline,
   onFoldBack,
+  onDelete,
   busy,
 }: {
   fold: FoldDoc;
@@ -37,6 +43,7 @@ function FoldCard({
   onAccept: (id: string) => void;
   onDecline: (id: string) => void;
   onFoldBack: (id: string) => void;
+  onDelete: (id: string) => void;
   busy: boolean;
 }) {
   const peerId = peerIdOf(fold.memberIds, me);
@@ -105,16 +112,27 @@ function FoldCard({
             Decline
           </Button>
         </div>
-      ) : fold.status !== 'declined' && !wet ? (
-        <div className="flex justify-end border-t border-white/5 px-4 py-1.5">
+      ) : fold.status !== 'declined' ? (
+        <div className="flex items-center justify-between border-t border-white/5 px-4 py-1.5">
           <button
             type="button"
             disabled={busy}
-            onClick={() => onFoldBack(fold.id)}
-            className="font-code text-[9px] font-bold uppercase tracking-widest text-amber-200/55 hover:text-amber-100"
+            onClick={() => onDelete(fold.id)}
+            className="inline-flex items-center gap-1 font-code text-[9px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground"
           >
-            Mark unread
+            <Trash2 className="h-3 w-3" />
+            Delete
           </button>
+          {!wet ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onFoldBack(fold.id)}
+              className="font-code text-[9px] font-bold uppercase tracking-widest text-amber-200/55 hover:text-amber-100"
+            >
+              Mark unread
+            </button>
+          ) : <span />}
         </div>
       ) : null}
     </article>
@@ -134,11 +152,17 @@ export function FoldStack() {
 
   const mine = user?.id || '';
   const openFolds = useMemo(
-    () => folds.filter((f) => f.status !== 'declined' && !(f.status === 'pending' && f.initiatedBy !== mine)),
+    () =>
+      folds.filter(
+        (f) =>
+          !f.deletedFor?.[mine] &&
+          f.status !== 'declined' &&
+          !(f.status === 'pending' && f.initiatedBy !== mine)
+      ),
     [folds, mine]
   );
   const waitingFolds = useMemo(
-    () => folds.filter((f) => f.status === 'pending' && f.initiatedBy !== mine),
+    () => folds.filter((f) => !f.deletedFor?.[mine] && f.status === 'pending' && f.initiatedBy !== mine),
     [folds, mine]
   );
 
@@ -184,6 +208,22 @@ export function FoldStack() {
       toast({
         variant: 'destructive',
         title: 'Could not mark unread',
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const deleteFromInbox = async (id: string) => {
+    setBusyId(id);
+    try {
+      await deleteFoldFromInboxClient(id);
+      toast({ title: 'Deleted from inbox' });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not delete',
         description: error instanceof Error ? error.message : undefined,
       });
     } finally {
@@ -253,6 +293,7 @@ export function FoldStack() {
               onAccept={(id) => void respond(id, true)}
               onDecline={(id) => void respond(id, false)}
               onFoldBack={(id) => void foldBack(id)}
+              onDelete={(id) => void deleteFromInbox(id)}
             />
           ))}
         </div>

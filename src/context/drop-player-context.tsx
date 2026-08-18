@@ -32,6 +32,7 @@ type DropPlayerContextValue = {
   skipNext: () => void;
   prev: () => void;
   seek: (value: number) => void;
+  stop: () => void;
 };
 
 const DropPlayerContext = createContext<DropPlayerContextValue | null>(null);
@@ -200,6 +201,24 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
     setElapsed(value);
   }, []);
 
+  const stop = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      userPausedRef.current = true;
+      wantPlayingRef.current = false;
+      audio.pause();
+      audio.currentTime = 0;
+      audio.removeAttribute('src');
+      audio.load();
+    }
+    setPlaying(false);
+    setLoading(false);
+    setElapsed(0);
+    setDuration(0);
+    setCurrent(null);
+    currentRef.current = null;
+  }, []);
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -334,6 +353,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       skipNext,
       prev,
       seek,
+      stop,
     }),
     [
       current,
@@ -350,6 +370,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       skipNext,
       prev,
       seek,
+      stop,
     ]
   );
 

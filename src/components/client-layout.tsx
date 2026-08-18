@@ -102,6 +102,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const isSettingsRoute = pathname === '/usage' || pathname.startsWith('/usage/') || pathname === '/admin';
   const showAppHeader =
     !isMarketingShell && !isPerformPage && !isSharePage && !isPublicProfilePage && !isMarketingCapture;
+  const showBottomNowPlaying = showDropNowPlaying && !showAppHeader;
   // Public home / login / profile / share need document scroll — overflow-hidden
   // traps the Pressing landing and makes the brand mark feel dead.
   const allowPageScroll =
@@ -129,7 +130,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 className={cn(
                   'relative z-10 flex min-h-screen flex-col flex-1',
                   allowPageScroll ? 'overflow-x-hidden overflow-y-auto' : 'overflow-hidden',
-                  showDropNowPlaying && 'pb-[4.75rem]'
+                  showBottomNowPlaying && 'pb-[4.75rem]'
                 )}
               >
                 {showAppHeader && <Header />}
@@ -156,7 +157,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               </div>
               {!isSharePage && !isPublicProfilePage && !isMarketingCapture && <StudioTips />}
               {!isSharePage && !isPublicProfilePage && <FloatingInkSpent />}
-              <DropNowPlayingBar />
+              {showBottomNowPlaying ? <DropNowPlayingBar /> : null}
               <FirstDropLatheHost />
               <Toaster />
               <AchievementUnlockCelebration />

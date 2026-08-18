@@ -123,7 +123,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
     target: '[data-tour="dna-drop"]',
     title: 'DNA Drop (Pro)',
     body: 'Publish a shareable lyric snapshot from the left panel — not the sell desk. Collaborators import lyrics, structure, DNA, and vibe after they sign in. To put the song on sale, leave the sheet and tap Press a song on The Scene.',
-    example: 'Drop a link for feedback — they merge it into their vault. Audio and price live on The Lathe.',
+    example: 'Drop a link for feedback — they merge it into their vault. Audio and price live on First Drops.',
   },
   {
     id: 'ink',
@@ -293,7 +293,7 @@ export const SCENE_HOME_TOUR_STEPS: LyricsTourStep[] = [
     target: '[data-tour="scene-nav-mobile"], [data-tour="scene-nav-desktop"]',
     mobileCardPlacement: 'top',
     title: 'The Vault is where you write',
-    body: 'Your albums, tracks, and the AI bar-for-bar workstation live in The Vault. Press a song on this dock (The Lathe) is how you put a track on sale — not DNA Drop. The Scene is the block; the Vault is the booth.',
+    body: 'Your albums, tracks, and the AI bar-for-bar workstation live in The Vault. Press a song on this dock is how you put a track on sale — not DNA Drop. The Scene is the block; the Vault is the booth.',
     example: 'Replay this tour anytime from the Studio Manual (?).',
   },
 ];
