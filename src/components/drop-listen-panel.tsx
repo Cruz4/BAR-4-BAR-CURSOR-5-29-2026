@@ -102,7 +102,7 @@ export function DropListenPanel({
           body: JSON.stringify({ sessionId, userId: user.id }),
         });
         await loadStream();
-        toast({ title: 'Added to your library', description: 'Full stream is on The Deck.' });
+        toast({ title: 'Added to Library', description: 'Full stream is ready to play.' });
       } catch {
         /* webhook may already have fulfilled */
       }
@@ -159,7 +159,7 @@ export function DropListenPanel({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Could not unlock');
       await loadStream();
-      toast({ title: 'Unlocked', description: 'Full stream is on The Deck.' });
+      toast({ title: 'Unlocked', description: 'Full stream is in Library.' });
     } catch (e: unknown) {
       toast({
         variant: 'destructive',
@@ -230,7 +230,7 @@ export function DropListenPanel({
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-headline font-bold uppercase">{title}</p>
             <p className="text-[10px] text-muted-foreground">
-              {previewCapped ? 'Preview stops at 30 seconds until you unlock the drop.' : 'Streams in your Bar 4 Bar library.'}
+              {previewCapped ? 'Preview stops at 30 seconds until you unlock the drop.' : 'Streams in Library.'}
             </p>
           </div>
           {src ? (

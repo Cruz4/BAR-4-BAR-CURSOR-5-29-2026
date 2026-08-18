@@ -13,7 +13,7 @@ type DropVisualizerProps = {
 const BAR_LABELS = ['BAR 1', 'BAR 2', 'BAR 3', 'BAR 4'] as const;
 
 /**
- * Bar 4 Bar Deck visualizer — a pressing-lathe ring plus four lyric-bar
+ * Bar 4 Bar Library visualizer — a pressing-lathe ring plus four lyric-bar
  * energy lanes. Not a generic equalizer.
  */
 export function DropVisualizer({ analyser, playing, children, className }: DropVisualizerProps) {

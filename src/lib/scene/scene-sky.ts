@@ -2,11 +2,11 @@
  * Scene sky model — day/night phase + weather condition for the skyline.
  * Weather codes follow Open-Meteo / WMO interpretation.
  *
- * Live weather uses the house city (not GPS). Geolocation is blocked in
- * Permissions-Policy; The Scene is a venue, not a weather app.
+ * Live weather prefers the viewer's place (IP, or GPS if already granted).
+ * House city (NYC) is last resort when location cannot be resolved.
  */
 
-/** Default city for Scene weather when the client has no coordinates. */
+/** Fallback city when IP / GPS cannot be resolved. */
 export const SCENE_HOUSE_CITY = {
   name: 'New York',
   shortName: 'NYC',
@@ -242,4 +242,10 @@ export function sceneWeatherChipLabel(
 ): string {
   const sky = WEATHER_ON_THE_BLOCK[weather] ?? 'On the block';
   return `${sky} · ${PHASE_CHIP[phase]}`;
+}
+
+/** Compact Fahrenheit for the Scene weather chip — `72°`. */
+export function formatSceneTempF(tempF: number | null | undefined): string | null {
+  if (typeof tempF !== 'number' || !Number.isFinite(tempF)) return null;
+  return `${Math.round(tempF)}°`;
 }

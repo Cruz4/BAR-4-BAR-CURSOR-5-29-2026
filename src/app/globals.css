@@ -1807,6 +1807,71 @@
     box-shadow: 0 0 50px 20px rgba(255, 140, 90, 0.25);
   }
 
+  .scene-block-sun.is-eclipsed {
+    box-shadow: 0 0 28px 10px rgba(180, 160, 120, 0.18);
+  }
+
+  .scene-block-sun-bite {
+    position: absolute;
+    inset: 8%;
+    border-radius: 9999px;
+    background: #0b1024;
+    transform: translate(-28%, -8%);
+    box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.8);
+  }
+
+  .scene-block-sun.is-annular .scene-block-sun-bite {
+    inset: 18%;
+    transform: translate(-12%, -6%);
+    box-shadow: 0 0 10px rgba(255, 200, 120, 0.35);
+  }
+
+  /* Real moon — phase via SVG mask in the atmosphere component. */
+  .scene-block-moon {
+    top: 12%;
+    right: 16%;
+    width: 56px;
+    height: 56px;
+    pointer-events: none;
+    filter: drop-shadow(0 0 18px rgba(236, 228, 196, 0.35));
+  }
+
+  .scene-block[data-phase='dusk'] .scene-block-moon {
+    top: 22%;
+    right: 12%;
+    width: 48px;
+    height: 48px;
+  }
+
+  .scene-block-moon.is-lunar-eclipse {
+    filter: drop-shadow(0 0 22px rgba(196, 72, 42, 0.55));
+  }
+
+  @keyframes scene-block-meteor-streak {
+    0% { opacity: 0; transform: rotate(var(--meteor-angle)) translateX(0); }
+    12% { opacity: 1; }
+    100% { opacity: 0; transform: rotate(var(--meteor-angle)) translateX(var(--meteor-travel)); }
+  }
+
+  .scene-block-meteor {
+    position: absolute;
+    height: 1.5px;
+    width: var(--meteor-len);
+    border-radius: 9999px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 18%,
+      rgba(255, 252, 240, 0.95) 72%,
+      rgba(186, 230, 255, 0.7) 100%
+    );
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.45);
+    transform-origin: left center;
+    animation: scene-block-meteor-streak 0.72s ease-out forwards;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+
   /* Soft cloud bands */
   @keyframes scene-block-cloud-drift {
     0% { transform: translateX(0); }
@@ -2060,24 +2125,33 @@
   }
 
   .scene-block-building-back {
-    background: linear-gradient(180deg, rgba(30, 26, 58, 0.55), rgba(14, 12, 32, 0.72));
+    background: #1a1730;
     clip-path: polygon(0 100%, 0 8%, 50% 0%, 100% 8%, 100% 100%);
-    opacity: 0.5;
+    z-index: 0;
   }
 
   .scene-block-building-front {
-    background: linear-gradient(180deg, rgba(20, 18, 42, 0.85), rgba(8, 7, 20, 0.95));
-    border-top: 1px solid rgba(148, 163, 184, 0.08);
+    background: #0b0914;
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
+    z-index: 1;
   }
 
   .scene-block[data-phase='day'] .scene-block-building-back {
-    background: linear-gradient(180deg, rgba(70, 90, 130, 0.35), rgba(40, 55, 90, 0.45));
-    opacity: 0.35;
+    background: #31405c;
   }
 
   .scene-block[data-phase='day'] .scene-block-building-front {
-    background: linear-gradient(180deg, rgba(45, 55, 85, 0.55), rgba(25, 30, 50, 0.72));
-    opacity: 0.7;
+    background: #1c2438;
+  }
+
+  .scene-block[data-phase='dawn'] .scene-block-building-back,
+  .scene-block[data-phase='dusk'] .scene-block-building-back {
+    background: #2a2038;
+  }
+
+  .scene-block[data-phase='dawn'] .scene-block-building-front,
+  .scene-block[data-phase='dusk'] .scene-block-building-front {
+    background: #140e1e;
   }
 
   .scene-block-window {
@@ -2086,6 +2160,7 @@
     transform: translate(-50%, 0);
     background: rgba(148, 163, 184, 0.12);
     border-radius: 1px;
+    z-index: 2;
   }
 
   @keyframes scene-block-window-flicker {
@@ -2144,7 +2219,8 @@
     .scene-block-window.is-lit,
     .scene-block-cloud,
     .scene-block-lightning,
-    .scene-block-precip-particle {
+    .scene-block-precip-particle,
+    .scene-block-meteor {
       animation: none !important;
     }
 
@@ -2186,6 +2262,10 @@
     .scene-block-note {
       animation-duration: 0.01ms;
       opacity: 0;
+    }
+
+    .scene-block-meteor {
+      display: none;
     }
   }
 }

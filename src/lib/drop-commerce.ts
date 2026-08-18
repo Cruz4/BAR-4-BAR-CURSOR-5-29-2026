@@ -61,7 +61,7 @@ export function firstDropsPitch(): string {
 }
 
 export function getFirstDropsWhatFaqAnswer(): string {
-  return `The record you press on First Drops — not a subsection of DNA Drop. Upload the song (private storage), set a price or pay-what-you-want, and fans buy once to stream it in Bar 4 Bar. Preview is 30 seconds until they unlock. The Deck on The Scene is the in-app player — crates, search, and a four-bar visualizer. Not a Spotify listing — exclusive in-app stream. ${firstDropsFeeLine()} ${firstDropsCashoutLine()} Ink is never used to buy music.`;
+  return `The record you press on First Drops — not a subsection of DNA Drop. Upload the song (private storage), set a price or pay-what-you-want, and fans buy once to stream it in Bar 4 Bar. Preview is 30 seconds until they unlock. Library on The Scene is the in-app player — crates, search, and a four-bar visualizer. Not a Spotify listing — exclusive in-app stream. ${firstDropsFeeLine()} ${firstDropsCashoutLine()} Ink is never used to buy music.`;
 }
 
 export function getFirstDropsSellFaqAnswer(): string {

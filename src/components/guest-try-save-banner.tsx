@@ -12,6 +12,7 @@ import {
   getGuestSignupHref,
   trackGuestSignupCta,
 } from '@/lib/guest-funnel-client';
+import { dispatchReplayTrySheetTour } from '@/lib/studio-onboarding';
 
 type GuestTrySaveBannerProps = {
   /** Live remaining count from the editor after a gen (optional). */
@@ -63,6 +64,7 @@ export function GuestTrySaveBanner({
 
   return (
     <div
+      data-tour="try-ink"
       className={
         outOfDemo
           ? 'shrink-0 border-b border-amber-500/40 bg-amber-500/15 px-2.5 py-1.5 md:px-4 md:py-2.5 flex flex-col gap-1.5 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-2 z-50'
@@ -151,6 +153,15 @@ export function GuestTrySaveBanner({
           <Link href={signupHref} onClick={onSignupClick}>
             {outOfDemo ? 'Save my bars' : 'Sign up to save'}
           </Link>
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 md:h-8 px-2 text-[9px] md:text-[10px] font-bold uppercase text-muted-foreground"
+          onClick={() => dispatchReplayTrySheetTour()}
+        >
+          Walkthrough
         </Button>
         <Button asChild variant="ghost" size="sm" className="h-7 md:h-8 px-2 text-[9px] md:text-[10px] font-bold uppercase text-muted-foreground">
           <Link href="/">Home</Link>

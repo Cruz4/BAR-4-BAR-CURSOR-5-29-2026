@@ -40,7 +40,7 @@ function isBrandNewStudioAccount(createdAt: string | undefined): boolean {
 const WHATS_NEW_ITEMS = [
   {
     title: 'First Drops',
-    desc: 'Put the actual song on a DNA Drop, set a price, and fans stream it here after they buy. Connect payouts on Earnings so Stripe can send your share to your bank. The Deck on The Scene is their player.',
+    desc: 'Put the actual song on a DNA Drop, set a price, and fans stream it here after they buy. Connect payouts on Earnings so Stripe can send your share to your bank. Library on The Scene is their player.',
     icon: Music,
     color: 'text-fuchsia-400',
     bgColor: 'bg-fuchsia-500/5',

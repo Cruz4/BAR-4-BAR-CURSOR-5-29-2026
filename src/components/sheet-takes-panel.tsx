@@ -91,7 +91,7 @@ export function SheetTakesPanel({
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card data-studio-panel className={studioAccentPanel('sky')}>
+      <Card data-tour="sheet-takes" data-studio-panel className={studioAccentPanel('sky')}>
         <CollapsibleTrigger asChild>
           <CardHeader className="cursor-pointer p-4 md:p-6">
             <div className="flex items-center justify-between gap-2">

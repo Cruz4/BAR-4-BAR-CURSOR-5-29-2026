@@ -249,7 +249,7 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
                 Bar 4 Bar First Drops
               </p>
               <h1 className="font-headline text-4xl font-bold uppercase leading-none sm:text-5xl">
-                The Deck
+                Library
               </h1>
               <p className="mt-1 max-w-xl text-sm text-muted-foreground">
                 Songs you pressed, plus First Drops you bought or unlocked — search, crate, play, and manage.
@@ -674,7 +674,7 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
           <AlertDialogHeader>
             <AlertDialogTitle>Break this crate?</AlertDialogTitle>
             <AlertDialogDescription>
-              The drops stay in your library. Only the crate goes.
+              The drops stay in Library. Only the crate goes.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

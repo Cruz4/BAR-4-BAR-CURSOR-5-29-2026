@@ -18,9 +18,20 @@ import {
   showsSun,
   type SceneWeather,
 } from '@/lib/scene/scene-sky';
+import {
+  activeEclipse,
+  activeMeteorShower,
+  meteorSkyOpen,
+  moonGlow,
+  moonPhaseAt,
+  moonShouldShow,
+  shootingStarIntervalMs,
+  type MeteorShower,
+  type MoonPhase,
+} from '@/lib/scene/scene-celestial';
 
 /**
- * The Scene Block — skyline driven by house-city weather + day/night,
+ * The Scene Block — skyline driven by live weather near the viewer + day/night,
  * with lit windows tracking social activity around the viewer.
  */
 
@@ -160,6 +171,122 @@ type NoteBurst = {
 
 const NOTE_GLYPHS = ['♪', '♫', '♬'];
 
+type MeteorStreak = {
+  id: number;
+  left: number;
+  top: number;
+  angle: number;
+  len: number;
+  travel: string;
+};
+
+function SceneMoonDisc({
+  moon,
+  eclipsed,
+  glow,
+}: {
+  moon: MoonPhase;
+  eclipsed: boolean;
+  glow: number;
+}) {
+  const maskId = React.useId().replace(/:/g, '');
+  const r = 22;
+  const cx = 28;
+  const cy = 28;
+  const offset = 2 * r * moon.illumination;
+  const shadeCx = moon.waxing ? cx - offset : cx + offset;
+  return (
+    <svg
+      className={cn('scene-block-moon absolute', eclipsed && 'is-lunar-eclipse')}
+      viewBox="0 0 56 56"
+      style={{ opacity: Math.min(1, 0.28 + glow) }}
+      aria-hidden
+    >
+      <defs>
+        <mask id={maskId}>
+          <rect width="56" height="56" fill="black" />
+          <circle cx={cx} cy={cy} r={r} fill="white" />
+          <circle cx={shadeCx} cy={cy} r={r} fill="black" />
+        </mask>
+      </defs>
+      <circle cx={cx} cy={cy} r={r} fill={eclipsed ? '#3a140e' : '#0b1020'} opacity="0.45" />
+      <circle cx={cx} cy={cy} r={r} fill={eclipsed ? '#c45c32' : '#f3ead0'} mask={`url(#${maskId})`} />
+    </svg>
+  );
+}
+
+function SceneMeteors({
+  enabled,
+  shower,
+}: {
+  enabled: boolean;
+  shower: MeteorShower | null;
+}) {
+  const [streaks, setStreaks] = useState<MeteorStreak[]>([]);
+  const idRef = useRef(0);
+  const showerKey = shower ? `${shower.name}:${Math.round(shower.zhr * shower.intensity)}` : '';
+  const showerRef = useRef(shower);
+  showerRef.current = shower;
+
+  useEffect(() => {
+    if (!enabled) {
+      setStreaks([]);
+      return;
+    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let cancelled = false;
+    let loopTimer = 0;
+    const clearTimers: number[] = [];
+    const spawn = () => {
+      if (cancelled) return;
+      const active = showerRef.current;
+      const count = active ? 1 + Math.floor(Math.random() * (active.intensity > 0.7 ? 3 : 2)) : 1;
+      const next: MeteorStreak[] = Array.from({ length: count }, () => ({
+        id: idRef.current++,
+        left: 8 + Math.random() * 78,
+        top: 4 + Math.random() * 38,
+        angle: active ? 28 + Math.random() * 18 : 18 + Math.random() * 50,
+        len: 48 + Math.random() * 56,
+        travel: `${110 + Math.random() * 80}px`,
+      }));
+      setStreaks((prev) => [...prev, ...next]);
+      clearTimers.push(
+        window.setTimeout(() => {
+          if (!cancelled) setStreaks((prev) => prev.filter((s) => !next.some((n) => n.id === s.id)));
+        }, 800)
+      );
+      loopTimer = window.setTimeout(spawn, shootingStarIntervalMs(active) * (0.7 + Math.random() * 0.6));
+    };
+    loopTimer = window.setTimeout(spawn, 2400 + Math.random() * 4000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(loopTimer);
+      clearTimers.forEach((id) => window.clearTimeout(id));
+    };
+  }, [enabled, showerKey]);
+
+  if (!enabled && streaks.length === 0) return null;
+
+  return (
+    <>
+      {streaks.map((streak) => (
+        <span
+          key={streak.id}
+          className="scene-block-meteor"
+          style={{
+            left: `${streak.left}%`,
+            top: `${streak.top}%`,
+            ['--meteor-angle' as string]: `${streak.angle}deg`,
+            ['--meteor-len' as string]: `${streak.len}px`,
+            ['--meteor-travel' as string]: streak.travel,
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
 function precipClass(weather: SceneWeather): string {
   const kind = precipKind(weather);
   if (kind === 'none') return '';
@@ -175,7 +302,13 @@ export function SceneBlockAtmosphere({
   energy?: number;
   pulseKey?: number;
 }) {
-  const { phase, weather, windy, hasWeather } = useSceneSky();
+  const { phase, weather, windy, hasWeather, lat, lon } = useSceneSky();
+  const moon = moonPhaseAt();
+  const shower = activeMeteorShower();
+  const eclipse = activeEclipse(new Date(), lat, lon, phase);
+  const moonVisible = moonShouldShow(phase, weather, moon);
+  const glow = moonGlow(moon, weather);
+  const meteorsOn = meteorSkyOpen(phase, weather);
   const litCount = Math.min(TOTAL_WINDOWS, Math.max(4, Math.round(4 + energy * 2)));
   const litIds = useMemo(() => new Set(WINDOW_LIGHT_ORDER.slice(0, litCount)), [litCount]);
   const litWindows = useMemo(
@@ -255,7 +388,21 @@ export function SceneBlockAtmosphere({
     >
       <div className="scene-block-sky absolute inset-0" />
 
-      {sunVisible && <div className="scene-block-sun absolute" />}
+      {sunVisible && (
+        <div
+          className={cn(
+            'scene-block-sun absolute',
+            eclipse?.kind === 'solar' && 'is-eclipsed',
+            eclipse?.kind === 'solar' && eclipse.shade === 'annular' && 'is-annular'
+          )}
+        >
+          {eclipse?.kind === 'solar' ? <div className="scene-block-sun-bite" /> : null}
+        </div>
+      )}
+
+      {moonVisible ? (
+        <SceneMoonDisc moon={moon} eclipsed={eclipse?.kind === 'lunar'} glow={glow} />
+      ) : null}
 
       {starVisible &&
         STARS.map((star) => (
@@ -272,6 +419,8 @@ export function SceneBlockAtmosphere({
             }}
           />
         ))}
+
+      <SceneMeteors enabled={meteorsOn} shower={shower} />
 
       {clouds > 0 && (
         <div

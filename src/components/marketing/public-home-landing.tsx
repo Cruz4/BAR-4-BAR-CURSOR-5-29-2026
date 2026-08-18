@@ -16,6 +16,8 @@ import { getSignupInkMarketingLine } from '@/lib/studio-tiers';
 import { BrandLockup } from '@/components/brand-lockup';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { firstDropsFeeCashoutLine, firstDropsPitch } from '@/lib/drop-commerce';
+import { guestTryHref } from '@/lib/guest-try';
+import { prefetchGuestTrySheetNow } from '@/lib/prefetch-guest-try-sheet';
 
 /** Public marketing surface — served at `/welcome` (and `/` when guest try sheet is off). */
 export function PublicHomeLanding() {
@@ -154,7 +156,13 @@ export function PublicHomeLanding() {
                 <Link href="/">Press your profile</Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="h-12 px-8 font-bold rounded-full border-emerald-500/40">
-                <Link href="/try?src=landing">Try writing free</Link>
+                <Link
+                  href={guestTryHref('landing')}
+                  onMouseEnter={() => prefetchGuestTrySheetNow()}
+                  onFocus={() => prefetchGuestTrySheetNow()}
+                >
+                  Try writing free
+                </Link>
               </Button>
             </div>
             <div className="pt-2">

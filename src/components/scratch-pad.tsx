@@ -126,9 +126,9 @@ const ScratchPad = forwardRef<{ addEffectResult: (result: ScratchPadEffectResult
                         studioPanelCaption,
                         isOpen ? 'text-[10px] leading-snug break-words' : 'text-[9px] leading-none truncate'
                       )}
-                      title="Temporary Work Area"
+                      title="Paste here, then onto the sheet"
                     >
-                      {isOpen ? 'Temporary Work Area' : 'Scratch Notes'}
+                      {isOpen ? 'Paste here, then onto the sheet' : 'Scratch notes'}
                     </p>
                 </div>
                 <div className="flex items-center gap-1">

@@ -42,7 +42,7 @@ export default function DropLibraryPage() {
   }, [user?.id, authLoading, firstDropsOn]);
 
   if (authLoading || featureLoading || !loaded) {
-    return <StudioLoader size="lg" fullscreen message="Cueing The Deck..." />;
+    return <StudioLoader size="lg" fullscreen message="Opening Library..." />;
   }
 
   if (!firstDropsOn) {
@@ -70,7 +70,7 @@ export default function DropLibraryPage() {
         <Card className="max-w-md text-center border-2">
           <CardContent className="p-8 space-y-4">
             <Library className="h-10 w-10 text-primary mx-auto" />
-            <h1 className="font-headline text-3xl font-bold uppercase">The Deck</h1>
+            <h1 className="font-headline text-3xl font-bold uppercase">Library</h1>
             <p className="text-sm text-muted-foreground">
               Sign in to spin songs you pressed, plus First Drops you bought or unlocked.
             </p>

@@ -40,6 +40,7 @@ import {
   scrollActivityPostTarget,
 } from '@/lib/activity/post-deep-link';
 import { compactReachCount, recordPostViewClient } from '@/lib/post-view-client';
+import { LyricClipCard } from '@/components/profile/lyric-clip-card';
 
 type PostCardProps = {
   post: ProfilePost;
@@ -133,12 +134,16 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
           </ArtistHomeLink>
         </p>
       </div>
-      {post.reverbText ? (
+      {post.reverbLyricClip ? (
+        <div className="mt-2">
+          <LyricClipCard clip={post.reverbLyricClip} />
+        </div>
+      ) : post.reverbText ? (
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--ph-text,#fff)]/90">
           {post.reverbText}
         </p>
       ) : null}
-      {post.reverbImageUrl ? (
+      {post.reverbImageUrl && !post.reverbLyricClip ? (
         <div className="mt-2 flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -165,7 +170,11 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
           />
         </div>
       ) : null}
-      {!post.reverbText && !post.reverbImageUrl && !post.reverbEmbedUrl && !post.reverbVoice ? (
+      {!post.reverbText &&
+      !post.reverbImageUrl &&
+      !post.reverbEmbedUrl &&
+      !post.reverbVoice &&
+      !post.reverbLyricClip ? (
         <p className="text-xs italic text-[var(--ph-muted,rgba(255,255,255,0.5))]">Original post</p>
       ) : null}
     </div>
@@ -469,11 +478,15 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         )}
       </div>
 
-      {post.text && (
+      {post.lyricClip ? (
+        <div className="mt-3">
+          <LyricClipCard clip={post.lyricClip} />
+        </div>
+      ) : post.text ? (
         <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--ph-text,#fff)]">
           {post.text}
         </p>
-      )}
+      ) : null}
 
       {post.voice ? (
         <div className="mt-3">

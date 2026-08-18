@@ -233,7 +233,7 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <Card data-creative-effects data-studio-panel className={studioAccentPanel('indigo')}>
+        <Card data-tour="creative-effects" data-creative-effects data-studio-panel className={studioAccentPanel('indigo')}>
         <CollapsibleTrigger asChild>
             <CardHeader className="flex-row items-center justify-between cursor-pointer p-4 md:p-6">
                 <div className="flex flex-col w-full min-w-0 pr-1">
@@ -242,9 +242,9 @@ export function CreativeEffectsPanel({ track, album, styleProfile, scratchPadRef
                     </CardTitle>
                     <p
                       className={cn('text-left pl-7', effectsSubtitleClass(isOpen))}
-                      title="Specialized Lyrical Tools"
+                      title="Pick one — what it does is under the picker"
                     >
-                      {isOpen ? 'All 9 tools — Ink per run' : 'Lyrical Tools'}
+                      {isOpen ? 'Pick one — what it does is under the picker' : 'Lyric tools'}
                     </p>
                 </div>
                 <Button variant="ghost" size="icon" className="h-6 w-6"><ChevronsUpDown className="h-4 w-4" /></Button>

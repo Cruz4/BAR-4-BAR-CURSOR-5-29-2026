@@ -8,6 +8,7 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowRight, ChevronUp, Globe, Music, PenLine, Sparkles, Wind } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,6 +62,11 @@ import {
   jordiePlaygroundGuestbookEntry,
 } from '@/lib/profile/jordie-cruz';
 import { cn } from '@/lib/utils';
+import { guestTryHref } from '@/lib/guest-try';
+import {
+  prefetchGuestTrySheetNow,
+  prefetchGuestTrySheetWhenIdle,
+} from '@/lib/prefetch-guest-try-sheet';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { firstDropsFeeCashoutLine } from '@/lib/drop-commerce';
 
@@ -145,6 +151,7 @@ function toProfilePosts(
 }
 
 function GuestPressingLandingInner() {
+  const router = useRouter();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const [draft, setDraft] = useState<GuestPressingDraft>(() => defaultGuestPressingDraft());
   const [mixOpen, setMixOpen] = useState(false);
@@ -158,6 +165,14 @@ function GuestPressingLandingInner() {
   const [jordieUserId, setJordieUserId] = useState<string | undefined>(undefined);
   const [jordieDisplayName, setJordieDisplayName] = useState<string>(JORDIE_CRUZ.displayName);
   const seedRef = useRef<HTMLTextAreaElement>(null);
+
+  const warmTrySheet = useCallback(() => {
+    prefetchGuestTrySheetNow((href) => router.prefetch(href));
+  }, [router]);
+
+  useEffect(() => {
+    prefetchGuestTrySheetWhenIdle((href) => router.prefetch(href));
+  }, [router]);
 
   useEffect(() => {
     const existing = readGuestPressingDraft();
@@ -434,7 +449,9 @@ function GuestPressingLandingInner() {
             </Button>
             <Button asChild variant="outline" className="border-emerald-500/40 bg-emerald-500/10 font-bold text-emerald-100">
               <Link
-                href="/try?src=pressing_tip"
+                href={guestTryHref('pressing_tip')}
+                onPointerEnter={warmTrySheet}
+                onFocus={warmTrySheet}
                 onClick={() => {
                   trackPressingTrySheet('pressing_tip');
                   dismissTip(false);
@@ -592,7 +609,12 @@ function GuestPressingLandingInner() {
                 variant="outline"
                 className="h-6 gap-0.5 border-emerald-500/40 bg-emerald-500/10 px-1.5 text-[9px] font-bold text-emerald-100 sm:h-7 sm:gap-1 sm:px-2 sm:text-[10px]"
               >
-                <Link href="/try?src=pressing_landing" onClick={() => trackPressingTrySheet('pressing_landing')}>
+                <Link
+                  href={guestTryHref('pressing_landing')}
+                  onPointerEnter={warmTrySheet}
+                  onFocus={warmTrySheet}
+                  onClick={() => trackPressingTrySheet('pressing_landing')}
+                >
                   <PenLine className="h-3 w-3" />
                   <span className="sm:hidden">Write</span>
                   <span className="hidden sm:inline">Write free</span>

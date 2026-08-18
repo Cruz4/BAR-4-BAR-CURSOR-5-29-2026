@@ -4,7 +4,7 @@ import { useCallback, useContext, useMemo } from 'react';
 
 /**
  * @fileOverview Studio Master Manual — spatial guide for Scene, Vault, workstation.
- * Start Here covers navigation, Activity, Artist Home, sky, and tours.
+ * Start Here: first-hour path vs skip-for-later. Same screens — only the ask changes.
  * Detail lives in Precision Tools + FAQ.
  */
 
@@ -128,6 +128,10 @@ const CORE_FAQS = [
       a: "Vault (albums & tracks) is at /vault — sky archive icon in the top nav, or top of the Scene dock. Activity (emerald bell) is for your work: unfinished verse, streak at midnight, someone echoing your bar, plus friends and DNA imports — not a feed dump. Optional push under Settings → Notifications.",
     },
     {
+      q: "What is Msgs?",
+      a: "Private messages between artists. Amber message icon in the header, or account menu → Msgs. Send from a friend's Artist Home or Your circle. Stored on our servers so the inbox works — not end-to-end encrypted.",
+    },
+    {
       q: "What is Artist Home and Edit Public Page?",
       a: "Artist Home is completely free — no Pro required to claim or go live. Shareable page at /profile/your-slug (skin, modules, The Board, embeds, socials, wall, friends, guestbook, live DNA Drops). New accounts often get Neomaiya Sol as a first friend with a guestbook welcome. On the Scene dock, Artist Home | Edit page is one split control — view live, or customize. Also reachable from Your Booth, Vault dock, or Studio Progress → Sharing. Private by default; never shows private lyrics unless you publish a DNA Drop."
     },
@@ -136,8 +140,12 @@ const CORE_FAQS = [
       a: "The Block is your friends feed on The Scene — wall posts, requests, and Discover when your circle is quiet. Search artists to invite, or copy your referral link. Your circle (/friends) lists friends and blocked artists."
     },
     {
+      q: "How do I post lines from the sheet to The Block?",
+      a: "On a lyrics sheet, use the line number itself (01, 02, 04…) — not the words. Right-click it, or press and hold for about half a second. A dialog lets you pick the range and style, then post. A normal tap on the number still does nothing. Guests can open it; posting needs a signed-in account.",
+    },
+    {
       q: "Why does the Scene sky change?",
-      a: "The skyline uses your local clock for day, dawn, dusk, and night. If you allow location once (cached on-device ~6 hours), live weather from Open-Meteo can add clouds, rain, snow, fog, wind, or storms. Deny location and you still get clock-only day/night with no weather particles. Coords are never stored on our servers."
+      a: "The skyline follows live weather near you — rain, snow, fog, storms — with day/dawn/dusk/night. At night the moon shows its real phase and brightness. Meteor showers and rare eclipses appear when they are actually happening for your sky; shooting stars drift on clear nights. Buildings stay solid silhouettes (not see-through). No location popup. If the browser already allowed location we use that; otherwise a rough city from your IP. NYC only if we cannot tell where you are. Clock-only sky if weather itself is down."
     },
     {
       q: "What is the difference between Residency and Raw Ink?",
@@ -149,7 +157,7 @@ const CORE_FAQS = [
     },
     {
       q: "How do I save a DNA profile from extraction?",
-      a: "Generation Workstation → DNA & REMIX → paste or Sync Current Lyrics → extract. On Analysis Step, Save DNA Profile archives everything. ⚡ on a strain injects just that field into this remix. DNA Suite also lets you type or edit the five Creative Direction questions after load/extract. On an album page, Pro can Extract Album DNA to fill World Building / Emotional Core / Message Truth from all tracks, then Save / Load those profiles."
+      a: "Generation Workstation → DNA & REMIX → paste or Sync Current Lyrics → extract. On Analysis Step, Save DNA Profile archives everything. ⚡ on a strain injects just that field into this remix. DNA Suite also lets you type or edit the five questions (world, emotion, trigger, message, tone) after load/extract. On an album page, Pro can Extract Album DNA to fill World Building / Emotional Core / Message Truth from all tracks, then Save / Load those profiles."
     },
     {
       q: "What is the difference between ⚡ inject and loading a DNA Profile?",
@@ -184,8 +192,8 @@ const CORE_FAQS = [
       a: "Right Panel → Track Vibe → folder icon opens the Vibe Vault. Save instrumentation and BPM for reuse across the project."
     },
     {
-      q: "What is the 3-Way System?",
-      a: "Three ways to generate: 1) In-line hover on the sheet, 2) Bar Workstation footer, 3) AI Co-Writer in the right panel."
+      q: "Where do I generate a bar?",
+      a: "Two places to generate a bar: in-line hover on the sheet, and the Bar Workstation footer. The right panel is Co-Writer — DNA, Vibe, Intents, Guardrails, Style DNA. Those are rails the generators read, not a third generate button."
     },
     {
       q: "Where is Studio Progress?",
@@ -213,7 +221,7 @@ const CORE_FAQS = [
     },
     {
       q: "What is DNA Drop?",
-      a: "Studio Pro — publish a shareable lyric snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live lyric drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. Selling is separate: Press a song on The Scene."
+      a: "Studio Pro — publish a shareable lyric snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live lyric drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. Selling is separate: Press a song from the left panel or The Scene dock."
     },
     {
       q: "What happens during Creative Syncing vs DNA Extraction?",
@@ -286,7 +294,7 @@ function sceneHomeFaq(flags: ConfigSurfaceFlags) {
   const pinBit = pins.length ? `, plus ${pins.join(' and ')}` : '';
   return {
     q: "What is The Scene (my home page)?",
-    a: `Signing in lands you on The Scene — friends' wall posts, Discover, Your Booth${pinBit}. Vault and Activity are in the top nav. The skyline follows your local day/night and optional live weather.`,
+    a: `Signing in lands you on The Scene — friends' wall posts, Discover, Your Booth${pinBit}. Vault and Activity are in the top nav. The skyline follows live weather near you (NYC only if we cannot read a location).`,
   };
 }
 
@@ -383,27 +391,26 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
               <TabsContent value="start-here" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
                 <ChapterCard icon={<Radio className="text-emerald-400" />} title="The Scene" colorClass="border-l-emerald-500 text-emerald-400">
                   <p className="text-sm text-foreground/90">
-                    Your home after sign-in: wall posts, Discover, Your Booth, and a live skyline that follows
-                    local day/night (and weather if you allow location once).
+                    You land here after sign-in. Do not stay. Open a sheet and write a bar — that is the first hour.
+                    Weather, Discover, and the wall can wait.
                   </p>
                   <div className="grid gap-3 sm:grid-cols-2 text-sm">
                     <div className="rounded-lg border border-border/40 bg-muted/20 p-3 space-y-1.5">
                       <p className="font-bold text-[10px] uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
-                        <Archive className="h-3 w-3" /> Get around
+                        <Archive className="h-3 w-3" /> Do this
                       </p>
                       <ul className="list-disc list-inside space-y-1 text-xs">
-                        <li><strong>Top nav</strong> — Vault (sky) and Activity (emerald bell with unread badge).</li>
-                        <li><strong>Dock</strong> — Vault{flags.firstDrops ? ', Library' : ''}, Keep writing | Start track, Artist Home | Edit page{flags.lock ? ', Finish this bar' : ''}, leaderboard, circle, Ink.</li>
-                        <li><strong>Post</strong> — composer at the top; friends see it on their Scene. Hit <strong>Voice</strong> for a 60-second note — listeners tap Read / Listen to switch transcript and playback.</li>
+                        <li><strong>Keep writing / Start track</strong> on the dock — or Vault in the top nav (sky icon).</li>
+                        <li>Then the 3 steps in <strong>Write in 60 seconds</strong> below. That is the whole start.</li>
+                        <li><strong>Skip for now:</strong> Msgs, Activity bell, Library, leaderboard, circle, Ink store, posting to the wall.</li>
                       </ul>
                     </div>
                     <div className="rounded-lg border border-border/40 bg-muted/20 p-3 space-y-1.5">
                       <p className="font-bold text-[10px] uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
-                        <CloudSun className="h-3 w-3" /> Atmosphere
+                        <CloudSun className="h-3 w-3" /> Skip — sky
                       </p>
                       <p className="text-xs leading-relaxed">
-                        Dawn → day → dusk → night from sunrise/sunset when weather loads, else your clock.
-                        Location denied? Sky still flips; no rain/snow particles. Coords stay on-device only.
+                        The skyline follows weather near you. It is scenery, not a setting you configure. Leave it.
                       </p>
                     </div>
                   </div>
@@ -412,11 +419,10 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 {flags.lock ? (
                 <ChapterCard icon={<Lock className="text-amber-300" />} title="Finish this bar" colorClass="border-l-amber-500 text-amber-300">
                   <p className="text-sm text-foreground/90">
-                    Optional casts (Admin → Config → Finish this bar): drop one bar with no account → Fit score + share card.
-                    Keep writing in Studio anytime. Sign in only to put your name on the reply.
+                    Skip this until you have written on a sheet. Optional public casts — not how you start.
                   </p>
                   <ul className="list-disc list-inside space-y-1.5 text-xs">
-                    <li><strong>After you drop</strong> — Keep writing in Studio, share your reply, or see all replies.</li>
+                    <li><strong>Later:</strong> drop one bar, get a Fit score + share card. Sign in only to put your name on a reply.</li>
                     <li><strong>Reply to this bar</strong> — answer someone else&apos;s line, not only the unfinished seed.</li>
                     <li><strong>Casting artists</strong> — Press Desk → Finish this bar; Manage → Pick, Clear for release, Close.</li>
                   </ul>
@@ -426,48 +432,48 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 <ChapterCard icon={<MousePointer2 className="text-primary" />} title="Write in 60 seconds" colorClass="border-l-primary text-primary">
                   <ol className="list-decimal list-inside space-y-2 text-sm">
                     <li><strong>Open a sheet</strong> — Vault, or Keep writing / Start track on the Scene dock.</li>
-                    <li><strong>Paste or type</strong> — Smart Structure in the top bar, or write on the sheet.</li>
-                    <li><strong>Generate one bar</strong> — select a line → Bar Workstation → Generate Next (~{AI_COSTS.generateNextLine} Ink).</li>
+                    <li><strong>Paste or type</strong> — Smart Structure in the top bar, or write on the sheet. One line is enough.</li>
+                    <li><strong>Generate one bar</strong> — tap that line → Bar Workstation at the bottom → Generate Next (~{AI_COSTS.generateNextLine} Ink).</li>
                   </ol>
                   <p className="text-xs border-l-2 border-primary/30 pl-3 italic">
-                    Free: full DNA &amp; REMIX + system presets. Pro: your own vault strains + cloud sync. Edits auto-save; Export Track (left) for PDF. The sun/moon in the sheet header is light/dark for that sheet only — leaving the track restores studio dark.
+                    Skip until you have a bar: Generation Workstation, DNA Drop, Press a song, Creative Effects, Takes, export, the sun/moon theme toggle. Co-Writer rails (DNA, Vibe, Intents, Style DNA) are optional — flip a switch on only if you want Next to follow it.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    When you do sell or share later: <strong>Press a song</strong> = audio + price. <strong>DNA Drop</strong> = lyric link. Do not open DNA Drop to sell.
                   </p>
                 </ChapterCard>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <ChapterCard icon={<Globe className="text-fuchsia-400" />} title="Artist Home" colorClass="border-l-fuchsia-500 text-fuchsia-400">
                     <p className="text-sm">
-                      Completely free. Public page at <code className="text-primary">/profile/your-slug</code> — skin, modules, The Board,
-                      embeds, wall, friends, guestbook, live DNA Drops. Off until you flip Public on. New pages often meet Neomaiya Sol first.
-                      Pro is for studio tools, not this page.
+                      Skip until you have something to show. Free public page — off until you flip Public on. Pro is for studio tools, not this page.
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Scene dock: <strong>Artist Home | Edit page</strong> (one control). Also Booth, Vault dock, or Studio Progress → Sharing.
+                      When you are ready: Scene dock <strong>Artist Home | Edit page</strong>. Same control from Your Booth.
                     </p>
                   </ChapterCard>
                   <ChapterCard icon={<Bell className="text-emerald-400" />} title="Activity" colorClass="border-l-emerald-500 text-emerald-400">
                     <p className="text-sm">
-                      Top-nav bell opens unread received activity — mark one or all read, or{' '}
-                      <strong>View all</strong> for the full inbox at{' '}
-                      <code className="text-primary">/activity</code>.
+                      Skip until someone replies, requests, or imports. The top-nav bell is not your writing desk.
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Full page tabs: Inbox · Requests · Sent. <strong>Open</strong> jumps to the post (and opens the reply if it was a comment). Notification prefs under Settings when push is enabled.
+                      Later: unread in the bell, or <strong>View all</strong> at <code className="text-primary">/activity</code> — Inbox · Requests · Sent.
                     </p>
                   </ChapterCard>
                 </div>
 
                 <ChapterCard icon={<Trophy className="text-amber-400" />} title="Progress &amp; community" colorClass="border-l-amber-500 text-amber-400">
+                  <p className="text-sm text-foreground/90">Skip this block until you have written a few bars. XP follows the sheet automatically.</p>
                   <ul className="list-disc list-inside space-y-1.5 text-sm">
-                    <li><strong>Studio Progress</strong> — Vault sidebar / header menu; full board at <code className="text-primary">/studio-progress</code>.</li>
-                    <li><strong>The Block</strong> — friends feed on The Scene; Your circle at <code className="text-primary">/friends</code>.</li>
-                    <li><strong>Share card</strong> — Sharing &amp; visibility → foil milestone export. <strong>Refer a Friend</strong> — Ink Store, 150 Ink each (up to 4).</li>
+                    <li><strong>Studio Progress</strong> — later, Vault sidebar or <code className="text-primary">/studio-progress</code>.</li>
+                    <li><strong>The Block</strong> — later, friends feed on The Scene; circle at <code className="text-primary">/friends</code>.</li>
+                    <li><strong>Share card / Refer a Friend</strong> — later. Ink Store, 150 Ink each (up to 4).</li>
                   </ul>
                 </ChapterCard>
 
                 <div className="grid gap-4 md:grid-cols-3">
                   <ChapterCard icon={<Radio className="text-emerald-400" />} title="Scene tour" colorClass="border-l-emerald-500 text-emerald-400">
-                    <p className="text-sm">Walk The Scene again — wall, Booth, feed, Discover, and the dock.</p>
+                    <p className="text-sm">Optional. Replay if you want the wall, Booth, feed, Discover, and dock pointed out. Not required to write.</p>
                     <Button
                       type="button"
                       variant="outline"
@@ -478,13 +484,13 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     </Button>
                   </ChapterCard>
                   <ChapterCard icon={<Compass className="text-green-500" />} title="Workstation tour" colorClass="border-l-green-500">
-                    <p className="text-sm">Spotlight walkthrough of the lyrics page — paste, sheet, bar AI, DNA, DNA Drop (Pro), Ink.</p>
+                    <p className="text-sm">This is the one to take after you open a sheet — sheet, Next/Previous, Co-Writer, Structure, Press a song, Ink.</p>
                     <Button type="button" className="font-bold uppercase text-[10px] tracking-widest gap-2" onClick={handleReplayWorkstationTour}>
                       <RefreshCw className="h-4 w-4" /> Replay tour
                     </Button>
                   </ChapterCard>
                   <ChapterCard icon={<CassetteTape className="text-sky-400" />} title="Vault tour" colorClass="border-l-sky-500 text-sky-400">
-                    <p className="text-sm">Albums, create, loose tracks, progress, search, Ink — first visit auto-runs; replay anytime.</p>
+                    <p className="text-sm">Optional. Albums and loose tracks. First vault visit already auto-runs it — skip replay unless you want it again.</p>
                     <Button
                       type="button"
                       variant="outline"
@@ -498,7 +504,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
 
                 <p className="text-[11px] text-muted-foreground font-code border border-border/40 rounded-lg px-3 py-2 bg-muted/10">
                   <Lightbulb className="inline h-3.5 w-3.5 mr-1.5 text-yellow-500 align-text-bottom" />
-                  After your first tour, the lyrics page shows one Studio Insight or Did You Know tip per visit. Pause or dismiss anytime.
+                  After your first tour, the lyrics page may show one tip per visit. Pause or dismiss — you do not have to follow it.
                 </p>
               </TabsContent>
 
@@ -508,7 +514,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <p className="text-sm text-foreground/90">{firstDropsPitch()}</p>
                     <ol className="list-decimal list-inside space-y-2 text-sm">
                       <li><strong>Write the song</strong> in The Vault — lyrics, DNA, vibe as usual.</li>
-                      <li><strong>Press a song</strong> on The Scene dock. Pick the track — you do not open DNA Drop to sell.</li>
+                      <li><strong>Press a song</strong> from the left panel on the sheet, or from The Scene dock. Pick the track — you do not open DNA Drop to sell.</li>
                       <li><strong>Upload the song and set a price</strong> — fixed price, or pay-what-you-want (floor $1.00). Then Press it live.</li>
                       <li><strong>DNA Drop stays lyrics-only</strong> — collaborators import bars and DNA. Selling lives on First Drops.</li>
                       <li><strong>Fans find it</strong> as Listen / buy at the top of your Artist Home, on The Scene, and on the share link.</li>
@@ -620,21 +626,21 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
 
               <TabsContent value="power-tools" className="mt-0 space-y-12 animate-in fade-in slide-in-from-bottom-4 pb-20">
                 <div className="space-y-4">
-                    <h2 className="text-3xl font-headline font-bold uppercase text-primary border-b-2 border-primary/10 pb-2">3-Way Neural System</h2>
-                    <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">Surgical generation accessible via three unique interaction points.</p>
+                    <h2 className="text-3xl font-headline font-bold uppercase text-primary border-b-2 border-primary/10 pb-2">Generate a bar</h2>
+                    <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">In-line on the sheet, or the Bar Workstation footer. Co-Writer is the rails those gens read.</p>
                 </div>
 
-                <ChapterCard icon={<MousePointer2 className="text-primary" />} title="Way 1: In-Line Hover Triggers" colorClass="border-l-primary">
+                <ChapterCard icon={<MousePointer2 className="text-primary" />} title="In-line on the sheet" colorClass="border-l-primary">
                     <p>Hover over any lyrical line on the notepad to reveal surgical triggers. Add a line directly below, above, or delete the line with one click.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Zap className="text-primary" />} title="Way 2: Bar Workstation (Footer)" colorClass="border-l-primary">
+                <ChapterCard icon={<Zap className="text-primary" />} title="Bar Workstation (footer)" colorClass="border-l-primary">
                     <p>Select a line to activate the Bar Workstation. Generate <strong>Next</strong> or <strong>Previous</strong> suggestions anchored to your active focus ({AI_COSTS.generateNextLine} Ink each).</p>
                     <p className="text-xs">Set <strong>End With</strong> to force the next suggestion to land on your punchline. Watch the rule badges light up to see which DNA, Vibes, and Intents are guiding the AI.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Sparkles className="text-primary" />} title="Way 3: Co-Writer (Right Panel)" colorClass="border-l-primary">
-                    <p>Access the global co-writer panel for high-level suggestions and <strong>Artist Style Training</strong> while you navigate the sheet.</p>
+                <ChapterCard icon={<Sparkles className="text-primary" />} title="Co-Writer (right panel)" colorClass="border-l-primary">
+                    <p>Co-Writer is the rails: DNA, Vibe, Intents, Guardrails, Style DNA. Flip a switch on so Generate Next / drafts follow it. Train Style DNA from this sheet when you want gens to clip like you.</p>
                 </ChapterCard>
 
                 <div className="pt-4 space-y-4">
@@ -660,16 +666,16 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
 
                 <div className="pt-4 space-y-4">
                     <h2 className="text-2xl font-headline font-bold uppercase text-primary border-b-2 border-primary/10 pb-2">Right Panel Controls</h2>
-                    <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">DNA, vibe, motifs, style, and restrictions.</p>
+                    <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">DNA, vibe, intents, style, and guardrails.</p>
                 </div>
 
                 <ChapterCard icon={<Dna className="text-green-500" />} title="DNA Suite (Right Panel)" colorClass="border-l-green-500">
-                    <p>The five Creative Direction questions (Setting, Emotion, Trigger, Message, Tone) — type your own DNA here or refine fields after you load or extract a profile.</p>
+                    <p>Five questions — world, emotion, trigger, message, tone. Type your own DNA here or refine fields after you load or extract a profile.</p>
                     <p className="text-xs">Primary save path: <strong>DNA &amp; REMIX → Analysis Step → Save DNA Profile</strong>. DNA Suite + the <strong>folder icon</strong> is where you browse vault saves, load full profiles (↻), or edit mapped fields by hand. Hub VAULT tab works the same during a remix.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Target className="text-sky-500" />} title="Precision Intents (Right Panel)" colorClass="border-l-sky-500">
-                    <p>Motif management for punchlines and recurring phrases. Hover any intent and click the <strong>Precision Lock arrow</strong> to force the AI to end its next suggestion on that exact phrase.</p>
+                <ChapterCard icon={<Target className="text-sky-500" />} title="Intents (Right Panel)" colorClass="border-l-sky-500">
+                    <p>Punchlines and recurring phrases you want in the song. Hover any intent and click the <strong>Precision Lock arrow</strong> to force the AI to end its next suggestion on that exact phrase.</p>
                 </ChapterCard>
 
                 <ChapterCard icon={<Shield className="text-rose-500" />} title="Guardrails (Right Panel)" colorClass="border-l-rose-500">
@@ -687,8 +693,8 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </ChapterCard>
 
                 <ChapterCard icon={<Wand2 className="text-indigo-500" />} title="Creative Effects" colorClass="border-l-indigo-500 text-indigo-400">
-                    <p>Neural sharpening tools in the Right Panel — Simile, Metaphor, and Sound-Alike on every tier; Twist, Image Chain, POV, and more on Studio Pro ({AI_COSTS.runCreativeEffect} Ink each).</p>
-                    <p className="text-xs">Results land in the Scratch Pad for review before you paste into the sheet.</p>
+                    <p>Lyric tools in the right panel — Simile, Metaphor, and Sound-Alike on every tier; Twist, Image Chain, POV, and more on Studio Pro ({AI_COSTS.runCreativeEffect} Ink each).</p>
+                    <p className="text-xs">Pick a tool from the dropdown — what it does and how to fill the fields is written under the picker. Results land in the Scratch Pad for review before you paste into the sheet.</p>
                 </ChapterCard>
 
                 <div className="pt-4 space-y-4">
@@ -787,7 +793,8 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                             <AccordionTrigger className="font-bold text-xs uppercase">Left Panel: Track Status</AccordionTrigger>
                             <AccordionContent className="text-xs space-y-2">
                                 <p>• <strong>Status:</strong> Manage titles and enter Performance Mode.</p>
-                                <p>• <strong>Structure:</strong> Reorder sections (Verse, Hook) and sort your lyrics.</p>
+                                <p>• <strong>Press a song:</strong> Sell desk — upload audio, set a price, press it live on First Drops. Not DNA Drop.</p>
+                                <p>• <strong>Structure:</strong> Live song map (Verse, Hook, Bridge). Tap a section to jump the sheet; Add Section to grow the form. Not the Smart Structure paste tool.</p>
                                 <p>• <strong>Vibe Suggester:</strong> Generate suno/udio instrumentation prompts.</p>
                             </AccordionContent>
                         </AccordionItem>
@@ -795,17 +802,18 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                             <AccordionTrigger className="font-bold text-xs uppercase">Center Panel: The Sheet</AccordionTrigger>
                             <AccordionContent className="text-xs space-y-2">
                                 <p>• <strong>Rhyme Pulse (Round Button):</strong> Initiates a deep manual scan ({AI_COSTS.findRhymes} Ink).</p>
-                                <p>• <strong>3-Way System:</strong> Hover for in-line triggers or use the footer workstation.</p>
+                                <p>• <strong>Bar Workstation:</strong> Select a line, then Generate Next / Previous. Hover a line for in-line Next.</p>
                                 <p>• <strong>Smart Structure:</strong> Paste raw text to auto-deconstruct blocks.</p>
                             </AccordionContent>
                         </AccordionItem>
                         <AccordionItem value="right">
                             <AccordionTrigger className="font-bold text-xs uppercase">Right Panel: Co-Writer</AccordionTrigger>
                             <AccordionContent className="text-xs space-y-2">
-                                <p>• <strong>DNA Suite:</strong> Five Creative Direction questions — type your own or edit after load/extract. <strong>Folder icon</strong> opens the vault. Primary extraction save: DNA &amp; REMIX → Analysis Step.</p>
-                                <p>• <strong>Intents:</strong> Motif management with the <strong>Precision Lock Arrow</strong>.</p>
-                                <p>• <strong>AI Co-Writer:</strong> Neural sharpening tools and Artist Style training.</p>
-                                <p>• <strong>Takes:</strong> Above Draft Chest — record up to 3 vocal memos per track (5 minutes each) and play them back anytime.</p>
+                                <p>• <strong>DNA Suite:</strong> World, emotion, trigger, message, tone — type your own or edit after load/extract. <strong>Folder icon</strong> opens the vault. Primary extraction save: DNA &amp; REMIX → Analysis Step.</p>
+                                <p>• <strong>Intents:</strong> Punchlines to weave in, with the <strong>Precision Lock Arrow</strong>.</p>
+                                <p>• <strong>Style DNA:</strong> Cadence and vocab from training this sheet. Switch on so gens clip like you.</p>
+                                <p>• <strong>Creative Effects:</strong> Pick a tool from the dropdown — the description under it tells you what it does. Results go to Scratch Pad.</p>
+                                <p>• <strong>Takes:</strong> Above Draft Chest — record up to 3 vocal memos per track (5 minutes each) and play them back anytime. Private booth notes — not Press a song.</p>
                             </AccordionContent>
                         </AccordionItem>
                     </Accordion>

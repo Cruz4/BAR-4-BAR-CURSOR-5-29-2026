@@ -31,6 +31,7 @@ const MOBILE_TOP_CLEARANCE = MOBILE_HEADER_RESERVE + TOUR_CARD_HEIGHT_ESTIMATE +
 const MOBILE_MAX_SPOTLIGHT_VH = 0.24;
 const MOBILE_SPOTLIGHT_VH_BY_STEP: Record<string, number> = {
   sheet: 0.52,
+  'try-sheet': 0.52,
 };
 /**
  * Sticky/fixed rail targets — skip auto-scroll only when already in view.
@@ -44,7 +45,37 @@ const STICKY_RAIL_STEP_IDS = new Set([
   'scene-nav',
 ]);
 /** Tab/panel switches need extra time before the target is visible on phone. */
-const PANEL_SWITCH_STEP_IDS = new Set(['generation', 'dna', 'dna-drop', 'save']);
+const PANEL_SWITCH_STEP_IDS = new Set([
+  'generation',
+  'dna',
+  'dna-drop',
+  'save',
+  'cowriter',
+  'vibe',
+  'intents',
+  'guardrails',
+  'style',
+  'creative-effects',
+  'sheet-takes',
+  'song-structure',
+  'press-song',
+  'try-cowriter',
+  'try-dna',
+  'try-vibe',
+  'try-intents',
+  'try-guardrails',
+  'try-style',
+  'try-effects',
+  'try-takes',
+  'try-combine',
+  'try-left',
+  'try-structure',
+  'try-press',
+  'try-workstation-locked',
+  'ws-modes',
+  'ws-draft',
+  'ws-remix',
+]);
 /** Targets that may mount late (gamification loading) or sit off-screen after feed scroll. */
 const LATE_MOUNT_STEP_IDS = new Set([
   'scene-progress',
@@ -54,7 +85,19 @@ const LATE_MOUNT_STEP_IDS = new Set([
 ]);
 
 function panelSwitchMeasureDelays(stepId: string): number[] {
-  if (stepId === 'dna-drop') return [360, 560, 820, 1080];
+  if (
+    stepId === 'dna-drop' ||
+    stepId === 'press-song' ||
+    stepId === 'try-press' ||
+    stepId === 'song-structure' ||
+    stepId === 'try-structure' ||
+    stepId === 'creative-effects' ||
+    stepId === 'try-effects' ||
+    stepId === 'sheet-takes' ||
+    stepId === 'try-takes'
+  ) {
+    return [360, 560, 820, 1080];
+  }
   if (stepId === 'save') return [320, 520, 760, 1000];
   return [260, 480, 720];
 }

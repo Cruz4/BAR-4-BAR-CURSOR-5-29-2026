@@ -68,6 +68,7 @@ import {
     Trash2,
     ListMusic,
     Replace,
+    HelpCircle,
     Lock,
 } from 'lucide-react';
 import { 
@@ -150,6 +151,8 @@ import { UpgradeTooltip } from '@/components/upgrade-tooltip';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
 import { SYSTEM_DNA_PRESETS, SYSTEM_STYLE_PRESETS, SYSTEM_VIBE_PRESETS } from '@/lib/system-presets';
 import { DNASynthesisLoader, getDnaLoaderStatusText, type SynthesisLoaderMode } from '@/components/dna-synthesis-loader';
+import { StudioGuidedTour } from '@/components/studio-guided-tour';
+import { WORKSTATION_MODE_TOUR_STEPS } from '@/lib/studio-onboarding';
 import { GenerationSyncAmbient, type SyncAttractor } from '@/components/generation-sync-ambient';
 import { DnaSeedExtractPanel } from '@/components/dna-seed-extract-panel';
 import { WorkstationStepBackground, stepToWorkstationVariant } from '@/components/workstation-step-background';
@@ -462,6 +465,8 @@ export function GenerateSongDraftDialog({
   const { setGenerating } = useUIState();
   const [progress, setProgress] = useState(0);
   const [step, setStep] = useState<number>(0);
+  const [modeTourActive, setModeTourActive] = useState(false);
+  const [modeTourStep, setModeTourStep] = useState(0);
   const [remixSeedBackConfirmOpen, setRemixSeedBackConfirmOpen] = useState(false);
   const [approvalDraftHistory, setApprovalDraftHistory] = useState<ApprovalDraftSnapshot[]>([]);
   const { getAlbumById, updateTrack, updateAlbum } = useContext(DataContext);
@@ -642,6 +647,7 @@ export function GenerateSongDraftDialog({
       onOpenChange(true);
       return;
     }
+    setModeTourActive(false);
 
     if (hardClosedRef.current) {
       sessionReadyRef.current = false;
@@ -2050,6 +2056,15 @@ export function GenerateSongDraftDialog({
         data-workstation-shell
         overlayClassName={cn('z-[2090] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0', workstationDialogOverlay)}
         className={cn('fixed left-1/2 top-[max(0.5rem,env(safe-area-inset-top))] sm:top-[2vh] -translate-x-1/2 translate-y-0 w-[min(99vw,1720px)] max-w-none h-[min(94vh,calc(100dvh-1rem))] max-h-[calc(100dvh-env(safe-area-inset-top,0px)-0.5rem)] sm:max-h-[calc(100dvh-1rem)] flex flex-col gap-0 overflow-hidden p-0 rounded-xl shadow-2xl z-[2100] [&>button.absolute]:hidden', workstationDialogShell)}
+        onPointerDownOutside={(e) => {
+          if (modeTourActive) e.preventDefault();
+        }}
+        onFocusOutside={(e) => {
+          if (modeTourActive) e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          if (modeTourActive) e.preventDefault();
+        }}
       >
         <DialogHeader className={cn('shrink-0 p-3 flex-row items-center justify-between relative z-[110] gap-2 min-w-0', workstationDialogHeader)}>
             <Button
@@ -2068,6 +2083,21 @@ export function GenerateSongDraftDialog({
                     <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary animate-pulse shrink-0" />
                     <span className="truncate">Generation Workstation</span>
                 </DialogTitle>
+                {step === 0 ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full shrink-0 text-muted-foreground hover:text-primary"
+                    aria-label="How Full Studio Draft and DNA & REMIX work"
+                    onClick={() => {
+                      setModeTourStep(0);
+                      setModeTourActive(true);
+                    }}
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </Button>
+                ) : null}
                 <DialogDescription className="sr-only">Step-by-step neural synthesis and calibration.</DialogDescription>
                 <div className="flex items-center gap-2 ml-auto shrink-0 sm:hidden">
                   <Link
@@ -2167,14 +2197,14 @@ export function GenerateSongDraftDialog({
 
           <div className={cn('flex-1 min-h-0 flex flex-col relative z-10 studio-scrollbar', step === 5 ? 'overflow-hidden' : 'overflow-y-auto', isGenerating && 'invisible pointer-events-none')}>
           {step === 0 && (
-            <div className="flex flex-1 flex-col items-center justify-center w-full min-h-0 px-3 sm:px-8 py-8 sm:py-12 gap-6 sm:gap-9 md:gap-10 animate-in fade-in duration-700">
+            <div data-tour="ws-mode-select" className="flex flex-1 flex-col items-center justify-center w-full min-h-0 px-3 sm:px-8 py-8 sm:py-12 gap-6 sm:gap-9 md:gap-10 animate-in fade-in duration-700">
                 <div className="text-center space-y-2 sm:space-y-3 w-full shrink-0 max-w-5xl mx-auto">
                     <p className="sm:hidden text-[10px] font-bold uppercase tracking-[0.35em] text-primary">Mode Select</p>
                     <h2 className={cn('text-3xl sm:text-5xl uppercase tracking-tight leading-tight px-1', workstationHeroTitle)}>Select Workflow Mode</h2>
                     <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-[0.25em] sm:tracking-[0.4em]">Initialize your creative process.</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-10 w-full max-w-5xl mx-auto">
-                    <Card className={cn('cursor-pointer hover:border-primary/50 p-8 sm:p-12 min-h-[220px] sm:min-h-[280px] flex flex-col items-center justify-center gap-5 sm:gap-7 hover:scale-[1.02] sm:hover:scale-[1.04] transition-all group relative overflow-hidden', workstationModeCard)} onClick={() => setStep(10)}>
+                    <Card data-tour="ws-mode-draft" className={cn('cursor-pointer hover:border-primary/50 p-8 sm:p-12 min-h-[220px] sm:min-h-[280px] flex flex-col items-center justify-center gap-5 sm:gap-7 hover:scale-[1.02] sm:hover:scale-[1.04] transition-all group relative overflow-hidden', workstationModeCard)} onClick={() => setStep(10)}>
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent opacity-80" />
                         <div className="pointer-events-none absolute -right-8 -top-8 h-36 w-36 rounded-full bg-primary/20 blur-3xl" />
                         <Wand2 className="relative h-20 w-16 sm:h-24 sm:w-20 text-primary group-hover:animate-bounce" />
@@ -2183,7 +2213,7 @@ export function GenerateSongDraftDialog({
                             <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-widest leading-relaxed max-w-[280px] mx-auto">Direct synthesis from active rules.</p>
                         </div>
                     </Card>
-                    <Card className={cn('cursor-pointer hover:border-sky-500/50 p-8 sm:p-12 min-h-[220px] sm:min-h-[280px] flex flex-col items-center justify-center gap-5 sm:gap-7 hover:scale-[1.02] sm:hover:scale-[1.04] transition-all group relative overflow-hidden', workstationModeCard)} onClick={() => setStep(1)}>
+                    <Card data-tour="ws-mode-remix" className={cn('cursor-pointer hover:border-sky-500/50 p-8 sm:p-12 min-h-[220px] sm:min-h-[280px] flex flex-col items-center justify-center gap-5 sm:gap-7 hover:scale-[1.02] sm:hover:scale-[1.04] transition-all group relative overflow-hidden', workstationModeCard)} onClick={() => setStep(1)}>
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-sky-500/15 via-cyan-500/5 to-transparent opacity-80" />
                         <div className="pointer-events-none absolute -left-8 -bottom-8 h-36 w-36 rounded-full bg-sky-500/20 blur-3xl" />
                         <BrainCircuit className="relative h-20 w-16 sm:h-24 sm:w-20 text-sky-600 dark:text-sky-400 group-hover:animate-pulse" />
@@ -3322,6 +3352,13 @@ export function GenerateSongDraftDialog({
         onConfirm={(name: string) => handleConfirmSaveStyle(name)}
         type="Style"
         sourceTrackTitle={track.title}
+    />
+    <StudioGuidedTour
+      active={open && modeTourActive && step === 0}
+      stepIndex={modeTourStep}
+      steps={WORKSTATION_MODE_TOUR_STEPS}
+      onStepChange={setModeTourStep}
+      onComplete={() => setModeTourActive(false)}
     />
     </TooltipProvider>
     </>

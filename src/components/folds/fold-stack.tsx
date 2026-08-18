@@ -268,7 +268,7 @@ export function FoldStack() {
 
       {!ready ? (
         <div className="flex justify-center py-16">
-          <StudioLoader size="md" message="Opening messages…" />
+          <StudioLoader size="md" message="Opening Msgs…" />
         </div>
       ) : rows.length === 0 ? (
         <div className="border border-dashed border-amber-500/20 bg-black/20 px-6 py-14 text-center">

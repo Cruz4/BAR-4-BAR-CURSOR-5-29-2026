@@ -16,7 +16,7 @@ export default function FoldsPage() {
   }, [authReady, user?.id, router]);
 
   if (!authReady || !user) {
-    return <StudioLoader size="lg" fullscreen message="Opening messages…" />;
+    return <StudioLoader size="lg" fullscreen message="Opening Msgs…" />;
   }
 
   return <FoldStack />;

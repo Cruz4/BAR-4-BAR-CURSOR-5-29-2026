@@ -1,0 +1,32 @@
+@keyframes lyric-clip-aurora {
+  0% {
+    transform: translate3d(-12%, 6%, 0) rotate(-4deg);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translate3d(10%, -8%, 0) rotate(7deg);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(-12%, 6%, 0) rotate(-4deg);
+    opacity: 0.45;
+  }
+}
+
+@keyframes lyric-clip-twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+.lyric-clip-aurora {
+  animation: lyric-clip-aurora 14s ease-in-out infinite;
+}
+
+.lyric-clip-star {
+  animation: lyric-clip-twinkle 3.6s ease-in-out infinite;
+}

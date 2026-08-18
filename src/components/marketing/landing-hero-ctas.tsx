@@ -1,10 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowRight, Globe, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LandingSignupLink } from '@/components/marketing/landing-signup-link';
+import { guestTryHref } from '@/lib/guest-try';
+import { prefetchGuestTrySheetNow, prefetchGuestTrySheetWhenIdle } from '@/lib/prefetch-guest-try-sheet';
 
 const HERO_BTN =
   'h-12 sm:h-14 min-w-0 w-full sm:min-w-[240px] sm:w-auto px-7 text-sm sm:text-base font-bold rounded-full';
@@ -14,6 +17,12 @@ const HERO_BTN =
  * Pricing lives quieter below; Pro is not the lead.
  */
 export function LandingHeroCtAs() {
+  const router = useRouter();
+  useEffect(() => {
+    prefetchGuestTrySheetWhenIdle((href) => router.prefetch(href));
+  }, [router]);
+  const warmTry = () => prefetchGuestTrySheetNow((href) => router.prefetch(href));
+
   return (
     <div className="flex flex-col items-center gap-3.5 pt-4 relative z-50 w-full max-w-3xl mx-auto lg:items-start">
       <div className="flex w-full flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap lg:justify-start">
@@ -37,7 +46,11 @@ export function LandingHeroCtAs() {
           variant="outline"
           className={`${HERO_BTN} border-emerald-500/45 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20 hover:text-white`}
         >
-          <Link href="/try?src=landing">
+          <Link
+            href={guestTryHref('landing')}
+            onMouseEnter={warmTry}
+            onFocus={warmTry}
+          >
             <span className="flex items-center justify-center gap-2">
               <PenLine className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
               Try writing free

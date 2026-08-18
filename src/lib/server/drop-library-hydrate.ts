@@ -121,7 +121,7 @@ function artistFromShare(data: Record<string, unknown>): string | undefined {
     : undefined;
 }
 
-/** Live First Drops the artist pressed — playable on The Deck without a purchase. */
+/** Live First Drops the artist pressed — playable in Library without a purchase. */
 export async function listOwnerPressedLibraryItems(
   db: Firestore,
   userId: string

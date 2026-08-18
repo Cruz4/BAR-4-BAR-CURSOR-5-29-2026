@@ -182,7 +182,7 @@ export function HeroWorkstationScene() {
               <CardTitle className="text-base font-headline uppercase text-green-400 flex items-center gap-2">
                 <Dna className="h-5 w-5" /> DNA Suite
               </CardTitle>
-              <p className="text-[11px] text-green-400/70 uppercase mt-1">Creative Direction</p>
+              <p className="text-[11px] text-green-400/70 uppercase mt-1">World, emotion, trigger</p>
             </CardHeader>
             <CardContent className="px-4 pb-4 space-y-3 font-code">
               {[
@@ -263,7 +263,7 @@ export function FeatureDnaSuiteScene() {
             <Dna className="h-8 w-8" /> DNA Suite
           </CardTitle>
           <p className="text-base text-green-400/90 uppercase tracking-wide mt-2">
-            Creative Direction Questions · Inherit from album
+            World, emotion, trigger, message, tone
           </p>
         </CardHeader>
         <CardContent className="p-8 space-y-5 font-code">

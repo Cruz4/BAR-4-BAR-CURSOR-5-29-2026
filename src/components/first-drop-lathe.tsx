@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
@@ -52,6 +53,7 @@ export function FirstDropLatheHost() {
   const [picked, setPicked] = useState<Picked | null>(null);
   const [uploading, setUploading] = useState(false);
   const [pressing, setPressing] = useState(false);
+  const [rightsChecked, setRightsChecked] = useState(false);
 
   const catalog = useMemo(() => {
     const rows: Picked[] = [];
@@ -103,6 +105,7 @@ export function FirstDropLatheHost() {
         setPicked(null);
       }
       setQuery('');
+      setRightsChecked(false);
       setOpen(true);
     },
     [catalog]
@@ -162,9 +165,19 @@ export function FirstDropLatheHost() {
       });
       return;
     }
-    if (!isCommerceLive(normalizeDropPrice(track.dropPrice))) {
-      updateTrack(album.id, track.id, { dropPrice: sellPrice });
+    if (!rightsChecked) {
+      toast({
+        variant: 'destructive',
+        title: 'Confirm the rights',
+        description: 'Check that you have the rights to sell this recording.',
+      });
+      return;
     }
+    const pressUpdates: Partial<Track> = { dropRightsAttestedAt: new Date().toISOString() };
+    if (!isCommerceLive(normalizeDropPrice(track.dropPrice))) {
+      pressUpdates.dropPrice = sellPrice;
+    }
+    updateTrack(album.id, track.id, pressUpdates);
     setPressing(true);
     try {
       const shareId = track.shareId
@@ -188,7 +201,13 @@ export function FirstDropLatheHost() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setRightsChecked(false);
+      }}
+    >
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto border-fuchsia-500/35 bg-card">
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl uppercase tracking-tight">
@@ -233,7 +252,10 @@ export function FirstDropLatheHost() {
                     <li key={`${row.album.id}-${row.track.id}`}>
                       <button
                         type="button"
-                        onClick={() => setPicked(row)}
+                        onClick={() => {
+                          setPicked(row);
+                          setRightsChecked(false);
+                        }}
                         className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-left hover:border-fuchsia-400/45 hover:bg-fuchsia-500/10"
                       >
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-fuchsia-400/30 bg-fuchsia-500/15 text-fuchsia-200">
@@ -260,7 +282,10 @@ export function FirstDropLatheHost() {
             <button
               type="button"
               className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-300 hover:underline"
-              onClick={() => setPicked(null)}
+              onClick={() => {
+                setPicked(null);
+                setRightsChecked(false);
+              }}
             >
               ← Different track
             </button>
@@ -323,10 +348,22 @@ export function FirstDropLatheHost() {
               }}
             />
 
+            <div className="flex items-start gap-3 rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/5 px-3 py-2.5">
+              <Checkbox
+                id="drop-rights"
+                checked={rightsChecked}
+                onCheckedChange={(checked) => setRightsChecked(checked === true)}
+                className="mt-0.5 border-fuchsia-300 data-[state=checked]:bg-fuchsia-400 data-[state=checked]:text-black"
+              />
+              <Label htmlFor="drop-rights" className="cursor-pointer text-[11px] font-medium leading-snug text-foreground/90">
+                I have the rights to sell this recording.
+              </Label>
+            </div>
+
             <Button
               type="button"
               className="h-12 w-full bg-fuchsia-400 font-headline text-lg font-bold uppercase tracking-wide text-black hover:bg-fuchsia-300"
-              disabled={pressing || uploading || !hasAudio}
+              disabled={pressing || uploading || !hasAudio || !rightsChecked}
               onClick={() => void pressLive()}
             >
               {pressing ? <Loader className="mr-2 h-5 w-5 animate-spin" /> : <Disc3 className="mr-2 h-5 w-5" />}

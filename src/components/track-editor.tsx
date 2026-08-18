@@ -105,6 +105,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useUIState } from '@/hooks/use-ui-state';
 import { useUsage } from '@/context/usage-context';
 import { HighlightedText } from './highlighted-text';
+import { PostLinesToBlockDialog, SheetLinePostGutter } from '@/components/sheet/post-lines-to-block-dialog';
 import { Badge } from '@/components/ui/badge';
 import { StudioLoader } from '@/components/studio-loader';
 import { useInkCosts } from '@/hooks/use-ink-costs';
@@ -130,6 +131,10 @@ import {
   REPLAY_GUIDED_TOUR_EVENT,
   PENDING_TOUR_REPLAY_KEY,
   LYRICS_PAGE_TOUR_STEPS,
+  TRY_SHEET_TOUR_STEPS,
+  REPLAY_TRY_SHEET_TOUR_EVENT,
+  hasSeenTrySheetTour,
+  markTrySheetTourSeen,
   type LyricsTourStep,
 } from '@/lib/studio-onboarding';
 import { persistLastWorkedTrack } from '@/lib/studio-tips-session';
@@ -296,7 +301,7 @@ function EditIntentDialog({ open, onOpenChange, initialValue, onConfirm }: any) 
       <DialogContent className="sm:max-w-md bg-card border-2 z-[3000]">
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl flex items-center gap-2">
-            <Pencil className="text-primary" /> Edit Motif
+            <Pencil className="text-primary" /> Edit intent
           </DialogTitle>
           <DialogDescription className="text-xs uppercase tracking-tight">Modify your intent target.</DialogDescription>
         </DialogHeader>
@@ -305,7 +310,7 @@ function EditIntentDialog({ open, onOpenChange, initialValue, onConfirm }: any) 
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => { onConfirm(value.trim()); onOpenChange(false); }} disabled={!value.trim()} className="px-8 font-bold">Update Motif</Button>
+          <Button onClick={() => { onConfirm(value.trim()); onOpenChange(false); }} disabled={!value.trim()} className="px-8 font-bold">Update intent</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -507,7 +512,7 @@ function createCoWriterDnaInjectHandlers(deps: {
         intentsEnabled: true,
       });
       openCoWriterSections?.('intents');
-      toast({ title: `Motifs injected (${motifs.length})` });
+      toast({ title: `Intents injected (${motifs.length})` });
       return;
     }
 
@@ -925,7 +930,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   }
 
   return (
-    <div className={cn("flex flex-col h-full bg-card border-r relative overflow-hidden w-[260px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'left'))}>
+    <div data-tour="left-panel" className={cn("flex flex-col h-full bg-card border-r relative overflow-hidden w-[260px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'left'))}>
       <div className="flex items-center justify-between p-4 border-b shrink-0 h-14">
         <h3 className="font-headline font-bold text-xs uppercase tracking-widest text-muted-foreground">Workstation</h3>
         {!mobileActive && (
@@ -1145,7 +1150,8 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                     >
                     <Button variant="secondary" size="sm" data-tour="track-export" className="w-full min-w-0 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold h-9 uppercase justify-start leading-none px-2" onClick={() => setExportDialogOpen(true)}><FileDown className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">{isPro ? 'Export Track' : 'Preview Export'}</span></Button>
                     </Hint>
-                    {firstDropsOn && !isGuestTryMode ? (
+                    <div data-tour="press-song" className="w-full min-w-0">
+                    {firstDropsOn || isGuestTryMode ? (
                       <Hint
                         actionSafe
                         content={
@@ -1158,13 +1164,25 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                           variant="secondary"
                           size="sm"
                           className="w-full min-w-0 bg-fuchsia-500/15 hover:bg-fuchsia-500/25 text-fuchsia-200 border border-fuchsia-400/35 text-[9px] font-bold h-9 uppercase justify-start leading-none pl-2 pr-2.5"
-                          onClick={() => openFirstDropLathe({ albumId: album.id, trackId: track.id })}
+                          onClick={() => {
+                            if (isGuestTryMode) {
+                              void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.LOCKED_FEATURE, {
+                                feature: 'Press a song',
+                              });
+                              promptGuestSignupLockedFeature('Press a song');
+                              return;
+                            }
+                            openFirstDropLathe({ albumId: album.id, trackId: track.id });
+                          }}
                         >
                           <Disc3 className="mr-2 h-4 w-4 shrink-0" />
-                          <span className="truncate min-w-0">Press a song</span>
+                          <span className="truncate min-w-0">
+                            {isGuestTryMode ? 'Press a song · Sign up' : 'Press a song'}
+                          </span>
                         </Button>
                       </Hint>
                     ) : null}
+                    </div>
                     <div data-tour="dna-drop" className="w-full min-w-0">
                     {isPro ? (
                       <Hint
@@ -1194,7 +1212,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
               </CardContent>
           </Card>
           
-          <Card className="border-yellow-500/20 bg-yellow-500/12 dark:bg-[#1a1a14] shadow-lg overflow-hidden p-0">
+          <Card data-tour="song-structure" className="border-yellow-500/20 bg-yellow-500/12 dark:bg-[#1a1a14] shadow-lg overflow-hidden p-0">
             <div className="flex items-center gap-2 p-4 pb-2 border-b border-border dark:border-white/5">
                 <GitMerge className="h-4 w-4 text-yellow-700 dark:text-yellow-500" />
                 <h3 className="font-headline font-bold text-lg text-yellow-800 dark:text-yellow-500 uppercase tracking-tight">Structure</h3>
@@ -1371,6 +1389,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
   const phoneDefaultSizeAppliedRef = useRef(false);
   const lyricsViewportRef = useRef<HTMLDivElement>(null);
   const emptySheetFocusRef = useRef(false);
+  const [blockPost, setBlockPost] = useState<{ sectionId: string; from: number } | null>(null);
   const { user } = useAuth();
   const { tooltip, buttonLabel, getCost, getEffectiveCost } = useInkCosts();
   const { toast } = useToast();
@@ -1859,11 +1878,17 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                           bar.justGenerated && "animate-line-glow"
                         )}
                         style={{ ['--lyrics-line-h' as string]: activeLineHeight }}>
-                        <span className={cn(
-                          "font-mono text-muted-foreground/40 text-right font-bold shrink-0 z-10 absolute",
+                        <SheetLinePostGutter
+                          label={String(bar.idx).padStart(2, '0')}
+                          disabled={trackLocked}
+                          className={cn(
+                          "font-mono text-muted-foreground/40 text-right font-bold shrink-0 z-30 absolute pointer-events-auto",
                           "left-0 w-[var(--lyrics-gutter)] pr-1.5 text-[10px] md:text-sm",
                           "md:left-[50px] md:w-10 md:pr-0 md:text-muted-foreground/30"
-                        )} style={barTextStyle}>{String(bar.idx).padStart(2, '0')}</span>
+                        )}
+                          style={barTextStyle}
+                          onOpen={() => setBlockPost({ sectionId: section.id, from: bar.idx })}
+                        />
 
                         <div className="flex-grow flex items-start min-w-0 relative overflow-hidden pl-[calc(var(--lyrics-gutter)+0.5rem)] md:pl-0">
                             <textarea 
@@ -2183,10 +2208,13 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                               </Button>
                               </Hint>
                             ) : null}
-                            <div className={cn(
+                        <div
+                          data-tour="generate-next"
+                          className={cn(
                               "flex flex-row flex-nowrap items-end gap-1.5 shrink-0 min-w-0 max-md:w-full max-md:overflow-x-auto studio-scrollbar md:overflow-visible md:max-w-[min(100%,22rem)] lg:max-w-none py-0.5 max-md:py-1",
                               !activeGeneratorBar && "max-md:hidden"
-                            )}>
+                            )}
+                        >
                                 <Hint
                                   actionSafe
                                   content={
@@ -2314,6 +2342,15 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
             )}
         </div>
       </div>
+      <PostLinesToBlockDialog
+        open={Boolean(blockPost)}
+        onOpenChange={(next) => {
+          if (!next) setBlockPost(null);
+        }}
+        section={track.sections?.find((s: { id: string }) => s.id === blockPost?.sectionId)}
+        startLine={blockPost?.from || 1}
+        trackTitle={track.title}
+      />
     </div>
   );
 }
@@ -2451,7 +2488,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
         checkedIntents: updatedChecked,
         ...(track.endWith === oldIntent ? { endWith: trimmed } : {}),
       });
-      toast({ title: 'Motif Updated' });
+      toast({ title: 'Intent updated' });
   };
 
   const handleDeleteIntent = (intent: string) => {
@@ -2464,7 +2501,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
       };
       if (track.endWith === intent) updates.endWith = null;
       onUpdateTrack(updates);
-      toast({ title: 'Motif Deleted' });
+      toast({ title: 'Intent deleted' });
   };
 
   const handleConfirmSaveDNA = (name: string) => {
@@ -2535,8 +2572,8 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
 
   return (
     <div className={cn("flex flex-col h-full bg-card border-l relative overflow-hidden w-[340px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'right'))}>
-      <div className={cn("flex items-center justify-between p-4 border-b shrink-0 h-14", mobileActive && "justify-center")}>
-        <h3 className="font-headline font-bold text-xs uppercase tracking-widest text-muted-foreground">Co-Writer Panel</h3>
+      <div data-tour="cowriter-panel" className={cn("flex items-center justify-between p-4 border-b shrink-0 h-14", mobileActive && "justify-center")}>
+        <h3 className="font-headline font-bold text-xs uppercase tracking-widest text-muted-foreground">Co-Writer</h3>
         {!mobileActive && (
           <Button
             variant="ghost"
@@ -2601,21 +2638,21 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                               )}
                               title={
                                 sectionOpen.dna
-                                  ? 'Creative Direction Questions'
+                                  ? 'World, emotion, trigger, message, tone'
                                   : isLooseTrack
-                                    ? 'Loose track — track DNA only'
+                                    ? 'Loose track — this sheet only'
                                     : inheritFromAlbumOn
-                                      ? 'Inherit From Album is on'
-                                      : 'Track DNA only — album inherit off'
+                                      ? 'Inherit from album is on'
+                                      : 'This track’s DNA only'
                               }
                             >
                               {sectionOpen.dna
-                                ? 'Creative Direction Questions'
+                                ? 'World, emotion, trigger, message, tone'
                                 : isLooseTrack
-                                  ? 'Loose track · Track DNA only'
+                                  ? 'Loose track · this sheet only'
                                   : inheritFromAlbumOn
-                                    ? 'Creative DNA · Inherit from album'
-                                    : 'Track DNA only'}
+                                    ? 'Inherit from album'
+                                    : 'This track only'}
                             </p>
                         </div>
                     </CollapsibleTrigger>
@@ -2624,7 +2661,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                           <Hint
                             actionSafe
                             side="left"
-                            content={<p className="text-[10px] font-bold leading-snug">Save this track’s Creative DNA profile to your vault.</p>}
+                            content={<p className="text-[10px] font-bold leading-snug">Save this track’s DNA profile to your vault.</p>}
                           >
                           <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600 hover:bg-green-500/10" onClick={(e) => { e.stopPropagation(); setArchivalDialog({ open: true, type: 'DNA' }); }} aria-label="Save DNA profile"><Save className="h-3.5 w-3.5" /></Button>
                           </Hint>
@@ -2658,8 +2695,8 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                           content={
                             <p className="text-[10px] font-bold leading-snug">
                               {isTrackDnaToggleOn(track)
-                                ? 'Track DNA is on — Creative Direction guides AI gens. Tap to turn off.'
-                                : 'Track DNA is off. Tap to enable Creative Direction for AI gens.'}
+                                ? 'Track DNA is on — these five questions guide AI gens. Tap to turn off.'
+                                : 'Track DNA is off. Tap to use these five questions on AI gens.'}
                             </p>
                           }
                         >
@@ -2696,7 +2733,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                       content={
                         <p className="text-[10px] font-bold leading-snug">
                           {inheritFromAlbumOn
-                            ? 'Album Creative DNA is inherited into this track. Tap to use track DNA only.'
+                            ? 'Album DNA is inherited into this track. Tap to use this track’s DNA only.'
                             : 'Album inherit is off — only this track’s DNA applies. Tap to inherit from album.'}
                         </p>
                       }
@@ -2723,7 +2760,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                               side="left"
                               content={
                                 <p className="text-[10px] font-bold leading-snug">
-                                  Pull album Creative DNA into this track when on.
+                                  Pull album DNA into this track when on.
                                 </p>
                               }
                             >
@@ -2740,7 +2777,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                         )}
                         {sectionOpen.dna && isLooseTrack && (
                           <p className="text-[9px] font-bold uppercase text-green-400/70 leading-snug border-b border-green-500/10 pb-2">
-                            Loose track — no album blueprint. Set Creative DNA on this track only.
+                            Loose track — no album blueprint. Set DNA on this track only.
                           </p>
                         )}
                         {inheritFromAlbumOn && !isTrackDnaToggleOn(track) && (
@@ -2787,7 +2824,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           </Collapsible>
 
           <Collapsible open={sectionOpen.vibe} onOpenChange={(o) => onSectionChange('vibe', o)} className="space-y-1">
-            <Card className={coWriterSectionCardClass(vibeActive, 'border-amber-500/30 bg-amber-500/12 dark:bg-amber-500/5')}>
+            <Card className={coWriterSectionCardClass(vibeActive, 'border-amber-500/30 bg-amber-500/12 dark:bg-amber-500/5')} data-tour="vibe-suite">
                 <div className="p-4 flex flex-row items-center justify-between space-y-0">
                     <TooltipProvider delayDuration={300}>
                       <Tooltip>
@@ -2796,7 +2833,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                             <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 overflow-hidden pr-1 text-left">
                               <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none truncate', coWriterSectionTitleClass(vibeActive, 'text-amber-500'))}><Palette className="h-4 w-4 shrink-0" /> Track Vibe</CardTitle>
                               <p className={cn(cowriterSectionSubtitle(sectionOpen.vibe), coWriterSectionAccentClass(vibeActive, 'text-amber-700/80 dark:text-amber-400/80'))}>
-                                {sectionOpen.vibe ? 'Instrumentation & Atmosphere' : 'Vibe & Production'}
+                                {sectionOpen.vibe ? 'Genre, BPM, mood, instruments' : 'Beat & production'}
                               </p>
                             </div>
                           </CollapsibleTrigger>
@@ -2935,7 +2972,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           </Collapsible>
 
           <Collapsible open={sectionOpen.intents} onOpenChange={(o) => onSectionChange('intents', o)} className="space-y-1">
-            <Card className={coWriterSectionCardClass(intentsMasterOn, 'border-sky-500/30 bg-sky-500/12 dark:bg-[#0c1a26] shadow-xl overflow-hidden p-0')} data-studio-panel>
+            <Card className={coWriterSectionCardClass(intentsMasterOn, 'border-sky-500/30 bg-sky-500/12 dark:bg-[#0c1a26] shadow-xl overflow-hidden p-0')} data-studio-panel data-tour="intents-suite">
                 <div className="flex items-center justify-between p-4 pb-2">
                     <TooltipProvider delayDuration={300}>
                       <Tooltip>
@@ -2952,19 +2989,19 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                   coWriterSectionAccentClass(intentsMasterOn, 'text-sky-800/90 dark:text-sky-300/80'),
                                   sectionOpen.intents ? 'leading-snug break-words' : 'leading-none truncate'
                                 )}
-                                title="Punchlines and lines to weave into this track."
+                                title="Punchlines to weave into this track"
                               >
                                 {sectionOpen.intents
-                                  ? 'Punchlines and lines to weave into this track.'
-                                  : 'Motifs & punchlines'}
+                                  ? 'Punchlines to weave in'
+                                  : 'Punchlines'}
                               </p>
                             </div>
                           </CollapsibleTrigger>
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-[260px] space-y-1">
-                          <p className="text-[10px] font-bold leading-snug">Intents (motifs)</p>
+                          <p className="text-[10px] font-bold leading-snug">Intents</p>
                           <p className="text-[10px] text-muted-foreground leading-snug">
-                            Motifs are punchlines or lines you want in the song. Add as many as you need — check any combination. To end the next line exactly as written, press the middle arrow on that motif.
+                            Punchlines or lines you want in the song. Add as many as you need — check any combination. To end the next line exactly as written, press the middle arrow on that intent.
                           </p>
                         </TooltipContent>
                       </Tooltip>
@@ -2976,8 +3013,8 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                           content={
                             <p className="text-[10px] font-bold leading-snug">
                               {(track.intentsEnabled ?? (track.checkedIntents?.length > 0))
-                                ? 'Intents are on — checked motifs weave into AI gens. Tap to turn off.'
-                                : 'Intents are off. Tap to enable motifs / punchlines for AI gens.'}
+                                ? 'Intents are on — checked punchlines weave into AI gens. Tap to turn off.'
+                                : 'Intents are off. Tap to enable punchlines for AI gens.'}
                             </p>
                           }
                         >
@@ -3027,8 +3064,8 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                           <Button variant="ghost" size="icon" className="h-7 w-7 text-sky-400/40 hover:text-sky-400 hover:bg-sky-500/10" onClick={(e) => { e.stopPropagation(); setEditIntentDialog({ open: true, intent }); }}><Pencil className="h-3.5 w-3.5" /></Button>
                                         </TooltipTrigger>
                                         <TooltipContent side="left" className="max-w-[240px] space-y-1">
-                                          <p className="text-[10px] font-bold leading-snug">Edit motif</p>
-                                          <p className="text-[10px] text-muted-foreground leading-snug">Rename or refine this phrase for the whole album. Updates apply everywhere the motif appears.</p>
+                                          <p className="text-[10px] font-bold leading-snug">Edit intent</p>
+                                          <p className="text-[10px] text-muted-foreground leading-snug">Rename or refine this phrase for the whole album. Updates apply everywhere the intent appears.</p>
                                         </TooltipContent>
                                       </Tooltip>
                                       <Tooltip>
@@ -3047,7 +3084,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                           <p className="text-[10px] text-muted-foreground leading-snug">
                                             {isLocked
                                               ? 'The synthesizer is forced to end its next suggestion on this phrase. Click again to release the lock.'
-                                              : 'Force the next suggestion to land exactly on this motif — ideal for hooks and punchlines. Also checks the motif for this track.'}
+                                              : 'Force the next suggestion to land exactly on this intent — ideal for hooks and punchlines. Also checks the intent for this track.'}
                                           </p>
                                         </TooltipContent>
                                       </Tooltip>
@@ -3056,7 +3093,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                           <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500/40 hover:text-red-500 hover:bg-red-500/10" onClick={(e) => { e.stopPropagation(); handleDeleteIntent(intent); }}><Trash2 className="h-3.5 w-3.5" /></Button>
                                         </TooltipTrigger>
                                         <TooltipContent side="left" className="max-w-[240px] space-y-1">
-                                          <p className="text-[10px] font-bold leading-snug">Delete motif</p>
+                                          <p className="text-[10px] font-bold leading-snug">Delete intent</p>
                                           <p className="text-[10px] text-muted-foreground leading-snug">Remove from the album vault and clear it from this track&apos;s checked list and any active lock.</p>
                                         </TooltipContent>
                                       </Tooltip>
@@ -3089,7 +3126,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                         </div>
                         <div className="flex items-center gap-2 pt-2">
                             <Input 
-                                placeholder="New motif..." 
+                                placeholder="New intent..." 
                                 className="h-9 bg-background/40 border-sky-500/10 text-xs text-foreground/90 font-code" 
                                 value={newIntent}
                                 onChange={(e) => setNewIntent(e.target.value)}
@@ -3103,13 +3140,13 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           </Collapsible>
 
           <Collapsible open={sectionOpen.guardrails} onOpenChange={(o) => onSectionChange('guardrails', o)} className="space-y-1">
-            <Card className={coWriterSectionCardClass(guardActive, 'border-rose-500/30 bg-rose-500/12 dark:bg-rose-500/5')}>
+            <Card className={coWriterSectionCardClass(guardActive, 'border-rose-500/30 bg-rose-500/12 dark:bg-rose-500/5')} data-tour="guardrails-suite">
                 <CollapsibleTrigger asChild>
                     <CardHeader className="p-4 flex-row items-center justify-between cursor-pointer space-y-0">
                         <div className="space-y-0.5 min-w-0 flex-grow pr-1">
                             <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none', coWriterSectionTitleClass(guardActive, 'text-rose-500'))}><Shield className="h-4 w-4" /> Guardrails</CardTitle>
-                            <p className={cn(cowriterSectionSubtitle(sectionOpen.guardrails), coWriterSectionAccentClass(guardActive, 'text-rose-700/80 dark:text-rose-400/80'))} title="Content Restrictions">
-                              Content Restrictions
+                            <p className={cn(cowriterSectionSubtitle(sectionOpen.guardrails), coWriterSectionAccentClass(guardActive, 'text-rose-700/80 dark:text-rose-400/80'))} title="Words to forbid or force">
+                              Words to forbid or force
                             </p>
                         </div>
                         <Hint
@@ -3179,15 +3216,15 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           </Collapsible>
 
           <Collapsible open={sectionOpen.coWriter} onOpenChange={(o) => onSectionChange('coWriter', o)} className="space-y-1">
-            <Card className={coWriterSectionCardClass(styleActive, 'border-fuchsia-500/30 bg-fuchsia-500/12 dark:bg-fuchsia-500/5 shadow-xl')}>
+            <Card className={coWriterSectionCardClass(styleActive, 'border-fuchsia-500/30 bg-fuchsia-500/12 dark:bg-fuchsia-500/5 shadow-xl')} data-tour="style-suite">
                 <div className="p-4 flex flex-row items-center justify-between space-y-0">
                     <CollapsibleTrigger asChild>
                         <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 overflow-hidden pr-1">
                             <div className="flex items-center gap-2">
-                                <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none', coWriterSectionTitleClass(styleActive, 'text-fuchsia-500'))}><BrainCircuit className="h-4 w-4" /> AI Co-Writer</CardTitle>
+                                <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none', coWriterSectionTitleClass(styleActive, 'text-fuchsia-500'))}><BrainCircuit className="h-4 w-4" /> Style DNA</CardTitle>
                             </div>
-                            <p className={cn(cowriterSectionSubtitle(sectionOpen.coWriter), coWriterSectionAccentClass(styleActive, 'text-fuchsia-700/80 dark:text-fuchsia-400/80'))} title="Neural Sharpening Tools">
-                              {sectionOpen.coWriter ? 'Neural Sharpening Tools' : 'Style & AI Tools'}
+                            <p className={cn(cowriterSectionSubtitle(sectionOpen.coWriter), coWriterSectionAccentClass(styleActive, 'text-fuchsia-700/80 dark:text-fuchsia-400/80'))} title="Your cadence and vocabulary">
+                              {sectionOpen.coWriter ? 'Your cadence & vocab' : 'Cadence & vocab'}
                             </p>
                         </div>
                     </CollapsibleTrigger>
@@ -3245,7 +3282,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                     <CardContent className="px-4 pb-4 space-y-4 font-code">
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-bold uppercase text-fuchsia-800 dark:text-fuchsia-300/85">Technical DNA</Label>
+                                <Label className="text-[10px] font-bold uppercase text-fuchsia-800 dark:text-fuchsia-300/85">Cadence</Label>
                                 <div className="flex items-center gap-1.5">
                                     <Hint
                                       side="left"
@@ -3259,7 +3296,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                       content={
                                         <>
                                           <p className="font-bold mb-1 uppercase text-primary">How to Use:</p>
-                                          This is your Global Artist Profile. It learns your cadence across ALL songs. Press Train to feed your latest sheet into the co-writer&apos;s brain.
+                                          This is your cadence profile. It learns your vocabulary across songs. Press Train to feed this sheet into Style DNA.
                                         </>
                                       }
                                     >
@@ -3288,7 +3325,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                     </>
                                 ) : (
                                     <div className="py-4 text-center">
-                                        <p className="text-[10px] text-foreground/70 uppercase tracking-widest font-bold">Awaiting neural training...</p>
+                                        <p className="text-[10px] text-foreground/70 uppercase tracking-widest font-bold">Train on this sheet to start</p>
                                     </div>
                                 )}
                             </div>
@@ -3540,6 +3577,8 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const scratchPadRef = useRef<any>(null);
 
   const { track, album } = useMemo(() => getTrackById(albumId, trackId), [getTrackById, albumId, trackId]);
+  const tourTrackRef = useRef(track);
+  tourTrackRef.current = track;
   const isGuestTryMode =
     !user && isGuestTrySheetEnabled() && isGuestTryAlbumId(albumId);
   const [guestDemoRemaining, setGuestDemoRemaining] = useState<number | null>(null);
@@ -3609,11 +3648,17 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   useEffect(() => {
     uiHydratedRef.current = false;
     const ui = loadTrackUILayout(trackId);
-    setLeftCollapsed(ui.leftCollapsed);
-    setRightCollapsed(ui.rightCollapsed);
-    setSectionOpen(ui.sections);
+    if (isGuestTryMode) {
+      setLeftCollapsed(true);
+      setRightCollapsed(false);
+      setSectionOpen(ui.sections);
+    } else {
+      setLeftCollapsed(ui.leftCollapsed);
+      setRightCollapsed(ui.rightCollapsed);
+      setSectionOpen(ui.sections);
+    }
     uiHydratedRef.current = true;
-  }, [trackId]);
+  }, [trackId, isGuestTryMode]);
 
   useEffect(() => {
     if (!uiHydratedRef.current) return;
@@ -3839,6 +3884,31 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     return () => window.removeEventListener(REPLAY_GUIDED_TOUR_EVENT, onReplay);
   }, []);
 
+  useEffect(() => {
+    if (!isGuestTryMode || !track || tourAutoStartRef.current) return;
+    tourAutoStartRef.current = true;
+    setRightCollapsed(false);
+    setLeftCollapsed(true);
+    if (hasSeenTrySheetTour()) return;
+    setTourSteps(TRY_SHEET_TOUR_STEPS);
+    setTourStep(0);
+    const t = window.setTimeout(() => setTourActive(true), 800);
+    return () => window.clearTimeout(t);
+  }, [isGuestTryMode, track]);
+
+  useEffect(() => {
+    const onReplay = () => {
+      if (!isGuestTryMode) return;
+      setRightCollapsed(false);
+      setLeftCollapsed(true);
+      setTourSteps(TRY_SHEET_TOUR_STEPS);
+      setTourStep(0);
+      setTourActive(true);
+    };
+    window.addEventListener(REPLAY_TRY_SHEET_TOUR_EVENT, onReplay);
+    return () => window.removeEventListener(REPLAY_TRY_SHEET_TOUR_EVENT, onReplay);
+  }, [isGuestTryMode]);
+
   const acceptLyricsTourOffer = useCallback(() => {
     if (user?.id) markLyricsTourOfferSeen(user.id);
     setLyricsTourOfferOpen(false);
@@ -3853,6 +3923,33 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   }, [user?.id]);
 
   const handleTourBeforeStep = useCallback((step: LyricsTourStep) => {
+    const cowriterSectionByStep: Record<string, CoWriterSectionKey> = {
+      dna: 'dna',
+      'try-dna': 'dna',
+      vibe: 'vibe',
+      'try-vibe': 'vibe',
+      intents: 'intents',
+      'try-intents': 'intents',
+      guardrails: 'guardrails',
+      'try-guardrails': 'guardrails',
+      style: 'coWriter',
+      'try-style': 'coWriter',
+      'creative-effects': 'creativeEffects',
+      'try-effects': 'creativeEffects',
+      'sheet-takes': 'sheetTakes',
+      'try-takes': 'sheetTakes',
+    };
+    const sectionKey = cowriterSectionByStep[step.id];
+    const ensureLineSelected = () => {
+      setActiveGeneratorBar((prev) => {
+        if (prev) return prev;
+        const section = tourTrackRef.current?.sections?.[0];
+        const firstBar = section?.bars?.[0];
+        if (!section || !firstBar) return prev;
+        return { sectionId: section.id, idx: firstBar.idx };
+      });
+    };
+
     if (['first-write', 'first-context', 'first-generate'].includes(step.id)) {
       setMobilePanelTab('lyrics');
       if (step.id === 'first-generate') setIsMinimized(false);
@@ -3868,27 +3965,59 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
           viewport?.scrollTo({ top: 0, behavior: 'auto' });
         }, 280);
       }
-    } else if (step.id === 'dna') {
+    } else if (
+      step.id === 'cowriter' ||
+      step.id === 'try-cowriter' ||
+      step.id === 'try-combine' ||
+      sectionKey
+    ) {
       setRightCollapsed(false);
       setMobilePanelTab('cowriter');
-      handleSectionChange('dna', true);
-    } else if (['paste', 'sheet', 'bar-workstation', 'rhyme-pulse'].includes(step.id)) {
+      if (sectionKey) {
+        setSectionOpen((prev) => ({ ...prev, [sectionKey]: true }));
+      }
+      if (step.id === 'try-combine') {
+        setIsMinimized(false);
+        setMobilePanelTab('lyrics');
+        ensureLineSelected();
+      }
+    } else if (['paste', 'sheet', 'bar-workstation', 'rhyme-pulse', 'try-sheet', 'try-workstation', 'try-rhyme', 'try-ink'].includes(step.id)) {
       setMobilePanelTab('lyrics');
-      if (step.id === 'bar-workstation') setIsMinimized(false);
-      if (step.id === 'sheet') {
+      if (step.id === 'bar-workstation' || step.id === 'try-workstation' || step.id === 'try-combine') {
+        setIsMinimized(false);
+        ensureLineSelected();
+      }
+      if (step.id === 'sheet' || step.id === 'try-sheet') {
         window.setTimeout(() => {
           const viewport = document.querySelector('[data-tour="lyrics-sheet"]') as HTMLElement | null;
           viewport?.scrollTo({ top: 0, behavior: 'auto' });
         }, 280);
       }
-    } else if (step.id === 'generation' || step.id === 'save' || step.id === 'dna-drop') {
+    } else if (
+      step.id === 'generation' ||
+      step.id === 'save' ||
+      step.id === 'dna-drop' ||
+      step.id === 'song-structure' ||
+      step.id === 'press-song' ||
+      step.id === 'try-left' ||
+      step.id === 'try-structure' ||
+      step.id === 'try-press' ||
+      step.id === 'try-workstation-locked'
+    ) {
       setLeftCollapsed(false);
       setMobilePanelTab('workstation');
-      if (step.id === 'dna-drop' || step.id === 'save') {
+      const leftScrollByStep: Record<string, string> = {
+        save: '[data-tour="track-export"]',
+        'dna-drop': '[data-tour="dna-drop"]',
+        'press-song': '[data-tour="press-song"]',
+        'try-press': '[data-tour="press-song"]',
+        'song-structure': '[data-tour="song-structure"]',
+        'try-structure': '[data-tour="song-structure"]',
+      };
+      const leftSelector = leftScrollByStep[step.id];
+      if (leftSelector) {
         window.setTimeout(() => {
-          const selector =
-            step.id === 'save' ? '[data-tour="track-export"]' : '[data-tour="dna-drop"]';
-          document.querySelector(selector)?.scrollIntoView({
+          document.querySelector(leftSelector)?.scrollIntoView({
             block: 'center',
             inline: 'nearest',
             behavior: 'auto',
@@ -3896,10 +4025,30 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         }, step.id === 'save' ? 420 : 360);
       }
     }
-  }, [handleSectionChange]);
+
+    if (
+      step.id === 'creative-effects' ||
+      step.id === 'try-effects' ||
+      step.id === 'sheet-takes' ||
+      step.id === 'try-takes'
+    ) {
+      const selector =
+        step.id === 'sheet-takes' || step.id === 'try-takes'
+          ? '[data-tour="sheet-takes"]'
+          : '[data-tour="creative-effects"]';
+      window.setTimeout(() => {
+        document.querySelector(selector)?.scrollIntoView({
+          block: 'center',
+          inline: 'nearest',
+          behavior: 'auto',
+        });
+      }, 360);
+    }
+  }, []);
 
   const handleTourComplete = useCallback(async (skipped: boolean) => {
     setTourActive(false);
+    if (isGuestTryMode) markTrySheetTourSeen();
     if (user && !user.lyricsTutorialCompletedAt) {
       try {
         await markLyricsTutorialComplete(user.id);
@@ -3907,11 +4056,11 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         console.warn('Failed to save tutorial completion', e);
       }
     }
-    if (!skipped) {
+    if (!skipped && !isGuestTryMode) {
       void postGamificationEvent('tour_complete');
     }
     // Visibility / leaderboard intro waits for first vault visit (after vault tour).
-  }, [user]);
+  }, [user, isGuestTryMode]);
 
   useEffect(() => {
     if (track && track.sections.length > 0 && !activeSectionId) {

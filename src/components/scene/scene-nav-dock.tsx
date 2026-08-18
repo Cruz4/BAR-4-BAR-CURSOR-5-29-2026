@@ -330,7 +330,7 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       key: 'library',
       href: '/library',
       label: 'Library',
-      sub: 'The Deck · First Drops',
+      sub: 'Unlocked First Drops',
       icon: Library,
       tone: 'border-amber-400/45 bg-amber-500/10 hover:border-amber-300/60',
       iconTone: 'border-amber-400/40 bg-amber-500/20 text-amber-200',

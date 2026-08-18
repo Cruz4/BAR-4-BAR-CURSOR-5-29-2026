@@ -46,6 +46,7 @@ import {
 } from '@/lib/profile/neomaiya-sol';
 import { JORDIE_PLAYGROUND_FRIEND } from '@/lib/profile/jordie-cruz';
 import { profileHref } from '@/lib/profile/profile-slug';
+import { parseLyricClip, type LyricClip } from '@/lib/profile/lyric-clip';
 
 export type ProfilePost = {
   id: string;
@@ -73,6 +74,10 @@ export type ProfilePost = {
   voice?: VoiceNote;
   /** Snapshot of the original post's voice when this wall item is a Reverb. */
   reverbVoice?: VoiceNote;
+  /** Styled lyric range from the sheet. */
+  lyricClip?: LyricClip;
+  /** Snapshot of the original lyric clip when this wall item is a Reverb. */
+  reverbLyricClip?: LyricClip;
 };
 
 export type PostComment = {
@@ -172,6 +177,7 @@ export async function createPost(input: {
   ownerName: string;
   ownerSlug?: string;
   voice?: RecordedVoiceClip;
+  lyricClip?: LyricClip;
 }): Promise<ProfilePost> {
   const user = requireUser();
   const text = input.text.trim().slice(0, MAX_POST_TEXT);
@@ -180,7 +186,7 @@ export async function createPost(input: {
   if (imageUrl && imageUrl.length > MAX_POST_IMAGE_URL) {
     throw new Error('Image is too large to post.');
   }
-  if (!text && !embedUrl && !imageUrl && !input.voice) {
+  if (!text && !embedUrl && !imageUrl && !input.voice && !parseLyricClip(input.lyricClip)) {
     throw new Error('Write something, add a link, attach an image, or record a voice note.');
   }
 
@@ -198,6 +204,7 @@ export async function createPost(input: {
   }
 
   const parsed = parseEmbedUrl(embedUrl);
+  const parsedLyricClip = parseLyricClip(input.lyricClip);
   const post: ProfilePost = {
     id,
     ownerId: user.uid,
@@ -208,6 +215,7 @@ export async function createPost(input: {
     ...(parsed ? { embedProvider: parsed.provider } : {}),
     ...(imageUrl ? { imageUrl } : {}),
     ...(voice ? { voice } : {}),
+    ...(parsedLyricClip ? { lyricClip: parsedLyricClip } : {}),
     createdAt: new Date().toISOString(),
   };
   const { id: postId, ...data } = post;
@@ -259,6 +267,8 @@ export async function deletePost(postId: string): Promise<void> {
 function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
   const parsedVoice = parseVoiceNote(data.voice);
   const parsedReverbVoice = parseVoiceNote(data.reverbVoice);
+  const lyricClip = parseLyricClip(data.lyricClip);
+  const reverbLyricClip = parseLyricClip(data.reverbLyricClip);
   return {
     id,
     ownerId: String(data.ownerId || ''),
@@ -286,6 +296,8 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
     ...(typeof data.reverbImageUrl === 'string' ? { reverbImageUrl: data.reverbImageUrl } : {}),
     ...(parsedVoice ? { voice: parsedVoice } : {}),
     ...(parsedReverbVoice ? { reverbVoice: parsedReverbVoice } : {}),
+    ...(lyricClip ? { lyricClip } : {}),
+    ...(reverbLyricClip ? { reverbLyricClip } : {}),
   };
 }
 
@@ -368,6 +380,10 @@ export async function toggleReverb(
     source.isReverb && source.reverbVoice
       ? source.reverbVoice
       : source.voice;
+  const rootLyricClip =
+    source.isReverb && source.reverbLyricClip
+      ? source.reverbLyricClip
+      : source.lyricClip;
 
   const pointerRef = doc(db, 'users', user.uid, 'reverbs', rootPostId);
   const existing = await getDoc(pointerRef);
@@ -403,6 +419,7 @@ export async function toggleReverb(
       ? { reverbImageUrl: rootImage }
       : {}),
     ...(rootVoice ? { reverbVoice: voiceNoteToFirestore(rootVoice) } : {}),
+    ...(rootLyricClip ? { reverbLyricClip: rootLyricClip } : {}),
   };
 
   const { id, ...data } = post;

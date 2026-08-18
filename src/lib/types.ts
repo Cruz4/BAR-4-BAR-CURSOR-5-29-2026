@@ -158,6 +158,8 @@ export interface Track {
   dropAudio?: DropAudioMeta;
   /** Song price for Bar 4 Bar First Drops. */
   dropPrice?: DropPrice;
+  /** When the artist attested they have rights to sell this recording (Press it live). */
+  dropRightsAttestedAt?: string;
 }
 
 /** How a lyric line was added — used for Studio Progress (written vs AI-generated). */

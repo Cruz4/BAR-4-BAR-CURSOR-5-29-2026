@@ -23,7 +23,7 @@ export default function PrivacyPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">1. Overview</h2>
             <p>Bar 4 Bar Studio (&quot;we&quot;, &quot;us&quot;) respects your creative privacy. This policy explains what data we collect when you use our web app at bar4bar.ink (the &quot;Service&quot;) and how we use it. By using the Service you also agree to our <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link href="/cookies" className="text-primary hover:underline">Cookie Policy</Link>.</p>
-            <p>The Service includes a lyric studio, The Scene, Artist Home pages, DNA Drops, First Drops, The Deck, Folds messages, Lock pages, and related tools. What we collect depends on which of those you use.</p>
+            <p>The Service includes a lyric studio, The Scene, Artist Home pages, DNA Drops, First Drops, Library, Msgs (private in-app messages), Lock pages, and related tools. What we collect depends on which of those you use.</p>
           </section>
 
           <section className="space-y-3">
@@ -33,7 +33,7 @@ export default function PrivacyPage() {
               <li><strong className="text-foreground">Creative data:</strong> albums, tracks, lyrics, style profiles, DNA/vibe settings, cover art, and project metadata stored in Firebase Firestore and Storage.</li>
               <li><strong className="text-foreground">Audio &amp; media:</strong> First Drop song files and 30-second previews, DNA Drop images, Artist Home media, and voice notes / Auto-Tune takes you record. Audio you sell is stored privately and streamed in-app; we do not sell your masters.</li>
               <li><strong className="text-foreground">Social data:</strong> Artist Home settings, wall posts, comments, likes, guestbook entries, friend requests/friendships, foil cards you share, unique post-view counts, and similar Scene activity. Public Artist Home and share links are visible to anyone with the link (and may be indexed if you make them public).</li>
-              <li><strong className="text-foreground">Folds messages:</strong> private in-app messages and related delivery metadata, stored on our servers so the inbox can work. Folds are not end-to-end encrypted.</li>
+              <li><strong className="text-foreground">Msgs:</strong> private in-app messages and related delivery metadata, stored on our servers so the inbox can work. Msgs are not end-to-end encrypted.</li>
               <li><strong className="text-foreground">Usage &amp; billing data:</strong> Ink balances and ledgers, AI action costs, subscription tier/status, Stripe customer and subscription identifiers, and (for First Drop sellers) Stripe Connect payout account identifiers, earnings totals, and payout status (we do not store full card or bank numbers — Stripe does).</li>
               <li><strong className="text-foreground">Product analytics:</strong> in-app events tied to your account or session — for example signup, session/page views, opening the track editor, pricing and checkout steps, upgrade clicks, Ink depletion and free-tier limit hits, AI feature use, achievements/quests/streaks, share-card actions, drop plays, and similar studio activity. Events may include limited metadata (feature name, amounts, plan, referral code).</li>
               <li><strong className="text-foreground">Guest try-sheet funnel:</strong> anonymous, aggregate steps on the free try sheet before signup (opened sheet, wrote a bar, used/limited demo Generate Next, accepted or dismissed a suggestion, tapped signup, tapped a locked feature), plus a browser-local temporary guest alias (for example <code className="text-foreground/80">Guest-Silk-7F3A</code>) used only to connect demo activity to a later signup in admin alerts. Used to improve the product; not a named account until you sign up.</li>
@@ -50,7 +50,7 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">3. How We Use Data</h2>
             <ul className="list-disc pl-5 space-y-2">
               <li>Provide, sync, and secure the studio (auth, vault, AI tools, gamification).</li>
-              <li>Host and stream First Drops, DNA Drops, Artist Home, The Scene, The Deck, and Folds.</li>
+              <li>Host and stream First Drops, DNA Drops, Artist Home, The Scene, Library, and Msgs.</li>
               <li>Process payments, fulfill Ink and Pro entitlements, pay artists through Stripe, and prevent billing or stream abuse.</li>
               <li>Count unique views, plays, and similar engagement so owners can see reach.</li>
               <li>Measure product performance and conversion (funnels, feature use, admin growth metrics).</li>
@@ -101,7 +101,7 @@ export default function PrivacyPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">9. Security</h2>
-            <p>We use industry-standard encryption in transit (HTTPS), Firebase security rules, and server-side verification for AI, streaming, and billing actions. Folds messages and vault data are access-controlled, not a guarantee against every breach. No system is 100% secure — use strong passwords and export vault backups (Pro) when available.</p>
+            <p>We use industry-standard encryption in transit (HTTPS), Firebase security rules, and server-side verification for AI, streaming, and billing actions. Msgs and vault data are access-controlled, not a guarantee against every breach. No system is 100% secure — use strong passwords and export vault backups (Pro) when available.</p>
           </section>
 
           <section className="space-y-3">

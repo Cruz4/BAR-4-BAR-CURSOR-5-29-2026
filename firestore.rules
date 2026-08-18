@@ -347,11 +347,16 @@ service cloud.firestore {
           || validVoiceNote(request.resource.data.voice))
         && (!('reverbVoice' in request.resource.data)
           || validReverbVoiceNote(request.resource.data.reverbVoice))
+        && (!('lyricClip' in request.resource.data)
+          || request.resource.data.lyricClip is map)
+        && (!('reverbLyricClip' in request.resource.data)
+          || request.resource.data.reverbLyricClip is map)
         && (
           request.resource.data.text.size() > 0
           || ('embedUrl' in request.resource.data && request.resource.data.embedUrl.size() > 0)
           || ('imageUrl' in request.resource.data && request.resource.data.imageUrl.size() > 0)
           || ('voice' in request.resource.data && validVoiceNote(request.resource.data.voice))
+          || ('lyricClip' in request.resource.data && request.resource.data.lyricClip is map)
           || (request.resource.data.isReverb == true
             && 'reverbPostId' in request.resource.data
             && request.resource.data.reverbPostId.size() > 0)

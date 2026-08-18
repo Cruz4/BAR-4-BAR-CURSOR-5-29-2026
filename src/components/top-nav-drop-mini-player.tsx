@@ -19,7 +19,7 @@ export function TopNavDropMiniPlayer() {
         <Link
           href="/library"
           className="min-w-0 flex-1 rounded-md px-1.5 py-0.5 hover:bg-white/5"
-          aria-label="Open Library player"
+          aria-label="Open Library"
         >
           <span className="block truncate font-headline text-[11px] font-bold uppercase leading-tight">
             {current.title}

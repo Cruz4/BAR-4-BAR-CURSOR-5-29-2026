@@ -29,7 +29,7 @@ export default function TermsPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">2. The Service</h2>
-            <p>Bar 4 Bar is a creative workstation and social music platform. Features may include lyric tools, AI co-writing, project vaults, DNA Drops (public lyric snapshots), First Drops (in-app song sales and streams), The Deck (in-app library player), The Scene, Artist Home pages, guestbook, friends, wall posts, comments, voice notes, Folds (private in-app messages), Lock pages, Studio Progress, and related tools. Features can be added, changed, limited, or turned off at any time.</p>
+            <p>Bar 4 Bar is a creative workstation and social music platform. Features may include lyric tools, AI co-writing, project vaults, DNA Drops (public lyric snapshots), First Drops (in-app song sales and streams), Library (in-app player), The Scene, Artist Home pages, guestbook, friends, wall posts, comments, voice notes, Msgs (private in-app messages), Lock pages, Studio Progress, and related tools. Features can be added, changed, limited, or turned off at any time.</p>
             <p>AI features — including line suggestions, draft generation, rhyme tools, vibe analysis, remix workflows, and similar outputs — are assistive tools only. They do not replace your creative judgment, legal review, or professional advice.</p>
           </section>
 
@@ -44,14 +44,14 @@ export default function TermsPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">4. Your Content &amp; License to Us</h2>
             <p>You retain ownership of lyrics, recordings, artwork, voice notes, posts, and projects you create — including master recordings you upload to sell a First Drop. Bar 4 Bar is not a label and does not claim your masters or publishing.</p>
-            <p>You grant Bar 4 Bar a worldwide, non-exclusive, royalty-free license to host, store, process, transcode, preview, stream, display, reproduce, and distribute your content solely as needed to operate and promote the Service (for example: The Deck, Artist Home, share links, The Scene, foil cards you post, and 30-second previews). This license lasts until you delete the content or your account, except for copies already shared, cached, backed up, or that other users lawfully unlocked.</p>
+            <p>You grant Bar 4 Bar a worldwide, non-exclusive, royalty-free license to host, store, process, transcode, preview, stream, display, reproduce, and distribute your content solely as needed to operate and promote the Service (for example: Library, Artist Home, share links, The Scene, foil cards you post, and 30-second previews). This license lasts until you delete the content or your account, except for copies already shared, cached, backed up, or that other users lawfully unlocked.</p>
             <p>You represent and warrant that you have all rights needed to upload, post, remix, analyze, or sell anything you provide, including copyrights, neighboring rights, trademarks, publicity rights, and sample clearances. You are solely responsible for copyright, sampling, trademark, and publishing clearance for work you release or sell. Bar 4 Bar does not review uploads for clearance and does not guarantee that your work is legal to sell or perform.</p>
           </section>
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">5. DNA Drops vs First Drops</h2>
             <p><strong className="text-foreground">DNA Drop</strong> is a public lyric snapshot and related share page. It is not a sell desk. Publishing a DNA Drop does not sell audio or transfer rights.</p>
-            <p><strong className="text-foreground">First Drops</strong> is how you press a song for sale: upload audio, set a price (or pay-what-you-want / free unlock where offered), and press it live. Fans buy once and stream in the app. Preview is typically 30 seconds until unlocked. The Deck is an in-app player, not a Spotify, Apple Music, or download store listing.</p>
+            <p><strong className="text-foreground">First Drops</strong> is how you press a song for sale: upload audio, set a price (or pay-what-you-want / free unlock where offered), and press it live. Fans buy once and stream in the app. Preview is typically 30 seconds until unlocked. Library is an in-app player, not a Spotify, Apple Music, or download store listing.</p>
             <p>On First Drop sales we keep a platform fee (currently 10%) to operate the Service; the remainder is the artist&apos;s share, subject to chargebacks, refunds, taxes, and Stripe&apos;s fees and payout rules. Uploading a song is not a label deal and does not transfer ownership to us.</p>
           </section>
 
@@ -77,8 +77,8 @@ export default function TermsPage() {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">9. Folds (Private Messages)</h2>
-            <p>Folds (in-app messages / lyric-sheet notes between users) are stored on our systems so the feature can work. They are not end-to-end encrypted. Do not send secrets you cannot afford a provider or a lawful process to see. We may access, review, or disclose Folds content when we believe it is needed to operate the Service, enforce these Terms, or comply with law.</p>
+            <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">9. Msgs (Private Messages)</h2>
+            <p>Msgs (private in-app messages between users) are stored on our systems so the feature can work. They are not end-to-end encrypted. Do not send secrets you cannot afford a provider or a lawful process to see. We may access, review, or disclose Msgs content when we believe it is needed to operate the Service, enforce these Terms, or comply with law.</p>
           </section>
 
           <section className="space-y-3">

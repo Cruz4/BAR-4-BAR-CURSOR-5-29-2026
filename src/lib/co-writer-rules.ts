@@ -354,15 +354,15 @@ export function getWorkstationRuleBadgeTooltip(id: string): string {
     case 'INHERIT':
     case 'FROM ALBUM':
     case 'INHERIT ALBUM':
-      return 'Inherit From Album is on — album Creative DNA feeds this track.';
+      return 'Inherit From Album is on — album DNA feeds this track.';
     case 'TRACK DNA':
-      return 'Track DNA is on — this track’s Creative Direction guides AI gens.';
+      return 'Track DNA is on — these five questions guide AI gens.';
     case 'ALBUM DNA':
-      return 'Album DNA is on — album Creative Direction is active for AI gens.';
+      return 'Album DNA is on — album world / emotion / message guide AI gens.';
     case 'VIBE':
-      return 'Track Vibe is on — genre, BPM, and atmosphere guide AI gens.';
+      return 'Track Vibe is on — genre, BPM, and mood guide AI gens.';
     case 'INTENTS':
-      return 'Intents are on — checked motifs weave into AI suggestions.';
+      return 'Intents are on — checked punchlines weave into AI suggestions.';
     case 'END WITH':
       return 'Precision Lock is on — the next generated line must end with your locked phrase.';
     case 'GUARD':

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { GuestTryHandoffScreen } from '@/components/guest-try-handoff-screen';
 import { StudioLoader } from '@/components/studio-loader';
 import { GUEST_TRY_PATH, isGuestTrySheetEnabled } from '@/lib/guest-try';
+import { prefetchGuestTrySheetNow } from '@/lib/prefetch-guest-try-sheet';
 import { vaultHref } from '@/lib/scene-home';
 import { useAuth } from '@/hooks/use-auth';
 
@@ -13,6 +14,10 @@ export default function TryRedirectInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
+
+  useEffect(() => {
+    prefetchGuestTrySheetNow((href) => router.prefetch(href));
+  }, [router]);
 
   useEffect(() => {
     if (loading) return;

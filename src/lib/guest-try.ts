@@ -12,6 +12,13 @@ export const GUEST_TRY_ALBUM_ID = 'try';
 export const GUEST_TRY_TRACK_ID = 'guest-sheet';
 export const GUEST_TRY_PATH = `/albums/${GUEST_TRY_ALBUM_ID}/tracks/${GUEST_TRY_TRACK_ID}`;
 
+/** Direct sheet URL — skip `/try` auth handoff when the visitor is already a guest. */
+export function guestTryHref(src?: string): string {
+  const trimmed = src?.trim();
+  if (!trimmed) return GUEST_TRY_PATH;
+  return `${GUEST_TRY_PATH}?src=${encodeURIComponent(trimmed)}`;
+}
+
 /** Free Generate Next assists per browser before signup (not real Ink). */
 export const GUEST_DEMO_MAX_USES = 2;
 

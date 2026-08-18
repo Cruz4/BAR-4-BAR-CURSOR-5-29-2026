@@ -53,6 +53,8 @@ import {
 import { useAuth } from '@/hooks/use-auth';
 import { fetchGamificationSummary } from '@/lib/gamification-client';
 import { trackGuestSignupCta } from '@/lib/guest-funnel-client';
+import { guestTryHref } from '@/lib/guest-try';
+import { prefetchGuestTrySheetNow, prefetchGuestTrySheetWhenIdle } from '@/lib/prefetch-guest-try-sheet';
 import { ProfileSocialLinks } from '@/components/profile/profile-social-links';
 import { ProfileContactChip } from '@/components/profile/profile-contact-chip';
 import { ProfileMediaLightbox } from '@/components/profile/profile-media-lightbox';
@@ -126,6 +128,11 @@ export function ArtistHome({
   useEffect(() => {
     setTokens(pressTokens(config.theme));
   }, [config.theme]);
+
+  useEffect(() => {
+    if (user) return;
+    prefetchGuestTrySheetWhenIdle();
+  }, [user]);
 
   const onTokensChange = useCallback((next: PressingTokens) => {
     setTokens(next);
@@ -603,7 +610,12 @@ export function ArtistHome({
                 className="h-9 gap-1.5 border-[var(--ph-border)] font-bold uppercase"
                 asChild
               >
-                <Link href="/try?src=profile" onClick={() => trackGuestSignupCta('artist_home')}>
+                <Link
+                  href={guestTryHref('profile')}
+                  onClick={() => trackGuestSignupCta('artist_home')}
+                  onMouseEnter={() => prefetchGuestTrySheetNow()}
+                  onFocus={() => prefetchGuestTrySheetNow()}
+                >
                   <PenLine className="h-3.5 w-3.5" /> Try writing free
                 </Link>
               </Button>
