@@ -34,6 +34,10 @@ export type DiscoverDrop = {
   updatedAt: string;
   hasDropAudio?: boolean;
   dropPriceSummary?: string;
+  playCount?: number;
+  previewCount?: number;
+  purchaseCount?: number;
+  firstBuyerName?: string;
 };
 
 export type DiscoverRiser = {

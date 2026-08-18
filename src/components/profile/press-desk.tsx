@@ -52,9 +52,10 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { useLockFeature } from '@/hooks/use-lock-feature';
-import { firstDropsFeeCashoutLine, firstDropsPitch } from '@/lib/drop-commerce';
+import { firstDropsFeeCashoutLine, firstDropsPitch, shareCommerceFlags } from '@/lib/drop-commerce';
 import { DataContext } from '@/context/data-context';
 import { cn } from '@/lib/utils';
+import { profileHref } from '@/lib/profile/profile-slug';
 import type { Album, Track } from '@/lib/types';
 import { processProfilePhotoFile } from '@/lib/cover-art';
 import {
@@ -503,6 +504,8 @@ export function PressDesk() {
         albumShareId?: string;
         trackIndex?: number;
         trackCount?: number;
+        hasDropAudio?: boolean;
+        dropPriceSummary?: string;
       }
     >();
 
@@ -513,6 +516,10 @@ export function PressDesk() {
           title: album.title,
           kind: 'Album DNA',
           trackCount: (album.tracks || []).length,
+          ...shareCommerceFlags({
+            dropAudio: album.dropAudio,
+            dropPrice: album.dropPrice,
+          }),
         });
       }
       // Tracks under a live album nest under that album on the Drop Shelf.
@@ -520,10 +527,16 @@ export function PressDesk() {
       (album.tracks || []).forEach((track, trackIndex) => {
         if (!(track.isPublic && track.shareId)) return;
         const existing = byId.get(track.shareId);
+        const flags = shareCommerceFlags({
+          dropAudio: track.dropAudio,
+          dropPrice: track.dropPrice,
+        });
         byId.set(track.shareId, {
           shareId: track.shareId,
           title: track.title,
           kind: 'Track DNA',
+          ...(flags.hasDropAudio ? { hasDropAudio: true } : {}),
+          ...(flags.dropPriceSummary ? { dropPriceSummary: flags.dropPriceSummary } : {}),
           ...(albumLive || existing?.albumTitle
             ? { albumTitle: albumLive ? album.title : existing?.albumTitle }
             : {}),
@@ -578,6 +591,8 @@ export function PressDesk() {
         ...(d.albumShareId ? { albumShareId: d.albumShareId } : {}),
         ...(typeof d.trackIndex === 'number' ? { trackIndex: d.trackIndex } : {}),
         ...(typeof d.trackCount === 'number' ? { trackCount: d.trackCount } : {}),
+        ...(d.hasDropAudio ? { hasDropAudio: true } : {}),
+        ...(d.dropPriceSummary ? { dropPriceSummary: d.dropPriceSummary } : {}),
       })),
     };
   }, [
@@ -1916,7 +1931,7 @@ export function PressDesk() {
             </Button>
             {profileSlug && profileLive ? (
               <Link
-                href={`/profile/${profileSlug}`}
+                href={profileHref(profileSlug) || '/'}
                 className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-primary"
               >
                 <ExternalLink className="h-3.5 w-3.5" /> View live page

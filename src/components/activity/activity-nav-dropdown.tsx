@@ -16,7 +16,6 @@ import {
   Mail,
   MessageCircle,
   Repeat2,
-  ScrollText,
   UserPlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -52,7 +51,7 @@ function TypeIcon({ type }: { type: ActivityType }) {
     case 'contact_accepted':
       return <Mail className={cn(className, 'text-sky-400')} />;
     case 'fold_pass':
-      return <ScrollText className={cn(className, 'text-amber-400')} />;
+      return <MessageCircle className={cn(className, 'text-amber-400')} />;
     case 'post_love':
       return <Heart className={cn(className, 'text-rose-400')} />;
     case 'post_reply':
@@ -61,6 +60,12 @@ function TypeIcon({ type }: { type: ActivityType }) {
       return <Repeat2 className={cn(className, 'text-violet-400')} />;
     case 'dna_import':
       return <Import className={cn(className, 'text-amber-400')} />;
+    case 'drop_loved':
+      return <Heart className={cn(className, 'text-fuchsia-400')} />;
+    case 'drop_reply':
+      return <MessageCircle className={cn(className, 'text-fuchsia-400')} />;
+    case 'drop_unlocked':
+      return <Flame className={cn(className, 'text-fuchsia-400')} />;
     case 'lock_answered':
     case 'lock_clear_offer':
       return <Lock className={cn(className, 'text-emerald-400')} />;

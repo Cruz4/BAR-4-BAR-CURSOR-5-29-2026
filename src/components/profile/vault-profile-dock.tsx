@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import {
   NEOMAIYA_CANONICAL_SLUG,
   normalizeProfileSlugInput,
+  profileHref,
   profileSlugError,
 } from '@/lib/profile/profile-slug';
 import { isNeomaiyaSolViewer } from '@/lib/profile/neomaiya-sol';
@@ -78,7 +79,7 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
   if (!user || loading) return null;
 
   const isLive = Boolean(publicProfile && summary.profileSlug);
-  const profileHref = summary.profileSlug ? `/profile/${summary.profileSlug}` : null;
+  const homeHref = summary.profileSlug ? profileHref(summary.profileSlug) : null;
 
   const saveSettings = async (next: {
     publicProfile?: boolean;
@@ -357,7 +358,7 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
             </p>
             <div className="flex flex-col gap-2">
               <div className="flex min-w-0 items-center gap-1 rounded-lg border border-border/70 bg-background/60 px-2.5 py-1.5 font-code text-xs">
-                <span className="shrink-0 text-muted-foreground">/profile/</span>
+                <span className="shrink-0 text-muted-foreground">bar4bar.ink/</span>
                 <Input
                   value={slugDraft}
                   disabled={saving || slugSaving}
@@ -380,7 +381,7 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
               </div>
               {summary.profileSlug && (
                 <p className="font-code text-[10px] text-sky-300/90">
-                  bar4bar.ink/profile/{summary.profileSlug}
+                  bar4bar.ink/{summary.profileSlug}
                 </p>
               )}
             </div>
@@ -396,10 +397,10 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
               {isLive ? 'Profile is live on the web' : 'Profile is private — not on the web'}
             </div>
 
-            {isLive && profileHref && (
+            {isLive && homeHref && (
               <div className="flex flex-wrap gap-2 border-t border-border/60 pt-4">
                 <Button className="h-10 gap-2 font-bold uppercase" asChild>
-                  <Link href={profileHref} target="_blank" onClick={() => setOpen(false)}>
+                  <Link href={homeHref} target="_blank" onClick={() => setOpen(false)}>
                     <ExternalLink className="h-4 w-4" /> View profile
                   </Link>
                 </Button>

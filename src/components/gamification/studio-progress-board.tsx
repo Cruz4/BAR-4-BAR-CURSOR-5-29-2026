@@ -48,6 +48,7 @@ import {
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { StudioLoader } from '@/components/studio-loader';
 import { cn } from '@/lib/utils';
+import { profileHref } from '@/lib/profile/profile-slug';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
 import { createPost } from '@/lib/profile/social-client';
 import {
@@ -345,7 +346,7 @@ export function StudioProgressBoard() {
                 className="text-xs font-bold uppercase gap-2 bg-sky-500 hover:bg-sky-400 text-black shadow-[0_0_24px_rgba(14,165,233,0.35)]"
                 asChild
               >
-                <Link href={`/profile/${summary.profileSlug}`} target="_blank">
+                <Link href={profileHref(summary.profileSlug) || '/'} target="_blank">
                   <ExternalLink className="h-3.5 w-3.5" /> View public profile
                 </Link>
               </Button>
@@ -618,8 +619,8 @@ export function StudioProgressBoard() {
               rankLabel,
               profileUrl:
                 typeof window !== 'undefined'
-                  ? `${window.location.origin}/profile/${summary.profileSlug}`
-                  : `/profile/${summary.profileSlug}`,
+                  ? `${window.location.origin}${profileHref(summary.profileSlug) || `/${summary.profileSlug}`}`
+                  : profileHref(summary.profileSlug) || `/${summary.profileSlug}`,
             }}
           />
         )}

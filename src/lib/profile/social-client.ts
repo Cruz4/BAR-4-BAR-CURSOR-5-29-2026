@@ -1571,7 +1571,7 @@ export async function fetchGuestbook(profileOwnerId: string, max = 30): Promise<
   }
 }
 
-/** Drop Mike-as-Neo lines; force real Neo lines to /profile/neomaiya_sol. */
+/** Drop Mike-as-Neo lines; force real Neo lines to /neomaiya_sol. */
 async function healGuestbookNeoAttribution(entries: GuestbookEntry[]): Promise<GuestbookEntry[]> {
   let neoUid: string | null = null;
   let neoSlug: string = NEOMAIYA_SOL.slug;

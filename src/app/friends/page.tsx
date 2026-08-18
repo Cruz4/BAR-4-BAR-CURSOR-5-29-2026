@@ -277,7 +277,7 @@ export default function FriendsPage() {
               <div className="min-w-0 flex-1">
                 {entry.blockedSlug ? (
                   <Link
-                    href={`/profile/${entry.blockedSlug}`}
+                    href={profileHref(entry.blockedSlug) || `/${entry.blockedSlug}`}
                     className="block truncate text-sm font-bold text-white hover:text-primary"
                   >
                     {entry.blockedName}

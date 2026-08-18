@@ -17,9 +17,11 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/client/firebase';
 import { cn } from '@/lib/utils';
+import { profileHref } from '@/lib/profile/profile-slug';
 import type { DiscoverCard } from '@/lib/scene/discover-client';
 import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
+import { formatDropPulseLine } from '@/lib/drop-pulse';
 
 function timeAgo(iso: string): string {
   try {
@@ -72,14 +74,14 @@ export function SceneDiscoverCard({
             avatarUrl={artist.avatarUrl}
             useStarMark={artist.starMarkUseStar}
             starMarkSeed={artist.starMarkSeed}
-            href={`/profile/${artist.slug}`}
+            href={profileHref(artist.slug) || `/${artist.slug}`}
             size={56}
             toneClass="bg-sky-500/25 text-sky-300"
             studioChrome={parseStudioBadge(artist.studioBadge) || 'free'}
           />
           <div className="min-w-0 flex-1">
             <Link
-              href={`/profile/${artist.slug}`}
+              href={profileHref(artist.slug) || `/${artist.slug}`}
               className={cn(
                 'block truncate font-headline text-sm font-bold uppercase tracking-tight hover:text-sky-300',
                 studioNameClass(parseStudioBadge(artist.studioBadge) || 'free')
@@ -92,7 +94,7 @@ export function SceneDiscoverCard({
             </p>
           </div>
           <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>
-            <Link href={`/profile/${artist.slug}`}>Visit</Link>
+            <Link href={profileHref(artist.slug) || `/${artist.slug}`}>Visit</Link>
           </Button>
         </div>
       </Card>
@@ -101,8 +103,9 @@ export function SceneDiscoverCard({
 
   if (card.kind === 'drop') {
     const { drop } = card;
-    const ownerHref = drop.ownerSlug ? `/profile/${drop.ownerSlug}` : undefined;
+    const ownerHref = drop.ownerSlug ? profileHref(drop.ownerSlug) : undefined;
     const firstDrop = firstDropsOn && Boolean(drop.hasDropAudio);
+    const pulse = formatDropPulseLine(drop);
     return (
       <Card className="border-primary/25 bg-gradient-to-r from-primary/[0.07] via-card/85 to-card/70 p-4">
         <DiscoverTag
@@ -148,6 +151,8 @@ export function SceneDiscoverCard({
               )}
               {drop.updatedAt ? ` · ${timeAgo(drop.updatedAt)}` : ''}
               {firstDrop && drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : ''}
+              {pulse ? ` · ${pulse}` : ''}
+              {drop.firstBuyerName ? ` · first cop ${drop.firstBuyerName}` : ''}
             </p>
           </div>
           <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>
@@ -271,14 +276,14 @@ export function SceneDiscoverCard({
               avatarUrl={riser.avatarUrl}
               useStarMark={riser.starMarkUseStar}
               starMarkSeed={riser.starMarkSeed}
-              href={riser.profileSlug ? `/profile/${riser.profileSlug}` : undefined}
+              href={riser.profileSlug ? profileHref(riser.profileSlug) : undefined}
               size={44}
               toneClass="bg-amber-500/25 text-amber-300"
               studioChrome={parseStudioBadge(riser.studioBadge) || 'free'}
             />
             {riser.profileSlug ? (
               <Link
-                href={`/profile/${riser.profileSlug}`}
+                href={profileHref(riser.profileSlug) || `/${riser.profileSlug}`}
                 className={cn(
                   'min-w-0 flex-1 truncate text-sm font-bold hover:text-amber-300',
                   studioNameClass(parseStudioBadge(riser.studioBadge) || 'free')

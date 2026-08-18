@@ -221,6 +221,13 @@ export interface ProjectShare {
   /** Lightweight First Drops flags for Discover / share page. */
   hasDropAudio?: boolean;
   dropPriceSummary?: string;
+  playCount?: number;
+  previewCount?: number;
+  purchaseCount?: number;
+  lastPulseAt?: string;
+  firstBuyerId?: string;
+  firstBuyerName?: string;
+  firstBuyerAt?: string;
 }
 
 export interface SystemLog {

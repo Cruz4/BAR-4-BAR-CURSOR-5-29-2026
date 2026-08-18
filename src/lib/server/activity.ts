@@ -92,6 +92,7 @@ async function loadPrefs(userId: string): Promise<ActivityPrefs> {
     lockCasts: data.lockCasts !== false,
     craftReminders: data.craftReminders !== false,
     foldBars: data.foldBars !== false,
+    firstDrops: data.firstDrops !== false,
   };
 }
 
@@ -163,7 +164,13 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
     }
   }
 
-  if (input.type === 'dna_import' && shareId) {
+  if (
+    (input.type === 'dna_import' ||
+      input.type === 'drop_loved' ||
+      input.type === 'drop_reply' ||
+      input.type === 'drop_unlocked') &&
+    shareId
+  ) {
     const shareSnap = await db.collection('shares').doc(shareId).get();
     if (!shareSnap.exists) return { ok: false };
     const share = shareSnap.data() || {};

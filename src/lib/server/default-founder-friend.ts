@@ -489,12 +489,12 @@ export async function repairMisattributedNeomaiyaIdentity(
 
   await cleanupNeomaiyaOwnCircle(db, auth, neo.uid, legacyUids);
 
-  // Claim clean /profile/neomaiya_sol for the real Neo account.
+  // Claim clean /neomaiya_sol for the real Neo account.
   let canonicalSlug: string = NEOMAIYA_SOL.slug;
   try {
     const { forceClaimNeomaiyaCanonicalSlug } = await import('@/lib/server/profile-slug');
     canonicalSlug = await forceClaimNeomaiyaCanonicalSlug(db, neo.uid);
-    // Best-effort public mirror refresh so /profile/neomaiya_sol is live.
+    // Best-effort public mirror refresh so /neomaiya_sol is live.
     try {
       const { updateGamificationSettings } = await import('@/lib/server/gamification');
       await updateGamificationSettings(neo.uid, {

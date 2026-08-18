@@ -124,7 +124,7 @@ export function buildShareCopyText(
   lines.push(`Studio ID: ${passId}`);
   lines.push('bar4bar.studio');
   if (input.profileSlug) {
-    lines.push(`Profile: bar4bar.studio/profile/${input.profileSlug}`);
+    lines.push(`Profile: bar4bar.ink/${input.profileSlug}`);
   }
   return lines.join('\n');
 }

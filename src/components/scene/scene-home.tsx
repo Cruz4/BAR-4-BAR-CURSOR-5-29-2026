@@ -90,6 +90,7 @@ import {
 } from '@/lib/scene/scene-section-prefs';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { profileHref } from '@/lib/profile/profile-slug';
 
 const SCENE_BLOCK_SHOW_MINE_KEY = 'b4b.scene.block.showMine';
 
@@ -818,7 +819,7 @@ export function SceneHome() {
                       <div className="min-w-0 flex-1">
                         {requesterSlug ? (
                           <Link
-                            href={`/profile/${requesterSlug}`}
+                            href={profileHref(requesterSlug) || `/${requesterSlug}`}
                             className="text-sm font-bold text-white hover:text-primary"
                           >
                             {requester?.name || 'Artist'}

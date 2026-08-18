@@ -19,6 +19,7 @@ import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
 import {
   NEOMAIYA_CANONICAL_SLUG,
   normalizeProfileSlugInput,
+  profileHref,
   profileSlugError,
 } from '@/lib/profile/profile-slug';
 import { isNeomaiyaSolViewer } from '@/lib/profile/neomaiya-sol';
@@ -94,7 +95,7 @@ export function StudioSharingSection() {
 
   const profileUrl =
     summary.profileSlug && publicProfile
-      ? `${typeof window !== 'undefined' ? window.location.origin : ''}/profile/${summary.profileSlug}`
+      ? `${typeof window !== 'undefined' ? window.location.origin : ''}${profileHref(summary.profileSlug) || `/${summary.profileSlug}`}`
       : null;
 
   return (
@@ -168,7 +169,7 @@ export function StudioSharingSection() {
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-border/70 bg-background/60 px-2.5 py-2 font-code text-xs">
-                <span className="shrink-0 text-muted-foreground">/profile/</span>
+                <span className="shrink-0 text-muted-foreground">bar4bar.ink/</span>
                 <Input
                   value={slugDraft}
                   disabled={saving || slugSaving}
@@ -193,11 +194,11 @@ export function StudioSharingSection() {
               <p className="font-code text-[11px] text-sky-300/90">
                 Live:{' '}
                 <Link
-                  href={`/profile/${summary.profileSlug}`}
+                  href={profileHref(summary.profileSlug) || '/'}
                   className="underline underline-offset-2 hover:text-sky-200"
                   target="_blank"
                 >
-                  bar4bar.ink/profile/{summary.profileSlug}
+                  bar4bar.ink/{summary.profileSlug}
                 </Link>
               </p>
             )}
@@ -230,7 +231,7 @@ export function StudioSharingSection() {
                   className="gap-2 h-11 text-sm font-bold bg-sky-500 hover:bg-sky-400 text-black shadow-[0_0_20px_rgba(14,165,233,0.3)]"
                   asChild
                 >
-                  <Link href={`/profile/${summary.profileSlug}`} target="_blank">
+                  <Link href={profileHref(summary.profileSlug) || '/'} target="_blank">
                     <ExternalLink className="h-4 w-4" /> View Artist Home
                   </Link>
                 </Button>

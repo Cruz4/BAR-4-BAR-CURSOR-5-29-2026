@@ -378,6 +378,22 @@ export async function fulfillPaidCheckoutSession(
       amountCents,
       scope: metadata.scope || 'track',
     });
+    try {
+      const { recordDropUnlock } = await import('@/lib/server/drop-pulse');
+      const buyerSnap = await db.collection('users').doc(userId).get();
+      const buyer = buyerSnap.data() || {};
+      const buyerName =
+        (typeof buyer.displayName === 'string' && buyer.displayName.trim()) || 'Artist';
+      await recordDropUnlock(db, {
+        shareId: metadata.shareId,
+        buyerId: userId,
+        buyerName,
+        title: metadata.title || 'First Drop',
+        amountCents,
+      });
+    } catch (err) {
+      console.warn('[fulfill] drop unlock pulse', err);
+    }
     return { fulfilled: true, duplicate: false, inkAmount: 0 };
   }
 

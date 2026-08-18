@@ -35,6 +35,13 @@ export function dropArtistNetCents(amountCents: number): number {
   return Math.max(0, amount - dropPlatformFeeCents(amount));
 }
 
+/** Live split under the price the artist is setting. */
+export function firstDropsSplitLine(amountCents: number): string {
+  const charged = Math.max(0, Math.round(amountCents));
+  if (charged <= 0) return 'Free — no platform fee.';
+  return `You keep ${centsToUsdLabel(dropArtistNetCents(charged))} (${dropArtistShareLabel()}) · we keep ${centsToUsdLabel(dropPlatformFeeCents(charged))} (${dropPlatformFeeLabel()})`;
+}
+
 export function firstDropsFeeLine(): string {
   return `We keep ${dropPlatformFeeLabel()} — the rest is yours.`;
 }
@@ -58,7 +65,7 @@ export function getFirstDropsWhatFaqAnswer(): string {
 }
 
 export function getFirstDropsSellFaqAnswer(): string {
-  return 'Open DNA Drop on a track (or album) → First Drop · audio & price. Upload audio, pick DNA only / free stream / set price / pay-what-you-want, then Confirm or Update snapshot. The public /share page is where fans preview, buy, and stream. To get paid, open Earnings and connect Stripe payouts.';
+  return 'First Drop lives on a DNA Drop — same public page, plus the song. Open a track in the vault → DNA Drop → First Drop · audio & price. Upload audio, pick DNA only / free stream / set price / pay-what-you-want, then Confirm or Update snapshot. Manage live ones from The Scene, Vault, or Edit Public Page (Live drops). Fans see a First Drops strip on your Artist Home and tagged cards on The Scene — they do not have to guess which DNA Drop has the song. To get paid, open Earnings and connect Stripe payouts.';
 }
 
 export function getFirstDropsFeeFaqAnswer(): string {

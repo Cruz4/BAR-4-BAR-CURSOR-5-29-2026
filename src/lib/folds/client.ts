@@ -169,7 +169,7 @@ export async function passBarClient(opts: {
     }),
   });
   const data = (await res.json().catch(() => ({}))) as { fold?: FoldDoc; bar?: FoldBar; error?: string };
-  if (!res.ok || !data.fold || !data.bar) throw new Error(data.error || 'Could not pass the bar');
+  if (!res.ok || !data.fold || !data.bar) throw new Error(data.error || 'Could not send');
   return { fold: data.fold, bar: data.bar };
 }
 
@@ -182,7 +182,7 @@ async function foldAction(action: 'read' | 'unread' | 'accept' | 'decline', fold
     body: JSON.stringify({ action, userId: user.uid, foldId }),
   });
   const data = (await res.json().catch(() => ({}))) as { fold?: FoldDoc; error?: string };
-  if (!res.ok || !data.fold) throw new Error(data.error || 'Could not update fold');
+  if (!res.ok || !data.fold) throw new Error(data.error || 'Could not update');
   return data.fold;
 }
 

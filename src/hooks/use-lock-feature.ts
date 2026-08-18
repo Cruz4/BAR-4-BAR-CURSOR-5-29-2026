@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { LockFeaturePublicStatus } from '@/lib/lock-feature';
-import { isLockEnabled } from '@/lib/lock-feature';
+import { readFeatureFlagCache, writeFeatureFlagCache } from '@/lib/feature-flag-cache';
+
+const CACHE_KEY = 'b4b.lockFeature';
 
 type State = {
   enabled: boolean;
@@ -13,10 +15,11 @@ type State = {
 
 /**
  * Live LOCK system flag from `/api/lock/status` (Admin Panel toggle).
- * Falls back to sync env bootstrap while loading.
+ * Starts off (and never optimistic-on from NEXT_PUBLIC_LOCK) so Scene doesn't
+ * flash Finish this bar when admin has it off.
  */
 export function useLockFeature(): State {
-  const [enabled, setEnabled] = useState(() => isLockEnabled());
+  const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [source, setSource] = useState<State['source']>('unknown');
   const [tick, setTick] = useState(0);
@@ -24,18 +27,26 @@ export function useLockFeature(): State {
   const refresh = useCallback(() => setTick((n) => n + 1), []);
 
   useEffect(() => {
+    const cached = readFeatureFlagCache(CACHE_KEY);
+    if (cached != null) {
+      setEnabled(cached);
+      setLoading(false);
+    }
+
     let cancelled = false;
-    setLoading(true);
     void fetch('/api/lock/status', { cache: 'no-store' })
       .then(async (res) => {
         const data = (await res.json()) as LockFeaturePublicStatus;
         if (cancelled) return;
-        setEnabled(Boolean(data.enabled));
+        const next = Boolean(data.enabled);
+        setEnabled(next);
+        writeFeatureFlagCache(CACHE_KEY, next);
         setSource(data.source || 'unknown');
       })
       .catch(() => {
         if (cancelled) return;
-        setEnabled(isLockEnabled());
+        const fallback = readFeatureFlagCache(CACHE_KEY);
+        setEnabled(fallback === true);
         setSource('unknown');
       })
       .finally(() => {

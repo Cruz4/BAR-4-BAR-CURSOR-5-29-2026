@@ -16,6 +16,7 @@ import { auth } from '@/lib/firebase/client/firebase';
 import { LockShell } from '@/components/lock/lock-shell';
 import { LockVersePath } from '@/components/lock/lock-verse-path';
 import { cn } from '@/lib/utils';
+import { profileHref } from '@/lib/profile/profile-slug';
 import {
   ancestryPath,
   indexEchoes,
@@ -369,7 +370,7 @@ function LockPublicPageInner({ lockId, lockEnabled }: LockPublicPageProps) {
   }
 
   const isClosed = lock.status !== 'open';
-  const ownerHome = lock.ownerSlug ? `/profile/${lock.ownerSlug}` : null;
+  const ownerHome = lock.ownerSlug ? profileHref(lock.ownerSlug) : null;
   const named = watching || Boolean(user && result?.authorName);
   const fromLabel = lock.isHouse
     ? 'Bar 4 Bar'

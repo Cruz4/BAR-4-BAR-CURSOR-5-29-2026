@@ -19,6 +19,7 @@ import {
 } from '@/lib/drop-commerce';
 import { Pause, Play, Loader } from 'lucide-react';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
+import { recordDropSpinClient } from '@/lib/drop-pulse-client';
 
 async function authHeaders(): Promise<HeadersInit> {
   const user = auth.currentUser;
@@ -239,7 +240,10 @@ export function DropListenPanel({
               preload="none"
               onEnded={() => setPlaying(false)}
               onPause={() => setPlaying(false)}
-              onPlay={() => setPlaying(true)}
+              onPlay={() => {
+                setPlaying(true);
+                recordDropSpinClient(shareId, previewCapped ? 'preview' : 'play');
+              }}
               onTimeUpdate={(e) => {
                 if (!previewCapped) return;
                 const el = e.currentTarget;

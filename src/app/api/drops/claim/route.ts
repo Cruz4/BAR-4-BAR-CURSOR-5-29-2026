@@ -54,6 +54,23 @@ export async function POST(req: Request) {
       free: true,
     });
 
+    try {
+      const { recordDropUnlock } = await import('@/lib/server/drop-pulse');
+      const buyerSnap = await db.collection('users').doc(userId).get();
+      const buyer = buyerSnap.data() || {};
+      const buyerName =
+        (typeof buyer.displayName === 'string' && buyer.displayName.trim()) || 'Artist';
+      await recordDropUnlock(db, {
+        shareId,
+        buyerId: userId,
+        buyerName,
+        title: priced.title,
+        amountCents: 0,
+      });
+    } catch (err) {
+      console.warn('[drops/claim] pulse', err);
+    }
+
     return NextResponse.json({ ok: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Claim failed';

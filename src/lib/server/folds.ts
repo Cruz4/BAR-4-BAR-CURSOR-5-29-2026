@@ -83,7 +83,7 @@ async function memberProfile(uid: string, fallbackName: string, fallbackSlug?: s
 }
 
 function assertMember(fold: FoldDoc, uid: string) {
-  if (!fold.memberIds.includes(uid)) throw new Error('That fold is not yours.');
+  if (!fold.memberIds.includes(uid)) throw new Error('That conversation isn’t yours.');
 }
 
 export async function getFold(foldId: string): Promise<FoldDoc | null> {
@@ -98,7 +98,7 @@ export async function markFoldRead(opts: { foldId: string; userId: string }): Pr
   const ref = db.doc(`folds/${opts.foldId}`);
   const snap = await ref.get();
   const fold = asFold(snap.id, snap.data());
-  if (!fold) throw new Error('Fold not found.');
+  if (!fold) throw new Error('Conversation not found.');
   assertMember(fold, opts.userId);
   await ref.set(
     {
@@ -117,7 +117,7 @@ export async function foldBackUnread(opts: { foldId: string; userId: string }): 
   const ref = db.doc(`folds/${opts.foldId}`);
   const snap = await ref.get();
   const fold = asFold(snap.id, snap.data());
-  if (!fold) throw new Error('Fold not found.');
+  if (!fold) throw new Error('Conversation not found.');
   assertMember(fold, opts.userId);
   const current = Math.max(0, Number(fold.unread[opts.userId] || 0));
   await ref.set(
@@ -133,7 +133,7 @@ export async function foldBackUnread(opts: { foldId: string; userId: string }): 
 
 export async function acceptFold(opts: { foldId: string; userId: string }): Promise<FoldDoc> {
   const fold = await getFold(opts.foldId);
-  if (!fold) throw new Error('Fold not found.');
+  if (!fold) throw new Error('Conversation not found.');
   assertMember(fold, opts.userId);
   if (fold.status === 'open') return fold;
   if (fold.initiatedBy === opts.userId) throw new Error('Wait for them to open it.');
@@ -152,10 +152,10 @@ export async function acceptFold(opts: { foldId: string; userId: string }): Prom
 
 export async function declineFold(opts: { foldId: string; userId: string }): Promise<FoldDoc> {
   const fold = await getFold(opts.foldId);
-  if (!fold) throw new Error('Fold not found.');
+  if (!fold) throw new Error('Conversation not found.');
   assertMember(fold, opts.userId);
   if (fold.initiatedBy === opts.userId && fold.status === 'pending') {
-    throw new Error('They still have the pass.');
+    throw new Error('They haven’t accepted yet.');
   }
   const db = await getDb();
   await db.doc(`folds/${opts.foldId}`).set(
@@ -181,9 +181,9 @@ export async function passBar(opts: {
 }): Promise<{ fold: FoldDoc; bar: FoldBar; opened: boolean; firstPass: boolean }> {
   if (opts.senderId === opts.peerId) throw new Error('That is you.');
   const text = opts.text.trim().slice(0, FOLD_BAR_MAX_CHARS);
-  if (!text) throw new Error('Write a bar first.');
+  if (!text) throw new Error('Write a message first.');
   if (await isBlockedEitherWay(opts.senderId, opts.peerId)) {
-    throw new Error('You can’t pass a bar to this artist.');
+    throw new Error('You can’t message this artist.');
   }
 
   const db = await getDb();
@@ -341,7 +341,7 @@ async function notifyPeer(opts: { fold: FoldDoc; bar: FoldBar; senderName: strin
 
   const origin = getPublicAppUrl();
   const href = `${origin}/folds/${opts.fold.id}`;
-  const title = opts.firstPass ? `${opts.senderName} passed you a bar` : opts.senderName;
+  const title = opts.firstPass ? `${opts.senderName} sent you a message` : opts.senderName;
   await getMessaging().send({
     token,
     notification: {

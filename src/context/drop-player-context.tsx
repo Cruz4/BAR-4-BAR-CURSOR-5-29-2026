@@ -12,7 +12,7 @@ import React, {
 } from 'react';
 import { auth } from '@/lib/firebase/client/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { DeckPlayable } from '@/lib/drop-library';
+import { recordDropSpinClient } from '@/lib/drop-pulse-client';
 
 export type DropRepeatMode = 'off' | 'all' | 'one';
 
@@ -113,6 +113,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
           wantPlayingRef.current = true;
           await audio.play();
           setPlaying(true);
+          recordDropSpinClient(item.shareId, data.full ? 'play' : 'preview');
         }
       } catch (e: unknown) {
         wantPlayingRef.current = false;

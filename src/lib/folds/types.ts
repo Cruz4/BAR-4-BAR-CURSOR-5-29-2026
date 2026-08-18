@@ -1,4 +1,4 @@
-/** Folds — a private lyric sheet passed between two artists. Not a chat thread. */
+/** Folds internals — private 1:1 messages between two artists. */
 
 export const FOLD_BAR_MAX_CHARS = 400;
 export const FOLD_PREVIEW_CHARS = 72;

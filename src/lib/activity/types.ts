@@ -12,6 +12,9 @@ export const ACTIVITY_TYPES = [
   'post_reply',
   'post_reverb',
   'dna_import',
+  'drop_loved',
+  'drop_reply',
+  'drop_unlocked',
   'lock_answered',
   'artist_pick',
   'lock_clear_offer',
@@ -33,6 +36,7 @@ export const SERVER_ONLY_ACTIVITY_TYPES: readonly ActivityType[] = [
   'contact_request',
   'contact_accepted',
   'fold_pass',
+  'drop_unlocked',
 ];
 
 export function isCraftActivityType(type: ActivityType): boolean {
@@ -71,8 +75,10 @@ export type ActivityPrefs = {
   lockCasts: boolean;
   /** Unfinished verse + streak-at-midnight reminders. */
   craftReminders: boolean;
-  /** Passed bars on Folds (realtime sheet). */
+  /** Private messages (Msgs). */
   foldBars: boolean;
+  /** First Drop loves, replies, and unlocks. */
+  firstDrops: boolean;
 };
 
 export const DEFAULT_ACTIVITY_PREFS: ActivityPrefs = {
@@ -85,6 +91,7 @@ export const DEFAULT_ACTIVITY_PREFS: ActivityPrefs = {
   lockCasts: true,
   craftReminders: true,
   foldBars: true,
+  firstDrops: true,
 };
 
 export type ActivitySummary = {
@@ -106,11 +113,14 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     friend_accepted: 'accepted your friend request',
     contact_request: 'asked to see your contact',
     contact_accepted: 'shared their contact with you',
-    fold_pass: 'passed you a bar',
+    fold_pass: 'sent you a message',
     post_love: 'loved your post',
     post_reply: 'replied to your post',
     post_reverb: 'Reverbed your post',
     dna_import: 'imported your DNA Drop',
+    drop_loved: 'loved your First Drop',
+    drop_reply: 'replied on your First Drop',
+    drop_unlocked: 'unlocked your First Drop',
     lock_answered: 'echoed your bar',
     artist_pick: 'picked your echo',
     lock_clear_offer: 'cleared a LOCK with an offer for you',
@@ -122,11 +132,14 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     friend_accepted: 'you accepted a friend request from',
     contact_request: 'you asked to see contact for',
     contact_accepted: 'you shared your contact with',
-    fold_pass: 'you passed a bar to',
+    fold_pass: 'you sent a message to',
     post_love: 'you loved a post by',
     post_reply: 'you replied to a post by',
     post_reverb: 'you Reverbed a post by',
     dna_import: 'you imported a DNA Drop from',
+    drop_loved: 'you loved a First Drop by',
+    drop_reply: 'you replied on a First Drop by',
+    drop_unlocked: 'you unlocked a First Drop by',
     lock_answered: 'you echoed a bar on',
     artist_pick: 'you picked an echo by',
     lock_clear_offer: 'you sent a clear offer to',
@@ -195,8 +208,8 @@ export function pushCopyForActivity(
       };
     case 'fold_pass':
       return {
-        title: `${actorName} passed you a bar`,
-        body: snippet || 'Open Folds to unfold it.',
+        title: `${actorName} sent you a message`,
+        body: snippet || 'Open Msgs to read it.',
       };
     case 'post_love':
       return {
@@ -217,6 +230,21 @@ export function pushCopyForActivity(
       return {
         title: 'Bar 4 Bar',
         body: `${actorName} imported your DNA Drop`,
+      };
+    case 'drop_loved':
+      return {
+        title: 'Bar 4 Bar',
+        body: `${actorName} loved your First Drop`,
+      };
+    case 'drop_reply':
+      return {
+        title: 'Bar 4 Bar',
+        body: snippet || `${actorName} replied on your First Drop`,
+      };
+    case 'drop_unlocked':
+      return {
+        title: `${actorName} unlocked your First Drop`,
+        body: snippet || 'Someone copped the song.',
       };
     default:
       return { title: 'Bar 4 Bar', body: snippet || 'New activity' };
@@ -244,6 +272,10 @@ export function prefsAllowsPush(prefs: ActivityPrefs, type: ActivityType): boole
       return prefs.postLoves;
     case 'dna_import':
       return prefs.dnaImports;
+    case 'drop_loved':
+    case 'drop_reply':
+    case 'drop_unlocked':
+      return prefs.firstDrops !== false;
     case 'lock_answered':
     case 'artist_pick':
     case 'lock_clear_offer':

@@ -499,10 +499,13 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                       <li><strong>DNA Drop</strong> on the track (or album) — confirm the lyric snapshot.</li>
                       <li><strong>First Drop · audio &amp; price</strong> — upload the file, pick DNA only / free stream / set price / pay-what-you-want (floor $1.00).</li>
                       <li><strong>Update snapshot</strong> so the public /share page has the audio. Fans preview 30 seconds, then buy or unlock to stream in-app.</li>
+                      <li><strong>Fans find it</strong> on your Artist Home (First Drops strip at the top of the Drop Shelf) and as tagged First Drop cards on The Scene — they do not guess which DNA Drop has the song.</li>
                       <li><strong>Cash out</strong> — open Earnings, connect Stripe payouts, then Stripe sends your {dropArtistShareLabel()} share to your bank.</li>
                     </ol>
                     <ul className="list-disc list-inside space-y-1.5 text-xs">
+                      <li><strong>Manage live ones</strong> from The Scene, Vault, or Edit Public Page → Live drops. DNA-only tracks have Add First Drop; live songs show under First Drops.</li>
                       <li><strong>Library</strong> on The Scene lists drops you unlocked. Stream stays in Bar 4 Bar.</li>
+                      <li><strong>Heat</strong> — spins and unlocks count on the drop. An unlock bumps it back up on The Scene. First cop is credited on the page. Love, reply, share, or post it to your wall.</li>
                       <li><strong>Fee &amp; cash out</strong> — {firstDropsFeeCashoutLine()} Sales before you connect stay held until you finish setup. Ink is not used for music purchases.</li>
                       <li><strong>Admin</strong> can turn First Drops off from Config without taking DNA Drops down.</li>
                     </ul>

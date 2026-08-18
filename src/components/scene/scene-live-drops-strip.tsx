@@ -7,7 +7,7 @@
 
 import React, { useContext, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CassetteTape, Disc3, Dna, ExternalLink, Settings2 } from 'lucide-react';
+import { CassetteTape, Disc3, Dna, ExternalLink, Music, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { DataContext } from '@/context/data-context';
 import { hasActiveDnaDrop } from '@/lib/dna-drop';
+import { dropPriceSummary, normalizeDropAudio, normalizeDropPrice } from '@/lib/drop-commerce';
 import { cn } from '@/lib/utils';
 
 type ManagedAlbumDrop = {
@@ -37,13 +38,15 @@ type ManagedTrackDrop = {
   albumId: string;
   trackId: string;
   fromAlbumHub: boolean;
+  hasDropAudio: boolean;
+  dropPriceSummary: string;
 };
 
 export function SceneLiveDropsStrip({ className }: { className?: string }) {
   const { albums, loading } = useContext(DataContext);
   const [open, setOpen] = useState(false);
 
-  const { albumDrops, trackDrops, total } = useMemo(() => {
+  const { albumDrops, trackDrops, total, firstDropCount } = useMemo(() => {
     const albumsOut: ManagedAlbumDrop[] = [];
     const tracksOut: ManagedTrackDrop[] = [];
     const seenTracks = new Set<string>();
@@ -75,6 +78,8 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
           albumId: album.id,
           trackId: track.id,
           fromAlbumHub: albumLive,
+          hasDropAudio: Boolean(normalizeDropAudio(track.dropAudio)),
+          dropPriceSummary: dropPriceSummary(normalizeDropPrice(track.dropPrice)),
         });
       }
     }
@@ -83,6 +88,7 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
       albumDrops: albumsOut,
       trackDrops: tracksOut,
       total: albumsOut.length + tracksOut.length,
+      firstDropCount: tracksOut.filter((t) => t.hasDropAudio).length,
     };
   }, [albums]);
 
@@ -105,12 +111,14 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
         </span>
         <span className="min-w-0 flex-1">
           <span className="block font-code text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground/70">
-            Live DNA drops
+            Live drops
           </span>
           <span className="block truncate text-xs text-foreground/90">
             {total === 0
-              ? 'None live — publish from an album or track'
-              : `${albumDrops.length} album${albumDrops.length === 1 ? '' : 's'} · ${trackDrops.length} track${trackDrops.length === 1 ? '' : 's'}`}
+              ? 'None live — DNA Drop a track, then add a First Drop'
+              : firstDropCount > 0
+                ? `${firstDropCount} First Drop${firstDropCount === 1 ? '' : 's'} · ${total} DNA live`
+                : `${albumDrops.length} album${albumDrops.length === 1 ? '' : 's'} · ${trackDrops.length} track${trackDrops.length === 1 ? '' : 's'} · no First Drops yet`}
           </span>
         </span>
         <span className="shrink-0 font-code text-[9px] font-bold uppercase tracking-[0.18em] text-primary/80">
@@ -122,17 +130,19 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
         <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-headline uppercase tracking-wide">
-              Your live DNA drops
+              Your live drops
             </DialogTitle>
             <DialogDescription>
-              Albums and track DNA appear on your Artist Home Drop Shelf. Open a drop or jump to the vault to update / take offline.
+              DNA Drops are the public lyric pages. First Drops are the song on those pages — upload audio
+              and set a price in the vault. Fans find them on your Artist Home and The Scene.
             </DialogDescription>
           </DialogHeader>
 
           {total === 0 ? (
             <div className="space-y-3 rounded-xl border border-dashed border-border/70 bg-muted/20 p-4">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                No DNA Drops are live yet. Publish from an album or track in the vault (Pro).
+                No DNA Drops are live yet. Open a track in the vault → DNA Drop → publish. Then First Drop
+                · audio & price to sell the song on that same page.
               </p>
               <Button size="sm" variant="outline" className="h-9 font-bold uppercase" asChild>
                 <Link href="/vault" onClick={() => setOpen(false)}>
@@ -142,6 +152,45 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
             </div>
           ) : (
             <div className="space-y-5">
+              {firstDropCount > 0 && (
+                <section className="space-y-2">
+                  <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.28em] text-fuchsia-300/90">
+                    <Music className="h-3.5 w-3.5" /> First Drops · live
+                  </p>
+                  <ul className="space-y-2">
+                    {trackDrops
+                      .filter((d) => d.hasDropAudio)
+                      .map((drop) => (
+                        <li
+                          key={`fd-${drop.shareId}`}
+                          className="rounded-xl border border-fuchsia-500/35 bg-fuchsia-500/10 p-3"
+                        >
+                          <p className="truncate text-sm font-bold">{drop.title}</p>
+                          <p className="mt-0.5 text-[10px] text-muted-foreground">
+                            {drop.dropPriceSummary || 'Song on this DNA Drop'}
+                            {drop.fromAlbumHub ? ` · ${drop.albumTitle}` : ''}
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <Button size="sm" variant="secondary" className="h-8 text-[10px] font-bold uppercase" asChild>
+                              <Link href={`/share/${drop.shareId}`} target="_blank" rel="noreferrer">
+                                <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> Open drop
+                              </Link>
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-8 text-[10px] font-bold uppercase" asChild>
+                              <Link
+                                href={`/albums/${drop.albumId}/tracks/${drop.trackId}`}
+                                onClick={() => setOpen(false)}
+                              >
+                                <Settings2 className="mr-1.5 h-3.5 w-3.5" /> Edit audio & price
+                              </Link>
+                            </Button>
+                          </div>
+                        </li>
+                      ))}
+                  </ul>
+                </section>
+              )}
+
               {albumDrops.length > 0 && (
                 <section className="space-y-2">
                   <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.28em] text-violet-300/90">
@@ -175,13 +224,19 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
                 </section>
               )}
 
-              {trackDrops.length > 0 && (
+              {trackDrops.some((d) => !d.hasDropAudio) && (
                 <section className="space-y-2">
                   <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.28em] text-emerald-300/90">
-                    <CassetteTape className="h-3.5 w-3.5" /> Track DNA
+                    <CassetteTape className="h-3.5 w-3.5" /> Track DNA · no song yet
+                  </p>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Open a track → DNA Drop → First Drop · audio &amp; price to sell it. Same page, plus the
+                    record.
                   </p>
                   <ul className="space-y-2">
-                    {trackDrops.map((drop) => (
+                    {trackDrops
+                      .filter((d) => !d.hasDropAudio)
+                      .map((drop) => (
                       <li
                         key={drop.shareId}
                         className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3"
@@ -189,8 +244,8 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
                         <p className="truncate text-sm font-bold">{drop.title}</p>
                         <p className="mt-0.5 text-[10px] text-muted-foreground">
                           {drop.fromAlbumHub
-                            ? `Also on album · ${drop.albumTitle}`
-                            : `From · ${drop.albumTitle}`}
+                            ? `DNA only · also on album · ${drop.albumTitle}`
+                            : `DNA only · from ${drop.albumTitle}`}
                         </p>
                         <div className="mt-2 flex flex-wrap gap-2">
                           <Button size="sm" variant="secondary" className="h-8 text-[10px] font-bold uppercase" asChild>
@@ -203,7 +258,7 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
                               href={`/albums/${drop.albumId}/tracks/${drop.trackId}`}
                               onClick={() => setOpen(false)}
                             >
-                              <Settings2 className="mr-1.5 h-3.5 w-3.5" /> Manage in vault
+                              <Settings2 className="mr-1.5 h-3.5 w-3.5" /> Add First Drop
                             </Link>
                           </Button>
                         </div>

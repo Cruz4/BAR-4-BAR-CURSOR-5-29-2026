@@ -18,7 +18,7 @@ export default function FoldSheetPage() {
   }, [authReady, user?.id, router, foldId]);
 
   if (!authReady || !user || !foldId) {
-    return <StudioLoader size="lg" fullscreen message="Unfolding…" />;
+    return <StudioLoader size="lg" fullscreen message="Opening…" />;
   }
 
   return <FoldSheet foldId={foldId} />;

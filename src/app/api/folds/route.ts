@@ -17,7 +17,7 @@ export const runtime = 'nodejs';
 export async function GET(req: Request) {
   try {
     if (!(await isFoldsFeatureEnabled())) {
-      return NextResponse.json({ error: 'Folds is off' }, { status: 404 });
+      return NextResponse.json({ error: 'Messaging is off' }, { status: 404 });
     }
     const url = new URL(req.url);
     const foldId = (url.searchParams.get('foldId') || '').trim();
@@ -33,19 +33,19 @@ export async function GET(req: Request) {
     }
     const fold = await getFold(foldId);
     if (!fold || !fold.memberIds.includes(userId)) {
-      return NextResponse.json({ error: 'Fold not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'Conversation not found.' }, { status: 404 });
     }
     return NextResponse.json({ fold });
   } catch (err) {
     console.error('[folds GET]', err);
-    return NextResponse.json({ error: 'Failed to load fold' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to load' }, { status: 500 });
   }
 }
 
 export async function POST(req: Request) {
   try {
     if (!(await isFoldsFeatureEnabled())) {
-      return NextResponse.json({ error: 'Folds is off' }, { status: 404 });
+      return NextResponse.json({ error: 'Messaging is off' }, { status: 404 });
     }
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const userId = typeof body.userId === 'string' ? body.userId.trim() : '';
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     if (action === 'pass') {
       const { allowed } = checkRateLimit(`fold-pass:${userId}`, 40, 60 * 60 * 1000);
       if (!allowed) {
-        return NextResponse.json({ error: 'Slow down — too many bars this hour.' }, { status: 429 });
+        return NextResponse.json({ error: 'Slow down — too many messages this hour.' }, { status: 429 });
       }
       const peerId = typeof body.peerId === 'string' ? body.peerId.trim() : '';
       const text = typeof body.text === 'string' ? body.text : '';
@@ -115,19 +115,19 @@ export async function POST(req: Request) {
     const message = err instanceof Error ? err.message : '';
     if (
       message === 'That is you.' ||
-      message === 'Write a bar first.' ||
-      message === 'You can’t pass a bar to this artist.' ||
+      message === 'Write a message first.' ||
+      message === 'You can’t message this artist.' ||
       message === 'Artist not found.' ||
-      message === 'That fold is not yours.' ||
+      message === 'That conversation isn’t yours.' ||
       message === 'Wait for them to open it.' ||
-      message === 'They still have the pass.'
+      message === 'They haven’t accepted yet.'
     ) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
-    if (message === 'Fold not found.') {
+    if (message === 'Conversation not found.') {
       return NextResponse.json({ error: message }, { status: 404 });
     }
     console.error('[folds POST]', err);
-    return NextResponse.json({ error: 'Failed to update fold' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
   }
 }

@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { cn } from '@/lib/utils';
+import { profileHref } from '@/lib/profile/profile-slug';
 import { LeaderboardHeatBackground } from '@/components/studio-page-background';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
 
@@ -79,7 +80,7 @@ function LeaderboardArtistName({ row }: { row: Entry }) {
   if (row.profileSlug) {
     return (
       <Link
-        href={`/profile/${row.profileSlug}`}
+        href={profileHref(row.profileSlug) || `/${row.profileSlug}`}
         className="font-bold text-sm uppercase truncate text-white/90 hover:text-primary transition-colors underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"
       >
         {name}

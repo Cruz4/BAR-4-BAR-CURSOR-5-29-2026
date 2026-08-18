@@ -14,7 +14,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: err.message }, { status: 401 });
     }
     console.error('[admin/folds GET]', err);
-    return NextResponse.json({ error: 'Failed to load Folds' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to load Msgs' }, { status: 500 });
   }
 }
 
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: err.message }, { status: 401 });
     }
     console.error('[admin/folds POST]', err);
-    const message = err instanceof Error ? err.message : 'Failed to save Folds';
+    const message = err instanceof Error ? err.message : 'Failed to save Msgs';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

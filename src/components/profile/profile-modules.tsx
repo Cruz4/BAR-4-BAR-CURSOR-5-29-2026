@@ -30,7 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
-import { profileHref } from '@/lib/profile/profile-slug';
+import { profileFriendsHref, profileHref } from '@/lib/profile/profile-slug';
 import type { ArtistHomeFeatured, ModuleSize } from '@/lib/profile/modules';
 import { FingerprintSvg } from '@/components/profile/rhyme-fingerprint-svg';
 import { BarBoardView } from '@/components/profile/bar-board-module';
@@ -81,6 +81,12 @@ export type ModuleContext = {
     albumShareId?: string;
     trackIndex?: number;
     trackCount?: number;
+    hasDropAudio?: boolean;
+    dropPriceSummary?: string;
+    playCount?: number;
+    previewCount?: number;
+    purchaseCount?: number;
+    firstBuyerName?: string;
   }>;
   /** Die-cut chrome from the living press — every module punches the same sheet. */
   plate: PressPlateChrome;
@@ -505,9 +511,14 @@ export function OpenLockModule({ ctx }: { ctx: ModuleContext }) {
 export function DropShelfModule({ ctx }: { ctx: ModuleContext }) {
   const drops = ctx.liveDnaDrops || [];
   if (!drops.length) return null;
+  const firstCount = drops.filter((d) => d.hasDropAudio && d.type === 'track').length;
 
   return (
-    <ModuleShell icon={Dna} title={"Live DNA Drops"} ctx={ctx}>
+    <ModuleShell
+      icon={Dna}
+      title={firstCount > 0 ? 'First Drops & DNA' : 'Live DNA Drops'}
+      ctx={ctx}
+    >
       <LiveDnaDropsGroupedList drops={drops} layout="shelf" />
     </ModuleShell>
   );
@@ -862,7 +873,7 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
       action={
         !playground && ctx.profileSlug ? (
           <Link
-            href={`/profile/${ctx.profileSlug}/friends`}
+            href={profileFriendsHref(ctx.profileSlug) || '/friends'}
             className="text-[10px] font-bold uppercase tracking-widest text-[var(--ph-accent,#7dd3fc)] hover:underline"
           >
             See all →
@@ -913,7 +924,7 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
             </p>
             {ctx.profileSlug ? (
               <Link
-                href={`/profile/${ctx.profileSlug}/friends`}
+                href={profileFriendsHref(ctx.profileSlug) || '/friends'}
                 className="text-[9px] font-bold uppercase tracking-widest text-[var(--ph-accent,#7dd3fc)] hover:underline"
               >
                 See all · search

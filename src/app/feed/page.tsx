@@ -28,6 +28,7 @@ import {
 } from '@/lib/profile/social-client';
 import { FRIENDSHIP_CHANGED_EVENT, type FriendshipChangedDetail } from '@/lib/activity/client';
 import { markBlockSeen } from '@/lib/profile/social-alerts';
+import { profileHref } from '@/lib/profile/profile-slug';
 
 export default function FeedPage() {
   const router = useRouter();
@@ -203,7 +204,7 @@ export default function FeedPage() {
                   <div className="min-w-0 flex-1">
                     {requester?.slug ? (
                       <Link
-                        href={`/profile/${requester.slug}`}
+                        href={profileHref(requester.slug) || `/${requester.slug}`}
                         className="text-sm font-bold text-white hover:text-primary"
                       >
                         {requester?.name || 'Artist'}
@@ -255,7 +256,7 @@ export default function FeedPage() {
           </p>
           {viewerSlug && (
             <Button size="sm" variant="outline" className="h-9 font-bold uppercase" asChild>
-              <Link href={`/profile/${viewerSlug}`}>Go to my page</Link>
+              <Link href={profileHref(viewerSlug) || '/'}>Go to my page</Link>
             </Button>
           )}
         </div>

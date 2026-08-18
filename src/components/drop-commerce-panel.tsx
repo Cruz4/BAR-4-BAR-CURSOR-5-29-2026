@@ -17,6 +17,7 @@ import {
   centsToUsdLabel,
   defaultDropPrice,
   firstDropsFeeCashoutLine,
+  firstDropsSplitLine,
   normalizeDropPrice,
   parseUsdToCents,
   type DropPrice,
@@ -94,6 +95,14 @@ function PriceEditor({
           <p className="text-[9px] text-muted-foreground">
             Charged {centsToUsdLabel(Math.max(DROP_PAID_MIN_CENTS, amount))} · min {centsToUsdLabel(DROP_PAID_MIN_CENTS)}
           </p>
+          <p className="text-[10px] font-medium leading-snug text-foreground/90">
+            {firstDropsSplitLine(
+              Math.max(
+                DROP_PAID_MIN_CENTS,
+                parseUsdToCents(custom) ?? amount
+              )
+            )}
+          </p>
         </div>
       )}
       {price.mode === 'pwyw' && (
@@ -122,6 +131,20 @@ function PriceEditor({
               className="h-8 font-code text-xs"
             />
           </div>
+          {min > 0 ? (
+            <p className="col-span-2 text-[10px] font-medium leading-snug text-foreground/90">
+              At the minimum: {firstDropsSplitLine(min)}
+            </p>
+          ) : (
+            <p className="col-span-2 text-[9px] text-muted-foreground">
+              $0 minimum is free — no fee until they pay.
+            </p>
+          )}
+          {suggested > 0 ? (
+            <p className="col-span-2 text-[10px] font-medium leading-snug text-foreground/90">
+              If they pay the suggested: {firstDropsSplitLine(suggested)}
+            </p>
+          ) : null}
         </div>
       )}
     </div>

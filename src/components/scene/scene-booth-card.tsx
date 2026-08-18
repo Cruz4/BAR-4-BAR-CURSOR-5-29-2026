@@ -18,6 +18,7 @@ import { useGamification } from '@/context/gamification-context';
 import { patchGamificationSettings } from '@/lib/gamification-client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { profileHref } from '@/lib/profile/profile-slug';
 import { studioChromeFromUser } from '@/lib/studio-tier-chrome';
 
 export function SceneBoothCard({ className }: { className?: string }) {
@@ -34,7 +35,7 @@ export function SceneBoothCard({ className }: { className?: string }) {
   if (!user || loading) return null;
 
   const isLive = Boolean(publicProfile && summary.profileSlug);
-  const profileHref = summary.profileSlug ? `/profile/${summary.profileSlug}` : null;
+  const homeHref = summary.profileSlug ? profileHref(summary.profileSlug) : null;
   const useStarMark = Boolean(summary.starMarkUseStar);
   const avatarUrl =
     !useStarMark &&
@@ -84,7 +85,7 @@ export function SceneBoothCard({ className }: { className?: string }) {
           starMarkSeed={summary.starMarkSeed}
           avatarUrl={avatarUrl}
           size={44}
-          href={profileHref || undefined}
+          href={homeHref || undefined}
           toneClass={
             isLive
               ? 'bg-sky-500/15 text-sky-400'
@@ -125,10 +126,10 @@ export function SceneBoothCard({ className }: { className?: string }) {
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2 border-t border-border/50 pt-3">
-        {isLive && profileHref ? (
+        {isLive && homeHref ? (
           <>
             <Button size="sm" className="h-9 gap-1.5 font-bold uppercase" asChild>
-              <Link href={profileHref}>
+              <Link href={homeHref}>
                 <ExternalLink className="h-3.5 w-3.5" /> View my page
               </Link>
             </Button>

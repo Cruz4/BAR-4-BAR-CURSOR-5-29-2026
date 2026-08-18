@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Save, ScrollText, Sparkles } from 'lucide-react';
+import { Save, MessageSquare, Sparkles } from 'lucide-react';
 import { adminApiFetch } from '@/lib/admin-client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,10 +45,10 @@ export function AdminFoldsFeatureCard() {
       setConfig(data);
       setEnabled(data.enabled);
       toast({
-        title: data.enabled ? 'Folds live' : 'Folds off',
+        title: data.enabled ? 'Msgs live' : 'Msgs off',
         description: data.enabled
-          ? 'Passed bars, /folds, Artist Home Pass a bar, and realtime slips are on. Free for every signed-in artist — no Ink.'
-          : 'Messaging is hidden. Existing sheets stay saved if you turn it back on.',
+          ? 'Inbox, Artist Home Message, and live notifications are on. Free for every signed-in artist — no Ink.'
+          : 'Messaging is hidden. Existing threads stay saved if you turn it back on.',
       });
     } catch (err) {
       toast({
@@ -67,11 +67,11 @@ export function AdminFoldsFeatureCard() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <CardTitle className="font-headline text-2xl uppercase flex items-center gap-2">
-              <ScrollText className="h-6 w-6 text-amber-400" />
-              Folds
+              <MessageSquare className="h-6 w-6 text-amber-400" />
+              Msgs
             </CardTitle>
             <CardDescription className="mt-2 max-w-xl">
-              Private lyric-sheet messaging (pass a bar, reply, wet ink / fold back, live slips + push).
+              Private messages between artists (send, reply, unread, live alerts + push).
               Free for every signed-in artist — no Ink, no Pro. Toggle live — no redeploy. Emergency:{' '}
               <code className="text-foreground/80">FOLDS_FORCE_OFF=1</code>.
             </CardDescription>
@@ -94,8 +94,8 @@ export function AdminFoldsFeatureCard() {
             <div className="flex items-center justify-between rounded-xl border border-white/10 bg-background/40 p-4">
               <div>
                 <p className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                  <ScrollText className="h-4 w-4 text-amber-400" />
-                  Enable Folds messaging
+                  <MessageSquare className="h-4 w-4 text-amber-400" />
+                  Enable Msgs
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 max-w-md">
                   When on: header, Scene dock, Artist Home, Your circle, and /folds. Contact-on-page
@@ -124,7 +124,7 @@ export function AdminFoldsFeatureCard() {
             ) : null}
 
             <ul className="text-[11px] text-muted-foreground space-y-1.5 list-disc list-inside">
-              <li>Inbox <code className="text-foreground/80">/folds</code> · live sheet <code className="text-foreground/80">/folds/[id]</code></li>
+              <li>Inbox <code className="text-foreground/80">/folds</code> · thread <code className="text-foreground/80">/folds/[id]</code></li>
               <li>Firestore listeners + FCM only while this is on</li>
               <li>No Ink charged. Visitor and Pro both get it when live.</li>
             </ul>

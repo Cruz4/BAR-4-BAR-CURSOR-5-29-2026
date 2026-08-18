@@ -6,8 +6,9 @@
  */
 
 import Link from 'next/link';
-import { CassetteTape, Disc3, ChevronRight } from 'lucide-react';
+import { CassetteTape, Disc3, ChevronRight, Music } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatDropPulseLine } from '@/lib/drop-pulse';
 
 export type LiveDnaDropItem = {
   shareId: string;
@@ -20,6 +21,12 @@ export type LiveDnaDropItem = {
   /** 0-based album tracklist position (set order). */
   trackIndex?: number;
   trackCount?: number;
+  hasDropAudio?: boolean;
+  dropPriceSummary?: string;
+  playCount?: number;
+  previewCount?: number;
+  purchaseCount?: number;
+  firstBuyerName?: string;
 };
 
 type LiveDnaDropLinkCardProps = {
@@ -37,6 +44,8 @@ export function LiveDnaDropLinkCard({
   nested = false,
 }: LiveDnaDropLinkCardProps) {
   const isAlbum = drop.type === 'album';
+  const firstDrop = Boolean(drop.hasDropAudio);
+  const pulse = formatDropPulseLine(drop);
 
   return (
     <Link
@@ -46,7 +55,9 @@ export function LiveDnaDropLinkCard({
         'group flex items-center transition-colors',
         nested
           ? 'gap-2.5 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.07] px-2.5 py-2 hover:border-emerald-400/45'
-          : isAlbum
+          : firstDrop
+            ? 'gap-3 rounded-xl border border-fuchsia-500/40 bg-gradient-to-br from-fuchsia-500/15 via-black/40 to-black/20 p-3.5 sm:p-4 hover:border-fuchsia-400/55'
+            : isAlbum
             ? 'gap-3 rounded-xl border border-violet-500/35 bg-gradient-to-br from-violet-500/15 via-black/40 to-black/20 p-3.5 sm:p-4 hover:border-violet-400/55'
             : 'gap-3 rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-black/35 to-black/20 p-3.5 sm:p-4 hover:border-emerald-400/50',
         className
@@ -57,12 +68,16 @@ export function LiveDnaDropLinkCard({
           'flex shrink-0 items-center justify-center rounded-lg border',
           nested
             ? 'h-8 w-8 border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
+            : firstDrop
+              ? 'h-11 w-11 border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-300'
             : isAlbum
               ? 'h-11 w-11 border-violet-400/40 bg-violet-500/15 text-violet-300'
               : 'h-11 w-11 border-emerald-400/35 bg-emerald-500/10 text-emerald-300'
         )}
       >
-        {isAlbum ? (
+        {firstDrop && !nested ? (
+          <Music className="h-5 w-5" />
+        ) : isAlbum ? (
           <Disc3 className={nested ? 'h-3.5 w-3.5' : 'h-5 w-5'} />
         ) : (
           <CassetteTape className={nested ? 'h-3.5 w-3.5' : 'h-5 w-5'} />
@@ -73,10 +88,12 @@ export function LiveDnaDropLinkCard({
           <p
             className={cn(
               'text-[9px] font-bold uppercase tracking-[0.22em]',
-              isAlbum ? 'text-violet-300/90' : 'text-emerald-300/90'
+              firstDrop ? 'text-fuchsia-300/90' : isAlbum ? 'text-violet-300/90' : 'text-emerald-300/90'
             )}
           >
-            {isAlbum ? 'Album DNA' : 'Track DNA'}
+            {firstDrop ? 'First Drop' : isAlbum ? 'Album DNA' : 'Track DNA'}
+            {drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : null}
+            {pulse ? ` · ${pulse}` : null}
             {isAlbum && typeof drop.trackCount === 'number'
               ? ` · ${drop.trackCount} track${drop.trackCount === 1 ? '' : 's'}`
               : null}
@@ -97,12 +114,18 @@ export function LiveDnaDropLinkCard({
             </p>
           ) : (
             <p className="text-[10px] text-[var(--ph-muted,rgba(255,255,255,0.45))]">
-              {isAlbum ? 'Open album · or pick a track below' : 'Open track DNA Drop'}
+              {firstDrop
+                ? 'Preview 30s · buy once to stream'
+                : isAlbum
+                  ? 'Open album · or pick a track below'
+                  : 'Open track DNA Drop'}
             </p>
           ))}
         {nested && (
           <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-300/70">
-            Track DNA · open
+            {drop.hasDropAudio
+              ? `First Drop${drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : ''}`
+              : 'Track DNA · open'}
           </p>
         )}
       </div>
@@ -182,10 +205,28 @@ export function LiveDnaDropsGroupedList({
   layout = 'shelf',
 }: LiveDnaDropsGroupedListProps) {
   const { albumGroups, standaloneTracks } = groupLiveDnaDrops(drops);
+  const firstDrops = drops.filter((d) => d.hasDropAudio && d.type === 'track');
   if (!albumGroups.length && !standaloneTracks.length) return null;
 
   return (
     <div className="space-y-5">
+      {firstDrops.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-fuchsia-300/90">
+            First Drops · {firstDrops.length} — listen / buy
+          </p>
+          <div
+            className={cn(
+              'grid gap-3',
+              layout === 'shelf' ? 'sm:grid-cols-2' : 'grid-cols-1'
+            )}
+          >
+            {firstDrops.map((drop) => (
+              <LiveDnaDropLinkCard key={`fd-${drop.shareId}`} drop={drop} onNavigate={onNavigate} />
+            ))}
+          </div>
+        </div>
+      )}
       {albumGroups.length > 0 && (
         <div className="space-y-3">
           <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-violet-300/80">

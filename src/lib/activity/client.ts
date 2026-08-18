@@ -251,6 +251,7 @@ export async function fetchActivityPrefs(): Promise<ActivityPrefs> {
       lockCasts: data.lockCasts !== false,
       craftReminders: data.craftReminders !== false,
       foldBars: data.foldBars !== false,
+      firstDrops: data.firstDrops !== false,
     };
   } catch {
     return { ...DEFAULT_ACTIVITY_PREFS };

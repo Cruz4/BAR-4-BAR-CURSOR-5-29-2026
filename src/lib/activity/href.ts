@@ -1,33 +1,18 @@
-import { profileHref } from '@/lib/profile/profile-slug';
+import { profileHref, slugFromProfileHref } from '@/lib/profile/profile-slug';
 import type { ActivityEvent } from '@/lib/activity/types';
 import { activityPostHash } from '@/lib/activity/post-deep-link';
 
 /**
- * Rewrite a stored /profile/{slug}[#hash] path through live vanity rules.
- * Old activity docs still point at hyphen + uid-tail slugs (e.g. neomaiya-sol-paQXxm)
- * that 404 after the underscore migration.
+ * Rewrite a stored Artist Home path through live vanity rules.
+ * Old activity docs still point at /profile/{hyphen-uid} slugs that 404 after
+ * the underscore + root-vanity cutover.
  */
 export function rewriteActivityProfileHref(href: string): string | undefined {
-  const raw = (href || '').trim();
-  if (!raw) return undefined;
-  let path = raw;
-  if (/^https?:\/\//i.test(raw)) {
-    try {
-      const u = new URL(raw);
-      path = `${u.pathname}${u.hash}`;
-    } catch {
-      return undefined;
-    }
-  }
-  const m = path.match(/^\/profile\/([^/?#]+)(?:\?[^#]*)?(?:#(.*))?$/);
-  if (!m) return undefined;
-  let slug = m[1];
-  try {
-    slug = decodeURIComponent(slug);
-  } catch {
-    /* keep */
-  }
-  return profileHref(slug, m[2] || undefined);
+  const slug = slugFromProfileHref(href);
+  if (!slug) return undefined;
+  const hashIdx = href.indexOf('#');
+  const hash = hashIdx >= 0 ? href.slice(hashIdx + 1) : undefined;
+  return profileHref(slug, hash || undefined);
 }
 
 /** Next.js Link-safe href so `#post-…` never gets folded into the `[slug]` param. */
@@ -59,7 +44,7 @@ async function livePostHref(slug: string | undefined, hash: string): Promise<str
   if (!slug) return undefined;
   const href = profileHref(slug, hash);
   if (!href) return undefined;
-  const liveSlug = href.match(/^\/profile\/([^/#]+)/)?.[1];
+  const liveSlug = slugFromProfileHref(href);
   if (!liveSlug || !(await isLivePublicProfileSlug(liveSlug))) return undefined;
   return href;
 }

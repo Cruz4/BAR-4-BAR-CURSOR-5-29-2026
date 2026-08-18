@@ -47,6 +47,7 @@ import {
   stopCelebrationConfetti,
 } from '@/lib/gamification/celebration-confetti';
 import { cn } from '@/lib/utils';
+import { profileHref } from '@/lib/profile/profile-slug';
 import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
 import { useToast } from '@/hooks/use-toast';
@@ -240,7 +241,7 @@ export function AchievementUnlockCelebration() {
 
   const profileUrl =
     typeof window !== 'undefined' && summary.profileSlug
-      ? `${window.location.origin}/profile/${summary.profileSlug}`
+      ? `${window.location.origin}${profileHref(summary.profileSlug) || `/${summary.profileSlug}`}`
       : typeof window !== 'undefined'
         ? window.location.origin
         : '';

@@ -61,7 +61,7 @@ export function PublicProfilePageClient({ slug }: { slug: string }) {
           const hash =
             swallowedHash ||
             (typeof window !== 'undefined' ? window.location.hash.replace(/^#/, '') : '');
-          router.replace(profileHref(liveSlug, hash || undefined) || `/profile/${liveSlug}`);
+          router.replace(profileHref(liveSlug, hash || undefined) || `/${liveSlug}`);
           return;
         }
         if (cancelled) return;
@@ -117,6 +117,12 @@ export function PublicProfilePageClient({ slug }: { slug: string }) {
                   albumShareId?: string;
                   trackIndex?: number;
                   trackCount?: number;
+                  hasDropAudio?: boolean;
+                  dropPriceSummary?: string;
+                  playCount?: number;
+                  previewCount?: number;
+                  purchaseCount?: number;
+                  firstBuyerName?: string;
                 }) => ({
                   shareId: d.shareId,
                   title: typeof d.title === 'string' && d.title.trim() ? d.title : 'Untitled drop',
@@ -129,6 +135,16 @@ export function PublicProfilePageClient({ slug }: { slug: string }) {
                     : {}),
                   ...(typeof d.trackIndex === 'number' ? { trackIndex: d.trackIndex } : {}),
                   ...(typeof d.trackCount === 'number' ? { trackCount: d.trackCount } : {}),
+                  ...(d.hasDropAudio ? { hasDropAudio: true } : {}),
+                  ...(typeof d.dropPriceSummary === 'string' && d.dropPriceSummary.trim()
+                    ? { dropPriceSummary: d.dropPriceSummary.trim() }
+                    : {}),
+                  ...(typeof d.playCount === 'number' ? { playCount: d.playCount } : {}),
+                  ...(typeof d.previewCount === 'number' ? { previewCount: d.previewCount } : {}),
+                  ...(typeof d.purchaseCount === 'number' ? { purchaseCount: d.purchaseCount } : {}),
+                  ...(typeof d.firstBuyerName === 'string' && d.firstBuyerName.trim()
+                    ? { firstBuyerName: d.firstBuyerName.trim() }
+                    : {}),
                 }))
             : [],
           slug: liveSlug,

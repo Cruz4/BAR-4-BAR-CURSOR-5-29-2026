@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Check, Copy, Facebook, Mail, MessageCircle, Share2 } from 'lucide-react';
 import type { ProfilePost } from '@/lib/profile/social-client';
+import { profileHref } from '@/lib/profile/profile-slug';
 
 type PostShareDialogProps = {
   open: boolean;
@@ -36,7 +37,7 @@ function buildPostShareUrl(post: ProfilePost): string {
   if (typeof window === 'undefined') return '';
   const origin = window.location.origin;
   if (post.ownerSlug) {
-    return `${origin}/profile/${post.ownerSlug}#post-${post.id}`;
+    return `${origin}${profileHref(post.ownerSlug, `post-${post.id}`) || `/${post.ownerSlug}#post-${post.id}`}`;
   }
   return origin;
 }

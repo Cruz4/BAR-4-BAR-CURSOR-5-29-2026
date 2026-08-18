@@ -1,7 +1,7 @@
 /**
- * Folds flag — private lyric-sheet messaging.
+ * Msgs flag — private 1:1 messaging (internal name: Folds).
  *
- * Live switch: Admin Panel → Config → Folds (Firestore `config/foldsFeature`).
+ * Live switch: Admin Panel → Config → Msgs (Firestore `config/foldsFeature`).
  * Emergency hard kill: FOLDS_FORCE_OFF=1
  * Until an admin saves, the feature stays ON (shipping with the app).
  */

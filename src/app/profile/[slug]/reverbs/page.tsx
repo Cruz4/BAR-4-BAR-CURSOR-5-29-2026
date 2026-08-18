@@ -13,6 +13,7 @@ import { StudioLoader } from '@/components/studio-loader';
 import { PostCard } from '@/components/profile/post-card';
 import { useAuth } from '@/hooks/use-auth';
 import { fetchGamificationSummary } from '@/lib/gamification-client';
+import { profileHref } from '@/lib/profile/profile-slug';
 import {
   fetchReverbsByOwner,
   type ProfilePost,
@@ -95,7 +96,7 @@ export default function ProfileReverbsPage() {
     <div className="container mx-auto max-w-2xl space-y-6 px-4 py-8">
       <header className="space-y-3">
         <Button size="sm" variant="outline" className="h-8 gap-1.5 font-bold uppercase" asChild>
-          <Link href={`/profile/${slug}`}>
+          <Link href={profileHref(slug) || `/${slug}`}>
             <ChevronLeft className="h-3.5 w-3.5" /> {displayName}
           </Link>
         </Button>

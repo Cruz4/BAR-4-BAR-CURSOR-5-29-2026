@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LogOut, LayoutDashboard, LayoutGrid, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy, Smartphone, Settings, Users, Archive, Bell, Banknote, ScrollText } from 'lucide-react';
+import { LogOut, LayoutDashboard, LayoutGrid, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy, Smartphone, Settings, Users, Archive, Bell, Banknote, MessageSquare } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -15,7 +15,7 @@ import { Button } from './ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { auth } from '@/lib/firebase/client/firebase';
 import { signOut } from 'firebase/auth';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, usePathname } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { useState, useEffect } from 'react';
@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/popover";
 import { BrandLockup } from '@/components/brand-lockup';
 import { StudioThemeControls } from '@/components/studio-theme-controls';
+import { isTrackLyricSheetPath } from '@/lib/studio-theme';
 import { useSocialAlerts } from '@/hooks/use-social-alerts';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
@@ -60,6 +61,7 @@ export function Header() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const params = useParams();
+  const pathname = usePathname();
   const { toast } = useToast();
   const [bugReportOpen, setBugReportOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -78,6 +80,7 @@ export function Header() {
 
   const albumId = params?.albumId as string;
   const trackId = params?.trackId as string;
+  const isLyricSheet = isTrackLyricSheetPath(pathname);
   const isGuestTry =
     !user && isGuestTrySheetEnabled() && isGuestTryAlbumId(albumId);
   const backHref = isGuestTry ? '/welcome' : albumId ? `/albums/${albumId}` : '/';
@@ -205,7 +208,7 @@ export function Header() {
             )}
             {!loading && user && (
               <>
-                <StudioThemeControls />
+                {isLyricSheet ? <StudioThemeControls /> : null}
                 {SCENE_HOME_ENABLED && (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -338,8 +341,8 @@ export function Header() {
                       <DropdownMenuItem onClick={() => router.push('/studio-progress')}><Trophy className="mr-2 h-4 w-4 text-amber-400" /><span>Studio Progress</span></DropdownMenuItem>
                       {foldsOn ? (
                       <DropdownMenuItem onClick={() => router.push('/folds')}>
-                        <ScrollText className="mr-2 h-4 w-4 text-amber-400" />
-                        <span className="flex-1">Folds</span>
+                        <MessageSquare className="mr-2 h-4 w-4 text-amber-400" />
+                        <span className="flex-1">Msgs</span>
                         {foldUnread > 0 && (
                           <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-400 px-1.5 text-[10px] font-bold text-black">
                             {foldUnread > 99 ? '99+' : foldUnread}

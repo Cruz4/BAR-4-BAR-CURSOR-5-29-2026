@@ -37,6 +37,7 @@ import {
   type VesperfoldSlot,
 } from '@/lib/profile/vesperfold';
 import { artistHomeForPublic, normalizeArtistHomeConfig } from '@/lib/profile/modules';
+import { shareCommerceFlags } from '@/lib/drop-commerce';
 import {
   allocateUniqueProfileSlug,
   assertProfileSlugAvailable,
@@ -719,7 +720,7 @@ export async function updateGamificationSettings(
     publicProfile?: boolean;
     leaderboardHidden?: boolean;
     displayName?: string;
-    /** Vanity Artist Home path: /profile/{profileSlug} */
+    /** Vanity Artist Home path: /{profileSlug} */
     profileSlug?: string;
     profilePhotoMode?: 'collage' | 'custom' | 'initials';
     profilePhotoUrl?: string | null;
@@ -1335,6 +1336,12 @@ export type LiveDnaDropSummary = {
   trackIndex?: number;
   /** Live track count on album cards. */
   trackCount?: number;
+  hasDropAudio?: boolean;
+  dropPriceSummary?: string;
+  playCount?: number;
+  previewCount?: number;
+  purchaseCount?: number;
+  firstBuyerName?: string;
 };
 
 type LiveDnaDropDraft = LiveDnaDropSummary & { updatedAt: string };
@@ -1363,11 +1370,30 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
           ? data.createdAt
           : '';
 
+    const payload = (data?.data ?? {}) as {
+      dropAudio?: unknown;
+      dropPrice?: unknown;
+      tracks?: Array<{ dropAudio?: unknown; dropPrice?: unknown }>;
+    };
+    // Album hubs inherit nested-track audio in shareCommerceFlags — don't label
+    // the album card itself as a First Drop. Fans should open the track.
+    const flags =
+      type === 'album'
+        ? shareCommerceFlags({ dropAudio: payload.dropAudio, dropPrice: payload.dropPrice })
+        : shareCommerceFlags(payload);
     const entry: LiveDnaDropDraft = {
       shareId: doc.id,
       title: title.slice(0, 120),
       type,
       updatedAt,
+      ...(flags.hasDropAudio ? { hasDropAudio: true } : {}),
+      ...(flags.dropPriceSummary ? { dropPriceSummary: flags.dropPriceSummary } : {}),
+      ...(Number(data.playCount) > 0 ? { playCount: Number(data.playCount) } : {}),
+      ...(Number(data.previewCount) > 0 ? { previewCount: Number(data.previewCount) } : {}),
+      ...(Number(data.purchaseCount) > 0 ? { purchaseCount: Number(data.purchaseCount) } : {}),
+      ...(typeof data.firstBuyerName === 'string' && data.firstBuyerName.trim()
+        ? { firstBuyerName: data.firstBuyerName.trim().slice(0, 80) }
+        : {}),
     };
 
     if (type === 'album') {
@@ -1410,6 +1436,7 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
           ? (track as { title: string }).title.trim().slice(0, 120)
           : 'Untitled track';
 
+      const trackFlags = shareCommerceFlags(track as { dropAudio?: unknown; dropPrice?: unknown });
       const existing = byShareId.get(shareId);
       if (existing) {
         byShareId.set(shareId, {
@@ -1419,6 +1446,8 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
           albumShareId,
           trackIndex,
           updatedAt: existing.updatedAt || albumUpdatedAt,
+          hasDropAudio: existing.hasDropAudio || trackFlags.hasDropAudio || undefined,
+          dropPriceSummary: existing.dropPriceSummary || trackFlags.dropPriceSummary || undefined,
         });
       } else {
         byShareId.set(shareId, {
@@ -1429,6 +1458,8 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
           albumShareId,
           trackIndex,
           updatedAt: albumUpdatedAt,
+          ...(trackFlags.hasDropAudio ? { hasDropAudio: true } : {}),
+          ...(trackFlags.dropPriceSummary ? { dropPriceSummary: trackFlags.dropPriceSummary } : {}),
         });
       }
     }
@@ -1451,7 +1482,7 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
       return b.updatedAt.localeCompare(a.updatedAt);
     })
     .slice(0, 48)
-    .map(({ shareId, title, type, albumTitle, albumShareId, trackIndex, trackCount }) => ({
+    .map(({ shareId, title, type, albumTitle, albumShareId, trackIndex, trackCount, hasDropAudio, dropPriceSummary, playCount, previewCount, purchaseCount, firstBuyerName }) => ({
       shareId,
       title,
       type,
@@ -1459,6 +1490,12 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
       ...(albumShareId ? { albumShareId } : {}),
       ...(typeof trackIndex === 'number' ? { trackIndex } : {}),
       ...(typeof trackCount === 'number' ? { trackCount } : {}),
+      ...(hasDropAudio ? { hasDropAudio: true } : {}),
+      ...(dropPriceSummary ? { dropPriceSummary } : {}),
+      ...(playCount ? { playCount } : {}),
+      ...(previewCount ? { previewCount } : {}),
+      ...(purchaseCount ? { purchaseCount } : {}),
+      ...(firstBuyerName ? { firstBuyerName } : {}),
     }));
 }
 
@@ -1964,6 +2001,10 @@ export type DiscoverShareSummary = {
   updatedAt: string;
   hasDropAudio?: boolean;
   dropPriceSummary?: string;
+  playCount?: number;
+  previewCount?: number;
+  purchaseCount?: number;
+  firstBuyerName?: string;
 };
 
 /** Recent live DNA Drops — summary only, heavy `data` payload stripped. */
@@ -1986,6 +2027,10 @@ export async function listRecentShareSummaries(
     updatedAt: string;
     hasDropAudio?: boolean;
     dropPriceSummary?: string;
+    playCount?: number;
+    previewCount?: number;
+    purchaseCount?: number;
+    firstBuyerName?: string;
   }> = [];
   for (const doc of snap.docs) {
     const data = doc.data() as Record<string, unknown>;
@@ -2017,6 +2062,13 @@ export async function listRecentShareSummaries(
       hasDropAudio: data.hasDropAudio === true,
       dropPriceSummary:
         typeof data.dropPriceSummary === 'string' ? data.dropPriceSummary : undefined,
+      playCount: Number(data.playCount) > 0 ? Number(data.playCount) : undefined,
+      previewCount: Number(data.previewCount) > 0 ? Number(data.previewCount) : undefined,
+      purchaseCount: Number(data.purchaseCount) > 0 ? Number(data.purchaseCount) : undefined,
+      firstBuyerName:
+        typeof data.firstBuyerName === 'string' && data.firstBuyerName.trim()
+          ? data.firstBuyerName.trim().slice(0, 80)
+          : undefined,
     });
     if (rows.length >= limit) break;
   }
@@ -2036,6 +2088,10 @@ export async function listRecentShareSummaries(
       updatedAt: r.updatedAt,
       hasDropAudio: r.hasDropAudio,
       dropPriceSummary: r.dropPriceSummary,
+      playCount: r.playCount,
+      previewCount: r.previewCount,
+      purchaseCount: r.purchaseCount,
+      firstBuyerName: r.firstBuyerName,
     };
   });
 }

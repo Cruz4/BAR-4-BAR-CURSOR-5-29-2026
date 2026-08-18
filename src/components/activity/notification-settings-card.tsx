@@ -123,11 +123,12 @@ export function NotificationSettingsCard() {
                 ['craftReminders', 'Verse still open + streak at midnight'],
                 ['lockCasts', 'Someone echoed your bar'],
                 ['friendRequests', 'Friend + contact requests'],
-                ['foldBars', 'Passed bars on Folds'],
+                ['foldBars', 'Messages'],
                 ['friendAccepted', 'Friend accepted'],
                 ['postLoves', 'Loves on your posts'],
                 ['postReplies', 'Replies on your posts'],
                 ['dnaImports', 'DNA Drop imports'],
+                ['firstDrops', 'First Drop loves, replies, unlocks'],
               ] as const
             ).map(([key, label]) => (
               <div

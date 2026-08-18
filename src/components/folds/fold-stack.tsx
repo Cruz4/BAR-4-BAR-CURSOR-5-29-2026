@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { ScrollText } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StudioLoader } from '@/components/studio-loader';
 import { useAuth } from '@/hooks/use-auth';
@@ -73,16 +73,16 @@ function FoldCard({
           </span>
         </div>
         <p className="mt-2 font-serif text-[15px] leading-relaxed text-amber-50/85">
-          {fold.lastBar || 'Empty sheet'}
+          {fold.lastBar || 'No messages yet'}
         </p>
         <p className="mt-2 font-code text-[9px] font-bold uppercase tracking-[0.22em] text-amber-200/70">
           {waiting
-            ? 'Sealed pass · unfold to keep it'
+            ? 'New · accept to keep it'
             : sentPending
-              ? 'Waiting · they haven’t unfolded'
+              ? 'Waiting · they haven’t opened it'
               : wet
-                ? `Wet ink · ${unreadFor(fold, me)}`
-                : 'Set'}
+                ? `Unread · ${unreadFor(fold, me)}`
+                : 'Read'}
         </p>
       </Link>
       {waiting ? (
@@ -93,7 +93,7 @@ function FoldCard({
             disabled={busy}
             onClick={() => onAccept(fold.id)}
           >
-            Unfold
+            Accept
           </Button>
           <Button
             size="sm"
@@ -105,7 +105,7 @@ function FoldCard({
             Decline
           </Button>
         </div>
-      ) : fold.status !== 'declined' ? (
+      ) : fold.status !== 'declined' && !wet ? (
         <div className="flex justify-end border-t border-white/5 px-4 py-1.5">
           <button
             type="button"
@@ -113,7 +113,7 @@ function FoldCard({
             onClick={() => onFoldBack(fold.id)}
             className="font-code text-[9px] font-bold uppercase tracking-widest text-amber-200/55 hover:text-amber-100"
           >
-            {wet ? 'Keep wet' : 'Fold back'}
+            Mark unread
           </button>
         </div>
       ) : null}
@@ -163,11 +163,11 @@ export function FoldStack() {
     try {
       if (accept) await acceptFoldClient(id);
       else await declineFoldClient(id);
-      toast({ title: accept ? 'Sheet unfolded' : 'Pass declined' });
+      toast({ title: accept ? 'Message accepted' : 'Message declined' });
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: accept ? 'Could not unfold' : 'Could not decline',
+        title: accept ? 'Could not accept' : 'Could not decline',
         description: error instanceof Error ? error.message : undefined,
       });
     } finally {
@@ -179,11 +179,11 @@ export function FoldStack() {
     setBusyId(id);
     try {
       await foldBackClient(id);
-      toast({ title: 'Folded back', description: 'Marked unread — wet ink again.' });
+      toast({ title: 'Marked unread' });
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Could not fold back',
+        title: 'Could not mark unread',
         description: error instanceof Error ? error.message : undefined,
       });
     } finally {
@@ -198,14 +198,7 @@ export function FoldStack() {
   return (
     <div className="mx-auto w-full max-w-xl space-y-5 px-4 py-8">
       <header className="space-y-2">
-        <p className="font-code text-[10px] font-bold uppercase tracking-[0.35em] text-amber-400/80">
-          Private sheets
-        </p>
-        <h1 className="font-headline text-4xl font-bold uppercase tracking-tight">Folds</h1>
-        <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-          Pass a bar. They unfold it. The sheet writes itself in real time — no bubbles, no chat chrome.
-          Wet ink is unread. Fold it back if you want it waiting again.
-        </p>
+        <h1 className="font-headline text-4xl font-bold uppercase tracking-tight">Msgs</h1>
       </header>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -213,8 +206,8 @@ export function FoldStack() {
           className="h-9 rounded-none bg-amber-700 font-bold uppercase tracking-[0.18em] text-amber-50 hover:bg-amber-600"
           onClick={() => void openPicker()}
         >
-          <ScrollText className="h-4 w-4" />
-          Pass a bar
+          <MessageSquare className="h-4 w-4" />
+          New message
         </Button>
         <div className="ml-auto flex border border-white/10">
           {(['open', 'waiting'] as const).map((id) => (
@@ -227,7 +220,7 @@ export function FoldStack() {
                 tab === id ? 'bg-amber-500/15 text-amber-100' : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              {id === 'open' ? 'Sheets' : `Waiting${waiting ? ` ${waiting}` : ''}`}
+              {id === 'open' ? 'Inbox' : `Requests${waiting ? ` ${waiting}` : ''}`}
             </button>
           ))}
         </div>
@@ -235,18 +228,18 @@ export function FoldStack() {
 
       {!ready ? (
         <div className="flex justify-center py-16">
-          <StudioLoader size="md" message="Unfolding…" />
+          <StudioLoader size="md" message="Opening messages…" />
         </div>
       ) : rows.length === 0 ? (
         <div className="border border-dashed border-amber-500/20 bg-black/20 px-6 py-14 text-center">
-          <ScrollText className="mx-auto mb-3 h-7 w-7 text-amber-400/70" />
+          <MessageSquare className="mx-auto mb-3 h-7 w-7 text-amber-400/70" />
           <p className="font-headline text-lg uppercase">
-            {tab === 'waiting' ? 'No sealed passes' : 'No sheets yet'}
+            {tab === 'waiting' ? 'No requests' : 'No messages yet'}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             {tab === 'waiting'
-              ? 'When someone passes you a bar, it lands here sealed until you unfold it.'
-              : 'Pass a bar from a friend’s Artist Home, or from Your circle.'}
+              ? 'Messages from people you aren’t friends with land here until you accept.'
+              : 'Send a message from a friend’s Artist Home, or from Your circle.'}
           </p>
         </div>
       ) : (
@@ -303,8 +296,8 @@ function FriendPick({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
       <div className="w-full max-w-sm border border-amber-500/25 bg-[#120e0a] p-4 shadow-2xl">
-        <p className="font-headline text-lg uppercase">Who gets the bar?</p>
-        <p className="mt-1 text-xs text-muted-foreground">Friends first. You can also pass from any Artist Home.</p>
+        <p className="font-headline text-lg uppercase">Who do you want to message?</p>
+        <p className="mt-1 text-xs text-muted-foreground">Friends first. You can also message from any Artist Home.</p>
         <ul className="mt-3 max-h-64 space-y-1 overflow-y-auto">
           {friends.length === 0 ? (
             <li className="px-2 py-6 text-center text-sm text-muted-foreground">No friends yet.</li>

@@ -172,7 +172,7 @@ export default async function ProfileOpenGraphImage({ params }: ImageProps) {
           }}
         >
           <span>Open profile</span>
-          <span>bar4bar.ink/profile/{slug || '…'}</span>
+          <span>bar4bar.ink/{slug || '…'}</span>
         </div>
       </div>
     ),

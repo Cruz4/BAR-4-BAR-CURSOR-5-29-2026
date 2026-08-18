@@ -86,6 +86,28 @@ service cloud.firestore {
       allow read: if true;
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+
+      match /loves/{likerId} {
+        allow read: if true;
+        allow create, delete: if request.auth != null && request.auth.uid == likerId;
+      }
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth != null
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 500
+          && request.resource.data.text.size() > 0;
+        allow delete: if request.auth != null
+          && (resource.data.authorId == request.auth.uid
+            || get(/databases/$(database)/documents/shares/$(shareId)).data.ownerId == request.auth.uid
+            || isAdmin());
+      }
+
+      match /spinTicks/{tickId} {
+        allow read, write: if false;
+      }
     }
 
     // Open LOCK — public read; mutations via Admin SDK APIs only

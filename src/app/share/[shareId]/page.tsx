@@ -41,6 +41,7 @@ import {
 import { isLooseTrackAlbum } from '@/lib/co-writer-rules';
 import { DnaDropAlbumHub } from '@/components/dna-drop-album-hub';
 import { DropListenPanel } from '@/components/drop-listen-panel';
+import { DropSocialPanel } from '@/components/drop-social-panel';
 import { normalizeDropAudio, normalizeDropPrice } from '@/lib/drop-commerce';
 import { EmbedPlayer } from '@/components/profile/embed-player';
 import { parseEmbedUrl } from '@/lib/profile/embeds';
@@ -408,6 +409,15 @@ export default function SharedProjectPage() {
                         }
                       />
                     </Suspense>
+                    <DropSocialPanel
+                      shareId={shareId}
+                      title={project.title || 'Untitled'}
+                      ownerId={share.ownerId}
+                      playCount={share.playCount}
+                      previewCount={share.previewCount}
+                      purchaseCount={share.purchaseCount}
+                      firstBuyerName={share.firstBuyerName}
+                    />
                     <Card className="border-2 overflow-hidden bg-card/80">
                         <div className="aspect-square relative w-full border-b bg-neutral-950">
                             <ShareCoverImage

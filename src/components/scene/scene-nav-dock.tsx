@@ -21,9 +21,10 @@ import {
   Droplets,
   Bell,
   Banknote,
-  ScrollText,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { profileHref } from '@/lib/profile/profile-slug';
 import { useGamification } from '@/context/gamification-context';
 import { useSocialAlerts } from '@/hooks/use-social-alerts';
 import { useFoldInbox } from '@/components/folds/fold-inbox-provider';
@@ -289,7 +290,7 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
   }, []);
 
   const isLive = Boolean(summary.publicProfile && summary.profileSlug);
-  const profileHref = summary.profileSlug ? `/profile/${summary.profileSlug}` : null;
+  const homeHref = summary.profileSlug ? profileHref(summary.profileSlug) : null;
   const newTrackHref = `${VAULT_PATH}?create=track`;
 
   const items: DockItem[] = [
@@ -324,9 +325,9 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
     {
       key: 'folds',
       href: '/folds',
-      label: 'Folds',
-      sub: foldUnread > 0 ? `${foldUnread > 99 ? '99+' : foldUnread} wet` : 'Passed bars',
-      icon: ScrollText,
+      label: 'Msgs',
+      sub: foldUnread > 0 ? `${foldUnread > 99 ? '99+' : foldUnread} unread` : 'Messages',
+      icon: MessageSquare,
       tone: 'border-amber-500/35 bg-gradient-to-r from-amber-500/10 via-card/85 to-card/70 hover:border-amber-400/55',
       iconTone: 'border-amber-400/45 bg-amber-500/15 text-amber-300',
       badge: foldUnread,
@@ -379,8 +380,8 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
   );
 
   const homeTile =
-    isLive && profileHref ? (
-      <ArtistHomeSplitButton profileHref={profileHref} isLive={isLive} />
+    isLive && homeHref ? (
+      <ArtistHomeSplitButton profileHref={homeHref} isLive={isLive} />
     ) : (
       <DockLink
         item={{

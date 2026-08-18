@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 
 export function SceneLivePrompts({ className }: { className?: string }) {
   const { summary } = useGamification();
-  const { enabled: lockOn } = useLockFeature();
+  const { enabled: lockOn, loading: lockLoading } = useLockFeature();
   const { live, loaded, houseBarOn, weeklyOn } = useSceneLive();
   const writeHref = getLastWorkedTrackPath() || `${VAULT_PATH}?create=track`;
 
@@ -44,8 +44,8 @@ export function SceneLivePrompts({ className }: { className?: string }) {
           <p className="mt-2 text-sm leading-snug text-foreground/95">“{live.houseBar.seedBar}”</p>
           <div className="mt-3">
             <Button asChild size="sm" className="h-8 font-bold uppercase tracking-wider">
-              <Link href={lockOn ? LOCK_HOUSE_PATH : writeHref}>
-                {lockOn ? 'Answer this bar' : 'Write the next line'}
+              <Link href={!lockLoading && lockOn ? LOCK_HOUSE_PATH : writeHref}>
+                {!lockLoading && lockOn ? 'Answer this bar' : 'Write the next line'}
               </Link>
             </Button>
           </div>

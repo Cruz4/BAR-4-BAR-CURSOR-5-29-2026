@@ -22,6 +22,7 @@ import { PublicAchievementFoil } from '@/components/profile/public-achievement-f
 import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { profileHref } from '@/lib/profile/profile-slug';
 import { processProfilePhotoFile } from '@/lib/cover-art';
 import { patchGamificationSettings } from '@/lib/gamification-client';
 import { rankBadgeClass, rankIdFromLabel } from '@/lib/gamification/badge-styles';
@@ -62,6 +63,12 @@ export type PublicProfileData = {
     albumShareId?: string;
     trackIndex?: number;
     trackCount?: number;
+    hasDropAudio?: boolean;
+    dropPriceSummary?: string;
+    playCount?: number;
+    previewCount?: number;
+    purchaseCount?: number;
+    firstBuyerName?: string;
   }>;
 };
 
@@ -133,9 +140,9 @@ export function PublicProfileShowcase({
 
   const profileUrl =
     typeof window !== 'undefined' && profile.slug
-      ? `${window.location.origin}/profile/${profile.slug}`
+      ? `${window.location.origin}${profileHref(profile.slug) || `/${profile.slug}`}`
       : profile.slug
-        ? `https://bar4bar.ink/profile/${profile.slug}`
+        ? `https://bar4bar.ink/${profile.slug}`
         : undefined;
 
   const savePhoto = async (next: {

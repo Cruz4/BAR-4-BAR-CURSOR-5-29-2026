@@ -78,7 +78,7 @@ function BarStanza({
             mine ? 'text-right' : 'text-left'
           )}
         >
-          answering “{bar.replyTo.text}”
+          replying to “{bar.replyTo.text}”
         </p>
       ) : null}
       <div
@@ -98,11 +98,11 @@ function BarStanza({
         )}
       >
         <CornerUpLeft className="h-3 w-3" />
-        Answer
+        Reply
       </button>
       {seen ? (
         <p className="mt-0.5 text-right font-code text-[9px] uppercase tracking-[0.2em] text-amber-200/45">
-          Set
+          Seen
         </p>
       ) : null}
     </div>
@@ -256,20 +256,20 @@ export function FoldSheet({ foldId }: { foldId: string }) {
   };
 
   if (!user) {
-    return <StudioLoader size="lg" fullscreen message="Opening the sheet…" />;
+    return <StudioLoader size="lg" fullscreen message="Opening…" />;
   }
   if (missing) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <p className="font-headline text-2xl uppercase">No sheet here</p>
+        <p className="font-headline text-2xl uppercase">Conversation not found</p>
         <Button asChild variant="outline" className="mt-4 rounded-none">
-          <Link href="/folds">Back to Folds</Link>
+          <Link href="/folds">Back to Msgs</Link>
         </Button>
       </div>
     );
   }
   if (!fold) {
-    return <StudioLoader size="lg" fullscreen message="Unfolding…" />;
+    return <StudioLoader size="lg" fullscreen message="Opening…" />;
   }
 
   const profileUrl = profileHref(peer?.slug);
@@ -278,7 +278,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
     <div className="mx-auto flex h-[calc(100dvh-3.5rem)] w-full max-w-2xl flex-col">
       <header className="flex items-center gap-2 border-b border-amber-500/20 bg-[#100c09]/90 px-2 py-2 backdrop-blur-md">
         <Button variant="ghost" size="icon" className="h-9 w-9 text-amber-100" asChild>
-          <Link href="/folds" aria-label="Back to Folds">
+          <Link href="/folds" aria-label="Back to Msgs">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
@@ -288,14 +288,16 @@ export function FoldSheet({ foldId }: { foldId: string }) {
           </p>
           <p className="mt-1 font-code text-[9px] font-bold uppercase tracking-[0.2em] text-amber-200/60">
             {fold.status === 'declined'
-              ? 'Fold closed'
+              ? 'Closed'
               : sealedForMe
-                ? 'Sealed pass'
+                ? 'New message'
                 : waitingOnThem
                   ? 'Waiting on them'
                   : inkMoving
-                    ? 'Ink moving'
-                    : 'Live sheet'}
+                    ? 'Typing…'
+                    : presence?.viewing
+                      ? 'Active'
+                      : 'Messages'}
           </p>
         </div>
         <DropdownMenu>
@@ -311,20 +313,20 @@ export function FoldSheet({ foldId }: { foldId: string }) {
             <DropdownMenuItem
               onClick={() =>
                 void foldBackClient(foldId)
-                  .then(() => toast({ title: 'Folded back', description: 'Marked unread.' }))
+                  .then(() => toast({ title: 'Marked unread' }))
                   .catch((e) =>
                     toast({
                       variant: 'destructive',
-                      title: 'Could not fold back',
+                      title: 'Could not mark unread',
                       description: e instanceof Error ? e.message : undefined,
                     })
                   )
               }
             >
-              Fold back (unread)
+              Mark unread
             </DropdownMenuItem>
             {sealedForMe ? (
-              <DropdownMenuItem onClick={() => void acceptFoldClient(foldId)}>Unfold</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => void acceptFoldClient(foldId)}>Accept</DropdownMenuItem>
             ) : null}
             {fold.status !== 'declined' ? (
               <DropdownMenuItem
@@ -332,7 +334,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
                 onClick={() =>
                   void declineFoldClient(foldId)
                     .then(() => {
-                      toast({ title: 'Sheet closed' });
+                      toast({ title: 'Conversation closed' });
                       router.push('/folds');
                     })
                     .catch((e) =>
@@ -344,7 +346,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
                     )
                 }
               >
-                Decline / close
+                Close
               </DropdownMenuItem>
             ) : null}
           </DropdownMenuContent>
@@ -361,9 +363,9 @@ export function FoldSheet({ foldId }: { foldId: string }) {
       >
         {sealedForMe ? (
           <div className="mb-6 border border-amber-400/30 bg-amber-500/10 px-4 py-3">
-            <p className="font-headline text-sm uppercase">Sealed pass</p>
+            <p className="font-headline text-sm uppercase">New message</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Unfold to keep this sheet open, or decline and it stays closed.
+              Accept to keep this conversation, or decline.
             </p>
             <div className="mt-3 flex gap-2">
               <Button
@@ -371,7 +373,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
                 className="h-8 rounded-none bg-amber-700 text-[10px] font-bold uppercase tracking-widest hover:bg-amber-600"
                 onClick={() => void acceptFoldClient(foldId)}
               >
-                Unfold
+                Accept
               </Button>
               <Button
                 size="sm"
@@ -408,7 +410,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
           })}
           {inkMoving ? (
             <p className="font-code text-[10px] uppercase tracking-[0.25em] text-amber-300/80">
-              Ink moving…
+              Typing…
             </p>
           ) : null}
         </div>
@@ -416,7 +418,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
 
       {fold.status === 'declined' ? (
         <div className="border-t border-white/10 px-4 py-3 text-center text-xs text-muted-foreground">
-          This fold is closed. Pass a new bar from their Artist Home to try again.
+          This conversation is closed. Send a new message from their Artist Home to try again.
         </div>
       ) : (
         <form
@@ -429,7 +431,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
           {replyTo ? (
             <div className="mb-2 flex items-center justify-between gap-2 border-l-2 border-amber-400/40 bg-amber-500/5 px-2 py-1.5">
               <p className="min-w-0 truncate font-serif text-xs italic text-amber-100/70">
-                answering “{replyTo.text}”
+                replying to “{replyTo.text}”
               </p>
               <button
                 type="button"
@@ -451,7 +453,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
                 }
               }}
               rows={2}
-              placeholder={waitingOnThem ? 'Waiting — you can pass another bar' : 'Write the next bar…'}
+              placeholder={waitingOnThem ? 'Waiting — you can still send' : 'Write a message…'}
               className="min-h-[52px] flex-1 resize-none border-0 bg-transparent font-serif text-base leading-relaxed text-amber-50 outline-none placeholder:text-amber-100/30"
               maxLength={FOLD_BAR_MAX_CHARS}
             />
@@ -460,7 +462,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
               disabled={busy || !text.trim()}
               className="h-10 rounded-none bg-amber-700 px-4 font-bold uppercase tracking-[0.22em] text-amber-50 hover:bg-amber-600"
             >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Pass'}
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send'}
             </Button>
           </div>
         </form>

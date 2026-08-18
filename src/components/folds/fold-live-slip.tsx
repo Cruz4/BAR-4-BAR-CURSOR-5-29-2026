@@ -31,7 +31,7 @@ export function FoldLiveSlip({
         />
         <Link href={`/folds/${slip.foldId}`} onClick={onDismiss} className="block px-4 py-3 pr-9">
           <p className="font-code text-[9px] font-bold uppercase tracking-[0.28em] text-amber-300/80">
-            Wet ink
+            New message
           </p>
           <p className="mt-1 truncate font-headline text-base uppercase tracking-tight text-amber-50">
             {slip.name}

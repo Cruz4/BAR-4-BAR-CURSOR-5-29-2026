@@ -1,4 +1,9 @@
-/** Studio appearance — global theme (next-themes) + lyrics writing surface. */
+/** Track lyric / edit sheet — not album hub, not Perform. */
+export function isTrackLyricSheetPath(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  const path = pathname.split('?')[0];
+  return /^\/albums\/[^/]+\/tracks\/[^/]+\/?$/.test(path);
+}
 
 export type WritingSurfaceMode = 'auto' | 'paper' | 'studio';
 

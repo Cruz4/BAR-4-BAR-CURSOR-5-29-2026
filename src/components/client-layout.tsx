@@ -14,6 +14,7 @@ import { AchievementUnlockCelebration } from '@/components/gamification/achievem
 import { ProgressCelebration } from '@/components/gamification/progress-celebration';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { usePathname } from 'next/navigation';
+import { isPublicArtistHomePath } from '@/lib/profile/profile-slug';
 import { StudioTips } from './studio-tips';
 import { FloatingInkSpent } from './floating-ink-spent';
 import { WhatsNewDialog } from './whats-new-dialog';
@@ -94,8 +95,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const isLibraryPage = pathname === '/library';
   const isEarningsPage = pathname === '/earnings';
   const isFoldsPage = pathname === '/folds' || pathname.startsWith('/folds/');
-  // /profile/customize is Edit Public Page — an app page, not the public profile
-  const isPublicProfilePage = pathname.startsWith('/profile/') && pathname !== '/profile/customize';
+  const isPublicProfilePage = isPublicArtistHomePath(pathname);
   const isMarketingCapture = pathname.startsWith('/marketing/capture');
   const isSettingsRoute = pathname === '/usage' || pathname.startsWith('/usage/') || pathname === '/admin';
   const showAppHeader =

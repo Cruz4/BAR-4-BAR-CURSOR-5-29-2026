@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { buildLoginUrl } from '@/lib/login-links';
+import { profileHref } from '@/lib/profile/profile-slug';
 import { contactHref, type ArtistHomeContact, type ContactRequestStatus } from '@/lib/profile/contact';
 import {
   fetchContactForArtist,
@@ -92,7 +93,7 @@ export function ProfileContactChip({
   const mode = contact?.mode;
   const loginHref = buildLoginUrl({
     mode: 'signup',
-    next: artistSlug ? `/profile/${artistSlug}` : undefined,
+    next: artistSlug ? profileHref(artistSlug) : undefined,
   });
 
   useEffect(() => {

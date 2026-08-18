@@ -77,6 +77,6 @@ export async function resolveNeomaiyaPublicSlug(
     return summarySlug;
   }
 
-  // Stable product URL — /profile/neomaiya_sol — even if the mirror is briefly missing.
+  // Stable product URL — /neomaiya_sol — even if the mirror is briefly missing.
   return canonical;
 }

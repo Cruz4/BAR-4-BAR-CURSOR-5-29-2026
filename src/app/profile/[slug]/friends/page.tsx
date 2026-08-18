@@ -128,7 +128,7 @@ export default function ProfileFriendsPage() {
       <header className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Button size="sm" variant="outline" className="h-8 gap-1.5 font-bold uppercase" asChild>
-            <Link href={`/profile/${slug}`}>
+            <Link href={profileHref(slug) || `/${slug}`}>
               <ChevronLeft className="h-3.5 w-3.5" /> {displayName}
             </Link>
           </Button>

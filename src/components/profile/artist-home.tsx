@@ -7,7 +7,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Dna, Flame, Globe, PenLine, Repeat2, Settings2, Share2, Star, Trophy, Zap } from 'lucide-react';
+import { ChevronLeft, Dna, Flame, Globe, Music, PenLine, Repeat2, Settings2, Share2, Star, Trophy, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -59,6 +59,7 @@ import { ProfileMediaLightbox } from '@/components/profile/profile-media-lightbo
 import { ArtistHomeGuestClaim } from '@/components/profile/artist-home-guest-claim';
 import { VesperfoldMark } from '@/components/profile/vesperfold-mark';
 import { normalizeVesperfoldSeed } from '@/lib/profile/vesperfold';
+import { profileHref, profileReverbsHref } from '@/lib/profile/profile-slug';
 import { buildLoginUrl } from '@/lib/login-links';
 import { useLockFeature } from '@/hooks/use-lock-feature';
 import { parseStudioBadge } from '@/lib/studio-tier-chrome';
@@ -162,7 +163,7 @@ export function ArtistHome({
 
   const profileUrl =
     typeof window !== 'undefined' && profile.slug
-      ? `${window.location.origin}/profile/${profile.slug}`
+      ? `${window.location.origin}${profileHref(profile.slug) || `/${profile.slug}`}`
       : undefined;
 
   const plateChrome = useMemo(
@@ -335,6 +336,7 @@ export function ArtistHome({
               {showLiveDnaDrops && (() => {
                 const albumCount = liveDnaDrops.filter((d) => d.type === 'album').length;
                 const trackCount = liveDnaDrops.filter((d) => d.type === 'track').length;
+                const firstCount = liveDnaDrops.filter((d) => d.hasDropAudio).length;
                 if (liveDnaDrops.length === 1) {
                   return (
                     <Button
@@ -344,14 +346,25 @@ export function ArtistHome({
                       className="h-8 gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
                     >
                       <Link href={`/share/${liveDnaDrops[0].shareId}`}>
-                        <Dna className="h-3.5 w-3.5" />
-                        {liveDnaDrops[0].type === 'album' ? '1 album DNA live' : '1 track DNA live'}
+                        {liveDnaDrops[0].hasDropAudio ? (
+                          <>
+                            <Music className="h-3.5 w-3.5" />
+                            First Drop live
+                          </>
+                        ) : (
+                          <>
+                            <Dna className="h-3.5 w-3.5" />
+                            {liveDnaDrops[0].type === 'album' ? '1 album DNA live' : '1 track DNA live'}
+                          </>
+                        )}
                       </Link>
                     </Button>
                   );
                 }
                 const label =
-                  albumCount > 0 && trackCount > 0
+                  firstCount > 0
+                    ? `${firstCount} First Drop${firstCount === 1 ? '' : 's'}`
+                    : albumCount > 0 && trackCount > 0
                     ? `${albumCount} album${albumCount === 1 ? '' : 's'} · ${trackCount} track${trackCount === 1 ? '' : 's'} live`
                     : albumCount > 0
                       ? `${albumCount} album DNA live`
@@ -364,7 +377,7 @@ export function ArtistHome({
                     className="h-8 gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
                     onClick={() => setDropsOpen(true)}
                   >
-                    <Dna className="h-3.5 w-3.5" />
+                    {firstCount > 0 ? <Music className="h-3.5 w-3.5" /> : <Dna className="h-3.5 w-3.5" />}
                     {label}
                   </Button>
                 );
@@ -404,7 +417,7 @@ export function ArtistHome({
                 >
                   {!previewMode ? (
                     <Link
-                      href={`/profile/${profile.slug}/reverbs`}
+                      href={profileReverbsHref(profile.slug) || `/${profile.slug}/reverbs`}
                       className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-violet-400/40 bg-violet-500/15 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.12)] transition-all hover:border-violet-300/70 hover:bg-violet-500/25 hover:text-violet-100 hover:shadow-[0_0_16px_rgba(139,92,246,0.25)]"
                     >
                       <Repeat2 className="h-3.5 w-3.5 shrink-0" />

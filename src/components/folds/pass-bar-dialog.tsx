@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, ScrollText } from 'lucide-react';
+import { Loader2, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -53,12 +53,12 @@ export function PassBarDialog({
       });
       onOpenChange(false);
       setText('');
-      toast({ title: 'Bar passed', description: `On the sheet with ${peerName}.` });
+      toast({ title: 'Sent', description: `Message to ${peerName}.` });
       router.push(`/folds/${fold.id}`);
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Could not pass the bar',
+        title: 'Could not send',
         description: error instanceof Error ? error.message : undefined,
       });
     } finally {
@@ -71,17 +71,16 @@ export function PassBarDialog({
       <DialogContent className="max-w-md border-amber-500/25 bg-[#120e0a] sm:rounded-none">
         <DialogHeader>
           <DialogTitle className="font-headline text-xl uppercase tracking-tight">
-            Pass a bar to {peerName}
+            Message {peerName}
           </DialogTitle>
           <DialogDescription className="text-xs leading-relaxed">
-            First line opens a private sheet. If you aren’t friends yet, they unfold it before it stays
-            open. Not a chat — one bar at a time.
+            If you aren’t friends yet, they accept before the thread stays open.
           </DialogDescription>
         </DialogHeader>
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value.slice(0, FOLD_BAR_MAX_CHARS))}
-          placeholder="Write the bar you’re passing…"
+          placeholder="Write a message…"
           className="min-h-[120px] resize-none rounded-none border-amber-500/20 bg-black/30 font-serif text-base leading-relaxed"
           maxLength={FOLD_BAR_MAX_CHARS}
           autoFocus
@@ -95,8 +94,8 @@ export function PassBarDialog({
             disabled={busy || !text.trim()}
             onClick={() => void submit()}
           >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScrollText className="h-4 w-4" />}
-            Pass
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+            Send
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -145,8 +144,8 @@ export function PassBarButton({
           setOpen(true);
         }}
       >
-        <ScrollText className="h-3.5 w-3.5" />
-        Pass a bar
+        <MessageSquare className="h-3.5 w-3.5" />
+        Message
       </Button>
       <PassBarDialog
         open={open}

@@ -1,18 +1,18 @@
 /**
- * Artist Home vanity slugs — /profile/{slug}
+ * Artist Home vanity slugs — bar4bar.ink/{slug}
  * Prefer clean name links; spaces become `_`; only suffix on collision.
+ * /profile/{slug} 308s to /{slug}. App routes stay reserved.
  */
 
-export const RESERVED_PROFILE_SLUGS = new Set([
+/** First URL segment of real app pages — never treat as an artist slug. */
+export const APP_ROOT_SEGMENTS = new Set([
   'admin',
   'api',
+  '_next',
+  '__',
   'login',
   'signup',
-  'sign-up',
-  'sign_up',
   'signin',
-  'sign-in',
-  'sign_in',
   'pricing',
   'usage',
   'profile',
@@ -39,17 +39,43 @@ export const RESERVED_PROFILE_SLUGS = new Set([
   'support',
   'help',
   'about',
+  'albums',
+  'earnings',
+  'folds',
+  'library',
+  'maintenance',
+  'marketing',
+  'studio-progress',
+  'msgs',
+  'messages',
+  'sitemap',
+  'robots',
+  'manifest',
+  'icon',
+  'favicon',
+  'apple-icon',
+  'opengraph-image',
+  'twitter-image',
   'neomaiya',
-  'neomaiya-sol',
-  'neomaiya_sol',
   'jordie',
-  'jordie-cruz',
-  'jordie_cruz',
   'bar4bar',
-  'bar-4-bar',
-  'bar_4_bar',
   'null',
   'undefined',
+]);
+
+export const RESERVED_PROFILE_SLUGS = new Set([
+  ...APP_ROOT_SEGMENTS,
+  'sign-up',
+  'sign_up',
+  'sign-in',
+  'sign_in',
+  'neomaiya-sol',
+  'neomaiya_sol',
+  'jordie-cruz',
+  'jordie_cruz',
+  'bar-4-bar',
+  'bar_4_bar',
+  'studio_progress',
 ]);
 
 /** Canonical Neo vanity link — reserved for plotformaiplan@. */
@@ -119,7 +145,7 @@ export function needsVanitySlugUpgrade(slug: string, uid?: string): boolean {
 }
 
 /**
- * Candidate Firestore doc ids to try when resolving a /profile/{slug} hit.
+ * Candidate Firestore doc ids to try when resolving a /{slug} (or legacy /profile/{slug}) hit.
  * Keeps old hyphen bookmarks working after underscore migration.
  */
 export function profileSlugLookupCandidates(raw: string): string[] {
@@ -158,7 +184,7 @@ export function sanitizeProfileSlugParam(raw: string): { slug: string; hash?: st
   return { slug: q >= 0 ? s.slice(0, q) : s };
 }
 
-/** Artist Home path helper — prefer underscore vanity in outbound links. */
+/** Artist Home path — bar4bar.ink/{slug}. */
 export function profileHref(slug?: string | null, hash?: string): string | undefined {
   const raw = (slug || '').trim();
   if (!raw) return undefined;
@@ -168,8 +194,61 @@ export function profileHref(slug?: string | null, hash?: string): string | undef
     s = stripLegacyUidSuffix(normalizeProfileSlugInput(raw));
   }
   if (!s) return undefined;
-  const base = `/profile/${s}`;
+  const base = `/${s}`;
   if (!hash) return base;
   const h = hash.startsWith('#') ? hash : `#${hash}`;
   return `${base}${h}`;
+}
+
+export function profileFriendsHref(slug?: string | null): string | undefined {
+  const base = profileHref(slug);
+  return base ? `${base}/friends` : undefined;
+}
+
+export function profileReverbsHref(slug?: string | null): string | undefined {
+  const base = profileHref(slug);
+  return base ? `${base}/reverbs` : undefined;
+}
+
+export function isAppRootSegment(segment: string | null | undefined): boolean {
+  const s = (segment || '').trim().toLowerCase();
+  return Boolean(s) && APP_ROOT_SEGMENTS.has(s);
+}
+
+/** Public Artist Home (vanity /{slug} or legacy /profile/{slug}), not Edit Public Page. */
+export function isPublicArtistHomePath(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  const path = pathname.split('?')[0];
+  if (path === '/profile/customize' || path.startsWith('/profile/customize/')) return false;
+  if (path.startsWith('/profile/')) return path.length > '/profile/'.length;
+  const parts = path.split('/').filter(Boolean);
+  if (parts.length === 0) return false;
+  if (isAppRootSegment(parts[0])) return false;
+  if (parts.length === 1) return true;
+  return parts.length === 2 && (parts[1] === 'friends' || parts[1] === 'reverbs');
+}
+
+/** Pull the artist slug out of /{slug} or /profile/{slug} links (Activity, OG, etc.). */
+export function slugFromProfileHref(href: string | null | undefined): string | undefined {
+  const raw = (href || '').trim();
+  if (!raw) return undefined;
+  let path = raw;
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      path = new URL(raw).pathname;
+    } catch {
+      return undefined;
+    }
+  }
+  path = path.split('#')[0].split('?')[0];
+  const m = path.match(/^\/profile\/([^/]+)/) || path.match(/^\/([^/]+)/);
+  if (!m) return undefined;
+  let slug = m[1];
+  try {
+    slug = decodeURIComponent(slug);
+  } catch {
+    /* keep */
+  }
+  if (!slug || isAppRootSegment(slug) || slug === 'profile') return undefined;
+  return slug;
 }

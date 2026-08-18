@@ -13,6 +13,7 @@ import { auth } from '@/lib/firebase/client/firebase';
 import { buildLoginUrl } from '@/lib/login-links';
 import type { LockContribution, LockDoc } from '@/lib/lock/types';
 import { cn } from '@/lib/utils';
+import { profileHref } from '@/lib/profile/profile-slug';
 
 export default function LockDeskPage() {
   const { user, loading: authLoading } = useAuth();
@@ -266,7 +267,7 @@ export default function LockDeskPage() {
                             <>
                               {' · '}
                               <Link
-                                href={`/profile/${c.ownerSlug}`}
+                                href={profileHref(c.ownerSlug) || `/${c.ownerSlug}`}
                                 className="hover:text-primary hover:underline"
                               >
                                 @{c.ownerSlug}
