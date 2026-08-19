@@ -77,6 +77,7 @@ export interface Album {
   message?: string;
   thingsToSay?: string[];
   createdAt: string; // ISO 8601 string
+  updatedAt?: string; // ISO 8601 string — last album-level edit
   coverArtUrl?: string;
   direction?: Direction;    
   tracks: Track[];
@@ -129,6 +130,7 @@ export interface Track {
   sections: TrackSection[];
   status: 'in_progress' | 'complete';
   createdAt: string; // ISO 8601 string
+  updatedAt?: string; // ISO 8601 string — last sheet edit
   direction?: Partial<Direction> & { inheritFromAlbum?: boolean; enabled?: boolean; };
   guardrails?: {
     enabled: boolean;

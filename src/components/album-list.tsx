@@ -44,7 +44,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { DnaDropLiveIndicator } from '@/components/dna-drop-live-indicator';
+import { TrackLiveIndicators, AlbumLiveIndicators } from '@/components/track-live-indicators';
 import { CollabSheetsVaultSection } from '@/components/collab-sheet/collab-sheets-vault-section';
 import {
   Dialog,
@@ -143,6 +143,7 @@ import {
 import { getEditableAlbumIds, getEditableTrackIds, needsFreeEditableTrackPicker } from '@/lib/tier-limits';
 import type { User } from '@/lib/types';
 import { VisitorVaultBanner } from '@/components/visitor-vault-banner';
+import { sortVaultItems, vaultSortLabels, type VaultSort } from '@/lib/vault-sort';
 import { DowngradeTrackPickerDialog } from '@/components/downgrade-track-picker-dialog';
 import { FirstSongHero } from '@/components/first-song-hero';
 
@@ -369,9 +370,9 @@ function FreeVisitorVault({
                     )}
                   </div>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0 flex-wrap">
                       <p className="font-bold font-headline text-lg text-foreground uppercase truncate">{track.title}</p>
-                      <DnaDropLiveIndicator shareId={track.shareId} variant="compact" />
+                      <TrackLiveIndicators track={track} variant="compact" />
                       {tierLocked && (
                         <Badge variant="outline" className={cn('text-[7px] px-1.5 h-4 shrink-0', proLockText())}>View only</Badge>
                       )}
@@ -477,7 +478,7 @@ function FreeVisitorVault({
 const VinylRecord = ({ album, tierLocked = false }: { album: Album; tierLocked?: boolean }) => (
     <Link href={`/albums/${album.id}`} className={cn('group relative aspect-square block', tierLocked && 'opacity-85')}>
         <div className="absolute top-3 right-3 z-30 pointer-events-none flex flex-col items-end gap-1">
-          <DnaDropLiveIndicator shareId={album.shareId} variant="dot" className="pointer-events-auto" />
+          <AlbumLiveIndicators album={album} variant="dot" className="flex-col items-end gap-1 pointer-events-auto" />
           {tierLocked && (
             <Badge variant="outline" className={cn('text-[7px] px-1.5 h-4 pointer-events-none', proLockText())}>View only</Badge>
           )}
@@ -540,7 +541,7 @@ export function AlbumList() {
   const searchParams = useSearchParams();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'alphabetical'>('newest');
+  const [sortBy, setSortBy] = useState<VaultSort>('newest');
   const [showImportConfirm, setShowImportConfirm] = useState(false);
   const [showClearVaultConfirm, setShowClearVaultConfirm] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -707,25 +708,16 @@ export function AlbumList() {
     };
   }, [pathname, loading]);
 
-  // Unified Sorting Logic
-  const sortData = (data: any[]) => {
-      let sorted = [...data];
-      if (sortBy === 'alphabetical') sorted.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-      else if (sortBy === 'oldest') sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-      else sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      return sorted;
-  };
-
   const filteredAlbums = useMemo(() => {
       const q = searchQuery.toLowerCase();
       let filtered = realAlbums.filter(a =>
         (a.title || '').toLowerCase().includes(q) || (a.theme || '').toLowerCase().includes(q)
       );
-      return sortData(filtered);
+      return sortVaultItems(filtered, sortBy);
   }, [realAlbums, searchQuery, sortBy]);
 
   const sortedLooseTracks = useMemo(() => {
-      return sortData(unassignedTracks);
+      return sortVaultItems(unassignedTracks, sortBy);
   }, [unassignedTracks, sortBy]);
 
   const searchResults = useMemo(() => {
@@ -883,12 +875,13 @@ export function AlbumList() {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm" className="h-10 px-4 bg-card/95 border-border rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest">
-                                <ArrowUpDown className="h-4 w-4" /> Sort
+                                <ArrowUpDown className="h-4 w-4" /> Sort · {vaultSortLabels[sortBy]}
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-card border-border">
                             <DropdownMenuItem onClick={() => setSortBy('newest')} className="text-[10px] font-bold uppercase"><SortDesc className="mr-2 h-4 w-4" /> Newest First</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setSortBy('oldest')} className="text-[10px] font-bold uppercase"><SortAsc className="mr-2 h-4 w-4" /> Oldest First</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSortBy('last-worked')} className="text-[10px] font-bold uppercase"><Clock className="mr-2 h-4 w-4" /> Last Worked On</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setSortBy('alphabetical')} className="text-[10px] font-bold uppercase"><SortAsc className="mr-2 h-4 w-4" /> Alphabetical</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -999,9 +992,13 @@ export function AlbumList() {
                                             {res.type === 'album' ? <Music className="h-6 w-6 text-primary" /> : <CassetteTape className="h-6 w-6 text-primary" />}
                                         </div>
                                         <div className="space-y-1 min-w-0">
-                                            <div className="flex items-center gap-2 min-w-0">
+                                            <div className="flex items-center gap-2 min-w-0 flex-wrap">
                                                 <h4 className="font-bold text-lg text-foreground font-headline leading-tight uppercase group-hover:text-primary transition-colors truncate">{res.title}</h4>
-                                                <DnaDropLiveIndicator shareId={res.shareId} variant="compact" />
+                                                {res.type === 'album' ? (
+                                                  <AlbumLiveIndicators album={res} variant="compact" />
+                                                ) : (
+                                                  <TrackLiveIndicators track={res} variant="compact" />
+                                                )}
                                                 <Badge variant="outline" className={cn("text-[8px] font-bold uppercase px-1.5 h-4 border-border shrink-0", res.type === 'album' ? 'text-emerald-500' : 'text-sky-500')}>{res.type}</Badge>
                                             </div>
                                             <p className="text-[10px] text-muted-foreground italic font-code line-clamp-1 opacity-60">
@@ -1079,9 +1076,9 @@ export function AlbumList() {
                                                             <CassetteTape className="h-5 w-5 text-primary" />
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <div className="flex items-center gap-2 min-w-0">
+                                                            <div className="flex items-center gap-2 min-w-0 flex-wrap">
                                                               <p className="font-bold font-headline text-base text-foreground uppercase truncate">{track.title}</p>
-                                                              <DnaDropLiveIndicator shareId={track.shareId} variant="compact" />
+                                                              <TrackLiveIndicators track={track} variant="compact" />
                                                             </div>
                                                             <p className="text-[8px] text-muted-foreground uppercase font-code mt-0.5">{track.vibe?.genre} &middot; {track.vibe?.tempoBPM} BPM</p>
                                                         </div>

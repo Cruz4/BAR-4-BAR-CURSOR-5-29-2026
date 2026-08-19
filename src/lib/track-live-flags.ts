@@ -1,4 +1,4 @@
-import type { Track } from '@/lib/types';
+import type { Track, Album } from '@/lib/types';
 import { hasActiveDnaDrop } from '@/lib/dna-drop';
 import { normalizeDropAudio } from '@/lib/drop-commerce';
 
@@ -60,4 +60,22 @@ export function sortLooseTracks(tracks: Track[], sortBy: LooseTrackSort): Track[
     sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
   return sorted;
+}
+
+/** Album or any track DNA Drop share that is currently live. */
+export function getAlbumLiveDnaShareId(album: Pick<Album, 'shareId' | 'tracks'>): string | undefined {
+  if (hasActiveDnaDrop(album.shareId)) return album.shareId;
+  return album.tracks?.find((track) => hasActiveDnaDrop(track.shareId))?.shareId;
+}
+
+export function getAlbumCollabTrack(album: Pick<Album, 'tracks'>): Track | undefined {
+  return album.tracks?.find((track) => hasLiveCollabSheet(track));
+}
+
+export function getAlbumFirstDropTrack(album: Pick<Album, 'tracks'>): Track | undefined {
+  return album.tracks?.find((track) => hasLiveFirstDrop(track));
+}
+
+export function albumHasCompleteTrack(album: Pick<Album, 'tracks'>): boolean {
+  return album.tracks?.some((track) => track.status === 'complete') ?? false;
 }

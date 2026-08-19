@@ -14,9 +14,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { DnaDropLiveIndicator } from '@/components/dna-drop-live-indicator';
-import { CollabSheetLiveIndicator } from '@/components/collab-sheet/collab-sheet-live-indicator';
-import { TrackLiveIndicators } from '@/components/track-live-indicators';
+import { TrackLiveIndicators, AlbumLiveIndicators } from '@/components/track-live-indicators';
 import {
   ListMusic,
   PlusCircle,
@@ -908,11 +906,6 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
     }
   }, [albumId, loading, getAlbumById, router]);
 
-  const albumCollabTrack = useMemo(
-    () => album?.tracks?.find((t) => t.collabSheetId),
-    [album?.tracks]
-  );
-
   // Vault can leave window mid-scroll (manual scrollRestoration). Always land at top.
   useEffect(() => {
     if (loading || !album || album.id !== albumId) return;
@@ -1242,16 +1235,14 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                             {album.tracks?.length ?? 0} loose
                           </Badge>
                         )}
-                        <DnaDropLiveIndicator shareId={album.shareId} variant="badge" />
-                        <CollabSheetLiveIndicator collabSheetId={albumCollabTrack?.collabSheetId} variant="badge" />
+                        <AlbumLiveIndicators album={album} variant="badge" />
                     </div>
                 </div>
                 
                 {!isUnassignedVault ? (
                     <div className="relative group shrink-0 w-full sm:w-auto flex justify-center lg:justify-end">
                         <div className="absolute top-2 right-2 z-20 sm:top-3 sm:right-3 flex items-center gap-1.5">
-                          <CollabSheetLiveIndicator collabSheetId={albumCollabTrack?.collabSheetId} variant="dot" />
-                          <DnaDropLiveIndicator shareId={album.shareId} variant="dot" />
+                          <AlbumLiveIndicators album={album} variant="dot" className="gap-1.5" />
                         </div>
                         <div className="w-40 h-40 sm:w-48 sm:h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8)] border-4 border-white/5 bg-neutral-900 flex flex-col items-center justify-center relative">
                             {album.coverArtUrl ? (

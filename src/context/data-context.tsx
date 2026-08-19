@@ -698,7 +698,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       throw new FreeTrackLimitError();
     }
     const id = track.id || `track-${Date.now()}`;
-    const newTrack = stripForFirestore({ ...track, id, ownerId: user!.id, albumId }) as Track;
+    const now = new Date().toISOString();
+    const newTrack = stripForFirestore({ ...track, id, ownerId: user!.id, albumId, updatedAt: now }) as Track;
     setAlbums(prev => {
       const next = prev.map(a => (a.id === albumId ? { ...a, tracks: [...a.tracks, newTrack] } : a));
       if (user && albumId !== UNASSIGNED_ALBUM_ID) {
@@ -737,10 +738,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }, [user, albums]);
 
   const updateTrack = useCallback((albumId: string, trackId: string, updates: Partial<Track>) => {
+    const now = new Date().toISOString();
     setAlbums((prev) => {
       const next = prev.map((a) =>
         a.id === albumId
-          ? { ...a, tracks: a.tracks.map((t) => (t.id === trackId ? { ...t, ...updates } : t)) }
+          ? { ...a, tracks: a.tracks.map((t) => (t.id === trackId ? { ...t, ...updates, updatedAt: now } : t)) }
           : a
       );
       albumsRef.current = next;
@@ -767,8 +769,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }, [user, performTrackSync]);
 
   const updateAlbum = useCallback((albumId: string, updates: Partial<Album>) => {
+    const now = new Date().toISOString();
     setAlbums((prev) => {
-      const next = prev.map((a) => (a.id === albumId ? { ...a, ...updates } : a));
+      const next = prev.map((a) => (a.id === albumId ? { ...a, ...updates, updatedAt: now } : a));
       albumsRef.current = next;
       return next;
     });
