@@ -155,6 +155,14 @@ function SceneComposer({
   const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
   const [image, setImage] = useState<PendingPostImage | null>(null);
   const [busy, setBusy] = useState(false);
+  const textRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+    el.style.height = '0px';
+    el.style.height = `${Math.max(52, el.scrollHeight)}px`;
+  }, [text]);
 
   if (!user) return null;
 
@@ -186,8 +194,9 @@ function SceneComposer({
   };
 
   return (
-    <Card className="border-border/70 bg-card/60 p-4" data-tour="scene-composer">
+    <Card className="border-border/70 bg-card/60 px-3 py-2" data-tour="scene-composer">
       <Textarea
+        ref={textRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onPaste={(e) => {
@@ -200,42 +209,45 @@ function SceneComposer({
           });
         }}
         placeholder="Write a post for your wall — or paste a photo..."
-        rows={2}
+        rows={1}
         maxLength={1000}
-        className="min-h-[3.25rem] resize-none border-border/60 bg-background/60 text-sm"
+        className="min-h-[2.5rem] overflow-hidden resize-none border-border/60 bg-background/60 text-sm leading-snug"
       />
       {showEmbed && (
         <Input
           value={embedUrl}
           onChange={(e) => setEmbedUrl(e.target.value)}
           placeholder="YouTube / TikTok / Instagram / Facebook link (optional)"
-          className="mt-2 h-9 border-border/60 bg-background/60 text-xs"
+          className="mt-1.5 h-8 border-border/60 bg-background/60 text-xs"
         />
       )}
-      <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} />
-      <ImageAttachComposer
-        image={image}
-        onImageChange={setImage}
-        disabled={busy}
-        onError={(message) =>
-          toast({ variant: 'destructive', title: 'Could not attach photo', description: message })
-        }
-      />
-      <div className="mt-2.5 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => setShowEmbed((v) => !v)}
-          className="font-code text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70 transition-colors hover:text-primary"
-        >
-          {showEmbed ? '− Remove link' : '+ Add a link'}
-        </button>
+      <div className="mt-1 flex flex-row items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} compact />
+          <ImageAttachComposer
+            image={image}
+            onImageChange={setImage}
+            disabled={busy}
+            compact
+            onError={(message) =>
+              toast({ variant: 'destructive', title: 'Could not attach photo', description: message })
+            }
+          />
+          <button
+            type="button"
+            onClick={() => setShowEmbed((v) => !v)}
+            className="font-code text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70 transition-colors hover:text-primary"
+          >
+            {showEmbed ? '− link' : '+ link'}
+          </button>
+        </div>
         <Button
           size="sm"
-          className="h-9 gap-1.5 font-bold uppercase"
+          className="h-7 px-3 gap-1 font-bold uppercase"
           disabled={busy || (!text.trim() && !embedUrl.trim() && !voice && !image)}
           onClick={() => void submit()}
         >
-          <Send className="h-3.5 w-3.5" /> Post
+          <Send className="h-3 w-3" /> Post
         </Button>
       </div>
     </Card>
@@ -773,7 +785,7 @@ export function SceneHome() {
                   <h1 className="font-headline text-3xl font-bold uppercase tracking-tight">
                     The Scene
                   </h1>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
+                  <p className="mt-0.5 text-[13px] text-muted-foreground">
                     Your block · friends, drops, and who&apos;s live right now
                     {friendCount > 0 ? ` · ${friendCount} friends` : ''}
                   </p>

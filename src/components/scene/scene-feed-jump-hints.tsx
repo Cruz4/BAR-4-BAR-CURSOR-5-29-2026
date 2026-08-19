@@ -55,7 +55,7 @@ function JumpLabel({
       type="button"
       onClick={onClick}
       className={cn(
-        'pointer-events-auto m-0 h-auto min-h-0 appearance-none border-0 bg-transparent p-0 leading-none text-center font-code text-[10px] font-bold uppercase tracking-[0.18em] text-white/40 transition-colors hover:text-white/80 sm:text-[11px]',
+        'pointer-events-auto m-0 h-auto min-h-0 appearance-none border-0 bg-transparent p-0 leading-none text-center font-code text-[10px] font-bold uppercase tracking-[0.18em] text-fuchsia-300/75 transition-colors hover:text-fuchsia-200 sm:text-[11px]',
         placement === 'top' && 'drop-shadow-[0_1px_8px_rgba(0,0,0,0.7)]',
         placement === 'bottom' && 'drop-shadow-[0_-1px_8px_rgba(0,0,0,0.7)]'
       )}

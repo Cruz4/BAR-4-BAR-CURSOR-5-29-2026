@@ -57,7 +57,7 @@ export function firstDropsFeeCashoutLine(): string {
 
 /** Public selling copy — hide whenever First Drops is toggled off. */
 export function firstDropsPitch(): string {
-  return `Press a song from The Scene. Upload the song, set a price, press it live. Listen / buy sits at the top of your Artist Home, on The Scene, and on the share link. Preview 30 seconds, buy once, stream here. You keep the rights to your music — we take a small fee on the sale to run the platform. DNA Drop is only the lyric snapshot — never the sell desk. ${firstDropsFeeLine()} ${firstDropsCashoutLine()}`;
+  return `Press a song from The Scene. Upload the song, set a price, press it live. Listen / buy sits at the top of your Artist Home, on The Scene, and on the share link. Preview 30 seconds, buy once, stream here. You keep the rights to your music — we take a small fee on the sale to run the platform. DNA Drop is your lyric preview card only — song uploads and sales happen in First Drops. ${firstDropsFeeLine()} ${firstDropsCashoutLine()}`;
 }
 
 export function getFirstDropsWhatFaqAnswer(): string {
