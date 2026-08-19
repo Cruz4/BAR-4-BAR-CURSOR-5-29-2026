@@ -29,6 +29,7 @@ export function ExpandableImage({ src, alt, className, thumbClassName }: Expanda
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
+          hideClose
           overlayClassName="bg-black/90"
           className="max-h-[96vh] max-w-[min(96vw,920px)] border-none bg-transparent p-2 shadow-none sm:rounded-xl"
         >
