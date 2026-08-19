@@ -150,17 +150,41 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
   const commentId = input.commentId?.trim() || undefined;
 
   if ((input.type === 'post_love' || input.type === 'post_reply' || input.type === 'post_reverb') && postId) {
-    const postSnap = await db.collection('posts').doc(postId).get();
-    if (!postSnap.exists) return { ok: false };
-    const post = postSnap.data() || {};
-    recipientId = String(post.ownerId || '');
-    recipientName = String(post.ownerName || 'Artist');
-    recipientSlug = await resolveProfileSlug(
-      recipientId,
-      typeof post.ownerSlug === 'string' ? post.ownerSlug : undefined
-    );
-    if (!preview && typeof post.text === 'string') {
-      preview = post.text.trim().slice(0, 120);
+    if (input.type === 'post_love' && commentId) {
+      const commentSnap = await db.collection('posts').doc(postId).collection('comments').doc(commentId).get();
+      if (!commentSnap.exists) return { ok: false };
+      const comment = commentSnap.data() || {};
+      recipientId = String(comment.authorId || '');
+      recipientName = String(comment.authorName || 'Artist');
+      recipientSlug = await resolveProfileSlug(
+        recipientId,
+        typeof comment.authorSlug === 'string' ? comment.authorSlug : undefined
+      );
+      if (!preview && typeof comment.text === 'string') {
+        preview = comment.text.trim().slice(0, 120);
+      }
+    } else if (input.type === 'post_reply' && input.recipientId) {
+      recipientId = input.recipientId.trim();
+      recipientName = input.recipientName?.trim() || 'Artist';
+      recipientSlug = await resolveProfileSlug(recipientId);
+      if (!preview && commentId) {
+        const commentSnap = await db.collection('posts').doc(postId).collection('comments').doc(commentId).get();
+        const parentText = commentSnap.data()?.text;
+        if (typeof parentText === 'string') preview = parentText.trim().slice(0, 120);
+      }
+    } else {
+      const postSnap = await db.collection('posts').doc(postId).get();
+      if (!postSnap.exists) return { ok: false };
+      const post = postSnap.data() || {};
+      recipientId = String(post.ownerId || '');
+      recipientName = String(post.ownerName || 'Artist');
+      recipientSlug = await resolveProfileSlug(
+        recipientId,
+        typeof post.ownerSlug === 'string' ? post.ownerSlug : undefined
+      );
+      if (!preview && typeof post.text === 'string') {
+        preview = post.text.trim().slice(0, 120);
+      }
     }
   }
 
@@ -171,16 +195,22 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
       input.type === 'drop_unlocked') &&
     shareId
   ) {
-    const shareSnap = await db.collection('shares').doc(shareId).get();
-    if (!shareSnap.exists) return { ok: false };
-    const share = shareSnap.data() || {};
-    recipientId = String(share.ownerId || '');
-    recipientName = String(share.ownerName || 'Artist');
-    const title =
-      share.data && typeof share.data === 'object' && typeof (share.data as { title?: string }).title === 'string'
-        ? (share.data as { title: string }).title
-        : 'DNA Drop';
-    if (!preview) preview = title;
+    if (input.type === 'drop_reply' && input.recipientId) {
+      recipientId = input.recipientId.trim();
+      recipientName = input.recipientName?.trim() || 'Artist';
+      recipientSlug = await resolveProfileSlug(recipientId);
+    } else {
+      const shareSnap = await db.collection('shares').doc(shareId).get();
+      if (!shareSnap.exists) return { ok: false };
+      const share = shareSnap.data() || {};
+      recipientId = String(share.ownerId || '');
+      recipientName = String(share.ownerName || 'Artist');
+      const title =
+        share.data && typeof share.data === 'object' && typeof (share.data as { title?: string }).title === 'string'
+          ? (share.data as { title: string }).title
+          : 'DNA Drop';
+      if (!preview) preview = title;
+    }
   }
 
   if (!recipientId) {

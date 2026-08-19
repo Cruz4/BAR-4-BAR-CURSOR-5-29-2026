@@ -3,9 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Copy, Heart, MessageCircle, Repeat2, Share2 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
+import { PostCommentThread } from '@/components/profile/post-comment-thread';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useGamification } from '@/context/gamification-context';
@@ -13,7 +12,6 @@ import { createPost } from '@/lib/profile/social-client';
 import { buildLoginUrl } from '@/lib/login-links';
 import { formatDropPulseLine } from '@/lib/drop-pulse';
 import {
-  addDropComment,
   fetchDropCommentCount,
   fetchDropComments,
   fetchDropLoveCount,
@@ -22,8 +20,6 @@ import {
   unlikeDrop,
 } from '@/lib/drop-social-client';
 import type { PostComment } from '@/lib/profile/social-client';
-import { revokePostImagePreview, type PendingPostImage } from '@/lib/profile/post-images';
-import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 import { cn } from '@/lib/utils';
 
 type DropSocialPanelProps = {
@@ -55,8 +51,6 @@ export function DropSocialPanel({
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState<PostComment[]>([]);
   const [commentsLoaded, setCommentsLoaded] = useState(false);
-  const [draft, setDraft] = useState('');
-  const [image, setImage] = useState<PendingPostImage | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [walled, setWalled] = useState(false);
@@ -121,40 +115,6 @@ export function DropSocialPanel({
     const list = await fetchDropComments(shareId);
     setComments(list);
     setCommentsLoaded(true);
-  };
-
-  const submitComment = async () => {
-    if (!user) {
-      needAuth();
-      return;
-    }
-    const text = draft.trim();
-    if (!text && !image) return;
-    setBusy(true);
-    try {
-      const comment = await addDropComment(
-        shareId,
-        text,
-        {
-          name: user.displayName || 'Artist',
-          slug: summary.profileSlug,
-        },
-        image || undefined
-      );
-      setComments((prev) => [...prev, comment]);
-      setCommentCount((n) => n + 1);
-      setDraft('');
-      revokePostImagePreview(image);
-      setImage(null);
-    } catch (err) {
-      toast({
-        variant: 'destructive',
-        title: 'Could not reply',
-        description: err instanceof Error ? err.message : undefined,
-      });
-    } finally {
-      setBusy(false);
-    }
   };
 
   const copyLink = async () => {
@@ -266,87 +226,17 @@ export function DropSocialPanel({
       </div>
 
       {commentsOpen && (
-        <div className="space-y-3 border-t border-white/10 pt-3">
-          {comments.map((comment) => (
-            <div key={comment.id} className="text-sm leading-snug">
-              <ArtistHomeLink
-                userId={comment.authorId}
-                slug={comment.authorSlug}
-                className="mr-1.5 font-bold text-foreground hover:text-primary"
-              >
-                {comment.authorName}
-              </ArtistHomeLink>
-              {comment.text ? <span className="text-foreground/90">{comment.text}</span> : null}
-              {comment.imageUrl ? (
-                <div className="mt-1.5">
-                  <a href={comment.imageUrl} target="_blank" rel="noopener noreferrer">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={comment.imageUrl}
-                      alt="Comment photo"
-                      className="max-h-56 w-auto max-w-full rounded-lg object-contain"
-                    />
-                  </a>
-                </div>
-              ) : null}
-            </div>
-          ))}
-          <div className="space-y-2">
-            {user ? (
-              <ImageAttachComposer
-                image={image}
-                onImageChange={setImage}
-                disabled={busy}
-                compact
-                onError={(message) =>
-                  toast({
-                    variant: 'destructive',
-                    title: 'Could not attach photo',
-                    description: message,
-                  })
-                }
-              />
-            ) : null}
-            <div className="flex gap-2">
-              <Input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onPaste={(e) => {
-                  if (!user) return;
-                  void attachPastedImage(e, {
-                    disabled: busy,
-                    image,
-                    onImageChange: setImage,
-                    onError: (message) =>
-                      toast({
-                        variant: 'destructive',
-                        title: 'Could not attach photo',
-                        description: message,
-                      }),
-                  });
-                }}
-                placeholder={user ? 'Reply on this drop — or paste a photo' : 'Sign in to reply'}
-                maxLength={500}
-                className="h-9"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    void submitComment();
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                size="sm"
-                className="h-9 font-bold uppercase"
-                disabled={busy || (!draft.trim() && !image) || !user}
-                onClick={() => void submitComment()}
-              >
-                Send
-              </Button>
-            </div>
-          </div>
-        </div>
+        <PostCommentThread
+          shareId={shareId}
+          comments={comments}
+          commentsLoaded={commentsLoaded}
+          commentCount={commentCount}
+          onCommentsChange={setComments}
+          onCommentCountChange={setCommentCount}
+          user={user}
+          viewerSlug={summary.profileSlug}
+          isOwner={user?.id === ownerId}
+        />
       )}
     </div>
   );

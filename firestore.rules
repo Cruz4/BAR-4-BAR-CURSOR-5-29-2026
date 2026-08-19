@@ -105,6 +105,9 @@ service cloud.firestore {
           && request.resource.data.authorId == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() <= 500
+          && (!('parentCommentId' in request.resource.data)
+            || (request.resource.data.parentCommentId is string
+              && request.resource.data.parentCommentId.size() <= 80))
           && (!('imageUrl' in request.resource.data)
             || (request.resource.data.imageUrl is string
               && request.resource.data.imageUrl.size() <= 2000))
@@ -119,6 +122,11 @@ service cloud.firestore {
           && (resource.data.authorId == request.auth.uid
             || get(/databases/$(database)/documents/shares/$(shareId)).data.ownerId == request.auth.uid
             || isAdmin());
+
+        match /likes/{likerId} {
+          allow read: if true;
+          allow create, delete: if request.auth != null && request.auth.uid == likerId;
+        }
       }
 
       match /spinTicks/{tickId} {
@@ -391,6 +399,9 @@ service cloud.firestore {
           && request.resource.data.authorId == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() <= 500
+          && (!('parentCommentId' in request.resource.data)
+            || (request.resource.data.parentCommentId is string
+              && request.resource.data.parentCommentId.size() <= 80))
           && (!('voice' in request.resource.data)
             || validVoiceNote(request.resource.data.voice))
           && (!('imageUrl' in request.resource.data)
@@ -408,6 +419,11 @@ service cloud.firestore {
           && (resource.data.authorId == request.auth.uid
             || get(/databases/$(database)/documents/posts/$(postId)).data.ownerId == request.auth.uid
             || isAdmin());
+
+        match /likes/{likerId} {
+          allow read: if true;
+          allow create, delete: if request.auth != null && request.auth.uid == likerId;
+        }
       }
 
       match /viewTicks/{tickId} {

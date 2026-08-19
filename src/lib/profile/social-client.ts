@@ -55,6 +55,7 @@ import {
   wallImagePostPath,
   type PendingPostImage,
 } from '@/lib/profile/post-images';
+import { notifyLoveReward } from '@/lib/profile/love-reward-client';
 
 export type ProfilePost = {
   id: string;
@@ -100,6 +101,8 @@ export type PostComment = {
   voice?: VoiceNote;
   imageUrl?: string;
   imageStoragePath?: string;
+  /** Reply to another comment on the same post. */
+  parentCommentId?: string;
 };
 
 export type FriendshipStatus = 'pending' | 'accepted';
@@ -532,6 +535,7 @@ export async function likePost(postId: string, actor?: { name?: string; slug?: s
   await setDoc(doc(db, 'posts', postId, 'likes', user.uid), {
     createdAt: new Date().toISOString(),
   });
+  notifyLoveReward({ postId });
   const { emitActivity } = await import('@/lib/activity/client');
   emitActivity({
     type: 'post_love',
@@ -575,11 +579,17 @@ export async function addComment(
   text: string,
   author: { name: string; slug?: string },
   voiceClip?: RecordedVoiceClip,
-  image?: PendingPostImage
+  image?: PendingPostImage,
+  opts?: {
+    parentCommentId?: string;
+    recipientId?: string;
+    recipientName?: string;
+  }
 ): Promise<PostComment> {
   const user = requireUser();
   const clean = text.trim().slice(0, MAX_COMMENT_TEXT);
   if (!clean && !voiceClip && !image) throw new Error('Comment is empty.');
+  const parentCommentId = opts?.parentCommentId?.trim().slice(0, 80) || undefined;
   const id = chronoId();
   let voice: VoiceNote | undefined;
   if (voiceClip) {
@@ -610,6 +620,7 @@ export async function addComment(
     ...(author.slug ? { authorSlug: author.slug } : {}),
     text: clean,
     createdAt: new Date().toISOString(),
+    ...(parentCommentId ? { parentCommentId } : {}),
     ...(voice ? { voice } : {}),
     ...(imageUrl ? { imageUrl } : {}),
     ...(imageStoragePath ? { imageStoragePath } : {}),
@@ -628,6 +639,8 @@ export async function addComment(
     actorName: comment.authorName,
     ...(comment.authorSlug ? { actorSlug: comment.authorSlug } : {}),
     postId,
+    ...(opts?.recipientId ? { recipientId: opts.recipientId } : {}),
+    ...(opts?.recipientName ? { recipientName: opts.recipientName } : {}),
     preview: (clean || voice?.transcript || (imageUrl ? 'Photo' : 'Voice note')).slice(0, 120),
     commentId,
   });
@@ -642,6 +655,8 @@ export async function fetchComments(postId: string, max = 50): Promise<PostComme
       const voice = parseVoiceNote(data.voice);
       const imageUrl = typeof data.imageUrl === 'string' ? data.imageUrl : undefined;
       const imageStoragePath = parseImageStoragePath(data.imageStoragePath);
+      const parentCommentId =
+        typeof data.parentCommentId === 'string' ? data.parentCommentId : undefined;
       return {
         id: d.id,
         authorId: String(data.authorId || ''),
@@ -649,6 +664,7 @@ export async function fetchComments(postId: string, max = 50): Promise<PostComme
         authorSlug: typeof data.authorSlug === 'string' ? data.authorSlug : undefined,
         text: String(data.text || ''),
         createdAt: String(data.createdAt || ''),
+        ...(parentCommentId ? { parentCommentId } : {}),
         ...(voice ? { voice } : {}),
         ...(imageUrl ? { imageUrl } : {}),
         ...(imageStoragePath ? { imageStoragePath } : {}),
@@ -694,6 +710,60 @@ export async function fetchCommentCount(postId: string): Promise<number> {
   } catch {
     return 0;
   }
+}
+
+export async function likeComment(
+  postId: string,
+  commentId: string,
+  actor?: { name?: string; slug?: string }
+): Promise<void> {
+  const user = requireUser();
+  await setDoc(doc(db, 'posts', postId, 'comments', commentId, 'likes', user.uid), {
+    createdAt: new Date().toISOString(),
+  });
+  notifyLoveReward({ postId, commentId });
+  const { emitActivity } = await import('@/lib/activity/client');
+  emitActivity({
+    type: 'post_love',
+    actorName: actor?.name || user.displayName || 'Artist',
+    ...(actor?.slug ? { actorSlug: actor.slug } : {}),
+    postId,
+    commentId,
+  });
+}
+
+export async function unlikeComment(postId: string, commentId: string): Promise<void> {
+  const user = requireUser();
+  await deleteDoc(doc(db, 'posts', postId, 'comments', commentId, 'likes', user.uid));
+}
+
+export async function fetchCommentLikeStates(
+  postId: string,
+  commentIds: string[]
+): Promise<Record<string, { count: number; liked: boolean }>> {
+  const user = auth.currentUser;
+  const unique = [...new Set(commentIds.filter(Boolean))];
+  if (!unique.length) return {};
+  const out: Record<string, { count: number; liked: boolean }> = {};
+  await Promise.all(
+    unique.map(async (commentId) => {
+      try {
+        const [countSnap, likedSnap] = await Promise.all([
+          getCountFromServer(collection(db, 'posts', postId, 'comments', commentId, 'likes')),
+          user
+            ? getDoc(doc(db, 'posts', postId, 'comments', commentId, 'likes', user.uid))
+            : Promise.resolve(null),
+        ]);
+        out[commentId] = {
+          count: countSnap.data().count,
+          liked: likedSnap?.exists() ?? false,
+        };
+      } catch {
+        out[commentId] = { count: 0, liked: false };
+      }
+    })
+  );
+  return out;
 }
 
 // ---------------------------------------------------------------------------

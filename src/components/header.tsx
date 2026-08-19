@@ -325,7 +325,11 @@ export function Header() {
                         </div>
                       </div>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuContent
+                      className="w-56 [&_[role=menuitem]]:focus:bg-amber-400/25 [&_[role=menuitem]]:focus:text-foreground"
+                      align="end"
+                      forceMount
+                    >
                       <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
                           <p className={cn("text-sm font-bold leading-none", studioNameClass(studioChrome))}>{user.displayName}</p>

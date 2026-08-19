@@ -1,11 +1,9 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import { Eye, Heart, MessageCircle, Repeat2, Send, Share2, Trash2, Users } from 'lucide-react';
+import { Eye, Heart, MessageCircle, Repeat2, Share2, Trash2, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
@@ -13,12 +11,10 @@ import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { ArtistHomeLink, useLiveArtistHomeSlug } from '@/components/profile/artist-home-link';
 import { EmbedPlayer } from '@/components/profile/embed-player';
 import { PostShareDialog } from '@/components/profile/post-share-dialog';
-import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
-import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
+import { ExpandableImage } from '@/components/profile/expandable-image';
+import { PostCommentThread } from '@/components/profile/post-comment-thread';
 import { VoiceNotePlayer } from '@/components/profile/voice-note-player';
 import {
-  addComment,
-  deleteComment,
   deletePost,
   fetchComments,
   fetchCommentCount,
@@ -32,12 +28,9 @@ import {
   type PostComment,
   type ProfilePost,
 } from '@/lib/profile/social-client';
-import { type RecordedVoiceClip } from '@/lib/profile/voice-notes';
-import { revokePostImagePreview, type PendingPostImage } from '@/lib/profile/post-images';
 import { Hint } from '@/components/ui/tooltip';
 import { parseStudioBadge, studioChromeFromUser, studioNameClass, type StudioNameChrome } from '@/lib/studio-tier-chrome';
 import {
-  activityCommentElementId,
   parseActivityPostHash,
   scrollActivityPostTarget,
 } from '@/lib/activity/post-deep-link';
@@ -147,11 +140,10 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
       ) : null}
       {post.reverbImageUrl && !post.reverbLyricClip ? (
         <div className="mt-2 flex justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <ExpandableImage
             src={post.reverbImageUrl}
-            alt="Reverbed studio card"
-            className="block h-auto w-full max-w-[360px] rounded-lg object-contain"
+            alt="Reverbed photo"
+            thumbClassName="block h-auto w-full max-w-[360px] rounded-lg object-contain"
           />
         </div>
       ) : null}
@@ -193,9 +185,6 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState<PostComment[]>([]);
   const [commentsLoaded, setCommentsLoaded] = useState(false);
-  const [draft, setDraft] = useState('');
-  const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
-  const [image, setImage] = useState<PendingPostImage | null>(null);
   const [busy, setBusy] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [reverbed, setReverbed] = useState(false);
@@ -372,37 +361,6 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     }
   };
 
-  const submitComment = async () => {
-    if (!user || (!draft.trim() && !voice && !image)) return;
-    setBusy(true);
-    try {
-      const comment = await addComment(
-        post.id,
-        draft,
-        {
-          name: user.displayName || 'Artist',
-          slug: viewerSlug,
-        },
-        voice || undefined,
-        image || undefined
-      );
-      setComments((prev) => [...prev, comment]);
-      setCommentCount((c) => c + 1);
-      setDraft('');
-      setVoice(null);
-      revokePostImagePreview(image);
-      setImage(null);
-    } catch (e) {
-      toast({
-        variant: 'destructive',
-        title: 'Comment failed',
-        description: e instanceof Error ? e.message : undefined,
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const handleDeletePost = async () => {
     setBusy(true);
     try {
@@ -510,15 +468,11 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
 
       {!post.isReverb && post.imageUrl && (
         <div className="mt-3 mb-1 flex justify-center overflow-visible">
-          <a href={post.imageUrl} target="_blank" rel="noopener noreferrer" className="block max-w-full">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={post.imageUrl}
-              alt="Posted photo"
-              className="block h-auto w-full max-w-[420px] rounded-xl object-contain shadow-[0_8px_28px_rgba(0,0,0,0.45)] sm:max-w-[480px]"
-              style={{ imageRendering: 'auto' }}
-            />
-          </a>
+          <ExpandableImage
+            src={post.imageUrl}
+            alt="Posted photo"
+            thumbClassName="block h-auto w-full max-w-[420px] rounded-xl object-contain shadow-[0_8px_28px_rgba(0,0,0,0.45)] sm:max-w-[480px]"
+          />
         </div>
       )}
 
@@ -609,144 +563,17 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
       <PostShareDialog open={shareOpen} onOpenChange={setShareOpen} post={post} />
 
       {commentsOpen && (
-        <div className="mt-3 space-y-2 border-t border-[var(--ph-border,rgba(255,255,255,0.12))] pt-3">
-          {comments.map((comment) => (
-            <div
-              key={comment.id}
-              id={activityCommentElementId(comment.id)}
-              className="flex scroll-mt-28 items-start gap-2 rounded-md px-1 py-1 text-sm transition-shadow data-[activity-focus]:ring-2 data-[activity-focus]:ring-fuchsia-400/80"
-            >
-              <div className="min-w-0 flex-1">
-                <ArtistHomeLink
-                  userId={comment.authorId}
-                  slug={comment.authorSlug}
-                  className="mr-2 text-[11px] font-bold uppercase tracking-wider text-[var(--ph-accent2,#fbbf24)] hover:underline"
-                >
-                  {comment.authorName}
-                </ArtistHomeLink>
-                {comment.text ? (
-                  <span className="text-[var(--ph-text,#fff)]/90">{comment.text}</span>
-                ) : null}
-                {comment.imageUrl ? (
-                  <div className="mt-1.5">
-                    <a href={comment.imageUrl} target="_blank" rel="noopener noreferrer">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={comment.imageUrl}
-                        alt="Comment photo"
-                        className="max-h-56 w-auto max-w-full rounded-lg object-contain"
-                      />
-                    </a>
-                  </div>
-                ) : null}
-                {comment.voice ? (
-                  <div className="mt-1.5">
-                    <VoiceNotePlayer
-                      src={comment.voice.url}
-                      storagePath={comment.voice.storagePath}
-                      contentType={comment.voice.contentType}
-                      transcript={comment.voice.transcript}
-                      durationSec={comment.voice.durationSec}
-                      compact
-                    />
-                  </div>
-                ) : null}
-              </div>
-              {user?.id && (user.id === comment.authorId || isOwner) && (
-                <button
-                  type="button"
-                  className="text-[var(--ph-muted,rgba(255,255,255,0.4))] hover:text-red-400"
-                  onClick={() => {
-                    void deleteComment(post.id, comment.id)
-                      .then(() => {
-                        setComments((prev) => prev.filter((c) => c.id !== comment.id));
-                        setCommentCount((c) => Math.max(0, c - 1));
-                      })
-                      .catch(() => toast({ variant: 'destructive', title: 'Could not delete' }));
-                  }}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </button>
-              )}
-            </div>
-          ))}
-          {commentsLoaded && comments.length === 0 && (
-            <p className="text-xs text-[var(--ph-muted,rgba(255,255,255,0.5))]">
-              No replies yet.
-            </p>
-          )}
-          {user ? (
-            <div className="space-y-2 pt-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <VoiceNoteComposer
-                  clip={voice}
-                  onClipChange={setVoice}
-                  disabled={busy}
-                  compact
-                />
-                <ImageAttachComposer
-                  image={image}
-                  onImageChange={setImage}
-                  disabled={busy}
-                  compact
-                  onError={(message) =>
-                    toast({
-                      variant: 'destructive',
-                      title: 'Could not attach photo',
-                      description: message,
-                    })
-                  }
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onPaste={(e) => {
-                    void attachPastedImage(e, {
-                      disabled: busy,
-                      image,
-                      onImageChange: setImage,
-                      onError: (message) =>
-                        toast({
-                          variant: 'destructive',
-                          title: 'Could not attach photo',
-                          description: message,
-                        }),
-                    });
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      void submitComment();
-                    }
-                  }}
-                  maxLength={500}
-                  placeholder={
-                    voice || image ? 'Add a caption (optional)…' : 'Say something… or paste a photo'
-                  }
-                  className="h-8 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 text-sm"
-                />
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 shrink-0 text-[var(--ph-accent,#7dd3fc)]"
-                  disabled={busy || (!draft.trim() && !voice && !image)}
-                  onClick={() => void submitComment()}
-                >
-                  <Send className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <p className="text-xs text-[var(--ph-muted,rgba(255,255,255,0.5))]">
-              <Link href="/login" className="text-[var(--ph-accent,#7dd3fc)] hover:underline">
-                Sign in
-              </Link>{' '}
-              to reply.
-            </p>
-          )}
-        </div>
+        <PostCommentThread
+          postId={post.id}
+          comments={comments}
+          commentsLoaded={commentsLoaded}
+          commentCount={commentCount}
+          onCommentsChange={setComments}
+          onCommentCountChange={setCommentCount}
+          user={user}
+          viewerSlug={viewerSlug}
+          isOwner={isOwner}
+        />
       )}
     </article>
   );

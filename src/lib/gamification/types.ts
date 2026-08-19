@@ -103,6 +103,11 @@ export type GamificationSummary = {
   lifetimeSharesCreated: number;
   /** Times other artists imported this user's DNA Drops. */
   lifetimeDnaImportsReceived: number;
+  /** Loves received on wall posts and replies (lifetime). */
+  lifetimeLovesReceived?: number;
+  /** XP earned from loves today — soft cap so farming stays boring. */
+  loveXpToday?: number;
+  loveXpDayKey?: string;
   dnaImportWeekCount: number;
   friendshipWeekCount: number;
   wallPostWeekCount: number;
@@ -133,7 +138,8 @@ export type GamificationTrigger =
   | 'dna_imported'
   | 'friendship_accepted'
   | 'wall_post_created'
-  | 'dna_drop_imported_by_other';
+  | 'dna_drop_imported_by_other'
+  | 'love_received';
 
 export const DEFAULT_GAMIFICATION_SUMMARY: GamificationSummary = {
   xp: 0,
@@ -172,6 +178,9 @@ export const DEFAULT_GAMIFICATION_SUMMARY: GamificationSummary = {
   lifetimeWallPosts: 0,
   lifetimeSharesCreated: 0,
   lifetimeDnaImportsReceived: 0,
+  lifetimeLovesReceived: 0,
+  loveXpToday: 0,
+  loveXpDayKey: '',
   dnaImportWeekCount: 0,
   friendshipWeekCount: 0,
   wallPostWeekCount: 0,

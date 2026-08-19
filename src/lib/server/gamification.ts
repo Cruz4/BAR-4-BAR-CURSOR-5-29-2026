@@ -610,6 +610,30 @@ export async function processGamificationEvent(
     xpGain += 25;
   }
 
+  if (trigger === 'love_received') {
+    summary.lifetimeLovesReceived = (summary.lifetimeLovesReceived || 0) + 1;
+    if (summary.loveXpDayKey !== dayKey) {
+      summary.loveXpDayKey = dayKey;
+      summary.loveXpToday = 0;
+    }
+    const loveXpCap = 50;
+    const loveXpGrant = (summary.loveXpToday || 0) < loveXpCap ? 5 : 0;
+    summary.loveXpToday = (summary.loveXpToday || 0) + loveXpGrant;
+    xpGain += loveXpGrant;
+    if (summary.lifetimeLovesReceived > 0 && summary.lifetimeLovesReceived % 5 === 0) {
+      const inkGranted = await grantBonusInk(userId, 2, 'Love milestone');
+      if (inkGranted > 0) {
+        unlocks.push({
+          id: `love_milestone_${summary.lifetimeLovesReceived}`,
+          title: '+2 Ink',
+          description: 'Five loves on your work — keep posting.',
+          inkReward: inkGranted,
+          xpReward: 0,
+        });
+      }
+    }
+  }
+
   for (const achievement of ACHIEVEMENTS) {
     summary = tryUnlock(
       summary,
