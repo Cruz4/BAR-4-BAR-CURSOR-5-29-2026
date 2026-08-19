@@ -16,6 +16,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { DnaDropLiveIndicator } from '@/components/dna-drop-live-indicator';
 import { CollabSheetLiveIndicator } from '@/components/collab-sheet/collab-sheet-live-indicator';
+import { TrackLiveIndicators } from '@/components/track-live-indicators';
 import {
   ListMusic,
   PlusCircle,
@@ -47,6 +48,12 @@ import {
   FolderOpen,
   Loader2,
   Disc3,
+  Search,
+  ArrowUpDown,
+  SortDesc,
+  SortAsc,
+  Filter,
+  X,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -143,6 +150,13 @@ import type { DnaPreset } from '@/lib/types';
 import { AI_COSTS } from '@/lib/costs';
 import { inkTooltip } from '@/lib/ink-labels';
 import { cn } from '@/lib/utils';
+import {
+  looseTrackSearchHaystack,
+  matchesLooseTrackFilter,
+  sortLooseTracks,
+  type LooseTrackFilter,
+  type LooseTrackSort,
+} from '@/lib/track-live-flags';
 import {
   studioVaultCard,
   studioVaultCardTitle,
@@ -840,7 +854,7 @@ function LooseTrackCard({
           {track.title}
         </p>
         <div className="flex flex-wrap items-center gap-2 mt-3">
-          <DnaDropLiveIndicator shareId={track.shareId} variant="badge" />
+          <TrackLiveIndicators track={track} variant="compact" />
           <Badge variant="outline" className="h-5 px-2 text-[8px] border-border text-muted-foreground font-code dark:border-white/10">
             {track.vibe?.genre || 'No genre'}
           </Badge>
@@ -917,6 +931,9 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const [trackToDelete, setTrackToDelete] = useState<Track | null>(null);
   const [downgradePickerDone, setDowngradePickerDone] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [looseSearch, setLooseSearch] = useState('');
+  const [looseSort, setLooseSort] = useState<LooseTrackSort>('newest');
+  const [looseFilter, setLooseFilter] = useState<LooseTrackFilter>('all');
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [extractingAlbumDna, setExtractingAlbumDna] = useState(false);
   const [saveAlbumDnaOpen, setSaveAlbumDnaOpen] = useState(false);
@@ -1139,6 +1156,25 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
 
   const isUnassignedVault = album?.id === 'unassigned';
   const realAlbums = albums.filter(a => a.id !== 'unassigned');
+
+  const displayedLooseTracks = useMemo(() => {
+    if (!isUnassignedVault || !album?.tracks) return [];
+    const q = looseSearch.trim().toLowerCase();
+    let rows = album.tracks.filter((track) => matchesLooseTrackFilter(track, looseFilter));
+    if (q) {
+      rows = rows.filter((track) => looseTrackSearchHaystack(track).includes(q));
+    }
+    return sortLooseTracks(rows, looseSort);
+  }, [album?.tracks, isUnassignedVault, looseSearch, looseSort, looseFilter]);
+
+  const looseFilterLabels: Record<LooseTrackFilter, string> = {
+    all: 'All',
+    live: 'Anything live',
+    dna: 'DNA Drop',
+    'first-drop': 'First Drop',
+    collab: 'Collab',
+    complete: 'Complete',
+  };
   const showDowngradePicker =
     !downgradePickerDone && !loading && user != null && needsFreeEditableTrackPicker(user, albums);
 
@@ -1322,11 +1358,91 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 )}
                             </div>
                         </CardHeader>
+                        {isUnassignedVault ? (
+                          <div className="flex flex-col gap-3 border-b border-border px-4 sm:px-6 md:px-8 py-4 dark:border-white/5">
+                            <div className="relative w-full">
+                              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                value={looseSearch}
+                                onChange={(e) => setLooseSearch(e.target.value)}
+                                placeholder='Search loose tracks… title, genre, mood'
+                                className="h-10 border-border bg-muted/40 pl-10 pr-10 font-code text-xs font-bold dark:border-white/10"
+                              />
+                              {looseSearch ? (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-1 top-1 h-8 w-8 rounded-full"
+                                  onClick={() => setLooseSearch('')}
+                                  aria-label="Clear search"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              ) : null}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-9 gap-2 border-border bg-muted/40 text-[10px] font-bold uppercase tracking-wider dark:border-white/10"
+                                  >
+                                    <ArrowUpDown className="h-3.5 w-3.5" />
+                                    Sort · {looseSort === 'newest' ? 'Newest' : looseSort === 'oldest' ? 'Oldest' : 'A–Z'}
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="bg-card border-border dark:border-white/10">
+                                  <DropdownMenuItem onClick={() => setLooseSort('newest')} className="text-[10px] font-bold uppercase">
+                                    <SortDesc className="mr-2 h-4 w-4" /> Newest first
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => setLooseSort('oldest')} className="text-[10px] font-bold uppercase">
+                                    <SortAsc className="mr-2 h-4 w-4" /> Oldest first
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => setLooseSort('alphabetical')} className="text-[10px] font-bold uppercase">
+                                    <SortAsc className="mr-2 h-4 w-4" /> Alphabetical
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-9 gap-2 border-border bg-muted/40 text-[10px] font-bold uppercase tracking-wider dark:border-white/10"
+                                  >
+                                    <Filter className="h-3.5 w-3.5" />
+                                    Filter · {looseFilterLabels[looseFilter]}
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="bg-card border-border dark:border-white/10">
+                                  {(Object.keys(looseFilterLabels) as LooseTrackFilter[]).map((key) => (
+                                    <DropdownMenuItem
+                                      key={key}
+                                      onClick={() => setLooseFilter(key)}
+                                      className={cn(
+                                        'text-[10px] font-bold uppercase',
+                                        looseFilter === key && 'bg-primary/10 text-primary'
+                                      )}
+                                    >
+                                      {looseFilterLabels[key]}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                              <Badge variant="outline" className="ml-auto border-sky-500/30 font-mono text-sky-400">
+                                {displayedLooseTracks.length} shown
+                              </Badge>
+                            </div>
+                          </div>
+                        ) : null}
                         <CardContent className={cn(isUnassignedVault ? 'p-6' : 'p-0')}>
                             {album.tracks?.length > 0 ? (
                               isUnassignedVault ? (
+                                displayedLooseTracks.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  {album.tracks.map((track, index) => (
+                                  {displayedLooseTracks.map((track, index) => (
                                     <LooseTrackCard
                                       key={track.id}
                                       track={track}
@@ -1342,6 +1458,15 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                     <ProCreateTrackSlot onClick={openCreateTrack} />
                                   )}
                                 </div>
+                                ) : (
+                                  <div className="py-16 text-center flex flex-col items-center gap-4 opacity-60">
+                                    <Search className="h-10 w-10 text-muted-foreground" />
+                                    <p className="font-code text-sm uppercase tracking-[0.25em]">No tracks match your search or filter</p>
+                                    <Button variant="outline" size="sm" className="text-[10px] font-bold uppercase" onClick={() => { setLooseSearch(''); setLooseFilter('all'); }}>
+                                      Clear filters
+                                    </Button>
+                                  </div>
+                                )
                               ) : (
                                 <div className="divide-y divide-white/5">
                                 {album.tracks.map((track, index) => {
@@ -1355,8 +1480,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                         <Link href={`/albums/${album.id}/tracks/${track.id}`} className="flex-grow min-w-0">
                                             <p className={cn('font-bold text-lg sm:text-2xl group-hover:text-primary transition-colors break-words', studioVaultCardTitle)}>{track.title}</p>
                                             <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
-                                                <DnaDropLiveIndicator shareId={track.shareId} variant="compact" />
-                                                <CollabSheetLiveIndicator collabSheetId={track.collabSheetId} variant="compact" />
+                                                <TrackLiveIndicators track={track} variant="compact" />
                                                 {trackTierLocked && (
                                                   <Badge variant="outline" className={cn('h-4 px-1.5 text-[8px]', proLockText())}>View only</Badge>
                                                 )}
