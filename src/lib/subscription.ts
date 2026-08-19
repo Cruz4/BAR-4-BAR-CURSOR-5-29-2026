@@ -15,6 +15,43 @@ export const FREE_RESIDENCY_POOL_CAP = 400;
 
 /** Pro workflow preview duration for new eligible signups (features only — Ink unchanged). */
 export const PRO_FEATURE_PREVIEW_DAYS = 2;
+export const PRO_FEATURE_PREVIEW_HOURS = PRO_FEATURE_PREVIEW_DAYS * 24;
+
+export function computeProFeaturePreviewExpiresAt(
+  days = PRO_FEATURE_PREVIEW_DAYS,
+  from = new Date()
+): string {
+  const d = new Date(from.getTime());
+  d.setDate(d.getDate() + days);
+  return d.toISOString();
+}
+
+export function getProFeaturePreviewMsRemaining(
+  user: Pick<User, 'proFeaturePreviewExpiresAt'> | null | undefined,
+  now = Date.now()
+): number | null {
+  if (!user?.proFeaturePreviewExpiresAt) return null;
+  return new Date(user.proFeaturePreviewExpiresAt).getTime() - now;
+}
+
+/** Live countdown label — `1d 12h 04m` or `3h 12m 08s`. `ended` when the window is over. */
+export function formatProFeaturePreviewCountdown(
+  user: Pick<User, 'proFeaturePreviewExpiresAt'> | null | undefined,
+  now = Date.now()
+): string | null {
+  const ms = getProFeaturePreviewMsRemaining(user, now);
+  if (ms === null) return null;
+  if (ms <= 0) return 'ended';
+  const totalSec = Math.floor(ms / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const seconds = totalSec % 60;
+  if (days > 0) {
+    return `${days}d ${hours}h ${String(minutes).padStart(2, '0')}m`;
+  }
+  return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+}
 
 /** One-time residency burst when an artist marks their first track complete. */
 export const COMPLETION_BURST_INK = 500;
@@ -27,17 +64,19 @@ export function isProUser(user: Pick<User, 'subscriptionStatus'> | null | undefi
 }
 
 export function isProFeaturePreviewActive(
-  user: Pick<User, 'proFeaturePreviewExpiresAt'> | null | undefined
+  user: Pick<User, 'proFeaturePreviewExpiresAt'> | null | undefined,
+  now = Date.now()
 ): boolean {
   if (!user?.proFeaturePreviewExpiresAt) return false;
-  return new Date(user.proFeaturePreviewExpiresAt).getTime() > Date.now();
+  return new Date(user.proFeaturePreviewExpiresAt).getTime() > now;
 }
 
 export function getProFeaturePreviewHoursRemaining(
-  user: Pick<User, 'proFeaturePreviewExpiresAt'> | null | undefined
+  user: Pick<User, 'proFeaturePreviewExpiresAt'> | null | undefined,
+  now = Date.now()
 ): number | null {
-  if (!user?.proFeaturePreviewExpiresAt) return null;
-  const ms = new Date(user.proFeaturePreviewExpiresAt).getTime() - Date.now();
+  const ms = getProFeaturePreviewMsRemaining(user, now);
+  if (ms === null) return null;
   if (ms <= 0) return 0;
   return Math.ceil(ms / (60 * 60 * 1000));
 }

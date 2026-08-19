@@ -4,9 +4,9 @@ import { getAuth, getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/ser
 import {
   FREE_MONTHLY_RESIDENCY_INK,
   FREE_RESIDENCY_POOL_CAP,
-  PRO_FEATURE_PREVIEW_DAYS,
   SIGNUP_INK,
   SIGNUP_PERMANENT_INK,
+  computeProFeaturePreviewExpiresAt,
   isProUser,
 } from '@/lib/subscription';
 import { inkBalanceFirestorePatch, normalizeInkPools, totalInkBalance } from '@/lib/ink-balance';
@@ -57,19 +57,14 @@ async function maybeSendWelcomeEmail(
   }).catch((e) => console.warn('[usage-init] welcome email', e));
 }
 
-function computeProFeaturePreviewExpiresAt(days = PRO_FEATURE_PREVIEW_DAYS): string {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString();
-}
-
 async function grantProFeaturePreview(
   db: Awaited<ReturnType<typeof getDb>>,
   userEmail: string,
   userId: string,
-  bypassIdentityRegistry: boolean
+  bypassIdentityRegistry: boolean,
+  force = false
 ): Promise<string | null> {
-  if (bypassIdentityRegistry) {
+  if (bypassIdentityRegistry || force) {
     return computeProFeaturePreviewExpiresAt();
   }
   if (!userEmail) return computeProFeaturePreviewExpiresAt();
@@ -249,64 +244,66 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
       if (!alreadyExists) throw err;
     }
 
-    if (!createdBalance) {
-      // Another init already created the balance — do not overwrite Ink or mark returning.
+    if (createdBalance) {
+      const userPatch: Record<string, unknown> = {
+        updatedAt: new Date().toISOString(),
+      };
+      if (!emailVerified) {
+        userPatch.pendingWelcomeInk = true;
+      }
+      if (returningIdentity) {
+        userPatch.returningIdentity = true;
+        if (!grantTrialWorkflow) {
+          userPatch.trialStartedAt = null;
+        }
+      }
+      // Pro preview is registry-gated (not blocked when welcome Ink is 0 for other reasons).
+      if (
+        emailVerified &&
+        !(userData as { proFeaturePreviewExpiresAt?: string })?.proFeaturePreviewExpiresAt
+      ) {
+        const previewExpiresAt = await grantProFeaturePreview(
+          db,
+          userEmail,
+          userId,
+          bypassIdentityRegistry,
+          returningIdentity
+        );
+        if (previewExpiresAt) {
+          userPatch.proFeaturePreviewExpiresAt = previewExpiresAt;
+        }
+      }
+
+      if (Object.keys(userPatch).length > 1) {
+        await userRef.set(userPatch, { merge: true });
+      }
+
+      if (signupLedger.length > 0) {
+        await recordInkLedgerEntries(db, userId, signupLedger);
+      }
+
+      if (emailVerified) {
+        await maybeSendWelcomeEmail(db, {
+          userId,
+          email: userEmail,
+          emailVerified,
+          returningIdentity,
+          alreadySent: Boolean((userData as { welcomeEmailSentAt?: string })?.welcomeEmailSentAt),
+          welcomeBackAlreadySent: Boolean(
+            (userData as { welcomeBackEmailSentAt?: string })?.welcomeBackEmailSentAt
+          ),
+        });
+      }
       return;
     }
 
-    const userPatch: Record<string, unknown> = {
-      updatedAt: new Date().toISOString(),
-    };
-    if (!emailVerified) {
-      userPatch.pendingWelcomeInk = true;
-    }
-    if (returningIdentity) {
-      userPatch.returningIdentity = true;
-      if (!grantTrialWorkflow) {
-        userPatch.trialStartedAt = null;
-      }
-    }
-    // Pro preview is registry-gated (not blocked when welcome Ink is 0 for other reasons).
-    if (
-      emailVerified &&
-      !(userData as { proFeaturePreviewExpiresAt?: string })?.proFeaturePreviewExpiresAt
-    ) {
-      const previewExpiresAt = await grantProFeaturePreview(
-        db,
-        userEmail,
-        userId,
-        bypassIdentityRegistry
-      );
-      if (previewExpiresAt) {
-        userPatch.proFeaturePreviewExpiresAt = previewExpiresAt;
-      }
-    }
-
-    if (Object.keys(userPatch).length > 1) {
-      await userRef.set(userPatch, { merge: true });
-    }
-
-    if (signupLedger.length > 0) {
-      await recordInkLedgerEntries(db, userId, signupLedger);
-    }
-
-    if (emailVerified) {
-      await maybeSendWelcomeEmail(db, {
-        userId,
-        email: userEmail,
-        emailVerified,
-        returningIdentity,
-        alreadySent: Boolean((userData as { welcomeEmailSentAt?: string })?.welcomeEmailSentAt),
-        welcomeBackAlreadySent: Boolean(
-          (userData as { welcomeBackEmailSentAt?: string })?.welcomeBackEmailSentAt
-        ),
-      });
-    }
-    return;
+    // Lost the create race — fall through and reconcile against the winner's doc.
   }
 
   const monthKey = new Date().toISOString().slice(0, 7);
-  let data = snap.data()!;
+  const balanceSnap = snap.exists ? snap : await balanceRef.get();
+  if (!balanceSnap.exists) return;
+  let data = balanceSnap.data()!;
   const isPaidProEarly = isProUser(userData as Pick<User, 'subscriptionStatus'> | undefined);
 
   // Never run free welcome reconciliation on paid Pro — FREE_RESIDENCY_POOL_CAP (400)
@@ -380,7 +377,8 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
         db,
         userEmail,
         userId,
-        bypassIdentityRegistry
+        bypassIdentityRegistry,
+        returningIdentity
       );
       if (previewExpiresAt) {
         userPatch.proFeaturePreviewExpiresAt = previewExpiresAt;
@@ -412,7 +410,8 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
       db,
       userEmail,
       userId,
-      bypassIdentityRegistry
+      bypassIdentityRegistry,
+      Boolean((userData as { returningIdentity?: boolean })?.returningIdentity)
     );
     if (previewExpiresAt) {
       await userRef.set(

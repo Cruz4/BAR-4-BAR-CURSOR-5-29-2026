@@ -26,6 +26,7 @@ import {
     ShieldX,
     Clock,
     Star,
+    Hourglass,
     AlertTriangle,
     LineChart,
     Trophy,
@@ -63,6 +64,7 @@ import type { AdminGamificationRosterEntry } from '@/lib/gamification/admin-rost
 import { format } from 'date-fns';
 import { formatUserJoinDate, userDateSortValue } from '@/lib/user-date';
 import { isMasterAdminEmail } from '@/lib/master-admin';
+import { isProFeaturePreviewActive, formatProFeaturePreviewCountdown, PRO_FEATURE_PREVIEW_HOURS, computeProFeaturePreviewExpiresAt } from '@/lib/subscription';
 import {
   Tooltip,
   TooltipContent,
@@ -103,6 +105,8 @@ export default function AdminPage() {
   const [reseedingNeoCircle, setReseedingNeoCircle] = useState(false);
   const [reseedingJordieCircle, setReseedingJordieCircle] = useState(false);
   const [updatingRoleId, setUpdatingRoleId] = useState<string | null>(null);
+  const [grantingPreviewId, setGrantingPreviewId] = useState<string | null>(null);
+  const [previewNow, setPreviewNow] = useState(() => Date.now());
   const [balances, setBalances] = useState<Record<string, { res: number, pur: number }>>({});
   const [gamificationStats, setGamificationStats] = useState<Record<string, AdminGamificationStats>>({});
   const [inkAdjustment, setInkAdjustment] = useState<Record<string, string>>({});
@@ -178,6 +182,11 @@ export default function AdminPage() {
   useEffect(() => {
     if (opsLogPage > opsLogPageCount) setOpsLogPage(opsLogPageCount);
   }, [opsLogPage, opsLogPageCount]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setPreviewNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const toggleRosterSort = (key: RosterSortKey) => {
     setRosterSort((prev) =>
@@ -608,6 +617,47 @@ export default function AdminPage() {
     }
   };
 
+  const handleGrantPreview = async (targetUser: User) => {
+    const label = `${PRO_FEATURE_PREVIEW_HOURS}h Pro`;
+    if (
+      !confirm(
+        `Give ${targetUser.displayName} a fresh ${label} preview?\n\nThis starts a new ${PRO_FEATURE_PREVIEW_HOURS}-hour Pro window from now (export, vault saves, Performance). It does not change paid Pro or Ink.`
+      )
+    ) {
+      return;
+    }
+    setGrantingPreviewId(targetUser.id);
+    try {
+      const res = await adminApiFetch('/api/admin/users/preview', {
+        method: 'POST',
+        body: JSON.stringify({ targetUserId: targetUser.id }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body.error || `Preview grant failed (${res.status})`);
+      }
+      const expiresAt = typeof body.expiresAt === 'string' ? body.expiresAt : computeProFeaturePreviewExpiresAt();
+      setUsers((prev) =>
+        prev.map((u) => (u.id === targetUser.id ? { ...u, proFeaturePreviewExpiresAt: expiresAt } : u))
+      );
+      setBlockedUsers((prev) =>
+        prev.map((u) => (u.id === targetUser.id ? { ...u, proFeaturePreviewExpiresAt: expiresAt } : u))
+      );
+      toast({
+        title: `${label} granted`,
+        description: `${targetUser.displayName} is on Pro preview until it runs out.`,
+      });
+    } catch (e: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Preview grant failed',
+        description: e.message,
+      });
+    } finally {
+      setGrantingPreviewId(null);
+    }
+  };
+
   const handleBlockUser = async (targetUser: User) => {
       try {
           await updateDoc(doc(db, 'users', targetUser.id), { status: 'blocked' });
@@ -880,6 +930,7 @@ export default function AdminPage() {
                         <div className="text-[9px] text-muted-foreground uppercase">{u.email}</div>
                       </TableCell>
                       <TableCell>
+                          <div className="space-y-1.5">
                           <Select value={u.subscriptionTier || 'none'} onValueChange={(val: any) => handleUpdateTier(u, val)}>
                               <SelectTrigger className={cn(
                                 "h-8 w-32 text-[9px] font-bold uppercase",
@@ -894,6 +945,35 @@ export default function AdminPage() {
                                   <SelectItem value="yearly" className="text-accent">PRO YR</SelectItem>
                               </SelectContent>
                           </Select>
+                          {u.subscriptionStatus === 'active' ? null : (
+                            <div className="space-y-1">
+                              {isProFeaturePreviewActive(u, previewNow) ? (
+                                <p className="flex items-center gap-1 font-code text-[9px] font-bold uppercase tracking-wide text-sky-300">
+                                  <Hourglass className="h-3 w-3 shrink-0" />
+                                  48h Pro · {formatProFeaturePreviewCountdown(u, previewNow)}
+                                </p>
+                              ) : u.proFeaturePreviewExpiresAt ? (
+                                <p className="font-code text-[8px] uppercase tracking-wide text-muted-foreground">
+                                  48h Pro ended
+                                </p>
+                              ) : null}
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-[8px] font-bold uppercase tracking-widest border-sky-500/40 text-sky-200 hover:bg-sky-500/10"
+                                disabled={grantingPreviewId === u.id}
+                                onClick={() => void handleGrantPreview(u)}
+                              >
+                                {grantingPreviewId === u.id
+                                  ? 'Granting…'
+                                  : isProFeaturePreviewActive(u, previewNow)
+                                    ? `Restart ${PRO_FEATURE_PREVIEW_HOURS}h`
+                                    : `Give ${PRO_FEATURE_PREVIEW_HOURS}h Pro`}
+                              </Button>
+                            </div>
+                          )}
+                          </div>
                       </TableCell>
                       <TableCell>
                         {(() => {
@@ -978,7 +1058,23 @@ export default function AdminPage() {
                           <p className="text-[8px] text-muted-foreground uppercase">best {gam?.longestStreak ?? 0}d</p>
                         </div>
                       </TableCell>
-                      <TableCell><div className="flex items-center gap-2 font-bold text-xs text-white"><Clock className="h-3 w-3 text-primary" />{(balances[u.id]?.res || 0).toLocaleString()}</div></TableCell>
+                      <TableCell>
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2 font-bold text-xs text-white">
+                            <Clock className="h-3 w-3 text-primary" />
+                            {(balances[u.id]?.res || 0).toLocaleString()}
+                          </div>
+                          {u.pendingWelcomeInk && (balances[u.id]?.res || 0) === 0 ? (
+                            <p className="text-[8px] font-code uppercase tracking-wide text-amber-300/80">
+                              pending verify
+                            </p>
+                          ) : u.returningIdentity && (balances[u.id]?.res || 0) === 0 ? (
+                            <p className="text-[8px] font-code uppercase tracking-wide text-muted-foreground">
+                              returning email
+                            </p>
+                          ) : null}
+                        </div>
+                      </TableCell>
                       <TableCell><div className="flex items-center gap-2 font-bold text-xs text-white"><Star className="h-3 w-3 text-orange-500" />{(balances[u.id]?.pur || 0).toLocaleString()}</div></TableCell>
                       <TableCell>
                           <div className="flex items-center gap-2">
