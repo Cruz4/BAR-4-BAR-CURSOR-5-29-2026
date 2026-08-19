@@ -468,7 +468,7 @@ export function coWriterIntentRowClass(
   checked: boolean = false
 ): string {
   const base =
-    'flex items-start gap-2 sm:gap-3 p-3 rounded-lg border transition-all group min-w-0 overflow-hidden';
+    'flex items-start gap-2 sm:gap-3 px-3 py-2 rounded-lg border transition-all group min-w-0';
   if (locked) {
     return cn(
       base,

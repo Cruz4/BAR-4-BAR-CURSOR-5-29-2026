@@ -3,7 +3,13 @@ import { isTrackEditorPath } from '@/lib/studio-tips-session';
 import type { Track } from '@/lib/types';
 
 export const BOOTH_MEMORY_KEY = 'b4b_booth_memory';
+export const BOOTH_MEMORY_DISMISSED_KEY = 'b4b_booth_memory_dismissed';
 const BAR_SNIPPET = 96;
+
+type DismissedBoothMemory = {
+  trackPath: string;
+  updatedAt: string;
+};
 
 export type BoothMemory = {
   trackPath: string;
@@ -58,6 +64,52 @@ export function writeLocalBoothMemory(memory: BoothMemory): void {
   } catch {
     /* ignore */
   }
+}
+
+function readDismissedBoothMemory(): DismissedBoothMemory | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(BOOTH_MEMORY_DISMISSED_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as DismissedBoothMemory;
+    if (!parsed?.trackPath || !isTrackEditorPath(parsed.trackPath)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function isBoothMemoryDismissed(memory: BoothMemory): boolean {
+  const dismissed = readDismissedBoothMemory();
+  if (!dismissed || dismissed.trackPath !== memory.trackPath) return false;
+  const memoryTs = Date.parse(memory.updatedAt);
+  const dismissedTs = Date.parse(dismissed.updatedAt);
+  if (!Number.isFinite(memoryTs) || !Number.isFinite(dismissedTs)) return true;
+  return memoryTs <= dismissedTs;
+}
+
+/** Hide from Scene until a newer sheet write. Does not delete the track. */
+export function dismissBoothMemory(memory: BoothMemory): void {
+  if (typeof window === 'undefined') return;
+  const now = Date.now();
+  const memoryTs = Date.parse(memory.updatedAt);
+  const dismissedAt = Number.isFinite(memoryTs) && memoryTs > now
+    ? memory.updatedAt
+    : new Date(now).toISOString();
+  try {
+    localStorage.setItem(
+      BOOTH_MEMORY_DISMISSED_KEY,
+      JSON.stringify({ trackPath: memory.trackPath, updatedAt: dismissedAt } satisfies DismissedBoothMemory)
+    );
+    localStorage.removeItem(BOOTH_MEMORY_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function visibleBoothMemory(memory: BoothMemory | null): BoothMemory | null {
+  if (!memory || isBoothMemoryDismissed(memory)) return null;
+  return memory;
 }
 
 /** Local snapshot now; Firestore craft resume when signed in. */

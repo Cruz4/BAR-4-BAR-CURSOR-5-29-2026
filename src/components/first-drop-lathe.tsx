@@ -348,14 +348,17 @@ export function FirstDropLatheHost() {
               }}
             />
 
-            <div className="flex items-start gap-3 rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/5 px-3 py-2.5">
+            <div className="flex min-h-10 items-center gap-3 rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/5 px-3">
               <Checkbox
                 id="drop-rights"
                 checked={rightsChecked}
                 onCheckedChange={(checked) => setRightsChecked(checked === true)}
-                className="mt-0.5 border-fuchsia-300 data-[state=checked]:bg-fuchsia-400 data-[state=checked]:text-black"
+                className="border-fuchsia-300 data-[state=checked]:bg-fuchsia-400 data-[state=checked]:text-black"
               />
-              <Label htmlFor="drop-rights" className="cursor-pointer text-[11px] font-medium leading-snug text-foreground/90">
+              <Label
+                htmlFor="drop-rights"
+                className="flex cursor-pointer items-center text-[11px] font-medium leading-none text-foreground/90"
+              >
                 I have the rights to sell this recording.
               </Label>
             </div>

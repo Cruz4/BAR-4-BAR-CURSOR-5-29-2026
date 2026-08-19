@@ -21,7 +21,12 @@ import {
   type ActivitySummary,
   type ActivityType,
 } from '@/lib/activity/types';
-import { craftToBoothMemory, readLocalBoothMemory, type BoothMemory } from '@/lib/scene/booth-memory';
+import {
+  craftToBoothMemory,
+  readLocalBoothMemory,
+  visibleBoothMemory,
+  type BoothMemory,
+} from '@/lib/scene/booth-memory';
 
 export type EmitActivityClientInput = {
   type: ActivityType;
@@ -325,15 +330,16 @@ export function persistCraftResume(path: string, extras?: CraftResumePatch | str
 export async function fetchCraftResume(): Promise<BoothMemory | null> {
   const local = readLocalBoothMemory();
   const user = auth.currentUser;
-  if (!user) return local;
+  if (!user) return visibleBoothMemory(local);
   try {
     const snap = await getDoc(doc(db, 'users', user.uid, 'activityMeta', 'craft'));
-    if (!snap.exists()) return local;
+    if (!snap.exists()) return visibleBoothMemory(local);
     const remote = craftToBoothMemory(snap.data() as Parameters<typeof craftToBoothMemory>[0]);
-    if (!remote) return local;
-    if (!local) return remote;
-    return Date.parse(remote.updatedAt) >= Date.parse(local.updatedAt) ? remote : local;
+    if (!remote) return visibleBoothMemory(local);
+    if (!local) return visibleBoothMemory(remote);
+    const newer = Date.parse(remote.updatedAt) >= Date.parse(local.updatedAt) ? remote : local;
+    return visibleBoothMemory(newer);
   } catch {
-    return local;
+    return visibleBoothMemory(local);
   }
 }

@@ -3045,7 +3045,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                   <Checkbox
                                     checked={isActiveForTrack}
                                     onCheckedChange={(c) => handleIntentCheck(intent, !!c)}
-                                    className="border-sky-500 data-[state=checked]:bg-sky-500 shrink-0 mt-0.5 self-center"
+                                    className="border-sky-500 data-[state=checked]:bg-sky-500 shrink-0 mt-0.5"
                                   />
                                 );
                                 const intentTextClass = cn(
@@ -3103,23 +3103,16 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                 return (
                                     <div
                                       key={intent}
-                                      className={cn(
-                                        coWriterIntentRowClass(intentsMasterOn, isLocked, isChecked),
-                                        'flex-col items-stretch gap-2'
-                                      )}
+                                      className={coWriterIntentRowClass(intentsMasterOn, isLocked, isChecked)}
                                     >
-                                      <div className="flex items-start gap-2 w-full min-w-0">
-                                        {intentCheckbox}
-                                        <span className={cn(intentTextClass, 'flex-1')}>{intent}</span>
-                                      </div>
-                                      <div className="flex items-center gap-1 justify-end w-full pl-6">
-                                        {isLocked && (
-                                          <span className="mr-auto text-[9px] font-bold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400 whitespace-nowrap">
-                                            End in
-                                          </span>
-                                        )}
-                                        {intentActions}
-                                      </div>
+                                      {intentCheckbox}
+                                      <span className={cn(intentTextClass, 'flex-1')}>{intent}</span>
+                                      {isLocked && (
+                                        <span className="self-start pt-1 text-[9px] font-bold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400 whitespace-nowrap">
+                                          End in
+                                        </span>
+                                      )}
+                                      {intentActions}
                                     </div>
                                 );
                             })}
