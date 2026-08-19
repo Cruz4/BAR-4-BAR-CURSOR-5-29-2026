@@ -21,7 +21,7 @@ export function FoldNavButton() {
           variant="ghost"
           size="icon"
           className="relative h-8 w-8 shrink-0 text-amber-300 hover:bg-amber-500/10 md:h-9 md:w-9"
-          onClick={() => router.push('/folds')}
+          onClick={() => router.push('/msgs')}
           aria-label={unread > 0 ? `Msgs, ${unread} unread` : 'Msgs'}
         >
           <MessageSquare className="h-4 w-4 md:h-5 md:w-5" />

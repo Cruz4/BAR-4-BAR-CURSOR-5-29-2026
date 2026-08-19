@@ -17,6 +17,7 @@ import {
   MessageCircle,
   Repeat2,
   UserPlus,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -53,6 +54,10 @@ function TypeIcon({ type }: { type: ActivityType }) {
       return <Mail className={cn(className, 'text-sky-400')} />;
     case 'fold_pass':
       return <MessageCircle className={cn(className, 'text-amber-400')} />;
+    case 'collab_invite':
+    case 'collab_edit':
+    case 'collab_message':
+      return <Users className={cn(className, 'text-violet-400')} />;
     case 'post_love':
       return <Heart className={cn(className, 'text-rose-400')} />;
     case 'post_reply':

@@ -98,7 +98,7 @@ export function AdminFoldsFeatureCard() {
                   Enable Msgs
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 max-w-md">
-                  When on: header, Scene dock, Artist Home, Your circle, and /folds. Contact-on-page
+                  When on: header, Scene dock, Artist Home, Your circle, and /msgs. Contact-on-page
                   (show / request) is separate and stays available.
                 </p>
               </div>
@@ -124,7 +124,7 @@ export function AdminFoldsFeatureCard() {
             ) : null}
 
             <ul className="text-[11px] text-muted-foreground space-y-1.5 list-disc list-inside">
-              <li>Inbox <code className="text-foreground/80">/folds</code> · thread <code className="text-foreground/80">/folds/[id]</code></li>
+              <li>Inbox <code className="text-foreground/80">/msgs</code> · thread <code className="text-foreground/80">/msgs/[id]</code></li>
               <li>Firestore listeners + FCM only while this is on</li>
               <li>No Ink charged. Visitor and Pro both get it when live.</li>
             </ul>

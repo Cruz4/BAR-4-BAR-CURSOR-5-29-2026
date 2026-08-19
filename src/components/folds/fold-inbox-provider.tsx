@@ -67,7 +67,7 @@ export function FoldInboxProvider({ children }: { children: React.ReactNode }) {
           seenBarRef.current.set(fold.id, fold.lastBarId);
           if (!fold.lastBarId || fold.lastBarId === prev) continue;
           if (fold.lastSenderId === uid) continue;
-          if (pathnameRef.current === `/folds/${fold.id}`) continue;
+          if (pathnameRef.current === `/msgs/${fold.id}`) continue;
           const peer = fold.members[peerIdOf(fold.memberIds, uid)];
           setSlip({
             id: fold.lastBarId,

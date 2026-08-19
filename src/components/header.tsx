@@ -347,7 +347,7 @@ export function Header() {
                       <DropdownMenuItem className="md:hidden" onClick={() => setGuideOpen(true)}><HelpCircle className="mr-2 h-4 w-4 text-primary" /><span>Studio Manual</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/studio-progress')}><Trophy className="mr-2 h-4 w-4 text-amber-400" /><span>Studio Progress</span></DropdownMenuItem>
                       {foldsOn ? (
-                      <DropdownMenuItem onClick={() => router.push('/folds')}>
+                      <DropdownMenuItem onClick={() => router.push('/msgs')}>
                         <MessageSquare className="mr-2 h-4 w-4 text-amber-400" />
                         <span className="flex-1">Msgs</span>
                         {foldUnread > 0 && (

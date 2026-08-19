@@ -58,6 +58,7 @@ import { AdminAchievementsTab } from '@/components/admin-achievements-tab';
 import { AdminInviteGateCard } from '@/components/admin-invite-gate-card';
 import { AdminLockFeatureCard } from '@/components/admin-lock-feature-card';
 import { AdminFoldsFeatureCard } from '@/components/admin-folds-feature-card';
+import { AdminCollabSheetFeatureCard } from '@/components/admin-collab-sheet-feature-card';
 import { AdminFirstDropsCard } from '@/components/admin-first-drops-card';
 import { AdminHouseBarCard } from '@/components/admin-house-bar-card';
 import { AdminWeeklyChallengeCard } from '@/components/admin-weekly-challenge-card';
@@ -1267,6 +1268,7 @@ export default function AdminPage() {
         <TabsContent value="config" className="space-y-8">
             <AdminLockFeatureCard />
             <AdminFoldsFeatureCard />
+            <AdminCollabSheetFeatureCard />
             <AdminFirstDropsCard />
             <AdminHouseBarCard />
             <AdminWeeklyChallengeCard />

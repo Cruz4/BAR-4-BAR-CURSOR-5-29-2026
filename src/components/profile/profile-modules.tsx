@@ -991,6 +991,7 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
                 starMarkSeed={friend.starMarkSeed}
                 studioChrome={parseStudioBadge(friend.studioBadge) || 'free'}
                 size={22}
+                hideInitials
               />
               {friend.name}
             </span>

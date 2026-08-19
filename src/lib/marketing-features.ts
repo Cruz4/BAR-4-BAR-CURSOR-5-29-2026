@@ -86,6 +86,23 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     mediaVariant: 'showcase',
   },
   {
+    id: 'collab-sheet',
+    eyebrow: 'Collab Sheet',
+    title: 'Write Together. Live.',
+    description:
+      'Studio Pro opens a live editable sheet on any track — invite friends, see who\u2019s on the page (2/13 live), chat in a bottom drawer, and watch bars sync in real time. DNA Drop is a snapshot; Collab Sheet is the same room.',
+    bullets: [
+      'Pro to share as owner — collaborators edit with their account',
+      'Presence chip + in-sheet chat — no pop-ups or extra windows',
+      'Vault section + album badge when a sheet is open',
+    ],
+    mediaSrc: '/marketing/hero-workstation.png',
+    mediaType: 'image',
+    mediaAlt: 'Bar 4 Bar Collab Sheet — live shared lyric editing on the workstation',
+    layout: 'split-reverse',
+    mediaVariant: 'showcase',
+  },
+  {
     id: 'strain-lab',
     eyebrow: 'DNA & Remix',
     title: 'Decode. Save. Remix.',
@@ -143,7 +160,7 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     title: 'Concept Arcs',
     description:
       'Ordered tracklists, shared Album DNA, one-click DNA Drops — build albums, not one-off prompts. Live drops show on your Artist Home automatically.',
-    bullets: ['Drag-order tracklist', 'DNA inherits per track', 'DNA Drop for collab'],
+    bullets: ['Drag-order tracklist', 'DNA inherits per track', 'DNA Drop snapshots · Collab Sheet live editing'],
     mediaSrc: '/marketing/feature-album-blueprint.png',
     mediaType: 'image',
     mediaAlt: 'Album blueprint with tracklist and Album DNA panel',

@@ -71,6 +71,7 @@ import {
   FlaskConical,
   ScanLine,
   Link2,
+  Users,
   GitBranch,
   Settings,
   ListRestart,
@@ -222,6 +223,10 @@ const CORE_FAQS = [
     {
       q: "What is DNA Drop?",
       a: "Studio Pro — publish a shareable lyric snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live lyric drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. Selling is separate: Press a song from the left panel or The Scene dock."
+    },
+    {
+      q: "What is Collab Sheet?",
+      a: "Studio Pro — share a live editable lyric sheet on a track with friends. Everyone on the sheet sees edits in real time, a 2/13-style presence chip (live of shared), in-sheet chat at the bottom, and activity alerts when someone writes 4+ new bars or changes structure. Only the owner can invite or revoke access. DNA Drop is a snapshot import; Collab Sheet is the same room."
     },
     {
       q: "What happens during Creative Syncing vs DNA Extraction?",
@@ -436,7 +441,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <li><strong>Generate one bar</strong> — tap that line → Bar Workstation at the bottom → Generate Next (~{AI_COSTS.generateNextLine} Ink).</li>
                   </ol>
                   <p className="text-xs border-l-2 border-primary/30 pl-3 italic">
-                    Skip until you have a bar: Generation Workstation, DNA Drop, Press a song, Creative Effects, Takes, export, the sun/moon theme toggle. Co-Writer rails (DNA, Vibe, Intents, Style DNA) are optional — flip a switch on only if you want Next to follow it.
+                    Skip until you have a bar: Generation Workstation, DNA Drop, Collab Sheet, Press a song, Creative Effects, Takes, export, the sun/moon theme toggle. Co-Writer rails (DNA, Vibe, Intents, Style DNA) are optional — flip a switch on only if you want Next to follow it.
                   </p>
                   <p className="text-xs text-muted-foreground">
                     When you do sell or share later: <strong>Press a song</strong> = audio + price. <strong>DNA Drop</strong> = lyric link. Do not open DNA Drop to sell.
@@ -516,7 +521,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                       <li><strong>Write the song</strong> in The Vault — lyrics, DNA, vibe as usual.</li>
                       <li><strong>Press a song</strong> from the left panel on the sheet, or from The Scene dock. Pick the track — you do not open DNA Drop to sell.</li>
                       <li><strong>Upload the song and set a price</strong> — fixed price, or pay-what-you-want (floor $1.00). Then Press it live.</li>
-                      <li><strong>DNA Drop stays lyrics-only</strong> — collaborators import bars and DNA. Selling lives on First Drops.</li>
+                      <li><strong>DNA Drop stays lyrics-only</strong> — collaborators import bars and DNA. <strong>Collab Sheet</strong> is live co-writing on the same track. Selling lives on First Drops.</li>
                       <li><strong>Fans find it</strong> as Listen / buy at the top of your Artist Home, on The Scene, and on the share link.</li>
                       <li><strong>Cash out</strong> — open Earnings, connect Stripe payouts, then Stripe sends your {dropArtistShareLabel()} share to your bank.</li>
                     </ol>
@@ -778,6 +783,10 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <p>Studio Pro — publish a shareable lyric snapshot from the left panel. Collaborators sign in and import lyrics, structure, Creative DNA, vibe, and related strains. Update snapshot after edits; <strong>Take offline</strong> to revoke the link. To sell the song, use <strong>Press a song</strong> on The Scene — DNA Drop is not the sell desk.</p>
                 </ChapterCard>
 
+                <ChapterCard icon={<Users className="text-violet-300" />} title="Collab Sheet" colorClass="border-l-violet-500 text-violet-300">
+                    <p>Studio Pro — open <strong>Collab Sheet</strong> from the left panel to share a live editable sheet on this track. Invite friends; edits sync in real time. Top-right shows live presence (e.g. 2/13). Chat expands from the bottom drawer — no pop-up window. Only the owner can invite or revoke. Shared sheets appear in the Vault Collab Sheets section; albums show a Collab badge when any track is live.</p>
+                </ChapterCard>
+
                 <ChapterCard icon={<NotebookText className="text-muted-foreground" />} title="Export Track &amp; Vault Backup" colorClass="border-l-muted-foreground">
                     <ul className="list-disc list-inside space-y-2 text-sm">
                         <li><strong>Export Track</strong> — left panel PDF export anytime.</li>
@@ -794,6 +803,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                             <AccordionContent className="text-xs space-y-2">
                                 <p>• <strong>Status:</strong> Manage titles and enter Performance Mode.</p>
                                 <p>• <strong>Press a song:</strong> Sell desk — upload audio, set a price, press it live on First Drops. Not DNA Drop.</p>
+                                <p>• <strong>DNA Drop / Collab Sheet:</strong> DNA Drop = lyric snapshot link. Collab Sheet = live shared editing with presence + chat.</p>
                                 <p>• <strong>Structure:</strong> Live song map (Verse, Hook, Bridge). Tap a section to jump the sheet; Add Section to grow the form. Not the Smart Structure paste tool.</p>
                                 <p>• <strong>Vibe Suggester:</strong> Generate suno/udio instrumentation prompts.</p>
                             </AccordionContent>

@@ -6,7 +6,7 @@ import { StudioLoader } from '@/components/studio-loader';
 import { FoldSheet } from '@/components/folds/fold-sheet';
 import { useAuth } from '@/hooks/use-auth';
 
-export default function FoldSheetPage() {
+export default function MsgThreadPage() {
   const { user, authReady } = useAuth();
   const router = useRouter();
   const params = useParams();
@@ -14,7 +14,7 @@ export default function FoldSheetPage() {
 
   useEffect(() => {
     if (!authReady) return;
-    if (!user?.id) router.replace(`/login?next=/folds/${encodeURIComponent(foldId)}`);
+    if (!user?.id) router.replace(`/login?next=/msgs/${encodeURIComponent(foldId)}`);
   }, [authReady, user?.id, router, foldId]);
 
   if (!authReady || !user || !foldId) {

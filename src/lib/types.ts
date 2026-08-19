@@ -149,6 +149,8 @@ export interface Track {
   suggestedTitlesHistory?: string[][];
   isPublic?: boolean;
   shareId?: string;
+  /** Active Collab Sheet — live multi-user editing session id. */
+  collabSheetId?: string;
   /**
    * Links / embeds on the public DNA Drop page (YouTube, Spotify, etc.).
    * Included in the published snapshot; edit from the DNA Drop dialog.

@@ -14,7 +14,7 @@ export default function robots(): MetadataRoute.Robots {
         '/marketing/capture',
         '/studio-progress',
         '/usage',
-        '/folds',
+        '/msgs',
         '/activity',
       ],
     },

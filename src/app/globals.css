@@ -2124,6 +2124,17 @@
     color: rgba(76, 40, 110, 0.88);
   }
 
+  /* Vault light theme — pron + gloss need solid contrast on pale chamber sky */
+  html:not(.dark) .scene-block-neon[data-phase='day'] .scene-block-neon-pron {
+    color: rgba(91, 33, 105, 0.96);
+    text-shadow: none;
+  }
+
+  html:not(.dark) .scene-block-neon[data-phase='day'] .scene-block-neon-gloss {
+    color: rgba(45, 28, 68, 0.94);
+    text-shadow: none;
+  }
+
   .scene-block-building-back {
     background: #1a1730;
     clip-path: polygon(0 100%, 0 8%, 50% 0%, 100% 8%, 100% 100%);

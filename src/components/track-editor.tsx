@@ -58,6 +58,7 @@ import {
   CheckCircle2,
   Pencil,
   ChevronLeft,
+  ChevronRight,
   Mic,
   ArrowUpRight,
   Check,
@@ -81,6 +82,7 @@ import {
   Globe,
   Undo2,
   Disc3,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -249,6 +251,13 @@ import { GenerateSongDraftDialog } from './generate-song-draft-dialog';
 import { ExportDialog } from './export-dialog';
 import { ShareDialog } from './share-dialog';
 import { DnaDropLiveIndicator } from './dna-drop-live-indicator';
+import { CollabSheetLiveIndicator } from '@/components/collab-sheet/collab-sheet-live-indicator';
+import { CollabSheetSession } from '@/components/collab-sheet/collab-sheet-session';
+import { CollabSheetFloatingPresence } from '@/components/collab-sheet/collab-sheet-floating-presence';
+import { SheetMsgsDock } from '@/components/collab-sheet/sheet-msgs-dock';
+import { useCollabSheetFeature } from '@/hooks/use-collab-sheet-feature';
+import { fetchFriendships, type Friendship } from '@/lib/profile/social-client';
+import { useGamification } from '@/context/gamification-context';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import {
@@ -781,7 +790,7 @@ function mobileLyricsPanelClass(active: boolean, edge?: 'left' | 'right') {
   );
 }
 
-function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSectionId, setExportDialogOpen, setShareDialogOpen, onCollapse, leftCollapsed, setGenerateDraftOpen, scratchPadRef, isPro, mobileActive = false, trackLocked = false, tierLocked = false, completeLocked = false, workstationAttention = false, tourMobilePad = false, isGuestTryMode = false }: any) {
+function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSectionId, setExportDialogOpen, setShareDialogOpen, setCollabShareOpen, onCollapse, leftCollapsed, setGenerateDraftOpen, scratchPadRef, isPro, mobileActive = false, trackLocked = false, tierLocked = false, completeLocked = false, workstationAttention = false, tourMobilePad = false, isGuestTryMode = false }: any) {
   const { user } = useAuth();
   const router = useRouter();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
@@ -920,11 +929,14 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
 
   if (leftCollapsed && !mobileActive) {
     return (
-        <div className={cn("flex flex-col items-center h-full bg-card border-r w-[56px] shrink-0 overflow-hidden py-6 z-30", mobileLyricsPanelClass(mobileActive, 'left'))}>
+        <div className={cn("flex flex-col items-center h-full bg-card border-r w-[56px] shrink-0 overflow-hidden py-3 z-30", mobileLyricsPanelClass(mobileActive, 'left'))}>
+            <CollapsedPanelExpandHint side="left" label="Expand Workstation" onExpand={() => onCollapse(false)} />
+            <div className="flex flex-col items-center w-full min-h-0 flex-1 overflow-y-auto studio-scrollbar">
             <NeuralStripItem text="STATUS" active={track.status === 'complete'} color="#0ea5e9" glow={false} onClick={() => onCollapse(false)} />
             <NeuralStripItem text="STRUC" active={true} color="#eab308" glow={false} onClick={() => onCollapse(false)} />
             <NeuralStripItem text="VIBE" active={isVibeActive(track)} color="#f59e0b" glow={false} onClick={() => onCollapse(false)} />
             <NeuralStripItem text="SCENE" active={false} color="#6366f1" glow={false} onClick={() => onCollapse(false)} />
+            </div>
         </div>
     );
   }
@@ -1208,6 +1220,32 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                       />
                     )}
                     </div>
+                    <div data-tour="collab-sheet" className="w-full min-w-0">
+                    {isPro ? (
+                      <Hint
+                        actionSafe
+                        content={
+                          <p className="text-[10px] font-bold leading-snug">
+                            Share a live editable sheet with friends — changes sync in real time on the same track.
+                          </p>
+                        }
+                      >
+                      <Button variant="secondary" size="sm" className="w-full min-w-0 bg-violet-500/10 hover:bg-violet-500/20 text-violet-200 border border-violet-500/25 text-[9px] font-bold h-9 uppercase justify-start leading-none pl-2 pr-2.5 overflow-visible" onClick={() => setCollabShareOpen(true)}><Users className="mr-2 h-4 w-4 shrink-0" /> <span className="flex items-center justify-between gap-2 min-w-0 flex-1 overflow-visible"><span className="truncate min-w-0">Collab Sheet</span><CollabSheetLiveIndicator collabSheetId={track.collabSheetId} variant="compact" /></span></Button>
+                      </Hint>
+                    ) : (
+                      <LockedProFeatureButton
+                        feature="Collab Sheet"
+                        benefit="Invite friends to write on the same lyric sheet live — edits sync in real time."
+                        example="Two writers on one track, same bars updating as you type."
+                        ctaLabel="Collab Sheet — Go Pro"
+                        icon={Users}
+                        iconClassName="text-violet-300"
+                        label={<span className="truncate flex items-center gap-2 min-w-0">Collab Sheet</span>}
+                        variant="outline"
+                        className="w-full min-w-0 text-[9px] font-bold h-9 uppercase px-2 bg-violet-500/10 text-violet-200 border border-violet-500/25"
+                      />
+                    )}
+                    </div>
                   </div>
               </CardContent>
           </Card>
@@ -1330,6 +1368,38 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   );
 }
 
+function CollapsedPanelExpandHint({
+  side,
+  label,
+  onExpand,
+}: {
+  side: 'left' | 'right';
+  label: string;
+  onExpand: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onExpand}
+      aria-label={label}
+      title={label}
+      className={cn(
+        'mb-2 flex w-[calc(100%-10px)] shrink-0 flex-col items-center gap-1 rounded-md border border-border/60 bg-muted/25 px-1 py-2',
+        'text-muted-foreground transition-all',
+        'hover:border-primary/45 hover:bg-primary/10 hover:text-primary',
+        'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40'
+      )}
+    >
+      {side === 'left' ? (
+        <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      ) : (
+        <ChevronLeft className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      )}
+      <span className="font-code text-[7px] font-bold uppercase leading-none tracking-[0.12em]">Open</span>
+    </button>
+  );
+}
+
 function NeuralStripItem({
   text,
   active,
@@ -1383,7 +1453,7 @@ function lineGenInkKey(mode: 'next' | 'previous', sectionId: string, barIdx: num
   return `generateNextLine-${mode}-${sectionId}-${barIdx}`;
 }
 
-function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, rhymePulseArmed = false, isInkArmed, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false, isGuestTryMode = false, onNewStarter }: any) {
+function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, rhymePulseArmed = false, isInkArmed, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false, isGuestTryMode = false, onNewStarter, collabEnabled = false, collabUserId, collabUserName, collabUserSlug, collabFriendships = [], collabIsOwner = false, collabShareOpen = false, onCollabShareOpenChange, onCollabSheetIdChange }: any) {
   const isPhoneView = useIsMobile();
   const [fontSize, setFontSize] = useState<'xs' | 'sm' | 'md' | 'lg'>('md');
   const phoneDefaultSizeAppliedRef = useRef(false);
@@ -1708,6 +1778,24 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
   };
 
   return (
+    <CollabSheetSession
+      collabSheetId={track.collabSheetId}
+      enabled={Boolean(collabEnabled && collabUserId)}
+      userId={collabUserId}
+      userName={collabUserName}
+      userSlug={collabUserSlug}
+      trackId={track.id}
+      albumId={album.id}
+      trackTitle={track.title}
+      albumTitle={album.title}
+      sections={track.sections}
+      isOwner={collabIsOwner}
+      friendships={collabFriendships}
+      onRemoteSections={(sections) => onUpdateTrack({ sections })}
+      onCollabSheetChange={onCollabSheetIdChange}
+      shareOpen={collabShareOpen}
+      onShareOpenChange={onCollabShareOpenChange}
+    >
         <div className={cn("flex flex-1 flex-col min-w-0 basis-0 h-full relative overflow-hidden", mobileLyricsPanelClass(mobileActive))}>
       <div className="h-14 max-md:h-auto max-md:min-h-[3.25rem] max-md:py-1.5 px-2 max-md:px-2 md:px-4 flex flex-row items-center gap-2 bg-card z-20 border-b shrink-0 min-w-0 max-md:overflow-x-auto max-md:overflow-y-hidden md:overflow-hidden studio-scrollbar">
         <div className="flex items-center gap-2 min-w-0 shrink-0">
@@ -1839,6 +1927,9 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
         )}
         style={notebookStyle}
       >
+        {collabEnabled && collabUserId ? (
+          <CollabSheetFloatingPresence userId={collabUserId} lineHeight={activeLineHeight} />
+        ) : null}
         <div className="w-full max-full pb-12">
           {!track.sections || track.sections.length === 0 ? (
               <div data-tour="lyrics-sheet-focus" className="flex flex-col items-center justify-center h-[400px] text-center gap-6 animate-in fade-in zoom-in duration-1000">
@@ -2054,6 +2145,10 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
         </div>
       </div>
 
+      <div className="relative shrink-0 z-[45]">
+        {collabUserId && !isGuestTryMode ? (
+          <SheetMsgsDock isMinimized={isMinimized} friendships={collabFriendships} />
+        ) : null}
       <div data-tour="bar-workstation" className={cn("bg-card border-t shadow-[0_-10px_40px_rgba(0,0,0,0.5)] shrink-0 z-[40] relative w-full min-w-0", isMinimized ? "h-10 overflow-hidden" : "min-h-[124px] max-md:max-h-[38dvh] max-md:overflow-y-auto max-md:studio-scrollbar")}>
         <div
           className={cn(
@@ -2342,6 +2437,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
             )}
         </div>
       </div>
+      </div>
       <PostLinesToBlockDialog
         open={Boolean(blockPost)}
         onOpenChange={(next) => {
@@ -2352,6 +2448,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
         trackTitle={track.title}
       />
     </div>
+    </CollabSheetSession>
   );
 }
 
@@ -2560,12 +2657,15 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
 
   if (rightCollapsed && !mobileActive) {
     return (
-        <div className={cn("flex flex-col items-center h-full bg-card border-l w-[56px] shrink-0 overflow-hidden py-6 z-30", mobileLyricsPanelClass(mobileActive, 'right'))}>
+        <div className={cn("flex flex-col items-center h-full bg-card border-l w-[56px] shrink-0 overflow-hidden py-3 z-30", mobileLyricsPanelClass(mobileActive, 'right'))}>
+            <CollapsedPanelExpandHint side="right" label="Expand Co-Writer" onExpand={() => onCollapse(false)} />
+            <div className="flex flex-col items-center w-full min-h-0 flex-1 overflow-y-auto studio-scrollbar">
             <NeuralStripItem text="DNA" color="#10b981" active={dnaSectionLit || isAlbumDnaActive(track, album)} onClick={() => onCollapse(false)} />
             <NeuralStripItem text="VIBE" color="#f59e0b" active={isVibeActive(track)} onClick={() => onCollapse(false)} />
             <NeuralStripItem text="INTENT" color="#0ea5e9" active={isIntentsActive(track)} onClick={() => onCollapse(false)} />
             <NeuralStripItem text="GUARD" color="#f43f5e" active={isGuardrailsActive(track)} onClick={() => onCollapse(false)} />
             <NeuralStripItem text="STYLE" color="#d946ef" active={isStyleActive(track)} onClick={() => onCollapse(false)} />
+            </div>
         </div>
     );
   }
@@ -3547,6 +3647,10 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const [styleVaultOpen, setStyleVaultOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [collabShareOpen, setCollabShareOpen] = useState(false);
+  const [friendships, setFriendships] = useState<Friendship[]>([]);
+  const { enabled: collabSheetOn } = useCollabSheetFeature();
+  const { summary } = useGamification();
   const [freestyleOpen, setFreestyleOpen] = useState(false);
   const [isRhymeLoading, setIsRhymeLoading] = useState(false);
   const [saveStyleNamingOpen, setSaveStyleNamingOpen] = useState(false);
@@ -3626,6 +3730,17 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     if (!track || !user) return;
     trackStudioEvent(ANALYTICS_EVENTS.TRACK_EDITOR_OPEN, { trackId, albumId });
   }, [trackId, albumId, track?.id, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    void fetchFriendships(user.id).then((list) => {
+      if (!cancelled) setFriendships(list);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   const effectiveStyleProfile = useMemo((): StyleProfile => {
     if (styleProfile) return styleProfile;
@@ -4098,6 +4213,14 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     if (updates.sections) setSectionsHistory(prev => [track.sections, ...prev].slice(0, 20));
     updateTrack(albumId, trackId, updates);
   }, [track, albumId, trackId, albums, user, updateTrack, toast]);
+
+  const handleCollabSheetIdChange = useCallback(
+    (id: string | null) => {
+      if (id) handleUpdateTrack({ collabSheetId: id });
+      else handleUpdateTrack({ collabSheetId: undefined });
+    },
+    [handleUpdateTrack]
+  );
 
   const handleUndo = useCallback(() => {
     if (track && isTrackOverTierLimit(trackId, albumId, albums, user)) {
@@ -4683,7 +4806,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         </div>
       )}
       <div className="flex flex-1 min-h-0 overflow-hidden w-full">
-      <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={isMobileLayout && mobilePanelTab === 'workstation'} trackLocked={editsLocked} tierLocked={tierLocked} completeLocked={completeLocked} workstationAttention={workstationAttention} tourMobilePad={tourActive && isMobileLayout} isGuestTryMode={isGuestTryMode} />
+      <LeftPanel track={track} album={album} onUpdateTrack={handleUpdateTrack} activeSectionId={activeSectionId} setActiveSectionId={setActiveSectionId} setExportDialogOpen={setExportDialogOpen} setShareDialogOpen={setShareDialogOpen} setCollabShareOpen={setCollabShareOpen} onCollapse={setLeftCollapsed} leftCollapsed={leftCollapsed} setGenerateDraftOpen={setGenerateDraftOpen} scratchPadRef={scratchPadRef} isPro={isPro} mobileActive={isMobileLayout && mobilePanelTab === 'workstation'} trackLocked={editsLocked} tierLocked={tierLocked} completeLocked={completeLocked} workstationAttention={workstationAttention} tourMobilePad={tourActive && isMobileLayout} isGuestTryMode={isGuestTryMode} />
       <CenterPanel track={track} onUpdateTrack={handleUpdateTrack} handleSharedLineGeneration={handleSharedLineGeneration} activeGeneratorBar={activeGeneratorBar} setActiveGeneratorBar={setActiveGeneratorBar} activeBarText={activeBarText} setActiveBarText={setActiveBarText} setFreestyleOpen={(open: boolean) => {
         if (open && isGuestTryMode) {
           void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.LOCKED_FEATURE, { feature: 'Freestyle Pad' });
@@ -4698,7 +4821,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
           return;
         }
         setSmartStructureOpen(open);
-      }} isRhymeLoading={isRhymeLoading} rhymePulseArmed={isArmed('findRhymes')} isInkArmed={isArmed} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleDismissGenerationOptions={handleDismissGenerationOptions} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={isMobileLayout && mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} isGuestTryMode={isGuestTryMode} onNewStarter={handleNewStarter} />
+      }} isRhymeLoading={isRhymeLoading} rhymePulseArmed={isArmed('findRhymes')} isInkArmed={isArmed} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleDismissGenerationOptions={handleDismissGenerationOptions} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={isMobileLayout && mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} isGuestTryMode={isGuestTryMode} onNewStarter={handleNewStarter} collabEnabled={collabSheetOn && Boolean(user) && !isGuestTryMode} collabUserId={user?.id} collabUserName={user?.displayName || 'Artist'} collabUserSlug={summary.profileSlug} collabFriendships={friendships} collabIsOwner={track.ownerId === user?.id} collabShareOpen={collabShareOpen} onCollabShareOpenChange={setCollabShareOpen} onCollabSheetIdChange={handleCollabSheetIdChange} />
       <RightPanel 
         track={track} 
         album={album} 

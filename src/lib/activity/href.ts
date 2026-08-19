@@ -85,7 +85,7 @@ export function activityOpenHref(event: ActivityEvent, viewerSlug?: string): str
     return profileHref(event.actorSlug) || '/friends';
   }
   if (event.type === 'friend_request' || event.type === 'contact_request') return '/activity?tab=requests';
-  if (event.type === 'fold_pass') return event.href || '/folds';
+  if (event.type === 'fold_pass') return event.href || '/msgs';
   if (event.type === 'contact_accepted' && event.actorSlug) {
     return profileHref(event.actorSlug) || '/activity';
   }

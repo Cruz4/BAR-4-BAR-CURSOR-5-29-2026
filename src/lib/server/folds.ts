@@ -346,7 +346,7 @@ async function notifyPeer(opts: { fold: FoldDoc; bar: FoldBar; senderName: strin
       recipientId: peerId,
       recipientName: opts.fold.members[peerId]?.name || 'Artist',
       preview: foldPreview(opts.bar.text),
-      href: `/folds/${opts.fold.id}`,
+      href: `/msgs/${opts.fold.id}`,
     });
   }
 
@@ -363,7 +363,7 @@ async function notifyPeer(opts: { fold: FoldDoc; bar: FoldBar; senderName: strin
   if (!token) return;
 
   const origin = getPublicAppUrl();
-  const href = `${origin}/folds/${opts.fold.id}`;
+  const href = `${origin}/msgs/${opts.fold.id}`;
   const title = opts.firstPass ? `${opts.senderName} sent you a message` : opts.senderName;
   await getMessaging().send({
     token,

@@ -34,6 +34,8 @@ type ArtistStarAvatarProps = {
   className?: string;
   toneClass?: string;
   studioChrome?: StudioNameChrome | null;
+  /** Hide 2-letter initials inside the stock star (e.g. tiny chips on Artist Home friends). */
+  hideInitials?: boolean;
 };
 
 function StockInitialsStar({
@@ -42,12 +44,14 @@ function StockInitialsStar({
   className,
   toneClass,
   studioChrome,
+  hideInitials = false,
 }: {
   name: string;
   size: number;
   className?: string;
   toneClass: string;
   studioChrome?: StudioNameChrome | null;
+  hideInitials?: boolean;
 }) {
   const initials = getInitials(name);
   const isPro = studioChrome === 'pro';
@@ -67,12 +71,14 @@ function StockInitialsStar({
           WebkitClipPath: ARTIST_STAR_CLIP,
         }}
       >
-        <span
-          className="flex h-full w-full items-center justify-center font-bold uppercase tracking-tight text-sky-300"
-          style={{ fontSize: Math.max(9, Math.round(size * (initials.length > 1 ? 0.23 : 0.28))) }}
-        >
-          {initials}
-        </span>
+        {!hideInitials ? (
+          <span
+            className="flex h-full w-full items-center justify-center font-bold uppercase tracking-tight text-sky-300"
+            style={{ fontSize: Math.max(9, Math.round(size * (initials.length > 1 ? 0.23 : 0.28))) }}
+          >
+            {initials}
+          </span>
+        ) : null}
       </span>
       {isPro ? (
         <svg
@@ -113,6 +119,7 @@ export function ArtistStarAvatar({
   className,
   toneClass = 'bg-sky-500/25 text-sky-300',
   studioChrome,
+  hideInitials = false,
 }: ArtistStarAvatarProps) {
   const seed = normalizeVesperfoldSeed(starMarkSeed ?? 0);
   const photoUrl = usablePhotoUrl(avatarUrl);
@@ -167,6 +174,7 @@ export function ArtistStarAvatar({
         className={className}
         toneClass={toneClass}
         studioChrome={studioChrome}
+        hideInitials={hideInitials}
       />
     );
   }

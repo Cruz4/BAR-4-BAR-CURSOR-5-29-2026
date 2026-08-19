@@ -263,7 +263,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
       <div className="mx-auto max-w-md px-4 py-16 text-center">
         <p className="font-headline text-2xl uppercase">Conversation not found</p>
         <Button asChild variant="outline" className="mt-4 rounded-none">
-          <Link href="/folds">Back to Msgs</Link>
+          <Link href="/msgs">Back to Msgs</Link>
         </Button>
       </div>
     );
@@ -278,7 +278,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
     <div className="mx-auto flex h-[calc(100dvh-3.5rem)] w-full max-w-2xl flex-col">
       <header className="flex items-center gap-2 border-b border-amber-500/20 bg-[#100c09]/90 px-2 py-2 backdrop-blur-md">
         <Button variant="ghost" size="icon" className="h-9 w-9 text-amber-100" asChild>
-          <Link href="/folds" aria-label="Back to Msgs">
+          <Link href="/msgs" aria-label="Back to Msgs">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
@@ -331,7 +331,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
                 void deleteFoldFromInboxClient(foldId)
                   .then(() => {
                     toast({ title: 'Deleted from inbox' });
-                    router.push('/folds');
+                    router.push('/msgs');
                   })
                   .catch((e) =>
                     toast({
@@ -354,7 +354,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
                   void declineFoldClient(foldId)
                     .then(() => {
                       toast({ title: 'Conversation closed' });
-                      router.push('/folds');
+                      router.push('/msgs');
                     })
                     .catch((e) =>
                       toast({
@@ -399,7 +399,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
                 variant="ghost"
                 className="h-8 rounded-none text-[10px] font-bold uppercase tracking-widest"
                 onClick={() =>
-                  void declineFoldClient(foldId).then(() => router.push('/folds'))
+                  void declineFoldClient(foldId).then(() => router.push('/msgs'))
                 }
               >
                 Decline

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DnaDropLiveIndicator } from '@/components/dna-drop-live-indicator';
+import { CollabSheetLiveIndicator } from '@/components/collab-sheet/collab-sheet-live-indicator';
 import {
   ListMusic,
   PlusCircle,
@@ -893,6 +894,11 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
     }
   }, [albumId, loading, getAlbumById, router]);
 
+  const albumCollabTrack = useMemo(
+    () => album?.tracks?.find((t) => t.collabSheetId),
+    [album?.tracks]
+  );
+
   // Vault can leave window mid-scroll (manual scrollRestoration). Always land at top.
   useEffect(() => {
     if (loading || !album || album.id !== albumId) return;
@@ -1201,12 +1207,14 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                           </Badge>
                         )}
                         <DnaDropLiveIndicator shareId={album.shareId} variant="badge" />
+                        <CollabSheetLiveIndicator collabSheetId={albumCollabTrack?.collabSheetId} variant="badge" />
                     </div>
                 </div>
                 
                 {!isUnassignedVault ? (
                     <div className="relative group shrink-0 w-full sm:w-auto flex justify-center lg:justify-end">
-                        <div className="absolute top-2 right-2 z-20 sm:top-3 sm:right-3">
+                        <div className="absolute top-2 right-2 z-20 sm:top-3 sm:right-3 flex items-center gap-1.5">
+                          <CollabSheetLiveIndicator collabSheetId={albumCollabTrack?.collabSheetId} variant="dot" />
                           <DnaDropLiveIndicator shareId={album.shareId} variant="dot" />
                         </div>
                         <div className="w-40 h-40 sm:w-48 sm:h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8)] border-4 border-white/5 bg-neutral-900 flex flex-col items-center justify-center relative">
@@ -1263,18 +1271,18 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                     <p className="text-[8px] sm:text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-0.5 whitespace-nowrap">Asset Reordering & Management</p>
                                 </div>
                             </div>
-                            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto md:justify-end shrink-0">
+                            <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:w-auto md:justify-end shrink-0">
                                 <Button
                                   onClick={openCreateTrack}
                                   disabled={!canAddTrack}
-                                  className="h-9 px-3 sm:px-6 font-bold text-[10px] uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 flex-1 sm:flex-none min-w-0"
+                                  className="h-9 px-3 sm:px-6 font-bold text-[10px] uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 w-full sm:w-auto sm:flex-none"
                                 >
                                     <PlusCircle className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Add Track
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-border rounded-xl bg-muted/40 flex-1 sm:flex-none min-w-0 dark:border-white/10 dark:bg-white/5"
+                                  className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-border rounded-xl bg-muted/40 w-full sm:w-auto sm:flex-none dark:border-white/10 dark:bg-white/5"
                                   onClick={() => {
                                     if (!canExportVault(user)) {
                                       toast(EXPORT_PRO_TOAST);
@@ -1289,7 +1297,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-fuchsia-400/40 rounded-xl bg-fuchsia-500/10 text-fuchsia-200 hover:bg-fuchsia-500/20 flex-1 sm:flex-none min-w-0"
+                                    className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-fuchsia-400/40 rounded-xl bg-fuchsia-500/10 text-fuchsia-200 hover:bg-fuchsia-500/20 w-full sm:w-auto sm:flex-none"
                                     onClick={() => openFirstDropLathe({ albumId: album.id })}
                                   >
                                     <Disc3 className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Press a song
@@ -1297,7 +1305,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 ) : null}
                                 {!isUnassignedVault && (
                                   isPro ? (
-                                    <Button variant="outline" size="sm" className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-primary/30 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 flex-1 sm:flex-none min-w-0" onClick={() => setShareDialogOpen(true)}>
+                                    <Button variant="outline" size="sm" className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-primary/30 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 w-full sm:w-auto sm:flex-none" onClick={() => setShareDialogOpen(true)}>
                                       <Globe className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> DNA Drop
                                     </Button>
                                   ) : (
@@ -1308,7 +1316,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                       iconClassName="text-primary"
                                       label="DNA Drop"
                                       variant="outline"
-                                      className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest flex-1 sm:flex-none min-w-0 border-primary/30 bg-primary/5 text-primary"
+                                      className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest w-full sm:w-auto sm:flex-none border-primary/30 bg-primary/5 text-primary"
                                     />
                                   )
                                 )}
@@ -1348,6 +1356,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                             <p className={cn('font-bold text-lg sm:text-2xl group-hover:text-primary transition-colors break-words', studioVaultCardTitle)}>{track.title}</p>
                                             <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
                                                 <DnaDropLiveIndicator shareId={track.shareId} variant="compact" />
+                                                <CollabSheetLiveIndicator collabSheetId={track.collabSheetId} variant="compact" />
                                                 {trackTierLocked && (
                                                   <Badge variant="outline" className={cn('h-4 px-1.5 text-[8px]', proLockText())}>View only</Badge>
                                                 )}

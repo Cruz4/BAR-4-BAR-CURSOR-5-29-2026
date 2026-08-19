@@ -39,7 +39,12 @@ export function isFoldsEnabledSync(): boolean {
   return true;
 }
 
-export function isFoldsPath(pathname: string | null | undefined): boolean {
+export function isMsgsPath(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
-  return pathname === '/folds' || pathname.startsWith('/folds/');
+  return pathname === '/msgs' || pathname.startsWith('/msgs/');
+}
+
+/** @deprecated Use isMsgsPath — /folds redirects to /msgs. */
+export function isFoldsPath(pathname: string | null | undefined): boolean {
+  return isMsgsPath(pathname);
 }

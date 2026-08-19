@@ -128,6 +128,7 @@ export function NotificationSettingsCard() {
                 ['postLoves', 'Loves on your posts'],
                 ['postReplies', 'Replies on your posts'],
                 ['dnaImports', 'DNA Drop imports'],
+                ['collabSheets', 'Collab Sheet invites, edits & chat'],
                 ['firstDrops', 'First Drop loves, replies, unlocks'],
               ] as const
             ).map(([key, label]) => (

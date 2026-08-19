@@ -45,6 +45,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DnaDropLiveIndicator } from '@/components/dna-drop-live-indicator';
+import { CollabSheetsVaultSection } from '@/components/collab-sheet/collab-sheets-vault-section';
 import {
   Dialog,
   DialogContent,
@@ -1127,6 +1128,8 @@ export function AlbumList() {
                                 )}
                             </AnimatePresence>
                     </div>
+
+                    <CollabSheetsVaultSection />
 
                     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200" data-tour="vault-collection">
                         <div className="flex items-center gap-4 border-l-4 border-emerald-500 pl-6">

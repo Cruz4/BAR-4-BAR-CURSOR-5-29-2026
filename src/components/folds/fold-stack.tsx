@@ -70,7 +70,7 @@ function FoldCard({
         aria-hidden
         className="pointer-events-none absolute -right-6 -top-8 h-16 w-16 rotate-45 border-l border-amber-200/20 bg-amber-100/[0.04]"
       />
-      <Link href={`/folds/${fold.id}`} className="block px-4 py-3.5 pr-10">
+      <Link href={`/msgs/${fold.id}`} className="block px-4 py-3.5 pr-10">
         <div className="flex items-baseline justify-between gap-3">
           <p className="truncate font-headline text-lg uppercase tracking-tight text-amber-50">
             {peer?.name || 'Artist'}

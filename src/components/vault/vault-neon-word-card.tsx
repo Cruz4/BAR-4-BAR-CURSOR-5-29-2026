@@ -8,6 +8,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Lock, LockOpen } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import {
   pinSceneNeonEntry,
@@ -18,8 +19,14 @@ import {
 } from '@/lib/scene/scene-neon-lexicon';
 
 export function VaultNeonWordCard() {
+  const { resolvedTheme } = useTheme();
   const [neon, setNeon] = useState<SceneNeonEntry | null>(null);
   const [neonPinned, setNeonPinned] = useState(false);
+  const [themeReady, setThemeReady] = useState(false);
+
+  useEffect(() => {
+    setThemeReady(true);
+  }, []);
 
   useEffect(() => {
     const { entry, pinned } = resolveSceneNeonEntry();
@@ -41,6 +48,8 @@ export function VaultNeonWordCard() {
 
   if (!neon) return null;
 
+  const phase = themeReady && resolvedTheme === 'light' ? 'day' : 'night';
+
   return (
     <div
       className={cn(
@@ -51,7 +60,7 @@ export function VaultNeonWordCard() {
         // (50% - 36rem = right gutter; minus dock+gap minus right-[3%])
         'xl:max-w-[min(18rem,max(0px,calc(50%-36rem-5.75rem-3%)))]'
       )}
-      data-phase="night"
+      data-phase={phase}
       aria-label={`Neon word ${neon.word}`}
     >
       <div className="inline-flex max-w-full items-baseline justify-end gap-1.5">

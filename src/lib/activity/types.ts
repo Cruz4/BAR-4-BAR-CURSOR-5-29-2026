@@ -8,6 +8,9 @@ export const ACTIVITY_TYPES = [
   'contact_request',
   'contact_accepted',
   'fold_pass',
+  'collab_invite',
+  'collab_edit',
+  'collab_message',
   'post_love',
   'post_reply',
   'post_reverb',
@@ -36,6 +39,9 @@ export const SERVER_ONLY_ACTIVITY_TYPES: readonly ActivityType[] = [
   'contact_request',
   'contact_accepted',
   'fold_pass',
+  'collab_invite',
+  'collab_edit',
+  'collab_message',
   'drop_unlocked',
 ];
 
@@ -77,6 +83,8 @@ export type ActivityPrefs = {
   craftReminders: boolean;
   /** Private messages (Msgs). */
   foldBars: boolean;
+  /** Collab Sheet invites, edits, and chat. */
+  collabSheets: boolean;
   /** First Drop loves, replies, and unlocks. */
   firstDrops: boolean;
 };
@@ -91,6 +99,7 @@ export const DEFAULT_ACTIVITY_PREFS: ActivityPrefs = {
   lockCasts: true,
   craftReminders: true,
   foldBars: true,
+  collabSheets: true,
   firstDrops: true,
 };
 
@@ -114,6 +123,9 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     contact_request: 'asked to see your contact',
     contact_accepted: 'shared their contact with you',
     fold_pass: 'sent you a message',
+    collab_invite: 'invited you to a Collab Sheet',
+    collab_edit: 'updated your Collab Sheet',
+    collab_message: 'sent a Collab Sheet message',
     post_love: 'loved your post',
     post_reply: 'replied to your post',
     post_reverb: 'Reverbed your post',
@@ -133,6 +145,9 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     contact_request: 'you asked to see contact for',
     contact_accepted: 'you shared your contact with',
     fold_pass: 'you sent a message to',
+    collab_invite: 'you invited to a Collab Sheet',
+    collab_edit: 'you updated a Collab Sheet',
+    collab_message: 'you sent a Collab Sheet message to',
     post_love: 'you loved a post by',
     post_reply: 'you replied to a post by',
     post_reverb: 'you Reverbed a post by',
@@ -211,6 +226,21 @@ export function pushCopyForActivity(
         title: `${actorName} sent you a message`,
         body: snippet || 'Open Msgs to read it.',
       };
+    case 'collab_invite':
+      return {
+        title: `${actorName} shared a Collab Sheet`,
+        body: snippet || 'Open the sheet to write together live.',
+      };
+    case 'collab_edit':
+      return {
+        title: `${actorName} updated the Collab Sheet`,
+        body: snippet || 'New bars or changes are waiting on the sheet.',
+      };
+    case 'collab_message':
+      return {
+        title: `${actorName} · Collab chat`,
+        body: snippet || 'Open the sheet chat to reply.',
+      };
     case 'post_love':
       return {
         title: 'Bar 4 Bar',
@@ -264,6 +294,10 @@ export function prefsAllowsPush(prefs: ActivityPrefs, type: ActivityType): boole
       return prefs.friendAccepted;
     case 'fold_pass':
       return false;
+    case 'collab_invite':
+    case 'collab_edit':
+    case 'collab_message':
+      return prefs.collabSheets !== false;
     case 'post_love':
       return prefs.postLoves;
     case 'post_reply':

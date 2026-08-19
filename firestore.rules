@@ -24,6 +24,13 @@ service cloud.firestore {
       return isOwner(userId) || isAdmin();
     }
 
+    function isCollabSheetMember(collabId) {
+      let sheet = get(/databases/$(database)/documents/collabSheets/$(collabId)).data;
+      return request.auth != null
+        && request.auth.uid in sheet.memberIds
+        && sheet.get('revoked', {}).get(request.auth.uid, false) != true;
+    }
+
     // Server-owned counters (Admin SDK). Clients may keep an existing value or omit it.
     function lockedServerNumber(key) {
       return !(key in request.resource.data)
@@ -553,6 +560,33 @@ service cloud.firestore {
     match /analytics_events/{eventId} {
       allow create, update, delete: if false;
       allow read: if isAdmin();
+    }
+
+    // Collab Sheets — live lyric collaboration. Admin SDK writes sheet body + chat.
+    // Clients read the sheet and heartbeat presence only.
+    match /collabSheets/{collabId} {
+      allow read: if request.auth != null
+        && request.auth.uid in resource.data.memberIds
+        && resource.data.get('revoked', {}).get(request.auth.uid, false) != true;
+      allow write: if false;
+
+      match /messages/{msgId} {
+        allow read: if isCollabSheetMember(collabId);
+        allow write: if false;
+      }
+
+      match /presence/{uid} {
+        allow read: if isCollabSheetMember(collabId);
+        allow create, update: if request.auth != null
+          && request.auth.uid == uid
+          && isCollabSheetMember(collabId)
+          && request.resource.data.keys().hasOnly(['viewing', 'at', 'name'])
+          && request.resource.data.at is string
+          && request.resource.data.viewing is bool
+          && (!('name' in request.resource.data)
+            || (request.resource.data.name is string && request.resource.data.name.size() <= 80));
+        allow delete: if request.auth != null && request.auth.uid == uid;
+      }
     }
 
     // Folds — shared lyric sheets. Members read; Admin SDK writes bars.

@@ -7,10 +7,10 @@ export const dynamic = 'force-dynamic';
 export const metadata = pageMetadata({
   title: 'Msgs',
   description: 'Private messages between artists on Bar 4 Bar.',
-  path: '/folds',
+  path: '/msgs',
 });
 
-export default async function FoldsLayout({ children }: { children: React.ReactNode }) {
+export default async function MsgsLayout({ children }: { children: React.ReactNode }) {
   if (!(await isFoldsFeatureEnabled())) {
     redirect('/');
   }

@@ -29,7 +29,7 @@ export function FoldLiveSlip({
           aria-hidden
           className="pointer-events-none absolute -right-5 -top-6 h-12 w-12 rotate-45 border-l border-amber-200/25 bg-amber-100/[0.06]"
         />
-        <Link href={`/folds/${slip.foldId}`} onClick={onDismiss} className="block px-4 py-3 pr-9">
+        <Link href={`/msgs/${slip.foldId}`} onClick={onDismiss} className="block px-4 py-3 pr-9">
           <p className="font-code text-[9px] font-bold uppercase tracking-[0.28em] text-amber-300/80">
             New message
           </p>

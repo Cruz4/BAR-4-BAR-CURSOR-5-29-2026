@@ -54,7 +54,7 @@ export function PassBarDialog({
       onOpenChange(false);
       setText('');
       toast({ title: 'Sent', description: `Message to ${peerName}.` });
-      router.push(`/folds/${fold.id}`);
+      router.push(`/msgs/${fold.id}`);
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -138,7 +138,7 @@ export function PassBarButton({
         )}
         onClick={() => {
           if (existing) {
-            router.push(`/folds/${existing.id}`);
+            router.push(`/msgs/${existing.id}`);
             return;
           }
           setOpen(true);

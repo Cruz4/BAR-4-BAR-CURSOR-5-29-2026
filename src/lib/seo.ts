@@ -11,7 +11,7 @@ export const SEO = {
   /** Open Graph / structured data — one clear line for search & shares. */
   titleLong: 'Bar 4 Bar — Your Scene, Your Studio & Shareable Artist Home',
   description:
-    'Your scene and your studio: claim a free Artist Home, land on The Scene with friends and discover, and open the bar-by-bar AI workstation one click in. Creative DNA, vault, DNA Drops. Free tier; Studio Pro available.',
+    'Your scene and your studio: claim a free Artist Home, land on The Scene with friends and discover, and open the bar-by-bar AI workstation one click in. Creative DNA, vault, DNA Drops, Collab Sheet live editing. Free tier; Studio Pro available.',
   keywords: [
     'bar 4 bar',
     'bar4bar',
@@ -30,6 +30,9 @@ export const SEO = {
     'concept album songwriting',
     'artist home page',
     'shareable lyric profile',
+    'collab sheet',
+    'live lyric collaboration',
+    'real-time songwriting',
   ],
   url: getPublicAppUrl(),
   /** Tab, PWA, Google site icon, and social preview (BAR 4 BAR logo). */

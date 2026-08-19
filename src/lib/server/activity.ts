@@ -52,7 +52,7 @@ function buildHref(input: EmitActivityInput, recipientSlug?: string): string | u
   if (input.shareId) return `/share/${input.shareId}`;
   if (input.type === 'friend_request' || input.type === 'contact_request') return '/activity?tab=requests';
   if (input.type === 'fold_pass' && input.href) return input.href;
-  if (input.type === 'fold_pass') return '/folds';
+  if (input.type === 'fold_pass') return '/msgs';
   if (input.type === 'friend_accepted' && input.actorSlug) {
     return profileHref(input.actorSlug) || '/friends';
   }
@@ -92,6 +92,7 @@ async function loadPrefs(userId: string): Promise<ActivityPrefs> {
     lockCasts: data.lockCasts !== false,
     craftReminders: data.craftReminders !== false,
     foldBars: data.foldBars !== false,
+    collabSheets: data.collabSheets !== false,
     firstDrops: data.firstDrops !== false,
   };
 }

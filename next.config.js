@@ -26,6 +26,12 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async redirects() {
+    return [
+      { source: '/folds', destination: '/msgs', permanent: true },
+      { source: '/folds/:foldId', destination: '/msgs/:foldId', permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

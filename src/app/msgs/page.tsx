@@ -6,13 +6,13 @@ import { StudioLoader } from '@/components/studio-loader';
 import { FoldStack } from '@/components/folds/fold-stack';
 import { useAuth } from '@/hooks/use-auth';
 
-export default function FoldsPage() {
+export default function MsgsPage() {
   const { user, authReady } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!authReady) return;
-    if (!user?.id) router.replace('/login?next=/folds');
+    if (!user?.id) router.replace('/login?next=/msgs');
   }, [authReady, user?.id, router]);
 
   if (!authReady || !user) {
