@@ -14,6 +14,7 @@ import { ArtistHomeLink, useLiveArtistHomeSlug } from '@/components/profile/arti
 import { EmbedPlayer } from '@/components/profile/embed-player';
 import { PostShareDialog } from '@/components/profile/post-share-dialog';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
+import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
 import { VoiceNotePlayer } from '@/components/profile/voice-note-player';
 import {
   addComment,
@@ -32,6 +33,7 @@ import {
   type ProfilePost,
 } from '@/lib/profile/social-client';
 import { type RecordedVoiceClip } from '@/lib/profile/voice-notes';
+import { revokePostImagePreview, type PendingPostImage } from '@/lib/profile/post-images';
 import { Hint } from '@/components/ui/tooltip';
 import { parseStudioBadge, studioChromeFromUser, studioNameClass, type StudioNameChrome } from '@/lib/studio-tier-chrome';
 import {
@@ -193,6 +195,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   const [commentsLoaded, setCommentsLoaded] = useState(false);
   const [draft, setDraft] = useState('');
   const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
+  const [image, setImage] = useState<PendingPostImage | null>(null);
   const [busy, setBusy] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [reverbed, setReverbed] = useState(false);
@@ -370,7 +373,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   };
 
   const submitComment = async () => {
-    if (!user || (!draft.trim() && !voice)) return;
+    if (!user || (!draft.trim() && !voice && !image)) return;
     setBusy(true);
     try {
       const comment = await addComment(
@@ -380,12 +383,15 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
           name: user.displayName || 'Artist',
           slug: viewerSlug,
         },
-        voice || undefined
+        voice || undefined,
+        image || undefined
       );
       setComments((prev) => [...prev, comment]);
       setCommentCount((c) => c + 1);
       setDraft('');
       setVoice(null);
+      revokePostImagePreview(image);
+      setImage(null);
     } catch (e) {
       toast({
         variant: 'destructive',
@@ -504,13 +510,15 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
 
       {!post.isReverb && post.imageUrl && (
         <div className="mt-3 mb-1 flex justify-center overflow-visible">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={post.imageUrl}
-            alt="Shared studio card"
-            className="block h-auto w-full max-w-[420px] rounded-xl object-contain shadow-[0_8px_28px_rgba(0,0,0,0.45)] sm:max-w-[480px]"
-            style={{ imageRendering: 'auto' }}
-          />
+          <a href={post.imageUrl} target="_blank" rel="noopener noreferrer" className="block max-w-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={post.imageUrl}
+              alt="Posted photo"
+              className="block h-auto w-full max-w-[420px] rounded-xl object-contain shadow-[0_8px_28px_rgba(0,0,0,0.45)] sm:max-w-[480px]"
+              style={{ imageRendering: 'auto' }}
+            />
+          </a>
         </div>
       )}
 
@@ -619,6 +627,18 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
                 {comment.text ? (
                   <span className="text-[var(--ph-text,#fff)]/90">{comment.text}</span>
                 ) : null}
+                {comment.imageUrl ? (
+                  <div className="mt-1.5">
+                    <a href={comment.imageUrl} target="_blank" rel="noopener noreferrer">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={comment.imageUrl}
+                        alt="Comment photo"
+                        className="max-h-56 w-auto max-w-full rounded-lg object-contain"
+                      />
+                    </a>
+                  </div>
+                ) : null}
                 {comment.voice ? (
                   <div className="mt-1.5">
                     <VoiceNotePlayer
@@ -657,16 +677,44 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
           )}
           {user ? (
             <div className="space-y-2 pt-1">
-              <VoiceNoteComposer
-                clip={voice}
-                onClipChange={setVoice}
-                disabled={busy}
-                compact
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <VoiceNoteComposer
+                  clip={voice}
+                  onClipChange={setVoice}
+                  disabled={busy}
+                  compact
+                />
+                <ImageAttachComposer
+                  image={image}
+                  onImageChange={setImage}
+                  disabled={busy}
+                  compact
+                  onError={(message) =>
+                    toast({
+                      variant: 'destructive',
+                      title: 'Could not attach photo',
+                      description: message,
+                    })
+                  }
+                />
+              </div>
               <div className="flex items-center gap-2">
                 <Input
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
+                  onPaste={(e) => {
+                    void attachPastedImage(e, {
+                      disabled: busy,
+                      image,
+                      onImageChange: setImage,
+                      onError: (message) =>
+                        toast({
+                          variant: 'destructive',
+                          title: 'Could not attach photo',
+                          description: message,
+                        }),
+                    });
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
@@ -674,14 +722,16 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
                     }
                   }}
                   maxLength={500}
-                  placeholder={voice ? 'Add a caption (optional)…' : 'Say something…'}
+                  placeholder={
+                    voice || image ? 'Add a caption (optional)…' : 'Say something… or paste a photo'
+                  }
                   className="h-8 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 text-sm"
                 />
                 <Button
                   size="icon"
                   variant="ghost"
                   className="h-8 w-8 shrink-0 text-[var(--ph-accent,#7dd3fc)]"
-                  disabled={busy || (!draft.trim() && !voice)}
+                  disabled={busy || (!draft.trim() && !voice && !image)}
                   onClick={() => void submitComment()}
                 >
                   <Send className="h-3.5 w-3.5" />

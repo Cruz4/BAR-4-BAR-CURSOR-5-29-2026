@@ -15,6 +15,8 @@ export type GuestWallDraftPost = {
   text: string;
   /** Optional media link (YouTube, Spotify, etc.). */
   embedUrl?: string;
+  /** Optional photo (data URL in the sandbox). */
+  imageUrl?: string;
   /** Example posts shown on the demo wall — not written to Firestore on claim. */
   isSample?: boolean;
   createdAt: string;
@@ -106,7 +108,12 @@ function normalizeWallPosts(raw: unknown): GuestWallDraftPost[] {
     const text = typeof row.text === 'string' ? row.text.trim().slice(0, 1000) : '';
     const embedUrl =
       typeof row.embedUrl === 'string' ? row.embedUrl.trim().slice(0, 500) : undefined;
-    if (!text && !embedUrl) continue;
+    const imageUrl =
+      typeof row.imageUrl === 'string' &&
+      (row.imageUrl.startsWith('data:image/') || /^https?:\/\//i.test(row.imageUrl))
+        ? row.imageUrl.slice(0, 350_000)
+        : undefined;
+    if (!text && !embedUrl && !imageUrl) continue;
     out.push({
       id:
         typeof row.id === 'string' && row.id.trim()
@@ -114,6 +121,7 @@ function normalizeWallPosts(raw: unknown): GuestWallDraftPost[] {
           : `guest-${Date.now()}-${out.length}`,
       text,
       ...(embedUrl ? { embedUrl } : {}),
+      ...(imageUrl ? { imageUrl } : {}),
       isSample: row.isSample === true,
       createdAt:
         typeof row.createdAt === 'string' ? row.createdAt : new Date().toISOString(),
@@ -235,12 +243,13 @@ export function completeGuestPressingClaim(): void {
 /** User-authored wall posts to write after claim (samples skipped). */
 export function claimableWallPosts(
   draft: GuestPressingDraft
-): Array<{ text: string; embedUrl?: string }> {
+): Array<{ text: string; embedUrl?: string; imageUrl?: string }> {
   return draft.wallPosts
-    .filter((p) => !p.isSample && (p.text.trim() || p.embedUrl?.trim()))
+    .filter((p) => !p.isSample && (p.text.trim() || p.embedUrl?.trim() || p.imageUrl?.trim()))
     .map((p) => ({
       text: p.text.trim().slice(0, 1000),
       ...(p.embedUrl?.trim() ? { embedUrl: p.embedUrl.trim().slice(0, 500) } : {}),
+      ...(p.imageUrl?.trim() ? { imageUrl: p.imageUrl.trim().slice(0, 350_000) } : {}),
     }))
     .slice(0, 10);
 }

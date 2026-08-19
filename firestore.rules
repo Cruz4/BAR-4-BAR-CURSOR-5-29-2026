@@ -105,7 +105,16 @@ service cloud.firestore {
           && request.resource.data.authorId == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() <= 500
-          && request.resource.data.text.size() > 0;
+          && (!('imageUrl' in request.resource.data)
+            || (request.resource.data.imageUrl is string
+              && request.resource.data.imageUrl.size() <= 2000))
+          && (!('imageStoragePath' in request.resource.data)
+            || (request.resource.data.imageStoragePath is string
+              && request.resource.data.imageStoragePath.size() <= 400))
+          && (
+            request.resource.data.text.size() > 0
+            || ('imageUrl' in request.resource.data && request.resource.data.imageUrl.size() > 0)
+          );
         allow delete: if request.auth != null
           && (resource.data.authorId == request.auth.uid
             || get(/databases/$(database)/documents/shares/$(shareId)).data.ownerId == request.auth.uid
@@ -320,6 +329,9 @@ service cloud.firestore {
         && (!('imageUrl' in request.resource.data)
           || (request.resource.data.imageUrl is string
             && request.resource.data.imageUrl.size() <= 900000))
+        && (!('imageStoragePath' in request.resource.data)
+          || (request.resource.data.imageStoragePath is string
+            && request.resource.data.imageStoragePath.size() <= 400))
         && (!('isReverb' in request.resource.data)
           || request.resource.data.isReverb == true)
         && (!('reverbPostId' in request.resource.data)
@@ -381,9 +393,16 @@ service cloud.firestore {
           && request.resource.data.text.size() <= 500
           && (!('voice' in request.resource.data)
             || validVoiceNote(request.resource.data.voice))
+          && (!('imageUrl' in request.resource.data)
+            || (request.resource.data.imageUrl is string
+              && request.resource.data.imageUrl.size() <= 2000))
+          && (!('imageStoragePath' in request.resource.data)
+            || (request.resource.data.imageStoragePath is string
+              && request.resource.data.imageStoragePath.size() <= 400))
           && (
             request.resource.data.text.size() > 0
             || ('voice' in request.resource.data && validVoiceNote(request.resource.data.voice))
+            || ('imageUrl' in request.resource.data && request.resource.data.imageUrl.size() > 0)
           );
         allow delete: if request.auth != null
           && (resource.data.authorId == request.auth.uid

@@ -123,6 +123,7 @@ export function GuestPressingClaimBootstrap() {
             await createPost({
               text: entry.text,
               ...(entry.embedUrl ? { embedUrl: entry.embedUrl } : {}),
+              ...(entry.imageUrl ? { imageUrl: entry.imageUrl } : {}),
               ownerName,
               ...(ownerSlug ? { ownerSlug } : {}),
             });

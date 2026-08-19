@@ -144,6 +144,7 @@ function toProfilePosts(
       text: p.text,
       ...(p.embedUrl ? { embedUrl: p.embedUrl } : {}),
       ...(parsed ? { embedProvider: parsed.provider } : {}),
+      ...(p.imageUrl ? { imageUrl: p.imageUrl } : {}),
       createdAt: p.createdAt,
     };
   });
@@ -303,15 +304,20 @@ function GuestPressingLandingInner() {
     setDraft((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  const onWallPost = useCallback((input: { text: string; embedUrl?: string }) => {
+  const onWallPost = useCallback((input: { text: string; embedUrl?: string; imageUrl?: string }) => {
     const clean = input.text.trim().slice(0, 1000);
     const link = input.embedUrl?.trim().slice(0, 500);
-    if (!clean && !link) return;
+    const imageUrl =
+      typeof input.imageUrl === 'string' && input.imageUrl.startsWith('data:image/')
+        ? input.imageUrl.slice(0, 350_000)
+        : undefined;
+    if (!clean && !link && !imageUrl) return;
     trackPressingAction('wall');
     const post: GuestWallDraftPost = {
       id: `guest-${Date.now().toString(36)}`,
       text: clean,
       ...(link ? { embedUrl: link } : {}),
+      ...(imageUrl ? { imageUrl } : {}),
       createdAt: new Date().toISOString(),
     };
     setDraft((prev) => ({

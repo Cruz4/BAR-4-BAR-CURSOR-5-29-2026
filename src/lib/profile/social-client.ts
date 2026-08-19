@@ -47,6 +47,14 @@ import {
 import { JORDIE_PLAYGROUND_FRIEND } from '@/lib/profile/jordie-cruz';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { parseLyricClip, type LyricClip } from '@/lib/profile/lyric-clip';
+import {
+  deletePostImageStorage,
+  parseImageStoragePath,
+  uploadPostImage,
+  wallImageCommentPath,
+  wallImagePostPath,
+  type PendingPostImage,
+} from '@/lib/profile/post-images';
 
 export type ProfilePost = {
   id: string;
@@ -56,8 +64,10 @@ export type ProfilePost = {
   text: string;
   embedUrl?: string;
   embedProvider?: EmbedProvider;
-  /** Inline image (data URL or https) — e.g. achievement foil card. */
+  /** Inline image (data URL or https) — foil cards or attached photos. */
   imageUrl?: string;
+  /** Storage object for attached wall photos (not used for foil data URLs). */
+  imageStoragePath?: string;
   createdAt: string;
   /** Unique people who saw this post. Owner-only in the UI. */
   viewCount?: number;
@@ -88,6 +98,8 @@ export type PostComment = {
   text: string;
   createdAt: string;
   voice?: VoiceNote;
+  imageUrl?: string;
+  imageStoragePath?: string;
 };
 
 export type FriendshipStatus = 'pending' | 'accepted';
@@ -174,6 +186,7 @@ export async function createPost(input: {
   text: string;
   embedUrl?: string;
   imageUrl?: string;
+  image?: PendingPostImage;
   ownerName: string;
   ownerSlug?: string;
   voice?: RecordedVoiceClip;
@@ -182,11 +195,12 @@ export async function createPost(input: {
   const user = requireUser();
   const text = input.text.trim().slice(0, MAX_POST_TEXT);
   const embedUrl = input.embedUrl?.trim() || undefined;
-  const imageUrl = input.imageUrl?.trim() || undefined;
+  let imageUrl = input.imageUrl?.trim() || undefined;
+  let imageStoragePath: string | undefined;
   if (imageUrl && imageUrl.length > MAX_POST_IMAGE_URL) {
     throw new Error('Image is too large to post.');
   }
-  if (!text && !embedUrl && !imageUrl && !input.voice && !parseLyricClip(input.lyricClip)) {
+  if (!text && !embedUrl && !imageUrl && !input.image && !input.voice && !parseLyricClip(input.lyricClip)) {
     throw new Error('Write something, add a link, attach an image, or record a voice note.');
   }
 
@@ -202,6 +216,19 @@ export async function createPost(input: {
       throw err instanceof Error ? err : new Error('Could not upload voice note.');
     }
   }
+  if (input.image) {
+    try {
+      const uploaded = await uploadPostImage({
+        storagePath: wallImagePostPath(user.uid, id),
+        image: input.image,
+      });
+      imageUrl = uploaded.url;
+      imageStoragePath = uploaded.storagePath;
+    } catch (err) {
+      if (voice) await deleteVoiceStorage(voice.storagePath);
+      throw err instanceof Error ? err : new Error('Could not upload image.');
+    }
+  }
 
   const parsed = parseEmbedUrl(embedUrl);
   const parsedLyricClip = parseLyricClip(input.lyricClip);
@@ -214,6 +241,7 @@ export async function createPost(input: {
     ...(embedUrl ? { embedUrl } : {}),
     ...(parsed ? { embedProvider: parsed.provider } : {}),
     ...(imageUrl ? { imageUrl } : {}),
+    ...(imageStoragePath ? { imageStoragePath } : {}),
     ...(voice ? { voice } : {}),
     ...(parsedLyricClip ? { lyricClip: parsedLyricClip } : {}),
     createdAt: new Date().toISOString(),
@@ -223,6 +251,7 @@ export async function createPost(input: {
     await setDoc(doc(db, 'posts', postId), data);
   } catch (err) {
     if (voice) await deleteVoiceStorage(voice.storagePath);
+    if (imageStoragePath) await deletePostImageStorage(imageStoragePath);
     throw err;
   }
   trackSocialEvent('profile_post_created', {
@@ -247,6 +276,8 @@ export async function deletePost(postId: string): Promise<void> {
       const data = snap.data() as Record<string, unknown>;
       const voice = parseVoiceNote(data.voice);
       if (voice?.storagePath) await deleteVoiceStorage(voice.storagePath);
+      const imagePath = parseImageStoragePath(data.imageStoragePath);
+      if (imagePath) await deletePostImageStorage(imagePath);
       if (
         data.isReverb === true &&
         typeof data.reverbPostId === 'string' &&
@@ -278,6 +309,7 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
     embedUrl: typeof data.embedUrl === 'string' ? data.embedUrl : undefined,
     embedProvider: data.embedProvider as EmbedProvider | undefined,
     imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : undefined,
+    imageStoragePath: parseImageStoragePath(data.imageStoragePath),
     createdAt: String(data.createdAt || ''),
     ...(typeof data.viewCount === 'number' && data.viewCount > 0
       ? { viewCount: Math.floor(data.viewCount) }
@@ -542,11 +574,12 @@ export async function addComment(
   postId: string,
   text: string,
   author: { name: string; slug?: string },
-  voiceClip?: RecordedVoiceClip
+  voiceClip?: RecordedVoiceClip,
+  image?: PendingPostImage
 ): Promise<PostComment> {
   const user = requireUser();
   const clean = text.trim().slice(0, MAX_COMMENT_TEXT);
-  if (!clean && !voiceClip) throw new Error('Comment is empty.');
+  if (!clean && !voiceClip && !image) throw new Error('Comment is empty.');
   const id = chronoId();
   let voice: VoiceNote | undefined;
   if (voiceClip) {
@@ -554,6 +587,21 @@ export async function addComment(
       storagePath: voiceCommentStoragePath(user.uid, postId, id, voiceClip.contentType),
       clip: voiceClip,
     });
+  }
+  let imageUrl: string | undefined;
+  let imageStoragePath: string | undefined;
+  if (image) {
+    try {
+      const uploaded = await uploadPostImage({
+        storagePath: wallImageCommentPath(user.uid, postId, id),
+        image,
+      });
+      imageUrl = uploaded.url;
+      imageStoragePath = uploaded.storagePath;
+    } catch (err) {
+      if (voice) await deleteVoiceStorage(voice.storagePath);
+      throw err instanceof Error ? err : new Error('Could not upload image.');
+    }
   }
   const comment: PostComment = {
     id,
@@ -563,12 +611,15 @@ export async function addComment(
     text: clean,
     createdAt: new Date().toISOString(),
     ...(voice ? { voice } : {}),
+    ...(imageUrl ? { imageUrl } : {}),
+    ...(imageStoragePath ? { imageStoragePath } : {}),
   };
   const { id: commentId, ...data } = comment;
   try {
     await setDoc(doc(db, 'posts', postId, 'comments', commentId), data);
   } catch (err) {
     if (voice) await deleteVoiceStorage(voice.storagePath);
+    if (imageStoragePath) await deletePostImageStorage(imageStoragePath);
     throw err;
   }
   const { emitActivity } = await import('@/lib/activity/client');
@@ -577,7 +628,7 @@ export async function addComment(
     actorName: comment.authorName,
     ...(comment.authorSlug ? { actorSlug: comment.authorSlug } : {}),
     postId,
-    preview: (clean || voice?.transcript || 'Voice note').slice(0, 120),
+    preview: (clean || voice?.transcript || (imageUrl ? 'Photo' : 'Voice note')).slice(0, 120),
     commentId,
   });
   return comment;
@@ -589,6 +640,8 @@ export async function fetchComments(postId: string, max = 50): Promise<PostComme
     const comments = snap.docs.map((d) => {
       const data = d.data();
       const voice = parseVoiceNote(data.voice);
+      const imageUrl = typeof data.imageUrl === 'string' ? data.imageUrl : undefined;
+      const imageStoragePath = parseImageStoragePath(data.imageStoragePath);
       return {
         id: d.id,
         authorId: String(data.authorId || ''),
@@ -597,6 +650,8 @@ export async function fetchComments(postId: string, max = 50): Promise<PostComme
         text: String(data.text || ''),
         createdAt: String(data.createdAt || ''),
         ...(voice ? { voice } : {}),
+        ...(imageUrl ? { imageUrl } : {}),
+        ...(imageStoragePath ? { imageStoragePath } : {}),
       };
     });
     const ids = [...new Set(comments.map((c) => c.authorId).filter(Boolean))];
@@ -623,6 +678,8 @@ export async function deleteComment(postId: string, commentId: string): Promise<
     if (snap.exists()) {
       const voice = parseVoiceNote(snap.data().voice);
       if (voice?.storagePath) await deleteVoiceStorage(voice.storagePath);
+      const imagePath = parseImageStoragePath(snap.data().imageStoragePath);
+      if (imagePath) await deletePostImageStorage(imagePath);
     }
   } catch {
     /* still attempt comment delete */

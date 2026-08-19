@@ -10,6 +10,7 @@ export type SocialProviderId =
   | 'snapchat'
   | 'suno'
   | 'spotify'
+  | 'soundcloud'
   | 'appleMusic'
   | 'github'
   | 'twitter';
@@ -84,6 +85,29 @@ export const SOCIAL_PROVIDERS: Array<{
       const handle = trimmed.replace(/^@/, '').split(/[/?#]/)[0];
       if (!handle || handle.length > 64 || /[\s<>"']/.test(handle)) return null;
       return `https://open.spotify.com/user/${encodeURIComponent(handle)}`;
+    },
+  },
+  {
+    id: 'soundcloud',
+    label: 'SoundCloud',
+    short: 'SC',
+    placeholder: 'soundcloud.com/... or username',
+    toUrl: (raw) => {
+      const trimmed = raw.trim();
+      if (!trimmed) return null;
+      if (/^https?:\/\//i.test(trimmed)) {
+        try {
+          const u = new URL(trimmed);
+          const host = u.hostname.toLowerCase();
+          if (!host.includes('soundcloud.com')) return null;
+          return u.toString();
+        } catch {
+          return null;
+        }
+      }
+      const handle = trimmed.replace(/^@/, '').split(/[/?#]/)[0];
+      if (!handle || handle.length > 64 || /[\s<>"']/.test(handle)) return null;
+      return `https://soundcloud.com/${encodeURIComponent(handle)}`;
     },
   },
   {

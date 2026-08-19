@@ -62,6 +62,8 @@ function SocialGlyph({ id, className }: { id: SocialProviderId; className?: stri
       return <LetterBadge letters="SUNO" className={className} />;
     case 'spotify':
       return <LetterBadge letters="SPOT" className={className} />;
+    case 'soundcloud':
+      return <LetterBadge letters="SC" className={className} />;
     case 'appleMusic':
       return <LetterBadge letters="AM" className={className} />;
     default:

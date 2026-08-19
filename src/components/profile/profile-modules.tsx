@@ -38,6 +38,7 @@ import { parseEmbedUrl, EMBED_HELP_TEXT } from '@/lib/profile/embeds';
 import { EmbedPlayer } from '@/components/profile/embed-player';
 import { PostCard } from '@/components/profile/post-card';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
+import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
 import { PressPlate, type PressPlateChrome } from '@/components/profile/press-plate';
 import { PublicAchievementFoil } from '@/components/profile/public-achievement-foil';
 import { firstDropTracks, LiveDnaDropsGroupedList } from '@/components/profile/live-dna-drop-card';
@@ -58,6 +59,12 @@ import {
   type ProfilePost,
 } from '@/lib/profile/social-client';
 import { type RecordedVoiceClip } from '@/lib/profile/voice-notes';
+import {
+  POST_IMAGE_GUEST_MAX_BYTES,
+  pendingImageToDataUrl,
+  revokePostImagePreview,
+  type PendingPostImage,
+} from '@/lib/profile/post-images';
 import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 
 export type ModuleContext = {
@@ -101,7 +108,7 @@ export type ModuleContext = {
    */
   playgroundWall?: {
     posts: ProfilePost[];
-    onPost: (input: { text: string; embedUrl?: string }) => void;
+    onPost: (input: { text: string; embedUrl?: string; imageUrl?: string }) => void;
     onDelete?: (id: string) => void;
   };
   /** Guest landing — local friends list (no Firestore). */
@@ -624,6 +631,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const [text, setText] = useState('');
   const [embedUrl, setEmbedUrl] = useState('');
   const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
+  const [image, setImage] = useState<PendingPostImage | null>(null);
   const [busy, setBusy] = useState(false);
   const [page, setPage] = useState(0);
 
@@ -666,7 +674,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
     if (playground) {
       const clean = text.trim();
       const link = embedUrl.trim();
-      if (!clean && !link) return;
+      if (!clean && !link && !image) return;
       if (link && !parseEmbedUrl(link)) {
         toast({
           variant: 'destructive',
@@ -675,17 +683,33 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
         });
         return;
       }
+      let guestImageUrl: string | undefined;
+      if (image) {
+        try {
+          guestImageUrl = await pendingImageToDataUrl(image);
+        } catch (e) {
+          toast({
+            variant: 'destructive',
+            title: 'Could not attach photo',
+            description: e instanceof Error ? e.message : undefined,
+          });
+          return;
+        }
+      }
       playground.onPost({
         text: clean,
         ...(link ? { embedUrl: link.slice(0, 500) } : {}),
+        ...(guestImageUrl ? { imageUrl: guestImageUrl } : {}),
       });
       setText('');
       setEmbedUrl('');
+      revokePostImagePreview(image);
+      setImage(null);
       setPage(0);
       return;
     }
     if (!user) return;
-    if (!text.trim() && !embedUrl.trim() && !voice) return;
+    if (!text.trim() && !embedUrl.trim() && !voice && !image) return;
     setBusy(true);
     try {
       const post = await createPost({
@@ -694,11 +718,14 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
         ownerName: user.displayName || 'Artist',
         ownerSlug: ctx.profileSlug,
         ...(voice ? { voice } : {}),
+        ...(image ? { image } : {}),
       });
       setPosts((prev) => [post, ...prev]);
       setText('');
       setEmbedUrl('');
       setVoice(null);
+      revokePostImagePreview(image);
+      setImage(null);
       setPage(0);
     } catch (e) {
       toast({
@@ -720,12 +747,26 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
           <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onPaste={(e) => {
+              void attachPastedImage(e, {
+                disabled: busy,
+                image,
+                onImageChange: setImage,
+                maxBytes: playground ? POST_IMAGE_GUEST_MAX_BYTES : undefined,
+                onError: (message) =>
+                  toast({
+                    variant: 'destructive',
+                    title: 'Could not attach photo',
+                    description: message,
+                  }),
+              });
+            }}
             maxLength={1000}
             rows={2}
             placeholder={
               playground
                 ? 'Try a wall post — claim your profile to keep it…'
-                : 'Drop a thought, a release, a moment...'
+                : 'Drop a thought, a photo, a release...'
             }
             className="border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 text-sm"
           />
@@ -744,16 +785,29 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
           {embedPreview && <EmbedPlayer url={embedUrl} />}
           {playground ? (
             <p className="text-[10px] text-[var(--ph-muted,rgba(255,255,255,0.5))]">
-              Demo wall — text and links stay here until you claim your free profile.
+              Demo wall — text, photos, and links stay here until you claim your free profile.
             </p>
           ) : (
             <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} />
           )}
+          <ImageAttachComposer
+            image={image}
+            onImageChange={setImage}
+            disabled={busy}
+            maxBytes={playground ? POST_IMAGE_GUEST_MAX_BYTES : undefined}
+            onError={(message) =>
+              toast({
+                variant: 'destructive',
+                title: 'Could not attach photo',
+                description: message,
+              })
+            }
+          />
           <div className="flex justify-end">
             <Button
               size="sm"
               className="h-9 gap-1.5 font-bold uppercase"
-              disabled={busy || (!text.trim() && !embedUrl.trim() && !voice)}
+              disabled={busy || (!text.trim() && !embedUrl.trim() && !voice && !image)}
               onClick={() => void submit()}
             >
               <Send className="h-3.5 w-3.5" /> Post

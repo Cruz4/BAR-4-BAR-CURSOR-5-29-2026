@@ -13,6 +13,13 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client/firebase';
 import type { PostComment } from '@/lib/profile/social-client';
+import {
+  deletePostImageStorage,
+  parseImageStoragePath,
+  uploadPostImage,
+  wallImageDropCommentPath,
+  type PendingPostImage,
+} from '@/lib/profile/post-images';
 
 const MAX_COMMENT_TEXT = 500;
 
@@ -68,12 +75,23 @@ export async function fetchDropLoved(shareId: string): Promise<boolean> {
 export async function addDropComment(
   shareId: string,
   text: string,
-  author: { name: string; slug?: string }
+  author: { name: string; slug?: string },
+  image?: PendingPostImage
 ): Promise<PostComment> {
   const user = requireUser();
   const clean = text.trim().slice(0, MAX_COMMENT_TEXT);
-  if (!clean) throw new Error('Comment is empty.');
+  if (!clean && !image) throw new Error('Comment is empty.');
   const id = chronoId();
+  let imageUrl: string | undefined;
+  let imageStoragePath: string | undefined;
+  if (image) {
+    const uploaded = await uploadPostImage({
+      storagePath: wallImageDropCommentPath(user.uid, shareId, id),
+      image,
+    });
+    imageUrl = uploaded.url;
+    imageStoragePath = uploaded.storagePath;
+  }
   const comment: PostComment = {
     id,
     authorId: user.uid,
@@ -81,16 +99,23 @@ export async function addDropComment(
     ...(author.slug ? { authorSlug: author.slug } : {}),
     text: clean,
     createdAt: new Date().toISOString(),
+    ...(imageUrl ? { imageUrl } : {}),
+    ...(imageStoragePath ? { imageStoragePath } : {}),
   };
   const { id: commentId, ...data } = comment;
-  await setDoc(doc(db, 'shares', shareId, 'comments', commentId), data);
+  try {
+    await setDoc(doc(db, 'shares', shareId, 'comments', commentId), data);
+  } catch (err) {
+    if (imageStoragePath) await deletePostImageStorage(imageStoragePath);
+    throw err;
+  }
   const { emitActivity } = await import('@/lib/activity/client');
   emitActivity({
     type: 'drop_reply',
     actorName: comment.authorName,
     ...(comment.authorSlug ? { actorSlug: comment.authorSlug } : {}),
     shareId,
-    preview: clean.slice(0, 120),
+    preview: (clean || (imageUrl ? 'Photo' : '')).slice(0, 120),
     commentId,
   });
   return comment;
@@ -102,6 +127,7 @@ export async function fetchDropComments(shareId: string, max = 50): Promise<Post
     return snap.docs
       .map((d) => {
         const data = d.data();
+        const imageStoragePath = parseImageStoragePath(data.imageStoragePath);
         return {
           id: d.id,
           authorId: String(data.authorId || ''),
@@ -109,6 +135,10 @@ export async function fetchDropComments(shareId: string, max = 50): Promise<Post
           authorSlug: typeof data.authorSlug === 'string' ? data.authorSlug : undefined,
           text: String(data.text || ''),
           createdAt: String(data.createdAt || ''),
+          ...(typeof data.imageUrl === 'string' && data.imageUrl.trim()
+            ? { imageUrl: data.imageUrl }
+            : {}),
+          ...(imageStoragePath ? { imageStoragePath } : {}),
         } satisfies PostComment;
       })
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));

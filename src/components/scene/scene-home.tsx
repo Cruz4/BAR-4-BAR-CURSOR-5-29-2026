@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { StudioLoader } from '@/components/studio-loader';
 import { PostCard } from '@/components/profile/post-card';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
+import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
 import { FindArtistsPanel } from '@/components/profile/find-artists-panel';
 import { VaultStudioProgress, SCENE_STUDIO_PROGRESS_EXPANDED_KEY, SCENE_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY } from '@/components/gamification/vault-studio-progress';
 import { SceneNavDock } from '@/components/scene/scene-nav-dock';
@@ -49,6 +50,7 @@ import {
   type ProfilePost,
 } from '@/lib/profile/social-client';
 import { type RecordedVoiceClip } from '@/lib/profile/voice-notes';
+import { revokePostImagePreview, type PendingPostImage } from '@/lib/profile/post-images';
 import { FRIENDSHIP_CHANGED_EVENT, type FriendshipChangedDetail } from '@/lib/activity/client';
 import { getBlockLastSeenAt, markBlockSeen } from '@/lib/profile/social-alerts';
 import {
@@ -150,12 +152,13 @@ function SceneComposer({
   const [embedUrl, setEmbedUrl] = useState('');
   const [showEmbed, setShowEmbed] = useState(false);
   const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
+  const [image, setImage] = useState<PendingPostImage | null>(null);
   const [busy, setBusy] = useState(false);
 
   if (!user) return null;
 
   const submit = async () => {
-    if (busy || (!text.trim() && !embedUrl.trim() && !voice)) return;
+    if (busy || (!text.trim() && !embedUrl.trim() && !voice && !image)) return;
     setBusy(true);
     try {
       const post = await createPost({
@@ -164,11 +167,14 @@ function SceneComposer({
         ownerName: user.displayName || 'Artist',
         ...(profileSlug ? { ownerSlug: profileSlug } : {}),
         ...(voice ? { voice } : {}),
+        ...(image ? { image } : {}),
       });
       setText('');
       setEmbedUrl('');
       setShowEmbed(false);
       setVoice(null);
+      revokePostImagePreview(image);
+      setImage(null);
       onPosted(post);
       toast({ title: 'Posted to your wall' });
     } catch (e) {
@@ -183,7 +189,16 @@ function SceneComposer({
       <Textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Write a post for your wall..."
+        onPaste={(e) => {
+          void attachPastedImage(e, {
+            disabled: busy,
+            image,
+            onImageChange: setImage,
+            onError: (message) =>
+              toast({ variant: 'destructive', title: 'Could not attach photo', description: message }),
+          });
+        }}
+        placeholder="Write a post for your wall — or paste a photo..."
         rows={2}
         maxLength={1000}
         className="min-h-[3.25rem] resize-none border-border/60 bg-background/60 text-sm"
@@ -197,6 +212,14 @@ function SceneComposer({
         />
       )}
       <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} />
+      <ImageAttachComposer
+        image={image}
+        onImageChange={setImage}
+        disabled={busy}
+        onError={(message) =>
+          toast({ variant: 'destructive', title: 'Could not attach photo', description: message })
+        }
+      />
       <div className="mt-2.5 flex items-center justify-between gap-2">
         <button
           type="button"
@@ -208,7 +231,7 @@ function SceneComposer({
         <Button
           size="sm"
           className="h-9 gap-1.5 font-bold uppercase"
-          disabled={busy || (!text.trim() && !embedUrl.trim() && !voice)}
+          disabled={busy || (!text.trim() && !embedUrl.trim() && !voice && !image)}
           onClick={() => void submit()}
         >
           <Send className="h-3.5 w-3.5" /> Post
