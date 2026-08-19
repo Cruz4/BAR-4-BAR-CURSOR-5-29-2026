@@ -40,7 +40,8 @@ import {
     Clock,
     Loader,
     ChevronUp,
-    ChevronDown
+    ChevronDown,
+    Filter,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -144,6 +145,12 @@ import { getEditableAlbumIds, getEditableTrackIds, needsFreeEditableTrackPicker 
 import type { User } from '@/lib/types';
 import { VisitorVaultBanner } from '@/components/visitor-vault-banner';
 import { sortVaultItems, vaultSortLabels, type VaultSort } from '@/lib/vault-sort';
+import {
+  matchesAlbumFilter,
+  matchesLooseTrackFilter,
+  vaultLiveFilterLabels,
+  type LooseTrackFilter,
+} from '@/lib/track-live-flags';
 import { DowngradeTrackPickerDialog } from '@/components/downgrade-track-picker-dialog';
 import { FirstSongHero } from '@/components/first-song-hero';
 
@@ -287,6 +294,18 @@ function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenC
   );
 }
 
+function VaultFilterEmptyState({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="col-span-full py-12 text-center flex flex-col items-center gap-4 opacity-60">
+      <Filter className="h-10 w-10 text-muted-foreground" />
+      <p className="font-code text-sm uppercase tracking-[0.25em]">Nothing matches this filter</p>
+      <Button variant="outline" size="sm" className="text-[10px] font-bold uppercase" onClick={onClear}>
+        Clear filter
+      </Button>
+    </div>
+  );
+}
+
 function FreeVisitorVault({
   sortedLooseTracks,
   filteredAlbums,
@@ -298,6 +317,9 @@ function FreeVisitorVault({
   user,
   moveTrack,
   onDeleteTrack,
+  vaultFilter,
+  onClearVaultFilter,
+  unassignedTrackCount,
 }: {
   sortedLooseTracks: Track[];
   filteredAlbums: Album[];
@@ -309,6 +331,9 @@ function FreeVisitorVault({
   user: User | null;
   moveTrack: (trackId: string, fromAlbumId: string, toAlbumId: string) => void;
   onDeleteTrack: (track: Track) => void;
+  vaultFilter: LooseTrackFilter;
+  onClearVaultFilter: () => void;
+  unassignedTrackCount: number;
 }) {
   const { toast } = useToast();
   const openTrackSlots = Math.max(0, FREE_TRACK_LIMIT - totalTrackCount);
@@ -343,7 +368,8 @@ function FreeVisitorVault({
           </Badge>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedLooseTracks.map((track) => {
+          {sortedLooseTracks.length > 0 ? (
+          sortedLooseTracks.map((track) => {
             const tierLocked = !editableTrackIds.has(track.id);
             return (
               <div
@@ -435,7 +461,10 @@ function FreeVisitorVault({
                 </div>
               </div>
             );
-          })}
+          })
+          ) : unassignedTrackCount > 0 && vaultFilter !== 'all' ? (
+            <VaultFilterEmptyState onClear={onClearVaultFilter} />
+          ) : null}
           {Array.from({ length: openTrackSlots }, (_, i) => (
               <OpenTrackSlot key={`open-track-${i}`} onClick={onCreateTrack} />
           ))}
@@ -460,13 +489,17 @@ function FreeVisitorVault({
           <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 font-mono">{realAlbums.length}/{FREE_ALBUM_LIMIT}</Badge>
         </div>
         <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-x-12 gap-y-12 px-2 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredAlbums.map((albumItem) => (
+          {filteredAlbums.length > 0 ? (
+          filteredAlbums.map((albumItem) => (
             <VinylRecord
               key={albumItem.id}
               album={albumItem}
               tierLocked={!editableAlbumIds.has(albumItem.id)}
             />
-          ))}
+          ))
+          ) : realAlbums.length > 0 && vaultFilter !== 'all' ? (
+            <VaultFilterEmptyState onClear={onClearVaultFilter} />
+          ) : null}
           {realAlbums.length < FREE_ALBUM_LIMIT && <OpenAlbumSlot onClick={onCreateAlbum} />}
           <LockedVaultSlot variant="album" label="Unlimited Albums" sublabel="Go Pro for unlimited albums" />
         </div>
@@ -542,6 +575,7 @@ export function AlbumList() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<VaultSort>('newest');
+  const [vaultFilter, setVaultFilter] = useState<LooseTrackFilter>('all');
   const [showImportConfirm, setShowImportConfirm] = useState(false);
   const [showClearVaultConfirm, setShowClearVaultConfirm] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -713,12 +747,19 @@ export function AlbumList() {
       let filtered = realAlbums.filter(a =>
         (a.title || '').toLowerCase().includes(q) || (a.theme || '').toLowerCase().includes(q)
       );
+      if (vaultFilter !== 'all') {
+        filtered = filtered.filter((album) => matchesAlbumFilter(album, vaultFilter));
+      }
       return sortVaultItems(filtered, sortBy);
-  }, [realAlbums, searchQuery, sortBy]);
+  }, [realAlbums, searchQuery, sortBy, vaultFilter]);
 
   const sortedLooseTracks = useMemo(() => {
-      return sortVaultItems(unassignedTracks, sortBy);
-  }, [unassignedTracks, sortBy]);
+      let tracks = unassignedTracks;
+      if (vaultFilter !== 'all') {
+        tracks = tracks.filter((track) => matchesLooseTrackFilter(track, vaultFilter));
+      }
+      return sortVaultItems(tracks, sortBy);
+  }, [unassignedTracks, sortBy, vaultFilter]);
 
   const searchResults = useMemo(() => {
       if (!searchQuery.trim()) return null;
@@ -770,7 +811,18 @@ export function AlbumList() {
       return results;
   }, [albums, searchQuery]);
 
+  const filteredSearchResults = useMemo(() => {
+    if (!searchResults) return null;
+    if (vaultFilter === 'all') return searchResults;
+    return searchResults.filter((res) =>
+      res.type === 'album'
+        ? matchesAlbumFilter(res as Album, vaultFilter)
+        : matchesLooseTrackFilter(res as Track, vaultFilter)
+    );
+  }, [searchResults, vaultFilter]);
+
   const isEmpty = realAlbums.length === 0 && unassignedTracks.length === 0;
+  const clearVaultFilter = () => setVaultFilter('all');
 
   const handleExport = () => {
     if (!canExportVault(user)) {
@@ -888,6 +940,28 @@ export function AlbumList() {
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-10 px-4 bg-card/95 border-border rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest">
+                                <Filter className="h-4 w-4" /> Filter · {vaultLiveFilterLabels[vaultFilter]}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-card border-border">
+                            {(Object.keys(vaultLiveFilterLabels) as LooseTrackFilter[]).map((key) => (
+                              <DropdownMenuItem
+                                key={key}
+                                onClick={() => setVaultFilter(key)}
+                                className={cn(
+                                  'text-[10px] font-bold uppercase',
+                                  vaultFilter === key && 'bg-primary/10 text-primary'
+                                )}
+                              >
+                                {vaultLiveFilterLabels[key]}
+                              </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                             <Button size="sm" data-tour="vault-create" className="h-10 px-6 font-bold shadow-[0_0_25px_rgba(59,130,246,0.3)] bg-primary hover:bg-primary/90 text-white rounded-xl uppercase text-[10px] tracking-widest gap-2">
                                 <PlusCircle className="h-4 w-4" /> Create New
                             </Button>
@@ -973,18 +1047,19 @@ export function AlbumList() {
 
           <div className="relative min-w-0 w-full xl:col-start-2 xl:row-start-2 px-4 sm:px-6 pb-10">
             {!loading && user && <LiveDnaDropsManage className="mb-4" />}
-            {user && isEmpty && !searchResults && <FirstSongHero />}
+            {user && isEmpty && !searchResults && vaultFilter === 'all' && <FirstSongHero />}
             {searchResults ? (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-                            <h2 className="text-2xl font-headline font-bold text-foreground uppercase tracking-tight">Search Results ({searchResults.length})</h2>
+                            <h2 className="text-2xl font-headline font-bold text-foreground uppercase tracking-tight">Search Results ({filteredSearchResults?.length ?? 0})</h2>
                         </div>
                         <Button variant="ghost" className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary" onClick={() => setSearchQuery('')}>Clear Search</Button>
                     </div>
+                    {(filteredSearchResults?.length ?? 0) > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {searchResults.map((res, i) => (
+                        {filteredSearchResults!.map((res, i) => (
                             <Link key={i} href={res.type === 'album' ? `/albums/${res.id}` : `/albums/${res.albumId}/tracks/${res.id}`} className="group">
                                 <Card className="p-4 bg-card/95 border-border hover:border-primary/40 hover:bg-primary/5 transition-all shadow-xl flex items-center justify-between group h-24">
                                     <div className="flex items-center gap-4 overflow-hidden">
@@ -1011,6 +1086,9 @@ export function AlbumList() {
                             </Link>
                         ))}
                     </div>
+                    ) : (
+                      <VaultFilterEmptyState onClear={clearVaultFilter} />
+                    )}
                 </div>
             ) : !isPaidPro ? (
                 <FreeVisitorVault
@@ -1024,6 +1102,9 @@ export function AlbumList() {
                   user={user}
                   moveTrack={moveTrack}
                   onDeleteTrack={setTrackToDelete}
+                  vaultFilter={vaultFilter}
+                  onClearVaultFilter={clearVaultFilter}
+                  unassignedTrackCount={unassignedTracks.length}
                 />
             ) : (
                 <div className="space-y-12">
@@ -1058,7 +1139,9 @@ export function AlbumList() {
                                       <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Tap + to capture a single</p>
                                     )}
                                 </div>
-                                <Badge variant="outline" className="border-primary/20 text-primary font-mono shrink-0">{unassignedTracks.length}</Badge>
+                                <Badge variant="outline" className="border-primary/20 text-primary font-mono shrink-0">
+                                  {vaultFilter !== 'all' ? `${sortedLooseTracks.length}/${unassignedTracks.length}` : unassignedTracks.length}
+                                </Badge>
                             </div>
                             <AnimatePresence>
                                 {(!looseTracksMinimized || unassignedTracks.length === 0) && (
@@ -1069,7 +1152,8 @@ export function AlbumList() {
                                         className="overflow-hidden"
                                     >
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {sortedLooseTracks.map(track => (
+                                            {sortedLooseTracks.length > 0 ? (
+                                            sortedLooseTracks.map(track => (
                                                 <div key={track.id} className="group flex items-center gap-2 py-4 pl-6 pr-3 rounded-2xl bg-card/95 backdrop-blur-3xl border border-border hover:border-primary/30 hover:bg-primary/5 transition-all shadow-xl">
                                                     <Link href={`/albums/unassigned/tracks/${track.id}`} className="flex items-center gap-4 min-w-0 flex-1">
                                                         <div className="p-2 bg-primary/10 rounded-xl border border-primary/20 group-hover:bg-primary/20 transition-all shrink-0">
@@ -1118,7 +1202,10 @@ export function AlbumList() {
                                                         </Link>
                                                     </div>
                                                 </div>
-                                            ))}
+                                            ))
+                                            ) : unassignedTracks.length > 0 && vaultFilter !== 'all' ? (
+                                              <VaultFilterEmptyState onClear={clearVaultFilter} />
+                                            ) : null}
                                             <ProCreateTrackSlot onClick={() => setCreateItemType('Track')} />
                                         </div>
                                     </motion.div>
@@ -1136,14 +1223,20 @@ export function AlbumList() {
                                 </h2>
                                 <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Concept Album DNA Architectures</p>
                             </div>
-                            {filteredAlbums.length > 0 && (
-                              <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 font-mono ml-auto">{filteredAlbums.length}</Badge>
+                            {(filteredAlbums.length > 0 || vaultFilter !== 'all') && (
+                              <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 font-mono ml-auto">
+                                {vaultFilter !== 'all' ? `${filteredAlbums.length}/${realAlbums.length}` : filteredAlbums.length}
+                              </Badge>
                             )}
                         </div>
                         <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-x-12 gap-y-12 px-2 sm:grid-cols-2 lg:grid-cols-3">
-                            {filteredAlbums.map((album) => (
+                            {filteredAlbums.length > 0 ? (
+                            filteredAlbums.map((album) => (
                                 <VinylRecord key={album.id} album={album} />
-                            ))}
+                            ))
+                            ) : realAlbums.length > 0 && vaultFilter !== 'all' ? (
+                              <VaultFilterEmptyState onClear={clearVaultFilter} />
+                            ) : null}
                             {isPaidPro && (
                               <ProCreateAlbumSlot onClick={() => setCreateItemType('Album')} />
                             )}

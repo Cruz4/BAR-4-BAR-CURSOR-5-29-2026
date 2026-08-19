@@ -152,6 +152,7 @@ import {
   looseTrackSearchHaystack,
   matchesLooseTrackFilter,
   sortLooseTracks,
+  vaultLiveFilterLabels,
   type LooseTrackFilter,
   type LooseTrackSort,
 } from '@/lib/track-live-flags';
@@ -1160,14 +1161,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
     return sortLooseTracks(rows, looseSort);
   }, [album?.tracks, isUnassignedVault, looseSearch, looseSort, looseFilter]);
 
-  const looseFilterLabels: Record<LooseTrackFilter, string> = {
-    all: 'All',
-    live: 'Anything live',
-    dna: 'DNA Drop',
-    'first-drop': 'First Drop',
-    collab: 'Collab',
-    complete: 'Complete',
-  };
+  const looseFilterLabels = vaultLiveFilterLabels;
   const showDowngradePicker =
     !downgradePickerDone && !loading && user != null && needsFreeEditableTrackPicker(user, albums);
 

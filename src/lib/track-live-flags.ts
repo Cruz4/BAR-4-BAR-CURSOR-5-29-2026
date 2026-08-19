@@ -26,6 +26,15 @@ export function trackHasLiveFlags(track: Track): boolean {
 
 export type LooseTrackFilter = 'all' | 'live' | 'dna' | 'first-drop' | 'collab' | 'complete';
 
+export const vaultLiveFilterLabels: Record<LooseTrackFilter, string> = {
+  all: 'All',
+  live: 'Anything live',
+  dna: 'DNA Drop',
+  'first-drop': 'First Drop',
+  collab: 'Collab',
+  complete: 'Complete',
+};
+
 export function matchesLooseTrackFilter(track: Track, filter: LooseTrackFilter): boolean {
   if (filter === 'all') return true;
   if (filter === 'live') return trackHasLiveFlags(track);
@@ -60,6 +69,21 @@ export function sortLooseTracks(tracks: Track[], sortBy: LooseTrackSort): Track[
     sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
   return sorted;
+}
+
+export function albumHasLiveFlags(album: Album): boolean {
+  if (hasActiveDnaDrop(album.shareId)) return true;
+  return album.tracks?.some((track) => trackHasLiveFlags(track)) ?? false;
+}
+
+export function matchesAlbumFilter(album: Album, filter: LooseTrackFilter): boolean {
+  if (filter === 'all') return true;
+  if (filter === 'live') return albumHasLiveFlags(album);
+  if (filter === 'dna') return Boolean(getAlbumLiveDnaShareId(album));
+  if (filter === 'first-drop') return Boolean(getAlbumFirstDropTrack(album));
+  if (filter === 'collab') return Boolean(getAlbumCollabTrack(album));
+  if (filter === 'complete') return albumHasCompleteTrack(album);
+  return true;
 }
 
 /** Album or any track DNA Drop share that is currently live. */
