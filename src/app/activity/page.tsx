@@ -37,6 +37,7 @@ import {
 } from '@/lib/activity/client';
 import { navigateActivityHref, resolveActivityOpenHref } from '@/lib/activity/href';
 import { activityShowsActor, activityVerb, type ActivityEvent, type ActivityType } from '@/lib/activity/types';
+import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import {
   acceptFriendRequest,
   fetchFriendships,
@@ -170,9 +171,19 @@ function ActivityRow({
         unread ? 'border-emerald-500/35 bg-emerald-500/5' : 'border-white/10 bg-card/40'
       )}
     >
-      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/40">
-        <TypeIcon type={event.type} />
-      </div>
+      {activityShowsActor(event.type) ? (
+        <LiveArtistStarAvatar
+          name={primaryName}
+          userId={event.direction === 'received' ? event.actorId : event.targetUserId || event.actorId}
+          slug={primarySlug}
+          size={36}
+          link={false}
+        />
+      ) : (
+        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/40">
+          <TypeIcon type={event.type} />
+        </div>
+      )}
       <div className="min-w-0 flex-1 space-y-1.5">
         <p className="text-sm leading-snug">
           {event.direction === 'received' ? (

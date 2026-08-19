@@ -532,22 +532,65 @@ export async function enrichPostsWithLiveSlugs(posts: ProfilePost[]): Promise<Pr
 
 export async function likePost(postId: string, actor?: { name?: string; slug?: string }): Promise<void> {
   const user = requireUser();
-  await setDoc(doc(db, 'posts', postId, 'likes', user.uid), {
-    createdAt: new Date().toISOString(),
-  });
+  const actorName = actor?.name || user.displayName || 'Artist';
+  const actorSlug = actor?.slug;
+  const now = new Date().toISOString();
+
+  const postSnap = await getDoc(doc(db, 'posts', postId));
+  const postData = postSnap.data();
+  const originalPostId =
+    postData?.isReverb === true && typeof postData.reverbPostId === 'string'
+      ? postData.reverbPostId.trim()
+      : '';
+
+  await setDoc(doc(db, 'posts', postId, 'likes', user.uid), { createdAt: now });
   notifyLoveReward({ postId });
+
   const { emitActivity } = await import('@/lib/activity/client');
   emitActivity({
     type: 'post_love',
-    actorName: actor?.name || user.displayName || 'Artist',
-    ...(actor?.slug ? { actorSlug: actor.slug } : {}),
+    actorName,
+    ...(actorSlug ? { actorSlug } : {}),
     postId,
   });
+
+  if (originalPostId && originalPostId !== postId) {
+    const originalLikeRef = doc(db, 'posts', originalPostId, 'likes', user.uid);
+    const existingOriginal = await getDoc(originalLikeRef);
+    if (!existingOriginal.exists()) {
+      await setDoc(originalLikeRef, { createdAt: now, viaReverbPostId: postId });
+    }
+    notifyLoveReward({ postId: originalPostId });
+    emitActivity({
+      type: 'post_love',
+      actorName,
+      ...(actorSlug ? { actorSlug } : {}),
+      postId: originalPostId,
+    });
+  }
 }
 
 export async function unlikePost(postId: string): Promise<void> {
   const user = requireUser();
+  const postSnap = await getDoc(doc(db, 'posts', postId));
+  const postData = postSnap.data();
+  const originalPostId =
+    postData?.isReverb === true && typeof postData.reverbPostId === 'string'
+      ? postData.reverbPostId.trim()
+      : '';
+
   await deleteDoc(doc(db, 'posts', postId, 'likes', user.uid));
+
+  if (originalPostId && originalPostId !== postId) {
+    const originalLikeRef = doc(db, 'posts', originalPostId, 'likes', user.uid);
+    const existingOriginal = await getDoc(originalLikeRef);
+    const viaReverb =
+      existingOriginal.exists() &&
+      existingOriginal.data()?.viaReverbPostId === postId;
+    if (viaReverb) {
+      await deleteDoc(originalLikeRef);
+    }
+  }
 }
 
 export async function fetchLikeCount(postId: string): Promise<number> {
@@ -1388,6 +1431,8 @@ export type PublicArtistMeta = {
   userId: string;
   slug?: string;
   avatarUrl?: string;
+  starMarkUseStar?: boolean;
+  starMarkSeed?: number;
   displayName?: string;
   studioBadge?: 'pro' | 'free';
 };
@@ -1444,6 +1489,24 @@ function customFeedPhotoUrl(asset: PublicAvatarAsset | undefined): string | unde
   return undefined;
 }
 
+/** Avatar chip fields from public profile doc + avatar asset. */
+function avatarChipFromPublic(
+  data: Record<string, unknown> | null | undefined,
+  asset?: PublicAvatarAsset
+): Pick<PublicArtistMeta, 'avatarUrl' | 'starMarkUseStar' | 'starMarkSeed'> {
+  const useStar = data?.starMarkUseStar === true || asset?.source === 'vesperfold';
+  if (useStar) {
+    return {
+      starMarkUseStar: true,
+      starMarkSeed: typeof data?.starMarkSeed === 'number' ? data.starMarkSeed : undefined,
+    };
+  }
+  return {
+    starMarkUseStar: false,
+    avatarUrl: customFeedPhotoUrl(asset) || avatarFromPublicDoc(data || {}),
+  };
+}
+
 /**
  * Resolve live Artist Home slug + avatar for a set of users.
  * Always prefers publicProfiles by userId so stale friendship/activity slugs
@@ -1467,33 +1530,25 @@ export async function fetchPublicArtistMetas(
 
         if (liveSlug) {
           const asset = await readPublicAvatarAsset(liveSlug);
+          let data: Record<string, unknown> | null = null;
+          try {
+            const snap = await getDoc(doc(db, 'publicProfiles', liveSlug));
+            if (snap.exists()) data = snap.data() as Record<string, unknown>;
+          } catch {
+            /* keep asset-only chip */
+          }
+          const chip = avatarChipFromPublic(data, asset);
           out.set(p.userId, {
             userId: p.userId,
             slug: liveSlug,
-            avatarUrl: customFeedPhotoUrl(asset),
-            displayName: live.displayName,
-            studioBadge: live.studioBadge,
+            displayName:
+              live.displayName ||
+              (typeof data?.displayName === 'string' && data.displayName.trim()
+                ? data.displayName.trim()
+                : undefined),
+            studioBadge: live.studioBadge || parseStudioBadge(data?.studioBadge),
+            ...chip,
           });
-          // Prefer custom avatar from live slug; if missing, try named avatar field via doc.
-          try {
-            const snap = await getDoc(doc(db, 'publicProfiles', liveSlug));
-            if (snap.exists()) {
-              const data = snap.data() as Record<string, unknown>;
-              const prev = out.get(p.userId)!;
-              out.set(p.userId, {
-                ...prev,
-                avatarUrl: prev.avatarUrl || avatarFromPublicDoc(data),
-                displayName:
-                  prev.displayName ||
-                  (typeof data.displayName === 'string' && data.displayName.trim()
-                    ? data.displayName.trim()
-                    : undefined),
-                studioBadge: prev.studioBadge || parseStudioBadge(data.studioBadge),
-              });
-            }
-          } catch {
-            /* keep live meta */
-          }
           return;
         }
 
@@ -1515,11 +1570,12 @@ export async function fetchPublicArtistMetas(
             out.set(p.userId, {
               userId: p.userId,
               slug: snap.id,
-              avatarUrl: customFeedPhotoUrl(asset) || avatarFromPublicDoc(data),
               displayName:
                 typeof data.displayName === 'string' && data.displayName.trim()
                   ? data.displayName.trim()
                   : undefined,
+              studioBadge: parseStudioBadge(data.studioBadge),
+              ...avatarChipFromPublic(data, asset),
             });
             return;
           }
@@ -1542,6 +1598,8 @@ export type CircleFriendRow = {
   /** Only set when they have a live public Artist Home. */
   slug?: string;
   avatarUrl?: string;
+  starMarkUseStar?: boolean;
+  starMarkSeed?: number;
   /** True when publicProfiles exists (publicProfile on). */
   isLivePublic: boolean;
   studioBadge?: 'pro' | 'free';
@@ -1564,6 +1622,8 @@ export async function resolveCircleFriends(
       name: (meta?.displayName || f.name || 'Artist').trim() || 'Artist',
       slug: isLivePublic ? meta?.slug : undefined,
       avatarUrl: isLivePublic ? meta?.avatarUrl : undefined,
+      starMarkUseStar: isLivePublic ? meta?.starMarkUseStar : undefined,
+      starMarkSeed: isLivePublic ? meta?.starMarkSeed : undefined,
       isLivePublic,
       studioBadge: meta?.studioBadge,
     };

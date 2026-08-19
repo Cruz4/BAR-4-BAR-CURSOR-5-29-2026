@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { ArtistHomeLink } from '@/components/profile/artist-home-link';
+import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import {
   fetchActivityFeed,
   FRIENDSHIP_CHANGED_EVENT,
@@ -293,8 +294,20 @@ export function ActivityNavDropdown({
                     className="flex w-full gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-emerald-500/5"
                     onClick={() => void openEvent(event)}
                   >
-                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/30">
-                      <TypeIcon type={event.type} />
+                    <span className="mt-0.5 shrink-0">
+                      {activityShowsActor(event.type) ? (
+                        <LiveArtistStarAvatar
+                          name={event.actorName}
+                          userId={event.actorId}
+                          slug={event.actorSlug}
+                          size={32}
+                          link={false}
+                        />
+                      ) : (
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/30">
+                          <TypeIcon type={event.type} />
+                        </span>
+                      )}
                     </span>
                     <span className="min-w-0 flex-1 pr-7">
                       <span className="block text-[12px] leading-snug">

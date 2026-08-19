@@ -62,8 +62,8 @@ function BarStanza({
   return (
     <div
       className={cn(
-        'group relative animate-in fade-in slide-in-from-bottom-2 duration-300',
-        mine ? 'ml-8 sm:ml-16' : 'mr-8 sm:mr-16'
+        'group relative flex animate-in flex-col fade-in slide-in-from-bottom-2 duration-300',
+        mine ? 'ml-8 items-end sm:ml-16' : 'mr-8 items-start sm:mr-16'
       )}
     >
       <div className={cn('flex items-baseline gap-2', mine ? 'justify-end' : 'justify-start')}>
@@ -90,17 +90,16 @@ function BarStanza({
       >
         <p className="whitespace-pre-wrap font-serif text-[17px] leading-relaxed text-amber-50">{bar.text}</p>
       </div>
-      <button
-        type="button"
-        onClick={() => onAnswer(bar)}
-        className={cn(
-          'mt-1 inline-flex items-center gap-1 font-code text-[9px] font-bold uppercase tracking-widest text-amber-200/50 opacity-0 transition-opacity hover:text-amber-100 group-hover:opacity-100',
-          mine && 'ml-auto'
-        )}
-      >
-        <CornerUpLeft className="h-3 w-3" />
-        Reply
-      </button>
+      {!mine ? (
+        <button
+          type="button"
+          onClick={() => onAnswer(bar)}
+          className="mt-1 inline-flex items-center gap-1 font-code text-[9px] font-bold uppercase tracking-widest text-amber-200/50 opacity-0 transition-opacity hover:text-amber-100 group-hover:opacity-100"
+        >
+          <CornerUpLeft className="h-3 w-3" />
+          Reply
+        </button>
+      ) : null}
       {seen ? (
         <p className="mt-0.5 text-right font-code text-[9px] uppercase tracking-[0.2em] text-amber-200/45">
           Seen

@@ -1,5 +1,6 @@
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { getClientStorage } from '@/lib/firebase/client/firebase';
+import { completeUploadTicket, requestUploadTicket } from '@/lib/upload-ticket-client';
 import { pickMediaRecorderMimeType } from '@/lib/speech-recognition';
 import { normalizeAudioContentType } from '@/lib/audio-mime';
 
@@ -141,9 +142,21 @@ export async function uploadVoiceClip(opts: {
     );
   }
   const contentType = normalizeAudioContentType(opts.clip.contentType || opts.clip.blob.type || 'audio/webm');
+  const storagePath = opts.storagePath.slice(0, 400);
+  const kind = storagePath.startsWith('sheet-takes/') ? 'sheet_take' : 'voice';
+  const ticket = await requestUploadTicket({
+    kind,
+    storagePath,
+    byteSize: opts.clip.blob.size,
+    contentType,
+  });
   const storage = getClientStorage();
-  const fileRef = ref(storage, opts.storagePath);
-  await uploadBytes(fileRef, opts.clip.blob, { contentType });
+  const fileRef = ref(storage, storagePath);
+  await uploadBytes(fileRef, opts.clip.blob, {
+    contentType,
+    customMetadata: { uploadTicket: ticket.ticketId },
+  });
+  await completeUploadTicket(ticket.ticketId);
   const url = await getDownloadURL(fileRef);
   return voiceNoteToFirestore(
     {

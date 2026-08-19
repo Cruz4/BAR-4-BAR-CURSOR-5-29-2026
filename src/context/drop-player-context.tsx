@@ -25,6 +25,7 @@ type DropPlayerContextValue = {
   duration: number;
   repeat: DropRepeatMode;
   queue: DeckPlayable[];
+  analyser: AnalyserNode | null;
   setQueue: (next: DeckPlayable[]) => void;
   setRepeat: (next: DropRepeatMode | ((prev: DropRepeatMode) => DropRepeatMode)) => void;
   loadAndPlay: (item: DeckPlayable, autoplay?: boolean) => Promise<void>;
@@ -58,6 +59,8 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
   const repeatRef = useRef<DropRepeatMode>('off');
   const userPausedRef = useRef(false);
   const wantPlayingRef = useRef(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
 
   const [queue, setQueueState] = useState<DeckPlayable[]>([]);
   const [current, setCurrent] = useState<DeckPlayable | null>(null);
@@ -66,6 +69,39 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
   const [elapsed, setElapsed] = useState(0);
   const [duration, setDuration] = useState(0);
   const [repeat, setRepeatState] = useState<DropRepeatMode>('off');
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+
+  const ensureAnalyser = useCallback(() => {
+    if (analyserRef.current) {
+      void audioCtxRef.current?.resume().catch(() => undefined);
+      return analyserRef.current;
+    }
+    const audio = audioRef.current;
+    if (!audio || typeof window === 'undefined') return null;
+    const AC =
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AC) return null;
+    try {
+      audio.crossOrigin = 'anonymous';
+      const ctx = new AC();
+      const source = ctx.createMediaElementSource(audio);
+      const node = ctx.createAnalyser();
+      node.fftSize = 256;
+      node.smoothingTimeConstant = 0.78;
+      node.minDecibels = -90;
+      node.maxDecibels = -20;
+      source.connect(node);
+      node.connect(ctx.destination);
+      audioCtxRef.current = ctx;
+      analyserRef.current = node;
+      setAnalyser(node);
+      void ctx.resume().catch(() => undefined);
+      return node;
+    } catch {
+      return null;
+    }
+  }, []);
 
   queueRef.current = queue;
   currentRef.current = current;
@@ -109,10 +145,12 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
         const res = await fetch(`/api/drops/audio?${qs.toString()}`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Could not load this drop.');
+        audio.crossOrigin = 'anonymous';
         audio.src = data.url;
         audio.load();
         if (autoplay) {
           wantPlayingRef.current = true;
+          ensureAnalyser();
           await audio.play();
           setPlaying(true);
           recordDropSpinClient(item.shareId, data.full ? 'play' : 'preview');
@@ -129,7 +167,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     },
-    [toast]
+    [toast, ensureAnalyser]
   );
 
   const loadAndPlayRef = useRef(loadAndPlay);
@@ -185,6 +223,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
     if (audio.paused) {
       userPausedRef.current = false;
       wantPlayingRef.current = true;
+      ensureAnalyser();
       void audio.play().then(() => setPlaying(true));
     } else {
       userPausedRef.current = true;
@@ -192,7 +231,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       audio.pause();
       setPlaying(false);
     }
-  }, []);
+  }, [ensureAnalyser]);
 
   const seek = useCallback((value: number) => {
     const audio = audioRef.current;
@@ -262,6 +301,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
     const onPlay = () => {
       setPlaying(true);
       wantPlayingRef.current = true;
+      ensureAnalyser();
     };
 
     audio.addEventListener('timeupdate', onTime);
@@ -276,7 +316,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       audio.removeEventListener('pause', onPause);
       audio.removeEventListener('play', onPlay);
     };
-  }, [skipNext]);
+  }, [skipNext, ensureAnalyser]);
 
   useEffect(() => {
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
@@ -303,6 +343,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       userPausedRef.current = false;
       wantPlayingRef.current = true;
       const el = audioRef.current;
+      ensureAnalyser();
       if (el?.src) void el.play().then(() => setPlaying(true));
       else if (currentRef.current) void loadAndPlayRef.current(currentRef.current);
     });
@@ -335,7 +376,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       bind('seekforward', null);
       bind('seekto', null);
     };
-  }, [current, playing, prev, skipNext]);
+  }, [current, playing, prev, skipNext, ensureAnalyser]);
 
   const value = useMemo<DropPlayerContextValue>(
     () => ({
@@ -346,6 +387,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       duration,
       repeat,
       queue,
+      analyser,
       setQueue,
       setRepeat,
       loadAndPlay,
@@ -363,6 +405,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       duration,
       repeat,
       queue,
+      analyser,
       setQueue,
       setRepeat,
       loadAndPlay,
@@ -380,6 +423,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
         ref={audioRef}
         preload="none"
         playsInline
+        crossOrigin="anonymous"
         className="pointer-events-none fixed left-0 top-0 h-px w-px overflow-hidden opacity-0"
       />
       {children}

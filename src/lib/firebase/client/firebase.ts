@@ -13,6 +13,7 @@ import {
 import { registerFirestoreDevRecovery } from '@/lib/firebase/client/firestore-dev-recovery';
 import { registerFirestoreBlockedClientHint } from '@/lib/firebase/client/firestore-blocked-hint';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
+import { initClientAppCheck } from '@/lib/firebase/client/app-check';
 
 /**
  * Production uses bar4bar.ink as authDomain (custom domain).
@@ -37,6 +38,10 @@ const firebaseConfig = {
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
+
+if (typeof window !== 'undefined') {
+  initClientAppCheck();
+}
 
 const globalForFirebase = globalThis as typeof globalThis & {
   __b4bFirestore?: Firestore;

@@ -56,6 +56,13 @@ service cloud.firestore {
           || (data.transcript is string && data.transcript.size() <= 4000));
     }
 
+    function validWallImagePath(path) {
+      return path is string
+        && path.size() > 0
+        && path.size() <= 400
+        && path.matches('wall/' + request.auth.uid + '/.*');
+    }
+
     function validReverbVoiceNote(data) {
       return data is map
         && data.keys().hasAll(['url', 'storagePath', 'contentType', 'durationSec', 'byteSize'])
@@ -112,8 +119,7 @@ service cloud.firestore {
             || (request.resource.data.imageUrl is string
               && request.resource.data.imageUrl.size() <= 2000))
           && (!('imageStoragePath' in request.resource.data)
-            || (request.resource.data.imageStoragePath is string
-              && request.resource.data.imageStoragePath.size() <= 400))
+            || validWallImagePath(request.resource.data.imageStoragePath))
           && (
             request.resource.data.text.size() > 0
             || ('imageUrl' in request.resource.data && request.resource.data.imageUrl.size() > 0)
@@ -231,6 +237,15 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Upload tickets + daily quotas — Admin SDK / ticket API only
+      match /uploadTickets/{ticketId} {
+        allow read, write: if false;
+      }
+
+      match /uploadQuota/{docId} {
+        allow read, write: if false;
+      }
+
       // Social blocks — only the blocker can read/write their own list
       match /blocks/{blockedUid} {
         allow read: if isOwner(userId);
@@ -338,8 +353,7 @@ service cloud.firestore {
           || (request.resource.data.imageUrl is string
             && request.resource.data.imageUrl.size() <= 900000))
         && (!('imageStoragePath' in request.resource.data)
-          || (request.resource.data.imageStoragePath is string
-            && request.resource.data.imageStoragePath.size() <= 400))
+          || validWallImagePath(request.resource.data.imageStoragePath))
         && (!('isReverb' in request.resource.data)
           || request.resource.data.isReverb == true)
         && (!('reverbPostId' in request.resource.data)
@@ -408,8 +422,7 @@ service cloud.firestore {
             || (request.resource.data.imageUrl is string
               && request.resource.data.imageUrl.size() <= 2000))
           && (!('imageStoragePath' in request.resource.data)
-            || (request.resource.data.imageStoragePath is string
-              && request.resource.data.imageStoragePath.size() <= 400))
+            || validWallImagePath(request.resource.data.imageStoragePath))
           && (
             request.resource.data.text.size() > 0
             || ('voice' in request.resource.data && validVoiceNote(request.resource.data.voice))

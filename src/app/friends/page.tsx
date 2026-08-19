@@ -7,11 +7,10 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Ban, Loader2, UserMinus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { StudioLoader } from '@/components/studio-loader';
 import { FindArtistsPanel } from '@/components/profile/find-artists-panel';
+import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +30,7 @@ import { cn } from '@/lib/utils';
 import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { PassBarButton } from '@/components/folds/pass-bar-dialog';
+import { Ban, Loader2, UserMinus, Users } from 'lucide-react';
 
 export default function FriendsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -186,17 +186,18 @@ export default function FriendsPage() {
           <ul className="space-y-2">
             {friends.map((friend) => {
               const friendship = friendships.find((f) => f.uids.includes(friend.userId));
-              const initial = (friend.name.trim().charAt(0) || '?').toUpperCase();
               const href =
                 friend.isLivePublic && friend.slug ? profileHref(friend.slug) : undefined;
               const profileInner = (
                 <>
-                  <Avatar className="h-9 w-9 border border-white/10">
-                    {friend.avatarUrl ? <AvatarImage src={friend.avatarUrl} alt="" /> : null}
-                    <AvatarFallback className="bg-primary/15 text-xs font-bold text-primary">
-                      {initial}
-                    </AvatarFallback>
-                  </Avatar>
+                  <ArtistStarAvatar
+                    name={friend.name}
+                    avatarUrl={friend.avatarUrl}
+                    useStarMark={friend.starMarkUseStar}
+                    starMarkSeed={friend.starMarkSeed}
+                    studioChrome={parseStudioBadge(friend.studioBadge) || 'free'}
+                    size={36}
+                  />
                   <span className={cn(
                     'min-w-0 truncate text-sm font-bold group-hover:text-primary',
                     studioNameClass(parseStudioBadge(friend.studioBadge) || 'free')

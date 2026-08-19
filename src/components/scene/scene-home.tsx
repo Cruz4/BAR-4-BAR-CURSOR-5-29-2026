@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { StudioLoader } from '@/components/studio-loader';
 import { PostCard } from '@/components/profile/post-card';
+import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
 import { FindArtistsPanel } from '@/components/profile/find-artists-panel';
@@ -831,6 +832,13 @@ export function SceneHome() {
                   const requesterSlug = requester?.slug;
                   return (
                     <div key={request.id} className="flex items-center gap-3">
+                      <LiveArtistStarAvatar
+                        name={requester?.name || 'Artist'}
+                        userId={request.requestedBy}
+                        slug={requesterSlug}
+                        size={32}
+                        link={false}
+                      />
                       <div className="min-w-0 flex-1">
                         {requesterSlug ? (
                           <Link

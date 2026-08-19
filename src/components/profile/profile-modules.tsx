@@ -31,6 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import { profileFriendsHref, profileHref } from '@/lib/profile/profile-slug';
+import { parseStudioBadge } from '@/lib/studio-tier-chrome';
 import type { ArtistHomeFeatured, ModuleSize } from '@/lib/profile/modules';
 import { FingerprintSvg } from '@/components/profile/rhyme-fingerprint-svg';
 import { BarBoardView } from '@/components/profile/bar-board-module';
@@ -55,6 +56,7 @@ import {
   resolveCircleFriends,
   setGuestbookEntry,
   visibleCircleFriends,
+  type CircleFriendRow,
   type GuestbookEntry,
   type ProfilePost,
 } from '@/lib/profile/social-client';
@@ -66,6 +68,7 @@ import {
   type PendingPostImage,
 } from '@/lib/profile/post-images';
 import { ArtistHomeLink } from '@/components/profile/artist-home-link';
+import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 
 export type ModuleContext = {
   profileUserId: string;
@@ -892,15 +895,27 @@ const FRIENDS_PAGE_SIZE = 20;
 export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
   const { user } = useAuth();
   const playground = ctx.playgroundFriends;
-  const [friends, setFriends] = useState<Array<{ userId: string; name: string; slug?: string }>>(
-    playground || []
+  const [friends, setFriends] = useState<CircleFriendRow[]>(
+    (playground || []).map((f) => ({
+      userId: f.userId,
+      name: f.name,
+      slug: f.slug,
+      isLivePublic: Boolean(f.slug),
+    }))
   );
   const [loaded, setLoaded] = useState(Boolean(playground));
   const [page, setPage] = useState(0);
 
   useEffect(() => {
     if (playground) {
-      setFriends(playground);
+      setFriends(
+        playground.map((f) => ({
+          userId: f.userId,
+          name: f.name,
+          slug: f.slug,
+          isLivePublic: Boolean(f.slug),
+        }))
+      );
       setLoaded(true);
       setPage(0);
       return;
@@ -966,24 +981,30 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
       }
     >
       <div className="flex flex-wrap gap-2">
-        {pageFriends.map((friend) =>
-          friend.slug ? (
-            <Link
-              key={friend.userId}
-              href={profileHref(friend.slug) || '#'}
-              className="rounded-full border border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 px-3 py-1.5 text-xs font-bold text-[var(--ph-text,#fff)] transition-colors hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]"
-            >
-              {friend.name}
-            </Link>
-          ) : (
-            <span
-              key={friend.userId}
-              className="rounded-full border border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 px-3 py-1.5 text-xs font-bold text-[var(--ph-text,#fff)]/70"
-            >
+        {pageFriends.map((friend) => {
+          const chip = (
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 py-1 pl-1 pr-3 text-xs font-bold text-[var(--ph-text,#fff)] transition-colors hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]">
+              <ArtistStarAvatar
+                name={friend.name}
+                avatarUrl={friend.avatarUrl}
+                useStarMark={friend.starMarkUseStar}
+                starMarkSeed={friend.starMarkSeed}
+                studioChrome={parseStudioBadge(friend.studioBadge) || 'free'}
+                size={22}
+              />
               {friend.name}
             </span>
-          )
-        )}
+          );
+          return friend.slug ? (
+            <Link key={friend.userId} href={profileHref(friend.slug) || '#'}>
+              {chip}
+            </Link>
+          ) : (
+            <span key={friend.userId} className="opacity-70">
+              {chip}
+            </span>
+          );
+        })}
       </div>
 
       {showPager ? (

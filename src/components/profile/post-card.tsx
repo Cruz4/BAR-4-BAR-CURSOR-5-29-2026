@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { Eye, Heart, MessageCircle, Repeat2, Share2, Trash2, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -33,7 +34,10 @@ import { parseStudioBadge, studioChromeFromUser, studioNameClass, type StudioNam
 import {
   parseActivityPostHash,
   scrollActivityPostTarget,
+  activityPostHash,
 } from '@/lib/activity/post-deep-link';
+import { activityOpenLinkHref } from '@/lib/activity/href';
+import { profileHref } from '@/lib/profile/profile-slug';
 import { compactReachCount, recordPostViewClient } from '@/lib/post-view-client';
 import { LyricClipCard } from '@/components/profile/lyric-clip-card';
 
@@ -86,6 +90,11 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
     };
   }, [liveSlug]);
 
+  const originalPostHref =
+    post.reverbPostId && (liveSlug || post.reverbOwnerSlug)
+      ? profileHref(liveSlug || post.reverbOwnerSlug, activityPostHash(post.reverbPostId))
+      : undefined;
+
   return (
     <div className="mt-2 rounded-xl border border-[var(--ph-border,rgba(255,255,255,0.14))] bg-black/30 p-3">
       <div className="mb-1.5 flex items-center gap-2">
@@ -116,7 +125,17 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
           />
         )}
         <p className="min-w-0 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
-          Original ·{' '}
+          {originalPostHref ? (
+            <Link
+              href={activityOpenLinkHref(originalPostHref)}
+              className="text-[var(--ph-muted,rgba(255,255,255,0.55))] transition-colors hover:text-[var(--ph-text,#fff)] hover:underline"
+            >
+              Original
+            </Link>
+          ) : (
+            'Original'
+          )}
+          {' · '}
           <ArtistHomeLink
             userId={post.reverbOwnerId}
             slug={post.reverbOwnerSlug}

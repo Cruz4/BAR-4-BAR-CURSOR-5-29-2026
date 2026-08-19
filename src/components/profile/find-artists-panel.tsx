@@ -19,6 +19,7 @@ import {
   type Friendship,
 } from '@/lib/profile/social-client';
 import { REFERRAL_INK_REWARD } from '@/lib/referrals';
+import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
@@ -219,6 +220,14 @@ export function FindArtistsPanel({ viewerSlug, className }: FindArtistsPanelProp
                 key={artist.userId}
                 className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3 py-2.5"
               >
+                <LiveArtistStarAvatar
+                  name={artist.displayName}
+                  userId={artist.userId}
+                  slug={artist.slug}
+                  studioChrome={parseStudioBadge(artist.studioBadge) || 'free'}
+                  size={36}
+                  link={false}
+                />
                 <div className="min-w-0 flex-1">
                   <Link
                     href={profileHref(artist.slug) || `/${artist.slug}`}

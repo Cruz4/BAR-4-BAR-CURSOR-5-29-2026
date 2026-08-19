@@ -13,7 +13,9 @@ import { cn } from '@/lib/utils';
 import { VesperfoldMark } from '@/components/profile/vesperfold-mark';
 import { normalizeVesperfoldSeed } from '@/lib/profile/vesperfold';
 import { getInitials } from '@/lib/gamification/studio-pass';
-import type { StudioNameChrome } from '@/lib/studio-tier-chrome';
+import { parseStudioBadge, type StudioNameChrome } from '@/lib/studio-tier-chrome';
+import { useLiveArtistHomeSlug } from '@/components/profile/artist-home-link';
+import { fetchPublicArtistAvatarMeta } from '@/lib/profile/social-client';
 
 /** Classic 5-point star clip — stock initials only (no photo, no generative). */
 export const ARTIST_STAR_CLIP =
@@ -182,4 +184,90 @@ export function ArtistStarAvatar({
   }
 
   return mark;
+}
+
+type LiveArtistStarAvatarProps = {
+  name: string;
+  userId?: string | null;
+  slug?: string | null;
+  /** Prefer when already resolved (friends lists). */
+  avatarUrl?: string;
+  useStarMark?: boolean;
+  starMarkSeed?: number;
+  studioChrome?: StudioNameChrome | null;
+  size?: number;
+  className?: string;
+  toneClass?: string;
+  /** When false, never link even if the profile is live. */
+  link?: boolean;
+};
+
+/**
+ * Live Artist Home badge — photo, feed star, or initials star.
+ * Loads public avatar meta when only userId/slug are known (activity, search, admin).
+ */
+export function LiveArtistStarAvatar({
+  name,
+  userId,
+  slug,
+  avatarUrl: bakedAvatarUrl,
+  useStarMark: bakedUseStar,
+  starMarkSeed: bakedSeed,
+  studioChrome: bakedChrome,
+  size = 36,
+  className,
+  toneClass,
+  link = true,
+}: LiveArtistStarAvatarProps) {
+  const { liveSlug, href, isLive } = useLiveArtistHomeSlug(userId, slug);
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(bakedAvatarUrl);
+  const [useStarMark, setUseStarMark] = useState(Boolean(bakedUseStar));
+  const [starMarkSeed, setStarMarkSeed] = useState<number | undefined>(bakedSeed);
+  const [studioChrome, setStudioChrome] = useState<StudioNameChrome | null | undefined>(bakedChrome);
+
+  useEffect(() => {
+    setAvatarUrl(bakedAvatarUrl);
+    setUseStarMark(Boolean(bakedUseStar));
+    setStarMarkSeed(bakedSeed);
+    setStudioChrome(bakedChrome);
+  }, [bakedAvatarUrl, bakedUseStar, bakedSeed, bakedChrome]);
+
+  useEffect(() => {
+    const targetSlug = liveSlug || (isLive ? slug || undefined : undefined);
+    if (!targetSlug) return;
+    // Friends / circle lists already resolved the public chip — don't refetch.
+    if (bakedUseStar === true) return;
+    if (bakedUseStar === false && typeof bakedAvatarUrl === 'string') return;
+
+    let cancelled = false;
+    void fetchPublicArtistAvatarMeta(targetSlug).then((meta) => {
+      if (cancelled || !meta) return;
+      if (meta.starMarkUseStar) {
+        setUseStarMark(true);
+        setStarMarkSeed(meta.starMarkSeed);
+        setAvatarUrl(undefined);
+      } else {
+        setUseStarMark(false);
+        setAvatarUrl(meta.avatarUrl || bakedAvatarUrl);
+      }
+      setStudioChrome(parseStudioBadge(meta.studioBadge) || bakedChrome || undefined);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [liveSlug, slug, isLive, bakedUseStar, bakedAvatarUrl, bakedChrome]);
+
+  return (
+    <ArtistStarAvatar
+      name={name}
+      avatarUrl={avatarUrl}
+      useStarMark={useStarMark}
+      starMarkSeed={starMarkSeed}
+      studioChrome={studioChrome}
+      href={link && isLive ? href : undefined}
+      size={size}
+      className={className}
+      toneClass={toneClass}
+    />
+  );
 }

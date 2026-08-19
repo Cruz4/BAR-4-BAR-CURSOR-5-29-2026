@@ -9,11 +9,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, Search, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { StudioLoader } from '@/components/studio-loader';
+import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { useAuth } from '@/hooks/use-auth';
 import {
   enrichFriendProfilesWithLiveSlugs,
@@ -24,6 +23,8 @@ import {
   type CircleFriendRow,
 } from '@/lib/profile/social-client';
 import { profileHref } from '@/lib/profile/profile-slug';
+import { parseStudioBadge } from '@/lib/studio-tier-chrome';
+import { ChevronLeft, Search, Users } from 'lucide-react';
 
 export default function ProfileFriendsPage() {
   const params = useParams();
@@ -172,20 +173,16 @@ export default function ProfileFriendsPage() {
         <ul className="space-y-2">
           {filtered.map((friend) => {
             const href = friend.slug ? profileHref(friend.slug) : undefined;
-            const initials = (friend.name || 'A')
-              .split(/\s+/)
-              .map((w) => w[0])
-              .join('')
-              .slice(0, 2)
-              .toUpperCase();
             const row = (
               <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 transition-colors hover:border-primary/40 hover:bg-black/40">
-                <Avatar className="h-10 w-10 border border-white/10">
-                  {friend.avatarUrl ? <AvatarImage src={friend.avatarUrl} alt="" /> : null}
-                  <AvatarFallback className="bg-primary/15 text-xs font-bold text-primary">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
+                <ArtistStarAvatar
+                  name={friend.name}
+                  avatarUrl={friend.avatarUrl}
+                  useStarMark={friend.starMarkUseStar}
+                  starMarkSeed={friend.starMarkSeed}
+                  studioChrome={parseStudioBadge(friend.studioBadge) || 'free'}
+                  size={40}
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-white">{friend.name}</p>
                   {friend.slug ? (

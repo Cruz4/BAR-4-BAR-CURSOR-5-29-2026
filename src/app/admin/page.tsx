@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { User, SystemLog } from '@/lib/types';
+import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import type { RankId } from '@/lib/gamification/types';
 import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { STUDIO_RANKS } from '@/lib/gamification/ranks';
@@ -902,6 +903,15 @@ export default function AdminPage() {
                     <TableRow key={u.id} className="hover:bg-white/5 border-b border-white/5">
                       <TableCell>
                         <div className="font-bold text-white uppercase text-xs flex items-center gap-2 flex-wrap">
+                          <LiveArtistStarAvatar
+                            name={u.displayName || 'Artist'}
+                            userId={u.id}
+                            slug={gam?.profileSlug}
+                            avatarUrl={u.photoURL}
+                            studioChrome={studioChromeFromSubscriptionStatus(u.subscriptionStatus)}
+                            size={28}
+                            link={false}
+                          />
                           <span className={studioNameClass(studioChromeFromSubscriptionStatus(u.subscriptionStatus))}>{u.displayName}</span>
                           {(u.role === 'admin' || isMasterAdminEmail(u.email)) && (
                             <Badge

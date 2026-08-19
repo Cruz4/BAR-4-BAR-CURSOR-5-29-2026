@@ -326,7 +326,7 @@ export function Header() {
                       </div>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
-                      className="w-56 [&_[role=menuitem]]:focus:bg-amber-400/25 [&_[role=menuitem]]:focus:text-foreground"
+                      className="w-56 [&_[role=menuitem][data-highlighted]]:bg-amber-400/25 [&_[role=menuitem][data-highlighted]]:text-foreground"
                       align="end"
                       forceMount
                     >

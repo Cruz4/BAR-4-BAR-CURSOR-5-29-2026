@@ -76,12 +76,26 @@ export function DropVisualizer({ analyser, playing, children, className }: DropV
         if (!bins || bins.length === 0) {
           return playing ? 0.28 + Math.sin(t * 3 + lane) * 0.12 : 0.12;
         }
-        const start = Math.floor((lane / 4) * bins.length * 0.42);
-        const end = Math.floor(((lane + 1) / 4) * bins.length * 0.42);
+        // Four lyric-bar lanes across the lower/mid spectrum (kick → snare → mids → sparkle).
+        const spans = [
+          [0, 0.12],
+          [0.12, 0.28],
+          [0.28, 0.5],
+          [0.5, 0.78],
+        ] as const;
+        const [lo, hi] = spans[lane];
+        const start = Math.floor(lo * bins.length);
+        const end = Math.max(start + 1, Math.floor(hi * bins.length));
         let sum = 0;
-        for (let i = start; i < end; i++) sum += bins[i];
-        const avg = sum / Math.max(1, end - start) / 255;
-        return playing ? Math.min(1, 0.12 + avg * 1.35) : 0.1 + avg * 0.2;
+        let peak = 0;
+        for (let i = start; i < end; i++) {
+          const v = bins[i] / 255;
+          sum += v;
+          if (v > peak) peak = v;
+        }
+        const avg = sum / (end - start);
+        const level = Math.min(1, avg * 1.15 + peak * 0.55);
+        return playing ? Math.max(0.08, level) : 0.08 + level * 0.18;
       });
 
       lanes.forEach((level, i) => {

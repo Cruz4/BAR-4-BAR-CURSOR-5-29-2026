@@ -169,14 +169,14 @@ async function fetchSceneWeather(): Promise<void> {
       sunriseIso: raw?.sunriseIso ?? undefined,
       sunsetIso: raw?.sunsetIso ?? undefined,
     };
-    sharedSky =
-      data.sky ??
-      buildSceneSkyState({
-        wmoCode: sharedBits.wmoCode,
-        windspeedKmh: sharedBits.windspeedKmh,
-        sunriseIso: sharedBits.sunriseIso,
-        sunsetIso: sharedBits.sunsetIso,
-      });
+    // Always derive phase on the client — server `data.sky` uses UTC `Date`, which
+    // can flip dawn/day/night vs the viewer's local clock after the first paint.
+    sharedSky = buildSceneSkyState({
+      wmoCode: sharedBits.wmoCode,
+      windspeedKmh: sharedBits.windspeedKmh,
+      sunriseIso: sharedBits.sunriseIso,
+      sunsetIso: sharedBits.sunsetIso,
+    });
     if (typeof data.city === 'string' && data.city.trim()) {
       sharedCity = data.city.trim();
     } else if (data.source === 'house') {
@@ -201,9 +201,6 @@ async function fetchSceneWeather(): Promise<void> {
 
 function tickPhaseFromBits(): SceneSkyState {
   const b = sharedBits;
-  if (typeof b.wmoCode !== 'number') {
-    return defaultSceneSkyState();
-  }
   return buildSceneSkyState({
     wmoCode: b.wmoCode,
     windspeedKmh: b.windspeedKmh,

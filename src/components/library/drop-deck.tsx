@@ -129,6 +129,7 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
     elapsed,
     duration,
     repeat,
+    analyser,
     setQueue: setPlayerQueue,
     setRepeat,
     loadAndPlay,
@@ -395,7 +396,7 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
 
         <section className="flex min-w-0 flex-1 flex-col gap-4 lg:min-h-0">
           <div className="rounded-2xl border border-fuchsia-400/20 bg-black/35 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-md sm:p-5">
-            <DropVisualizer analyser={null} playing={playing}>
+            <DropVisualizer analyser={analyser} playing={playing}>
               <PressingPlate item={current} playing={playing} />
             </DropVisualizer>
             <div className="mt-4 min-w-0">

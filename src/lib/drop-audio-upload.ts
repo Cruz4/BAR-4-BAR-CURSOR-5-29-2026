@@ -6,6 +6,7 @@ import {
 } from '@/lib/drop-commerce';
 import { getClientStorage } from '@/lib/firebase/client/firebase';
 import { ref, uploadBytes, deleteObject } from 'firebase/storage';
+import { completeUploadTicket, requestUploadTicket } from '@/lib/upload-ticket-client';
 
 function writeWav(buffer: AudioBuffer, frameCount: number): Blob {
   const channels = Math.min(2, buffer.numberOfChannels);
@@ -95,8 +96,24 @@ export async function uploadDropAudio(opts: {
   const previewPath = `${prefix}/preview.wav`;
   const contentType = opts.file.type || 'audio/mpeg';
 
-  await uploadBytes(ref(storage, storagePath), opts.file, { contentType });
-  await uploadBytes(ref(storage, previewPath), preview.blob, { contentType: 'audio/wav' });
+  const ticket = await requestUploadTicket({
+    kind: 'drop_audio',
+    storagePath,
+    byteSize: opts.file.size,
+    contentType,
+    companionPath: previewPath,
+    companionByteSize: preview.blob.size,
+  });
+
+  await uploadBytes(ref(storage, storagePath), opts.file, {
+    contentType,
+    customMetadata: { uploadTicket: ticket.ticketId },
+  });
+  await uploadBytes(ref(storage, previewPath), preview.blob, {
+    contentType: 'audio/wav',
+    customMetadata: { uploadTicket: ticket.ticketId },
+  });
+  await completeUploadTicket(ticket.ticketId);
 
   return {
     storagePath,

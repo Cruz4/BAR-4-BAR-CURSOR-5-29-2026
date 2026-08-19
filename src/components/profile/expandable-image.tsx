@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
 type ExpandableImageProps = {
@@ -33,6 +33,7 @@ export function ExpandableImage({ src, alt, className, thumbClassName }: Expanda
           overlayClassName="bg-black/90"
           className="max-h-[96vh] max-w-[min(96vw,920px)] border-none bg-transparent p-2 shadow-none sm:rounded-xl"
         >
+          <DialogTitle className="sr-only">{alt || 'Expanded photo'}</DialogTitle>
           <button
             type="button"
             onClick={() => setOpen(false)}
