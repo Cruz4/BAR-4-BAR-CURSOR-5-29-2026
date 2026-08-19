@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { ProfileVoiceMemoBadge } from '@/components/profile/profile-voice-memo-badge';
 import {
   resolvedSocialLinks,
+  SOCIAL_PROVIDERS,
   type ArtistHomeSocials,
   type SocialProviderId,
 } from '@/lib/profile/social-links';
@@ -66,6 +67,31 @@ function SocialGlyph({ id, className }: { id: SocialProviderId; className?: stri
     default:
       return null;
   }
+}
+
+const SANDBOX_SOCIAL_EXAMPLES: SocialProviderId[] = ['instagram', 'tiktok', 'youtube', 'spotify'];
+
+/** Guest sandbox — example social chips under the initials star (not live links). */
+export function ProfileSocialExampleBadges({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn('flex flex-wrap items-center justify-center gap-1.5', className)}
+      aria-label="Example social badges"
+    >
+      {SANDBOX_SOCIAL_EXAMPLES.map((id) => {
+        const provider = SOCIAL_PROVIDERS.find((p) => p.id === id);
+        return (
+          <span
+            key={id}
+            title={provider?.label || id}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--ph-border)] bg-[var(--ph-plate)] text-[var(--ph-muted)]"
+          >
+            <SocialGlyph id={id} className="h-3.5 w-3.5" />
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 export function ProfileSocialLinks({

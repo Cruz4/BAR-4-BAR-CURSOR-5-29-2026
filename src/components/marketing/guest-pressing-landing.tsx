@@ -68,7 +68,6 @@ import {
   prefetchGuestTrySheetWhenIdle,
 } from '@/lib/prefetch-guest-try-sheet';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
-import { firstDropsFeeCashoutLine } from '@/lib/drop-commerce';
 
 const PRESSING_TIP_KEY = 'b4b-guest-pressing-tip-seen';
 
@@ -432,8 +431,7 @@ function GuestPressingLandingInner() {
               <li className="flex gap-2">
                 <Music className="mt-0.5 h-3.5 w-3.5 shrink-0 text-fuchsia-400" />
                 <span>
-                  First Drops — press the song from The Scene. Fans buy once and stream here.{' '}
-                  {firstDropsFeeCashoutLine()}
+                  Upload and sell your music from this page — press a song from The Scene, fans stream here.
                 </span>
               </li>
             ) : null}
@@ -520,7 +518,7 @@ function GuestPressingLandingInner() {
             {' '}
             <span className="hidden text-zinc-300 sm:inline">
               Try The Pressing at the bottom to customize the skin.
-              {firstDropsOn ? ` ${firstDropsFeeCashoutLine()}` : ''}
+              {firstDropsOn ? ' You can upload and sell your music from your Artist Home.' : ''}
             </span>
           </p>
           <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
@@ -770,7 +768,7 @@ function GuestPressingLandingInner() {
                 value={draft.seedText}
                 onChange={(e) => update({ seedText: e.target.value.slice(0, 280) })}
                 rows={2}
-                placeholder="Type a bar — skins the page live…"
+                placeholder="Type something here & watch your page change"
                 aria-label="The Pressing — skins this page"
                 className={cn(
                   'resize-none border-white/15 bg-black/50 text-sm leading-snug transition-shadow',
@@ -797,7 +795,7 @@ function GuestPressingLandingInner() {
             This preview is your Artist Home — completely free. Type above for The Pressing. Click Bar of the Week on
             the page to edit it. Mix & sizes still has faders and S/M/L. Claim keeps your look.
             {firstDropsOn
-              ? ` First Drops: Press a song from The Scene, set a price, fans stream here. ${firstDropsFeeCashoutLine()}`
+              ? ' You can upload and sell your music from your Artist Home.'
               : ''}
           </p>
         </div>

@@ -173,7 +173,11 @@ export function readGuestPressingDraft(): GuestPressingDraft | null {
       ...base,
       displayName: typeof parsed.displayName === 'string' ? parsed.displayName : base.displayName,
       tagline: typeof parsed.tagline === 'string' ? parsed.tagline : base.tagline,
-      seedText: typeof parsed.seedText === 'string' ? parsed.seedText : base.seedText,
+      seedText:
+        typeof parsed.seedText === 'string' &&
+        parsed.seedText !== 'Type a bar here to watch your page change.'
+          ? parsed.seedText
+          : base.seedText,
       barOfWeek:
         typeof parsed.barOfWeek === 'string' ? parsed.barOfWeek : base.barOfWeek,
       faders: {

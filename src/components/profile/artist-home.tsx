@@ -55,7 +55,7 @@ import { fetchGamificationSummary } from '@/lib/gamification-client';
 import { trackGuestSignupCta } from '@/lib/guest-funnel-client';
 import { guestTryHref } from '@/lib/guest-try';
 import { prefetchGuestTrySheetNow, prefetchGuestTrySheetWhenIdle } from '@/lib/prefetch-guest-try-sheet';
-import { ProfileSocialLinks } from '@/components/profile/profile-social-links';
+import { ProfileSocialExampleBadges, ProfileSocialLinks } from '@/components/profile/profile-social-links';
 import { ProfileContactChip } from '@/components/profile/profile-contact-chip';
 import { ProfileMediaLightbox } from '@/components/profile/profile-media-lightbox';
 import { ArtistHomeGuestClaim } from '@/components/profile/artist-home-guest-claim';
@@ -525,11 +525,20 @@ export function ArtistHome({
                   </span>
                 </div>
               )}
-              <ProfileSocialLinks
-                socials={config.featured.socials}
-                voiceMemo={config.featured.voiceMemo}
-                className="relative z-20 mt-3 pointer-events-auto"
-              />
+              {previewMode && !isOwner ? (
+                <div className="relative z-20 mt-3 space-y-1.5 text-center">
+                  <ProfileSocialExampleBadges />
+                  <p className="text-[10px] leading-snug text-[var(--ph-muted)]">
+                    (example socials — upload or change your picture once you sign in)
+                  </p>
+                </div>
+              ) : (
+                <ProfileSocialLinks
+                  socials={config.featured.socials}
+                  voiceMemo={config.featured.voiceMemo}
+                  className="relative z-20 mt-3 pointer-events-auto"
+                />
+              )}
             </div>
           </div>
         </section>
