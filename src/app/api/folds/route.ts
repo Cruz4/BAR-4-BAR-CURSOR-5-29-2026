@@ -63,7 +63,7 @@ export async function POST(req: Request) {
     }
 
     if (action === 'pass') {
-      const { allowed } = checkRateLimit(`fold-pass:${userId}`, 40, 60 * 60 * 1000);
+      const { allowed } = await checkRateLimit(`fold-pass:${userId}`, 40, 60 * 60 * 1000);
       if (!allowed) {
         return NextResponse.json({ error: 'Slow down — too many messages this hour.' }, { status: 429 });
       }

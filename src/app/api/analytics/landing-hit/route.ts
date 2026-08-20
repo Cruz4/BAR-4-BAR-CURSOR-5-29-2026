@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     const rateKey = guestId
       ? `landing-hit:${guestId}:${ref}:${path}`
       : `landing-hit:${ip}:${ref}:${path}`;
-    const { allowed } = checkRateLimit(rateKey, MAX_PER_WINDOW, WINDOW_MS);
+    const { allowed } = await checkRateLimit(rateKey, MAX_PER_WINDOW, WINDOW_MS);
     if (!allowed) {
       return NextResponse.json({ ok: true, throttled: true });
     }

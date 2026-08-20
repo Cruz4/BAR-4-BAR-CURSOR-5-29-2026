@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 import { getDb } from '@/lib/firebase/server';
 import { processGamificationEvent } from '@/lib/server/gamification';
+import { emitActivityEvent } from '@/lib/server/activity';
+import { SYSTEM_ACTOR_ID, SYSTEM_ACTOR_NAME } from '@/lib/activity/types';
+import { loveInkRewardUnlockId } from '@/lib/gamification/love-rewards';
 
 export const runtime = 'nodejs';
 
@@ -87,7 +90,26 @@ export async function POST(req: Request) {
       shareId: shareId || null,
     });
 
-    return NextResponse.json({ ok: true, xpGain: result.xpGain });
+    const lifetimeLovesReceived = result.summary.lifetimeLovesReceived || 0;
+    const milestoneUnlock = result.unlocks.find(
+      (unlock) => unlock.id === loveInkRewardUnlockId(lifetimeLovesReceived)
+    );
+    if (milestoneUnlock) {
+      await emitActivityEvent({
+        type: 'love_milestone',
+        actorId: SYSTEM_ACTOR_ID,
+        actorName: SYSTEM_ACTOR_NAME,
+        recipientId,
+        preview: milestoneUnlock.description,
+        href: '/studio-progress',
+      });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      xpGain: result.xpGain,
+      inkReward: milestoneUnlock?.inkReward || 0,
+    });
   } catch (err) {
     console.error('[social/love-reward]', err);
     return NextResponse.json({ error: 'Failed to grant love reward' }, { status: 500 });

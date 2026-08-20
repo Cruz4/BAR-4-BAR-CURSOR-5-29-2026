@@ -24,6 +24,11 @@ service cloud.firestore {
       return isOwner(userId) || isAdmin();
     }
 
+    function isPaidPro(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId))
+        && get(/databases/$(database)/documents/users/$(userId)).data.get('subscriptionStatus', 'none') == 'active';
+    }
+
     function isCollabSheetMember(collabId) {
       let sheet = get(/databases/$(database)/documents/collabSheets/$(collabId)).data;
       return request.auth != null
@@ -179,20 +184,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    function isOwnerFreeEditableUpdate(userId) {
-      let keys = request.resource.data.diff(resource.data).affectedKeys();
-      return isOwner(userId)
-        && (keys.hasOnly(['freeEditableTrackIds'])
-          || keys.hasOnly(['freeEditableTrackIds', 'freeEditableSelectionAt']));
-    }
-
     // User profile — owner can update except privileged billing fields
     match /users/{userId} {
       allow read: if isOwnerOrAdmin(userId);
       allow list: if isAdmin();
       allow create: if isOwner(userId) && isSafeUserBootstrap();
       allow update: if isAdmin()
-        || isOwnerFreeEditableUpdate(userId)
         || (isOwner(userId)
           && !('status' in resource.data)
           && request.resource.data.status == 'active'
@@ -206,7 +203,8 @@ service cloud.firestore {
             'subscriptionId', 'stripeCustomerId', 'referredBy', 'referralCode', 'referralCount',
             'stripeConnectAccountId', 'stripeConnectCountry', 'stripeConnectDetailsSubmitted',
             'stripeConnectTransfersActive', 'stripeConnectPayoutsEnabled',
-            'returningIdentity', 'proFeaturePreviewExpiresAt', 'pendingWelcomeInk', 'welcomeInkReconciled'
+            'returningIdentity', 'proFeaturePreviewExpiresAt', 'pendingWelcomeInk', 'welcomeInkReconciled',
+            'freeAlbumId', 'freeEditableTrackIds', 'freeEditableSelectionAt'
           ]));
       allow delete: if isOwner(userId) || isAdmin();
 
@@ -227,10 +225,21 @@ service cloud.firestore {
       }
 
       match /albums/{albumId} {
-        allow read, write: if isOwnerOrAdmin(userId);
+        allow read: if isOwnerOrAdmin(userId);
+        allow create: if isAdmin()
+          || (isOwner(userId)
+            && (isPaidPro(userId)
+              || albumId == 'unassigned'
+              || get(/databases/$(database)/documents/users/$(userId)).data.get('freeAlbumId', '') == albumId));
+        allow update, delete: if isOwnerOrAdmin(userId);
 
         match /tracks/{trackId} {
-          allow read, write: if isOwnerOrAdmin(userId);
+          allow read: if isOwnerOrAdmin(userId);
+          allow create: if isAdmin()
+            || (isOwner(userId)
+              && (isPaidPro(userId)
+                || trackId in get(/databases/$(database)/documents/users/$(userId)).data.get('freeEditableTrackIds', [])));
+          allow update, delete: if isOwnerOrAdmin(userId);
         }
       }
 
@@ -246,6 +255,11 @@ service cloud.firestore {
       match /gamification/{docId} {
         allow read: if isOwnerOrAdmin(userId);
         allow write: if false;
+      }
+
+      // Server-owned AI session accounting; never trust client chunk counters.
+      match /aiSessions/{docId} {
+        allow read, write: if false;
       }
 
       // Upload tickets + daily quotas — Admin SDK / ticket API only
@@ -558,6 +572,11 @@ service cloud.firestore {
     }
 
     match /stripe_fulfilled_sessions/{sessionId} {
+      allow read, write: if false;
+    }
+
+    // Shared server-side abuse counters. Admin SDK only.
+    match /rate_limits/{bucketId} {
       allow read, write: if false;
     }
 

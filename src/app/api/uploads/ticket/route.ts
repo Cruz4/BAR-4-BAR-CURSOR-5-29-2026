@@ -15,7 +15,7 @@ const KINDS = new Set<UploadKind>(['wall_image', 'voice', 'drop_audio', 'sheet_t
 export async function POST(req: Request) {
   try {
     const { uid } = await verifyUploadRequest(req);
-    const { allowed, retryAfterMs } = checkRateLimit(`upload-ticket:${uid}`, TICKET_MAX_PER_WINDOW, TICKET_WINDOW_MS);
+    const { allowed, retryAfterMs } = await checkRateLimit(`upload-ticket:${uid}`, TICKET_MAX_PER_WINDOW, TICKET_WINDOW_MS);
     if (!allowed) {
       return NextResponse.json(
         { error: 'Too many upload attempts. Wait a moment and try again.' },

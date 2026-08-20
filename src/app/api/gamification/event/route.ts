@@ -11,7 +11,6 @@ const EVENT_MAX_PER_WINDOW = 40;
 
 const ALLOWED: GamificationTrigger[] = [
   'session_start',
-  'ai_action',
   'smart_structure_used',
   'tour_complete',
   'rhyme_pulse_on',
@@ -42,7 +41,7 @@ export async function POST(req: Request) {
       throw e;
     }
 
-    const { allowed } = checkRateLimit(`gamification:${uid}`, EVENT_MAX_PER_WINDOW, EVENT_WINDOW_MS);
+    const { allowed } = await checkRateLimit(`gamification:${uid}`, EVENT_MAX_PER_WINDOW, EVENT_WINDOW_MS);
     if (!allowed) {
       return NextResponse.json({ error: 'Too many events. Please slow down.' }, { status: 429 });
     }

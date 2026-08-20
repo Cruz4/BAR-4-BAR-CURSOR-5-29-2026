@@ -63,7 +63,7 @@ export async function POST(req: Request) {
     }
 
     if (action === 'request') {
-      const { allowed } = checkRateLimit(`contact-request:${userId}`, 10, 60 * 60 * 1000);
+      const { allowed } = await checkRateLimit(`contact-request:${userId}`, 10, 60 * 60 * 1000);
       if (!allowed) {
         return NextResponse.json({ error: 'Too many contact requests. Try again later.' }, { status: 429 });
       }

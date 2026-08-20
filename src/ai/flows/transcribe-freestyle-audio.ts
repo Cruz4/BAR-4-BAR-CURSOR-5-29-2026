@@ -1,7 +1,11 @@
 'use server';
 
 import { ai, z } from '@/ai/genkit';
-import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
+import { runSecuredAiAction, stripAiAuth, verifyAiToken } from '@/lib/server/ai-gate';
+import {
+  claimFreestyleChunk,
+  releaseFailedFreestyleCharge,
+} from '@/lib/server/freestyle-session';
 import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
 import type { AiSecuredInput } from '@/lib/ai-secured';
 import { sanitizeFreestyleTranscript } from '@/lib/freestyle-transcript';
@@ -21,13 +25,13 @@ const TranscribeFreestyleInputSchema = z.object({
   albumTheme: z.string().max(FREESTYLE_CONTEXT_FIELD_MAX).optional(),
   trackVibeSummary: z.string().max(FREESTYLE_CONTEXT_FIELD_MAX).optional(),
   styleProfileSummary: z.string().max(FREESTYLE_STYLE_CONTEXT_MAX).optional(),
-  /** True for the first billable chunk of a recording session — charges the flat "Freestyle Session" fee. */
-  isSessionStart: z.boolean().optional(),
 });
 export type TranscribeFreestyleInput = z.infer<typeof TranscribeFreestyleInputSchema>;
 
 const TranscribeFreestyleOutputSchema = z.object({
   transcript: z.string(),
+  /** True only when this server-owned session chunk paid the flat session fee. */
+  billedSession: z.boolean().optional(),
 });
 export type TranscribeFreestyleOutput = z.infer<typeof TranscribeFreestyleOutputSchema>;
 
@@ -105,24 +109,33 @@ const transcribeFreestyleFlow = ai.defineFlow(
 
 /**
  * Chunk transcription during an active freestyle session.
- * Ink is charged once per session, on the 5th billable speech chunk (`isSessionStart`) —
- * that chunk uses the `freestyleTranscription` action name, which resolves to the
- * flat "Freestyle Session" fee in AI_COSTS. Earlier chunks and continuation chunks use
- * `freestyleTranscriptionChunk`, which is listed at 0 Ink in AI_COSTS.
+ * Ink is charged once per server-owned session, on the 5th audible chunk.
  */
 export async function transcribeFreestyleAudio(
   input: TranscribeFreestyleInput & AiSecuredInput
 ): Promise<TranscribeFreestyleOutput> {
-  const { isSessionStart, ...rest } = input;
-  const flowInput = stripAiAuth(rest);
-  return runSecuredAiAction(
-    {
-      idToken: input.idToken,
-      userId: input.userId,
-      actionName: isSessionStart ? 'freestyleTranscription' : 'freestyleTranscriptionChunk',
-      inkCost: 0,
-      customApiKey: input.customApiKey,
-    },
-    () => transcribeFreestyleFlow(flowInput)
-  );
+  const flowInput = stripAiAuth(input);
+  const uid = await verifyAiToken(input.idToken, input.userId);
+  const claim = await claimFreestyleChunk(uid);
+
+  try {
+    const result = await runSecuredAiAction(
+      {
+        idToken: input.idToken,
+        userId: input.userId,
+        actionName: claim.shouldCharge
+          ? 'freestyleTranscription'
+          : 'freestyleTranscriptionChunk',
+        inkCost: 0,
+        customApiKey: input.customApiKey,
+      },
+      () => transcribeFreestyleFlow(flowInput)
+    );
+    return { ...result, billedSession: claim.shouldCharge };
+  } catch (error) {
+    if (claim.shouldCharge) {
+      await releaseFailedFreestyleCharge(uid, claim.reservationId).catch(() => undefined);
+    }
+    throw error;
+  }
 }

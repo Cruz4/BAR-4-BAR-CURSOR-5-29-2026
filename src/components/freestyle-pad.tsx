@@ -44,7 +44,6 @@ import {
   truncateFreestyleContextField,
 } from '@/lib/freestyle-transcription-context';
 import { mergeFreestyleTranscriptChunk, sanitizeFreestyleTranscript } from '@/lib/freestyle-transcript';
-import { FREESTYLE_BILL_AFTER_CHUNKS } from '@/lib/costs';
 
 interface FreestylePadProps {
   open: boolean;
@@ -89,7 +88,6 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   >([]);
   const recordingSessionRef = useRef(0);
   const sessionBilledRef = useRef(false);
-  const speechChunkCountRef = useRef(0);
   const transcriptRef = useRef('');
   const networkRetryRef = useRef(false);
   const studioFailNotifiedRef = useRef(false);
@@ -129,7 +127,6 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   const discardStaleStudioWork = useCallback(() => {
     recordingSessionRef.current += 1;
     sessionBilledRef.current = false;
-    speechChunkCountRef.current = 0;
     studioChunkQueueRef.current = [];
     studioChunkBusyRef.current = false;
     setIsStudioTranscribing(false);
@@ -229,9 +226,6 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       }
       silentChunkStreakRef.current = 0;
       const audioBase64 = await blobToBase64(blob);
-      const isSessionStart =
-        !sessionBilledRef.current &&
-        speechChunkCountRef.current + 1 >= FREESTYLE_BILL_AFTER_CHUNKS;
       const result = await lazyTranscribeFreestyleAudio(
         await withAiAuth({
           audioBase64,
@@ -240,11 +234,9 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
           albumTheme: transcriptionContext.albumTheme || undefined,
           trackVibeSummary: transcriptionContext.trackVibeSummary || undefined,
           styleProfileSummary: transcriptionContext.styleProfileSummary || undefined,
-          isSessionStart,
         })
       );
-      speechChunkCountRef.current += 1;
-      if (isSessionStart) sessionBilledRef.current = true;
+      if (result.billedSession) sessionBilledRef.current = true;
       if (sessionId !== recordingSessionRef.current) {
         return;
       }

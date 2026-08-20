@@ -7,7 +7,14 @@ export const runtime = 'nodejs';
 
 function sanitizeTrackIds(trackIds: unknown): string[] {
   if (!Array.isArray(trackIds)) return [];
-  return trackIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0);
+  return Array.from(
+    new Set(
+      trackIds.filter(
+        (id): id is string =>
+          typeof id === 'string' && id.trim().length > 0 && id.length <= 200 && !id.includes('/')
+      )
+    )
+  );
 }
 
 export async function POST(req: Request) {
@@ -42,6 +49,19 @@ export async function POST(req: Request) {
     }
 
     const db = await getDb();
+    const albums = await db.collection(`users/${userId}/albums`).get();
+    const existingTrackIds = new Set<string>();
+    for (const album of albums.docs) {
+      const tracks = await album.ref.collection('tracks').get();
+      tracks.docs.forEach((track) => existingTrackIds.add(track.id));
+    }
+    // Loose tracks can exist below an unassigned path before its shell document exists.
+    const looseTracks = await db.collection(`users/${userId}/albums/unassigned/tracks`).get();
+    looseTracks.docs.forEach((track) => existingTrackIds.add(track.id));
+    if (trimmed.some((trackId) => !existingTrackIds.has(trackId))) {
+      return NextResponse.json({ error: 'Track selection contains an unknown track' }, { status: 400 });
+    }
+
     const patch: Record<string, string | string[]> = {
       freeEditableTrackIds: trimmed,
     };

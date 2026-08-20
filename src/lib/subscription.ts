@@ -53,9 +53,6 @@ export function formatProFeaturePreviewCountdown(
   return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
 }
 
-/** One-time residency burst when an artist marks their first track complete. */
-export const COMPLETION_BURST_INK = 500;
-
 /** Referrer Ink granted after referee spends this much Ink on AI actions. */
 export const REFERRAL_INK_SPEND_THRESHOLD = 50;
 

@@ -8,6 +8,7 @@ import {
   Check,
   CheckCheck,
   ChevronRight,
+  Droplets,
   FilePenLine,
   Flame,
   Heart,
@@ -75,6 +76,8 @@ function TypeIcon({ type }: { type: ActivityType }) {
       return <Flame className={cn(className, 'text-fuchsia-400')} />;
     case 'drop_sold':
       return <Banknote className={cn(className, 'text-emerald-400')} />;
+    case 'love_milestone':
+      return <Droplets className={cn(className, 'text-violet-300')} />;
     case 'lock_answered':
     case 'lock_clear_offer':
       return <Lock className={cn(className, 'text-emerald-400')} />;

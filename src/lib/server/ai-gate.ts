@@ -65,8 +65,8 @@ async function enforceProOnlyAiAction(uid: string, actionName: string): Promise<
   }
 }
 
-function enforceAiRateLimit(uid: string) {
-  const { allowed } = checkRateLimit(`ai:${uid}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS);
+async function enforceAiRateLimit(uid: string): Promise<void> {
+  const { allowed } = await checkRateLimit(`ai:${uid}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS);
   if (!allowed) {
     throw new AiGateError('Too many AI requests. Please wait a moment.', 'RATE_LIMIT');
   }
@@ -253,7 +253,7 @@ export async function runSecuredAiAction<T>(
   userName?: string
 ): Promise<T> {
   const uid = await verifyAiToken(ctx.idToken, ctx.userId);
-  enforceAiRateLimit(uid);
+  await enforceAiRateLimit(uid);
   await enforceProOnlyAiAction(uid, ctx.actionName);
   const byoApiKey = await resolveByoApiKey(uid, ctx.customApiKey);
 

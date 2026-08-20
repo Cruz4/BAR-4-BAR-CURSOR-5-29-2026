@@ -224,7 +224,7 @@ export function DropCommercePanel({
       </div>
       <p className="text-[10px] text-muted-foreground leading-relaxed">
         Upload the song to Bar 4 Bar (private storage). Fans buy once — set price or pay-what-you-want — then stream it
-        here. Preview is 30 seconds until they pay or you set it free. {firstDropsFeeCashoutLine()}
+        here. Preview is 30 seconds until they buy it. Live First Drops are always paid. {firstDropsFeeCashoutLine()}
       </p>
       <Button asChild variant="outline" className="h-8 w-full text-[9px] font-bold uppercase tracking-widest">
         <Link href="/earnings">

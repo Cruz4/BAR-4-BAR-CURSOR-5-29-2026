@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useContext, useMemo } from 'react';
+import { useCallback, useContext, useMemo, useState } from 'react';
+import Link from 'next/link';
 
 /**
  * @fileOverview Studio Master Manual — spatial guide for Scene, Vault, workstation.
@@ -79,6 +80,11 @@ import {
   Bell,
   Archive,
   CloudSun,
+  Search,
+  X,
+  Banknote,
+  BadgeDollarSign,
+  CircleDollarSign,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -93,8 +99,23 @@ import {
 import { DataContext } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
 import { useConfigSurfaceFlags, type ConfigSurfaceFlags } from '@/hooks/use-config-surface-flags';
-import { dropArtistShareLabel, firstDropsFeeCashoutLine, firstDropsPitch, getFirstDropsCashoutFaqAnswer, getFirstDropsFeeFaqAnswer, getFirstDropsRightsFaqAnswer, getFirstDropsSellFaqAnswer, getFirstDropsWhatFaqAnswer } from '@/lib/drop-commerce';
+import {
+  DROP_PAID_MIN_CENTS,
+  DROP_PRICE_PRESETS_CENTS,
+  centsToUsdLabel,
+  dropArtistNetCents,
+  dropPlatformFeeCents,
+  dropPlatformFeePercent,
+  firstDropsFeeCashoutLine,
+  firstDropsPitch,
+  getFirstDropsCashoutFaqAnswer,
+  getFirstDropsFeeFaqAnswer,
+  getFirstDropsRightsFaqAnswer,
+  getFirstDropsSellFaqAnswer,
+  getFirstDropsWhatFaqAnswer,
+} from '@/lib/drop-commerce';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import {
   Accordion,
   AccordionContent,
@@ -107,8 +128,8 @@ interface HowToUseDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const ChapterCard = ({ icon, title, children, colorClass }: { icon: React.ReactNode, title: string, children: React.ReactNode, colorClass?: string }) => (
-    <Card className={cn("bg-card/50 border-border/50 shadow-sm overflow-hidden border-l-4", colorClass)}>
+const ChapterCard = ({ id, icon, title, children, colorClass }: { id?: string, icon: React.ReactNode, title: string, children: React.ReactNode, colorClass?: string }) => (
+    <Card id={id} className={cn("scroll-mt-6 bg-card/50 border-border/50 shadow-sm overflow-hidden border-l-4", colorClass)}>
         <CardHeader className="pb-4 bg-muted/20 border-b border-border/10">
             <div className="flex items-center gap-4">
                 <div className={cn("p-2 rounded-xl border", colorClass?.replace('border-l-4', 'bg-opacity-10'))}>{icon}</div>
@@ -118,6 +139,53 @@ const ChapterCard = ({ icon, title, children, colorClass }: { icon: React.ReactN
         <CardContent className="font-code text-sm text-muted-foreground pt-6 space-y-4 leading-relaxed">{children}</CardContent>
     </Card>
 );
+
+type ManualTab = 'start-here' | 'first-drops' | 'tiering' | 'loop' | 'power-tools' | 'panels' | 'faq';
+
+type ManualSearchItem = {
+  label: string;
+  detail: string;
+  tab: ManualTab;
+  targetId: string;
+  keywords?: string;
+};
+
+const PRECISION_TOOL_GLOSSARY: ManualSearchItem[] = [
+  { label: 'In-line generation', detail: 'Generate a bar', tab: 'power-tools', targetId: 'manual-inline-generation', keywords: 'sheet hover next previous line' },
+  { label: 'Bar Workstation', detail: 'Generate a bar', tab: 'power-tools', targetId: 'manual-bar-workstation', keywords: 'footer end with suggestions' },
+  { label: 'Co-Writer', detail: 'Generate a bar', tab: 'power-tools', targetId: 'manual-co-writer', keywords: 'right panel rails' },
+  { label: 'Smart Structure', detail: 'Sheet & Structure', tab: 'power-tools', targetId: 'manual-smart-structure', keywords: 'paste lyrics sections' },
+  { label: 'Rhyme Pulse', detail: 'Sheet & Structure', tab: 'power-tools', targetId: 'manual-rhyme-pulse', keywords: 'phonetic scan rhyme' },
+  { label: 'Editing & Undo', detail: 'Sheet & Structure', tab: 'power-tools', targetId: 'manual-sheet-editing', keywords: 'enter backspace history' },
+  { label: 'DNA Suite', detail: 'Right Panel', tab: 'power-tools', targetId: 'manual-dna-suite', keywords: 'world emotion trigger message tone' },
+  { label: 'Intents', detail: 'Right Panel', tab: 'power-tools', targetId: 'manual-intents', keywords: 'punchline precision lock' },
+  { label: 'Guardrails', detail: 'Right Panel', tab: 'power-tools', targetId: 'manual-guardrails', keywords: 'forbidden must include words' },
+  { label: 'Track Vibe', detail: 'Right Panel', tab: 'power-tools', targetId: 'manual-track-vibe', keywords: 'genre bpm instrumentation vault' },
+  { label: 'Style DNA', detail: 'Right Panel', tab: 'power-tools', targetId: 'manual-style-dna', keywords: 'train vocabulary flow' },
+  { label: 'Creative Effects', detail: 'Right Panel', tab: 'power-tools', targetId: 'manual-creative-effects', keywords: 'simile metaphor twist scratch pad' },
+  { label: 'Seed DNA & REMIX', detail: 'DNA & Remix', tab: 'power-tools', targetId: 'manual-seed-remix', keywords: 'paste sync extract source' },
+  { label: 'Analysis Step', detail: 'DNA & Remix', tab: 'power-tools', targetId: 'manual-analysis-step', keywords: 'save inject strain paths' },
+  { label: 'DNA Extraction', detail: 'DNA & Remix', tab: 'power-tools', targetId: 'manual-dna-extraction', keywords: 'overview analysis synthesis' },
+  { label: 'Calibration Hub', detail: 'DNA & Remix', tab: 'power-tools', targetId: 'manual-calibration-hub', keywords: 'insights vault structure synthesis' },
+  { label: 'Special Instructions', detail: 'DNA & Remix', tab: 'power-tools', targetId: 'manual-special-instructions', keywords: 'brief constraints tone pov' },
+  { label: 'Remix Paths', detail: 'DNA & Remix', tab: 'power-tools', targetId: 'manual-remix-paths', keywords: 'influence sliders forks' },
+  { label: 'Creative Syncing', detail: 'DNA & Remix', tab: 'power-tools', targetId: 'manual-creative-syncing', keywords: 'synthesis overlay' },
+  { label: 'DNA Vault & Mixer', detail: 'DNA & Remix', tab: 'power-tools', targetId: 'manual-dna-vault', keywords: 'save load profile strains' },
+  { label: 'Studio Draft', detail: 'Generation & Capture', tab: 'power-tools', targetId: 'manual-studio-draft', keywords: 'full song sections generation workstation' },
+  { label: 'Freestyle Pad', detail: 'Generation & Capture', tab: 'power-tools', targetId: 'manual-freestyle-pad', keywords: 'voice speak transcribe' },
+  { label: 'Vibe Suggester', detail: 'Generation & Capture', tab: 'power-tools', targetId: 'manual-vibe-suggester', keywords: 'analyze genre bpm instrumentation' },
+  { label: 'Performance Mode', detail: 'Export & Share', tab: 'power-tools', targetId: 'manual-performance-mode', keywords: 'teleprompter rehearsal' },
+  { label: 'DNA Drop', detail: 'Export & Share', tab: 'power-tools', targetId: 'manual-dna-drop', keywords: 'share lyric snapshot' },
+  { label: 'Collab Sheet', detail: 'Export & Share', tab: 'power-tools', targetId: 'manual-collab-sheet', keywords: 'live editing invite chat' },
+  { label: 'Export & Backup', detail: 'Export & Share', tab: 'power-tools', targetId: 'manual-export-backup', keywords: 'pdf json vault download' },
+];
+
+const FIRST_DROP_PRICE_EXAMPLES = DROP_PRICE_PRESETS_CENTS.map((amountCents) => ({
+  amountCents,
+  feeCents: dropPlatformFeeCents(amountCents),
+  artistCents: dropArtistNetCents(amountCents),
+  feePercent: dropPlatformFeePercent(amountCents),
+}));
 
 const CORE_FAQS = [
     {
@@ -203,6 +271,10 @@ const CORE_FAQS = [
     {
       q: "How do achievements and share cards work?",
       a: "Badges unlock as you hit milestones. Studio Progress → Studio trophies for the grid. Sharing & visibility → Share achievement card downloads a foil milestone card."
+    },
+    {
+      q: "Do Loves earn Ink?",
+      a: "Yes — every 20 verified Loves received across your posts, comments, and First Drops earns 2 permanent Ink. You receive an unread Activity notification when the reward lands. Removing and re-adding the same Love does not count twice."
     },
     {
       q: "How does Refer a Friend work?",
@@ -336,6 +408,50 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
   const { toast } = useToast();
   const flags = useConfigSurfaceFlags();
   const faqs = useMemo(() => buildStudioFaqs(flags), [flags]);
+  const [activeTab, setActiveTab] = useState<ManualTab>('start-here');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const searchItems = useMemo<ManualSearchItem[]>(() => [
+    { label: 'Start here', detail: 'First-hour walkthrough', tab: 'start-here', targetId: 'manual-start-here', keywords: 'begin new artist write first track tour scene vault' },
+    { label: 'Sell your music', detail: 'First Drops setup, pricing, fees, and payouts', tab: 'first-drops', targetId: 'manual-selling-overview', keywords: 'sell song audio price pay what you want first drops stripe earnings cash out' },
+    { label: 'First Drop pricing options', detail: 'Fixed price and pay-what-you-want', tab: 'first-drops', targetId: 'manual-selling-pricing', keywords: 'minimum floor suggested fee 1.99 2.99 4.99 7.77' },
+    { label: 'First Drop fees', detail: 'Platform fee and artist share examples', tab: 'first-drops', targetId: 'manual-selling-fees', keywords: '25 percent 15 percent 10 percent stripe processing split' },
+    { label: 'First Drop payouts', detail: 'Stripe connection, held sales, and Earnings', tab: 'first-drops', targetId: 'manual-selling-payouts', keywords: 'bank connect cash out sales details origin timestamp' },
+    { label: 'Studio tiers', detail: 'Visitor and Studio Pro', tab: 'tiering', targetId: 'manual-studio-tiers', keywords: 'free pro monthly yearly price limits' },
+    { label: 'Ink economy', detail: 'Residency and Raw Ink', tab: 'tiering', targetId: 'manual-ink-economy', keywords: 'credits fuel balance refill permanent' },
+    { label: 'The Infinity Loop', detail: 'Extract, archive, calibrate, and sync', tab: 'loop', targetId: 'manual-infinity-loop', keywords: 'method workflow dna' },
+    ...PRECISION_TOOL_GLOSSARY,
+    { label: 'Workstation map', detail: 'Left, center, and right panels', tab: 'panels', targetId: 'manual-workstation-map', keywords: 'where location controls' },
+    ...faqs.map((faq, idx) => ({
+      label: faq.q,
+      detail: 'Studio FAQ',
+      tab: 'faq' as const,
+      targetId: `manual-faq-${idx}`,
+      keywords: faq.a,
+    })),
+  ], [faqs]);
+
+  const searchResults = useMemo(() => {
+    const query = searchQuery.trim().toLocaleLowerCase();
+    if (query.length < 2) return [];
+    return searchItems
+      .filter((item) => `${item.label} ${item.detail} ${item.keywords || ''}`.toLocaleLowerCase().includes(query))
+      .slice(0, 8);
+  }, [searchItems, searchQuery]);
+
+  const scrollToManualTarget = useCallback((tab: ManualTab, targetId: string) => {
+    setActiveTab(tab);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  }, []);
+
+  const chooseSearchResult = useCallback((item: ManualSearchItem) => {
+    setSearchQuery('');
+    scrollToManualTarget(item.tab, item.targetId);
+  }, [scrollToManualTarget]);
 
   const workstationTourPath = useMemo(
     () => resolveWorkstationTourPath(albums),
@@ -373,15 +489,61 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-primary shrink-0" /> Studio Master Manual
             </DialogTitle>
             <DialogDescription className="font-tagline uppercase tracking-[0.3em] text-[10px] text-muted-foreground">Bar4Bar · Studio guide</DialogDescription>
+            <div className="relative pt-2">
+              <Search className="absolute left-3 top-1/2 mt-1 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <Input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && searchResults[0]) {
+                    event.preventDefault();
+                    chooseSearchResult(searchResults[0]);
+                  }
+                }}
+                placeholder="Search tools, selling, Ink, sharing, or a question..."
+                aria-label="Search the Studio Master Manual"
+                className="h-10 pl-10 pr-10 bg-muted/20 border-border/60 font-code text-xs"
+              />
+              {searchQuery ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Clear manual search"
+                  className="absolute right-1 top-1/2 mt-1 h-8 w-8 -translate-y-1/2"
+                  onClick={() => setSearchQuery('')}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              ) : null}
+              {searchQuery.trim().length >= 2 ? (
+                <div className="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-[80] max-h-72 overflow-y-auto rounded-xl border border-border bg-popover p-1.5 shadow-2xl">
+                  {searchResults.length ? searchResults.map((item) => (
+                    <button
+                      key={`${item.tab}-${item.targetId}`}
+                      type="button"
+                      className="flex w-full items-start justify-between gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      onClick={() => chooseSearchResult(item)}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-bold text-foreground">{item.label}</span>
+                        <span className="block truncate text-[10px] uppercase tracking-widest text-muted-foreground">{item.detail}</span>
+                      </span>
+                      <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    </button>
+                  )) : (
+                    <p className="px-3 py-4 text-center text-xs text-muted-foreground">No manual sections match that search.</p>
+                  )}
+                </div>
+              ) : null}
+            </div>
         </DialogHeader>
 
-        <Tabs defaultValue="start-here" className="flex-grow flex flex-col min-h-0">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ManualTab)} className="flex-grow flex flex-col min-h-0">
           <div className="px-4 sm:px-8 border-b bg-muted/10 shrink-0">
             <TabsList className="bg-transparent h-11 sm:h-12 gap-4 sm:gap-8 overflow-x-auto justify-start w-full max-w-full flex-nowrap scrollbar-none">
               <TabsTrigger value="start-here" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Start Here</TabsTrigger>
-              {flags.firstDrops ? (
-                <TabsTrigger value="first-drops" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">First Drops</TabsTrigger>
-              ) : null}
+              <TabsTrigger value="first-drops" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Sell Your Music</TabsTrigger>
               <TabsTrigger value="tiering" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Studio Tiers</TabsTrigger>
               <TabsTrigger value="loop" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">The ∞ Loop</TabsTrigger>
               <TabsTrigger value="power-tools" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Precision Tools</TabsTrigger>
@@ -393,7 +555,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
           <ScrollArea className="flex-grow p-4 sm:p-8 min-h-0">
             <div className="max-w-4xl mx-auto space-y-12 pb-12">
 
-              <TabsContent value="start-here" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
+              <TabsContent id="manual-start-here" value="start-here" className="mt-0 scroll-mt-6 space-y-8 animate-in fade-in slide-in-from-bottom-4">
                 <ChapterCard icon={<Radio className="text-emerald-400" />} title="The Scene" colorClass="border-l-emerald-500 text-emerald-400">
                   <p className="text-sm text-foreground/90">
                     You land here after sign-in. Do not stay. Open a sheet and write a bar — that is the first hour.
@@ -513,32 +675,107 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </p>
               </TabsContent>
 
-              {flags.firstDrops ? (
-                <TabsContent value="first-drops" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                  <ChapterCard icon={<Music className="text-fuchsia-400" />} title="First Drops" colorClass="border-l-fuchsia-500 text-fuchsia-400">
-                    <p className="text-sm text-foreground/90">{firstDropsPitch()}</p>
+              <TabsContent value="first-drops" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4 pb-16">
+                <ChapterCard id="manual-selling-overview" icon={<Music className="text-fuchsia-400" />} title="Sell Your Music with First Drops" colorClass="border-l-fuchsia-500 text-fuchsia-400">
+                  {!flags.firstDrops ? (
+                    <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+                      First Drops is currently paused by Studio Ops. Your existing sales remain saved; selling controls return when it is switched back on.
+                    </p>
+                  ) : null}
+                  <p className="text-sm text-foreground/90">{firstDropsPitch()}</p>
+                  <div className="rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-4">
+                    <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-fuchsia-300">Exactly where to go</p>
                     <ol className="list-decimal list-inside space-y-2 text-sm">
-                      <li><strong>Write the song</strong> in The Vault — lyrics, DNA, vibe as usual.</li>
-                      <li><strong>Press a song</strong> from the left panel on the sheet, or from The Scene dock. Pick the track — you do not open DNA Drop to sell.</li>
-                      <li><strong>Upload the song and set a price</strong> — fixed price, or pay-what-you-want (floor $1.00). Then Press it live.</li>
-                      <li><strong>DNA Drop stays lyrics-only</strong> — collaborators import bars and DNA. <strong>Collab Sheet</strong> is live co-writing on the same track. Selling lives on First Drops.</li>
-                      <li><strong>Fans find it</strong> as Listen / buy at the top of your Artist Home, on The Scene, and on the share link.</li>
-                      <li><strong>Cash out</strong> — open Earnings, connect Stripe payouts, then Stripe sends your {dropArtistShareLabel()} share to your bank.</li>
+                      <li><strong>Open The Scene → Press a song</strong>, or open the song&apos;s sheet and use <strong>Left panel → Track Status → Press a song</strong>.</li>
+                      <li><strong>Choose a Vault track</strong>. First Drops sells the recording; DNA Drop is the separate lyric-preview and import link.</li>
+                      <li><strong>Upload the finished audio</strong>, choose Fixed price or Pay what you want, and review the live artist-share line.</li>
+                      <li><strong>Press it live</strong>. Listen / buy appears on your Artist Home, The Scene, and its public share link.</li>
+                      <li><strong>Open Earnings</strong> and connect Stripe payouts so your share can reach your bank.</li>
                     </ol>
-                    <ul className="list-disc list-inside space-y-1.5 text-xs">
-                      <li><strong>Manage live ones</strong> from The Scene, Vault, or Edit Public Page → Live drops. DNA-only tracks have Press this song; live songs show under First Drops.</li>
-                      <li><strong>Library</strong> on The Scene lists drops you unlocked. Stream stays in Bar 4 Bar.</li>
-                      <li><strong>Heat</strong> — spins and unlocks count on the drop. An unlock bumps it back up on The Scene. First cop is credited on the page. Love, reply, share, or post it to your wall.</li>
-                      <li><strong>Your rights</strong> — you keep the lyrics, the recording, and the masters. We are not a label. A small platform fee on the sale helps run Bar 4 Bar; the rest is yours.</li>
-                      <li><strong>Fee &amp; cash out</strong> — {firstDropsFeeCashoutLine()} Sales before you connect stay held until you finish setup. Ink is not used for music purchases.</li>
-                      <li><strong>Admin</strong> can turn First Drops off from Config without taking DNA Drops down.</li>
-                    </ul>
-                  </ChapterCard>
-                </TabsContent>
-              ) : null}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Fans hear a 30-second preview before purchase. After buying once, they stream the full song inside Bar 4 Bar from Library. Music purchases use money, never Ink. You keep ownership of your lyrics, recording, and master.
+                  </p>
+                </ChapterCard>
+
+                <ChapterCard id="manual-selling-pricing" icon={<BadgeDollarSign className="text-emerald-400" />} title="Pricing Options" colorClass="border-l-emerald-500 text-emerald-400">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-xl border border-border/50 bg-muted/20 p-4 space-y-2">
+                      <p className="font-bold text-foreground">Fixed price</p>
+                      <p className="text-xs">Everyone pays the exact amount you set. The lowest live checkout price is <strong>{centsToUsdLabel(DROP_PAID_MIN_CENTS)}</strong>.</p>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Good for a clear, consistent release price</p>
+                    </div>
+                    <div className="rounded-xl border border-border/50 bg-muted/20 p-4 space-y-2">
+                      <p className="font-bold text-foreground">Pay what you want</p>
+                      <p className="text-xs">Set a minimum and a suggested amount. The buyer may pay more, but never less than <strong>{centsToUsdLabel(DROP_PAID_MIN_CENTS)}</strong>.</p>
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Good for supporter pricing and flexible drops</p>
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 p-3 text-xs text-rose-100">
+                    <strong>No free checkout:</strong> live First Drops are paid. Current quick-price examples are {DROP_PRICE_PRESETS_CENTS.map(centsToUsdLabel).join(', ')}.
+                  </div>
+                </ChapterCard>
+
+                <ChapterCard id="manual-selling-fees" icon={<CircleDollarSign className="text-amber-400" />} title="Fees & What You Keep" colorClass="border-l-amber-500 text-amber-400">
+                  <p>{firstDropsFeeCashoutLine()}</p>
+                  <div className="overflow-x-auto rounded-xl border border-border/50">
+                    <table className="w-full min-w-[520px] text-left text-xs">
+                      <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
+                        <tr>
+                          <th className="px-3 py-2.5">Fan pays</th>
+                          <th className="px-3 py-2.5">Platform fee</th>
+                          <th className="px-3 py-2.5">Fee amount</th>
+                          <th className="px-3 py-2.5 text-emerald-300">You keep</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/40 font-code tabular-nums">
+                        {FIRST_DROP_PRICE_EXAMPLES.map((example) => (
+                          <tr key={example.amountCents}>
+                            <td className="px-3 py-2.5 font-bold text-foreground">{centsToUsdLabel(example.amountCents)}</td>
+                            <td className="px-3 py-2.5">{example.feePercent}%</td>
+                            <td className="px-3 py-2.5">{centsToUsdLabel(example.feeCents)}</td>
+                            <td className="px-3 py-2.5 font-bold text-emerald-300">{centsToUsdLabel(example.artistCents)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <ul className="list-disc list-inside space-y-1.5 text-xs">
+                    <li><strong>Below $3:</strong> 25% platform fee.</li>
+                    <li><strong>$3 through $4.99:</strong> 15% platform fee.</li>
+                    <li><strong>$5 and up:</strong> 10% platform fee.</li>
+                    <li><strong>Stripe processing:</strong> Bar 4 Bar pays card processing; it is not another deduction from the artist share shown above.</li>
+                  </ul>
+                </ChapterCard>
+
+                <ChapterCard id="manual-selling-payouts" icon={<Banknote className="text-sky-400" />} title="Payouts, Sales Tracking & Where Fans Buy" colorClass="border-l-sky-500 text-sky-400">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <p className="font-bold text-foreground">Get paid</p>
+                      <ol className="list-decimal list-inside space-y-1.5 text-xs">
+                        <li>Open <strong>Earnings</strong> from the Scene dock, account menu, Settings → First Drop payouts, or the First Drop sell desk.</li>
+                        <li>Complete Stripe&apos;s identity and bank setup once.</li>
+                        <li>New sales move to Stripe automatically. Sales made before setup remain <strong>Held</strong> until you connect or send held sales.</li>
+                      </ol>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="font-bold text-foreground">Track every sale</p>
+                      <p className="text-xs">Earnings shows lifetime gross sales, total fees, your net earnings, sale count, average sale, latest-sale time, buyer, song, origin link, timestamp, and Paid or Held status.</p>
+                    </div>
+                  </div>
+                  <Button asChild className="w-full font-bold uppercase tracking-widest text-[10px]">
+                    <Link href="/earnings">
+                      <Banknote className="mr-2 h-4 w-4" /> Open First Drop Earnings
+                    </Link>
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Fans can buy from the Listen / buy player on your Artist Home, a First Drop card on The Scene, or the public share page. Manage live releases from The Scene, Vault, or Edit Public Page → Live drops.
+                  </p>
+                </ChapterCard>
+              </TabsContent>
               
               <TabsContent value="tiering" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                <ChapterCard icon={<ShieldCheck />} title="Visitor vs Studio Pro" colorClass="border-l-primary text-primary">
+                <ChapterCard id="manual-studio-tiers" icon={<ShieldCheck />} title="Visitor vs Studio Pro" colorClass="border-l-primary text-primary">
                     <p>Bar 4 Bar is a professional workstation. Your membership level determines project scale, vault access, and monthly Ink residency.</p>
                     <p className="text-xs bg-muted/30 border border-border/40 rounded-lg p-3"><strong>Free artists:</strong> try the full DNA &amp; REMIX and Generation Workstation flows with system presets. <strong>Pro:</strong> archive your own DNA, Vibe, and Style strains; unlimited albums; cloud sync.</p>
                     <div className="grid md:grid-cols-2 gap-6">
@@ -580,7 +817,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     </div>
                 </ChapterCard>
 
-                <ChapterCard icon={<Droplets className="text-primary" />} title="The Ink Economy" colorClass="border-l-primary">
+                <ChapterCard id="manual-ink-economy" icon={<Droplets className="text-primary" />} title="The Ink Economy" colorClass="border-l-primary">
                     <div className="grid md:grid-cols-2 gap-8">
                         <div className="space-y-3">
                             <div className="flex items-center gap-2">
@@ -601,7 +838,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
               </TabsContent>
 
               <TabsContent value="loop" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                <ChapterCard icon={<BrainCircuit className="text-primary" />} title="The ∞ Loop Methodology" colorClass="border-l-primary text-primary">
+                <ChapterCard id="manual-infinity-loop" icon={<BrainCircuit className="text-primary" />} title="The ∞ Loop Methodology" colorClass="border-l-primary text-primary">
                     <p>The core of Bar 4 Bar is a continuous cycle of creative refinement. You are never 'finished'—you are always evolving.</p>
                     <div className="space-y-6">
                         <div className="flex gap-4 p-4 bg-primary/5 rounded-xl border border-primary/10">
@@ -630,21 +867,40 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
               </TabsContent>
 
               <TabsContent value="power-tools" className="mt-0 space-y-12 animate-in fade-in slide-in-from-bottom-4 pb-20">
+                <div id="manual-precision-glossary" className="scroll-mt-6 rounded-2xl border border-primary/25 bg-primary/5 p-4 sm:p-5 space-y-3">
+                  <div>
+                    <h2 className="font-headline text-2xl font-bold uppercase text-primary">Clickable glossary</h2>
+                    <p className="text-xs text-muted-foreground">Tap any precision tool to jump straight to its explanation.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {PRECISION_TOOL_GLOSSARY.map((item) => (
+                      <button
+                        key={item.targetId}
+                        type="button"
+                        className="rounded-full border border-primary/25 bg-background/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        onClick={() => scrollToManualTarget(item.tab, item.targetId)}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="space-y-4">
                     <h2 className="text-3xl font-headline font-bold uppercase text-primary border-b-2 border-primary/10 pb-2">Generate a bar</h2>
                     <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">In-line on the sheet, or the Bar Workstation footer. Co-Writer is the rails those gens read.</p>
                 </div>
 
-                <ChapterCard icon={<MousePointer2 className="text-primary" />} title="In-line on the sheet" colorClass="border-l-primary">
+                <ChapterCard id="manual-inline-generation" icon={<MousePointer2 className="text-primary" />} title="In-line on the sheet" colorClass="border-l-primary">
                     <p>Hover over any lyrical line on the notepad to reveal surgical triggers. Add a line directly below, above, or delete the line with one click.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Zap className="text-primary" />} title="Bar Workstation (footer)" colorClass="border-l-primary">
+                <ChapterCard id="manual-bar-workstation" icon={<Zap className="text-primary" />} title="Bar Workstation (footer)" colorClass="border-l-primary">
                     <p>Select a line to activate the Bar Workstation. Generate <strong>Next</strong> or <strong>Previous</strong> suggestions anchored to your active focus ({AI_COSTS.generateNextLine} Ink each).</p>
                     <p className="text-xs">Set <strong>End With</strong> to force the next suggestion to land on your punchline. Watch the rule badges light up to see which DNA, Vibes, and Intents are guiding the AI.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Sparkles className="text-primary" />} title="Co-Writer (right panel)" colorClass="border-l-primary">
+                <ChapterCard id="manual-co-writer" icon={<Sparkles className="text-primary" />} title="Co-Writer (right panel)" colorClass="border-l-primary">
                     <p>Co-Writer is the rails: DNA, Vibe, Intents, Guardrails, Style DNA. Flip a switch on so Generate Next / drafts follow it. Train Style DNA from this sheet when you want gens to clip like you.</p>
                 </ChapterCard>
 
@@ -653,15 +909,15 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">Center panel — the rhyme book itself.</p>
                 </div>
 
-                <ChapterCard icon={<ClipboardPaste className="text-primary" />} title="Smart Structure" colorClass="border-l-primary">
+                <ChapterCard id="manual-smart-structure" icon={<ClipboardPaste className="text-primary" />} title="Smart Structure" colorClass="border-l-primary">
                     <p>Click <strong>+ Paste Your Lyrics</strong> in the center top bar. Label sections with <code className="text-primary">[Verse]</code>, <code className="text-primary">[Hook]</code>, etc. on their own lines for automatic splits ({AI_COSTS.analyzeStructure} Ink).</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Zap className="text-amber-500" />} title="Rhyme Pulse" colorClass="border-l-amber-500 text-amber-500">
+                <ChapterCard id="manual-rhyme-pulse" icon={<Zap className="text-amber-500" />} title="Rhyme Pulse" colorClass="border-l-amber-500 text-amber-500">
                     <p>The round button in the center top bar runs a one-time deep phonetic scan of your current sheet ({AI_COSTS.findRhymes} Ink). Results update rhyme highlighting across every line.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<ListRestart className="text-muted-foreground" />} title="Sheet Editing &amp; Undo" colorClass="border-l-muted-foreground">
+                <ChapterCard id="manual-sheet-editing" icon={<ListRestart className="text-muted-foreground" />} title="Sheet Editing &amp; Undo" colorClass="border-l-muted-foreground">
                     <ul className="list-disc list-inside space-y-2 text-sm">
                         <li><strong>Enter</strong> — split a line at the cursor; the workstation handles indexing and hanging indents.</li>
                         <li><strong>Backspace</strong> at the start of a bar — merge with the line above.</li>
@@ -674,30 +930,30 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">DNA, vibe, intents, style, and guardrails.</p>
                 </div>
 
-                <ChapterCard icon={<Dna className="text-green-500" />} title="DNA Suite (Right Panel)" colorClass="border-l-green-500">
+                <ChapterCard id="manual-dna-suite" icon={<Dna className="text-green-500" />} title="DNA Suite (Right Panel)" colorClass="border-l-green-500">
                     <p>Five questions — world, emotion, trigger, message, tone. Type your own DNA here or refine fields after you load or extract a profile.</p>
                     <p className="text-xs">Primary save path: <strong>DNA &amp; REMIX → Analysis Step → Save DNA Profile</strong>. DNA Suite + the <strong>folder icon</strong> is where you browse vault saves, load full profiles (↻), or edit mapped fields by hand. Hub VAULT tab works the same during a remix.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Target className="text-sky-500" />} title="Intents (Right Panel)" colorClass="border-l-sky-500">
+                <ChapterCard id="manual-intents" icon={<Target className="text-sky-500" />} title="Intents (Right Panel)" colorClass="border-l-sky-500">
                     <p>Punchlines and recurring phrases you want in the song. Hover any intent and click the <strong>Precision Lock arrow</strong> to force the AI to end its next suggestion on that exact phrase.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Shield className="text-rose-500" />} title="Guardrails (Right Panel)" colorClass="border-l-rose-500">
+                <ChapterCard id="manual-guardrails" icon={<Shield className="text-rose-500" />} title="Guardrails (Right Panel)" colorClass="border-l-rose-500">
                     <p>Surgical restrictions. The AI avoids <strong>Forbidden Words</strong> and integrates <strong>Must-Include Words</strong> during every generation pass.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Palette className="text-amber-500" />} title="Track Vibe &amp; Vibe Vault" colorClass="border-l-amber-500 text-amber-500">
+                <ChapterCard id="manual-track-vibe" icon={<Palette className="text-amber-500" />} title="Track Vibe &amp; Vibe Vault" colorClass="border-l-amber-500 text-amber-500">
                     <p>Set genre, BPM, feeling tags, and instrumentation in <strong>Track Vibe</strong>. Copy the instrumentation string into Suno, Udio, or similar tools.</p>
                     <p className="text-xs">Save presets with the <strong>folder icon</strong> under Track Vibe — reuse the same sonic palette across every song in the project.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Fingerprint className="text-fuchsia-500" />} title="Style DNA &amp; Training" colorClass="border-l-fuchsia-500 text-fuchsia-500">
+                <ChapterCard id="manual-style-dna" icon={<Fingerprint className="text-fuchsia-500" />} title="Style DNA &amp; Training" colorClass="border-l-fuchsia-500 text-fuchsia-500">
                     <p><strong>Train AI on Style</strong> ({AI_COSTS.improveMyStyle} Ink) teaches the workstation your vocabulary and flow. Style DNA feeds every generation when the toggle is on.</p>
                     <p className="text-xs">Save style strains to the Style Vault (folder icon) for reuse across tracks.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Wand2 className="text-indigo-500" />} title="Creative Effects" colorClass="border-l-indigo-500 text-indigo-400">
+                <ChapterCard id="manual-creative-effects" icon={<Wand2 className="text-indigo-500" />} title="Creative Effects" colorClass="border-l-indigo-500 text-indigo-400">
                     <p>Lyric tools in the right panel — Simile, Metaphor, and Sound-Alike on every tier; Twist, Image Chain, POV, and more on Studio Pro ({AI_COSTS.runCreativeEffect} Ink each).</p>
                     <p className="text-xs">Pick a tool from the dropdown — what it does and how to fill the fields is written under the picker. Results land in the Scratch Pad for review before you paste into the sheet.</p>
                 </ChapterCard>
@@ -707,12 +963,12 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">Generation Workstation → DNA &amp; REMIX.</p>
                 </div>
 
-                <ChapterCard icon={<ScanLine className="text-sky-400" />} title="Seed DNA &amp; REMIX" colorClass="border-l-sky-500 text-sky-400">
+                <ChapterCard id="manual-seed-remix" icon={<ScanLine className="text-sky-400" />} title="Seed DNA &amp; REMIX" colorClass="border-l-sky-500 text-sky-400">
                     <p>Step 1 of DNA &amp; REMIX. Paste lyrics, a poem, rough ideas, or inspiration — or turn on <strong>Sync Current Lyrics</strong> to pull from your sheet. Run extraction to open Analysis Step.</p>
                     <p className="text-xs">This pass maps analytical strains <em>without</em> drafting new bars. You can re-matrix remix paths later without re-pasting source text once extraction is saved.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Sparkles className="text-emerald-400" />} title="Analysis Step — Save &amp; Inject" colorClass="border-l-emerald-500 text-emerald-400">
+                <ChapterCard id="manual-analysis-step" icon={<Sparkles className="text-emerald-400" />} title="Analysis Step — Save &amp; Inject" colorClass="border-l-emerald-500 text-emerald-400">
                     <p>Step 2 decodes your source into color-coded strain cards (Themes, Motifs, Emotion, Structure, Style, and more).</p>
                     <ul className="list-disc list-inside space-y-1 text-sm">
                         <li><strong>Save DNA Profile</strong> (Pro) — archives the <em>entire</em> extraction to your vault for any track.</li>
@@ -722,11 +978,11 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <p className="text-xs">Edit or type DNA manually anytime in DNA Suite after you load or extract — the vault and Suite stay in sync with the same profile shape.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<ScanLine className="text-sky-400" />} title="DNA Extraction (Overview)" colorClass="border-l-sky-500/60 text-sky-400/90">
+                <ChapterCard id="manual-dna-extraction" icon={<ScanLine className="text-sky-400" />} title="DNA Extraction (Overview)" colorClass="border-l-sky-500/60 text-sky-400/90">
                     <p>The full flow: <strong>Seed</strong> (paste or sync) → <strong>Analysis Step</strong> (save full profile or ⚡ parts) → <strong>Remix Paths</strong> (optional) → <strong>Calibration Hub</strong> → synthesis.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Settings className="text-primary" />} title="Calibration Hub" colorClass="border-l-primary">
+                <ChapterCard id="manual-calibration-hub" icon={<Settings className="text-primary" />} title="Calibration Hub" colorClass="border-l-primary">
                     <p>The workstation brain (Step 10). Mix DNA strains, Style DNA, Intents, Structure presets, remix paths, and Special Instructions before synthesis.</p>
                     <ul className="list-disc list-inside space-y-1 text-sm">
                         <li><strong>INSIGHTS</strong> — latest extraction strains with ⚡ inject buttons (one field at a time).</li>
@@ -735,19 +991,19 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     </ul>
                 </ChapterCard>
 
-                <ChapterCard icon={<FilePenLine className="text-blue-400" />} title="Special Instructions" colorClass="border-l-blue-500 text-blue-400">
+                <ChapterCard id="manual-special-instructions" icon={<FilePenLine className="text-blue-400" />} title="Special Instructions" colorClass="border-l-blue-500 text-blue-400">
                     <p>A direct creative brief in the Calibration Hub — tone, POV, constraints, or scene direction. Treated as a hard rule at synthesis, <em>not</em> blended by remix path percentages.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<GitBranch className="text-violet-400" />} title="Remix Paths" colorClass="border-l-violet-500 text-violet-400">
+                <ChapterCard id="manual-remix-paths" icon={<GitBranch className="text-violet-400" />} title="Remix Paths" colorClass="border-l-violet-500 text-violet-400">
                     <p>Select multiple creative paths in DNA &amp; REMIX. Influence % sliders blend selected forks relative to each other during synthesis — explore narrative branches without rewriting the whole track.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<FlaskConical className="text-cyan-400" />} title="Creative Syncing" colorClass="border-l-cyan-500 text-cyan-400">
+                <ChapterCard id="manual-creative-syncing" icon={<FlaskConical className="text-cyan-400" />} title="Creative Syncing" colorClass="border-l-cyan-500 text-cyan-400">
                     <p>During Studio Draft and remix synthesis, the Creative Syncing overlay weaves active DNA, Intents, Style, Vibe, guardrails, and Special Instructions into one neural pass.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<FolderOpen className="text-green-500" />} title="DNA Vault &amp; DNA Mixer" colorClass="border-l-green-500">
+                <ChapterCard id="manual-dna-vault" icon={<FolderOpen className="text-green-500" />} title="DNA Vault &amp; DNA Mixer" colorClass="border-l-green-500">
                     <p><strong>Save:</strong> DNA &amp; REMIX → Analysis Step → <strong>Save DNA Profile</strong> (Pro). <strong>Load:</strong> Calibration Hub VAULT tab or DNA Suite folder icon — full profile (↻) or partial ⚡ per strain.</p>
                     <p className="text-xs"><strong>DNA Mixer</strong> (Album page) — selectively pick individual creative strains from your vault history without loading an entire profile.</p>
                 </ChapterCard>
@@ -757,16 +1013,16 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">Left panel workstation, drafts, and voice capture.</p>
                 </div>
 
-                <ChapterCard icon={<BrainCircuit className="text-primary" />} title="Generation Workstation &amp; Studio Draft" colorClass="border-l-primary">
+                <ChapterCard id="manual-studio-draft" icon={<BrainCircuit className="text-primary" />} title="Generation Workstation &amp; Studio Draft" colorClass="border-l-primary">
                     <p>Open <strong>Generation Workstation</strong> from the left panel. Run <strong>Studio Draft</strong> in the Calibration Hub to generate full sections — a typical default structure is about {STUDIO_DRAFT_INK_PER_SONG} Ink ({AI_COSTS.generateDraftPerBar} Ink per bar).</p>
                     <p className="text-xs">Use Next/Previous Line for surgical tweaks; running it on every bar costs more over a full track than a single draft pass.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Mic className="text-primary" />} title="Freestyle Pad" colorClass="border-l-primary">
+                <ChapterCard id="manual-freestyle-pad" icon={<Mic className="text-primary" />} title="Freestyle Pad" colorClass="border-l-primary">
                     <p>Studio Pro — open from the footer Bar Workstation. Speak your bars; tap <strong>Add to Editor</strong> to drop transcribed lines directly into the active section ({AI_COSTS.freestyleTranscription} Ink after a short pickup, not per clip).</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Volume2 className="text-amber-500" />} title="Vibe Suggester" colorClass="border-l-amber-500 text-amber-500">
+                <ChapterCard id="manual-vibe-suggester" icon={<Volume2 className="text-amber-500" />} title="Vibe Suggester" colorClass="border-l-amber-500 text-amber-500">
                     <p>Left panel → <strong>Analyze Vibe</strong> reads your lyrics and auto-fills genre, BPM, and instrumentation in Track Vibe ({AI_COSTS.suggestVibe} Ink). Copy the result into external music AIs.</p>
                 </ChapterCard>
 
@@ -775,19 +1031,19 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <p className="text-xs text-muted-foreground font-code uppercase tracking-widest">Pro workflows for performance and collaboration.</p>
                 </div>
 
-                <ChapterCard icon={<MonitorPlay className="text-sky-400" />} title="Performance Mode" colorClass="border-l-sky-500 text-sky-400">
+                <ChapterCard id="manual-performance-mode" icon={<MonitorPlay className="text-sky-400" />} title="Performance Mode" colorClass="border-l-sky-500 text-sky-400">
                     <p>Studio Pro — left panel Track Status card. Distraction-free teleprompter with rhyme focus for live runs or rehearsal.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Link2 className="text-primary" />} title="DNA Drop" colorClass="border-l-primary">
+                <ChapterCard id="manual-dna-drop" icon={<Link2 className="text-primary" />} title="DNA Drop" colorClass="border-l-primary">
                     <p>Studio Pro — publish a shareable lyric snapshot from the left panel. Collaborators sign in and import lyrics, structure, Creative DNA, vibe, and related strains. Update snapshot after edits; <strong>Take offline</strong> to revoke the link. To sell the song, use <strong>Press a song</strong> on The Scene — DNA Drop is not the sell desk.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<Users className="text-violet-300" />} title="Collab Sheet" colorClass="border-l-violet-500 text-violet-300">
+                <ChapterCard id="manual-collab-sheet" icon={<Users className="text-violet-300" />} title="Collab Sheet" colorClass="border-l-violet-500 text-violet-300">
                     <p>Studio Pro — open <strong>Collab Sheet</strong> from the left panel to share a live editable sheet on this track. Invite friends; edits sync in real time. Top-right shows live presence (e.g. 2/13). Chat expands from the bottom drawer — no pop-up window. Only the owner can invite or revoke. Shared sheets appear in the Vault Collab Sheets section; albums show a Collab badge when any track is live.</p>
                 </ChapterCard>
 
-                <ChapterCard icon={<NotebookText className="text-muted-foreground" />} title="Export Track &amp; Vault Backup" colorClass="border-l-muted-foreground">
+                <ChapterCard id="manual-export-backup" icon={<NotebookText className="text-muted-foreground" />} title="Export Track &amp; Vault Backup" colorClass="border-l-muted-foreground">
                     <ul className="list-disc list-inside space-y-2 text-sm">
                         <li><strong>Export Track</strong> — left panel PDF export anytime.</li>
                         <li><strong>Vault Export</strong> — Vault dashboard downloads a <code className="text-primary">.json</code> backup; re-import to restore albums, DNA presets, and strains.</li>
@@ -796,7 +1052,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
               </TabsContent>
 
               <TabsContent value="panels" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                <ChapterCard icon={<MonitorPlay className="text-amber-600" />} title="Workstation Map" colorClass="border-l-amber-500 text-amber-700">
+                <ChapterCard id="manual-workstation-map" icon={<MonitorPlay className="text-amber-600" />} title="Workstation Map" colorClass="border-l-amber-500 text-amber-700">
                     <Accordion type="single" collapsible className="w-full">
                         <AccordionItem value="left">
                             <AccordionTrigger className="font-bold text-xs uppercase">Left Panel: Track Status</AccordionTrigger>
@@ -837,7 +1093,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     </h3>
                     <Accordion type="single" collapsible className="w-full space-y-4">
                         {faqs.map((faq, idx) => (
-                            <AccordionItem key={idx} value={`faq-${idx}`} className="border rounded-xl bg-card/50 px-6 overflow-hidden">
+                            <AccordionItem id={`manual-faq-${idx}`} key={idx} value={`faq-${idx}`} className="scroll-mt-6 border rounded-xl bg-card/50 px-6 overflow-hidden">
                                 <AccordionTrigger className="hover:no-underline font-headline text-lg text-left py-4 hover:text-primary transition-colors">
                                     {faq.q}
                                 </AccordionTrigger>

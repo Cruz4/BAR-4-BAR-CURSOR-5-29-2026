@@ -9,8 +9,8 @@ Follow this checklist to get the Studio economy running.
 
 ## 1. Stripe Dashboard Setup
 1. [ ] Create **Studio Pro** product (Monthly/Yearly).
-2. [ ] Create 3 **Ink Packs** (1k, 3.5k, 10k).
-3. [ ] Copy all 5 **Price IDs** into `src/services/stripe.ts`.
+2. [ ] Create 3 **Ink Packs** (1,000, 2,500, and 5,000 Ink).
+3. [ ] Set all 5 **Price IDs** as `STRIPE_PRICE_*` environment variables. The server maps and validates them in `src/lib/stripe-catalog.ts`.
 
 ## 2. Webhook Setup
 1. [ ] Create webhook pointing to: `https://bar4bar.ink/api/stripe/webhook`

@@ -11,7 +11,7 @@
 | Pro Monthly | $7.77/mo | 1,777 |
 | Pro Yearly | $4.44/mo ($53.28/yr) | 3,444 |
 
-**Per-action Ink:** see `src/lib/costs.ts` (e.g. Next/Prev Line **10**, Rhyme Pulse **20**, draft **2/bar**, effects **10**). Do not advertise tracks/month in UI.
+**Per-action Ink:** see `src/lib/costs.ts` (e.g. Generate Next Line **15**, Rhyme Pulse **10**, draft **2/bar**, effects **10**). Do not advertise tracks/month in UI.
 
 **Permanent ink packs** (one-time, never expire):
 
@@ -25,7 +25,7 @@ Stripe prices are immutable — after changing amounts, run `npm run stripe:crea
 
 Yearly Pro: **50% off** ink packs at checkout (`STRIPE_COUPON_YEARLY_INK_50` — percent coupon, works on any pack list price).
 
-**Pro subscription trial:** New Pro checkouts default to a **3-day Stripe trial** (`trial_period_days` in `/api/stripe/checkout`, constant `STRIPE_PRO_TRIAL_DAYS` in `src/lib/trial.ts`). Card required; fulfillment accepts `payment_status: no_payment_required`. Skip trial with `?trial=0` on checkout URLs or `withTrial: false` in the API body. Free signup is Visitor-only — no automatic internal trial.
+**Pro preview:** Stripe checkout does not create a billing trial. Eligible new Visitor accounts can receive a separate 48-hour Pro **feature preview**; it does not change their Ink balance or Visitor catalog limits.
 
 **Test coupon:** `npm run stripe:create-test-yearly-ink-coupon` (requires `sk_test_...`), then add the printed line to `.env` and `functions/.env` before deploy.
 
@@ -105,7 +105,7 @@ npm run stripe:create-live-prices
 npm run stripe:create-live-prices -- --with-coupon
 ```
 
-The script prints six `STRIPE_PRICE_*` IDs (and optional `STRIPE_COUPON_YEARLY_INK_50`). **Save them** — live price IDs differ from test IDs.
+The script prints five active `STRIPE_PRICE_*` IDs (and optional `STRIPE_COUPON_YEARLY_INK_50`). **Save them** — live price IDs differ from test IDs.
 
 Verify against live Stripe:
 
@@ -209,7 +209,7 @@ If ink does not update after payment, see `docs/STRIPE_MASTER_GUIDE.md` (signing
 | `STRIPE_WEBHOOK_SECRET_TEST` | Sandbox / Test mode webhook signing secret (`whsec_`) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Client key (`pk_test_` or `pk_live_`) |
 | `NEXT_PUBLIC_APP_URL` | Production URL (checkout success/cancel redirects) |
-| `STRIPE_PRICE_*` | Six price IDs (must match the mode of your secret key) |
+| `STRIPE_PRICE_*` | Five active price IDs (must match the mode of your secret key) |
 | `STRIPE_COUPON_YEARLY_INK_50` | Optional coupon for Yearly Pro ink discount |
 
 ## npm scripts

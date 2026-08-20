@@ -1,7 +1,7 @@
 
 # Bar 4 Bar: The Professional AI Rhyme Book & Studio Master Blueprint
 
-**Bar 4 Bar** is a high-end, universal workstation for musicians, rappers, and lyricists. It is designed to transform the chaotic process of writing a concept album into a structured, AI-assisted workflow. 
+**Bar 4 Bar (BA)** is a high-end, universal workstation for musicians, rappers, and lyricists. It is designed to transform the chaotic process of writing a concept album into a structured, AI-assisted workflow. It assists the artist's writing process; it is not a full-song generator.
 
 ---
 
@@ -14,16 +14,17 @@
 ## 2. Monetization & "The Toolbox Model"
 The app uses a tiered subscription model centered around **Connectivity** and **AI Capacity (Ink)**.
 
-### Zero-Loss Infrastructure
-To ensure the owner never takes a loss, the app distinguishes between Local and Cloud storage.
-- **Local Artist (Free)**: Work is saved to the user's browser. Zero database costs for the owner.
-- **Studio Pro (Paid)**: Unlocks **Cloud Sync** and **Power User Features**.
+### Current tiers
+- **Visitor**: Limited cloud catalog plus 250 signup Ink and 150 monthly residency Ink, capped at 400.
+- **Studio Pro**: Cloud workflow, expanded catalog, and monthly residency Ink.
+
+The source-backed current economy is documented in [Monetization](./docs/MONETIZATION.md) and [Stripe setup](./docs/STRIPE_SETUP.md).
 
 ### The Ink Economy (Platform Access)
 Ink represents the value of the studio's proprietary prompt architecture and workflow logic.
-- **Generate Line**: 10 Ink.
-- **Song Draft**: 5 Ink per bar.
-- **Style Analysis**: 100 Ink.
+- **Generate Next Line**: 15 Ink.
+- **Song Draft**: 2 Ink per bar.
+- **Improve My Style**: 35 Ink.
 
 ### Power User Feature: BYO-API
 - **Studio API Bypass**: Pro users can connect their own Google AI Studio key.

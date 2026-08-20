@@ -11,7 +11,7 @@ import {
  * Real-time listeners desync under Turbopack HMR (Firestore ca9/b815).
  * Poll in local dev instead of opening watch streams.
  */
-function usePollingSubscriptions(): boolean {
+function shouldPollSubscriptions(): boolean {
   return typeof window !== 'undefined' && process.env.NODE_ENV === 'development';
 }
 
@@ -21,7 +21,7 @@ export function subscribeDocument<T extends DocumentData>(
   onError?: (err: unknown) => void,
   pollIntervalMs = 15000
 ): () => void {
-  if (usePollingSubscriptions()) {
+  if (shouldPollSubscriptions()) {
     let active = true;
     let inFlight = false;
 
@@ -59,7 +59,7 @@ export function subscribeQuery<T extends DocumentData>(
   onError?: (err: unknown) => void,
   pollIntervalMs = 20000
 ): () => void {
-  if (usePollingSubscriptions()) {
+  if (shouldPollSubscriptions()) {
     let active = true;
     let inFlight = false;
 

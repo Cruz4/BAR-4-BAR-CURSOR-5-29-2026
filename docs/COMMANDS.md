@@ -28,7 +28,7 @@ Installs dependencies and runs `patch-package` automatically (`postinstall`).
 |---------|----------------|
 | `npm run dev` | Starts the Next.js dev server on **port 9002**. Use this every day while coding. |
 | `npm run dev:turbo` | Same as `dev`, but uses **Turbopack** (faster refresh on some machines). |
-| `npm run lint` | Runs ESLint on the project. |
+| `npm run lint` | Runs the non-interactive ESLint correctness gate. Existing cleanup warnings are reported but do not fail the command. |
 | `npm run typecheck` | TypeScript check only — no build output. |
 
 **Typical workflow:**

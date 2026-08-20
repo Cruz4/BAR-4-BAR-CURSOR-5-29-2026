@@ -2,7 +2,7 @@ import { getAiAuth } from '@/lib/ai-client';
 
 export async function claimMilestone(
   userId: string,
-  milestone: 'track_complete' | 'studio_draft_complete',
+  milestone: 'studio_draft_complete',
   userName?: string
 ): Promise<void> {
   try {

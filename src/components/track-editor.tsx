@@ -167,7 +167,6 @@ import {
   markLyricsTourOfferSeen,
 } from '@/lib/first-session';
 import { postGamificationEvent } from '@/lib/gamification-client';
-import { claimMilestone } from '@/lib/milestones-client';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
 import { GuestTrySaveBanner } from '@/components/guest-try-save-banner';
 import { GuestDemoSignupRequiredDialog } from '@/components/guest-demo-signup-required-dialog';
@@ -798,7 +797,6 @@ function mobileLyricsPanelClass(active: boolean, edge?: 'left' | 'right') {
 }
 
 function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSectionId, setExportDialogOpen, setShareDialogOpen, setCollabShareOpen, onCollapse, leftCollapsed, setGenerateDraftOpen, scratchPadRef, isPro, mobileActive = false, trackLocked = false, tierLocked = false, completeLocked = false, workstationAttention = false, tourMobilePad = false, isGuestTryMode = false }: any) {
-  const { user } = useAuth();
   const router = useRouter();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const { setGenerating } = useUIState();
@@ -1108,9 +1106,6 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                         }
                         const next = track.status === 'complete' ? 'in_progress' : 'complete';
                         onUpdateTrack({ status: next });
-                        if (next === 'complete' && user?.id) {
-                          void claimMilestone(user.id, 'track_complete', user.displayName);
-                        }
                         toast(
                           next === 'complete'
                             ? TRACK_COMPLETE_TOAST

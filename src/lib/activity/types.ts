@@ -19,6 +19,7 @@ export const ACTIVITY_TYPES = [
   'drop_reply',
   'drop_unlocked',
   'drop_sold',
+  'love_milestone',
   'lock_answered',
   'artist_pick',
   'lock_clear_offer',
@@ -45,6 +46,7 @@ export const SERVER_ONLY_ACTIVITY_TYPES: readonly ActivityType[] = [
   'collab_message',
   'drop_unlocked',
   'drop_sold',
+  'love_milestone',
 ];
 
 export function isCraftActivityType(type: ActivityType): boolean {
@@ -136,6 +138,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     drop_reply: 'replied on your First Drop',
     drop_unlocked: 'unlocked your First Drop',
     drop_sold: 'bought your song',
+    love_milestone: 'rewarded you 2 Ink for 20 Loves',
     lock_answered: 'echoed your bar',
     artist_pick: 'picked your echo',
     lock_clear_offer: 'cleared a LOCK with an offer for you',
@@ -159,6 +162,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     drop_reply: 'you replied on a First Drop by',
     drop_unlocked: 'you unlocked a First Drop by',
     drop_sold: 'you bought a song from',
+    love_milestone: 'rewarded you 2 Ink for 20 Loves',
     lock_answered: 'you echoed a bar on',
     artist_pick: 'you picked an echo by',
     lock_clear_offer: 'you sent a clear offer to',
@@ -285,6 +289,11 @@ export function pushCopyForActivity(
         title: 'You got a sale',
         body: snippet || `${actorName} bought your First Drop`,
       };
+    case 'love_milestone':
+      return {
+        title: 'You earned +2 Ink',
+        body: snippet || 'Your work reached another 20 verified Loves.',
+      };
     default:
       return { title: 'Bar 4 Bar', body: snippet || 'New activity' };
   }
@@ -320,6 +329,8 @@ export function prefsAllowsPush(prefs: ActivityPrefs, type: ActivityType): boole
     case 'drop_unlocked':
     case 'drop_sold':
       return prefs.firstDrops !== false;
+    case 'love_milestone':
+      return prefs.postLoves;
     case 'lock_answered':
     case 'artist_pick':
     case 'lock_clear_offer':

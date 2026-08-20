@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase/server';
 import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
-import { grantCompletionBurstIfEligible, markUserActivatedIfNeeded } from '@/lib/server/milestones';
+import { markUserActivatedIfNeeded } from '@/lib/server/milestones';
 
 export const runtime = 'nodejs';
 
-const ALLOWED = new Set(['track_complete', 'studio_draft_complete']);
+const ALLOWED = new Set(['studio_draft_complete']);
 
 export async function POST(req: Request) {
   try {
@@ -24,17 +24,13 @@ export async function POST(req: Request) {
     }
 
     const db = await getDb();
-    let completionBurst = { granted: false, amount: 0 };
     let activated = false;
 
-    if (milestone === 'track_complete') {
-      completionBurst = await grantCompletionBurstIfEligible(db, userId, userName);
-    }
     if (milestone === 'studio_draft_complete') {
       activated = await markUserActivatedIfNeeded(db, userId, userName);
     }
 
-    return NextResponse.json({ ok: true, completionBurst, activated });
+    return NextResponse.json({ ok: true, activated });
   } catch (err) {
     console.error('[milestones]', err);
     return NextResponse.json({ error: 'Milestone processing failed' }, { status: 500 });

@@ -27,6 +27,12 @@ import {
 import type { AdminGamificationRosterEntry } from '@/lib/gamification/admin-roster-types';
 import type { AnalyticsEventName } from '@/lib/analytics-events';
 import { countLinesWithSource } from '@/lib/gamification/line-attribution';
+import {
+  LOVE_INK_REWARD_AMOUNT,
+  isLoveInkRewardMilestone,
+  loveInkRewardDescription,
+  loveInkRewardUnlockId,
+} from '@/lib/gamification/love-rewards';
 import { countNonEmptyLines, rhymeBarsToLines } from '@/lib/lyrics-units';
 import { ensureReferralCode } from '@/lib/server/referrals';
 import { parseStudioBadge, studioChromeFromSubscriptionStatus } from '@/lib/studio-tier-chrome';
@@ -624,17 +630,14 @@ export async function processGamificationEvent(
     const loveXpGrant = (summary.loveXpToday || 0) < loveXpCap ? 5 : 0;
     summary.loveXpToday = (summary.loveXpToday || 0) + loveXpGrant;
     xpGain += loveXpGrant;
-    if (summary.lifetimeLovesReceived > 0 && summary.lifetimeLovesReceived % 5 === 0) {
-      const inkGranted = await grantBonusInk(userId, 2, 'Love milestone');
-      if (inkGranted > 0) {
-        unlocks.push({
-          id: `love_milestone_${summary.lifetimeLovesReceived}`,
-          title: '+2 Ink',
-          description: 'Five loves on your work — keep posting.',
-          inkReward: inkGranted,
-          xpReward: 0,
-        });
-      }
+    if (isLoveInkRewardMilestone(summary.lifetimeLovesReceived)) {
+      unlocks.push({
+        id: loveInkRewardUnlockId(summary.lifetimeLovesReceived),
+        title: `+${LOVE_INK_REWARD_AMOUNT} Ink`,
+        description: loveInkRewardDescription(summary.lifetimeLovesReceived),
+        inkReward: LOVE_INK_REWARD_AMOUNT,
+        xpReward: 0,
+      });
     }
   }
 

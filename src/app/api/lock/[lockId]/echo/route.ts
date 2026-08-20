@@ -27,7 +27,7 @@ export async function POST(
     const text = typeof body.text === 'string' ? body.text : '';
     const parentEchoId = typeof body.parentEchoId === 'string' ? body.parentEchoId : null;
 
-    const ipLimit = checkRateLimit(`lock-echo:${clientIp(req)}`, 20, 60 * 60 * 1000);
+    const ipLimit = await checkRateLimit(`lock-echo:${clientIp(req)}`, 20, 60 * 60 * 1000);
     if (!ipLimit.allowed) {
       return NextResponse.json(
         { error: 'Too many locks from this network. Try later.', code: 'LOCK_RATE' },

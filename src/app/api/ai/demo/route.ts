@@ -285,7 +285,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const ipCheck = checkRateLimit(`demo:${clientIp(req)}`, IP_LIMIT_MAX, IP_LIMIT_WINDOW_MS);
+  const ipCheck = await checkRateLimit(`demo:${clientIp(req)}`, IP_LIMIT_MAX, IP_LIMIT_WINDOW_MS);
   if (!ipCheck.allowed) {
     const remaining = Math.max(0, DEMO_MAX_USES - uses);
     await trackDemoLimit(ref, 'ip', remaining, guest);

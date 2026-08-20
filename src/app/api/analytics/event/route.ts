@@ -24,7 +24,6 @@ const ALLOWED_EVENTS: AnalyticsEventName[] = [
   'ink_depletion',
   'trial_quest_complete',
   'free_limit_hit',
-  'ai_action',
   'achievement_unlocked',
   'quest_step_complete',
   'streak_milestone',
@@ -55,7 +54,7 @@ export async function POST(req: Request) {
       throw e;
     }
 
-    const { allowed } = checkRateLimit(`analytics:${uid}`, ANALYTICS_MAX_PER_WINDOW, ANALYTICS_WINDOW_MS);
+    const { allowed } = await checkRateLimit(`analytics:${uid}`, ANALYTICS_MAX_PER_WINDOW, ANALYTICS_WINDOW_MS);
     if (!allowed) {
       return NextResponse.json({ error: 'Too many analytics events.' }, { status: 429 });
     }

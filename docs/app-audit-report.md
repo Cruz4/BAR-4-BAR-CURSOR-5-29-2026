@@ -1,5 +1,7 @@
 # Bar 4 Bar — Full App Audit Report
 
+> **Historical snapshot:** This report records the repository state on July 10, 2026. Several findings have since been fixed. Use [CURRENT_SECURITY_MONEY_AUDIT.md](./CURRENT_SECURITY_MONEY_AUDIT.md) for the current re-audit status; do not treat unresolved items below as automatically current.
+
 **Date:** July 10, 2026
 **Scope:** every page, button, modal, form, mobile breakpoint, loading state, error state, database action, AI-generation flow, Ink deduction, and subscription restriction.
 **Method:** full type-check (`tsc --noEmit`), lint attempt, and three parallel code audits (UI surfaces; API routes + database; AI flows + Ink + subscription gates).

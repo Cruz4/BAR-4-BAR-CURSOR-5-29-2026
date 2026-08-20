@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       : guestId
         ? `post-view:${guestId}`
         : `post-view:${ip}`;
-    const { allowed } = checkRateLimit(rateKey, MAX_PER_WINDOW, WINDOW_MS);
+    const { allowed } = await checkRateLimit(rateKey, MAX_PER_WINDOW, WINDOW_MS);
     if (!allowed) {
       return NextResponse.json({ ok: true, counted: false, throttled: true });
     }

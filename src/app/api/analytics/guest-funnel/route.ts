@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     }
 
     const ip = clientIp(req);
-    const { allowed } = checkRateLimit(`guest-funnel:${ip}`, MAX_PER_WINDOW, WINDOW_MS);
+    const { allowed } = await checkRateLimit(`guest-funnel:${ip}`, MAX_PER_WINDOW, WINDOW_MS);
     if (!allowed) {
       return NextResponse.json({ ok: true, throttled: true });
     }

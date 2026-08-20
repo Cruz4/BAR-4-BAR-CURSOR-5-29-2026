@@ -46,6 +46,7 @@ import { shareDocCommerceFlags } from '@/lib/drop-commerce';
 import { canUserAddTrack, FreeTrackLimitError, hasUnlimitedCatalog, isProOrTrial } from '@/lib/subscription';
 import { computeRotatedFreeEditableTrackIds } from '@/lib/tier-limits';
 import { persistFreeEditableTrackIds } from '@/lib/free-editable-tracks';
+import { createCatalogAlbum, createCatalogTrack } from '@/lib/catalog-client';
 
 const UNASSIGNED_ALBUM_ID = 'unassigned';
 
@@ -61,50 +62,6 @@ function ensureTrackId(track: Track, index: number): string {
   const id = track.id?.trim();
   if (id) return id;
   return `track-import-${Date.now()}-${index}`;
-}
-
-async function persistLooseTracks(
-  userId: string,
-  tracks: Track[],
-  batch?: ReturnType<typeof writeBatch>,
-): Promise<{ batch: ReturnType<typeof writeBatch>; opCount: number; persisted: Track[] }> {
-  let activeBatch = batch ?? writeBatch(db);
-  let opCount = 0;
-  const persisted: Track[] = [];
-
-  if (tracks.length === 0) {
-    return { batch: activeBatch, opCount, persisted };
-  }
-
-  activeBatch.set(
-    doc(db, 'users', userId, 'albums', UNASSIGNED_ALBUM_ID),
-    stripForFirestore({
-      ...createUnassignedShell(userId),
-      updatedAt: new Date().toISOString(),
-    }),
-    { merge: true },
-  );
-  opCount++;
-
-  tracks.forEach((track, index) => {
-    const trackId = ensureTrackId(track, index);
-    const trackData = stripForFirestore({
-      ...track,
-      id: trackId,
-      ownerId: userId,
-      albumId: UNASSIGNED_ALBUM_ID,
-      updatedAt: new Date().toISOString(),
-    });
-    activeBatch.set(
-      doc(db, 'users', userId, 'albums', UNASSIGNED_ALBUM_ID, 'tracks', trackId),
-      trackData,
-      { merge: true },
-    );
-    opCount++;
-    persisted.push(trackData as Track);
-  });
-
-  return { batch: activeBatch, opCount, persisted };
 }
 
 interface DataContextType {
@@ -180,6 +137,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const syncTrackTimeout = useRef<NodeJS.Timeout | null>(null);
   const pendingAlbumUpdates = useRef<Record<string, any>>({});
   const syncAlbumTimeout = useRef<NodeJS.Timeout | null>(null);
+  const pendingCatalogCreatesRef = useRef(new Map<string, Promise<void>>());
   const albumsRef = useRef<Album[]>([]);
   const vaultLoadedUserIdRef = useRef<string | null>(null);
   const prevBarCountsRef = useRef<Record<string, number>>({});
@@ -254,6 +212,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const batch = writeBatch(db);
     const updates = { ...pendingTrackUpdates.current };
     pendingTrackUpdates.current = {};
+    await Promise.allSettled(
+      Object.entries(updates)
+        .map(([trackId, data]) =>
+          pendingCatalogCreatesRef.current.get(`track:${data.albumId}:${trackId}`)
+        )
+        .filter((pending): pending is Promise<void> => Boolean(pending))
+    );
     Object.entries(updates).forEach(([trackId, data]) => {
         batch.set(
           doc(db, 'users', user.id, 'albums', data.albumId, 'tracks', trackId),
@@ -314,6 +279,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const batch = writeBatch(db);
     const updates = { ...pendingAlbumUpdates.current };
     pendingAlbumUpdates.current = {};
+    await Promise.allSettled(
+      Object.keys(updates)
+        .map((albumId) => pendingCatalogCreatesRef.current.get(`album:${albumId}`))
+        .filter((pending): pending is Promise<void> => Boolean(pending))
+    );
     Object.entries(updates).forEach(([albumId, data]) => {
         batch.set(
           doc(db, 'users', user.id, 'albums', albumId),
@@ -341,17 +311,21 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     for (const entry of entries) {
       if (entry.type === 'track') {
-        await setDoc(
-          doc(db, 'users', user.id, 'albums', entry.albumId, 'tracks', entry.trackId),
-          stripForFirestore({ ...entry.updates, updatedAt: new Date().toISOString() }),
-          { merge: true }
-        );
+        const trackRef = doc(db, 'users', user.id, 'albums', entry.albumId, 'tracks', entry.trackId);
+        const trackData = stripForFirestore({ ...entry.updates, updatedAt: new Date().toISOString() });
+        if ((await getDoc(trackRef)).exists()) {
+          await setDoc(trackRef, trackData, { merge: true });
+        } else {
+          await createCatalogTrack(entry.albumId, entry.trackId, trackData);
+        }
       } else if (entry.type === 'album') {
-        await setDoc(
-          doc(db, 'users', user.id, 'albums', entry.albumId),
-          stripForFirestore({ ...entry.updates, updatedAt: new Date().toISOString() }),
-          { merge: true }
-        );
+        const albumRef = doc(db, 'users', user.id, 'albums', entry.albumId);
+        const albumData = stripForFirestore({ ...entry.updates, updatedAt: new Date().toISOString() });
+        if ((await getDoc(albumRef)).exists()) {
+          await setDoc(albumRef, albumData, { merge: true });
+        } else {
+          await createCatalogAlbum(entry.albumId, albumData);
+        }
       } else if (entry.type === 'styleProfile') {
         await setDoc(doc(db, 'users', user.id, 'styleProfile', 'main'), stripForFirestore(entry.profile));
       } else if (entry.type === 'deleteTrack') {
@@ -410,9 +384,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     return onNetworkChange((online) => {
       if (online) {
         setSyncPendingCount(outboxCount(user.id));
+        void flushOutboxReplay();
       }
     });
-  }, [user?.id]);
+  }, [user?.id, flushOutboxReplay]);
 
   useEffect(() => {
     const onHide = () => {
@@ -616,9 +591,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             const localLoose = localAlbums.find((a) => a.id === UNASSIGNED_ALBUM_ID)?.tracks ?? [];
             const missingLoose = localLoose.filter((lt) => lt?.id && !looseTracks.some((ct) => ct.id === lt.id));
             if (missingLoose.length > 0) {
-              const { batch, persisted } = await persistLooseTracks(user.id, missingLoose);
-              await batch.commit();
-              looseTracks = [...looseTracks, ...persisted];
+              for (const track of missingLoose) {
+                const trackId = ensureTrackId(track, looseTracks.length);
+                const trackData = stripForFirestore({
+                  ...track,
+                  id: trackId,
+                  ownerId: user.id,
+                  albumId: UNASSIGNED_ALBUM_ID,
+                  updatedAt: new Date().toISOString(),
+                });
+                await createCatalogTrack(UNASSIGNED_ALBUM_ID, trackId, trackData);
+                looseTracks.push(trackData as Track);
+              }
             }
           }
         } catch (recoveryError) {
@@ -677,21 +661,25 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const addAlbum = useCallback((album: Album) => {
     setAlbums(prev => [album, ...prev]);
     if (user) {
-      const { tracks = [], ...data } = album;
-      void setDoc(
-        doc(db, 'users', user.id, 'albums', album.id),
-        stripForFirestore({ ...data, ownerId: user.id }),
-        { merge: true },
-      );
-      for (const t of tracks) {
-        void setDoc(
-          doc(db, 'users', user.id, 'albums', album.id, 'tracks', t.id),
-          stripForFirestore({ ...t, ownerId: user.id, albumId: album.id }),
-          { merge: true },
-        );
+      const { tracks: _tracks, ...data } = album;
+      const albumData = stripForFirestore({ ...data, ownerId: user.id });
+      if (isBrowserOffline()) {
+        const count = mergeAlbumOutbox(user.id, album.id, albumData);
+        setSyncPendingCount(count);
+        setCloudSaveStatus('offline');
+        return;
       }
+
+      const creation = createCatalogAlbum(album.id, albumData);
+      pendingCatalogCreatesRef.current.set(`album:${album.id}`, creation);
+      void creation
+        .catch((error) => {
+          setAlbums((prev) => prev.filter((item) => item.id !== album.id));
+          toast({ variant: 'destructive', title: 'Album not saved', description: error.message });
+        })
+        .finally(() => pendingCatalogCreatesRef.current.delete(`album:${album.id}`));
     }
-  }, [user]);
+  }, [user, toast]);
 
   const addTrack = useCallback((albumId: string, track: Omit<Track, 'id'> & { id?: string }): Track => {
     if (!canUserAddTrack(albums, user)) {
@@ -722,20 +710,41 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       return next;
     });
     if (user) {
-      if (albumId === UNASSIGNED_ALBUM_ID) {
-        void setDoc(
-          doc(db, 'users', user.id, 'albums', UNASSIGNED_ALBUM_ID),
-          stripForFirestore({ ...createUnassignedShell(user.id), updatedAt: new Date().toISOString() }),
-          { merge: true },
+      if (isBrowserOffline()) {
+        const count = mergeTrackOutbox(
+          user.id,
+          id,
+          albumId,
+          newTrack as unknown as Record<string, unknown>
         );
+        setSyncPendingCount(count);
+        setCloudSaveStatus('offline');
+      } else {
+        const creation = createCatalogTrack(
+          albumId,
+          id,
+          newTrack as unknown as Record<string, unknown>
+        );
+        pendingCatalogCreatesRef.current.set(`track:${albumId}:${id}`, creation);
+        void creation
+          .catch((error) => {
+            setAlbums((prev) =>
+              prev.map((album) =>
+                album.id === albumId
+                  ? { ...album, tracks: album.tracks.filter((item) => item.id !== id) }
+                  : album
+              )
+            );
+            toast({ variant: 'destructive', title: 'Track not saved', description: error.message });
+          })
+          .finally(() => pendingCatalogCreatesRef.current.delete(`track:${albumId}:${id}`));
       }
-      void setDoc(doc(db, 'users', user.id, 'albums', albumId, 'tracks', id), newTrack, { merge: true });
       prevBarCountsRef.current[id] = countNonEmptyBars(newTrack.sections);
       prevTrackCompleteRef.current[id] = newTrack.status === 'complete';
       prevLineBaselinesRef.current[id] = buildLineBaseline(newTrack.sections);
     }
     return newTrack;
-  }, [user, albums]);
+  }, [user, albums, toast]);
 
   const updateTrack = useCallback((albumId: string, trackId: string, updates: Partial<Track>) => {
     const now = new Date().toISOString();
@@ -1065,8 +1074,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           ownerId: user.id,
           updatedAt: new Date().toISOString(),
         });
-        batch.set(doc(db, 'users', user.id, 'albums', album.id), stampedAlbum, { merge: true });
-        opCount++;
+        const albumRef = doc(db, 'users', user.id, 'albums', album.id);
+        if ((await getDoc(albumRef)).exists()) {
+          batch.set(albumRef, stampedAlbum, { merge: true });
+          opCount++;
+        } else {
+          await createCatalogAlbum(album.id, stampedAlbum);
+        }
 
         const persistedTracks: Track[] = [];
         for (const track of tracks) {
@@ -1078,8 +1092,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             albumId: album.id,
             updatedAt: new Date().toISOString(),
           });
-          batch.set(doc(db, 'users', user.id, 'albums', album.id, 'tracks', trackId), trackData, { merge: true });
-          opCount++;
+          const trackRef = doc(db, 'users', user.id, 'albums', album.id, 'tracks', trackId);
+          if ((await getDoc(trackRef)).exists()) {
+            batch.set(trackRef, trackData, { merge: true });
+            opCount++;
+          } else {
+            await createCatalogTrack(album.id, trackId, trackData);
+          }
           persistedTracks.push(trackData as Track);
           await commitIfNeeded();
         }
@@ -1087,11 +1106,33 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (allLooseTracks.length > 0) {
-        const looseResult = await persistLooseTracks(user.id, allLooseTracks, batch);
-        batch = looseResult.batch;
-        opCount += looseResult.opCount;
-        persistedLooseTracks = looseResult.persisted;
-        await commitIfNeeded();
+        for (const track of allLooseTracks) {
+          const trackId = ensureTrackId(track, persistedLooseTracks.length);
+          const trackData = stripForFirestore({
+            ...track,
+            id: trackId,
+            ownerId: user.id,
+            albumId: UNASSIGNED_ALBUM_ID,
+            updatedAt: new Date().toISOString(),
+          });
+          const trackRef = doc(
+            db,
+            'users',
+            user.id,
+            'albums',
+            UNASSIGNED_ALBUM_ID,
+            'tracks',
+            trackId
+          );
+          if ((await getDoc(trackRef)).exists()) {
+            batch.set(trackRef, trackData, { merge: true });
+            opCount++;
+          } else {
+            await createCatalogTrack(UNASSIGNED_ALBUM_ID, trackId, trackData);
+          }
+          persistedLooseTracks.push(trackData as Track);
+          await commitIfNeeded();
+        }
       }
 
       await commitIfNeeded(true);

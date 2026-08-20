@@ -29,7 +29,7 @@ async function handleLike(
     }
     const auth = await getAuth();
     const decoded = await auth.verifyIdToken(header.slice(7));
-    const limited = checkRateLimit(`lock-echo-like:${decoded.uid}`, 60, 60 * 1000);
+    const limited = await checkRateLimit(`lock-echo-like:${decoded.uid}`, 60, 60 * 1000);
     if (!limited.allowed) {
       return NextResponse.json({ error: 'Slow down' }, { status: 429 });
     }
