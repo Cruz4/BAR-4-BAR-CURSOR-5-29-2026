@@ -28,6 +28,7 @@ import { SceneDiscoverCard } from '@/components/scene/scene-discover-card';
 import { SceneLiveDropsStrip } from '@/components/scene/scene-live-drops-strip';
 import { SceneOnSaleRail } from '@/components/scene/scene-on-sale-rail';
 import { SceneLivePrompts } from '@/components/scene/scene-live-prompts';
+import { SceneHouseBarPin } from '@/components/scene/scene-house-bar-pin';
 import { SceneWeatherChip } from '@/components/scene/scene-weather-chip';
 import { SceneBoothMemoryCard } from '@/components/scene/scene-booth-memory-card';
 import { SceneBlockAtmosphere } from '@/components/scene/scene-block-atmosphere';
@@ -1037,6 +1038,7 @@ export function SceneHome() {
 
               {discoverExpanded ? (
                 <div id="scene-discover-body" className="space-y-4">
+                  <SceneHouseBarPin variant="dock" />
                   {!discoverReady && visibleDiscoverCards.length === 0 ? (
                     <>
                       <FeedCardSkeleton />

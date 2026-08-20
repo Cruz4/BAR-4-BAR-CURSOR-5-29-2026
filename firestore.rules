@@ -155,6 +155,10 @@ service cloud.firestore {
       match /echoes/{echoId} {
         allow read: if true;
         allow write: if false;
+        match /likes/{userId} {
+          allow read: if true;
+          allow write: if false;
+        }
       }
       match /watchers/{userId} {
         allow read: if isOwnerOrAdmin(userId);

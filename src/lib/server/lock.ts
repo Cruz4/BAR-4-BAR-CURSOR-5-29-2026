@@ -70,6 +70,7 @@ function mapEcho(id: string, data: Record<string, unknown>): LockEcho {
     authorName: typeof data.authorName === 'string' ? data.authorName : null,
     authorSlug: typeof data.authorSlug === 'string' ? data.authorSlug : null,
     createdAt: String(data.createdAt || new Date().toISOString()),
+    likeCount: typeof data.likeCount === 'number' ? Math.max(0, data.likeCount) : 0,
     ...(data.isPick === true ? { isPick: true } : {}),
   };
 }
@@ -183,6 +184,50 @@ export async function listEchoes(
   );
 }
 
+export async function attachViewerEchoLikes(
+  lockId: string,
+  echoes: LockEcho[],
+  viewerId: string | null
+): Promise<LockEcho[]> {
+  if (!viewerId || echoes.length === 0) return echoes;
+  const db = await getDb();
+  const refs = echoes.map((echo) =>
+    db.doc(`locks/${lockId}/echoes/${echo.id}/likes/${viewerId}`)
+  );
+  const snaps = await db.getAll(...refs);
+  return echoes.map((echo, i) => ({ ...echo, likedByMe: snaps[i]?.exists === true }));
+}
+
+export async function toggleEchoLike(input: {
+  lockId: string;
+  echoId: string;
+  userId: string;
+  like: boolean;
+}): Promise<{ likeCount: number; likedByMe: boolean }> {
+  const lock = await getLock(input.lockId);
+  if (!lock) throw new Error('Cast not found');
+  const db = await getDb();
+  const echoRef = db.collection('locks').doc(lock.id).collection('echoes').doc(input.echoId);
+  const likeRef = echoRef.collection('likes').doc(input.userId);
+
+  return db.runTransaction(async (tx) => {
+    const [echoSnap, likeSnap] = await Promise.all([tx.get(echoRef), tx.get(likeRef)]);
+    if (!echoSnap.exists) throw new Error('Reply not found');
+    const already = likeSnap.exists;
+    const current = typeof echoSnap.data()?.likeCount === 'number' ? echoSnap.data()!.likeCount : 0;
+    if (input.like) {
+      if (already) return { likeCount: current, likedByMe: true };
+      tx.set(likeRef, { createdAt: new Date().toISOString() });
+      tx.update(echoRef, { likeCount: FieldValue.increment(1) });
+      return { likeCount: current + 1, likedByMe: true };
+    }
+    if (!already) return { likeCount: Math.max(0, current), likedByMe: false };
+    tx.delete(likeRef);
+    tx.update(echoRef, { likeCount: FieldValue.increment(-1) });
+    return { likeCount: Math.max(0, current - 1), likedByMe: false };
+  });
+}
+
 export async function submitEcho(input: {
   lockId: string;
   text: string;
@@ -228,6 +273,7 @@ export async function submitEcho(input: {
     authorSlug,
     createdAt: now,
     isPick: false,
+    likeCount: 0,
   };
 
   const batch = db.batch();

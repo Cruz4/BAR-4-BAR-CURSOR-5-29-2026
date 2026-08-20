@@ -27,6 +27,8 @@ import { LOCK_HOUSE_ID } from '@/lib/lock-feature';
 import type { LockDoc, LockEcho } from '@/lib/lock/types';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { parseUserDate } from '@/lib/user-date';
+import { markHouseBarSeen, notifyHouseBarThreadUpdated } from '@/lib/scene/house-bar-pin';
+import { HouseBarMicLike } from '@/components/scene/house-bar-mic-like';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -60,7 +62,10 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/lock/${LOCK_HOUSE_ID}`, { cache: 'no-store' });
+      const headers: Record<string, string> = {};
+      const token = await auth.currentUser?.getIdToken().catch(() => null);
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`/api/lock/${LOCK_HOUSE_ID}`, { cache: 'no-store', headers });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Could not load house bar');
       setLock(data.lock as LockDoc);
@@ -77,8 +82,14 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
   }, [toast]);
 
   useEffect(() => {
-    if (open) void load();
+    if (!open) return;
+    void load();
   }, [open, load]);
+
+  useEffect(() => {
+    if (!open || !lock) return;
+    markHouseBarSeen(lock.seedBar || seedBar, lock.echoCount);
+  }, [open, lock, seedBar]);
 
   const canDelete = (echo: LockEcho) => {
     if (!user) return false;
@@ -107,6 +118,7 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
       if (!res.ok) throw new Error(data.error || 'Could not save your bar');
       setBar('');
       toast({ title: 'Bar dropped', description: 'It’s on the house cypher now.' });
+      notifyHouseBarThreadUpdated();
       void load();
     } catch (e) {
       toast({
@@ -133,6 +145,7 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Delete failed');
       toast({ title: 'Reply removed' });
+      notifyHouseBarThreadUpdated();
       void load();
     } catch (e) {
       toast({
@@ -235,7 +248,9 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
                         ) : null}
                       </p>
                     </div>
-                    {canDelete(echo) ? (
+                    <div className="flex shrink-0 items-start gap-0.5">
+                      <HouseBarMicLike echo={echo} />
+                      {canDelete(echo) ? (
                       <Button
                         type="button"
                         size="icon"
@@ -250,7 +265,8 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
-                    ) : null}
+                      ) : null}
+                    </div>
                   </li>
                 );
               })}

@@ -44,6 +44,8 @@ export type LockEcho = {
   authorSlug?: string | null;
   createdAt: string;
   isPick?: boolean;
+  likeCount?: number;
+  likedByMe?: boolean;
 };
 
 export type LockClearOffer = {

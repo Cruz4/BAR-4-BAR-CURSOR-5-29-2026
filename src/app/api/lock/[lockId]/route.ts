@@ -1,14 +1,27 @@
 import { NextResponse } from 'next/server';
 import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
-import { getLock, listEchoes, ensureHouseLock, deleteLock } from '@/lib/server/lock';
+import { getLock, listEchoes, ensureHouseLock, deleteLock, attachViewerEchoLikes } from '@/lib/server/lock';
 import { LOCK_HOUSE_ID } from '@/lib/lock-feature';
 import { isLockFeatureEnabled } from '@/lib/server/lock-feature';
 import { canAccessLockApi } from '@/lib/server/lock-access';
+import { getAuth } from '@/lib/firebase/server';
 
 export const runtime = 'nodejs';
 
+async function optionalUid(req: Request): Promise<string | null> {
+  const header = req.headers.get('authorization');
+  if (!header?.startsWith('Bearer ')) return null;
+  try {
+    const auth = await getAuth();
+    const decoded = await auth.verifyIdToken(header.slice(7));
+    return decoded.uid;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ lockId: string }> }
 ) {
   try {
@@ -25,9 +38,14 @@ export async function GET(
     if (!lock) {
       return NextResponse.json({ error: 'LOCK not found' }, { status: 404 });
     }
-    const [newest, top] = await Promise.all([
+    const viewerId = await optionalUid(req);
+    const [newestRaw, topRaw] = await Promise.all([
       listEchoes(lock.id, { limit: 40, order: 'new' }),
       listEchoes(lock.id, { limit: 8, order: 'score' }),
+    ]);
+    const [newest, top] = await Promise.all([
+      attachViewerEchoLikes(lock.id, newestRaw, viewerId),
+      attachViewerEchoLikes(lock.id, topRaw, viewerId),
     ]);
     return NextResponse.json({
       lock,

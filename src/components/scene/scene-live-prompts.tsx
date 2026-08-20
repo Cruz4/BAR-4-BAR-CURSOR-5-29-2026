@@ -5,26 +5,28 @@
  * House bar continues in a Scene popup (not your last lyric track).
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { CalendarRange, Flame, Radio } from 'lucide-react';
+import { CalendarRange, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useGamification } from '@/context/gamification-context';
+import { useHouseBarPin } from '@/hooks/use-house-bar-pin';
 import { useSceneLive } from '@/hooks/use-scene-live';
 import { getLastWorkedTrackPath } from '@/lib/studio-tips-session';
 import { VAULT_PATH } from '@/lib/scene-home';
 import { getChallengeProgress, WEEKLY_CHALLENGES } from '@/lib/gamification/challenges';
-import { SceneHouseBarDialog } from '@/components/scene/scene-house-bar-dialog';
+import { SceneHouseBarPin } from '@/components/scene/scene-house-bar-pin';
 import { cn } from '@/lib/utils';
 
 export function SceneLivePrompts({ className }: { className?: string }) {
   const { summary } = useGamification();
   const { live, loaded, houseBarOn, weeklyOn } = useSceneLive();
+  const { placement } = useHouseBarPin(live.houseBar.seedBar, houseBarOn);
   const writeHref = getLastWorkedTrackPath() || `${VAULT_PATH}?create=track`;
-  const [houseOpen, setHouseOpen] = useState(false);
+  const showHouse = houseBarOn && placement === 'hero';
 
-  if (!loaded || (!houseBarOn && !weeklyOn)) return null;
+  if (!loaded || (!showHouse && !weeklyOn)) return null;
 
   const barsChallenge = WEEKLY_CHALLENGES.find((c) => c.id === 'bars_8');
   const written = barsChallenge
@@ -35,34 +37,7 @@ export function SceneLivePrompts({ className }: { className?: string }) {
 
   return (
     <div className={cn('space-y-3', className)}>
-      {houseBarOn ? (
-        <Card className="relative overflow-hidden border border-fuchsia-500/35 bg-gradient-to-br from-fuchsia-500/10 via-card/90 to-card/70 px-3 py-2 sm:px-3.5 sm:py-2.5">
-          <div className="flex items-center gap-2.5">
-            <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-1.5 font-code text-[8px] font-bold uppercase tracking-[0.22em] text-fuchsia-300">
-                <Radio className="h-3 w-3 shrink-0" />
-                <span className="truncate">{live.houseBar.title || 'House bar of the day'}</span>
-              </p>
-              <p className="mt-0.5 truncate text-[13px] leading-tight text-foreground/95">
-                “{live.houseBar.seedBar}”
-              </p>
-            </div>
-            <Button
-              size="sm"
-              className="h-7 shrink-0 px-2.5 text-[11px] font-bold uppercase tracking-wider"
-              onClick={() => setHouseOpen(true)}
-            >
-              Write next
-            </Button>
-          </div>
-          <SceneHouseBarDialog
-            open={houseOpen}
-            onOpenChange={setHouseOpen}
-            seedBar={live.houseBar.seedBar}
-            title={live.houseBar.title || 'House bar of the day'}
-          />
-        </Card>
-      ) : null}
+      {showHouse ? <SceneHouseBarPin /> : null}
 
       {weeklyOn ? (
         <Card className="relative overflow-hidden border border-amber-500/35 bg-gradient-to-br from-amber-500/10 via-card/90 to-card/70 p-4 sm:p-5">
