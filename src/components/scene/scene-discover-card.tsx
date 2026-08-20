@@ -7,17 +7,18 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Dna, Flame, Lock, Music, Radio, TrendingUp } from 'lucide-react';
+import { Dna, Flame, Lock, Music, Radio, Trash2, TrendingUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PostCard } from '@/components/profile/post-card';
-import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
+import { ArtistStarAvatar, LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/client/firebase';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
+import { isMasterAdminEmail } from '@/lib/master-admin';
 import type { DiscoverCard } from '@/lib/scene/discover-client';
 import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
@@ -46,7 +47,7 @@ export function SceneDiscoverCard({
 }: {
   card: DiscoverCard;
   viewerSlug?: string;
-  /** Called after the viewer deletes their own Finish this bar cast. */
+  /** Called after the owner or studio admin deletes a Finish this bar cast. */
   onLockRemoved?: (lockId: string) => void;
 }) {
   const { user } = useAuth();
@@ -170,6 +171,9 @@ export function SceneDiscoverCard({
         ((lock.ownerId && lock.ownerId === user.id) ||
           (viewerSlug && lock.ownerSlug && viewerSlug === lock.ownerSlug))
     );
+    const isAdmin = Boolean(user) && (isMasterAdminEmail(user?.email) || user?.role === 'admin');
+    const canRemove = isOwner || isAdmin;
+    const ownerHref = lock.ownerSlug ? profileHref(lock.ownerSlug) : undefined;
 
     const deleteCast = async () => {
       if (!user?.id || busy) return;
@@ -216,39 +220,56 @@ export function SceneDiscoverCard({
             </span>
           ) : null}
         </div>
-        <div className="mt-2.5 space-y-2">
-          <p className="font-headline text-sm font-bold uppercase tracking-tight">
-            {lock.ownerName}
-          </p>
-          <p className="text-sm leading-snug text-foreground/90 line-clamp-2">“{lock.seedBar}”</p>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
-              {lock.echoCount} replies
-              {lock.updatedAt ? ` · ${timeAgo(lock.updatedAt)}` : ''}
-            </p>
-            {isOwner ? (
+        <div className="mt-2.5 flex items-start gap-3">
+          <LiveArtistStarAvatar
+            name={lock.ownerName}
+            userId={lock.ownerId}
+            slug={lock.ownerSlug}
+            size={44}
+            toneClass="bg-emerald-500/25 text-emerald-300"
+          />
+          <div className="min-w-0 flex-1 space-y-2">
+            {ownerHref ? (
+              <Link
+                href={ownerHref}
+                className="block truncate font-headline text-sm font-bold uppercase tracking-tight hover:text-emerald-300"
+              >
+                {lock.ownerName}
+              </Link>
+            ) : (
+              <p className="truncate font-headline text-sm font-bold uppercase tracking-tight">
+                {lock.ownerName}
+              </p>
+            )}
+            <p className="text-sm leading-snug text-foreground/90 line-clamp-2">“{lock.seedBar}”</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
+                {lock.echoCount} replies
+                {lock.updatedAt ? ` · ${timeAgo(lock.updatedAt)}` : ''}
+              </p>
               <div className="flex flex-wrap items-center gap-1.5">
-                <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>
-                  <Link href={`/lock/${lock.id}/manage`}>Manage</Link>
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 shrink-0 font-bold uppercase text-rose-300 hover:bg-rose-500/10 hover:text-rose-200"
-                  disabled={busy}
-                  onClick={() => void deleteCast()}
-                >
-                  Delete
-                </Button>
-                <Button size="sm" variant="ghost" className="h-8 shrink-0 font-bold uppercase" asChild>
-                  <Link href={`/lock/${lock.id}`}>Open</Link>
+                {isOwner ? (
+                  <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>
+                    <Link href={`/lock/${lock.id}/manage`}>Manage</Link>
+                  </Button>
+                ) : null}
+                {canRemove ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 shrink-0 font-bold uppercase text-rose-300 hover:bg-rose-500/10 hover:text-rose-200"
+                    disabled={busy}
+                    onClick={() => void deleteCast()}
+                  >
+                    <Trash2 className="mr-1 h-3.5 w-3.5" />
+                    Delete
+                  </Button>
+                ) : null}
+                <Button size="sm" variant={isOwner ? 'ghost' : 'outline'} className="h-8 shrink-0 font-bold uppercase" asChild>
+                  <Link href={`/lock/${lock.id}`}>{isOwner ? 'Open' : 'Finish it'}</Link>
                 </Button>
               </div>
-            ) : (
-              <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>
-                <Link href={`/lock/${lock.id}`}>Finish it</Link>
-              </Button>
-            )}
+            </div>
           </div>
         </div>
       </Card>

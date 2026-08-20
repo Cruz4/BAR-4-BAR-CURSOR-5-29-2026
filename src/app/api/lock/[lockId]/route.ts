@@ -84,7 +84,19 @@ export async function DELETE(
       throw e;
     }
 
-    await deleteLock({ lockId, ownerId: userId });
+    let requesterEmail: string | null = null;
+    const header = req.headers.get('authorization');
+    if (header?.startsWith('Bearer ')) {
+      try {
+        const auth = await getAuth();
+        const decoded = await auth.verifyIdToken(header.slice(7));
+        requesterEmail = decoded.email || null;
+      } catch {
+        /* verifyCheckoutUser already authenticated */
+      }
+    }
+
+    await deleteLock({ lockId, requesterId: userId, requesterEmail });
     return NextResponse.json({ ok: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Delete failed';

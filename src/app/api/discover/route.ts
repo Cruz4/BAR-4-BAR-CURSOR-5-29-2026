@@ -49,6 +49,7 @@ export async function GET(req: Request) {
       seedBar: l.seedBar,
       echoCount: l.echoCount,
       updatedAt: l.updatedAt,
+      isHouse: l.isHouse,
     }));
 
     return NextResponse.json(

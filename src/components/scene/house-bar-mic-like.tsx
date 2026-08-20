@@ -81,7 +81,8 @@ export function HouseBarMicLike({
       }}
       disabled={busy}
       className={cn(
-        'inline-flex shrink-0 items-center gap-0.5 rounded-md px-1 py-0.5 text-[10px] font-bold tabular-nums transition-colors',
+        'inline-flex h-7 shrink-0 items-center justify-center gap-0.5 rounded-md p-0 text-[10px] font-bold tabular-nums leading-none transition-colors',
+        count > 0 ? 'min-w-7 px-1' : 'w-7',
         liked
           ? 'text-fuchsia-300'
           : 'text-muted-foreground hover:text-fuchsia-200',
@@ -91,8 +92,8 @@ export function HouseBarMicLike({
       aria-label={liked ? 'Remove mic' : 'Mic this bar'}
       title={liked ? 'Un-mic' : 'Mic'}
     >
-      <Mic className={cn('h-3.5 w-3.5', liked && 'fill-fuchsia-300/35')} />
-      {count > 0 ? count : compact ? null : 'Mic'}
+      <Mic className={cn('block h-3.5 w-3.5 shrink-0', liked && 'fill-fuchsia-300/35')} />
+      {count > 0 ? <span className="leading-none">{count}</span> : null}
     </button>
   );
 }

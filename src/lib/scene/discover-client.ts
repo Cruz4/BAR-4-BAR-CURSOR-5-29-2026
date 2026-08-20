@@ -60,6 +60,7 @@ export type DiscoverLock = {
   seedBar: string;
   echoCount: number;
   updatedAt: string;
+  isHouse?: boolean;
 };
 
 export type DiscoverData = {
@@ -159,7 +160,9 @@ export function buildDiscoverCards(
   const drops = data.drops;
   const saleDrops = drops.filter((d) => d.hasDropAudio && d.type === 'track');
   const otherDrops = drops.filter((d) => !(d.hasDropAudio && d.type === 'track'));
-  const locks = data.locks || [];
+  const locks = (data.locks || []).filter(
+    (l) => !l.isHouse && l.ownerId !== 'system' && l.id !== 'house'
+  );
   const risers = data.risers.filter((r) => !excludeUserIds.has(r.userId));
 
   const timed: DiscoverCard[] = [

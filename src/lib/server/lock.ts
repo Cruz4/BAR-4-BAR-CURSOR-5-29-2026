@@ -512,18 +512,25 @@ export async function closeLock(input: {
   return { ...lock, status: 'closed', updatedAt: now };
 }
 
-/** Owner hard-deletes a cast (echoes, watchers, clear offers, contribution mirrors). */
+/** Owner or studio admin hard-deletes a cast (echoes, watchers, clear offers, contribution mirrors). */
 export async function deleteLock(input: {
   lockId: string;
-  ownerId: string;
+  requesterId: string;
+  requesterEmail?: string | null;
 }): Promise<void> {
   const lock = await getLock(input.lockId);
   if (!lock) throw new Error('LOCK not found');
-  if (lock.ownerId !== input.ownerId) {
-    throw new Error('Only the casting artist can delete this LOCK');
-  }
   if (lock.isHouse || lock.ownerId === 'system') {
     throw new Error('The house LOCK cannot be deleted');
+  }
+  const isOwner = lock.ownerId === input.requesterId && lock.ownerId !== 'system';
+  const { isStudioAdminUser } = await import('@/lib/server/lock-access');
+  const isAdmin = await isStudioAdminUser({
+    uid: input.requesterId,
+    email: input.requesterEmail,
+  });
+  if (!isOwner && !isAdmin) {
+    throw new Error('Only the casting artist or studio admin can delete this LOCK');
   }
 
   const db = await getDb();
@@ -627,21 +634,28 @@ export async function setArtistPick(input: {
 
 export async function listRecentOpenLocks(limit = 12): Promise<LockDoc[]> {
   const db = await getDb();
+  const cap = Math.min(40, Math.max(1, limit));
+  const isDiscoverable = (l: LockDoc) =>
+    l.status === 'open' && !l.isHouse && l.ownerId !== 'system' && l.id !== LOCK_HOUSE_ID;
+
   try {
     const snap = await db
       .collection('locks')
       .where('status', '==', 'open')
       .orderBy('updatedAt', 'desc')
-      .limit(Math.min(40, Math.max(1, limit)))
+      .limit(Math.min(40, cap + 8))
       .get();
-    return snap.docs.map((d) => mapLock(d.id, (d.data() || {}) as Record<string, unknown>));
+    return snap.docs
+      .map((d) => mapLock(d.id, (d.data() || {}) as Record<string, unknown>))
+      .filter(isDiscoverable)
+      .slice(0, cap);
   } catch {
     // Fallback if composite index missing
     const snap = await db.collection('locks').orderBy('updatedAt', 'desc').limit(40).get();
     return snap.docs
       .map((d) => mapLock(d.id, (d.data() || {}) as Record<string, unknown>))
-      .filter((l) => l.status === 'open')
-      .slice(0, limit);
+      .filter(isDiscoverable)
+      .slice(0, cap);
   }
 }
 

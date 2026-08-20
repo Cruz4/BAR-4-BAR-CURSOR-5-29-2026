@@ -57,7 +57,7 @@ function buildMessage(input: EnqueueInput): string {
   if (input.kind === 'lock_funnel') {
     const via = refLabel && input.ref !== 'organic' ? ` · ${refLabel}` : '';
     const detail = input.detail ? ` — ${input.detail}` : '';
-    return `${input.method || 'LOCK activity'}${via}${detail}`;
+    return `${input.method || 'Finish this bar activity'}${via}${detail}`;
   }
   const page = input.path || '/';
   const who = input.guestAlias || 'Visitor';

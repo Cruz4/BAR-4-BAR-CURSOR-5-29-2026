@@ -59,53 +59,57 @@ function lockAlertCopy(
   event: LockFunnelEventName,
   metadata: LockFunnelMetadata
 ): { method: string; detail: string | null } {
-  const lockId = typeof metadata.lockId === 'string' ? metadata.lockId : 'lock';
-  const score =
-    typeof metadata.lockScore === 'number' ? `LOCK ${metadata.lockScore}` : null;
+  const fit =
+    typeof metadata.lockScore === 'number' ? `Fit ${metadata.lockScore}` : null;
+  const house = metadata.isHouse === true;
 
   switch (event) {
     case LOCK_FUNNEL_EVENTS.OPEN:
       return {
-        method: 'Opened LOCK',
-        detail: metadata.isHouse === true ? 'house dare' : lockId.slice(0, 12),
+        method: house ? 'opened the house bar' : 'opened a Finish this bar',
+        detail: null,
       };
     case LOCK_FUNNEL_EVENTS.SUBMIT:
       return {
-        method: 'Locked a bar',
-        detail: [score, metadata.branched === true ? 'branched' : 'on seed']
-          .filter(Boolean)
-          .join(' · ') || null,
+        method: house
+          ? metadata.branched === true
+            ? 'replied to a house bar line'
+            : 'replied to the house bar'
+          : metadata.branched === true
+            ? 'replied to someone else’s line'
+            : 'replied to a Finish this bar',
+        detail: fit,
       };
     case LOCK_FUNNEL_EVENTS.BRANCH:
       return {
-        method: 'Answered after someone else',
-        detail: score,
+        method: house ? 'replied to a house bar line' : 'replied to someone else’s line',
+        detail: fit,
       };
     case LOCK_FUNNEL_EVENTS.SHARE_CARD:
-      return { method: 'Shared reply card', detail: score };
+      return { method: 'shared a reply card', detail: fit };
     case LOCK_FUNNEL_EVENTS.NAME_CTA:
       return {
-        method: 'Tapped save name on reply',
+        method: 'tapped save name on a reply',
         detail: typeof metadata.source === 'string' ? metadata.source : null,
       };
     case LOCK_FUNNEL_EVENTS.WHERE_NEXT:
       return {
-        method: 'Chose next step',
+        method: 'chose a next step',
         detail: typeof metadata.destination === 'string' ? metadata.destination : null,
       };
     case LOCK_FUNNEL_EVENTS.STUDIO:
-      return { method: 'Opened Studio from finish-the-bar', detail: lockId.slice(0, 12) };
+      return { method: 'opened Studio from Finish this bar', detail: null };
     case LOCK_FUNNEL_EVENTS.WRITE_ANOTHER:
-      return { method: 'Writing another reply', detail: lockId.slice(0, 12) };
+      return { method: 'started another reply', detail: null };
     case LOCK_FUNNEL_EVENTS.BLOODLINE:
-      return { method: 'Opened all replies', detail: lockId.slice(0, 12) };
+      return { method: 'opened all replies', detail: null };
     case LOCK_FUNNEL_EVENTS.SIGNUP_CTA:
       return {
-        method: 'Finish-the-bar signup CTA',
+        method: 'tapped Finish this bar sign-up',
         detail: typeof metadata.source === 'string' ? metadata.source : null,
       };
     case LOCK_FUNNEL_EVENTS.TYPED:
-      return { method: 'Started typing a reply', detail: null };
+      return { method: 'started typing a reply', detail: null };
     default:
       return { method: event, detail: null };
   }

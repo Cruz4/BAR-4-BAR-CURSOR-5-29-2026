@@ -227,7 +227,7 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
                 return (
                   <li
                     key={echo.id}
-                    className="flex items-start gap-2 rounded-md border border-white/5 bg-black/20 px-2.5 py-2"
+                    className="flex items-center gap-2 rounded-md border border-white/5 bg-black/20 px-2.5 py-2"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm leading-snug text-foreground/95">{echo.text}</p>
@@ -248,22 +248,22 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
                         ) : null}
                       </p>
                     </div>
-                    <div className="flex shrink-0 items-start gap-0.5">
-                      <HouseBarMicLike echo={echo} />
+                    <div className="flex shrink-0 items-center">
+                      <HouseBarMicLike echo={echo} compact />
                       {canDelete(echo) ? (
                       <Button
                         type="button"
                         size="icon"
                         variant="ghost"
                         className={cn(
-                          'h-7 w-7 shrink-0 text-muted-foreground hover:text-rose-400',
+                          'h-7 w-7 shrink-0 p-0 text-muted-foreground hover:text-rose-400',
                           deletingId === echo.id && 'opacity-50'
                         )}
                         disabled={deletingId === echo.id}
                         aria-label="Delete reply"
                         onClick={() => void onDelete(echo.id)}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="block h-3.5 w-3.5" />
                       </Button>
                       ) : null}
                     </div>
