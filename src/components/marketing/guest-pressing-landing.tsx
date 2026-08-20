@@ -774,7 +774,7 @@ function GuestPressingLandingInner() {
                 value={draft.seedText}
                 onChange={(e) => update({ seedText: e.target.value.slice(0, 280) })}
                 rows={2}
-                placeholder="Type something here & watch your page change"
+                placeholder="Type something here & watch your page change."
                 aria-label="The Pressing — skins this page"
                 className={cn(
                   'resize-none border-white/15 bg-black/50 text-sm leading-snug transition-shadow',

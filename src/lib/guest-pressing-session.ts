@@ -183,7 +183,8 @@ export function readGuestPressingDraft(): GuestPressingDraft | null {
       tagline: typeof parsed.tagline === 'string' ? parsed.tagline : base.tagline,
       seedText:
         typeof parsed.seedText === 'string' &&
-        parsed.seedText !== 'Type a bar here to watch your page change.'
+        parsed.seedText !== 'Type a bar here to watch your page change.' &&
+        parsed.seedText !== 'Type something here & watch your page change'
           ? parsed.seedText
           : base.seedText,
       barOfWeek:

@@ -242,7 +242,7 @@ export type PressingTokens = {
 export const DEFAULT_FADERS: PressingFaders = { heat: 55, grain: 30, pace: 40, ink: 80 };
 
 export const DEFAULT_PRESSING: PressingConfig = {
-  seedText: 'Type something here & watch your page change',
+  seedText: 'Type something here & watch your page change.',
   faders: DEFAULT_FADERS,
   alive: true,
   autoDrift: false,
