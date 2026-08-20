@@ -899,35 +899,41 @@ export function AlbumList() {
         <div className="relative z-20 w-full min-w-0 max-w-[100vw] xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,72rem)_minmax(0,1fr)] xl:grid-rows-[auto_auto] xl:items-start">
           <div className="relative min-w-0 w-full xl:col-start-2 xl:row-start-1 px-4 sm:px-6 pt-6">
             <header className="mb-8 pb-6 border-b border-border" data-tour="vault-header">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-6">
+              <div className="flex items-center gap-3 lg:gap-4 min-w-0 w-full">
                 <div className="flex items-center gap-3 shrink-0">
                   <Waves className="h-8 w-8 text-primary shrink-0" />
-                  <div className="space-y-1 min-w-0">
-                    <h1 className="text-4xl md:text-5xl font-headline font-bold text-primary uppercase tracking-tighter leading-none">
+                  <div className="space-y-1 shrink-0 hidden sm:block">
+                    <h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-headline font-bold text-primary uppercase tracking-tighter leading-none whitespace-nowrap">
                       The Vault
                     </h1>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-[0.4em] font-bold">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-[0.35em] font-bold whitespace-nowrap hidden xl:block">
                       Professional Project Blueprints
                     </p>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 w-full lg:flex-1 lg:justify-end lg:max-w-3xl">
-                    <div className="relative group w-full sm:min-w-[280px] sm:max-w-md sm:flex-1" data-tour="vault-search">
-                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                        <Input 
-                            placeholder='Search Vault... use "" for exact' 
-                            className="pl-10 h-10 bg-muted border-border focus:border-primary/40 rounded-xl font-code font-bold text-xs"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                        {searchQuery && <Button variant="ghost" size="icon" className="absolute right-2 top-1 h-8 w-8 rounded-full" onClick={() => setSearchQuery('')}><X className="h-4 w-4" /></Button>}
-                    </div>
-                    
+                <div className="relative group flex-1 min-w-0" data-tour="vault-search">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors pointer-events-none z-10" />
+                    <Input 
+                        placeholder='Search Vault... use "" for exact' 
+                        className="pl-10 pr-3 h-10 bg-muted border-border focus:border-primary/40 rounded-xl font-code text-xs w-full min-w-0 placeholder:font-code placeholder:text-xs placeholder:tracking-normal"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        title='Search Vault... use "" for exact phrase match'
+                    />
+                    {searchQuery && <Button variant="ghost" size="icon" className="absolute right-2 top-1 h-8 w-8 rounded-full" onClick={() => setSearchQuery('')}><X className="h-4 w-4" /></Button>}
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-10 px-4 bg-card/95 border-border rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest">
-                                <ArrowUpDown className="h-4 w-4" /> Sort · {vaultSortLabels[sortBy]}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              title={`Sort: ${vaultSortLabels[sortBy]}`}
+                              className="h-10 px-3 lg:px-4 bg-card/95 border-border rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest shrink-0 whitespace-nowrap"
+                            >
+                                <ArrowUpDown className="h-4 w-4 shrink-0" /> Sort
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-card border-border">
@@ -940,8 +946,13 @@ export function AlbumList() {
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-10 px-4 bg-card/95 border-border rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest">
-                                <Filter className="h-4 w-4" /> Filter · {vaultLiveFilterLabels[vaultFilter]}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              title={`Filter: ${vaultLiveFilterLabels[vaultFilter]}`}
+                              className="h-10 px-3 lg:px-4 bg-card/95 border-border rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest shrink-0 whitespace-nowrap"
+                            >
+                                <Filter className="h-4 w-4 shrink-0" /> Filter
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-card border-border">
@@ -962,8 +973,8 @@ export function AlbumList() {
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button size="sm" data-tour="vault-create" className="h-10 px-6 font-bold shadow-[0_0_25px_rgba(59,130,246,0.3)] bg-primary hover:bg-primary/90 text-white rounded-xl uppercase text-[10px] tracking-widest gap-2">
-                                <PlusCircle className="h-4 w-4" /> Create New
+                            <Button size="sm" data-tour="vault-create" className="h-10 px-4 lg:px-6 font-bold shadow-[0_0_25px_rgba(59,130,246,0.3)] bg-primary hover:bg-primary/90 text-white rounded-xl uppercase text-[10px] tracking-widest gap-2 shrink-0 whitespace-nowrap">
+                                <PlusCircle className="h-4 w-4 shrink-0" /> Create New
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-card border-border w-48">
@@ -976,7 +987,7 @@ export function AlbumList() {
                         </DropdownMenuContent>
                     </DropdownMenu>
                     
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 shrink-0">
                         {hasProWorkflow ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
