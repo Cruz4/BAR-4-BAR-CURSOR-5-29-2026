@@ -1777,13 +1777,12 @@
     filter: brightness(0.85);
   }
 
-  /* Sun disc / glow */
+  /* Sun disc / glow — position set inline from live azimuth/altitude. */
   .scene-block-sun {
     width: 72px;
     height: 72px;
     border-radius: 9999px;
-    top: 11%;
-    right: 18%;
+    transform: translate(-50%, -50%);
     background: radial-gradient(
       circle at 40% 40%,
       rgba(255, 250, 220, 0.95) 0%,
@@ -1795,9 +1794,6 @@
   }
 
   .scene-block[data-phase='dawn'] .scene-block-sun {
-    top: 22%;
-    right: auto;
-    left: 14%;
     background: radial-gradient(
       circle at 40% 40%,
       rgba(255, 230, 190, 0.9) 0%,
@@ -1826,19 +1822,16 @@
     box-shadow: 0 0 10px rgba(255, 200, 120, 0.35);
   }
 
-  /* Real moon — phase via SVG mask in the atmosphere component. */
+  /* Real moon — phase via SVG mask; position from live azimuth/altitude. */
   .scene-block-moon {
-    top: 12%;
-    right: 16%;
     width: 56px;
     height: 56px;
+    transform: translate(-50%, -50%);
     pointer-events: none;
     filter: drop-shadow(0 0 18px rgba(236, 228, 196, 0.35));
   }
 
   .scene-block[data-phase='dusk'] .scene-block-moon {
-    top: 22%;
-    right: 12%;
     width: 48px;
     height: 48px;
   }

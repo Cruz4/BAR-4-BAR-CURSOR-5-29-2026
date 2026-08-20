@@ -166,7 +166,10 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
 
   return (
     <>
-      <div className={shellClass} data-tour="vault-social-dock">
+      <div
+        className={shellClass}
+        data-tour={compact ? 'vault-social-dock-mobile' : 'vault-social-dock-desktop'}
+      >
         <button
           type="button"
           onClick={() => setOpen(true)}

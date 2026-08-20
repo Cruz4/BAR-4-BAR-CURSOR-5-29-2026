@@ -20,7 +20,7 @@ export function SceneWeatherChip({ className }: { className?: string }) {
   const shower = activeMeteorShower();
   const eclipse = activeEclipse(new Date(), lat, lon, phase);
   const extras = [
-    moonShouldShow(phase, weather, moon) ? moon.label : null,
+    moonShouldShow(phase, weather, moon, { lat, lon }) ? moon.label : null,
     shower && (phase === 'night' || phase === 'dusk') ? shower.name : null,
     eclipse?.label ?? null,
   ].filter(Boolean);

@@ -236,12 +236,13 @@ export function FoldStack() {
   const rows = tab === 'waiting' ? waitingFolds : openFolds;
 
   return (
-    <div className="mx-auto w-full max-w-xl space-y-5 px-4 py-8">
-      <header className="space-y-2">
-        <h1 className="font-headline text-4xl font-bold uppercase tracking-tight">Msgs</h1>
+    <div className="flex min-h-[calc(100dvh-3.5rem)] w-full flex-col bg-[#0a0c12]/95">
+      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-4 sm:px-6 sm:py-5">
+      <header className="shrink-0 space-y-2">
+        <h1 className="font-headline text-3xl font-bold uppercase tracking-tight sm:text-4xl">Msgs</h1>
       </header>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="mt-4 flex shrink-0 flex-wrap items-center gap-2">
         <Button
           className="h-9 rounded-none bg-amber-700 font-bold uppercase tracking-[0.18em] text-amber-50 hover:bg-amber-600"
           onClick={() => void openPicker()}
@@ -266,12 +267,14 @@ export function FoldStack() {
         </div>
       </div>
 
+      <div className="mt-4 flex min-h-0 flex-1 flex-col">
       {!ready ? (
-        <div className="flex justify-center py-16">
+        <div className="flex flex-1 items-center justify-center py-12">
           <StudioLoader size="md" message="Opening Msgs…" />
         </div>
       ) : rows.length === 0 ? (
-        <div className="border border-dashed border-amber-500/20 bg-black/20 px-6 py-14 text-center">
+        <div className="flex flex-1 items-center justify-center border border-dashed border-amber-500/20 bg-black/20 px-6 py-12 text-center sm:py-16">
+          <div>
           <MessageSquare className="mx-auto mb-3 h-7 w-7 text-amber-400/70" />
           <p className="font-headline text-lg uppercase">
             {tab === 'waiting' ? 'No requests' : 'No messages yet'}
@@ -281,9 +284,10 @@ export function FoldStack() {
               ? 'Messages from people you aren’t friends with land here until you accept.'
               : 'Send a message from a friend’s Artist Home, or from Your circle.'}
           </p>
+          </div>
         </div>
       ) : (
-        <div className="space-y-2.5">
+        <div className="flex-1 space-y-2.5 overflow-y-auto pb-6 pr-0.5">
           {rows.map((fold) => (
             <FoldCard
               key={fold.id}
@@ -298,6 +302,7 @@ export function FoldStack() {
           ))}
         </div>
       )}
+      </div>
 
       {peer ? (
         <PassBarDialog
@@ -321,6 +326,7 @@ export function FoldStack() {
           }}
         />
       ) : null}
+      </div>
     </div>
   );
 }

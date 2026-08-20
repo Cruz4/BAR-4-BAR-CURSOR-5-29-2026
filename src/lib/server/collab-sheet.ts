@@ -314,6 +314,12 @@ export async function sendCollabMessage(opts: {
   const sheet = await getCollabSheet(opts.collabId);
   if (!sheet || !sheet.active) throw new Error('Collab Sheet not found.');
   assertMember(sheet, opts.userId);
+  if (opts.targetUserId) {
+    if (opts.targetUserId === opts.userId) throw new Error('That is you.');
+    if (!sheet.memberIds.includes(opts.targetUserId) || sheet.revoked[opts.targetUserId]) {
+      throw new Error('They are not on this Collab Sheet.');
+    }
+  }
 
   const db = await getDb();
   const msgId = chronoId();

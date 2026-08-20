@@ -19,20 +19,13 @@ export type StudioGuidedTourProps = {
 const PAD = 8;
 const MOBILE_BREAKPOINT = 768;
 const TOUR_CARD_HEIGHT_ESTIMATE = 280;
+const TOUR_CARD_HEIGHT_MOBILE = 220;
 /** Ignore sub-pixel drift so scroll listeners do not fight the spotlight. */
 const SCROLL_DEADBAND_PX = 16;
 /** Mobile tab bar + safe area (quest rail hidden on phone during tour). */
 const MOBILE_BOTTOM_CHROME = 88;
-/** App header + pinned top tour card on phone. */
+/** App header fallback when the live header node is missing. */
 const MOBILE_HEADER_RESERVE = 68;
-/** Keep highlighted targets below the pinned top tour card on phone. */
-const MOBILE_TOP_CLEARANCE = MOBILE_HEADER_RESERVE + TOUR_CARD_HEIGHT_ESTIMATE + 24;
-/** Max spotlight height on phone when the target element is taller than the safe band. */
-const MOBILE_MAX_SPOTLIGHT_VH = 0.24;
-const MOBILE_SPOTLIGHT_VH_BY_STEP: Record<string, number> = {
-  sheet: 0.52,
-  'try-sheet': 0.52,
-};
 /**
  * Sticky/fixed rail targets — skip auto-scroll only when already in view.
  * Scene/Vault rails live under overflow-hidden shells that often break sticky,
@@ -59,6 +52,11 @@ const PANEL_SWITCH_STEP_IDS = new Set([
   'sheet-takes',
   'song-structure',
   'press-song',
+  'collab-sheet',
+  'paste',
+  'sheet',
+  'bar-workstation',
+  'rhyme-pulse',
   'try-cowriter',
   'try-dna',
   'try-vibe',
@@ -72,10 +70,36 @@ const PANEL_SWITCH_STEP_IDS = new Set([
   'try-structure',
   'try-press',
   'try-workstation-locked',
+  'try-sheet',
+  'try-workstation',
+  'try-rhyme',
+  'try-ink',
+  'first-write',
+  'first-context',
+  'first-generate',
+  'first-manual',
   'ws-modes',
   'ws-draft',
   'ws-remix',
 ]);
+/** Max spotlight height on phone when the target element is taller than the safe band. */
+const MOBILE_MAX_SPOTLIGHT_VH = 0.22;
+const MOBILE_SPOTLIGHT_VH_BY_STEP: Record<string, number> = {
+  sheet: 0.38,
+  'try-sheet': 0.38,
+  'first-write': 0.32,
+  'first-context': 0.38,
+  'ws-modes': 0.42,
+  'ws-draft': 0.42,
+  'ws-remix': 0.42,
+  'vault-collection': 0.28,
+  'scene-feed': 0.32,
+  'try-left': 0.28,
+  'bar-workstation': 0.28,
+  'try-workstation': 0.28,
+  'try-combine': 0.28,
+  'first-generate': 0.28,
+};
 /** Targets that may mount late (gamification loading) or sit off-screen after feed scroll. */
 const LATE_MOUNT_STEP_IDS = new Set([
   'scene-progress',
@@ -98,7 +122,7 @@ function panelSwitchMeasureDelays(stepId: string): number[] {
   ) {
     return [360, 560, 820, 1080];
   }
-  if (stepId === 'save') return [320, 520, 760, 1000];
+  if (stepId === 'save' || stepId === 'collab-sheet') return [320, 520, 760, 1000];
   return [260, 480, 720];
 }
 
@@ -128,23 +152,71 @@ function getScrollParent(el: HTMLElement): HTMLElement | null {
   return null;
 }
 
-function computeMobileCardPlacement(targetRect: DOMRect): 'top' | 'bottom' {
-  const vh = window.innerHeight;
-  const cardH = TOUR_CARD_HEIGHT_ESTIMATE;
-  const topBandBottom = MOBILE_HEADER_RESERVE + cardH + 32;
-  const bottomBandTop = vh - MOBILE_BOTTOM_CHROME - cardH - 32;
-  const targetCenter = targetRect.top + targetRect.height / 2;
-
-  if (targetRect.top < topBandBottom) return 'bottom';
-  if (targetRect.bottom > bottomBandTop) return 'top';
-  return targetCenter < (topBandBottom + bottomBandTop) / 2 ? 'bottom' : 'top';
+function getMobileTopChrome(): number {
+  const safe = Number.parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)') || '0'
+  );
+  let bottom = Math.max(MOBILE_HEADER_RESERVE, safe + 48);
+  document.querySelectorAll('[data-app-header], [data-app-chrome]').forEach((node) => {
+    const r = (node as HTMLElement).getBoundingClientRect();
+    if (r.height > 4 && r.width > 4 && r.top < 280 && r.bottom > 0) {
+      bottom = Math.max(bottom, r.bottom);
+    }
+  });
+  return Math.ceil(bottom) + 8;
 }
 
-function clampMobileSpotlightRect(rect: DOMRect, stepId?: string): DOMRect {
+function mobileCardHeight(): number {
+  return TOUR_CARD_HEIGHT_MOBILE;
+}
+
+function computeMobileCardPlacement(
+  targetRect: DOMRect,
+  preferred?: 'top' | 'bottom'
+): 'top' | 'bottom' {
+  const vh = window.innerHeight;
+  const cardH = mobileCardHeight();
+  const topChrome = getMobileTopChrome();
+  const topCardBottom = topChrome + cardH + 20;
+  const bottomCardTop = vh - MOBILE_BOTTOM_CHROME - cardH - 20;
+  const targetCenter = targetRect.top + targetRect.height / 2;
+
+  let placement = preferred ?? (targetCenter < vh / 2 ? 'bottom' : 'top');
+  // Never park the card on top of the thing this step is pointing at.
+  if (targetRect.top < topCardBottom) placement = 'bottom';
+  if (targetRect.bottom > bottomCardTop) placement = 'top';
+  if (targetRect.top < topCardBottom && targetRect.bottom > bottomCardTop) {
+    placement = targetCenter < vh / 2 ? 'bottom' : 'top';
+  }
+  return placement;
+}
+
+function clampMobileSpotlightRect(
+  rect: DOMRect,
+  stepId: string | undefined,
+  placement: 'top' | 'bottom'
+): DOMRect {
   const maxVh = stepId ? (MOBILE_SPOTLIGHT_VH_BY_STEP[stepId] ?? MOBILE_MAX_SPOTLIGHT_VH) : MOBILE_MAX_SPOTLIGHT_VH;
   const maxH = window.innerHeight * maxVh;
-  if (rect.height <= maxH) return rect;
-  return new DOMRect(rect.x, rect.y, rect.width, maxH);
+  const topChrome = getMobileTopChrome();
+  const cardH = mobileCardHeight();
+  const topSafe = topChrome + (placement === 'top' ? cardH + 12 : 8);
+  const bottomSafe =
+    window.innerHeight - MOBILE_BOTTOM_CHROME - (placement === 'bottom' ? cardH + 12 : 8);
+  const band = Math.max(64, bottomSafe - topSafe);
+
+  let y = rect.y;
+  let h = Math.min(rect.height, maxH, band);
+  const clippedTop = Math.max(rect.y, topSafe);
+  const clippedBottom = Math.min(rect.y + Math.min(rect.height, maxH), bottomSafe);
+  if (clippedBottom - clippedTop >= 48) {
+    y = clippedTop;
+    h = clippedBottom - clippedTop;
+  } else {
+    y = topSafe;
+    h = Math.min(h, band);
+  }
+  return new DOMRect(rect.x, y, rect.width, h);
 }
 
 function elementHasLayoutSize(el: Element): boolean {
@@ -217,10 +289,11 @@ function forceBringIntoView(el: HTMLElement, topReserve: number, bottomReserve: 
 
 function scrollTargetIntoMobileSafeBand(el: HTMLElement, placement: 'top' | 'bottom') {
   const vh = window.innerHeight;
-  const cardH = TOUR_CARD_HEIGHT_ESTIMATE;
-  const topClear = placement === 'top' ? MOBILE_TOP_CLEARANCE : MOBILE_HEADER_RESERVE + 16;
+  const cardH = mobileCardHeight();
+  const topChrome = getMobileTopChrome();
+  const topClear = placement === 'top' ? topChrome + cardH + 16 : topChrome + 8;
   const bottomClear =
-    placement === 'bottom' ? MOBILE_BOTTOM_CHROME + cardH + 24 : MOBILE_BOTTOM_CHROME + 16;
+    placement === 'bottom' ? MOBILE_BOTTOM_CHROME + cardH + 20 : MOBILE_BOTTOM_CHROME + 16;
   forceBringIntoView(el, topClear, bottomClear);
 
   const rect = el.getBoundingClientRect();
@@ -338,6 +411,7 @@ export function StudioGuidedTour({
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [cardPlacement, setCardPlacement] = useState<'top' | 'bottom'>('bottom');
   const [mounted, setMounted] = useState(false);
+  const [topChrome, setTopChrome] = useState(MOBILE_HEADER_RESERVE);
   const isCompact = useCompactViewport();
   const scrollStyledElRef = useRef<HTMLElement | null>(null);
   const measureTimersRef = useRef<number[]>([]);
@@ -381,12 +455,13 @@ export function StudioGuidedTour({
     const trySelectors = (list: string[]) => {
       const candidates: HTMLElement[] = [];
       for (const selector of list) {
-        const candidate = document.querySelector(selector);
-        if (!candidate || !elementHasLayoutSize(candidate)) continue;
-        candidates.push(candidate as HTMLElement);
+        document.querySelectorAll(selector).forEach((candidate) => {
+          if (!elementHasLayoutSize(candidate)) return;
+          candidates.push(candidate as HTMLElement);
+        });
       }
       if (candidates.length === 0) return null;
-      // Prefer the target actually on screen (hidden xl duplicates are 0×0 and skipped above).
+      // Prefer the copy actually on screen (phone strip vs xl rails share the same tour id).
       candidates.sort((a, b) => elementVisibleArea(b) - elementVisibleArea(a));
       return candidates[0] ?? null;
     };
@@ -400,15 +475,18 @@ export function StudioGuidedTour({
       if (next.width === 0 && next.height === 0) return;
 
       const compact = window.innerWidth < MOBILE_BREAKPOINT;
+      const topChromeNow = compact ? getMobileTopChrome() : MOBILE_HEADER_RESERVE;
+      if (compact) setTopChrome(topChromeNow);
+      const cardH = compact ? mobileCardHeight() : TOUR_CARD_HEIGHT_ESTIMATE;
       const bottomCardReserve = compact
-        ? TOUR_CARD_HEIGHT_ESTIMATE + MOBILE_BOTTOM_CHROME + 20
+        ? cardH + MOBILE_BOTTOM_CHROME + 20
         : TOUR_CARD_HEIGHT_ESTIMATE + 32;
       const spaceBelow = window.innerHeight - next.bottom;
       const spaceAbove = next.top;
       const targetInLowerHalf = next.top > window.innerHeight * 0.42;
 
       const placement: 'top' | 'bottom' = compact
-        ? step!.mobileCardPlacement ?? computeMobileCardPlacement(next)
+        ? computeMobileCardPlacement(next, step!.mobileCardPlacement)
         : spaceBelow < bottomCardReserve + 16 && spaceAbove >= TOUR_CARD_HEIGHT_ESTIMATE + 16
           ? 'top'
           : spaceBelow < TOUR_CARD_HEIGHT_ESTIMATE + 16 || targetInLowerHalf
@@ -416,7 +494,13 @@ export function StudioGuidedTour({
             : 'bottom';
       setCardPlacement(placement);
 
-      const topReserve = compact && placement === 'top' ? MOBILE_TOP_CLEARANCE : placement === 'top' ? TOUR_CARD_HEIGHT_ESTIMATE + 88 : 72;
+      const topReserve = compact
+        ? placement === 'top'
+          ? topChromeNow + cardH + 16
+          : topChromeNow + 8
+        : placement === 'top'
+          ? TOUR_CARD_HEIGHT_ESTIMATE + 88
+          : 72;
       const bottomReserve = compact
         ? placement === 'bottom'
           ? bottomCardReserve
@@ -437,7 +521,7 @@ export function StudioGuidedTour({
           if (y > 80) setPageScrollY(Math.max(0, y * 0.15));
         }
         if (compact) {
-          htmlEl.style.scrollMarginTop = `${placement === 'top' ? MOBILE_TOP_CLEARANCE : MOBILE_HEADER_RESERVE + 16}px`;
+          htmlEl.style.scrollMarginTop = `${placement === 'top' ? topChromeNow + cardH + 16 : topChromeNow + 8}px`;
           htmlEl.style.scrollMarginBottom = `${placement === 'bottom' ? bottomCardReserve : MOBILE_BOTTOM_CHROME + 16}px`;
           scrollTargetIntoMobileSafeBand(htmlEl, placement);
         } else {
@@ -457,13 +541,13 @@ export function StudioGuidedTour({
           forceBringIntoView(htmlEl, topReserve, bottomReserve);
           const retry = htmlEl.getBoundingClientRect();
           if (elementVisibleArea(htmlEl) >= 80) {
-            setRect(compact ? clampMobileSpotlightRect(retry, step!.id) : retry);
+            setRect(compact ? clampMobileSpotlightRect(retry, step!.id, placement) : retry);
           }
           // else leave previous/null; delayed measureTarget timers will retry
         }
         return;
       }
-      setRect(compact ? clampMobileSpotlightRect(spotlight, step!.id) : spotlight);
+      setRect(compact ? clampMobileSpotlightRect(spotlight, step!.id, placement) : spotlight);
     },
     [step]
   );
@@ -631,13 +715,19 @@ export function StudioGuidedTour({
           'fixed z-[6001] pointer-events-auto animate-in fade-in duration-300 w-auto max-w-none',
           isCompact
             ? cardPlacement === 'top'
-              ? 'left-4 right-4 top-[max(4.25rem,env(safe-area-inset-top))] slide-in-from-top-2'
+              ? 'left-4 right-4 slide-in-from-top-2'
               : 'left-4 right-4 bottom-[max(calc(3.75rem+env(safe-area-inset-bottom)),1rem)] slide-in-from-bottom-2'
             : 'w-[min(340px,calc(100vw-32px))] slide-in-from-bottom-2'
         )}
-        style={isCompact ? undefined : { top: cardTop ?? 80, left: cardLeft ?? 16 }}
+        style={
+          isCompact
+            ? cardPlacement === 'top'
+              ? { top: topChrome }
+              : undefined
+            : { top: cardTop ?? 80, left: cardLeft ?? 16 }
+        }
       >
-        <div className="rounded-xl border border-primary/30 bg-card shadow-[0_0_40px_rgba(59,130,246,0.25)] flex flex-col max-h-[min(58dvh,calc(100dvh-11rem))] overflow-hidden">
+        <div className="rounded-xl border border-primary/30 bg-card shadow-[0_0_40px_rgba(59,130,246,0.25)] flex flex-col max-h-[min(42dvh,calc(100dvh-12rem))] overflow-hidden">
           <div className="flex items-start justify-between gap-2 px-4 pt-4 shrink-0">
             <div className="space-y-1 min-w-0">
               <p className="text-[9px] font-bold uppercase tracking-widest text-primary">

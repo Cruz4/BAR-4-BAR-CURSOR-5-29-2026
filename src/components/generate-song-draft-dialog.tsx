@@ -152,7 +152,7 @@ import { linesToRhymeBars } from '@/lib/lyrics-units';
 import { SYSTEM_DNA_PRESETS, SYSTEM_STYLE_PRESETS, SYSTEM_VIBE_PRESETS } from '@/lib/system-presets';
 import { DNASynthesisLoader, getDnaLoaderStatusText, type SynthesisLoaderMode } from '@/components/dna-synthesis-loader';
 import { StudioGuidedTour } from '@/components/studio-guided-tour';
-import { WORKSTATION_MODE_TOUR_STEPS } from '@/lib/studio-onboarding';
+import { WORKSTATION_MODE_TOUR_STEPS, type LyricsTourStep } from '@/lib/studio-onboarding';
 import { GenerationSyncAmbient, type SyncAttractor } from '@/components/generation-sync-ambient';
 import { DnaSeedExtractPanel } from '@/components/dna-seed-extract-panel';
 import { WorkstationStepBackground, stepToWorkstationVariant } from '@/components/workstation-step-background';
@@ -663,6 +663,22 @@ export function GenerateSongDraftDialog({
 
     onOpenChange(false);
   }, [isGenerating, onOpenChange]);
+
+  const handleModeTourBeforeStep = useCallback((tourStep: LyricsTourStep) => {
+    const selector =
+      tourStep.id === 'ws-remix'
+        ? '[data-tour="ws-mode-remix"]'
+        : tourStep.id === 'ws-draft'
+          ? '[data-tour="ws-mode-draft"]'
+          : '[data-tour="ws-mode-heading"]';
+    window.setTimeout(() => {
+      document.querySelector(selector)?.scrollIntoView({
+        block: 'center',
+        inline: 'nearest',
+        behavior: 'auto',
+      });
+    }, 40);
+  }, []);
 
   const buildApprovalSettingsSummary = useCallback((): string[] => {
     const tags: string[] = [];
@@ -2066,7 +2082,7 @@ export function GenerateSongDraftDialog({
           if (modeTourActive) e.preventDefault();
         }}
       >
-        <DialogHeader className={cn('shrink-0 p-3 flex-row items-center justify-between relative z-[110] gap-2 min-w-0', workstationDialogHeader)}>
+        <DialogHeader data-app-chrome className={cn('shrink-0 p-3 flex-row items-center justify-between relative z-[110] gap-2 min-w-0', workstationDialogHeader)}>
             <Button
               type="button"
               variant="ghost"
@@ -2198,7 +2214,7 @@ export function GenerateSongDraftDialog({
           <div className={cn('flex-1 min-h-0 flex flex-col relative z-10 studio-scrollbar', step === 5 ? 'overflow-hidden' : 'overflow-y-auto', isGenerating && 'invisible pointer-events-none')}>
           {step === 0 && (
             <div data-tour="ws-mode-select" className="flex flex-1 flex-col items-center justify-center w-full min-h-0 px-3 sm:px-8 py-8 sm:py-12 gap-6 sm:gap-9 md:gap-10 animate-in fade-in duration-700">
-                <div className="text-center space-y-2 sm:space-y-3 w-full shrink-0 max-w-5xl mx-auto">
+                <div data-tour="ws-mode-heading" className="text-center space-y-2 sm:space-y-3 w-full shrink-0 max-w-5xl mx-auto">
                     <p className="sm:hidden text-[10px] font-bold uppercase tracking-[0.35em] text-primary">Mode Select</p>
                     <h2 className={cn('text-3xl sm:text-5xl uppercase tracking-tight leading-tight px-1', workstationHeroTitle)}>Select Workflow Mode</h2>
                     <p className="text-[11px] sm:text-xs text-muted-foreground uppercase tracking-[0.25em] sm:tracking-[0.4em]">Initialize your creative process.</p>
@@ -3358,6 +3374,7 @@ export function GenerateSongDraftDialog({
       stepIndex={modeTourStep}
       steps={WORKSTATION_MODE_TOUR_STEPS}
       onStepChange={setModeTourStep}
+      onBeforeStep={handleModeTourBeforeStep}
       onComplete={() => setModeTourActive(false)}
     />
     </TooltipProvider>

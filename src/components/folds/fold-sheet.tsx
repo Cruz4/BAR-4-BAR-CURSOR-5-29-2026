@@ -275,7 +275,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
   const profileUrl = profileHref(peer?.slug);
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-3.5rem)] w-full max-w-2xl flex-col">
+    <div className="mx-auto flex h-[calc(100dvh-3.5rem)] w-full max-w-2xl flex-col bg-[#0a0c12]/95">
       <header className="flex items-center gap-2 border-b border-amber-500/20 bg-[#100c09]/90 px-2 py-2 backdrop-blur-md">
         <Button variant="ghost" size="icon" className="h-9 w-9 text-amber-100" asChild>
           <Link href="/msgs" aria-label="Back to Msgs">

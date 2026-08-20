@@ -25,11 +25,11 @@ export function CollabSheetFloatingPresence({
 
   if (!session?.sheet || !userId) return null;
 
-  const { sheet, collab, isOwner, openMsgsWith } = session;
+  const { sheet, collab, isOwner, userName, openMsgsWith } = session;
 
   return (
     <div
-      className="sticky top-0 z-30 flex w-full justify-end overflow-hidden px-2 md:px-4 pointer-events-none"
+      className="sticky top-0 z-40 flex w-full justify-end overflow-visible px-2 md:px-4 pointer-events-none"
       style={{ height: lineHeight, marginBottom: `calc(-1 * ${lineHeight})` }}
     >
       <div className="pointer-events-auto max-w-fit leading-none -translate-x-2 md:-translate-x-3" style={{ paddingTop: padTop }}>
@@ -39,6 +39,7 @@ export function CollabSheetFloatingPresence({
           liveCount={collab.liveCount}
           totalShared={collab.totalShared}
           userId={userId}
+          userName={userName}
           isOwner={isOwner}
           onMessage={openMsgsWith}
         />

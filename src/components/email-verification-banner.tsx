@@ -70,6 +70,7 @@ export function EmailVerificationBanner({ className }: { className?: string }) {
 
   return (
     <div
+      data-app-chrome
       className={cn(
         'shrink-0 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 flex flex-wrap items-center gap-3 z-40',
         className

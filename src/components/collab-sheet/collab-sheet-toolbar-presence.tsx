@@ -9,7 +9,7 @@ export function CollabSheetToolbarPresence({ userId }: { userId?: string }) {
   const session = useCollabSheetSession();
   if (!session?.sheet || !userId) return null;
 
-  const { sheet, collab, isOwner, openMsgsWith } = session;
+  const { sheet, collab, isOwner, userName, openMsgsWith } = session;
 
   return (
     <div className="flex flex-col items-end gap-1">
@@ -19,6 +19,7 @@ export function CollabSheetToolbarPresence({ userId }: { userId?: string }) {
         liveCount={collab.liveCount}
         totalShared={collab.totalShared}
         userId={userId}
+        userName={userName}
         isOwner={isOwner}
         onMessage={openMsgsWith}
       />

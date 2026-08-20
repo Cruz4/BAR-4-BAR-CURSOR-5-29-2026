@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AKAsheet">
+  <!-- Icon-only mark: book + sparse knowledge tree + person + magenta star. No type. -->
+  <rect width="64" height="64" rx="14" fill="#050a1e"/>
+
+  <g fill="none" stroke="#f4f4f5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <!-- trunk from book spine -->
+    <path d="M32 40.5V20"/>
+    <!-- three branch pairs, not a dense canopy -->
+    <path d="M32 28.5 21 22.5"/>
+    <path d="M32 28.5 43 22.5"/>
+    <path d="M32 33.2 18.5 29.2"/>
+    <path d="M32 33.2 45.5 29.2"/>
+    <path d="M32 24.2 25.5 16.8"/>
+    <path d="M32 24.2 38.5 16.8"/>
+  </g>
+
+  <g fill="#f4f4f5">
+    <circle cx="21" cy="22.5" r="1.85"/>
+    <circle cx="43" cy="22.5" r="1.85"/>
+    <circle cx="18.5" cy="29.2" r="1.85"/>
+    <circle cx="45.5" cy="29.2" r="1.85"/>
+    <circle cx="25.5" cy="16.8" r="1.7"/>
+    <circle cx="38.5" cy="16.8" r="1.7"/>
+  </g>
+
+  <!-- standing figure punched through the trunk -->
+  <path
+    fill="#050a1e"
+    d="M32 21.1c1.15 0 2.08.93 2.08 2.08s-.93 2.08-2.08 2.08-2.08-.93-2.08-2.08.93-2.08 2.08-2.08Zm-2.85 5.35h5.7c.95 0 1.55.85 1.28 1.76l-1.38 4.64h-1.12v4.55h-2.26v-4.55h-1.12l-1.38-4.64c-.27-.91.33-1.76 1.28-1.76Z"
+  />
+
+  <!-- open book -->
+  <path fill="#f4f4f5" d="M30.6 40.2c-7.4 1.5-13.4 3.6-16.8 4.7v11.2c3.6-1.2 9.8-3.3 16.8-4.8V40.2Z"/>
+  <path fill="#f4f4f5" d="M33.4 40.2c7.4 1.5 13.4 3.6 16.8 4.7v11.2c-3.6-1.2-9.8-3.3-16.8-4.8V40.2Z"/>
+  <rect x="30.35" y="39.6" width="3.3" height="12.6" rx="0.9" fill="#E11D8A"/>
+
+  <!-- four-point star -->
+  <path fill="#E11D8A" d="M32 8.2 33.55 13.4 38.9 14.95 33.55 16.5 32 21.7 30.45 16.5 25.1 14.95 30.45 13.4Z"/>
+</svg>

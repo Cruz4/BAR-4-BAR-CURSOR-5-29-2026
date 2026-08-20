@@ -379,7 +379,7 @@ function LoginForm() {
             </Link>
           </nav>
 
-          <BrandLockup variant="marketing" className="justify-center max-w-[min(100%,14rem)] sm:max-w-none" />
+          <BrandLockup variant="app" className="justify-center max-w-[min(100%,14rem)] sm:max-w-none" />
 
           <nav className="flex items-center justify-end gap-2 sm:gap-4 min-w-0">
             <Link href="/#features" className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Features</Link>
@@ -450,7 +450,7 @@ function LoginForm() {
                   <div className="relative z-10 flex flex-col items-center gap-5 w-full">
                     <div className="relative flex items-center justify-center">
                       <div
-                        className="absolute inset-0 rounded-3xl bg-primary/25 blur-2xl scale-110"
+                        className="pointer-events-none absolute inset-0 rounded-3xl bg-primary/25 blur-2xl scale-110"
                         aria-hidden
                       />
                       <div className="relative w-[7.5rem] h-[7.5rem] sm:w-36 sm:h-36 bg-white rounded-3xl flex items-center justify-center p-4 sm:p-5 shadow-[0_0_48px_rgba(59,130,246,0.35)] border border-primary/20 ring-1 ring-white/10">
@@ -459,7 +459,7 @@ function LoginForm() {
                     </div>
                     <div className="space-y-2.5 max-w-[16rem]">
                       <p className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/35 bg-orange-500/10 px-3 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.28em] text-orange-400">
-                        {isTikTokRef ? 'TikTok Artist Flow' : 'AI Notebook'}
+                        {isTikTokRef ? 'TikTok Artist Flow' : 'Social Studio'}
                       </p>
                       <h2 className="font-headline text-2xl sm:text-3xl lg:text-[2.1rem] font-bold uppercase text-foreground dark:text-white tracking-tight leading-tight">
                         {isTikTokRef ? 'Write Better Bars Fast' : 'Enter the Studio'}

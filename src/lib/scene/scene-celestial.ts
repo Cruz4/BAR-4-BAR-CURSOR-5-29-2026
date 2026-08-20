@@ -3,6 +3,7 @@
  * and a small table of real eclipses. No extra network calls.
  */
 
+import * as SunCalc from 'suncalc';
 import { cloudIntensity, type SceneSkyPhase, type SceneWeather } from '@/lib/scene/scene-sky';
 
 const LUNAR_MONTH_DAYS = 29.530588853;
@@ -217,14 +218,62 @@ export function activeEclipse(
   return null;
 }
 
+export type CelestialScreenPosition = {
+  leftPct: number;
+  topPct: number;
+  /** True when the body is above the local horizon. */
+  aboveHorizon: boolean;
+  altitudeDeg: number;
+};
+
+/**
+ * Map suncalc azimuth/altitude to Scene skyline screen coords.
+ * Azimuth is radians from south with west positive (suncalc convention).
+ */
+export function celestialToScreenPosition(
+  azimuthRad: number,
+  altitudeRad: number
+): CelestialScreenPosition {
+  const altitudeDeg = (altitudeRad * 180) / Math.PI;
+  const aboveHorizon = altitudeDeg > -0.35;
+  const leftPct = Math.min(94, Math.max(6, 50 + 50 * Math.sin(azimuthRad)));
+  const topPct = Math.min(58, Math.max(8, 56 - altitudeDeg * 1.08));
+  return { leftPct, topPct, aboveHorizon, altitudeDeg };
+}
+
+export function sunScreenPosition(
+  now: Date,
+  lat: number,
+  lon: number
+): CelestialScreenPosition {
+  const { azimuth, altitude } = SunCalc.getPosition(now, lat, lon);
+  return celestialToScreenPosition(azimuth, altitude);
+}
+
+export function moonScreenPosition(
+  now: Date,
+  lat: number,
+  lon: number
+): CelestialScreenPosition {
+  const { azimuth, altitude } = SunCalc.getMoonPosition(now, lat, lon);
+  return celestialToScreenPosition(azimuth, altitude);
+}
+
 export function moonShouldShow(
   phase: SceneSkyPhase,
   weather: SceneWeather,
-  moon: MoonPhase
+  moon: MoonPhase,
+  opts?: { now?: Date; lat?: number | null; lon?: number | null }
 ): boolean {
   if (phase !== 'night' && phase !== 'dusk') return false;
   if (moon.illumination < 0.05) return false;
-  return cloudIntensity(weather) < 0.92;
+  if (cloudIntensity(weather) >= 0.92) return false;
+  if (typeof opts?.lat === 'number' && typeof opts?.lon === 'number') {
+    if (!moonScreenPosition(opts.now ?? new Date(), opts.lat, opts.lon).aboveHorizon) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export function meteorSkyOpen(phase: SceneSkyPhase, weather: SceneWeather): boolean {

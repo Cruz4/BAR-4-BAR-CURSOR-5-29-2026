@@ -17,6 +17,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useTransition, useContext, useRef, useCallback, Suspense } from 'react';
+import { flushSync } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useWritingSurface } from '@/hooks/use-writing-surface';
 import { buildLyricsNotebookStyle, lyricsSurfaceClassName } from '@/lib/writing-surface-styles';
@@ -258,6 +259,12 @@ import { SheetMsgsDock } from '@/components/collab-sheet/sheet-msgs-dock';
 import { useCollabSheetFeature } from '@/hooks/use-collab-sheet-feature';
 import { fetchFriendships, type Friendship } from '@/lib/profile/social-client';
 import { useGamification } from '@/context/gamification-context';
+import { listCollabSheetsClient } from '@/lib/collab-sheet/client';
+import {
+  albumFromCollabSheet,
+  trackFromCollabSheet,
+  type CollabSheetDoc,
+} from '@/lib/collab-sheet/types';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import {
@@ -1221,7 +1228,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                     )}
                     </div>
                     <div data-tour="collab-sheet" className="w-full min-w-0">
-                    {isPro ? (
+                    {isPro || track.collabSheetId ? (
                       <Hint
                         actionSafe
                         content={
@@ -3673,7 +3680,66 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   const scratchPadRef = useRef<any>(null);
 
-  const { track, album } = useMemo(() => getTrackById(albumId, trackId), [getTrackById, albumId, trackId]);
+  const vaultHit = useMemo(() => getTrackById(albumId, trackId), [getTrackById, albumId, trackId]);
+  const [guestCollabSheet, setGuestCollabSheet] = useState<CollabSheetDoc | null>(null);
+  const [collabLookupDone, setCollabLookupDone] = useState(false);
+  const [collabLocalTrack, setCollabLocalTrack] = useState<Track | null>(null);
+
+  useEffect(() => {
+    if (!user?.id || !collabSheetOn || isGuestTryAlbumId(albumId)) {
+      setGuestCollabSheet(null);
+      setCollabLookupDone(true);
+      return;
+    }
+    if (vaultHit.track?.collabSheetId && vaultHit.track.ownerId === user.id) {
+      setGuestCollabSheet(null);
+      setCollabLookupDone(true);
+      return;
+    }
+    let cancelled = false;
+    setCollabLookupDone(false);
+    void listCollabSheetsClient(user.id)
+      .then((rows) => {
+        if (cancelled) return;
+        const match =
+          rows.find(
+            (s) =>
+              s.active &&
+              s.trackId === trackId &&
+              s.albumId === albumId &&
+              s.memberIds.includes(user.id) &&
+              !s.revoked[user.id]
+          ) || null;
+        setGuestCollabSheet(match);
+      })
+      .catch(() => {
+        if (!cancelled) setGuestCollabSheet(null);
+      })
+      .finally(() => {
+        if (!cancelled) setCollabLookupDone(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, collabSheetOn, vaultHit.track?.collabSheetId, vaultHit.track?.ownerId, albumId, trackId]);
+
+  useEffect(() => {
+    if (vaultHit.track) {
+      setCollabLocalTrack(null);
+      return;
+    }
+    if (guestCollabSheet) {
+      setCollabLocalTrack(trackFromCollabSheet(guestCollabSheet));
+      return;
+    }
+    setCollabLocalTrack(null);
+  }, [vaultHit.track, guestCollabSheet]);
+
+  const isCollabGuest = Boolean(!vaultHit.track && collabLocalTrack);
+  const track = vaultHit.track || collabLocalTrack;
+  const album =
+    vaultHit.album ||
+    (guestCollabSheet && track ? albumFromCollabSheet(guestCollabSheet, track) : undefined);
   const tourTrackRef = useRef(track);
   tourTrackRef.current = track;
   const isGuestTryMode =
@@ -3798,7 +3864,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   }, [track, album, effectiveStyleProfile, registerAiContext]);
 
   useEffect(() => {
-    if (vaultLoading) {
+    if (vaultLoading || !collabLookupDone) {
       setInitTimedOut(false);
       return;
     }
@@ -3808,7 +3874,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     }
 
     const currentPath = `/albums/${albumId}/tracks/${trackId}`;
-    if (!trackExistsInVault(albums, currentPath)) {
+    if (!trackExistsInVault(albums, currentPath) && !guestCollabSheet) {
       clearStaleLastWorkedTrackPath();
       const fallback = resolveWorkstationTrackPath(albums);
       const openGenerator = searchParams.get('openGenerator');
@@ -3827,7 +3893,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     setInitTimedOut(false);
     const t = setTimeout(() => setInitTimedOut(true), 12000);
     return () => clearTimeout(t);
-  }, [albumId, trackId, vaultLoading, track, album, albums, router, searchParams]);
+  }, [albumId, trackId, vaultLoading, collabLookupDone, guestCollabSheet, track, album, albums, router, searchParams]);
 
   const clearWorkstationOpenParams = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -4031,6 +4097,11 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   }, [user?.id]);
 
   const handleTourBeforeStep = useCallback((step: LyricsTourStep) => {
+    const setTourTab = (tab: MobileLyricsTab) => {
+      flushSync(() => {
+        setMobilePanelTab(tab);
+      });
+    };
     const cowriterSectionByStep: Record<string, CoWriterSectionKey> = {
       dna: 'dna',
       'try-dna': 'dna',
@@ -4049,18 +4120,21 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     };
     const sectionKey = cowriterSectionByStep[step.id];
     const ensureLineSelected = () => {
-      setActiveGeneratorBar((prev) => {
-        if (prev) return prev;
-        const section = tourTrackRef.current?.sections?.[0];
-        const firstBar = section?.bars?.[0];
-        if (!section || !firstBar) return prev;
-        return { sectionId: section.id, idx: firstBar.idx };
+      flushSync(() => {
+        setIsMinimized(false);
+        setActiveGeneratorBar((prev) => {
+          if (prev) return prev;
+          const section = tourTrackRef.current?.sections?.[0];
+          const firstBar = section?.bars?.[0];
+          if (!section || !firstBar) return prev;
+          return { sectionId: section.id, idx: firstBar.idx };
+        });
       });
     };
 
-    if (['first-write', 'first-context', 'first-generate'].includes(step.id)) {
-      setMobilePanelTab('lyrics');
-      if (step.id === 'first-generate') setIsMinimized(false);
+    if (['first-write', 'first-context', 'first-generate', 'first-manual'].includes(step.id)) {
+      setTourTab('lyrics');
+      if (step.id === 'first-generate') ensureLineSelected();
       if (step.id === 'first-write') {
         window.setTimeout(() => {
           const focus = document.querySelector('[data-tour="lyrics-sheet-focus"]') as HTMLElement | null;
@@ -4076,23 +4150,18 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     } else if (
       step.id === 'cowriter' ||
       step.id === 'try-cowriter' ||
-      step.id === 'try-combine' ||
       sectionKey
     ) {
-      setRightCollapsed(false);
-      setMobilePanelTab('cowriter');
-      if (sectionKey) {
-        setSectionOpen((prev) => ({ ...prev, [sectionKey]: true }));
-      }
-      if (step.id === 'try-combine') {
-        setIsMinimized(false);
-        setMobilePanelTab('lyrics');
-        ensureLineSelected();
-      }
-    } else if (['paste', 'sheet', 'bar-workstation', 'rhyme-pulse', 'try-sheet', 'try-workstation', 'try-rhyme', 'try-ink'].includes(step.id)) {
-      setMobilePanelTab('lyrics');
+      flushSync(() => {
+        setRightCollapsed(false);
+        setMobilePanelTab('cowriter');
+        if (sectionKey) {
+          setSectionOpen((prev) => ({ ...prev, [sectionKey]: true }));
+        }
+      });
+    } else if (['paste', 'sheet', 'bar-workstation', 'rhyme-pulse', 'try-sheet', 'try-workstation', 'try-rhyme', 'try-ink', 'try-combine'].includes(step.id)) {
+      setTourTab('lyrics');
       if (step.id === 'bar-workstation' || step.id === 'try-workstation' || step.id === 'try-combine') {
-        setIsMinimized(false);
         ensureLineSelected();
       }
       if (step.id === 'sheet' || step.id === 'try-sheet') {
@@ -4100,6 +4169,17 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
           const viewport = document.querySelector('[data-tour="lyrics-sheet"]') as HTMLElement | null;
           viewport?.scrollTo({ top: 0, behavior: 'auto' });
         }, 280);
+      }
+      if (step.id === 'rhyme-pulse' || step.id === 'try-rhyme' || step.id === 'paste') {
+        window.setTimeout(() => {
+          const sel =
+            step.id === 'paste' ? '[data-tour="smart-structure"]' : '[data-tour="rhyme-pulse"]';
+          document.querySelector(sel)?.scrollIntoView({
+            block: 'nearest',
+            inline: 'nearest',
+            behavior: 'auto',
+          });
+        }, 200);
       }
     } else if (
       step.id === 'generation' ||
@@ -4110,10 +4190,11 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       step.id === 'try-left' ||
       step.id === 'try-structure' ||
       step.id === 'try-press' ||
-      step.id === 'try-workstation-locked'
+      step.id === 'try-workstation-locked' ||
+      step.id === 'collab-sheet'
     ) {
       setLeftCollapsed(false);
-      setMobilePanelTab('workstation');
+      setTourTab('workstation');
       const leftScrollByStep: Record<string, string> = {
         save: '[data-tour="track-export"]',
         'dna-drop': '[data-tour="dna-drop"]',
@@ -4121,6 +4202,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         'try-press': '[data-tour="press-song"]',
         'song-structure': '[data-tour="song-structure"]',
         'try-structure': '[data-tour="song-structure"]',
+        'collab-sheet': '[data-tour="collab-sheet"]',
       };
       const leftSelector = leftScrollByStep[step.id];
       if (leftSelector) {
@@ -4178,19 +4260,34 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   useEffect(() => {
     if (!track) return;
-    if (isTrackLocked(track)) return;
     const hasFlash = track.sections.some(s => s.bars.some(b => b.justGenerated));
-    if (hasFlash) {
-        const timer = setTimeout(() => {
-            const cleared = track.sections.map(s => ({
-                ...s,
-                bars: s.bars.map(b => ({ ...b, justGenerated: false }))
-            }));
-            updateTrack(albumId, trackId, { sections: cleared });
-        }, 3000);
-        return () => clearTimeout(timer);
+    if (!hasFlash) return;
+    if (isCollabGuest) {
+      const timer = setTimeout(() => {
+        setCollabLocalTrack((prev) =>
+          prev
+            ? {
+                ...prev,
+                sections: prev.sections.map((s) => ({
+                  ...s,
+                  bars: s.bars.map((b) => ({ ...b, justGenerated: false })),
+                })),
+              }
+            : prev
+        );
+      }, 3000);
+      return () => clearTimeout(timer);
     }
-  }, [track?.sections, track?.status, albumId, trackId, updateTrack]);
+    if (isTrackLocked(track)) return;
+    const timer = setTimeout(() => {
+      const cleared = track.sections.map(s => ({
+        ...s,
+        bars: s.bars.map(b => ({ ...b, justGenerated: false }))
+      }));
+      updateTrack(albumId, trackId, { sections: cleared });
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [track?.sections, track?.status, albumId, trackId, updateTrack, isCollabGuest]);
 
   const tierLocked = track ? isTrackOverTierLimit(trackId, albumId, albums, user) : false;
   const tierLimitBanner = useMemo(
@@ -4202,6 +4299,11 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
 
   const handleUpdateTrack = useCallback((updates: Partial<Track>) => {
     if (!track) return;
+    if (isCollabGuest) {
+      if (updates.sections) setSectionsHistory((prev) => [track.sections, ...prev].slice(0, 20));
+      setCollabLocalTrack((prev) => (prev ? { ...prev, ...updates } : prev));
+      return;
+    }
     if (isTrackOverTierLimit(trackId, albumId, albums, user)) {
       toast({ ...TIER_LIMIT_LOCKED_TOAST, variant: 'destructive' });
       return;
@@ -4212,14 +4314,15 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     }
     if (updates.sections) setSectionsHistory(prev => [track.sections, ...prev].slice(0, 20));
     updateTrack(albumId, trackId, updates);
-  }, [track, albumId, trackId, albums, user, updateTrack, toast]);
+  }, [track, albumId, trackId, albums, user, updateTrack, toast, isCollabGuest]);
 
   const handleCollabSheetIdChange = useCallback(
     (id: string | null) => {
+      if (isCollabGuest || track?.ownerId !== user?.id) return;
       if (id) handleUpdateTrack({ collabSheetId: id });
       else handleUpdateTrack({ collabSheetId: undefined });
     },
-    [handleUpdateTrack]
+    [handleUpdateTrack, isCollabGuest, track?.ownerId, user?.id]
   );
 
   const handleUndo = useCallback(() => {
@@ -4234,9 +4337,13 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     if (sectionsHistory.length === 0) return;
     const [previousState, ...remainingHistory] = sectionsHistory;
     setSectionsHistory(remainingHistory);
-    updateTrack(albumId, trackId, { sections: previousState });
+    if (isCollabGuest) {
+      setCollabLocalTrack((prev) => (prev ? { ...prev, sections: previousState } : prev));
+    } else {
+      updateTrack(albumId, trackId, { sections: previousState });
+    }
     toast({ title: "Undo Successful" });
-  }, [sectionsHistory, albumId, trackId, updateTrack, toast]);
+  }, [sectionsHistory, albumId, trackId, updateTrack, toast, isCollabGuest]);
 
   const handleRunRhymeScan = async (e: any) => {
     if (!track) return;

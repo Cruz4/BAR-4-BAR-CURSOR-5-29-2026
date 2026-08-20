@@ -8,13 +8,11 @@ export const PRO_TRIAL_WIN_EVENT = 'b4b-pro-trial-win';
 export const PRO_TRIAL_QUEST_OPEN_GENERATOR = 'remix';
 
 export const PRO_TRIAL_WIN_QUEST = {
-  title: 'Pro preview quest',
-  task: 'Save your first DNA extraction to the vault',
-  hint:
-    'Generation Workstation → DNA & REMIX → paste lyrics, a poem, or ideas (or toggle Sync Current Lyrics) → run extraction → on Analysis Step tap Save DNA Profile. DNA Suite in the right panel is also where you can type your own or edit after you load or extract.',
-  cta: 'Open DNA & REMIX',
-  completeSummary:
-    'Your extraction is in the vault. Upgrade before your Pro preview ends to keep saving custom profiles.',
+  title: 'Try this',
+  task: 'Save how a song feels — so you can reuse that vibe later',
+  hint: 'We’ll open a track and walk you through it.',
+  cta: 'Show me',
+  completeSummary: 'Nice — that’s saved. Upgrade if you want to keep doing this after the preview.',
 } as const;
 
 export function shouldShowProTrialWinQuest(user: Pick<

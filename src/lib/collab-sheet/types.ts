@@ -1,6 +1,6 @@
 /** Collab Sheet — live multi-user lyric editing on the same track. */
 
-import type { TrackSection } from '@/lib/types';
+import type { Album, Track, TrackSection } from '@/lib/types';
 
 export const COLLAB_MESSAGE_MAX_CHARS = 800;
 export const COLLAB_PRESENCE_STALE_MS = 90_000;
@@ -51,6 +51,35 @@ export type CollabPresence = {
 
 export function collabSheetIdFor(ownerId: string, trackId: string): string {
   return `${ownerId}_${trackId}`;
+}
+
+/** Local workstation view for someone invited onto another artist's Collab Sheet. */
+export function trackFromCollabSheet(sheet: CollabSheetDoc): Track {
+  return {
+    id: sheet.trackId,
+    albumId: sheet.albumId,
+    ownerId: sheet.ownerId,
+    title: sheet.title,
+    vibe: { genre: 'General', tempoBPM: 90, feeling: ['neutral'] },
+    intentRefs: [],
+    sections: sheet.liveSections?.length ? sheet.liveSections : [],
+    status: 'in_progress',
+    createdAt: sheet.createdAt,
+    updatedAt: sheet.updatedAt,
+    collabSheetId: sheet.id,
+  };
+}
+
+export function albumFromCollabSheet(sheet: CollabSheetDoc, track: Track): Album {
+  return {
+    id: sheet.albumId,
+    ownerId: sheet.ownerId,
+    title: sheet.albumTitle || 'Collab Sheet',
+    theme: '',
+    createdAt: sheet.createdAt,
+    updatedAt: sheet.updatedAt,
+    tracks: [track],
+  };
 }
 
 export function countWrittenBars(sections: TrackSection[] | undefined): number {

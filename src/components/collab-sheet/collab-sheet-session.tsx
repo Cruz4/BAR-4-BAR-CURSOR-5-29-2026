@@ -11,6 +11,7 @@ type CollabSheetSessionContextValue = {
   sheet: CollabSheetDoc | null;
   collab: ReturnType<typeof useCollabSheet>;
   isOwner: boolean;
+  userName?: string;
   friendships: Friendship[];
   openMsgsWith: (peerId: string, peerName: string) => void;
   registerMsgsOpen: (fn: (peerId: string, peerName: string) => void) => void;
@@ -116,11 +117,12 @@ export function CollabSheetSession({
       sheet,
       collab,
       isOwner,
+      userName,
       friendships,
       openMsgsWith,
       registerMsgsOpen,
     }),
-    [sheet, collab, isOwner, friendships, openMsgsWith, registerMsgsOpen]
+    [sheet, collab, isOwner, userName, friendships, openMsgsWith, registerMsgsOpen]
   );
 
   if (!enabled || !userId) return <>{children}</>;

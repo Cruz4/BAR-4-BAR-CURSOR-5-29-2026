@@ -125,7 +125,7 @@ export function buildFirstSessionGuidedSteps(ctx: FirstSessionGuidedContext): Ly
   return [
     {
       id: 'first-write',
-      target: '[data-tour="lyrics-sheet-focus"]',
+      target: '[data-tour="lyrics-sheet-focus"], [data-tour="lyrics-sheet"]',
       mobileCardPlacement: 'bottom',
       title: 'Step 1 · Write your opening line',
       body: topic
@@ -153,7 +153,7 @@ export function buildFirstSessionGuidedSteps(ctx: FirstSessionGuidedContext): Ly
     {
       id: 'first-manual',
       target: '[data-tour="ink-balance"]',
-      mobileCardPlacement: 'top',
+      mobileCardPlacement: 'bottom',
       title: 'Step 4 · You are in control',
       body: 'Ink lives in the header. Explore freely — your sheet autosaves. Open Studio Manual (?) anytime to replay this guide or tour DNA, vault, and export.',
       example: 'Account menu → Studio Manual → Replay Workstation Tour.',

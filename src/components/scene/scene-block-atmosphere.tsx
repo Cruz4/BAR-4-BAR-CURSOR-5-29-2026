@@ -11,6 +11,7 @@ import {
   type SceneNeonEntry,
 } from '@/lib/scene/scene-neon-lexicon';
 import { useSceneSky } from '@/hooks/use-scene-sky';
+import { useAppChromeBottom } from '@/hooks/use-app-chrome-bottom';
 import {
   cloudIntensity,
   precipKind,
@@ -24,11 +25,17 @@ import {
   meteorSkyOpen,
   moonGlow,
   moonPhaseAt,
+  moonScreenPosition,
   moonShouldShow,
   shootingStarIntervalMs,
+  sunScreenPosition,
   type MeteorShower,
   type MoonPhase,
 } from '@/lib/scene/scene-celestial';
+import { SCENE_HOUSE_CITY } from '@/lib/scene/scene-sky';
+
+/** Sun/moon arc refresh while Scene is open — real sky drift is slow. */
+const CELESTIAL_TICK_MS = 5 * 60 * 1000;
 
 /**
  * The Scene Block — skyline driven by live weather near the viewer + day/night,
@@ -184,10 +191,12 @@ function SceneMoonDisc({
   moon,
   eclipsed,
   glow,
+  style,
 }: {
   moon: MoonPhase;
   eclipsed: boolean;
   glow: number;
+  style?: React.CSSProperties;
 }) {
   const maskId = React.useId().replace(/:/g, '');
   const r = 22;
@@ -199,7 +208,7 @@ function SceneMoonDisc({
     <svg
       className={cn('scene-block-moon absolute', eclipsed && 'is-lunar-eclipse')}
       viewBox="0 0 56 56"
-      style={{ opacity: Math.min(1, 0.28 + glow) }}
+      style={{ opacity: Math.min(1, 0.28 + glow), ...style }}
       aria-hidden
     >
       <defs>
@@ -303,10 +312,29 @@ export function SceneBlockAtmosphere({
   pulseKey?: number;
 }) {
   const { phase, weather, windy, hasWeather, lat, lon } = useSceneSky();
-  const moon = moonPhaseAt();
-  const shower = activeMeteorShower();
-  const eclipse = activeEclipse(new Date(), lat, lon, phase);
-  const moonVisible = moonShouldShow(phase, weather, moon);
+  const appChromeBottom = useAppChromeBottom(16);
+  const [skyNow, setSkyNow] = useState(() => new Date());
+  const [viewportH, setViewportH] = useState(() =>
+    typeof window !== 'undefined' ? window.innerHeight : 800
+  );
+  const moon = moonPhaseAt(skyNow);
+  const shower = activeMeteorShower(skyNow);
+  const eclipse = activeEclipse(skyNow, lat, lon, phase);
+  const sceneLat = lat ?? SCENE_HOUSE_CITY.lat;
+  const sceneLon = lon ?? SCENE_HOUSE_CITY.lon;
+  const sunPos = useMemo(
+    () => sunScreenPosition(skyNow, sceneLat, sceneLon),
+    [skyNow, sceneLat, sceneLon]
+  );
+  const moonPos = useMemo(
+    () => moonScreenPosition(skyNow, sceneLat, sceneLon),
+    [skyNow, sceneLat, sceneLon]
+  );
+  const moonVisible = moonShouldShow(phase, weather, moon, {
+    now: skyNow,
+    lat: sceneLat,
+    lon: sceneLon,
+  });
   const glow = moonGlow(moon, weather);
   const meteorsOn = meteorSkyOpen(phase, weather);
   const litCount = Math.min(TOTAL_WINDOWS, Math.max(4, Math.round(4 + energy * 2)));
@@ -325,8 +353,36 @@ export function SceneBlockAtmosphere({
   const clouds = cloudIntensity(weather);
   const precip = precipKind(weather);
   const starVisible = showsStars(phase);
-  const sunVisible = showsSun(phase, weather);
+  const sunVisible = showsSun(phase, weather) && sunPos.aboveHorizon;
   const showLightning = weather === 'thunderstorm' || weather === 'hail';
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setSkyNow(new Date()), CELESTIAL_TICK_MS);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => setViewportH(window.innerHeight);
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const celestialStyle = (pos: { leftPct: number; topPct: number }) =>
+    ({
+      left: `${pos.leftPct}%`,
+      top: `${pos.topPct}%`,
+    }) as const;
+
+  const moonStyle = useMemo(() => {
+    const moonHalf = phase === 'dusk' ? 24 : 28;
+    const rawTopPx = (moonPos.topPct / 100) * viewportH;
+    const minTopPx = appChromeBottom + moonHalf;
+    return {
+      left: `${moonPos.leftPct}%`,
+      top: `${Math.max(rawTopPx, minTopPx)}px`,
+    };
+  }, [moonPos, appChromeBottom, phase, viewportH]);
 
   useEffect(() => {
     const { entry, pinned } = resolveSceneNeonEntry();
@@ -395,13 +451,19 @@ export function SceneBlockAtmosphere({
             eclipse?.kind === 'solar' && 'is-eclipsed',
             eclipse?.kind === 'solar' && eclipse.shade === 'annular' && 'is-annular'
           )}
+          style={celestialStyle(sunPos)}
         >
           {eclipse?.kind === 'solar' ? <div className="scene-block-sun-bite" /> : null}
         </div>
       )}
 
       {moonVisible ? (
-        <SceneMoonDisc moon={moon} eclipsed={eclipse?.kind === 'lunar'} glow={glow} />
+        <SceneMoonDisc
+          moon={moon}
+          eclipsed={eclipse?.kind === 'lunar'}
+          glow={glow}
+          style={moonStyle}
+        />
       ) : null}
 
       {starVisible &&

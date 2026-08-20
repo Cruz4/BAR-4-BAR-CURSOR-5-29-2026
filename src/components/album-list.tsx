@@ -693,7 +693,10 @@ export function AlbumList() {
     if (
       step.id === 'vault-header' ||
       step.id === 'vault-search' ||
-      step.id === 'vault-create'
+      step.id === 'vault-create' ||
+      step.id === 'vault-progress' ||
+      step.id === 'vault-social-dock' ||
+      step.id === 'ink'
     ) {
       window.scrollTo({ top: 0, behavior: 'auto' });
     }

@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { MessageSquare, Radio } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,9 +10,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 import type { CollabPresence, CollabSheetDoc } from '@/lib/collab-sheet/types';
 import { COLLAB_PRESENCE_STALE_MS } from '@/lib/collab-sheet/types';
+import { sendCollabMessageClient } from '@/lib/collab-sheet/client';
 import { CollabSheetPresenceChip } from '@/components/collab-sheet/collab-sheet-presence-chip';
+import { useToast } from '@/hooks/use-toast';
 
 function isLive(p: CollabPresence | undefined, now = Date.now()): boolean {
   if (!p?.at) return false;
@@ -25,6 +29,7 @@ export function CollabSheetMembersMenu({
   liveCount,
   totalShared,
   userId,
+  userName,
   isOwner,
   onMessage,
   onRevoke,
@@ -34,11 +39,40 @@ export function CollabSheetMembersMenu({
   liveCount: number;
   totalShared: number;
   userId?: string;
+  userName?: string;
   isOwner: boolean;
   onMessage: (targetUserId: string, name: string) => void;
   onRevoke?: (targetUserId: string) => void;
 }) {
+  const { toast } = useToast();
+  const [busyId, setBusyId] = useState<string | null>(null);
   const members = sheet.memberIds.filter((id) => !sheet.revoked[id]);
+
+  if (members.length < 2) return null;
+
+  const ping = async (targetUserId: string, name: string) => {
+    if (!userId || targetUserId === userId) return;
+    setBusyId(targetUserId);
+    try {
+      await sendCollabMessageClient({
+        userId,
+        userName: userName || 'Artist',
+        collabId: sheet.id,
+        targetUserId,
+        text: `Ping — ${userName || 'someone'} needs you on "${sheet.title}".`,
+        clientId: `ping_${Date.now()}`,
+      });
+      toast({ title: `Pinged ${name}`, description: 'They’ll get a Collab Sheet ping in Activity.' });
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not ping',
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
     <DropdownMenu>
@@ -47,47 +81,67 @@ export function CollabSheetMembersMenu({
           <CollabSheetPresenceChip liveCount={liveCount} totalShared={totalShared} />
         </span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel className="font-code text-[9px] uppercase tracking-widest text-violet-300">
-          Collab Sheet
+          On this Collab Sheet
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {members.map((id) => {
           const m = sheet.members[id];
           const live = isLive(presence[id]);
           const owner = id === sheet.ownerId;
+          const self = id === userId;
+          const name = m?.name || 'Artist';
           return (
             <DropdownMenuItem
               key={id}
-              className="flex items-center justify-between gap-2"
-              onSelect={(e) => {
-                if (id === userId) return;
-                e.preventDefault();
-                onMessage(id, m?.name || 'Artist');
-              }}
+              className="flex cursor-default flex-col items-stretch gap-1.5 py-2"
+              onSelect={(e) => e.preventDefault()}
             >
-              <span className="truncate text-sm">
-                {m?.name || 'Artist'}
-                {owner ? ' · owner' : ''}
-              </span>
-              <span className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate text-sm">
+                  {self ? 'You' : name}
+                  {owner ? ' · owner' : ''}
+                </span>
                 {live ? (
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" title="Live" />
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400 animate-pulse" title="Live" />
                 ) : (
-                  <span className="text-[9px] text-muted-foreground uppercase">away</span>
+                  <span className="text-[9px] uppercase text-muted-foreground">away</span>
                 )}
-              </span>
+              </div>
+              {!self ? (
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="h-7 flex-1 gap-1 px-2 text-[9px] font-bold uppercase"
+                    onClick={() => onMessage(id, name)}
+                  >
+                    <MessageSquare className="h-3 w-3" />
+                    Message
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 flex-1 gap-1 px-2 text-[9px] font-bold uppercase"
+                    disabled={busyId === id}
+                    onClick={() => void ping(id, name)}
+                  >
+                    <Radio className="h-3 w-3" />
+                    Ping
+                  </Button>
+                </div>
+              ) : null}
             </DropdownMenuItem>
           );
         })}
-        {isOwner && onRevoke ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-[9px] text-muted-foreground font-normal">
-              Tap a name to message. Revoke from Collab Sheet settings.
-            </DropdownMenuLabel>
-          </>
-        ) : null}
+        <DropdownMenuSeparator />
+        <p className="px-2 py-1.5 text-[9px] leading-snug text-muted-foreground">
+          Message opens Msgs. Ping sends an Activity alert to pull them back to the sheet.
+          {isOwner && onRevoke ? ' Revoke access from Collab Sheet settings.' : ''}
+        </p>
       </DropdownMenuContent>
     </DropdownMenu>
   );

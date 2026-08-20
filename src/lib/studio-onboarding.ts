@@ -84,6 +84,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'paste',
     target: '[data-tour="smart-structure"]',
+    mobileCardPlacement: 'bottom',
     title: 'Paste or write lyrics',
     body: 'Start with Smart Structure — paste raw lyrics or notes and we split them into Verse, Hook, and bars.',
     example: 'Paste a voice-memo transcript → structured bars in one click.',
@@ -91,6 +92,8 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'sheet',
     target: '[data-tour="lyrics-sheet"]',
+    mobileTarget: '[data-tour="lyrics-sheet-focus"]',
+    mobileCardPlacement: 'bottom',
     title: 'Your rhyme book',
     body: 'Write line-by-line on the sheet. Tap a line to select it — that line is what Generate Next / Previous writes off of. Or just type your own.',
     example: 'Think in couplets — each row is a line, goals count pairs.',
@@ -98,6 +101,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'bar-workstation',
     target: '[data-tour="bar-workstation"]',
+    mobileCardPlacement: 'top',
     title: 'Bar Workstation',
     body: 'Select a line, then Next writes under it and Previous writes above it. Type in the box to stay in your own voice. Suggestions land here to Accept or dismiss.',
     example: 'Stuck mid-verse? One bar at a time — Next / Previous costs Ink (shown on the button).',
@@ -105,6 +109,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'rhyme-pulse',
     target: '[data-tour="rhyme-pulse"]',
+    mobileCardPlacement: 'bottom',
     title: 'Rhyme Pulse',
     body: 'Scan your sheet for rhyme families and turn on highlighting so punchlines land clean.',
   },
@@ -112,6 +117,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
     id: 'cowriter',
     target: '[data-tour="cowriter-panel"]',
     mobileTarget: '[data-tour="cowriter-panel"]',
+    mobileCardPlacement: 'bottom',
     title: 'Co-Writer rails',
     body: 'Right panel = the rails AI follows. Each block has a switch. Off = ignored. On = used. Stack DNA + Vibe + Intents — Generate Next reads all of them together.',
     example: 'Flip only Vibe for a beat-first line. Add Intents when you need a punchline in the bar.',
@@ -169,6 +175,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'generation',
     target: '[data-tour="generation-workstation"]',
+    mobileCardPlacement: 'bottom',
     title: 'Generation Workstation',
     body: 'Full-song drafts and DNA & REMIX live here — not on the sheet Next button. Open it, then tap the ? on Select Workflow Mode for a walkthrough of each path.',
     example: 'Studio Draft writes sections from your rails. DNA & REMIX extracts a voice from pasted lyrics or this sheet.',
@@ -176,6 +183,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'song-structure',
     target: '[data-tour="song-structure"]',
+    mobileCardPlacement: 'bottom',
     title: 'Structure (left)',
     body: 'This is the song map: Verse, Hook, Bridge, and the rest. Tap a section to jump the sheet there. Add Section to grow the form. Arrows reorder; trash removes. This is not Smart Structure — that paste tool lives on the center sheet.',
     example: 'Add Hook, tap it, write the chorus on those lines.',
@@ -183,6 +191,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'press-song',
     target: '[data-tour="press-song"]',
+    mobileCardPlacement: 'bottom',
     title: 'Press a song',
     body: 'This is the sell desk. Press a song opens the lathe: upload the audio, set a price, confirm you have the rights, then Press it live on First Drops. DNA Drop below is lyric-share only — not the store. You can also Press from The Scene dock.',
     example: 'Finished mix → Press a song → price it → live on The Scene.',
@@ -197,6 +206,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'collab-sheet',
     target: '[data-tour="collab-sheet"]',
+    mobileCardPlacement: 'bottom',
     title: 'Collab Sheet (Pro)',
     body: 'Share a live editable sheet with friends on this track. Edits sync in real time — presence shows who is on the page, and chat opens from the bottom drawer. Only the owner can invite more people.',
     example: 'Open Collab Sheet → invite a friend → write the hook together live.',
@@ -204,6 +214,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'ink',
     target: '[data-tour="ink-balance"]',
+    mobileCardPlacement: 'bottom',
     title: 'Ink fuel',
     body: 'Residency Ink refills monthly; permanent Ink never expires. Costs show on AI buttons before you click.',
   },
@@ -211,6 +222,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
     id: 'save',
     target: '[data-tour="track-status"]',
     mobileTarget: '[data-tour="track-export"]',
+    mobileCardPlacement: 'bottom',
     title: 'Save & export',
     body: 'Your track saves as you edit. Export PDF with Studio Pro — your work auto-saves in the demo vault.',
   },
@@ -244,6 +256,8 @@ export const TRY_SHEET_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'try-sheet',
     target: '[data-tour="lyrics-sheet"]',
+    mobileTarget: '[data-tour="lyrics-sheet-focus"]',
+    mobileCardPlacement: 'bottom',
     title: 'This is the real sheet',
     body: 'Same booth you get after signup. Tap a line to select it, or type your own bar. Generate Next / Previous always writes off the line that is selected — not a random verse.',
     example: 'Tap line 01, type a bar. That line is now the seed.',
@@ -251,6 +265,7 @@ export const TRY_SHEET_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'try-workstation',
     target: '[data-tour="bar-workstation"]',
+    mobileCardPlacement: 'top',
     title: 'Writing workstation',
     body: 'Bottom strip is the Bar Workstation. Next writes under the selected line. Previous writes above it. Type in the box if you do not want AI. Suggestions show here to Accept.',
     example: `This try sheet gives ${GUEST_DEMO_MAX_USES} free Generate Next / starter assists. After signup, Next is ${AI_COSTS.generateNextLine} Ink each.`,
@@ -258,12 +273,14 @@ export const TRY_SHEET_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'try-rhyme',
     target: '[data-tour="rhyme-pulse"]',
+    mobileCardPlacement: 'bottom',
     title: 'Rhyme Pulse is free here',
     body: 'Highlights matching end-rhymes as you write. On the try sheet it does not spend Ink.',
   },
   {
     id: 'try-cowriter',
     target: '[data-tour="cowriter-panel"]',
+    mobileCardPlacement: 'bottom',
     title: 'Co-Writer (right panel)',
     body: 'These are the rails. Each card has a switch — off means AI ignores it. Turn several on and they stack. Generate Next reads every switch that is on.',
     example: 'DNA + Vibe on, Guardrails off = world + beat, no word bans.',
@@ -318,7 +335,8 @@ export const TRY_SHEET_TOUR_STEPS: LyricsTourStep[] = [
   },
   {
     id: 'try-combine',
-    target: '[data-tour="generate-next"]',
+    target: '[data-tour="generate-next"], [data-tour="bar-workstation"]',
+    mobileCardPlacement: 'top',
     title: 'Select a line, then generate',
     body: 'Rails do nothing until you pick a line and tap Next (or Previous). Combine DNA + Vibe + an Intent, tap line 02, hit Next. That is the product.',
     example: 'No line selected = Next has nothing to write off of.',
@@ -326,12 +344,15 @@ export const TRY_SHEET_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'try-left',
     target: '[data-tour="left-panel"]',
+    mobileTarget: '[data-tour="generation-workstation"]',
+    mobileCardPlacement: 'bottom',
     title: 'Left panel',
     body: 'Workstation for the whole song: titles, paste, vibe suggester, scene prompt, export. Structure and Press a song are next — the sheet stays center.',
   },
   {
     id: 'try-structure',
     target: '[data-tour="song-structure"]',
+    mobileCardPlacement: 'bottom',
     title: 'Structure (left)',
     body: 'Song map: Verse, Hook, Bridge. Tap a section to jump the sheet there. Add Section to grow the form. Arrows reorder; trash removes. Smart Structure on the center sheet is the paste-and-split tool — this card is the live outline.',
     example: 'Add Hook, tap it, write the chorus on those lines.',
@@ -339,6 +360,7 @@ export const TRY_SHEET_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'try-press',
     target: '[data-tour="press-song"]',
+    mobileCardPlacement: 'bottom',
     title: 'Press a song',
     body: 'This is the sell desk — the big one after you sign up. Press a song uploads the audio, sets a price, and presses it live on First Drops. It is not DNA Drop (that’s a lyric link) and not Takes (those stay private). On the try sheet it asks you to create an account first.',
     example: 'Write here. Mix elsewhere. Sign up, Press a song, put it on sale.',
@@ -346,6 +368,7 @@ export const TRY_SHEET_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'try-workstation-locked',
     target: '[data-tour="generation-workstation"]',
+    mobileCardPlacement: 'bottom',
     title: 'Generation Workstation',
     body: `Locked on the try sheet. After you sign up you get a ${PRO_FEATURE_PREVIEW_DAYS * 24}-hour Pro preview — Full Studio Draft (whole song from your rails) and DNA & REMIX (paste a verse or sync this sheet, extract the voice, generate a new draft). Inside that window, tap ? for a visual of each mode.`,
     example: 'Sheet Next = one bar. Workstation = the whole record or a remix pivot.',
@@ -353,6 +376,7 @@ export const TRY_SHEET_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'try-ink',
     target: '[data-tour="try-ink"]',
+    mobileCardPlacement: 'bottom',
     title: 'Ink is the fuel',
     body: `Ink pays for AI: Next / Previous (${AI_COSTS.generateNextLine} Ink), Rhyme Pulse (${AI_COSTS.findRhymes}), drafts (scales with bars), titles, vibe, scene. Residency Ink refills on a plan; Raw Ink you buy never expires. This try page uses ${GUEST_DEMO_MAX_USES} free demo assists — not your real Ink pool.`,
     example: `Sign up free → ${SIGNUP_INK} Ink in the tank, plus ${PRO_FEATURE_PREVIEW_DAYS * 24} hours to open Generation Workstation.`,
@@ -363,12 +387,15 @@ export const WORKSTATION_MODE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'ws-modes',
     target: '[data-tour="ws-mode-select"]',
+    mobileTarget: '[data-tour="ws-mode-heading"]',
+    mobileCardPlacement: 'bottom',
     title: 'Two ways in',
     body: 'Generation Workstation is not Generate Next. Pick a mode, calibrate the hub, then synthesize. Costs scale with how many bars you enable.',
   },
   {
     id: 'ws-draft',
     target: '[data-tour="ws-mode-draft"]',
+    mobileCardPlacement: 'bottom',
     title: 'Full Studio Draft',
     body: 'Writes a whole song onto the sheet from whatever rails are on (DNA, vibe, intents, guardrails, style). You set structure — Verse 16 / Hook 8 — then generate.',
     example: 'Example: DNA world = “rain on the block,” Vibe = 90 BPM boom-bap, Intents checked. Draft fills Verse / Hook / Bridge in that voice. Review, keep, or stash to Draft Chest.',
@@ -376,6 +403,7 @@ export const WORKSTATION_MODE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'ws-remix',
     target: '[data-tour="ws-mode-remix"]',
+    mobileCardPlacement: 'top',
     title: 'DNA & REMIX',
     body: 'Extract a Creative DNA from pasted lyrics, a poem, or this sheet (Sync Current Lyrics). Analysis Step lets you save the profile or ⚡ inject one strain, then generate a new draft in that extracted voice.',
     example: 'Example: paste a verse you love → extract → ⚡ inject Message/Truth into this remix → generate. Same melody-of-thought, new bars.',
@@ -405,14 +433,14 @@ export const VAULT_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'vault-header',
     target: '[data-tour="vault-header"]',
-    mobileCardPlacement: 'top',
+    mobileCardPlacement: 'bottom',
     title: 'The Vault',
     body: 'Your studio home — albums, loose tracks, and every project blueprint live here.',
   },
   {
     id: 'vault-create',
     target: '[data-tour="vault-create"]',
-    mobileCardPlacement: 'top',
+    mobileCardPlacement: 'bottom',
     title: 'Create a project',
     body: 'Spin up a Concept Album (shared DNA across tracks) or capture a Loose Track for quick ideas.',
     example: 'Album = cohesive project. Loose track = single song, no album inherit.',
@@ -420,6 +448,7 @@ export const VAULT_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'vault-collection',
     target: '[data-tour="vault-collection"]',
+    mobileCardPlacement: 'bottom',
     title: 'Your collection',
     body: 'Albums show as vinyl records. Click one to open its track list, then open a sheet to write and generate bars.',
   },
@@ -432,23 +461,23 @@ export const VAULT_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'vault-progress',
     target: '[data-tour="vault-progress-mobile"], [data-tour="vault-progress-desktop"]',
-    mobileCardPlacement: 'top',
+    mobileCardPlacement: 'bottom',
     title: 'Studio progress',
     body: 'XP, rank, weekly goals, and trophies live here. On phone it sits under the vault header; on desktop look for the trophy bubble on the left.',
     example: 'Tap the header anytime to expand or collapse — View all opens your full progress board.',
   },
   {
     id: 'vault-social-dock',
-    target: '[data-tour="vault-social-dock"]',
-    mobileCardPlacement: 'top',
-    title: 'Artist Home & The Block',
-    body: 'Turn your public Artist Home on or off here, open Edit Public Page, and jump to The Block — your friends feed. A green badge means friend requests or new posts.',
-    example: 'Search artists by name on The Block to send friend invites, or share your referral link.',
+    target: '[data-tour="vault-social-dock-mobile"], [data-tour="vault-social-dock-desktop"]',
+    mobileCardPlacement: 'bottom',
+    title: 'Artist Home & Activity',
+    body: 'These two buttons are on the right on a wide screen (under the vault header on phone). Artist Home turns your public page on or off and opens Edit Public Page. Activity is your inbox — loves, replies, and friend requests. A green badge means something new.',
+    example: 'Tap Artist Home for visibility and your bar4bar.ink link. Activity opens the inbox.',
   },
   {
     id: 'vault-search',
     target: '[data-tour="vault-search"]',
-    mobileCardPlacement: 'top',
+    mobileCardPlacement: 'bottom',
     title: 'Search the vault',
     body: 'Find lyrics across every album and track. Use quotes for exact phrases.',
     example: '"midnight drive" finds that exact line anywhere in your vault.',
@@ -456,7 +485,7 @@ export const VAULT_PAGE_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'ink',
     target: '[data-tour="ink-balance"]',
-    mobileCardPlacement: 'top',
+    mobileCardPlacement: 'bottom',
     title: 'Ink fuel',
     body: 'Residency Ink refills monthly; permanent Ink never expires. Tap to open the Ink Store or buy packs.',
   },
@@ -526,14 +555,14 @@ export const SCENE_HOME_TOUR_STEPS: LyricsTourStep[] = [
   {
     id: 'scene-progress',
     target: '[data-tour="scene-progress-mobile"], [data-tour="scene-progress-desktop"]',
-    mobileCardPlacement: 'top',
+    mobileCardPlacement: 'bottom',
     title: 'Studio progress',
     body: 'XP, rank, streak, and weekly goals. Writing bars in the studio feeds all of it — and your rank shows on your page and the leaderboard.',
   },
   {
     id: 'scene-nav',
     target: '[data-tour="scene-nav-mobile"], [data-tour="scene-nav-desktop"]',
-    mobileCardPlacement: 'top',
+    mobileCardPlacement: 'bottom',
     title: 'The Vault is where you write',
     body: 'Your albums, tracks, and the AI bar-for-bar workstation live in The Vault. Press a song on this dock is how you put a track on sale — not DNA Drop. The Scene is the block; the Vault is the booth.',
     example: 'Replay this tour anytime from the Studio Manual (?).',
