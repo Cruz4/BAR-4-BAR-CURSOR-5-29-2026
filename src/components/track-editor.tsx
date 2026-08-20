@@ -2160,7 +2160,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
         <div
           className={cn(
             'w-full min-w-0 h-full px-2 md:px-4 lg:px-6 flex flex-col',
-            isMinimized ? 'justify-center py-0 overflow-hidden' : 'justify-start max-md:py-1 md:pt-0.5 md:pb-2.5 max-md:gap-0 md:gap-0.5'
+            isMinimized ? 'justify-center py-0 overflow-hidden' : 'justify-start max-md:py-0 md:pt-0.5 md:pb-2.5 max-md:gap-0 md:gap-0.5'
           )}
         >
             <div
@@ -2168,7 +2168,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                 'min-w-0 w-full',
                 isMinimized
                   ? 'flex flex-row items-center justify-between gap-2 h-full'
-                  : 'flex flex-col gap-1 md:flex-row md:items-center md:justify-between shrink-0 max-md:min-h-0 md:min-h-[28px] max-md:py-0 md:py-0.5 border-b border-white/5'
+                  : 'flex flex-row items-center justify-between gap-1 shrink-0 max-md:min-h-0 md:min-h-[28px] max-md:py-0 md:py-0.5 border-b border-white/5'
               )}
             >
                 <div className="flex items-center gap-1.5 md:gap-2 min-w-0 overflow-hidden flex-1">
@@ -2184,12 +2184,9 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                         <Info className="h-3 w-3" />
                       </button>
                     </Hint>
-                    <span className="hidden sm:inline text-muted-foreground font-code text-[8px] md:text-[9px] font-bold tracking-widest uppercase min-w-0 truncate leading-none">{activeBarLabel}</span>
+                    <span className="text-muted-foreground font-code text-[8px] md:text-[9px] font-bold tracking-widest uppercase min-w-0 truncate leading-none">{activeBarLabel}</span>
                 </div>
-                <div className={cn(
-                  'flex items-center gap-1.5 min-w-0',
-                  isMinimized ? 'shrink-0' : 'w-full md:w-auto md:shrink-0'
-                )}>
+                <div className="flex items-center gap-1.5 min-w-0 shrink-0">
                     <div className={cn(
                       'flex items-center gap-1 overflow-x-auto studio-scrollbar flex-nowrap py-px min-w-0',
                       isMinimized ? 'max-w-[min(48vw,11rem)]' : 'flex-1 md:flex-none md:max-w-[min(40vw,18rem)] lg:max-w-none'
@@ -2235,12 +2232,9 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                     </Button>
                     </Hint>
                 </div>
-                {!isMinimized && (
-                  <span className="sm:hidden text-muted-foreground font-code text-[8px] font-bold tracking-widest uppercase leading-none">{activeBarLabel}</span>
-                )}
             </div>
             {!isMinimized && (
-                <div className="flex max-md:flex-col md:flex-row md:items-center gap-1.5 md:gap-2 max-md:mt-0 md:mt-0.5 min-w-0 max-md:flex-none md:flex-1">
+                <div className="flex max-md:flex-col md:flex-row md:items-center gap-1 md:gap-2 max-md:mt-0 md:mt-0.5 min-w-0 max-md:flex-none md:flex-1">
                     {generationOptions ? (
                         <div className="flex-grow flex max-md:flex-col md:flex-row gap-2 animate-in fade-in slide-in-from-bottom-4 min-w-0 py-0.5 w-full">
                             {generationOptions.map((opt: any, i: number) => (

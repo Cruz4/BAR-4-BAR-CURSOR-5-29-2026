@@ -1183,7 +1183,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
         
         <div className="relative z-10 min-w-0 md:pl-32">
             <Button variant="ghost" size="sm" onClick={() => router.push(vaultHref())} className="mb-4 sm:mb-6 -ml-1 sm:-ml-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-all">
-                <ChevronLeft className="mr-2 h-4 w-4" /> Collection
+                <ChevronLeft className="mr-2 h-4 w-4" /> Vault
             </Button>
 
             {albumTierLocked && (
