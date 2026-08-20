@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Smile } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { EMOJI_PALETTE } from '@/lib/text/emoji-palette';
+import { EMOJI_PALETTE, emojiMatchesQuery } from '@/lib/text/emoji-palette';
+import { readRecentEmojis, rememberRecentEmoji } from '@/lib/text/recent-emojis';
 import { insertAtCursor } from '@/lib/text/insert-at-cursor';
 
 type TextFieldRef = React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>;
@@ -43,6 +44,32 @@ type EmojiPickerButtonProps = {
   side?: 'top' | 'right' | 'bottom' | 'left';
 };
 
+function EmojiGrid({
+  emojis,
+  keyPrefix,
+  onPick,
+}: {
+  emojis: string[];
+  keyPrefix: string;
+  onPick: (emoji: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-8 gap-0.5">
+      {emojis.map((emoji) => (
+        <button
+          key={`${keyPrefix}-${emoji}`}
+          type="button"
+          className="flex h-8 w-8 items-center justify-center rounded-md text-lg transition-colors hover:bg-white/10"
+          onClick={() => onPick(emoji)}
+          aria-label={`Insert ${emoji}`}
+        >
+          {emoji}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function EmojiPickerButton({
   onInsert,
   disabled = false,
@@ -52,9 +79,34 @@ export function EmojiPickerButton({
   side = 'top',
 }: EmojiPickerButtonProps) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [recent, setRecent] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (open) setRecent(readRecentEmojis());
+  }, [open]);
+
+  const filteredGroups = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return EMOJI_PALETTE;
+    return EMOJI_PALETTE.map((group) => ({
+      ...group,
+      emojis: group.emojis.filter(
+        (emoji) => group.label.toLowerCase().includes(q) || emojiMatchesQuery(emoji, q)
+      ),
+    })).filter((group) => group.emojis.length > 0);
+  }, [query]);
+
+  const filteredRecent = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return recent;
+    return recent.filter((emoji) => emojiMatchesQuery(emoji, q) || emoji.includes(q));
+  }, [query, recent]);
 
   const pick = (emoji: string) => {
     onInsert(emoji);
+    setRecent(rememberRecentEmoji(emoji));
+    setQuery('');
     setOpen(false);
   };
 
@@ -84,30 +136,39 @@ export function EmojiPickerButton({
         side={side}
         className="w-[min(18rem,calc(100vw-1.5rem))] border-white/10 bg-[#0c1018] p-2 text-zinc-100 shadow-xl"
       >
-        <ScrollArea className="max-h-56 pr-2">
-          <div className="space-y-2.5">
-            {EMOJI_PALETTE.map((group) => (
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value.slice(0, 32))}
+          placeholder="Search emoji..."
+          className="mb-2 h-8 border-white/15 bg-black/30 text-xs placeholder:text-zinc-500"
+          aria-label="Search emoji"
+        />
+        <div
+          className="max-h-56 overflow-y-auto overscroll-contain pr-1"
+          onWheel={(e) => e.stopPropagation()}
+        >
+          <div className="space-y-2.5 pr-1">
+            {filteredRecent.length > 0 ? (
+              <div>
+                <p className="mb-1 px-0.5 text-[9px] font-bold uppercase tracking-[0.22em] text-zinc-500">
+                  Recent
+                </p>
+                <EmojiGrid emojis={filteredRecent} keyPrefix="recent" onPick={pick} />
+              </div>
+            ) : null}
+            {filteredGroups.map((group) => (
               <div key={group.label}>
                 <p className="mb-1 px-0.5 text-[9px] font-bold uppercase tracking-[0.22em] text-zinc-500">
                   {group.label}
                 </p>
-                <div className="grid grid-cols-8 gap-0.5">
-                  {group.emojis.map((emoji) => (
-                    <button
-                      key={`${group.label}-${emoji}`}
-                      type="button"
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-lg transition-colors hover:bg-white/10"
-                      onClick={() => pick(emoji)}
-                      aria-label={`Insert ${emoji}`}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
+                <EmojiGrid emojis={group.emojis} keyPrefix={group.label} onPick={pick} />
               </div>
             ))}
+            {filteredGroups.length === 0 && filteredRecent.length === 0 ? (
+              <p className="px-1 py-4 text-xs text-zinc-500">No emojis found.</p>
+            ) : null}
           </div>
-        </ScrollArea>
+        </div>
       </PopoverContent>
     </Popover>
   );

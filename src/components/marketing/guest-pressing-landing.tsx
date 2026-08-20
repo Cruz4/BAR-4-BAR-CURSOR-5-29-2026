@@ -474,7 +474,7 @@ function GuestPressingLandingInner() {
 
       <header className="fixed top-0 left-0 right-0 z-[200] grid h-14 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 border-b border-white/[0.06] bg-background/55 px-3 backdrop-blur-xl sm:h-16 sm:gap-2 sm:px-6">
         <nav className="flex min-w-0 items-center justify-start">
-          <LandingSignInLink className="truncate text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-primary sm:hidden">
+          <LandingSignInLink className="truncate text-[10px] font-bold uppercase tracking-widest text-amber-300 transition-colors hover:text-amber-200 sm:hidden">
             Sign in
           </LandingSignInLink>
         </nav>
@@ -498,7 +498,7 @@ function GuestPressingLandingInner() {
           >
             Pricing
           </Link>
-          <LandingSignInLink className="hidden text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-primary sm:inline">
+          <LandingSignInLink className="hidden text-[10px] font-bold uppercase tracking-widest text-amber-300 transition-colors hover:text-amber-200 sm:inline">
             Sign in
           </LandingSignInLink>
           <StudioThemeControls className="hidden sm:inline-flex" />
