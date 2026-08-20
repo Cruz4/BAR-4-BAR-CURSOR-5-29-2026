@@ -52,14 +52,28 @@ async function memberProfile(uid: string, fallbackName: string, fallbackSlug?: s
     db.doc(`users/${uid}`).get(),
     db.doc(`users/${uid}/gamification/summary`).get(),
   ]);
-  const name =
-    typeof userSnap.data()?.displayName === 'string' && userSnap.data()!.displayName.trim()
-      ? userSnap.data()!.displayName.trim()
-      : fallbackName.trim() || 'Artist';
-  const slug =
+  const profileSlug =
+    (typeof summarySnap.data()?.profileSlug === 'string' ? summarySnap.data()!.profileSlug.trim() : '') ||
     fallbackSlug?.trim() ||
-    (typeof summarySnap.data()?.profileSlug === 'string' ? summarySnap.data()!.profileSlug.trim() : '');
-  return slug ? { name: name.slice(0, 80), slug: slug.slice(0, 80) } : { name: name.slice(0, 80) };
+    '';
+  const publicProfileSnap = profileSlug
+    ? await db.doc(`publicProfiles/${profileSlug}`).get()
+    : null;
+  const publicDisplayName = publicProfileSnap?.data()?.displayName;
+  const name =
+    typeof publicDisplayName === 'string' && publicDisplayName.trim()
+      ? publicDisplayName.trim()
+      : typeof userSnap.data()?.displayName === 'string' && userSnap.data()!.displayName.trim()
+        ? userSnap.data()!.displayName.trim()
+        : fallbackName.trim() || 'Artist';
+  const studioBadge = isProUser(userSnap.data() as Pick<User, 'subscriptionStatus'>)
+    ? 'pro'
+    : 'free';
+  return {
+    name: name.slice(0, 80),
+    studioBadge,
+    ...(profileSlug ? { slug: profileSlug.slice(0, 80) } : {}),
+  };
 }
 
 async function areFriends(a: string, b: string): Promise<boolean> {
@@ -97,6 +111,39 @@ export async function listCollabSheetsForUser(userId: string): Promise<CollabShe
     if (row && row.active) map.set(row.id, row);
   }
   return [...map.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+/** Refresh legacy/stale member snapshots from live account names and subscription tiers. */
+export async function refreshCollabMemberProfiles(
+  collabId: string,
+  requestingUserId: string
+): Promise<CollabSheetDoc> {
+  const sheet = await getCollabSheet(collabId);
+  if (!sheet || !sheet.active) throw new Error('Collab Sheet not found.');
+  assertMember(sheet, requestingUserId);
+
+  const activeMemberIds = sheet.memberIds.filter((uid) => !sheet.revoked[uid]);
+  const profiles = await Promise.all(
+    activeMemberIds.map(async (uid) => [
+      uid,
+      await memberProfile(uid, sheet.members[uid]?.name || 'Artist', sheet.members[uid]?.slug),
+    ] as const)
+  );
+  const members = { ...sheet.members, ...Object.fromEntries(profiles) };
+  const changed = profiles.some(([uid, profile]) => {
+    const current = sheet.members[uid];
+    return (
+      current?.name !== profile.name ||
+      current?.slug !== profile.slug ||
+      current?.studioBadge !== profile.studioBadge
+    );
+  });
+
+  if (changed) {
+    const db = await getDb();
+    await db.doc(`collabSheets/${collabId}`).set({ members }, { merge: true });
+  }
+  return changed ? ((await getCollabSheet(collabId)) as CollabSheetDoc) : sheet;
 }
 
 async function mergeOwnerTrackSections(

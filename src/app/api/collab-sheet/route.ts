@@ -6,6 +6,7 @@ import {
   inviteToCollabSheet,
   listCollabSheetsForUser,
   openCollabSheet,
+  refreshCollabMemberProfiles,
   revokeCollabAccess,
   sendCollabMessage,
   syncCollabSections,
@@ -82,6 +83,11 @@ export async function POST(req: Request) {
     const collabId = typeof body.collabId === 'string' ? body.collabId.trim() : '';
     if (!collabId && action !== 'open') {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    }
+
+    if (action === 'refresh-members') {
+      const sheet = await refreshCollabMemberProfiles(collabId, userId);
+      return NextResponse.json({ sheet });
     }
 
     if (action === 'invite') {

@@ -16,6 +16,7 @@ import { COLLAB_PRESENCE_STALE_MS } from '@/lib/collab-sheet/types';
 import { sendCollabMessageClient } from '@/lib/collab-sheet/client';
 import { CollabSheetPresenceChip } from '@/components/collab-sheet/collab-sheet-presence-chip';
 import { useToast } from '@/hooks/use-toast';
+import { studioNameClass } from '@/lib/studio-tier-chrome';
 
 function isLive(p: CollabPresence | undefined, now = Date.now()): boolean {
   if (!p?.at) return false;
@@ -91,7 +92,11 @@ export function CollabSheetMembersMenu({
           const live = isLive(presence[id]);
           const owner = id === sheet.ownerId;
           const self = id === userId;
-          const name = m?.name || 'Artist';
+          const savedName = m?.name?.trim();
+          const liveName = presence[id]?.name?.trim();
+          const name = savedName && savedName !== 'Artist'
+            ? savedName
+            : liveName || savedName || 'Artist';
           return (
             <DropdownMenuItem
               key={id}
@@ -99,9 +104,11 @@ export function CollabSheetMembersMenu({
               onSelect={(e) => e.preventDefault()}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-sm">
-                  {self ? 'You' : name}
-                  {owner ? ' · owner' : ''}
+                <span className="flex min-w-0 items-baseline gap-1.5">
+                  <span className={studioNameClass(m?.studioBadge || 'free', 'truncate text-sm font-bold')}>
+                    {self ? 'You' : name}
+                  </span>
+                  {owner ? <span className="shrink-0 text-[9px] uppercase text-muted-foreground">owner</span> : null}
                 </span>
                 {live ? (
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400 animate-pulse" title="Live" />

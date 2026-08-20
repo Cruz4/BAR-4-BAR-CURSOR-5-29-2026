@@ -23,6 +23,7 @@ import { collabSheetIdFor, type CollabSheetDoc } from '@/lib/collab-sheet/types'
 import type { TrackSection } from '@/lib/types';
 import type { Friendship } from '@/lib/profile/social-client';
 import { friendProfilesOf } from '@/lib/profile/social-client';
+import { studioNameClass } from '@/lib/studio-tier-chrome';
 
 export function CollabSheetShareDialog({
   open,
@@ -169,11 +170,14 @@ export function CollabSheetShareDialog({
               {members.map((id) => {
                 const m = sheet.members[id];
                 const owner = id === sheet.ownerId;
+                const name = m?.name?.trim() || 'Artist';
                 return (
                   <li key={id} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="truncate">
-                      {m?.name || 'Artist'}
-                      {owner ? ' · owner' : ''}
+                    <span className="flex min-w-0 items-baseline gap-1.5">
+                      <span className={studioNameClass(m?.studioBadge || 'free', 'truncate font-bold')}>
+                        {name}
+                      </span>
+                      {owner ? <span className="shrink-0 text-[9px] uppercase text-muted-foreground">owner</span> : null}
                     </span>
                     <div className="flex items-center gap-1 shrink-0">
                       {onOpenChatWith && id !== userId ? (
@@ -182,7 +186,7 @@ export function CollabSheetShareDialog({
                           size="sm"
                           variant="ghost"
                           className="h-7 px-2 text-[9px] uppercase"
-                          onClick={() => onOpenChatWith(id, m?.name || 'Artist')}
+                          onClick={() => onOpenChatWith(id, name)}
                         >
                           Message
                         </Button>

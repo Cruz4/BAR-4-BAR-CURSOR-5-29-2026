@@ -9,6 +9,7 @@ export const COLLAB_EDIT_NOTIFY_BAR_DELTA = 4;
 export type CollabMember = {
   name: string;
   slug?: string;
+  studioBadge?: 'pro' | 'free';
 };
 
 export type CollabSheetDoc = {

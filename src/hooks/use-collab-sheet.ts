@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TrackSection } from '@/lib/types';
 import {
+  refreshCollabMembersClient,
   subscribeCollabPresence,
   subscribeCollabSheet,
   syncCollabClient,
@@ -36,6 +37,7 @@ export function useCollabSheet(opts: {
   const applyingRemoteRef = useRef(false);
   const syncTimerRef = useRef<number | null>(null);
   const sectionsRef = useRef(opts.sections);
+  const refreshedMembersForRef = useRef<string | null>(null);
   const onRemoteRef = useRef(opts.onRemoteSections);
   sectionsRef.current = opts.sections;
   onRemoteRef.current = opts.onRemoteSections;
@@ -46,6 +48,7 @@ export function useCollabSheet(opts: {
       setPresence({});
       localRevisionRef.current = 0;
       lastAppliedRevisionRef.current = 0;
+      refreshedMembersForRef.current = null;
       return;
     }
 
@@ -73,6 +76,17 @@ export function useCollabSheet(opts: {
       if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
     };
   }, [opts.collabId, opts.enabled]);
+
+  useEffect(() => {
+    if (!opts.enabled || !opts.collabId || !opts.userId || !sheet?.active) return;
+    if (refreshedMembersForRef.current === opts.collabId) return;
+    refreshedMembersForRef.current = opts.collabId;
+    void refreshCollabMembersClient({ userId: opts.userId, collabId: opts.collabId }).catch(
+      () => {
+        refreshedMembersForRef.current = null;
+      }
+    );
+  }, [opts.collabId, opts.enabled, opts.userId, sheet?.active]);
 
   useEffect(() => {
     if (!opts.enabled || !opts.collabId || !opts.userId || !sheet?.active) return;

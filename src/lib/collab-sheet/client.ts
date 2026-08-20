@@ -179,6 +179,13 @@ export async function openCollabSheetClient(opts: {
   });
 }
 
+export async function refreshCollabMembersClient(opts: {
+  userId: string;
+  collabId: string;
+}) {
+  return collabSheetApi({ ...opts, action: 'refresh-members' });
+}
+
 export async function inviteCollabClient(opts: {
   userId: string;
   collabId: string;

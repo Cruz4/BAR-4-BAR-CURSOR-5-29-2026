@@ -26,7 +26,7 @@ import {
     HelpCircle, 
     NotebookPen, 
     Wand2, 
-    Waves,
+    Archive,
     Search,
     ArrowUpDown,
     X,
@@ -1036,7 +1036,7 @@ export function AlbumList() {
               <div className="flex flex-col gap-2.5 min-w-0 w-full">
                 <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0 w-full">
                   <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                    <Waves className="h-7 w-7 sm:h-8 sm:w-8 text-primary shrink-0" />
+                    <Archive className="h-7 w-7 sm:h-8 sm:w-8 text-primary shrink-0" />
                     <div className="space-y-1 shrink-0 hidden sm:block">
                       <h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-headline font-bold text-primary uppercase tracking-tighter leading-none whitespace-nowrap">
                         The Vault
