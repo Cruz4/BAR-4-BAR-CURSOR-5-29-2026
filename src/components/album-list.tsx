@@ -559,6 +559,137 @@ const VinylRecord = ({ album, tierLocked = false }: { album: Album; tierLocked?:
     </Link>
 );
 
+function VaultHeaderToolbar({
+  sortBy,
+  setSortBy,
+  vaultFilter,
+  setVaultFilter,
+  setCreateItemType,
+  hasProWorkflow,
+  fileInputRef,
+  onExport,
+  compact = false,
+}: {
+  sortBy: VaultSort;
+  setSortBy: (value: VaultSort) => void;
+  vaultFilter: LooseTrackFilter;
+  setVaultFilter: (value: LooseTrackFilter) => void;
+  setCreateItemType: (value: 'Album' | 'Track') => void;
+  hasProWorkflow: boolean;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  onExport: () => void;
+  compact?: boolean;
+}) {
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            title={`Sort: ${vaultSortLabels[sortBy]}`}
+            className={cn(
+              'h-9 sm:h-10 bg-card/95 border-border rounded-xl gap-1.5 sm:gap-2 font-bold text-[10px] uppercase tracking-widest shrink-0 whitespace-nowrap',
+              compact ? 'px-2.5' : 'px-3 lg:px-4'
+            )}
+          >
+            <ArrowUpDown className="h-4 w-4 shrink-0" />
+            Sort
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="bg-card border-border">
+          <DropdownMenuItem onClick={() => setSortBy('newest')} className="text-[10px] font-bold uppercase"><SortDesc className="mr-2 h-4 w-4" /> Newest First</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setSortBy('oldest')} className="text-[10px] font-bold uppercase"><SortAsc className="mr-2 h-4 w-4" /> Oldest First</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setSortBy('last-worked')} className="text-[10px] font-bold uppercase"><Clock className="mr-2 h-4 w-4" /> Last Worked On</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setSortBy('alphabetical')} className="text-[10px] font-bold uppercase"><SortAsc className="mr-2 h-4 w-4" /> Alphabetical</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            title={`Filter: ${vaultLiveFilterLabels[vaultFilter]}`}
+            className={cn(
+              'h-9 sm:h-10 bg-card/95 border-border rounded-xl gap-1.5 sm:gap-2 font-bold text-[10px] uppercase tracking-widest shrink-0 whitespace-nowrap',
+              compact ? 'px-2.5' : 'px-3 lg:px-4'
+            )}
+          >
+            <Filter className="h-4 w-4 shrink-0" />
+            Filter
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="bg-card border-border">
+          {(Object.keys(vaultLiveFilterLabels) as LooseTrackFilter[]).map((key) => (
+            <DropdownMenuItem
+              key={key}
+              onClick={() => setVaultFilter(key)}
+              className={cn(
+                'text-[10px] font-bold uppercase',
+                vaultFilter === key && 'bg-primary/10 text-primary'
+              )}
+            >
+              {vaultLiveFilterLabels[key]}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            size="sm"
+            data-tour="vault-create"
+            className={cn(
+              'h-9 sm:h-10 font-bold shadow-[0_0_25px_rgba(59,130,246,0.3)] bg-primary hover:bg-primary/90 text-white rounded-xl uppercase text-[10px] tracking-widest gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap',
+              compact ? 'px-3' : 'px-4 lg:px-6'
+            )}
+          >
+            <PlusCircle className="h-4 w-4 shrink-0" />
+            {compact ? 'Create' : 'Create New'}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="bg-card border-border w-48">
+          <DropdownMenuItem onClick={() => setCreateItemType('Album')} className="text-[10px] font-bold uppercase">
+            <Music className="mr-2 h-4 w-4" /> Concept Album
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setCreateItemType('Track')} className="text-[10px] font-bold uppercase">
+            <CassetteTape className="mr-2 h-4 w-4" /> Loose Track
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <div className="flex gap-2 shrink-0">
+        {hasProWorkflow ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10 border border-border bg-card/95 rounded-xl" onClick={() => fileInputRef.current?.click()}>
+                <Import className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p className="text-[10px] font-bold">Import Studio Vault</p></TooltipContent>
+          </Tooltip>
+        ) : (
+          <LockedToolbarButton feature="Vault Import" benefit="Merge backup blueprints into your studio." icon={Import} />
+        )}
+        {hasProWorkflow ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10 border border-border bg-card/95 rounded-xl" onClick={onExport}>
+                <Download className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p className="text-[10px] font-bold">Export Studio Vault</p></TooltipContent>
+          </Tooltip>
+        ) : (
+          <LockedToolbarButton feature="Vault Export" benefit="Download your full studio as a portable blueprint." icon={Download} />
+        )}
+      </div>
+    </>
+  );
+}
+
 export function AlbumList() {
   const [createItemType, setCreateItemType] = useState<'Album' | 'Track' | null>(null);
   const { albums, loading, deleteAlbum, deleteTrack, moveTrack, getAlbumById, mergeData, clearVault, isCloudSyncActive } = useContext(DataContext);
@@ -901,121 +1032,63 @@ export function AlbumList() {
 
         <div className="relative z-20 w-full min-w-0 max-w-[100vw] xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,72rem)_minmax(0,1fr)] xl:grid-rows-[auto_auto] xl:items-start">
           <div className="relative min-w-0 w-full xl:col-start-2 xl:row-start-1 px-4 sm:px-6 pt-6">
-            <header className="mb-8 pb-6 border-b border-border" data-tour="vault-header">
-              <div className="flex items-center gap-3 lg:gap-4 min-w-0 w-full">
-                <div className="flex items-center gap-3 shrink-0">
-                  <Waves className="h-8 w-8 text-primary shrink-0" />
-                  <div className="space-y-1 shrink-0 hidden sm:block">
-                    <h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-headline font-bold text-primary uppercase tracking-tighter leading-none whitespace-nowrap">
-                      The Vault
-                    </h1>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-[0.35em] font-bold whitespace-nowrap hidden xl:block">
-                      Professional Project Blueprints
-                    </p>
+            <header className="mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-border" data-tour="vault-header">
+              <div className="flex flex-col gap-2.5 min-w-0 w-full">
+                <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0 w-full">
+                  <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                    <Waves className="h-7 w-7 sm:h-8 sm:w-8 text-primary shrink-0" />
+                    <div className="space-y-1 shrink-0 hidden sm:block">
+                      <h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-headline font-bold text-primary uppercase tracking-tighter leading-none whitespace-nowrap">
+                        The Vault
+                      </h1>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-[0.35em] font-bold whitespace-nowrap hidden xl:block">
+                        Professional Project Blueprints
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="relative group flex-1 min-w-0" data-tour="vault-search">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors pointer-events-none z-10" />
+                    <Input
+                      placeholder='Search Vault... use "" for exact'
+                      className="pl-10 pr-3 h-10 bg-muted border-border focus:border-primary/40 rounded-xl font-code text-xs w-full min-w-0 placeholder:font-code placeholder:text-xs placeholder:tracking-normal"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      title='Search Vault... use "" for exact phrase match'
+                    />
+                    {searchQuery && (
+                      <Button variant="ghost" size="icon" className="absolute right-2 top-1 h-8 w-8 rounded-full" onClick={() => setSearchQuery('')}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="hidden sm:flex items-center gap-2 shrink-0">
+                    <VaultHeaderToolbar
+                      sortBy={sortBy}
+                      setSortBy={setSortBy}
+                      vaultFilter={vaultFilter}
+                      setVaultFilter={setVaultFilter}
+                      setCreateItemType={setCreateItemType}
+                      hasProWorkflow={hasProWorkflow}
+                      fileInputRef={fileInputRef}
+                      onExport={handleExport}
+                    />
                   </div>
                 </div>
 
-                <div className="relative group flex-1 min-w-0" data-tour="vault-search">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors pointer-events-none z-10" />
-                    <Input 
-                        placeholder='Search Vault... use "" for exact' 
-                        className="pl-10 pr-3 h-10 bg-muted border-border focus:border-primary/40 rounded-xl font-code text-xs w-full min-w-0 placeholder:font-code placeholder:text-xs placeholder:tracking-normal"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        title='Search Vault... use "" for exact phrase match'
-                    />
-                    {searchQuery && <Button variant="ghost" size="icon" className="absolute right-2 top-1 h-8 w-8 rounded-full" onClick={() => setSearchQuery('')}><X className="h-4 w-4" /></Button>}
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              title={`Sort: ${vaultSortLabels[sortBy]}`}
-                              className="h-10 px-3 lg:px-4 bg-card/95 border-border rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest shrink-0 whitespace-nowrap"
-                            >
-                                <ArrowUpDown className="h-4 w-4 shrink-0" /> Sort
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-card border-border">
-                            <DropdownMenuItem onClick={() => setSortBy('newest')} className="text-[10px] font-bold uppercase"><SortDesc className="mr-2 h-4 w-4" /> Newest First</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setSortBy('oldest')} className="text-[10px] font-bold uppercase"><SortAsc className="mr-2 h-4 w-4" /> Oldest First</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setSortBy('last-worked')} className="text-[10px] font-bold uppercase"><Clock className="mr-2 h-4 w-4" /> Last Worked On</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setSortBy('alphabetical')} className="text-[10px] font-bold uppercase"><SortAsc className="mr-2 h-4 w-4" /> Alphabetical</DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              title={`Filter: ${vaultLiveFilterLabels[vaultFilter]}`}
-                              className="h-10 px-3 lg:px-4 bg-card/95 border-border rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest shrink-0 whitespace-nowrap"
-                            >
-                                <Filter className="h-4 w-4 shrink-0" /> Filter
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-card border-border">
-                            {(Object.keys(vaultLiveFilterLabels) as LooseTrackFilter[]).map((key) => (
-                              <DropdownMenuItem
-                                key={key}
-                                onClick={() => setVaultFilter(key)}
-                                className={cn(
-                                  'text-[10px] font-bold uppercase',
-                                  vaultFilter === key && 'bg-primary/10 text-primary'
-                                )}
-                              >
-                                {vaultLiveFilterLabels[key]}
-                              </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button size="sm" data-tour="vault-create" className="h-10 px-4 lg:px-6 font-bold shadow-[0_0_25px_rgba(59,130,246,0.3)] bg-primary hover:bg-primary/90 text-white rounded-xl uppercase text-[10px] tracking-widest gap-2 shrink-0 whitespace-nowrap">
-                                <PlusCircle className="h-4 w-4 shrink-0" /> Create New
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-card border-border w-48">
-                            <DropdownMenuItem onClick={() => setCreateItemType('Album')} className="text-[10px] font-bold uppercase">
-                                <Music className="mr-2 h-4 w-4" /> Concept Album
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setCreateItemType('Track')} className="text-[10px] font-bold uppercase">
-                                <CassetteTape className="mr-2 h-4 w-4" /> Loose Track
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    
-                    <div className="flex gap-2 shrink-0">
-                        {hasProWorkflow ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-10 w-10 border border-border bg-card/95 rounded-xl" onClick={() => fileInputRef.current?.click()}>
-                                <Import className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p className="text-[10px] font-bold">Import Studio Vault</p></TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          <LockedToolbarButton feature="Vault Import" benefit="Merge backup blueprints into your studio." icon={Import} />
-                        )}
-                        {hasProWorkflow ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-10 w-10 border border-border bg-card/95 rounded-xl" onClick={handleExport}>
-                                <Download className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p className="text-[10px] font-bold">Export Studio Vault</p></TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          <LockedToolbarButton feature="Vault Export" benefit="Download your full studio as a portable blueprint." icon={Download} />
-                        )}
-                    </div>
+                <div className="flex sm:hidden items-center gap-2 min-w-0 w-full overflow-x-auto studio-scrollbar pb-0.5">
+                  <VaultHeaderToolbar
+                    compact
+                    sortBy={sortBy}
+                    setSortBy={setSortBy}
+                    vaultFilter={vaultFilter}
+                    setVaultFilter={setVaultFilter}
+                    setCreateItemType={setCreateItemType}
+                    hasProWorkflow={hasProWorkflow}
+                    fileInputRef={fileInputRef}
+                    onExport={handleExport}
+                  />
                 </div>
               </div>
             </header>

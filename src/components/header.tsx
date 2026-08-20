@@ -145,7 +145,7 @@ export function Header() {
             </div>
 
             <div className="relative z-10 flex h-14 items-center justify-between gap-1 min-w-0 pointer-events-none [&_button]:pointer-events-auto [&_a]:pointer-events-auto">
-            <div className="flex items-center justify-start gap-1 sm:gap-2 min-w-0 flex-1 basis-0 max-w-[58%] sm:max-w-[62%] md:max-w-none pointer-events-none [&>*]:pointer-events-auto">
+            <div className="flex items-center justify-start gap-1 sm:gap-2 min-w-0 flex-1 basis-0 max-w-[52%] sm:max-w-[58%] md:max-w-none pointer-events-none [&>*]:pointer-events-auto">
                 {albumId && trackId && (
                   <Button 
                     variant="ghost" 
@@ -157,7 +157,14 @@ export function Header() {
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
                 )}
-                <BrandLockup variant="app" className="min-w-0 flex-1 md:hidden max-w-full overflow-hidden" />
+                {!loading && user && isLyricSheet ? (
+                  <StudioThemeControls className="md:hidden shrink-0" />
+                ) : null}
+                <BrandLockup
+                  variant="app"
+                  compact={isLyricSheet}
+                  className="min-w-0 flex-1 md:hidden max-w-full overflow-hidden"
+                />
                 {albumId && trackId && (
                   <Button 
                     variant="ghost" 
@@ -176,7 +183,7 @@ export function Header() {
                 </div>
             </div>
 
-          <nav className="flex items-center justify-end gap-0.5 sm:gap-1 md:gap-2 min-w-0 flex-1 basis-0 max-w-[42%] sm:max-w-[38%] md:max-w-none shrink-0 pointer-events-none [&>*]:pointer-events-auto">
+          <nav className="flex items-center justify-end gap-0.5 sm:gap-1 md:gap-2 min-w-0 flex-1 basis-0 max-w-[48%] sm:max-w-[42%] md:max-w-none shrink-0 pointer-events-none [&>*]:pointer-events-auto">
             <TooltipProvider>
             {!loading && !user && isGuestTry && (
               <>
@@ -211,7 +218,7 @@ export function Header() {
             )}
             {!loading && user && (
               <>
-                {isLyricSheet ? <StudioThemeControls /> : null}
+                {isLyricSheet ? <StudioThemeControls className="hidden md:inline-flex shrink-0" /> : null}
                 {SCENE_HOME_ENABLED && (
                   <Tooltip>
                     <TooltipTrigger asChild>

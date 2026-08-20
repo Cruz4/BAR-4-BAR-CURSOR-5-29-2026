@@ -11,6 +11,8 @@ export const BRAND_HOME_HREF = '/';
 
 type BrandLockupProps = {
   variant?: 'app' | 'marketing';
+  /** Lyrics sheet phone nav — logo mark only, no wordmark overlap. */
+  compact?: boolean;
   className?: string;
   /** Defaults to the shared brand home (`/`). */
   linkHref?: string;
@@ -28,6 +30,7 @@ function scrollPageTop() {
 
 export function BrandLockup({
   variant = 'app',
+  compact = false,
   className,
   linkHref = BRAND_HOME_HREF,
   titleTag = 'span',
@@ -53,7 +56,7 @@ export function BrandLockup({
       <div
         className={cn(
           'min-w-0 flex flex-col items-center text-center',
-          isMarketing ? 'hidden sm:flex' : 'flex'
+          compact ? 'hidden sm:flex' : isMarketing ? 'hidden sm:flex' : 'flex'
         )}
       >
         <TitleTag

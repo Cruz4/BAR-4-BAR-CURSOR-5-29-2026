@@ -2156,11 +2156,11 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
         {collabUserId && !isGuestTryMode ? (
           <SheetMsgsDock isMinimized={isMinimized} friendships={collabFriendships} />
         ) : null}
-      <div data-tour="bar-workstation" className={cn("bg-card border-t shadow-[0_-10px_40px_rgba(0,0,0,0.5)] shrink-0 z-[40] relative w-full min-w-0", isMinimized ? "h-10 overflow-hidden" : "min-h-[124px] max-md:max-h-[38dvh] max-md:overflow-y-auto max-md:studio-scrollbar")}>
+      <div data-tour="bar-workstation" className={cn("bg-card border-t shadow-[0_-10px_40px_rgba(0,0,0,0.5)] shrink-0 z-[40] relative w-full min-w-0", isMinimized ? "h-10 overflow-hidden" : "max-md:h-auto md:min-h-[124px] max-md:max-h-[min(50dvh,100%)] max-md:overflow-y-auto max-md:studio-scrollbar")}>
         <div
           className={cn(
             'w-full min-w-0 h-full px-2 md:px-4 lg:px-6 flex flex-col',
-            isMinimized ? 'justify-center py-0 overflow-hidden' : 'justify-start pt-0.5 pb-2.5 gap-0.5'
+            isMinimized ? 'justify-center py-0 overflow-hidden' : 'justify-start max-md:py-1 md:pt-0.5 md:pb-2.5 max-md:gap-0 md:gap-0.5'
           )}
         >
             <div
@@ -2168,7 +2168,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                 'min-w-0 w-full',
                 isMinimized
                   ? 'flex flex-row items-center justify-between gap-2 h-full'
-                  : 'flex flex-col gap-1.5 md:flex-row md:items-center md:justify-between shrink-0 min-h-[28px] py-0.5 border-b border-white/5'
+                  : 'flex flex-col gap-1 md:flex-row md:items-center md:justify-between shrink-0 max-md:min-h-0 md:min-h-[28px] max-md:py-0 md:py-0.5 border-b border-white/5'
               )}
             >
                 <div className="flex items-center gap-1.5 md:gap-2 min-w-0 overflow-hidden flex-1">
@@ -2236,11 +2236,11 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                     </Hint>
                 </div>
                 {!isMinimized && (
-                  <span className="sm:hidden text-muted-foreground font-code text-[8px] font-bold tracking-widest uppercase leading-none -mt-0.5">{activeBarLabel}</span>
+                  <span className="sm:hidden text-muted-foreground font-code text-[8px] font-bold tracking-widest uppercase leading-none">{activeBarLabel}</span>
                 )}
             </div>
             {!isMinimized && (
-                <div className="flex max-md:flex-col md:flex-row md:items-center gap-2 mt-0.5 min-w-0 flex-1">
+                <div className="flex max-md:flex-col md:flex-row md:items-center gap-1.5 md:gap-2 max-md:mt-0 md:mt-0.5 min-w-0 max-md:flex-none md:flex-1">
                     {generationOptions ? (
                         <div className="flex-grow flex max-md:flex-col md:flex-row gap-2 animate-in fade-in slide-in-from-bottom-4 min-w-0 py-0.5 w-full">
                             {generationOptions.map((opt: any, i: number) => (
