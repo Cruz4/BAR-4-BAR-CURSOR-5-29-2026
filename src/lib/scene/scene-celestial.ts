@@ -6,10 +6,6 @@
 import * as SunCalc from 'suncalc';
 import { cloudIntensity, type SceneSkyPhase, type SceneWeather } from '@/lib/scene/scene-sky';
 
-const LUNAR_MONTH_DAYS = 29.530588853;
-/** Known new moon (UTC). */
-const KNOWN_NEW_MOON_MS = Date.UTC(2000, 0, 6, 18, 14, 0);
-
 export type MoonPhaseName =
   | 'new'
   | 'waxing_crescent'
@@ -156,10 +152,9 @@ function mdToDay(md: string): number {
 }
 
 export function moonPhaseAt(now: Date = new Date()): MoonPhase {
-  const days = (now.getTime() - KNOWN_NEW_MOON_MS) / 86400000;
-  const age = ((days % LUNAR_MONTH_DAYS) + LUNAR_MONTH_DAYS) % LUNAR_MONTH_DAYS;
-  const cycle = age / LUNAR_MONTH_DAYS;
-  const illumination = (1 - Math.cos(2 * Math.PI * cycle)) / 2;
+  const info = SunCalc.getMoonIllumination(now);
+  const cycle = ((info.phase % 1) + 1) % 1;
+  const illumination = Math.min(1, Math.max(0, info.fraction));
   const waxing = cycle < 0.5;
   let name: MoonPhaseName = 'new';
   if (cycle < 0.03 || cycle >= 0.97) name = 'new';
@@ -226,18 +221,22 @@ export type CelestialScreenPosition = {
   altitudeDeg: number;
 };
 
+/** Degrees used to park the moon in the upper sky after it has set. */
+const MOON_REST_ALTITUDE_DEG = 26;
+
 /**
  * Map suncalc azimuth/altitude to Scene skyline screen coords.
- * Azimuth is radians from south with west positive (suncalc convention).
+ * suncalc v2 returns both in degrees (south → west positive azimuth).
  */
 export function celestialToScreenPosition(
-  azimuthRad: number,
-  altitudeRad: number
+  azimuthDeg: number,
+  altitudeDeg: number
 ): CelestialScreenPosition {
-  const altitudeDeg = (altitudeRad * 180) / Math.PI;
+  const azimuthRad = (azimuthDeg * Math.PI) / 180;
   const aboveHorizon = altitudeDeg > -0.35;
   const leftPct = Math.min(94, Math.max(6, 50 + 50 * Math.sin(azimuthRad)));
-  const topPct = Math.min(58, Math.max(8, 56 - altitudeDeg * 1.08));
+  const displayAlt = Math.max(altitudeDeg, 2);
+  const topPct = Math.min(58, Math.max(8, 56 - displayAlt * 1.08));
   return { leftPct, topPct, aboveHorizon, altitudeDeg };
 }
 
@@ -256,23 +255,21 @@ export function moonScreenPosition(
   lon: number
 ): CelestialScreenPosition {
   const { azimuth, altitude } = SunCalc.getMoonPosition(now, lat, lon);
-  return celestialToScreenPosition(azimuth, altitude);
+  const pos = celestialToScreenPosition(azimuth, altitude);
+  if (pos.aboveHorizon) return pos;
+  // Keep tonight's moon in the sky after moonset so The Scene isn't empty.
+  return celestialToScreenPosition(azimuth, MOON_REST_ALTITUDE_DEG);
 }
 
 export function moonShouldShow(
   phase: SceneSkyPhase,
   weather: SceneWeather,
   moon: MoonPhase,
-  opts?: { now?: Date; lat?: number | null; lon?: number | null }
+  _opts?: { now?: Date; lat?: number | null; lon?: number | null }
 ): boolean {
   if (phase !== 'night' && phase !== 'dusk') return false;
   if (moon.illumination < 0.05) return false;
   if (cloudIntensity(weather) >= 0.92) return false;
-  if (typeof opts?.lat === 'number' && typeof opts?.lon === 'number') {
-    if (!moonScreenPosition(opts.now ?? new Date(), opts.lat, opts.lon).aboveHorizon) {
-      return false;
-    }
-  }
   return true;
 }
 

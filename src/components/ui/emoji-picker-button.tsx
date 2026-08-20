@@ -144,7 +144,7 @@ export function EmojiPickerButton({
           aria-label="Search emoji"
         />
         <div
-          className="max-h-56 overflow-y-auto overscroll-contain pr-1"
+          className="max-h-64 overflow-y-auto overscroll-contain pr-1"
           onWheel={(e) => e.stopPropagation()}
         >
           <div className="space-y-2.5 pr-1">

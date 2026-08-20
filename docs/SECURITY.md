@@ -22,6 +22,8 @@ When changing the master admin email, update `firestore.rules` `isAdmin()` email
 2. `npm run firebase:deploy` (or `npm run deploy:live`) so hosting/API routes update.
 3. Confirm production has Admin SDK credentials (AI + ink must not run in dev-skip mode).
 
+**Outage / break-glass:** [OUTAGE_RUNBOOK.md](./OUTAGE_RUNBOOK.md)
+
 ## Key controls
 
 - User profile bootstrap: privileged fields blocked on Firestore **create** and **update**.

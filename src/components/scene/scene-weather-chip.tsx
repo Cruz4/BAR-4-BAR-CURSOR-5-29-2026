@@ -7,8 +7,6 @@ import { formatSceneTempF, sceneWeatherChipLabel } from '@/lib/scene/scene-sky';
 import {
   activeEclipse,
   activeMeteorShower,
-  moonPhaseAt,
-  moonShouldShow,
 } from '@/lib/scene/scene-celestial';
 
 export function SceneWeatherChip({ className }: { className?: string }) {
@@ -16,11 +14,9 @@ export function SceneWeatherChip({ className }: { className?: string }) {
   const label = sceneWeatherChipLabel(weather, phase);
   const degrees = formatSceneTempF(tempF);
   const place = degrees ? `${city} ${degrees}` : city;
-  const moon = moonPhaseAt();
   const shower = activeMeteorShower();
   const eclipse = activeEclipse(new Date(), lat, lon, phase);
   const extras = [
-    moonShouldShow(phase, weather, moon, { lat, lon }) ? moon.label : null,
     shower && (phase === 'night' || phase === 'dusk') ? shower.name : null,
     eclipse?.label ?? null,
   ].filter(Boolean);

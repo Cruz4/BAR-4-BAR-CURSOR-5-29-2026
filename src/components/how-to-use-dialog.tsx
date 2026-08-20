@@ -146,7 +146,7 @@ const CORE_FAQS = [
     },
     {
       q: "Why does the Scene sky change?",
-      a: "The skyline follows live weather near you — rain, snow, fog, storms — with day/dawn/dusk/night. At night the moon shows its real phase and brightness. Meteor showers and rare eclipses appear when they are actually happening for your sky; shooting stars drift on clear nights. Buildings stay solid silhouettes (not see-through). No location popup. If the browser already allowed location we use that; otherwise a rough city from your IP. NYC only if we cannot tell where you are. Clock-only sky if weather itself is down."
+      a: "The skyline follows live weather near you — rain, snow, fog, storms — with day/dawn/dusk/night. At night the moon uses tonight’s real phase and brightness (hover it to see the name). If the moon has already set, it still sits in the sky with that same illumination. Meteor showers and rare eclipses appear when they are actually happening for your sky; shooting stars drift on clear nights. Buildings stay solid silhouettes (not see-through). No location popup. If the browser already allowed location we use that; otherwise a rough city from your IP. NYC only if we cannot tell where you are. Clock-only sky if weather itself is down."
     },
     {
       q: "What is the difference between Residency and Raw Ink?",

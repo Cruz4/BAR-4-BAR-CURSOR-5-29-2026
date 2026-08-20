@@ -161,6 +161,7 @@ See also: [MOBILE_STORE_GUIDE.md](./MOBILE_STORE_GUIDE.md)
 
 ## Related docs
 
+- [OUTAGE_RUNBOOK.md](./OUTAGE_RUNBOOK.md) — Site down / admin break-glass
 - [MARKETING_QUICKSTART.md](./MARKETING_QUICKSTART.md) — TikTok / social links
 - [PRE_LAUNCH_CHECKLIST.md](./PRE_LAUNCH_CHECKLIST.md) — Launch checklist
 - [CUSTOM_DOMAIN.md](./CUSTOM_DOMAIN.md) — Domain setup

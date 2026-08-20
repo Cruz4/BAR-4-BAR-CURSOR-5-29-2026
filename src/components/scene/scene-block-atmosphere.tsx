@@ -202,25 +202,52 @@ function SceneMoonDisc({
   const r = 22;
   const cx = 28;
   const cy = 28;
+  // Two-circle terminator: 0 = new (shadow centered), 1 = full (shadow fully off-disc).
   const offset = 2 * r * moon.illumination;
   const shadeCx = moon.waxing ? cx - offset : cx + offset;
+  const phaseLabel = eclipsed ? `${moon.label} · lunar eclipse` : moon.label;
+  const [hintOpen, setHintOpen] = useState(false);
+
   return (
-    <svg
-      className={cn('scene-block-moon absolute', eclipsed && 'is-lunar-eclipse')}
-      viewBox="0 0 56 56"
-      style={{ opacity: Math.min(1, 0.28 + glow), ...style }}
-      aria-hidden
+    <div
+      className="scene-block-moon-anchor pointer-events-auto fixed z-[30]"
+      style={style}
+      onMouseEnter={() => setHintOpen(true)}
+      onMouseLeave={() => setHintOpen(false)}
+      onFocus={() => setHintOpen(true)}
+      onBlur={() => setHintOpen(false)}
     >
-      <defs>
-        <mask id={maskId}>
-          <rect width="56" height="56" fill="black" />
-          <circle cx={cx} cy={cy} r={r} fill="white" />
-          <circle cx={shadeCx} cy={cy} r={r} fill="black" />
-        </mask>
-      </defs>
-      <circle cx={cx} cy={cy} r={r} fill={eclipsed ? '#3a140e' : '#0b1020'} opacity="0.45" />
-      <circle cx={cx} cy={cy} r={r} fill={eclipsed ? '#c45c32' : '#f3ead0'} mask={`url(#${maskId})`} />
-    </svg>
+      <button
+        type="button"
+        className={cn(
+          'scene-block-moon relative block h-14 w-14 cursor-default border-0 bg-transparent p-0',
+          eclipsed && 'is-lunar-eclipse'
+        )}
+        style={{ opacity: Math.min(1, 0.55 + glow * 0.5) }}
+        aria-label={phaseLabel}
+        onClick={() => setHintOpen((open) => !open)}
+      >
+        <svg viewBox="0 0 56 56" className="h-full w-full" aria-hidden>
+          <defs>
+            <mask id={maskId}>
+              <rect width="56" height="56" fill="black" />
+              <circle cx={cx} cy={cy} r={r} fill="white" />
+              <circle cx={shadeCx} cy={cy} r={r} fill="black" />
+            </mask>
+          </defs>
+          <circle cx={cx} cy={cy} r={r} fill={eclipsed ? '#3a140e' : '#1a2238'} />
+          <circle cx={cx} cy={cy} r={r} fill={eclipsed ? '#c45c32' : '#f4edd4'} mask={`url(#${maskId})`} />
+        </svg>
+      </button>
+      {hintOpen ? (
+        <span
+          role="tooltip"
+          className="pointer-events-none absolute left-1/2 top-full z-[40] mt-1.5 -translate-x-1/2 whitespace-nowrap rounded px-2 py-0.5 font-sans text-[11px] font-medium leading-tight tracking-normal text-white/85 bg-black/55"
+        >
+          {phaseLabel}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -440,9 +467,8 @@ export function SceneBlockAtmosphere({
       data-phase={phase}
       data-weather={weather}
       data-has-weather={hasWeather ? '1' : '0'}
-      aria-hidden
     >
-      <div className="scene-block-sky absolute inset-0" />
+      <div className="scene-block-sky absolute inset-0" aria-hidden />
 
       {sunVisible && (
         <div
@@ -456,15 +482,6 @@ export function SceneBlockAtmosphere({
           {eclipse?.kind === 'solar' ? <div className="scene-block-sun-bite" /> : null}
         </div>
       )}
-
-      {moonVisible ? (
-        <SceneMoonDisc
-          moon={moon}
-          eclipsed={eclipse?.kind === 'lunar'}
-          glow={glow}
-          style={moonStyle}
-        />
-      ) : null}
 
       {starVisible &&
         STARS.map((star) => (
@@ -579,6 +596,15 @@ export function SceneBlockAtmosphere({
         ))}
       </div>
     </div>
+
+    {moonVisible ? (
+      <SceneMoonDisc
+        moon={moon}
+        eclipsed={eclipse?.kind === 'lunar'}
+        glow={glow}
+        style={moonStyle}
+      />
+    ) : null}
 
     {/* Above feed chrome so the pin is clickable; desktop-only (sm+) on purpose. */}
     {neon && (

@@ -1823,15 +1823,19 @@
   }
 
   /* Real moon — phase via SVG mask; position from live azimuth/altitude. */
-  .scene-block-moon {
+  .scene-block-moon-anchor {
     width: 56px;
     height: 56px;
     transform: translate(-50%, -50%);
-    pointer-events: none;
-    filter: drop-shadow(0 0 18px rgba(236, 228, 196, 0.35));
   }
 
-  .scene-block[data-phase='dusk'] .scene-block-moon {
+  .scene-block-moon {
+    width: 56px;
+    height: 56px;
+    filter: drop-shadow(0 0 22px rgba(236, 228, 196, 0.55));
+  }
+
+  .scene-block[data-phase='dusk'] ~ .scene-block-moon-anchor .scene-block-moon {
     width: 48px;
     height: 48px;
   }
