@@ -31,7 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import { profileFriendsHref, profileHref } from '@/lib/profile/profile-slug';
-import { parseStudioBadge } from '@/lib/studio-tier-chrome';
+import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
 import type { ArtistHomeFeatured, ModuleSize } from '@/lib/profile/modules';
 import { FingerprintSvg } from '@/components/profile/rhyme-fingerprint-svg';
 import { BarBoardView } from '@/components/profile/bar-board-module';
@@ -49,11 +49,13 @@ import {
   createPost,
   deleteGuestbookEntry,
   enrichFriendProfilesWithLiveSlugs,
+  enrichGuestbookEntries,
   fetchFriendships,
   fetchGuestbook,
   fetchPostsByOwner,
   friendProfilesOf,
   resolveCircleFriends,
+  resolvePlaygroundFriends,
   setGuestbookEntry,
   visibleCircleFriends,
   type CircleFriendRow,
@@ -908,17 +910,32 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
 
   useEffect(() => {
     if (playground) {
-      setFriends(
-        playground.map((f) => ({
-          userId: f.userId,
-          name: f.name,
-          slug: f.slug,
-          isLivePublic: Boolean(f.slug),
-        }))
-      );
-      setLoaded(true);
+      let cancelled = false;
       setPage(0);
-      return;
+      setLoaded(false);
+      void (async () => {
+        try {
+          const resolved = await resolvePlaygroundFriends(playground);
+          if (!cancelled) setFriends(resolved);
+        } catch (err) {
+          console.warn('[friends-module] playground enrich failed', err);
+          if (!cancelled) {
+            setFriends(
+              playground.map((f) => ({
+                userId: f.userId,
+                name: f.name,
+                slug: f.slug,
+                isLivePublic: Boolean(f.slug),
+              }))
+            );
+          }
+        } finally {
+          if (!cancelled) setLoaded(true);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
     }
     setPage(0);
     let cancelled = false;
@@ -982,18 +999,19 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
     >
       <div className="flex flex-wrap gap-2">
         {pageFriends.map((friend) => {
+          const chrome = parseStudioBadge(friend.studioBadge) || 'free';
           const chip = (
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 py-1 pl-1 pr-3 text-xs font-bold text-[var(--ph-text,#fff)] transition-colors hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 py-1 pl-1 pr-3 text-xs font-bold transition-colors hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]">
               <ArtistStarAvatar
                 name={friend.name}
                 avatarUrl={friend.avatarUrl}
                 useStarMark={friend.starMarkUseStar}
                 starMarkSeed={friend.starMarkSeed}
-                studioChrome={parseStudioBadge(friend.studioBadge) || 'free'}
+                studioChrome={chrome}
                 size={22}
                 hideInitials
               />
-              {friend.name}
+              <span className={studioNameClass(chrome)}>{friend.name}</span>
             </span>
           );
           return friend.slug ? (
@@ -1067,13 +1085,20 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (playground) {
-      setEntries(playground);
-      return;
-    }
-    fetchGuestbook(ctx.profileUserId)
-      .then(setEntries)
-      .catch(() => undefined);
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const raw = playground ?? (await fetchGuestbook(ctx.profileUserId));
+        const enriched = await enrichGuestbookEntries(raw);
+        if (!cancelled) setEntries(enriched);
+      } catch {
+        if (!cancelled && playground) setEntries(playground);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, [ctx.profileUserId, playground]);
 
   const canSign = !playground && Boolean(user && user.id !== ctx.profileUserId);
@@ -1142,13 +1167,30 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
         </p>
       ) : null}
       <div className="space-y-2.5">
-        {entries.slice(0, 20).map((entry) => (
-          <div key={entry.id} className="flex items-start gap-2 text-sm">
+        {entries.slice(0, 20).map((entry) => {
+          const chrome = parseStudioBadge(entry.studioBadge) || 'free';
+          const authorHref = entry.authorSlug ? profileHref(entry.authorSlug) || undefined : undefined;
+          return (
+          <div key={entry.id} className="flex items-start gap-2.5 text-sm">
+            <ArtistStarAvatar
+              name={entry.authorName}
+              avatarUrl={entry.avatarUrl}
+              useStarMark={entry.starMarkUseStar}
+              starMarkSeed={entry.starMarkSeed}
+              href={authorHref}
+              studioChrome={chrome}
+              size={22}
+              hideInitials
+              className="mt-0.5 shrink-0"
+            />
             <div className="min-w-0 flex-1">
               <ArtistHomeLink
                 userId={entry.authorId}
                 slug={entry.authorSlug}
-                className="mr-2 text-[11px] font-bold uppercase tracking-wider text-[var(--ph-accent2,#fbbf24)] hover:underline"
+                className={cn(
+                  'mr-2 text-[11px] font-bold uppercase tracking-wider hover:underline',
+                  studioNameClass(chrome)
+                )}
               >
                 {entry.authorName}
               </ArtistHomeLink>
@@ -1168,7 +1210,8 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
               </button>
             )}
           </div>
-        ))}
+          );
+        })}
         {entries.length === 0 && (
           <p className="py-4 text-center text-sm text-[var(--ph-muted,rgba(255,255,255,0.55))]">
             The book is open — first line is free.

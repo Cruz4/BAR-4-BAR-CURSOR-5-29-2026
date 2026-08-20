@@ -301,8 +301,13 @@ export function ArtistHome({
           </div>
         </div>
 
-        {/* Hero — original scale */}
-        <section className="mt-8 grid gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 lg:grid-cols-12 lg:items-end">
+        {/* Hero — original scale; preview/sandbox centers shorter copy with the photo column */}
+        <section
+          className={cn(
+            'mt-8 grid gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 lg:grid-cols-12',
+            previewMode ? 'lg:items-center' : 'lg:items-end'
+          )}
+        >
           <div className="space-y-5 lg:col-span-7">
             {config.featured.tagline && (
               <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-[var(--ph-accent)]">
@@ -437,11 +442,11 @@ export function ArtistHome({
                   </div>
                 ))}
               </div>
-              {!previewMode || config.featured.contact ? (
+              {(!previewMode || config.featured.contact) && (
                 <div
                   className={cn(
                     'grid gap-2',
-                    config.featured.contact ? 'grid-cols-2' : 'grid-cols-1'
+                    !previewMode && config.featured.contact ? 'grid-cols-2' : 'grid-cols-1'
                   )}
                 >
                   {!previewMode ? (
@@ -452,9 +457,7 @@ export function ArtistHome({
                       <Repeat2 className="h-3.5 w-3.5 shrink-0" />
                       Reverbs
                     </Link>
-                  ) : (
-                    <div />
-                  )}
+                  ) : null}
                   {config.featured.contact ? (
                     <ProfileContactChip
                       artistId={profile.userId}
@@ -467,7 +470,7 @@ export function ArtistHome({
                     />
                   ) : null}
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
 

@@ -125,6 +125,11 @@ export type GuestbookEntry = {
   authorSlug?: string;
   text: string;
   createdAt: string;
+  /** Client enrichment — live public avatar + Pro chrome (not stored on the doc). */
+  avatarUrl?: string;
+  starMarkUseStar?: boolean;
+  starMarkSeed?: number;
+  studioBadge?: 'pro' | 'free';
 };
 
 const MAX_POST_TEXT = 1000;
@@ -1630,6 +1635,45 @@ export async function resolveCircleFriends(
   });
 }
 
+/** Guest Pressing sandbox — live public badges (photo, feed star, Pro ring) by slug. */
+export async function resolvePlaygroundFriends(
+  chips: Array<{ userId: string; name: string; slug?: string }>
+): Promise<CircleFriendRow[]> {
+  if (!chips.length) return [];
+  const resolved = await resolveCircleFriends(chips);
+  return Promise.all(
+    chips.map(async (seed, i) => {
+      const row = resolved[i];
+      const slug = row.slug || seed.slug;
+      let merged: CircleFriendRow = {
+        userId: seed.userId,
+        name: (row.name || seed.name || 'Artist').trim() || 'Artist',
+        slug,
+        avatarUrl: row.avatarUrl,
+        starMarkUseStar: row.starMarkUseStar,
+        starMarkSeed: row.starMarkSeed,
+        isLivePublic: Boolean(slug),
+        studioBadge: row.studioBadge,
+      };
+      if (!slug) return merged;
+      try {
+        const meta = await fetchPublicArtistAvatarMeta(slug);
+        if (!meta) return merged;
+        merged = {
+          ...merged,
+          avatarUrl: meta.starMarkUseStar ? undefined : meta.avatarUrl ?? merged.avatarUrl,
+          starMarkUseStar: meta.starMarkUseStar ?? merged.starMarkUseStar,
+          starMarkSeed: meta.starMarkSeed ?? merged.starMarkSeed,
+          studioBadge: meta.studioBadge ?? merged.studioBadge,
+        };
+      } catch {
+        /* keep resolved row */
+      }
+      return merged;
+    })
+  );
+}
+
 /** Strangers / Artist Home lists: live-public only. Personal `/friends` can pass true for offline. */
 export function visibleCircleFriends(
   rows: CircleFriendRow[],
@@ -1752,6 +1796,29 @@ export async function setGuestbookEntry(
   await setDoc(doc(db, 'guestbooks', profileOwnerId, 'entries', id), data);
   trackSocialEvent('profile_guestbook_signed');
   return entry;
+}
+
+/** Live avatar + Pro name chrome for guestbook author chips. */
+export async function enrichGuestbookEntries(entries: GuestbookEntry[]): Promise<GuestbookEntry[]> {
+  if (!entries.length) return [];
+  const chips = entries.map((e) => ({
+    userId: e.authorId,
+    name: e.authorName,
+    slug: e.authorSlug,
+  }));
+  const resolved = await resolvePlaygroundFriends(chips);
+  return entries.map((e, i) => {
+    const row = resolved[i];
+    return {
+      ...e,
+      authorName: row.name,
+      authorSlug: row.slug ?? e.authorSlug,
+      avatarUrl: row.avatarUrl,
+      starMarkUseStar: row.starMarkUseStar,
+      starMarkSeed: row.starMarkSeed,
+      studioBadge: row.studioBadge,
+    };
+  });
 }
 
 export async function fetchGuestbook(profileOwnerId: string, max = 30): Promise<GuestbookEntry[]> {
