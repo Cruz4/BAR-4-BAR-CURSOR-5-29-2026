@@ -89,6 +89,7 @@ import { TierPriceSummary } from '@/components/tier-price-summary';
 import { PwaInstallGuideCard } from '@/components/pwa-install-prompt';
 import { StudioThemeSettingsCard } from '@/components/studio-theme-controls';
 import { NotificationSettingsCard } from '@/components/activity/notification-settings-card';
+import { DeviceSessionsCard } from '@/components/security/device-sessions-card';
 import { ReferAFriendSection } from '@/components/refer-a-friend-section';
 import { DeleteAccountDialog } from '@/components/delete-account-dialog';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
@@ -689,6 +690,7 @@ function UsagePageContent() {
                 <PwaInstallGuideCard />
                 <StudioThemeSettingsCard />
                 <NotificationSettingsCard />
+                <DeviceSessionsCard />
                 {firstDropsOn && (
                 <Card className="border-emerald-500/20">
                     <CardHeader className="pb-4">

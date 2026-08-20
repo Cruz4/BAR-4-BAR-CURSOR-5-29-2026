@@ -262,6 +262,16 @@ service cloud.firestore {
         allow read, write: if false;
       }
 
+      // Server-owned signed-in device registry; clients use the authenticated session API.
+      match /authSessions/{sessionId} {
+        allow read, write: if false;
+      }
+
+      // Global session revocation cutoff used by the server session heartbeat.
+      match /security/{docId} {
+        allow read, write: if false;
+      }
+
       // Upload tickets + daily quotas — Admin SDK / ticket API only
       match /uploadTickets/{ticketId} {
         allow read, write: if false;

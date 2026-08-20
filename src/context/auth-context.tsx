@@ -31,6 +31,12 @@ import { isMasterAdminEmail } from '@/lib/master-admin';
 import { resolvePostLoginPath } from '@/lib/post-login-redirect';
 import { isGuestTryPath, isGuestTrySheetEnabled } from '@/lib/guest-try';
 import { vaultHref } from '@/lib/scene-home';
+import {
+  clearCurrentDeviceSessionIdentity,
+  DeviceSessionEndedError,
+  touchCurrentDeviceSession,
+} from '@/lib/device-sessions-client';
+import { DEVICE_SESSION_HEARTBEAT_MS } from '@/lib/device-sessions';
 
 interface AuthContextType {
   user: User | null;
@@ -318,6 +324,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setOfflineAuth(false);
     });
   }, []);
+
+  useEffect(() => {
+    if (!user?.id || !authReady || loading || offlineAuth) return;
+    let disposed = false;
+    let checking = false;
+
+    const checkCurrentDevice = async () => {
+      if (checking || disposed || isBrowserOffline()) return;
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser || firebaseUser.uid !== user.id) return;
+      checking = true;
+      try {
+        await touchCurrentDeviceSession(firebaseUser);
+      } catch (error) {
+        if (error instanceof DeviceSessionEndedError) {
+          clearCurrentDeviceSessionIdentity();
+          await signOut(auth).catch(() => undefined);
+          if (!disposed) {
+            setUser(null);
+            setAuthReady(false);
+            router.replace('/login?error=session-ended');
+          }
+        } else {
+          console.warn('Device session check failed:', error);
+        }
+      } finally {
+        checking = false;
+      }
+    };
+
+    void checkCurrentDevice();
+    const timer = window.setInterval(checkCurrentDevice, DEVICE_SESSION_HEARTBEAT_MS);
+    const onFocus = () => void checkCurrentDevice();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') void checkCurrentDevice();
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [user?.id, authReady, loading, offlineAuth, router]);
 
   useEffect(() => {
     if (loading) return;

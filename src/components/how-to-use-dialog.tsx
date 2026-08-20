@@ -484,7 +484,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl w-[calc(100vw-1rem)] sm:w-full h-[min(90dvh,100vh)] max-h-[90dvh] flex flex-col p-0 overflow-hidden bg-background">
-        <DialogHeader className="p-4 sm:p-8 pb-4 border-b bg-background/80 backdrop-blur-md shrink-0">
+        <DialogHeader className="relative z-[90] p-4 sm:p-8 pb-4 border-b bg-background/80 backdrop-blur-md shrink-0">
             <DialogTitle className="font-headline text-2xl sm:text-4xl flex items-center gap-3 font-bold">
                 <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-primary shrink-0" /> Studio Master Manual
             </DialogTitle>
@@ -517,7 +517,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </Button>
               ) : null}
               {searchQuery.trim().length >= 2 ? (
-                <div className="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-[80] max-h-72 overflow-y-auto rounded-xl border border-border bg-popover p-1.5 shadow-2xl">
+                <div className="isolate absolute left-0 right-0 top-[calc(100%+0.35rem)] z-[100] max-h-72 overflow-y-auto rounded-xl border border-border bg-popover p-1.5 text-popover-foreground shadow-2xl">
                   {searchResults.length ? searchResults.map((item) => (
                     <button
                       key={`${item.tab}-${item.targetId}`}

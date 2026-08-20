@@ -7,6 +7,8 @@ This is the current companion to the historical [July app audit](./app-audit-rep
 
 ## Verified protections
 
+- Settings includes a server-owned signed-in device registry. Each authenticated browser checks in at least once per minute, users can revoke individual or other listed devices, and **Sign out everywhere** applies a server revocation cutoff and revokes all Firebase refresh tokens. Browser session and security-control documents are inaccessible to Firestore clients.
+
 | Area | Current status |
 |------|----------------|
 | Stripe catalog | Checkout resolves server-owned price keys and also applies the Pro gate to raw resolved price IDs. |

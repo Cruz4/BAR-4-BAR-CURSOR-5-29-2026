@@ -58,6 +58,10 @@ import {
 } from '@/lib/studio-tier-chrome';
 import { useOptionalDropPlayer } from '@/context/drop-player-context';
 import { TopNavDropMiniPlayer } from '@/components/top-nav-drop-mini-player';
+import {
+  clearCurrentDeviceSessionIdentity,
+  endCurrentDeviceSession,
+} from '@/lib/device-sessions-client';
 
 export function Header() {
   const { user, loading } = useAuth();
@@ -108,6 +112,8 @@ export function Header() {
 
   const handleLogout = async () => {
     try {
+      await endCurrentDeviceSession().catch(() => undefined);
+      clearCurrentDeviceSessionIdentity();
       await signOut(auth);
       router.push('/login');
     } catch (error) {

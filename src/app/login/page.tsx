@@ -107,6 +107,21 @@ function LoginForm() {
   const isTikTokRef = marketingRef === 'tiktok';
 
   useEffect(() => {
+    const authError = searchParams.get('error');
+    if (authError !== 'session-ended' && authError !== 'signed-out-everywhere') return;
+    toast({
+      title: authError === 'signed-out-everywhere' ? 'Signed out everywhere' : 'Device signed out',
+      description:
+        authError === 'signed-out-everywhere'
+          ? 'Every BA device must sign in again.'
+          : 'This device was removed from your signed-in devices. Sign in again if this was you.',
+    });
+    const url = new URL(window.location.href);
+    url.searchParams.delete('error');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  }, [searchParams, toast]);
+
+  useEffect(() => {
     if (proCheckoutIntent || dropBuyIntent) setAuthMode('signup');
   }, [proCheckoutIntent, dropBuyIntent]);
 
