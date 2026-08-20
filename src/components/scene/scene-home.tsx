@@ -164,7 +164,7 @@ function SceneComposer({
     const el = textRef.current;
     if (!el) return;
     el.style.height = '0px';
-    el.style.height = `${Math.max(52, el.scrollHeight)}px`;
+    el.style.height = `${Math.max(56, el.scrollHeight)}px`;
   }, [text]);
 
   if (!user) return null;
@@ -197,7 +197,7 @@ function SceneComposer({
   };
 
   return (
-    <Card className="border-border/70 bg-card/60 px-3 py-2" data-tour="scene-composer">
+    <div data-tour="scene-composer">
       <Textarea
         ref={textRef}
         value={text}
@@ -212,9 +212,9 @@ function SceneComposer({
           });
         }}
         placeholder="Write a post for your wall — or paste a photo..."
-        rows={1}
+        rows={2}
         maxLength={1000}
-        className="min-h-[2.5rem] overflow-hidden resize-none border-border/60 bg-background/60 text-sm leading-snug"
+        className="min-h-[3.5rem] overflow-hidden resize-none border-border/60 bg-background/60 text-sm leading-snug"
       />
       {showEmbed && (
         <Input
@@ -259,7 +259,7 @@ function SceneComposer({
           <Send className="h-3 w-3" /> Post
         </Button>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -896,13 +896,14 @@ export function SceneHome() {
             </section>
           )}
 
-          <SceneComposer profileSlug={summary.profileSlug} onPosted={onPosted} />
+          {/* Combined Your Booth + wall composer. Revert this commit to split them. */}
+          <SceneBoothCard>
+            <SceneComposer profileSlug={summary.profileSlug} onPosted={onPosted} />
+          </SceneBoothCard>
 
           <SceneBoothMemoryCard />
 
           <SceneLivePrompts />
-
-          <SceneBoothCard />
 
           <SceneLiveDropsStrip />
 

@@ -22,7 +22,13 @@ import { profileHref } from '@/lib/profile/profile-slug';
 import { studioChromeFromUser } from '@/lib/studio-tier-chrome';
 import { SCENE_BOOTH_ID } from '@/lib/scene-home';
 
-export function SceneBoothCard({ className }: { className?: string }) {
+export function SceneBoothCard({
+  className,
+  children,
+}: {
+  className?: string;
+  children?: React.ReactNode;
+}) {
   const { user } = useAuth();
   const { summary, rankLabel, loading } = useGamification();
   const { toast } = useToast();
@@ -58,7 +64,7 @@ export function SceneBoothCard({ className }: { className?: string }) {
         title: next ? 'Your Artist Home is live' : 'Artist Home set to private',
         description: next
           ? 'Friends and the Discover stream can find your page now.'
-          : 'Your page is off the web until you flip it back on.',
+          : 'Nobody can open your public page — you can still post and write.',
       });
     } catch {
       setPublicProfile(!next);
@@ -72,7 +78,7 @@ export function SceneBoothCard({ className }: { className?: string }) {
     <Card
       id={SCENE_BOOTH_ID}
       className={cn(
-        'relative scroll-mt-[5.5rem] overflow-hidden border p-4 sm:p-5 transition-all',
+        'relative scroll-mt-[5.5rem] overflow-hidden border px-3 py-2.5 transition-all sm:px-3.5',
         isLive
           ? 'border-sky-500/35 bg-gradient-to-br from-sky-500/10 via-card/90 to-card/70'
           : 'border-border/70 bg-card/60',
@@ -80,7 +86,7 @@ export function SceneBoothCard({ className }: { className?: string }) {
       )}
       data-tour="scene-booth"
     >
-      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+      <div className="flex items-center gap-3">
         <ArtistStarAvatar
           name={user.displayName || 'Artist'}
           useStarMark={useStarMark}
@@ -105,7 +111,7 @@ export function SceneBoothCard({ className }: { className?: string }) {
           <p className="font-code text-[9px] font-bold uppercase tracking-[0.28em] text-muted-foreground/70">
             Your booth
           </p>
-          <p className="truncate font-headline text-base font-bold uppercase tracking-tight">
+          <p className="truncate font-headline text-base font-bold uppercase tracking-tight leading-tight">
             {user.displayName || 'Artist'}
           </p>
           <p
@@ -127,34 +133,34 @@ export function SceneBoothCard({ className }: { className?: string }) {
         </label>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2 border-t border-border/50 pt-3">
-        {isLive && homeHref ? (
-          <>
-            <Button size="sm" className="h-9 gap-1.5 font-bold uppercase" asChild>
-              <Link href={homeHref}>
-                <ExternalLink className="h-3.5 w-3.5" /> View my page
-              </Link>
-            </Button>
-            <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
-              <Link href="/profile/customize">
-                <Settings2 className="h-3.5 w-3.5" /> Edit Public Page
-              </Link>
-            </Button>
-          </>
-        ) : (
-          <>
-            <p className="w-full text-xs leading-snug text-muted-foreground">
-              Your Artist Home is free — skin, The Board, wall, friends. Lyrics are never
-              published. Flip it live and start decorating.
-            </p>
-            <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
-              <Link href="/profile/customize">
-                <Settings2 className="h-3.5 w-3.5" /> Set up my page
-              </Link>
-            </Button>
-          </>
-        )}
-      </div>
+      {!isLive ? (
+        <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">
+          Nobody can open your public profile until you go live. You can still{' '}
+          <span className="text-foreground/85">post to your wall</span>
+          {' '}(friends see it), write in Vault, and{' '}
+          <Link href="/profile/customize" className="font-semibold text-sky-300 hover:underline">
+            set up your page
+          </Link>
+          . Lyrics stay private.
+        </p>
+      ) : null}
+
+      {children ? <div className="mt-2">{children}</div> : null}
+
+      {isLive && homeHref ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Button size="sm" className="h-9 gap-1.5 font-bold uppercase" asChild>
+            <Link href={homeHref}>
+              <ExternalLink className="h-3.5 w-3.5" /> View my page
+            </Link>
+          </Button>
+          <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
+            <Link href="/profile/customize">
+              <Settings2 className="h-3.5 w-3.5" /> Edit Public Page
+            </Link>
+          </Button>
+        </div>
+      ) : null}
     </Card>
   );
 }
