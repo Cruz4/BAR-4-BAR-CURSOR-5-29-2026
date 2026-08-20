@@ -5,7 +5,7 @@
  * Replies live on the shared house cast; studio admins can delete any reply.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Radio, Trash2 } from 'lucide-react';
@@ -42,6 +42,14 @@ function formatEchoStamp(iso: string): string {
   const d = parseUserDate(iso);
   if (!d) return '';
   return `${format(d, 'h:mm a')} · ${format(d, 'MMM d, yyyy')}`;
+}
+
+function sortByMicScore(echoes: LockEcho[]): LockEcho[] {
+  return [...echoes].sort((a, b) => {
+    const likes = (b.likeCount ?? 0) - (a.likeCount ?? 0);
+    if (likes !== 0) return likes;
+    return (b.createdAt || '').localeCompare(a.createdAt || '');
+  });
 }
 
 export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Props) {
@@ -90,6 +98,8 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
     if (!open || !lock) return;
     markHouseBarSeen(lock.seedBar || seedBar, lock.echoCount);
   }, [open, lock, seedBar]);
+
+  const rankedEchoes = useMemo(() => sortByMicScore(echoes), [echoes]);
 
   const canDelete = (echo: LockEcho) => {
     if (!user) return false;
@@ -164,12 +174,12 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto border-fuchsia-500/30 bg-card sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 font-headline text-lg uppercase tracking-tight">
+        <DialogHeader className="text-center sm:text-center">
+          <DialogTitle className="flex items-center justify-center gap-2 text-center font-headline text-lg uppercase tracking-tight">
             <Radio className="h-4 w-4 text-fuchsia-400" />
             {title || 'House bar of the day'}
           </DialogTitle>
-          <DialogDescription className="text-left text-sm text-muted-foreground">
+          <DialogDescription className="text-center text-sm text-muted-foreground">
             Write the next line here on The Scene. Everyone answers the same opening bar.
           </DialogDescription>
         </DialogHeader>
@@ -212,23 +222,27 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
 
         <div className="space-y-2 border-t border-border/60 pt-3">
           <p className="font-code text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
-            Recent replies{lock ? ` · ${lock.echoCount}` : ''}
+            Top by mic{lock ? ` · ${lock.echoCount} replies` : ''}
           </p>
           {loading ? (
             <p className="text-xs text-muted-foreground">Loading…</p>
-          ) : echoes.length === 0 ? (
+          ) : rankedEchoes.length === 0 ? (
             <p className="text-xs text-muted-foreground">No replies yet — be first.</p>
           ) : (
             <ul className="max-h-48 space-y-2 overflow-y-auto studio-scrollbar pr-1">
-              {echoes.slice(0, 24).map((echo) => {
+              {rankedEchoes.slice(0, 24).map((echo, index) => {
                 const name = echo.authorName?.trim() || 'Guest';
                 const href = echo.authorSlug ? profileHref(echo.authorSlug) : undefined;
                 const stamp = formatEchoStamp(echo.createdAt);
+                const micScore = echo.likeCount ?? 0;
                 return (
                   <li
                     key={echo.id}
                     className="flex items-center gap-2 rounded-md border border-white/5 bg-black/20 px-2.5 py-2"
                   >
+                    <span className="w-5 shrink-0 text-center font-code text-[10px] font-bold tabular-nums text-fuchsia-300">
+                      {index + 1}
+                    </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm leading-snug text-foreground/95">{echo.text}</p>
                       <p className="mt-0.5 text-[10px] tracking-wide text-muted-foreground">
@@ -243,6 +257,7 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
                         ) : (
                           <span className="font-semibold text-foreground/70">{name}</span>
                         )}
+                        <span className="font-semibold text-fuchsia-300"> · {micScore} mic</span>
                         {stamp ? (
                           <span className="text-muted-foreground/80"> · {stamp}</span>
                         ) : null}

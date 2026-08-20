@@ -51,8 +51,8 @@ export default function TermsPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">5. DNA Drops vs First Drops</h2>
             <p><strong className="text-foreground">DNA Drop</strong> is a public lyric snapshot and related share page. It is not a sell desk. Publishing a DNA Drop does not sell audio or transfer rights.</p>
-            <p><strong className="text-foreground">First Drops</strong> is how you press a song for sale: upload audio, set a price (or pay-what-you-want / free unlock where offered), and press it live. Fans buy once and stream in the app. Preview is typically 30 seconds until unlocked. Library is an in-app player, not a Spotify, Apple Music, or download store listing.</p>
-            <p>On First Drop sales we keep a platform fee (currently 10%) to operate the Service; the remainder is the artist&apos;s share, subject to chargebacks, refunds, taxes, and Stripe&apos;s fees and payout rules. Uploading a song is not a label deal and does not transfer ownership to us.</p>
+            <p><strong className="text-foreground">First Drops</strong> is how you press a song for sale: upload audio, set a price or pay-what-you-want amount, and press it live. Fans buy once and stream in the app. Preview is typically 30 seconds until unlocked. Library is an in-app player, not a Spotify, Apple Music, or download store listing.</p>
+            <p>On First Drop sales we keep a tiered platform fee (currently 25% below $3, 15% from $3 through $4.99, and 10% from $5 up) to operate the Service; the remainder is the artist&apos;s share, subject to chargebacks, refunds, taxes, and Stripe&apos;s fees and payout rules. First Drops have no free unlock and the paid minimum is shown before purchase. Uploading a song is not a label deal and does not transfer ownership to us.</p>
           </section>
 
           <section className="space-y-3">

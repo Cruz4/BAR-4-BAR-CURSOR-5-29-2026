@@ -3,7 +3,7 @@
 import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Banknote, LogIn, Loader, ExternalLink, Wallet } from 'lucide-react';
+import { Banknote, LogIn, Loader, ExternalLink, Wallet, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -279,6 +279,10 @@ function EarningsPageContent() {
   const { connect, totals, sales } = summary;
   const payoutsReady = connect.transfersActive && Boolean(connect.accountId);
   const countryLocked = Boolean(connect.accountId);
+  const saleCount = sales.length;
+  const avgGrossCents =
+    saleCount > 0 ? Math.round(sales.reduce((sum, s) => sum + s.amountCents, 0) / saleCount) : 0;
+  const lastSaleAt = sales[0]?.createdAt;
 
   return (
     <div className="container relative z-10 mx-auto max-w-4xl py-10 px-4 space-y-8">
@@ -399,41 +403,100 @@ function EarningsPageContent() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="font-headline text-xl">Sales</CardTitle>
-          <CardDescription>Lifetime sold {centsToUsdLabel(totals.grossCents)} · fee {centsToUsdLabel(totals.feeCents)}</CardDescription>
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <CardTitle className="font-headline text-xl">Sales track</CardTitle>
+              <CardDescription>
+                Lifetime sold {centsToUsdLabel(totals.grossCents)} · fee {centsToUsdLabel(totals.feeCents)}
+              </CardDescription>
+            </div>
+            {saleCount > 0 ? (
+              <div className="flex flex-wrap gap-2 text-[10px] font-code uppercase tracking-widest text-muted-foreground">
+                <span className="rounded-md border border-white/10 bg-muted/20 px-2 py-1">
+                  {saleCount} sale{saleCount === 1 ? '' : 's'}
+                </span>
+                <span className="rounded-md border border-white/10 bg-muted/20 px-2 py-1">
+                  avg {centsToUsdLabel(avgGrossCents)}
+                </span>
+                {lastSaleAt ? (
+                  <span className="rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-1 text-emerald-300/90">
+                    last {new Date(lastSaleAt).toLocaleString()}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent>
           {sales.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No First Drop sales yet. Price a DNA Drop, then share the public link.</p>
+            <p className="text-sm text-muted-foreground">
+              No First Drop sales yet. Price a DNA Drop, then share the public link.
+            </p>
           ) : (
-            <div className="space-y-2">
-              {sales.map((sale) => (
-                <div
-                  key={sale.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-muted/10 px-3 py-2.5"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold truncate">{sale.title}</p>
-                    <p className="text-[10px] font-code text-muted-foreground uppercase tracking-widest">
-                      {new Date(sale.createdAt).toLocaleDateString()} · {centsToUsdLabel(sale.amountCents)} sale
-                    </p>
+            <div className="divide-y divide-white/10 rounded-lg border border-white/10 overflow-hidden">
+              {sales.map((sale) => {
+                const when = new Date(sale.createdAt);
+                const stamp = Number.isFinite(when.getTime())
+                  ? when.toLocaleString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })
+                  : sale.createdAt;
+                return (
+                  <div
+                    key={sale.id}
+                    className="grid gap-2 bg-muted/10 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4"
+                  >
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                        <p className="truncate text-sm font-bold">{sale.title}</p>
+                        {sale.shareId ? (
+                          <Link
+                            href={`/share/${sale.shareId}`}
+                            className="inline-flex items-center gap-1 text-[10px] font-code uppercase tracking-widest text-primary/90 hover:text-primary"
+                          >
+                            <Link2 className="h-3 w-3" />
+                            Origin · First Drop {sale.shareId}
+                          </Link>
+                        ) : null}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        <span className="font-medium text-foreground/80">
+                          {sale.buyerName?.trim() || 'Fan'}
+                        </span>
+                        <span className="mx-1.5 text-white/20">·</span>
+                        <span className="font-code tabular-nums">{stamp}</span>
+                      </p>
+                      <p className="text-[10px] font-code uppercase tracking-widest text-muted-foreground">
+                        Sale {centsToUsdLabel(sale.amountCents)}
+                        <span className="mx-1 text-white/20">·</span>
+                        Fee {centsToUsdLabel(sale.feeCents)}
+                        <span className="mx-1 text-white/20">·</span>
+                        You {centsToUsdLabel(sale.netCents)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 sm:justify-end">
+                      <p className="font-code text-base font-bold tabular-nums text-emerald-300">
+                        {centsToUsdLabel(sale.netCents)}
+                      </p>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'text-[8px] uppercase tracking-widest',
+                          sale.status === 'paid' && 'border-emerald-500/40 text-emerald-300',
+                          sale.status === 'held' && 'border-amber-500/40 text-amber-300'
+                        )}
+                      >
+                        {dropSaleStatusLabel(sale.status)}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <p className="font-code text-sm tabular-nums">{centsToUsdLabel(sale.netCents)}</p>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        'text-[8px] uppercase tracking-widest',
-                        sale.status === 'paid' && 'border-emerald-500/40 text-emerald-300',
-                        sale.status === 'held' && 'border-amber-500/40 text-amber-300'
-                      )}
-                    >
-                      {dropSaleStatusLabel(sale.status)}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

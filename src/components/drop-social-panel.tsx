@@ -149,7 +149,8 @@ export function DropSocialPanel({
     setBusy(true);
     try {
       await createPost({
-        text: `First Drop · ${title}\n${dropUrl}`,
+        text: `First Drop · ${title}`,
+        embedUrl: dropUrl,
         ownerName: user.displayName || 'Artist',
         ownerSlug: summary.profileSlug,
       });

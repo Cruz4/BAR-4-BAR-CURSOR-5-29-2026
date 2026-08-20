@@ -48,6 +48,8 @@ export function PriceEditor({
   const amount = price.amountCents ?? 777;
   const min = price.minCents ?? 0;
   const suggested = price.suggestedCents ?? 777;
+  const effectiveMin = Math.max(DROP_PAID_MIN_CENTS, min);
+  const effectiveSuggested = Math.max(DROP_PAID_MIN_CENTS, suggested);
   const modes = omitHidden ? MODES.filter((m) => m.id !== 'hidden') : MODES;
 
   return (
@@ -117,39 +119,39 @@ export function PriceEditor({
           <div>
             <Label className="text-[9px] uppercase text-muted-foreground">Minimum</Label>
             <Input
-              defaultValue={(min / 100).toFixed(2)}
+              defaultValue={(effectiveMin / 100).toFixed(2)}
               onBlur={(e) => {
                 const cents = parseUsdToCents(e.target.value);
-                onChange({ ...price, mode: 'pwyw', minCents: cents == null ? 0 : cents });
+                onChange({
+                  ...price,
+                  mode: 'pwyw',
+                  minCents: Math.max(DROP_PAID_MIN_CENTS, cents ?? DROP_PAID_MIN_CENTS),
+                });
               }}
               className="h-8 font-code text-xs"
             />
-            <p className="text-[8px] text-muted-foreground mt-1">$0 = free + optional tip</p>
+            <p className="text-[8px] text-muted-foreground mt-1">
+              Lowest buyer price: {centsToUsdLabel(DROP_PAID_MIN_CENTS)}
+            </p>
           </div>
           <div>
             <Label className="text-[9px] uppercase text-muted-foreground">Suggested</Label>
             <Input
-              defaultValue={(suggested / 100).toFixed(2)}
+              defaultValue={(effectiveSuggested / 100).toFixed(2)}
               onBlur={(e) => {
                 const cents = parseUsdToCents(e.target.value);
                 if (cents == null) return;
-                onChange({ ...price, mode: 'pwyw', suggestedCents: Math.max(0, cents) });
+                onChange({ ...price, mode: 'pwyw', suggestedCents: Math.max(DROP_PAID_MIN_CENTS, cents) });
               }}
               className="h-8 font-code text-xs"
             />
           </div>
-          {min > 0 ? (
+          <p className="col-span-2 text-[10px] font-medium leading-snug text-foreground/90">
+            At the minimum: {firstDropsSplitLine(effectiveMin)}
+          </p>
+          {effectiveSuggested > 0 ? (
             <p className="col-span-2 text-[10px] font-medium leading-snug text-foreground/90">
-              At the minimum: {firstDropsSplitLine(min)}
-            </p>
-          ) : (
-            <p className="col-span-2 text-[9px] text-muted-foreground">
-              $0 minimum is free — no fee until they pay.
-            </p>
-          )}
-          {suggested > 0 ? (
-            <p className="col-span-2 text-[10px] font-medium leading-snug text-foreground/90">
-              If they pay the suggested: {firstDropsSplitLine(suggested)}
+              If they pay the suggested: {firstDropsSplitLine(effectiveSuggested)}
             </p>
           ) : null}
         </div>

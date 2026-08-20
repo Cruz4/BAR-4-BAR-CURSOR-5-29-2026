@@ -58,6 +58,11 @@ function timeAgo(iso: string): string {
   }
 }
 
+function firstDropUrlFromText(text?: string): string | undefined {
+  if (!text) return undefined;
+  return text.match(/https?:\/\/[^\s]+\/share\/[^\s?#]+|\/share\/[^\s?#]+/i)?.[0];
+}
+
 function ReverbSourceBody({ post }: { post: ProfilePost }) {
   const name = post.reverbOwnerName || 'Artist';
   const { liveSlug, href, resolved, isLive } = useLiveArtistHomeSlug(
@@ -166,9 +171,9 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
           />
         </div>
       ) : null}
-      {post.reverbEmbedUrl ? (
+      {post.reverbEmbedUrl || firstDropUrlFromText(post.reverbText) ? (
         <div className="mt-2">
-          <EmbedPlayer url={post.reverbEmbedUrl} />
+          <EmbedPlayer url={post.reverbEmbedUrl || firstDropUrlFromText(post.reverbText)!} />
         </div>
       ) : null}
       {post.reverbVoice ? (
@@ -495,9 +500,9 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         </div>
       )}
 
-      {!post.isReverb && post.embedUrl && (
+      {!post.isReverb && (post.embedUrl || firstDropUrlFromText(post.text)) && (
         <div className="mt-3">
-          <EmbedPlayer url={post.embedUrl} />
+          <EmbedPlayer url={post.embedUrl || firstDropUrlFromText(post.text)!} />
         </div>
       )}
 

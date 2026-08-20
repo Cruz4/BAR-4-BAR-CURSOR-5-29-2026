@@ -37,7 +37,11 @@ import {
   type VesperfoldSlot,
 } from '@/lib/profile/vesperfold';
 import { artistHomeForPublic, normalizeArtistHomeConfig } from '@/lib/profile/modules';
-import { shareCommerceFlags, shareDocCommerceFlags } from '@/lib/drop-commerce';
+import {
+  normalizeDropPrice,
+  shareCommerceFlags,
+  shareDocCommerceFlags,
+} from '@/lib/drop-commerce';
 import {
   allocateUniqueProfileSlug,
   assertProfileSlugAvailable,
@@ -2051,6 +2055,7 @@ export async function listRecentShareSummaries(
     updatedAt: string;
     hasDropAudio?: boolean;
     dropPriceSummary?: string;
+    dropPrice?: ReturnType<typeof normalizeDropPrice>;
     playCount?: number;
     previewCount?: number;
     purchaseCount?: number;
@@ -2067,6 +2072,7 @@ export async function listRecentShareSummaries(
       dropPrice: payload.dropPrice,
     });
     const hasDropAudio = type === 'track' && (flags.hasDropAudio || data.hasDropAudio === true);
+    const priced = normalizeDropPrice(payload.dropPrice);
     const title =
       typeof payload.title === 'string' && payload.title.trim()
         ? payload.title.trim().slice(0, 120)
@@ -2090,6 +2096,7 @@ export async function listRecentShareSummaries(
             : '',
       ...(hasDropAudio ? { hasDropAudio: true } : {}),
       dropPriceSummary: flags.dropPriceSummary || (typeof data.dropPriceSummary === 'string' ? data.dropPriceSummary : undefined),
+      ...(priced ? { dropPrice: priced } : {}),
       playCount: Number(data.playCount) > 0 ? Number(data.playCount) : undefined,
       previewCount: Number(data.previewCount) > 0 ? Number(data.previewCount) : undefined,
       purchaseCount: Number(data.purchaseCount) > 0 ? Number(data.purchaseCount) : undefined,
@@ -2109,6 +2116,7 @@ export async function listRecentShareSummaries(
       shareId: r.shareId,
       type: r.type,
       title: r.title,
+      ownerId: r.ownerId,
       ownerName: r.ownerName,
       ownerSlug: meta?.slug,
       avatarUrl: meta?.avatarUrl,
@@ -2118,6 +2126,7 @@ export async function listRecentShareSummaries(
       updatedAt: r.updatedAt,
       hasDropAudio: r.hasDropAudio,
       dropPriceSummary: r.dropPriceSummary,
+      dropPrice: r.dropPrice,
       playCount: r.playCount,
       previewCount: r.previewCount,
       purchaseCount: r.purchaseCount,

@@ -59,6 +59,10 @@ export function DropListenPanel({
   const [pwyw, setPwyw] = useState('');
   const normalized = normalizeDropPrice(price);
   const isOwner = Boolean(user && user.id === ownerId);
+  const enteredPwywCents = parseUsdToCents(pwyw);
+  const pwywCheckoutCents = normalized.mode === 'pwyw'
+    ? resolveCheckoutCents(normalized, enteredPwywCents ?? undefined)
+    : 0;
 
   const loadStream = useCallback(async () => {
     if (!firstDropsOn || !hasAudio) return;
@@ -144,47 +148,11 @@ export function DropListenPanel({
     }
   };
 
-  const claimFree = async () => {
-    if (!user) {
-      router.push(buildDropBuyLoginPath(shareId));
-      return;
-    }
-    setBusy(true);
-    try {
-      const headers = await authHeaders();
-      const res = await fetch('/api/drops/claim', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ userId: user.id, shareId, trackId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Could not unlock');
-      await loadStream();
-      toast({ title: 'Unlocked', description: 'Full stream is in Library.' });
-    } catch (e: unknown) {
-      toast({
-        variant: 'destructive',
-        title: 'Unlock failed',
-        description: e instanceof Error ? e.message : undefined,
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const buy = () => {
     if (normalized.mode === 'pwyw') {
       const entered = parseUsdToCents(pwyw);
       const cents = resolveCheckoutCents(normalized, entered ?? undefined);
-      if (cents <= 0) {
-        void claimFree();
-        return;
-      }
       void startCheckout(cents);
-      return;
-    }
-    if (normalized.mode === 'free') {
-      void claimFree();
       return;
     }
     void startCheckout(resolveCheckoutCents(normalized));
@@ -265,7 +233,7 @@ export function DropListenPanel({
             <Input
               value={pwyw}
               onChange={(e) => setPwyw(e.target.value)}
-              placeholder={`Suggested ${centsToUsdLabel(normalized.suggestedCents ?? 777)}`}
+              placeholder={`Suggested ${centsToUsdLabel(Math.max(DROP_PAID_MIN_CENTS, normalized.suggestedCents ?? 777))}`}
               className="h-9 font-code text-xs"
             />
           )}
@@ -275,15 +243,13 @@ export function DropListenPanel({
             onClick={buy}
           >
             {busy ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {normalized.mode === 'free'
-              ? user ? 'Unlock free stream' : 'Sign up · Unlock free'
-              : normalized.mode === 'fixed'
+            {normalized.mode === 'fixed' || normalized.mode === 'free'
                 ? user
                   ? `Buy · ${centsToUsdLabel(Math.max(DROP_PAID_MIN_CENTS, normalized.amountCents ?? DROP_PAID_MIN_CENTS))}`
                   : `Sign up · Buy · ${centsToUsdLabel(Math.max(DROP_PAID_MIN_CENTS, normalized.amountCents ?? DROP_PAID_MIN_CENTS))}`
                 : user
-                  ? 'Pay what you want'
-                  : 'Sign up · Pay what you want'}
+                    ? `Pay · ${centsToUsdLabel(pwywCheckoutCents)}`
+                    : `Sign up · Pay · ${centsToUsdLabel(pwywCheckoutCents)}`}
           </Button>
           <p className="text-[9px] text-muted-foreground text-center">
             Buy once. Stream in the app. Not on Spotify unless the artist goes wide later.

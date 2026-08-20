@@ -60,6 +60,7 @@ function buildHref(input: EmitActivityInput, recipientSlug?: string): string | u
   if (input.type === 'contact_accepted' && input.actorSlug) {
     return profileHref(input.actorSlug) || '/activity';
   }
+  if (input.type === 'drop_sold') return '/earnings';
   return '/activity';
 }
 
@@ -193,7 +194,8 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
     (input.type === 'dna_import' ||
       input.type === 'drop_loved' ||
       input.type === 'drop_reply' ||
-      input.type === 'drop_unlocked') &&
+      input.type === 'drop_unlocked' ||
+      input.type === 'drop_sold') &&
     shareId
   ) {
     if (input.type === 'drop_reply' && input.recipientId) {

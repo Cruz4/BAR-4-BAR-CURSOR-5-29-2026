@@ -18,6 +18,7 @@ export const ACTIVITY_TYPES = [
   'drop_loved',
   'drop_reply',
   'drop_unlocked',
+  'drop_sold',
   'lock_answered',
   'artist_pick',
   'lock_clear_offer',
@@ -43,6 +44,7 @@ export const SERVER_ONLY_ACTIVITY_TYPES: readonly ActivityType[] = [
   'collab_edit',
   'collab_message',
   'drop_unlocked',
+  'drop_sold',
 ];
 
 export function isCraftActivityType(type: ActivityType): boolean {
@@ -133,6 +135,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     drop_loved: 'loved your First Drop',
     drop_reply: 'replied on your First Drop',
     drop_unlocked: 'unlocked your First Drop',
+    drop_sold: 'bought your song',
     lock_answered: 'echoed your bar',
     artist_pick: 'picked your echo',
     lock_clear_offer: 'cleared a LOCK with an offer for you',
@@ -155,6 +158,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     drop_loved: 'you loved a First Drop by',
     drop_reply: 'you replied on a First Drop by',
     drop_unlocked: 'you unlocked a First Drop by',
+    drop_sold: 'you bought a song from',
     lock_answered: 'you echoed a bar on',
     artist_pick: 'you picked an echo by',
     lock_clear_offer: 'you sent a clear offer to',
@@ -276,6 +280,11 @@ export function pushCopyForActivity(
         title: `${actorName} unlocked your First Drop`,
         body: snippet || 'Someone copped the song.',
       };
+    case 'drop_sold':
+      return {
+        title: 'You got a sale',
+        body: snippet || `${actorName} bought your First Drop`,
+      };
     default:
       return { title: 'Bar 4 Bar', body: snippet || 'New activity' };
   }
@@ -309,6 +318,7 @@ export function prefsAllowsPush(prefs: ActivityPrefs, type: ActivityType): boole
     case 'drop_loved':
     case 'drop_reply':
     case 'drop_unlocked':
+    case 'drop_sold':
       return prefs.firstDrops !== false;
     case 'lock_answered':
     case 'artist_pick':

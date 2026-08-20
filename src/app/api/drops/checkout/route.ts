@@ -6,7 +6,7 @@ import { getPublicAppUrl } from '@/lib/app-url';
 import {
   assertPaidAmount,
   BAR4BAR_FIRST_DROPS,
-  DROP_PLATFORM_FEE_BPS,
+  dropPlatformFeeBps,
   dropArtistNetCents,
   dropPlatformFeeCents,
   isCommerceLive,
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
         feeCents: String(feeCents),
         netCents: String(netCents),
         title: priced.title.slice(0, 80),
-        feeBps: String(DROP_PLATFORM_FEE_BPS),
+        feeBps: String(dropPlatformFeeBps(amountCents)),
         payoutMode,
         ...(connect.accountId ? { connectAccountId: connect.accountId } : {}),
       },

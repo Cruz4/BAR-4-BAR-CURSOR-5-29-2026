@@ -33,6 +33,7 @@ import { ProductAnalytics } from './product-analytics';
 import { TikTokPixel } from './tiktok-pixel';
 import { MarketingAttributionCapture } from './marketing-attribution-capture';
 import { AdminAlertListener } from './admin-alert-listener';
+import { DropSaleAlertListener } from './drop-sale-alert-listener';
 import { InviteGateGuard } from './invite-gate-guard';
 import { DropPlayerProvider, useOptionalDropPlayer } from '@/context/drop-player-context';
 import { DropNowPlayingBar, shouldHideDropNowPlayingBar } from '@/components/library/drop-now-playing-bar';
@@ -119,6 +120,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <FirebaseErrorListener />
               <MarketingAttributionCapture />
               <AdminAlertListener />
+              <DropSaleAlertListener />
               <ProductAnalytics />
               <TikTokPixel />
               {isMarketingCapture || isMarketingShell || isPublicProfilePage ? null : isSettingsRoute ? (

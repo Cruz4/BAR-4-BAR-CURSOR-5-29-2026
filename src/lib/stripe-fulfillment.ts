@@ -357,6 +357,17 @@ export async function fulfillPaidCheckoutSession(
       purchasedAt: new Date().toISOString(),
       stripeSessionId: session.id,
     });
+    let buyerName = 'Fan';
+    try {
+      const buyerSnap = await db.collection('users').doc(userId).get();
+      const buyer = buyerSnap.data() || {};
+      buyerName =
+        (typeof buyer.displayName === 'string' && buyer.displayName.trim()) ||
+        (typeof buyer.name === 'string' && buyer.name.trim()) ||
+        'Fan';
+    } catch {
+      /* buyer name is best-effort */
+    }
     if (metadata.artistId && amountCents > 0) {
       const split = splitDropSale(amountCents);
       const feeCents = parseInt(metadata.feeCents || '', 10);
@@ -365,6 +376,7 @@ export async function fulfillPaidCheckoutSession(
         shareId: metadata.shareId,
         title: metadata.title || 'Drop',
         buyerId: userId,
+        buyerName,
         amountCents,
         feeCents: Number.isFinite(feeCents) && feeCents >= 0 ? feeCents : split.feeCents,
         netCents: Number.isFinite(netCents) && netCents > 0 ? netCents : split.netCents,
@@ -380,10 +392,6 @@ export async function fulfillPaidCheckoutSession(
     });
     try {
       const { recordDropUnlock } = await import('@/lib/server/drop-pulse');
-      const buyerSnap = await db.collection('users').doc(userId).get();
-      const buyer = buyerSnap.data() || {};
-      const buyerName =
-        (typeof buyer.displayName === 'string' && buyer.displayName.trim()) || 'Artist';
       await recordDropUnlock(db, {
         shareId: metadata.shareId,
         buyerId: userId,

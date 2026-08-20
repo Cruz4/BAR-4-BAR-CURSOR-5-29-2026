@@ -1,12 +1,18 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Music } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
 import {
   parseEmbedUrl,
   EMBED_PROVIDER_LABELS,
   type EmbedProvider,
 } from '@/lib/profile/embeds';
+import { db } from '@/lib/firebase/client/firebase';
+import type { ProjectShare } from '@/lib/types';
+import type { DnaDropAlbumPayload, DnaDropTrackPayload } from '@/lib/dna-drop';
+import { normalizeDropAudio, normalizeDropPrice } from '@/lib/drop-commerce';
+import { DropListenPanel } from '@/components/drop-listen-panel';
 
 /**
  * Plays a whitelisted provider link right on the page (iframe embed).
@@ -29,7 +35,63 @@ const OPEN_LABELS: Record<EmbedProvider, string> = {
   facebook: 'Open on Facebook',
 };
 
+function firstDropShareId(raw: string): string | null {
+  try {
+    const base = typeof window !== 'undefined' ? window.location.origin : 'https://bar4bar.app';
+    const parsed = new URL(raw, base);
+    const match = parsed.pathname.match(/^\/share\/([^/?#]+)\/?$/);
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Native First Drop media inside a wall/feed post. Entitlements stay server-authoritative. */
+function FirstDropFeedPlayer({ shareId }: { shareId: string }) {
+  const [share, setShare] = useState<ProjectShare | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getDoc(doc(db, 'shares', shareId)).then((snapshot) => {
+      if (!cancelled && snapshot.exists()) setShare(snapshot.data() as ProjectShare);
+    });
+    return () => { cancelled = true; };
+  }, [shareId]);
+
+  const details = useMemo(() => {
+    if (!share) return null;
+    const project = share.data as DnaDropAlbumPayload | DnaDropTrackPayload;
+    const hasAudio = share.type === 'album'
+      ? Boolean((project as DnaDropAlbumPayload).tracks?.some((track) => normalizeDropAudio(track.dropAudio)))
+      : Boolean(normalizeDropAudio((project as DnaDropTrackPayload).dropAudio));
+    return {
+      title: project?.title || 'First Drop',
+      price: normalizeDropPrice(project?.dropPrice),
+      hasAudio,
+    };
+  }, [share]);
+
+  if (!share || !details) {
+    return <div className="h-24 animate-pulse rounded-xl border border-fuchsia-500/25 bg-fuchsia-500/10" />;
+  }
+
+  return (
+    <Suspense fallback={null}>
+      <DropListenPanel
+        shareId={shareId}
+        title={details.title}
+        ownerId={share.ownerId}
+        price={details.price}
+        hasAudio={details.hasAudio}
+      />
+    </Suspense>
+  );
+}
+
 export function EmbedPlayer({ url, title }: { url: string; title?: string }) {
+  const dropShareId = firstDropShareId(url);
+  if (dropShareId) return <FirstDropFeedPlayer shareId={dropShareId} />;
+
   const parsed = parseEmbedUrl(url);
 
   if (!parsed) {

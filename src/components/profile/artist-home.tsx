@@ -308,7 +308,7 @@ export function ArtistHome({
             previewMode ? 'lg:items-center' : 'lg:items-end'
           )}
         >
-          <div className="space-y-5 lg:col-span-7">
+          <div className="min-w-0 space-y-5 lg:col-span-7">
             {config.featured.tagline && (
               <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-[var(--ph-accent)]">
                 {config.featured.tagline}
@@ -316,7 +316,7 @@ export function ArtistHome({
             )}
             <h1
               className={cn(
-                'text-[clamp(2.4rem,7.5vw,5rem)] font-bold leading-[0.94] text-[var(--ph-text)]',
+                'break-words text-[clamp(2.4rem,7.5vw,5rem)] font-bold leading-[0.94] text-[var(--ph-text)]',
                 pressingTypeClass(tokens.typeVariant)
               )}
             >
@@ -333,7 +333,7 @@ export function ArtistHome({
                 </Hint>
               ) : null}
             </h1>
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
               <StudioStandingRankBadge
                 variant="pill"
                 allowShare={isOwner}
@@ -357,23 +357,25 @@ export function ArtistHome({
                   <Button
                     asChild
                     size="sm"
-                    className="h-9 gap-1.5 bg-fuchsia-400 px-4 font-bold uppercase tracking-wider text-black hover:bg-fuchsia-300"
+                    className="h-auto min-h-10 w-full max-w-full gap-1.5 whitespace-normal bg-fuchsia-400 px-3 py-2 text-center font-bold uppercase leading-tight tracking-wider text-black hover:bg-fuchsia-300 sm:h-9 sm:w-auto sm:whitespace-nowrap sm:px-4 sm:py-0"
                   >
-                    <Link href={`/share/${saleDrops[0].shareId}`}>
-                      <Music className="h-3.5 w-3.5" />
-                      Listen
-                      {saleDrops[0].dropPriceSummary ? ` · ${saleDrops[0].dropPriceSummary}` : ''}
+                    <Link href={`/share/${saleDrops[0].shareId}`} className="inline-flex max-w-full items-center gap-1.5">
+                      <Music className="h-3.5 w-3.5 shrink-0" />
+                      <span className="min-w-0 break-words">
+                        Listen
+                        {saleDrops[0].dropPriceSummary ? ` · ${saleDrops[0].dropPriceSummary}` : ''}
+                      </span>
                     </Link>
                   </Button>
                 ) : (
                   <Button
                     asChild
                     size="sm"
-                    className="h-9 gap-1.5 bg-fuchsia-400 px-4 font-bold uppercase tracking-wider text-black hover:bg-fuchsia-300"
+                    className="h-auto min-h-10 w-full max-w-full gap-1.5 whitespace-normal bg-fuchsia-400 px-3 py-2 text-center font-bold uppercase leading-tight tracking-wider text-black hover:bg-fuchsia-300 sm:h-9 sm:w-auto sm:whitespace-nowrap sm:px-4 sm:py-0"
                   >
-                    <a href="#first-drops">
-                      <Music className="h-3.5 w-3.5" />
-                      Listen · {saleDrops.length} songs
+                    <a href="#first-drops" className="inline-flex max-w-full items-center gap-1.5">
+                      <Music className="h-3.5 w-3.5 shrink-0" />
+                      <span className="min-w-0 truncate">Listen · {saleDrops.length} songs</span>
                     </a>
                   </Button>
                 )
@@ -388,11 +390,13 @@ export function ArtistHome({
                       asChild
                       variant="outline"
                       size="sm"
-                      className="h-8 gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
+                      className="h-8 max-w-full gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
                     >
-                      <Link href={`/share/${liveDnaDrops[0].shareId}`}>
-                        <Dna className="h-3.5 w-3.5" />
-                        {liveDnaDrops[0].type === 'album' ? '1 album DNA live' : '1 track DNA live'}
+                      <Link href={`/share/${liveDnaDrops[0].shareId}`} className="inline-flex max-w-full items-center gap-1.5">
+                        <Dna className="h-3.5 w-3.5 shrink-0" />
+                        <span className="min-w-0 truncate">
+                          {liveDnaDrops[0].type === 'album' ? '1 album DNA live' : '1 track DNA live'}
+                        </span>
                       </Link>
                     </Button>
                   );
@@ -408,11 +412,11 @@ export function ArtistHome({
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-8 gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
+                    className="h-8 max-w-full gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
                     onClick={() => setDropsOpen(true)}
                   >
-                    <Dna className="h-3.5 w-3.5" />
-                    {label}
+                    <Dna className="h-3.5 w-3.5 shrink-0" />
+                    <span className="min-w-0 truncate">{label}</span>
                   </Button>
                 );
               })()}
@@ -421,8 +425,8 @@ export function ArtistHome({
               <p className="max-w-xl text-sm leading-relaxed text-[var(--ph-muted)]">{config.featured.bio}</p>
             )}
 
-            <div className="max-w-md space-y-3">
-              <div className="grid grid-cols-3 gap-2">
+            <div className="w-full max-w-md min-w-0 space-y-3">
+              <div className="grid min-w-0 grid-cols-3 gap-1.5 sm:gap-2">
                 {[
                   { label: 'Total XP', value: totalXp.toLocaleString(), icon: Zap },
                   { label: 'Live streak', value: `${liveStreak}d`, icon: Flame },
@@ -430,13 +434,13 @@ export function ArtistHome({
                 ].map((stat) => (
                   <div
                     key={stat.label}
-                    className="flex flex-col items-center justify-center border border-[var(--ph-border)] bg-[var(--ph-plate)] px-2 py-2.5 text-center"
+                    className="flex min-w-0 flex-col items-center justify-center border border-[var(--ph-border)] bg-[var(--ph-plate)] px-1.5 py-2.5 text-center sm:px-2"
                   >
-                    <stat.icon className="mb-1 h-3.5 w-3.5 text-[var(--ph-accent)]" />
-                    <p className="font-code text-base font-bold leading-none tracking-tight text-[var(--ph-text)] tabular-nums sm:text-lg">
+                    <stat.icon className="mb-1 h-3.5 w-3.5 shrink-0 text-[var(--ph-accent)]" />
+                    <p className="max-w-full truncate font-code text-sm font-bold leading-none tracking-tight text-[var(--ph-text)] tabular-nums sm:text-base md:text-lg">
                       {stat.value}
                     </p>
-                    <p className="mt-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--ph-muted)] sm:text-[10px]">
+                    <p className="mt-1.5 max-w-full break-words text-[8px] font-bold uppercase leading-tight tracking-[0.08em] text-[var(--ph-muted)] sm:text-[9px] sm:tracking-[0.12em] md:text-[10px]">
                       {stat.label}
                     </p>
                   </div>
@@ -445,41 +449,43 @@ export function ArtistHome({
               {(!previewMode || config.featured.contact) && (
                 <div
                   className={cn(
-                    'grid gap-2',
-                    !previewMode && config.featured.contact ? 'grid-cols-2' : 'grid-cols-1'
+                    'grid min-w-0 gap-2',
+                    !previewMode && config.featured.contact ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
                   )}
                 >
                   {!previewMode ? (
                     <Link
                       href={profileReverbsHref(profile.slug) || `/${profile.slug}/reverbs`}
-                      className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-violet-400/40 bg-violet-500/15 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.12)] transition-all hover:border-violet-300/70 hover:bg-violet-500/25 hover:text-violet-100 hover:shadow-[0_0_16px_rgba(139,92,246,0.25)]"
+                      className="inline-flex h-9 w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-violet-400/40 bg-violet-500/15 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.12)] transition-all hover:border-violet-300/70 hover:bg-violet-500/25 hover:text-violet-100 hover:shadow-[0_0_16px_rgba(139,92,246,0.25)]"
                     >
                       <Repeat2 className="h-3.5 w-3.5 shrink-0" />
                       Reverbs
                     </Link>
                   ) : null}
                   {config.featured.contact ? (
-                    <ProfileContactChip
-                      artistId={profile.userId}
-                      artistSlug={profile.slug}
-                      contact={config.featured.contact}
-                      isOwner={isOwner}
-                      previewMode={previewMode}
-                      viewerName={user?.displayName || undefined}
-                      viewerSlug={viewerSlug}
-                    />
+                    <div className="min-w-0">
+                      <ProfileContactChip
+                        artistId={profile.userId}
+                        artistSlug={profile.slug}
+                        contact={config.featured.contact}
+                        isOwner={isOwner}
+                        previewMode={previewMode}
+                        viewerName={user?.displayName || undefined}
+                        viewerSlug={viewerSlug}
+                      />
+                    </div>
                   ) : null}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="flex justify-center lg:col-span-5 lg:justify-end">
-            <div className="relative w-full max-w-sm animate-in fade-in zoom-in-95 duration-500">
+          <div className="flex min-w-0 justify-center overflow-visible lg:col-span-5 lg:justify-end">
+            <div className="relative w-full max-w-[20rem] animate-in fade-in zoom-in-95 duration-500 sm:max-w-96">
               {tokens.alive && (
                 <div
                   aria-hidden
-                  className="ph-hero-breath pointer-events-none absolute -inset-5"
+                  className="ph-hero-breath pointer-events-none absolute inset-0 sm:-inset-5"
                   style={{
                     background: `radial-gradient(circle, hsl(${tokens.hue} 70% 60% / 0.2), transparent 70%)`,
                     animation: `ph-hero-breath var(--ph-breath) ease-in-out infinite`,
@@ -487,7 +493,7 @@ export function ArtistHome({
                 />
               )}
               <div
-                className="absolute -inset-3 opacity-60 blur-xl"
+                className="absolute inset-0 opacity-60 blur-xl sm:-inset-3"
                 style={{
                   background: `linear-gradient(135deg, var(--ph-accent-soft), var(--ph-accent2-soft))`,
                 }}
@@ -496,7 +502,7 @@ export function ArtistHome({
                 type="button"
                 onClick={() => setPhotoOpen(true)}
                 aria-label={`View ${profile.displayName}'s profile photo`}
-                className="relative aspect-square w-full cursor-zoom-in overflow-hidden border border-[var(--ph-border)] shadow-[0_24px_80px_rgba(0,0,0,0.55)] transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ph-accent,#7dd3fc)]"
+                className="relative aspect-square w-full max-w-full cursor-zoom-in overflow-hidden border border-[var(--ph-border)] shadow-[0_24px_80px_rgba(0,0,0,0.55)] transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ph-accent,#7dd3fc)]"
                 style={{ clipPath: dieCutClip(((tokens.cutStyle + 1) % 6) as 0 | 1 | 2 | 3 | 4 | 5) }}
               >
                 {useCustomPhoto ? (

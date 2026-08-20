@@ -25,6 +25,7 @@ export type DiscoverDrop = {
   shareId: string;
   type: 'album' | 'track';
   title: string;
+  ownerId?: string;
   ownerName: string;
   ownerSlug?: string;
   avatarUrl?: string;
@@ -34,6 +35,12 @@ export type DiscoverDrop = {
   updatedAt: string;
   hasDropAudio?: boolean;
   dropPriceSummary?: string;
+  dropPrice?: {
+    mode: 'hidden' | 'free' | 'fixed' | 'pwyw';
+    amountCents?: number;
+    minCents?: number;
+    suggestedCents?: number;
+  };
   playCount?: number;
   previewCount?: number;
   purchaseCount?: number;

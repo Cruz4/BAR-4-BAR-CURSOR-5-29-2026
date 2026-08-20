@@ -15,6 +15,7 @@ import {
   Lock,
   Mail,
   MessageCircle,
+  Banknote,
   Repeat2,
   Star,
   UserPlus,
@@ -109,6 +110,8 @@ function TypeIcon({ type }: { type: ActivityType }) {
       return <MessageCircle className={cn(className, 'text-fuchsia-400')} />;
     case 'drop_unlocked':
       return <Flame className={cn(className, 'text-fuchsia-400')} />;
+    case 'drop_sold':
+      return <Banknote className={cn(className, 'text-emerald-400')} />;
     case 'lock_answered':
       return <Lock className={cn(className, 'text-emerald-400')} />;
     case 'artist_pick':

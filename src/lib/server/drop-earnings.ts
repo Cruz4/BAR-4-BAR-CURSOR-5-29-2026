@@ -11,6 +11,7 @@ import {
   type DropSaleRecord,
   type DropSaleStatus,
 } from '@/lib/drop-earnings';
+import { centsToUsdLabel } from '@/lib/drop-commerce';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
 
 const HELD_FLUSH_LIMIT = 25;
@@ -19,6 +20,7 @@ type SaleWrite = {
   shareId: string;
   title: string;
   buyerId: string;
+  buyerName?: string;
   amountCents: number;
   feeCents: number;
   netCents: number;
@@ -64,6 +66,10 @@ function parseSale(id: string, raw: Record<string, unknown>): DropSaleRecord | n
     shareId: typeof raw.shareId === 'string' ? raw.shareId : '',
     title: typeof raw.title === 'string' && raw.title.trim() ? raw.title : 'Drop',
     buyerId: typeof raw.buyerId === 'string' ? raw.buyerId : '',
+    buyerName:
+      typeof raw.buyerName === 'string' && raw.buyerName.trim()
+        ? raw.buyerName.trim().slice(0, 80)
+        : undefined,
     amountCents,
     feeCents: Math.max(0, Number(raw.feeCents) || 0),
     netCents: Math.max(0, Number(raw.netCents) || 0),
@@ -108,12 +114,32 @@ export async function recordDropSale(db: Firestore, artistId: string, sale: Sale
   const existing = await ref.get();
   if (existing.exists) return;
 
+  let buyerName =
+    typeof sale.buyerName === 'string' && sale.buyerName.trim()
+      ? sale.buyerName.trim().slice(0, 80)
+      : '';
+  if (!buyerName && sale.buyerId) {
+    try {
+      const buyerSnap = await db.collection('users').doc(sale.buyerId).get();
+      const buyer = buyerSnap.data() || {};
+      buyerName =
+        (typeof buyer.displayName === 'string' && buyer.displayName.trim()) ||
+        (typeof buyer.name === 'string' && buyer.name.trim()) ||
+        'Fan';
+    } catch {
+      buyerName = 'Fan';
+    }
+  }
+  buyerName = (buyerName || 'Fan').slice(0, 80);
+
   const status: DropSaleStatus = sale.payoutMode === 'destination' ? 'paid' : 'held';
   const now = new Date().toISOString();
+  const title = sale.title.slice(0, 120);
   await ref.set({
     shareId: sale.shareId,
-    title: sale.title.slice(0, 120),
+    title,
     buyerId: sale.buyerId,
+    buyerName,
     amountCents: sale.amountCents,
     feeCents: sale.feeCents,
     netCents: sale.netCents,
@@ -141,6 +167,22 @@ export async function recordDropSale(db: Firestore, artistId: string, sale: Sale
     netCents: sale.netCents,
     payoutMode: sale.payoutMode,
   });
+
+  try {
+    const { emitActivityEvent } = await import('@/lib/server/activity');
+    const preview = `${title} · ${centsToUsdLabel(sale.amountCents)} · you keep ${centsToUsdLabel(sale.netCents)}`;
+    await emitActivityEvent({
+      type: 'drop_sold',
+      actorId: sale.buyerId || 'system',
+      actorName: buyerName,
+      recipientId: artistId,
+      shareId: sale.shareId,
+      preview: preview.slice(0, 160),
+      href: '/earnings',
+    });
+  } catch (err) {
+    console.warn('[drop-earnings] sale activity', err);
+  }
 }
 
 async function markSalePaid(

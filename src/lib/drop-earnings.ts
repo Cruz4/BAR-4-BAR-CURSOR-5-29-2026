@@ -1,6 +1,6 @@
 /**
  * First Drop artist earnings — shared types for payouts UI + APIs.
- * Money split lives in drop-commerce.ts (10% platform / 90% artist).
+ * Tiered money split lives in drop-commerce.ts.
  */
 
 export type DropPayoutMode = 'destination' | 'held';
@@ -11,6 +11,7 @@ export type DropSaleRecord = {
   shareId: string;
   title: string;
   buyerId: string;
+  buyerName?: string;
   amountCents: number;
   feeCents: number;
   netCents: number;

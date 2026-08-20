@@ -102,7 +102,9 @@ export async function recordDropUnlock(
 
   await ref.set(patch, { merge: true });
 
-  if (ownerId) {
+  // Paid unlocks notify via `drop_sold` from recordDropSale — avoid double ping.
+  const paidUnlock = typeof input.amountCents === 'number' && input.amountCents > 0;
+  if (ownerId && !paidUnlock) {
     try {
       await emitActivityEvent({
         type: 'drop_unlocked',

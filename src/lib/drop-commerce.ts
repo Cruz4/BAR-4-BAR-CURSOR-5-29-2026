@@ -6,26 +6,46 @@
 
 export const BAR4BAR_FIRST_DROPS = 'bar4bar-first-drops' as const;
 
-export const DROP_PAID_MIN_CENTS = 100;
-export const DROP_PLATFORM_FEE_BPS = 1000; // 10%
+export const DROP_PAID_MIN_CENTS = 199;
+export const DROP_MID_FEE_FROM_CENTS = 300;
+export const DROP_STANDARD_FEE_FROM_CENTS = 500;
+export const DROP_LOW_PRICE_FEE_BPS = 2500; // 25% from $1.99 through $2.99
+export const DROP_MID_PRICE_FEE_BPS = 1500; // 15% from $3.00 through $4.99
+export const DROP_PLATFORM_FEE_BPS = 1000; // 10% from $5.00
 export const DROP_PLATFORM_FEE_PERCENT = DROP_PLATFORM_FEE_BPS / 100;
+export const DROP_LOW_PRICE_FEE_PERCENT = DROP_LOW_PRICE_FEE_BPS / 100;
+
+export function dropPlatformFeeBps(amountCents: number): number {
+  const amount = Math.max(0, Math.round(amountCents));
+  if (amount > 0 && amount < DROP_MID_FEE_FROM_CENTS) return DROP_LOW_PRICE_FEE_BPS;
+  if (amount < DROP_STANDARD_FEE_FROM_CENTS) return DROP_MID_PRICE_FEE_BPS;
+  return DROP_PLATFORM_FEE_BPS;
+}
 
 export function dropPlatformFeeLabel(): string {
-  return `${DROP_PLATFORM_FEE_PERCENT}%`;
+  return `${DROP_PLATFORM_FEE_PERCENT}–${DROP_LOW_PRICE_FEE_PERCENT}%`;
 }
 
 export function dropArtistSharePercent(): number {
-  return 100 - DROP_PLATFORM_FEE_PERCENT;
+  return 100 - DROP_LOW_PRICE_FEE_PERCENT;
 }
 
 export function dropArtistShareLabel(): string {
-  return `${dropArtistSharePercent()}%`;
+  return `${dropArtistSharePercent()}–${100 - DROP_PLATFORM_FEE_PERCENT}%`;
+}
+
+export function dropPlatformFeePercent(amountCents: number): number {
+  return dropPlatformFeeBps(amountCents) / 100;
+}
+
+export function dropArtistSharePercentForAmount(amountCents: number): number {
+  return 100 - dropPlatformFeePercent(amountCents);
 }
 
 /** Platform cut of a First Drop sale, in cents. */
 export function dropPlatformFeeCents(amountCents: number): number {
   const amount = Math.max(0, Math.round(amountCents));
-  const fee = Math.round((amount * DROP_PLATFORM_FEE_BPS) / 10_000);
+  const fee = Math.round((amount * dropPlatformFeeBps(amount)) / 10_000);
   return Math.min(fee, Math.max(0, amount - 1));
 }
 
@@ -37,13 +57,13 @@ export function dropArtistNetCents(amountCents: number): number {
 
 /** Live split under the price the artist is setting. */
 export function firstDropsSplitLine(amountCents: number): string {
-  const charged = Math.max(0, Math.round(amountCents));
-  if (charged <= 0) return 'Free — no platform fee.';
-  return `You keep ${centsToUsdLabel(dropArtistNetCents(charged))} (${dropArtistShareLabel()}) · we keep ${centsToUsdLabel(dropPlatformFeeCents(charged))} (${dropPlatformFeeLabel()})`;
+  const requested = Math.max(0, Math.round(amountCents));
+  const charged = Math.max(DROP_PAID_MIN_CENTS, requested);
+  return `You keep ${centsToUsdLabel(dropArtistNetCents(charged))} (${dropArtistSharePercentForAmount(charged)}%) · we keep ${centsToUsdLabel(dropPlatformFeeCents(charged))} (${dropPlatformFeePercent(charged)}%)`;
 }
 
 export function firstDropsFeeLine(): string {
-  return `We keep ${dropPlatformFeeLabel()} — the rest is yours.`;
+  return `We keep 25% below $3, 15% from $3–$4.99, and 10% from $5 up — the rest is yours.`;
 }
 
 export function firstDropsCashoutLine(): string {
@@ -52,7 +72,7 @@ export function firstDropsCashoutLine(): string {
 
 /** Tight fee + cashout line for banners, hints, and marketing. */
 export function firstDropsFeeCashoutLine(): string {
-  return `We keep ${dropPlatformFeeLabel()}. Cash out the rest on Earnings after you connect payouts.`;
+  return 'We keep 25% below $3, 15% from $3–$4.99, and 10% from $5 up. Cash out the rest on Earnings after you connect payouts.';
 }
 
 /** Public selling copy — hide whenever First Drops is toggled off. */
@@ -69,11 +89,11 @@ export function getFirstDropsSellFaqAnswer(): string {
 }
 
 export function getFirstDropsRightsFaqAnswer(): string {
-  return `Yes. You keep all rights to your lyrics, recordings, and masters. Uploading a song to sell on Bar 4 Bar is not a label deal and does not transfer ownership. We host the in-app stream and keep a ${dropPlatformFeeLabel()} platform fee on each sale so we can run the platform — the rest is yours. ${firstDropsCashoutLine()}`;
+  return `Yes. You keep all rights to your lyrics, recordings, and masters. Uploading a song to sell on Bar 4 Bar is not a label deal and does not transfer ownership. We host the in-app stream and keep 25% below $3, 15% from $3–$4.99, or 10% from $5 up — the rest is yours. ${firstDropsCashoutLine()}`;
 }
 
 export function getFirstDropsFeeFaqAnswer(): string {
-  return `A ${dropPlatformFeeLabel()} platform fee on the sale — not a cut of your catalog. You still own the recording. The rest is yours. ${firstDropsCashoutLine()} Fans buy once and stream in the app — Ink is not used for music purchases.`;
+  return `A 25% platform fee below $3, 15% from $3–$4.99, or 10% from $5 up — not a cut of your catalog. Paid checkout starts at ${centsToUsdLabel(DROP_PAID_MIN_CENTS)}. You still own the recording. The rest is yours. ${firstDropsCashoutLine()} Fans buy once and stream in the app — Ink is not used for music purchases.`;
 }
 
 export function getFirstDropsCashoutFaqAnswer(): string {
@@ -82,7 +102,7 @@ export function getFirstDropsCashoutFaqAnswer(): string {
 
 export const DROP_AUDIO_MAX_BYTES = 40 * 1024 * 1024;
 export const DROP_PREVIEW_SECONDS = 30;
-export const DROP_PRICE_PRESETS_CENTS = [177, 299, 777, 1777] as const;
+export const DROP_PRICE_PRESETS_CENTS = [199, 299, 499, 777] as const;
 
 export const DROP_AUDIO_ACCEPT =
   'audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/aac,audio/ogg,audio/flac,audio/webm,.mp3,.wav,.m4a,.aac,.ogg,.flac';
@@ -93,7 +113,7 @@ export type DropPrice = {
   mode: DropPriceMode;
   /** Fixed price in cents. */
   amountCents?: number;
-  /** Pay-what-you-want floor. 0 = free unlock + optional paid tip. */
+  /** Pay-what-you-want floor. Paid drops never fall below DROP_PAID_MIN_CENTS. */
   minCents?: number;
   /** Pay-what-you-want suggested amount. */
   suggestedCents?: number;
@@ -143,18 +163,23 @@ export function parseUsdToCents(raw: string): number | null {
 export function normalizeDropPrice(raw: unknown): DropPrice {
   if (!raw || typeof raw !== 'object') return defaultDropPrice();
   const o = raw as Record<string, unknown>;
-  const mode: DropPriceMode =
+  const rawMode: DropPriceMode =
     o.mode === 'free' || o.mode === 'fixed' || o.mode === 'pwyw' || o.mode === 'hidden'
       ? o.mode
       : 'hidden';
+  const mode: DropPriceMode = rawMode === 'free' ? 'fixed' : rawMode;
   const amountCents = typeof o.amountCents === 'number' ? Math.round(o.amountCents) : undefined;
   const minCents = typeof o.minCents === 'number' ? Math.round(o.minCents) : undefined;
   const suggestedCents =
     typeof o.suggestedCents === 'number' ? Math.round(o.suggestedCents) : undefined;
   const next: DropPrice = { mode };
-  if (amountCents != null && amountCents >= 0) next.amountCents = amountCents;
-  if (minCents != null && minCents >= 0) next.minCents = minCents;
-  if (suggestedCents != null && suggestedCents >= 0) next.suggestedCents = suggestedCents;
+  if (mode === 'fixed') {
+    next.amountCents = Math.max(DROP_PAID_MIN_CENTS, amountCents ?? DROP_PAID_MIN_CENTS);
+  }
+  if (mode === 'pwyw') {
+    next.minCents = Math.max(DROP_PAID_MIN_CENTS, minCents ?? DROP_PAID_MIN_CENTS);
+    next.suggestedCents = Math.max(next.minCents, suggestedCents ?? 777);
+  }
   return next;
 }
 
@@ -164,31 +189,30 @@ export function isCommerceLive(price?: DropPrice | null): boolean {
 
 export function dropPriceSummary(price?: DropPrice | null): string {
   if (!price || price.mode === 'hidden') return '';
-  if (price.mode === 'free') return 'Free stream';
+  if (price.mode === 'free') return centsToUsdLabel(DROP_PAID_MIN_CENTS);
   if (price.mode === 'fixed') {
-    return centsToUsdLabel(price.amountCents ?? DROP_PAID_MIN_CENTS);
+    return centsToUsdLabel(Math.max(DROP_PAID_MIN_CENTS, price.amountCents ?? DROP_PAID_MIN_CENTS));
   }
-  const min = price.minCents ?? 0;
-  const sug = price.suggestedCents ?? Math.max(min, 777);
-  if (min <= 0) return `Pay what you want · suggested ${centsToUsdLabel(sug)}`;
+  const rawMin = price.minCents ?? DROP_PAID_MIN_CENTS;
+  const min = Math.max(DROP_PAID_MIN_CENTS, rawMin);
+  const sug = Math.max(DROP_PAID_MIN_CENTS, price.suggestedCents ?? Math.max(min, 777));
   return `PWYW from ${centsToUsdLabel(min)} · suggested ${centsToUsdLabel(sug)}`;
 }
 
-/** Amount the fan owes for this click. 0 = free claim, no Stripe. */
+/** Amount the fan owes for this click. Live First Drops are always paid. */
 export function resolveCheckoutCents(price: DropPrice, fanEnteredCents?: number): number {
   if (price.mode === 'hidden') return 0;
-  if (price.mode === 'free') return 0;
+  if (price.mode === 'free') return DROP_PAID_MIN_CENTS;
   if (price.mode === 'fixed') {
     return Math.max(DROP_PAID_MIN_CENTS, price.amountCents ?? DROP_PAID_MIN_CENTS);
   }
-  const min = Math.max(0, price.minCents ?? 0);
+  const min = Math.max(DROP_PAID_MIN_CENTS, price.minCents ?? DROP_PAID_MIN_CENTS);
   const suggested = Math.max(min, price.suggestedCents ?? min, min > 0 ? min : 0);
   const entered =
     typeof fanEnteredCents === 'number' && Number.isFinite(fanEnteredCents)
       ? Math.round(fanEnteredCents)
       : suggested;
   const charged = Math.max(min, entered);
-  if (charged <= 0) return 0;
   return Math.max(DROP_PAID_MIN_CENTS, charged);
 }
 

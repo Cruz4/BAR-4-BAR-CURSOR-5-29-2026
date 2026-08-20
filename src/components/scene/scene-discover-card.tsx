@@ -5,7 +5,7 @@
  * posts, live DNA Drops, and this week's leaderboard risers.
  */
 
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { Dna, Flame, Lock, Music, Radio, Trash2, TrendingUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PostCard } from '@/components/profile/post-card';
 import { ArtistStarAvatar, LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
+import { DropListenPanel } from '@/components/drop-listen-panel';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/client/firebase';
@@ -23,6 +24,7 @@ import type { DiscoverCard } from '@/lib/scene/discover-client';
 import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { formatDropPulseLine } from '@/lib/drop-pulse';
+import { normalizeDropPrice } from '@/lib/drop-commerce';
 
 function timeAgo(iso: string): string {
   try {
@@ -156,10 +158,25 @@ export function SceneDiscoverCard({
               {drop.firstBuyerName ? ` · first cop ${drop.firstBuyerName}` : ''}
             </p>
           </div>
-          <Button size="sm" className={firstDrop ? 'h-8 shrink-0 bg-fuchsia-400 font-bold uppercase text-black hover:bg-fuchsia-300' : 'h-8 shrink-0 font-bold uppercase'} variant={firstDrop ? 'default' : 'outline'} asChild>
-            <Link href={`/share/${drop.shareId}`}>{firstDrop ? 'Listen' : 'Open'}</Link>
-          </Button>
+          {!firstDrop ? (
+            <Button size="sm" className="h-8 shrink-0 font-bold uppercase" variant="outline" asChild>
+              <Link href={`/share/${drop.shareId}`}>Open</Link>
+            </Button>
+          ) : null}
         </div>
+        {firstDrop ? (
+          <div className="mt-3">
+            <Suspense fallback={<div className="h-24 animate-pulse rounded-xl bg-fuchsia-500/10" />}>
+              <DropListenPanel
+                shareId={drop.shareId}
+                title={drop.title}
+                ownerId={drop.ownerId || ''}
+                price={normalizeDropPrice(drop.dropPrice)}
+                hasAudio
+              />
+            </Suspense>
+          </div>
+        ) : null}
       </Card>
     );
   }
