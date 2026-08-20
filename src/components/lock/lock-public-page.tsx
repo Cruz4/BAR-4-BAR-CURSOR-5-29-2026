@@ -17,6 +17,7 @@ import { LockShell } from '@/components/lock/lock-shell';
 import { LockVersePath } from '@/components/lock/lock-verse-path';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
+import { isMasterAdminEmail } from '@/lib/master-admin';
 import {
   ancestryPath,
   indexEchoes,
@@ -302,6 +303,7 @@ function LockPublicPageInner({ lockId, lockEnabled }: LockPublicPageProps) {
 
   const canDelete = (echo: LockEcho) => {
     if (!user) return false;
+    if (isMasterAdminEmail(user.email) || user.role === 'admin') return true;
     if (echo.authorId && echo.authorId === user.id) return true;
     if (lock && lock.ownerId === user.id && lock.ownerId !== 'system') return true;
     return false;

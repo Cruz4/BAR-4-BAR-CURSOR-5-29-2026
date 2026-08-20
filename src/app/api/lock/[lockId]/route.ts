@@ -3,6 +3,7 @@ import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 import { getLock, listEchoes, ensureHouseLock, deleteLock } from '@/lib/server/lock';
 import { LOCK_HOUSE_ID } from '@/lib/lock-feature';
 import { isLockFeatureEnabled } from '@/lib/server/lock-feature';
+import { canAccessLockApi } from '@/lib/server/lock-access';
 
 export const runtime = 'nodejs';
 
@@ -10,16 +11,17 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ lockId: string }> }
 ) {
-  if (!(await isLockFeatureEnabled())) {
-    return NextResponse.json({ error: 'LOCK is off' }, { status: 404 });
-  }
   try {
     const { lockId: raw } = await params;
     const lockId = (raw || '').trim() || LOCK_HOUSE_ID;
-    if (lockId === LOCK_HOUSE_ID || lockId === 'house') {
+    const resolvedId = lockId === 'house' ? LOCK_HOUSE_ID : lockId;
+    if (!(await canAccessLockApi(resolvedId))) {
+      return NextResponse.json({ error: 'LOCK is off' }, { status: 404 });
+    }
+    if (resolvedId === LOCK_HOUSE_ID) {
       await ensureHouseLock();
     }
-    const lock = await getLock(lockId === 'house' ? LOCK_HOUSE_ID : lockId);
+    const lock = await getLock(resolvedId);
     if (!lock) {
       return NextResponse.json({ error: 'LOCK not found' }, { status: 404 });
     }

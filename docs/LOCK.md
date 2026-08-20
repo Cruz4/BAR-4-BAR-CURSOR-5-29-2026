@@ -40,8 +40,11 @@ Feature branch: `feat/lock`. Do not merge to `main` until ready.
 
 ## House bar of the day
 
-Separate from the LOCK kill switch. Firestore `config/houseBar`. When live, The Scene shows the bar above the feed. Answer CTA goes to `/lock/house` if LOCK is on.  
+Pinned on The Scene (Firestore `config/houseBar`). **Write the next line** opens a Scene popup — you stay on the feed, drop a reply, and see recent replies there.
 
+Studio admins can delete any house reply from that popup (or from `/lock/house`). Artist-owned LOCKs still use the LOCK System kill switch; the house cast also works when House bar is live even if LOCK System is off.
+
+`/lock/house` remains the deep link / full tree view.
 
 ## Rights
 

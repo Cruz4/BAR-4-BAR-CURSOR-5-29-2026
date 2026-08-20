@@ -40,6 +40,8 @@ export type LockEcho = {
   parentEchoId?: string | null;
   authorId?: string | null;
   authorName?: string | null;
+  /** Artist Home vanity slug when the reply was named. */
+  authorSlug?: string | null;
   createdAt: string;
   isPick?: boolean;
 };

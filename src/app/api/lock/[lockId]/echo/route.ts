@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/server/rate-limit';
 import { submitEcho } from '@/lib/server/lock';
 import { LOCK_HOUSE_ID } from '@/lib/lock-feature';
-import { isLockFeatureEnabled } from '@/lib/server/lock-feature';
+import { canAccessLockApi } from '@/lib/server/lock-access';
 import { getAuth } from '@/lib/firebase/server';
 
 export const runtime = 'nodejs';
@@ -17,12 +17,12 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ lockId: string }> }
 ) {
-  if (!(await isLockFeatureEnabled())) {
-    return NextResponse.json({ error: 'LOCK is off' }, { status: 404 });
-  }
   try {
     const { lockId: raw } = await params;
     const lockId = ((raw || '').trim() === 'house' ? LOCK_HOUSE_ID : (raw || '').trim()) || LOCK_HOUSE_ID;
+    if (!(await canAccessLockApi(lockId))) {
+      return NextResponse.json({ error: 'LOCK is off' }, { status: 404 });
+    }
     const body = await req.json().catch(() => ({}));
     const text = typeof body.text === 'string' ? body.text : '';
     const parentEchoId = typeof body.parentEchoId === 'string' ? body.parentEchoId : null;
@@ -37,6 +37,10 @@ export async function POST(
 
     let authorId: string | null = null;
     let authorName: string | null = null;
+    let authorSlug: string | null =
+      typeof body.authorSlug === 'string' && body.authorSlug.trim()
+        ? body.authorSlug.trim().slice(0, 80)
+        : null;
     const header = req.headers.get('authorization');
     if (header?.startsWith('Bearer ')) {
       try {
@@ -58,6 +62,7 @@ export async function POST(
       parentEchoId,
       authorId,
       authorName,
+      authorSlug,
     });
 
     // Server-side funnel (Telegram) — reliable even if client beacon fails

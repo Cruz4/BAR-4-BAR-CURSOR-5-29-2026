@@ -78,9 +78,8 @@ export function AdminHouseBarCard() {
               House bar of the day
             </CardTitle>
             <CardDescription className="mt-2 max-w-xl">
-              One shared unfinished bar pinned on The Scene. Toggle live and rewrite the line
-              anytime — no redeploy. Updates the house LOCK seed at{' '}
-              <code className="text-foreground/80">/lock/house</code>.
+              One shared unfinished bar pinned on The Scene. Artists continue it in a Scene popup
+              (not their last track). Toggle live and rewrite anytime — updates the house cast seed.
             </CardDescription>
           </div>
           <Badge
@@ -102,7 +101,7 @@ export function AdminHouseBarCard() {
               <div>
                 <p className="text-sm font-bold uppercase tracking-wider text-white">Pin on The Scene</p>
                 <p className="text-xs text-muted-foreground mt-1 max-w-md">
-                  When on, every signed-in artist sees this bar above the feed.
+                  When on, artists see this bar on The Scene and continue it in a popup. Studio admins can delete any reply.
                 </p>
               </div>
               <Switch checked={enabled} onCheckedChange={setEnabled} />

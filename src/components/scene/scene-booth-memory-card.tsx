@@ -64,29 +64,16 @@ export function SceneBoothMemoryCard({ className }: { className?: string }) {
     <Card
       id={SCENE_BOOTH_MEMORY_ID}
       className={cn(
-        'relative overflow-hidden border border-sky-500/30 bg-gradient-to-br from-sky-500/10 via-card/90 to-card/70 px-3 py-2',
+        'relative overflow-hidden border border-sky-500/30 bg-gradient-to-br from-sky-500/10 via-card/90 to-card/70 p-2',
         className
       )}
     >
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="absolute right-1.5 top-1.5 h-6 w-6 text-muted-foreground hover:bg-white/10 hover:text-foreground"
-        aria-label="Close booth memory"
-        onClick={() => {
-          dismissBoothMemory(memory);
-          setMemory(null);
-        }}
-      >
-        <X className="h-3.5 w-3.5" />
-      </Button>
-      <p className="flex items-center gap-1.5 pr-8 font-code text-[9px] font-bold uppercase tracking-[0.28em] text-sky-300">
-        <Mic2 className="h-3 w-3" />
-        Booth memory
-      </p>
-      <div className="mt-1 flex items-center justify-between gap-3 pr-1">
-        <div className="min-w-0">
+      <div className="flex items-start gap-2.5">
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="flex items-center gap-1.5 font-code text-[9px] font-bold uppercase tracking-[0.28em] text-sky-300">
+            <Mic2 className="h-3 w-3" />
+            Booth memory
+          </p>
           <p className="text-[13px] leading-snug text-foreground/95">
             You left <span className="font-semibold">{memory.trackTitle}</span>{' '}
             <span className="text-muted-foreground">
@@ -95,16 +82,31 @@ export function SceneBoothMemoryCard({ className }: { className?: string }) {
             </span>
           </p>
           {line ? (
-            <p className="mt-0.5 truncate text-[12px] italic text-muted-foreground">
+            <p className="truncate text-[12px] italic text-muted-foreground">
               &ldquo;{line}&rdquo;
             </p>
           ) : (
-            <p className="mt-0.5 text-[12px] text-muted-foreground">The sheet is still on the desk.</p>
+            <p className="text-[12px] text-muted-foreground">The sheet is still on the desk.</p>
           )}
         </div>
-        <Button asChild size="sm" className="h-7 shrink-0 px-3 font-bold uppercase tracking-wider">
-          <Link href={memory.trackPath}>{line ? 'Finish this bar' : 'Open the sheet'}</Link>
-        </Button>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+            aria-label="Close booth memory"
+            onClick={() => {
+              dismissBoothMemory(memory);
+              setMemory(null);
+            }}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+          <Button asChild size="sm" className="h-7 shrink-0 px-3 font-bold uppercase tracking-wider">
+            <Link href={memory.trackPath}>{line ? 'Finish this bar' : 'Open the sheet'}</Link>
+          </Button>
+        </div>
       </div>
     </Card>
   );

@@ -13,6 +13,7 @@ import { trackLockBloodline } from '@/lib/lock-funnel-client';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/client/firebase';
+import { isMasterAdminEmail } from '@/lib/master-admin';
 import {
   LOCK_SEED_NODE_ID,
   ancestryPath,
@@ -124,6 +125,7 @@ export default function LockBloodlinePageInner() {
 
   const canDelete = (echo: LockEcho) => {
     if (!user || !lock) return false;
+    if (isMasterAdminEmail(user.email) || user.role === 'admin') return true;
     if (echo.authorId && echo.authorId === user.id) return true;
     if (lock.ownerId === user.id && lock.ownerId !== 'system') return true;
     return false;

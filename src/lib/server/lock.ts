@@ -68,9 +68,21 @@ function mapEcho(id: string, data: Record<string, unknown>): LockEcho {
     parentEchoId: typeof data.parentEchoId === 'string' ? data.parentEchoId : null,
     authorId: typeof data.authorId === 'string' ? data.authorId : null,
     authorName: typeof data.authorName === 'string' ? data.authorName : null,
+    authorSlug: typeof data.authorSlug === 'string' ? data.authorSlug : null,
     createdAt: String(data.createdAt || new Date().toISOString()),
     ...(data.isPick === true ? { isPick: true } : {}),
   };
+}
+
+async function resolveAuthorSlug(userId: string): Promise<string | null> {
+  try {
+    const db = await getDb();
+    const snap = await db.doc(`users/${userId}/gamification/summary`).get();
+    const slug = snap.exists ? snap.data()?.profileSlug : null;
+    return typeof slug === 'string' && slug.trim() ? slug.trim() : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function ensureHouseLock(): Promise<LockDoc> {
@@ -148,7 +160,27 @@ export async function listEchoes(
   } else {
     snap = await col.orderBy('createdAt', 'desc').limit(lim).get();
   }
-  return snap.docs.map((d) => mapEcho(d.id, (d.data() || {}) as Record<string, unknown>));
+  const echoes = snap.docs.map((d) => mapEcho(d.id, (d.data() || {}) as Record<string, unknown>));
+  const missing = [
+    ...new Set(
+      echoes
+        .filter((e) => e.authorId && !e.authorSlug)
+        .map((e) => e.authorId as string)
+    ),
+  ];
+  if (missing.length === 0) return echoes;
+  const slugByUid = new Map<string, string>();
+  await Promise.all(
+    missing.map(async (uid) => {
+      const slug = await resolveAuthorSlug(uid);
+      if (slug) slugByUid.set(uid, slug);
+    })
+  );
+  return echoes.map((e) =>
+    e.authorId && !e.authorSlug && slugByUid.has(e.authorId)
+      ? { ...e, authorSlug: slugByUid.get(e.authorId)! }
+      : e
+  );
 }
 
 export async function submitEcho(input: {
@@ -157,6 +189,7 @@ export async function submitEcho(input: {
   parentEchoId?: string | null;
   authorId?: string | null;
   authorName?: string | null;
+  authorSlug?: string | null;
 }): Promise<{ lock: LockDoc; echo: LockEcho }> {
   const lock = await getLock(input.lockId);
   if (!lock) throw new Error('LOCK not found');
@@ -176,13 +209,23 @@ export async function submitEcho(input: {
   const now = new Date().toISOString();
   const echoRef = db.collection('locks').doc(lock.id).collection('echoes').doc(echoId);
 
+  const authorId = input.authorId?.trim() || null;
+  let authorSlug =
+    typeof input.authorSlug === 'string' && input.authorSlug.trim()
+      ? input.authorSlug.trim().slice(0, 80)
+      : null;
+  if (authorId && !authorSlug) {
+    authorSlug = await resolveAuthorSlug(authorId);
+  }
+
   const echoData = {
     text,
     lockScore: scored.score,
     lockLabel: scored.label,
     parentEchoId: input.parentEchoId?.trim() || null,
-    authorId: input.authorId?.trim() || null,
+    authorId,
     authorName: input.authorName?.trim() || null,
+    authorSlug,
     createdAt: now,
     isPick: false,
   };
@@ -255,11 +298,12 @@ async function notifyLockAnswered(input: {
   }
 }
 
-/** Author or cast owner may remove a reply. Decrements echoCount; clears pick if needed. */
+/** Author, cast owner, or studio admin may remove a reply. Decrements echoCount; clears pick if needed. */
 export async function deleteEcho(input: {
   lockId: string;
   echoId: string;
   requesterId: string;
+  requesterEmail?: string | null;
 }): Promise<void> {
   const lock = await getLock(input.lockId);
   if (!lock) throw new Error('Cast not found');
@@ -273,8 +317,13 @@ export async function deleteEcho(input: {
   const authorId = typeof data.authorId === 'string' ? data.authorId : null;
   const isOwner = lock.ownerId === input.requesterId && lock.ownerId !== 'system';
   const isAuthor = Boolean(authorId && authorId === input.requesterId);
-  if (!isOwner && !isAuthor) {
-    throw new Error('Only the writer or the casting artist can delete this reply');
+  const { isStudioAdminUser } = await import('@/lib/server/lock-access');
+  const isAdmin = await isStudioAdminUser({
+    uid: input.requesterId,
+    email: input.requesterEmail,
+  });
+  if (!isOwner && !isAuthor && !isAdmin) {
+    throw new Error('Only the writer, casting artist, or studio admin can delete this reply');
   }
 
   const now = new Date().toISOString();
