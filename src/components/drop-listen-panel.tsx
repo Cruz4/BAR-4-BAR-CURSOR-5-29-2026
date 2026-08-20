@@ -17,6 +17,7 @@ import {
   resolveCheckoutCents,
   type DropPrice,
 } from '@/lib/drop-commerce';
+import { buildDropBuyLoginPath } from '@/lib/checkout-intent';
 import { Pause, Play, Loader } from 'lucide-react';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { recordDropSpinClient } from '@/lib/drop-pulse-client';
@@ -112,7 +113,7 @@ export function DropListenPanel({
   const startCheckout = async (amountCents?: number) => {
     if (!authReady) return;
     if (!user) {
-      router.push(`/login?next=${encodeURIComponent(`/share/${shareId}`)}`);
+      router.push(buildDropBuyLoginPath(shareId));
       return;
     }
     setBusy(true);
@@ -145,7 +146,7 @@ export function DropListenPanel({
 
   const claimFree = async () => {
     if (!user) {
-      router.push(`/login?next=${encodeURIComponent(`/share/${shareId}`)}`);
+      router.push(buildDropBuyLoginPath(shareId));
       return;
     }
     setBusy(true);
@@ -275,10 +276,14 @@ export function DropListenPanel({
           >
             {busy ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : null}
             {normalized.mode === 'free'
-              ? 'Unlock free stream'
+              ? user ? 'Unlock free stream' : 'Sign up · Unlock free'
               : normalized.mode === 'fixed'
-                ? `Buy · ${centsToUsdLabel(Math.max(DROP_PAID_MIN_CENTS, normalized.amountCents ?? DROP_PAID_MIN_CENTS))}`
-                : 'Pay what you want'}
+                ? user
+                  ? `Buy · ${centsToUsdLabel(Math.max(DROP_PAID_MIN_CENTS, normalized.amountCents ?? DROP_PAID_MIN_CENTS))}`
+                  : `Sign up · Buy · ${centsToUsdLabel(Math.max(DROP_PAID_MIN_CENTS, normalized.amountCents ?? DROP_PAID_MIN_CENTS))}`
+                : user
+                  ? 'Pay what you want'
+                  : 'Sign up · Pay what you want'}
           </Button>
           <p className="text-[9px] text-muted-foreground text-center">
             Buy once. Stream in the app. Not on Spotify unless the artist goes wide later.

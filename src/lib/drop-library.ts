@@ -23,6 +23,7 @@ export type DropLibraryItem = DropLibraryEntry & {
 
 export type DeckSort = 'fresh' | 'az' | 'artist' | 'paid' | 'played';
 export type DeckGroup = 'none' | 'kind' | 'artist' | 'access' | 'month';
+export type DeckViewMode = 'list' | 'browse';
 
 export type DeckPlayable = {
   key: string;
@@ -46,6 +47,19 @@ export type DeckGroupBucket = {
   id: string;
   label: string;
   items: DeckPlayable[];
+};
+
+export type DeckBrowseAlbum = {
+  id: string;
+  label: string;
+  items: DeckPlayable[];
+};
+
+export type DeckBrowseArtist = {
+  id: string;
+  label: string;
+  albums: DeckBrowseAlbum[];
+  trackCount: number;
 };
 
 export type DropCrate = {
@@ -218,6 +232,48 @@ export function groupPlayables(items: DeckPlayable[], group: DeckGroup): DeckGro
     return [...order].sort((a, b) => b.localeCompare(a)).map((id) => buckets.get(id)!);
   }
   return order.map((id) => buckets.get(id)!);
+}
+
+/**
+ * Hierarchical browser data for Library:
+ * artist -> album/singles bucket -> tracks.
+ * Respects caller order of `items` so search/sort still drives results.
+ */
+export function buildBrowseArtists(items: DeckPlayable[]): DeckBrowseArtist[] {
+  const artists = new Map<string, DeckBrowseArtist>();
+  const albumSeenByArtist = new Map<string, Set<string>>();
+
+  for (const item of items) {
+    const artistId = (item.artistName || 'Unknown artist').trim().toLowerCase() || 'unknown-artist';
+    const artistLabel = item.artistName || 'Unknown artist';
+    let artist = artists.get(artistId);
+    if (!artist) {
+      artist = { id: artistId, label: artistLabel, albums: [], trackCount: 0 };
+      artists.set(artistId, artist);
+      albumSeenByArtist.set(artistId, new Set<string>());
+    }
+
+    const albumKey = item.albumId
+      ? `album:${item.albumId}`
+      : item.albumTitle
+        ? `album-title:${item.albumTitle.toLowerCase()}`
+        : item.scope === 'album'
+          ? `pressing:${item.shareId}`
+          : `single:${item.shareId}`;
+    const albumLabel = item.albumTitle || (item.scope === 'album' ? 'Untitled pressing' : 'Singles');
+    const seenAlbums = albumSeenByArtist.get(artistId)!;
+
+    if (!seenAlbums.has(albumKey)) {
+      artist.albums.push({ id: albumKey, label: albumLabel, items: [] });
+      seenAlbums.add(albumKey);
+    }
+    const album = artist.albums.find((a) => a.id === albumKey);
+    if (!album) continue;
+    album.items.push(item);
+    artist.trackCount += 1;
+  }
+
+  return [...artists.values()];
 }
 
 export function readPlayedMap(): DeckPlayedMap {

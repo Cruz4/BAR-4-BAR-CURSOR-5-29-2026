@@ -92,3 +92,30 @@ export function DeckNeonBackground() {
     </div>
   );
 }
+
+/** Library alt — lighter, airy mesh with subtle motion feel. */
+export function DeckAuroraBackground() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden isolate" aria-hidden>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_8%,rgba(34,211,238,0.14),transparent_45%),radial-gradient(circle_at_88%_12%,rgba(232,121,249,0.14),transparent_42%),radial-gradient(circle_at_50%_88%,rgba(99,102,241,0.1),transparent_48%)]" />
+      <MeshOrb
+        className="left-[-10%] top-[-12%] h-[min(52vh,500px)] w-[min(82vw,760px)] bg-cyan-400/[0.14] dark:bg-cyan-400/[0.1] blur-[105px] sm:blur-[145px]"
+      />
+      <MeshOrb
+        className="right-[-8%] top-[20%] h-[min(44vh,420px)] w-[min(68vw,620px)] bg-fuchsia-400/[0.12] dark:bg-fuchsia-400/[0.08] blur-[95px] sm:blur-[130px]"
+      />
+      <MeshOrb
+        className="bottom-[-15%] left-1/4 h-[min(42vh,400px)] w-[min(86vw,780px)] bg-violet-500/[0.1] dark:bg-violet-500/[0.08] blur-[110px] sm:blur-[150px]"
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%,transparent_78%,rgba(255,255,255,0.025))] dark:bg-[linear-gradient(to_bottom,rgba(255,255,255,0.01),transparent_24%,transparent_76%,rgba(255,255,255,0.012))]" />
+      <div className="absolute inset-0 opacity-[0.018] [background-image:linear-gradient(rgba(255,255,255,0.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.09)_1px,transparent_1px)] [background-size:34px_34px]" />
+      <div
+        className="absolute inset-0 opacity-[0.02] mix-blend-soft-light"
+        style={{
+          backgroundImage: `url("${STUDIO_GRAIN_URI}")`,
+          backgroundSize: '260px 260px',
+        }}
+      />
+    </div>
+  );
+}

@@ -3,8 +3,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
+  ChevronDown,
+  ChevronRight,
   Disc3,
   ExternalLink,
+  FolderOpen,
+  Layers2,
   ListPlus,
   Loader,
   Pause,
@@ -60,6 +64,7 @@ import {
   toggleShareInCrate,
 } from '@/lib/drop-crates';
 import {
+  buildBrowseArtists,
   deckHue,
   flattenLibraryItems,
   formatDeckTime,
@@ -69,14 +74,16 @@ import {
   searchPlayables,
   shufflePlayables,
   sortPlayables,
+  type DeckBrowseArtist,
   type DeckGroup,
   type DeckPlayable,
   type DeckSort,
+  type DeckViewMode,
   type DropCrate,
   type DropLibraryItem,
 } from '@/lib/drop-library';
 import { cn } from '@/lib/utils';
-import { DeckNeonBackground } from '@/components/studio-page-background';
+import { DeckAuroraBackground } from '@/components/studio-page-background';
 import { DropVisualizer } from '@/components/library/drop-visualizer';
 
 function PressingPlate({
@@ -140,6 +147,7 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
   } = useDropPlayer();
 
   const [query, setQuery] = useState('');
+  const [viewMode, setViewMode] = useState<DeckViewMode>('list');
   const [sort, setSort] = useState<DeckSort>('fresh');
   const [group, setGroup] = useState<DeckGroup>('kind');
   const [crateId, setCrateId] = useState<string>('all');
@@ -150,6 +158,8 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [expandedArtists, setExpandedArtists] = useState<Record<string, boolean>>({});
+  const [expandedAlbums, setExpandedAlbums] = useState<Record<string, boolean>>({});
   const currentKey = current?.key ?? null;
 
   const activeCrate = crateId === 'all' ? null : crates.find((c) => c.id === crateId) ?? null;
@@ -164,6 +174,7 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
   }, [items, activeCrate, query, sort, played]);
 
   const buckets = useMemo(() => groupPlayables(playables, group), [playables, group]);
+  const browseArtists: DeckBrowseArtist[] = useMemo(() => buildBrowseArtists(playables), [playables]);
 
   useEffect(() => {
     if (!shuffle) {
@@ -210,6 +221,26 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
     [loadAndPlay]
   );
 
+  useEffect(() => {
+    setExpandedArtists((prev) => {
+      const next: Record<string, boolean> = {};
+      for (const artist of browseArtists) {
+        next[artist.id] = prev[artist.id] ?? true;
+      }
+      return next;
+    });
+    setExpandedAlbums((prev) => {
+      const next: Record<string, boolean> = {};
+      for (const artist of browseArtists) {
+        for (const album of artist.albums) {
+          const key = `${artist.id}:${album.id}`;
+          next[key] = prev[key] ?? true;
+        }
+      }
+      return next;
+    });
+  }, [browseArtists]);
+
   const makeCrate = async (seedShareId?: string) => {
     try {
       const name = crateName.trim() || 'Untitled crate';
@@ -240,7 +271,7 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
 
   return (
     <div className="relative flex flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
-      <DeckNeonBackground />
+      <DeckAuroraBackground />
 
       <header className="relative z-10 shrink-0 border-b border-fuchsia-500/15 px-4 py-4 sm:px-6">
         <div className="mx-auto flex max-w-6xl flex-col gap-4">
@@ -270,6 +301,32 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
                 className="border-fuchsia-500/25 bg-black/30 pl-9 font-code"
               />
             </div>
+            <div className="inline-flex h-10 items-center rounded-lg border border-fuchsia-500/25 bg-black/30 p-1">
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={cn(
+                  'inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[10px] font-bold uppercase tracking-[0.16em] transition-colors',
+                  viewMode === 'list'
+                    ? 'bg-fuchsia-500/25 text-fuchsia-100'
+                    : 'text-muted-foreground hover:text-fuchsia-100'
+                )}
+              >
+                <Layers2 className="h-3.5 w-3.5" /> List
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('browse')}
+                className={cn(
+                  'inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[10px] font-bold uppercase tracking-[0.16em] transition-colors',
+                  viewMode === 'browse'
+                    ? 'bg-cyan-500/20 text-cyan-100'
+                    : 'text-muted-foreground hover:text-cyan-100'
+                )}
+              >
+                <FolderOpen className="h-3.5 w-3.5" /> Browse
+              </button>
+            </div>
             <Select value={sort} onValueChange={(v) => setSort(v as DeckSort)}>
               <SelectTrigger className="w-full border-fuchsia-500/25 bg-black/30 sm:w-[160px]">
                 <SelectValue placeholder="Sort" />
@@ -282,18 +339,20 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
                 <SelectItem value="paid">Paid first</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={group} onValueChange={(v) => setGroup(v as DeckGroup)}>
-              <SelectTrigger className="w-full border-fuchsia-500/25 bg-black/30 sm:w-[160px]">
-                <SelectValue placeholder="Group" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="kind">Singles / pressings</SelectItem>
-                <SelectItem value="artist">By artist</SelectItem>
-                <SelectItem value="access">Bought / free</SelectItem>
-                <SelectItem value="month">By month</SelectItem>
-                <SelectItem value="none">Flat platter</SelectItem>
-              </SelectContent>
-            </Select>
+            {viewMode === 'list' ? (
+              <Select value={group} onValueChange={(v) => setGroup(v as DeckGroup)}>
+                <SelectTrigger className="w-full border-fuchsia-500/25 bg-black/30 sm:w-[160px]">
+                  <SelectValue placeholder="Group" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="kind">Singles / pressings</SelectItem>
+                  <SelectItem value="artist">By artist</SelectItem>
+                  <SelectItem value="access">Bought / free</SelectItem>
+                  <SelectItem value="month">By month</SelectItem>
+                  <SelectItem value="none">Flat platter</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : null}
           </div>
         </div>
       </header>
@@ -491,6 +550,198 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
               <p className="p-8 text-center text-sm text-muted-foreground">
                 No drops match this crate or search.
               </p>
+            ) : viewMode === 'browse' ? (
+              <div className="p-2 sm:p-3">
+                {browseArtists.map((artist) => {
+                  const artistOpen = expandedArtists[artist.id] ?? true;
+                  return (
+                    <div key={artist.id} className="mb-3 overflow-hidden rounded-xl border border-white/10 bg-black/20">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedArtists((prev) => ({ ...prev, [artist.id]: !artistOpen }))
+                        }
+                        className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-white/5"
+                      >
+                        <span className="inline-flex min-w-0 items-center gap-2">
+                          {artistOpen ? (
+                            <ChevronDown className="h-4 w-4 text-cyan-300" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-cyan-300" />
+                          )}
+                          <span className="truncate font-headline text-sm font-bold uppercase text-cyan-100">
+                            {artist.label}
+                          </span>
+                        </span>
+                        <span className="shrink-0 font-code text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                          {artist.trackCount} tracks
+                        </span>
+                      </button>
+                      {artistOpen ? (
+                        <div className="border-t border-white/10 bg-black/20 px-2 py-2">
+                          {artist.albums.map((album) => {
+                            const albumKey = `${artist.id}:${album.id}`;
+                            const albumOpen = expandedAlbums[albumKey] ?? true;
+                            return (
+                              <div key={album.id} className="mb-2 rounded-lg border border-white/10 bg-black/20">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setExpandedAlbums((prev) => ({ ...prev, [albumKey]: !albumOpen }))
+                                  }
+                                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-white/5"
+                                >
+                                  <span className="inline-flex min-w-0 items-center gap-2">
+                                    {albumOpen ? (
+                                      <ChevronDown className="h-3.5 w-3.5 text-fuchsia-300" />
+                                    ) : (
+                                      <ChevronRight className="h-3.5 w-3.5 text-fuchsia-300" />
+                                    )}
+                                    <span className="truncate font-code text-[11px] font-bold uppercase tracking-[0.14em] text-fuchsia-100/90">
+                                      {album.label}
+                                    </span>
+                                  </span>
+                                  <span className="shrink-0 font-code text-[10px] text-muted-foreground">
+                                    {album.items.length}
+                                  </span>
+                                </button>
+                                {albumOpen ? (
+                                  <ul className="border-t border-white/10 px-1 py-1">
+                                    {album.items.map((item) => {
+                                      const active = item.key === currentKey;
+                                      return (
+                                        <li key={item.key}>
+                                          <div
+                                            className={cn(
+                                              'group flex items-center gap-2 rounded-xl px-2 py-2 transition-colors',
+                                              active
+                                                ? 'bg-fuchsia-500/15 ring-1 ring-fuchsia-400/35'
+                                                : 'hover:bg-white/5'
+                                            )}
+                                          >
+                                            <button
+                                              type="button"
+                                              className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                                              onClick={() => {
+                                                if (active) togglePlay();
+                                                else playItem(item);
+                                              }}
+                                            >
+                                              <span
+                                                className={cn(
+                                                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border',
+                                                  active
+                                                    ? 'border-fuchsia-300/60 bg-fuchsia-500/20 text-fuchsia-100'
+                                                    : 'border-white/10 bg-black/40 text-muted-foreground'
+                                                )}
+                                              >
+                                                {active && playing ? (
+                                                  <Pause className="h-3.5 w-3.5" />
+                                                ) : (
+                                                  <Play className="h-3.5 w-3.5" />
+                                                )}
+                                              </span>
+                                              <span className="min-w-0 flex-1">
+                                                <span className="block truncate font-headline text-sm font-bold uppercase">
+                                                  {item.title}
+                                                </span>
+                                                <span className="block truncate font-code text-[10px] uppercase text-muted-foreground">
+                                                  {item.artistName}
+                                                  {item.albumTitle ? ` · ${item.albumTitle}` : ` · ${item.scope}`}
+                                                  {item.own
+                                                    ? ' · Yours'
+                                                    : item.free
+                                                      ? ' · Free'
+                                                      : ` · ${centsToUsdLabel(item.amountCents)}`}
+                                                </span>
+                                              </span>
+                                              <span className="hidden shrink-0 font-code text-[10px] text-muted-foreground sm:block">
+                                                {item.durationSec ? formatDeckTime(item.durationSec) : ''}
+                                              </span>
+                                            </button>
+                                            <DropdownMenu>
+                                              <DropdownMenuTrigger asChild>
+                                                <Button
+                                                  type="button"
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  className="h-8 w-8 shrink-0 opacity-70 hover:opacity-100"
+                                                  aria-label={item.own ? 'Manage this song' : 'Add to crate'}
+                                                >
+                                                  {item.own ? (
+                                                    <Settings2 className="h-4 w-4" />
+                                                  ) : (
+                                                    <ListPlus className="h-4 w-4" />
+                                                  )}
+                                                </Button>
+                                              </DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end" className="w-52">
+                                                {item.own && (
+                                                  <>
+                                                    <DropdownMenuLabel>Manage</DropdownMenuLabel>
+                                                    <DropdownMenuItem
+                                                      onClick={() =>
+                                                        openFirstDropLathe({
+                                                          trackId: item.trackId,
+                                                          albumId: item.albumId,
+                                                        })
+                                                      }
+                                                    >
+                                                      <Settings2 className="h-4 w-4" />
+                                                      Update press
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem asChild>
+                                                      <Link href={`/share/${item.shareId}`}>
+                                                        <ExternalLink className="h-4 w-4" />
+                                                        Open drop
+                                                      </Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                  </>
+                                                )}
+                                                <DropdownMenuLabel>Add to crate</DropdownMenuLabel>
+                                                {crates.length === 0 && (
+                                                  <DropdownMenuItem onClick={() => void makeCrate(item.shareId)}>
+                                                    New crate with this drop
+                                                  </DropdownMenuItem>
+                                                )}
+                                                {crates.map((crate) => {
+                                                  const inCrate = crate.shareIds.includes(item.shareId);
+                                                  return (
+                                                    <DropdownMenuItem
+                                                      key={crate.id}
+                                                      onClick={() => void addToCrate(crate, item.shareId)}
+                                                    >
+                                                      {inCrate ? 'Remove from ' : 'Add to '}
+                                                      {crate.name}
+                                                    </DropdownMenuItem>
+                                                  );
+                                                })}
+                                                {crates.length > 0 && (
+                                                  <>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem onClick={() => void makeCrate(item.shareId)}>
+                                                      New crate with this drop
+                                                    </DropdownMenuItem>
+                                                  </>
+                                                )}
+                                              </DropdownMenuContent>
+                                            </DropdownMenu>
+                                          </div>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               <div className="p-2 sm:p-3">
                 {buckets.map((bucket) => (

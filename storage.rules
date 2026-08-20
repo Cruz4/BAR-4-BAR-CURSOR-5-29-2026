@@ -18,16 +18,19 @@ service firebase.storage {
     function ticketWriteOk(userId) {
       let ticketId = request.resource.metadata.uploadTicket;
       let ticket = uploadTicket(userId, ticketId);
+      let isMain = ticket.data != null && request.resource.name == ticket.data.storagePath;
+      let isCompanion = ticket.data != null
+        && 'companionPath' in ticket.data
+        && request.resource.name == ticket.data.companionPath;
       return ticketId != null
         && ticket.data != null
         && ticket.data.used == false
         && request.time < ticket.data.expiresAt
-        && request.resource.size <= ticket.data.maxBytes
         && request.resource.contentType.matches(ticket.data.contentTypePattern)
-        && (request.resource.name == ticket.data.storagePath
-            || ('companionPath' in ticket.data
-                && request.resource.name == ticket.data.companionPath
-                && request.resource.size <= ticket.data.companionMaxBytes));
+        && (
+          (isMain && request.resource.size <= ticket.data.maxBytes)
+          || (isCompanion && request.resource.size <= ticket.data.companionMaxBytes)
+        );
     }
 
     function ownerTicketWrite(userId) {

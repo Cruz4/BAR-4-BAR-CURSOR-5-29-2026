@@ -8,6 +8,7 @@
 
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Banknote, Disc3, Loader, Music, Trash2 } from 'lucide-react';
 import {
   Dialog,
@@ -42,6 +43,7 @@ import type { Album, Track } from '@/lib/types';
 type Picked = { album: Album; track: Track };
 
 export function FirstDropLatheHost() {
+  const router = useRouter();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -187,8 +189,8 @@ export function FirstDropLatheHost() {
         title: 'Pressed live',
         description: 'Visitors hear this first on your Artist Home and this share link.',
       });
-      window.open(`/share/${shareId}`, '_blank', 'noopener,noreferrer');
       setOpen(false);
+      router.push(`/share/${shareId}`);
     } catch (e: unknown) {
       toast({
         variant: 'destructive',

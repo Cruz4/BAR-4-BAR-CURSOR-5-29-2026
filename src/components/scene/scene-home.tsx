@@ -999,7 +999,7 @@ export function SceneHome() {
               ) : null}
             </div>
 
-            <SceneOnSaleRail drops={discover?.drops || []} />
+            {blockExpanded ? <SceneOnSaleRail drops={discover?.drops || []} /> : null}
 
             <div
               id={DISCOVER_SECTION_ID}

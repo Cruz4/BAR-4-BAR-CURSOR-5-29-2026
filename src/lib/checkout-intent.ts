@@ -25,6 +25,12 @@ export function buildLoginPath(nextPath: string): string {
   return `/login?next=${encodeURIComponent(getSafeNextPath(nextPath))}`;
 }
 
+/** Guest First Drop checkout — sign up, then return to the share page to buy. */
+export function buildDropBuyLoginPath(shareId: string): string {
+  const next = getSafeNextPath(`/share/${shareId}`);
+  return `/login?mode=signup&next=${encodeURIComponent(next)}&intent=drop-buy`;
+}
+
 function parsePathUrl(path: string): URL | null {
   try {
     return path.startsWith('http') ? new URL(path) : new URL(path, 'http://local');

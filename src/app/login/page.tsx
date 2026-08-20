@@ -20,7 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Mail, Lock, User as UserIcon, Zap, Import, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, Zap, Import, ShieldCheck, Disc3 } from 'lucide-react';
 import { BUY_ME_COFFEE_URL, SUPPORT_MAILTO } from '@/lib/support';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
@@ -99,6 +99,7 @@ function LoginForm() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const importIntent = searchParams.get('intent') === 'dna-import';
+  const dropBuyIntent = searchParams.get('intent') === 'drop-buy';
   const guestTryIntent = searchParams.get('intent') === 'guest_try';
   const safeNext = getSafeNextPath(searchParams.get('next'));
   const proCheckoutIntent = getCheckoutFromPath(safeNext);
@@ -106,8 +107,8 @@ function LoginForm() {
   const isTikTokRef = marketingRef === 'tiktok';
 
   useEffect(() => {
-    if (proCheckoutIntent) setAuthMode('signup');
-  }, [proCheckoutIntent]);
+    if (proCheckoutIntent || dropBuyIntent) setAuthMode('signup');
+  }, [proCheckoutIntent, dropBuyIntent]);
 
   useEffect(() => {
     if (signupFromUrl) setAuthMode('signup');
@@ -422,6 +423,21 @@ function LoginForm() {
               </Card>
             )}
 
+            {dropBuyIntent && (
+              <Card className="w-full border-fuchsia-500/35 bg-fuchsia-500/10 backdrop-blur-md relative z-50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-headline uppercase tracking-wide flex items-center gap-2 text-fuchsia-300">
+                    <Disc3 className="h-4 w-4" /> Unlock this song
+                  </CardTitle>
+                  <CardDescription className="text-[11px] font-code leading-relaxed text-left">
+                    Create a free account — you&apos;ll come right back to this page to pay what you want and stream the full song in Bar 4 Bar.
+                    {' '}
+                    <strong className="text-foreground">Import Setup</strong> is separate: that copies lyrics &amp; Creative DNA into your vault, not the recording.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            )}
+
             {importIntent && (
               <Card className="w-full border-primary/30 bg-primary/10 backdrop-blur-md relative z-50">
                 <CardHeader className="pb-2">
@@ -429,7 +445,7 @@ function LoginForm() {
                     <Import className="h-4 w-4" /> DNA Drop — Import Setup
                   </CardTitle>
                   <CardDescription className="text-[11px] font-code leading-relaxed text-left">
-                    Someone shared a Bar 4 Bar project with you. After you sign in, you&apos;ll return to that DNA Drop and can merge its lyrics, structure, DNA, and vibe into your vault.
+                    Someone shared a Bar 4 Bar project with you. After you sign in, you&apos;ll return to that page and can merge its lyrics, structure, Creative DNA, and vibe into your vault — not the song file.
                     Studio Pro is required to import drops from other artists.
                   </CardDescription>
                 </CardHeader>

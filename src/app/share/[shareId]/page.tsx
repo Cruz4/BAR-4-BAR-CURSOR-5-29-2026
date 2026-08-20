@@ -62,6 +62,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import Link from 'next/link';
+import { buildDropBuyLoginPath, buildLoginPath } from '@/lib/checkout-intent';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export default function SharedProjectPage() {
     const params = useParams();
@@ -182,7 +189,7 @@ export default function SharedProjectPage() {
         if (!authReady) return;
 
         if (!user) {
-            router.push(`/login?next=${encodeURIComponent(`/share/${shareId}`)}&intent=dna-import`);
+            router.push(`${buildLoginPath(`/share/${shareId}`)}&intent=dna-import`);
             return;
         }
 
@@ -279,10 +286,15 @@ export default function SharedProjectPage() {
     }
 
     const importLabel = !user
-        ? 'Sign in to Import'
+        ? hasFirstDropAudio
+          ? 'Import lyrics & DNA'
+          : 'Sign in to Import'
         : isOwnShare && alreadyInVault
           ? ownerEditLabel
           : 'Import Setup';
+
+    const guestImportHint =
+      'Copies lyrics, structure, and Creative DNA into your vault — not the song. Use Pay what you want below to buy the stream.';
 
     const OwnerEditIcon = isAlbum ? Disc3 : Pencil;
 
@@ -349,6 +361,33 @@ export default function SharedProjectPage() {
                             <span className="hidden sm:inline">Take offline</span>
                         </Button>
                     )}
+                    {!user && hasFirstDropAudio ? (
+                      <TooltipProvider delayDuration={300}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              onClick={handleImportClick}
+                              size="sm"
+                              className="h-8 sm:h-9 px-2.5 sm:px-4 font-bold shadow-lg max-w-[11rem] sm:max-w-none"
+                              disabled={isImporting}
+                            >
+                              {isImporting ? (
+                                <StudioLoader size="sm" />
+                              ) : (
+                                <LogIn className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                              )}
+                              <span className="truncate text-[10px] sm:text-sm">
+                                <span className="sm:hidden">Lyrics &amp; DNA</span>
+                                <span className="hidden sm:inline">{importLabel}</span>
+                              </span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="max-w-[16rem] text-[11px] leading-relaxed">
+                            {guestImportHint}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
                     <Button
                         onClick={handleImportClick}
                         size="sm"
@@ -375,6 +414,7 @@ export default function SharedProjectPage() {
                             )}
                         </span>
                     </Button>
+                    )}
                 </div>
             </header>
 
@@ -386,16 +426,16 @@ export default function SharedProjectPage() {
                               <>
                                 Hit play for a 30-second preview. Buy once to stream the full song in Bar 4 Bar — not Spotify.
                                 {' '}
-                                <button type="button" className="text-fuchsia-300 underline underline-offset-2 font-bold" onClick={() => router.push(`/login?next=${encodeURIComponent(`/share/${shareId}`)}`)}>
-                                  Sign in to unlock
+                                <button type="button" className="text-fuchsia-300 underline underline-offset-2 font-bold" onClick={() => router.push(buildDropBuyLoginPath(shareId))}>
+                                  Sign up to unlock
                                 </button>
-                                {'. Lyrics and DNA are on this same page if you want them.'}
+                                {'. Import lyrics & DNA is the button above — not the song.'}
                               </>
                             ) : isAlbum ? (
                               <>
                             Import Setup copies this album snapshot — album DNA plus every track’s lyrics & structure — into your Bar 4 Bar vault. Open a live song card for that track’s public DNA Drop page.
                             {' '}
-                            <button type="button" className="text-primary underline underline-offset-2 font-bold" onClick={() => router.push(`/login?next=${encodeURIComponent(`/share/${shareId}`)}&intent=dna-import`)}>
+                            <button type="button" className="text-primary underline underline-offset-2 font-bold" onClick={() => router.push(`${buildLoginPath(`/share/${shareId}`)}&intent=dna-import`)}>
                                 Sign in or create a free account
                             </button>
                             {' '}to import. Studio Pro is required to import DNA Drops from other artists.
@@ -404,7 +444,7 @@ export default function SharedProjectPage() {
                               <>
                             Import Setup copies this snapshot — lyrics, structure, Creative DNA, intents, vibe, guardrails, special instructions, and Style DNA when shared — into your Bar 4 Bar vault.
                             {' '}
-                            <button type="button" className="text-primary underline underline-offset-2 font-bold" onClick={() => router.push(`/login?next=${encodeURIComponent(`/share/${shareId}`)}&intent=dna-import`)}>
+                            <button type="button" className="text-primary underline underline-offset-2 font-bold" onClick={() => router.push(`${buildLoginPath(`/share/${shareId}`)}&intent=dna-import`)}>
                                 Sign in or create a free account
                             </button>
                             {' '}to import. Studio Pro is required to import DNA Drops from other artists.
