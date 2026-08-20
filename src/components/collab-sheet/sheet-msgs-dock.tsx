@@ -37,6 +37,7 @@ import {
 import { friendProfilesOf, type Friendship } from '@/lib/profile/social-client';
 import { useGamification } from '@/context/gamification-context';
 import { useToast } from '@/hooks/use-toast';
+import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 
 type View = 'inbox' | 'compose' | 'thread';
 
@@ -84,6 +85,8 @@ export function SheetMsgsDock({
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const threadScrollRef = useRef<HTMLDivElement>(null);
+  const composeRef = useRef<HTMLInputElement>(null);
+  const insertEmoji = useEmojiInserter(text, setText, composeRef);
 
   const me = user?.id || '';
 
@@ -434,7 +437,9 @@ export function SheetMsgsDock({
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-1.5 border-t border-white/10 p-2">
+                <EmojiPickerButton compact disabled={busy} onInsert={insertEmoji} />
                 <Input
+                  ref={composeRef}
                   value={text}
                   onChange={(e) => setText(e.target.value.slice(0, FOLD_BAR_MAX_CHARS))}
                   placeholder={`Message ${peerName}…`}

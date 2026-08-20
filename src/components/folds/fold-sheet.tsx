@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, CornerUpLeft, Loader2, MoreHorizontal } from 'lucide-react';
@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useGamification } from '@/context/gamification-context';
 import { cn } from '@/lib/utils';
+import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 import { profileHref } from '@/lib/profile/profile-slug';
 import {
   acceptFoldClient,
@@ -123,9 +124,24 @@ export function FoldSheet({ foldId }: { foldId: string }) {
   const [busy, setBusy] = useState(false);
   const [missing, setMissing] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const composeRef = useRef<HTMLTextAreaElement>(null);
   const typingTimer = useRef<number | null>(null);
   const typingRef = useRef(false);
   const lastReadBarRef = useRef<string | null>(null);
+
+  const onType = useCallback((value: string) => {
+    setText(value.slice(0, FOLD_BAR_MAX_CHARS));
+    const typing = value.trim().length > 0;
+    typingRef.current = typing;
+    if (typingTimer.current) window.clearTimeout(typingTimer.current);
+    void writeFoldPresence(foldId, { viewing: true, typing }).catch(() => undefined);
+    typingTimer.current = window.setTimeout(() => {
+      typingRef.current = false;
+      void writeFoldPresence(foldId, { viewing: true, typing: false }).catch(() => undefined);
+    }, 1600);
+  }, [foldId]);
+
+  const insertEmoji = useEmojiInserter(text, onType, composeRef);
 
   const me = user?.id || '';
   const peerId = fold ? peerIdOf(fold.memberIds, me) : '';
@@ -241,18 +257,6 @@ export function FoldSheet({ foldId }: { foldId: string }) {
     } finally {
       setBusy(false);
     }
-  };
-
-  const onType = (value: string) => {
-    setText(value.slice(0, FOLD_BAR_MAX_CHARS));
-    const typing = value.trim().length > 0;
-    typingRef.current = typing;
-    if (typingTimer.current) window.clearTimeout(typingTimer.current);
-    void writeFoldPresence(foldId, { viewing: true, typing }).catch(() => undefined);
-    typingTimer.current = window.setTimeout(() => {
-      typingRef.current = false;
-      void writeFoldPresence(foldId, { viewing: true, typing: false }).catch(() => undefined);
-    }, 1600);
   };
 
   if (!user) {
@@ -462,7 +466,14 @@ export function FoldSheet({ foldId }: { foldId: string }) {
             </div>
           ) : null}
           <div className="flex items-end gap-2">
+            <EmojiPickerButton
+              compact
+              disabled={busy}
+              onInsert={insertEmoji}
+              className="mb-1 shrink-0 text-amber-200/80 hover:text-amber-100"
+            />
             <textarea
+              ref={composeRef}
               value={text}
               onChange={(e) => onType(e.target.value)}
               onKeyDown={(e) => {

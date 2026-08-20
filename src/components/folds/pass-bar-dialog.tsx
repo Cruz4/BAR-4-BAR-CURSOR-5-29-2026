@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ import { passBarClient } from '@/lib/folds/client';
 import { cn } from '@/lib/utils';
 import { useFoldInbox } from '@/components/folds/fold-inbox-provider';
 import { useFoldsFeature } from '@/hooks/use-folds-feature';
+import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 
 export function PassBarDialog({
   open,
@@ -39,6 +40,8 @@ export function PassBarDialog({
   const router = useRouter();
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  const composeRef = useRef<HTMLTextAreaElement>(null);
+  const insertEmoji = useEmojiInserter(text, setText, composeRef);
 
   const submit = async () => {
     if (!user || !text.trim()) return;
@@ -77,14 +80,23 @@ export function PassBarDialog({
             If you aren’t friends yet, they accept before the thread stays open.
           </DialogDescription>
         </DialogHeader>
-        <Textarea
-          value={text}
-          onChange={(e) => setText(e.target.value.slice(0, FOLD_BAR_MAX_CHARS))}
-          placeholder="Write a message…"
-          className="min-h-[120px] resize-none rounded-none border-amber-500/20 bg-black/30 font-serif text-base leading-relaxed"
-          maxLength={FOLD_BAR_MAX_CHARS}
-          autoFocus
-        />
+        <div className="flex items-start gap-2">
+          <EmojiPickerButton
+            compact
+            disabled={busy}
+            onInsert={insertEmoji}
+            className="mt-2 shrink-0 text-amber-200/80 hover:text-amber-100"
+          />
+          <Textarea
+            ref={composeRef}
+            value={text}
+            onChange={(e) => setText(e.target.value.slice(0, FOLD_BAR_MAX_CHARS))}
+            placeholder="Write a message…"
+            className="min-h-[120px] flex-1 resize-none rounded-none border-amber-500/20 bg-black/30 font-serif text-base leading-relaxed"
+            maxLength={FOLD_BAR_MAX_CHARS}
+            autoFocus
+          />
+        </div>
         <p className="text-right font-code text-[10px] text-muted-foreground">
           {text.trim().length}/{FOLD_BAR_MAX_CHARS}
         </p>

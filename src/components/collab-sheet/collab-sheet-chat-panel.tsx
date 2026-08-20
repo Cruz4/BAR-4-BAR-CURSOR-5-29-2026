@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, MessageCircle, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 import type { CollabMessage } from '@/lib/collab-sheet/types';
 
 function stampTime(iso: string): string {
@@ -35,6 +36,8 @@ export function CollabSheetChatPanel({
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const composeRef = useRef<HTMLInputElement>(null);
+  const insertEmoji = useEmojiInserter(text, setText, composeRef);
 
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -102,7 +105,9 @@ export function CollabSheetChatPanel({
               <div ref={bottomRef} />
             </div>
             <div className="flex items-center gap-1.5 border-t border-white/10 p-2">
+              <EmojiPickerButton compact disabled={busy} onInsert={insertEmoji} />
               <Input
+                ref={composeRef}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Type a message…"

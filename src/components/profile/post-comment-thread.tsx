@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Heart, MessageCircle, Send, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,7 @@ import {
 import { revokePostImagePreview, type PendingPostImage } from '@/lib/profile/post-images';
 import { type RecordedVoiceClip } from '@/lib/profile/voice-notes';
 import { activityCommentElementId } from '@/lib/activity/post-deep-link';
+import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 
 type PostCommentThreadProps = {
   postId?: string;
@@ -69,6 +70,8 @@ export function PostCommentThread({
   const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
   const [image, setImage] = useState<PendingPostImage | null>(null);
   const [busy, setBusy] = useState(false);
+  const draftRef = useRef<HTMLInputElement>(null);
+  const insertEmoji = useEmojiInserter(draft, setDraft, draftRef);
 
   const tree = useMemo(() => buildCommentTree(comments), [comments]);
 
@@ -304,9 +307,11 @@ export function PostCommentThread({
                 })
               }
             />
+            <EmojiPickerButton compact disabled={busy} onInsert={insertEmoji} />
           </div>
           <div className="flex items-center gap-2">
             <Input
+              ref={draftRef}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onPaste={(e) => {

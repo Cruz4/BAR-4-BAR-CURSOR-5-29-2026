@@ -19,6 +19,7 @@ import { PostCard } from '@/components/profile/post-card';
 import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
+import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 import { FindArtistsPanel } from '@/components/profile/find-artists-panel';
 import { VaultStudioProgress, SCENE_STUDIO_PROGRESS_EXPANDED_KEY, SCENE_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY } from '@/components/gamification/vault-studio-progress';
 import { SceneNavDock } from '@/components/scene/scene-nav-dock';
@@ -156,6 +157,7 @@ function SceneComposer({
   const [image, setImage] = useState<PendingPostImage | null>(null);
   const [busy, setBusy] = useState(false);
   const textRef = useRef<HTMLTextAreaElement | null>(null);
+  const insertEmoji = useEmojiInserter(text, setText, textRef);
 
   useEffect(() => {
     const el = textRef.current;
@@ -232,6 +234,12 @@ function SceneComposer({
             onError={(message) =>
               toast({ variant: 'destructive', title: 'Could not attach photo', description: message })
             }
+          />
+          <EmojiPickerButton
+            compact
+            disabled={busy}
+            onInsert={insertEmoji}
+            className="text-muted-foreground hover:text-primary"
           />
           <button
             type="button"

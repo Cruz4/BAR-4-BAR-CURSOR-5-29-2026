@@ -71,6 +71,7 @@ import {
 } from '@/lib/profile/post-images';
 import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
+import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 
 export type ModuleContext = {
   profileUserId: string;
@@ -639,6 +640,8 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const [image, setImage] = useState<PendingPostImage | null>(null);
   const [busy, setBusy] = useState(false);
   const [page, setPage] = useState(0);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const insertEmoji = useEmojiInserter(text, setText, textRef);
 
   useEffect(() => {
     if (playground) {
@@ -750,6 +753,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       {canCompose && (
         <div className={cn(inkWellClass, 'mb-5 space-y-2 p-4')}>
           <Textarea
+            ref={textRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onPaste={(e) => {
@@ -792,22 +796,27 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
             <p className="text-[10px] text-[var(--ph-muted,rgba(255,255,255,0.5))]">
               Demo wall — text, photos, and links stay here until you claim your free profile.
             </p>
-          ) : (
-            <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} />
-          )}
-          <ImageAttachComposer
-            image={image}
-            onImageChange={setImage}
-            disabled={busy}
-            maxBytes={playground ? POST_IMAGE_GUEST_MAX_BYTES : undefined}
-            onError={(message) =>
-              toast({
-                variant: 'destructive',
-                title: 'Could not attach photo',
-                description: message,
-              })
-            }
-          />
+          ) : null}
+          <div className="flex flex-wrap items-center gap-1">
+            {!playground ? (
+              <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} compact />
+            ) : null}
+            <ImageAttachComposer
+              image={image}
+              onImageChange={setImage}
+              disabled={busy}
+              compact
+              maxBytes={playground ? POST_IMAGE_GUEST_MAX_BYTES : undefined}
+              onError={(message) =>
+                toast({
+                  variant: 'destructive',
+                  title: 'Could not attach photo',
+                  description: message,
+                })
+              }
+            />
+            <EmojiPickerButton compact disabled={busy} onInsert={insertEmoji} />
+          </div>
           <div className="flex justify-end">
             <Button
               size="sm"
