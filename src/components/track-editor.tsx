@@ -1798,8 +1798,8 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
       shareOpen={collabShareOpen}
       onShareOpenChange={onCollabShareOpenChange}
     >
-        <div className={cn("flex flex-1 flex-col min-w-0 basis-0 h-full relative overflow-hidden", mobileLyricsPanelClass(mobileActive))}>
-      <div className="h-14 max-md:h-auto max-md:min-h-[3.25rem] max-md:py-1.5 px-2 max-md:px-2 md:px-4 flex flex-row items-center gap-2 bg-card z-20 border-b shrink-0 min-w-0 max-md:overflow-x-auto max-md:overflow-y-hidden md:overflow-hidden studio-scrollbar">
+    <div className={cn("flex flex-1 flex-col min-w-0 basis-0 h-full relative overflow-hidden", mobileLyricsPanelClass(mobileActive))}>
+      <div className="h-14 max-md:h-auto max-md:min-h-[3.25rem] max-md:py-1.5 md:max-xl:h-auto md:max-xl:min-h-14 md:max-xl:py-2 px-2 max-md:px-2 md:px-4 flex flex-row items-center gap-2 bg-card z-20 border-b shrink-0 min-w-0 max-md:overflow-x-auto max-md:overflow-y-hidden md:overflow-hidden studio-scrollbar">
         <div className="flex items-center gap-2 min-w-0 shrink-0">
             <Hint
               skipOnTouch
@@ -1807,12 +1807,12 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
               content={<p className="text-[10px] font-bold">{tooltip('analyzeStructure')}</p>}
             >
               <Button variant="outline" size="sm" disabled={trackLocked} data-tour="smart-structure" className="h-8 max-md:px-2 max-md:text-[9px] px-3 font-bold text-[10px] md:text-xs uppercase tracking-widest border-border/40 hover:bg-primary/5 text-muted-foreground hover:text-primary shrink-0 disabled:opacity-50" onClick={() => setSmartStructureOpen(true)}>
-                  <span className="max-md:hidden truncate max-w-[10rem]">{buttonLabel('analyzeStructure')}</span>
-                  <span className="md:hidden">Paste</span>
+                  <span className="hidden xl:inline truncate max-w-[10rem]">{buttonLabel('analyzeStructure')}</span>
+                  <span className="xl:hidden">Paste</span>
               </Button>
             </Hint>
         </div>
-        <div className="flex flex-1 min-w-0 items-center justify-end gap-2 max-md:flex-nowrap overflow-x-auto studio-scrollbar">
+        <div className="flex flex-1 min-w-0 items-center justify-end gap-2 max-md:flex-nowrap md:max-xl:flex-wrap md:max-xl:overflow-visible overflow-x-auto studio-scrollbar">
           <div className="flex items-center gap-1.5 md:gap-2 bg-muted/40 px-2 py-1 rounded-full border border-border/40 shrink-0">
              <div className="flex items-center gap-1 md:gap-1.5">
                 <Hint
@@ -1924,7 +1924,9 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
         data-tour="lyrics-sheet"
         className={cn(
           'flex-1 relative overflow-x-hidden overflow-y-auto min-h-0 studio-scrollbar',
-          '[--lyrics-gutter:100px] max-md:[--lyrics-gutter:2.75rem]',
+          '[--lyrics-gutter:100px] [--lyrics-line-number-left:50px] [--lyrics-text-start:120px] [--lyrics-text-pad:145px] [--lyrics-text-indent:-25px]',
+          'max-md:[--lyrics-gutter:2.75rem]',
+          'md:max-xl:[--lyrics-gutter:76px] md:max-xl:[--lyrics-line-number-left:26px] md:max-xl:[--lyrics-text-start:96px] md:max-xl:[--lyrics-text-pad:121px]',
           lyricsSurfaceClass
         )}
         style={notebookStyle}
@@ -1950,7 +1952,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                   id={`section-header-${section.id}`}
                   data-tour={sectionIdx === 0 ? 'lyrics-sheet-focus' : undefined}
                   style={{ height: `calc(${activeLineHeight} * 2)` }}
-                  className="flex items-end pl-[calc(var(--lyrics-gutter)+0.5rem)] md:pl-[120px]"
+                  className="flex items-end pl-[calc(var(--lyrics-gutter)+0.5rem)] md:pl-[var(--lyrics-text-start)]"
                 >
                     <h3 className="text-lg md:text-2xl font-headline font-bold text-sky-400 uppercase leading-none">[{section.type}]</h3>
                 </div>
@@ -1977,7 +1979,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                           className={cn(
                           "font-mono text-muted-foreground/40 text-right font-bold shrink-0 z-30 absolute pointer-events-auto",
                           "left-0 w-[var(--lyrics-gutter)] pr-1.5 text-[10px] md:text-sm",
-                          "md:left-[50px] md:w-10 md:pr-0 md:text-muted-foreground/30"
+                          "md:left-[var(--lyrics-line-number-left)] md:w-10 md:pr-0 md:text-muted-foreground/30"
                         )}
                           style={barTextStyle}
                           onOpen={() => setBlockPost({ sectionId: section.id, from: bar.idx })}
@@ -2026,7 +2028,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                             className={cn(
                                 "border-0 bg-transparent p-0 focus-visible:ring-0 font-code font-bold w-full shadow-none z-10 tracking-normal resize-none overflow-hidden whitespace-pre-wrap break-words",
                                 showEmptyStarterCta ? "pr-[7.5rem] max-md:pr-[6.75rem]" : "pr-14 max-md:indent-0",
-                                "md:pr-24 md:pl-[145px] md:-indent-[25px]",
+                                "md:pr-24 md:pl-[var(--lyrics-text-pad)] md:[text-indent:var(--lyrics-text-indent)]",
                                 showEmptyStarterCta && "md:pr-[11.5rem]",
                                 "antialiased text-rendering-geometric",
                                 trackLocked && "opacity-80 cursor-not-allowed",
@@ -2073,7 +2075,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                 <p className={cn(
                                     "font-code font-bold tracking-normal whitespace-pre-wrap break-words w-full text-transparent m-0",
                                     "max-md:indent-0",
-                                    "md:pl-[145px] md:-indent-[25px]",
+                                    "md:pl-[var(--lyrics-text-pad)] md:[text-indent:var(--lyrics-text-indent)]",
                                     "antialiased text-rendering-geometric",
                                     fontSizes[fontSize]
                                 )} style={barTextStyle}>
@@ -2667,7 +2669,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   }
 
   return (
-    <div className={cn("flex flex-col h-full bg-card border-l relative overflow-hidden w-[340px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'right'))}>
+    <div className={cn("flex flex-col h-full bg-card border-l relative overflow-hidden w-[340px] md:max-lg:w-[248px] lg:max-xl:w-[280px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'right'))}>
       <div data-tour="cowriter-panel" className={cn("flex items-center justify-between p-4 border-b shrink-0 h-14", mobileActive && "justify-center")}>
         <h3 className="font-headline font-bold text-xs uppercase tracking-widest text-muted-foreground">Co-Writer</h3>
         {!mobileActive && (

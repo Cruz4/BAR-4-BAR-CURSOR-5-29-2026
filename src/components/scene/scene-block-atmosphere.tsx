@@ -210,7 +210,7 @@ function SceneMoonDisc({
 
   return (
     <div
-      className="scene-block-moon-anchor pointer-events-auto fixed z-[30]"
+      className="scene-block-moon-anchor pointer-events-auto absolute"
       style={style}
       onMouseEnter={() => setHintOpen(true)}
       onMouseLeave={() => setHintOpen(false)}
@@ -499,6 +499,15 @@ export function SceneBlockAtmosphere({
           />
         ))}
 
+      {moonVisible ? (
+        <SceneMoonDisc
+          moon={moon}
+          eclipsed={eclipse?.kind === 'lunar'}
+          glow={glow}
+          style={moonStyle}
+        />
+      ) : null}
+
       <SceneMeteors enabled={meteorsOn} shower={shower} />
 
       {clouds > 0 && (
@@ -596,15 +605,6 @@ export function SceneBlockAtmosphere({
         ))}
       </div>
     </div>
-
-    {moonVisible ? (
-      <SceneMoonDisc
-        moon={moon}
-        eclipsed={eclipse?.kind === 'lunar'}
-        glow={glow}
-        style={moonStyle}
-      />
-    ) : null}
 
     {/* Above feed chrome so the pin is clickable; desktop-only (sm+) on purpose. */}
     {neon && (

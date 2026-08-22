@@ -173,6 +173,28 @@ export function ArtistHome({
   const totalXp = Number(profile.xp) || 0;
   const liveStreak = Number(profile.currentStreak) || 0;
   const bestStreak = Number(profile.longestStreak) || 0;
+  const displayNameWords = useMemo(
+    () =>
+      profile.displayName
+        .trim()
+        // Treat a colon as a name separator even when imported account data omitted the space.
+        .replace(/:\s*/g, ': ')
+        .split(/\s+/)
+        .filter(Boolean),
+    [profile.displayName]
+  );
+  const longestDisplayNameWord = Math.max(
+    0,
+    ...displayNameWords.map((word) => Array.from(word).length)
+  );
+  const displayNameScale =
+    longestDisplayNameWord >= 17 ? 'long' : longestDisplayNameWord >= 12 ? 'medium' : 'default';
+  const displayNameSizeClass =
+    displayNameScale === 'long'
+      ? 'text-[clamp(1.7rem,4.5vw,3.5rem)]'
+      : displayNameScale === 'medium'
+        ? 'text-[clamp(2rem,5.5vw,4.25rem)]'
+        : 'text-[clamp(2.4rem,7.5vw,5rem)]';
 
   const profileUrl =
     typeof window !== 'undefined' && profile.slug
@@ -232,6 +254,56 @@ export function ArtistHome({
         }
         @media (prefers-reduced-motion: reduce) {
           .ph-hero-breath { animation: none !important; }
+        }
+        .ph-artist-name {
+          hyphens: none;
+          overflow-wrap: normal;
+          text-wrap: balance;
+          word-break: normal;
+        }
+        /*
+         * iPadOS/WebKit can leave stale hit-test regions when transformed,
+         * clipped cards are fragmented across CSS columns. Keep the desktop
+         * masonry, but use a real grid anywhere touch is available so every
+         * module control remains the topmost tappable target.
+         */
+        @media (any-pointer: coarse) {
+          .ph-artist-name[data-name-scale='default'] {
+            font-size: clamp(2.2rem, 6vw, 4.35rem);
+          }
+          .ph-artist-name[data-name-scale='medium'] {
+            font-size: clamp(1.9rem, 5vw, 3.75rem);
+          }
+          .ph-artist-name[data-name-scale='long'] {
+            font-size: clamp(1.6rem, 4vw, 3.15rem);
+          }
+          .ph-module-deck {
+            column-count: initial !important;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+          }
+          .ph-module-deck > .ph-module-item {
+            break-inside: auto;
+            isolation: isolate;
+            margin-bottom: 0;
+            min-width: 0;
+            position: relative;
+          }
+          .ph-module-deck a,
+          .ph-module-deck button,
+          .ph-module-deck input,
+          .ph-module-deck textarea,
+          .ph-module-deck [role='button'] {
+            touch-action: manipulation;
+          }
+        }
+        @media (any-pointer: coarse) and (min-width: 1024px) {
+          .ph-module-deck {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          .ph-module-deck > .ph-module-item[data-full-bleed='true'] {
+            grid-column: 1 / -1;
+          }
         }
       `}</style>
 
@@ -315,12 +387,19 @@ export function ArtistHome({
               </p>
             )}
             <h1
+              data-name-scale={displayNameScale}
               className={cn(
-                'break-words text-[clamp(2.4rem,7.5vw,5rem)] font-bold leading-[0.94] text-[var(--ph-text)]',
+                'ph-artist-name whitespace-normal font-bold leading-[0.94] text-[var(--ph-text)]',
+                displayNameSizeClass,
                 pressingTypeClass(tokens.typeVariant)
               )}
             >
-              {profile.displayName}
+              {displayNameWords.map((word, index) => (
+                <React.Fragment key={`${word}-${index}`}>
+                  {index > 0 ? ' ' : null}
+                  <span className="inline-block whitespace-nowrap">{word}</span>
+                </React.Fragment>
+              ))}
               {parseStudioBadge(profile.studioBadge) === 'pro' ? (
                 <Hint content="Studio Pro" skipOnTouch>
                   <span
@@ -557,7 +636,7 @@ export function ArtistHome({
         ) : null}
 
         {/* Module deck — original width, masonry so S/M don't leave holes */}
-        <div className="mt-12 columns-1 gap-5 lg:columns-2 lg:gap-5">
+        <div className="ph-module-deck mt-12 columns-1 gap-5 lg:columns-2 lg:gap-5">
           {enabledModules.map((setting, i) => {
             const Renderer = MODULE_RENDERERS[setting.id];
             if (!Renderer) return null;
@@ -587,8 +666,9 @@ export function ArtistHome({
             return (
               <div
                 key={setting.id}
+                data-full-bleed={fullBleed ? 'true' : undefined}
                 className={cn(
-                  'mb-5 break-inside-avoid animate-in fade-in slide-in-from-bottom-2 duration-500',
+                  'ph-module-item mb-5 break-inside-avoid animate-in fade-in slide-in-from-bottom-2 duration-500',
                   fullBleed && 'lg:[column-span:all]'
                 )}
                 style={{ animationDelay: `${Math.min(i * 40, 200)}ms` }}

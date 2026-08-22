@@ -785,7 +785,7 @@ export function SceneHome() {
             className="mb-6 scroll-mt-[5.5rem] border-b border-border pb-5"
             data-tour="scene-header"
           >
-            <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="flex flex-wrap items-end justify-between gap-3 md:max-xl:flex-col md:max-xl:items-start md:max-xl:pr-[19rem]">
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
                   <Radio className="h-5 w-5 text-primary" />

@@ -1032,7 +1032,7 @@ export function AlbumList() {
 
         <div className="relative z-20 w-full min-w-0 max-w-[100vw] xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,72rem)_minmax(0,1fr)] xl:grid-rows-[auto_auto] xl:items-start">
           <div className="relative min-w-0 w-full xl:col-start-2 xl:row-start-1 px-4 sm:px-6 pt-6">
-            <header className="mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-border" data-tour="vault-header">
+            <header className="mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-border md:max-xl:pr-[19rem]" data-tour="vault-header">
               <div className="flex flex-col gap-2.5 min-w-0 w-full">
                 <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0 w-full">
                   <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -1063,7 +1063,7 @@ export function AlbumList() {
                     )}
                   </div>
 
-                  <div className="hidden sm:flex items-center gap-2 shrink-0">
+                  <div className="hidden xl:flex items-center gap-2 shrink-0">
                     <VaultHeaderToolbar
                       sortBy={sortBy}
                       setSortBy={setSortBy}
@@ -1077,7 +1077,7 @@ export function AlbumList() {
                   </div>
                 </div>
 
-                <div className="flex sm:hidden items-center gap-2 min-w-0 w-full overflow-x-auto studio-scrollbar pb-0.5">
+                <div className="flex xl:hidden items-center gap-2 min-w-0 w-full overflow-x-auto studio-scrollbar pb-0.5">
                   <VaultHeaderToolbar
                     compact
                     sortBy={sortBy}
