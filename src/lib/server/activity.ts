@@ -324,33 +324,65 @@ export async function markActivityRead(userId: string, eventIds: string[]): Prom
   return marked;
 }
 
-export async function markAllActivityRead(userId: string): Promise<number> {
+export async function markActivityUnread(userId: string, eventIds: string[]): Promise<number> {
   const db = await getDb();
-  const snap = await db
-    .collection(`users/${userId}/activity`)
-    .where('direction', '==', 'received')
-    .where('readAt', '==', null)
-    .limit(100)
-    .get();
+  const now = new Date().toISOString();
+  const unique = [...new Set(eventIds)].filter(Boolean).slice(0, 50);
+  if (!unique.length) return 0;
 
-  if (snap.empty) {
-    await db.doc(`users/${userId}/activityMeta/summary`).set(
-      { unreadReceived: 0, updatedAt: new Date().toISOString() },
+  const eventRefs = unique.map((eventId) => db.doc(`users/${userId}/activity/${eventId}`));
+  const summaryRef = db.doc(`users/${userId}/activityMeta/summary`);
+
+  return db.runTransaction(async (tx) => {
+    const snapshots = await Promise.all(eventRefs.map((ref) => tx.get(ref)));
+    const unreadRefs = snapshots
+      .filter((snap) => {
+        const data = snap.data() || {};
+        return snap.exists && data.direction === 'received' && Boolean(data.readAt);
+      })
+      .map((snap) => snap.ref);
+
+    if (!unreadRefs.length) return 0;
+
+    unreadRefs.forEach((ref) => tx.update(ref, { readAt: null }));
+    tx.set(
+      summaryRef,
+      {
+        unreadReceived: FieldValue.increment(unreadRefs.length),
+        updatedAt: now,
+      },
       { merge: true }
     );
-    return 0;
+    return unreadRefs.length;
+  });
+}
+
+export async function markAllActivityRead(userId: string): Promise<number> {
+  const db = await getDb();
+  const now = new Date().toISOString();
+  let marked = 0;
+
+  while (true) {
+    const snap = await db
+      .collection(`users/${userId}/activity`)
+      .where('direction', '==', 'received')
+      .where('readAt', '==', null)
+      .limit(400)
+      .get();
+    if (snap.empty) break;
+
+    const batch = db.batch();
+    snap.docs.forEach((d) => batch.update(d.ref, { readAt: now }));
+    await batch.commit();
+    marked += snap.size;
+    if (snap.size < 400) break;
   }
 
-  const now = new Date().toISOString();
-  const batch = db.batch();
-  snap.docs.forEach((d) => batch.update(d.ref, { readAt: now }));
-  batch.set(
-    db.doc(`users/${userId}/activityMeta/summary`),
+  await db.doc(`users/${userId}/activityMeta/summary`).set(
     { unreadReceived: 0, updatedAt: now },
     { merge: true }
   );
-  await batch.commit();
-  return snap.size;
+  return marked;
 }
 
 /**

@@ -178,11 +178,25 @@ export async function markActivityEventsRead(eventIds: string[]): Promise<void> 
   if (!user || !eventIds.length) return;
   const headers = await authHeaders();
   if (!headers) return;
-  await fetch('/api/activity/read', {
+  const response = await fetch('/api/activity/read', {
     method: 'POST',
     headers,
     body: JSON.stringify({ userId: user.uid, eventIds }),
   });
+  if (!response.ok) throw new Error('Failed to mark activity read');
+}
+
+export async function markActivityEventsUnread(eventIds: string[]): Promise<void> {
+  const user = auth.currentUser;
+  if (!user || !eventIds.length) return;
+  const headers = await authHeaders();
+  if (!headers) return;
+  const response = await fetch('/api/activity/read', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ userId: user.uid, eventIds, unread: true }),
+  });
+  if (!response.ok) throw new Error('Failed to mark activity unread');
 }
 
 export async function markAllActivityEventsRead(): Promise<void> {
@@ -190,11 +204,12 @@ export async function markAllActivityEventsRead(): Promise<void> {
   if (!user) return;
   const headers = await authHeaders();
   if (!headers) return;
-  await fetch('/api/activity/read', {
+  const response = await fetch('/api/activity/read', {
     method: 'POST',
     headers,
     body: JSON.stringify({ userId: user.uid, all: true }),
   });
+  if (!response.ok) throw new Error('Failed to mark all activity read');
 }
 
 /**

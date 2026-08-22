@@ -1458,7 +1458,7 @@ function lineGenInkKey(mode: 'next' | 'previous', sectionId: string, barIdx: num
 function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, rhymePulseArmed = false, isInkArmed, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false, isGuestTryMode = false, onNewStarter, collabEnabled = false, collabUserId, collabUserName, collabUserSlug, collabFriendships = [], collabIsOwner = false, collabShareOpen = false, onCollabShareOpenChange, onCollabSheetIdChange }: any) {
   const isPhoneView = useIsMobile();
   const [fontSize, setFontSize] = useState<'xs' | 'sm' | 'md' | 'lg'>('md');
-  const phoneDefaultSizeAppliedRef = useRef(false);
+  const responsiveDefaultSizeAppliedRef = useRef(false);
   const lyricsViewportRef = useRef<HTMLDivElement>(null);
   const emptySheetFocusRef = useRef(false);
   const [blockPost, setBlockPost] = useState<{ sectionId: string; from: number } | null>(null);
@@ -1468,10 +1468,14 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
 
   const sheetEmpty = !trackHasWrittenLyrics(track);
 
-  // Phone / narrow view: open the sheet on the second-smallest lyrics size. Desktop stays medium.
+  // Phone and touch-tablet sheets open on the second-smallest size. Desktop stays medium.
   useEffect(() => {
-    if (!isPhoneView || phoneDefaultSizeAppliedRef.current) return;
-    phoneDefaultSizeAppliedRef.current = true;
+    if (responsiveDefaultSizeAppliedRef.current) return;
+    const isTouchTablet = window.matchMedia(
+      '(min-width: 768px) and (max-width: 1366px) and (any-pointer: coarse)'
+    ).matches;
+    if (!isPhoneView && !isTouchTablet) return;
+    responsiveDefaultSizeAppliedRef.current = true;
     setFontSize('sm');
   }, [isPhoneView]);
 
@@ -2153,7 +2157,11 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
         {collabUserId && !isGuestTryMode ? (
           <SheetMsgsDock isMinimized={isMinimized} friendships={collabFriendships} />
         ) : null}
-      <div data-tour="bar-workstation" className={cn("bg-card border-t shadow-[0_-10px_40px_rgba(0,0,0,0.5)] shrink-0 z-[40] relative w-full min-w-0", isMinimized ? "h-10 overflow-hidden" : "max-md:h-auto md:min-h-[124px] max-md:max-h-[min(50dvh,100%)] max-md:overflow-y-auto max-md:studio-scrollbar")}>
+      <div
+        data-tour="bar-workstation"
+        data-side-panels-open={!leftCollapsed && !rightCollapsed ? 'true' : 'false'}
+        className={cn("bg-card border-t shadow-[0_-10px_40px_rgba(0,0,0,0.5)] shrink-0 z-[40] relative w-full min-w-0", isMinimized ? "h-10 overflow-hidden" : "max-md:h-auto md:min-h-[124px] max-md:max-h-[min(50dvh,100%)] max-md:overflow-y-auto max-md:studio-scrollbar")}
+      >
         <div
           className={cn(
             'w-full min-w-0 h-full px-2 md:px-4 lg:px-6 flex flex-col',
@@ -2261,7 +2269,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                             </Hint>
                         </div>
                     ) : (
-                        <div className="flex max-md:flex-col md:flex-row md:items-center gap-2 min-w-0 w-full flex-1 max-md:overflow-visible">
+                        <div className="bar-workstation-editor-row flex max-md:flex-col md:flex-row md:items-center gap-2 min-w-0 w-full flex-1 max-md:overflow-visible">
                             <textarea 
                                 placeholder={
                                   trackLocked
@@ -2304,7 +2312,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                         <div
                           data-tour="generate-next"
                           className={cn(
-                              "flex flex-row flex-nowrap items-end gap-1.5 shrink-0 min-w-0 max-md:w-full max-md:overflow-x-auto studio-scrollbar md:overflow-visible md:max-w-[min(100%,22rem)] lg:max-w-none py-0.5 max-md:py-1",
+                              "bar-workstation-actions flex flex-row flex-nowrap items-end gap-1.5 shrink-0 min-w-0 max-md:w-full max-md:overflow-x-auto studio-scrollbar md:overflow-visible md:max-w-[min(100%,22rem)] lg:max-w-none py-0.5 max-md:py-1",
                               !activeGeneratorBar && "max-md:hidden"
                             )}
                         >
@@ -2454,8 +2462,23 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
 
 function cowriterSectionSubtitle(expanded: boolean) {
   return cn(
-    'text-[9px] font-bold uppercase tracking-widest leading-snug',
-    expanded ? 'break-words' : 'whitespace-normal'
+    'text-[9px] font-bold uppercase tracking-widest leading-snug whitespace-normal break-normal [overflow-wrap:normal]',
+    !expanded && 'leading-tight'
+  );
+}
+
+function CoWriterSectionChevron({ open, label }: { open: boolean; label: string }) {
+  return (
+    <CollapsibleTrigger asChild>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="co-writer-section-chevron h-7 w-7 text-muted-foreground hover:text-primary shrink-0 -mr-0.5 self-center"
+        aria-label={`${open ? 'Collapse' : 'Expand'} ${label}`}
+      >
+        {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+      </Button>
+    </CollapsibleTrigger>
   );
 }
 
@@ -2669,7 +2692,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   }
 
   return (
-    <div className={cn("flex flex-col h-full bg-card border-l relative overflow-hidden w-[340px] md:max-lg:w-[248px] lg:max-xl:w-[280px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'right'))}>
+    <div className={cn("co-writer-panel-shell flex flex-col h-full bg-card border-l relative overflow-hidden w-[340px] md:max-lg:w-[248px] lg:max-xl:w-[280px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'right'))}>
       <div data-tour="cowriter-panel" className={cn("flex items-center justify-between p-4 border-b shrink-0 h-14", mobileActive && "justify-center")}>
         <h3 className="font-headline font-bold text-xs uppercase tracking-widest text-muted-foreground">Co-Writer</h3>
         {!mobileActive && (
@@ -2707,13 +2730,13 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                 <div className={cn('p-4 flex flex-col gap-2', !sectionOpen.dna && 'pb-3')}>
                 <div
                   data-tour="dna-suite-header"
-                  className="flex flex-row items-center justify-between space-y-0"
+                  className="co-writer-section-header flex flex-row items-center justify-between gap-1 space-y-0"
                 >
                     <CollapsibleTrigger asChild>
-                        <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 pr-1">
+                        <div className="co-writer-section-heading space-y-0.5 cursor-pointer flex-grow min-w-0 pr-1 text-left">
                             <CardTitle
                               className={cn(
-                                'text-sm flex items-center gap-2 font-headline uppercase leading-none',
+                                'co-writer-section-title text-sm flex items-center gap-2 font-headline uppercase leading-none whitespace-nowrap',
                                 dnaCollapsedInherit
                                   ? 'text-green-500'
                                   : coWriterSectionTitleClass(dnaSectionLit, 'text-green-500')
@@ -2754,7 +2777,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                             </p>
                         </div>
                     </CollapsibleTrigger>
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="co-writer-section-actions flex items-center justify-end gap-1 shrink-0">
                         {isPro ? (
                           <Hint
                             actionSafe
@@ -2808,6 +2831,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                           </span>
                         </Hint>
                     </div>
+                    <CoWriterSectionChevron open={sectionOpen.dna} label="DNA Suite" />
                 </div>
                 {!sectionOpen.dna && !isLooseTrack && (
                   <div
@@ -2923,13 +2947,13 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
 
           <Collapsible open={sectionOpen.vibe} onOpenChange={(o) => onSectionChange('vibe', o)} className="space-y-1">
             <Card className={coWriterSectionCardClass(vibeActive, 'border-amber-500/30 bg-amber-500/12 dark:bg-amber-500/5')} data-tour="vibe-suite">
-                <div className="p-4 flex flex-row items-center justify-between space-y-0">
+                <div className="co-writer-section-header p-4 flex flex-row items-center justify-between gap-1 space-y-0">
                     <TooltipProvider delayDuration={300}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <CollapsibleTrigger asChild>
-                            <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 overflow-hidden pr-1 text-left">
-                              <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none truncate', coWriterSectionTitleClass(vibeActive, 'text-amber-500'))}><Palette className="h-4 w-4 shrink-0" /> Track Vibe</CardTitle>
+                            <div className="co-writer-section-heading space-y-0.5 cursor-pointer flex-grow min-w-0 pr-1 text-left">
+                              <CardTitle className={cn('co-writer-section-title text-sm flex items-center gap-2 font-headline uppercase leading-none whitespace-nowrap', coWriterSectionTitleClass(vibeActive, 'text-amber-500'))}><Palette className="h-4 w-4 shrink-0" /> Track Vibe</CardTitle>
                               <p className={cn(cowriterSectionSubtitle(sectionOpen.vibe), coWriterSectionAccentClass(vibeActive, 'text-amber-700/80 dark:text-amber-400/80'))}>
                                 {sectionOpen.vibe ? 'Genre, BPM, mood, instruments' : 'Beat & production'}
                               </p>
@@ -2944,7 +2968,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <div className="flex items-center gap-1">
+                    <div className="co-writer-section-actions flex items-center justify-end gap-1 shrink-0">
                         {isPro ? (
                           <Hint
                             actionSafe
@@ -2993,6 +3017,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                           </span>
                         </Hint>
                     </div>
+                    <CoWriterSectionChevron open={sectionOpen.vibe} label="Track Vibe" />
                 </div>
                 <CollapsibleContent>
                     <CardContent className="space-y-3 px-4 pb-4 font-code">
@@ -3071,21 +3096,19 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
 
           <Collapsible open={sectionOpen.intents} onOpenChange={(o) => onSectionChange('intents', o)} className="space-y-1">
             <Card className={coWriterSectionCardClass(intentsMasterOn, 'border-sky-500/30 bg-sky-500/12 dark:bg-[#0c1a26] shadow-xl overflow-hidden p-0')} data-studio-panel data-tour="intents-suite">
-                <div className="flex items-center justify-between p-4 pb-2">
+                <div className="co-writer-section-header flex items-center justify-between gap-1 p-4 pb-2">
                     <TooltipProvider delayDuration={300}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <CollapsibleTrigger asChild>
-                            <div className="space-y-1 cursor-pointer flex-grow min-w-0 overflow-hidden text-left pr-1">
-                              <div className="flex items-center gap-2 min-w-0">
-                                  <Target className={cn('h-5 w-5 shrink-0', coWriterSectionTitleClass(intentsMasterOn, 'text-sky-700 dark:text-sky-400'))} />
-                                  <h3 className={cn('font-bold text-xl uppercase tracking-tighter truncate', coWriterSectionTitleClass(intentsMasterOn, 'text-sky-700 dark:text-sky-400'))}>Intents</h3>
-                              </div>
+                            <div className="co-writer-section-heading space-y-0.5 cursor-pointer flex-grow min-w-0 text-left pr-1">
+                              <CardTitle className={cn('co-writer-section-title text-sm flex items-center gap-2 font-headline uppercase leading-none whitespace-nowrap', coWriterSectionTitleClass(intentsMasterOn, 'text-sky-700 dark:text-sky-400'))}>
+                                <Target className="h-4 w-4 shrink-0" /> Intents
+                              </CardTitle>
                               <p
                                 className={cn(
-                                  'text-[10px] font-code normal-case tracking-normal',
+                                  cowriterSectionSubtitle(sectionOpen.intents),
                                   coWriterSectionAccentClass(intentsMasterOn, 'text-sky-800/90 dark:text-sky-300/80'),
-                                  sectionOpen.intents ? 'leading-snug break-words' : 'leading-none truncate'
                                 )}
                                 title="Punchlines to weave into this track"
                               >
@@ -3104,7 +3127,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="co-writer-section-actions flex items-center justify-end gap-1 shrink-0">
                         <Hint
                           actionSafe
                           side="left"
@@ -3120,17 +3143,8 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                         <Switch checked={track.intentsEnabled ?? (track.checkedIntents?.length > 0)} onCheckedChange={(c) => onUpdateTrack({ intentsEnabled: c })} aria-label="Intents enabled" />
                           </span>
                         </Hint>
-                        <CollapsibleTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-primary shrink-0 -mr-0.5 self-center"
-                            aria-label={sectionOpen.intents ? 'Collapse Intents' : 'Expand Intents'}
-                          >
-                            {sectionOpen.intents ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          </Button>
-                        </CollapsibleTrigger>
                     </div>
+                    <CoWriterSectionChevron open={sectionOpen.intents} label="Intents" />
                 </div>
                 <CollapsibleContent>
                     <CardContent className="space-y-4 p-4 pt-4 min-w-0">
@@ -3232,14 +3246,16 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
 
           <Collapsible open={sectionOpen.guardrails} onOpenChange={(o) => onSectionChange('guardrails', o)} className="space-y-1">
             <Card className={coWriterSectionCardClass(guardActive, 'border-rose-500/30 bg-rose-500/12 dark:bg-rose-500/5')} data-tour="guardrails-suite">
+                <div className="co-writer-section-header p-4 flex-row items-center justify-between gap-1 space-y-0">
                 <CollapsibleTrigger asChild>
-                    <CardHeader className="p-4 flex-row items-center justify-between cursor-pointer space-y-0">
-                        <div className="space-y-0.5 min-w-0 flex-grow pr-1">
-                            <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none', coWriterSectionTitleClass(guardActive, 'text-rose-500'))}><Shield className="h-4 w-4" /> Guardrails</CardTitle>
+                        <div className="co-writer-section-heading space-y-0.5 min-w-0 flex-grow pr-1 cursor-pointer text-left">
+                            <CardTitle className={cn('co-writer-section-title text-sm flex items-center gap-2 font-headline uppercase leading-none whitespace-nowrap', coWriterSectionTitleClass(guardActive, 'text-rose-500'))}><Shield className="h-4 w-4 shrink-0" /> Guardrails</CardTitle>
                             <p className={cn(cowriterSectionSubtitle(sectionOpen.guardrails), coWriterSectionAccentClass(guardActive, 'text-rose-700/80 dark:text-rose-400/80'))} title="Words to forbid or force">
                               Words to forbid or force
                             </p>
                         </div>
+                </CollapsibleTrigger>
+                        <div className="co-writer-section-actions flex items-center justify-end gap-1 shrink-0">
                         <Hint
                           actionSafe
                           side="left"
@@ -3260,8 +3276,9 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                         />
                           </span>
                         </Hint>
-                    </CardHeader>
-                </CollapsibleTrigger>
+                        </div>
+                        <CoWriterSectionChevron open={sectionOpen.guardrails} label="Guardrails" />
+                </div>
                 <CollapsibleContent>
                     <CardContent className="space-y-3 px-4 pb-4 font-code">
                         <div className="space-y-1">
@@ -3308,18 +3325,16 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
 
           <Collapsible open={sectionOpen.coWriter} onOpenChange={(o) => onSectionChange('coWriter', o)} className="space-y-1">
             <Card className={coWriterSectionCardClass(styleActive, 'border-fuchsia-500/30 bg-fuchsia-500/12 dark:bg-fuchsia-500/5 shadow-xl')} data-tour="style-suite">
-                <div className="p-4 flex flex-row items-center justify-between space-y-0">
+                <div className="co-writer-section-header p-4 flex flex-row items-center justify-between gap-1 space-y-0">
                     <CollapsibleTrigger asChild>
-                        <div className="space-y-0.5 cursor-pointer flex-grow min-w-0 overflow-hidden pr-1">
-                            <div className="flex items-center gap-2">
-                                <CardTitle className={cn('text-sm flex items-center gap-2 font-headline uppercase leading-none', coWriterSectionTitleClass(styleActive, 'text-fuchsia-500'))}><BrainCircuit className="h-4 w-4" /> Style DNA</CardTitle>
-                            </div>
+                        <div className="co-writer-section-heading space-y-0.5 cursor-pointer flex-grow min-w-0 pr-1 text-left">
+                            <CardTitle className={cn('co-writer-section-title text-sm flex items-center gap-2 font-headline uppercase leading-none whitespace-nowrap', coWriterSectionTitleClass(styleActive, 'text-fuchsia-500'))}><BrainCircuit className="h-4 w-4 shrink-0" /> Style DNA</CardTitle>
                             <p className={cn(cowriterSectionSubtitle(sectionOpen.coWriter), coWriterSectionAccentClass(styleActive, 'text-fuchsia-700/80 dark:text-fuchsia-400/80'))} title="Your cadence and vocabulary">
                               {sectionOpen.coWriter ? 'Your cadence & vocab' : 'Cadence & vocab'}
                             </p>
                         </div>
                     </CollapsibleTrigger>
-                    <div className="flex items-center gap-1">
+                    <div className="co-writer-section-actions flex items-center justify-end gap-1 shrink-0">
                         {isPro ? (
                           <Hint
                             actionSafe
@@ -3368,6 +3383,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                           </span>
                         </Hint>
                     </div>
+                    <CoWriterSectionChevron open={sectionOpen.coWriter} label="Style DNA" />
                 </div>
                 <CollapsibleContent>
                     <CardContent className="px-4 pb-4 space-y-4 font-code">

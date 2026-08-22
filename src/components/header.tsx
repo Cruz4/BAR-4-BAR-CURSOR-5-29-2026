@@ -146,7 +146,7 @@ export function Header() {
       )}
       <div data-app-header-bar className="relative h-14 w-full px-2 sm:px-4 md:px-6">
             {/* Logo centered — tablet/desktop only (mobile uses left column to avoid theme-toggle overlap) */}
-            <div className="pointer-events-none absolute inset-0 z-20 hidden md:flex items-center justify-center px-24 lg:px-32">
+            <div data-app-header-brand-center className="pointer-events-none absolute inset-0 z-20 hidden md:flex items-center justify-center px-24 lg:px-32">
                 <BrandLockup variant="app" className="pointer-events-auto min-w-0 max-w-full" />
             </div>
 

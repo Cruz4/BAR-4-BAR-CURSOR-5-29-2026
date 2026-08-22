@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { markActivityRead, markAllActivityRead } from '@/lib/server/activity';
+import { markActivityRead, markActivityUnread, markAllActivityRead } from '@/lib/server/activity';
 import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 
 export const runtime = 'nodejs';
 
-/** Mark activity events read (or all received unread). */
+/** Mark activity events read/unread (or mark all received events read). */
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
@@ -34,10 +34,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing eventIds' }, { status: 400 });
     }
 
-    const marked = await markActivityRead(userId, eventIds);
+    const marked = body.unread === true
+      ? await markActivityUnread(userId, eventIds)
+      : await markActivityRead(userId, eventIds);
     return NextResponse.json({ ok: true, marked });
   } catch (err) {
     console.error('[activity/read]', err);
-    return NextResponse.json({ error: 'Failed to mark read' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update read state' }, { status: 500 });
   }
 }

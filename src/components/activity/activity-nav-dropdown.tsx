@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Bell,
-  Check,
-  CheckCheck,
   ChevronRight,
   Droplets,
   FilePenLine,
@@ -15,6 +13,7 @@ import {
   Import,
   Lock,
   Mail,
+  MailOpen,
   MessageCircle,
   Banknote,
   Repeat2,
@@ -34,6 +33,7 @@ import {
   fetchActivityFeed,
   FRIENDSHIP_CHANGED_EVENT,
   markActivityEventsRead,
+  markActivityEventsUnread,
   markAllActivityEventsRead,
   type FriendshipChangedDetail,
 } from '@/lib/activity/client';
@@ -98,7 +98,7 @@ function timeAgo(iso: string): string {
   }
 }
 
-const PREVIEW_LIMIT = 8;
+const PREVIEW_LIMIT = 5;
 
 export function ActivityNavDropdown({
   unreadCount,
@@ -111,10 +111,9 @@ export function ActivityNavDropdown({
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<ActivityEvent[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [markingAll, setMarkingAll] = useState(false);
-  const seenTimerRef = React.useRef<number | null>(null);
+  const [hiddenNewCount, setHiddenNewCount] = useState(0);
 
-  const loadUnread = useCallback(async () => {
+  const loadRecent = useCallback(async () => {
     if (!user?.id) {
       setItems([]);
       return;
@@ -133,9 +132,8 @@ export function ActivityNavDropdown({
           .map((f) => f.requestedBy)
       );
       const pendingContact = new Set(pendingContactIds);
-      // Drop request rows already answered elsewhere (still unread in activity).
-      const unread = received
-        .filter((e) => !e.readAt)
+      // Drop request rows already answered elsewhere; keep every other recent event, read or unread.
+      const recent = received
         .filter((e) => {
           if (e.type === 'friend_request') {
             return e.direction === 'received' && pendingRequesters.has(e.actorId);
@@ -146,29 +144,21 @@ export function ActivityNavDropdown({
           return true;
         })
         .slice(0, PREVIEW_LIMIT);
-      const lookups = unread
+      const lookups = recent
         .filter((e) => !e.actorSlug && e.actorId)
         .map((e) => ({ userId: e.actorId }));
       if (lookups.length) {
         const { fetchPublicArtistMetas } = await import('@/lib/profile/social-client');
         const metas = await fetchPublicArtistMetas(lookups);
         setItems(
-          unread.map((e) => {
+          recent.map((e) => {
             if (e.actorSlug) return e;
             const slug = metas.get(e.actorId)?.slug;
             return slug ? { ...e, actorSlug: slug } : e;
           })
         );
       } else {
-        setItems(unread);
-      }
-      const ids = unread.map((e) => e.id);
-      if (ids.length) {
-        if (seenTimerRef.current) window.clearTimeout(seenTimerRef.current);
-        seenTimerRef.current = window.setTimeout(() => {
-          seenTimerRef.current = null;
-          void markActivityEventsRead(ids).then(() => refreshActivityAlerts());
-        }, 400);
+        setItems(recent);
       }
     } catch {
       setItems([]);
@@ -201,32 +191,31 @@ export function ActivityNavDropdown({
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
-    if (next) void loadUnread();
+    if (!next) return;
+
+    setHiddenNewCount(Math.max(0, unreadCount - PREVIEW_LIMIT));
+    void loadRecent();
+    if (unreadCount <= 0) return;
+    const readAt = new Date().toISOString();
+    void markAllActivityEventsRead()
+      .then(() => {
+        setItems((prev) => prev.map((event) => event.readAt ? event : { ...event, readAt }));
+        refreshActivityAlerts();
+      })
+      .catch(() => undefined);
   };
 
-  const markOne = async (event: ActivityEvent, e?: React.MouseEvent) => {
+  const markOneUnread = async (event: ActivityEvent, e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
-    if (busyId) return;
+    if (busyId || !event.readAt) return;
     setBusyId(event.id);
     try {
-      await markActivityEventsRead([event.id]);
-      setItems((prev) => prev.filter((x) => x.id !== event.id));
+      await markActivityEventsUnread([event.id]);
+      setItems((prev) => prev.map((item) => item.id === event.id ? { ...item, readAt: null } : item));
       refreshActivityAlerts();
     } finally {
       setBusyId(null);
-    }
-  };
-
-  const markAll = async () => {
-    if (markingAll || items.length === 0) return;
-    setMarkingAll(true);
-    try {
-      await markAllActivityEventsRead();
-      setItems([]);
-      refreshActivityAlerts();
-    } finally {
-      setMarkingAll(false);
     }
   };
 
@@ -265,19 +254,11 @@ export function ActivityNavDropdown({
       >
         <div className="flex items-center justify-between gap-2 border-b bg-muted/30 px-3 py-2.5">
           <h4 className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
-            <Bell className="h-3 w-3" /> Unread
+            <Bell className="h-3 w-3" /> Recent activity
           </h4>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 gap-1 px-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:text-emerald-400 disabled:opacity-40"
-            disabled={markingAll || items.length === 0}
-            onClick={() => void markAll()}
-          >
-            <CheckCheck className="h-3.5 w-3.5" />
-            Mark all read
-          </Button>
+          <span className="text-[9px] font-code uppercase tracking-wider text-muted-foreground">
+            Opened = read
+          </span>
         </div>
 
         <div className="max-h-[min(22rem,50vh)] overflow-y-auto">
@@ -290,16 +271,16 @@ export function ActivityNavDropdown({
             <div className="px-4 py-10 text-center">
               <Bell className="mx-auto mb-2 h-7 w-7 text-muted-foreground/40" />
               <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                You&apos;re caught up
+                No activity yet
               </p>
               <p className="mt-1 text-[10px] text-muted-foreground/80">
-                No unread activity right now.
+                New notifications will show here.
               </p>
             </div>
           ) : (
             <ul className="divide-y divide-border/60">
               {items.map((event) => (
-                <li key={event.id} className="group relative">
+                <li key={event.id} className={cn('group relative', !event.readAt && 'bg-emerald-500/5')}>
                   <button
                     type="button"
                     className="flex w-full gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-emerald-500/5"
@@ -352,18 +333,26 @@ export function ActivityNavDropdown({
                       </span>
                     </span>
                   </button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    title="Mark as read"
-                    aria-label="Mark as read"
-                    disabled={busyId === event.id}
-                    className="absolute right-1.5 top-2 h-7 w-7 text-muted-foreground hover:text-emerald-400 opacity-80 group-hover:opacity-100"
-                    onClick={(e) => void markOne(event, e)}
-                  >
-                    <Check className="h-3.5 w-3.5" />
-                  </Button>
+                  {event.readAt ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      title="Mark as unread"
+                      aria-label="Mark as unread"
+                      disabled={busyId === event.id}
+                      className="absolute right-1.5 top-2 h-7 w-7 text-muted-foreground hover:text-emerald-400 opacity-80 group-hover:opacity-100"
+                      onClick={(e) => void markOneUnread(event, e)}
+                    >
+                      <MailOpen className="h-3.5 w-3.5" />
+                    </Button>
+                  ) : (
+                    <span
+                      className="absolute right-3 top-4 h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]"
+                      title="Unread"
+                      aria-label="Unread"
+                    />
+                  )}
                 </li>
               ))}
             </ul>
@@ -381,7 +370,7 @@ export function ActivityNavDropdown({
               router.push('/activity');
             }}
           >
-            View all activity
+            {hiddenNewCount > 0 ? `View ${hiddenNewCount} more new…` : 'View all activity'}
             <ChevronRight className="h-3.5 w-3.5" />
           </Button>
         </div>

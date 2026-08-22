@@ -1604,6 +1604,52 @@
     color: hsl(var(--foreground) / 0.88);
   }
 
+  .co-writer-panel-shell {
+    container-name: co-writer-panel;
+    container-type: inline-size;
+  }
+
+  .co-writer-section-header {
+    display: flex;
+  }
+
+  .co-writer-section-heading {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .co-writer-section-title {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+  }
+
+  @container co-writer-panel (max-width: 319px) {
+    .co-writer-section-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      column-gap: 0.25rem;
+      row-gap: 0.35rem;
+    }
+
+    .co-writer-section-heading {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .co-writer-section-actions {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      justify-self: end;
+    }
+
+    .co-writer-section-chevron {
+      grid-column: 2;
+      grid-row: 1;
+    }
+  }
+
   /* Light mode — force readable captions/labels on tinted panels (utility classes lose to components layer) */
   html:not(.dark) [data-studio-panel] label,
   html:not(.dark) [data-studio-panel] [data-studio-caption],
@@ -1630,6 +1676,27 @@
       hsl(var(--foreground)),
       hsl(var(--foreground))
     );
+  }
+}
+
+/* Touch-tablet sheet: keep every Bar Workstation action visible with both rails open. */
+@media (min-width: 768px) and (max-width: 1366px) and (any-pointer: coarse) {
+  [data-tour='bar-workstation'][data-side-panels-open='true'] .bar-workstation-editor-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  [data-tour='bar-workstation'][data-side-panels-open='true'] .bar-workstation-actions {
+    width: 100%;
+    max-width: none;
+    overflow-x: auto;
+  }
+}
+
+/* iPad portrait: retain the centered brand mark without letting its wordmark cover nav controls. */
+@media (min-width: 768px) and (max-width: 1100px) and (orientation: portrait) and (any-pointer: coarse) {
+  [data-app-header-brand-center] > a > div > div:last-child {
+    display: none;
   }
 }
 
