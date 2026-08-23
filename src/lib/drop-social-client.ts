@@ -12,7 +12,10 @@ import {
   setDoc,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client/firebase';
-import type { PostComment } from '@/lib/profile/social-client';
+import {
+  requireLiveProfileForPosting,
+  type PostComment,
+} from '@/lib/profile/social-client';
 import {
   deletePostImageStorage,
   parseImageStoragePath,
@@ -86,6 +89,7 @@ export async function addDropComment(
   }
 ): Promise<PostComment> {
   const user = requireUser();
+  const liveProfile = await requireLiveProfileForPosting(user.uid);
   const clean = text.trim().slice(0, MAX_COMMENT_TEXT);
   if (!clean && !image) throw new Error('Comment is empty.');
   const parentCommentId = opts?.parentCommentId?.trim().slice(0, 80) || undefined;
@@ -104,7 +108,7 @@ export async function addDropComment(
     id,
     authorId: user.uid,
     authorName: author.name || user.displayName || 'Artist',
-    ...(author.slug ? { authorSlug: author.slug } : {}),
+    authorSlug: liveProfile.slug,
     text: clean,
     createdAt: new Date().toISOString(),
     ...(parentCommentId ? { parentCommentId } : {}),
@@ -159,6 +163,20 @@ export async function fetchDropComments(shareId: string, max = 50): Promise<Post
   } catch {
     return [];
   }
+}
+
+export async function deleteDropComment(shareId: string, commentId: string): Promise<void> {
+  requireUser();
+  try {
+    const snap = await getDoc(doc(db, 'shares', shareId, 'comments', commentId));
+    if (snap.exists()) {
+      const imageStoragePath = parseImageStoragePath(snap.data().imageStoragePath);
+      if (imageStoragePath) await deletePostImageStorage(imageStoragePath);
+    }
+  } catch {
+    // Still remove the comment if an attached image cannot be read or deleted.
+  }
+  await deleteDoc(doc(db, 'shares', shareId, 'comments', commentId));
 }
 
 export async function fetchDropCommentCount(shareId: string): Promise<number> {

@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { useGamification } from '@/context/gamification-context';
 import { BOARD_REPLY_MAX, type BarBoard, type BarBoardPin } from '@/lib/profile/bar-board';
 import {
   deleteBoardPinReply,
@@ -20,6 +21,8 @@ import {
 } from '@/lib/profile/social-client';
 import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 import { cn } from '@/lib/utils';
+import { SCENE_BOOTH_ID } from '@/lib/scene-home';
+import { isMasterAdminEmail } from '@/lib/master-admin';
 
 export function BarBoardView({
   data,
@@ -59,6 +62,7 @@ function BoardPinCard({
   compact?: boolean;
 }) {
   const { user } = useAuth();
+  const { summary, loading: profileLoading } = useGamification();
   const { toast } = useToast();
   const [replies, setReplies] = useState<BoardPinReply[]>([]);
   const [draft, setDraft] = useState('');
@@ -72,7 +76,12 @@ function BoardPinCard({
       .catch(() => undefined);
   }, [profileUserId, pin.id, showReplies]);
 
-  const canReply = Boolean(user && user.id !== profileUserId);
+  const profileLive = Boolean(summary.publicProfile && summary.profileSlug);
+  const canReplyIdentity = Boolean(user && user.id !== profileUserId);
+  const canReply = canReplyIdentity && !profileLoading && profileLive;
+  const isAdmin = Boolean(
+    user && (user.role === 'admin' || isMasterAdminEmail(user.email))
+  );
   const myReply = user ? replies.find((r) => r.authorId === user.id) : undefined;
 
   const copyBar = async () => {
@@ -185,6 +194,17 @@ function BoardPinCard({
                 Reply
               </Button>
             </div>
+          ) : canReplyIdentity && !profileLoading && !profileLive ? (
+            <p className="text-[11px] text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+              Your Artist Home is offline.{' '}
+              <Link
+                href={`/#${SCENE_BOOTH_ID}`}
+                className="font-semibold text-[var(--ph-accent,#7dd3fc)] hover:underline"
+              >
+                Turn it live in Your Booth
+              </Link>{' '}
+              to reply. Existing replies stay visible.
+            </p>
           ) : !user ? (
             <p className="text-[11px] text-[var(--ph-muted,rgba(255,255,255,0.5))]">
               <Link href="/login" className="text-[var(--ph-accent,#7dd3fc)] hover:underline">
@@ -207,13 +227,22 @@ function BoardPinCard({
                   </ArtistHomeLink>
                   <span className="text-[var(--ph-muted,rgba(255,255,255,0.7))]">{r.text}</span>
                 </div>
-                {user && (user.id === r.authorId || user.id === profileUserId) ? (
+                {user && (user.id === r.authorId || user.id === profileUserId || isAdmin) ? (
                   <button
                     type="button"
                     disabled={busy}
                     className="text-[var(--ph-muted,rgba(255,255,255,0.4))] hover:text-rose-400"
                     onClick={() => void removeReply(r.id)}
-                    aria-label="Delete reply"
+                    aria-label={
+                      isAdmin && user.id !== r.authorId && user.id !== profileUserId
+                        ? 'Admin: delete reply'
+                        : 'Delete reply'
+                    }
+                    title={
+                      isAdmin && user.id !== r.authorId && user.id !== profileUserId
+                        ? 'Admin: delete reply'
+                        : 'Delete reply'
+                    }
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>

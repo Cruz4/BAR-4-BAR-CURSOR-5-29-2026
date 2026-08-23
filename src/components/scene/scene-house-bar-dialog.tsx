@@ -22,14 +22,15 @@ import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/client/firebase';
+import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 import { isMasterAdminEmail } from '@/lib/master-admin';
 import { LOCK_HOUSE_ID } from '@/lib/lock-feature';
 import type { LockDoc, LockEcho } from '@/lib/lock/types';
-import { profileHref } from '@/lib/profile/profile-slug';
 import { parseUserDate } from '@/lib/user-date';
 import { markHouseBarSeen, notifyHouseBarThreadUpdated } from '@/lib/scene/house-bar-pin';
 import { HouseBarMicLike } from '@/components/scene/house-bar-mic-like';
 import { cn } from '@/lib/utils';
+import { SCENE_BOOTH_ID } from '@/lib/scene-home';
 
 type Props = {
   open: boolean;
@@ -54,7 +55,7 @@ function sortByMicScore(echoes: LockEcho[]): LockEcho[] {
 
 export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Props) {
   const { user } = useAuth();
-  const { summary } = useGamification();
+  const { summary, loading: profileLoading } = useGamification();
   const { toast } = useToast();
   const [lock, setLock] = useState<LockDoc | null>(null);
   const [echoes, setEchoes] = useState<LockEcho[]>([]);
@@ -110,6 +111,14 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
 
   const onDrop = async () => {
     if (!bar.trim() || submitting) return;
+    if (!summary.publicProfile || !summary.profileSlug) {
+      toast({
+        variant: 'destructive',
+        title: 'Artist Home offline',
+        description: 'Turn your Artist Home live in Your Booth before posting or replying.',
+      });
+      return;
+    }
     setSubmitting(true);
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -170,6 +179,7 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
 
   const displaySeed = lock?.seedBar || seedBar;
   const closed = lock?.status === 'closed';
+  const profileLive = Boolean(summary.publicProfile && summary.profileSlug);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -190,6 +200,16 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
 
         {closed ? (
           <p className="text-sm text-rose-400">This house bar is closed — no new replies.</p>
+        ) : profileLoading ? (
+          <p className="text-sm text-muted-foreground">Checking your Artist Home…</p>
+        ) : !profileLive ? (
+          <p className="text-sm text-muted-foreground">
+            Your Artist Home is offline.{' '}
+            <Link href={`/#${SCENE_BOOTH_ID}`} className="font-semibold text-sky-300 hover:underline">
+              Turn it live in Your Booth
+            </Link>{' '}
+            to add a reply. Existing replies stay visible.
+          </p>
         ) : (
           <div className="space-y-2">
             <Textarea
@@ -232,7 +252,6 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
             <ul className="max-h-48 space-y-2 overflow-y-auto studio-scrollbar pr-1">
               {rankedEchoes.slice(0, 24).map((echo, index) => {
                 const name = echo.authorName?.trim() || 'Guest';
-                const href = echo.authorSlug ? profileHref(echo.authorSlug) : undefined;
                 const stamp = formatEchoStamp(echo.createdAt);
                 const micScore = echo.likeCount ?? 0;
                 return (
@@ -246,14 +265,15 @@ export function SceneHouseBarDialog({ open, onOpenChange, seedBar, title }: Prop
                     <div className="min-w-0 flex-1">
                       <p className="text-sm leading-snug text-foreground/95">{echo.text}</p>
                       <p className="mt-0.5 text-[10px] tracking-wide text-muted-foreground">
-                        {href ? (
-                          <Link
-                            href={href}
+                        {echo.authorId || echo.authorSlug ? (
+                          <ArtistHomeLink
+                            userId={echo.authorId}
+                            slug={echo.authorSlug}
                             className="font-semibold text-sky-300 hover:underline"
-                            onClick={() => onOpenChange(false)}
+                            onNavigate={() => onOpenChange(false)}
                           >
                             {name}
-                          </Link>
+                          </ArtistHomeLink>
                         ) : (
                           <span className="font-semibold text-foreground/70">{name}</span>
                         )}

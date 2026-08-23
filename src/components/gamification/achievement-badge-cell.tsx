@@ -166,9 +166,7 @@ export function AchievementBadgeCell({
       });
       toast({
         title: 'Shared to your feed',
-        description: summary.publicProfile
-          ? 'Foil card posted on your Artist Home wall / The Scene.'
-          : 'Foil card posted to your wall — flip Artist Home live so the block can see it.',
+        description: 'Foil card posted on your Artist Home wall / The Scene.',
       });
     } catch (e) {
       toast({

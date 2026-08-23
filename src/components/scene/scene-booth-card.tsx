@@ -64,7 +64,7 @@ export function SceneBoothCard({
         title: next ? 'Your Artist Home is live' : 'Artist Home set to private',
         description: next
           ? 'Friends and the Discover stream can find your page now.'
-          : 'Nobody can open your public page — you can still post and write.',
+          : 'Nobody can open your public page or add new public posts and replies.',
       });
     } catch {
       setPublicProfile(!next);
@@ -135,9 +135,8 @@ export function SceneBoothCard({
 
       {!isLive ? (
         <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">
-          Nobody can open your public profile until you go live. You can still{' '}
-          <span className="text-foreground/85">post to your wall</span>
-          {' '}(friends see it), write in Vault, and{' '}
+          Nobody can open your public profile or add new wall posts and replies until you go live.
+          Existing activity stays visible. You can still write privately in Vault and{' '}
           <Link href="/profile/customize" className="font-semibold text-sky-300 hover:underline">
             set up your page
           </Link>

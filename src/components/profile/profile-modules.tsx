@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { useGamification } from '@/context/gamification-context';
 import { cn } from '@/lib/utils';
 import { profileFriendsHref, profileHref } from '@/lib/profile/profile-slug';
 import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
@@ -72,6 +73,8 @@ import {
 import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
+import { SCENE_BOOTH_ID } from '@/lib/scene-home';
+import { isMasterAdminEmail } from '@/lib/master-admin';
 
 export type ModuleContext = {
   profileUserId: string;
@@ -630,6 +633,7 @@ const WALL_FETCH_MAX = 150;
 
 export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const { user } = useAuth();
+  const { summary, loading: profileLoading } = useGamification();
   const { toast } = useToast();
   const playground = ctx.playgroundWall;
   const [posts, setPosts] = useState<ProfilePost[]>(playground?.posts || []);
@@ -664,7 +668,10 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   }, [playground, playground?.posts]);
 
   const embedPreview = useMemo(() => parseEmbedUrl(embedUrl), [embedUrl]);
-  const canCompose = Boolean(playground) || (ctx.isOwner && user);
+  const profileLive = Boolean(summary.publicProfile && summary.profileSlug);
+  const signedInOwner = Boolean(ctx.isOwner && user);
+  const canCompose = Boolean(playground) || Boolean(signedInOwner && profileLive);
+  const ownerNeedsLive = Boolean(!playground && signedInOwner && !profileLoading && !profileLive);
 
   const pageCount = Math.max(1, Math.ceil(posts.length / WALL_PAGE_SIZE) || 1);
   const safePage = Math.min(Math.max(0, page), pageCount - 1);
@@ -746,10 +753,22 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
     }
   };
 
-  if (!canCompose && loaded && posts.length === 0) return null;
+  if (!canCompose && !ownerNeedsLive && loaded && posts.length === 0) return null;
 
   return (
     <ModuleShell icon={PenLine} title={"The Wall"} ctx={ctx}>
+      {ownerNeedsLive ? (
+        <p className={cn(inkWellClass, 'mb-5 p-4 text-sm text-[var(--ph-muted,rgba(255,255,255,0.6))]')}>
+          Your Artist Home is offline.{' '}
+          <Link
+            href={`/#${SCENE_BOOTH_ID}`}
+            className="font-semibold text-[var(--ph-accent,#7dd3fc)] hover:underline"
+          >
+            Turn it live in Your Booth
+          </Link>{' '}
+          to add a wall post. Existing posts stay visible.
+        </p>
+      ) : null}
       {canCompose && (
         <div className={cn(inkWellClass, 'mb-5 space-y-2 p-4')}>
           <Textarea
@@ -1087,6 +1106,7 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
 
 export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
   const { user } = useAuth();
+  const { summary, loading: profileLoading } = useGamification();
   const { toast } = useToast();
   const playground = ctx.playgroundGuestbook;
   const [entries, setEntries] = useState<GuestbookEntry[]>(playground || []);
@@ -1110,7 +1130,12 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
     };
   }, [ctx.profileUserId, playground]);
 
-  const canSign = !playground && Boolean(user && user.id !== ctx.profileUserId);
+  const profileLive = Boolean(summary.publicProfile && summary.profileSlug);
+  const canSignIdentity = !playground && Boolean(user && user.id !== ctx.profileUserId);
+  const canSign = canSignIdentity && !profileLoading && profileLive;
+  const isAdmin = Boolean(
+    user && (user.role === 'admin' || isMasterAdminEmail(user.email))
+  );
   const myEntry = user ? entries.find((e) => e.authorId === user.id) : undefined;
 
   const sign = async () => {
@@ -1162,6 +1187,18 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
           </Button>
         </div>
       )}
+      {canSignIdentity && !profileLoading && !profileLive ? (
+        <p className="mb-4 text-xs text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+          Your Artist Home is offline.{' '}
+          <Link
+            href={`/#${SCENE_BOOTH_ID}`}
+            className="font-semibold text-[var(--ph-accent,#7dd3fc)] hover:underline"
+          >
+            Turn it live in Your Booth
+          </Link>{' '}
+          to leave a new line. Existing entries stay visible.
+        </p>
+      ) : null}
       {!user && !playground && (
         <p className="mb-4 text-xs text-[var(--ph-muted,rgba(255,255,255,0.55))]">
           <Link href="/login" className="text-[var(--ph-accent,#7dd3fc)] hover:underline">
@@ -1205,7 +1242,7 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
               </ArtistHomeLink>
               <span className="italic text-[var(--ph-text,#fff)]/85">&ldquo;{entry.text}&rdquo;</span>
             </div>
-            {!playground && user?.id && (user.id === entry.authorId || ctx.isOwner) && (
+            {!playground && user?.id && (user.id === entry.authorId || ctx.isOwner || isAdmin) && (
               <button
                 type="button"
                 className="text-[var(--ph-muted,rgba(255,255,255,0.4))] hover:text-red-400"
@@ -1214,6 +1251,16 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
                     .then(() => setEntries((prev) => prev.filter((e) => e.id !== entry.id)))
                     .catch(() => toast({ variant: 'destructive', title: 'Could not remove' }));
                 }}
+                aria-label={
+                  isAdmin && user.id !== entry.authorId && !ctx.isOwner
+                    ? 'Admin: delete guestbook entry'
+                    : 'Delete guestbook entry'
+                }
+                title={
+                  isAdmin && user.id !== entry.authorId && !ctx.isOwner
+                    ? 'Admin: delete guestbook entry'
+                    : 'Delete guestbook entry'
+                }
               >
                 <Trash2 className="h-3 w-3" />
               </button>

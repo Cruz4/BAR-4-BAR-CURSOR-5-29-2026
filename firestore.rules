@@ -29,6 +29,17 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(userId)).data.get('subscriptionStatus', 'none') == 'active';
     }
 
+    // Public social writing requires the author's Artist Home to be live.
+    // The summary is server-owned, so a modified client cannot fake this flag.
+    function hasLiveArtistHome(userId) {
+      return request.auth != null
+        && request.auth.uid == userId
+        && exists(/databases/$(database)/documents/users/$(userId)/gamification/summary)
+        && get(/databases/$(database)/documents/users/$(userId)/gamification/summary).data.get('publicProfile', false) == true
+        && get(/databases/$(database)/documents/users/$(userId)/gamification/summary).data.get('profileSlug', '') is string
+        && get(/databases/$(database)/documents/users/$(userId)/gamification/summary).data.get('profileSlug', '').size() > 0;
+    }
+
     function isCollabSheetMember(collabId) {
       let sheet = get(/databases/$(database)/documents/collabSheets/$(collabId)).data;
       return request.auth != null
@@ -121,6 +132,7 @@ service cloud.firestore {
       match /comments/{commentId} {
         allow read: if true;
         allow create: if request.auth != null
+          && hasLiveArtistHome(request.auth.uid)
           && request.resource.data.authorId == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() <= 500
@@ -378,6 +390,7 @@ service cloud.firestore {
     match /posts/{postId} {
       allow read: if true;
       allow create: if request.auth != null
+        && hasLiveArtistHome(request.auth.uid)
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.text is string
         && request.resource.data.text.size() <= 1000
@@ -431,6 +444,7 @@ service cloud.firestore {
             && request.resource.data.reverbPostId.size() > 0)
         );
       allow update: if request.auth != null
+        && hasLiveArtistHome(request.auth.uid)
         && resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerId == resource.data.ownerId
         && lockedServerNumber('viewCount');
@@ -445,6 +459,7 @@ service cloud.firestore {
       match /comments/{commentId} {
         allow read: if true;
         allow create: if request.auth != null
+          && hasLiveArtistHome(request.auth.uid)
           && request.resource.data.authorId == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() <= 500
@@ -528,6 +543,7 @@ service cloud.firestore {
     match /guestbooks/{ownerUid}/entries/{authorUid} {
       allow read: if true;
       allow create, update: if request.auth != null
+        && hasLiveArtistHome(request.auth.uid)
         && request.auth.uid == authorUid
         && request.auth.uid != ownerUid
         && request.resource.data.authorId == authorUid
@@ -541,6 +557,7 @@ service cloud.firestore {
     match /boardReplies/{ownerUid}/pins/{pinId}/entries/{authorUid} {
       allow read: if true;
       allow create, update: if request.auth != null
+        && hasLiveArtistHome(request.auth.uid)
         && request.auth.uid == authorUid
         && request.auth.uid != ownerUid
         && request.resource.data.authorId == authorUid

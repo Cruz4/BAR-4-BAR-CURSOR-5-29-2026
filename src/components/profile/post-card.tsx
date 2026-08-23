@@ -40,6 +40,7 @@ import { activityOpenLinkHref } from '@/lib/activity/href';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { compactReachCount, recordPostViewClient } from '@/lib/post-view-client';
 import { LyricClipCard } from '@/components/profile/lyric-clip-card';
+import { isMasterAdminEmail } from '@/lib/master-admin';
 
 type PostCardProps = {
   post: ProfilePost;
@@ -210,6 +211,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   const [comments, setComments] = useState<PostComment[]>([]);
   const [commentsLoaded, setCommentsLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [deleted, setDeleted] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [reverbed, setReverbed] = useState(false);
   const [authorAvatarUrl, setAuthorAvatarUrl] = useState<string | undefined>(undefined);
@@ -224,6 +226,10 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   } = useLiveArtistHomeSlug(showAuthor ? post.ownerId : undefined, showAuthor ? post.ownerSlug : undefined);
 
   const isOwner = Boolean(user?.id && user.id === post.ownerId);
+  const isAdmin = Boolean(
+    user && (user.role === 'admin' || isMasterAdminEmail(user.email))
+  );
+  const canDeletePost = isOwner || isAdmin;
   const authorChrome =
     authorStudioChrome || (isOwner ? studioChromeFromUser(user) : undefined);
   const rootIdForReverb =
@@ -389,12 +395,15 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     setBusy(true);
     try {
       await deletePost(post.id);
+      setDeleted(true);
       onDeleted?.(post.id);
     } catch {
       toast({ variant: 'destructive', title: 'Could not delete post' });
       setBusy(false);
     }
   };
+
+  if (deleted) return null;
 
   return (
     <article
@@ -453,13 +462,15 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
             {timeAgo(post.createdAt)}
           </p>
         </div>
-        {isOwner && (
+        {canDeletePost && (
           <Button
             size="icon"
             variant="ghost"
             className="h-7 w-7 text-[var(--ph-muted,rgba(255,255,255,0.55))] hover:text-red-400"
             disabled={busy}
             onClick={() => void handleDeletePost()}
+            aria-label={isAdmin && !isOwner ? 'Admin: delete post' : 'Delete post'}
+            title={isAdmin && !isOwner ? 'Admin: delete post' : 'Delete post'}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>

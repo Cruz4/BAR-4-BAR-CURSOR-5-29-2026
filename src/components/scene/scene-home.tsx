@@ -150,6 +150,7 @@ function SceneComposer({
   onPosted: (post: ProfilePost) => void;
 }) {
   const { user } = useAuth();
+  const { summary, loading: profileLoading } = useGamification();
   const { toast } = useToast();
   const [text, setText] = useState('');
   const [embedUrl, setEmbedUrl] = useState('');
@@ -167,7 +168,8 @@ function SceneComposer({
     el.style.height = `${Math.max(56, el.scrollHeight)}px`;
   }, [text]);
 
-  if (!user) return null;
+  const profileLive = Boolean(summary.publicProfile && summary.profileSlug);
+  if (!user || profileLoading || !profileLive) return null;
 
   const submit = async () => {
     if (busy || (!text.trim() && !embedUrl.trim() && !voice && !image)) return;

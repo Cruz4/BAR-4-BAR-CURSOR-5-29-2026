@@ -144,6 +144,21 @@ function requireUser() {
   return user;
 }
 
+export const PROFILE_LIVE_REQUIRED_MESSAGE =
+  'Your Artist Home is offline. Turn it live before posting or replying.';
+
+/** Friendly client guard; Firestore rules independently enforce the same policy. */
+export async function requireLiveProfileForPosting(
+  userId?: string
+): Promise<LivePublicMeta & { slug: string }> {
+  const user = requireUser();
+  const uid = userId || user.uid;
+  if (uid !== user.uid) throw new Error(PROFILE_LIVE_REQUIRED_MESSAGE);
+  const live = await fetchLivePublicProfileByUserId(uid);
+  if (!live?.slug) throw new Error(PROFILE_LIVE_REQUIRED_MESSAGE);
+  return { ...live, slug: live.slug };
+}
+
 /** Fire-and-forget conversion analytics for profile social actions. */
 function trackSocialEvent(
   event:
@@ -201,6 +216,7 @@ export async function createPost(input: {
   lyricClip?: LyricClip;
 }): Promise<ProfilePost> {
   const user = requireUser();
+  const liveProfile = await requireLiveProfileForPosting(user.uid);
   const text = input.text.trim().slice(0, MAX_POST_TEXT);
   const embedUrl = input.embedUrl?.trim() || undefined;
   let imageUrl = input.imageUrl?.trim() || undefined;
@@ -244,7 +260,7 @@ export async function createPost(input: {
     id,
     ownerId: user.uid,
     ownerName: input.ownerName || user.displayName || 'Artist',
-    ...(input.ownerSlug ? { ownerSlug: input.ownerSlug } : {}),
+    ownerSlug: liveProfile.slug,
     text,
     ...(embedUrl ? { embedUrl } : {}),
     ...(parsed ? { embedProvider: parsed.provider } : {}),
@@ -441,11 +457,13 @@ export async function toggleReverb(
     return { status: 'removed' };
   }
 
+  const liveProfile = await requireLiveProfileForPosting(user.uid);
+
   const post: ProfilePost = {
     id: newestFirstId(),
     ownerId: user.uid,
     ownerName: me.name || user.displayName || 'Artist',
-    ...(me.slug ? { ownerSlug: me.slug } : {}),
+    ownerSlug: liveProfile.slug,
     text: '',
     createdAt: new Date().toISOString(),
     isReverb: true,
@@ -635,6 +653,7 @@ export async function addComment(
   }
 ): Promise<PostComment> {
   const user = requireUser();
+  const liveProfile = await requireLiveProfileForPosting(user.uid);
   const clean = text.trim().slice(0, MAX_COMMENT_TEXT);
   if (!clean && !voiceClip && !image) throw new Error('Comment is empty.');
   const parentCommentId = opts?.parentCommentId?.trim().slice(0, 80) || undefined;
@@ -665,7 +684,7 @@ export async function addComment(
     id,
     authorId: user.uid,
     authorName: author.name || user.displayName || 'Artist',
-    ...(author.slug ? { authorSlug: author.slug } : {}),
+    authorSlug: liveProfile.slug,
     text: clean,
     createdAt: new Date().toISOString(),
     ...(parentCommentId ? { parentCommentId } : {}),
@@ -1781,6 +1800,7 @@ export async function setGuestbookEntry(
   author: { name: string; slug?: string }
 ): Promise<GuestbookEntry> {
   const user = requireUser();
+  const liveProfile = await requireLiveProfileForPosting(user.uid);
   if (profileOwnerId === user.uid) throw new Error('Sign your own book from the wall instead.');
   const clean = text.trim().slice(0, MAX_GUESTBOOK_TEXT);
   if (!clean) throw new Error('Say something first.');
@@ -1788,7 +1808,7 @@ export async function setGuestbookEntry(
     id: user.uid,
     authorId: user.uid,
     authorName: author.name || user.displayName || 'Artist',
-    ...(author.slug ? { authorSlug: author.slug } : {}),
+    authorSlug: liveProfile.slug,
     text: clean,
     createdAt: new Date().toISOString(),
   };
@@ -1916,6 +1936,7 @@ export async function setBoardPinReply(
   author: { name: string; slug?: string }
 ): Promise<BoardPinReply> {
   const user = requireUser();
+  const liveProfile = await requireLiveProfileForPosting(user.uid);
   if (profileOwnerId === user.uid) throw new Error('Reply under someone else’s pin from the wall instead.');
   const clean = text.trim().slice(0, MAX_BOARD_REPLY);
   if (!clean) throw new Error('Say something first.');
@@ -1924,7 +1945,7 @@ export async function setBoardPinReply(
     id: user.uid,
     authorId: user.uid,
     authorName: author.name || user.displayName || 'Artist',
-    ...(author.slug ? { authorSlug: author.slug } : {}),
+    authorSlug: liveProfile.slug,
     text: clean,
     createdAt: new Date().toISOString(),
     pinId: pinId.trim().slice(0, 40),

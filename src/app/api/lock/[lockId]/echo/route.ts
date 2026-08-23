@@ -4,6 +4,7 @@ import { submitEcho } from '@/lib/server/lock';
 import { LOCK_HOUSE_ID } from '@/lib/lock-feature';
 import { canAccessLockApi } from '@/lib/server/lock-access';
 import { getAuth } from '@/lib/firebase/server';
+import { getGamificationSummaryForUser } from '@/lib/server/gamification';
 
 export const runtime = 'nodejs';
 
@@ -54,6 +55,20 @@ export async function POST(
       } catch {
         /* treat as guest */
       }
+    }
+
+    if (lockId === LOCK_HOUSE_ID) {
+      if (!authorId) {
+        return NextResponse.json({ error: 'Sign in to reply to the house bar.' }, { status: 401 });
+      }
+      const summary = await getGamificationSummaryForUser(authorId);
+      if (!summary.publicProfile || !summary.profileSlug) {
+        return NextResponse.json(
+          { error: 'Your Artist Home is offline. Turn it live before posting or replying.' },
+          { status: 403 }
+        );
+      }
+      authorSlug = summary.profileSlug;
     }
 
     const result = await submitEcho({

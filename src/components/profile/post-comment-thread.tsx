@@ -21,8 +21,11 @@ import {
   unlikeComment,
   type PostComment,
 } from '@/lib/profile/social-client';
+import { useGamification } from '@/context/gamification-context';
+import { SCENE_BOOTH_ID } from '@/lib/scene-home';
 import {
   addDropComment,
+  deleteDropComment,
   fetchDropCommentLikeStates,
   likeDropComment,
   unlikeDropComment,
@@ -31,6 +34,7 @@ import { revokePostImagePreview, type PendingPostImage } from '@/lib/profile/pos
 import { type RecordedVoiceClip } from '@/lib/profile/voice-notes';
 import { activityCommentElementId } from '@/lib/activity/post-deep-link';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
+import { isMasterAdminEmail } from '@/lib/master-admin';
 
 type PostCommentThreadProps = {
   postId?: string;
@@ -40,7 +44,12 @@ type PostCommentThreadProps = {
   commentCount: number;
   onCommentsChange: (next: PostComment[]) => void;
   onCommentCountChange: (next: number) => void;
-  user: { id: string; displayName?: string | null } | null;
+  user: {
+    id: string;
+    displayName?: string | null;
+    email?: string | null;
+    role?: string | null;
+  } | null;
   viewerSlug?: string;
   isOwner: boolean;
 };
@@ -64,6 +73,7 @@ export function PostCommentThread({
   isOwner,
 }: PostCommentThreadProps) {
   const { toast } = useToast();
+  const { summary, loading: profileLoading } = useGamification();
   const [likeStates, setLikeStates] = useState<Record<string, { count: number; liked: boolean }>>({});
   const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
   const [draft, setDraft] = useState('');
@@ -72,6 +82,11 @@ export function PostCommentThread({
   const [busy, setBusy] = useState(false);
   const draftRef = useRef<HTMLInputElement>(null);
   const insertEmoji = useEmojiInserter(draft, setDraft, draftRef);
+  const profileLive = Boolean(summary.publicProfile && summary.profileSlug);
+  const canWritePublic = Boolean(user && !profileLoading && profileLive);
+  const isAdmin = Boolean(
+    user && (user.role === 'admin' || isMasterAdminEmail(user.email))
+  );
 
   const tree = useMemo(() => buildCommentTree(comments), [comments]);
 
@@ -94,6 +109,14 @@ export function PostCommentThread({
 
   const submitComment = async () => {
     if (!user || (!draft.trim() && !voice && !image)) return;
+    if (!canWritePublic) {
+      toast({
+        variant: 'destructive',
+        title: 'Artist Home offline',
+        description: 'Turn your Artist Home live in Your Booth before posting or replying.',
+      });
+      return;
+    }
     if (!postId && !shareId) return;
     setBusy(true);
     try {
@@ -167,8 +190,9 @@ export function PostCommentThread({
   };
 
   const removeComment = async (commentId: string) => {
-    if (!postId) return;
-    await deleteComment(postId, commentId);
+    if (postId) await deleteComment(postId, commentId);
+    else if (shareId) await deleteDropComment(shareId, commentId);
+    else return;
     onCommentsChange(comments.filter((c) => c.id !== commentId));
     onCommentCountChange(Math.max(0, commentCount - 1));
   };
@@ -234,6 +258,7 @@ export function PostCommentThread({
               {user ? (
                 <button
                   type="button"
+                  disabled={!canWritePublic}
                   onClick={() =>
                     setReplyTo({
                       commentId: node.id,
@@ -241,7 +266,8 @@ export function PostCommentThread({
                       authorName: node.authorName,
                     })
                   }
-                  className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.45))] hover:text-[var(--ph-text,#fff)]"
+                  className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.45))] hover:text-[var(--ph-text,#fff)] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:text-[var(--ph-muted,rgba(255,255,255,0.45))]"
+                  title={!canWritePublic ? 'Turn your Artist Home live to reply' : undefined}
                 >
                   <MessageCircle className="h-3 w-3" />
                   Reply
@@ -249,7 +275,7 @@ export function PostCommentThread({
               ) : null}
             </div>
           </div>
-          {user?.id && postId && (user.id === node.authorId || isOwner) ? (
+          {user?.id && (user.id === node.authorId || isOwner || isAdmin) ? (
             <button
               type="button"
               className="text-[var(--ph-muted,rgba(255,255,255,0.4))] hover:text-red-400"
@@ -258,6 +284,16 @@ export function PostCommentThread({
                   toast({ variant: 'destructive', title: 'Could not delete' })
                 );
               }}
+              aria-label={
+                isAdmin && user.id !== node.authorId && !isOwner
+                  ? 'Admin: delete reply'
+                  : 'Delete reply'
+              }
+              title={
+                isAdmin && user.id !== node.authorId && !isOwner
+                  ? 'Admin: delete reply'
+                  : 'Delete reply'
+              }
             >
               <Trash2 className="h-3 w-3" />
             </button>
@@ -276,7 +312,11 @@ export function PostCommentThread({
       {commentsLoaded && comments.length === 0 && (
         <p className="text-xs text-[var(--ph-muted,rgba(255,255,255,0.5))]">No replies yet.</p>
       )}
-      {user ? (
+      {user && profileLoading ? (
+        <p className="text-xs text-[var(--ph-muted,rgba(255,255,255,0.5))]">
+          Checking your Artist Home…
+        </p>
+      ) : canWritePublic ? (
         <div className="space-y-2 pt-1">
           {replyTo ? (
             <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
@@ -356,6 +396,17 @@ export function PostCommentThread({
             </Button>
           </div>
         </div>
+      ) : user ? (
+        <p className="text-xs text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+          Your Artist Home is offline.{' '}
+          <Link
+            href={`/#${SCENE_BOOTH_ID}`}
+            className="font-semibold text-[var(--ph-accent,#7dd3fc)] hover:underline"
+          >
+            Turn it live in Your Booth
+          </Link>{' '}
+          to post or reply. Existing comments stay visible.
+        </p>
       ) : (
         <p className="text-xs text-[var(--ph-muted,rgba(255,255,255,0.5))]">
           <Link href="/login" className="text-[var(--ph-accent,#7dd3fc)] hover:underline">

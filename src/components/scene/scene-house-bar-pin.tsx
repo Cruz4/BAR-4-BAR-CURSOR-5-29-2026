@@ -7,7 +7,6 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import { ChevronUp, Radio, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -22,7 +21,7 @@ import {
 } from '@/lib/scene/house-bar-pin';
 import { useToast } from '@/hooks/use-toast';
 import { SCENE_TOP_ID } from '@/lib/scene-home';
-import { profileHref } from '@/lib/profile/profile-slug';
+import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 import { HouseBarMicLike } from '@/components/scene/house-bar-mic-like';
 import type { LockEcho } from '@/lib/lock/types';
 
@@ -177,7 +176,6 @@ export function SceneHouseBarPin({
           ) : (
             preview.map((echo, index) => {
               const name = echo.authorName?.trim() || 'Guest';
-              const href = echo.authorSlug ? profileHref(echo.authorSlug) : undefined;
               const micScore = echo.likeCount ?? 0;
               return (
                 <li key={echo.id} className="flex items-center gap-1.5 text-[12px] leading-snug">
@@ -189,10 +187,14 @@ export function SceneHouseBarPin({
                     <span className="text-muted-foreground">
                       {' '}
                       ·{' '}
-                      {href ? (
-                        <Link href={href} className="font-semibold text-sky-300 hover:underline">
+                      {echo.authorId || echo.authorSlug ? (
+                        <ArtistHomeLink
+                          userId={echo.authorId}
+                          slug={echo.authorSlug}
+                          className="font-semibold text-sky-300 hover:underline"
+                        >
                           {name}
-                        </Link>
+                        </ArtistHomeLink>
                       ) : (
                         <span className="font-semibold text-foreground/60">{name}</span>
                       )}
