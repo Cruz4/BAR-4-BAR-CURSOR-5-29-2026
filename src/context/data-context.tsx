@@ -82,7 +82,15 @@ interface DataContextType {
   updateTrack: (albumId: string, trackId: string, updates: Partial<Track>) => void;
   deleteTrack: (albumId: string, trackId: string) => void;
   getTrackById: (albumId: string, trackId: string) => { track: Track | undefined, album: Album | undefined };
-  mergeData: (albumsToMerge: Album[], tracksToMerge: Track[]) => Promise<void>;
+  mergeData: (
+    albumsToMerge: Album[],
+    tracksToMerge: Track[],
+    options?: {
+      styleProfile?: StyleProfile | null;
+      copyOnConflict?: boolean;
+      applyImportedTrackStyle?: boolean;
+    }
+  ) => Promise<void>;
   clearVault: () => Promise<void>;
   moveTrack: (trackId: string, fromAlbumId: string, toAlbumId: string) => void;
   updateStyleProfile: (analysis: string, metrics?: any) => void;
@@ -1036,7 +1044,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     [updateStyleProfile]
   );
 
-  const mergeData = useCallback(async (importedAlbums: Album[], importedTracks: Track[]) => {
+  const mergeData = useCallback(async (
+    importedAlbums: Album[],
+    importedTracks: Track[],
+    options?: {
+      styleProfile?: StyleProfile | null;
+      copyOnConflict?: boolean;
+      applyImportedTrackStyle?: boolean;
+    }
+  ) => {
     if (!user) return;
 
     await flushCloudNow();
@@ -1069,17 +1085,32 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       for (const album of importedAlbums) {
         if (album.id === UNASSIGNED_ALBUM_ID) continue;
         const { tracks = [], ...albumData } = album;
+        let albumId = album.id;
+        let albumRef = doc(db, 'users', user.id, 'albums', albumId);
+        let existingAlbum = await getDoc(albumRef);
+        let albumCopiedForConflict = false;
+        if (options?.copyOnConflict && existingAlbum.exists()) {
+          albumCopiedForConflict = true;
+          let copy = 1;
+          do {
+            albumId = `${album.id}-import-${Date.now().toString(36)}${copy > 1 ? `-${copy}` : ''}`;
+            albumRef = doc(db, 'users', user.id, 'albums', albumId);
+            existingAlbum = await getDoc(albumRef);
+            copy += 1;
+          } while (existingAlbum.exists());
+        }
         const stampedAlbum = stripForFirestore({
           ...albumData,
+          id: albumId,
           ownerId: user.id,
+          ...(albumCopiedForConflict ? { shareId: undefined } : {}),
           updatedAt: new Date().toISOString(),
         });
-        const albumRef = doc(db, 'users', user.id, 'albums', album.id);
-        if ((await getDoc(albumRef)).exists()) {
+        if (existingAlbum.exists()) {
           batch.set(albumRef, stampedAlbum, { merge: true });
           opCount++;
         } else {
-          await createCatalogAlbum(album.id, stampedAlbum);
+          await createCatalogAlbum(albumId, stampedAlbum);
         }
 
         const persistedTracks: Track[] = [];
@@ -1089,33 +1120,27 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             ...track,
             id: trackId,
             ownerId: user.id,
-            albumId: album.id,
+            albumId,
+            ...(albumCopiedForConflict ? { shareId: undefined, collabSheetId: undefined } : {}),
             updatedAt: new Date().toISOString(),
           });
-          const trackRef = doc(db, 'users', user.id, 'albums', album.id, 'tracks', trackId);
+          const trackRef = doc(db, 'users', user.id, 'albums', albumId, 'tracks', trackId);
           if ((await getDoc(trackRef)).exists()) {
             batch.set(trackRef, trackData, { merge: true });
             opCount++;
           } else {
-            await createCatalogTrack(album.id, trackId, trackData);
+            await createCatalogTrack(albumId, trackId, trackData);
           }
           persistedTracks.push(trackData as Track);
           await commitIfNeeded();
         }
-        persistedAlbums.push({ ...stampedAlbum, id: album.id, tracks: persistedTracks });
+        persistedAlbums.push({ ...stampedAlbum, id: albumId, tracks: persistedTracks });
       }
 
       if (allLooseTracks.length > 0) {
         for (const track of allLooseTracks) {
-          const trackId = ensureTrackId(track, persistedLooseTracks.length);
-          const trackData = stripForFirestore({
-            ...track,
-            id: trackId,
-            ownerId: user.id,
-            albumId: UNASSIGNED_ALBUM_ID,
-            updatedAt: new Date().toISOString(),
-          });
-          const trackRef = doc(
+          let trackId = ensureTrackId(track, persistedLooseTracks.length);
+          let trackRef = doc(
             db,
             'users',
             user.id,
@@ -1124,7 +1149,27 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             'tracks',
             trackId
           );
-          if ((await getDoc(trackRef)).exists()) {
+          let existingTrack = await getDoc(trackRef);
+          let trackCopiedForConflict = false;
+          if (options?.copyOnConflict && existingTrack.exists()) {
+            trackCopiedForConflict = true;
+            let copy = 1;
+            do {
+              trackId = `${track.id}-import-${Date.now().toString(36)}${copy > 1 ? `-${copy}` : ''}`;
+              trackRef = doc(db, 'users', user.id, 'albums', UNASSIGNED_ALBUM_ID, 'tracks', trackId);
+              existingTrack = await getDoc(trackRef);
+              copy += 1;
+            } while (existingTrack.exists());
+          }
+          const trackData = stripForFirestore({
+            ...track,
+            id: trackId,
+            ownerId: user.id,
+            albumId: UNASSIGNED_ALBUM_ID,
+            ...(trackCopiedForConflict ? { shareId: undefined, collabSheetId: undefined } : {}),
+            updatedAt: new Date().toISOString(),
+          });
+          if (existingTrack.exists()) {
             batch.set(trackRef, trackData, { merge: true });
             opCount++;
           } else {
@@ -1136,6 +1181,21 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       await commitIfNeeded(true);
+
+      if (options?.styleProfile && !styleProfile) {
+        const styleRef = doc(db, 'users', user.id, 'styleProfile', 'main');
+        const existingStyle = await getDoc(styleRef);
+        if (!existingStyle.exists()) {
+          const restoredStyle = stripForFirestore({
+            ...options.styleProfile,
+            id: `style-${user.id}`,
+            ownerId: user.id,
+            updatedAt: new Date().toISOString(),
+          }) as StyleProfile;
+          await setDoc(styleRef, restoredStyle);
+          setStyleProfile(restoredStyle);
+        }
+      }
     } catch (error) {
       console.error('Vault merge failed:', error);
       throw error;
@@ -1178,8 +1238,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       ...persistedLooseTracks,
       ...persistedAlbums.flatMap((a) => a.tracks ?? []),
     ];
-    applyImportedStyle(tracksForStyleImport);
-  }, [user, flushCloudNow, seedTrackProgressBaselines, applyImportedStyle]);
+    if (options?.applyImportedTrackStyle !== false) {
+      applyImportedStyle(tracksForStyleImport);
+    }
+  }, [user, flushCloudNow, seedTrackProgressBaselines, applyImportedStyle, styleProfile]);
 
   const clearVault = useCallback(async () => {
     if (!user) return;

@@ -153,6 +153,12 @@ import {
 } from '@/lib/track-live-flags';
 import { DowngradeTrackPickerDialog } from '@/components/downgrade-track-picker-dialog';
 import { FirstSongHero } from '@/components/first-song-hero';
+import {
+  buildVaultBackup,
+  parseVaultBackup,
+  prepareVaultImport,
+  type PreparedVaultImport,
+} from '@/lib/vault-backup';
 
 function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenChange: (open: boolean) => void, type: 'Album' | 'Track' }) {
   const [title, setTitle] = useState('');
@@ -692,7 +698,7 @@ function VaultHeaderToolbar({
 
 export function AlbumList() {
   const [createItemType, setCreateItemType] = useState<'Album' | 'Track' | null>(null);
-  const { albums, loading, deleteAlbum, deleteTrack, moveTrack, getAlbumById, mergeData, clearVault, isCloudSyncActive } = useContext(DataContext);
+  const { albums, styleProfile, loading, deleteAlbum, deleteTrack, moveTrack, getAlbumById, mergeData, clearVault, isCloudSyncActive } = useContext(DataContext);
   const { user, loading: authLoading } = useAuth();
   const isPaidPro = isProUser(user);
   const hasProWorkflow = isProOrTrial(user);
@@ -711,7 +717,7 @@ export function AlbumList() {
   const [showClearVaultConfirm, setShowClearVaultConfirm] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isClearingVault, setIsClearingVault] = useState(false);
-  const [dataToImport, setDataToImport] = useState<any>(null);
+  const [dataToImport, setDataToImport] = useState<PreparedVaultImport | null>(null);
   const [trackToDelete, setTrackToDelete] = useState<Track | null>(null);
   const [looseTracksMinimized, setLooseTracksMinimized] = useState(false);
   const [downgradePickerDone, setDowngradePickerDone] = useState(false);
@@ -963,7 +969,8 @@ export function AlbumList() {
       toast(EXPORT_PRO_TOAST);
       return;
     }
-    const dataStr = JSON.stringify(albums, null, 2);
+    const backup = buildVaultBackup(albums, styleProfile);
+    const dataStr = JSON.stringify(backup, null, 2);
     const dataBlob = new Blob([dataStr], {type: "application/json"});
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
@@ -982,25 +989,17 @@ export function AlbumList() {
     }
     setIsImporting(true);
     try {
-      let albumsPayload: Album[] = [];
-      let looseTracks: Track[] = [];
-
-      if (Array.isArray(dataToImport)) {
-        const unassigned = dataToImport.find((a: Album) => a.id === 'unassigned');
-        looseTracks = unassigned?.tracks || [];
-        albumsPayload = dataToImport.filter((a: Album) => a.id !== 'unassigned');
-      } else if (dataToImport.albums) {
-        const unassigned = dataToImport.albums.find((a: Album) => a.id === 'unassigned');
-        looseTracks = unassigned?.tracks || dataToImport.tracks || [];
-        albumsPayload = dataToImport.albums.filter((a: Album) => a.id !== 'unassigned');
-      } else {
-        throw new Error('Invalid blueprint format');
-      }
-
-      await mergeData(albumsPayload, looseTracks);
+      await mergeData(dataToImport.albums, dataToImport.looseTracks, {
+        styleProfile: dataToImport.styleProfile,
+        copyOnConflict: true,
+        applyImportedTrackStyle: false,
+      });
       setShowImportConfirm(false);
       setDataToImport(null);
-      toast({ title: 'Vault Merged Successfully', description: 'Imported albums and tracks saved to your cloud vault.' });
+      toast({
+        title: 'Vault Merged Safely',
+        description: `Added ${dataToImport.preview.albumsToAdd} albums and ${dataToImport.preview.albumTracksToAdd + dataToImport.preview.looseTracksToAdd} tracks. Existing work was kept.`,
+      });
     } catch {
       toast({ variant: 'destructive', title: 'Import Failed', description: 'Could not merge studio blueprint.' });
     } finally {
@@ -1361,21 +1360,73 @@ export function AlbumList() {
         type={createItemType || 'Album'}
       />
       
-      <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={(e) => {
+      <input type="file" ref={fileInputRef} className="hidden" accept=".json,application/json" onChange={(e) => {
           const file = e.target.files?.[0]; if(!file) return;
           if (!canExportVault(user)) {
             toast(IMPORT_PRO_TOAST);
             e.target.value = '';
             return;
           }
-          const reader = new FileReader(); reader.onload = (ev) => { try { setDataToImport(JSON.parse(ev.target?.result as string)); setShowImportConfirm(true); } catch(err) { toast({ variant: 'destructive', title: 'Import Failed', description: 'Invalid studio blueprint file.' }); } }; reader.readAsText(file);
+          if (file.size > 50 * 1024 * 1024) {
+            toast({ variant: 'destructive', title: 'Import Failed', description: 'Vault backups must be 50 MB or smaller.' });
+            e.target.value = '';
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            try {
+              const parsed = parseVaultBackup(JSON.parse(String(ev.target?.result || '')));
+              setDataToImport(prepareVaultImport(parsed, albums, Boolean(styleProfile)));
+              setShowImportConfirm(true);
+            } catch (error) {
+              toast({
+                variant: 'destructive',
+                title: 'Import Failed',
+                description: error instanceof Error ? error.message : 'Invalid studio blueprint file.',
+              });
+              e.target.value = '';
+            }
+          };
+          reader.onerror = () => {
+            toast({ variant: 'destructive', title: 'Import Failed', description: 'Could not read that Vault backup.' });
+            e.target.value = '';
+          };
+          reader.readAsText(file);
       }} />
 
-      <AlertDialog open={showImportConfirm} onOpenChange={setShowImportConfirm}>
-          <AlertDialogContent className="bg-card border-2">
+      <AlertDialog open={showImportConfirm} onOpenChange={(open) => {
+          setShowImportConfirm(open);
+          if (!open && !isImporting) {
+            setDataToImport(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+          }
+      }}>
+          <AlertDialogContent className="bg-card border-2 max-w-lg">
               <AlertDialogHeader>
-                  <AlertDialogTitle className="font-headline text-2xl uppercase">Initialize Vault Merge?</AlertDialogTitle>
-                  <AlertDialogDescription className="text-sm font-code">This will load the imported albums and tracks into your current studio session. This action cannot be undone.</AlertDialogDescription>
+                  <AlertDialogTitle className="font-headline text-2xl uppercase">Preview Safe Vault Merge</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-3 text-sm font-code text-muted-foreground">
+                      <p>
+                        {dataToImport?.sourceVersion === 2 ? 'Version 2 Vault backup' : 'Legacy Vault blueprint'}
+                        {dataToImport?.exportedAt ? ` · exported ${new Date(dataToImport.exportedAt).toLocaleString()}` : ''}
+                      </p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="rounded-lg border border-border bg-background/50 p-2 text-center"><strong className="block text-lg text-foreground">{dataToImport?.preview.albumsToAdd || 0}</strong>albums</div>
+                        <div className="rounded-lg border border-border bg-background/50 p-2 text-center"><strong className="block text-lg text-foreground">{dataToImport?.preview.albumTracksToAdd || 0}</strong>album tracks</div>
+                        <div className="rounded-lg border border-border bg-background/50 p-2 text-center"><strong className="block text-lg text-foreground">{dataToImport?.preview.looseTracksToAdd || 0}</strong>loose tracks</div>
+                      </div>
+                      {(dataToImport?.preview.albumCopies || dataToImport?.preview.looseTrackCopies) ? (
+                        <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-amber-200/90">
+                          {dataToImport.preview.albumCopies} album and {dataToImport.preview.looseTrackCopies} loose-track ID conflicts will be added as clearly named imported copies.
+                        </p>
+                      ) : null}
+                      <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-emerald-200/90">
+                        Safe merge only: no current album or track will be removed or overwritten.
+                      </p>
+                      {dataToImport?.preview.styleProfile === 'add' ? <p>The backed-up Style Profile will be restored because this Vault has none.</p> : null}
+                      {dataToImport?.preview.styleProfile === 'keep-current' ? <p>Your current Style Profile will remain unchanged.</p> : null}
+                    </div>
+                  </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                   <AlertDialogCancel className="font-bold">Abort</AlertDialogCancel>
