@@ -226,17 +226,22 @@ export function SceneImmersiveFeedDialog({
 
         <div
           ref={scrollerRef}
-          className="h-[100dvh] snap-y snap-mandatory overflow-y-auto overscroll-y-contain scroll-smooth"
+          className="h-[100dvh] touch-pan-y snap-y snap-mandatory overflow-y-auto overscroll-y-contain scroll-smooth [-webkit-overflow-scrolling:touch]"
           onScroll={(event) => {
             const el = event.currentTarget;
-            const index = Math.round(el.scrollTop / Math.max(1, el.clientHeight));
+            const slides = Array.from(el.children) as HTMLElement[];
+            const index = slides.reduce((closest, slide, candidate) => (
+              Math.abs(slide.offsetTop - el.scrollTop) < Math.abs(slides[closest].offsetTop - el.scrollTop)
+                ? candidate
+                : closest
+            ), 0);
             if (index !== activeIndex) setActiveIndex(Math.max(0, Math.min(items.length - 1, index)));
           }}
         >
           {items.length ? items.map((item, index) => (
             <section
               key={item.meta.key}
-              className="relative flex h-[100dvh] snap-start snap-always items-center justify-center overflow-hidden pb-[max(1rem,env(safe-area-inset-bottom))] pl-3 pr-14 pt-[8.25rem] sm:px-16 sm:pt-[8.75rem]"
+              className="relative flex min-h-[100dvh] touch-pan-y snap-start snap-always items-center justify-center pb-[max(1rem,env(safe-area-inset-bottom))] pl-3 pr-14 pt-[8.25rem] sm:px-16 sm:pt-[8.75rem]"
               aria-label={`${title}: ${item.meta.name}`}
             >
               <div className={cn(
@@ -261,7 +266,7 @@ export function SceneImmersiveFeedDialog({
                     <span className="block truncate font-code text-[8px] uppercase tracking-[0.16em] text-white/40">{item.meta.label}</span>
                   </span>
                 </div>
-                <div className="max-h-[calc(100dvh-12rem)] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-[hsl(216_38%_7%)]/95 p-0.5 shadow-[0_28px_90px_rgba(0,0,0,0.55)] [scrollbar-width:thin]">
+                <div className="touch-pan-y rounded-2xl border border-white/10 bg-[hsl(216_38%_7%)]/95 p-0.5 shadow-[0_28px_90px_rgba(0,0,0,0.55)]">
                   {'post' in item ? (
                     <PostCard
                       post={item.post}
