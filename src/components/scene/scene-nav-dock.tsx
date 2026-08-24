@@ -22,6 +22,7 @@ import {
   Banknote,
   Disc3,
   BarChart3,
+  HeartHandshake,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
@@ -344,6 +345,15 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       icon: BarChart3,
       tone: 'border-sky-500/30 bg-card/55 hover:border-sky-400/50',
       iconTone: 'border-sky-400/45 bg-sky-500/15 text-sky-300',
+    },
+    {
+      key: 'supporters',
+      href: '/supporters',
+      label: 'Support Circle',
+      sub: 'Followers · Inner Circle',
+      icon: HeartHandshake,
+      tone: 'border-fuchsia-500/30 bg-card/55 hover:border-fuchsia-400/50',
+      iconTone: 'border-fuchsia-400/45 bg-fuchsia-500/15 text-fuchsia-300',
     },
     {
       key: 'earnings',

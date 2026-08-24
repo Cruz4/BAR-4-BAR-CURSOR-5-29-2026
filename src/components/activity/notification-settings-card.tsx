@@ -125,6 +125,7 @@ export function NotificationSettingsCard() {
                 ['friendRequests', 'Friend + contact requests'],
                 ['foldBars', 'Msgs'],
                 ['friendAccepted', 'Friend accepted'],
+                ['relationships', 'Followers + Inner Circle support'],
                 ['postLoves', 'Loves on your posts'],
                 ['postReplies', 'Replies on your posts'],
                 ['dnaImports', 'DNA Drop imports'],

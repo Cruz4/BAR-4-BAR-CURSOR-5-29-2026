@@ -26,6 +26,7 @@ import { rankBadgeClass, rankIdFromLabel } from '@/lib/gamification/badge-styles
 import { StudioStandingRankBadge } from '@/components/gamification/studio-standing-foil-dialog';
 import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { FriendButton } from '@/components/profile/friend-button';
+import { SupportButton } from '@/components/profile/support-button';
 import { PassBarButton } from '@/components/folds/pass-bar-dialog';
 import {
   dieCutClip,
@@ -359,7 +360,7 @@ export function ArtistHome({
               {tokens.autoDrift ? ' · restless' : ''}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
             {previewMode && onExitPreview ? (
               <Button
                 size="sm"
@@ -391,6 +392,10 @@ export function ArtistHome({
                     peerId={profile.userId}
                     peerName={profile.displayName}
                     senderSlug={viewerSlug}
+                  />
+                  <SupportButton
+                    targetUserId={profile.userId}
+                    targetName={profile.displayName}
                   />
                   <FriendButton
                     targetUserId={profile.userId}

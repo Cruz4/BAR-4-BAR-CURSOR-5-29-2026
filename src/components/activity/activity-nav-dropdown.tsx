@@ -17,6 +17,7 @@ import {
   MessageCircle,
   Banknote,
   Repeat2,
+  Star,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -51,6 +52,10 @@ function TypeIcon({ type }: { type: ActivityType }) {
     case 'friend_request':
     case 'friend_accepted':
       return <UserPlus className={cn(className, 'text-emerald-400')} />;
+    case 'profile_followed':
+      return <Heart className={cn(className, 'text-fuchsia-400')} />;
+    case 'inner_circle_joined':
+      return <Star className={cn(className, 'fill-amber-300 text-amber-300')} />;
     case 'contact_request':
     case 'contact_accepted':
       return <Mail className={cn(className, 'text-sky-400')} />;

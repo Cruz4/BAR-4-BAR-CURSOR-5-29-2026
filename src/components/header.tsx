@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LogOut, LayoutDashboard, LayoutGrid, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy, Smartphone, Settings, Users, Archive, Bell, Banknote, MessageSquare, BarChart3 } from 'lucide-react';
+import { LogOut, LayoutDashboard, LayoutGrid, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy, Smartphone, Settings, Users, Archive, Bell, Banknote, MessageSquare, BarChart3, HeartHandshake } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -388,6 +388,10 @@ export function Header() {
                       <DropdownMenuItem onClick={() => router.push('/friends')}>
                         <Users className="mr-2 h-4 w-4 text-sky-400" />
                         <span>Your circle</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => router.push('/supporters')}>
+                        <HeartHandshake className="mr-2 h-4 w-4 text-fuchsia-400" />
+                        <span>Support Circle</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=buy-ink')}><LayoutGrid className="mr-2 h-4 w-4 text-primary" /><span>Ink Store</span></DropdownMenuItem>
                       {firstDropsOn ? (

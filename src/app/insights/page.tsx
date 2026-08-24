@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { BarChart3, Headphones, RefreshCw, Repeat2, ShoppingBag, ShieldCheck } from 'lucide-react';
+import { BarChart3, Headphones, HeartHandshake, RefreshCw, Repeat2, ShoppingBag, ShieldCheck } from 'lucide-react';
 import { auth } from '@/lib/firebase/client/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -103,6 +103,9 @@ export default function ListenerInsightsPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/supporters"><HeartHandshake className="mr-1.5 h-4 w-4" /> Support Circle</Link>
+          </Button>
           {([7, 30, 90] as const).map((value) => (
             <Button key={value} size="sm" variant={days === value ? 'default' : 'outline'} onClick={() => setDays(value)}>
               {value}D
@@ -178,4 +181,3 @@ export default function ListenerInsightsPage() {
     </div>
   );
 }
-

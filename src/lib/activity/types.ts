@@ -5,6 +5,8 @@
 export const ACTIVITY_TYPES = [
   'friend_request',
   'friend_accepted',
+  'profile_followed',
+  'inner_circle_joined',
   'contact_request',
   'contact_accepted',
   'fold_pass',
@@ -47,6 +49,8 @@ export const SERVER_ONLY_ACTIVITY_TYPES: readonly ActivityType[] = [
   'drop_unlocked',
   'drop_sold',
   'love_milestone',
+  'profile_followed',
+  'inner_circle_joined',
 ];
 
 export function isCraftActivityType(type: ActivityType): boolean {
@@ -78,6 +82,8 @@ export type ActivityPrefs = {
   pushEnabled: boolean;
   friendRequests: boolean;
   friendAccepted: boolean;
+  /** New followers and Inner Circle supporters. */
+  relationships: boolean;
   postLoves: boolean;
   postReplies: boolean;
   dnaImports: boolean;
@@ -97,6 +103,7 @@ export const DEFAULT_ACTIVITY_PREFS: ActivityPrefs = {
   pushEnabled: false,
   friendRequests: true,
   friendAccepted: true,
+  relationships: true,
   postLoves: true,
   postReplies: true,
   dnaImports: true,
@@ -124,6 +131,8 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
   const received: Record<ActivityType, string> = {
     friend_request: 'sent you a friend request',
     friend_accepted: 'accepted your friend request',
+    profile_followed: 'followed your profile',
+    inner_circle_joined: 'added you to their Inner Circle',
     contact_request: 'asked to see your contact',
     contact_accepted: 'shared their contact with you',
     fold_pass: 'sent you a message',
@@ -148,6 +157,8 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
   const given: Record<ActivityType, string> = {
     friend_request: 'you sent a friend request to',
     friend_accepted: 'you accepted a friend request from',
+    profile_followed: 'you followed',
+    inner_circle_joined: 'you added to your Inner Circle',
     contact_request: 'you asked to see contact for',
     contact_accepted: 'you shared your contact with',
     fold_pass: 'you sent a message to',
@@ -218,6 +229,16 @@ export function pushCopyForActivity(
       return {
         title: 'Bar 4 Bar',
         body: `${actorName} accepted your friend request`,
+      };
+    case 'profile_followed':
+      return {
+        title: 'New follower',
+        body: `${actorName} followed your Bar 4 Bar profile`,
+      };
+    case 'inner_circle_joined':
+      return {
+        title: 'Inner Circle support',
+        body: `${actorName} added you to their Inner Circle`,
       };
     case 'contact_request':
       return {
@@ -306,6 +327,9 @@ export function prefsAllowsPush(prefs: ActivityPrefs, type: ActivityType): boole
       return prefs.friendRequests;
     case 'friend_accepted':
       return prefs.friendAccepted;
+    case 'profile_followed':
+    case 'inner_circle_joined':
+      return prefs.relationships !== false;
     case 'contact_request':
       return prefs.friendRequests;
     case 'contact_accepted':

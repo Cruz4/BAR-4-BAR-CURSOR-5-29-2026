@@ -372,6 +372,14 @@ service cloud.firestore {
         allow read, write: if false;
       }
 
+      // One-way Follow + Inner Circle graph. Mutations and counts are server-validated.
+      match /following/{targetUserId} {
+        allow read, write: if false;
+      }
+      match /followers/{followerUserId} {
+        allow read, write: if false;
+      }
+
       // The Deck crates (playlists of unlocked drops)
       match /dropCrates/{crateId} {
         allow read: if isOwner(userId);

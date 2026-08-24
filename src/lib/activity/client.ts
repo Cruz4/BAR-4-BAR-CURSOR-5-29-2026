@@ -266,6 +266,7 @@ export async function fetchActivityPrefs(): Promise<ActivityPrefs> {
       pushEnabled: data.pushEnabled === true,
       friendRequests: data.friendRequests !== false,
       friendAccepted: data.friendAccepted !== false,
+      relationships: data.relationships !== false,
       postLoves: data.postLoves !== false,
       postReplies: data.postReplies !== false,
       dnaImports: data.dnaImports !== false,
