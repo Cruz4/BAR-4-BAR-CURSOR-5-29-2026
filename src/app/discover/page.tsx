@@ -6,7 +6,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Compass } from 'lucide-react';
+import { ChevronLeft, Compass, Hammer, Sparkles, TimerReset } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StudioLoader } from '@/components/studio-loader';
 import { SceneDiscoverCard } from '@/components/scene/scene-discover-card';
@@ -21,6 +21,7 @@ import {
   type DiscoverCard,
   type DiscoverData,
 } from '@/lib/scene/discover-client';
+import type { DiscoveryGraphMode } from '@/lib/discovery-graph';
 import { DISCOVER_PAGE_SIZE } from '@/lib/scene/scene-section-prefs';
 
 const LIST_SECTION_ID = 'discover-list';
@@ -32,6 +33,7 @@ export default function DiscoverPage() {
   const [viewerSlug, setViewerSlug] = useState<string | undefined>();
   const [loaded, setLoaded] = useState(false);
   const [page, setPage] = useState(0);
+  const [mode, setMode] = useState<DiscoveryGraphMode | 'fresh'>('fresh');
 
   useEffect(() => {
     let cancelled = false;
@@ -43,6 +45,7 @@ export default function DiscoverPage() {
         ]);
         if (cancelled) return;
         setDiscover(data);
+        setMode(data.viewerGraph.hasTaste ? 'taste' : data.viewerGraph.hasCreation ? 'creation' : 'fresh');
         setBlockedIds(new Set(blocks.map((b) => b.blockedUserId)));
         setPage(0);
       } finally {
@@ -65,8 +68,9 @@ export default function DiscoverPage() {
     return buildDiscoverCards(discover, {
       excludeUserIds: blockedIds,
       maxCards: DISCOVER_ALL_MAX_CARDS,
+      mode,
     });
-  }, [discover, blockedIds]);
+  }, [discover, blockedIds, mode]);
 
   const pageCount = Math.max(1, Math.ceil(cards.length / DISCOVER_PAGE_SIZE) || 1);
   const safePage = Math.min(Math.max(0, page), pageCount - 1);
@@ -111,11 +115,54 @@ export default function DiscoverPage() {
               Discover
             </h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Newest public posts, live DNA Drops, and Artist Homes — newest first
+              Public music people and First Drops, matched from the identity and taste you chose
             </p>
           </div>
         </div>
       </header>
+
+      <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+        <div className="flex flex-wrap gap-2">
+          {discover?.viewerGraph.hasTaste ? (
+            <Button
+              size="sm"
+              variant={mode === 'taste' ? 'default' : 'outline'}
+              className="h-9 gap-1.5 font-bold uppercase"
+              onClick={() => { setMode('taste'); setPage(0); }}
+            >
+              <Sparkles className="h-3.5 w-3.5" /> For your taste
+            </Button>
+          ) : null}
+          {discover?.viewerGraph.hasCreation ? (
+            <Button
+              size="sm"
+              variant={mode === 'creation' ? 'default' : 'outline'}
+              className="h-9 gap-1.5 font-bold uppercase"
+              onClick={() => { setMode('creation'); setPage(0); }}
+            >
+              <Hammer className="h-3.5 w-3.5" /> For your craft
+            </Button>
+          ) : null}
+          <Button
+            size="sm"
+            variant={mode === 'fresh' ? 'default' : 'outline'}
+            className="h-9 gap-1.5 font-bold uppercase"
+            onClick={() => { setMode('fresh'); setPage(0); }}
+          >
+            <TimerReset className="h-3.5 w-3.5" /> New & live
+          </Button>
+        </div>
+        <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+          {mode === 'fresh'
+            ? 'Newest public activity first.'
+            : 'Matches use only public genres, moods, influences, region, identity, and collaboration choices. Money, Ink, Pro status, and private writing never buy placement.'}
+        </p>
+        {!discover?.viewerGraph.personalized ? (
+          <p className="mt-1 text-[10px] text-sky-300">
+            Add your Sound Identity in Edit Public Page to unlock personal matching—including Music Fan profiles.
+          </p>
+        ) : null}
+      </div>
 
       <div id={LIST_SECTION_ID} className="scroll-mt-[5.5rem] space-y-4">
         {cards.length === 0 ? (

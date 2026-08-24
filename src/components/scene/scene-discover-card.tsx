@@ -7,7 +7,7 @@
 
 import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { Dna, Flame, Lock, Music, Radio, Trash2, TrendingUp } from 'lucide-react';
+import { Dna, Flame, Lock, Music, Radio, Sparkles, Trash2, TrendingUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -42,6 +42,25 @@ function DiscoverTag({ label, icon: Icon, tone }: { label: string; icon: React.C
   );
 }
 
+function MatchReasons({ match }: { match?: DiscoverCard['match'] }) {
+  if (!match?.score || !match.reasons.length) return null;
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      <span className="inline-flex items-center gap-1 font-code text-[9px] font-bold uppercase tracking-[0.16em] text-violet-300">
+        <Sparkles className="h-3 w-3" /> Why it matches
+      </span>
+      {match.reasons.map((reason) => (
+        <span
+          key={reason}
+          className="rounded-full border border-violet-400/25 bg-violet-500/10 px-2 py-0.5 text-[9px] text-violet-100"
+        >
+          {reason}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function SceneDiscoverCard({
   card,
   viewerSlug,
@@ -71,6 +90,7 @@ export function SceneDiscoverCard({
     return (
       <Card className="border-sky-500/25 bg-gradient-to-r from-sky-500/[0.07] via-card/85 to-card/70 p-4">
         <DiscoverTag label="Recently live" icon={Radio} tone="text-sky-400/90" />
+        <MatchReasons match={card.match} />
         <div className="mt-2.5 flex items-center gap-3">
           <ArtistStarAvatar
             name={artist.displayName}
@@ -116,6 +136,7 @@ export function SceneDiscoverCard({
           icon={firstDrop ? Music : Dna}
           tone={firstDrop ? 'text-fuchsia-400/90' : 'text-primary/90'}
         />
+        <MatchReasons match={card.match} />
         <div className="mt-2.5 flex items-center gap-3">
           <ArtistStarAvatar
             name={drop.ownerName}

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getAuth } from '@/lib/firebase/server';
 import { listRecentOpenLocks } from '@/lib/server/lock';
 import { isLockFeatureEnabled } from '@/lib/server/lock-feature';
 import {
@@ -7,8 +8,25 @@ import {
   listRecentPublicProfiles,
   listRecentShareSummaries,
 } from '@/lib/server/gamification';
+import { getArtistHomeConfig } from '@/lib/server/artist-home';
+import {
+  buildDiscoveryMatch,
+  hasCreationSignals,
+  hasTasteSignals,
+} from '@/lib/discovery-graph';
 
 export const runtime = 'nodejs';
+
+async function optionalUid(req: Request): Promise<string | null> {
+  const header = req.headers.get('authorization');
+  if (!header?.startsWith('Bearer ')) return null;
+  try {
+    const decoded = await (await getAuth()).verifyIdToken(header.slice('Bearer '.length));
+    return decoded.uid;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Scene home Discover stream — recent public activity across the site.
@@ -18,8 +36,13 @@ export const runtime = 'nodejs';
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const excludeUserId = searchParams.get('excludeUserId') || undefined;
+    const viewerUserId = await optionalUid(req);
+    const excludeUserId = viewerUserId || searchParams.get('excludeUserId') || undefined;
     const viewAll = searchParams.get('view') === 'all';
+
+    const viewerIdentity = viewerUserId
+      ? (await getArtistHomeConfig(viewerUserId)).featured.soundIdentity
+      : undefined;
 
     const [artists, posts, drops, risers, locks] = await Promise.all([
       listRecentPublicProfiles({
@@ -52,10 +75,34 @@ export async function GET(req: Request) {
       isHouse: l.isHouse,
     }));
 
-    return NextResponse.json(
-      { artists, posts, drops, risers, locks: lockCards },
-      { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=120' } }
+    const matchedArtists = artists.map((artist) => ({
+      ...artist,
+      tasteMatch: buildDiscoveryMatch(viewerIdentity, artist.soundIdentity, 'taste'),
+      creationMatch: buildDiscoveryMatch(viewerIdentity, artist.soundIdentity, 'creation'),
+    }));
+    const matchedDrops = drops.map((drop) => ({
+      ...drop,
+      tasteMatch: buildDiscoveryMatch(viewerIdentity, drop.soundIdentity, 'taste'),
+      creationMatch: buildDiscoveryMatch(viewerIdentity, drop.soundIdentity, 'creation'),
+    }));
+    const response = NextResponse.json({
+      artists: matchedArtists,
+      posts,
+      drops: matchedDrops,
+      risers,
+      locks: lockCards,
+      viewerGraph: {
+        personalized: Boolean(viewerIdentity),
+        hasTaste: hasTasteSignals(viewerIdentity),
+        hasCreation: hasCreationSignals(viewerIdentity),
+      },
+    });
+    response.headers.set(
+      'Cache-Control',
+      viewerUserId ? 'private, no-store' : 'public, max-age=60, s-maxage=120'
     );
+    response.headers.set('Vary', 'Authorization');
+    return response;
   } catch (err) {
     console.error('[discover]', err);
     return NextResponse.json({ error: 'Discover failed' }, { status: 500 });

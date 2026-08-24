@@ -383,7 +383,14 @@ export function SceneHome() {
       .catch(() => {
         if (cancelled) return;
         if (circleDone) setDiscoverReady(true);
-        else heldDiscover = { artists: [], posts: [], drops: [], risers: [], locks: [] };
+        else heldDiscover = {
+          artists: [],
+          posts: [],
+          drops: [],
+          risers: [],
+          locks: [],
+          viewerGraph: { personalized: false, hasTaste: false, hasCreation: false },
+        };
       });
 
     const loadCircle = async () => {

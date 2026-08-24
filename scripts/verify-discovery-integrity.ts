@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { organicMomentumScore } from '../src/lib/drop-listen-analytics';
+import { buildDiscoveryMatch } from '../src/lib/discovery-graph';
 
 const baseline = organicMomentumScore({
   qualifiedListeners: 10,
@@ -25,6 +26,38 @@ assert.equal(
   baseline,
   'money, Ink, sponsorship, or subscription status affected organic score'
 );
+
+const tasteMatch = buildDiscoveryMatch(
+  {
+    kinds: ['music_fan'],
+    genres: ['Alternative', 'R&B'],
+    moods: ['Moody'],
+    influences: ['Missy Elliott'],
+    region: 'Baltimore',
+  },
+  {
+    kinds: ['artist'],
+    genres: ['alternative'],
+    moods: ['MOODY'],
+    influences: ['Missy Elliott'],
+    region: 'baltimore',
+    ...({ isPro: true, inkBalance: 999999, salesCents: 999999 } as object),
+  },
+  'taste'
+);
+assert.equal(tasteMatch.score, 12, 'public taste-tag weights changed unexpectedly');
+assert.deepEqual(
+  tasteMatch.reasons,
+  ['Genre · Alternative', 'Mood · Moody', 'Influence · Missy Elliott'],
+  'taste matches must stay explainable'
+);
+
+const creationMatch = buildDiscoveryMatch(
+  { kinds: ['producer'], genres: ['Hip-hop'], collaboration: 'open' },
+  { kinds: ['producer'], genres: ['hip-hop'], collaboration: 'open' },
+  'creation'
+);
+assert.equal(creationMatch.score, 10, 'creation matching should use public craft/collab choices');
 assert.equal(
   organicMomentumScore({
     qualifiedListeners: -5,
@@ -39,4 +72,3 @@ assert.equal(
 );
 
 console.log('Discovery integrity verification passed.');
-

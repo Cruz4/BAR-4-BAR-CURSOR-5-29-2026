@@ -7,6 +7,9 @@
 import type { EmbedProvider } from '@/lib/profile/embeds';
 import type { ProfilePost } from '@/lib/profile/social-client';
 import { enrichPostsWithLiveSlugs } from '@/lib/profile/social-client';
+import { auth } from '@/lib/firebase/client/firebase';
+import type { ArtistHomeSoundIdentity } from '@/lib/profile/sound-identity';
+import type { DiscoveryGraphMode, DiscoveryMatch } from '@/lib/discovery-graph';
 
 export type DiscoverArtist = {
   userId: string;
@@ -18,6 +21,9 @@ export type DiscoverArtist = {
   studioBadge?: 'pro' | 'free';
   rankId?: string;
   xp?: number;
+  soundIdentity?: ArtistHomeSoundIdentity;
+  tasteMatch?: DiscoveryMatch;
+  creationMatch?: DiscoveryMatch;
   updatedAt: string;
 };
 
@@ -45,6 +51,9 @@ export type DiscoverDrop = {
   previewCount?: number;
   purchaseCount?: number;
   firstBuyerName?: string;
+  soundIdentity?: ArtistHomeSoundIdentity;
+  tasteMatch?: DiscoveryMatch;
+  creationMatch?: DiscoveryMatch;
 };
 
 export type DiscoverRiser = {
@@ -76,21 +85,34 @@ export type DiscoverData = {
   drops: DiscoverDrop[];
   risers: DiscoverRiser[];
   locks: DiscoverLock[];
+  viewerGraph: {
+    personalized: boolean;
+    hasTaste: boolean;
+    hasCreation: boolean;
+  };
 };
 
-export type DiscoverCard =
+export type DiscoverCard = (
   | { kind: 'artist'; key: string; artist: DiscoverArtist }
   | { kind: 'post'; key: string; post: ProfilePost }
   | { kind: 'drop'; key: string; drop: DiscoverDrop }
   | { kind: 'lock'; key: string; lock: DiscoverLock }
-  | { kind: 'risers'; key: string; risers: DiscoverRiser[] };
+  | { kind: 'risers'; key: string; risers: DiscoverRiser[] }
+) & { match?: DiscoveryMatch };
 
 /** Max Discover cards kept in the Scene home pool (paged at DISCOVER_PAGE_SIZE). */
 export const DISCOVER_HOME_MAX_CARDS = 80;
 /** Max cards on the full Discover page (paged at DISCOVER_PAGE_SIZE). */
 export const DISCOVER_ALL_MAX_CARDS = 120;
 
-const EMPTY: DiscoverData = { artists: [], posts: [], drops: [], risers: [], locks: [] };
+const EMPTY: DiscoverData = {
+  artists: [],
+  posts: [],
+  drops: [],
+  risers: [],
+  locks: [],
+  viewerGraph: { personalized: false, hasTaste: false, hasCreation: false },
+};
 
 export async function fetchDiscover(
   excludeUserId?: string,
@@ -101,7 +123,12 @@ export async function fetchDiscover(
     if (excludeUserId) params.set('excludeUserId', excludeUserId);
     if (opts?.view === 'all') params.set('view', 'all');
     const qs = params.toString();
-    const res = await fetch(`/api/discover${qs ? `?${qs}` : ''}`);
+    const current = auth.currentUser;
+    const headers: HeadersInit = {};
+    if (current && (!excludeUserId || current.uid === excludeUserId)) {
+      headers.Authorization = `Bearer ${await current.getIdToken()}`;
+    }
+    const res = await fetch(`/api/discover${qs ? `?${qs}` : ''}`, { headers });
     if (!res.ok) return EMPTY;
     const data = (await res.json()) as Partial<DiscoverData>;
     const rawPosts = Array.isArray(data.posts)
@@ -122,6 +149,14 @@ export async function fetchDiscover(
       locks: Array.isArray((data as { locks?: DiscoverLock[] }).locks)
         ? ((data as { locks: DiscoverLock[] }).locks)
         : [],
+      viewerGraph:
+        data.viewerGraph && typeof data.viewerGraph === 'object'
+          ? {
+              personalized: Boolean(data.viewerGraph.personalized),
+              hasTaste: Boolean(data.viewerGraph.hasTaste),
+              hasCreation: Boolean(data.viewerGraph.hasCreation),
+            }
+          : EMPTY.viewerGraph,
     };
   } catch {
     return EMPTY;
@@ -154,11 +189,13 @@ export function buildDiscoverCards(
     /** Owners the viewer blocked (or who blocked the viewer). */
     excludeUserIds?: Set<string>;
     maxCards?: number;
+    mode?: DiscoveryGraphMode | 'fresh';
   } = {}
 ): DiscoverCard[] {
   const excludePostIds = opts.excludePostIds ?? new Set<string>();
   const excludeUserIds = opts.excludeUserIds ?? new Set<string>();
   const maxCards = opts.maxCards ?? DISCOVER_HOME_MAX_CARDS;
+  const mode = opts.mode ?? (data.viewerGraph.hasTaste ? 'taste' : 'fresh');
 
   const artists = data.artists.filter((a) => !excludeUserIds.has(a.userId));
   const posts = data.posts.filter(
@@ -181,13 +218,19 @@ export function buildDiscoverCards(
         kind: 'artist',
         key: `artist-${artist.slug}`,
         artist,
+        ...(mode !== 'fresh'
+          ? { match: mode === 'creation' ? artist.creationMatch : artist.tasteMatch }
+          : {}),
       })
     ),
-    ...otherDrops.map(
+    ...(mode === 'fresh' ? otherDrops : drops).map(
       (drop): DiscoverCard => ({
         kind: 'drop',
         key: `drop-${drop.shareId}`,
         drop,
+        ...(mode !== 'fresh'
+          ? { match: mode === 'creation' ? drop.creationMatch : drop.tasteMatch }
+          : {}),
       })
     ),
     ...locks.map(
@@ -199,9 +242,15 @@ export function buildDiscoverCards(
     ),
   ];
 
-  timed.sort((a, b) => cardTimestamp(b).localeCompare(cardTimestamp(a)));
+  timed.sort((a, b) => {
+    if (mode !== 'fresh') {
+      const score = (b.match?.score || 0) - (a.match?.score || 0);
+      if (score) return score;
+    }
+    return cardTimestamp(b).localeCompare(cardTimestamp(a));
+  });
 
-  const saleCards: DiscoverCard[] = saleDrops.map((drop) => ({
+  const saleCards: DiscoverCard[] = (mode === 'fresh' ? saleDrops : []).map((drop) => ({
     kind: 'drop',
     key: `drop-${drop.shareId}`,
     drop,

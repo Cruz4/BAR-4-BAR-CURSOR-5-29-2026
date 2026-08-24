@@ -43,6 +43,7 @@ import {
   type VesperfoldSlot,
 } from '@/lib/profile/vesperfold';
 import { artistHomeForPublic, normalizeArtistHomeConfig } from '@/lib/profile/modules';
+import type { ArtistHomeSoundIdentity } from '@/lib/profile/sound-identity';
 import {
   normalizeDropPrice,
   shareCommerceFlags,
@@ -1845,6 +1846,7 @@ async function resolvePublicAvatarsByUserIds(
       starMarkUseStar?: boolean;
       starMarkSeed?: number;
       studioBadge?: 'pro' | 'free';
+      soundIdentity?: ArtistHomeSoundIdentity;
     }
   >
 > {
@@ -1857,6 +1859,7 @@ async function resolvePublicAvatarsByUserIds(
       starMarkUseStar?: boolean;
       starMarkSeed?: number;
       studioBadge?: 'pro' | 'free';
+      soundIdentity?: ArtistHomeSoundIdentity;
     }
   >();
   const unique = [...new Set(userIds.filter(Boolean))];
@@ -1889,6 +1892,7 @@ async function resolvePublicAvatarsByUserIds(
         });
         const best = ranked[0]!;
         const data = best.data() as Record<string, unknown>;
+        const soundIdentity = normalizeArtistHomeConfig(data.artistHome).featured.soundIdentity;
         const avatarUrl = await resolvePublicAvatar(best.id, data);
         const useStar = data.starMarkUseStar === true;
         const displayName =
@@ -1906,6 +1910,7 @@ async function resolvePublicAvatarsByUserIds(
               )
             : undefined,
           studioBadge: parseStudioBadge(data.studioBadge),
+          ...(soundIdentity ? { soundIdentity } : {}),
         });
       })
     );
@@ -1934,6 +1939,7 @@ export type DiscoverArtistSummary = {
   studioBadge?: 'pro' | 'free';
   rankId?: string;
   xp?: number;
+  soundIdentity?: ArtistHomeSoundIdentity;
   updatedAt: string;
 };
 
@@ -1941,7 +1947,7 @@ export type DiscoverArtistSummary = {
 export async function listRecentPublicProfiles(
   opts: { limit?: number; excludeUserId?: string } = {}
 ): Promise<DiscoverArtistSummary[]> {
-  const limit = Math.min(Math.max(opts.limit ?? 8, 1), 24);
+  const limit = Math.min(Math.max(opts.limit ?? 8, 1), 48);
   const db = await getDb();
   const { needsVanitySlugUpgrade } = await import('@/lib/profile/profile-slug');
   const snap = await db
@@ -1994,6 +2000,7 @@ export async function listRecentPublicProfiles(
           : undefined;
       const studioBadge =
         liveBadges.get(row.userId) || parseStudioBadge(row.data.studioBadge) || 'free';
+      const soundIdentity = normalizeArtistHomeConfig(row.data.artistHome).featured.soundIdentity;
       return {
         userId: row.userId,
         slug: row.slug,
@@ -2004,6 +2011,7 @@ export async function listRecentPublicProfiles(
         studioBadge,
         rankId: row.rankId,
         xp: row.xp,
+        ...(soundIdentity ? { soundIdentity } : {}),
         updatedAt: row.updatedAt,
       };
     })
@@ -2036,13 +2044,14 @@ export type DiscoverShareSummary = {
   previewCount?: number;
   purchaseCount?: number;
   firstBuyerName?: string;
+  soundIdentity?: ArtistHomeSoundIdentity;
 };
 
 /** Recent live DNA Drops — summary only, heavy `data` payload stripped. */
 export async function listRecentShareSummaries(
   opts: { limit?: number; excludeOwnerId?: string } = {}
 ): Promise<DiscoverShareSummary[]> {
-  const limit = Math.min(Math.max(opts.limit ?? 6, 1), 24);
+  const limit = Math.min(Math.max(opts.limit ?? 6, 1), 40);
   const db = await getDb();
   const snap = await db
     .collection('shares')
@@ -2134,6 +2143,7 @@ export async function listRecentShareSummaries(
       previewCount: r.previewCount,
       purchaseCount: r.purchaseCount,
       firstBuyerName: r.firstBuyerName,
+      soundIdentity: meta?.soundIdentity,
     };
   });
 }
