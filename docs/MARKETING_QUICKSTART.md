@@ -10,12 +10,12 @@
 
 ## Positioning (copy/paste everywhere)
 
-**Bar 4 Bar** — your Scene, your studio, and a shareable Artist Home. Bar-by-bar rhyme book + AI co-writer (not full-song ChatGPT dumps). Guest home is a live **Pressing** playground; writing demo sits at `/try`.
+**Bar 4 Bar** — the bar-by-bar AI songwriting studio with a music network built around the work. Artists, creators, and Music Fans get a free public music home, explainable discovery, real support layers, featured owned/purchased tracks, First Drops, and transparent Emerging momentum. It assists the writing process; it is not a full-song generator.
 
 > Bar 4 Bar is the rhyme book + co-writer for rappers and songwriters who think in **bars**—not paragraphs.
 
 **Bio line 1:** Rhyme book + AI co-writer for rappers & songwriters  
-**Bio line 2:** Free 250 Ink — write your next bar today
+**Bio line 2:** Free music home + 250 Ink — write, discover, support
 
 ---
 
@@ -41,6 +41,7 @@ Signups store `ref` in analytics (Admin → Growth Metrics). Pin comment: **“2
   2. **Hook B** — “Your notes app isn’t a rhyme book” → paste mess → Smart Structure
   3. **Hook C** — Rhyme Pulse on one bar (10s magic moment)
   4. **Hook D** — Add to Home Screen (PWA) — [MOBILE_STORE_GUIDE.md](./MOBILE_STORE_GUIDE.md) Phase 1
+- [ ] **Rotate one network clip each week:** Music Fan identity → purchased featured track; “why this matched” Discover card; Follow vs Inner Circle vs Friends; Emerging score breakdown; creator Listener Insights; collision-safe Vault restore.
 - [ ] **CapCut** (1.5 hr): trim 15–22s each, auto-captions, end card: “Free demo — link in bio”
 - [ ] **Post schedule:** Mon / Wed / Fri / Sun → TikTok + cross-post Instagram Reels
 - [ ] **Accounts:** `@Bar4BarStudio` (or your handle) — same name on TikTok, IG, YouTube
@@ -106,6 +107,14 @@ Signups store `ref` in analytics (Admin → Growth Metrics). Pin comment: **“2
 **Objection:**
 
 - Web studio — works on phone, no App Store download (show PWA add-to-home)
+
+**Music-network hooks:**
+
+- You should not have to pretend to be an artist to belong in a music app
+- Put a song you bought on your profile—and choose the 30 seconds people hear
+- This discovery card tells you why it matched; your money and Pro badge do not rank you
+- Follow is support. Friends are collaboration. They should not be the same button
+- An Emerging chart that publishes the score instead of hiding the algorithm
 
 ---
 

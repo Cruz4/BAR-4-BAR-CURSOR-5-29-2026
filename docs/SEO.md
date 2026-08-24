@@ -6,7 +6,7 @@ Production canonical base: **https://bar4bar.ink** (`NEXT_PUBLIC_APP_URL`).
 
 ## Positioning (matches product)
 
-Default description emphasizes **Artist Home + The Scene + bar-by-bar studio**. Guest `/` is the Pressing playground (live profile draft); writing demos live at `/try`. Do not market home as a LOCK-only or “ChatGPT lyrics” door.
+Default description now joins the two real product loops: **bar-by-bar songwriting** and a **music network for artists, creators, and Music Fans**. Public copy covers free music homes, owned/purchased featured tracks, explainable Discover, Support Circle, transparent Emerging momentum, Listener Insights, collaboration, and First Drops. Guest `/` is the Pressing playground; the writing demo lives at `/try`.
 
 ## What ships in the app
 
@@ -16,13 +16,13 @@ Default description emphasizes **Artist Home + The Scene + bar-by-bar studio**. 
 | Robots | `https://bar4bar.ink/robots.txt` |
 | Manifest | `https://bar4bar.ink/manifest.webmanifest` |
 
-**Indexed public routes (static sitemap):** home (`/`), `/login`, `/pricing`, `/leaderboard`, `/terms`, `/privacy`, `/cookies`.
+**Indexed public routes (static sitemap):** home (`/`), `/try`, `/pricing`, `/discover`, `/leaderboard`, `/login`, `/terms`, `/privacy`, `/cookies`.
 
-**Blocked in robots:** `/admin`, `/api/`, `/albums/` (private vault + guest try sheet), `/maintenance`, `/marketing/capture`, `/studio-progress`, `/usage`.
+**Blocked in robots:** admin/API routes plus account-only albums, activity, earnings, feed, friends, insights, Library, Msgs, Edit Public Page, Studio Progress, Support Circle, Usage, and Vault. Their route metadata is also `noindex` where applicable.
 
-**Artist Homes (`/profile/[slug]`):** Not listed in the static sitemap. Live profiles get per-page `generateMetadata` (title, description, Open Graph `profile`, canonical). Missing / private-unavailable slugs are `noindex`. Share Neo / friends / guestbook links so crawlers and humans can discover real pages.
+**Public music homes (`/{slug}`):** Up to 1,000 live `publicProfiles` are added to the sitemap, refreshed hourly; if Firebase is temporarily unavailable, the sitemap safely falls back to static routes. Legacy `/profile/{slug}` links permanently redirect to the clean vanity route. Live profiles get per-page metadata built from public identity labels, genres, featured-track title, and studio rank. Missing/private-unavailable slugs are `noindex`.
 
-**Structured data:** `WebSite`, `Organization`, and `SoftwareApplication` JSON-LD on every page (root layout).
+**Structured data:** `WebSite`, `Organization`, and `SoftwareApplication` JSON-LD on every page. The app schema includes its music/songwriting audience and a current feature list.
 
 ## Google Search Console (manual, ~10 min)
 
@@ -30,7 +30,7 @@ Default description emphasizes **Artist Home + The Scene + bar-by-bar studio**. 
 2. **Add property** → URL prefix → `https://bar4bar.ink`.
 3. **Verify** using DNS TXT (recommended on Porkbun/Cloudflare) or HTML tag.
 4. **Sitemaps** → submit `https://bar4bar.ink/sitemap.xml`.
-5. **URL inspection** → test `https://bar4bar.ink/login` and **Request indexing**. Optionally inspect a known live Artist Home (e.g. Neomaiya Sol after resolving her slug).
+5. **URL inspection** → test home, `/try`, `/discover`, and `/leaderboard`, then **Request indexing**. Optionally inspect a known live public music home.
 
 Re-submit the sitemap after major marketing pushes or new public pages.
 
@@ -43,16 +43,16 @@ npm run deploy:live
 Confirm:
 
 - `curl -s https://bar4bar.ink/robots.txt` lists the sitemap URL and does **not** disallow `/profile/`.
-- `curl -s https://bar4bar.ink/sitemap.xml` includes `/login`, `/pricing`, and home.
+- `curl -s https://bar4bar.ink/sitemap.xml` includes home, `/try`, `/pricing`, `/discover`, and `/leaderboard`.
 - View source on `/login` — `<title>` and `og:title` mention Bar 4 Bar.
-- Guest `/` OG/title still sell Artist Home / Scene (root layout defaults from `SEO.*`).
+- Guest `/` OG/title cover the songwriting workstation and public music network (root layout defaults from `SEO.*`).
 
 ## Optional improvements (not in repo)
 
 - Dedicated **1200×630** Open Graph image (replace `/Logo.png` in `SEO.ogImagePath`).
 - Set `SEO.twitterHandle` in `src/lib/seo.ts` when you have a brand X account.
 - Blog or `/help` pages for long-tail “how to write next rap bar” content.
-- Dynamic sitemap entries for recently live Artist Homes (optional; links + OG already work).
+- Dedicated public editorial/help pages for long-tail music discovery and direct-to-fan search queries.
 - Google Analytics / Search Console linking for query reports.
 
 ## Editing copy

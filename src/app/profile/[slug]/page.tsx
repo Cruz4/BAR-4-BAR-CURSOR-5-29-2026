@@ -5,6 +5,7 @@ import { getPublicProfile } from '@/lib/server/gamification';
 import { rankFromXp } from '@/lib/gamification/ranks';
 import { absoluteUrl, SEO } from '@/lib/seo';
 import { legacyProfileAppRedirect } from '@/lib/profile/profile-slug';
+import { publicIdentityLabel, type PublicIdentityKind } from '@/lib/profile/sound-identity';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,7 +24,35 @@ function profileShareCopy(data: Record<string, unknown>, slug: string) {
       ? data.rankLabel.trim()
       : rank.label;
   const title = `${displayName} · ${rankLabel}`;
-  const description = `${displayName}'s Artist Home on Bar 4 Bar — ${rankLabel}, studio trophies, and live DNA Drops. Open their page on bar4bar.ink.`;
+  const artistHome = data.artistHome && typeof data.artistHome === 'object'
+    ? data.artistHome as Record<string, unknown>
+    : {};
+  const featured = artistHome.featured && typeof artistHome.featured === 'object'
+    ? artistHome.featured as Record<string, unknown>
+    : {};
+  const soundIdentity = featured.soundIdentity && typeof featured.soundIdentity === 'object'
+    ? featured.soundIdentity as Record<string, unknown>
+    : {};
+  const kinds = Array.isArray(soundIdentity.kinds)
+    ? soundIdentity.kinds
+        .filter((kind): kind is PublicIdentityKind => typeof kind === 'string')
+        .slice(0, 3)
+        .map(publicIdentityLabel)
+    : [];
+  const genres = Array.isArray(soundIdentity.genres)
+    ? soundIdentity.genres.filter((genre): genre is string => typeof genre === 'string').slice(0, 3)
+    : [];
+  const featuredTrack = featured.featuredTrack && typeof featured.featuredTrack === 'object'
+    ? featured.featuredTrack as Record<string, unknown>
+    : {};
+  const featuredTitle = typeof featuredTrack.title === 'string' ? featuredTrack.title.trim() : '';
+  const highlights = [
+    kinds.length ? kinds.join(', ') : 'public music profile',
+    genres.length ? genres.join(', ') : '',
+    featuredTitle ? `featuring ${featuredTitle}` : '',
+    rankLabel,
+  ].filter(Boolean);
+  const description = `${displayName} on Bar 4 Bar—${highlights.join(' · ')}. Discover their public music home, First Drops, and creative work.`;
   return { displayName, rankLabel, title, description };
 }
 
@@ -39,7 +68,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
   if (!slug) {
     return {
-      title: 'Artist Home',
+      title: 'Public Music Home',
       description: SEO.description,
     };
   }
@@ -48,8 +77,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const profile = await getPublicProfile(slug);
     if (!profile) {
       return {
-        title: 'Artist Home',
-        description: 'This Bar 4 Bar Artist Home is not available.',
+        title: 'Public Music Home',
+        description: 'This Bar 4 Bar public music home is not available.',
         robots: { index: false, follow: false },
       };
     }
@@ -82,7 +111,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   } catch (err) {
     console.error('[profile/slug metadata]', err);
     return {
-      title: 'Artist Home',
+      title: 'Public Music Home',
       description: SEO.description,
     };
   }

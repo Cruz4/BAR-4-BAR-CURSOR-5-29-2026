@@ -5,6 +5,7 @@ export const metadata = pageMetadata({
   description:
     'Track your Bar 4 Bar milestones, achievements, and writing streaks as you build bars and grow your lyric vault.',
   path: '/studio-progress',
+  index: false,
 });
 
 export default function StudioProgressLayout({ children }: { children: React.ReactNode }) {

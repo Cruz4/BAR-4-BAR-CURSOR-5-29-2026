@@ -44,9 +44,9 @@ Use a **separate account** from your daily driver — e.g. `bar4bar.demo@gmail.c
 ### 2. Import the demo vault
 
 1. Sign in as the demo account on **localhost:9002** or **bar4bar.ink**
-2. Open **Vault** (album grid)
-3. **Import / merge** → select `sample-data/bar4bar-marketing-demo-vault-import.json`
-4. Confirm merge — `ownerId` fields become your user automatically
+2. Open **The Vault** at `/vault`
+3. Choose **Import Studio Vault** → select `sample-data/bar4bar-marketing-demo-vault-import.json`
+4. Review the version, project counts, Style Profile behavior, and collision copies, then confirm merge. Import never removes or overwrites current projects.
 
 You should see **4 albums**:
 
@@ -63,7 +63,7 @@ Replace `{base}` with `https://bar4bar.ink` or `http://localhost:9002`.
 
 | Beat | URL |
 |------|-----|
-| Vault home | `{base}/` (logged-in album grid) |
+| Vault home | `{base}/vault` |
 | **Hero track (Next Line)** | `{base}/albums/album-neon-after-hours/tracks/track-neon-01` |
 | **Rhyme Pulse track** | `{base}/albums/album-earthen-monolith-2026/tracks/track-stone-circuit-001` |
 | **Album DNA (5 questions)** | `{base}/albums/album-neon-after-hours` |
@@ -97,8 +97,8 @@ Replace `{base}` with `https://bar4bar.ink` or `http://localhost:9002`.
 | **0:18–0:32** | “Start with your album’s DNA — five questions: setting, emotion, trigger, truth, tone. Set it once… every track inherits it.” | Open **NEON AFTER HOURS** → Album DNA panel; slow scroll all five fields |
 | **0:32–0:50** | “Write on the sheet — verse, hook, bridge. Stuck? Hit **Next Line**. Two rhyme-aware options. Pick one. It slots in. Structure stays intact.” | 1) Click bar 4 2) Footer **Bar Workstation** → Next 3) Opt 1 / Opt 2 4) Accept — **hold 1 sec** |
 | **0:50–1:05** | “Paste rough notes — the studio decodes themes and style into **strains** you save, remix, and inject. So the AI sounds like *your* project.” | DNA & Remix: paste `MARKETING_SEED_LYRICS` from below → strain cards → one ⚡ inject |
-| **1:05–1:18** | “Organize concept albums. Search every bar. Export your vault. Share a DNA Drop. **Performance Mode** when it’s showtime.” | Montage: tracklist → vault search → flash `/perform` |
-| **1:18–1:30** | “Start free at bar4bar.ink — welcome Ink included. Build your catalog. Master the next bar.” | Landing or pricing → **Create free account**. End card 3s: **BAR 4 BAR · bar4bar.ink** |
+| **1:05–1:20** | “Then step onto The Scene. Choose Artist, creator, or Music Fan. Feature a track you released or bought, discover people by public taste and craft, and see why every match or Emerging score moved.” | Fast montage: Sound Identity → featured track selector → Discover reason → Emerging reason |
+| **1:20–1:30** | “Start free at bar4bar.ink. Write the next bar, then build the music world around it.” | Landing → **Create free account**. End card 3s: **BAR 4 BAR · bar4bar.ink** |
 
 ### DNA paste text (for 0:50 beat)
 
@@ -122,6 +122,7 @@ Priority order for screen recording:
 5. **DNA decode / strains** — paste seed lyrics in Calibration Hub
 6. **Performance Mode** — quick 3s flash on hero track
 7. **Vault search** — type “granite” or “neon” → bar result
+8. **Public ecosystem montage** — Music Fan identity → featured Library track → Discover reason → Emerging reason
 
 **Skip in a 90s cut:** Ink costs, settings, gamification, downgrade modals, empty states.
 

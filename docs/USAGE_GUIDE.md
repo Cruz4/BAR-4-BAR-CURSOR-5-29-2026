@@ -15,7 +15,7 @@ Your Ink balance is displayed in the header and on the **Usage & Billing** page.
 See `src/lib/lyrics-units.ts` for conversion helpers.
 
 ## 3. Cloud Sync
-Signed-in artists sync to Firestore and land on **The Scene** (`/`) — friends feed, Discover stream, and Your Booth — with The Vault (albums, tracks, workstation) at `/vault`. Visitors get the full AI workstation on Ink (system DNA presets only), plus Artist Home and The Scene. Pro unlocks unlimited albums/tracks, custom DNA/Vibe/Style saves, Performance Mode, Freestyle, vault import/export, and DNA Drop share links. New signups receive a 3-day Pro trial with workflow access and 400 bonus Ink.
+Signed-in accounts sync to Firestore and land on **The Scene** (`/`)—friends feed, explainable Discover, Emerging momentum, and Your Booth—with The Vault (albums, tracks, workstation) at `/vault`. Visitor accounts get the full AI workstation on Ink (system DNA presets only), plus a free public music home and The Scene. Pro unlocks unlimited albums/tracks, custom DNA/Vibe/Style saves, Performance Mode, Freestyle, vault import/export, and DNA Drop share links. New signups receive a 3-day Pro trial with workflow access and 400 bonus Ink.
 
 **Logged out:** `/` is the Pressing / Artist Home playground (claim to save). `/try` is the free writing sheet. Demo Friends/Guestbook link to Neomaiya Sol’s live profile. Details: [GUEST_TRY_SHEET.md](./GUEST_TRY_SHEET.md).
 
@@ -35,7 +35,16 @@ Signed-in artists sync to Firestore and land on **The Scene** (`/`) — friends 
 ## 5. Bar 4 Bar vs full-song AI apps
 Unlike Suno or Udio, this studio is for **lyrics, rhyme books, and DNA strains**—not finished audio. Ink powers drafting and analysis.
 
-## 6. Onboarding surfaces
+## 6. Public identity, discovery, and music support
+
+- **Edit Public Page:** choose Artist, Songwriter, Producer, Engineer, DJ, or Music Fan (up to three), then add public genres, moods, influences, region, collaboration status, and current focus.
+- **Featured track:** select a First Drop you released or purchased and choose its 30-second public excerpt.
+- **Discover:** For your taste and For your craft explain their public match; New & live is chronological. Private lyrics, DNA, money, Ink, Pro, and private listening history are excluded.
+- **Relationships:** Follow and Inner Circle are one-way support; Friends remain reciprocal for collaboration and Msgs. Manage support at `/supporters`.
+- **Insights and rankings:** `/insights` is creator-only qualified First Drop analytics. `/leaderboard` → Emerging (7d) publishes its score, inputs, and reasons without pay-to-rank signals.
+- **Vault portability:** Export Studio Vault creates a versioned backup; import previews and merges collision-safe copies without overwriting current projects.
+
+## 7. Onboarding surfaces
 
 | Surface | Location |
 |---------|----------|

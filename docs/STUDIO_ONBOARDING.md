@@ -42,7 +42,7 @@ This document describes how Bar 4 Bar teaches new systems to artists in-app. Sou
 ## Studio Insights & Did You Knows
 
 - **Component:** `src/components/studio-tips.tsx`
-- **Pool size:** ~57 tips (legacy 1–32 + May 2026 33–46 + Jul 2026 48–58; id 6 = Special Instructions; id 47 = Studio Ranks)
+- **Pool size:** 84 uniquely numbered tips (legacy workflow, Scene/social, First Drops, public identity, discovery, support, insights, Emerging, and backup safety)
 - **Labels:** `Studio Insight` (default) or `Did You Know?` when `kind: 'did-you-know'`
 - **When shown:** On a track sheet revisit (2nd+ visit this session), 3s after load, **after** guided tour complete — one tip per sheet path per session
 - **Session guard:** `sessionStorage` key `b4b_studio_tip_shown:{pathname}`
@@ -85,12 +85,26 @@ This document describes how Bar 4 Bar teaches new systems to artists in-app. Sou
 | 57 | Vault Sidebar Goals | Insight |
 | 58 | Preview Quest | Insight |
 
-### Aug 2026 tips (ids 59–60)
+### Aug 2026 Scene/social tips (ids 59–76 and 84)
 
 | ID | Title | Kind |
 |----|--------|------|
 | 59 | The Scene | Insight |
 | 60 | Post From Home | Did You Know |
+| 61–76 | Scene navigation, sharing, embeds, Activity, public challenges, First Drops, Library, public page, social posts, voice, takes, theme, and reach | Mixed |
+| 84 | Activity Opens the Post | Did You Know |
+
+### Stronger-version tips (ids 77–83)
+
+| ID | Title | Kind |
+|----|--------|------|
+| 77 | Music Fan Belongs Here | Insight |
+| 78 | Feature a Library Track | Insight |
+| 79 | Discover Explains Why | Did You Know |
+| 80 | Three Levels of Connection | Insight |
+| 81 | Qualified Listener Insights | Insight |
+| 82 | Emerging Cannot Be Bought | Did You Know |
+| 83 | Safe Vault Restore | Insight |
 
 ## Studio visibility intro
 
@@ -104,17 +118,18 @@ The 9-step lyrics tour stays focused on workflow; visibility is explained in thi
 
 ## What's New dialog
 
-- **Version key:** `src/lib/whats-new-session.ts` → `WHATS_NEW_VERSION` (currently `0.5.0`)
+- **Version key:** `src/lib/whats-new-session.ts` → `WHATS_NEW_VERSION` (currently `0.9.0`)
 - **When shown:** Once per login on `/` (Scene home) or `/vault`
-- **Content:** `src/components/whats-new-dialog.tsx`
+- **Content:** `src/components/whats-new-dialog.tsx` — public music identity, featured owned/purchased tracks, explainable Discover, Support Circle, Listener Insights, Emerging, and safer Vault restore
 
 Bump `WHATS_NEW_VERSION` when shipping user-visible onboarding or feature notes so returning artists see the dialog again on next login.
 
 ## Spatial Manual (in-app docs)
 
 - **Component:** `src/components/how-to-use-dialog.tsx`
-- **Tabs:** Start Here, Studio Tiers, ∞ Loop, Precision Tools, Workstation Map, Studio FAQ
-- **FAQ** covers vault locations, inject vs load, rhyme bars, DNA Drop, Creative Sync vs Extraction, and challenge cadence
+- **Tabs:** Start Here, Scene & Profile, Sell Your Music, Studio Tiers, ∞ Loop, Precision Tools, Workstation Map, Studio FAQ
+- **Scene & Profile:** searchable explanations and direct links for public identity, featured tracks, Discover, relationship levels, Listener Insights, Emerging, and versioned Vault backup
+- **FAQ:** vault locations, inject vs load, rhyme bars, DNA Drop, Creative Sync vs Extraction, challenge cadence, privacy, and First Drop commerce
 
 ## Adding a new tip
 

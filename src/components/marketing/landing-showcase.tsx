@@ -45,7 +45,7 @@ export function LandingShowcase({ showClosingCta = true }: LandingShowcaseProps)
               Ready to claim your booth?
             </h3>
             <p className="font-code text-xs md:text-sm text-fuchsia-300/90">
-              Free Artist Home · The Scene · studio one click in
+              Free public music home · The Scene · studio one click in
               {firstDropsOn ? ' · First Drops' : ''}
             </p>
             <p className="font-code text-[10px] md:text-xs text-muted-foreground/90">

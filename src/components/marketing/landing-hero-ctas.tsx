@@ -13,7 +13,7 @@ const HERO_BTN =
   'h-12 sm:h-14 min-w-0 w-full sm:min-w-[240px] sm:w-auto px-7 text-sm sm:text-base font-bold rounded-full';
 
 /**
- * Hero CTA row — scene-first: claim Artist Home + try writing.
+ * Hero CTA row — scene-first: claim a public music home + try writing.
  * Pricing lives quieter below; Pro is not the lead.
  */
 export function LandingHeroCtAs() {
@@ -34,7 +34,7 @@ export function LandingHeroCtAs() {
           <LandingSignupLink intent="claim_artist_home">
             <span className="flex items-center justify-center gap-2">
               <Globe className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-              Claim your free Artist Home
+              Claim your free music home
               <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover:translate-x-1 transition-transform shrink-0" />
             </span>
           </LandingSignupLink>

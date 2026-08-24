@@ -407,15 +407,15 @@ function GuestPressingLandingInner() {
         <DialogContent className="z-[300] max-w-md border-white/15 bg-[#0c1018] text-zinc-100 sm:rounded-xl">
           <DialogHeader className="space-y-3 text-left">
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-primary">
-              Your Artist Home
+              Your Public Music Home
             </p>
             <DialogTitle className="font-headline text-2xl font-bold tracking-tight">
               This would be your Bar 4 Bar profile.
             </DialogTitle>
             <DialogDescription className="text-sm leading-relaxed text-zinc-400">
-              Everything behind this tip is a live preview of your public page — Wall, friends,
-              guestbook, the works. <span className="font-medium text-zinc-200">Artist Home is completely free</span>
-              {' '}— no Pro required to claim or go live. At the bottom,{' '}
+              Everything behind this tip is a live preview of your public page—Wall, friends,
+              guestbook, the works. <span className="font-medium text-zinc-200">It is free for artists, creators, and Music Fans</span>
+              {' '}— no Pro required to claim or go live. Add public identity and taste, feature a track you released or purchased, then use{' '}
               <span className="font-medium text-zinc-200">The Pressing</span> is the customization
               tool: type a bar or sentence and the whole page skins itself in real time.
             </DialogDescription>
@@ -437,7 +437,7 @@ function GuestPressingLandingInner() {
               <li className="flex gap-2">
                 <Music className="mt-0.5 h-3.5 w-3.5 shrink-0 text-fuchsia-400" />
                 <span>
-                  Upload and sell your music from this page — press a song from The Scene, fans stream here.
+                  Creators can sell First Drops here. Music Fans can feature a purchased track with their chosen 30-second excerpt.
                 </span>
               </li>
             ) : null}
@@ -524,7 +524,7 @@ function GuestPressingLandingInner() {
             {' '}
             <span className="hidden text-zinc-300 sm:inline">
               Try The Pressing at the bottom to customize the skin.
-              {firstDropsOn ? ' You can upload and sell your music from your Artist Home.' : ''}
+              {firstDropsOn ? ' Creators can sell First Drops; Music Fans can feature purchased music.' : ''}
             </span>
           </p>
           <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
@@ -798,10 +798,10 @@ function GuestPressingLandingInner() {
             </Button>
           </div>
           <p className="mt-2 hidden text-[11px] text-muted-foreground sm:block">
-            This preview is your Artist Home — completely free. Type above for The Pressing. Click Bar of the Week on
+            This preview is your public music home—completely free for artists, creators, and Music Fans. Type above for The Pressing. Click Bar of the Week on
             the page to edit it. Mix & sizes still has faders and S/M/L. Claim keeps your look.
             {firstDropsOn
-              ? ' You can upload and sell your music from your Artist Home.'
+              ? ' Creators can sell First Drops; Music Fans can feature purchased music.'
               : ''}
           </p>
         </div>

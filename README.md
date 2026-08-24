@@ -38,15 +38,18 @@ Ink represents the value of the studio's proprietary prompt architecture and wor
 Users can "Add to Home Screen" on iPhone/Android for a native full-screen experience.
 
 ### B. The Dashboard (The Vinyl & Cassette Collection)
-- **Vinyl Records**: Full albums with interactive spin animations.
-- **Cassettes**: "Loose Tracks" for unassigned ideas.
-- **Digital Vault**: Export/Import `.json` files to share project DNA with fans or collaborators.
+- **The Scene**: Signed-in home for the friends feed, Your Booth, explainable Discover, public challenges, First Drops, and transparent Emerging momentum.
+- **The Vault**: Full albums, loose tracks, Collab Sheets, the bar-by-bar workstation, Creative DNA, search, and versioned non-destructive backup/restore.
+- **Public Music Home**: A free public identity for artists, creators, and Music Fans, with chosen labels, sound/taste, support relationships, and an owned or purchased featured track.
+- **Direct-to-Fan Music**: First Drops let creators sell buy-once in-app streams while qualified Listener Insights explain reach and conversion.
 
 ---
 
 ## 4. Technical Stack & Security
 - **Next.js 15 / React / Tailwind**: High-performance UI.
 - **Firebase Firestore**: Secure, account-based cloud storage (Pro Tier).
+- **Firebase Storage + server tickets**: Private masters and selected 30-second profile excerpts stream through entitlement-aware APIs.
+- **Stripe Connect**: First Drop checkout, tiered platform fees, creator payouts, held-sale handling, and detailed Earnings records.
 - **Gemini 2.5 Flash**: Efficient, low-cost AI reasoning.
 - **Roadmap**: Transitioning to **Google Antigravity** for long-term AI development.
 

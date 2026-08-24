@@ -31,7 +31,7 @@ Don't market this as a "Lyric Generator." Market it as an **Album Manager.**
 
 ## 4. The "Gold Glow" Psychological Trigger
 In your "How to Upgrade" or "Pricing" videos, show the toggle flipping from Monthly to Yearly.
-*   The **Slow Gold Glow** on the $8.00/mo price is designed for "Visual Satisfaction."
+*   Show the real plan choices: **$7.77 monthly** or **$4.44/mo billed yearly**. Do not round or reuse old prices in overlays.
 *   Call it out: "The Pro tier is cheaper than a coffee if you bill it yearly."
 
 ## 5. Captions & Tags
@@ -40,5 +40,16 @@ In your "How to Upgrade" or "Pricing" videos, show the toggle flipping from Mont
 
 ## 6. The Referral "Growth Hack"
 Encourage users to "Refer a friend" to get bonus Ink. Create a video showing the **Referral Flash** animation on the usage page.
-*   "Tag an artist who needs a better workflow. If they join, you both get 200 bonus Ink."
-*   Mention the cap: "Limit of 5 bonuses, so invite your best collaborators first."
+*   "Tag an artist who needs a better workflow. If they join, you both get 150 permanent Ink."
+*   Mention the cap: "Limit of 4 referrer bonuses, so invite your best collaborators first."
+# Stronger-version content angles (August 2026)
+
+Rotate these alongside workstation clips so Bar 4 Bar is understood as both a serious writing tool and a music network:
+
+- **Music Fans belong:** choose Music Fan without pretending to be an artist; add public taste and feature a purchased favorite.
+- **The 30 seconds you choose:** show the featured-track excerpt picker, then compare a non-owner preview with purchaser full playback.
+- **Discovery with receipts:** zoom into the “why this matched” reason and say which private/pay signals are excluded.
+- **Three buttons, three meanings:** Follow = support, Inner Circle = stronger support, Friends = reciprocal collaboration and Msgs.
+- **No mystery chart:** open Emerging (7d), point to the visible formula/reasons, and state that price, dollars, Ink, Pro, ads, and sponsorship add zero points.
+- **Creator signal, listener privacy:** show aggregate Listener Insights without exposing named listening histories.
+- **Restore without fear:** import the same Vault twice and show collision copies instead of overwritten work.

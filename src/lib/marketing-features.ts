@@ -1,6 +1,11 @@
 /** Landing page feature bands — copy + asset paths. */
 
-import { firstDropsFeeCashoutLine, firstDropsPitch } from '@/lib/drop-commerce';
+import {
+  centsToUsdLabel,
+  DROP_PAID_MIN_CENTS,
+  firstDropsFeeCashoutLine,
+  firstDropsPitch,
+} from '@/lib/drop-commerce';
 
 export type MarketingMediaType = 'image' | 'gif';
 
@@ -37,14 +42,14 @@ export const STRAIN_PIPELINE_STEPS = [
 export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
   {
     id: 'artist-home',
-    eyebrow: 'Artist Home & The Scene',
+    eyebrow: 'Public Music Home & The Scene',
     title: 'Your Page. Your Block.',
     description:
-      'Sign in and land on The Scene — friends\u2019 drops, a Discover stream of live Artist Homes, and Your Booth. Every artist gets a public home, completely free: living skin, Album Rooms, embeds, live DNA Drops. Write in the vault. Show up on the block.',
+      'Sign in and land on The Scene—your friends feed, explainable Discover matches, transparent Emerging momentum, and Your Booth. Artists, creators, and Music Fans get a free public home with their own identity, sound, support circle, and featured Library track.',
     bullets: [
-      'Artist Home is free — claim it, skin it, go live. No Pro required for the page.',
-      'The Scene home — friends feed + Discover, never an empty room',
-      'Public /profile link you control — private by default until you go live',
+      'Choose up to three public labels—including Music Fan—plus genres, moods, influences, region, and collaboration status',
+      'Feature an owned or purchased track: visitors hear your chosen 30 seconds, then buy or stream by entitlement',
+      'Follow, Inner Circle, and Friends stay distinct so support does not automatically open collaboration or Msgs',
     ],
     mediaSrc: '/marketing/feature-artist-home.png',
     mediaType: 'image',
@@ -59,7 +64,7 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     description: firstDropsPitch(),
     bullets: [
       'Press a song from The Scene — upload, price, live. You keep the rights. DNA Drop stays lyrics-only',
-      'Fixed price or pay-what-you-want, floor $1.00',
+      `Fixed price or pay-what-you-want, paid floor ${centsToUsdLabel(DROP_PAID_MIN_CENTS)}`,
       `Buy once, stream in-app. Library lives on The Scene. ${firstDropsFeeCashoutLine()}`,
     ],
     mediaSrc: '/marketing/feature-artist-home-live.jpg',
@@ -145,7 +150,7 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     bullets: [
       'Store verses, poems, and scratch ideas in one vault',
       'Search every bar you have ever written',
-      'Import & export — your studio travels with you',
+      'Versioned import & export—preview first, merge safely, never overwrite current projects',
     ],
     mediaSrc: '/marketing/feature-vault.png',
     mediaType: 'image',
@@ -177,7 +182,7 @@ export const MARKETING_HOW_IT_WORKS = [
   {
     step: '01',
     title: 'Claim Your Booth',
-    body: 'Free Artist Home — always. Private until you go live. Land on The Scene with friends and Discover.',
+    body: 'Free public music home—Artist, creator, or Music Fan. Private until you go live. Add your Sound Identity and land on The Scene.',
     media: '/marketing/feature-artist-home.png',
   },
   {
@@ -189,7 +194,7 @@ export const MARKETING_HOW_IT_WORKS = [
   {
     step: '03',
     title: 'Show Up on the Scene',
-    body: 'Post to your wall, drop DNA, sell a First Drop, visit Artist Homes, build your block.',
+    body: 'Post to your wall, drop DNA, sell a First Drop, feature a Library track, discover matches, and build your Support Circle.',
     media: '/marketing/how-step-progress.png',
   },
 ] as const;
@@ -202,7 +207,8 @@ export const MARKETING_COMPARISON = {
     ['No album context', 'Album DNA on every bar'],
     ['Generic filler lines', 'Guardrails + must-includes'],
     ['Paragraphs and prose', 'Bars, hooks, and rhyme schemes'],
-    ['No artist presence', 'The Scene home + shareable Artist Home (free) + friends on The Block'],
+    ['No music identity or listener home', 'The Scene + free public home for artists, creators, and Music Fans'],
+    ['Black-box popularity feeds', 'Explainable Discover + transparent Emerging signals—no pay-to-rank'],
     [
       'Nowhere to sell the actual song',
       `First Drops — set a price, fans buy once. ${firstDropsFeeCashoutLine()}`,

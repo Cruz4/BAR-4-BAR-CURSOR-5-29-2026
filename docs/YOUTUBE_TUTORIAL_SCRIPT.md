@@ -17,7 +17,7 @@
 ## Description template
 
 ```
-Bar 4 Bar Studio — rhyme book + AI co-writer for rappers and songwriters.
+Bar 4 Bar — bar-by-bar AI songwriting studio + public music network for artists, creators, and Music Fans.
 Free demo: 250 Ink at signup.
 
 Try it: https://bar4bar.ink?ref=yt
@@ -30,7 +30,7 @@ Chapters:
 3:30 Pro / Ink (optional)
 4:20 Add to Home Screen on phone
 
-#songwriting #rap #lyrics #AI #indieartist
+#songwriting #rap #lyrics #AI #indieartist #musicdiscovery
 ```
 
 ---
@@ -107,8 +107,8 @@ Chapters:
 ### Outro (4:20–end)
 
 > Link in description — free demo. If you’re serious about bars, try one verse tonight.  
-> Or open bar4bar.ink logged out and **press** a live Artist Home first — Friends and Guestbook preview the social side.  
-> Comment what you want the next tutorial to cover: Freestyle pad, DNA Drop, or Performance Mode.
+> Or open bar4bar.ink logged out and **press** a public music home first. Artists, creators, and Music Fans can choose a Sound Identity, feature a track they released or purchased, find explainable matches, and support people without turning every Follow into a collaboration request.
+> Comment what you want next: Featured Library track, Discover and Emerging, Listener Insights, Freestyle Pad, DNA Drop, or Performance Mode.
 
 ---
 

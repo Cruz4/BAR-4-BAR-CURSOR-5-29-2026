@@ -8,6 +8,7 @@ export const metadata: Metadata = pageMetadata({
   description:
     `Connect Stripe payouts, see First Drop sales, and cash out your ${dropArtistShareLabel()} artist share in Bar 4 Bar.`,
   path: '/earnings',
+  index: false,
 });
 
 export default function EarningsLayout({ children }: { children: ReactNode }) {

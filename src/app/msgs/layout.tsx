@@ -6,8 +6,9 @@ export const dynamic = 'force-dynamic';
 
 export const metadata = pageMetadata({
   title: 'Msgs',
-  description: 'Private messages between artists on Bar 4 Bar.',
+  description: 'Private messages between connected Bar 4 Bar members.',
   path: '/msgs',
+  index: false,
 });
 
 export default async function MsgsLayout({ children }: { children: React.ReactNode }) {

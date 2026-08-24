@@ -88,10 +88,10 @@ export function PublicHomeLanding() {
                 <p className="text-sm md:text-lg text-foreground/90 dark:text-white font-body font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0 tracking-wide drop-shadow-lg">
                   Sign in and land on{' '}
                   <span className="bg-fuchsia-500/20 text-fuchsia-300 px-1 rounded-sm font-bold">The Scene</span>
-                  — friends, discover, and your shareable{' '}
-                  <span className="bg-fuchsia-500/20 text-fuchsia-300 px-1 rounded-sm font-bold">Artist Home</span>
+                  — friends, explainable discover, and your shareable{' '}
+                  <span className="bg-fuchsia-500/20 text-fuchsia-300 px-1 rounded-sm font-bold">music home</span>
                   {' '}
-                  <span className="text-fuchsia-200/90">— completely free.</span>
+                  <span className="text-fuchsia-200/90">— completely free for artists, creators, and Music Fans.</span>
                   The Vault is one click away: write bar by bar, train your{' '}
                   <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">DNA</span>, drop what
                   you&apos;re proud of back on the block.
@@ -101,7 +101,7 @@ export function PublicHomeLanding() {
                       When the song is ready, put it on that page.{' '}
                       <span className="bg-amber-500/20 text-amber-200 px-1 rounded-sm font-bold">Listen / buy</span>
                       {' '}
-                      sits at the top of your Artist Home so a first-time visitor does not have to hunt. Preview 30 seconds, buy once, stream here.{' '}
+                      sits at the top of your page so a first-time visitor does not have to hunt. Feature music you released or purchased, choose the public 30 seconds, then buy once and stream here.{' '}
                       {firstDropsFeeCashoutLine()}
                     </>
                   ) : null}
@@ -112,7 +112,7 @@ export function PublicHomeLanding() {
 
               <div className="mx-auto w-full max-w-5xl rounded-2xl border border-white/10 bg-black/35 p-3 shadow-2xl lg:justify-self-end">
                 <p className="mb-2 text-[10px] font-code font-bold uppercase tracking-[0.22em] text-fuchsia-300 text-center lg:text-left">
-                  Artist Home — live on the web
+                  Public music home — live on the web
                 </p>
                 <div className="overflow-hidden rounded-xl border border-white/10 bg-black/50">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -140,7 +140,7 @@ export function PublicHomeLanding() {
               Ready to claim your booth?
             </h3>
             <p className="font-code text-xs md:text-sm text-fuchsia-300/90">
-              Free Artist Home · The Scene · full studio one click in
+              Free public music home · The Scene · full studio one click in
               {firstDropsOn ? ' · First Drops' : ''}
             </p>
             <p className="font-code text-[10px] md:text-xs text-muted-foreground">
@@ -149,7 +149,7 @@ export function PublicHomeLanding() {
             <div className="flex flex-col items-center justify-center gap-3 pt-1 sm:flex-row sm:flex-wrap">
               <Button asChild size="lg" className="h-12 px-8 font-bold rounded-full">
                 <LandingSignupLink intent="claim_artist_home">
-                  Claim your free Artist Home
+                  Claim your free music home
                 </LandingSignupLink>
               </Button>
               <Button asChild size="lg" variant="outline" className="h-12 px-8 font-bold rounded-full border-primary/40">

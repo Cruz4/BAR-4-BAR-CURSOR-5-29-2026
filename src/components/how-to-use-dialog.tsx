@@ -140,7 +140,7 @@ const ChapterCard = ({ id, icon, title, children, colorClass }: { id?: string, i
     </Card>
 );
 
-type ManualTab = 'start-here' | 'first-drops' | 'tiering' | 'loop' | 'power-tools' | 'panels' | 'faq';
+type ManualTab = 'start-here' | 'scene' | 'first-drops' | 'tiering' | 'loop' | 'power-tools' | 'panels' | 'faq';
 
 type ManualSearchItem = {
   label: string;
@@ -198,15 +198,15 @@ const CORE_FAQS = [
     },
     {
       q: "What is Msgs?",
-      a: "Private messages between artists. Amber message icon in the header, or account menu → Msgs. Send from a friend's Artist Home or Your circle. Stored on our servers so the inbox works — not end-to-end encrypted.",
+      a: "Private messages between friends. Amber message icon in the header, or account menu → Msgs. Send from a friend's public music home or Your circle. Stored on our servers so the inbox works—not end-to-end encrypted.",
     },
     {
-      q: "What is Artist Home and Edit Public Page?",
-      a: "Artist Home is completely free — no Pro required to claim or go live. Shareable page at /profile/your-slug (skin, modules, The Board, embeds, socials, wall, friends, guestbook, live DNA Drops). New accounts often get Neomaiya Sol as a first friend with a guestbook welcome. On the Scene dock, Artist Home | Edit page is one split control — view live, or customize. Also reachable from Your Booth, Vault dock, or Studio Progress → Sharing. Private by default; never shows private lyrics unless you publish a DNA Drop."
+      q: "What is my public music home and Edit Public Page?",
+      a: "Your public music home is completely free—no Pro required to claim or go live. It uses the clean link /your_slug and supports Artist, Songwriter, Producer, Engineer, DJ, and Music Fan labels, Sound Identity, a featured owned/purchased track, skin, modules, The Board, embeds, socials, wall, friends, guestbook, and live DNA Drops. On the Scene dock, Artist Home | Edit page is one split control—view live or customize. Private by default; never shows private lyrics unless you publish a DNA Drop."
     },
     {
       q: "What is The Block?",
-      a: "The Block is your friends feed on The Scene — wall posts, requests, and Discover when your circle is quiet. Search artists to invite, or copy your referral link. Your circle (/friends) lists friends and blocked artists."
+      a: "The Block is your friends feed on The Scene—wall posts, requests, and Discover when your circle is quiet. Search music people to invite, or copy your referral link. Your circle (/friends) lists friends and blocked accounts."
     },
     {
       q: "How do I post lines from the sheet to The Block?",
@@ -290,7 +290,7 @@ const CORE_FAQS = [
     },
     {
       q: "What shows on the leaderboard and public profile?",
-      a: "Weekly board: display name, rank, XP, bars (7 days), streak, tracks completed — never lyrics. Opt in via Studio Progress → Sharing. Artist Home is off by default; when live it can show modules, socials, rooms, drops, friends, guestbook, and wall — still never private lyrics unless you DNA Drop."
+      a: "Writing boards show display name, rank, XP, bars (7 days), streak, and tracks completed—never lyrics. Emerging (7d) separately shows its public momentum score, signal counts, and reasons without dollar, Ink, Pro, ad, or sponsorship points. Opt in via Studio Progress → Sharing. Your public music home is off by default and never shows private lyrics unless you publish a DNA Drop."
     },
     {
       q: "What is DNA Drop?",
@@ -413,6 +413,13 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
 
   const searchItems = useMemo<ManualSearchItem[]>(() => [
     { label: 'Start here', detail: 'First-hour walkthrough', tab: 'start-here', targetId: 'manual-start-here', keywords: 'begin new artist write first track tour scene vault' },
+    { label: 'Public identity', detail: 'Artist, creator, and Music Fan labels', tab: 'scene', targetId: 'manual-public-identity', keywords: 'artist songwriter producer engineer dj music fan profile sound identity genre mood influence region collaboration' },
+    { label: 'Featured Library track', detail: 'Owned or purchased music on your profile', tab: 'scene', targetId: 'manual-featured-track', keywords: '30 second excerpt preview purchased song music fan buy full stream public page' },
+    { label: 'Discover matches', detail: 'Taste, craft, and new public profiles', tab: 'scene', targetId: 'manual-discovery', keywords: 'for your taste craft new live genre mood influence region why matched private lyrics' },
+    { label: 'Follow, Inner Circle, and Friends', detail: 'The three relationship levels', tab: 'scene', targetId: 'manual-relationships', keywords: 'support circle followers supporters friend collaboration messages inner circle' },
+    { label: 'Listener Insights', detail: 'Qualified First Drop listening and conversions', tab: 'scene', targetId: 'manual-listener-insights', keywords: '80 percent repeat completion purchase source analytics private creator' },
+    { label: 'Emerging (7d)', detail: 'Transparent momentum ranking', tab: 'scene', targetId: 'manual-emerging', keywords: 'leaderboard score qualified listeners follows inner circle buyer conversions fair no pay rank' },
+    { label: 'Safe Vault backup', detail: 'Versioned export and merge-only restore', tab: 'scene', targetId: 'manual-vault-backup-v2', keywords: 'portable export import restore version 2 collision copy non destructive style profile legacy' },
     { label: 'Sell your music', detail: 'First Drops setup, pricing, fees, and payouts', tab: 'first-drops', targetId: 'manual-selling-overview', keywords: 'sell song audio price pay what you want first drops stripe earnings cash out' },
     { label: 'First Drop pricing options', detail: 'Fixed price and pay-what-you-want', tab: 'first-drops', targetId: 'manual-selling-pricing', keywords: 'minimum floor suggested fee 1.99 2.99 4.99 7.77' },
     { label: 'First Drop fees', detail: 'Platform fee and artist share examples', tab: 'first-drops', targetId: 'manual-selling-fees', keywords: '25 percent 15 percent 10 percent stripe processing split' },
@@ -543,6 +550,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
           <div className="px-4 sm:px-8 border-b bg-muted/10 shrink-0">
             <TabsList className="bg-transparent h-11 sm:h-12 gap-4 sm:gap-8 overflow-x-auto justify-start w-full max-w-full flex-nowrap scrollbar-none">
               <TabsTrigger value="start-here" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Start Here</TabsTrigger>
+              <TabsTrigger value="scene" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Scene &amp; Profile</TabsTrigger>
               <TabsTrigger value="first-drops" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Sell Your Music</TabsTrigger>
               <TabsTrigger value="tiering" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Studio Tiers</TabsTrigger>
               <TabsTrigger value="loop" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">The ∞ Loop</TabsTrigger>
@@ -675,6 +683,80 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </p>
               </TabsContent>
 
+              <TabsContent value="scene" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4 pb-16">
+                <ChapterCard id="manual-public-identity" icon={<Globe className="text-fuchsia-400" />} title="Your Public Music Identity" colorClass="border-l-fuchsia-500 text-fuchsia-400">
+                  <p className="text-sm text-foreground/90">
+                    Bar 4 Bar is not artists-only. In <strong>Edit Public Page</strong>, choose up to three labels: Artist, Songwriter, Producer, Engineer, DJ, or Music Fan. These are public profile labels, not security permissions or subscription tiers.
+                  </p>
+                  <p className="text-xs">Add public genres, moods, influences, region, collaboration status, and current focus. Those choices power explainable Discover matches; private lyrics and DNA never do.</p>
+                  <Button asChild variant="outline" className="w-full font-bold uppercase tracking-widest text-[10px]">
+                    <Link href="/profile/customize"><Globe className="mr-2 h-4 w-4" /> Edit Public Page</Link>
+                  </Button>
+                </ChapterCard>
+
+                <ChapterCard id="manual-featured-track" icon={<Music className="text-fuchsia-300" />} title="Feature an Owned or Purchased Track" colorClass="border-l-fuchsia-500 text-fuchsia-300">
+                  <ol className="list-decimal list-inside space-y-2 text-sm">
+                    <li>Open <strong>Edit Public Page</strong> and find the featured Library track control.</li>
+                    <li>Choose a First Drop you released or one you purchased from another artist.</li>
+                    <li>Pick the exact start of the 30-second public excerpt, build the showcase, then save.</li>
+                  </ol>
+                  <p className="text-xs">Visitors who do not own the track hear your excerpt and see Buy. The owner and purchasers get the full stream after Bar 4 Bar checks entitlement. Music Fans can use this to put a purchased favorite on their profile.</p>
+                </ChapterCard>
+
+                <ChapterCard id="manual-discovery" icon={<Compass className="text-sky-400" />} title="Discover by Taste, Craft, or What Is New" colorClass="border-l-sky-500 text-sky-400">
+                  <ul className="list-disc list-inside space-y-2 text-sm">
+                    <li><strong>For your taste</strong> matches public genres, moods, influences, and region.</li>
+                    <li><strong>For your craft</strong> matches public roles and collaboration choices.</li>
+                    <li><strong>New &amp; live</strong> shows the newest public activity without personalization.</li>
+                  </ul>
+                  <p className="text-xs">Every personalized card explains why it matched. Money, Ink, Pro status, sales totals, private writing, and private listening history cannot buy placement.</p>
+                  <Button asChild variant="outline" className="w-full font-bold uppercase tracking-widest text-[10px]">
+                    <Link href="/discover"><Compass className="mr-2 h-4 w-4" /> Open Discover</Link>
+                  </Button>
+                </ChapterCard>
+
+                <ChapterCard id="manual-relationships" icon={<Users className="text-emerald-400" />} title="Follow, Inner Circle, and Friends" colorClass="border-l-emerald-500 text-emerald-400">
+                  <div className="grid gap-3 sm:grid-cols-3 text-xs">
+                    <div className="rounded-lg border border-border/40 bg-muted/20 p-3"><strong className="text-foreground">Follow</strong><br />One-way support. It does not open collaboration or Msgs.</div>
+                    <div className="rounded-lg border border-border/40 bg-muted/20 p-3"><strong className="text-foreground">Inner Circle</strong><br />A stronger supporter signal, still separate from friendship.</div>
+                    <div className="rounded-lg border border-border/40 bg-muted/20 p-3"><strong className="text-foreground">Friends</strong><br />Reciprocal connection used for collaboration and Msgs.</div>
+                  </div>
+                  <p className="text-xs">Manage supporters and people you support in Support Circle. Blocks prevent new relationship actions.</p>
+                  <Button asChild variant="outline" className="w-full font-bold uppercase tracking-widest text-[10px]">
+                    <Link href="/supporters"><Users className="mr-2 h-4 w-4" /> Open Support Circle</Link>
+                  </Button>
+                </ChapterCard>
+
+                <ChapterCard id="manual-listener-insights" icon={<Radio className="text-cyan-400" />} title="Qualified Listener Insights" colorClass="border-l-cyan-500 text-cyan-400">
+                  <p className="text-sm">Listener Insights is the creator-only First Drop dashboard for qualified listeners, repeats, completions, purchase conversions, sources, timeline, and track summaries.</p>
+                  <p className="text-xs">A qualified listen reaches 80% of the available preview or full stream in real time. Your own plays do not count. Listener identities stay private and are not exposed as named listening histories.</p>
+                  <Button asChild variant="outline" className="w-full font-bold uppercase tracking-widest text-[10px]">
+                    <Link href="/insights"><Radio className="mr-2 h-4 w-4" /> Open Listener Insights</Link>
+                  </Button>
+                </ChapterCard>
+
+                <ChapterCard id="manual-emerging" icon={<Trophy className="text-amber-400" />} title="Emerging (7d): Momentum You Can Explain" colorClass="border-l-amber-500 text-amber-400">
+                  <p className="text-sm">Leaderboard keeps the writing-progress boards and adds <strong>Emerging (7d)</strong> for public music momentum. Each entry shows its score, signal counts, and reasons.</p>
+                  <p className="text-xs">Qualified listening, repeats, follows, Inner Circle joins, shared-listen conversions, and unique buyer conversions can add points. Dollar amount, Ink, Pro, ads, and sponsorship cannot.</p>
+                  <Button asChild variant="outline" className="w-full font-bold uppercase tracking-widest text-[10px]">
+                    <Link href="/leaderboard"><Trophy className="mr-2 h-4 w-4" /> View Emerging</Link>
+                  </Button>
+                </ChapterCard>
+
+                <ChapterCard id="manual-vault-backup-v2" icon={<Archive className="text-violet-300" />} title="Versioned, Non-Destructive Vault Backup" colorClass="border-l-violet-500 text-violet-300">
+                  <p className="text-sm">Use <strong>Export Studio Vault</strong> on The Vault to download a versioned backup of albums, tracks, embedded project presets, and Style Profile. Import previews what will be added before it writes.</p>
+                  <ul className="list-disc list-inside space-y-1.5 text-xs">
+                    <li>Import merges; it never removes or overwrites current projects.</li>
+                    <li>ID conflicts become clearly named imported copies.</li>
+                    <li>Legacy backups remain supported; unknown future versions and malformed files are rejected.</li>
+                    <li>Your existing Style Profile wins if one is already present.</li>
+                  </ul>
+                  <Button asChild variant="outline" className="w-full font-bold uppercase tracking-widest text-[10px]">
+                    <Link href="/vault"><Archive className="mr-2 h-4 w-4" /> Open The Vault</Link>
+                  </Button>
+                </ChapterCard>
+              </TabsContent>
+
               <TabsContent value="first-drops" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4 pb-16">
                 <ChapterCard id="manual-selling-overview" icon={<Music className="text-fuchsia-400" />} title="Sell Your Music with First Drops" colorClass="border-l-fuchsia-500 text-fuchsia-400">
                   {!flags.firstDrops ? (
@@ -777,7 +859,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
               <TabsContent value="tiering" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
                 <ChapterCard id="manual-studio-tiers" icon={<ShieldCheck />} title="Visitor vs Studio Pro" colorClass="border-l-primary text-primary">
                     <p>Bar 4 Bar is a professional workstation. Your membership level determines project scale, vault access, and monthly Ink residency.</p>
-                    <p className="text-xs bg-muted/30 border border-border/40 rounded-lg p-3"><strong>Free artists:</strong> try the full DNA &amp; REMIX and Generation Workstation flows with system presets. <strong>Pro:</strong> archive your own DNA, Vibe, and Style strains; unlimited albums; cloud sync.</p>
+                    <p className="text-xs bg-muted/30 border border-border/40 rounded-lg p-3"><strong>Visitor accounts:</strong> try the full DNA &amp; REMIX and Generation Workstation flows with system presets. <strong>Pro:</strong> archive your own DNA, Vibe, and Style strains; unlimited albums; cloud sync.</p>
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2 border-l-4 border-muted pl-4 bg-muted/5 p-3 rounded-r-lg">
                             <p className="font-bold text-foreground text-xs uppercase flex items-center gap-2"><Globe className="h-3 w-3" /> Visitor (Free) — Limits</p>

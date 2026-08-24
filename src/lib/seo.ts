@@ -9,14 +9,22 @@ export const SEO = {
   /** Default document title (tab + PWA window suffix). Match appName to avoid duplicate title bar text. */
   title: 'Bar 4 Bar',
   /** Open Graph / structured data — one clear line for search & shares. */
-  titleLong: 'Bar 4 Bar — Your Scene, Your Studio & Shareable Artist Home',
+  titleLong: 'Bar 4 Bar — AI Songwriting Studio & Music Network',
   description:
-    'Your scene and your studio: claim a free Artist Home, land on The Scene with friends and discover, and open the bar-by-bar AI workstation one click in. Creative DNA, vault, DNA Drops, Collab Sheet live editing. Free tier; Studio Pro available.',
+    'Bar-by-bar AI songwriting studio and music network for artists, creators, and fans. Write with Creative DNA, discover music, collaborate, and sell First Drops.',
   keywords: [
     'bar 4 bar',
     'bar4bar',
     'artist home',
+    'music fan profile',
+    'public music profile',
     'the scene',
+    'music discovery app',
+    'independent music discovery',
+    'emerging artist platform',
+    'artist listener analytics',
+    'sell music directly to fans',
+    'first drops music',
     'DNA notebook',
     'AI rhyme book',
     'lyric notebook',
@@ -47,10 +55,12 @@ export const PUBLIC_SITEMAP_PATHS: Array<{
   changeFrequency: 'weekly' | 'monthly';
   priority: number;
 }> = [
-  { path: '/login', changeFrequency: 'weekly', priority: 1 },
-  { path: '', changeFrequency: 'weekly', priority: 0.95 },
-  { path: '/pricing', changeFrequency: 'weekly', priority: 0.9 },
-  { path: '/leaderboard', changeFrequency: 'weekly', priority: 0.7 },
+  { path: '', changeFrequency: 'weekly', priority: 1 },
+  { path: '/try', changeFrequency: 'weekly', priority: 0.9 },
+  { path: '/pricing', changeFrequency: 'weekly', priority: 0.85 },
+  { path: '/discover', changeFrequency: 'weekly', priority: 0.8 },
+  { path: '/leaderboard', changeFrequency: 'weekly', priority: 0.75 },
+  { path: '/login', changeFrequency: 'weekly', priority: 0.65 },
   { path: '/terms', changeFrequency: 'monthly', priority: 0.4 },
   { path: '/privacy', changeFrequency: 'monthly', priority: 0.4 },
   { path: '/cookies', changeFrequency: 'monthly', priority: 0.35 },
@@ -97,8 +107,24 @@ export function buildStructuredDataGraph(): Record<string, unknown>[] {
       url: appUrl,
       image: imageUrl,
       applicationCategory: 'MultimediaApplication',
+      applicationSubCategory: 'Songwriting and music community',
       operatingSystem: 'Web',
       description: SEO.description,
+      audience: {
+        '@type': 'Audience',
+        audienceType: 'Artists, songwriters, producers, engineers, DJs, and music fans',
+      },
+      featureList: [
+        'Bar-by-bar AI-assisted lyric writing',
+        'Creative DNA and album-aware songwriting',
+        'Public music profiles for artists, creators, and music fans',
+        'Owned or purchased featured-track excerpts',
+        'Explainable taste and craft discovery',
+        'Follow, Inner Circle, Friends, and live collaboration',
+        'Qualified listener insights and transparent Emerging rankings',
+        'First Drop direct-to-fan music sales',
+        'Versioned non-destructive studio backups',
+      ],
       offers: {
         '@type': 'Offer',
         price: '0',
@@ -115,12 +141,15 @@ export function pageMetadata(options: {
   description: string;
   path: string;
   openGraphTitle?: string;
+  /** Account-only pages should be useful in-browser without entering search results. */
+  index?: boolean;
 }): Metadata {
   const canonical = absoluteUrl(options.path);
   const ogTitle = options.openGraphTitle ?? `${options.title} | ${SEO.siteName}`;
   return {
     title: options.title,
     description: options.description,
+    ...(options.index === false ? { robots: { index: false, follow: false } } : {}),
     alternates: { canonical },
     openGraph: {
       type: 'website',

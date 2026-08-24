@@ -3,7 +3,7 @@ import { pageMetadata } from '@/lib/seo';
 export const metadata = pageMetadata({
   title: 'Studio Leaderboard',
   description:
-    'See top Bar 4 Bar writers by bars written, streaks, and studio activity. Join the community and climb the ranks.',
+    'See Bar 4 Bar writing leaders and transparent Emerging (7d) music momentum, with visible signals and no pay-to-rank points.',
   path: '/leaderboard',
 });
 
