@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * The Scene — signed-in home. Friends feed + Discover stream + Your Booth in
- * the middle, studio progress on the left, nav dock on the right.
- * The feed is never empty: Discover cards fill in around friends' posts.
+ * The Scene — signed-in home. Your Booth leads into a reversible portal hub;
+ * Your Block and Discover reuse the real feeds inside an immersive snap viewer.
+ * The original inline feeds and shortcut dock remain behind one feature switch.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -36,6 +36,8 @@ import { InfiniteFeedSentinel } from '@/components/scene/infinite-feed-sentinel'
 import { SceneFeedJumpHints } from '@/components/scene/scene-feed-jump-hints';
 import { SceneUniversalSearch } from '@/components/scene/scene-universal-search';
 import { SceneChartSpotlight } from '@/components/scene/scene-chart-spotlight';
+import { ScenePortalHub } from '@/components/scene/scene-portal-hub';
+import { SceneImmersiveFeedDialog } from '@/components/scene/scene-immersive-feed-dialog';
 import { LockClaimBootstrap } from '@/components/lock/lock-claim-bootstrap';
 import { GuestPressingClaimBootstrap } from '@/components/profile/guest-pressing-claim-bootstrap';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -107,6 +109,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
+import { SCENE_PORTAL_HUB_ENABLED } from '@/lib/scene/portal-hub-config';
 
 const SCENE_BLOCK_SHOW_MINE_KEY = 'b4b.scene.block.showMine';
 
@@ -289,6 +292,8 @@ export function SceneHome() {
   const [discoverVisible, setDiscoverVisible] = useState(DISCOVER_PAGE_SIZE);
   const [blockLastSeen, setBlockLastSeen] = useState<string | null>(null);
   const [discoverLastSeen, setDiscoverLastSeen] = useState<string | null>(null);
+  const [immersiveFeed, setImmersiveFeed] = useState<'block' | 'discover' | null>(null);
+  const [immersiveInitialKey, setImmersiveInitialKey] = useState<string | undefined>(undefined);
   const tourAutoStartRef = useRef(false);
 
   const viewerSlug = summary.profileSlug || undefined;
@@ -320,7 +325,7 @@ export function SceneHome() {
   const setBlockExpandedPersist = useCallback((next: boolean) => {
     setBlockExpanded(next);
     writePersistedExpanded(SCENE_BLOCK_EXPANDED_KEY, next);
-    if (next) {
+    if (next && !SCENE_PORTAL_HUB_ENABLED) {
       markBlockSeen();
       setBlockLastSeen(new Date().toISOString());
     }
@@ -329,7 +334,7 @@ export function SceneHome() {
   const setDiscoverExpandedPersist = useCallback((next: boolean) => {
     setDiscoverExpanded(next);
     writePersistedExpanded(SCENE_DISCOVER_EXPANDED_KEY, next);
-    if (next) {
+    if (next && !SCENE_PORTAL_HUB_ENABLED) {
       markDiscoverSeen();
       setDiscoverLastSeen(new Date().toISOString());
     }
@@ -357,7 +362,7 @@ export function SceneHome() {
       if (cancelled) return;
       setDiscover(data);
       setDiscoverReady(true);
-      if (readPersistedExpanded(SCENE_DISCOVER_EXPANDED_KEY, true)) {
+      if (!SCENE_PORTAL_HUB_ENABLED && readPersistedExpanded(SCENE_DISCOVER_EXPANDED_KEY, true)) {
         markDiscoverSeen();
         setDiscoverLastSeen(new Date().toISOString());
       }
@@ -444,7 +449,7 @@ export function SceneHome() {
           setBlockReady(true);
           setCircleLoading(false);
           if (heldDiscover) releaseDiscover(heldDiscover);
-          if (readPersistedExpanded(SCENE_BLOCK_EXPANDED_KEY, true)) {
+          if (!SCENE_PORTAL_HUB_ENABLED && readPersistedExpanded(SCENE_BLOCK_EXPANDED_KEY, true)) {
             markBlockSeen();
             setBlockLastSeen(new Date().toISOString());
           }
@@ -551,8 +556,20 @@ export function SceneHome() {
       const hash = window.location.hash.replace(/^#/, '');
       if (hash === BLOCK_SECTION_ID) {
         setBlockExpandedPersist(true);
+        if (SCENE_PORTAL_HUB_ENABLED) {
+          markBlockSeen();
+          setBlockLastSeen(new Date().toISOString());
+          setImmersiveInitialKey(undefined);
+          setImmersiveFeed('block');
+        }
       } else if (hash === DISCOVER_SECTION_ID) {
         setDiscoverExpandedPersist(true);
+        if (SCENE_PORTAL_HUB_ENABLED) {
+          markDiscoverSeen();
+          setDiscoverLastSeen(new Date().toISOString());
+          setImmersiveInitialKey(undefined);
+          setImmersiveFeed('discover');
+        }
       } else {
         return;
       }
@@ -659,9 +676,16 @@ export function SceneHome() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!parseActivityPostHash(window.location.hash)) return;
+    const target = parseActivityPostHash(window.location.hash);
+    if (!target) return;
     setShowMinePersist(true);
     setBlockExpandedPersist(true);
+    if (SCENE_PORTAL_HUB_ENABLED) {
+      markBlockSeen();
+      setBlockLastSeen(new Date().toISOString());
+      setImmersiveInitialKey(`post-${target.postId}`);
+      setImmersiveFeed('block');
+    }
   }, [setShowMinePersist, setBlockExpandedPersist]);
 
   useEffect(() => {
@@ -689,6 +713,13 @@ export function SceneHome() {
       if (idx >= 0) {
         setBlockVisible((n) => Math.max(n, idx + 1));
       }
+      if (SCENE_PORTAL_HUB_ENABLED) {
+        markBlockSeen();
+        setBlockLastSeen(new Date().toISOString());
+        setImmersiveInitialKey(`post-${target.postId}`);
+        setImmersiveFeed('block');
+        return;
+      }
       const tryScroll = () => scrollActivityPostTarget(target);
       window.setTimeout(tryScroll, 80);
       window.setTimeout(tryScroll, 500);
@@ -709,12 +740,12 @@ export function SceneHome() {
   }, [discoverCards.length]);
 
   const newBlockCount = useMemo(() => {
-    if (blockExpanded || !user?.id || !blockLastSeen) return 0;
+    if ((!SCENE_PORTAL_HUB_ENABLED && blockExpanded) || !user?.id || !blockLastSeen) return 0;
     return posts.filter((p) => p.ownerId !== user.id && p.createdAt > blockLastSeen).length;
   }, [blockExpanded, blockLastSeen, posts, user?.id]);
 
   const newDiscoverCount = useMemo(() => {
-    if (discoverExpanded || !discoverLastSeen) return 0;
+    if ((!SCENE_PORTAL_HUB_ENABLED && discoverExpanded) || !discoverLastSeen) return 0;
     return discoverCards.filter((c) => {
       const ts = discoverCardTimestamp(c);
       return Boolean(ts) && ts > discoverLastSeen;
@@ -732,6 +763,33 @@ export function SceneHome() {
 
   const onPostDeleted = useCallback((postId: string) => {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
+  }, []);
+
+  const openBlockPortal = useCallback(() => {
+    setBlockExpandedPersist(true);
+    markBlockSeen();
+    setBlockLastSeen(new Date().toISOString());
+    setImmersiveInitialKey(undefined);
+    setImmersiveFeed('block');
+  }, [setBlockExpandedPersist]);
+
+  const openDiscoverPortal = useCallback(() => {
+    setDiscoverExpandedPersist(true);
+    markDiscoverSeen();
+    setDiscoverLastSeen(new Date().toISOString());
+    setImmersiveInitialKey(undefined);
+    setImmersiveFeed('discover');
+    if (!user?.id) return;
+    void fetchDiscover(user.id, { view: 'all', enrichSlugs: false }).then((next) => {
+      setDiscover(next);
+      setDiscoverReady(true);
+    });
+  }, [setDiscoverExpandedPersist, user?.id]);
+
+  const onDiscoverLockRemoved = useCallback((lockId: string) => {
+    setDiscover((prev) =>
+      prev ? { ...prev, locks: prev.locks.filter((lock) => lock.id !== lockId) } : prev
+    );
   }, []);
 
   const loadMoreBlock = useCallback(() => {
@@ -784,7 +842,7 @@ export function SceneHome() {
       <SceneFeedJumpHints
         blockExpanded={blockExpanded}
         discoverExpanded={discoverExpanded}
-        hidden={tourActive}
+        hidden={tourActive || SCENE_PORTAL_HUB_ENABLED}
         onEnsureBlock={() => setBlockExpandedPersist(true)}
         onEnsureDiscover={() => setDiscoverExpandedPersist(true)}
       />
@@ -830,7 +888,7 @@ export function SceneHome() {
               phoneStartsMinimized
               persistExpandedKey={SCENE_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY}
             />
-            <SceneNavDock compact />
+            {!SCENE_PORTAL_HUB_ENABLED ? <SceneNavDock compact /> : null}
           </div>
         </div>
 
@@ -849,12 +907,14 @@ export function SceneHome() {
         </aside>
 
         {/* Right rail — nav dock (xl only) */}
-        <aside
-          className="hidden xl:flex xl:col-start-3 xl:row-start-2 justify-start items-start self-start pl-2 2xl:pl-3 sticky top-[5.25rem] z-30 pointer-events-none [&>*]:pointer-events-auto"
-          aria-label="Scene shortcuts"
-        >
-          <SceneNavDock />
-        </aside>
+        {!SCENE_PORTAL_HUB_ENABLED ? (
+          <aside
+            className="hidden xl:flex xl:col-start-3 xl:row-start-2 justify-start items-start self-start pl-2 2xl:pl-3 sticky top-[5.25rem] z-30 pointer-events-none [&>*]:pointer-events-auto"
+            aria-label="Scene shortcuts"
+          >
+            <SceneNavDock />
+          </aside>
+        ) : null}
 
         {/* Middle column — the feed */}
         <div className="relative min-w-0 w-full xl:col-start-2 xl:row-start-2 px-4 sm:px-6 pb-12 space-y-5">
@@ -923,6 +983,40 @@ export function SceneHome() {
 
           <SceneLiveDropsStrip />
 
+          {SCENE_PORTAL_HUB_ENABLED ? (
+            <>
+              <div id={BLOCK_SECTION_ID} className="scroll-mt-[5.5rem]">
+                <span id={DISCOVER_SECTION_ID} className="sr-only" aria-hidden />
+                <ScenePortalHub
+                  viewer={{
+                    userId: user.id,
+                    displayName: user.displayName || 'Music Fan',
+                    ...(viewerSlug ? { slug: viewerSlug } : {}),
+                  }}
+                  artistHomeHref={viewerSlug ? profileHref(viewerSlug) || '/profile/customize' : '/profile/customize'}
+                  friendCount={friendCount}
+                  blockPreview={posts[0]}
+                  discoverPreview={discoverCards[0]}
+                  newBlockCount={newBlockCount}
+                  newDiscoverCount={newDiscoverCount}
+                  onOpenBlock={openBlockPortal}
+                  onOpenDiscover={openDiscoverPortal}
+                />
+              </div>
+              <SceneImmersiveFeedDialog
+                mode={immersiveFeed}
+                initialItemKey={immersiveInitialKey}
+                onOpenChange={(open) => {
+                  if (!open) setImmersiveFeed(null);
+                }}
+                posts={posts}
+                discoverCards={discoverCards}
+                viewerSlug={viewerSlug}
+                onPostDeleted={onPostDeleted}
+                onLockRemoved={onDiscoverLockRemoved}
+              />
+            </>
+          ) : (
           <>
             <div
               id={BLOCK_SECTION_ID}
@@ -1092,6 +1186,7 @@ export function SceneHome() {
               ) : null}
             </div>
           </>
+          )}
 
           <div id={FIND_ARTISTS_SECTION_ID} className="scroll-mt-[5.5rem]" data-tour="scene-find-artists">
             <FindArtistsPanel viewerSlug={viewerSlug} />

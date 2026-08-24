@@ -548,9 +548,9 @@ export const SCENE_HOME_TOUR_STEPS: LyricsTourStep[] = [
     id: 'scene-feed',
     target: '[data-tour="scene-feed"]',
     mobileCardPlacement: 'top',
-    title: 'The feed',
-    body: 'Your Block is your friends feed. Discover sits below with For your taste, For your craft, and New & live. Personalized cards explain the public identity match, and this week\u2019s transparent Emerging risers appear here too.',
-    example: 'Visit a profile to Follow, add Inner Circle support, or send a separate friend request.',
+    title: 'Your Scene portals',
+    body: 'Your Block and Discover now open as full-screen, one-card-at-a-time streams. The bubbles jump between people, side controls move between cards, and every post keeps its love, reply, Reverb, share, player, and profile actions.',
+    example: 'Discover uses public taste and craft signals to explain why an artist, post, or Drop matches you.',
   },
   {
     id: 'scene-progress',
@@ -564,7 +564,7 @@ export const SCENE_HOME_TOUR_STEPS: LyricsTourStep[] = [
     target: '[data-tour="scene-nav-mobile"], [data-tour="scene-nav-desktop"]',
     mobileCardPlacement: 'bottom',
     title: 'The Vault is where you write',
-    body: 'Your albums, tracks, and the AI bar-for-bar workstation live in The Vault. Press a song on this dock is how you put a track on sale — not DNA Drop. The Scene is the block; the Vault is the booth.',
+    body: 'The portal hub opens The Vault, Library, Artist Home, Your Circle, Listener Insights, and Support Circle. Press a Song below the hub is how you put a track on sale — not DNA Drop. The Scene is the block; the Vault is the booth.',
     example: 'Replay this tour anytime from the Studio Manual (?).',
   },
 ];
