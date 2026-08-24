@@ -162,6 +162,11 @@ service cloud.firestore {
       match /spinTicks/{tickId} {
         allow read, write: if false;
       }
+
+      // Qualified playback evidence is accepted and aggregated by server APIs only.
+      match /listenTicks/{tickId} {
+        allow read, write: if false;
+      }
     }
 
     // Open LOCK — public read; mutations via Admin SDK APIs only
@@ -351,6 +356,20 @@ service cloud.firestore {
       match /dropPayouts/{docId} {
         allow read: if isOwnerOrAdmin(userId);
         allow write: if false;
+      }
+
+      // Private creator listening/supporter analytics. Served through owner-authenticated APIs.
+      match /dropInsights/{docId} {
+        allow read, write: if false;
+      }
+      match /dropInsightDays/{docId} {
+        allow read, write: if false;
+      }
+      match /dropAudience/{docId} {
+        allow read, write: if false;
+      }
+      match /dropPurchaseTicks/{docId} {
+        allow read, write: if false;
       }
 
       // The Deck crates (playlists of unlocked drops)

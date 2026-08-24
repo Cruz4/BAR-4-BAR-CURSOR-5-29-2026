@@ -460,6 +460,7 @@ export default function SharedProjectPage() {
                     <Suspense fallback={null}>
                       <DropListenPanel
                         shareId={shareId}
+                        source="share"
                         title={project.title || 'Untitled'}
                         ownerId={share.ownerId}
                         price={

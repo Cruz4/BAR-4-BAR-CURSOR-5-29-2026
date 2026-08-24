@@ -3,6 +3,11 @@ import { getAuth, getDb } from '@/lib/firebase/server';
 import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
 import { recordDropSpin } from '@/lib/server/drop-pulse';
 import type { DropPulseKind } from '@/lib/drop-pulse';
+import { isDropListenMilestone } from '@/lib/drop-listen-analytics';
+import { resolveDropListenerIdentity } from '@/lib/server/drop-listener-identity';
+import { verifyDropListenProof } from '@/lib/server/drop-listen-proof';
+import { recordQualifiedListenProgress } from '@/lib/server/drop-listen-analytics';
+import { checkRateLimit } from '@/lib/server/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -30,11 +35,41 @@ export async function POST(req: Request) {
     if (!shareId) return NextResponse.json({ error: 'Missing drop.' }, { status: 400 });
 
     const viewerId = await optionalUid(req);
+    const listener = resolveDropListenerIdentity(req, viewerId);
     const db = await getDb();
-    const result = await recordDropSpin(db, { shareId, kind, viewerId });
-    return NextResponse.json({ ok: true, ...result });
+    const { allowed } = await checkRateLimit(`drop-listen:${listener.key}`, 120, 60_000);
+    if (!allowed) return NextResponse.json({ error: 'Too many listening events.' }, { status: 429 });
+
+    let result: { counted: boolean; qualified?: boolean };
+    if (typeof body.listenProof === 'string' && isDropListenMilestone(body.milestone)) {
+      const proof = verifyDropListenProof(body.listenProof);
+      if (proof.s !== shareId) {
+        return NextResponse.json({ error: 'Listening proof does not match this drop.' }, { status: 400 });
+      }
+      result = await recordQualifiedListenProgress(db, {
+        proof,
+        listenerKey: listener.key,
+        milestone: body.milestone,
+        source: body.source,
+      });
+    } else {
+      result = await recordDropSpin(db, {
+        shareId,
+        kind,
+        viewerId,
+        dedupeKey: listener.key,
+      });
+    }
+    const response = NextResponse.json({ ok: true, ...result });
+    if (listener.setCookie) response.headers.append('Set-Cookie', listener.setCookie);
+    return response;
   } catch (err) {
     console.error('[drops/pulse]', err);
-    return NextResponse.json({ error: 'Could not record spin.' }, { status: 500 });
+    const message = err instanceof Error ? err.message : 'Could not record spin.';
+    const invalidProof = /proof/i.test(message);
+    return NextResponse.json(
+      { error: invalidProof ? message : 'Could not record spin.' },
+      { status: invalidProof ? 400 : 500 }
+    );
   }
 }

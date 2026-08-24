@@ -12,8 +12,9 @@ import React, {
 } from 'react';
 import { auth } from '@/lib/firebase/client/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { recordDropSpinClient } from '@/lib/drop-pulse-client';
+import { recordDropListenProgressClient, recordDropSpinClient } from '@/lib/drop-pulse-client';
 import type { DeckPlayable } from '@/lib/drop-library';
+import { DROP_LISTEN_MILESTONES, type DropListenMilestone } from '@/lib/drop-listen-analytics';
 
 export type DropRepeatMode = 'off' | 'all' | 'one';
 
@@ -61,6 +62,9 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
   const wantPlayingRef = useRef(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const listenProofRef = useRef('');
+  const eligibleDurationRef = useRef(30);
+  const reportedMilestonesRef = useRef<Set<DropListenMilestone>>(new Set());
 
   const [queue, setQueueState] = useState<DeckPlayable[]>([]);
   const [current, setCurrent] = useState<DeckPlayable | null>(null);
@@ -147,6 +151,9 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
         if (!res.ok) throw new Error(data.error || 'Could not load this drop.');
         audio.crossOrigin = 'anonymous';
         audio.src = data.url;
+        listenProofRef.current = typeof data.listenProof === 'string' ? data.listenProof : '';
+        eligibleDurationRef.current = Math.max(1, Number(data.eligibleDurationSec) || 30);
+        reportedMilestonesRef.current = new Set();
         audio.load();
         if (autoplay) {
           wantPlayingRef.current = true;
@@ -265,6 +272,33 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
     const onTime = () => {
       setElapsed(audio.currentTime || 0);
       if (Number.isFinite(audio.duration) && audio.duration > 0) setDuration(audio.duration);
+      const item = currentRef.current;
+      const proof = listenProofRef.current;
+      const progressDuration = Math.max(
+        1,
+        Math.min(
+          eligibleDurationRef.current,
+          Number.isFinite(audio.duration) && audio.duration > 0
+            ? audio.duration
+            : eligibleDurationRef.current
+        )
+      );
+      if (item && proof) {
+        for (const milestone of DROP_LISTEN_MILESTONES) {
+          if (
+            !reportedMilestonesRef.current.has(milestone) &&
+            audio.currentTime >= progressDuration * (milestone / 100)
+          ) {
+            reportedMilestonesRef.current.add(milestone);
+            recordDropListenProgressClient({
+              shareId: item.shareId,
+              listenProof: proof,
+              milestone,
+              source: 'library',
+            });
+          }
+        }
+      }
       if (typeof navigator !== 'undefined' && navigator.mediaSession && Number.isFinite(audio.duration)) {
         try {
           navigator.mediaSession.setPositionState({

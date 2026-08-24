@@ -3,6 +3,9 @@ import { getAuth, getDb } from '@/lib/firebase/server';
 import { audioForPlay, loadShare, userCanStreamFull } from '@/lib/server/drop-entitlements';
 import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
 import { dropAudioFileUrl, mintDropAudioTicket } from '@/lib/server/drop-audio-stream';
+import { DROP_PREVIEW_SECONDS } from '@/lib/drop-commerce';
+import { resolveDropListenerIdentity } from '@/lib/server/drop-listener-identity';
+import { mintDropListenProof } from '@/lib/server/drop-listen-proof';
 
 export const runtime = 'nodejs';
 
@@ -44,13 +47,29 @@ export async function GET(req: Request) {
 
     const contentType = full ? audio.contentType || 'audio/mpeg' : 'audio/wav';
     const ticket = mintDropAudioTicket({ storagePath: path, contentType, full });
-    return NextResponse.json({
+    const listener = resolveDropListenerIdentity(req, userId);
+    const eligibleDurationSec = full
+      ? Math.max(1, audio.durationSec || DROP_PREVIEW_SECONDS)
+      : Math.max(1, Math.min(DROP_PREVIEW_SECONDS, audio.durationSec || DROP_PREVIEW_SECONDS));
+    const listenProof = mintDropListenProof({
+      shareId,
+      trackId,
+      listenerKey: listener.key,
+      authenticated: listener.authenticated,
+      full,
+      eligibleDurationSec,
+    });
+    const response = NextResponse.json({
       url: dropAudioFileUrl(ticket),
       full,
       preview: !full,
       durationSec: audio.durationSec ?? null,
+      eligibleDurationSec,
+      listenProof,
       contentType,
     });
+    if (listener.setCookie) response.headers.append('Set-Cookie', listener.setCookie);
+    return response;
   } catch (err: unknown) {
     const raw = err instanceof Error ? err.message : 'Stream failed';
     console.error('[drops/audio]', err);

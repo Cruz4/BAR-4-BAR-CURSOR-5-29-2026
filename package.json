@@ -18,6 +18,7 @@
     "verify:bar-units": "node scripts/verify-rhyme-bar-units.mjs",
     "verify:lyrics-analysis": "tsx scripts/verify-lyrics-analysis.mjs",
     "verify:love-rewards": "tsx scripts/verify-love-rewards.ts",
+    "verify:discovery-integrity": "tsx scripts/verify-discovery-integrity.ts",
     "stripe:verify": "node scripts/verify-stripe-prices.mjs",
     "stripe:webhook-env": "node scripts/stripe-webhook-env-check.mjs",
     "stripe:webhook-sync-test": "node scripts/stripe-webhook-sync-test-secret.mjs",

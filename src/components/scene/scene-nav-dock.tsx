@@ -21,6 +21,7 @@ import {
   Bell,
   Banknote,
   Disc3,
+  BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
@@ -334,6 +335,15 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       icon: Library,
       tone: 'border-amber-400/45 bg-amber-500/10 hover:border-amber-300/60',
       iconTone: 'border-amber-400/40 bg-amber-500/20 text-amber-200',
+    },
+    {
+      key: 'insights',
+      href: '/insights',
+      label: 'Listener Insights',
+      sub: 'Real fans, not vanity plays',
+      icon: BarChart3,
+      tone: 'border-sky-500/30 bg-card/55 hover:border-sky-400/50',
+      iconTone: 'border-sky-400/45 bg-sky-500/15 text-sky-300',
     },
     {
       key: 'earnings',

@@ -79,6 +79,7 @@ function FirstDropFeedPlayer({ shareId }: { shareId: string }) {
     <Suspense fallback={null}>
       <DropListenPanel
         shareId={shareId}
+        source="artist_home"
         title={details.title}
         ownerId={share.ownerId}
         price={details.price}

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LogOut, LayoutDashboard, LayoutGrid, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy, Smartphone, Settings, Users, Archive, Bell, Banknote, MessageSquare } from 'lucide-react';
+import { LogOut, LayoutDashboard, LayoutGrid, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy, Smartphone, Settings, Users, Archive, Bell, Banknote, MessageSquare, BarChart3 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -391,10 +391,16 @@ export function Header() {
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=buy-ink')}><LayoutGrid className="mr-2 h-4 w-4 text-primary" /><span>Ink Store</span></DropdownMenuItem>
                       {firstDropsOn ? (
-                        <DropdownMenuItem onClick={() => router.push('/earnings')}>
-                          <Banknote className="mr-2 h-4 w-4 text-emerald-400" />
-                          <span>Earnings</span>
-                        </DropdownMenuItem>
+                        <>
+                          <DropdownMenuItem onClick={() => router.push('/insights')}>
+                            <BarChart3 className="mr-2 h-4 w-4 text-sky-400" />
+                            <span>Listener Insights</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push('/earnings')}>
+                            <Banknote className="mr-2 h-4 w-4 text-emerald-400" />
+                            <span>Earnings</span>
+                          </DropdownMenuItem>
+                        </>
                       ) : null}
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=settings')}><Settings className="mr-2 h-4 w-4" /><span>Settings</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=cloud')}>

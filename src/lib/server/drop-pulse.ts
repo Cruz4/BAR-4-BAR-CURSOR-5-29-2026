@@ -18,6 +18,7 @@ export async function recordDropSpin(
     shareId: string;
     kind: DropPulseKind;
     viewerId?: string | null;
+    dedupeKey?: string | null;
   }
 ): Promise<{ counted: boolean }> {
   const shareId = input.shareId.trim();
@@ -30,7 +31,7 @@ export async function recordDropSpin(
   const viewerId = input.viewerId?.trim() || '';
   if (viewerId && ownerId && viewerId === ownerId) return { counted: false };
 
-  const tickId = `${viewerId || 'anon'}_${input.kind}`;
+  const tickId = `${input.dedupeKey?.trim() || viewerId || 'anon'}_${input.kind}`;
   const tickRef = shareRef(db, shareId).collection('spinTicks').doc(tickId.slice(0, 120));
   const tickSnap = await tickRef.get();
   const now = Date.now();
@@ -101,6 +102,24 @@ export async function recordDropUnlock(
   }
 
   await ref.set(patch, { merge: true });
+
+  if (typeof input.amountCents === 'number' && input.amountCents > 0 && ownerId) {
+    try {
+      const [{ recordDropPurchaseInsight }, { dropListenerKeyForUser }] = await Promise.all([
+        import('@/lib/server/drop-listen-analytics'),
+        import('@/lib/server/drop-listener-identity'),
+      ]);
+      await recordDropPurchaseInsight(db, {
+        ownerId,
+        shareId,
+        buyerListenerKey: dropListenerKeyForUser(buyerId),
+        amountCents: input.amountCents,
+        title,
+      });
+    } catch (err) {
+      console.warn('[drop-pulse] purchase insight', err);
+    }
+  }
 
   // Paid unlocks notify via `drop_sold` from recordDropSale — avoid double ping.
   const paidUnlock = typeof input.amountCents === 'number' && input.amountCents > 0;

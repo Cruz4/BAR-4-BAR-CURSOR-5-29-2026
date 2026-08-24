@@ -2,6 +2,7 @@
 
 import { auth } from '@/lib/firebase/client/firebase';
 import type { DropPulseKind } from '@/lib/drop-pulse';
+import type { DropListenMilestone, DropListenSource } from '@/lib/drop-listen-analytics';
 
 const SESSION_PREFIX = 'b4b.dropSpin.';
 
@@ -41,6 +42,36 @@ export function recordDropSpinClient(shareId: string, kind: DropPulseKind): void
       });
     } catch {
       /* ignore */
+    }
+  })();
+}
+
+/** Report a signed playback milestone; the server decides whether it qualifies. */
+export function recordDropListenProgressClient(input: {
+  shareId: string;
+  listenProof: string;
+  milestone: DropListenMilestone;
+  source: DropListenSource;
+}): void {
+  const shareId = input.shareId.trim();
+  if (!shareId || !input.listenProof) return;
+  const key = sessionKey(shareId, `proof.${input.listenProof.slice(-12)}.${input.milestone}`);
+  try {
+    if (typeof window !== 'undefined' && sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+  } catch {
+    /* server dedupe remains authoritative */
+  }
+  void (async () => {
+    try {
+      const headers = await authHeaders();
+      await fetch('/api/drops/pulse', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(input),
+      });
+    } catch {
+      /* analytics must never interrupt playback */
     }
   })();
 }

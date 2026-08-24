@@ -169,6 +169,7 @@ export function SceneDiscoverCard({
             <Suspense fallback={<div className="h-24 animate-pulse rounded-xl bg-fuchsia-500/10" />}>
               <DropListenPanel
                 shareId={drop.shareId}
+                source="scene"
                 title={drop.title}
                 ownerId={drop.ownerId || ''}
                 price={normalizeDropPrice(drop.dropPrice)}

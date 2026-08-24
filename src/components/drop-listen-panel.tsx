@@ -20,7 +20,12 @@ import {
 import { buildDropBuyLoginPath } from '@/lib/checkout-intent';
 import { Pause, Play, Loader } from 'lucide-react';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
-import { recordDropSpinClient } from '@/lib/drop-pulse-client';
+import { recordDropListenProgressClient, recordDropSpinClient } from '@/lib/drop-pulse-client';
+import {
+  DROP_LISTEN_MILESTONES,
+  type DropListenMilestone,
+  type DropListenSource,
+} from '@/lib/drop-listen-analytics';
 
 async function authHeaders(): Promise<HeadersInit> {
   const user = auth.currentUser;
@@ -37,6 +42,7 @@ export function DropListenPanel({
   price,
   hasAudio,
   trackId,
+  source = 'direct',
 }: {
   shareId: string;
   title: string;
@@ -44,6 +50,7 @@ export function DropListenPanel({
   price?: DropPrice | null;
   hasAudio: boolean;
   trackId?: string;
+  source?: DropListenSource;
 }) {
   const { user, authReady } = useAuth();
   const { toast } = useToast();
@@ -51,8 +58,11 @@ export function DropListenPanel({
   const router = useRouter();
   const searchParams = useSearchParams();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const reportedMilestonesRef = useRef<Set<DropListenMilestone>>(new Set());
   const [src, setSrc] = useState<string | null>(null);
   const [full, setFull] = useState(false);
+  const [listenProof, setListenProof] = useState('');
+  const [eligibleDurationSec, setEligibleDurationSec] = useState(30);
   const [loading, setLoading] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -76,6 +86,9 @@ export function DropListenPanel({
       if (!res.ok) throw new Error(data.error || 'Could not load audio.');
       setSrc(data.url);
       setFull(Boolean(data.full));
+      setListenProof(typeof data.listenProof === 'string' ? data.listenProof : '');
+      setEligibleDurationSec(Math.max(1, Number(data.eligibleDurationSec) || 30));
+      reportedMilestonesRef.current = new Set();
     } catch (e: unknown) {
       const raw = e instanceof Error ? e.message : undefined;
       toast({
@@ -214,8 +227,25 @@ export function DropListenPanel({
                 recordDropSpinClient(shareId, previewCapped ? 'preview' : 'play');
               }}
               onTimeUpdate={(e) => {
-                if (!previewCapped) return;
                 const el = e.currentTarget;
+                const progressDuration = Math.max(
+                  1,
+                  Math.min(
+                    eligibleDurationSec,
+                    Number.isFinite(el.duration) && el.duration > 0 ? el.duration : eligibleDurationSec
+                  )
+                );
+                for (const milestone of DROP_LISTEN_MILESTONES) {
+                  if (
+                    listenProof &&
+                    !reportedMilestonesRef.current.has(milestone) &&
+                    el.currentTime >= progressDuration * (milestone / 100)
+                  ) {
+                    reportedMilestonesRef.current.add(milestone);
+                    recordDropListenProgressClient({ shareId, listenProof, milestone, source });
+                  }
+                }
+                if (!previewCapped) return;
                 if (el.currentTime >= 30) {
                   el.pause();
                   el.currentTime = 30;
