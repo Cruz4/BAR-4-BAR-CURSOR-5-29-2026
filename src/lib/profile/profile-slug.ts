@@ -22,6 +22,8 @@ export const APP_ROOT_SEGMENTS = new Set([
   'friends',
   'feed',
   'discover',
+  'insights',
+  'supporters',
   'activity',
   'lock',
   'try',
@@ -80,6 +82,17 @@ export const RESERVED_PROFILE_SLUGS = new Set([
 
 /** Canonical Neo vanity link — reserved for plotformaiplan@. */
 export const NEOMAIYA_CANONICAL_SLUG = 'neomaiya_sol';
+
+const LEGACY_PROFILE_APP_REDIRECTS: Readonly<Record<string, string>> = {
+  insights: '/insights',
+  supporters: '/supporters',
+};
+
+/** Keep old /profile/{app-page} links from falling through to the public-profile API. */
+export function legacyProfileAppRedirect(slug: string | null | undefined): string | undefined {
+  const clean = (slug || '').trim().toLowerCase();
+  return LEGACY_PROFILE_APP_REDIRECTS[clean];
+}
 
 const SLUG_BODY_RE = /^[a-z0-9]+(?:_[a-z0-9]+)*$/;
 

@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { PublicProfilePageClient } from '@/components/profile/public-profile-page-client';
 import { getPublicProfile } from '@/lib/server/gamification';
 import { rankFromXp } from '@/lib/gamification/ranks';
 import { absoluteUrl, SEO } from '@/lib/seo';
+import { legacyProfileAppRedirect } from '@/lib/profile/profile-slug';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,6 +30,13 @@ function profileShareCopy(data: Record<string, unknown>, slug: string) {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug: rawSlug } = await params;
   const slug = rawSlug?.trim() || '';
+  const appRedirect = legacyProfileAppRedirect(slug);
+  if (appRedirect) {
+    return {
+      title: appRedirect === '/insights' ? 'Listener Insights' : 'Support Circle',
+      robots: { index: false, follow: false },
+    };
+  }
   if (!slug) {
     return {
       title: 'Artist Home',
@@ -81,5 +90,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function PublicProfilePage({ params }: PageProps) {
   const { slug } = await params;
+  const appRedirect = legacyProfileAppRedirect(slug);
+  if (appRedirect) redirect(appRedirect);
   return <PublicProfilePageClient slug={slug} />;
 }

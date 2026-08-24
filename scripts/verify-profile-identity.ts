@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { normalizeArtistHomeConfig } from '../src/lib/profile/modules';
 import { normalizeSoundIdentity } from '../src/lib/profile/sound-identity';
+import {
+  isValidProfileSlug,
+  legacyProfileAppRedirect,
+} from '../src/lib/profile/profile-slug';
 
 const identity = normalizeSoundIdentity({
   kinds: ['music_fan', 'artist', 'music_fan', 'not-a-role'],
@@ -25,5 +29,11 @@ const migrated = normalizeArtistHomeConfig({
 assert.equal(migrated.version, 2);
 assert.equal(migrated.featured.tagline, 'Legacy profile');
 assert.equal(migrated.featured.soundIdentity, undefined);
+
+assert.equal(legacyProfileAppRedirect('insights'), '/insights');
+assert.equal(legacyProfileAppRedirect('SUPPORTERS'), '/supporters');
+assert.equal(legacyProfileAppRedirect('real_music_fan'), undefined);
+assert.equal(isValidProfileSlug('insights'), false, 'app pages must never be claimable profile slugs');
+assert.equal(isValidProfileSlug('supporters'), false, 'app pages must never be claimable profile slugs');
 
 console.log('Profile identity verification passed.');

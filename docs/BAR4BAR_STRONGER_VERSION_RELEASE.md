@@ -2,7 +2,15 @@
 
 ## Release status
 
-This release is implemented on local `main` in seven independent product commits plus this release-audit commit. The requested Industry Room (the original item 6) was intentionally skipped. No package was added, no production document was migrated, and no production data was deleted.
+This release is organized into seven independent product commits, one release-audit documentation commit, and one post-audit profile-route correction commit. The requested Industry Room (the original item 6) was intentionally skipped. No package was added, no production document was migrated, and no production data was deleted.
+
+## Post-audit runtime correction
+
+- Legacy `/profile/insights` links now redirect to `/insights` before the public-profile client can request `/api/profile/insights`.
+- Legacy `/profile/supporters` links likewise redirect to `/supporters`.
+- `insights` and `supporters` are reserved app segments and cannot be claimed as public-profile slugs.
+- The profile identity verification covers both compatibility redirects and both reserved names.
+- Production HTTP verification confirmed `/profile/insights` returns 308 to `/insights`, `/profile/supporters` returns 308 to `/supporters`, and both destination pages return 200.
 
 ## What shipped
 
@@ -163,4 +171,8 @@ Known repository-wide lint and Handlebars/Genkit build warnings predate this rel
 
 ### Vault safety and release documentation
 
-`scripts/verify-vault-backups.ts`, `src/components/album-list.tsx`, `src/context/data-context.tsx`, `src/lib/vault-backup.ts`, `docs/BAR4BAR_STRONGER_VERSION_RELEASE.md`.
+`scripts/verify-vault-backups.ts`, `src/components/album-list.tsx`, `src/context/data-context.tsx`, `src/lib/vault-backup.ts`, `docs/BAR4BAR_STRONGER_VERSION_RELEASE.md`, `BAR4BAR_STRONGER_VERSION_CHANGES.md`.
+
+### Runtime profile-route correction
+
+`src/app/profile/[slug]/page.tsx`, `src/lib/profile/profile-slug.ts`, `scripts/verify-profile-identity.ts`, `BAR4BAR_STRONGER_VERSION_CHANGES.md`, `docs/BAR4BAR_STRONGER_VERSION_RELEASE.md`.
