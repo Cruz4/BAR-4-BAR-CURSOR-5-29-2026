@@ -1,12 +1,13 @@
 import 'server-only';
 
-import type { Firestore } from 'firebase-admin/firestore';
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import type {
   SupportDashboard,
   SupportRelationshipRow,
   SupportRelationshipState,
 } from '@/lib/relationships';
 import { nextSupportRelationship, type SupportRelationshipAction } from '@/lib/relationships';
+import { emergingEntryPath } from '@/lib/emerging-ranking';
 
 type RelationshipProfile = {
   userId: string;
@@ -104,12 +105,23 @@ export async function setSupportRelationship(
 
   const followingRef = db.doc(`users/${input.actorId}/following/${input.targetId}`);
   const followerRef = db.doc(`users/${input.targetId}/followers/${input.actorId}`);
+  const followSignalRef = db.doc(
+    `users/${input.targetId}/organicRelationshipTicks/${input.actorId}_follow`
+  );
+  const innerSignalRef = db.doc(
+    `users/${input.targetId}/organicRelationshipTicks/${input.actorId}_inner`
+  );
   let newlyFollowed = false;
   let newlyInnerCircle = false;
   await db.runTransaction(async (tx) => {
-    const existing = await tx.get(followingRef);
+    const [existing, followSignal, innerSignal] = await Promise.all([
+      tx.get(followingRef),
+      tx.get(followSignalRef),
+      tx.get(innerSignalRef),
+    ]);
     const previous = existing.data() || {};
-    const now = new Date().toISOString();
+    const nowDate = new Date();
+    const now = nowDate.toISOString();
     const next = nextSupportRelationship(
       existing.exists ? previous.innerCircle === true : null,
       input.action
@@ -139,6 +151,21 @@ export async function setSupportRelationship(
       createdAt,
       updatedAt: now,
     });
+    const emergingPatch: Record<string, unknown> = {
+      userId: target.userId,
+      updatedAt: now,
+    };
+    if (newlyFollowed && !followSignal.exists) {
+      tx.set(followSignalRef, { actorId: actor.userId, kind: 'follow', createdAt: now });
+      emergingPatch.follows = FieldValue.increment(1);
+    }
+    if (newlyInnerCircle && !innerSignal.exists) {
+      tx.set(innerSignalRef, { actorId: actor.userId, kind: 'inner_circle', createdAt: now });
+      emergingPatch.innerCircleJoins = FieldValue.increment(1);
+    }
+    if ('follows' in emergingPatch || 'innerCircleJoins' in emergingPatch) {
+      tx.set(db.doc(emergingEntryPath(target.userId, nowDate)), emergingPatch, { merge: true });
+    }
   });
 
   return {

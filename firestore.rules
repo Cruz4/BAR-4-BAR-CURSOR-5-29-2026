@@ -379,6 +379,9 @@ service cloud.firestore {
       match /followers/{followerUserId} {
         allow read, write: if false;
       }
+      match /organicRelationshipTicks/{tickId} {
+        allow read, write: if false;
+      }
 
       // The Deck crates (playlists of unlocked drops)
       match /dropCrates/{crateId} {
@@ -631,6 +634,11 @@ service cloud.firestore {
 
     // Shared server-side abuse counters. Admin SDK only.
     match /rate_limits/{bucketId} {
+      allow read, write: if false;
+    }
+
+    // Daily inputs for the transparent Emerging board. Admin SDK only.
+    match /emergingSignals/{day}/{document=**} {
       allow read, write: if false;
     }
 

@@ -6,7 +6,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StudioLoader } from '@/components/studio-loader';
-import { Trophy, Flame, Music, ChevronLeft, Crown, Zap } from 'lucide-react';
+import {
+  Trophy,
+  Flame,
+  Music,
+  ChevronLeft,
+  Crown,
+  Zap,
+  TrendingUp,
+  Headphones,
+  Repeat2,
+  UserPlus,
+  Star,
+  ShoppingBag,
+  ShieldCheck,
+} from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
@@ -14,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { LeaderboardHeatBackground } from '@/components/studio-page-background';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
+import type { EmergingRankingEntry, EmergingRankingResponse } from '@/lib/emerging-ranking';
 
 type Entry = {
   userId: string;
@@ -166,6 +181,67 @@ function LeaderboardTable({
   );
 }
 
+const emergingSignalLabels: Array<{
+  key: keyof EmergingRankingEntry['signals'];
+  label: string;
+  icon: typeof Headphones;
+}> = [
+  { key: 'qualifiedListeners', label: 'qualified', icon: Headphones },
+  { key: 'repeatListeners', label: 'repeat', icon: Repeat2 },
+  { key: 'follows', label: 'follows', icon: UserPlus },
+  { key: 'innerCircleJoins', label: 'inner circle', icon: Star },
+  { key: 'purchaseConversions', label: 'buyer conversions', icon: ShoppingBag },
+];
+
+function EmergingTable({ rows }: { rows: EmergingRankingEntry[] }) {
+  if (!rows.length) {
+    return (
+      <div className="py-14 text-center">
+        <TrendingUp className="mx-auto mb-3 h-8 w-8 text-cyan-300/50" />
+        <p className="font-code text-xs uppercase tracking-widest text-cyan-100/50">
+          Qualified listener momentum will appear here as it is earned.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      {rows.map((row, index) => (
+        <div key={row.userId} className="rounded-xl border border-cyan-400/15 bg-cyan-500/[0.04] p-4">
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <Badge variant="outline" className="h-9 w-9 shrink-0 justify-center border-cyan-400/30 bg-cyan-500/10 p-0 text-cyan-200">
+                {index + 1}
+              </Badge>
+              <div className="min-w-0">
+                <Link href={profileHref(row.profileSlug) || `/profile/${row.profileSlug}`} className="block truncate text-sm font-bold uppercase text-white hover:text-cyan-200 hover:underline">
+                  {row.displayName}
+                </Link>
+                <p className="mt-1 font-code text-[10px] text-cyan-100/55">
+                  Why they’re rising: {row.reasons.join(' · ')}
+                </p>
+              </div>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="font-code text-lg font-black tabular-nums text-cyan-300">{row.score}</p>
+              <p className="font-code text-[9px] uppercase tracking-widest text-cyan-100/40">momentum</p>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {emergingSignalLabels.map(({ key, label, icon: Icon }) =>
+              row.signals[key] > 0 ? (
+                <span key={key} className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/25 px-2 py-1 font-code text-[9px] uppercase text-white/55">
+                  <Icon className="h-3 w-3 text-cyan-300/70" /> {row.signals[key]} {label}
+                </span>
+              ) : null
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const tabTriggerClass =
   'inline-flex h-full w-full items-center justify-center gap-1.5 rounded-[6px] py-0 text-[10px] font-bold uppercase tracking-wide text-orange-200/50 transition-all data-[state=active]:bg-orange-500/90 data-[state=active]:text-white data-[state=active]:shadow-[0_0_24px_rgba(249,115,22,0.35)]';
 
@@ -175,14 +251,19 @@ const heatCardClass =
 export default function LeaderboardPage() {
   const { user } = useAuth();
   const [data, setData] = useState<LeaderboardData | null>(null);
+  const [emerging, setEmerging] = useState<EmergingRankingResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       try {
         const q = user ? `?userId=${user.id}` : '';
-        const res = await fetch(`/api/gamification/leaderboard${q}`);
-        if (res.ok) setData(await res.json());
+        const [leaderboardRes, emergingRes] = await Promise.all([
+          fetch(`/api/gamification/leaderboard${q}`),
+          fetch('/api/emerging'),
+        ]);
+        if (leaderboardRes.ok) setData(await leaderboardRes.json());
+        if (emergingRes.ok) setEmerging(await emergingRes.json());
       } finally {
         setLoading(false);
       }
@@ -248,7 +329,7 @@ export default function LeaderboardPage() {
         </div>
 
         <Tabs defaultValue="bars" className="space-y-4">
-          <TabsList className="grid h-11 w-full grid-cols-3 rounded-lg border border-orange-500/25 bg-black/40 p-1 shadow-[inset_0_0_20px_rgba(249,115,22,0.08)]">
+          <TabsList className="grid h-auto min-h-11 w-full grid-cols-2 rounded-lg border border-orange-500/25 bg-black/40 p-1 shadow-[inset_0_0_20px_rgba(249,115,22,0.08)] sm:grid-cols-4">
             <TabsTrigger value="bars" className={tabTriggerClass}>
               <Music className="h-3 w-3 shrink-0" /> Bars (7d)
             </TabsTrigger>
@@ -257,6 +338,9 @@ export default function LeaderboardPage() {
             </TabsTrigger>
             <TabsTrigger value="tracks" className={tabTriggerClass}>
               <Trophy className="h-3 w-3 shrink-0" /> Tracks (30d)
+            </TabsTrigger>
+            <TabsTrigger value="emerging" className={tabTriggerClass}>
+              <TrendingUp className="h-3 w-3 shrink-0" /> Emerging (7d)
             </TabsTrigger>
           </TabsList>
 
@@ -307,6 +391,31 @@ export default function LeaderboardPage() {
               </CardHeader>
               <CardContent>
                 <LeaderboardTable rows={data?.tracksCompleted30d || []} valueKey="tracksCompleted30d" />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="emerging">
+            <Card className="relative overflow-hidden border-cyan-400/20 bg-black/35 shadow-[0_0_40px_rgba(34,211,238,0.06)] backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-sm uppercase text-cyan-100">
+                  <TrendingUp className="h-4 w-4 text-cyan-300" /> Emerging through qualified support
+                </CardTitle>
+                <CardDescription className="text-cyan-100/50">
+                  Rolling {emerging?.window.days || 7}-day momentum. Every placement shows the real actions that moved it.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="rounded-lg border border-cyan-400/15 bg-cyan-500/[0.04] p-3 font-code text-[10px] text-cyan-50/60">
+                  <p className="mb-2 flex items-center gap-1.5 font-bold uppercase tracking-wider text-cyan-200">
+                    <ShieldCheck className="h-3.5 w-3.5" /> Public formula
+                  </p>
+                  <p>{(emerging?.formula || []).map((part) => `${part.points}× ${part.label}`).join(' + ') || 'Loading qualified support formula…'}</p>
+                  <p className="mt-2 text-cyan-100/40">
+                    Dollars paid, Ink, Pro tier, ads, and sponsorship never add points. A live profile and leaderboard opt-in are required.
+                  </p>
+                </div>
+                <EmergingTable rows={emerging?.entries || []} />
               </CardContent>
             </Card>
           </TabsContent>

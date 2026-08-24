@@ -9,6 +9,7 @@ import {
 } from '@/lib/drop-listen-analytics';
 import type { DropListenProof } from '@/lib/server/drop-listen-proof';
 import { dropListenerKeyForUser } from '@/lib/server/drop-listener-identity';
+import { emergingEntryPath } from '@/lib/emerging-ranking';
 
 function safeId(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 100);
@@ -75,6 +76,7 @@ export async function recordQualifiedListenProgress(
   const dailyRef = db.doc(
     `users/${ownerId}/dropInsightDays/${day}_${safeId(input.proof.s)}`
   );
+  const emergingRef = db.doc(emergingEntryPath(ownerId, now));
 
   return db.runTransaction(async (tx) => {
     const [milestoneTick, qualifiedTick, audienceSnap] = await Promise.all([
@@ -153,6 +155,16 @@ export async function recordQualifiedListenProgress(
         );
       }
       tx.set(
+        emergingRef,
+        {
+          userId: ownerId,
+          qualifiedListeners: FieldValue.increment(1),
+          ...(repeatDay ? { repeatListeners: FieldValue.increment(1) } : {}),
+          updatedAt: nowIso,
+        },
+        { merge: true }
+      );
+      tx.set(
         audienceRef,
         {
           listenerKey: input.listenerKey,
@@ -193,6 +205,9 @@ export async function recordDropPurchaseInsight(
   const dailyRef = db.doc(
     `users/${input.ownerId}/dropInsightDays/${day}_${safeId(input.shareId)}`
   );
+  const emergingRef = db.doc(emergingEntryPath(input.ownerId, now));
+  const organicPurchaseEligible =
+    input.buyerListenerKey !== dropListenerKeyForUser(input.ownerId);
 
   await db.runTransaction(async (tx) => {
     const [tick, audienceSnap] = await Promise.all([
@@ -238,5 +253,16 @@ export async function recordDropPurchaseInsight(
       },
       { merge: true }
     );
+    if (organicPurchaseEligible) {
+      tx.set(
+        emergingRef,
+        {
+          userId: input.ownerId,
+          purchaseConversions: FieldValue.increment(1),
+          updatedAt: nowIso,
+        },
+        { merge: true }
+      );
+    }
   });
 }

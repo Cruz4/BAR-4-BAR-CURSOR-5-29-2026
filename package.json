@@ -22,6 +22,7 @@
     "verify:profile-identity": "tsx scripts/verify-profile-identity.ts",
     "verify:featured-profile-track": "tsx scripts/verify-featured-profile-track.ts",
     "verify:relationships": "tsx scripts/verify-relationships.ts",
+    "verify:emerging-rankings": "tsx scripts/verify-emerging-rankings.ts",
     "stripe:verify": "node scripts/verify-stripe-prices.mjs",
     "stripe:webhook-env": "node scripts/stripe-webhook-env-check.mjs",
     "stripe:webhook-sync-test": "node scripts/stripe-webhook-sync-test-secret.mjs",
