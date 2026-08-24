@@ -13,6 +13,7 @@ import type { ProjectShare } from '@/lib/types';
 import type { DnaDropAlbumPayload, DnaDropTrackPayload } from '@/lib/dna-drop';
 import { normalizeDropAudio, normalizeDropPrice } from '@/lib/drop-commerce';
 import { DropListenPanel } from '@/components/drop-listen-panel';
+import type { FeaturedTrackSelection } from '@/lib/profile/modules';
 
 /**
  * Plays a whitelisted provider link right on the page (iframe embed).
@@ -84,6 +85,60 @@ function FirstDropFeedPlayer({ shareId }: { shareId: string }) {
         ownerId={share.ownerId}
         price={details.price}
         hasAudio={details.hasAudio}
+      />
+    </Suspense>
+  );
+}
+
+export function FeaturedTrackPlayer({
+  selection,
+  profileUserId,
+}: {
+  selection: FeaturedTrackSelection;
+  profileUserId: string;
+}) {
+  const [share, setShare] = useState<ProjectShare | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getDoc(doc(db, 'shares', selection.shareId)).then((snapshot) => {
+      if (!cancelled && snapshot.exists()) setShare(snapshot.data() as ProjectShare);
+    });
+    return () => { cancelled = true; };
+  }, [selection.shareId]);
+
+  const details = useMemo(() => {
+    if (!share) return null;
+    const payload = share.data as DnaDropAlbumPayload | DnaDropTrackPayload;
+    if (share.type === 'album') {
+      const track = (payload as DnaDropAlbumPayload).tracks?.find((row) => row.id === selection.trackId);
+      return {
+        price: normalizeDropPrice(track?.dropPrice ?? payload.dropPrice),
+        hasAudio: Boolean(normalizeDropAudio(track?.dropAudio)),
+      };
+    }
+    return {
+      price: normalizeDropPrice(payload.dropPrice),
+      hasAudio: Boolean(normalizeDropAudio((payload as DnaDropTrackPayload).dropAudio)),
+    };
+  }, [selection.trackId, share]);
+
+  if (!share || !details) {
+    return <div className="h-24 animate-pulse rounded-xl border border-fuchsia-500/25 bg-fuchsia-500/10" />;
+  }
+
+  return (
+    <Suspense fallback={null}>
+      <DropListenPanel
+        shareId={selection.shareId}
+        trackId={selection.trackId}
+        source="artist_home"
+        title={selection.title}
+        ownerId={selection.ownerId}
+        price={details.price}
+        hasAudio={details.hasAudio}
+        featuredByUserId={profileUserId}
+        excerptStartSec={selection.excerptStartSec}
       />
     </Suspense>
   );

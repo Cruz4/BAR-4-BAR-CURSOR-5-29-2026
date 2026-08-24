@@ -8,7 +8,7 @@ import { getClientStorage } from '@/lib/firebase/client/firebase';
 import { ref, uploadBytes, deleteObject } from 'firebase/storage';
 import { completeUploadTicket, requestUploadTicket } from '@/lib/upload-ticket-client';
 
-function writeWav(buffer: AudioBuffer, frameCount: number): Blob {
+function writeWav(buffer: AudioBuffer, startFrame: number, frameCount: number): Blob {
   const channels = Math.min(2, buffer.numberOfChannels);
   const sampleRate = buffer.sampleRate;
   const bytesPerSample = 2;
@@ -37,8 +37,9 @@ function writeWav(buffer: AudioBuffer, frameCount: number): Blob {
   const ch1 = channels > 1 ? buffer.getChannelData(1) : ch0;
   let offset = 44;
   for (let i = 0; i < frameCount; i++) {
-    const s0 = Math.max(-1, Math.min(1, ch0[i] ?? 0));
-    const s1 = Math.max(-1, Math.min(1, ch1[i] ?? 0));
+    const sourceIndex = startFrame + i;
+    const s0 = Math.max(-1, Math.min(1, ch0[sourceIndex] ?? 0));
+    const s1 = Math.max(-1, Math.min(1, ch1[sourceIndex] ?? 0));
     view.setInt16(offset, s0 < 0 ? s0 * 0x8000 : s0 * 0x7fff, true);
     offset += 2;
     if (channels > 1) {
@@ -49,7 +50,11 @@ function writeWav(buffer: AudioBuffer, frameCount: number): Blob {
   return new Blob([out], { type: 'audio/wav' });
 }
 
-export async function buildPreviewWav(file: File, maxSeconds = DROP_PREVIEW_SECONDS): Promise<{
+export async function buildPreviewWav(
+  file: File,
+  maxSeconds = DROP_PREVIEW_SECONDS,
+  startSeconds = 0
+): Promise<{
   blob: Blob;
   durationSec: number;
 }> {
@@ -57,8 +62,11 @@ export async function buildPreviewWav(file: File, maxSeconds = DROP_PREVIEW_SECO
   try {
     const decoded = await ctx.decodeAudioData(await file.arrayBuffer());
     const durationSec = decoded.duration;
-    const frameCount = Math.min(decoded.length, Math.floor(maxSeconds * decoded.sampleRate));
-    return { blob: writeWav(decoded, Math.max(1, frameCount)), durationSec };
+    const maxStart = Math.max(0, durationSec - Math.min(maxSeconds, durationSec));
+    const safeStart = Math.max(0, Math.min(maxStart, Number(startSeconds) || 0));
+    const startFrame = Math.min(decoded.length - 1, Math.floor(safeStart * decoded.sampleRate));
+    const frameCount = Math.min(decoded.length - startFrame, Math.floor(maxSeconds * decoded.sampleRate));
+    return { blob: writeWav(decoded, startFrame, Math.max(1, frameCount)), durationSec };
   } finally {
     void ctx.close();
   }

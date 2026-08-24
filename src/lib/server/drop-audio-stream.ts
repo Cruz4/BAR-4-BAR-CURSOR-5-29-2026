@@ -29,7 +29,7 @@ function ticketSecret(): string {
 }
 
 export function isSafeDropStoragePath(path: string): boolean {
-  if (!path.startsWith('drops/')) return false;
+  if (!path.startsWith('drops/') && !path.startsWith('profile-previews/')) return false;
   if (path.includes('..') || path.includes('\\') || path.includes('\0')) return false;
   if (path.length > 500) return false;
   return true;

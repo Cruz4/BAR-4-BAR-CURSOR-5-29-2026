@@ -60,6 +60,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ config: saved });
   } catch (err) {
     console.error('[profile/config POST]', err);
-    return NextResponse.json({ error: 'Failed to save profile config' }, { status: 500 });
+    const message = err instanceof Error ? err.message : 'Failed to save profile config';
+    const expected = /featured track|track is no longer|playable audio|own or purchased|profile preview/i.test(message);
+    return NextResponse.json({ error: expected ? message : 'Failed to save profile config' }, { status: expected ? 400 : 500 });
   }
 }

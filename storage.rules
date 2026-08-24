@@ -65,6 +65,13 @@ service firebase.storage {
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
+    // User-selected 30-second profile excerpts. Always streamed through an API ticket.
+    match /profile-previews/{userId}/{allPaths=**} {
+      allow read: if false;
+      allow write: if ownerTicketWrite(userId);
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

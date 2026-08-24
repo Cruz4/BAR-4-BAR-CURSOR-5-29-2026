@@ -43,6 +43,8 @@ export function DropListenPanel({
   hasAudio,
   trackId,
   source = 'direct',
+  featuredByUserId,
+  excerptStartSec = 0,
 }: {
   shareId: string;
   title: string;
@@ -51,6 +53,9 @@ export function DropListenPanel({
   hasAudio: boolean;
   trackId?: string;
   source?: DropListenSource;
+  /** Profile owner whose saved featured selection this player must match. */
+  featuredByUserId?: string;
+  excerptStartSec?: number;
 }) {
   const { user, authReady } = useAuth();
   const { toast } = useToast();
@@ -63,6 +68,7 @@ export function DropListenPanel({
   const [full, setFull] = useState(false);
   const [listenProof, setListenProof] = useState('');
   const [eligibleDurationSec, setEligibleDurationSec] = useState(30);
+  const [playbackStartSec, setPlaybackStartSec] = useState(0);
   const [loading, setLoading] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -81,13 +87,18 @@ export function DropListenPanel({
       const headers = await authHeaders();
       const qs = new URLSearchParams({ shareId });
       if (trackId) qs.set('trackId', trackId);
-      const res = await fetch(`/api/drops/audio?${qs.toString()}`, { headers });
+      if (featuredByUserId) qs.set('profileUserId', featuredByUserId);
+      const endpoint = featuredByUserId
+        ? '/api/profile/featured-track/audio'
+        : '/api/drops/audio';
+      const res = await fetch(`${endpoint}?${qs.toString()}`, { headers });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Could not load audio.');
       setSrc(data.url);
       setFull(Boolean(data.full));
       setListenProof(typeof data.listenProof === 'string' ? data.listenProof : '');
       setEligibleDurationSec(Math.max(1, Number(data.eligibleDurationSec) || 30));
+      setPlaybackStartSec(Math.max(0, Number(data.playbackStartSec) || 0));
       reportedMilestonesRef.current = new Set();
     } catch (e: unknown) {
       const raw = e instanceof Error ? e.message : undefined;
@@ -102,7 +113,7 @@ export function DropListenPanel({
     } finally {
       setLoading(false);
     }
-  }, [firstDropsOn, hasAudio, shareId, trackId, toast]);
+  }, [featuredByUserId, firstDropsOn, hasAudio, shareId, trackId, toast]);
 
   useEffect(() => {
     void loadStream();
@@ -212,7 +223,11 @@ export function DropListenPanel({
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-headline font-bold uppercase">{title}</p>
             <p className="text-[10px] text-muted-foreground">
-              {previewCapped ? 'Preview stops at 30 seconds until you unlock the drop.' : 'Streams in Library.'}
+              {previewCapped
+                ? `Featured 30-second excerpt${excerptStartSec > 0 ? ` from ${Math.floor(excerptStartSec / 60)}:${Math.floor(excerptStartSec % 60).toString().padStart(2, '0')}` : ''}. Buy once to unlock.`
+                : featuredByUserId && excerptStartSec > 0
+                  ? 'Full track unlocked · starts at the featured moment.'
+                  : 'Streams in Library.'}
             </p>
           </div>
           {src ? (
@@ -220,6 +235,11 @@ export function DropListenPanel({
               ref={audioRef}
               src={src}
               preload="none"
+              onLoadedMetadata={(event) => {
+                if (playbackStartSec > 0 && event.currentTarget.currentTime < playbackStartSec) {
+                  event.currentTarget.currentTime = playbackStartSec;
+                }
+              }}
               onEnded={() => setPlaying(false)}
               onPause={() => setPlaying(false)}
               onPlay={() => {
@@ -228,6 +248,7 @@ export function DropListenPanel({
               }}
               onTimeUpdate={(e) => {
                 const el = e.currentTarget;
+                const listenedSec = Math.max(0, el.currentTime - playbackStartSec);
                 const progressDuration = Math.max(
                   1,
                   Math.min(
@@ -239,16 +260,16 @@ export function DropListenPanel({
                   if (
                     listenProof &&
                     !reportedMilestonesRef.current.has(milestone) &&
-                    el.currentTime >= progressDuration * (milestone / 100)
+                    listenedSec >= progressDuration * (milestone / 100)
                   ) {
                     reportedMilestonesRef.current.add(milestone);
                     recordDropListenProgressClient({ shareId, listenProof, milestone, source });
                   }
                 }
                 if (!previewCapped) return;
-                if (el.currentTime >= 30) {
+                if (listenedSec >= Math.min(30, eligibleDurationSec)) {
                   el.pause();
-                  el.currentTime = 30;
+                  el.currentTime = playbackStartSec + Math.min(30, eligibleDurationSec);
                   setPlaying(false);
                 }
               }}

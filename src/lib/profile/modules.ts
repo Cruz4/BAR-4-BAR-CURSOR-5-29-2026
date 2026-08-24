@@ -69,6 +69,19 @@ export type RhymeFingerprint = {
   sourceKey?: string;
 };
 
+export type FeaturedTrackSelection = {
+  shareId: string;
+  trackId?: string;
+  title: string;
+  artistName: string;
+  ownerId: string;
+  durationSec?: number;
+  excerptStartSec: number;
+  source: 'owned' | 'purchased';
+  /** Canonical private Storage path. Stripped from the public profile mirror. */
+  previewPath?: string;
+};
+
 export type ArtistHomeFeatured = {
   tagline?: string;
   bio?: string;
@@ -77,6 +90,8 @@ export type ArtistHomeFeatured = {
   /** Now Playing — whitelisted provider URL, embedded playable on the page. */
   embedUrl?: string;
   embedTitle?: string;
+  /** A First Drop the profile owner owns or purchased. */
+  featuredTrack?: FeaturedTrackSelection;
   barOfWeek?: string;
   /** Optional DNA Drop the featured bar lives in. */
   barOfWeekShareId?: string;
@@ -224,6 +239,35 @@ const MAX_ALBUM_ROOMS = 4;
 const MAX_DROPS = 8;
 const MAX_FINGERPRINT_LINES = 16;
 
+function normalizeFeaturedTrack(raw: unknown): FeaturedTrackSelection | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const obj = raw as Partial<FeaturedTrackSelection>;
+  const shareId = cleanString(obj.shareId, 80);
+  const title = cleanString(obj.title, 160);
+  const artistName = cleanString(obj.artistName, 120);
+  const ownerId = cleanString(obj.ownerId, 128);
+  if (!shareId || !title || !artistName || !ownerId) return undefined;
+  const trackId = cleanString(obj.trackId, 128);
+  const durationRaw = Number(obj.durationSec);
+  const durationSec = Number.isFinite(durationRaw) && durationRaw > 0
+    ? Math.min(24 * 60 * 60, durationRaw)
+    : undefined;
+  const maxStart = Math.max(0, (durationSec || 30) - 30);
+  const excerptStartSec = Math.max(0, Math.min(maxStart, Number(obj.excerptStartSec) || 0));
+  const previewPath = cleanString(obj.previewPath, 500);
+  return {
+    shareId,
+    ...(trackId ? { trackId } : {}),
+    title,
+    artistName,
+    ownerId,
+    ...(durationSec ? { durationSec } : {}),
+    excerptStartSec,
+    source: obj.source === 'owned' ? 'owned' : 'purchased',
+    ...(previewPath ? { previewPath } : {}),
+  };
+}
+
 function cleanString(value: unknown, max: number): string | undefined {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
@@ -317,6 +361,8 @@ function normalizeFeatured(raw: unknown): ArtistHomeFeatured {
   if (embedUrl) featured.embedUrl = embedUrl;
   const embedTitle = cleanString(obj.embedTitle, 120);
   if (embedTitle) featured.embedTitle = embedTitle;
+  const featuredTrack = normalizeFeaturedTrack(obj.featuredTrack);
+  if (featuredTrack) featured.featuredTrack = featuredTrack;
   const barOfWeek = cleanString(obj.barOfWeek, MAX_BAR);
   if (barOfWeek) featured.barOfWeek = barOfWeek;
   const barOfWeekShareId = cleanString(obj.barOfWeekShareId, 40);
@@ -397,9 +443,12 @@ export function normalizeArtistHomeConfig(raw: unknown): ArtistHomeConfig {
 /** Public mirror — drop request-mode contact values so emails never sit on publicProfiles. */
 export function artistHomeForPublic(config: ArtistHomeConfig): ArtistHomeConfig {
   const next = contactForPublicProfile(config.featured.contact);
-  if (next === config.featured.contact) return config;
   const featured = { ...config.featured };
   if (next) featured.contact = next;
   else delete featured.contact;
+  if (featured.featuredTrack?.previewPath) {
+    const { previewPath: _privatePath, ...publicTrack } = featured.featuredTrack;
+    featured.featuredTrack = publicTrack;
+  }
   return { ...config, featured };
 }

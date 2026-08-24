@@ -9,13 +9,19 @@ import 'server-only';
  * profile re-enables never lose the skin.
  */
 
-import { getDb } from '@/lib/firebase/server';
+import { getAdminBucket, getDb } from '@/lib/firebase/server';
 import {
   defaultArtistHomeConfig,
   normalizeArtistHomeConfig,
   artistHomeForPublic,
   type ArtistHomeConfig,
 } from '@/lib/profile/modules';
+import {
+  audioForPlay,
+  loadShare,
+  priceFromShare,
+  userCanStreamFull,
+} from '@/lib/server/drop-entitlements';
 
 const CONFIG_DOC = (uid: string) => `users/${uid}/gamification/artistHome`;
 
@@ -38,13 +44,68 @@ export async function saveArtistHomeConfig(
   config: ArtistHomeConfig
 ): Promise<ArtistHomeConfig> {
   const db = await getDb();
-  const normalized = stripEmptyContact(stripAlbumRoomCovers(normalizeArtistHomeConfig(config)));
+  const normalized = await validateFeaturedTrack(
+    userId,
+    stripEmptyContact(stripAlbumRoomCovers(normalizeArtistHomeConfig(config)))
+  );
   await db.doc(CONFIG_DOC(userId)).set(
     { ...normalized, updatedAt: new Date().toISOString() },
     { merge: false }
   );
   await mirrorArtistHomeToPublicProfile(userId, normalized);
   return normalized;
+}
+
+async function validateFeaturedTrack(
+  userId: string,
+  config: ArtistHomeConfig
+): Promise<ArtistHomeConfig> {
+  const selected = config.featured.featuredTrack;
+  if (!selected) return config;
+
+  const db = await getDb();
+  const share = await loadShare(db, selected.shareId);
+  if (!share) throw new Error('That featured track is no longer live.');
+  const audio = audioForPlay(share, selected.trackId);
+  if (!audio?.storagePath) throw new Error('That featured track has no playable audio.');
+  const entitled = await userCanStreamFull({ db, share, userId, trackId: selected.trackId });
+  if (!entitled) throw new Error('Choose a track you own or purchased.');
+
+  const details = priceFromShare(share, selected.trackId);
+  const durationSec = Math.max(1, Number(audio.durationSec) || 30);
+  const excerptStartSec = Math.max(
+    0,
+    Math.min(durationSec - Math.min(30, durationSec), selected.excerptStartSec)
+  );
+  let previewPath: string | undefined;
+  if (excerptStartSec > 0.05) {
+    const candidate = selected.previewPath?.trim() || '';
+    const prefix = `profile-previews/${userId}/`;
+    if (!candidate.startsWith(prefix) || candidate.includes('..') || candidate.includes('\\')) {
+      throw new Error('Build the selected 30-second profile preview again.');
+    }
+    const [exists] = await getAdminBucket().file(candidate).exists();
+    if (!exists) throw new Error('Build the selected 30-second profile preview again.');
+    previewPath = candidate;
+  }
+
+  return {
+    ...config,
+    featured: {
+      ...config.featured,
+      featuredTrack: {
+        shareId: share.id,
+        ...(selected.trackId ? { trackId: selected.trackId } : {}),
+        title: details.title,
+        artistName: share.ownerName?.trim() || 'Unknown artist',
+        ownerId: share.ownerId,
+        durationSec,
+        excerptStartSec,
+        source: share.ownerId === userId ? 'owned' : 'purchased',
+        ...(previewPath ? { previewPath } : {}),
+      },
+    },
+  };
 }
 
 /** Don't persist a request-mode chip with no line to reveal. */

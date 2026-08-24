@@ -107,6 +107,17 @@ import type { PublicProfileData } from '@/components/profile/public-profile-show
 import { studioChromeFromUser } from '@/lib/studio-tier-chrome';
 import { VesperfoldForge } from '@/components/profile/vesperfold-forge';
 import { SoundIdentityStrip } from '@/components/profile/sound-identity-strip';
+import { auth } from '@/lib/firebase/client/firebase';
+import {
+  flattenLibraryItems,
+  formatDeckTime,
+  type DeckPlayable,
+  type DropLibraryItem,
+} from '@/lib/drop-library';
+import {
+  buildFeaturedTrackPreview,
+  deleteFeaturedTrackPreview,
+} from '@/lib/profile/featured-track-preview';
 import {
   PUBLIC_IDENTITY_KINDS,
   type ArtistHomeSoundIdentity,
@@ -495,6 +506,10 @@ export function PressDesk() {
   const [starBusy, setStarBusy] = useState(false);
   const [heroBusy, setHeroBusy] = useState(false);
   const [committedMemoPath, setCommittedMemoPath] = useState<string | undefined>();
+  const [committedFeaturedPreviewPath, setCommittedFeaturedPreviewPath] = useState<string | undefined>();
+  const [featuredTracks, setFeaturedTracks] = useState<DeckPlayable[]>([]);
+  const [featuredTracksLoading, setFeaturedTracksLoading] = useState(false);
+  const [featuredPreviewBusy, setFeaturedPreviewBusy] = useState(false);
   const heroFileRef = useRef<HTMLInputElement>(null);
   const previewFrameRef = useRef<HTMLDivElement>(null);
 
@@ -524,6 +539,7 @@ export function PressDesk() {
       .then((next) => {
         setConfig(next);
         setCommittedMemoPath(next.featured.voiceMemo?.storagePath);
+        setCommittedFeaturedPreviewPath(next.featured.featuredTrack?.previewPath);
       })
       .catch(() => toast({ variant: 'destructive', title: 'Could not load your Artist Home config' }));
     void fetchGamificationSummary(user.id).then((next) => {
@@ -555,6 +571,39 @@ export function PressDesk() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || !firstDropsOn) {
+      setFeaturedTracks([]);
+      return;
+    }
+    let cancelled = false;
+    setFeaturedTracksLoading(true);
+    void (async () => {
+      const current = auth.currentUser;
+      if (!current) throw new Error('Sign in again to load your Library.');
+      const token = await current.getIdToken();
+      const response = await fetch(`/api/drops/library?userId=${encodeURIComponent(user.id)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Could not load your Library.');
+      if (!cancelled) setFeaturedTracks(flattenLibraryItems((data.items || []) as DropLibraryItem[]));
+    })()
+      .catch((error) => {
+        if (!cancelled) {
+          toast({
+            variant: 'destructive',
+            title: 'Could not load featured-track choices',
+            description: error instanceof Error ? error.message : undefined,
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setFeaturedTracksLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [firstDropsOn, toast, user?.id]);
 
   const vaultBars = useMemo(() => collectVaultBars(albums), [albums]);
   const dnaCandidates = useMemo(() => collectDnaCandidates(albums), [albums]);
@@ -869,11 +918,19 @@ export function PressDesk() {
     setSaving(true);
     try {
       const previousMemoPath = committedMemoPath;
+      const previousFeaturedPreviewPath = committedFeaturedPreviewPath;
       const saved = await saveArtistHomeConfigClient(config);
       setConfig(saved);
       setCommittedMemoPath(saved.featured.voiceMemo?.storagePath);
+      setCommittedFeaturedPreviewPath(saved.featured.featuredTrack?.previewPath);
       if (previousMemoPath && previousMemoPath !== saved.featured.voiceMemo?.storagePath) {
         void deleteVoiceStorage(previousMemoPath);
+      }
+      if (
+        previousFeaturedPreviewPath &&
+        previousFeaturedPreviewPath !== saved.featured.featuredTrack?.previewPath
+      ) {
+        void deleteFeaturedTrackPreview(previousFeaturedPreviewPath);
       }
       setDirty(false);
       toast({ title: 'Artist Home pressed', description: 'Your page is updated.' });
@@ -885,6 +942,58 @@ export function PressDesk() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const chooseFeaturedTrack = (key: string) => {
+    if (key === '__none__') {
+      update((draft) => { draft.featured.featuredTrack = undefined; });
+      return;
+    }
+    const item = featuredTracks.find((track) => track.key === key);
+    if (!item) return;
+    update((draft) => {
+      draft.featured.featuredTrack = {
+        shareId: item.shareId,
+        ...(item.trackId ? { trackId: item.trackId } : {}),
+        title: item.title,
+        artistName: item.artistName,
+        ownerId: item.ownerId,
+        ...(item.durationSec ? { durationSec: item.durationSec } : {}),
+        excerptStartSec: 0,
+        source: item.own ? 'owned' : 'purchased',
+      };
+    });
+  };
+
+  const buildFeaturedPreview = async () => {
+    const selected = config?.featured.featuredTrack;
+    if (!user?.id || !selected || selected.excerptStartSec <= 0) return;
+    setFeaturedPreviewBusy(true);
+    try {
+      const result = await buildFeaturedTrackPreview({
+        userId: user.id,
+        shareId: selected.shareId,
+        trackId: selected.trackId,
+        excerptStartSec: selected.excerptStartSec,
+      });
+      update((draft) => {
+        if (!draft.featured.featuredTrack) return;
+        draft.featured.featuredTrack.previewPath = result.previewPath;
+        draft.featured.featuredTrack.durationSec = result.durationSec;
+      });
+      toast({
+        title: '30-second showcase ready',
+        description: 'Press your page to publish this featured moment.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not build the showcase',
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setFeaturedPreviewBusy(false);
     }
   };
 
@@ -985,6 +1094,15 @@ export function PressDesk() {
   }
 
   const embedPreview = parseEmbedUrl(config.featured.embedUrl || '');
+  const selectedFeaturedTrack = config.featured.featuredTrack;
+  const selectedFeaturedKey = selectedFeaturedTrack
+    ? featuredTracks.find(
+        (item) =>
+          item.shareId === selectedFeaturedTrack.shareId &&
+          (item.trackId || undefined) === (selectedFeaturedTrack.trackId || undefined)
+      )?.key || '__none__'
+    : '__none__';
+  const featuredMaxStart = Math.max(0, (selectedFeaturedTrack?.durationSec || 30) - 30);
   const displayName = user.displayName || 'Artist';
   const soundIdentity: ArtistHomeSoundIdentity = config.featured.soundIdentity || {};
 
@@ -1672,8 +1790,97 @@ export function PressDesk() {
       </DeskSection>
 
       {/* 3. Now Playing */}
-      <DeskSection icon={Disc3} title="Now Playing" hint={EMBED_HELP_TEXT}>
-        <div className="space-y-3">
+      <DeskSection
+        icon={Disc3}
+        title="Now Playing"
+        hint="Feature your own First Drop or a track you purchased. Visitors hear your chosen 30 seconds; owners hear the full track. External embeds still work below."
+      >
+        <div className="space-y-4">
+          {firstDropsOn && (
+            <div className="space-y-3 rounded-xl border border-fuchsia-500/25 bg-fuchsia-500/5 p-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-300">
+                  Featured from your Library
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Includes First Drops you made and tracks you bought as a Music Fan.
+                </p>
+              </div>
+              <Select
+                value={selectedFeaturedKey}
+                onValueChange={chooseFeaturedTrack}
+                disabled={featuredTracksLoading}
+              >
+                <SelectTrigger className="bg-black/30 text-sm">
+                  <SelectValue placeholder={featuredTracksLoading ? 'Loading Library…' : 'Choose a track'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No First Drop featured</SelectItem>
+                  {featuredTracks.map((track) => (
+                    <SelectItem key={track.key} value={track.key}>
+                      {track.title} · {track.artistName} · {track.own ? 'Mine' : 'Purchased'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!featuredTracksLoading && featuredTracks.length === 0 && (
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Your own live First Drops and purchased tracks will appear here.
+                </p>
+              )}
+              {selectedFeaturedTrack && (
+                <div className="space-y-3 border-t border-white/10 pt-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="font-bold">Choose the 30-second moment</span>
+                    <span className="font-code text-fuchsia-200">
+                      {formatDeckTime(selectedFeaturedTrack.excerptStartSec)}–{formatDeckTime(Math.min(selectedFeaturedTrack.excerptStartSec + 30, selectedFeaturedTrack.durationSec || 30))}
+                    </span>
+                  </div>
+                  <Slider
+                    value={[Math.min(featuredMaxStart, selectedFeaturedTrack.excerptStartSec)]}
+                    min={0}
+                    max={Math.max(1, featuredMaxStart)}
+                    step={1}
+                    disabled={featuredMaxStart <= 0 || featuredPreviewBusy}
+                    onValueChange={([value]) =>
+                      update((draft) => {
+                        const track = draft.featured.featuredTrack;
+                        if (!track) return;
+                        track.excerptStartSec = Math.max(0, Math.min(featuredMaxStart, value));
+                        track.previewPath = undefined;
+                      })
+                    }
+                  />
+                  {selectedFeaturedTrack.excerptStartSec > 0 ? (
+                    <Button
+                      type="button"
+                      variant={selectedFeaturedTrack.previewPath ? 'outline' : 'default'}
+                      className="w-full gap-2 font-bold uppercase"
+                      disabled={featuredPreviewBusy}
+                      onClick={() => void buildFeaturedPreview()}
+                    >
+                      {featuredPreviewBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Music2 className="h-4 w-4" />}
+                      {selectedFeaturedTrack.previewPath ? 'Rebuild 30-second showcase' : 'Build 30-second showcase'}
+                    </Button>
+                  ) : (
+                    <p className="text-[10px] uppercase tracking-wider text-emerald-300">
+                      The drop’s opening preview is ready—no extra build needed.
+                    </p>
+                  )}
+                  {selectedFeaturedTrack.excerptStartSec > 0 && !selectedFeaturedTrack.previewPath && (
+                    <p className="text-[10px] uppercase tracking-wider text-amber-300">
+                      Build this showcase before pressing your page.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+            <span className="h-px flex-1 bg-white/10" /> External player <span className="h-px flex-1 bg-white/10" />
+          </div>
+          <p className="text-[10px] text-muted-foreground">{EMBED_HELP_TEXT}</p>
           <Input
             value={config.featured.embedTitle || ''}
             onChange={(e) => update((d) => void (d.featured.embedTitle = e.target.value.slice(0, 120)))}

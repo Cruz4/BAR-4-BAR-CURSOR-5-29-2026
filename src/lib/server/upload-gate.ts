@@ -14,6 +14,7 @@ const DAILY_QUOTAS: Record<UploadKind, QuotaSpec> = {
   voice: { free: 30, pro: 150 },
   drop_audio: { free: 12, pro: 60 },
   sheet_take: { free: 40, pro: 200 },
+  profile_preview: { free: 20, pro: 100 },
 };
 
 const MAX_BYTES: Record<UploadKind, number> = {
@@ -21,6 +22,7 @@ const MAX_BYTES: Record<UploadKind, number> = {
   voice: 5 * 1024 * 1024,
   drop_audio: 40 * 1024 * 1024,
   sheet_take: 12 * 1024 * 1024,
+  profile_preview: 12 * 1024 * 1024,
 };
 
 const CONTENT_TYPE_PATTERN: Record<UploadKind, string> = {
@@ -28,6 +30,7 @@ const CONTENT_TYPE_PATTERN: Record<UploadKind, string> = {
   voice: 'audio/.*',
   drop_audio: 'audio/.*',
   sheet_take: 'audio/.*',
+  profile_preview: 'audio/.*',
 };
 
 function utcDayKey(d = new Date()): string {
@@ -44,6 +47,8 @@ function pathPrefixForKind(kind: UploadKind, uid: string): string {
       return `drops/${uid}/`;
     case 'sheet_take':
       return `sheet-takes/${uid}/`;
+    case 'profile_preview':
+      return `profile-previews/${uid}/`;
   }
 }
 

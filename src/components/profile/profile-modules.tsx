@@ -37,7 +37,7 @@ import type { ArtistHomeFeatured, ModuleSize } from '@/lib/profile/modules';
 import { FingerprintSvg } from '@/components/profile/rhyme-fingerprint-svg';
 import { BarBoardView } from '@/components/profile/bar-board-module';
 import { parseEmbedUrl, EMBED_HELP_TEXT } from '@/lib/profile/embeds';
-import { EmbedPlayer } from '@/components/profile/embed-player';
+import { EmbedPlayer, FeaturedTrackPlayer } from '@/components/profile/embed-player';
 import { PostCard } from '@/components/profile/post-card';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
@@ -167,6 +167,24 @@ const inkWellClass =
 
 export function NowPlayingModule({ ctx }: { ctx: ModuleContext }) {
   const { enabled: firstDropsOn } = useFirstDropsFeature();
+  if (firstDropsOn && ctx.featured.featuredTrack && ctx.profileUserId) {
+    return (
+      <ModuleShell icon={Disc3} title="Now Playing" ctx={ctx}>
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <p className="font-headline text-lg text-[var(--ph-text,#fff)]">
+            {ctx.featured.featuredTrack.title}
+          </p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+            {ctx.featured.featuredTrack.source === 'purchased' ? 'From my Library' : 'My First Drop'}
+          </p>
+        </div>
+        <FeaturedTrackPlayer
+          selection={ctx.featured.featuredTrack}
+          profileUserId={ctx.profileUserId}
+        />
+      </ModuleShell>
+    );
+  }
   if (ctx.featured.embedUrl) {
     return (
       <ModuleShell icon={Disc3} title={"Now Playing"} ctx={ctx}>
