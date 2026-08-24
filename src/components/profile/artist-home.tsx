@@ -67,6 +67,7 @@ import { useLockFeature } from '@/hooks/use-lock-feature';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { parseStudioBadge } from '@/lib/studio-tier-chrome';
 import { Hint } from '@/components/ui/tooltip';
+import { SoundIdentityStrip } from '@/components/profile/sound-identity-strip';
 
 type ArtistHomeProps = {
   profile: PublicProfileData;
@@ -74,6 +75,7 @@ type ArtistHomeProps = {
   isOwner: boolean;
   /** Full-page draft preview from Edit Public Page (not the live URL). */
   previewMode?: boolean;
+  previewViewport?: 'phone' | 'tablet' | 'desktop';
   onExitPreview?: () => void;
   /**
    * Guest landing playground — local Wall posts (no Firestore).
@@ -108,6 +110,7 @@ export function ArtistHome({
   config,
   isOwner,
   previewMode = false,
+  previewViewport = 'desktop',
   onExitPreview,
   playgroundWall,
   playgroundFriends,
@@ -244,6 +247,7 @@ export function ArtistHome({
 
   return (
     <div
+      data-preview-viewport={previewMode ? previewViewport : undefined}
       className="relative min-h-screen overflow-x-hidden pb-24 text-[var(--ph-text)]"
       style={{ ...(cssVars as React.CSSProperties), backgroundColor: 'var(--ph-bg)' }}
     >
@@ -260,6 +264,33 @@ export function ArtistHome({
           overflow-wrap: normal;
           text-wrap: balance;
           word-break: normal;
+        }
+        [data-preview-viewport='phone'] .ph-hero-grid,
+        [data-preview-viewport='tablet'] .ph-hero-grid {
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+        [data-preview-viewport='phone'] .ph-artist-name {
+          font-size: clamp(2rem, 10vw, 3.1rem) !important;
+        }
+        [data-preview-viewport='tablet'] .ph-artist-name {
+          font-size: clamp(2.4rem, 7vw, 4.6rem) !important;
+        }
+        [data-preview-viewport='phone'] .ph-hero-grid > *,
+        [data-preview-viewport='tablet'] .ph-hero-grid > * {
+          grid-column: auto !important;
+        }
+        [data-preview-viewport='phone'] .ph-module-deck {
+          column-count: initial !important;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+        [data-preview-viewport='tablet'] .ph-module-deck {
+          column-count: initial !important;
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+        [data-preview-viewport='tablet'] .ph-module-deck > .ph-module-item[data-full-bleed='true'] {
+          grid-column: 1 / -1;
         }
         /*
          * iPadOS/WebKit can leave stale hit-test regions when transformed,
@@ -376,7 +407,7 @@ export function ArtistHome({
         {/* Hero — original scale; preview/sandbox centers shorter copy with the photo column */}
         <section
           className={cn(
-            'mt-8 grid gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 lg:grid-cols-12',
+            'ph-hero-grid mt-8 grid gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 lg:grid-cols-12',
             previewMode ? 'lg:items-center' : 'lg:items-end'
           )}
         >
@@ -387,6 +418,7 @@ export function ArtistHome({
               </p>
             )}
             <h1
+              data-profile-safe-check
               data-name-scale={displayNameScale}
               className={cn(
                 'ph-artist-name whitespace-normal font-bold leading-[0.94] text-[var(--ph-text)]',
@@ -412,7 +444,8 @@ export function ArtistHome({
                 </Hint>
               ) : null}
             </h1>
-            <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+            <SoundIdentityStrip identity={config.featured.soundIdentity} />
+            <div data-profile-safe-check className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
               <StudioStandingRankBadge
                 variant="pill"
                 allowShare={isOwner}

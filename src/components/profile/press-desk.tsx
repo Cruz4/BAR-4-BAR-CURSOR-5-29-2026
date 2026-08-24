@@ -35,6 +35,11 @@ import {
   Trash2,
   Shuffle,
   Star,
+  X,
+  Smartphone,
+  Tablet,
+  Monitor,
+  Music2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -101,6 +106,11 @@ import { PublishOpenLockPanel } from '@/components/lock/publish-open-lock-panel'
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
 import { studioChromeFromUser } from '@/lib/studio-tier-chrome';
 import { VesperfoldForge } from '@/components/profile/vesperfold-forge';
+import { SoundIdentityStrip } from '@/components/profile/sound-identity-strip';
+import {
+  PUBLIC_IDENTITY_KINDS,
+  type ArtistHomeSoundIdentity,
+} from '@/lib/profile/sound-identity';
 import {
   normalizeVesperfoldSeed,
   sanitizeVesperfoldSlots,
@@ -374,6 +384,7 @@ function IdentityPreview({ config, displayName }: { config: ArtistHomeConfig; di
         >
           {displayName}
         </h3>
+        <SoundIdentityStrip identity={config.featured.soundIdentity} compact />
         {bio ? (
           <p className="max-w-xl text-xs leading-relaxed sm:text-sm" style={{ color: 'var(--ph-muted)' }}>
             {bio}
@@ -381,6 +392,74 @@ function IdentityPreview({ config, displayName }: { config: ArtistHomeConfig; di
         ) : (
           <p className="text-xs italic text-[var(--ph-muted)]/45">Your short bio appears under the name</p>
         )}
+      </div>
+    </div>
+  );
+}
+
+function TagEditor({
+  label,
+  values,
+  max,
+  placeholder,
+  onChange,
+}: {
+  label: string;
+  values: string[];
+  max: number;
+  placeholder: string;
+  onChange: (next: string[]) => void;
+}) {
+  const [draft, setDraft] = useState('');
+  const add = () => {
+    const value = draft.trim().replace(/\s+/g, ' ').slice(0, 50);
+    if (!value || values.some((item) => item.toLowerCase() === value.toLowerCase()) || values.length >= max) {
+      setDraft('');
+      return;
+    }
+    onChange([...values, value]);
+    setDraft('');
+  };
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-[10px] font-bold uppercase tracking-widest text-white/70">{label}</label>
+        <span className="font-code text-[9px] text-muted-foreground">{values.length}/{max}</span>
+      </div>
+      {values.length ? (
+        <div className="flex flex-wrap gap-1.5">
+          {values.map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => onChange(values.filter((item) => item !== value))}
+              className="inline-flex max-w-full items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[10px] text-primary hover:border-destructive/50 hover:text-destructive"
+              aria-label={`Remove ${value}`}
+            >
+              <span className="truncate">{value}</span><X className="h-3 w-3 shrink-0" />
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <div className="flex gap-2">
+        <Input
+          value={draft}
+          disabled={values.length >= max}
+          maxLength={50}
+          placeholder={values.length >= max ? `${label} full` : placeholder}
+          className="h-9 bg-black/30 text-sm"
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={add}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ',') {
+              event.preventDefault();
+              add();
+            }
+          }}
+        />
+        <Button type="button" size="sm" variant="outline" disabled={!draft.trim() || values.length >= max} onMouseDown={(event) => event.preventDefault()} onClick={add}>
+          Add
+        </Button>
       </div>
     </div>
   );
@@ -402,6 +481,8 @@ export function PressDesk() {
   const [profileLive, setProfileLive] = useState(false);
   const [summary, setSummary] = useState<GamificationSummary | null>(null);
   const [previewing, setPreviewing] = useState(false);
+  const [previewViewport, setPreviewViewport] = useState<'phone' | 'tablet' | 'desktop'>('desktop');
+  const [previewOverflow, setPreviewOverflow] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [photoMode, setPhotoMode] = useState<'collage' | 'custom' | 'initials'>('initials');
@@ -415,6 +496,27 @@ export function PressDesk() {
   const [heroBusy, setHeroBusy] = useState(false);
   const [committedMemoPath, setCommittedMemoPath] = useState<string | undefined>();
   const heroFileRef = useRef<HTMLInputElement>(null);
+  const previewFrameRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!previewing) return;
+    const check = () => {
+      const frame = previewFrameRef.current;
+      if (!frame) return;
+      const bounds = frame.getBoundingClientRect();
+      const unsafe = [...frame.querySelectorAll<HTMLElement>('[data-profile-safe-check]')].some((node) => {
+        const rect = node.getBoundingClientRect();
+        return rect.left < bounds.left - 1 || rect.right > bounds.right + 1;
+      });
+      setPreviewOverflow(unsafe);
+    };
+    const timer = window.setTimeout(check, 180);
+    window.addEventListener('resize', check);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('resize', check);
+    };
+  }, [config, previewing, previewViewport]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -816,13 +918,48 @@ export function PressDesk() {
             </p>
           </div>
         </div>
-        <ArtistHome
-          profile={previewProfile}
-          config={config}
-          isOwner
-          previewMode
-          onExitPreview={() => setPreviewing(false)}
-        />
+        <div className="flex flex-wrap items-center justify-center gap-2 border-b border-white/10 bg-background/80 px-3 py-2">
+          {([
+            { id: 'phone', label: 'Phone', icon: Smartphone },
+            { id: 'tablet', label: 'iPad', icon: Tablet },
+            { id: 'desktop', label: 'Desktop', icon: Monitor },
+          ] as const).map((option) => (
+            <Button
+              key={option.id}
+              type="button"
+              size="sm"
+              variant={previewViewport === option.id ? 'default' : 'outline'}
+              className="h-8 gap-1.5 px-2.5 text-[10px] font-bold uppercase"
+              onClick={() => setPreviewViewport(option.id)}
+            >
+              <option.icon className="h-3.5 w-3.5" /> {option.label}
+            </Button>
+          ))}
+          <span className={cn('text-[10px] font-code uppercase tracking-wider', previewOverflow ? 'text-amber-300' : 'text-emerald-300')}>
+            {previewOverflow ? 'Width needs attention' : 'Safe width'}
+          </span>
+        </div>
+        <div className="overflow-x-auto bg-black/35 p-2 sm:p-4">
+          <div
+            ref={previewFrameRef}
+            className={cn(
+              'mx-auto overflow-hidden border border-white/10 bg-background shadow-2xl transition-[width] duration-300',
+              previewViewport === 'phone' && 'w-[390px]',
+              previewViewport === 'tablet' && 'w-[820px]',
+              previewViewport === 'desktop' && 'w-full max-w-[1440px]',
+              previewOverflow && 'ring-2 ring-amber-400/70'
+            )}
+          >
+            <ArtistHome
+              profile={previewProfile}
+              config={config}
+              isOwner
+              previewMode
+              previewViewport={previewViewport}
+              onExitPreview={() => setPreviewing(false)}
+            />
+          </div>
+        </div>
         <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-background/95 backdrop-blur-md">
           <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
             <Button
@@ -849,6 +986,7 @@ export function PressDesk() {
 
   const embedPreview = parseEmbedUrl(config.featured.embedUrl || '');
   const displayName = user.displayName || 'Artist';
+  const soundIdentity: ArtistHomeSoundIdentity = config.featured.soundIdentity || {};
 
   return (
     <div className="container mx-auto max-w-3xl space-y-5 px-4 pb-32 pt-8">
@@ -1298,6 +1436,111 @@ export function PressDesk() {
             placeholder="Short bio (600 chars)"
             className="bg-black/30 text-sm"
           />
+          <div className="space-y-4 rounded-xl border border-primary/20 bg-black/20 p-3 sm:p-4">
+            <div className="space-y-1">
+              <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-primary">
+                <Music2 className="h-3.5 w-3.5" /> Your place in music
+              </p>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                Choose what fits. Music Fans belong here too—this is your public identity, not an account permission.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {PUBLIC_IDENTITY_KINDS.map((option) => {
+                const active = soundIdentity.kinds?.includes(option.id) || false;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() =>
+                      update((draft) => {
+                        const current = draft.featured.soundIdentity || {};
+                        const kinds = current.kinds || [];
+                        const nextKinds = active
+                          ? kinds.filter((kind) => kind !== option.id)
+                          : kinds.length < 3
+                            ? [...kinds, option.id]
+                            : kinds;
+                        draft.featured.soundIdentity = { ...current, kinds: nextKinds };
+                      })
+                    }
+                    className={cn(
+                      'rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors',
+                      active
+                        ? 'border-primary/60 bg-primary/15 text-primary'
+                        : 'border-white/10 bg-black/20 text-muted-foreground hover:border-white/25',
+                      !active && (soundIdentity.kinds?.length || 0) >= 3 && 'cursor-not-allowed opacity-45'
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            <TagEditor
+              label="Genres"
+              values={soundIdentity.genres || []}
+              max={3}
+              placeholder="Add a genre"
+              onChange={(genres) => update((draft) => void (draft.featured.soundIdentity = { ...(draft.featured.soundIdentity || {}), genres }))}
+            />
+            <TagEditor
+              label="Moods / energy"
+              values={soundIdentity.moods || []}
+              max={5}
+              placeholder="Add a mood"
+              onChange={(moods) => update((draft) => void (draft.featured.soundIdentity = { ...(draft.featured.soundIdentity || {}), moods }))}
+            />
+            <TagEditor
+              label="Influences"
+              values={soundIdentity.influences || []}
+              max={5}
+              placeholder="Add an influence"
+              onChange={(influences) => update((draft) => void (draft.featured.soundIdentity = { ...(draft.featured.soundIdentity || {}), influences }))}
+            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-white/70">Scene / region</label>
+                <Input
+                  value={soundIdentity.region || ''}
+                  maxLength={80}
+                  placeholder="Optional—city, region, or scene"
+                  className="bg-black/30 text-sm"
+                  onChange={(event) => update((draft) => void (draft.featured.soundIdentity = { ...(draft.featured.soundIdentity || {}), region: event.target.value.slice(0, 80) }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-white/70">Collaboration</label>
+                <Select
+                  value={soundIdentity.collaboration || 'none'}
+                  onValueChange={(value) =>
+                    update((draft) => void (draft.featured.soundIdentity = {
+                      ...(draft.featured.soundIdentity || {}),
+                      collaboration: value === 'none' ? undefined : value as ArtistHomeSoundIdentity['collaboration'],
+                    }))
+                  }
+                >
+                  <SelectTrigger className="bg-black/30"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Not listed</SelectItem>
+                    <SelectItem value="open">Open to collaborate</SelectItem>
+                    <SelectItem value="selective">Selective collaborations</SelectItem>
+                    <SelectItem value="not_now">Not collaborating right now</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Textarea
+              value={soundIdentity.currentFocus || ''}
+              rows={2}
+              maxLength={120}
+              placeholder="What are you listening to, making, supporting, or releasing right now?"
+              className="bg-black/30 text-sm"
+              onChange={(event) => update((draft) => void (draft.featured.soundIdentity = { ...(draft.featured.soundIdentity || {}), currentFocus: event.target.value.slice(0, 120) }))}
+            />
+            <p className="text-[10px] text-muted-foreground">Only what you choose here becomes public. Private lyrics and DNA stay private.</p>
+          </div>
         </div>
       </DeskSection>
 

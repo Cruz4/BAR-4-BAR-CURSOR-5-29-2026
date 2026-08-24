@@ -20,6 +20,10 @@ import {
   normalizeContact,
   type ArtistHomeContact,
 } from '@/lib/profile/contact';
+import {
+  normalizeSoundIdentity,
+  type ArtistHomeSoundIdentity,
+} from '@/lib/profile/sound-identity';
 
 export type ProfileModuleId =
   | 'nowPlaying'
@@ -68,6 +72,8 @@ export type RhymeFingerprint = {
 export type ArtistHomeFeatured = {
   tagline?: string;
   bio?: string;
+  /** Public, user-chosen identity and taste. Never inferred from private lyrics. */
+  soundIdentity?: ArtistHomeSoundIdentity;
   /** Now Playing — whitelisted provider URL, embedded playable on the page. */
   embedUrl?: string;
   embedTitle?: string;
@@ -96,7 +102,7 @@ export type ArtistHomeFeatured = {
 };
 
 export type ArtistHomeConfig = {
-  version: 1;
+  version: 2;
   theme: PressingConfig;
   modules: ProfileModuleSetting[];
   featured: ArtistHomeFeatured;
@@ -198,7 +204,7 @@ export function defaultModules(): ProfileModuleSetting[] {
 
 export function defaultArtistHomeConfig(): ArtistHomeConfig {
   return {
-    version: 1,
+    version: 2,
     theme: {
       ...DEFAULT_PRESSING,
       faders: { ...DEFAULT_PRESSING.faders },
@@ -305,6 +311,8 @@ function normalizeFeatured(raw: unknown): ArtistHomeFeatured {
   if (tagline) featured.tagline = tagline;
   const bio = cleanString(obj.bio, MAX_BIO);
   if (bio) featured.bio = bio;
+  const soundIdentity = normalizeSoundIdentity(obj.soundIdentity);
+  if (soundIdentity) featured.soundIdentity = soundIdentity;
   const embedUrl = cleanString(obj.embedUrl, 500);
   if (embedUrl) featured.embedUrl = embedUrl;
   const embedTitle = cleanString(obj.embedTitle, 120);
@@ -379,7 +387,7 @@ function normalizeFeatured(raw: unknown): ArtistHomeFeatured {
 export function normalizeArtistHomeConfig(raw: unknown): ArtistHomeConfig {
   const obj = (raw && typeof raw === 'object' ? raw : {}) as Partial<ArtistHomeConfig>;
   return {
-    version: 1,
+    version: 2,
     theme: normalizePressingConfig(obj.theme),
     modules: normalizeModules(obj.modules),
     featured: normalizeFeatured(obj.featured),
