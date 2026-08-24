@@ -13,6 +13,7 @@ import {
 } from '@/lib/admin-metrics-range';
 
 const DEFAULT_TTL_MS = 6 * 60 * 60 * 1000;
+const METRICS_CACHE_SCHEMA_VERSION = 2;
 
 export type { AdminMetricsResponse } from '@/lib/admin-metrics-types';
 
@@ -47,11 +48,11 @@ function withCacheMeta(
 }
 
 function normalizeCachedSnapshot(
-  raw: AdminMetricsSnapshot & { computedAt?: string },
+  raw: AdminMetricsSnapshot & { computedAt?: string; cacheSchemaVersion?: number },
   range: MetricsRangeKey
 ): AdminMetricsSnapshot | null {
-  if (!raw?.funnel) return null;
-  const { computedAt: _computedAt, ...rest } = raw;
+  if (!raw?.funnel || raw.cacheSchemaVersion !== METRICS_CACHE_SCHEMA_VERSION) return null;
+  const { computedAt: _computedAt, cacheSchemaVersion: _cacheSchemaVersion, ...rest } = raw;
   const metrics = rest as AdminMetricsSnapshot;
   if (!metrics.period) {
     metrics.period = buildMetricsPeriod(range);
@@ -67,7 +68,10 @@ export async function readCachedAdminMetrics(
     const db = await getDb();
     const snap = await db.doc(snapshotDocPath(range)).get();
     if (!snap.exists) return null;
-    const raw = snap.data() as AdminMetricsSnapshot & { computedAt?: string };
+    const raw = snap.data() as AdminMetricsSnapshot & {
+      computedAt?: string;
+      cacheSchemaVersion?: number;
+    };
     if (!raw?.computedAt) return null;
     const metrics = normalizeCachedSnapshot(raw, range);
     if (!metrics) return null;
@@ -85,10 +89,11 @@ export async function refreshAdminMetricsCache(
 ): Promise<AdminMetricsResponse> {
   const metrics = await computeAdminMetrics({ range });
   const computedAt = new Date().toISOString();
-  const payload: AdminMetricsSnapshot & { computedAt: string } = {
+  const payload: AdminMetricsSnapshot & { computedAt: string; cacheSchemaVersion: number } = {
     ...metrics,
     generatedAt: metrics.generatedAt || computedAt,
     computedAt,
+    cacheSchemaVersion: METRICS_CACHE_SCHEMA_VERSION,
   };
 
   if (hasAdminFirestoreCredentials()) {

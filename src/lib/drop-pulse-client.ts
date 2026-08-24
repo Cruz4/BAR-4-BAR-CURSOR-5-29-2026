@@ -47,31 +47,36 @@ export function recordDropSpinClient(shareId: string, kind: DropPulseKind): void
 }
 
 /** Report a signed playback milestone; the server decides whether it qualifies. */
-export function recordDropListenProgressClient(input: {
+export async function recordDropListenProgressClient(input: {
   shareId: string;
   listenProof: string;
   milestone: DropListenMilestone;
   source: DropListenSource;
-}): void {
+}): Promise<boolean> {
   const shareId = input.shareId.trim();
-  if (!shareId || !input.listenProof) return;
-  const key = sessionKey(shareId, `proof.${input.listenProof.slice(-12)}.${input.milestone}`);
+  if (!shareId || !input.listenProof) return false;
+  const key = sessionKey(shareId, `proof2.${input.listenProof.slice(-12)}.${input.milestone}`);
   try {
-    if (typeof window !== 'undefined' && sessionStorage.getItem(key)) return;
-    sessionStorage.setItem(key, '1');
+    if (typeof window !== 'undefined' && sessionStorage.getItem(key)) return true;
   } catch {
     /* server dedupe remains authoritative */
   }
-  void (async () => {
+  try {
+    const headers = await authHeaders();
+    const response = await fetch('/api/drops/pulse', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(input),
+    });
+    if (!response.ok) return false;
     try {
-      const headers = await authHeaders();
-      await fetch('/api/drops/pulse', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(input),
-      });
+      if (typeof window !== 'undefined') sessionStorage.setItem(key, '1');
     } catch {
-      /* analytics must never interrupt playback */
+      /* server dedupe remains authoritative */
     }
-  })();
+    return true;
+  } catch {
+    /* analytics must never interrupt playback */
+    return false;
+  }
 }

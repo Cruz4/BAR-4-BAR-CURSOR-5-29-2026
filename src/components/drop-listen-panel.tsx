@@ -263,7 +263,11 @@ export function DropListenPanel({
                     listenedSec >= progressDuration * (milestone / 100)
                   ) {
                     reportedMilestonesRef.current.add(milestone);
-                    recordDropListenProgressClient({ shareId, listenProof, milestone, source });
+                    void recordDropListenProgressClient({ shareId, listenProof, milestone, source }).then(
+                      (recorded) => {
+                        if (!recorded) reportedMilestonesRef.current.delete(milestone);
+                      }
+                    );
                   }
                 }
                 if (!previewCapped) return;

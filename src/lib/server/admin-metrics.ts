@@ -24,6 +24,9 @@ import { marketingRefLabel, normalizeMarketingRef } from '@/lib/marketing-attrib
 import { GUEST_FUNNEL_EVENTS } from '@/lib/guest-funnel-events';
 import { LOCK_FUNNEL_EVENTS } from '@/lib/lock-funnel-events';
 
+const ANALYTICS_EVENT_PAGE_SIZE = 1000;
+const ANALYTICS_EVENT_SCAN_LIMIT = 25_000;
+
 export type { AdminMetricsSnapshot, DailyCount } from '@/lib/admin-metrics-types';
 
 function parseDate(value: unknown): Date | null {
@@ -89,6 +92,22 @@ export type ComputeAdminMetricsOptions = {
   range?: MetricsRangeKey;
 };
 
+async function loadAnalyticsEventDocs(db: Awaited<ReturnType<typeof getDb>>, periodStart: Date | null) {
+  let query = db.collection('analytics_events').orderBy('timestamp', 'desc');
+  if (periodStart) query = query.where('timestamp', '>=', periodStart.toISOString());
+  const docs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+
+  while (docs.length < ANALYTICS_EVENT_SCAN_LIMIT) {
+    const remaining = ANALYTICS_EVENT_SCAN_LIMIT - docs.length;
+    const snap = await query.limit(Math.min(ANALYTICS_EVENT_PAGE_SIZE, remaining)).get();
+    docs.push(...snap.docs);
+    if (snap.size < ANALYTICS_EVENT_PAGE_SIZE) break;
+    query = query.startAfter(snap.docs[snap.docs.length - 1]);
+  }
+
+  return docs;
+}
+
 export async function computeAdminMetrics(
   options: ComputeAdminMetricsOptions = {}
 ): Promise<AdminMetricsSnapshot> {
@@ -106,10 +125,10 @@ export async function computeAdminMetrics(
   const d90 = windowStart(90, periodStart);
   const chartDays = Math.min(90, period.days ?? 30);
 
-  const [usersSnap, eventsSnap, logsSnap, marketingSnap, landingHitsSnap, guestFunnelSnap, lockFunnelSnap] =
+  const [usersSnap, eventDocs, logsSnap, marketingSnap, landingHitsSnap, guestFunnelSnap, lockFunnelSnap] =
     await Promise.all([
       db.collection('users').get(),
-      db.collection('analytics_events').orderBy('timestamp', 'desc').limit(500).get(),
+      loadAnalyticsEventDocs(db, periodStart),
       db.collection('system').doc('logs').collection('entries').orderBy('timestamp', 'desc').limit(1000).get(),
       db.doc('studioMetrics/marketing').get(),
       // All-time landing / funnel event scans — windows (7/30/90d) are derived in memory.
@@ -434,7 +453,7 @@ export async function computeAdminMetrics(
     }
   }
 
-  for (const doc of eventsSnap.docs) {
+  for (const doc of eventDocs) {
     const data = doc.data();
     const at = parseDate(data.timestamp);
     if (!inPeriod(at, periodStart)) continue;
@@ -469,7 +488,7 @@ export async function computeAdminMetrics(
   let shareCardGenerated = 0;
   let shareCardOpened = 0;
   let leaderboardViews = 0;
-  for (const doc of eventsSnap.docs) {
+  for (const doc of eventDocs) {
     const data = doc.data();
     const at = parseDate(data.timestamp);
     if (!inPeriod(at, periodStart)) continue;
@@ -676,7 +695,7 @@ export async function computeAdminMetrics(
     openToSignupCtaPercent: pct(lockSignupCtas, lockOpens),
   };
 
-  const recentEvents = eventsSnap.docs
+  const recentEvents = eventDocs
     .filter((doc) => inPeriod(parseDate(doc.data().timestamp), periodStart))
     .slice(0, 25)
     .map((doc) => {

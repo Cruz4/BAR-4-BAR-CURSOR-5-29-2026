@@ -112,7 +112,6 @@ export async function recordQualifiedListenProgress(
       day,
       [milestoneField]: FieldValue.increment(1),
       updatedAt: nowIso,
-      ...sourceIncrement(source),
     };
     tx.set(dailyRef, basePatch, { merge: true });
     tx.set(
@@ -140,6 +139,7 @@ export async function recordQualifiedListenProgress(
         {
           qualifiedListeners: FieldValue.increment(1),
           ...(repeatDay ? { repeatListeners: FieldValue.increment(1) } : {}),
+          ...sourceIncrement(source),
         },
         { merge: true }
       );

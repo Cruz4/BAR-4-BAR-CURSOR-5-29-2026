@@ -728,8 +728,8 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </ChapterCard>
 
                 <ChapterCard id="manual-listener-insights" icon={<Radio className="text-cyan-400" />} title="Qualified Listener Insights" colorClass="border-l-cyan-500 text-cyan-400">
-                  <p className="text-sm">Listener Insights is the creator-only First Drop dashboard for qualified listeners, repeats, completions, purchase conversions, sources, timeline, and track summaries.</p>
-                  <p className="text-xs">A qualified listen reaches 80% of the available preview or full stream in real time. Your own plays do not count. Listener identities stay private and are not exposed as named listening histories.</p>
+                  <p className="text-sm">Listener Insights is the creator-only First Drop dashboard for historical starts and sales plus verified qualified listeners, repeats, completions, sources, timeline, and track summaries.</p>
+                  <p className="text-xs">Existing preview/full starts and purchases appear retroactively. They stay separate from qualified listens because only playback recorded with proof of reaching 80% can qualify. Your own verified plays do not count, and listener identities stay private.</p>
                   <Button asChild variant="outline" className="w-full font-bold uppercase tracking-widest text-[10px]">
                     <Link href="/insights"><Radio className="mr-2 h-4 w-4" /> Open Listener Insights</Link>
                   </Button>

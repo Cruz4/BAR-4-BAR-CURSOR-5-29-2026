@@ -290,11 +290,13 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
             audio.currentTime >= progressDuration * (milestone / 100)
           ) {
             reportedMilestonesRef.current.add(milestone);
-            recordDropListenProgressClient({
+            void recordDropListenProgressClient({
               shareId: item.shareId,
               listenProof: proof,
               milestone,
               source: 'library',
+            }).then((recorded) => {
+              if (!recorded) reportedMilestonesRef.current.delete(milestone);
             });
           }
         }

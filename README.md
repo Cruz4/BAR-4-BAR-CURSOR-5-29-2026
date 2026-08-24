@@ -41,7 +41,7 @@ Users can "Add to Home Screen" on iPhone/Android for a native full-screen experi
 - **The Scene**: Signed-in home for the friends feed, Your Booth, explainable Discover, public challenges, First Drops, and transparent Emerging momentum.
 - **The Vault**: Full albums, loose tracks, Collab Sheets, the bar-by-bar workstation, Creative DNA, search, and versioned non-destructive backup/restore.
 - **Public Music Home**: A free public identity for artists, creators, and Music Fans, with chosen labels, sound/taste, support relationships, and an owned or purchased featured track.
-- **Direct-to-Fan Music**: First Drops let creators sell buy-once in-app streams while qualified Listener Insights explain reach and conversion.
+- **Direct-to-Fan Music**: First Drops let creators sell buy-once in-app streams. Listener Insights restores historical starts and sales while keeping them distinct from newly verified 80% listening, repeats, completion, sources, and conversion.
 
 ---
 

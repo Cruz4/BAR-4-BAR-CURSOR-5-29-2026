@@ -78,7 +78,7 @@ This release is organized into seven independent product commits, one release-au
 - Firestore rules deny direct client access to listen evidence, creator insights, audience hashes, purchase ticks, Follow/Inner Circle edges, organic relationship ticks, and Emerging inputs.
 - Storage rules deny public reads of profile excerpt files; playback goes through the entitlement-aware API.
 - No private lyrics or DNA are sent into social discovery.
-- No production backfill is required. Qualified insights and Emerging signals begin accumulating after the release is deployed.
+- No production write migration is required. Existing First Drop starts and sales are merged into Listener Insights at read time; only playback captured with signed milestone proof may enter qualified or Emerging counts.
 - This release does not create fan-to-fan resale or transfer ownership. That remains a separate commerce/legal design decision.
 
 ## Deployment requirements
@@ -87,7 +87,7 @@ This release is organized into seven independent product commits, one release-au
 2. Deploy the application build.
 3. Deploy Firestore and Storage rules. The new app APIs rely on the server-only boundaries in both rule files.
 4. Do not run a data migration or delete/backfill job; none is needed.
-5. Expect Listener Insights and Emerging to begin empty and populate from new qualified activity.
+5. Expect historical First Drop starts and sales to appear immediately in Listener Insights. Verified qualification and Emerging signals populate only from signed activity that can prove the listener reached the required threshold.
 
 ## Manual release tests
 

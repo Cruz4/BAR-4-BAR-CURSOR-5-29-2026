@@ -68,7 +68,7 @@ const WHATS_NEW_ITEMS = [
   },
   {
     title: 'Listener Insights',
-    desc: 'Creators can see qualified First Drop listeners, repeats, completions, buyer conversions, sources, timeline, and track summaries without exposing named listener histories.',
+    desc: 'Creators see historical First Drop starts and sales immediately, plus verified qualified listeners, repeats, completions, sources, timeline, and track summaries without exposing named listener histories.',
     icon: Radio,
     color: 'text-cyan-400',
     bgColor: 'bg-cyan-500/5',

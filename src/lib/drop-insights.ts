@@ -9,6 +9,7 @@ export type DropInsightTotals = {
 };
 export type DropInsightDay = {
   day: string;
+  recordedStarts: number;
   qualifiedListeners: number;
   repeatListeners: number;
   completions: number;
@@ -18,10 +19,21 @@ export type DropInsightDay = {
 export type DropInsightTrack = {
   shareId: string;
   title: string;
+  lifetimePreviewStarts: number;
+  lifetimeFullStarts: number;
+  lifetimePurchases: number;
   qualifiedListeners: number;
   repeatListeners: number;
   completions: number;
   purchases: number;
+};
+
+export type DropInsightLifetime = {
+  trackedDrops: number;
+  previewStarts: number;
+  fullStarts: number;
+  purchases: number;
+  grossCents: number;
 };
 
 export type DropInsightsResponse = {
@@ -35,9 +47,11 @@ export type DropInsightsResponse = {
   sources: Record<string, number>;
   timeline: DropInsightDay[];
   tracks: DropInsightTrack[];
+  lifetime: DropInsightLifetime;
   integrity: {
     qualifiedAtPercent: 80;
     ownerActionsExcluded: true;
     paymentAmountAffectsOrganicRank: false;
+    historicalStartsAreQualified: false;
   };
 };

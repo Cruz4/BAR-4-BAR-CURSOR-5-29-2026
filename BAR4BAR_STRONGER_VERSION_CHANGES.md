@@ -11,6 +11,8 @@ The original proposed Industry Room item was skipped as requested. No production
 - A listener becomes qualified at 80% of the available preview or full stream.
 - The creator’s own playback and same-day repeated qualification are excluded.
 - Added private Listener Insights showing qualified listeners, repeat listeners, completions, buyer conversions, sources, timeline, and per-track performance.
+- Existing First Drop preview/full starts and sale records are merged at read time, so prior activity appears without a production-data migration. Historical starts remain labeled separately because they cannot prove an 80% listen retroactively.
+- Failed browser milestone reports now retry instead of being permanently suppressed, and source attribution increments once when a listen qualifies.
 - Listener identities are stored as opaque hashes rather than exposed user IDs or IP addresses.
 
 Where to use it: open **Listener Insights** from the profile/navigation menu or go to `/insights`.
