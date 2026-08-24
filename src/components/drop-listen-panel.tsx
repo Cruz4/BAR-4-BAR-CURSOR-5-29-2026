@@ -20,6 +20,8 @@ import {
 import { buildDropBuyLoginPath } from '@/lib/checkout-intent';
 import { Pause, Play, Loader } from 'lucide-react';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
+import { useAudioVolume } from '@/hooks/use-audio-volume';
+import { AudioVolumeControl } from '@/components/audio-volume-control';
 import { recordDropListenProgressClient, recordDropSpinClient } from '@/lib/drop-pulse-client';
 import {
   DROP_LISTEN_MILESTONES,
@@ -60,6 +62,7 @@ export function DropListenPanel({
   const { user, authReady } = useAuth();
   const { toast } = useToast();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
+  const { volume, setVolume, toggleMute } = useAudioVolume();
   const router = useRouter();
   const searchParams = useSearchParams();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -118,6 +121,11 @@ export function DropListenPanel({
   useEffect(() => {
     void loadStream();
   }, [loadStream, user?.id]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) audio.volume = volume;
+  }, [src, volume]);
 
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
@@ -235,6 +243,7 @@ export function DropListenPanel({
               ref={audioRef}
               src={src}
               preload="none"
+              playsInline
               onLoadedMetadata={(event) => {
                 if (playbackStartSec > 0 && event.currentTarget.currentTime < playbackStartSec) {
                   event.currentTarget.currentTime = playbackStartSec;
@@ -281,6 +290,15 @@ export function DropListenPanel({
           ) : null}
         </div>
       )}
+
+      {hasAudio ? (
+        <AudioVolumeControl
+          volume={volume}
+          onVolumeChange={setVolume}
+          onToggleMute={toggleMute}
+          className="ml-[52px] max-w-56"
+        />
+      ) : null}
 
       {!full && !isOwner && isCommerceLive(normalized) && (
         <div className="space-y-2 border-t border-white/10 pt-3">

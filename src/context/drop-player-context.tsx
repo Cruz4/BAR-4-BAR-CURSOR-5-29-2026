@@ -12,6 +12,7 @@ import React, {
 } from 'react';
 import { auth } from '@/lib/firebase/client/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useAudioVolume } from '@/hooks/use-audio-volume';
 import { recordDropListenProgressClient, recordDropSpinClient } from '@/lib/drop-pulse-client';
 import type { DeckPlayable } from '@/lib/drop-library';
 import { DROP_LISTEN_MILESTONES, type DropListenMilestone } from '@/lib/drop-listen-analytics';
@@ -24,6 +25,7 @@ type DropPlayerContextValue = {
   loading: boolean;
   elapsed: number;
   duration: number;
+  volume: number;
   repeat: DropRepeatMode;
   queue: DeckPlayable[];
   analyser: AnalyserNode | null;
@@ -34,6 +36,8 @@ type DropPlayerContextValue = {
   skipNext: () => void;
   prev: () => void;
   seek: (value: number) => void;
+  setVolume: (value: number) => void;
+  toggleMute: () => void;
   stop: () => void;
 };
 
@@ -54,6 +58,7 @@ function mediaArtwork(url?: string): MediaImage[] | undefined {
 
 export function DropPlayerProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const { volume, setVolume, toggleMute } = useAudioVolume();
   const audioRef = useRef<HTMLAudioElement>(null);
   const queueRef = useRef<DeckPlayable[]>([]);
   const currentRef = useRef<DeckPlayable | null>(null);
@@ -117,6 +122,11 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
     audio.setAttribute('playsinline', 'true');
     audio.setAttribute('webkit-playsinline', 'true');
   }, []);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) audio.volume = volume;
+  }, [volume]);
 
   const setQueue = useCallback((next: DeckPlayable[]) => {
     queueRef.current = next;
@@ -421,6 +431,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       loading,
       elapsed,
       duration,
+      volume,
       repeat,
       queue,
       analyser,
@@ -431,6 +442,8 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       skipNext,
       prev,
       seek,
+      setVolume,
+      toggleMute,
       stop,
     }),
     [
@@ -439,6 +452,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       loading,
       elapsed,
       duration,
+      volume,
       repeat,
       queue,
       analyser,
@@ -449,6 +463,8 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       skipNext,
       prev,
       seek,
+      setVolume,
+      toggleMute,
       stop,
     ]
   );

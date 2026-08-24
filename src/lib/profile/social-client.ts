@@ -407,7 +407,8 @@ export async function fetchReverbsByOwner(ownerId: string, max = 40): Promise<Pr
  */
 export async function toggleReverb(
   source: ProfilePost,
-  me: { name: string; slug?: string }
+  me: { name: string; slug?: string },
+  options?: { quote?: string }
 ): Promise<{ status: 'created' | 'removed'; post?: ProfilePost }> {
   const user = requireUser();
   if (source.ownerId === user.uid) {
@@ -458,13 +459,14 @@ export async function toggleReverb(
   }
 
   const liveProfile = await requireLiveProfileForPosting(user.uid);
+  const quote = options?.quote?.trim().slice(0, MAX_POST_TEXT) || '';
 
   const post: ProfilePost = {
     id: newestFirstId(),
     ownerId: user.uid,
     ownerName: me.name || user.displayName || 'Artist',
     ownerSlug: liveProfile.slug,
-    text: '',
+    text: quote,
     createdAt: new Date().toISOString(),
     isReverb: true,
     reverbPostId: rootPostId,
@@ -484,7 +486,10 @@ export async function toggleReverb(
   await setDoc(doc(db, 'posts', id), data);
   await setDoc(pointerRef, { wallPostId: id, createdAt: post.createdAt });
 
-  trackSocialEvent('profile_reverb', { originalOwnerId: rootOwnerId });
+  trackSocialEvent('profile_reverb', {
+    originalOwnerId: rootOwnerId,
+    quoted: Boolean(quote),
+  });
   const { emitActivity } = await import('@/lib/activity/client');
   emitActivity({
     type: 'post_reverb',

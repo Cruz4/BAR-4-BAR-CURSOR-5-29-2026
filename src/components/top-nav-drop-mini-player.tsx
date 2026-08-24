@@ -6,12 +6,26 @@ import { Loader, Pause, Play, SkipBack, SkipForward, X } from 'lucide-react';
 import { useOptionalDropPlayer } from '@/context/drop-player-context';
 import { formatDeckTime } from '@/lib/drop-library';
 import { Button } from '@/components/ui/button';
+import { AudioVolumeControl } from '@/components/audio-volume-control';
 
 export function TopNavDropMiniPlayer() {
   const player = useOptionalDropPlayer();
   if (!player?.current) return null;
 
-  const { current, playing, loading, elapsed, duration, togglePlay, skipNext, prev, stop } = player;
+  const {
+    current,
+    playing,
+    loading,
+    elapsed,
+    duration,
+    volume,
+    togglePlay,
+    skipNext,
+    prev,
+    stop,
+    setVolume,
+    toggleMute,
+  } = player;
 
   return (
     <div className="border-t border-border/40 bg-background/95 px-2 sm:px-4 md:px-6">
@@ -50,6 +64,12 @@ export function TopNavDropMiniPlayer() {
         <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={skipNext} aria-label="Next">
           <SkipForward className="h-3.5 w-3.5" />
         </Button>
+        <AudioVolumeControl
+          compact
+          volume={volume}
+          onVolumeChange={setVolume}
+          onToggleMute={toggleMute}
+        />
         <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-muted-foreground" onClick={stop} aria-label="Stop">
           <X className="h-3.5 w-3.5" />
         </Button>

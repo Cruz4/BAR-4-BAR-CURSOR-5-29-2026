@@ -2,7 +2,7 @@
 
 /**
  * Share this post — intent-based outbound (X, Facebook, WhatsApp, copy, native share).
- * Links back to the artist's Artist Home (posts live on the wall).
+ * Links to the public, indexable post permalink.
  */
 
 import React, { useMemo } from 'react';
@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Check, Copy, Facebook, Mail, MessageCircle, Share2 } from 'lucide-react';
 import type { ProfilePost } from '@/lib/profile/social-client';
-import { profileHref } from '@/lib/profile/profile-slug';
 
 type PostShareDialogProps = {
   open: boolean;
@@ -35,11 +34,7 @@ function XIcon({ className }: { className?: string }) {
 
 function buildPostShareUrl(post: ProfilePost): string {
   if (typeof window === 'undefined') return '';
-  const origin = window.location.origin;
-  if (post.ownerSlug) {
-    return `${origin}${profileHref(post.ownerSlug, `post-${post.id}`) || `/${post.ownerSlug}#post-${post.id}`}`;
-  }
-  return origin;
+  return `${window.location.origin}/p/${encodeURIComponent(post.id)}`;
 }
 
 function buildPostShareText(post: ProfilePost, shareUrl: string): string {

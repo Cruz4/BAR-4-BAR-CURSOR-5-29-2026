@@ -10,6 +10,7 @@ import { ChevronLeft, Compass, Hammer, Sparkles, TimerReset } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import { StudioLoader } from '@/components/studio-loader';
 import { SceneDiscoverCard } from '@/components/scene/scene-discover-card';
+import { SceneUniversalSearch } from '@/components/scene/scene-universal-search';
 import { SectionPager } from '@/components/scene/section-pager';
 import { useAuth } from '@/hooks/use-auth';
 import { fetchGamificationSummary } from '@/lib/gamification-client';
@@ -34,6 +35,21 @@ export default function DiscoverPage() {
   const [loaded, setLoaded] = useState(false);
   const [page, setPage] = useState(0);
   const [mode, setMode] = useState<DiscoveryGraphMode | 'fresh'>('fresh');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setSearchQuery(new URLSearchParams(window.location.search).get('q')?.slice(0, 80) || '');
+  }, []);
+
+  const updateSearchQuery = useCallback((next: string) => {
+    setSearchQuery(next);
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (next.trim()) url.searchParams.set('q', next.trim());
+    else url.searchParams.delete('q');
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,7 +137,14 @@ export default function DiscoverPage() {
         </div>
       </header>
 
-      <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+      <SceneUniversalSearch
+        variant="page"
+        query={searchQuery}
+        onQueryChange={updateSearchQuery}
+        excludedUserIds={blockedIds}
+      />
+
+      {searchQuery.trim().length < 2 ? <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
         <div className="flex flex-wrap gap-2">
           {discover?.viewerGraph.hasTaste ? (
             <Button
@@ -162,9 +185,9 @@ export default function DiscoverPage() {
             Add your Sound Identity in Edit Public Page to unlock personal matching—including Music Fan profiles.
           </p>
         ) : null}
-      </div>
+      </div> : null}
 
-      <div id={LIST_SECTION_ID} className="scroll-mt-[5.5rem] space-y-4">
+      {searchQuery.trim().length < 2 ? <div id={LIST_SECTION_ID} className="scroll-mt-[5.5rem] space-y-4">
         {cards.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/15 bg-black/20 px-6 py-16 text-center">
             <p className="text-sm text-muted-foreground">
@@ -197,7 +220,7 @@ export default function DiscoverPage() {
             />
           </>
         )}
-      </div>
+      </div> : null}
     </div>
   );
 }

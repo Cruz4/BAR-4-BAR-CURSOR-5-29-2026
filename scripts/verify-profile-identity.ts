@@ -35,5 +35,7 @@ assert.equal(legacyProfileAppRedirect('SUPPORTERS'), '/supporters');
 assert.equal(legacyProfileAppRedirect('real_music_fan'), undefined);
 assert.equal(isValidProfileSlug('insights'), false, 'app pages must never be claimable profile slugs');
 assert.equal(isValidProfileSlug('supporters'), false, 'app pages must never be claimable profile slugs');
+assert.equal(isValidProfileSlug('p'), false, 'public post route must never be claimable as a profile slug');
+assert.equal(isValidProfileSlug('charts'), false, 'music chart route must never be claimable as a profile slug');
 
 console.log('Profile identity verification passed.');

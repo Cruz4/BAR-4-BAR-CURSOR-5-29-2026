@@ -236,6 +236,7 @@ export async function recordDropPurchaseInsight(
         title: input.title.slice(0, 120),
         day,
         purchases: FieldValue.increment(1),
+        ...(organicPurchaseEligible ? { organicPurchases: FieldValue.increment(1) } : {}),
         grossCents: FieldValue.increment(Math.max(0, Math.round(input.amountCents))),
         ...(repeatBuyer ? { repeatBuyers: FieldValue.increment(1) } : {}),
         updatedAt: nowIso,

@@ -85,6 +85,7 @@ import {
 import { cn } from '@/lib/utils';
 import { DeckAuroraBackground } from '@/components/studio-page-background';
 import { DropVisualizer } from '@/components/library/drop-visualizer';
+import { AudioVolumeControl } from '@/components/audio-volume-control';
 
 function PressingPlate({
   item,
@@ -135,6 +136,7 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
     loading,
     elapsed,
     duration,
+    volume,
     repeat,
     analyser,
     setQueue: setPlayerQueue,
@@ -144,6 +146,8 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
     skipNext,
     prev,
     seek,
+    setVolume,
+    toggleMute,
   } = useDropPlayer();
 
   const [query, setQuery] = useState('');
@@ -532,6 +536,12 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
                 </Button>
               )}
             </div>
+            <AudioVolumeControl
+              volume={volume}
+              onVolumeChange={setVolume}
+              onToggleMute={toggleMute}
+              className="mx-auto mt-2 w-full max-w-56"
+            />
           </div>
 
           <div className="lg:min-h-0 lg:flex-1 lg:overflow-hidden">

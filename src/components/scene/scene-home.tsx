@@ -34,6 +34,8 @@ import { SceneBoothMemoryCard } from '@/components/scene/scene-booth-memory-card
 import { SceneBlockAtmosphere } from '@/components/scene/scene-block-atmosphere';
 import { InfiniteFeedSentinel } from '@/components/scene/infinite-feed-sentinel';
 import { SceneFeedJumpHints } from '@/components/scene/scene-feed-jump-hints';
+import { SceneUniversalSearch } from '@/components/scene/scene-universal-search';
+import { SceneChartSpotlight } from '@/components/scene/scene-chart-spotlight';
 import { LockClaimBootstrap } from '@/components/lock/lock-claim-bootstrap';
 import { GuestPressingClaimBootstrap } from '@/components/profile/guest-pressing-claim-bootstrap';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -811,6 +813,11 @@ export function SceneHome() {
               </div>
               <SceneWeatherChip />
             </div>
+            <SceneUniversalSearch
+              className="mt-4"
+              excludedUserIds={blockedIds}
+            />
+            <SceneChartSpotlight excludedUserIds={blockedIds} />
           </header>
 
           {/* < xl: progress banner + nav strip stacked above the feed */}

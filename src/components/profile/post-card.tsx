@@ -5,6 +5,15 @@ import Link from 'next/link';
 import { Eye, Heart, MessageCircle, Repeat2, Share2, Trash2, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
@@ -34,10 +43,7 @@ import { parseStudioBadge, studioChromeFromUser, studioNameClass, type StudioNam
 import {
   parseActivityPostHash,
   scrollActivityPostTarget,
-  activityPostHash,
 } from '@/lib/activity/post-deep-link';
-import { activityOpenLinkHref } from '@/lib/activity/href';
-import { profileHref } from '@/lib/profile/profile-slug';
 import { compactReachCount, recordPostViewClient } from '@/lib/post-view-client';
 import { LyricClipCard } from '@/components/profile/lyric-clip-card';
 import { isMasterAdminEmail } from '@/lib/master-admin';
@@ -96,10 +102,7 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
     };
   }, [liveSlug]);
 
-  const originalPostHref =
-    post.reverbPostId && (liveSlug || post.reverbOwnerSlug)
-      ? profileHref(liveSlug || post.reverbOwnerSlug, activityPostHash(post.reverbPostId))
-      : undefined;
+  const originalPostHref = post.reverbPostId ? `/p/${post.reverbPostId}` : undefined;
 
   return (
     <div className="mt-2 rounded-xl border border-[var(--ph-border,rgba(255,255,255,0.14))] bg-black/30 p-3">
@@ -133,7 +136,7 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
         <p className="min-w-0 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
           {originalPostHref ? (
             <Link
-              href={activityOpenLinkHref(originalPostHref)}
+              href={originalPostHref}
               className="text-[var(--ph-muted,rgba(255,255,255,0.55))] transition-colors hover:text-[var(--ph-text,#fff)] hover:underline"
             >
               Original
@@ -214,6 +217,8 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   const [deleted, setDeleted] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [reverbed, setReverbed] = useState(false);
+  const [reverbComposerOpen, setReverbComposerOpen] = useState(false);
+  const [reverbQuote, setReverbQuote] = useState('');
   const [authorAvatarUrl, setAuthorAvatarUrl] = useState<string | undefined>(undefined);
   const [authorStarSeed, setAuthorStarSeed] = useState<number | undefined>(undefined);
   const [authorUseStar, setAuthorUseStar] = useState(false);
@@ -348,7 +353,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     }
   };
 
-  const handleReverb = async () => {
+  const handleReverb = async (quote?: string) => {
     if (!user) {
       toast({ title: 'Sign in to Reverb' });
       return;
@@ -358,10 +363,14 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
       const result = await toggleReverb(post, {
         name: user.displayName || 'Artist',
         slug: viewerSlug,
-      });
+      }, quote?.trim() ? { quote } : undefined);
       setReverbed(result.status === 'created');
+      setReverbComposerOpen(false);
+      setReverbQuote('');
       toast({
-        title: result.status === 'created' ? 'Reverb live' : 'Reverb removed',
+        title: result.status === 'created'
+          ? quote?.trim() ? 'Quote Reverb live' : 'Reverb live'
+          : 'Reverb removed',
         description:
           result.status === 'created'
             ? 'This post now echoes on your wall and Reverbs page.'
@@ -458,9 +467,13 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
               </ArtistHomeLink>
             </span>
           )}
-          <p className="text-[10px] uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+          <Link
+            href={`/p/${post.id}`}
+            className="text-[10px] uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))] hover:text-[var(--ph-text,#fff)] hover:underline"
+            aria-label="Open public post permalink"
+          >
             {timeAgo(post.createdAt)}
-          </p>
+          </Link>
         </div>
         {canDeletePost && (
           <Button
@@ -557,6 +570,17 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
             {reverbed ? 'Reverbed' : 'Reverb'}
           </button>
         )}
+        {canReverb && !reverbed ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setReverbComposerOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))] transition-colors hover:text-violet-300"
+            title="Quote Reverb — add your thought above the original"
+          >
+            <MessageCircle className="h-3.5 w-3.5" /> Quote
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={() => setShareOpen(true)}
@@ -596,6 +620,64 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
       </div>
 
       <PostShareDialog open={shareOpen} onOpenChange={setShareOpen} post={post} />
+
+      <Dialog
+        open={reverbComposerOpen}
+        onOpenChange={(open) => {
+          if (busy) return;
+          setReverbComposerOpen(open);
+          if (!open) setReverbQuote('');
+        }}
+      >
+        <DialogContent className="border-violet-400/25 sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-headline text-xl uppercase">
+              <Repeat2 className="h-5 w-5 text-violet-300" /> Reverb this post
+            </DialogTitle>
+            <DialogDescription>
+              Add your own thought above the original, then pass both to your wall.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Textarea
+              value={reverbQuote}
+              onChange={(event) => setReverbQuote(event.target.value.slice(0, 1000))}
+              placeholder="Add your quote…"
+              rows={4}
+              maxLength={1000}
+              className="resize-none border-violet-400/20 bg-black/30"
+              autoFocus
+            />
+            <div className="rounded-lg border border-white/10 bg-black/25 px-3 py-2.5">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                Original · {post.isReverb ? post.reverbOwnerName || 'Artist' : post.ownerName}
+              </p>
+              <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-foreground/80">
+                {(post.isReverb ? post.reverbText : post.text) || 'Media post'}
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={() => setReverbComposerOpen(false)}
+              className="font-bold uppercase"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={busy || !reverbQuote.trim()}
+              onClick={() => void handleReverb(reverbQuote)}
+              className="gap-1.5 bg-violet-500 font-bold uppercase text-white hover:bg-violet-400"
+            >
+              <MessageCircle className="h-3.5 w-3.5" /> Quote + Reverb
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {commentsOpen && (
         <PostCommentThread

@@ -23,6 +23,7 @@ import {
   Disc3,
   BarChart3,
   HeartHandshake,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
@@ -373,6 +374,15 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       tone: 'border-fuchsia-500/45 bg-gradient-to-r from-fuchsia-500/18 via-card/85 to-card/70 hover:border-fuchsia-400/70',
       iconTone: 'border-fuchsia-400/50 bg-fuchsia-500/20 text-fuchsia-300',
     },
+    {
+      key: 'charts',
+      href: '/charts',
+      label: 'Music Charts',
+      sub: 'Proof-based · 7 days',
+      icon: TrendingUp,
+      tone: 'border-cyan-500/35 bg-cyan-500/10 hover:border-cyan-400/55',
+      iconTone: 'border-cyan-400/45 bg-cyan-500/15 text-cyan-300',
+    },
   ];
 
   if (loading && !compact) {
@@ -435,6 +445,7 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
 
   const afterActivity = [
     firstDropsOn ? <DockLink key="library" item={items[1]!} /> : null,
+    <DockLink key="charts" item={items[6]!} />,
     firstDropsOn ? <DockLink key="earnings" item={items[2]!} /> : null,
     <DockLink key="ink" item={items[3]!} />,
   ].filter(Boolean) as React.ReactElement[];
