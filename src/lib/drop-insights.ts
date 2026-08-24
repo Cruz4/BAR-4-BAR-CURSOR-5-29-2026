@@ -7,7 +7,6 @@ export type DropInsightTotals = {
   repeatBuyers: number;
   grossCents: number;
 };
-
 export type DropInsightDay = {
   day: string;
   qualifiedListeners: number;
@@ -42,4 +41,3 @@ export type DropInsightsResponse = {
     paymentAmountAffectsOrganicRank: false;
   };
 };
-

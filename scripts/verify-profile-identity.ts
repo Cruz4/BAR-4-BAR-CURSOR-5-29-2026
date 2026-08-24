@@ -27,4 +27,3 @@ assert.equal(migrated.featured.tagline, 'Legacy profile');
 assert.equal(migrated.featured.soundIdentity, undefined);
 
 console.log('Profile identity verification passed.');
-

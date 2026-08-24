@@ -13,7 +13,6 @@ export type DropListenSource =
 export function isDropListenMilestone(value: unknown): value is DropListenMilestone {
   return DROP_LISTEN_MILESTONES.includes(Number(value) as DropListenMilestone);
 }
-
 export function normalizeDropListenSource(value: unknown): DropListenSource {
   return value === 'artist_home' ||
     value === 'scene' ||
@@ -59,4 +58,3 @@ export function organicMomentumScore(signals: OrganicMomentumSignals): number {
     whole(signals.purchaseConversions, 5_000) * 8
   );
 }
-

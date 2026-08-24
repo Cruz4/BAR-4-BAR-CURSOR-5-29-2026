@@ -27,7 +27,6 @@ function clean(value: unknown, max: number): string | undefined {
   const next = value.trim().replace(/\s+/g, ' ');
   return next ? next.slice(0, max) : undefined;
 }
-
 function cleanList(value: unknown, maxItems: number, maxItemLength: number): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const seen = new Set<string>();
@@ -88,4 +87,3 @@ export function collaborationLabel(value?: CollaborationStatus): string | undefi
   if (value === 'not_now') return 'Not collaborating right now';
   return undefined;
 }
-

@@ -10,7 +10,6 @@ import type {
 function count(value: unknown): number {
   return Math.max(0, Math.floor(Number(value) || 0));
 }
-
 function percent(numerator: number, denominator: number): number {
   if (denominator <= 0) return 0;
   return Math.min(100, Math.round((numerator / denominator) * 1000) / 10);
@@ -149,4 +148,3 @@ export async function getDropInsights(
     },
   };
 }
-

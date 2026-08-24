@@ -29,4 +29,3 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Could not load listener insights.' }, { status: 500 });
   }
 }
-
