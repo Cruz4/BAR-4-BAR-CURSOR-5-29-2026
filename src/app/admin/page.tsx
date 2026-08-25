@@ -56,6 +56,7 @@ import { StudioLoader } from '@/components/studio-loader';
 import { AdminMetricsTab } from '@/components/admin-metrics-tab';
 import { AdminAchievementsTab } from '@/components/admin-achievements-tab';
 import { AdminInviteGateCard } from '@/components/admin-invite-gate-card';
+import { AdminSceneLayoutCard } from '@/components/admin-scene-layout-card';
 import { AdminLockFeatureCard } from '@/components/admin-lock-feature-card';
 import { AdminFoldsFeatureCard } from '@/components/admin-folds-feature-card';
 import { AdminCollabSheetFeatureCard } from '@/components/admin-collab-sheet-feature-card';
@@ -1266,6 +1267,7 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="config" className="space-y-8">
+            <AdminSceneLayoutCard />
             <AdminLockFeatureCard />
             <AdminFoldsFeatureCard />
             <AdminCollabSheetFeatureCard />
