@@ -142,8 +142,8 @@ export function SceneUniversalSearch({
   const showTrendingPanel = variant === 'dropdown' && focused && cleanQuery.length < 2;
 
   return (
-    <div ref={rootRef} className={cn('relative', className)} data-tour="scene-search">
-      <div className="relative">
+    <div ref={rootRef} className={cn('relative min-w-0', className)} data-tour="scene-search">
+      <div className="relative min-w-0">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sky-300" />
         <Input
           type="search"
@@ -156,7 +156,7 @@ export function SceneUniversalSearch({
           placeholder="Discover people, taste, cities, songs, DNA Drops, posts…"
           aria-label="Search the Bar 4 Bar music network"
           aria-expanded={showTrendingPanel || (showPanel && cleanQuery.length >= 2)}
-          className="h-11 border-sky-400/30 bg-[hsl(216_35%_7%)] pl-10 pr-20 font-code text-xs shadow-[0_12px_32px_rgba(0,0,0,0.25)] placeholder:text-muted-foreground/70 focus-visible:ring-sky-400"
+          className="h-11 w-full min-w-0 border-sky-400/30 bg-[hsl(216_35%_7%)] pl-10 pr-12 font-code text-xs shadow-[0_12px_32px_rgba(0,0,0,0.25)] placeholder:text-muted-foreground/70 focus-visible:ring-sky-400 sm:pr-20"
         />
         <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
           {loading ? <Loader2 className="h-4 w-4 animate-spin text-sky-300" /> : null}
@@ -244,7 +244,7 @@ export function SceneUniversalSearch({
           ) : null}
         </div>
       ) : variant === 'page' ? (
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="mt-2 break-words text-xs leading-relaxed text-muted-foreground">
           Type at least two characters. Search public names, Music Fans, genres, moods, influences, regions, songs, DNA Drops, and Scene posts.
         </p>
       ) : null}

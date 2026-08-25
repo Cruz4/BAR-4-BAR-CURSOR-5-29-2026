@@ -249,19 +249,19 @@ function WorldShortcut({
     <Link
       href={href}
       className={cn(
-        'group relative flex min-h-[6.4rem] min-w-0 items-center gap-3 overflow-hidden rounded-2xl border px-3 py-3 text-left shadow-[inset_0_0_28px_rgba(255,255,255,0.015),0_14px_35px_rgba(0,0,0,0.25)] transition duration-200 hover:-translate-y-0.5 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:min-h-[7rem] sm:px-4',
+        'group relative flex min-h-[7rem] min-w-0 items-center gap-2 overflow-hidden rounded-2xl border px-2.5 py-3 text-left shadow-[inset_0_0_28px_rgba(255,255,255,0.015),0_14px_35px_rgba(0,0,0,0.25)] transition duration-200 hover:-translate-y-0.5 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:min-h-[7rem] sm:gap-3 sm:px-4',
         shortcutTone[tone]
       )}
     >
       <span className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.12)_0.7px,transparent_0.8px)] [background-size:7px_7px]" />
-      <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-current/35 bg-current/[0.08] shadow-[0_0_24px_currentColor] sm:h-14 sm:w-14">
+      <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-current/35 bg-current/[0.08] shadow-[0_0_24px_currentColor] sm:h-14 sm:w-14">
         {avatar || <Icon className="h-7 w-7 sm:h-8 sm:w-8" />}
       </span>
       <span className="relative min-w-0 flex-1">
         <span className="block font-headline text-[clamp(0.92rem,4vw,1.25rem)] font-bold uppercase leading-none tracking-wide text-white">
           {title}
         </span>
-        <span className="mt-1 block truncate text-[10px] text-white/55 sm:text-xs">{detail}</span>
+        <span className="mt-1 block whitespace-normal text-[10px] leading-snug text-white/60 sm:text-xs">{detail}</span>
         <span className="mt-2 block">{status}</span>
       </span>
       <ChevronRight className="relative h-5 w-5 shrink-0 text-white/75 transition-transform group-hover:translate-x-1" />
@@ -307,7 +307,7 @@ export function ScenePortalHub({
   onOpenDiscover,
 }: ScenePortalHubProps) {
   return (
-    <section className="space-y-3" data-tour="scene-feed" aria-label="Your World scene portals">
+    <section className="space-y-3" data-tour="scene-feed" aria-label="Scene Portal">
       <div
         data-tour="scene-nav-mobile"
         className="relative overflow-hidden rounded-[1.7rem] border border-sky-400/20 bg-[radial-gradient(circle_at_8%_4%,rgba(14,165,233,0.1),transparent_30%),radial-gradient(circle_at_94%_25%,rgba(217,70,239,0.1),transparent_30%),linear-gradient(155deg,rgba(3,10,24,0.98),rgba(2,7,18,0.99))] p-3 shadow-[0_28px_90px_rgba(0,0,0,0.5)] sm:p-5"
@@ -319,8 +319,8 @@ export function ScenePortalHub({
             <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
           </span>
           <span className="min-w-0">
-            <span className="block font-headline text-3xl font-black uppercase leading-none tracking-wide text-white sm:text-4xl">Your World</span>
-            <span className="mt-1 block text-xs text-white/55 sm:text-sm">Create, explore, connect.</span>
+            <span className="block font-headline text-3xl font-black uppercase leading-none tracking-wide text-white sm:text-4xl">Scene Portal</span>
+            <span className="mt-1 block text-xs text-white/55 sm:text-sm">Create · discover · connect.</span>
           </span>
         </header>
 

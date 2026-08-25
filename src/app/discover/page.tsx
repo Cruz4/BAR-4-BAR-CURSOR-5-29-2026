@@ -125,25 +125,25 @@ export default function DiscoverPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background" style={guestPressingStyle as React.CSSProperties}>
+    <div className="relative min-h-screen w-full overflow-x-clip bg-background" style={guestPressingStyle as React.CSSProperties}>
       {!user && guestPressing ? <LivingPressField config={guestPressing} /> : null}
-      <div className={cn('relative z-10 mx-auto px-4 py-8', user ? 'max-w-2xl' : 'grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]')}>
-      <main className="space-y-6">
+      <div className={cn('relative z-10 mx-auto w-full min-w-0 px-3 py-6 sm:px-4 sm:py-8', user ? 'max-w-2xl' : 'grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]')}>
+      <main className="min-w-0 space-y-6">
       <header className="space-y-3">
         <Button size="sm" variant="outline" className="h-8 gap-1.5 font-bold uppercase" asChild>
           <Link href="/">
             <ChevronLeft className="h-3.5 w-3.5" /> The Scene
           </Link>
         </Button>
-        <div className="flex items-end gap-3">
+        <div className="flex min-w-0 items-start gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
             <Compass className="h-5 w-5 text-primary" />
           </span>
-          <div>
+          <div className="min-w-0 flex-1">
             <h1 className="font-headline text-3xl font-bold uppercase tracking-tight">
               Discover
             </h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
+            <p className="mt-0.5 break-words text-sm leading-relaxed text-muted-foreground">
               Public music people and First Drops, matched from the identity and taste you chose
             </p>
           </div>
@@ -151,6 +151,7 @@ export default function DiscoverPage() {
       </header>
 
       <SceneUniversalSearch
+        className="w-full min-w-0"
         variant="page"
         query={searchQuery}
         onQueryChange={updateSearchQuery}
@@ -236,7 +237,7 @@ export default function DiscoverPage() {
       </div> : null}
       </main>
       {!user ? (
-        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+        <aside className="min-w-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
           <section className="rounded-2xl border border-cyan-400/25 bg-black/60 p-4 backdrop-blur-md">
             <p className="font-headline text-lg font-bold uppercase text-cyan-200">Scene pulse</p>
             <div className="mt-3 grid grid-cols-3 gap-2 lg:grid-cols-1">

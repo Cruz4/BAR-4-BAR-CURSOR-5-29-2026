@@ -25,8 +25,9 @@ export function activityOpenLinkHref(href: string): string | { pathname: string;
   return { pathname, hash };
 }
 
-function scenePostHref(postId: string, hash: string): string {
-  return `/#${hash || activityPostHash(postId)}`;
+function publicPostHref(postId: string, hash: string): string {
+  const target = hash || activityPostHash(postId);
+  return `/p/${encodeURIComponent(postId)}${target ? `#${target}` : ''}`;
 }
 
 async function isLivePublicProfileSlug(slug: string): Promise<boolean> {
@@ -40,15 +41,6 @@ async function isLivePublicProfileSlug(slug: string): Promise<boolean> {
   }
 }
 
-async function livePostHref(slug: string | undefined, hash: string): Promise<string | undefined> {
-  if (!slug) return undefined;
-  const href = profileHref(slug, hash);
-  if (!href) return undefined;
-  const liveSlug = slugFromProfileHref(href);
-  if (!liveSlug || !(await isLivePublicProfileSlug(liveSlug))) return undefined;
-  return href;
-}
-
 function postHashForEvent(event: ActivityEvent): string {
   return activityPostHash(event.postId || '', {
     commentId: event.commentId,
@@ -56,7 +48,7 @@ function postHashForEvent(event: ActivityEvent): string {
   });
 }
 
-export function activityOpenHref(event: ActivityEvent, viewerSlug?: string): string {
+export function activityOpenHref(event: ActivityEvent, _viewerSlug?: string): string {
   if (event.lockId) return `/lock/${event.lockId}`;
   if (event.href?.startsWith('/lock/')) return event.href;
   if (event.href?.startsWith('/song/')) return event.href;
@@ -64,19 +56,7 @@ export function activityOpenHref(event: ActivityEvent, viewerSlug?: string): str
 
   if (event.postId) {
     const hash = postHashForEvent(event);
-    if (event.direction === 'received') {
-      return (
-        profileHref(viewerSlug, hash) ||
-        rewriteActivityProfileHref(event.href || '') ||
-        scenePostHref(event.postId, hash)
-      );
-    }
-    return (
-      profileHref(event.targetSlug, hash) ||
-      rewriteActivityProfileHref(event.href || '') ||
-      profileHref(viewerSlug, hash) ||
-      scenePostHref(event.postId, hash)
-    );
+    return publicPostHref(event.postId, hash);
   }
 
   if (event.href) {
@@ -94,8 +74,8 @@ export function activityOpenHref(event: ActivityEvent, viewerSlug?: string): str
 }
 
 /**
- * Open target for an activity row. Never sends the user to a 404 Artist Home
- * (unpublished vanity slug, hyphen/uid leftovers). Posts fall back to Scene.
+ * Open target for an activity row. Post and comment events use their canonical
+ * public post route; profile-only events still honor live vanity rules.
  */
 export async function resolveActivityOpenHref(
   event: ActivityEvent,
@@ -108,27 +88,7 @@ export async function resolveActivityOpenHref(
 
   if (event.postId) {
     const hash = postHashForEvent(event);
-    const { fetchLivePublicProfileByUserId } = await import('@/lib/profile/social-client');
-    const ownerUserId =
-      event.direction === 'received' ? opts?.viewerUserId : event.targetUserId;
-    if (ownerUserId) {
-      const live = await fetchLivePublicProfileByUserId(ownerUserId);
-      const href = await livePostHref(live?.slug, hash);
-      if (href) return href;
-    }
-    const baked =
-      event.direction === 'received' ? opts?.viewerSlug : event.targetSlug || opts?.viewerSlug;
-    const fromBaked = await livePostHref(baked, hash);
-    if (fromBaked) return fromBaked;
-    const rewritten = rewriteActivityProfileHref(event.href || '');
-    if (rewritten) {
-      const slug = rewritten.match(/^\/profile\/([^/#]+)/)?.[1];
-      if (slug && (await isLivePublicProfileSlug(slug))) {
-        const withHash = profileHref(slug, hash);
-        return withHash || rewritten;
-      }
-    }
-    return scenePostHref(event.postId, hash);
+    return publicPostHref(event.postId, hash);
   }
 
   if ((event.type === 'friend_accepted' || event.type === 'contact_accepted') && event.actorId) {

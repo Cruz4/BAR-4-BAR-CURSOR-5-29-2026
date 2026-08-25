@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { X, Play, Target, BrainCircuit, Shield, Wand2, Palette, Sparkles, Zap, FolderOpen, ClipboardPaste, ArrowRight, ListRestart, Fingerprint, MonitorPlay, RefreshCw, Link2, FilePenLine, GitBranch, Download, Mic, Settings, Rocket, HelpCircle, MousePointer2, Dna, Clock, Trophy, Share2, Gift, Globe, Lightbulb, Layers, FlaskConical, ScanLine, Undo2, Crown, EyeOff, Image, CalendarRange, Upload, Medal, BadgeCheck, Lock, Flame, Hash, Camera, Pencil, ToggleRight, Mail, PanelLeft, Sparkle, Bell, Radio, Music, Library, Eye, Sun, Users } from 'lucide-react';
-import { PRO_FEATURE_PREVIEW_DAYS } from '@/lib/subscription';
+import { PRO_FEATURE_PREVIEW_DAYS, REFERRAL_INK_SPEND_THRESHOLD, SIGNUP_INK } from '@/lib/subscription';
+import { MAX_REFERRAL_REWARDS, REFERRAL_INK_REWARD } from '@/lib/referrals';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
@@ -69,7 +70,7 @@ const STUDIO_TIPS: StudioTip[] = [
   { id: 29, icon: Trophy, title: "STUDIO PROGRESS", text: "Open The Vault sidebar (desktop) or Studio Progress in the header menu for weekly goals, rank XP, and milestones. Full board: /studio-progress.", color: "text-amber-400" },
   { id: 30, icon: Sparkles, title: "ACHIEVEMENTS", text: "Badges unlock as you write, generate, and explore. Hover trophies in Studio Progress for unlock details.", color: "text-violet-400" },
   { id: 31, icon: Share2, title: "SHARE CARDS", text: "In Studio Progress → Sharing & visibility, tap Share achievement card to export a foil milestone card with rank, XP, and streak — great for social posts.", color: "text-sky-400" },
-  { id: 32, icon: Gift, title: "REFER A FRIEND", text: "Ink Store → copy your referral link. You and each friend get 150 Ink when they join (residency on Visitor; up to 4 friends).", color: "text-primary" },
+  { id: 32, icon: Gift, title: "REFER A FRIEND", text: `Ink Store → copy your link. Your friend gets ${SIGNUP_INK} welcome Ink plus up to ${REFERRAL_INK_REWARD} extra. You can earn up to ${REFERRAL_INK_REWARD} Ink after they spend ${REFERRAL_INK_SPEND_THRESHOLD} Ink, for up to ${MAX_REFERRAL_REWARDS} eligible referrals.`, color: "text-primary" },
   { id: 33, kind: 'did-you-know', icon: Lightbulb, title: "WRITTEN VS GENERATED", text: "Studio Progress splits your work: hand-typed lines (and lines you edit after AI) count toward writing goals and streaks. AI-generated lines earn lighter XP and feed Generate Next milestones — not “write 10 bars” trophies.", color: "text-amber-400" },
   { id: 34, icon: Globe, title: "DNA DROP", text: "Studio Pro can publish a DNA Drop link from the left panel. Collaborators import your lyrics, structure, DNA, and vibe after sign-in — great for feedback loops.", color: "text-primary" },
   { id: 71, icon: Users, title: "COLLAB SHEET", text: "Studio Pro — Collab Sheet on the left panel shares a live editable track with friends. Presence chip (2/13 live), bottom chat drawer, real-time bar sync. Invited writers edit free; only you can invite or revoke.", color: "text-violet-300" },

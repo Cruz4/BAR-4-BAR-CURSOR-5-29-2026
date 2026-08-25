@@ -58,6 +58,12 @@ import {
 import { notifyLoveReward } from '@/lib/profile/love-reward-client';
 import type { PressingConfig } from '@/lib/profile/pressing';
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
+import {
+  buildPostPoll,
+  parsePostPoll,
+  type CreatePostPoll,
+  type PostPoll,
+} from '@/lib/profile/post-polls';
 
 export type ProfilePost = {
   id: string;
@@ -93,6 +99,10 @@ export type ProfilePost = {
   lyricClip?: LyricClip;
   /** Snapshot of the original lyric clip when this wall item is a Reverb. */
   reverbLyricClip?: LyricClip;
+  /** Public choices only; votes and totals are kept in server-only subcollections. */
+  poll?: PostPoll;
+  /** Snapshot of the original poll when this wall item is a Reverb. */
+  reverbPoll?: PostPoll;
   /** Public Artist Home Pressing, attached only to lightweight Scene summaries. */
   pressing?: PressingConfig;
 };
@@ -221,16 +231,19 @@ export async function createPost(input: {
   voice?: RecordedVoiceClip;
   lyricClip?: LyricClip;
   sourceKind?: 'post' | 'song' | 'dna';
+  poll?: CreatePostPoll;
 }): Promise<ProfilePost> {
   const user = requireUser();
   const liveProfile = await requireLiveProfileForPosting(user.uid);
   const text = input.text.trim().slice(0, MAX_POST_TEXT);
+  const poll = buildPostPoll(input.poll);
   const embedUrl = input.embedUrl?.trim() || undefined;
   let imageUrl = input.imageUrl?.trim() || undefined;
   let imageStoragePath: string | undefined;
   if (imageUrl && imageUrl.length > MAX_POST_IMAGE_URL) {
     throw new Error('Image is too large to post.');
   }
+  if (poll && !text) throw new Error('Write the poll question in your post.');
   if (!text && !embedUrl && !imageUrl && !input.image && !input.voice && !parseLyricClip(input.lyricClip)) {
     throw new Error('Write something, add a link, attach an image, or record a voice note.');
   }
@@ -276,6 +289,7 @@ export async function createPost(input: {
     ...(voice ? { voice } : {}),
     ...(parsedLyricClip ? { lyricClip: parsedLyricClip } : {}),
     ...(input.sourceKind ? { sourceKind: input.sourceKind } : {}),
+    ...(poll ? { poll } : {}),
     createdAt: new Date().toISOString(),
   };
   const { id: postId, ...data } = post;
@@ -294,6 +308,7 @@ export async function createPost(input: {
     hasEmbed: Boolean(embedUrl),
     hasImage: Boolean(imageUrl),
     hasVoice: Boolean(voice),
+    hasPoll: Boolean(poll),
   });
   try {
     const { postGamificationEvent } = await import('@/lib/gamification-client');
@@ -336,6 +351,8 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
   const parsedReverbVoice = parseVoiceNote(data.reverbVoice);
   const lyricClip = parseLyricClip(data.lyricClip);
   const reverbLyricClip = parseLyricClip(data.reverbLyricClip);
+  const poll = parsePostPoll(data.poll);
+  const reverbPoll = parsePostPoll(data.reverbPoll);
   return {
     id,
     ownerId: String(data.ownerId || ''),
@@ -369,6 +386,8 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
     ...(parsedReverbVoice ? { reverbVoice: parsedReverbVoice } : {}),
     ...(lyricClip ? { lyricClip } : {}),
     ...(reverbLyricClip ? { reverbLyricClip } : {}),
+    ...(poll ? { poll } : {}),
+    ...(reverbPoll ? { reverbPoll } : {}),
   };
 }
 
@@ -456,6 +475,7 @@ export async function toggleReverb(
     source.isReverb && source.reverbLyricClip
       ? source.reverbLyricClip
       : source.lyricClip;
+  const rootPoll = source.isReverb && source.reverbPoll ? source.reverbPoll : source.poll;
   const rootSourceKind = source.sourceKind || (rootEmbed?.includes('/song/') ? 'song' : rootEmbed?.includes('/share/') ? 'dna' : 'post');
 
   const pointerRef = doc(db, 'users', user.uid, 'reverbs', rootPostId);
@@ -511,6 +531,7 @@ export async function toggleReverb(
       : {}),
     ...(rootVoice ? { reverbVoice: voiceNoteToFirestore(rootVoice) } : {}),
     ...(rootLyricClip ? { reverbLyricClip: rootLyricClip } : {}),
+    ...(rootPoll ? { reverbPoll: rootPoll } : {}),
   };
 
   const { id, ...data } = post;

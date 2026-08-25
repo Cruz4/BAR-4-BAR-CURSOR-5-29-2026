@@ -199,6 +199,14 @@ function FeatureRow({
   const reverse = layout === 'split-reverse';
   const isHeroStack = layout === 'hero-stack';
 
+  if (band.showMedia === false) {
+    return (
+      <article>
+        <FeatureCopy band={band} index={index} align="center" />
+      </article>
+    );
+  }
+
   if (isHeroStack) {
     return (
       <article className="space-y-6 lg:space-y-8">

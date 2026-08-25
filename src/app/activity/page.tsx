@@ -424,6 +424,20 @@ function ActivityPageInner() {
     void load();
   }, [authReady, user?.id, router, load]);
 
+  useEffect(() => {
+    if (!authReady || !user?.id) return;
+    const revalidate = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    const onPageShow = () => revalidate();
+    window.addEventListener('pageshow', onPageShow);
+    document.addEventListener('visibilitychange', revalidate);
+    return () => {
+      window.removeEventListener('pageshow', onPageShow);
+      document.removeEventListener('visibilitychange', revalidate);
+    };
+  }, [authReady, load, user?.id]);
+
   // Accept/decline from Scene, profile, or elsewhere — drop Accept/Decline here too.
   useEffect(() => {
     const onFriendshipChanged = (ev: Event) => {
@@ -657,7 +671,7 @@ function ActivityPageInner() {
               </div>
             ) : null}
 
-            {loading ? (
+            {loading && inbox.length === 0 && sent.length === 0 ? (
               <div className="flex justify-center py-16">
                 <StudioLoader size="md" message="Loading…" />
               </div>

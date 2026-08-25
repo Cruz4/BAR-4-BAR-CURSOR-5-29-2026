@@ -51,6 +51,7 @@ import { isMasterAdminEmail } from '@/lib/master-admin';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MentionSuggestions } from '@/components/profile/mention-suggestions';
 import { MentionText } from '@/components/profile/mention-text';
+import { PostPollCard } from '@/components/profile/post-poll';
 
 type PostCardProps = {
   post: ProfilePost;
@@ -197,11 +198,15 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
           />
         </div>
       ) : null}
+      {post.reverbPoll && post.reverbPostId ? (
+        <PostPollCard postId={post.reverbPostId} poll={post.reverbPoll} />
+      ) : null}
       {!post.reverbText &&
       !post.reverbImageUrl &&
       !post.reverbEmbedUrl &&
       !post.reverbVoice &&
-      !post.reverbLyricClip ? (
+      !post.reverbLyricClip &&
+      !post.reverbPoll ? (
         <p className="text-xs italic text-[var(--ph-muted,rgba(255,255,255,0.5))]">Original post</p>
       ) : null}
     </div>
@@ -227,6 +232,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   const [viewerReverbQuote, setViewerReverbQuote] = useState('');
   const [loveBurst, setLoveBurst] = useState(false);
   const tapRef = useRef({ lastAt: 0, downX: 0, downY: 0 });
+  const loveBusyRef = useRef(false);
   const [authorAvatarUrl, setAuthorAvatarUrl] = useState<string | undefined>(undefined);
   const [authorStarSeed, setAuthorStarSeed] = useState<number | undefined>(undefined);
   const [authorUseStar, setAuthorUseStar] = useState(false);
@@ -346,14 +352,20 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     };
   }, [showAuthor, liveAuthorSlug]);
 
-  const toggleLike = async () => {
+  const toggleLike = async (showBurst = false) => {
+    if (loveBusyRef.current) return;
     if (!user) {
       toast({ title: 'Sign in to show love' });
       return;
     }
     const next = !liked;
+    loveBusyRef.current = true;
     setLiked(next);
     setLikeCount((c) => Math.max(0, c + (next ? 1 : -1)));
+    if (next && showBurst) {
+      setLoveBurst(true);
+      window.setTimeout(() => setLoveBurst(false), 650);
+    }
     try {
       if (next) {
         await likePost(post.id, {
@@ -364,24 +376,8 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     } catch {
       setLiked(!next);
       setLikeCount((c) => Math.max(0, c + (next ? -1 : 1)));
-    }
-  };
-
-  const addLove = async () => {
-    if (liked) return;
-    if (!user) {
-      toast({ title: 'Sign in to show love' });
-      return;
-    }
-    setLiked(true);
-    setLikeCount((count) => count + 1);
-    setLoveBurst(true);
-    window.setTimeout(() => setLoveBurst(false), 650);
-    try {
-      await likePost(post.id, { name: user.displayName || 'Artist', slug: viewerSlug });
-    } catch {
-      setLiked(false);
-      setLikeCount((count) => Math.max(0, count - 1));
+    } finally {
+      loveBusyRef.current = false;
     }
   };
 
@@ -466,7 +462,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         const now = Date.now();
         if (now - tapRef.current.lastAt < 330) {
           tapRef.current.lastAt = 0;
-          void addLove();
+          void toggleLike(true);
         } else tapRef.current.lastAt = now;
       } : undefined}
     >
@@ -550,6 +546,8 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
           <MentionText text={post.text} />
         </p>
       ) : null}
+
+      {!post.isReverb && post.poll ? <PostPollCard postId={post.id} poll={post.poll} /> : null}
 
       {post.voice ? (
         <div className="mt-3">

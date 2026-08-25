@@ -24,6 +24,8 @@ export type MarketingFeatureBand = {
   layout: ShowcaseLayout;
   mediaVariant?: MarketingMediaVariant;
   bentoGroup?: string;
+  /** Keep the feature copy while omitting repeated media from the Welcome sequence. */
+  showMedia?: boolean;
 };
 
 export const STRAIN_PIPELINE_STEPS = [
@@ -73,6 +75,7 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     mediaAlt: 'Bar 4 Bar First Drop — sell and stream your song on the public page',
     layout: 'hero-stack',
     mediaVariant: 'showcase',
+    showMedia: false,
   },
   {
     id: 'cowriter',
@@ -107,6 +110,7 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     mediaAlt: 'Bar 4 Bar Collab Sheet — live shared lyric editing on the workstation',
     layout: 'hero-stack',
     mediaVariant: 'showcase',
+    showMedia: false,
   },
   {
     id: 'strain-lab',

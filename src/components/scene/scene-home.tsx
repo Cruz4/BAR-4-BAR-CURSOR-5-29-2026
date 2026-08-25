@@ -8,7 +8,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Check, ChevronDown, Radio, Send, UserPlus, X } from 'lucide-react';
+import { BarChart3, Check, ChevronDown, Radio, Send, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,7 @@ import { SceneImmersiveFeedDialog } from '@/components/scene/scene-immersive-fee
 import { LockClaimBootstrap } from '@/components/lock/lock-claim-bootstrap';
 import { GuestPressingClaimBootstrap } from '@/components/profile/guest-pressing-claim-bootstrap';
 import { MentionSuggestions } from '@/components/profile/mention-suggestions';
+import { PollComposerFields } from '@/components/profile/poll-composer-fields';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
@@ -59,6 +60,7 @@ import {
 } from '@/lib/profile/social-client';
 import { type RecordedVoiceClip } from '@/lib/profile/voice-notes';
 import { revokePostImagePreview, type PendingPostImage } from '@/lib/profile/post-images';
+import type { PostPollResultsVisibility } from '@/lib/profile/post-polls';
 import { FRIENDSHIP_CHANGED_EVENT, type FriendshipChangedDetail } from '@/lib/activity/client';
 import { getBlockLastSeenAt, markBlockSeen } from '@/lib/profile/social-alerts';
 import {
@@ -163,6 +165,9 @@ function SceneComposer({
   const [showEmbed, setShowEmbed] = useState(false);
   const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
   const [image, setImage] = useState<PendingPostImage | null>(null);
+  const [pollOpen, setPollOpen] = useState(false);
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [pollVisibility, setPollVisibility] = useState<PostPollResultsVisibility>('after_vote');
   const [busy, setBusy] = useState(false);
   const textRef = useRef<HTMLTextAreaElement | null>(null);
   const insertEmoji = useEmojiInserter(text, setText, textRef);
@@ -175,10 +180,11 @@ function SceneComposer({
   }, [text]);
 
   const profileLive = Boolean(summary.publicProfile && summary.profileSlug);
+  const pollReady = !pollOpen || (Boolean(text.trim()) && pollOptions.every((option) => option.trim()));
   if (!user || profileLoading || !profileLive) return null;
 
   const submit = async () => {
-    if (busy || (!text.trim() && !embedUrl.trim() && !voice && !image)) return;
+    if (busy || !pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image)) return;
     setBusy(true);
     try {
       const post = await createPost({
@@ -188,6 +194,7 @@ function SceneComposer({
         ...(profileSlug ? { ownerSlug: profileSlug } : {}),
         ...(voice ? { voice } : {}),
         ...(image ? { image } : {}),
+        ...(pollOpen ? { poll: { options: pollOptions, resultsVisibility: pollVisibility } } : {}),
       });
       setText('');
       setEmbedUrl('');
@@ -195,6 +202,9 @@ function SceneComposer({
       setVoice(null);
       revokePostImagePreview(image);
       setImage(null);
+      setPollOpen(false);
+      setPollOptions(['', '']);
+      setPollVisibility('after_vote');
       onPosted(post);
       toast({ title: 'Posted to your wall' });
     } catch (e) {
@@ -225,6 +235,20 @@ function SceneComposer({
         className="min-h-[3.5rem] overflow-hidden resize-none border-border/60 bg-background/60 text-sm leading-snug"
       />
       <MentionSuggestions value={text} onChange={setText} />
+      {pollOpen ? (
+        <PollComposerFields
+          options={pollOptions}
+          onOptionsChange={setPollOptions}
+          resultsVisibility={pollVisibility}
+          onResultsVisibilityChange={setPollVisibility}
+          onRemovePoll={() => {
+            setPollOpen(false);
+            setPollOptions(['', '']);
+            setPollVisibility('after_vote');
+          }}
+          disabled={busy}
+        />
+      ) : null}
       {showEmbed && (
         <Input
           value={embedUrl}
@@ -258,11 +282,22 @@ function SceneComposer({
           >
             {showEmbed ? '− link' : '+ link'}
           </button>
+          <button
+            type="button"
+            onClick={() => setPollOpen((value) => !value)}
+            disabled={busy}
+            className={cn(
+              'inline-flex items-center gap-1 font-code text-[9px] font-bold uppercase tracking-[0.16em] transition-colors',
+              pollOpen ? 'text-cyan-300' : 'text-muted-foreground/70 hover:text-cyan-300'
+            )}
+          >
+            <BarChart3 className="h-3.5 w-3.5" /> Poll
+          </button>
         </div>
         <Button
           size="sm"
           className="h-7 px-3 gap-1 font-bold uppercase"
-          disabled={busy || (!text.trim() && !embedUrl.trim() && !voice && !image)}
+          disabled={busy || !pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image)}
           onClick={() => void submit()}
         >
           <Send className="h-3 w-3" /> Post

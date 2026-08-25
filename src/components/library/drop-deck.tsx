@@ -83,9 +83,10 @@ import {
   type DropLibraryItem,
 } from '@/lib/drop-library';
 import { cn } from '@/lib/utils';
-import { DeckAuroraBackground } from '@/components/studio-page-background';
 import { DropVisualizer } from '@/components/library/drop-visualizer';
+import { LibraryPressingBackground } from '@/components/library/library-pressing-background';
 import { AudioVolumeControl } from '@/components/audio-volume-control';
+import { pressTokens, pressingCssVars, type PressingConfig } from '@/lib/profile/pressing';
 
 function PressingPlate({
   item,
@@ -127,7 +128,15 @@ function PressingPlate({
   );
 }
 
-export function DropDeck({ userId, items }: { userId: string; items: DropLibraryItem[] }) {
+export function DropDeck({
+  userId,
+  items,
+  pressing,
+}: {
+  userId: string;
+  items: DropLibraryItem[];
+  pressing?: PressingConfig | null;
+}) {
   const { toast } = useToast();
   const { crates } = useDropCrates(userId);
   const {
@@ -165,6 +174,10 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
   const [expandedArtists, setExpandedArtists] = useState<Record<string, boolean>>({});
   const [expandedAlbums, setExpandedAlbums] = useState<Record<string, boolean>>({});
   const currentKey = current?.key ?? null;
+  const pressingStyle = useMemo(
+    () => (pressing ? pressingCssVars(pressTokens(pressing)) : undefined),
+    [pressing]
+  );
 
   const activeCrate = crateId === 'all' ? null : crates.find((c) => c.id === crateId) ?? null;
 
@@ -274,8 +287,14 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
   };
 
   return (
-    <div className="relative flex flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
-      <DeckAuroraBackground />
+    <div
+      className="relative flex flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden"
+      style={{
+        ...(pressingStyle as React.CSSProperties),
+        backgroundColor: pressing ? 'var(--ph-bg)' : '#050914',
+      }}
+    >
+      <LibraryPressingBackground pressing={pressing} analyser={analyser} playing={playing} />
 
       <header className="relative z-10 shrink-0 border-b border-fuchsia-500/15 px-4 py-4 sm:px-6">
         <div className="mx-auto flex max-w-6xl flex-col gap-4">
@@ -336,7 +355,7 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="fresh">Fresh ink</SelectItem>
+                <SelectItem value="fresh">Newest added</SelectItem>
                 <SelectItem value="played">Last spun</SelectItem>
                 <SelectItem value="az">Title A–Z</SelectItem>
                 <SelectItem value="artist">Artist</SelectItem>

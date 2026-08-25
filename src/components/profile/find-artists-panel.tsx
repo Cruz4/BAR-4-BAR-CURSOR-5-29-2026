@@ -19,6 +19,7 @@ import {
   type Friendship,
 } from '@/lib/profile/social-client';
 import { REFERRAL_INK_REWARD } from '@/lib/referrals';
+import { REFERRAL_INK_SPEND_THRESHOLD, SIGNUP_INK } from '@/lib/subscription';
 import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
@@ -168,7 +169,7 @@ export function FindArtistsPanel({ viewerSlug, className }: FindArtistsPanelProp
       setCopied(true);
       toast({
         title: 'Invite link copied',
-        description: `Share it — you and your friend each get ${REFERRAL_INK_REWARD} Ink when they join.`,
+        description: `Your friend gets ${SIGNUP_INK} welcome Ink plus up to ${REFERRAL_INK_REWARD} extra. You can earn up to ${REFERRAL_INK_REWARD} Ink after they spend ${REFERRAL_INK_SPEND_THRESHOLD} Ink.`,
       });
       setTimeout(() => setCopied(false), 2000);
     } catch {

@@ -42,7 +42,7 @@ export const GIF_STRAIN_VAULT_STEPS = 5;
 export const GIF_CO_WRITER_STEPS = 5;
 export const GIF_CO_WRITER_STEP_MS = 1800;
 
-function GifChrome({ children, step }: { children: React.ReactNode; step: number }) {
+function GifChrome({ children, step, className }: { children: React.ReactNode; step: number; className?: string }) {
   return (
     <div
       className="bg-[#05080f] text-foreground px-2 py-1"
@@ -53,7 +53,10 @@ function GifChrome({ children, step }: { children: React.ReactNode; step: number
     >
       <div
         data-marketing-ui-crop
-        className="rounded-2xl border border-white/12 bg-[#0a1018] shadow-2xl flex flex-col w-full overflow-hidden antialiased"
+        className={cn(
+          'rounded-2xl border border-white/12 bg-[#0a1018] shadow-2xl flex flex-col w-full overflow-hidden antialiased',
+          className
+        )}
       >
         {children}
       </div>
@@ -463,7 +466,7 @@ function GifCoWriterSceneInner() {
   const lineSlotted = step === 4;
 
   return (
-    <GifChrome step={step}>
+    <GifChrome step={step} className="min-h-[637px]">
       <div className="px-5 pt-4 pb-3 border-b border-white/8 shrink-0">
         <p className="text-sm font-code text-zinc-300 uppercase tracking-widest">{track.title}</p>
         <GifGradientTitle

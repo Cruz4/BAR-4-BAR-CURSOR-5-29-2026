@@ -25,7 +25,7 @@ import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { formatDropPulseLine } from '@/lib/drop-pulse';
 import { normalizeDropPrice } from '@/lib/drop-commerce';
-import { fetchDropLoved, likeDrop } from '@/lib/drop-social-client';
+import { fetchDropLoved, likeDrop, unlikeDrop } from '@/lib/drop-social-client';
 
 function timeAgo(iso: string): string {
   try {
@@ -81,6 +81,7 @@ export function SceneDiscoverCard({
   const [dropLoved, setDropLoved] = useState(false);
   const [loveBurst, setLoveBurst] = useState(false);
   const dropTapRef = useRef({ lastAt: 0, x: 0, y: 0 });
+  const dropLoveBusyRef = useRef(false);
 
   useEffect(() => {
     if (!immersive || card.kind !== 'drop') return;
@@ -99,7 +100,7 @@ export function SceneDiscoverCard({
   if (card.kind === 'artist') {
     const { artist } = card;
     return (
-      <Card className="border-sky-500/25 bg-gradient-to-r from-sky-500/[0.07] via-card/85 to-card/70 p-4">
+      <Card className="min-w-0 overflow-hidden border-sky-500/25 bg-gradient-to-r from-sky-500/[0.07] via-card/85 to-card/70 p-4">
         <DiscoverTag label="Recently live" icon={Radio} tone="text-sky-400/90" />
         <MatchReasons match={card.match} />
         <div className="mt-2.5 flex items-center gap-3">
@@ -142,7 +143,7 @@ export function SceneDiscoverCard({
     const pulse = formatDropPulseLine(drop);
     return (
       <Card
-        className="relative touch-pan-y border-fuchsia-500/40 bg-gradient-to-r from-fuchsia-500/[0.12] via-card/85 to-card/70 p-4"
+        className="relative min-w-0 touch-pan-y overflow-hidden border-fuchsia-500/40 bg-gradient-to-r from-fuchsia-500/[0.12] via-card/85 to-card/70 p-3 sm:p-4"
         onPointerDown={immersive ? (event) => { dropTapRef.current.x = event.clientX; dropTapRef.current.y = event.clientY; } : undefined}
         onPointerUp={immersive ? (event) => {
           const target = event.target as HTMLElement;
@@ -152,11 +153,19 @@ export function SceneDiscoverCard({
           if (now - dropTapRef.current.lastAt < 330) {
             dropTapRef.current.lastAt = 0;
             if (!user) toast({ title: 'Sign in to show love' });
-            else if (!dropLoved) {
-              setDropLoved(true);
-              setLoveBurst(true);
-              window.setTimeout(() => setLoveBurst(false), 650);
-              void likeDrop(drop.shareId, { name: user.displayName }).catch(() => setDropLoved(false));
+            else if (!dropLoveBusyRef.current) {
+              const next = !dropLoved;
+              dropLoveBusyRef.current = true;
+              setDropLoved(next);
+              if (next) {
+                setLoveBurst(true);
+                window.setTimeout(() => setLoveBurst(false), 650);
+              }
+              void (next
+                ? likeDrop(drop.shareId, { name: user.displayName })
+                : unlikeDrop(drop.shareId))
+                .catch(() => setDropLoved(!next))
+                .finally(() => { dropLoveBusyRef.current = false; });
             }
           } else dropTapRef.current.lastAt = now;
         } : undefined}
@@ -186,7 +195,7 @@ export function SceneDiscoverCard({
             >
               {drop.title}
             </Link>
-            <p className="font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
+            <p className="break-words font-code text-[9px] font-bold uppercase leading-relaxed tracking-[0.14em] text-muted-foreground/70 sm:tracking-[0.18em]">
               {firstDrop ? 'Song' : drop.type === 'album' ? 'Album' : 'Track'}
               {firstDrop ? ' · stream' : ' DNA'} by{' '}
               {ownerHref ? (

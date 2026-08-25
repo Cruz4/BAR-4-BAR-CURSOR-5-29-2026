@@ -11,11 +11,14 @@ import { useAuth } from '@/hooks/use-auth';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { auth } from '@/lib/firebase/client/firebase';
 import type { DropLibraryItem } from '@/lib/drop-library';
+import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
+import type { PressingConfig } from '@/lib/profile/pressing';
 
 export default function DropLibraryPage() {
   const { user, loading: authLoading } = useAuth();
   const { enabled: firstDropsOn, loading: featureLoading } = useFirstDropsFeature();
   const [items, setItems] = useState<DropLibraryItem[]>([]);
+  const [pressing, setPressing] = useState<PressingConfig | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -27,14 +30,21 @@ export default function DropLibraryPage() {
       setLoaded(!authLoading);
       return;
     }
+    setPressing(null);
     void (async () => {
       try {
         const token = await auth.currentUser?.getIdToken();
-        const res = await fetch(`/api/drops/library?userId=${encodeURIComponent(user.id)}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        const data = await res.json();
-        if (res.ok && Array.isArray(data.items)) setItems(data.items);
+        const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+        const [libraryResponse, profileResponse] = await Promise.all([
+          fetch(`/api/drops/library?userId=${encodeURIComponent(user.id)}`, { headers }),
+          fetch(`/api/profile/config?userId=${encodeURIComponent(user.id)}`, { headers }).catch(() => null),
+        ]);
+        const [libraryData, profileData] = await Promise.all([
+          libraryResponse.json(),
+          profileResponse?.ok ? profileResponse.json() : Promise.resolve(null),
+        ]);
+        if (libraryResponse.ok && Array.isArray(libraryData.items)) setItems(libraryData.items);
+        if (profileData?.config) setPressing(normalizeArtistHomeConfig(profileData.config).theme);
       } finally {
         setLoaded(true);
       }
@@ -87,7 +97,7 @@ export default function DropLibraryPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <DropDeck userId={user.id} items={items} />
+      <DropDeck userId={user.id} items={items} pressing={pressing} />
     </div>
   );
 }

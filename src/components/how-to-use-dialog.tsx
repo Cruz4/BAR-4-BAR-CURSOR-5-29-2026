@@ -19,6 +19,7 @@ import {
   getVisitorHeadlinePerks,
   getProMonthlyHeadlinePerks,
   getProYearlyHeadlinePerks,
+  getReferralFaqAnswer,
 } from '@/lib/studio-tiers';
 import { TierPriceSummary } from '@/components/tier-price-summary';
 import {
@@ -278,7 +279,7 @@ const CORE_FAQS = [
     },
     {
       q: "How does Refer a Friend work?",
-      a: "Ink Store → Refer a Friend copies your link. New signup through it: 150 permanent Ink each. Up to 4 referrer bonuses (600 Ink total)."
+      a: getReferralFaqAnswer()
     },
     {
       q: "What is a rhyme bar vs a sheet line?",
@@ -642,7 +643,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                   <ul className="list-disc list-inside space-y-1.5 text-sm">
                     <li><strong>Studio Progress</strong> — later, Vault sidebar or <code className="text-primary">/studio-progress</code>.</li>
                     <li><strong>The Block</strong> — later, friends feed on The Scene; circle at <code className="text-primary">/friends</code>.</li>
-                    <li><strong>Share card / Refer a Friend</strong> — later. Ink Store, 150 Ink each (up to 4).</li>
+                    <li><strong>Share card / Refer a Friend</strong> — later. Ink Store; your friend gets welcome Ink plus a referral bonus, and your reward unlocks after their first 50 Ink of legitimate AI use.</li>
                   </ul>
                 </ChapterCard>
 

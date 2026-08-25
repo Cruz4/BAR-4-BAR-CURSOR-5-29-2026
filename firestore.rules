@@ -107,6 +107,32 @@ service cloud.firestore {
           || (data.transcript is string && data.transcript.size() <= 4000));
     }
 
+    function validPollOption(option, expectedId) {
+      return option is map
+        && option.keys().hasAll(['id', 'label'])
+        && option.keys().hasOnly(['id', 'label'])
+        && option.id == expectedId
+        && option.label is string
+        && option.label.size() > 0
+        && option.label.size() <= 120;
+    }
+
+    function validPostPoll(data) {
+      return data is map
+        && data.keys().hasAll(['options', 'resultsVisibility'])
+        && data.keys().hasOnly(['options', 'resultsVisibility'])
+        && data.options is list
+        && data.options.size() >= 2
+        && data.options.size() <= 6
+        && (data.resultsVisibility == 'after_vote' || data.resultsVisibility == 'always')
+        && validPollOption(data.options[0], 'option_1')
+        && validPollOption(data.options[1], 'option_2')
+        && (data.options.size() < 3 || validPollOption(data.options[2], 'option_3'))
+        && (data.options.size() < 4 || validPollOption(data.options[3], 'option_4'))
+        && (data.options.size() < 5 || validPollOption(data.options[4], 'option_5'))
+        && (data.options.size() < 6 || validPollOption(data.options[5], 'option_6'));
+    }
+
     // Client bootstrap only — privileged billing/admin fields must stay at safe defaults
     function isSafeUserBootstrap() {
       let data = request.resource.data;
@@ -463,6 +489,11 @@ service cloud.firestore {
           || request.resource.data.lyricClip is map)
         && (!('reverbLyricClip' in request.resource.data)
           || request.resource.data.reverbLyricClip is map)
+        && (!('poll' in request.resource.data)
+          || (validPostPoll(request.resource.data.poll)
+            && request.resource.data.text.size() > 0))
+        && (!('reverbPoll' in request.resource.data)
+          || validPostPoll(request.resource.data.reverbPoll))
         && (
           request.resource.data.text.size() > 0
           || ('embedUrl' in request.resource.data && request.resource.data.embedUrl.size() > 0)
@@ -477,6 +508,7 @@ service cloud.firestore {
         && hasLiveArtistHome(request.auth.uid)
         && resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerId == resource.data.ownerId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['poll', 'reverbPoll'])
         && lockedServerNumber('viewCount');
       allow delete: if request.auth != null
         && (resource.data.ownerId == request.auth.uid || isAdmin());
@@ -517,6 +549,16 @@ service cloud.firestore {
           allow read: if true;
           allow create, delete: if request.auth != null && request.auth.uid == likerId;
         }
+      }
+
+      // Votes and aggregate results are Admin SDK-only. Public post reads must
+      // never reveal a person's choice or early results.
+      match /pollVotes/{voterId} {
+        allow read, write: if false;
+      }
+
+      match /pollPrivate/{documentId} {
+        allow read, write: if false;
       }
 
       match /viewTicks/{tickId} {

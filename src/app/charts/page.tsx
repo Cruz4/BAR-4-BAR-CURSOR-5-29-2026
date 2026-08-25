@@ -62,6 +62,25 @@ const trackSignalLabels: Array<{
   { key: 'purchaseConversions', label: 'buyers', icon: ShoppingBag },
 ];
 
+const trackProofExplanations: Record<keyof TrackChartSignals, { title: string; detail: string }> = {
+  qualifiedListeners: {
+    title: 'A listener reaches 80%',
+    detail: 'The first time that person plays at least 80% of the song that day.',
+  },
+  completions: {
+    title: 'A listener finishes the song',
+    detail: 'They reach the end. These points are added on top of the 80% listening point.',
+  },
+  repeatListeners: {
+    title: 'A listener returns on another day',
+    detail: 'They previously reached 80%, then come back on a later day and reach 80% again.',
+  },
+  purchaseConversions: {
+    title: 'A unique listener buys the song',
+    detail: 'The first verified purchase from that listener counts. Paying more does not add more chart points.',
+  },
+};
+
 function matchesLabel(values: string[], selected: string): boolean {
   if (!selected) return true;
   const target = selected.toLocaleLowerCase();
@@ -241,15 +260,39 @@ export default function ChartsPage() {
         <Card className="border-cyan-400/20 bg-black/35 backdrop-blur-sm">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm uppercase text-cyan-100">
-              <ShieldCheck className="h-4 w-4 text-cyan-300" /> Proof
+              <ShieldCheck className="h-4 w-4 text-cyan-300" /> How song chart scores work
             </CardTitle>
-            <CardDescription className="text-cyan-100/50">
-              Song score: {(charts?.formula.tracks || []).map((part) => `${part.points}× ${part.label}`).join(' + ')}.
+            <CardDescription className="max-w-2xl text-sm leading-relaxed text-cyan-100/65">
+              Songs earn points from real listening and buying during the rolling {charts?.window.days || 7}-day chart period. More verified points means a higher chart position.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2 font-code text-[10px] leading-relaxed text-white/50">
-            <p>An 80% listen is timed and deduped. Owners cannot count themselves. Purchases count unique listener conversion, never dollars spent.</p>
-            <p>Ink, Pro tier, ads, and sponsorship add zero. Geography comes only from the member’s public Scene/region setting.</p>
+          <CardContent className="space-y-4">
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(charts?.formula.tracks || []).map((part) => {
+                const explanation = trackProofExplanations[part.signal];
+                return (
+                  <div key={part.signal} className="rounded-lg border border-cyan-400/15 bg-cyan-500/[0.05] p-3">
+                    <p className="font-code text-xs font-black uppercase tracking-wide text-cyan-200">
+                      +{part.points} {part.points === 1 ? 'point' : 'points'}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-white/90">{explanation.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-white/55">{explanation.detail}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="rounded-lg border border-white/10 bg-black/25 p-3 text-xs leading-relaxed text-white/65">
+              <p>
+                <span className="font-bold text-white/85">Example:</span> If a returning listener reaches 80% and finishes the song, that adds 1 + 2 + 3 = 6 points. Their first verified purchase adds another 8 points.
+              </p>
+            </div>
+
+            <div className="space-y-1 text-xs leading-relaxed text-white/55">
+              <p><span className="font-bold text-white/75">Kept fair:</span> Replaying the same song repeatedly on the same day does not keep adding listening points, and artists cannot score their own songs.</p>
+              <p><span className="font-bold text-white/75">No pay-to-rank:</span> Ink balance, Pro tier, ads, sponsorships, and the amount someone pays add zero points.</p>
+              <p><span className="font-bold text-white/75">Location charts:</span> A member only represents the Scene or region they chose to make public.</p>
+            </div>
           </CardContent>
         </Card>
 

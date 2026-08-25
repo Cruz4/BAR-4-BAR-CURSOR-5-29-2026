@@ -110,10 +110,11 @@ export async function fetchActivityFeedPage(
   max = 60,
   cursor?: string | null
 ): Promise<ActivityFeedPage> {
+  await auth.authStateReady();
   const user = auth.currentUser;
-  if (!user) return { events: [], nextCursor: null };
+  if (!user) throw new Error('Sign in required to load activity history.');
   const headers = await authHeaders();
-  if (!headers) return { events: [], nextCursor: null };
+  if (!headers) throw new Error('Your session is still restoring. Please try again.');
   const params = new URLSearchParams({
     userId: user.uid,
     direction,

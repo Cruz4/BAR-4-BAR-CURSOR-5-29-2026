@@ -1,12 +1,81 @@
 'use client';
 
 import Link from 'next/link';
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Loader, Pause, Play, SkipBack, SkipForward, X } from 'lucide-react';
 import { useOptionalDropPlayer } from '@/context/drop-player-context';
 import { formatDeckTime } from '@/lib/drop-library';
 import { Button } from '@/components/ui/button';
 import { AudioVolumeControl } from '@/components/audio-volume-control';
+import { MUSICAL_EQ_BANDS, measureSpectrumBand, smoothSpectrumLevel } from '@/lib/audio-spectrum';
+
+function MiniDropEqualizer({ analyser, playing }: { analyser: AnalyserNode | null; playing: boolean }) {
+  const barRefs = useRef<Array<HTMLSpanElement | null>>([]);
+
+  useEffect(() => {
+    let frame = 0;
+    let tick = 0;
+    const smoothed = [0.28, 0.28, 0.28, 0.28, 0.28];
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const bins = analyser ? new Uint8Array(analyser.frequencyBinCount) : null;
+
+    const render = () => {
+      tick += 0.12;
+      if (analyser && bins) analyser.getByteFrequencyData(bins);
+
+      let targets = [0.28, 0.28, 0.28, 0.28, 0.28];
+      if (playing && reducedMotion) {
+        targets = [0.42, 0.5, 0.58, 0.5, 0.42];
+      } else if (playing && analyser && bins && bins.length > 0) {
+        const levels = MUSICAL_EQ_BANDS.map((band) => measureSpectrumBand(analyser, bins, band));
+        const edge = Math.max(0.2, (levels[2] + levels[3]) / 2);
+        const inner = Math.max(0.24, (levels[1] + levels[2]) / 2);
+        const center = Math.max(
+          0.3,
+          (levels.reduce((sum, level) => sum + level, 0) / levels.length) * 1.08
+        );
+        targets = [edge, inner, center, inner, edge];
+      } else if (playing) {
+        const edge = 0.3 + Math.abs(Math.sin(tick)) * 0.35;
+        const inner = 0.36 + Math.abs(Math.sin(tick + 0.7)) * 0.42;
+        const center = 0.44 + Math.abs(Math.sin(tick + 1.2)) * 0.48;
+        targets = [edge, inner, center, inner, edge];
+      }
+
+      barRefs.current.forEach((bar, index) => {
+        if (!bar) return;
+        smoothed[index] = smoothSpectrumLevel(smoothed[index], targets[index]);
+        bar.style.transform = `scaleY(${smoothed[index]})`;
+      });
+
+      if (playing && !reducedMotion) frame = window.requestAnimationFrame(render);
+    };
+
+    render();
+    return () => window.cancelAnimationFrame(frame);
+  }, [analyser, playing]);
+
+  return (
+    <div
+      className="flex h-7 w-10 shrink-0 items-center justify-center gap-[3px] sm:pointer-events-none sm:absolute sm:left-1/2 sm:-translate-x-1/2"
+      role="img"
+      aria-label={playing ? 'Audio levels moving with the current song' : 'Audio levels paused'}
+      title={playing ? 'Now playing' : 'Playback paused'}
+    >
+      {[13, 21, 27, 21, 13].map((height, index) => (
+        <span
+          key={height + index}
+          ref={(element) => {
+            barRefs.current[index] = element;
+          }}
+          className="w-[3px] origin-center rounded-full bg-white/90 shadow-[0_0_6px_rgba(255,255,255,0.32)] transition-transform duration-75"
+          style={{ height, transform: 'scaleY(0.28)' }}
+          aria-hidden
+        />
+      ))}
+    </div>
+  );
+}
 
 export function TopNavDropMiniPlayer() {
   const player = useOptionalDropPlayer();
@@ -19,6 +88,7 @@ export function TopNavDropMiniPlayer() {
     elapsed,
     duration,
     volume,
+    analyser,
     togglePlay,
     skipNext,
     prev,
@@ -29,10 +99,10 @@ export function TopNavDropMiniPlayer() {
 
   return (
     <div className="border-t border-border/40 bg-background/95 px-2 sm:px-4 md:px-6">
-      <div className="mx-auto flex h-10 w-full max-w-6xl items-center gap-1.5">
+      <div className="relative mx-auto flex h-10 w-full max-w-6xl items-center gap-1.5">
         <Link
           href="/library"
-          className="min-w-0 flex-1 rounded-md px-1.5 py-0.5 hover:bg-white/5"
+          className="min-w-0 flex-1 rounded-md px-1.5 py-0.5 hover:bg-white/5 sm:max-w-[calc(50%-28px)]"
           aria-label="Open Library"
         >
           <span className="block truncate font-headline text-[11px] font-bold uppercase leading-tight">
@@ -43,36 +113,39 @@ export function TopNavDropMiniPlayer() {
             {duration > 0 ? ` · ${formatDeckTime(elapsed)} / ${formatDeckTime(duration)}` : ''}
           </span>
         </Link>
-        <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={prev} aria-label="Previous">
-          <SkipBack className="h-3.5 w-3.5" />
-        </Button>
-        <Button
-          type="button"
-          size="icon"
-          className="h-7 w-7 shrink-0 rounded-full"
-          onClick={togglePlay}
-          aria-label={playing ? 'Pause' : 'Play'}
-        >
-          {loading ? (
-            <Loader className="h-3.5 w-3.5 animate-spin" />
-          ) : playing ? (
-            <Pause className="h-3.5 w-3.5" />
-          ) : (
-            <Play className="h-3.5 w-3.5" />
-          )}
-        </Button>
-        <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={skipNext} aria-label="Next">
-          <SkipForward className="h-3.5 w-3.5" />
-        </Button>
-        <AudioVolumeControl
-          compact
-          volume={volume}
-          onVolumeChange={setVolume}
-          onToggleMute={toggleMute}
-        />
-        <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-muted-foreground" onClick={stop} aria-label="Stop">
-          <X className="h-3.5 w-3.5" />
-        </Button>
+        <MiniDropEqualizer analyser={analyser} playing={playing} />
+        <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1.5">
+          <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={prev} aria-label="Previous">
+            <SkipBack className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            type="button"
+            size="icon"
+            className="h-7 w-7 shrink-0 rounded-full"
+            onClick={togglePlay}
+            aria-label={playing ? 'Pause' : 'Play'}
+          >
+            {loading ? (
+              <Loader className="h-3.5 w-3.5 animate-spin" />
+            ) : playing ? (
+              <Pause className="h-3.5 w-3.5" />
+            ) : (
+              <Play className="h-3.5 w-3.5" />
+            )}
+          </Button>
+          <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={skipNext} aria-label="Next">
+            <SkipForward className="h-3.5 w-3.5" />
+          </Button>
+          <AudioVolumeControl
+            compact
+            volume={volume}
+            onVolumeChange={setVolume}
+            onToggleMute={toggleMute}
+          />
+          <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-muted-foreground" onClick={stop} aria-label="Stop">
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
     </div>
   );

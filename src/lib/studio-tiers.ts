@@ -9,6 +9,7 @@ import {
   FREE_RESIDENCY_POOL_CAP,
   FREE_ALBUM_LIMIT,
   FREE_TRACK_LIMIT,
+  REFERRAL_INK_SPEND_THRESHOLD,
   isProUser,
   isYearlyPro,
 } from '@/lib/subscription';
@@ -299,7 +300,7 @@ export function getResidencyVsPermanentFaqAnswer(): string {
 
 /** Pricing FAQ — refer a friend */
 export function getReferralFaqAnswer(): string {
-  return `Copy your link from Ink Store → Refer a Friend. When a new artist signs up through it, you each get ${REFERRAL_INK_REWARD} Ink (referrers earn up to ${MAX_REFERRAL_REWARDS} bonuses). Referrer bonuses credit after your friend spends 50 Ink on AI tools. On Visitor, referral Ink stacks in your residency pool (capped at ${FREE_RESIDENCY_POOL_CAP}); Pro members receive permanent Ink. One welcome bonus per email — returning identities after self-delete do not re-earn referral welcome Ink.`;
+  return `Every new account starts with ${SIGNUP_INK} welcome Ink. When an eligible friend signs up through your referral link, they can receive up to ${REFERRAL_INK_REWARD} additional referral Ink. You can earn up to ${REFERRAL_INK_REWARD} Ink after they legitimately spend ${REFERRAL_INK_SPEND_THRESHOLD} Ink on AI tools, for up to ${MAX_REFERRAL_REWARDS} rewarded referrals. Visitor referral Ink goes into the residency pool, capped at ${FREE_RESIDENCY_POOL_CAP}; Pro referral Ink is permanent. One referral welcome bonus per eligible identity.`;
 }
 
 /** Pricing FAQ — is Artist Home / The Scene free */

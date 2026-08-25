@@ -609,8 +609,9 @@ export function SceneBlockAtmosphere({
     {/* Above feed chrome so the pin is clickable; desktop-only (sm+) on purpose. */}
     {neon && (
       <div
-        className="scene-block-neon pointer-events-none fixed right-[3%] top-[4.5rem] z-[40] hidden max-w-[16rem] text-right sm:block sm:max-w-[18rem]"
+        className="scene-block-neon pointer-events-none fixed right-[3%] z-[40] hidden max-w-[16rem] text-right sm:block sm:max-w-[18rem]"
         data-phase={phase}
+        style={{ top: appChromeBottom }}
       >
         <div className="inline-flex items-baseline justify-end gap-1.5">
           <button

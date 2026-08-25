@@ -460,13 +460,15 @@ export function ArtistHome({
               ) : null}
             </h1>
             <SoundIdentityStrip identity={config.featured.soundIdentity} />
-            <div data-profile-safe-check className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+            <div data-profile-safe-check className="flex min-w-0 flex-row flex-wrap items-center gap-2 sm:gap-3">
               <StudioStandingRankBadge
                 variant="pill"
                 allowShare={isOwner}
+                compactOnMobile={showFirstDropsStorefront}
+                className="self-start"
                 badgeClassName={cn(
                   rankBadgeClass(rankId),
-                  'border-white/30 bg-black/70 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-md'
+                  'border-white/35 bg-black/80 text-white shadow-[0_8px_24px_rgba(0,0,0,0.55)] backdrop-blur-md'
                 )}
                 stats={{
                   displayName: profile.displayName,
@@ -487,7 +489,7 @@ export function ArtistHome({
                   <Button
                     asChild
                     size="sm"
-                    className="h-auto min-h-10 w-full max-w-full gap-1.5 whitespace-normal bg-fuchsia-400 px-3 py-2 text-center font-bold uppercase leading-tight tracking-wider text-black hover:bg-fuchsia-300 sm:h-9 sm:w-auto sm:whitespace-nowrap sm:px-4 sm:py-0"
+                    className="h-auto min-h-10 min-w-0 flex-1 gap-1.5 whitespace-normal bg-fuchsia-400 px-3 py-2 text-center font-bold uppercase leading-tight tracking-wider text-black hover:bg-fuchsia-300 sm:h-9 sm:w-auto sm:flex-none sm:whitespace-nowrap sm:px-4 sm:py-0"
                   >
                     <Link href={`/song/${saleDrops[0].shareId}`} className="inline-flex max-w-full items-center gap-1.5">
                       <Music className="h-3.5 w-3.5 shrink-0" />
@@ -501,7 +503,7 @@ export function ArtistHome({
                   <Button
                     asChild
                     size="sm"
-                    className="h-auto min-h-10 w-full max-w-full gap-1.5 whitespace-normal bg-fuchsia-400 px-3 py-2 text-center font-bold uppercase leading-tight tracking-wider text-black hover:bg-fuchsia-300 sm:h-9 sm:w-auto sm:whitespace-nowrap sm:px-4 sm:py-0"
+                    className="h-auto min-h-10 min-w-0 flex-1 gap-1.5 whitespace-normal bg-fuchsia-400 px-3 py-2 text-center font-bold uppercase leading-tight tracking-wider text-black hover:bg-fuchsia-300 sm:h-9 sm:w-auto sm:flex-none sm:whitespace-nowrap sm:px-4 sm:py-0"
                   >
                     <a href="#first-drops" className="inline-flex max-w-full items-center gap-1.5">
                       <Music className="h-3.5 w-3.5 shrink-0" />

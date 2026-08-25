@@ -6,6 +6,7 @@ import { parseLyricClip } from '@/lib/profile/lyric-clip';
 import { needsVanitySlugUpgrade } from '@/lib/profile/profile-slug';
 import type { ProfilePost } from '@/lib/profile/social-client';
 import type { VoiceNote } from '@/lib/profile/voice-notes';
+import { parsePostPoll } from '@/lib/profile/post-polls';
 
 export type PublicPostPageData = {
   post: ProfilePost;
@@ -45,6 +46,8 @@ export function postFromServerDoc(id: string, data: Record<string, unknown>): Pr
   const reverbVoice = publicVoice(data.reverbVoice);
   const lyricClip = parseLyricClip(data.lyricClip);
   const reverbLyricClip = parseLyricClip(data.reverbLyricClip);
+  const poll = parsePostPoll(data.poll);
+  const reverbPoll = parsePostPoll(data.reverbPoll);
   return {
     id,
     ownerId: clean(data.ownerId, 128) || '',
@@ -76,6 +79,8 @@ export function postFromServerDoc(id: string, data: Record<string, unknown>): Pr
     ...(reverbVoice ? { reverbVoice } : {}),
     ...(lyricClip ? { lyricClip } : {}),
     ...(reverbLyricClip ? { reverbLyricClip } : {}),
+    ...(poll ? { poll } : {}),
+    ...(reverbPoll ? { reverbPoll } : {}),
   };
 }
 
@@ -84,9 +89,11 @@ export function publicPostText(post: ProfilePost): string {
     post.text,
     post.lyricClip?.lines.join(' '),
     post.voice?.transcript,
+    post.poll?.options.map((option) => option.label).join(' '),
     post.isReverb ? post.reverbText : '',
     post.isReverb ? post.reverbLyricClip?.lines.join(' ') : '',
     post.isReverb ? post.reverbVoice?.transcript : '',
+    post.isReverb ? post.reverbPoll?.options.map((option) => option.label).join(' ') : '',
   ]
     .filter(Boolean)
     .join(' ')

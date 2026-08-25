@@ -47,7 +47,7 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
   const { albums, loading } = useContext(DataContext);
   const [open, setOpen] = useState(false);
 
-  const { albumDrops, trackDrops, total, firstDropCount } = useMemo(() => {
+  const { albumDrops, trackDrops, total, firstDropCount, lyricPreviewCount } = useMemo(() => {
     const albumsOut: ManagedAlbumDrop[] = [];
     const tracksOut: ManagedTrackDrop[] = [];
     const seenTracks = new Set<string>();
@@ -90,6 +90,7 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
       trackDrops: tracksOut,
       total: albumsOut.length + tracksOut.length,
       firstDropCount: tracksOut.filter((t) => t.hasDropAudio).length,
+      lyricPreviewCount: albumsOut.length + tracksOut.filter((t) => !t.hasDropAudio).length,
     };
   }, [albums]);
 
@@ -97,14 +98,12 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
+      <div
         className={cn(
-          'flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors',
+          'flex w-full flex-wrap items-center gap-3 rounded-xl border px-3.5 py-3 text-left',
           firstDropCount > 0
-            ? 'border-amber-400/45 bg-amber-500/10 hover:border-amber-300/60 hover:bg-amber-500/15'
-            : 'border-border/60 bg-card/40 hover:border-primary/35 hover:bg-card/70',
+            ? 'border-amber-400/45 bg-amber-500/10'
+            : 'border-border/60 bg-card/40',
           className
         )}
         data-tour="scene-live-drops"
@@ -121,38 +120,52 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
         </span>
         <span className="min-w-0 flex-1">
           <span className="block font-code text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground/70">
-            {firstDropCount > 0 ? 'Your songs for sale' : 'Live drops'}
+            Your releases
           </span>
-          <span className="block truncate text-xs text-foreground/90">
+          <span className="block text-xs leading-relaxed text-foreground/90">
             {total === 0
-              ? 'None live — publish a track, then add the song + price'
-              : firstDropCount > 0
-                ? `${firstDropCount} on sale · visitors hear these first on your home`
-                : `${albumDrops.length} album${albumDrops.length === 1 ? '' : 's'} · ${trackDrops.length} track${trackDrops.length === 1 ? '' : 's'} · no song for sale yet`}
+              ? 'No releases yet — press your first song or publish a lyric preview'
+              : `${firstDropCount} song${firstDropCount === 1 ? '' : 's'} for sale · ${lyricPreviewCount} lyric preview${lyricPreviewCount === 1 ? '' : 's'}`}
           </span>
         </span>
-        <span className="shrink-0 font-code text-[9px] font-bold uppercase tracking-[0.18em] text-amber-200/90">
-          Manage
+        <span className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <Button
+            type="button"
+            size="sm"
+            className="h-9 bg-fuchsia-400 px-3 text-[10px] font-bold uppercase text-black hover:bg-fuchsia-300"
+            onClick={() => openFirstDropLathe()}
+          >
+            Press a song
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 px-3 text-[10px] font-bold uppercase"
+            onClick={() => setOpen(true)}
+          >
+            Manage releases
+          </Button>
         </span>
-      </button>
+      </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="flex w-[calc(100vw-1.5rem)] max-w-4xl max-h-[min(82vh,860px)] flex-col gap-4 overflow-hidden sm:rounded-xl">
           <DialogHeader className="shrink-0 space-y-1.5 pr-8 text-left">
             <DialogTitle className="font-headline uppercase tracking-wide">
-              Your live drops
+              Your releases
             </DialogTitle>
             <DialogDescription>
-              DNA Drops are the public lyric pages. First Drops are the song on those pages — upload audio
-              and set a price on First Drops. Fans find them on your Artist Home and The Scene.
+              Songs for Sale contain uploaded audio and a price. Lyric Previews are public DNA pages for
+              sharing words and creative identity; they are not songs for sale.
             </DialogDescription>
           </DialogHeader>
 
           {total === 0 ? (
             <div className="space-y-3 rounded-xl border border-dashed border-border/70 bg-muted/20 p-4">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Nothing live yet. Tap Press a song on The Scene to upload a song and put it on
-                sale. DNA Drop is only for sharing lyrics — not for selling.
+                Nothing released yet. Press a song to upload audio, choose a preview, and set a price,
+                or open The Vault to publish a lyric preview.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -177,7 +190,10 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
               {firstDropCount > 0 && (
                 <section className="space-y-2">
                   <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.28em] text-fuchsia-300/90">
-                    <Music className="h-3.5 w-3.5" /> First Drops · live
+                    <Music className="h-3.5 w-3.5" /> Songs for sale
+                  </p>
+                  <p className="text-[11px] leading-relaxed text-muted-foreground">
+                    Finished audio that listeners can preview, buy once, and stream in Bar4Bar.
                   </p>
                   <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {trackDrops
@@ -219,7 +235,7 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
               {albumDrops.length > 0 && (
                 <section className="space-y-2">
                   <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.28em] text-violet-300/90">
-                    <Disc3 className="h-3.5 w-3.5" /> Album DNA
+                    <Disc3 className="h-3.5 w-3.5" /> Lyric previews · albums
                   </p>
                   <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {albumDrops.map((drop) => (
@@ -262,10 +278,10 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
               {trackDrops.some((d) => !d.hasDropAudio) && (
                 <section className="space-y-2">
                   <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.28em] text-emerald-300/90">
-                    <CassetteTape className="h-3.5 w-3.5" /> Track DNA · no song yet
+                    <CassetteTape className="h-3.5 w-3.5" /> Lyric previews · tracks
                   </p>
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    Lyrics are live. Press the song on First Drops to sell it — you do not go back through DNA Drop.
+                    These public DNA pages share lyrics and identity. To sell finished audio, press the song separately.
                   </p>
                   <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {trackDrops

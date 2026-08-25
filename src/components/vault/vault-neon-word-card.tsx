@@ -10,6 +10,7 @@ import React, { useEffect, useState } from 'react';
 import { Lock, LockOpen } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
+import { useAppChromeBottom } from '@/hooks/use-app-chrome-bottom';
 import {
   pinSceneNeonEntry,
   pickSceneNeonEntry,
@@ -23,6 +24,7 @@ export function VaultNeonWordCard() {
   const [neon, setNeon] = useState<SceneNeonEntry | null>(null);
   const [neonPinned, setNeonPinned] = useState(false);
   const [themeReady, setThemeReady] = useState(false);
+  const appChromeBottom = useAppChromeBottom(16);
 
   useEffect(() => {
     setThemeReady(true);
@@ -53,7 +55,7 @@ export function VaultNeonWordCard() {
   return (
     <div
       className={cn(
-        'scene-block-neon pointer-events-none fixed right-[3%] top-[4.5rem] z-[40] hidden overflow-hidden text-right sm:block',
+        'scene-block-neon pointer-events-none fixed right-[3%] z-[40] hidden overflow-hidden text-right sm:block',
         // Scene widths below xl (no side dock)
         'max-w-[16rem] sm:max-w-[18rem]',
         // xl+: keep Scene right/top anchor; shrink so left edge clears the dock
@@ -61,6 +63,7 @@ export function VaultNeonWordCard() {
         'xl:max-w-[min(18rem,max(0px,calc(50%-36rem-5.75rem-3%)))]'
       )}
       data-phase={phase}
+      style={{ top: appChromeBottom }}
       aria-label={`Neon word ${neon.word}`}
     >
       <div className="inline-flex max-w-full items-baseline justify-end gap-1.5">

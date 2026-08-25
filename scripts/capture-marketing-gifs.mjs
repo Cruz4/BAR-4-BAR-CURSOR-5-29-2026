@@ -27,6 +27,11 @@ const GIF_SCENES = [
   { scene: 'gif-rhyme-pulse', file: 'gif-rhyme-pulse.gif', steps: 5, stepMs: 2200, holdSteps: 2 },
 ];
 
+const requestedScene = process.argv
+  .find((arg) => arg.startsWith('--scene='))
+  ?.slice('--scene='.length)
+  .trim();
+
 async function waitForServer(page, url) {
   for (let i = 0; i < 30; i++) {
     try {
@@ -110,7 +115,14 @@ async function main() {
   console.log(`Waiting for ${BASE_URL} ...`);
   await waitForServer(page, probeUrl);
 
-  for (const { scene, file, steps, stepMs, holdSteps = 0 } of GIF_SCENES) {
+  const scenes = requestedScene
+    ? GIF_SCENES.filter(({ scene }) => scene === requestedScene)
+    : GIF_SCENES;
+  if (requestedScene && scenes.length === 0) {
+    throw new Error(`Unknown marketing GIF scene: ${requestedScene}`);
+  }
+
+  for (const { scene, file, steps, stepMs, holdSteps = 0 } of scenes) {
     const url = `${BASE_URL}/marketing/capture/${scene}?capture=1`;
     const outPath = path.join(OUT_DIR, file);
     console.log(`Recording ${scene} -> public/marketing/${file} (${stepMs}ms/step, frozen)`);
@@ -118,7 +130,7 @@ async function main() {
   }
 
   await browser.close();
-  console.log(`Done. ${GIF_SCENES.length} GIFs saved to public/marketing/`);
+  console.log(`Done. ${scenes.length} GIF${scenes.length === 1 ? '' : 's'} saved to public/marketing/`);
 }
 
 main().catch((err) => {

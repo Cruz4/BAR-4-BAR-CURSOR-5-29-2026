@@ -10,6 +10,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   BookOpen,
+  BarChart3,
   ChevronLeft,
   ChevronRight,
   Disc3,
@@ -71,6 +72,8 @@ import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picke
 import { SCENE_BOOTH_ID } from '@/lib/scene-home';
 import { isMasterAdminEmail } from '@/lib/master-admin';
 import { MentionSuggestions } from '@/components/profile/mention-suggestions';
+import { PollComposerFields } from '@/components/profile/poll-composer-fields';
+import type { PostPollResultsVisibility } from '@/lib/profile/post-polls';
 
 export type ModuleContext = {
   profileUserId: string;
@@ -654,6 +657,9 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const [embedUrl, setEmbedUrl] = useState('');
   const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
   const [image, setImage] = useState<PendingPostImage | null>(null);
+  const [pollOpen, setPollOpen] = useState(false);
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [pollVisibility, setPollVisibility] = useState<PostPollResultsVisibility>('after_vote');
   const [busy, setBusy] = useState(false);
   const [page, setPage] = useState(0);
   const [wallPageCount, setWallPageCount] = useState(1);
@@ -716,6 +722,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const signedInOwner = Boolean(ctx.isOwner && user);
   const canCompose = Boolean(playground) || Boolean(signedInOwner && profileLive);
   const ownerNeedsLive = Boolean(!playground && signedInOwner && !profileLoading && !profileLive);
+  const pollReady = !pollOpen || (Boolean(text.trim()) && pollOptions.every((option) => option.trim()));
 
   const pageCount = playground
     ? Math.max(1, Math.ceil(posts.length / WALL_PAGE_SIZE) || 1)
@@ -796,7 +803,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       return;
     }
     if (!user) return;
-    if (!text.trim() && !embedUrl.trim() && !voice && !image) return;
+    if (!pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image)) return;
     setBusy(true);
     try {
       const post = await createPost({
@@ -806,6 +813,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
         ownerSlug: ctx.profileSlug,
         ...(voice ? { voice } : {}),
         ...(image ? { image } : {}),
+        ...(pollOpen ? { poll: { options: pollOptions, resultsVisibility: pollVisibility } } : {}),
       });
       setPosts((prev) => [post, ...prev]);
       setWallTotal((value) => value + 1);
@@ -814,6 +822,9 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       setVoice(null);
       revokePostImagePreview(image);
       setImage(null);
+      setPollOpen(false);
+      setPollOptions(['', '']);
+      setPollVisibility('after_vote');
       setPage(0);
     } catch (e) {
       toast({
@@ -884,6 +895,20 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
             </p>
           )}
           {embedPreview && <EmbedPlayer url={embedUrl} />}
+          {!playground && pollOpen ? (
+            <PollComposerFields
+              options={pollOptions}
+              onOptionsChange={setPollOptions}
+              resultsVisibility={pollVisibility}
+              onResultsVisibilityChange={setPollVisibility}
+              onRemovePoll={() => {
+                setPollOpen(false);
+                setPollOptions(['', '']);
+                setPollVisibility('after_vote');
+              }}
+              disabled={busy}
+            />
+          ) : null}
           {playground ? (
             <p className="text-[10px] text-[var(--ph-muted,rgba(255,255,255,0.5))]">
               Demo wall — text, photos, and links stay here until you claim your free profile.
@@ -909,12 +934,24 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
           />
           {!playground ? <MentionSuggestions value={text} onChange={setText} excludeUserId={user?.id} /> : null}
             <EmojiPickerButton compact disabled={busy} onInsert={insertEmoji} />
+            {!playground ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className={cn('h-8 gap-1 px-2 text-[10px] font-bold uppercase tracking-wider', pollOpen && 'text-cyan-300')}
+                onClick={() => setPollOpen((value) => !value)}
+                disabled={busy}
+              >
+                <BarChart3 className="h-3.5 w-3.5" /> Poll
+              </Button>
+            ) : null}
           </div>
           <div className="flex justify-end">
             <Button
               size="sm"
               className="h-9 gap-1.5 font-bold uppercase"
-              disabled={busy || (!text.trim() && !embedUrl.trim() && !voice && !image)}
+              disabled={busy || !pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image)}
               onClick={() => void submit()}
             >
               <Send className="h-3.5 w-3.5" /> Post

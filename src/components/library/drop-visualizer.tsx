@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { MUSICAL_EQ_BANDS, measureSpectrumBand, smoothSpectrumLevel } from '@/lib/audio-spectrum';
 import { cn } from '@/lib/utils';
 
 type DropVisualizerProps = {
@@ -10,11 +11,11 @@ type DropVisualizerProps = {
   className?: string;
 };
 
-const BAR_LABELS = ['BAR 1', 'BAR 2', 'BAR 3', 'BAR 4'] as const;
+const BAND_LABELS = ['LOW', 'LOW-MID', 'HIGH-MID', 'HIGH'] as const;
 
 /**
- * Bar 4 Bar Library visualizer — a pressing-lathe ring plus four lyric-bar
- * energy lanes. Not a generic equalizer.
+ * Bar 4 Bar Library visualizer — a pressing-lathe ring plus four live
+ * frequency-band energy lanes.
  */
 export function DropVisualizer({ analyser, playing, children, className }: DropVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -30,6 +31,7 @@ export function DropVisualizer({ analyser, playing, children, className }: DropV
     if (!ctx) return;
 
     const bins = analyser ? new Uint8Array(analyser.frequencyBinCount) : null;
+    const smoothedLanes = [0.08, 0.08, 0.08, 0.08];
     let t = 0;
 
     const draw = () => {
@@ -72,30 +74,14 @@ export function DropVisualizer({ analyser, playing, children, className }: DropV
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      const lanes = [0, 1, 2, 3].map((lane) => {
+      const lanes = MUSICAL_EQ_BANDS.map((band, lane) => {
         if (!bins || bins.length === 0) {
           return playing ? 0.28 + Math.sin(t * 3 + lane) * 0.12 : 0.12;
         }
-        // Four lyric-bar lanes across the lower/mid spectrum (kick → snare → mids → sparkle).
-        const spans = [
-          [0, 0.12],
-          [0.12, 0.28],
-          [0.28, 0.5],
-          [0.5, 0.78],
-        ] as const;
-        const [lo, hi] = spans[lane];
-        const start = Math.floor(lo * bins.length);
-        const end = Math.max(start + 1, Math.floor(hi * bins.length));
-        let sum = 0;
-        let peak = 0;
-        for (let i = start; i < end; i++) {
-          const v = bins[i] / 255;
-          sum += v;
-          if (v > peak) peak = v;
-        }
-        const avg = sum / (end - start);
-        const level = Math.min(1, avg * 1.15 + peak * 0.55);
-        return playing ? Math.max(0.08, level) : 0.08 + level * 0.18;
+        // Musical Hz ranges from bass through high detail.
+        const measured = playing ? measureSpectrumBand(analyser!, bins, band) : 0.06;
+        smoothedLanes[lane] = smoothSpectrumLevel(smoothedLanes[lane], measured);
+        return Math.max(0.06, smoothedLanes[lane]);
       });
 
       lanes.forEach((level, i) => {
@@ -144,9 +130,9 @@ export function DropVisualizer({ analyser, playing, children, className }: DropV
         <div className="absolute inset-[14%]">{children}</div>
       </div>
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 px-1">
-        {BAR_LABELS.map((label, i) => (
+        {BAND_LABELS.map((label, i) => (
           <div key={label} className="flex items-center gap-2">
-            <span className="w-10 shrink-0 font-code text-[8px] font-bold tracking-[0.18em] text-fuchsia-300/70">
+            <span className="w-14 shrink-0 font-code text-[8px] font-bold tracking-[0.12em] text-fuchsia-300/70">
               {label}
             </span>
             <div className="h-2.5 flex-1 overflow-hidden rounded-sm bg-white/5 ring-1 ring-fuchsia-400/15">
@@ -166,7 +152,7 @@ export function DropVisualizer({ analyser, playing, children, className }: DropV
           </div>
         ))}
         <p className="mt-1 font-code text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
-          Four bars. One take.
+          Live sound levels
         </p>
       </div>
     </div>

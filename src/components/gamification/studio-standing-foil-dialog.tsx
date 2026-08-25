@@ -194,6 +194,8 @@ type StudioStandingRankBadgeProps = {
   showTrophy?: boolean;
   /** Profile-style crown chip instead of Badge. */
   variant?: 'badge' | 'pill';
+  /** Use a centered crown-only control below the small breakpoint. */
+  compactOnMobile?: boolean;
 };
 
 /** Rank chip that opens the Studio Standing foil plate. */
@@ -204,6 +206,7 @@ export function StudioStandingRankBadge({
   badgeClassName,
   showTrophy = true,
   variant = 'badge',
+  compactOnMobile = false,
 }: StudioStandingRankBadgeProps) {
   const [open, setOpen] = useState(false);
 
@@ -217,14 +220,18 @@ export function StudioStandingRankBadge({
             setOpen(true);
           }}
           className={cn(
-            'inline-flex items-center gap-2 border px-4 py-2 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            'inline-flex shrink-0 items-center justify-center gap-2 border px-4 py-2 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            compactOnMobile && 'h-10 w-10 gap-0 px-0 sm:h-auto sm:w-auto sm:gap-2 sm:px-4',
             badgeClassName,
             className
           )}
           aria-label={`View ${stats.rankLabel} Studio Standing plate`}
+          title={`${stats.rankLabel} Studio Standing`}
         >
-          <Crown className="h-4 w-4" />
-          <span className="text-xs font-bold uppercase tracking-[0.25em]">{stats.rankLabel}</span>
+          <Crown className="h-4 w-4 shrink-0" />
+          <span className={cn('text-xs font-bold uppercase tracking-[0.25em]', compactOnMobile && 'hidden sm:inline')}>
+            {stats.rankLabel}
+          </span>
         </button>
       ) : (
         <button

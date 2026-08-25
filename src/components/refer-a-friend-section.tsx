@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/client/firebase';
 import { REFERRAL_INK_REWARD, MAX_REFERRAL_REWARDS } from '@/lib/referrals';
+import { REFERRAL_INK_SPEND_THRESHOLD, SIGNUP_INK } from '@/lib/subscription';
 import { cn } from '@/lib/utils';
 
 type ReferralInfo = {
@@ -59,7 +60,7 @@ export function ReferAFriendSection({ className }: { className?: string }) {
       setCopied(true);
       toast({
         title: 'Referral link copied',
-        description: `Eligible new members can receive up to ${REFERRAL_INK_REWARD} Ink. Your reward unlocks after they legitimately spend 50 Ink.`,
+        description: `Your friend gets ${SIGNUP_INK} welcome Ink plus up to ${REFERRAL_INK_REWARD} extra referral Ink. You can earn up to ${REFERRAL_INK_REWARD} Ink after they legitimately spend ${REFERRAL_INK_SPEND_THRESHOLD} Ink.`,
       });
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -114,7 +115,7 @@ export function ReferAFriendSection({ className }: { className?: string }) {
             <div>
               <CardTitle className="font-headline text-lg uppercase tracking-tight">Refer a Friend</CardTitle>
               <CardDescription className="text-xs font-code mt-1">
-                Invite someone into the Scene. Eligible new members can receive up to {REFERRAL_INK_REWARD} Ink.
+                Invite someone into the Scene and both of you can receive Ink.
               </CardDescription>
             </div>
           </div>
@@ -130,6 +131,20 @@ export function ReferAFriendSection({ className }: { className?: string }) {
           </p>
         ) : (
           <>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="rounded-lg border border-cyan-400/20 bg-cyan-500/[0.06] p-3">
+                <p className="font-code text-[9px] font-bold uppercase tracking-widest text-cyan-300">Your friend gets</p>
+                <p className="mt-1 text-xs leading-relaxed text-foreground/85">
+                  {SIGNUP_INK} welcome Ink plus up to {REFERRAL_INK_REWARD} extra referral Ink.
+                </p>
+              </div>
+              <div className="rounded-lg border border-fuchsia-400/20 bg-fuchsia-500/[0.06] p-3">
+                <p className="font-code text-[9px] font-bold uppercase tracking-widest text-fuchsia-300">You can earn</p>
+                <p className="mt-1 text-xs leading-relaxed text-foreground/85">
+                  Up to {REFERRAL_INK_REWARD} Ink after they legitimately spend {REFERRAL_INK_SPEND_THRESHOLD} Ink.
+                </p>
+              </div>
+            </div>
             <div className="flex gap-2">
               <Input
                 readOnly
@@ -143,7 +158,7 @@ export function ReferAFriendSection({ className }: { className?: string }) {
             </div>
             <p className="text-[10px] text-muted-foreground font-code flex items-center gap-1.5">
               <Sparkles className="h-3 w-3 text-primary" />
-              {remaining} referral{remaining === 1 ? '' : 's'} left · your reward unlocks after a referred member legitimately spends 50 Ink
+              {remaining} rewarded referral{remaining === 1 ? '' : 's'} left · rewards are subject to eligibility and the Visitor residency-pool cap
             </p>
           </>
         )}

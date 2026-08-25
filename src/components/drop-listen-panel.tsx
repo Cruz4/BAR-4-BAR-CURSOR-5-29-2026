@@ -280,18 +280,18 @@ export function DropListenPanel({
       ? 'space-y-3 rounded-2xl border border-fuchsia-300/45 bg-black/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_18px_55px_rgba(0,0,0,.35)] sm:p-5'
       : presentation === 'playlist'
         ? 'space-y-3 rounded-2xl border border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500/15 via-black/65 to-blue-500/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.07),0_14px_38px_rgba(0,0,0,.28)] transition-colors hover:border-fuchsia-300/60 sm:p-5'
-        : 'rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-4 space-y-3'}>
-      <div className="flex items-center justify-between gap-2">
+      : 'min-w-0 rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-3 space-y-3 sm:p-4'}>
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
         <p className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-200">
           {full || isOwner ? 'Full stream' : hasAudio ? 'Play preview · 30 seconds' : 'On sale'}
         </p>
         {dropPriceSummary(normalized) ? (
-          <span className="text-[10px] font-code text-muted-foreground">{dropPriceSummary(normalized)}</span>
+          <span className="max-w-full break-words text-right font-code text-[10px] leading-relaxed text-muted-foreground">{dropPriceSummary(normalized)}</span>
         ) : null}
       </div>
 
       {hasAudio && (
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <Button
             type="button"
             size="icon"
@@ -399,7 +399,7 @@ export function DropListenPanel({
           volume={volume}
           onVolumeChange={setVolume}
           onToggleMute={toggleMute}
-          className={presentation === 'playlist' ? 'ml-[52px] max-w-sm' : 'ml-[52px] max-w-56'}
+          className={presentation === 'playlist' ? 'ml-[52px] w-[calc(100%-52px)] max-w-sm' : 'ml-[52px] w-[calc(100%-52px)] max-w-56'}
         />
       ) : null}
 
