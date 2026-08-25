@@ -22,6 +22,10 @@ export type ChallengeDef = {
     | 'friendshipWeekCount'
     | 'wallPostWeekCount'
     | 'shareCreatedWeekCount'
+    | 'qualifiedListenSongWeekCount'
+    | 'quoteReverbWeekCount'
+    | 'galleryPostWeekCount'
+    | 'creatorListenerWeekCount'
     | 'barsMonth'
     | 'generateNextLineMonthCount'
     | 'tracksCompletedMonthCount'
@@ -112,6 +116,42 @@ export const WEEKLY_CHALLENGES: ChallengeDef[] = [
     scale: 'weekly',
     tier: 'epic',
     field: 'shareCreatedWeekCount',
+  },
+  {
+    id: 'qualified_listening_mix',
+    label: 'Deep-listen to 3 songs',
+    description: 'Reach 80% on three different pressed songs this week. One qualified day per song counts.',
+    target: 3,
+    scale: 'weekly',
+    tier: 'standard',
+    field: 'qualifiedListenSongWeekCount',
+  },
+  {
+    id: 'quote_reverbs_2',
+    label: 'Publish 2 Quote Reverbs',
+    description: 'Add your perspective to two public posts this week.',
+    target: 2,
+    scale: 'weekly',
+    tier: 'standard',
+    field: 'quoteReverbWeekCount',
+  },
+  {
+    id: 'gallery_posts_2',
+    label: 'Post 2 public images',
+    description: 'Publish two verified image posts from your live Artist Home.',
+    target: 2,
+    scale: 'weekly',
+    tier: 'standard',
+    field: 'galleryPostWeekCount',
+  },
+  {
+    id: 'creator_listener_momentum',
+    label: 'Reach 5 new qualified listeners',
+    description: 'Five distinct listeners earn their first qualified day on your pressed music this week.',
+    target: 5,
+    scale: 'weekly',
+    tier: 'epic',
+    field: 'creatorListenerWeekCount',
   },
 ];
 
@@ -387,6 +427,14 @@ function resolveFieldProgress(
       return summary.weeklyChallengeWeekKey === getWeekKey() ? summary.wallPostWeekCount || 0 : 0;
     case 'shareCreatedWeekCount':
       return summary.weeklyChallengeWeekKey === getWeekKey() ? summary.shareCreatedWeekCount || 0 : 0;
+    case 'qualifiedListenSongWeekCount':
+      return summary.weeklyChallengeWeekKey === getWeekKey() ? summary.qualifiedListenSongWeekCount || 0 : 0;
+    case 'quoteReverbWeekCount':
+      return summary.weeklyChallengeWeekKey === getWeekKey() ? summary.quoteReverbWeekCount || 0 : 0;
+    case 'galleryPostWeekCount':
+      return summary.weeklyChallengeWeekKey === getWeekKey() ? summary.galleryPostWeekCount || 0 : 0;
+    case 'creatorListenerWeekCount':
+      return summary.weeklyChallengeWeekKey === getWeekKey() ? summary.creatorListenerWeekCount || 0 : 0;
     case 'barsMonth':
       return summary.monthlyChallengeMonthKey === getMonthKey()
         ? summary.monthlyChallengeProgress.barsMonth || 0

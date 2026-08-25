@@ -36,7 +36,7 @@ export function resolvePostLoginPath(nextParam: string | null | undefined): stri
 
   const { pathname } = parseNextPath(safeNext);
 
-  if (pathname.startsWith('/share/')) return safeNext;
+  if (pathname.startsWith('/share/') || pathname.startsWith('/song/')) return safeNext;
   if (getCheckoutFromPath(safeNext)) return safeNext;
 
   if (pathname === '/usage' || pathname.startsWith('/usage/')) {

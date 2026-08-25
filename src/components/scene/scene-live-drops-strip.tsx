@@ -194,7 +194,7 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
                           </p>
                           <div className="mt-auto flex flex-wrap gap-2 pt-3">
                             <Button size="sm" variant="secondary" className="h-8 text-[10px] font-bold uppercase" asChild>
-                              <Link href={`/share/${drop.shareId}`} target="_blank" rel="noreferrer">
+                              <Link href={`/song/${drop.shareId}`} target="_blank" rel="noreferrer">
                                 <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> Open drop
                               </Link>
                             </Button>
@@ -233,7 +233,7 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
                         </p>
                         <div className="mt-auto flex flex-wrap gap-2 pt-3">
                           <Button size="sm" variant="secondary" className="h-8 text-[10px] font-bold uppercase" asChild>
-                            <Link href={`/share/${drop.shareId}`} target="_blank" rel="noreferrer">
+                            <Link href={`/song/${drop.shareId}`} target="_blank" rel="noreferrer">
                               <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> Open album
                             </Link>
                           </Button>
@@ -283,7 +283,7 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
                         </p>
                         <div className="mt-auto flex flex-wrap gap-2 pt-3">
                           <Button size="sm" variant="secondary" className="h-8 text-[10px] font-bold uppercase" asChild>
-                            <Link href={`/share/${drop.shareId}`} target="_blank" rel="noreferrer">
+                            <Link href={`/song/${drop.shareId}`} target="_blank" rel="noreferrer">
                               <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> Open drop
                             </Link>
                           </Button>

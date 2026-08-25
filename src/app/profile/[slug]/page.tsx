@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { cache } from 'react';
 import { PublicProfilePageClient } from '@/components/profile/public-profile-page-client';
 import { getPublicProfile } from '@/lib/server/gamification';
 import { rankFromXp } from '@/lib/gamification/ranks';
@@ -11,6 +12,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 type PageProps = { params: Promise<{ slug: string }> };
+const getCachedPublicProfile = cache(getPublicProfile);
 
 function profileShareCopy(data: Record<string, unknown>, slug: string) {
   const displayName =
@@ -74,7 +76,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   try {
-    const profile = await getPublicProfile(slug);
+    const profile = await getCachedPublicProfile(slug);
     if (!profile) {
       return {
         title: 'Public Music Home',
@@ -121,5 +123,6 @@ export default async function PublicProfilePage({ params }: PageProps) {
   const { slug } = await params;
   const appRedirect = legacyProfileAppRedirect(slug);
   if (appRedirect) redirect(appRedirect);
-  return <PublicProfilePageClient slug={slug} />;
+  const profile = await getCachedPublicProfile(slug);
+  return <PublicProfilePageClient slug={slug} initialData={profile} />;
 }

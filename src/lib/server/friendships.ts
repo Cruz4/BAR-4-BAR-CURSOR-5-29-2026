@@ -44,7 +44,7 @@ function mapFriendship(id: string, data: Record<string, unknown>): ServerFriends
  */
 export async function listFriendshipsForUser(
   userId: string,
-  opts?: { status?: 'accepted' | 'pending'; limit?: number }
+  opts?: { status?: 'accepted' | 'pending'; limit?: number; enrichSlugs?: boolean }
 ): Promise<ServerFriendship[]> {
   const uid = userId.trim();
   if (!uid) return [];
@@ -64,7 +64,7 @@ export async function listFriendshipsForUser(
   rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   // Rewrite chip slugs to live underscore vanity so Neo / friends never open hyphen URLs.
-  try {
+  if (opts?.enrichSlugs !== false) try {
     const { resolveLiveUnderscoreProfileSlug } = await import('@/lib/server/profile-slug');
     const { needsVanitySlugUpgrade } = await import('@/lib/profile/profile-slug');
     const cache = new Map<string, string | null>();

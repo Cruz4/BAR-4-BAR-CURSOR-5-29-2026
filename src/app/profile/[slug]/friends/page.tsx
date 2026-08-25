@@ -14,14 +14,7 @@ import { Input } from '@/components/ui/input';
 import { StudioLoader } from '@/components/studio-loader';
 import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { useAuth } from '@/hooks/use-auth';
-import {
-  enrichFriendProfilesWithLiveSlugs,
-  fetchFriendships,
-  friendProfilesOf,
-  resolveCircleFriends,
-  visibleCircleFriends,
-  type CircleFriendRow,
-} from '@/lib/profile/social-client';
+import { type CircleFriendRow } from '@/lib/profile/social-client';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { parseStudioBadge } from '@/lib/studio-tier-chrome';
 import { ChevronLeft, Search, Users } from 'lucide-react';
@@ -33,6 +26,9 @@ export default function ProfileFriendsPage() {
   const [displayName, setDisplayName] = useState('Artist');
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [friends, setFriends] = useState<CircleFriendRow[]>([]);
+  const [serverPage, setServerPage] = useState(0);
+  const [serverPageCount, setServerPageCount] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [query, setQuery] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [missing, setMissing] = useState(false);
@@ -63,26 +59,14 @@ export default function ProfileFriendsPage() {
             : slug
         );
 
-        const list = await fetchFriendships(data.userId, 'accepted');
-        const chips = friendProfilesOf(list, data.userId, {
-          email: user?.email,
-          displayName: user?.displayName,
-        });
-        let base = chips;
-        try {
-          base = await enrichFriendProfilesWithLiveSlugs(chips);
-        } catch (err) {
-          console.warn('[profile-friends] enrich failed', err);
-        }
-
-        try {
-          const resolved = await resolveCircleFriends(base);
-          if (cancelled) return;
-          // Public Artist Home circle: live-public only (no offline).
-          setFriends(visibleCircleFriends(resolved, false));
-        } catch (err) {
-          console.warn('[profile-friends] resolve failed', err);
-          if (!cancelled) setFriends([]);
+        const cardsResponse = await fetch(
+          `/api/friends?of=${encodeURIComponent(data.userId)}&status=accepted&publicCards=1&limit=40&page=0`
+        );
+        if (!cardsResponse.ok) throw new Error('Friends unavailable');
+        const cardsData = (await cardsResponse.json()) as { cards?: CircleFriendRow[]; pageCount?: number };
+        if (!cancelled) {
+          setFriends(cardsData.cards || []);
+          setServerPageCount(Math.max(1, Number(cardsData.pageCount) || 1));
         }
       } catch {
         if (!cancelled) setMissing(true);
@@ -94,7 +78,7 @@ export default function ProfileFriendsPage() {
     return () => {
       cancelled = true;
     };
-  }, [slug, user?.email, user?.displayName]);
+  }, [slug]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -201,6 +185,21 @@ export default function ProfileFriendsPage() {
           })}
         </ul>
       )}
+      {ownerId && serverPage + 1 < serverPageCount ? (
+        <Button variant="outline" className="w-full font-bold uppercase" disabled={loadingMore} onClick={() => {
+          const next = serverPage + 1;
+          setLoadingMore(true);
+          void fetch(`/api/friends?of=${encodeURIComponent(ownerId)}&status=accepted&publicCards=1&limit=40&page=${next}`)
+            .then(async (response) => {
+              if (!response.ok) throw new Error('Friends unavailable');
+              const data = (await response.json()) as { cards?: CircleFriendRow[]; pageCount?: number };
+              setFriends((current) => [...current, ...(data.cards || [])]);
+              setServerPage(next);
+              setServerPageCount(Math.max(1, Number(data.pageCount) || 1));
+            })
+            .finally(() => setLoadingMore(false));
+        }}>{loadingMore ? 'Loading…' : 'Load more friends'}</Button>
+      ) : null}
     </div>
   );
 }

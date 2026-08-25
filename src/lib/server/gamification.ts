@@ -44,6 +44,7 @@ import {
 } from '@/lib/profile/vesperfold';
 import { artistHomeForPublic, normalizeArtistHomeConfig } from '@/lib/profile/modules';
 import type { ArtistHomeSoundIdentity } from '@/lib/profile/sound-identity';
+import type { PressingConfig } from '@/lib/profile/pressing';
 import {
   normalizeDropPrice,
   shareCommerceFlags,
@@ -66,6 +67,10 @@ const EMPTY_VERIFY_CTX: AchievementVerifyContext = {
   qualifyingAlbumCountVerified: 0,
   albumCompletedTracksVerified: 0,
   maxBarsOnAnyTrackVerified: 0,
+  pressedSongCreatedVerified: false,
+  wallImagePostVerified: false,
+  quoteReverbVerified: false,
+  deepListenerVerified: false,
 };
 
 export type GamificationEventMetadata = Record<string, string | number | boolean | null>;
@@ -100,6 +105,9 @@ function mergeSummary(existing: Partial<GamificationSummary>): GamificationSumma
     ...raw,
     unlockedAchievements: raw.unlockedAchievements || {},
     weeklyChallengeProgress: raw.weeklyChallengeProgress || {},
+    qualifiedListenWeekSongIds: Array.isArray(raw.qualifiedListenWeekSongIds)
+      ? raw.qualifiedListenWeekSongIds.filter((id): id is string => typeof id === 'string').slice(-50)
+      : [],
     monthlyChallengeProgress: raw.monthlyChallengeProgress || {},
     personalBests: { ...DEFAULT_GAMIFICATION_SUMMARY.personalBests, ...(raw.personalBests || {}) },
     starMarkUseStar: Boolean(raw.starMarkUseStar),
@@ -134,6 +142,12 @@ function resetWeekCounters(summary: GamificationSummary, weekKey: string): Gamif
     friendshipWeekCount: 0,
     wallPostWeekCount: 0,
     shareCreatedWeekCount: 0,
+    qualifiedListenWeekCount: 0,
+    qualifiedListenSongWeekCount: 0,
+    qualifiedListenWeekSongIds: [],
+    quoteReverbWeekCount: 0,
+    galleryPostWeekCount: 0,
+    creatorListenerWeekCount: 0,
   };
 }
 
@@ -224,6 +238,7 @@ async function loadTrackVerifyContext(
   return {
     // Always overwritten by the caller with the real value — included here only
     // to satisfy AchievementVerifyContext's required shape for this partial ctx.
+    ...EMPTY_VERIFY_CTX,
     tourCompletedVerified: false,
     trackCompleteVerified:
       track.status === 'complete' && barsOnTrackVerified >= minLines,
@@ -458,6 +473,63 @@ export async function processGamificationEvent(
     ...EMPTY_VERIFY_CTX,
     tourCompletedVerified: Boolean(user.lyricsTutorialCompletedAt),
   };
+  let verifiedShareCreatedClaim = false;
+  let verifiedPressedSongClaim = false;
+
+  if (trigger === 'wall_post_created' || trigger === 'quote_reverb_created' || trigger === 'share_created') {
+    const isPostTrigger = trigger === 'wall_post_created' || trigger === 'quote_reverb_created';
+    const sourceId = String(isPostTrigger ? metadata.postId || '' : metadata.shareId || '').trim();
+    if (!sourceId) return { unlocks: [], summary, xpGain: 0 };
+    const sourceRef = db.collection(isPostTrigger ? 'posts' : 'shares').doc(sourceId);
+    const sourceSnap = await sourceRef.get();
+    const source = sourceSnap.data() || {};
+    if (!sourceSnap.exists || source.ownerId !== userId) {
+      return { unlocks: [], summary, xpGain: 0 };
+    }
+    if (isPostTrigger) {
+      verifyCtx.wallImagePostVerified = typeof source.imageUrl === 'string' && source.imageUrl.length > 0;
+      verifyCtx.quoteReverbVerified = source.isReverb === true && typeof source.text === 'string' && source.text.trim().length > 0;
+    } else {
+      const payload = source.data && typeof source.data === 'object' ? source.data as Record<string, unknown> : {};
+      const flags = shareDocCommerceFlags(source.type === 'album' ? 'album' : 'track', {
+        dropAudio: payload.dropAudio,
+        dropPrice: payload.dropPrice,
+      });
+      verifyCtx.pressedSongCreatedVerified = source.type !== 'album' && flags.hasDropAudio;
+    }
+
+    const claim = async (claimId: string): Promise<boolean> => {
+      const claimRef = db.doc(`users/${userId}/gamificationEvents/${claimId}`);
+      try {
+        await claimRef.create({ trigger, sourceId, createdAt: timestamp });
+        return true;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (/already exists|ALREADY_EXISTS|6/i.test(message)) return false;
+        throw error;
+      }
+    };
+
+    if (trigger === 'share_created') {
+      verifiedShareCreatedClaim = await claim(`share_created_${sourceId}`);
+      verifiedPressedSongClaim = verifyCtx.pressedSongCreatedVerified
+        ? await claim(`pressed_song_created_${sourceId}`)
+        : false;
+      if (!verifiedShareCreatedClaim && !verifiedPressedSongClaim) {
+        return { unlocks: [], summary, xpGain: 0 };
+      }
+    } else if (!(await claim(`${trigger}_${sourceId}`))) {
+      return { unlocks: [], summary, xpGain: 0 };
+    }
+  }
+
+  if (trigger === 'qualified_listen') {
+    const shareId = String(metadata.shareId || '').trim();
+    if (shareId) {
+      const progress = await db.doc(`users/${userId}/musicProgress/${shareId}`).get();
+      verifyCtx.deepListenerVerified = Number(progress.data()?.qualifiedListeningDays || 0) >= 50;
+    }
+  }
 
   summary = resetWeekCounters(summary, weekKey);
   summary = resetMonthCounters(summary, getMonthKey(now));
@@ -608,12 +680,49 @@ export async function processGamificationEvent(
     summary.lifetimeWallPosts = (summary.lifetimeWallPosts || 0) + 1;
     summary.wallPostWeekCount = (summary.wallPostWeekCount || 0) + 1;
     xpGain += 10;
+    if (verifyCtx.wallImagePostVerified) {
+      summary.lifetimeGalleryPosts = (summary.lifetimeGalleryPosts || 0) + 1;
+      summary.galleryPostWeekCount = (summary.galleryPostWeekCount || 0) + 1;
+    }
+  }
+
+  if (trigger === 'quote_reverb_created' && verifyCtx.quoteReverbVerified) {
+    summary.lifetimeQuoteReverbs = (summary.lifetimeQuoteReverbs || 0) + 1;
+    summary.quoteReverbWeekCount = (summary.quoteReverbWeekCount || 0) + 1;
   }
 
   if (trigger === 'share_created') {
-    summary.lifetimeSharesCreated = (summary.lifetimeSharesCreated || 0) + 1;
-    summary.shareCreatedWeekCount = (summary.shareCreatedWeekCount || 0) + 1;
-    xpGain += 15;
+    if (verifiedShareCreatedClaim) {
+      summary.lifetimeSharesCreated = (summary.lifetimeSharesCreated || 0) + 1;
+      summary.shareCreatedWeekCount = (summary.shareCreatedWeekCount || 0) + 1;
+      xpGain += 15;
+    }
+    if (verifiedPressedSongClaim) {
+      summary.lifetimePressedSongs = (summary.lifetimePressedSongs || 0) + 1;
+    }
+  }
+
+  if (trigger === 'paid_support') {
+    summary.lifetimePaidSupports = (summary.lifetimePaidSupports || 0) + 1;
+  }
+
+  if (trigger === 'qualified_listen') {
+    const shareId = String(metadata.shareId || '').trim();
+    summary.lifetimeQualifiedListeningDays = (summary.lifetimeQualifiedListeningDays || 0) + 1;
+    summary.qualifiedListenWeekCount = (summary.qualifiedListenWeekCount || 0) + 1;
+    const songs = new Set(summary.qualifiedListenWeekSongIds || []);
+    if (shareId) songs.add(shareId);
+    summary.qualifiedListenWeekSongIds = [...songs].slice(-50);
+    summary.qualifiedListenSongWeekCount = summary.qualifiedListenWeekSongIds.length;
+  }
+
+  if (trigger === 'creator_sale') {
+    summary.lifetimeFirstDropSales = (summary.lifetimeFirstDropSales || 0) + 1;
+  }
+
+  if (trigger === 'creator_qualified_listener') {
+    summary.lifetimeCreatorQualifiedListeners = (summary.lifetimeCreatorQualifiedListeners || 0) + 1;
+    summary.creatorListenerWeekCount = (summary.creatorListenerWeekCount || 0) + 1;
   }
 
   if (trigger === 'dna_drop_imported_by_other') {
@@ -1847,6 +1956,7 @@ async function resolvePublicAvatarsByUserIds(
       starMarkSeed?: number;
       studioBadge?: 'pro' | 'free';
       soundIdentity?: ArtistHomeSoundIdentity;
+      pressing?: PressingConfig;
     }
   >
 > {
@@ -1860,6 +1970,7 @@ async function resolvePublicAvatarsByUserIds(
       starMarkSeed?: number;
       studioBadge?: 'pro' | 'free';
       soundIdentity?: ArtistHomeSoundIdentity;
+      pressing?: PressingConfig;
     }
   >();
   const unique = [...new Set(userIds.filter(Boolean))];
@@ -1892,7 +2003,8 @@ async function resolvePublicAvatarsByUserIds(
         });
         const best = ranked[0]!;
         const data = best.data() as Record<string, unknown>;
-        const soundIdentity = normalizeArtistHomeConfig(data.artistHome).featured.soundIdentity;
+        const artistHome = normalizeArtistHomeConfig(data.artistHome);
+        const soundIdentity = artistHome.featured.soundIdentity;
         const avatarUrl = await resolvePublicAvatar(best.id, data);
         const useStar = data.starMarkUseStar === true;
         const displayName =
@@ -1911,6 +2023,7 @@ async function resolvePublicAvatarsByUserIds(
             : undefined,
           studioBadge: parseStudioBadge(data.studioBadge),
           ...(soundIdentity ? { soundIdentity } : {}),
+          pressing: artistHome.theme,
         });
       })
     );
@@ -1940,6 +2053,7 @@ export type DiscoverArtistSummary = {
   rankId?: string;
   xp?: number;
   soundIdentity?: ArtistHomeSoundIdentity;
+  pressing?: PressingConfig;
   updatedAt: string;
 };
 
@@ -2000,7 +2114,8 @@ export async function listRecentPublicProfiles(
           : undefined;
       const studioBadge =
         liveBadges.get(row.userId) || parseStudioBadge(row.data.studioBadge) || 'free';
-      const soundIdentity = normalizeArtistHomeConfig(row.data.artistHome).featured.soundIdentity;
+      const artistHome = normalizeArtistHomeConfig(row.data.artistHome);
+      const soundIdentity = artistHome.featured.soundIdentity;
       return {
         userId: row.userId,
         slug: row.slug,
@@ -2012,6 +2127,7 @@ export async function listRecentPublicProfiles(
         rankId: row.rankId,
         xp: row.xp,
         ...(soundIdentity ? { soundIdentity } : {}),
+        pressing: artistHome.theme,
         updatedAt: row.updatedAt,
       };
     })
@@ -2045,6 +2161,7 @@ export type DiscoverShareSummary = {
   purchaseCount?: number;
   firstBuyerName?: string;
   soundIdentity?: ArtistHomeSoundIdentity;
+  pressing?: PressingConfig;
 };
 
 /** Recent live DNA Drops — summary only, heavy `data` payload stripped. */
@@ -2144,6 +2261,7 @@ export async function listRecentShareSummaries(
       purchaseCount: r.purchaseCount,
       firstBuyerName: r.firstBuyerName,
       soundIdentity: meta?.soundIdentity,
+      pressing: meta?.pressing,
     };
   });
 }
@@ -2166,6 +2284,7 @@ export type DiscoverPostSummary = {
   reverbEmbedUrl?: string;
   reverbImageUrl?: string;
   createdAt: string;
+  pressing?: PressingConfig;
 };
 
 /** Recent public wall posts — only from owners with a live Artist Home. */
@@ -2230,6 +2349,7 @@ export async function listRecentPublicPosts(
       ownerName: ownerMeta.displayName || p.ownerName,
       ...(reverbMeta?.slug ? { reverbOwnerSlug: reverbMeta.slug } : {}),
       ...(reverbMeta?.displayName ? { reverbOwnerName: reverbMeta.displayName } : {}),
+      pressing: ownerMeta.pressing,
     });
     if (out.length >= limit) break;
   }

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { ExternalLink, Music } from 'lucide-react';
 import { doc, getDoc } from 'firebase/firestore';
 import {
@@ -14,6 +15,9 @@ import type { DnaDropAlbumPayload, DnaDropTrackPayload } from '@/lib/dna-drop';
 import { normalizeDropAudio, normalizeDropPrice } from '@/lib/drop-commerce';
 import { DropListenPanel } from '@/components/drop-listen-panel';
 import type { FeaturedTrackSelection } from '@/lib/profile/modules';
+import type { PressedSongSummary } from '@/lib/pressed-song';
+import { profileHref } from '@/lib/profile/profile-slug';
+import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 
 /**
  * Plays a whitelisted provider link right on the page (iframe embed).
@@ -40,7 +44,7 @@ function firstDropShareId(raw: string): string | null {
   try {
     const base = typeof window !== 'undefined' ? window.location.origin : 'https://bar4bar.app';
     const parsed = new URL(raw, base);
-    const match = parsed.pathname.match(/^\/share\/([^/?#]+)\/?$/);
+    const match = parsed.pathname.match(/^\/(?:share|song)\/([^/?#]+)\/?$/);
     return match ? decodeURIComponent(match[1]) : null;
   } catch {
     return null;
@@ -49,42 +53,34 @@ function firstDropShareId(raw: string): string | null {
 
 /** Native First Drop media inside a wall/feed post. Entitlements stay server-authoritative. */
 function FirstDropFeedPlayer({ shareId }: { shareId: string }) {
-  const [share, setShare] = useState<ProjectShare | null>(null);
+  const [song, setSong] = useState<PressedSongSummary | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    void getDoc(doc(db, 'shares', shareId)).then((snapshot) => {
-      if (!cancelled && snapshot.exists()) setShare(snapshot.data() as ProjectShare);
-    });
+    void fetch(`/api/songs/${encodeURIComponent(shareId)}`)
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => { if (!cancelled && data) setSong(data as PressedSongSummary); });
     return () => { cancelled = true; };
   }, [shareId]);
 
-  const details = useMemo(() => {
-    if (!share) return null;
-    const project = share.data as DnaDropAlbumPayload | DnaDropTrackPayload;
-    const hasAudio = share.type === 'album'
-      ? Boolean((project as DnaDropAlbumPayload).tracks?.some((track) => normalizeDropAudio(track.dropAudio)))
-      : Boolean(normalizeDropAudio((project as DnaDropTrackPayload).dropAudio));
-    return {
-      title: project?.title || 'First Drop',
-      price: normalizeDropPrice(project?.dropPrice),
-      hasAudio,
-    };
-  }, [share]);
-
-  if (!share || !details) {
+  if (!song) {
     return <div className="h-24 animate-pulse rounded-xl border border-fuchsia-500/25 bg-fuchsia-500/10" />;
   }
 
+  const artistHref = profileHref(song.artist.slug);
   return (
     <Suspense fallback={null}>
+      <div className="mb-2 flex items-center gap-2 px-1">
+        <ArtistStarAvatar name={song.artist.name} avatarUrl={song.artist.avatarUrl} studioChrome={song.artist.studioBadge || 'free'} size={28} />
+        <div className="min-w-0"><p className="text-[8px] font-bold uppercase tracking-widest text-fuchsia-300">Original artist</p>{artistHref ? <Link href={artistHref} className="block truncate text-xs font-bold hover:text-fuchsia-300">{song.artist.name}</Link> : <p className="truncate text-xs font-bold">{song.artist.name}</p>}</div>
+      </div>
       <DropListenPanel
         shareId={shareId}
         source="artist_home"
-        title={details.title}
-        ownerId={share.ownerId}
-        price={details.price}
-        hasAudio={details.hasAudio}
+        title={song.title}
+        ownerId={song.ownerId}
+        price={song.price}
+        hasAudio
       />
     </Suspense>
   );
@@ -140,6 +136,11 @@ export function FeaturedTrackPlayer({
         featuredByUserId={profileUserId}
         excerptStartSec={selection.excerptStartSec}
       />
+      {selection.showFirstPressBadge ? (
+        <p className="mt-2 inline-flex rounded-full border border-amber-400/35 bg-amber-500/10 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-amber-200">
+          First Press #{selection.firstPressRank || '1–10'}
+        </p>
+      ) : null}
     </Suspense>
   );
 }

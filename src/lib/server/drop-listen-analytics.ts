@@ -37,6 +37,7 @@ export async function recordQualifiedListenProgress(
   input: {
     proof: DropListenProof;
     listenerKey: string;
+    viewerId?: string | null;
     milestone: DropListenMilestone;
     source?: unknown;
   }
@@ -77,12 +78,16 @@ export async function recordQualifiedListenProgress(
     `users/${ownerId}/dropInsightDays/${day}_${safeId(input.proof.s)}`
   );
   const emergingRef = db.doc(emergingEntryPath(ownerId, now));
+  const listenerProgressRef = input.viewerId
+    ? db.doc(`users/${input.viewerId}/musicProgress/${input.proof.s}`)
+    : null;
 
-  return db.runTransaction(async (tx) => {
-    const [milestoneTick, qualifiedTick, audienceSnap] = await Promise.all([
+  const result = await db.runTransaction(async (tx) => {
+    const [milestoneTick, qualifiedTick, audienceSnap, listenerProgressSnap] = await Promise.all([
       tx.get(milestoneTickRef),
       qualifies ? tx.get(qualifiedTickRef) : Promise.resolve(null),
       tx.get(audienceRef),
+      listenerProgressRef ? tx.get(listenerProgressRef) : Promise.resolve(null),
     ]);
     if (milestoneTick.exists) return { counted: false, qualified: false };
 
@@ -177,10 +182,32 @@ export async function recordQualifiedListenProgress(
         },
         { merge: true }
       );
+      if (listenerProgressRef) {
+        tx.set(
+          listenerProgressRef,
+          {
+            shareId: input.proof.s,
+            qualifiedListeningDays: FieldValue.increment(1),
+            firstQualifiedAt: listenerProgressSnap?.data()?.firstQualifiedAt || nowIso,
+            lastQualifiedAt: nowIso,
+            lastQualifiedDay: day,
+          },
+          { merge: true }
+        );
+      }
     }
 
-    return { counted: true, qualified: newQualifiedDay };
+    return { counted: true, qualified: newQualifiedDay, firstForCreator: firstQualified };
   });
+  if (result.qualified && input.viewerId) {
+    const { processGamificationEvent } = await import('@/lib/server/gamification');
+    await processGamificationEvent(input.viewerId, 'qualified_listen', { shareId: input.proof.s });
+  }
+  if (result.firstForCreator && input.viewerId !== ownerId) {
+    const { processGamificationEvent } = await import('@/lib/server/gamification');
+    await processGamificationEvent(ownerId, 'creator_qualified_listener', { shareId: input.proof.s });
+  }
+  return { counted: result.counted, qualified: result.qualified };
 }
 
 export async function recordDropPurchaseInsight(

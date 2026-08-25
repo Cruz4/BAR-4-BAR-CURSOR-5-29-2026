@@ -16,7 +16,7 @@ export function shouldHideDropNowPlayingBar(pathname: string | null): boolean {
     pathname === '/login' ||
     pathname === '/welcome' ||
     pathname.endsWith('/perform') ||
-    pathname.startsWith('/share/') ||
+    pathname.startsWith('/share/') || pathname.startsWith('/song/') ||
     pathname.startsWith('/marketing/')
   );
 }

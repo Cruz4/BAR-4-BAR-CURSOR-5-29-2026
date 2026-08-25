@@ -10,6 +10,7 @@ import { enrichPostsWithLiveSlugs } from '@/lib/profile/social-client';
 import { auth } from '@/lib/firebase/client/firebase';
 import type { ArtistHomeSoundIdentity } from '@/lib/profile/sound-identity';
 import type { DiscoveryGraphMode, DiscoveryMatch } from '@/lib/discovery-graph';
+import type { PressingConfig } from '@/lib/profile/pressing';
 
 export type DiscoverArtist = {
   userId: string;
@@ -25,6 +26,7 @@ export type DiscoverArtist = {
   tasteMatch?: DiscoveryMatch;
   creationMatch?: DiscoveryMatch;
   updatedAt: string;
+  pressing?: PressingConfig;
 };
 
 export type DiscoverDrop = {
@@ -54,6 +56,7 @@ export type DiscoverDrop = {
   soundIdentity?: ArtistHomeSoundIdentity;
   tasteMatch?: DiscoveryMatch;
   creationMatch?: DiscoveryMatch;
+  pressing?: PressingConfig;
 };
 
 export type DiscoverRiser = {

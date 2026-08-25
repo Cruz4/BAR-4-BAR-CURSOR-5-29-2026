@@ -40,7 +40,7 @@ function publicVoice(raw: unknown): VoiceNote | undefined {
   };
 }
 
-function postFromServerDoc(id: string, data: Record<string, unknown>): ProfilePost {
+export function postFromServerDoc(id: string, data: Record<string, unknown>): ProfilePost {
   const voice = publicVoice(data.voice);
   const reverbVoice = publicVoice(data.reverbVoice);
   const lyricClip = parseLyricClip(data.lyricClip);

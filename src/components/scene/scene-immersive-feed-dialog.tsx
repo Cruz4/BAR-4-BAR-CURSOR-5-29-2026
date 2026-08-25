@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ChevronDown, ChevronUp, Compass, ExternalLink, Radio, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Compass, ExternalLink, Radio, Vault, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { PostCard } from '@/components/profile/post-card';
 import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
@@ -11,6 +11,8 @@ import type { ProfilePost } from '@/lib/profile/social-client';
 import type { DiscoverCard } from '@/lib/scene/discover-client';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { cn } from '@/lib/utils';
+import type { PressingConfig } from '@/lib/profile/pressing';
+import { LivingPressField } from '@/components/profile/living-press-field';
 
 type FeedMode = 'block' | 'discover';
 
@@ -22,6 +24,7 @@ type SlideMeta = {
   userId?: string;
   slug?: string;
   avatarUrl?: string;
+  pressing?: PressingConfig;
 };
 
 type SceneImmersiveFeedDialogProps = {
@@ -43,6 +46,7 @@ function blockMeta(post: ProfilePost): SlideMeta {
     userId: post.ownerId,
     slug: post.ownerSlug,
     href: post.ownerSlug ? profileHref(post.ownerSlug) : undefined,
+    pressing: post.pressing,
   };
 }
 
@@ -57,6 +61,7 @@ function discoverMeta(card: DiscoverCard): SlideMeta {
       slug: card.artist.slug,
       avatarUrl: card.artist.avatarUrl,
       href: profileHref(card.artist.slug),
+      pressing: card.artist.pressing,
     };
   }
   if (card.kind === 'drop') {
@@ -67,7 +72,10 @@ function discoverMeta(card: DiscoverCard): SlideMeta {
       userId: card.drop.ownerId,
       slug: card.drop.ownerSlug,
       avatarUrl: card.drop.avatarUrl,
-      href: `/share/${card.drop.shareId}`,
+      href: card.drop.hasDropAudio
+        ? `/song/${card.drop.shareId}`
+        : `/share/${card.drop.shareId}`,
+      pressing: card.drop.pressing,
     };
   }
   if (card.kind === 'lock') {
@@ -137,6 +145,7 @@ export function SceneImmersiveFeedDialog({
 }: SceneImmersiveFeedDialogProps) {
   const open = mode !== null;
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const bubbleRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const [activeIndex, setActiveIndex] = useState(0);
 
   const items = useMemo(() => {
@@ -159,6 +168,13 @@ export function SceneImmersiveFeedDialog({
     if (activeIndex < items.length) return;
     setActiveIndex(Math.max(0, items.length - 1));
   }, [activeIndex, items.length]);
+
+  useEffect(() => {
+    const bubble = bubbleRefs.current[activeIndex];
+    if (!bubble) return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    bubble.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'nearest', inline: 'center' });
+  }, [activeIndex]);
 
   const scrollTo = (index: number) => {
     const next = Math.max(0, Math.min(items.length - 1, index));
@@ -193,6 +209,10 @@ export function SceneImmersiveFeedDialog({
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-40 bg-gradient-to-b from-black via-black/85 to-transparent pb-6 pt-[max(0.65rem,env(safe-area-inset-top))]">
           <div className="pointer-events-auto flex items-center gap-2 px-3 sm:px-5">
+            <Link href="/" onClick={() => onOpenChange(false)} className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-white p-1" aria-label="Bar4Bar home">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/Logo.png" alt="" className="h-full w-full object-contain" />
+            </Link>
             <span className={cn(
               'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border',
               mode === 'block' ? 'border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200' : 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200'
@@ -205,6 +225,8 @@ export function SceneImmersiveFeedDialog({
                 {items.length ? `${activeIndex + 1} of ${items.length} · swipe or scroll` : 'Waiting for the Scene'}
               </p>
             </div>
+            <Link href="/" onClick={() => onOpenChange(false)} className="flex h-9 items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2.5 text-[9px] font-bold uppercase tracking-wider text-cyan-200 hover:border-cyan-300/60" aria-label="The Scene"><Radio className="h-3.5 w-3.5" /><span className="hidden sm:inline">Scene</span></Link>
+            <Link href="/vault" onClick={() => onOpenChange(false)} className="flex h-9 items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 text-[9px] font-bold uppercase tracking-wider text-amber-200 hover:border-amber-300/60" aria-label="The Vault"><Vault className="h-3.5 w-3.5" /><span className="hidden sm:inline">Vault</span></Link>
             <button
               type="button"
               onClick={() => onOpenChange(false)}
@@ -217,8 +239,10 @@ export function SceneImmersiveFeedDialog({
 
           {items.length > 0 ? (
             <div className="pointer-events-auto mt-2 flex gap-1.5 overflow-x-auto overscroll-x-contain px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-5">
-              {items.slice(0, 24).map((item, index) => (
-                <FeedBubble key={item.meta.key} meta={item.meta} active={activeIndex === index} onClick={() => scrollTo(index)} />
+              {items.map((item, index) => (
+                <span key={item.meta.key} ref={(node) => { bubbleRefs.current[index] = node; }}>
+                  <FeedBubble meta={item.meta} active={activeIndex === index} onClick={() => scrollTo(index)} />
+                </span>
               ))}
             </div>
           ) : null}
@@ -241,9 +265,14 @@ export function SceneImmersiveFeedDialog({
           {items.length ? items.map((item, index) => (
             <section
               key={item.meta.key}
-              className="relative flex min-h-[100dvh] touch-pan-y snap-start snap-always items-center justify-center pb-[max(1rem,env(safe-area-inset-bottom))] pl-3 pr-14 pt-[8.25rem] sm:px-16 sm:pt-[8.75rem]"
+              className="relative flex min-h-[100dvh] touch-pan-y snap-start snap-always items-center justify-center pb-[max(1rem,env(safe-area-inset-bottom))] pl-3 pr-14 pt-[7.4rem] sm:px-16 sm:pt-[8.25rem]"
               aria-label={`${title}: ${item.meta.name}`}
             >
+              {item.meta.pressing && Math.abs(index - activeIndex) <= 1 ? (
+                <div className={cn('pointer-events-none absolute inset-0 transition-opacity duration-500', activeIndex === index ? 'opacity-75' : 'opacity-35')}>
+                  <LivingPressField config={item.meta.pressing} compact className="!absolute" />
+                </div>
+              ) : null}
               <div className={cn(
                 'pointer-events-none absolute inset-0 opacity-70',
                 mode === 'block'
@@ -273,12 +302,14 @@ export function SceneImmersiveFeedDialog({
                       showAuthor
                       viewerSlug={viewerSlug}
                       onDeleted={onPostDeleted}
+                      immersive
                     />
                   ) : 'card' in item ? (
                     <SceneDiscoverCard
                       card={item.card}
                       viewerSlug={viewerSlug}
                       onLockRemoved={onLockRemoved}
+                      immersive
                     />
                   ) : null}
                 </div>

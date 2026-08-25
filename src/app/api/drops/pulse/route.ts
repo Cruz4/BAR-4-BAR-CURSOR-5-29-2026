@@ -49,6 +49,7 @@ export async function POST(req: Request) {
       result = await recordQualifiedListenProgress(db, {
         proof,
         listenerKey: listener.key,
+        viewerId,
         milestone: body.milestone,
         source: body.source,
       });

@@ -5,9 +5,9 @@
  * posts, live DNA Drops, and this week's leaderboard risers.
  */
 
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Dna, Flame, Lock, Music, Radio, Sparkles, Trash2, TrendingUp } from 'lucide-react';
+import { Dna, Flame, Heart, Lock, Music, Radio, Sparkles, Trash2, TrendingUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -25,6 +25,7 @@ import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { formatDropPulseLine } from '@/lib/drop-pulse';
 import { normalizeDropPrice } from '@/lib/drop-commerce';
+import { fetchDropLoved, likeDrop } from '@/lib/drop-social-client';
 
 function timeAgo(iso: string): string {
   try {
@@ -65,22 +66,32 @@ export function SceneDiscoverCard({
   card,
   viewerSlug,
   onLockRemoved,
+  immersive = false,
 }: {
   card: DiscoverCard;
   viewerSlug?: string;
   /** Called after the owner or studio admin deletes a Finish this bar cast. */
   onLockRemoved?: (lockId: string) => void;
+  immersive?: boolean;
 }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const [busy, setBusy] = useState(false);
+  const [dropLoved, setDropLoved] = useState(false);
+  const [loveBurst, setLoveBurst] = useState(false);
+  const dropTapRef = useRef({ lastAt: 0, x: 0, y: 0 });
+
+  useEffect(() => {
+    if (!immersive || card.kind !== 'drop') return;
+    void fetchDropLoved(card.drop.shareId).then(setDropLoved);
+  }, [card, immersive, user?.id]);
 
   if (card.kind === 'post') {
     return (
       <div className="space-y-1.5">
         <DiscoverTag label="From the scene" icon={Radio} tone="text-fuchsia-400/90" />
-        <PostCard post={card.post} showAuthor viewerSlug={viewerSlug} />
+        <PostCard post={card.post} showAuthor viewerSlug={viewerSlug} immersive={immersive} />
       </div>
     );
   }
@@ -130,7 +141,27 @@ export function SceneDiscoverCard({
     const firstDrop = firstDropsOn && Boolean(drop.hasDropAudio);
     const pulse = formatDropPulseLine(drop);
     return (
-      <Card className="border-fuchsia-500/40 bg-gradient-to-r from-fuchsia-500/[0.12] via-card/85 to-card/70 p-4">
+      <Card
+        className="relative touch-pan-y border-fuchsia-500/40 bg-gradient-to-r from-fuchsia-500/[0.12] via-card/85 to-card/70 p-4"
+        onPointerDown={immersive ? (event) => { dropTapRef.current.x = event.clientX; dropTapRef.current.y = event.clientY; } : undefined}
+        onPointerUp={immersive ? (event) => {
+          const target = event.target as HTMLElement;
+          if (target.closest('button,a,input,textarea,select,audio,video,[role="button"]')) return;
+          if (Math.hypot(event.clientX - dropTapRef.current.x, event.clientY - dropTapRef.current.y) > 12) { dropTapRef.current.lastAt = 0; return; }
+          const now = Date.now();
+          if (now - dropTapRef.current.lastAt < 330) {
+            dropTapRef.current.lastAt = 0;
+            if (!user) toast({ title: 'Sign in to show love' });
+            else if (!dropLoved) {
+              setDropLoved(true);
+              setLoveBurst(true);
+              window.setTimeout(() => setLoveBurst(false), 650);
+              void likeDrop(drop.shareId, { name: user.displayName }).catch(() => setDropLoved(false));
+            }
+          } else dropTapRef.current.lastAt = now;
+        } : undefined}
+      >
+        {loveBurst ? <Heart className="pointer-events-none absolute left-1/2 top-1/2 z-50 h-20 w-20 -translate-x-1/2 -translate-y-1/2 fill-fuchsia-400 text-fuchsia-400 drop-shadow-[0_0_24px_rgba(244,114,182,.9)]" /> : null}
         <DiscoverTag
           label={firstDrop ? 'On sale' : 'Live DNA Drop'}
           icon={firstDrop ? Music : Dna}
@@ -150,7 +181,7 @@ export function SceneDiscoverCard({
           />
           <div className="min-w-0 flex-1">
             <Link
-              href={`/share/${drop.shareId}`}
+              href={firstDrop ? `/song/${drop.shareId}` : `/share/${drop.shareId}`}
               className="block truncate font-headline text-sm font-bold uppercase tracking-tight text-foreground hover:text-primary"
             >
               {drop.title}

@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Copy, Heart, MessageCircle, Repeat2, Share2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { PostCommentThread } from '@/components/profile/post-comment-thread';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +29,7 @@ type DropSocialPanelProps = {
   previewCount?: number;
   purchaseCount?: number;
   firstBuyerName?: string;
+  hasAudio?: boolean;
 };
 
 export function DropSocialPanel({
@@ -40,6 +40,7 @@ export function DropSocialPanel({
   previewCount,
   purchaseCount,
   firstBuyerName,
+  hasAudio = true,
 }: DropSocialPanelProps) {
   const { user } = useAuth();
   const { summary } = useGamification();
@@ -56,8 +57,8 @@ export function DropSocialPanel({
   const [walled, setWalled] = useState(false);
 
   const pulse = formatDropPulseLine({ playCount, previewCount, purchaseCount, loveCount: likeCount });
-  const dropUrl =
-    typeof window !== 'undefined' ? `${window.location.origin}/share/${shareId}` : `/share/${shareId}`;
+  const dropPath = hasAudio ? `/song/${shareId}` : `/share/${shareId}`;
+  const dropUrl = typeof window !== 'undefined' ? `${window.location.origin}${dropPath}` : dropPath;
 
   useEffect(() => {
     let cancelled = false;
@@ -78,7 +79,7 @@ export function DropSocialPanel({
   }, [shareId, user?.id]);
 
   const needAuth = () => {
-    router.push(buildLoginUrl({ next: `/share/${shareId}` }));
+    router.push(buildLoginUrl({ next: `/song/${shareId}` }));
   };
 
   const toggleLike = async () => {

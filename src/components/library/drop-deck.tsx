@@ -530,7 +530,7 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
               </Button>
               {current && (
                 <Button type="button" size="icon" variant="ghost" asChild>
-                  <Link href={`/share/${current.shareId}`} aria-label="Open drop page">
+                  <Link href={`/song/${current.shareId}`} aria-label="Open drop page">
                     <ExternalLink className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -701,7 +701,7 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
                                                       Update press
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem asChild>
-                                                      <Link href={`/share/${item.shareId}`}>
+                                                      <Link href={`/song/${item.shareId}`}>
                                                         <ExternalLink className="h-4 w-4" />
                                                         Open drop
                                                       </Link>
@@ -849,7 +849,7 @@ export function DropDeck({ userId, items }: { userId: string; items: DropLibrary
                                         Update press
                                       </DropdownMenuItem>
                                       <DropdownMenuItem asChild>
-                                        <Link href={`/share/${item.shareId}`}>
+                                        <Link href={`/song/${item.shareId}`}>
                                           <ExternalLink className="h-4 w-4" />
                                           Open drop
                                         </Link>

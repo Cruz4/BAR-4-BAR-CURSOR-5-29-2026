@@ -746,9 +746,7 @@ export function PressDesk() {
       })),
     };
   }, [
-    user?.id,
-    user?.displayName,
-    user?.subscriptionStatus,
+    user,
     summary,
     heroCollageUrls,
     useInitialsHero,
@@ -1872,6 +1870,23 @@ export function PressDesk() {
                       Build this showcase before pressing your page.
                     </p>
                   )}
+                  {selectedFeaturedTrack.source === 'purchased' ? (
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-400/25 bg-amber-500/10 p-3">
+                      <div>
+                        <p className="text-xs font-bold">Show First Press badge</p>
+                        <p className="text-[10px] text-muted-foreground">Verified when you press the page; available to the first 10 supporters.</p>
+                      </div>
+                      <Switch
+                        checked={selectedFeaturedTrack.showFirstPressBadge === true}
+                        onCheckedChange={(checked) => update((draft) => {
+                          if (draft.featured.featuredTrack) {
+                            draft.featured.featuredTrack.showFirstPressBadge = checked;
+                            if (!checked) draft.featured.featuredTrack.firstPressRank = undefined;
+                          }
+                        })}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>

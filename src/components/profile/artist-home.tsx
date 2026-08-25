@@ -6,8 +6,9 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { ChevronLeft, Dna, Flame, Globe, Music, PenLine, Repeat2, Settings2, Share2, Star, Trophy, Zap } from 'lucide-react';
+import { ChevronLeft, Compass, Dna, Flame, Globe, Music, PenLine, Repeat2, Settings2, Share2, Star, Trophy, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -69,6 +70,13 @@ import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { parseStudioBadge } from '@/lib/studio-tier-chrome';
 import { Hint } from '@/components/ui/tooltip';
 import { SoundIdentityStrip } from '@/components/profile/sound-identity-strip';
+import { ArtistHomeBackButton } from '@/components/profile/artist-home-back-button';
+import { ProfileSectionTabs } from '@/components/profile/profile-section-tabs';
+
+const GuestDiscoverSearch = dynamic(
+  () => import('@/components/scene/scene-universal-search').then((module) => module.SceneUniversalSearch),
+  { ssr: false }
+);
 
 type ArtistHomeProps = {
   profile: PublicProfileData;
@@ -156,7 +164,7 @@ export function ArtistHome({
 
   const cssVars = useMemo(() => pressingCssVars(tokens), [tokens]);
   const rankId = profile.rankId ?? rankIdFromLabel(profile.rankLabel);
-  const liveDnaDrops = profile.liveDnaDrops || [];
+  const liveDnaDrops = useMemo(() => profile.liveDnaDrops || [], [profile.liveDnaDrops]);
   const saleDrops = useMemo(
     () => (firstDropsOn ? firstDropTracks(liveDnaDrops) : []),
     [firstDropsOn, liveDnaDrops]
@@ -345,16 +353,20 @@ export function ArtistHome({
         {/* Sheet header */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-dashed border-[var(--ph-border)] pb-4">
           <div className="flex flex-wrap items-center gap-3">
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1.5 border-[var(--ph-accent)]/45 bg-[var(--ph-accent)]/12 px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ph-accent)] shadow-none hover:bg-[var(--ph-accent)]/22 hover:text-[var(--ph-accent)]"
-              asChild
-            >
-              <Link href={studioHomeHref}>
-                <ChevronLeft className="h-4 w-4" /> {studioHomeLabel}
-              </Link>
-            </Button>
+            {studioHomeHref === '/' && !previewMode && !playgroundWall ? (
+              <ArtistHomeBackButton label="Back" />
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1.5 border-[var(--ph-accent)]/45 bg-[var(--ph-accent)]/12 px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ph-accent)] shadow-none hover:bg-[var(--ph-accent)]/22 hover:text-[var(--ph-accent)]"
+                asChild
+              >
+                <Link href={studioHomeHref}>
+                  <ChevronLeft className="h-4 w-4" /> {studioHomeLabel}
+                </Link>
+              </Button>
+            )}
             <span className="hidden font-code text-[9px] uppercase tracking-[0.3em] text-[var(--ph-muted)] sm:inline">
               {tokens.plateSerial}
               {tokens.autoDrift ? ' · restless' : ''}
@@ -408,6 +420,23 @@ export function ArtistHome({
             )}
           </div>
         </div>
+
+        {!previewMode && !playgroundWall ? (
+          <ProfileSectionTabs slug={profile.slug} className="mt-3" />
+        ) : null}
+
+        {!user && !previewMode && !playgroundWall ? (
+          <section className="mt-4 rounded-xl border border-sky-400/25 bg-sky-500/[0.07] p-3 sm:p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-sky-300"><Compass className="h-4 w-4" /> See what artists and Music Fans are doing</p>
+                <p className="mt-1 text-[11px] text-[var(--ph-muted)]">Search public profiles, pressed songs, DNA Drops, and Scene posts.</p>
+              </div>
+              <Button size="sm" variant="outline" asChild className="h-8 font-bold uppercase"><Link href="/discover">Open Discover</Link></Button>
+            </div>
+            <GuestDiscoverSearch className="relative z-30" />
+          </section>
+        ) : null}
 
         {/* Hero — original scale; preview/sandbox centers shorter copy with the photo column */}
         <section
@@ -476,7 +505,7 @@ export function ArtistHome({
                     size="sm"
                     className="h-auto min-h-10 w-full max-w-full gap-1.5 whitespace-normal bg-fuchsia-400 px-3 py-2 text-center font-bold uppercase leading-tight tracking-wider text-black hover:bg-fuchsia-300 sm:h-9 sm:w-auto sm:whitespace-nowrap sm:px-4 sm:py-0"
                   >
-                    <Link href={`/share/${saleDrops[0].shareId}`} className="inline-flex max-w-full items-center gap-1.5">
+                    <Link href={`/song/${saleDrops[0].shareId}`} className="inline-flex max-w-full items-center gap-1.5">
                       <Music className="h-3.5 w-3.5 shrink-0" />
                       <span className="min-w-0 break-words">
                         Listen
@@ -509,7 +538,7 @@ export function ArtistHome({
                       size="sm"
                       className="h-8 max-w-full gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
                     >
-                      <Link href={`/share/${liveDnaDrops[0].shareId}`} className="inline-flex max-w-full items-center gap-1.5">
+                      <Link href={liveDnaDrops[0].hasDropAudio ? `/song/${liveDnaDrops[0].shareId}` : `/share/${liveDnaDrops[0].shareId}`} className="inline-flex max-w-full items-center gap-1.5">
                         <Dna className="h-3.5 w-3.5 shrink-0" />
                         <span className="min-w-0 truncate">
                           {liveDnaDrops[0].type === 'album' ? '1 album DNA live' : '1 track DNA live'}
@@ -731,7 +760,7 @@ export function ArtistHome({
                 <Link
                   href={buildLoginUrl({
                     mode: 'signup',
-                    next: '/',
+                    next: profileHref(profile.slug) || '/',
                     intent: 'claim_artist_home',
                     referralCode: profile.referralCode,
                   })}
@@ -764,6 +793,7 @@ export function ArtistHome({
         <ArtistHomeGuestClaim
           artistName={profile.displayName}
           referralCode={profile.referralCode}
+          nextPath={profileHref(profile.slug) || '/'}
         />
       ) : null}
 

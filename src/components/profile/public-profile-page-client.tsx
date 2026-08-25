@@ -7,24 +7,37 @@ import { StudioLoader } from '@/components/studio-loader';
 import { ArtistHome } from '@/components/profile/artist-home';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
 import { trackShareCardEvent } from '@/lib/gamification-client';
-import { getAchievement } from '@/lib/gamification/achievements';
-import type { AchievementDef } from '@/lib/gamification/achievements';
-import { normalizeArtistHomeConfig, type ArtistHomeConfig } from '@/lib/profile/modules';
+import type { ArtistHomeConfig } from '@/lib/profile/modules';
+import { publicProfileView } from '@/lib/profile/public-profile-view';
 import { profileHref, sanitizeProfileSlugParam } from '@/lib/profile/profile-slug';
-import { normalizeProfilePhotoMode } from '@/lib/gamification/types';
-import { parseStudioBadge } from '@/lib/studio-tier-chrome';
 import { useAuth } from '@/hooks/use-auth';
 
-export function PublicProfilePageClient({ slug }: { slug: string }) {
+export function PublicProfilePageClient({
+  slug,
+  initialData,
+}: {
+  slug: string;
+  initialData?: unknown;
+}) {
   const { user } = useAuth();
   const router = useRouter();
-  const [profile, setProfile] = useState<PublicProfileData | null>(null);
-  const [config, setConfig] = useState<ArtistHomeConfig | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const initial = initialData ? publicProfileView(initialData, slug) : null;
+  const [profile, setProfile] = useState<PublicProfileData | null>(initial?.profile || null);
+  const [config, setConfig] = useState<ArtistHomeConfig | null>(initial?.config || null);
+  const [loading, setLoading] = useState(!initial);
+  const [error, setError] = useState(initialData === null);
 
   useEffect(() => {
     if (!slug) return;
+    if (initialData) {
+      const next = publicProfileView(initialData, slug);
+      setProfile(next.profile);
+      setConfig(next.config);
+      setLoading(false);
+      setError(false);
+      void trackShareCardEvent('share_card_opened', { slug: next.liveSlug });
+      return;
+    }
     let cancelled = false;
     let redirected = false;
     setLoading(true);
@@ -54,8 +67,8 @@ export function PublicProfilePageClient({ slug }: { slug: string }) {
           return;
         }
         const data = await res.json();
-        const liveSlug =
-          typeof data.slug === 'string' && data.slug.trim() ? data.slug.trim() : cleanSlug;
+        const view = publicProfileView(data, cleanSlug);
+        const liveSlug = view.liveSlug;
         if (liveSlug !== cleanSlug) {
           redirected = true;
           const hash =
@@ -65,92 +78,8 @@ export function PublicProfilePageClient({ slug }: { slug: string }) {
           return;
         }
         if (cancelled) return;
-        const badges: AchievementDef[] =
-          data.badges ||
-          (data.badgeIds || [])
-            .map((id: string) => getAchievement(id))
-            .filter(Boolean);
-
-        setProfile({
-          displayName:
-            typeof data.displayName === 'string' && data.displayName.trim()
-              ? data.displayName.trim()
-              : 'Artist',
-          rankLabel: data.rankLabel,
-          rankId: data.rankId,
-          xp: Number(data.xp) || 0,
-          currentStreak: Number(data.currentStreak) || 0,
-          longestStreak: Number(data.longestStreak) || 0,
-          lifetimeBarsWritten:
-            typeof data.lifetimeBarsWritten === 'number' ? data.lifetimeBarsWritten : undefined,
-          lifetimeLinesGenerated:
-            typeof data.lifetimeLinesGenerated === 'number'
-              ? data.lifetimeLinesGenerated
-              : undefined,
-          albumCoverUrls: data.albumCoverUrls,
-          badges,
-          unlockedAchievements:
-            data.unlockedAchievements && typeof data.unlockedAchievements === 'object'
-              ? data.unlockedAchievements
-              : undefined,
-          userId: data.userId,
-          profilePhotoMode: normalizeProfilePhotoMode(data.profilePhotoMode),
-          profilePhotoUrl: data.profilePhotoUrl || null,
-          starMarkUseStar: Boolean(data.starMarkUseStar),
-          starMarkSeed:
-            typeof data.starMarkSeed === 'number' ? data.starMarkSeed : undefined,
-          referralCode:
-            typeof data.referralCode === 'string' && data.referralCode.trim()
-              ? data.referralCode.trim().toUpperCase()
-              : undefined,
-          liveDnaDrops: Array.isArray(data.liveDnaDrops)
-            ? data.liveDnaDrops
-                .filter(
-                  (d: { shareId?: string }) =>
-                    typeof d?.shareId === 'string' && d.shareId.trim().length > 0
-                )
-                .map((d: {
-                  shareId: string;
-                  title?: string;
-                  type?: string;
-                  albumTitle?: string;
-                  albumShareId?: string;
-                  trackIndex?: number;
-                  trackCount?: number;
-                  hasDropAudio?: boolean;
-                  dropPriceSummary?: string;
-                  playCount?: number;
-                  previewCount?: number;
-                  purchaseCount?: number;
-                  firstBuyerName?: string;
-                }) => ({
-                  shareId: d.shareId,
-                  title: typeof d.title === 'string' && d.title.trim() ? d.title : 'Untitled drop',
-                  type: d.type === 'album' ? ('album' as const) : ('track' as const),
-                  ...(typeof d.albumTitle === 'string' && d.albumTitle.trim()
-                    ? { albumTitle: d.albumTitle.trim() }
-                    : {}),
-                  ...(typeof d.albumShareId === 'string' && d.albumShareId.trim()
-                    ? { albumShareId: d.albumShareId.trim() }
-                    : {}),
-                  ...(typeof d.trackIndex === 'number' ? { trackIndex: d.trackIndex } : {}),
-                  ...(typeof d.trackCount === 'number' ? { trackCount: d.trackCount } : {}),
-                  ...(d.hasDropAudio ? { hasDropAudio: true } : {}),
-                  ...(typeof d.dropPriceSummary === 'string' && d.dropPriceSummary.trim()
-                    ? { dropPriceSummary: d.dropPriceSummary.trim() }
-                    : {}),
-                  ...(typeof d.playCount === 'number' ? { playCount: d.playCount } : {}),
-                  ...(typeof d.previewCount === 'number' ? { previewCount: d.previewCount } : {}),
-                  ...(typeof d.purchaseCount === 'number' ? { purchaseCount: d.purchaseCount } : {}),
-                  ...(typeof d.firstBuyerName === 'string' && d.firstBuyerName.trim()
-                    ? { firstBuyerName: d.firstBuyerName.trim() }
-                    : {}),
-                }))
-            : [],
-          slug: liveSlug,
-          studioBadge: parseStudioBadge(data.studioBadge),
-        });
-        setConfig(normalizeArtistHomeConfig(data.artistHome));
+        setProfile(view.profile);
+        setConfig(view.config);
         void trackShareCardEvent('share_card_opened', { slug: liveSlug });
       } finally {
         // Stay on the loader while the URL is rewritten to the live slug.
@@ -161,7 +90,7 @@ export function PublicProfilePageClient({ slug }: { slug: string }) {
     return () => {
       cancelled = true;
     };
-  }, [slug, router]);
+  }, [slug, router, initialData]);
 
   if (loading) {
     return (

@@ -94,7 +94,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const isPublicHome = pathname === '/' && !user;
   const isMarketingShell = isLoginPage || isPublicHome || isWelcomePage;
   const isPerformPage = pathname.endsWith('/perform');
-  const isSharePage = pathname.startsWith('/share/');
+  const isSharePage = pathname.startsWith('/share/') || pathname.startsWith('/song/');
   const isLibraryPage = pathname === '/library';
   const isEarningsPage = pathname === '/earnings';
   const isInsightsPage = pathname === '/insights';

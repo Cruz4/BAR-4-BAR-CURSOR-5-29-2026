@@ -49,7 +49,7 @@ export function LiveDnaDropLinkCard({
 
   return (
     <Link
-      href={`/share/${drop.shareId}`}
+      href={firstDrop ? `/song/${drop.shareId}` : `/share/${drop.shareId}`}
       onClick={onNavigate}
       className={cn(
         'group flex items-center transition-colors',
@@ -346,7 +346,7 @@ export function FirstDropsStorefront({
         {sale.map((drop) => (
           <Link
             key={drop.shareId}
-            href={`/share/${drop.shareId}`}
+            href={`/song/${drop.shareId}`}
             onClick={onNavigate}
             className="group flex items-center gap-3 rounded-xl border border-fuchsia-400/40 bg-black/35 p-3.5 transition-colors hover:border-fuchsia-300/70 hover:bg-fuchsia-500/10"
           >

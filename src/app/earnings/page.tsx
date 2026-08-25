@@ -456,7 +456,7 @@ function EarningsPageContent() {
                         <p className="truncate text-sm font-bold">{sale.title}</p>
                         {sale.shareId ? (
                           <Link
-                            href={`/share/${sale.shareId}`}
+                            href={`/song/${sale.shareId}`}
                             className="inline-flex items-center gap-1 text-[10px] font-code uppercase tracking-widest text-primary/90 hover:text-primary"
                           >
                             <Link2 className="h-3 w-3" />

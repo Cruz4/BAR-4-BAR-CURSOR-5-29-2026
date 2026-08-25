@@ -15,6 +15,7 @@ import {
 } from '@/lib/activity/types';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { activityPostHash } from '@/lib/activity/post-deep-link';
+import { shareDocCommerceFlags } from '@/lib/drop-commerce';
 
 export type EmitActivityInput = {
   type: ActivityType;
@@ -149,6 +150,7 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
   let recipientSlug: string | undefined;
   let preview = input.preview?.trim().slice(0, 160) || undefined;
   let shareId = input.shareId?.trim().toUpperCase() || undefined;
+  let resolvedShareHref: string | undefined;
   const postId = input.postId?.trim() || undefined;
   const commentId = input.commentId?.trim() || undefined;
 
@@ -199,14 +201,27 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
       input.type === 'drop_sold') &&
     shareId
   ) {
+    const shareSnap = await db.collection('shares').doc(shareId).get();
+    if (!shareSnap.exists) return { ok: false };
+    const share = shareSnap.data() || {};
+    const payload = share.data && typeof share.data === 'object'
+      ? share.data as Record<string, unknown>
+      : {};
+    const pressed = share.type !== 'album' && shareDocCommerceFlags('track', {
+      dropAudio: payload.dropAudio,
+      dropPrice: payload.dropPrice,
+    }).hasDropAudio;
+    if (
+      pressed &&
+      (input.type === 'drop_loved' || input.type === 'drop_reply' || input.type === 'drop_unlocked')
+    ) {
+      resolvedShareHref = `/song/${shareId}`;
+    }
     if (input.type === 'drop_reply' && input.recipientId) {
       recipientId = input.recipientId.trim();
       recipientName = input.recipientName?.trim() || 'Artist';
       recipientSlug = await resolveProfileSlug(recipientId);
     } else {
-      const shareSnap = await db.collection('shares').doc(shareId).get();
-      if (!shareSnap.exists) return { ok: false };
-      const share = shareSnap.data() || {};
       recipientId = String(share.ownerId || '');
       recipientName = String(share.ownerName || 'Artist');
       const title =
@@ -231,7 +246,10 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
   const actorSlug = await resolveProfileSlug(input.actorId, input.actorSlug);
 
   const now = new Date().toISOString();
-  const href = buildHref({ ...input, actorSlug }, recipientSlug) || '/activity';
+  const href = buildHref(
+    { ...input, actorSlug, ...(resolvedShareHref && !input.href ? { href: resolvedShareHref } : {}) },
+    recipientSlug
+  ) || '/activity';
   const base = {
     type: input.type,
     createdAt: now,

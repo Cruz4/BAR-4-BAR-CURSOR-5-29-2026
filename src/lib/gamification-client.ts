@@ -51,6 +51,27 @@ export async function postGamificationEvent(
   }
 }
 
+/** Records Quote Reverb progress only after the server verifies the owned post. */
+export async function postVerifiedQuoteReverb(postId: string): Promise<void> {
+  try {
+    const { user, token } = await authHeaders();
+    const res = await fetch('/api/gamification/social-proof', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ userId: user.uid, postId }),
+    });
+    if (!res.ok) return;
+    const data = (await res.json()) as GamificationEventResult;
+    if (data.summary) dispatchGamificationSummaryPatch(data.summary);
+    dispatchAchievementUnlocks(data.unlocks, data.xpGain ?? 0);
+  } catch {
+    /* Quote proof is best-effort; the verified post remains intact. */
+  }
+}
+
 export async function patchGamificationSettings(settings: {
   publicProfile?: boolean;
   leaderboardHidden?: boolean;

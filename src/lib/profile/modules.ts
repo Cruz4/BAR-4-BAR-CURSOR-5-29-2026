@@ -78,6 +78,10 @@ export type FeaturedTrackSelection = {
   durationSec?: number;
   excerptStartSec: number;
   source: 'owned' | 'purchased';
+  /** Server-validated place among the first 10 paid supporters. */
+  firstPressRank?: number;
+  /** Show a server-validated First Press #1–10 mark on the public profile player. */
+  showFirstPressBadge?: boolean;
   /** Canonical private Storage path. Stripped from the public profile mirror. */
   previewPath?: string;
 };
@@ -264,6 +268,10 @@ function normalizeFeaturedTrack(raw: unknown): FeaturedTrackSelection | undefine
     ...(durationSec ? { durationSec } : {}),
     excerptStartSec,
     source: obj.source === 'owned' ? 'owned' : 'purchased',
+    ...(obj.showFirstPressBadge === true && Number(obj.firstPressRank) >= 1 && Number(obj.firstPressRank) <= 10
+      ? { firstPressRank: Math.floor(Number(obj.firstPressRank)) }
+      : {}),
+    ...(obj.showFirstPressBadge === true ? { showFirstPressBadge: true } : {}),
     ...(previewPath ? { previewPath } : {}),
   };
 }

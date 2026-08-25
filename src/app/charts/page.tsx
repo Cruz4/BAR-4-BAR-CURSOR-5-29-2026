@@ -80,7 +80,7 @@ function TrackChartRow({ entry, index }: { entry: TrackChartEntry; index: number
         <ChartRank index={index} />
         <div className="min-w-0 flex-1">
           <Link
-            href={`/share/${entry.shareId}`}
+            href={`/song/${entry.shareId}`}
             className="block truncate font-headline text-base font-bold uppercase text-white hover:text-cyan-200 hover:underline"
           >
             {entry.title}
@@ -229,7 +229,7 @@ export default function ChartsPage() {
         <Card className="border-cyan-400/20 bg-black/35 backdrop-blur-sm">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm uppercase text-cyan-100">
-              <ShieldCheck className="h-4 w-4 text-cyan-300" /> Proof, not payola
+              <ShieldCheck className="h-4 w-4 text-cyan-300" /> Proof
             </CardTitle>
             <CardDescription className="text-cyan-100/50">
               Song score: {(charts?.formula.tracks || []).map((part) => `${part.points}× ${part.label}`).join(' + ')}.

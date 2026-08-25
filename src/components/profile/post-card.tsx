@@ -30,6 +30,7 @@ import {
   fetchCommentCount,
   fetchHasLiked,
   fetchHasReverbed,
+  fetchViewerReverbPost,
   fetchLikeCount,
   fetchPublicArtistAvatarMeta,
   likePost,
@@ -47,6 +48,7 @@ import {
 import { compactReachCount, recordPostViewClient } from '@/lib/post-view-client';
 import { LyricClipCard } from '@/components/profile/lyric-clip-card';
 import { isMasterAdminEmail } from '@/lib/master-admin';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 type PostCardProps = {
   post: ProfilePost;
@@ -55,6 +57,7 @@ type PostCardProps = {
   viewerSlug?: string;
   onDeleted?: (postId: string) => void;
   onReverbed?: (post: ProfilePost) => void;
+  immersive?: boolean;
 };
 
 function timeAgo(iso: string): string {
@@ -67,7 +70,7 @@ function timeAgo(iso: string): string {
 
 function firstDropUrlFromText(text?: string): string | undefined {
   if (!text) return undefined;
-  return text.match(/https?:\/\/[^\s]+\/share\/[^\s?#]+|\/share\/[^\s?#]+/i)?.[0];
+  return text.match(/https?:\/\/[^\s]+\/(?:song|share)\/[^\s?#]+|\/(?:song|share)\/[^\s?#]+/i)?.[0];
 }
 
 function ReverbSourceBody({ post }: { post: ProfilePost }) {
@@ -203,7 +206,7 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
   );
 }
 
-export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onReverbed }: PostCardProps) {
+export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onReverbed, immersive = false }: PostCardProps) {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const articleRef = useRef<HTMLElement>(null);
@@ -219,6 +222,9 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   const [reverbed, setReverbed] = useState(false);
   const [reverbComposerOpen, setReverbComposerOpen] = useState(false);
   const [reverbQuote, setReverbQuote] = useState('');
+  const [viewerReverbQuote, setViewerReverbQuote] = useState('');
+  const [loveBurst, setLoveBurst] = useState(false);
+  const tapRef = useRef({ lastAt: 0, downX: 0, downY: 0 });
   const [authorAvatarUrl, setAuthorAvatarUrl] = useState<string | undefined>(undefined);
   const [authorStarSeed, setAuthorStarSeed] = useState<number | undefined>(undefined);
   const [authorUseStar, setAuthorUseStar] = useState(false);
@@ -278,7 +284,13 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
       setReverbed(false);
       return;
     }
-    void fetchHasReverbed(rootIdForReverb).then(setReverbed).catch(() => undefined);
+    void Promise.all([
+      fetchHasReverbed(rootIdForReverb),
+      fetchViewerReverbPost(rootIdForReverb),
+    ]).then(([has, reverbPost]) => {
+      setReverbed(has);
+      setViewerReverbQuote(reverbPost?.text || '');
+    }).catch(() => undefined);
   }, [canReverb, rootIdForReverb]);
 
   useEffect(() => {
@@ -353,6 +365,24 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     }
   };
 
+  const addLove = async () => {
+    if (liked) return;
+    if (!user) {
+      toast({ title: 'Sign in to show love' });
+      return;
+    }
+    setLiked(true);
+    setLikeCount((count) => count + 1);
+    setLoveBurst(true);
+    window.setTimeout(() => setLoveBurst(false), 650);
+    try {
+      await likePost(post.id, { name: user.displayName || 'Artist', slug: viewerSlug });
+    } catch {
+      setLiked(false);
+      setLikeCount((count) => Math.max(0, count - 1));
+    }
+  };
+
   const handleReverb = async (quote?: string) => {
     if (!user) {
       toast({ title: 'Sign in to Reverb' });
@@ -364,15 +394,16 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         name: user.displayName || 'Artist',
         slug: viewerSlug,
       }, quote?.trim() ? { quote } : undefined);
-      setReverbed(result.status === 'created');
+      setReverbed(result.status !== 'removed');
+      setViewerReverbQuote(result.status === 'removed' ? '' : quote?.trim() || viewerReverbQuote);
       setReverbComposerOpen(false);
       setReverbQuote('');
       toast({
         title: result.status === 'created'
           ? quote?.trim() ? 'Quote Reverb live' : 'Reverb live'
-          : 'Reverb removed',
+          : result.status === 'updated' ? 'Quote Reverb updated' : 'Reverb removed',
         description:
-          result.status === 'created'
+          result.status === 'created' || result.status === 'updated'
             ? 'This post now echoes on your wall and Reverbs page.'
             : 'Taken off your Reverbs.',
       });
@@ -418,8 +449,26 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     <article
       ref={articleRef}
       id={`post-${post.id}`}
-      className="scroll-mt-28 border border-dashed border-[var(--ph-border)] bg-black/20 p-4 transition-shadow data-[activity-focus]:ring-2 data-[activity-focus]:ring-fuchsia-400/80"
+      className="relative touch-pan-y scroll-mt-28 border border-dashed border-[var(--ph-border)] bg-black/20 p-4 transition-shadow data-[activity-focus]:ring-2 data-[activity-focus]:ring-fuchsia-400/80"
+      onPointerDown={immersive ? (event) => {
+        tapRef.current.downX = event.clientX;
+        tapRef.current.downY = event.clientY;
+      } : undefined}
+      onPointerUp={immersive ? (event) => {
+        const target = event.target as HTMLElement;
+        if (target.closest('button,a,input,textarea,select,audio,video,[role="button"],[data-no-double-love]')) return;
+        if (Math.hypot(event.clientX - tapRef.current.downX, event.clientY - tapRef.current.downY) > 12) {
+          tapRef.current.lastAt = 0;
+          return;
+        }
+        const now = Date.now();
+        if (now - tapRef.current.lastAt < 330) {
+          tapRef.current.lastAt = 0;
+          void addLove();
+        } else tapRef.current.lastAt = now;
+      } : undefined}
     >
+      {loveBurst ? <Heart className="pointer-events-none absolute left-1/2 top-1/2 z-50 h-20 w-20 -translate-x-1/2 -translate-y-1/2 animate-in zoom-in fill-fuchsia-400 text-fuchsia-400 drop-shadow-[0_0_24px_rgba(244,114,182,.9)]" /> : null}
       {post.isReverb && (
         <p className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-violet-300/90">
           <Repeat2 className="h-3 w-3" /> Reverb
@@ -554,10 +603,11 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
           {commentCount > 0 ? commentCount : 'Reply'}
         </button>
         {canReverb && (
+          <DropdownMenu>
+          <DropdownMenuTrigger asChild>
           <button
             type="button"
             disabled={busy}
-            onClick={() => void handleReverb()}
             className={cn(
               'flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors',
               reverbed
@@ -569,18 +619,13 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
             <Repeat2 className={cn('h-3.5 w-3.5', reverbed && 'stroke-[2.5]')} />
             {reverbed ? 'Reverbed' : 'Reverb'}
           </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-44 border-violet-400/25">
+            <DropdownMenuItem onSelect={() => void handleReverb()}>{reverbed ? 'Undo Reverb' : 'Reverb'}</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => { setReverbQuote(viewerReverbQuote); setReverbComposerOpen(true); }}>{viewerReverbQuote ? 'Edit Quote' : 'Quote'}</DropdownMenuItem>
+          </DropdownMenuContent>
+          </DropdownMenu>
         )}
-        {canReverb && !reverbed ? (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setReverbComposerOpen(true)}
-            className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))] transition-colors hover:text-violet-300"
-            title="Quote Reverb — add your thought above the original"
-          >
-            <MessageCircle className="h-3.5 w-3.5" /> Quote
-          </button>
-        ) : null}
         <button
           type="button"
           onClick={() => setShareOpen(true)}
@@ -632,7 +677,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         <DialogContent className="border-violet-400/25 sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-headline text-xl uppercase">
-              <Repeat2 className="h-5 w-5 text-violet-300" /> Reverb this post
+              <Repeat2 className="h-5 w-5 text-violet-300" /> {viewerReverbQuote ? 'Edit Quote Reverb' : 'Reverb this post'}
             </DialogTitle>
             <DialogDescription>
               Add your own thought above the original, then pass both to your wall.
@@ -673,7 +718,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
               onClick={() => void handleReverb(reverbQuote)}
               className="gap-1.5 bg-violet-500 font-bold uppercase text-white hover:bg-violet-400"
             >
-              <MessageCircle className="h-3.5 w-3.5" /> Quote + Reverb
+              <MessageCircle className="h-3.5 w-3.5" /> {viewerReverbQuote ? 'Save Quote' : 'Quote + Reverb'}
             </Button>
           </DialogFooter>
         </DialogContent>

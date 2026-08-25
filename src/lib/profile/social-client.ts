@@ -56,6 +56,7 @@ import {
   type PendingPostImage,
 } from '@/lib/profile/post-images';
 import { notifyLoveReward } from '@/lib/profile/love-reward-client';
+import type { PressingConfig } from '@/lib/profile/pressing';
 
 export type ProfilePost = {
   id: string;
@@ -89,6 +90,8 @@ export type ProfilePost = {
   lyricClip?: LyricClip;
   /** Snapshot of the original lyric clip when this wall item is a Reverb. */
   reverbLyricClip?: LyricClip;
+  /** Public Artist Home Pressing, attached only to lightweight Scene summaries. */
+  pressing?: PressingConfig;
 };
 
 export type PostComment = {
@@ -285,7 +288,7 @@ export async function createPost(input: {
   });
   try {
     const { postGamificationEvent } = await import('@/lib/gamification-client');
-    void postGamificationEvent('wall_post_created');
+    void postGamificationEvent('wall_post_created', { postId });
   } catch {
     /* ignore */
   }
@@ -409,7 +412,7 @@ export async function toggleReverb(
   source: ProfilePost,
   me: { name: string; slug?: string },
   options?: { quote?: string }
-): Promise<{ status: 'created' | 'removed'; post?: ProfilePost }> {
+): Promise<{ status: 'created' | 'updated' | 'removed'; post?: ProfilePost }> {
   const user = requireUser();
   if (source.ownerId === user.uid) {
     throw new Error('You already own this post.');
@@ -447,6 +450,20 @@ export async function toggleReverb(
   if (existing.exists()) {
     const wallPostId =
       typeof existing.data()?.wallPostId === 'string' ? existing.data()!.wallPostId : '';
+    if (wallPostId && typeof options?.quote === 'string') {
+      await requireLiveProfileForPosting(user.uid);
+      const wallRef = doc(db, 'posts', wallPostId);
+      const wall = await getDoc(wallRef);
+      if (wall.exists()) {
+        const quote = options.quote.trim().slice(0, MAX_POST_TEXT);
+        await updateDoc(wallRef, { text: quote });
+        if (quote) {
+          const { postVerifiedQuoteReverb } = await import('@/lib/gamification-client');
+          void postVerifiedQuoteReverb(wallPostId);
+        }
+        return { status: 'updated', post: { ...postFromDoc(wall.id, wall.data()), text: quote } };
+      }
+    }
     if (wallPostId) {
       try {
         await deleteDoc(doc(db, 'posts', wallPostId));
@@ -486,6 +503,14 @@ export async function toggleReverb(
   await setDoc(doc(db, 'posts', id), data);
   await setDoc(pointerRef, { wallPostId: id, createdAt: post.createdAt });
 
+  try {
+    const { postGamificationEvent, postVerifiedQuoteReverb } = await import('@/lib/gamification-client');
+    void postGamificationEvent('wall_post_created', { postId: id });
+    if (quote) void postVerifiedQuoteReverb(id);
+  } catch {
+    /* social proof is best-effort; the verified post remains intact */
+  }
+
   trackSocialEvent('profile_reverb', {
     originalOwnerId: rootOwnerId,
     quoted: Boolean(quote),
@@ -511,6 +536,20 @@ export async function fetchHasReverbed(originalPostId: string): Promise<boolean>
     return snap.exists();
   } catch {
     return false;
+  }
+}
+
+export async function fetchViewerReverbPost(originalPostId: string): Promise<ProfilePost | null> {
+  const user = auth.currentUser;
+  if (!user || !originalPostId) return null;
+  try {
+    const pointer = await getDoc(doc(db, 'users', user.uid, 'reverbs', originalPostId));
+    const wallPostId = pointer.exists() && typeof pointer.data()?.wallPostId === 'string'
+      ? pointer.data()!.wallPostId
+      : '';
+    return wallPostId ? fetchPostById(wallPostId) : null;
+  } catch {
+    return null;
   }
 }
 

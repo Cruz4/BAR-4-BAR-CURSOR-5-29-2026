@@ -974,6 +974,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       persistProjectShareId(type, id, shareId, albumId);
+      void postGamificationEvent('share_created', { shareId });
       return shareId;
     },
     [user, buildDropPayload, persistProjectShareId]
@@ -1011,7 +1012,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       });
 
       persistProjectShareId(type, id, shareId, albumId);
-      void postGamificationEvent('share_created');
+      void postGamificationEvent('share_created', { shareId });
       return shareId;
     },
     [user, resolveTrackForDrop, buildDropPayload, persistProjectShareId, updateDNA]

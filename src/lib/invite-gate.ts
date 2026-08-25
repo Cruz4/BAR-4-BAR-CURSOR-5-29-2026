@@ -41,7 +41,7 @@ export function normalizeInviteCode(code: string): string {
 /** Paths that stay reachable while the gate is on (no unlock cookie required). */
 export function isInviteGateExemptPath(pathname: string): boolean {
   if (!pathname || pathname === '/') return false;
-  if (pathname.startsWith('/share/')) return true;
+  if (pathname.startsWith('/share/') || pathname.startsWith('/song/')) return true;
   if (pathname.startsWith('/lock/') || pathname === '/lock') return true;
   if (pathname.startsWith('/marketing/capture')) return true;
   if (pathname.startsWith('/api/')) return true;

@@ -310,7 +310,7 @@ export async function searchPublicMusicNetwork(input: {
         id: drop.resultId,
         title: drop.title,
         subtitle: `${drop.pressed ? 'Pressed song' : 'DNA Drop'} · ${drop.ownerName}`,
-        href: `/share/${drop.shareId}`,
+        href: drop.pressed ? `/song/${drop.shareId}` : `/share/${drop.shareId}`,
         ...(drop.ownerId ? { ownerId: drop.ownerId } : {}),
         ownerName: drop.ownerName,
         ...(drop.ownerSlug ? { ownerSlug: drop.ownerSlug } : {}),

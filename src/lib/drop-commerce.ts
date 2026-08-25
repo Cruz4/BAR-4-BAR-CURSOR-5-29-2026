@@ -141,6 +141,8 @@ export type DropLibraryEntry = {
   stripeSessionId?: string;
   free?: boolean;
   own?: boolean;
+  /** Per-song public supporter credit. Private unless the buyer explicitly opts in. */
+  supporterCreditPublic?: boolean;
 };
 
 export function defaultDropPrice(): DropPrice {

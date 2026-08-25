@@ -112,6 +112,19 @@ export type GamificationSummary = {
   friendshipWeekCount: number;
   wallPostWeekCount: number;
   shareCreatedWeekCount: number;
+  qualifiedListenWeekCount: number;
+  qualifiedListenSongWeekCount: number;
+  qualifiedListenWeekSongIds: string[];
+  quoteReverbWeekCount: number;
+  galleryPostWeekCount: number;
+  creatorListenerWeekCount: number;
+  lifetimePaidSupports: number;
+  lifetimeQualifiedListeningDays: number;
+  lifetimePressedSongs: number;
+  lifetimeFirstDropSales: number;
+  lifetimeQuoteReverbs: number;
+  lifetimeGalleryPosts: number;
+  lifetimeCreatorQualifiedListeners: number;
   lastGenerateNextLineDayKey: string;
   updatedAt: string;
 };
@@ -138,8 +151,13 @@ export type GamificationTrigger =
   | 'dna_imported'
   | 'friendship_accepted'
   | 'wall_post_created'
+  | 'quote_reverb_created'
   | 'dna_drop_imported_by_other'
-  | 'love_received';
+  | 'love_received'
+  | 'paid_support'
+  | 'qualified_listen'
+  | 'creator_sale'
+  | 'creator_qualified_listener';
 
 export const DEFAULT_GAMIFICATION_SUMMARY: GamificationSummary = {
   xp: 0,
@@ -185,6 +203,19 @@ export const DEFAULT_GAMIFICATION_SUMMARY: GamificationSummary = {
   friendshipWeekCount: 0,
   wallPostWeekCount: 0,
   shareCreatedWeekCount: 0,
+  qualifiedListenWeekCount: 0,
+  qualifiedListenSongWeekCount: 0,
+  qualifiedListenWeekSongIds: [],
+  quoteReverbWeekCount: 0,
+  galleryPostWeekCount: 0,
+  creatorListenerWeekCount: 0,
+  lifetimePaidSupports: 0,
+  lifetimeQualifiedListeningDays: 0,
+  lifetimePressedSongs: 0,
+  lifetimeFirstDropSales: 0,
+  lifetimeQuoteReverbs: 0,
+  lifetimeGalleryPosts: 0,
+  lifetimeCreatorQualifiedListeners: 0,
   lastGenerateNextLineDayKey: '',
   updatedAt: new Date().toISOString(),
 };

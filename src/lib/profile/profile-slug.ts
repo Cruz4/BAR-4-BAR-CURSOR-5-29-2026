@@ -35,6 +35,7 @@ export const APP_ROOT_SEGMENTS = new Set([
   'scene',
   'share',
   'shares',
+  'song',
   'ink',
   'pro',
   'terms',
@@ -225,6 +226,16 @@ export function profileReverbsHref(slug?: string | null): string | undefined {
   return base ? `${base}/reverbs` : undefined;
 }
 
+export function profileImagesHref(slug?: string | null): string | undefined {
+  const base = profileHref(slug);
+  return base ? `${base}/images` : undefined;
+}
+
+export function profileSongsHref(slug?: string | null): string | undefined {
+  const base = profileHref(slug);
+  return base ? `${base}/songs` : undefined;
+}
+
 export function isAppRootSegment(segment: string | null | undefined): boolean {
   const s = (segment || '').trim().toLowerCase();
   return Boolean(s) && APP_ROOT_SEGMENTS.has(s);
@@ -240,7 +251,13 @@ export function isPublicArtistHomePath(pathname: string | null | undefined): boo
   if (parts.length === 0) return false;
   if (isAppRootSegment(parts[0])) return false;
   if (parts.length === 1) return true;
-  return parts.length === 2 && (parts[1] === 'friends' || parts[1] === 'reverbs');
+  return (
+    parts.length === 2 &&
+    (parts[1] === 'friends' ||
+      parts[1] === 'reverbs' ||
+      parts[1] === 'images' ||
+      parts[1] === 'songs')
+  );
 }
 
 /** Pull the artist slug out of /{slug} or /profile/{slug} links (Activity, OG, etc.). */

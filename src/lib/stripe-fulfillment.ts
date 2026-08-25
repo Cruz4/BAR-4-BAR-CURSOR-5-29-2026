@@ -402,6 +402,20 @@ export async function fulfillPaidCheckoutSession(
     } catch (err) {
       console.warn('[fulfill] drop unlock pulse', err);
     }
+    try {
+      const { processGamificationEvent } = await import('@/lib/server/gamification');
+      await Promise.all([
+        amountCents > 0 && metadata.artistId && metadata.artistId !== userId
+          ? processGamificationEvent(userId, 'paid_support', { shareId: metadata.shareId }, buyerName)
+          : Promise.resolve(),
+        amountCents > 0 && metadata.artistId
+          ? processGamificationEvent(metadata.artistId, 'creator_sale', { shareId: metadata.shareId })
+          : Promise.resolve(),
+      ]);
+    } catch (err) {
+      // Never roll back a paid entitlement because a reward notification is delayed.
+      console.warn('[fulfill] verified music achievements', err);
+    }
     return { fulfilled: true, duplicate: false, inkAmount: 0 };
   }
 

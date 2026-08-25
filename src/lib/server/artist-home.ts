@@ -88,6 +88,24 @@ async function validateFeaturedTrack(
     if (!exists) throw new Error('Build the selected 30-second profile preview again.');
     previewPath = candidate;
   }
+  let firstPressRank: number | undefined;
+  if (selected.showFirstPressBadge && share.ownerId !== userId) {
+    const sales = await db
+      .collection('users')
+      .doc(share.ownerId)
+      .collection('dropEarnings')
+      .where('shareId', '==', share.id)
+      .get();
+    const firstBuyers = sales.docs
+      .filter((doc) => doc.data().status !== 'failed' && Number(doc.data().amountCents || 0) > 0)
+      .map((doc) => ({ buyerId: String(doc.data().buyerId || ''), createdAt: String(doc.data().createdAt || '') }))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .filter((row, index, all) => row.buyerId && all.findIndex((candidate) => candidate.buyerId === row.buyerId) === index)
+      .slice(0, 10);
+    const rank = firstBuyers.findIndex((row) => row.buyerId === userId);
+    if (rank < 0) throw new Error('First Press credit is only available to this song’s first 10 supporters.');
+    firstPressRank = rank + 1;
+  }
 
   return {
     ...config,
@@ -102,6 +120,7 @@ async function validateFeaturedTrack(
         durationSec,
         excerptStartSec,
         source: share.ownerId === userId ? 'owned' : 'purchased',
+        ...(firstPressRank ? { showFirstPressBadge: true, firstPressRank } : {}),
         ...(previewPath ? { previewPath } : {}),
       },
     },

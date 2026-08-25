@@ -479,6 +479,7 @@ export default function SharedProjectPage() {
                       previewCount={share.previewCount}
                       purchaseCount={share.purchaseCount}
                       firstBuyerName={share.firstBuyerName}
+                      hasAudio={hasFirstDropAudio}
                     />
                     <Card className="border-2 overflow-hidden bg-card/80">
                         <div className="aspect-square relative w-full border-b bg-neutral-950">

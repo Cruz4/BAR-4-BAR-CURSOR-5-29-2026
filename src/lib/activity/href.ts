@@ -59,6 +59,7 @@ function postHashForEvent(event: ActivityEvent): string {
 export function activityOpenHref(event: ActivityEvent, viewerSlug?: string): string {
   if (event.lockId) return `/lock/${event.lockId}`;
   if (event.href?.startsWith('/lock/')) return event.href;
+  if (event.href?.startsWith('/song/')) return event.href;
   if (event.shareId) return `/share/${event.shareId}`;
 
   if (event.postId) {
@@ -102,6 +103,7 @@ export async function resolveActivityOpenHref(
 ): Promise<string> {
   if (event.lockId) return `/lock/${event.lockId}`;
   if (event.href?.startsWith('/lock/')) return event.href;
+  if (event.href?.startsWith('/song/')) return event.href;
   if (event.shareId) return `/share/${event.shareId}`;
 
   if (event.postId) {

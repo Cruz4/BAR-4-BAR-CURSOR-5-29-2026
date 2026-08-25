@@ -1,6 +1,6 @@
 import 'server-only';
 
-import type { Firestore } from 'firebase-admin/firestore';
+import { FieldPath, type Firestore } from 'firebase-admin/firestore';
 import type {
   DropInsightDay,
   DropInsightsResponse,
@@ -36,6 +36,23 @@ function shareTitle(data: Record<string, unknown>): string {
     : 'First Drop';
 }
 
+async function loadInsightDays(db: Firestore, ownerId: string, sinceDay: string, limit: number) {
+  const ref = db.collection('users').doc(ownerId).collection('dropInsightDays');
+  try {
+    return await ref.where('day', '>=', sinceDay).orderBy('day', 'desc').limit(limit).get();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/FAILED_PRECONDITION|requires an index/i.test(message)) throw error;
+    // Keep insights available while a newly deployed Firestore index is building.
+    console.warn('[drop-insights] day index is not ready; using bounded compatibility read');
+    const fallback = await ref.orderBy(FieldPath.documentId(), 'desc').limit(limit).get();
+    const docs = fallback.docs
+      .filter((doc) => String(doc.data().day || '') >= sinceDay)
+      .sort((a, b) => String(b.data().day || '').localeCompare(String(a.data().day || '')));
+    return { ...fallback, docs };
+  }
+}
+
 export async function getDropInsights(
   db: Firestore,
   ownerId: string,
@@ -49,14 +66,7 @@ export async function getDropInsights(
   const sinceDay = since.toISOString().slice(0, 10);
 
   const [dailySnap, audienceSnap, sharesSnap, salesSnap] = await Promise.all([
-    db
-      .collection('users')
-      .doc(ownerId)
-      .collection('dropInsightDays')
-      .where('day', '>=', sinceDay)
-      .orderBy('day', 'desc')
-      .limit(days * 100)
-      .get(),
+    loadInsightDays(db, ownerId, sinceDay, days * 100),
     db
       .collection('users')
       .doc(ownerId)

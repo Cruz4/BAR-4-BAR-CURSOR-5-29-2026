@@ -190,7 +190,7 @@ export function FirstDropLatheHost() {
         description: 'Visitors hear this first on your Artist Home and this share link.',
       });
       setOpen(false);
-      router.push(`/share/${shareId}`);
+      router.push(`/song/${shareId}`);
     } catch (e: unknown) {
       toast({
         variant: 'destructive',

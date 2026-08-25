@@ -30,7 +30,7 @@ export function SceneOnSaleRail({ drops }: { drops: DiscoverDrop[] }) {
           return (
             <li key={drop.shareId} className="min-w-0">
               <Link
-                href={`/share/${drop.shareId}`}
+                href={`/song/${drop.shareId}`}
                 className="group grid w-full min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 overflow-hidden rounded-xl border border-fuchsia-400/30 bg-black/35 px-2.5 py-2.5 transition-colors hover:border-fuchsia-300/60 hover:bg-fuchsia-500/10 sm:gap-3 sm:px-3"
               >
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-fuchsia-400/35 bg-fuchsia-500/15 text-fuchsia-200">

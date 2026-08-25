@@ -49,16 +49,11 @@ import type { AchievementDef } from '@/lib/gamification/achievements';
 import {
   createPost,
   deleteGuestbookEntry,
-  enrichFriendProfilesWithLiveSlugs,
   enrichGuestbookEntries,
-  fetchFriendships,
   fetchGuestbook,
   fetchPostsByOwner,
-  friendProfilesOf,
-  resolveCircleFriends,
   resolvePlaygroundFriends,
   setGuestbookEntry,
-  visibleCircleFriends,
   type CircleFriendRow,
   type GuestbookEntry,
   type ProfilePost,
@@ -203,7 +198,7 @@ export function NowPlayingModule({ ctx }: { ctx: ModuleContext }) {
     <ModuleShell icon={Disc3} title={"Now Playing"} ctx={ctx}>
       <p className="mb-3 font-headline text-lg text-[var(--ph-text,#fff)]">{featuredDrop.title}</p>
       <Link
-        href={`/share/${featuredDrop.shareId}`}
+        href={`/song/${featuredDrop.shareId}`}
         className="inline-flex h-11 items-center gap-2 rounded-full bg-fuchsia-400 px-5 text-[11px] font-bold uppercase tracking-widest text-black hover:bg-fuchsia-300"
       >
         Listen
@@ -646,8 +641,6 @@ export function ProofWallModule({ ctx }: { ctx: ModuleContext }) {
 // ---------------------------------------------------------------------------
 
 const WALL_PAGE_SIZE = 15;
-/** Enough for ~10 in-module pages without a separate wall route. */
-const WALL_FETCH_MAX = 150;
 
 export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const { user } = useAuth();
@@ -662,6 +655,8 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const [image, setImage] = useState<PendingPostImage | null>(null);
   const [busy, setBusy] = useState(false);
   const [page, setPage] = useState(0);
+  const [wallPageCount, setWallPageCount] = useState(1);
+  const [wallTotal, setWallTotal] = useState(playground?.posts.length || 0);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const insertEmoji = useEmojiInserter(text, setText, textRef);
 
@@ -673,11 +668,41 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       return;
     }
     setPage(0);
-    fetchPostsByOwner(ctx.profileUserId, WALL_FETCH_MAX)
-      .then(setPosts)
+    const target = typeof window !== 'undefined' ? window.location.hash.replace(/^#/, '') : '';
+    const params = new URLSearchParams({ page: '0' });
+    if (target.startsWith('post-')) params.set('target', target);
+    const endpoint = ctx.profileSlug
+      ? `/api/profile/${encodeURIComponent(ctx.profileSlug)}/posts?${params.toString()}`
+      : '';
+    if (!endpoint) {
+      fetchPostsByOwner(ctx.profileUserId, WALL_PAGE_SIZE)
+        .then((rows) => {
+          setPosts(rows);
+          setWallTotal(rows.length);
+        })
+        .catch(() => undefined)
+        .finally(() => setLoaded(true));
+      return;
+    }
+    void fetch(endpoint, { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Wall unavailable');
+        return res.json() as Promise<{
+          posts?: ProfilePost[];
+          page?: number;
+          pageCount?: number;
+          total?: number;
+        }>;
+      })
+      .then((data) => {
+        setPosts(Array.isArray(data.posts) ? data.posts : []);
+        setPage(Math.max(0, Number(data.page) || 0));
+        setWallPageCount(Math.max(1, Number(data.pageCount) || 1));
+        setWallTotal(Math.max(0, Number(data.total) || 0));
+      })
       .catch(() => undefined)
       .finally(() => setLoaded(true));
-  }, [ctx.profileUserId, playground]);
+  }, [ctx.profileUserId, ctx.profileSlug, playground]);
 
   // Keep playground posts in sync when the guest sandbox mutates them.
   useEffect(() => {
@@ -691,17 +716,45 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const canCompose = Boolean(playground) || Boolean(signedInOwner && profileLive);
   const ownerNeedsLive = Boolean(!playground && signedInOwner && !profileLoading && !profileLive);
 
-  const pageCount = Math.max(1, Math.ceil(posts.length / WALL_PAGE_SIZE) || 1);
+  const pageCount = playground
+    ? Math.max(1, Math.ceil(posts.length / WALL_PAGE_SIZE) || 1)
+    : wallPageCount;
   const safePage = Math.min(Math.max(0, page), pageCount - 1);
-  const pagePosts = posts.slice(
-    safePage * WALL_PAGE_SIZE,
-    safePage * WALL_PAGE_SIZE + WALL_PAGE_SIZE
-  );
-  const showPager = posts.length > WALL_PAGE_SIZE;
+  const pagePosts = playground
+    ? posts.slice(safePage * WALL_PAGE_SIZE, safePage * WALL_PAGE_SIZE + WALL_PAGE_SIZE)
+    : posts;
+  const showPager = pageCount > 1;
 
   useEffect(() => {
     if (page !== safePage) setPage(safePage);
   }, [page, safePage]);
+
+  const loadWallPage = async (nextPage: number) => {
+    if (playground || !ctx.profileSlug) {
+      setPage(nextPage);
+      return;
+    }
+    const next = Math.max(0, Math.min(pageCount - 1, nextPage));
+    try {
+      const res = await fetch(
+        `/api/profile/${encodeURIComponent(ctx.profileSlug)}/posts?page=${next}`,
+        { cache: 'no-store' }
+      );
+      const data = (await res.json()) as {
+        posts?: ProfilePost[];
+        page?: number;
+        pageCount?: number;
+        total?: number;
+      };
+      if (!res.ok) throw new Error('Wall unavailable');
+      setPosts(Array.isArray(data.posts) ? data.posts : []);
+      setPage(Math.max(0, Number(data.page) || 0));
+      setWallPageCount(Math.max(1, Number(data.pageCount) || 1));
+      setWallTotal(Math.max(0, Number(data.total) || 0));
+    } catch {
+      toast({ variant: 'destructive', title: 'Could not load that wall page' });
+    }
+  };
 
   const submit = async () => {
     if (playground) {
@@ -754,6 +807,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
         ...(image ? { image } : {}),
       });
       setPosts((prev) => [post, ...prev]);
+      setWallTotal((value) => value + 1);
       setText('');
       setEmbedUrl('');
       setVoice(null);
@@ -877,7 +931,10 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
               onDeleted={
                 playground
                   ? undefined
-                  : (id) => setPosts((prev) => prev.filter((p) => p.id !== id))
+                  : (id) => {
+                      setPosts((prev) => prev.filter((p) => p.id !== id));
+                      setWallTotal((value) => Math.max(0, value - 1));
+                    }
               }
             />
             {playground?.onDelete ? (
@@ -906,7 +963,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
             variant="outline"
             className="h-8 gap-1 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/20 px-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--ph-text,#fff)] hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]"
             disabled={safePage <= 0}
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            onClick={() => void loadWallPage(Math.max(0, safePage - 1))}
           >
             <ChevronLeft className="h-3.5 w-3.5" />
             Prev
@@ -914,7 +971,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--ph-muted,rgba(255,255,255,0.55))]">
             {safePage + 1} / {pageCount}
             <span className="ml-2 font-normal tracking-widest opacity-80">
-              · {posts.length} posts
+              · {playground ? posts.length : wallTotal} posts
             </span>
           </p>
           <Button
@@ -923,7 +980,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
             variant="outline"
             className="h-8 gap-1 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/20 px-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--ph-text,#fff)] hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]"
             disabled={safePage >= pageCount - 1}
-            onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+            onClick={() => void loadWallPage(Math.min(pageCount - 1, safePage + 1))}
           >
             Next
             <ChevronRight className="h-3.5 w-3.5" />
@@ -941,7 +998,6 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
 const FRIENDS_PAGE_SIZE = 20;
 
 export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
-  const { user } = useAuth();
   const playground = ctx.playgroundFriends;
   const [friends, setFriends] = useState<CircleFriendRow[]>(
     (playground || []).map((f) => ({
@@ -987,21 +1043,19 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
     let cancelled = false;
     void (async () => {
       try {
-        const list = await fetchFriendships(ctx.profileUserId, 'accepted');
-        const chips = friendProfilesOf(list, ctx.profileUserId, {
-          email: user?.email,
-          displayName: user?.displayName,
+        const params = new URLSearchParams({
+          of: ctx.profileUserId,
+          status: 'accepted',
+          publicCards: '1',
+          limit: '40',
         });
-        let base = chips;
-        try {
-          base = await enrichFriendProfilesWithLiveSlugs(chips);
-        } catch (err) {
-          console.warn('[friends-module] enrich failed', err);
-        }
+        const res = await fetch(`/api/friends?${params.toString()}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Friends unavailable');
+        const data = (await res.json()) as { cards?: CircleFriendRow[] };
+        const resolved = Array.isArray(data.cards) ? data.cards : [];
         // Artist Home lists: live-public friends only — never show private/offline here.
-        const resolved = await resolveCircleFriends(base);
         if (cancelled) return;
-        setFriends(visibleCircleFriends(resolved, false));
+        setFriends(resolved);
       } catch (err) {
         console.warn('[friends-module]', err);
       } finally {
@@ -1011,7 +1065,7 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
     return () => {
       cancelled = true;
     };
-  }, [ctx.profileUserId, playground, user?.email, user?.displayName]);
+  }, [ctx.profileUserId, playground]);
 
   const pageCount = Math.max(1, Math.ceil(friends.length / FRIENDS_PAGE_SIZE) || 1);
   const safePage = Math.min(Math.max(0, page), pageCount - 1);

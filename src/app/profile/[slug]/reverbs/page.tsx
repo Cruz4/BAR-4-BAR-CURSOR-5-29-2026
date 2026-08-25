@@ -14,6 +14,7 @@ import { PostCard } from '@/components/profile/post-card';
 import { useAuth } from '@/hooks/use-auth';
 import { fetchGamificationSummary } from '@/lib/gamification-client';
 import { profileHref } from '@/lib/profile/profile-slug';
+import { ProfileSectionTabs } from '@/components/profile/profile-section-tabs';
 import {
   fetchReverbsByOwner,
   type ProfilePost,
@@ -114,6 +115,7 @@ export default function ProfileReverbsPage() {
           </div>
         </div>
       </header>
+      <ProfileSectionTabs slug={slug} />
 
       {posts.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/15 bg-black/20 px-6 py-16 text-center">

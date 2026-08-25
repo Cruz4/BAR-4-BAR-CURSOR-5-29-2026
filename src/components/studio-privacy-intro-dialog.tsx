@@ -86,7 +86,7 @@ export function StudioPrivacyIntroDialog() {
 
     if (isStudioPrivacyIntroSnoozed()) return;
     if (!user?.id || user.studioPrivacyIntroCompletedAt || gamificationLoading) return;
-    if (pathname === '/login' || pathname.startsWith('/share/')) return;
+    if (pathname === '/login' || pathname.startsWith('/share/') || pathname.startsWith('/song/')) return;
     // Visibility intro belongs on the Scene home or vault — never mid sheet / demo handoff.
     if (pathname.startsWith('/albums/')) return;
     if (pathname !== '/' && pathname !== '/vault') return;

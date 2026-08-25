@@ -214,7 +214,7 @@ export default function ListenerInsightsPage() {
             <div className="divide-y divide-white/10 rounded-xl border border-white/10">
               {data.tracks.map((track) => (
                 <div key={track.shareId} className="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_repeat(4,auto)] sm:items-center sm:gap-5">
-                  <Link href={`/share/${track.shareId}`} className="min-w-0 truncate font-bold hover:text-primary">{track.title}</Link>
+                  <Link href={`/song/${track.shareId}`} className="min-w-0 truncate font-bold hover:text-primary">{track.title}</Link>
                   <span className="text-xs text-muted-foreground"><strong className="text-foreground">{track.lifetimePreviewStarts + track.lifetimeFullStarts}</strong> starts</span>
                   <span className="text-xs text-muted-foreground"><strong className="text-foreground">{track.qualifiedListeners}</strong> qualified</span>
                   <span className="text-xs text-muted-foreground"><strong className="text-foreground">{track.completions}</strong> complete</span>

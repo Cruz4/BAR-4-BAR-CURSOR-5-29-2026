@@ -20,6 +20,10 @@ export type AchievementVerifyContext = {
   albumCompletedTracksVerified: number;
   /** Max non-empty lines on any saved track */
   maxBarsOnAnyTrackVerified: number;
+  pressedSongCreatedVerified: boolean;
+  wallImagePostVerified: boolean;
+  quoteReverbVerified: boolean;
+  deepListenerVerified: boolean;
 };
 
 type AnalyticsSummary = Record<string, unknown>;
@@ -39,6 +43,12 @@ type SummarySlice = Pick<
   | 'lifetimeDnaImportsReceived'
   | 'personalBests'
   | 'prestigeLevel'
+  | 'lifetimePaidSupports'
+  | 'lifetimePressedSongs'
+  | 'lifetimeFirstDropSales'
+  | 'lifetimeQuoteReverbs'
+  | 'lifetimeGalleryPosts'
+  | 'lifetimeCreatorQualifiedListeners'
 >;
 
 function scaled(base: number, prestigeLevel?: number): number {
@@ -89,6 +99,20 @@ export function isAchievementActionVerified(
       return trigger === 'wall_post_created';
     case 'drop_resonance':
       return trigger === 'dna_drop_imported_by_other';
+    case 'first_support':
+      return trigger === 'paid_support';
+    case 'deep_listener':
+      return trigger === 'qualified_listen' && ctx.deepListenerVerified;
+    case 'first_press':
+      return trigger === 'share_created' && ctx.pressedSongCreatedVerified;
+    case 'first_sale':
+      return trigger === 'creator_sale';
+    case 'creator_listener_10':
+      return trigger === 'creator_qualified_listener';
+    case 'quote_signal':
+      return trigger === 'quote_reverb_created' && ctx.quoteReverbVerified;
+    case 'gallery_signal':
+      return trigger === 'wall_post_created' && ctx.wallImagePostVerified;
     case 'ai_trinity':
       return (
         Boolean(analytics.firstGenerateNextLineAt) &&
@@ -204,6 +228,20 @@ export function canUnlockAchievement(
       return (summary.lifetimeDnaImportsReceived || 0) >= t.dnaImportsReceivedEcho;
     case 'triple_live':
       return (summary.lifetimeSharesCreated || 0) >= t.sharesCreatedTriple;
+    case 'first_support':
+      return (summary.lifetimePaidSupports || 0) >= 1 && trigger === 'paid_support';
+    case 'deep_listener':
+      return ctx.deepListenerVerified && trigger === 'qualified_listen';
+    case 'first_press':
+      return (summary.lifetimePressedSongs || 0) >= 1 && ctx.pressedSongCreatedVerified;
+    case 'first_sale':
+      return (summary.lifetimeFirstDropSales || 0) >= 1 && trigger === 'creator_sale';
+    case 'creator_listener_10':
+      return (summary.lifetimeCreatorQualifiedListeners || 0) >= 10 && trigger === 'creator_qualified_listener';
+    case 'quote_signal':
+      return (summary.lifetimeQuoteReverbs || 0) >= 1 && ctx.quoteReverbVerified;
+    case 'gallery_signal':
+      return (summary.lifetimeGalleryPosts || 0) >= 1 && ctx.wallImagePostVerified;
     default:
       return isAchievementActionVerified(achievementId, analytics, ctx, trigger, prestige);
   }

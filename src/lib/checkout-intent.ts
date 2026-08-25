@@ -27,7 +27,7 @@ export function buildLoginPath(nextPath: string): string {
 
 /** Guest First Drop checkout — sign up, then return to the share page to buy. */
 export function buildDropBuyLoginPath(shareId: string): string {
-  const next = getSafeNextPath(`/share/${shareId}`);
+  const next = getSafeNextPath(`/song/${shareId}`);
   return `/login?mode=signup&next=${encodeURIComponent(next)}&intent=drop-buy`;
 }
 

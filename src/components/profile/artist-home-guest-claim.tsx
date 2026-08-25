@@ -20,12 +20,14 @@ type ArtistHomeGuestClaimProps = {
   artistName: string;
   /** Profile owner's referral code — credits them when a guest signs up. */
   referralCode?: string;
+  nextPath?: string;
   className?: string;
 };
 
 export function ArtistHomeGuestClaim({
   artistName,
   referralCode,
+  nextPath = '/',
   className,
 }: ArtistHomeGuestClaimProps) {
   const { user, loading } = useAuth();
@@ -51,7 +53,7 @@ export function ArtistHomeGuestClaim({
 
   const signupHref = buildLoginUrl({
     mode: 'signup',
-    next: '/',
+    next: nextPath,
     intent: 'claim_artist_home',
     referralCode,
   });

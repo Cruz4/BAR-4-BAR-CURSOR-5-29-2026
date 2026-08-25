@@ -133,7 +133,7 @@ export async function recordDropUnlock(
         recipientName: ownerName,
         shareId,
         preview: title.slice(0, 120),
-        href: `/share/${shareId}`,
+        href: `/song/${shareId}`,
       });
     } catch (err) {
       console.warn('[drop-pulse] activity', err);

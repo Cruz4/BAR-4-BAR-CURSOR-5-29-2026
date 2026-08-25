@@ -15,6 +15,9 @@ const contentSecurityPolicy = [
 ].join('; ');
 
 const nextConfig = {
+  // Keep dev/HMR output separate so a production build or deploy cannot remove
+  // manifests underneath a running local server.
+  distDir: process.env.NODE_ENV === 'development' ? '.next-dev' : '.next',
   // Force public env into the Next runtime (server + client compile).
   env: {
     NEXT_PUBLIC_LOCK: process.env.NEXT_PUBLIC_LOCK ?? '',
