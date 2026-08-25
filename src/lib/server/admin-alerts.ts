@@ -20,8 +20,43 @@ type EnqueueInput = {
   guestAlias?: string | null;
 };
 
-function buildMessage(input: EnqueueInput): string {
-  const refLabel = input.ref ? marketingRefLabel(input.ref) : null;
+type RefPresentation = {
+  label: string | null;
+  referralName: string | null;
+};
+
+async function resolveRefPresentation(ref: string | null | undefined): Promise<RefPresentation> {
+  if (!ref?.trim()) return { label: null, referralName: null };
+
+  const fallback = marketingRefLabel(ref);
+  // Known campaign tags already have a human label and are not member referrals.
+  if (fallback !== ref) return { label: fallback, referralName: null };
+  const possibleReferralCode = ref.trim().toUpperCase();
+  if (!/^[A-Z0-9]{6,12}$/.test(possibleReferralCode) || !hasAdminFirestoreCredentials()) {
+    return { label: fallback, referralName: null };
+  }
+
+  try {
+    const db = await getDb();
+    const match = await db
+      .collection('users')
+      .where('referralCode', '==', possibleReferralCode)
+      .limit(1)
+      .get();
+    const data = match.docs[0]?.data();
+    const referralName =
+      typeof data?.displayName === 'string' && data.displayName.trim()
+        ? data.displayName.trim().slice(0, 120)
+        : null;
+    if (referralName) return { label: `${referralName} referral`, referralName };
+  } catch (error) {
+    console.warn('[enqueueAdminAlert] referral label lookup skipped:', (error as Error).message);
+  }
+
+  return { label: fallback, referralName: null };
+}
+
+function buildMessage(input: EnqueueInput, refLabel: string | null): string {
   if (input.kind === 'signup') {
     const who =
       input.userName && input.userEmail
@@ -66,7 +101,8 @@ function buildMessage(input: EnqueueInput): string {
 }
 
 export async function enqueueAdminAlert(input: EnqueueInput): Promise<void> {
-  const message = buildMessage(input);
+  const refPresentation = await resolveRefPresentation(input.ref);
+  const message = buildMessage(input, refPresentation.label);
 
   await sendTelegramAdminAlert({
     kind: input.kind,
@@ -80,6 +116,8 @@ export async function enqueueAdminAlert(input: EnqueueInput): Promise<void> {
     detail: input.detail,
     guestId: input.guestId,
     guestAlias: input.guestAlias,
+    refLabel: refPresentation.label,
+    referralName: refPresentation.referralName,
   });
 
   if (!hasAdminFirestoreCredentials()) return;
@@ -98,6 +136,7 @@ export async function enqueueAdminAlert(input: EnqueueInput): Promise<void> {
       detail: input.detail || null,
       guestId: input.guestId || null,
       guestAlias: input.guestAlias || null,
+      refLabel: refPresentation.label,
       timestamp,
     });
   } catch (error) {

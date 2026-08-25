@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Radio } from 'lucide-react';
+import { Compass, PenLine, Radio, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LegalFooter } from '@/components/legal-footer';
 import { LandingShowcase } from '@/components/marketing/landing-showcase';
@@ -14,7 +14,6 @@ import { ProBillingCheckoutCta } from '@/components/marketing/pro-billing-checko
 import { getSignupInkMarketingLine } from '@/lib/studio-tiers';
 import { BrandLockup } from '@/components/brand-lockup';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
-import { firstDropsFeeCashoutLine, firstDropsPitch } from '@/lib/drop-commerce';
 import { guestTryHref } from '@/lib/guest-try';
 import { prefetchGuestTrySheetNow } from '@/lib/prefetch-guest-try-sheet';
 
@@ -83,27 +82,30 @@ export function PublicHomeLanding() {
                   </div>
                 </div>
 
-                <p className="text-sm md:text-lg text-foreground/90 dark:text-white font-body font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0 tracking-wide drop-shadow-lg">
-                  Sign in and land on{' '}
-                  <span className="bg-fuchsia-500/20 text-fuchsia-300 px-1 rounded-sm font-bold">The Scene</span>
-                  — friends, explainable discover, and your shareable{' '}
-                  <span className="bg-fuchsia-500/20 text-fuchsia-300 px-1 rounded-sm font-bold">music home</span>
-                  {' '}
-                  <span className="text-fuchsia-200/90">— completely free for artists, creators, and Music Fans.</span>
-                  The Vault is one click away: write bar by bar, train your{' '}
-                  <span className="bg-primary/20 text-primary px-1 rounded-sm font-bold">DNA</span>, drop what
-                  you&apos;re proud of back on the block.
-                  {firstDropsOn ? (
-                    <>
-                      {' '}
-                      When the song is ready, put it on that page.{' '}
-                      <span className="bg-amber-500/20 text-amber-200 px-1 rounded-sm font-bold">Listen / buy</span>
-                      {' '}
-                      puts your featured release front and center. Feature music you released or purchased, choose the public 30 seconds, then buy once and stream here.{' '}
-                      {firstDropsFeeCashoutLine()}
-                    </>
-                  ) : null}
+                <p className="mx-auto max-w-2xl text-sm font-medium leading-relaxed tracking-wide text-foreground/90 drop-shadow-lg dark:text-white md:text-lg lg:mx-0">
+                  Your free music home and songwriting studio. Meet artists and Music Fans on The Scene,
+                  then open The Vault when you&apos;re ready to turn an idea into bars.
                 </p>
+
+                <div className="grid gap-2 text-left sm:grid-cols-3" aria-label="How Bar4Bar works">
+                  <div className="rounded-lg border border-sky-400/25 bg-sky-500/[0.08] p-3">
+                    <Compass className="mb-2 h-4 w-4 text-sky-300" />
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-200">Find your Scene</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Friends, discovery, and your public music home.</p>
+                  </div>
+                  <div className="rounded-lg border border-blue-400/25 bg-blue-500/[0.08] p-3">
+                    <PenLine className="mb-2 h-4 w-4 text-blue-300" />
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-200">Write your way</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Private by default. Build bar by bar with tools that learn your style.</p>
+                  </div>
+                  <div className="rounded-lg border border-amber-400/25 bg-amber-500/[0.08] p-3">
+                    <ShoppingBag className="mb-2 h-4 w-4 text-amber-300" />
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-200">Release when ready</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                      {firstDropsOn ? 'Feature music or press a finished song for sale.' : 'Feature your music when you are ready.'}
+                    </p>
+                  </div>
+                </div>
 
                 <LandingHeroCtAs />
                 <Button asChild variant="outline" className="border-sky-400/40 bg-sky-500/10 font-bold uppercase tracking-wider text-sky-200">
@@ -125,8 +127,8 @@ export function PublicHomeLanding() {
                   />
                 </div>
                 <p className="mt-2 text-center text-[10px] font-code text-muted-foreground lg:text-left">
-                  Completely free. Private by default. Flip it live when you&apos;re ready for eyes.
-                  {firstDropsOn ? ` ${firstDropsPitch()}` : ''}
+                  Free to join. Your page stays private until you publish it.
+                  {firstDropsOn ? ' Ready to release? Press a song and put Listen / buy on your page.' : ''}
                 </p>
               </div>
             </div>

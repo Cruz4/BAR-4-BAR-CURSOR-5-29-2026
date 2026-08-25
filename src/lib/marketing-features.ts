@@ -4,7 +4,6 @@ import {
   centsToUsdLabel,
   DROP_PAID_MIN_CENTS,
   firstDropsFeeCashoutLine,
-  firstDropsPitch,
 } from '@/lib/drop-commerce';
 
 export type MarketingMediaType = 'image' | 'gif';
@@ -45,9 +44,9 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     eyebrow: 'Public Music Home & The Scene',
     title: 'Your Page. Your Block.',
     description:
-      'Sign in and land on The Scene—your friends feed, explainable Discover matches, transparent Emerging momentum, and Your Booth. Artists, creators, and Music Fans get a free public home with their own identity, sound, support circle, and featured Library track.',
+      'Create a free public music home and join The Scene as an artist, creator, or Music Fan. Find friends and music that match your taste, with clear reasons behind every recommendation.',
     bullets: [
-      'Choose up to three public labels—including Music Fan—plus genres, moods, influences, region, and collaboration status',
+      'Your page starts private. Go live only when you are ready, with your labels, genres, moods, influences, region, and collaboration status',
       'Feature an owned or purchased track: visitors hear your chosen 30 seconds, then buy or stream by entitlement',
       'Follow, Inner Circle, and Friends stay distinct so support does not automatically open collaboration or Msgs',
     ],
@@ -61,16 +60,18 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     id: 'first-drops',
     eyebrow: 'First Drops',
     title: 'Sell The Song.',
-    description: firstDropsPitch(),
+    description:
+      'Start from The Scene, upload a finished recording, choose a fixed or pay-what-you-want price, select the public 30-second preview, and press it live. Fans buy once and stream it in Bar4Bar.',
     bullets: [
-      'Press a song from The Scene — upload, price, live. You keep the rights. DNA Drop stays lyrics-only',
-      `Fixed price or pay-what-you-want, paid floor ${centsToUsdLabel(DROP_PAID_MIN_CENTS)}`,
-      `Buy once, stream in-app. Library lives on The Scene. ${firstDropsFeeCashoutLine()}`,
+      'Listen / buy appears on your Artist Home, The Scene, and the song share link',
+      `Fixed price or pay-what-you-want starts at ${centsToUsdLabel(DROP_PAID_MIN_CENTS)}. DNA Drop remains your lyric-preview card; finished-song sales happen in First Drops`,
+      'You keep every right to your music. We keep 25% below $3, 15% from $3–$4.99, and 10% from $5 up',
+      'Connect payouts in Earnings so Stripe can send the rest to your bank',
     ],
     mediaSrc: '/marketing/feature-artist-home-live.jpg',
     mediaType: 'image',
     mediaAlt: 'Bar 4 Bar First Drop — sell and stream your song on the public page',
-    layout: 'split',
+    layout: 'hero-stack',
     mediaVariant: 'showcase',
   },
   {
@@ -104,7 +105,7 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     mediaSrc: '/marketing/how-step-workstation.png',
     mediaType: 'image',
     mediaAlt: 'Bar 4 Bar Collab Sheet — live shared lyric editing on the workstation',
-    layout: 'split-reverse',
+    layout: 'hero-stack',
     mediaVariant: 'showcase',
   },
   {

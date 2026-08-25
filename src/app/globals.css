@@ -2167,25 +2167,26 @@
     text-shadow: 0 0 10px rgba(167, 139, 250, 0.12);
   }
 
-  /* Daytime neon — slightly brighter so it stays readable on blue sky */
+  /* Daytime lexicon — deep ink tones hold contrast against bright sky/clouds. */
   .scene-block[data-phase='day'] .scene-block-neon-text,
   .scene-block-neon[data-phase='day'] .scene-block-neon-text {
-    color: rgba(192, 38, 211, 0.95);
+    color: rgba(67, 10, 82, 0.98);
     text-shadow:
-      0 0 8px rgba(232, 121, 249, 0.55),
-      0 0 18px rgba(192, 38, 211, 0.35),
-      0 1px 0 rgba(255, 255, 255, 0.35);
+      0 1px 0 rgba(255, 255, 255, 0.72),
+      0 0 10px rgba(255, 255, 255, 0.48);
+    animation: none;
   }
 
   .scene-block[data-phase='day'] .scene-block-neon-pron,
   .scene-block-neon[data-phase='day'] .scene-block-neon-pron {
-    color: rgba(126, 34, 140, 0.88);
-    text-shadow: 0 0 6px rgba(232, 121, 249, 0.2);
+    color: rgba(43, 20, 55, 0.97);
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.58);
   }
 
   .scene-block[data-phase='day'] .scene-block-neon-gloss,
   .scene-block-neon[data-phase='day'] .scene-block-neon-gloss {
-    color: rgba(76, 40, 110, 0.88);
+    color: rgba(18, 28, 45, 0.97);
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.52);
   }
 
   /* Vault light theme — pron + gloss need solid contrast on pale chamber sky */

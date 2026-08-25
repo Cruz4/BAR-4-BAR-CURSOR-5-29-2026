@@ -6,17 +6,18 @@ import { getStoredMarketingRef, normalizeMarketingRef } from '@/lib/marketing-at
 import { loadLastCachedUserProfile } from '@/lib/offline/vault-cache';
 
 const SENT_PREFIX = 'b4b_landing_hit_sent:';
-const ALERT_PATHS = new Set(['/', '/pricing', '/login', '/welcome']);
+const ALERT_PATHS = new Set(['/', '/pricing', '/login', '/welcome', '/discover']);
 
 function resolveRef(urlRef: string | null): string {
   return urlRef || getStoredMarketingRef() || 'organic';
 }
 
 function isSignedInSession(explicit?: boolean): boolean {
-  if (explicit) return true;
+  if (typeof explicit === 'boolean') return explicit;
   if (auth.currentUser) return true;
   // AuthProvider hydrates the last profile before Firebase restores currentUser.
-  // Without this, a logged-in Scene visit on / looks like a guest organic hit.
+  // Without this fallback, callers that do not yet know auth state can report a
+  // logged-in Scene visit on / as a guest organic hit.
   return Boolean(loadLastCachedUserProfile());
 }
 
@@ -36,6 +37,8 @@ export async function reportLandingHitIfNeeded(
 
     // Logged-in Scene lives at / — skip organic noise; still alert on explicit ?ref= links.
     if (path === '/' && signedIn && !urlRef) return;
+    // Discover alerts are specifically for anonymous visitors, not members browsing the feed.
+    if (path === '/discover' && signedIn) return;
     // Logged-in pricing is reported via analytics pricing_view.
     if (path === '/pricing' && signedIn) return;
     // Login/welcome: only alert when a marketing ref is present (or stored).

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +18,7 @@ import {
   resolveCheckoutCents,
   type DropPrice,
 } from '@/lib/drop-commerce';
-import { buildDropBuyLoginPath } from '@/lib/checkout-intent';
+import { buildDropBuyLoginPath, getDropBuyIntentFromPath } from '@/lib/checkout-intent';
 import { Pause, Play, Loader } from 'lucide-react';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { useAudioVolume } from '@/hooks/use-audio-volume';
@@ -28,6 +29,7 @@ import {
   type DropListenMilestone,
   type DropListenSource,
 } from '@/lib/drop-listen-analytics';
+import { pressedSongHref } from '@/lib/pressed-song';
 
 async function authHeaders(): Promise<HeadersInit> {
   const user = auth.currentUser;
@@ -48,6 +50,7 @@ export function DropListenPanel({
   featuredByUserId,
   excerptStartSec = 0,
   presentation = 'default',
+  playbackGroup,
   onPlaybackStateChange,
   referralPostId,
 }: {
@@ -61,7 +64,9 @@ export function DropListenPanel({
   /** Profile owner whose saved featured selection this player must match. */
   featuredByUserId?: string;
   excerptStartSec?: number;
-  presentation?: 'default' | 'song';
+  presentation?: 'default' | 'song' | 'playlist';
+  /** When set, starting this player pauses another Drop player in the same queue. */
+  playbackGroup?: string;
   onPlaybackStateChange?: (state: { playing: boolean; currentTime: number; duration: number }) => void;
   referralPostId?: string;
 }) {
@@ -72,6 +77,7 @@ export function DropListenPanel({
   const router = useRouter();
   const searchParams = useSearchParams();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playerId = React.useId();
   const reportedMilestonesRef = useRef<Set<DropListenMilestone>>(new Set());
   const [src, setSrc] = useState<string | null>(null);
   const [full, setFull] = useState(false);
@@ -79,6 +85,7 @@ export function DropListenPanel({
   const [eligibleDurationSec, setEligibleDurationSec] = useState(30);
   const [playbackStartSec, setPlaybackStartSec] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [streamReady, setStreamReady] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pwyw, setPwyw] = useState('');
@@ -88,15 +95,26 @@ export function DropListenPanel({
   const pwywCheckoutCents = normalized.mode === 'pwyw'
     ? resolveCheckoutCents(normalized, enteredPwywCents ?? undefined)
     : 0;
+  const pendingBuyIntent = getDropBuyIntentFromPath(
+    `/song/${encodeURIComponent(shareId)}?${searchParams.toString()}`
+  );
+  const queryReferralPostId = searchParams.get('refPost')?.trim() || undefined;
+  const effectiveReferralPostId = referralPostId || queryReferralPostId;
+  const effectiveTrackId = trackId || pendingBuyIntent?.trackId;
+  const pendingCheckoutHandledRef = useRef<string | null>(null);
 
   const loadStream = useCallback(async () => {
-    if (!firstDropsOn || !hasAudio) return;
+    if (!firstDropsOn || !hasAudio) {
+      setStreamReady(true);
+      return;
+    }
+    setStreamReady(false);
     setLoading(true);
     try {
       const headers = await authHeaders();
       const qs = new URLSearchParams({ shareId });
-      if (trackId) qs.set('trackId', trackId);
-      if (referralPostId) qs.set('referralPostId', referralPostId);
+      if (effectiveTrackId) qs.set('trackId', effectiveTrackId);
+      if (effectiveReferralPostId) qs.set('referralPostId', effectiveReferralPostId);
       if (featuredByUserId) qs.set('profileUserId', featuredByUserId);
       const endpoint = featuredByUserId
         ? '/api/profile/featured-track/audio'
@@ -122,8 +140,9 @@ export function DropListenPanel({
       });
     } finally {
       setLoading(false);
+      setStreamReady(true);
     }
-  }, [featuredByUserId, firstDropsOn, hasAudio, referralPostId, shareId, trackId, toast]);
+  }, [effectiveReferralPostId, effectiveTrackId, featuredByUserId, firstDropsOn, hasAudio, shareId, toast]);
 
   useEffect(() => {
     void loadStream();
@@ -133,6 +152,18 @@ export function DropListenPanel({
     const audio = audioRef.current;
     if (audio) audio.volume = volume;
   }, [src, volume]);
+
+  useEffect(() => {
+    if (!playbackGroup) return;
+    const pauseOtherQueuePlayers = (event: Event) => {
+      const detail = (event as CustomEvent<{ group?: string; playerId?: string }>).detail;
+      if (detail?.group !== playbackGroup || detail.playerId === playerId) return;
+      const audio = audioRef.current;
+      if (audio && !audio.paused) audio.pause();
+    };
+    window.addEventListener('bar4bar:drop-player-play', pauseOtherQueuePlayers);
+    return () => window.removeEventListener('bar4bar:drop-player-play', pauseOtherQueuePlayers);
+  }, [playbackGroup, playerId]);
 
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
@@ -153,12 +184,16 @@ export function DropListenPanel({
     })();
   }, [searchParams, user?.id, loadStream, toast]);
 
-  const startCheckout = async (amountCents?: number) => {
-    if (!authReady) return;
+  const startCheckout = useCallback(async (amountCents?: number) => {
     if (!user) {
-      router.push(buildDropBuyLoginPath(shareId));
+      router.push(buildDropBuyLoginPath(shareId, {
+        amountCents,
+        trackId: effectiveTrackId,
+        referralPostId: effectiveReferralPostId,
+      }));
       return;
     }
+    if (!authReady) return;
     setBusy(true);
     try {
       const headers = await authHeaders();
@@ -169,7 +204,7 @@ export function DropListenPanel({
           userId: user.id,
           email: user.email,
           shareId,
-          trackId,
+          trackId: effectiveTrackId,
           amountCents,
         }),
       });
@@ -185,7 +220,45 @@ export function DropListenPanel({
     } finally {
       setBusy(false);
     }
-  };
+  }, [authReady, effectiveReferralPostId, effectiveTrackId, router, shareId, toast, user]);
+
+  useEffect(() => {
+    if (!pendingBuyIntent || !authReady || !user || !streamReady || busy) return;
+    const intentKey = [
+      shareId,
+      pendingBuyIntent.amountCents || 'priced',
+      effectiveTrackId || 'single',
+      user.id,
+    ].join(':');
+    if (pendingCheckoutHandledRef.current === intentKey) return;
+    pendingCheckoutHandledRef.current = intentKey;
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('checkout');
+    url.searchParams.delete('amountCents');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+
+    if (full || isOwner) {
+      toast({
+        title: isOwner ? 'This is your song' : 'Already in your Library',
+        description: 'The full stream is ready—no additional purchase needed.',
+      });
+      return;
+    }
+    void startCheckout(pendingBuyIntent.amountCents);
+  }, [
+    authReady,
+    busy,
+    effectiveTrackId,
+    full,
+    isOwner,
+    pendingBuyIntent,
+    shareId,
+    startCheckout,
+    streamReady,
+    toast,
+    user,
+  ]);
 
   const buy = () => {
     if (normalized.mode === 'pwyw') {
@@ -205,7 +278,9 @@ export function DropListenPanel({
   return (
     <div className={presentation === 'song'
       ? 'space-y-3 rounded-2xl border border-fuchsia-300/45 bg-black/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_18px_55px_rgba(0,0,0,.35)] sm:p-5'
-      : 'rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-4 space-y-3'}>
+      : presentation === 'playlist'
+        ? 'space-y-3 rounded-2xl border border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500/15 via-black/65 to-blue-500/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.07),0_14px_38px_rgba(0,0,0,.28)] transition-colors hover:border-fuchsia-300/60 sm:p-5'
+        : 'rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-4 space-y-3'}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-200">
           {full || isOwner ? 'Full stream' : hasAudio ? 'Play preview · 30 seconds' : 'On sale'}
@@ -238,7 +313,12 @@ export function DropListenPanel({
             {loading ? <Loader className="h-4 w-4 animate-spin" /> : playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
           </Button>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-headline font-bold uppercase">{title}</p>
+            <Link
+              href={pressedSongHref(shareId, { referralPostId: effectiveReferralPostId })}
+              className="block truncate text-sm font-headline font-bold uppercase transition-colors hover:text-fuchsia-300 hover:underline"
+            >
+              {title}
+            </Link>
             <p className="text-[10px] text-muted-foreground">
               {previewCapped
                 ? `Featured 30-second excerpt${excerptStartSec > 0 ? ` from ${Math.floor(excerptStartSec / 60)}:${Math.floor(excerptStartSec % 60).toString().padStart(2, '0')}` : ''}. Buy once to unlock.`
@@ -268,6 +348,11 @@ export function DropListenPanel({
               }}
               onPlay={() => {
                 setPlaying(true);
+                if (playbackGroup) {
+                  window.dispatchEvent(new CustomEvent('bar4bar:drop-player-play', {
+                    detail: { group: playbackGroup, playerId },
+                  }));
+                }
                 recordDropSpinClient(shareId, previewCapped ? 'preview' : 'play');
                 const audio = audioRef.current;
                 onPlaybackStateChange?.({ playing: true, currentTime: audio?.currentTime || 0, duration: audio?.duration || eligibleDurationSec });
@@ -314,7 +399,7 @@ export function DropListenPanel({
           volume={volume}
           onVolumeChange={setVolume}
           onToggleMute={toggleMute}
-          className="ml-[52px] max-w-56"
+          className={presentation === 'playlist' ? 'ml-[52px] max-w-sm' : 'ml-[52px] max-w-56'}
         />
       ) : null}
 
@@ -330,7 +415,7 @@ export function DropListenPanel({
           )}
           <Button
             className="w-full h-11 font-bold uppercase bg-fuchsia-400 text-black hover:bg-fuchsia-300"
-            disabled={busy}
+            disabled={busy || (Boolean(user) && !authReady)}
             onClick={buy}
           >
             {busy ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : null}

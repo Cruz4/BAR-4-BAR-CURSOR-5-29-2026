@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
 
 const WINDOW_MS = 5 * 60_000;
 const MAX_PER_WINDOW = 12;
-const VISIT_ALERT_PATHS = new Set(['/', '/pricing', '/login', '/welcome']);
+const VISIT_ALERT_PATHS = new Set(['/', '/pricing', '/login', '/welcome', '/discover']);
 
 function clientIp(req: Request): string {
   const forwarded = req.headers.get('x-forwarded-for');

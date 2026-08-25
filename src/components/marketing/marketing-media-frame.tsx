@@ -13,13 +13,6 @@ type Props = {
   variant?: MarketingMediaVariant;
 };
 
-const FRAME_MAX: Record<MarketingMediaVariant, string> = {
-  'hero-full': 'max-h-[min(72vh,680px)] w-full',
-  showcase: 'max-h-[min(62vh,580px)] w-full',
-  feature: 'max-h-[min(50vh,460px)] w-full',
-  bento: 'max-h-[min(42vh,360px)] w-full',
-};
-
 const FRAME_SHELL: Record<MarketingMediaVariant, string> = {
   'hero-full':
     'w-full max-w-none rounded-2xl shadow-[0_20px_90px_rgba(0,0,0,0.5)] border-white/[0.1]',
@@ -59,9 +52,9 @@ export function MarketingMediaFrame({
           src={src}
           alt={alt}
           className={cn(
-            'block mx-auto',
+            'block mx-auto h-auto max-w-full',
             isHero ? 'w-full h-auto max-h-[min(78vh,760px)] object-contain object-top' : 'object-contain object-center',
-            !isHero && FRAME_MAX[variant]
+            !isHero && 'w-full'
           )}
           loading={priority ? 'eager' : 'lazy'}
           decoding="async"

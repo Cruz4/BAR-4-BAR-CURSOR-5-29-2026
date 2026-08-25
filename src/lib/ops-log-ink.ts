@@ -21,7 +21,7 @@ function near(a: number, b: number, tol = 0.05): boolean {
 }
 
 /** Extract ink amount from legacy ops-log details when inkDelta was missing/zero. */
-function parseInkFromDetails(details: string): number {
+function parseInkFromDetails(details: string, allowBareLeadingPlus = true): number {
   const permanent = details.match(/\+(\d[\d,]*)\s+permanent/i);
   if (permanent) return parseIntLoose(permanent[1]);
 
@@ -31,8 +31,13 @@ function parseInkFromDetails(details: string): number {
   const residency = details.match(/residency\s*→\s*([\d,]+)/i);
   if (residency) return parseIntLoose(residency[1]);
 
-  const leadingPlus = details.match(/^\+(\d[\d,]*)\b/);
-  if (leadingPlus) return parseIntLoose(leadingPlus[1]);
+  // Some old transaction rows only stored a bare leading credit. Achievement
+  // details also begin with values such as "+50 XP", so that fallback must never
+  // be used for achievement rows.
+  if (allowBareLeadingPlus) {
+    const leadingPlus = details.match(/^\+(\d[\d,]*)\b/);
+    if (leadingPlus) return parseIntLoose(leadingPlus[1]);
+  }
 
   return 0;
 }
@@ -68,11 +73,32 @@ function inferInkFromGross(action: string, details: string): number {
  * Positive = credit, negative = spend. Handles legacy rows that only stored Gross.
  */
 export function resolveOpsLogInkDelta(log: SystemLog): number {
+  const hasExplicitDelta = log.inkDelta !== undefined && log.inkDelta !== null;
   const explicit = Number(log.inkDelta);
-  if (Number.isFinite(explicit) && explicit !== 0) return explicit;
+  // Zero is authoritative for achievement rows. Ignoring it allowed a following
+  // "+XP" detail to be misread as an Ink credit by the legacy parser.
+  if (
+    hasExplicitDelta
+    && Number.isFinite(explicit)
+    && (explicit !== 0 || log.type === 'achievement')
+  ) {
+    return explicit;
+  }
 
   const used = Number(log.inkUsed);
-  if (log.type === 'transaction' || log.type === 'achievement') {
+  if (log.type === 'achievement') {
+    const details = typeof log.details === 'string' ? log.details : '';
+    const fromDetails = parseInkFromDetails(details, false);
+    if (fromDetails > 0) return fromDetails;
+    // Legacy achievement writers occasionally placed XP in inkUsed as well.
+    // An XP-only detail is definitive proof that the value is not Ink.
+    const xpOnly = /\+?\d[\d,]*\s+XP\b/i.test(details)
+      && !/\+?\d[\d,]*\s+Ink\b/i.test(details);
+    if (xpOnly) return 0;
+    return Number.isFinite(used) && used > 0 ? used : 0;
+  }
+
+  if (log.type === 'transaction') {
     if (Number.isFinite(used) && used > 0) return used;
     const details = typeof log.details === 'string' ? log.details : '';
     const fromDetails = parseInkFromDetails(details);

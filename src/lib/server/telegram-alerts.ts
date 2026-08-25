@@ -14,6 +14,8 @@ type TelegramAlertInput = {
   detail?: string | null;
   guestId?: string | null;
   guestAlias?: string | null;
+  refLabel?: string | null;
+  referralName?: string | null;
 };
 
 const KIND_HEADLINE: Record<AdminAlertKind, string> = {
@@ -61,7 +63,11 @@ function formatTelegramText(input: TelegramAlertInput): string {
   ) {
     lines.push(`guest: ${input.guestAlias}`);
   }
-  if (input.ref) lines.push(`ref: ${input.ref}`);
+  if (input.referralName) {
+    lines.push(`referred by: ${input.referralName}`);
+  } else if (input.ref) {
+    lines.push(`ref: ${input.refLabel || input.ref}`);
+  }
   if (input.path) lines.push(`path: ${input.path}`);
   if (input.detail && input.kind === 'signup') lines.push(input.detail);
   if (input.userId) lines.push(`uid: ${input.userId.slice(0, 12)}…`);

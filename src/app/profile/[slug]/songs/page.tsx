@@ -1,22 +1,31 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, Music2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Music2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StudioLoader } from '@/components/studio-loader';
 import { ProfileSectionTabs } from '@/components/profile/profile-section-tabs';
-import { LiveDnaDropLinkCard, type LiveDnaDropItem } from '@/components/profile/live-dna-drop-card';
+import type { LiveDnaDropItem } from '@/components/profile/live-dna-drop-card';
+import { DropListenPanel } from '@/components/drop-listen-panel';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { PublicProfileSectionShell } from '@/components/profile/public-profile-section-shell';
+import { formatDropPulseLine } from '@/lib/drop-pulse';
+import type { DropPrice } from '@/lib/drop-commerce';
+import { pressedSongHref } from '@/lib/pressed-song';
+
+type PressedProfileSong = LiveDnaDropItem & {
+  ownerId: string;
+  price: DropPrice;
+};
 
 export default function ProfileSongsPage() {
   const params = useParams();
   const slug = typeof params?.slug === 'string' ? params.slug : '';
   const [displayName, setDisplayName] = useState('Artist');
   const [rawProfile, setRawProfile] = useState<unknown>({});
-  const [songs, setSongs] = useState<LiveDnaDropItem[]>([]);
+  const [songs, setSongs] = useState<PressedProfileSong[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -32,7 +41,7 @@ export default function ProfileSongsPage() {
       .then(async ([profileResponse, songsResponse]) => {
         if (!profileResponse.ok || !songsResponse.ok) throw new Error('Profile unavailable');
         const data = (await profileResponse.json()) as { displayName?: string };
-        const songsData = (await songsResponse.json()) as { songs?: LiveDnaDropItem[]; nextCursor?: string | null };
+        const songsData = (await songsResponse.json()) as { songs?: PressedProfileSong[]; nextCursor?: string | null };
         if (cancelled) return;
         setDisplayName(data.displayName?.trim() || slug);
         setRawProfile(data);
@@ -48,22 +57,53 @@ export default function ProfileSongsPage() {
   if (missing) return <div className="mx-auto max-w-lg px-4 py-20 text-center">Artist page not found.</div>;
   return (
     <PublicProfileSectionShell rawProfile={rawProfile} slug={slug}>
-    <main className="container mx-auto max-w-2xl space-y-6 px-4 py-8">
+    <main className="container mx-auto max-w-4xl space-y-6 px-4 py-8">
       <Button size="sm" variant="outline" asChild className="h-8 gap-1.5 font-bold uppercase">
         <Link href={profileHref(slug) || '/'}><ChevronLeft className="h-4 w-4" /> {displayName}</Link>
       </Button>
       <ProfileSectionTabs slug={slug} />
       <header>
         <h1 className="flex items-center gap-2 font-headline text-3xl font-bold uppercase"><Music2 className="h-7 w-7 text-fuchsia-400" /> Pressed Songs</h1>
-        <p className="text-sm text-muted-foreground">Every live First Drop pressed by {displayName}.</p>
+        <p className="text-sm text-muted-foreground">Play {displayName}&apos;s previews here like a playlist, or open any song for its full page.</p>
       </header>
-      {songs.length ? <div className="grid gap-3 sm:grid-cols-2">{songs.map((song) => <LiveDnaDropLinkCard key={song.shareId} drop={song} />)}</div> : <div className="rounded-2xl border border-dashed border-white/15 px-6 py-16 text-center text-sm text-muted-foreground">No live pressed songs yet.</div>}
+      {songs.length ? (
+        <div className="space-y-4">
+          {songs.map((song, index) => (
+            <article key={song.shareId} className="space-y-2">
+              <div className="flex items-center gap-3 px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 text-fuchsia-200">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <span className="min-w-0 flex-1 truncate">{formatDropPulseLine(song)}</span>
+                <Link
+                  href={pressedSongHref(song.shareId)}
+                  className="flex shrink-0 items-center gap-1 text-fuchsia-200 transition-colors hover:text-fuchsia-100"
+                >
+                  Song page <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+              <Suspense fallback={<div className="h-40 animate-pulse rounded-2xl border border-fuchsia-400/20 bg-black/35" />}>
+                <DropListenPanel
+                  shareId={song.shareId}
+                  title={song.title}
+                  ownerId={song.ownerId}
+                  price={song.price}
+                  hasAudio={Boolean(song.hasDropAudio)}
+                  source="artist_home"
+                  presentation="playlist"
+                  playbackGroup={`profile-pressed:${slug}`}
+                />
+              </Suspense>
+            </article>
+          ))}
+        </div>
+      ) : <div className="rounded-2xl border border-dashed border-white/15 px-6 py-16 text-center text-sm text-muted-foreground">No live pressed songs yet.</div>}
       {cursor ? <Button variant="outline" className="w-full font-bold uppercase" disabled={loadingMore} onClick={() => {
         setLoadingMore(true);
         void fetch(`/api/profile/${encodeURIComponent(slug)}/songs?cursor=${encodeURIComponent(cursor)}`)
           .then(async (response) => {
             if (!response.ok) throw new Error('Songs unavailable');
-            const data = (await response.json()) as { songs?: LiveDnaDropItem[]; nextCursor?: string | null };
+            const data = (await response.json()) as { songs?: PressedProfileSong[]; nextCursor?: string | null };
             setSongs((current) => [...current, ...(data.songs || [])]);
             setCursor(data.nextCursor || null);
           })

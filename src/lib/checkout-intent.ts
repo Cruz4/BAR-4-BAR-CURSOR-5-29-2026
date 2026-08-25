@@ -25,9 +25,27 @@ export function buildLoginPath(nextPath: string): string {
   return `/login?next=${encodeURIComponent(getSafeNextPath(nextPath))}`;
 }
 
-/** Guest First Drop checkout — sign up, then return to the share page to buy. */
-export function buildDropBuyLoginPath(shareId: string): string {
-  const next = getSafeNextPath(`/song/${shareId}`);
+export type DropBuyIntent = {
+  amountCents?: number;
+  trackId?: string;
+  referralPostId?: string;
+};
+
+/** Song-page return URL that safely carries a guest's chosen checkout details. */
+export function buildDropBuyReturnPath(shareId: string, intent: DropBuyIntent = {}): string {
+  const id = shareId.trim();
+  const query = new URLSearchParams({ checkout: 'drop' });
+  if (Number.isFinite(intent.amountCents) && (intent.amountCents ?? 0) > 0) {
+    query.set('amountCents', String(Math.round(intent.amountCents!)));
+  }
+  if (intent.trackId?.trim()) query.set('trackId', intent.trackId.trim());
+  if (intent.referralPostId?.trim()) query.set('refPost', intent.referralPostId.trim());
+  return `/song/${encodeURIComponent(id)}?${query.toString()}`;
+}
+
+/** Guest First Drop checkout — sign up, return to the song, then resume checkout. */
+export function buildDropBuyLoginPath(shareId: string, intent: DropBuyIntent = {}): string {
+  const next = getSafeNextPath(buildDropBuyReturnPath(shareId, intent));
   return `/login?mode=signup&next=${encodeURIComponent(next)}&intent=drop-buy`;
 }
 
@@ -37,6 +55,22 @@ function parsePathUrl(path: string): URL | null {
   } catch {
     return null;
   }
+}
+
+export function getDropBuyIntentFromPath(path: string): DropBuyIntent | null {
+  const url = parsePathUrl(path);
+  if (!url || !url.pathname.startsWith('/song/') || url.searchParams.get('checkout') !== 'drop') {
+    return null;
+  }
+  const amountRaw = url.searchParams.get('amountCents');
+  const amount = amountRaw ? Number(amountRaw) : NaN;
+  const trackId = url.searchParams.get('trackId')?.trim();
+  const referralPostId = url.searchParams.get('refPost')?.trim();
+  return {
+    ...(Number.isSafeInteger(amount) && amount > 0 ? { amountCents: amount } : {}),
+    ...(trackId ? { trackId } : {}),
+    ...(referralPostId ? { referralPostId } : {}),
+  };
 }
 
 export function getCheckoutFromPath(path: string): ProCheckoutPriceKey | null {

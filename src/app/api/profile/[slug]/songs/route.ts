@@ -24,9 +24,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       const price = normalizeDropPrice(data.dropPrice);
       return [{
         shareId: doc.id,
+        ownerId: owner.userId,
         type: 'track' as const,
         title: typeof data.title === 'string' && data.title.trim() ? data.title.trim().slice(0, 120) : 'Untitled track',
         hasDropAudio: true,
+        price,
         dropPriceSummary: dropPriceSummary(price),
         playCount: Math.max(0, Number(raw.playCount) || 0),
         previewCount: Math.max(0, Number(raw.previewCount) || 0),

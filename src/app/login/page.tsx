@@ -52,6 +52,7 @@ import {
 import { BrandLockup } from '@/components/brand-lockup';
 import {
   getCheckoutFromPath,
+  getDropBuyIntentFromPath,
   getProCheckoutLabel,
   getSafeNextPath,
 } from '@/lib/checkout-intent';
@@ -65,6 +66,7 @@ import {
 import { markFreshSignup } from '@/lib/post-login-redirect';
 import { sendSignupVerificationEmail } from '@/lib/email-verification-client';
 import { PRO_FEATURE_PREVIEW_DAYS, SIGNUP_INK } from '@/lib/subscription';
+import { centsToUsdLabel } from '@/lib/drop-commerce';
 
 /** Auth account young enough that usage-init/doc races still count as a signup. */
 function isFreshAuthAccount(firebaseUser: { metadata?: { creationTime?: string } }): boolean {
@@ -102,6 +104,7 @@ function LoginForm() {
   const dropBuyIntent = searchParams.get('intent') === 'drop-buy';
   const guestTryIntent = searchParams.get('intent') === 'guest_try';
   const safeNext = getSafeNextPath(searchParams.get('next'));
+  const dropBuyDetails = getDropBuyIntentFromPath(safeNext);
   const proCheckoutIntent = getCheckoutFromPath(safeNext);
   const marketingRef = normalizeMarketingRef(searchParams.get('ref'));
   const isTikTokRef = marketingRef === 'tiktok';
@@ -445,7 +448,11 @@ function LoginForm() {
                     <Disc3 className="h-4 w-4" /> Unlock this song
                   </CardTitle>
                   <CardDescription className="text-[11px] font-code leading-relaxed text-left">
-                    Create a free account — you&apos;ll come right back to this page to pay what you want and stream the full song in Bar 4 Bar.
+                    Create a free account or sign in—you&apos;ll return to this song and continue directly to secure checkout
+                    {dropBuyDetails?.amountCents ? (
+                      <> for <strong className="text-foreground">{centsToUsdLabel(dropBuyDetails.amountCents)}</strong></>
+                    ) : null}
+                    . Your selected price stays with you through signup.
                     {' '}
                     <strong className="text-foreground">Import Setup</strong> is separate: that copies lyrics &amp; Creative DNA into your vault, not the recording.
                   </CardDescription>

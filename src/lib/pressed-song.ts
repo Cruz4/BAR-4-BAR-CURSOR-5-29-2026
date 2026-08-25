@@ -1,8 +1,13 @@
 import type { DropPrice } from '@/lib/drop-commerce';
 import type { PressingConfig } from '@/lib/profile/pressing';
 
-export function pressedSongHref(shareId: string): string {
-  return `/song/${encodeURIComponent(shareId)}`;
+export function pressedSongHref(
+  shareId: string,
+  options: { referralPostId?: string } = {}
+): string {
+  const base = `/song/${encodeURIComponent(shareId)}`;
+  const referralPostId = options.referralPostId?.trim();
+  return referralPostId ? `${base}?refPost=${encodeURIComponent(referralPostId)}` : base;
 }
 
 export type PressedSongSupporter = {

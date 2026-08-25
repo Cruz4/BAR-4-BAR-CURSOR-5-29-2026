@@ -335,7 +335,7 @@ export function FeatureShowcaseSection() {
                 </span>
               </h2>
               <p className="font-code text-fuchsia-100/75 text-sm md:text-base leading-relaxed max-w-2xl mx-auto">
-                {firstDropsBand.description}
+                A clear path from finished recording to a buy-once release—without giving up your rights.
               </p>
             </div>
             <FeatureRow
