@@ -7,7 +7,24 @@ import { useOptionalDropPlayer } from '@/context/drop-player-context';
 import { formatDeckTime } from '@/lib/drop-library';
 import { Button } from '@/components/ui/button';
 import { AudioVolumeControl } from '@/components/audio-volume-control';
-import { MUSICAL_EQ_BANDS, measureSpectrumBand, smoothSpectrumLevel } from '@/lib/audio-spectrum';
+import { measureSpectrumBand } from '@/lib/audio-spectrum';
+
+const MINI_EQ_BANDS = [
+  { lowHz: 35, highHz: 130, gain: 0.72 },
+  { lowHz: 130, highHz: 420, gain: 0.82 },
+  { lowHz: 420, highHz: 1_600, gain: 0.92 },
+  { lowHz: 1_600, highHz: 5_200, gain: 1.02 },
+  { lowHz: 5_200, highHz: 13_000, gain: 1.12 },
+] as const;
+
+function clampMeter(value: number): number {
+  return Math.max(0.12, Math.min(0.96, value));
+}
+
+function smoothMiniMeter(current: number, target: number): number {
+  const speed = target > current ? 0.38 : 0.2;
+  return current + (target - current) * speed;
+}
 
 function MiniDropEqualizer({ analyser, playing }: { analyser: AnalyserNode | null; playing: boolean }) {
   const barRefs = useRef<Array<HTMLSpanElement | null>>([]);
@@ -15,7 +32,10 @@ function MiniDropEqualizer({ analyser, playing }: { analyser: AnalyserNode | nul
   useEffect(() => {
     let frame = 0;
     let tick = 0;
-    const smoothed = [0.28, 0.28, 0.28, 0.28, 0.28];
+    const smoothed = [0.18, 0.18, 0.18, 0.18, 0.18];
+    const baseline = [0.18, 0.18, 0.18, 0.18, 0.18];
+    const previous = [0.18, 0.18, 0.18, 0.18, 0.18];
+    let calibrated = false;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const bins = analyser ? new Uint8Array(analyser.frequencyBinCount) : null;
 
@@ -23,18 +43,29 @@ function MiniDropEqualizer({ analyser, playing }: { analyser: AnalyserNode | nul
       tick += 0.12;
       if (analyser && bins) analyser.getByteFrequencyData(bins);
 
-      let targets = [0.28, 0.28, 0.28, 0.28, 0.28];
+      let targets = [0.18, 0.18, 0.18, 0.18, 0.18];
       if (playing && reducedMotion) {
         targets = [0.42, 0.5, 0.58, 0.5, 0.42];
       } else if (playing && analyser && bins && bins.length > 0) {
-        const levels = MUSICAL_EQ_BANDS.map((band) => measureSpectrumBand(analyser, bins, band));
-        const edge = Math.max(0.2, (levels[2] + levels[3]) / 2);
-        const inner = Math.max(0.24, (levels[1] + levels[2]) / 2);
-        const center = Math.max(
-          0.3,
-          (levels.reduce((sum, level) => sum + level, 0) / levels.length) * 1.08
-        );
-        targets = [edge, inner, center, inner, edge];
+        const levels = MINI_EQ_BANDS.map((band) => measureSpectrumBand(analyser, bins, band));
+        if (!calibrated) {
+          levels.forEach((level, index) => {
+            baseline[index] = level;
+            previous[index] = level;
+          });
+          calibrated = true;
+        }
+        targets = levels.map((level, index) => {
+          // Track the song's typical loudness slowly, then emphasize momentary
+          // movement. This preserves headroom on heavily mastered tracks.
+          const baselineSpeed = level < baseline[index] ? 0.045 : 0.012;
+          baseline[index] += (level - baseline[index]) * baselineSpeed;
+          const lift = Math.max(0, level - baseline[index]);
+          const attack = Math.max(0, level - previous[index]);
+          const release = Math.max(0, previous[index] - level);
+          previous[index] = level;
+          return clampMeter(0.12 + level * 0.42 + lift * 2.6 + attack * 3.2 - release * 0.8);
+        });
       } else if (playing) {
         const edge = 0.3 + Math.abs(Math.sin(tick)) * 0.35;
         const inner = 0.36 + Math.abs(Math.sin(tick + 0.7)) * 0.42;
@@ -44,7 +75,7 @@ function MiniDropEqualizer({ analyser, playing }: { analyser: AnalyserNode | nul
 
       barRefs.current.forEach((bar, index) => {
         if (!bar) return;
-        smoothed[index] = smoothSpectrumLevel(smoothed[index], targets[index]);
+        smoothed[index] = smoothMiniMeter(smoothed[index], targets[index]);
         bar.style.transform = `scaleY(${smoothed[index]})`;
       });
 
@@ -68,8 +99,8 @@ function MiniDropEqualizer({ analyser, playing }: { analyser: AnalyserNode | nul
           ref={(element) => {
             barRefs.current[index] = element;
           }}
-          className="w-[3px] origin-center rounded-full bg-white/90 shadow-[0_0_6px_rgba(255,255,255,0.32)] transition-transform duration-75"
-          style={{ height, transform: 'scaleY(0.28)' }}
+          className="w-[3px] origin-center rounded-full bg-white/90 shadow-[0_0_6px_rgba(255,255,255,0.32)]"
+          style={{ height, transform: 'scaleY(0.18)' }}
           aria-hidden
         />
       ))}

@@ -698,7 +698,7 @@ function GuestPressingLandingInner() {
                   Section sizes (S / M / L)
                 </p>
                 <p className="hidden text-[10px] text-zinc-500 sm:block">
-                  Same controls as Edit Public Page. Watch the layout reflow live.
+                  Resize the four sections visible in this preview and watch the layout reflow live.
                 </p>
                 <ul className="space-y-1.5 sm:space-y-2">
                   {GUEST_SIZEABLE_MODULES.map((id) => {

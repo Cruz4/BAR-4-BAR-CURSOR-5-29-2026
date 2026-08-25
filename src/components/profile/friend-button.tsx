@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Ban, Check, Clock, UserMinus, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Hint } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import {
@@ -24,6 +25,18 @@ type FriendButtonProps = {
   /** Signed-in viewer's own public slug (for the denormalized friendship doc). */
   viewerSlug?: string;
 };
+
+const ADD_FRIEND_HELP =
+  'Add Friend is mutual: it sends a request. After they accept, you appear in each other\'s Friends lists. Following is separate.';
+
+const FRIENDS_HELP =
+  'You are mutual friends. Tap to remove the friendship; following this profile is managed separately.';
+
+const REQUESTED_HELP =
+  'Your friend request is waiting for their approval. Tap to cancel the request.';
+
+const ACCEPT_HELP =
+  'Accept this request to become mutual friends. Following remains a separate choice.';
 
 /**
  * Add friend / requested / accept / friends / block states on a public profile.
@@ -80,11 +93,13 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
 
   if (!user) {
     return (
-      <Button size="sm" variant="outline" className={baseClass} asChild>
-        <a href="/login">
-          <UserPlus className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Add friend</span>
-        </a>
-      </Button>
+      <Hint content={ADD_FRIEND_HELP} side="bottom" actionSafe>
+        <Button size="sm" variant="outline" className={baseClass} asChild>
+          <a href="/login" aria-label={`Add ${targetName} as a friend`}>
+            <UserPlus className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Add friend</span>
+          </a>
+        </Button>
+      </Hint>
     );
   }
 
@@ -148,29 +163,32 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
   if (!friendship) {
     return (
       <div className="flex gap-1.5">
-        <Button
-          size="sm"
-          variant="outline"
-          className={baseClass}
-          disabled={busy}
-          onClick={() =>
-            run(async () => {
-              const created = await sendFriendRequest(
-                { name: user.displayName || 'Artist', slug: viewerSlug },
-                { userId: targetUserId, name: targetName, slug: targetSlug }
-              );
-              setFriendship(created);
-              toast({
-                title:
-                  created.status === 'accepted'
-                    ? `You and ${targetName} are friends now`
-                    : 'Friend request sent',
-              });
-            }, 'Could not send request')
-          }
-        >
-          <UserPlus className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Add friend</span>
-        </Button>
+        <Hint content={ADD_FRIEND_HELP} side="bottom" actionSafe>
+          <Button
+            size="sm"
+            variant="outline"
+            className={baseClass}
+            disabled={busy}
+            aria-label={`Add ${targetName} as a friend`}
+            onClick={() =>
+              run(async () => {
+                const created = await sendFriendRequest(
+                  { name: user.displayName || 'Artist', slug: viewerSlug },
+                  { userId: targetUserId, name: targetName, slug: targetSlug }
+                );
+                setFriendship(created);
+                toast({
+                  title:
+                    created.status === 'accepted'
+                      ? `You and ${targetName} are friends now`
+                      : 'Friend request sent',
+                });
+              }, 'Could not send request')
+            }
+          >
+            <UserPlus className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Add friend</span>
+          </Button>
+        </Hint>
         {blockAction}
       </div>
     );
@@ -179,23 +197,26 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
   if (friendship.status === 'accepted') {
     return (
       <div className="flex gap-1.5">
-        <Button
-          size="sm"
-          variant="ghost"
-          className={baseClass}
-          disabled={busy}
-          onClick={() => {
-            if (!window.confirm(`Remove ${targetName} from your friends? You will continue following them unless you unfollow separately.`)) return;
-            void run(async () => {
-              await removeFriendship(friendship.id);
-              setFriendship(null);
-              toast({ title: 'Removed from friends' });
-            }, 'Could not update friendship');
-          }}
-        >
-          <Check className="h-3.5 w-3.5 text-emerald-400" /> <span className="max-[380px]:hidden">Friends</span>
-          <UserMinus className="hidden h-3 w-3 opacity-60 sm:block" />
-        </Button>
+        <Hint content={FRIENDS_HELP} side="bottom" actionSafe>
+          <Button
+            size="sm"
+            variant="ghost"
+            className={baseClass}
+            disabled={busy}
+            aria-label={`Friends with ${targetName}`}
+            onClick={() => {
+              if (!window.confirm(`Remove ${targetName} from your friends? You will continue following them unless you unfollow separately.`)) return;
+              void run(async () => {
+                await removeFriendship(friendship.id);
+                setFriendship(null);
+                toast({ title: 'Removed from friends' });
+              }, 'Could not update friendship');
+            }}
+          >
+            <Check className="h-3.5 w-3.5 text-emerald-400" /> <span className="max-[380px]:hidden">Friends</span>
+            <UserMinus className="hidden h-3 w-3 opacity-60 sm:block" />
+          </Button>
+        </Hint>
         {blockAction}
       </div>
     );
@@ -204,21 +225,24 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
   if (friendship.requestedBy === user.id) {
     return (
       <div className="flex gap-1.5">
-        <Button
-          size="sm"
-          variant="ghost"
-          className={baseClass}
-          disabled={busy}
-          onClick={() =>
-            run(async () => {
-              await removeFriendship(friendship.id);
-              setFriendship(null);
-              toast({ title: 'Request cancelled' });
-            }, 'Could not cancel request')
-          }
-        >
-          <Clock className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Requested</span>
-        </Button>
+        <Hint content={REQUESTED_HELP} side="bottom" actionSafe>
+          <Button
+            size="sm"
+            variant="ghost"
+            className={baseClass}
+            disabled={busy}
+            aria-label={`Friend request sent to ${targetName}`}
+            onClick={() =>
+              run(async () => {
+                await removeFriendship(friendship.id);
+                setFriendship(null);
+                toast({ title: 'Request cancelled' });
+              }, 'Could not cancel request')
+            }
+          >
+            <Clock className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Requested</span>
+          </Button>
+        </Hint>
         {blockAction}
       </div>
     );
@@ -226,20 +250,23 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
 
   return (
     <div className="flex gap-1.5">
-      <Button
-        size="sm"
-        className={baseClass}
-        disabled={busy}
-        onClick={() =>
-          run(async () => {
-            await acceptFriendRequest(friendship.id);
-            setFriendship({ ...friendship, status: 'accepted' });
-            toast({ title: `You and ${targetName} are friends now` });
-          }, 'Could not accept request')
-        }
-      >
-        <Check className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Accept</span>
-      </Button>
+      <Hint content={ACCEPT_HELP} side="bottom" actionSafe>
+        <Button
+          size="sm"
+          className={baseClass}
+          disabled={busy}
+          aria-label={`Accept ${targetName}'s friend request`}
+          onClick={() =>
+            run(async () => {
+              await acceptFriendRequest(friendship.id);
+              setFriendship({ ...friendship, status: 'accepted' });
+              toast({ title: `You and ${targetName} are friends now` });
+            }, 'Could not accept request')
+          }
+        >
+          <Check className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Accept</span>
+        </Button>
+      </Hint>
       <Button
         size="sm"
         variant="ghost"

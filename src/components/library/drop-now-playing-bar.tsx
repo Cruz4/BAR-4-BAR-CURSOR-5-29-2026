@@ -1,13 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Loader, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { useOptionalDropPlayer } from '@/context/drop-player-context';
 import { formatDeckTime } from '@/lib/drop-library';
 import { Button } from '@/components/ui/button';
+import { AudioVolumeControl } from '@/components/audio-volume-control';
 import { cn } from '@/lib/utils';
+
+const artistAvatarCache = new Map<string, string | null>();
 
 export function shouldHideDropNowPlayingBar(pathname: string | null): boolean {
   if (!pathname) return true;
@@ -24,10 +27,56 @@ export function shouldHideDropNowPlayingBar(pathname: string | null): boolean {
 export function DropNowPlayingBar() {
   const player = useOptionalDropPlayer();
   const pathname = usePathname();
+  const currentShareId = player?.current?.shareId;
+  const [artistAvatarUrl, setArtistAvatarUrl] = useState<string>();
+
+  useEffect(() => {
+    if (!currentShareId) {
+      setArtistAvatarUrl(undefined);
+      return;
+    }
+    if (artistAvatarCache.has(currentShareId)) {
+      setArtistAvatarUrl(artistAvatarCache.get(currentShareId) || undefined);
+      return;
+    }
+
+    let cancelled = false;
+    setArtistAvatarUrl(undefined);
+    void fetch(`/api/songs/${encodeURIComponent(currentShareId)}`)
+      .then((response) => response.ok ? response.json() : null)
+      .then((summary) => {
+        const avatarUrl = typeof summary?.artist?.avatarUrl === 'string' && summary.artist.avatarUrl.trim()
+          ? summary.artist.avatarUrl.trim()
+          : null;
+        artistAvatarCache.set(currentShareId, avatarUrl);
+        if (!cancelled) setArtistAvatarUrl(avatarUrl || undefined);
+      })
+      .catch(() => {
+        artistAvatarCache.set(currentShareId, null);
+        if (!cancelled) setArtistAvatarUrl(undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentShareId]);
+
   if (!player?.current) return null;
   if (shouldHideDropNowPlayingBar(pathname)) return null;
 
-  const { current, playing, loading, elapsed, duration, togglePlay, skipNext, prev } = player;
+  const {
+    current,
+    playing,
+    loading,
+    elapsed,
+    duration,
+    volume,
+    togglePlay,
+    skipNext,
+    prev,
+    setVolume,
+    toggleMute,
+  } = player;
+  const playerImageUrl = artistAvatarUrl || current.coverArtUrl;
   const liftForEditor =
     pathname.startsWith('/albums/') || pathname.startsWith('/tracks/');
 
@@ -46,12 +95,16 @@ export function DropNowPlayingBar() {
           className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-1 py-0.5 hover:bg-white/5"
         >
           <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-fuchsia-400/25 bg-black">
-            {current.coverArtUrl ? (
+            {playerImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={current.coverArtUrl} alt="" className="h-full w-full object-cover" />
+              <img
+                src={playerImageUrl}
+                alt={`${current.artistName} profile`}
+                className="h-full w-full object-cover"
+              />
             ) : (
               <span className="flex h-full w-full items-center justify-center font-headline text-sm font-bold text-fuchsia-200">
-                {current.title.trim().charAt(0).toUpperCase()}
+                {current.artistName.trim().charAt(0).toUpperCase() || 'B'}
               </span>
             )}
           </span>
@@ -86,6 +139,12 @@ export function DropNowPlayingBar() {
         <Button type="button" size="icon" variant="ghost" className="h-9 w-9 shrink-0" onClick={skipNext} aria-label="Next">
           <SkipForward className="h-4 w-4" />
         </Button>
+        <AudioVolumeControl
+          compact
+          volume={volume}
+          onVolumeChange={setVolume}
+          onToggleMute={toggleMute}
+        />
       </div>
     </div>
   );

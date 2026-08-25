@@ -295,6 +295,10 @@ export function ArtistHome({
         [data-preview-viewport='tablet'] .ph-module-deck > .ph-module-item[data-full-bleed='true'] {
           grid-column: 1 / -1;
         }
+        [data-preview-viewport='tablet'] .ph-module-deck > .ph-module-item[data-module-size='S'] {
+          justify-self: start;
+          width: 78%;
+        }
         /*
          * iPadOS/WebKit can leave stale hit-test regions when transformed,
          * clipped cards are fragmented across CSS columns. Keep the desktop
@@ -338,6 +342,15 @@ export function ArtistHome({
           .ph-module-deck > .ph-module-item[data-full-bleed='true'] {
             grid-column: 1 / -1;
           }
+          .ph-module-deck > .ph-module-item[data-module-size='S'] {
+            justify-self: start;
+            width: 78%;
+          }
+        }
+        @media (any-pointer: fine) and (min-width: 1024px) {
+          .ph-module-deck > .ph-module-item[data-module-size='S'] {
+            width: 78%;
+          }
         }
       `}</style>
 
@@ -348,7 +361,7 @@ export function ArtistHome({
         <div className="flex items-center justify-between gap-1.5 border-b border-dashed border-[var(--ph-border)] pb-4 sm:gap-3">
           <div className="flex min-w-0 shrink items-center gap-1.5 sm:gap-3">
             {studioHomeHref === '/' && !previewMode && !playgroundWall ? (
-              <ArtistHomeBackButton label="Back" />
+              <ArtistHomeBackButton label="Back" profileSlug={profile.slug} />
             ) : (
               <Button
                 size="sm"
@@ -720,6 +733,7 @@ export function ArtistHome({
               <div
                 key={setting.id}
                 data-full-bleed={fullBleed ? 'true' : undefined}
+                data-module-size={setting.size}
                 className={cn(
                   'ph-module-item mb-5 break-inside-avoid animate-in fade-in slide-in-from-bottom-2 duration-500',
                   fullBleed && 'lg:[column-span:all]'
@@ -778,7 +792,7 @@ export function ArtistHome({
                 className="h-9 gap-1.5 border-sky-400/35 bg-sky-500/[0.08] font-bold uppercase text-sky-200 hover:bg-sky-500/15 hover:text-white"
                 asChild
               >
-                <Link href="/discover">
+                <Link href="/discover?entry=profile" scroll>
                   <Compass className="h-3.5 w-3.5" /> See what others are doing on Bar4Bar
                 </Link>
               </Button>

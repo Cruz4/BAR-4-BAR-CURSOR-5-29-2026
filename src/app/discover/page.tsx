@@ -4,15 +4,18 @@
  * Full Discover stream — newest public Scene activity beyond the home strip.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, Compass, Hammer, Sparkles, TimerReset } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StudioLoader } from '@/components/studio-loader';
 import { SceneDiscoverCard } from '@/components/scene/scene-discover-card';
+import { GuestScenePortalHub } from '@/components/scene/scene-portal-hub';
 import { SceneUniversalSearch } from '@/components/scene/scene-universal-search';
 import { SectionPager } from '@/components/scene/section-pager';
 import { useAuth } from '@/hooks/use-auth';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useSceneLayout } from '@/hooks/use-scene-layout';
 import { fetchGamificationSummary } from '@/lib/gamification-client';
 import { fetchBlockedUsers } from '@/lib/profile/social-client';
 import {
@@ -39,11 +42,37 @@ export default function DiscoverPage() {
   const [page, setPage] = useState(0);
   const [mode, setMode] = useState<DiscoveryGraphMode | 'fresh'>('fresh');
   const [searchQuery, setSearchQuery] = useState('');
+  const [guestFeedOpen, setGuestFeedOpen] = useState(false);
+  const profileEntryTopRef = useRef(false);
+  const isMobile = useIsMobile();
+  const { portalHubEnabled } = useSceneLayout();
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    setSearchQuery(new URLSearchParams(window.location.search).get('q')?.slice(0, 80) || '');
+    const url = new URL(window.location.href);
+    setSearchQuery(url.searchParams.get('q')?.slice(0, 80) || '');
+    profileEntryTopRef.current = url.searchParams.get('entry') === 'profile';
+    if (profileEntryTopRef.current) {
+      url.searchParams.delete('entry');
+      window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
   }, []);
+
+  useEffect(() => {
+    if (authLoading || !loaded || !profileEntryTopRef.current) return;
+    const resetToTop = () => window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    resetToTop();
+    const frame = window.requestAnimationFrame(resetToTop);
+    const settle = window.setTimeout(() => {
+      resetToTop();
+      profileEntryTopRef.current = false;
+    }, 180);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(settle);
+    };
+  }, [authLoading, loaded]);
 
   const updateSearchQuery = useCallback((next: string) => {
     setSearchQuery(next);
@@ -97,6 +126,15 @@ export default function DiscoverPage() {
     safePage * DISCOVER_PAGE_SIZE,
     safePage * DISCOVER_PAGE_SIZE + DISCOVER_PAGE_SIZE
   );
+  const showGuestPortal = !user && isMobile && portalHubEnabled;
+  const guestPortalPreviews = useMemo(
+    () => cards.filter((card) => card.kind !== 'drop' || !card.drop.hasDropAudio).slice(0, 3),
+    [cards]
+  );
+  const newestPressed = useMemo(
+    () => (discover?.drops || []).filter((drop) => drop.type === 'track' && drop.hasDropAudio).slice(0, 5),
+    [discover?.drops]
+  );
   const guestPressing = !user
     ? discover?.artists.find((artist) => artist.pressing)?.pressing || discover?.drops.find((drop) => drop.pressing)?.pressing
     : undefined;
@@ -118,6 +156,16 @@ export default function DiscoverPage() {
         block: 'start',
       });
     });
+  }, []);
+
+  const openGuestFeed = useCallback(() => {
+    setGuestFeedOpen(true);
+    window.setTimeout(() => {
+      document.getElementById(LIST_SECTION_ID)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 0);
   }, []);
 
   if (authLoading || !loaded) {
@@ -158,7 +206,7 @@ export default function DiscoverPage() {
         excludedUserIds={blockedIds}
       />
 
-      {searchQuery.trim().length < 2 ? <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+      {user && searchQuery.trim().length < 2 ? <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
         <div className="flex flex-wrap gap-2">
           {discover?.viewerGraph.hasTaste ? (
             <Button
@@ -201,7 +249,36 @@ export default function DiscoverPage() {
         ) : null}
       </div> : null}
 
-      {searchQuery.trim().length < 2 ? <div id={LIST_SECTION_ID} className="scroll-mt-[5.5rem] space-y-4">
+      {showGuestPortal && searchQuery.trim().length < 2 ? (
+        <GuestScenePortalHub
+          publicPulse={discover?.publicPulse || { profiles: 0, posts: 0, pressedSongs: 0 }}
+          newestPressed={newestPressed}
+          discoverPreviews={guestPortalPreviews}
+          onOpenDiscover={openGuestFeed}
+        />
+      ) : null}
+
+      {searchQuery.trim().length < 2 && (!showGuestPortal || guestFeedOpen) ? <div id={LIST_SECTION_ID} className="scroll-mt-[5.5rem] space-y-4">
+        {showGuestPortal ? (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-cyan-400/20 bg-black/45 px-3 py-2">
+            <div className="min-w-0">
+              <p className="font-headline text-base font-bold uppercase text-cyan-100">Public Scene feed</p>
+              <p className="text-[9px] text-muted-foreground">Newest public activity</p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 shrink-0 font-bold uppercase"
+              onClick={() => {
+                setGuestFeedOpen(false);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            >
+              Back to Portal
+            </Button>
+          </div>
+        ) : null}
         {cards.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/15 bg-black/20 px-6 py-16 text-center">
             <p className="text-sm text-muted-foreground">
@@ -215,6 +292,7 @@ export default function DiscoverPage() {
                 key={card.key}
                 card={card}
                 viewerSlug={viewerSlug}
+                compactSalePlayer={!user}
                 onLockRemoved={(lockId) => {
                   setDiscover((prev) =>
                     prev
@@ -236,7 +314,7 @@ export default function DiscoverPage() {
         )}
       </div> : null}
       </main>
-      {!user ? (
+      {!user && !showGuestPortal ? (
         <aside className="min-w-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
           <section className="rounded-2xl border border-cyan-400/25 bg-black/60 p-4 backdrop-blur-md">
             <p className="font-headline text-lg font-bold uppercase text-cyan-200">Scene pulse</p>
@@ -251,7 +329,7 @@ export default function DiscoverPage() {
           <section className="rounded-2xl border border-fuchsia-400/25 bg-black/60 p-4 backdrop-blur-md">
             <p className="font-headline text-lg font-bold uppercase text-fuchsia-200">Newest pressed</p>
             <div className="mt-3 space-y-2">
-              {(discover?.drops || []).filter((drop) => drop.type === 'track' && drop.hasDropAudio).slice(0, 5).map((drop) => (
+              {newestPressed.map((drop) => (
                 <Link key={drop.shareId} href={`/song/${drop.shareId}`} className="block rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:border-fuchsia-300/40">
                   <span className="block truncate text-xs font-bold">{drop.title}</span><span className="block truncate font-code text-[9px] text-muted-foreground">{drop.ownerName}</span>
                 </Link>

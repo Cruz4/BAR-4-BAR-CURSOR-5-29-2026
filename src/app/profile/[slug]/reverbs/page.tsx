@@ -101,7 +101,7 @@ export default function ProfileReverbsPage() {
     <div className="container mx-auto max-w-2xl space-y-6 px-4 py-8">
       <header className="space-y-3">
         <Button size="sm" variant="outline" className="h-8 gap-1.5 font-bold uppercase" asChild>
-          <Link href={profileHref(slug) || `/${slug}`}>
+          <Link href={profileHref(slug) || `/${slug}`} replace>
             <ChevronLeft className="h-3.5 w-3.5" /> {displayName}
           </Link>
         </Button>

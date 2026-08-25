@@ -64,7 +64,7 @@ export function DropListenPanel({
   /** Profile owner whose saved featured selection this player must match. */
   featuredByUserId?: string;
   excerptStartSec?: number;
-  presentation?: 'default' | 'song' | 'playlist';
+  presentation?: 'default' | 'song' | 'playlist' | 'compact';
   /** When set, starting this player pauses another Drop player in the same queue. */
   playbackGroup?: string;
   onPlaybackStateChange?: (state: { playing: boolean; currentTime: number; duration: number }) => void;
@@ -102,6 +102,7 @@ export function DropListenPanel({
   const effectiveReferralPostId = referralPostId || queryReferralPostId;
   const effectiveTrackId = trackId || pendingBuyIntent?.trackId;
   const pendingCheckoutHandledRef = useRef<string | null>(null);
+  const compactPresentation = presentation === 'compact';
 
   const loadStream = useCallback(async () => {
     if (!firstDropsOn || !hasAudio) {
@@ -280,7 +281,9 @@ export function DropListenPanel({
       ? 'space-y-3 rounded-2xl border border-fuchsia-300/45 bg-black/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_18px_55px_rgba(0,0,0,.35)] sm:p-5'
       : presentation === 'playlist'
         ? 'space-y-3 rounded-2xl border border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500/15 via-black/65 to-blue-500/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.07),0_14px_38px_rgba(0,0,0,.28)] transition-colors hover:border-fuchsia-300/60 sm:p-5'
-      : 'min-w-0 rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-3 space-y-3 sm:p-4'}>
+      : compactPresentation
+        ? 'min-w-0 space-y-2 rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-2.5'
+        : 'min-w-0 rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-3 space-y-3 sm:p-4'}>
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
         <p className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-200">
           {full || isOwner ? 'Full stream' : hasAudio ? 'Play preview · 30 seconds' : 'On sale'}
@@ -295,7 +298,7 @@ export function DropListenPanel({
           <Button
             type="button"
             size="icon"
-            className="h-11 w-11 rounded-full"
+            className={compactPresentation ? 'h-9 w-9 rounded-full' : 'h-11 w-11 rounded-full'}
             disabled={loading || !src}
             onClick={() => {
               const el = audioRef.current;
@@ -319,7 +322,7 @@ export function DropListenPanel({
             >
               {title}
             </Link>
-            <p className="text-[10px] text-muted-foreground">
+            <p className={compactPresentation ? 'truncate text-[9px] text-muted-foreground' : 'text-[10px] text-muted-foreground'}>
               {previewCapped
                 ? `Featured 30-second excerpt${excerptStartSec > 0 ? ` from ${Math.floor(excerptStartSec / 60)}:${Math.floor(excerptStartSec % 60).toString().padStart(2, '0')}` : ''}. Buy once to unlock.`
                 : featuredByUserId && excerptStartSec > 0
@@ -327,6 +330,14 @@ export function DropListenPanel({
                   : 'Streams in Library.'}
             </p>
           </div>
+          {compactPresentation ? (
+            <AudioVolumeControl
+              volume={volume}
+              onVolumeChange={setVolume}
+              onToggleMute={toggleMute}
+              compact
+            />
+          ) : null}
           {src ? (
             <audio
               ref={audioRef}
@@ -394,7 +405,7 @@ export function DropListenPanel({
         </div>
       )}
 
-      {hasAudio ? (
+      {hasAudio && !compactPresentation ? (
         <AudioVolumeControl
           volume={volume}
           onVolumeChange={setVolume}
@@ -404,17 +415,21 @@ export function DropListenPanel({
       ) : null}
 
       {!full && !isOwner && isCommerceLive(normalized) && (
-        <div className="space-y-2 border-t border-white/10 pt-3">
+        <div className={compactPresentation
+          ? normalized.mode === 'pwyw'
+            ? 'grid grid-cols-[minmax(0,1fr)_auto] gap-1.5 border-t border-white/10 pt-2'
+            : 'border-t border-white/10 pt-2'
+          : 'space-y-2 border-t border-white/10 pt-3'}>
           {normalized.mode === 'pwyw' && (
             <Input
               value={pwyw}
               onChange={(e) => setPwyw(e.target.value)}
               placeholder={`Suggested ${centsToUsdLabel(Math.max(DROP_PAID_MIN_CENTS, normalized.suggestedCents ?? 777))}`}
-              className="h-9 font-code text-xs"
+              className={compactPresentation ? 'h-8 font-code text-[11px]' : 'h-9 font-code text-xs'}
             />
           )}
           <Button
-            className="w-full h-11 font-bold uppercase bg-fuchsia-400 text-black hover:bg-fuchsia-300"
+            className={compactPresentation ? 'h-8 min-w-0 px-3 text-[11px] font-bold uppercase bg-fuchsia-400 text-black hover:bg-fuchsia-300' : 'w-full h-11 font-bold uppercase bg-fuchsia-400 text-black hover:bg-fuchsia-300'}
             disabled={busy || (Boolean(user) && !authReady)}
             onClick={buy}
           >
@@ -427,7 +442,7 @@ export function DropListenPanel({
                     ? `Pay · ${centsToUsdLabel(pwywCheckoutCents)}`
                     : `Sign up · Pay · ${centsToUsdLabel(pwywCheckoutCents)}`}
           </Button>
-          <p className="text-[9px] text-muted-foreground text-center">
+          <p className={compactPresentation ? 'sr-only' : 'text-[9px] text-muted-foreground text-center'}>
             Buy once. Stream in the app. Not on Spotify unless the artist goes wide later.
           </p>
         </div>

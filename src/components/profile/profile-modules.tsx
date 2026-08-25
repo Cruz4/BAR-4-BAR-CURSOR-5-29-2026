@@ -150,6 +150,7 @@ function ModuleShell({
       action={action}
       chrome={ctx.plate}
       index={ctx.moduleIndex}
+      density={ctx.size === 'S' ? 'compact' : 'default'}
     >
       {children}
     </PressPlate>
@@ -304,10 +305,19 @@ export function BarOfWeekModule({ ctx }: { ctx: ModuleContext }) {
   return (
     <ModuleShell icon={Quote} title={"Bar of the Week"} ctx={ctx}>
       {playground ? (
-        <PlaygroundBarOfWeekQuote value={playground.text} onChange={playground.onChange} />
+        <div className={ctx.size === 'S' ? '[&_blockquote]:text-[clamp(1.05rem,2.5vw,1.45rem)]' : undefined}>
+          <PlaygroundBarOfWeekQuote value={playground.text} onChange={playground.onChange} />
+        </div>
       ) : (
         <>
-          <blockquote className="font-headline text-[clamp(1.4rem,3.5vw,2.4rem)] leading-tight text-[var(--ph-text,#fff)]">
+          <blockquote
+            className={cn(
+              'font-headline leading-tight text-[var(--ph-text,#fff)]',
+              ctx.size === 'S'
+                ? 'text-[clamp(1.05rem,2.5vw,1.45rem)]'
+                : 'text-[clamp(1.4rem,3.5vw,2.4rem)]'
+            )}
+          >
             &ldquo;{bar}&rdquo;
           </blockquote>
           {ctx.featured.barOfWeekShareId && (

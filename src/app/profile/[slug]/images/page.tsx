@@ -71,7 +71,7 @@ export default function ProfileImagesPage() {
     <PublicProfileSectionShell rawProfile={rawProfile} slug={slug}>
     <main className="container mx-auto max-w-2xl space-y-6 px-4 py-8">
       <Button size="sm" variant="outline" asChild className="h-8 gap-1.5 font-bold uppercase">
-        <Link href={profileHref(slug) || '/'}><ChevronLeft className="h-4 w-4" /> {displayName}</Link>
+        <Link href={profileHref(slug) || '/'} replace><ChevronLeft className="h-4 w-4" /> {displayName}</Link>
       </Button>
       <ProfileSectionTabs slug={slug} />
       <header>

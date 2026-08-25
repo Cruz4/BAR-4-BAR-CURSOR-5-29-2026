@@ -23,6 +23,7 @@ type PressPlateProps = {
   chrome: PressPlateChrome;
   index?: number;
   className?: string;
+  density?: 'compact' | 'default';
 };
 
 export function PressPlate({
@@ -33,6 +34,7 @@ export function PressPlate({
   chrome,
   index = 0,
   className,
+  density = 'default',
 }: PressPlateProps) {
   const cut = ((chrome.cutStyle + index) % 6) as CutStyle;
 
@@ -45,10 +47,22 @@ export function PressPlate({
           background: `linear-gradient(165deg, var(--ph-plate), color-mix(in srgb, var(--ph-bg) 70%, transparent))`,
         }}
       >
-        <div className="relative z-10 px-5 py-5 sm:px-6 sm:py-6">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="flex min-w-0 items-center gap-2 font-headline text-xs font-bold uppercase tracking-[0.18em] text-[var(--ph-text)]">
-              {Icon && <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--ph-accent)]" />}
+        <div
+          className={cn(
+            'relative z-10',
+            density === 'compact' ? 'px-3 py-3 sm:px-4 sm:py-4' : 'px-5 py-5 sm:px-6 sm:py-6'
+          )}
+        >
+          <div className={cn('flex items-center justify-between', density === 'compact' ? 'mb-2 gap-2' : 'mb-4 gap-3')}>
+            <h2
+              className={cn(
+                'flex min-w-0 items-center font-headline font-bold uppercase text-[var(--ph-text)]',
+                density === 'compact'
+                  ? 'gap-1.5 text-[10px] tracking-[0.14em]'
+                  : 'gap-2 text-xs tracking-[0.18em]'
+              )}
+            >
+              {Icon && <Icon className={cn('shrink-0 text-[var(--ph-accent)]', density === 'compact' ? 'h-3 w-3' : 'h-3.5 w-3.5')} />}
               <span className="truncate">{title}</span>
             </h2>
             {action ? (

@@ -45,12 +45,6 @@ export const GUEST_SIZEABLE_MODULES: ProfileModuleId[] = [
   'wall',
   'friends',
   'guestbook',
-  'proofWall',
-  'dnaStrip',
-  'nowPlaying',
-  'rhymeFingerprint',
-  'barBoard',
-  'dropShelf',
 ];
 
 const SAMPLE_WALL: Omit<GuestWallDraftPost, 'id' | 'createdAt'>[] = [

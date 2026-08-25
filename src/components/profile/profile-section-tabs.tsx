@@ -32,6 +32,7 @@ export function ProfileSectionTabs({ slug, className }: { slug?: string; classNa
           <Link
             key={tab.label}
             href={tab.href}
+            replace
             aria-current={active ? 'page' : undefined}
             className={cn(
               'flex h-9 shrink-0 items-center gap-1.5 rounded-t-md px-3 text-[10px] font-bold uppercase tracking-[0.14em] transition-colors',

@@ -67,12 +67,15 @@ export function SceneDiscoverCard({
   viewerSlug,
   onLockRemoved,
   immersive = false,
+  compactSalePlayer = false,
 }: {
   card: DiscoverCard;
   viewerSlug?: string;
   /** Called after the owner or studio admin deletes a Finish this bar cast. */
   onLockRemoved?: (lockId: string) => void;
   immersive?: boolean;
+  /** Keep guest Discover sale cards useful without letting each player dominate the feed. */
+  compactSalePlayer?: boolean;
 }) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -235,6 +238,7 @@ export function SceneDiscoverCard({
                 ownerId={drop.ownerId || ''}
                 price={normalizeDropPrice(drop.dropPrice)}
                 hasAudio
+                presentation={compactSalePlayer ? 'compact' : 'default'}
               />
             </Suspense>
           </div>

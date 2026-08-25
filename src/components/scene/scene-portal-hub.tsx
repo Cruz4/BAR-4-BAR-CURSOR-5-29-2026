@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import type { ProfilePost } from '@/lib/profile/social-client';
-import type { DiscoverCard } from '@/lib/scene/discover-client';
+import type { DiscoverCard, DiscoverDrop } from '@/lib/scene/discover-client';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
 import { cn } from '@/lib/utils';
 
@@ -37,6 +37,17 @@ type ScenePortalHubProps = {
   newBlockCount: number;
   newDiscoverCount: number;
   onOpenBlock: () => void;
+  onOpenDiscover: () => void;
+};
+
+type GuestScenePortalHubProps = {
+  publicPulse: {
+    profiles: number;
+    posts: number;
+    pressedSongs: number;
+  };
+  newestPressed: DiscoverDrop[];
+  discoverPreviews: DiscoverCard[];
   onOpenDiscover: () => void;
 };
 
@@ -446,6 +457,171 @@ export function ScenePortalHub({
         <QuickAction href="/insights" title="Music Listener Insights" detail="Real listeners · proof" icon={BarChart3} tone="border-cyan-400/30 text-cyan-300" />
         <QuickAction href="/supporters" title="Support Circle" detail="Followers · Inner Circle" icon={HeartHandshake} tone="border-fuchsia-400/30 text-fuchsia-300" />
         <QuickAction title="Press a Song" detail="Sell · First Drops" icon={Disc3} tone="border-sky-300/40 text-sky-200" />
+      </div>
+    </section>
+  );
+}
+
+export function GuestScenePortalHub({
+  publicPulse,
+  newestPressed,
+  discoverPreviews,
+  onOpenDiscover,
+}: GuestScenePortalHubProps) {
+  const pressedSongs = newestPressed
+    .filter((drop) => drop.type === 'track' && drop.hasDropAudio)
+    .slice(0, 4);
+
+  return (
+    <section className="space-y-3" aria-label="Public Scene Portal">
+      <div className="relative overflow-hidden rounded-[1.7rem] border border-sky-400/20 bg-[radial-gradient(circle_at_8%_4%,rgba(14,165,233,0.1),transparent_30%),radial-gradient(circle_at_94%_25%,rgba(217,70,239,0.1),transparent_30%),linear-gradient(155deg,rgba(3,10,24,0.98),rgba(2,7,18,0.99))] p-3 shadow-[0_28px_90px_rgba(0,0,0,0.5)]">
+        <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_center,rgba(56,189,248,0.18)_0.65px,transparent_0.8px)] [background-size:8px_8px]" />
+
+        <header className="relative mb-4 flex items-center gap-3 px-1">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sky-400/30 bg-sky-500/10 text-sky-300 shadow-[0_0_24px_rgba(14,165,233,0.18)]">
+            <Sparkles className="h-5 w-5" />
+          </span>
+          <span className="min-w-0">
+            <span className="block font-headline text-3xl font-black uppercase leading-none tracking-wide text-white">
+              Scene Portal
+            </span>
+            <span className="mt-1 block text-xs text-white/55">Discover · listen · connect.</span>
+          </span>
+        </header>
+
+        <button
+          type="button"
+          onClick={onOpenDiscover}
+          className="group relative flex w-full min-w-0 items-center gap-3 overflow-hidden rounded-[1.5rem] border border-cyan-300/70 bg-[radial-gradient(circle_at_10%_50%,rgba(6,182,212,0.2),transparent_34%),radial-gradient(circle_at_88%_20%,rgba(217,70,239,0.15),transparent_34%),rgba(5,10,28,0.92)] px-3 py-4 text-left shadow-[inset_0_0_45px_rgba(56,189,248,0.06),0_0_0_1px_rgba(217,70,239,0.2),0_18px_50px_rgba(0,0,0,0.32)] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        >
+          <span className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_center,rgba(56,189,248,0.22)_0.7px,transparent_0.8px)] [background-size:7px_7px]" />
+          <span className="relative flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-full border-2 border-cyan-300/75 bg-cyan-500/10 text-cyan-300 shadow-[0_0_28px_rgba(34,211,238,0.24)]">
+            <Compass className="h-10 w-10" />
+          </span>
+          <span className="relative min-w-0 flex-1">
+            <span className="block font-headline text-[clamp(1.45rem,7vw,2.25rem)] font-black uppercase leading-none tracking-wide text-white">
+              Discover Bar4Bar
+            </span>
+            <span className="mt-1 block text-[11px] leading-snug text-white/60">
+              Preview public music, artists, and Music Fans.
+            </span>
+            <span className="mt-2 block">
+              <PortalStatus tone="cyan">Open public feed</PortalStatus>
+            </span>
+          </span>
+          <ChevronRight className="relative h-7 w-7 shrink-0 text-cyan-200 transition-transform group-hover:translate-x-1" />
+        </button>
+
+        <div className="relative mt-3 grid min-h-[25rem] grid-cols-2 overflow-hidden rounded-[1.5rem] bg-black/45 shadow-[0_18px_50px_rgba(0,0,0,0.34)]">
+          <section className="relative min-w-0 overflow-hidden rounded-l-[1.5rem] border-y border-l border-cyan-300/60 bg-[radial-gradient(circle_at_35%_12%,rgba(6,182,212,0.2),transparent_36%),linear-gradient(165deg,rgba(4,23,42,0.96),rgba(3,11,27,0.98))] px-3 pb-5 pt-5">
+            <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_center,rgba(34,211,238,0.18)_0.65px,transparent_0.8px)] [background-size:7px_7px]" />
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-full border border-cyan-300/60 bg-cyan-500/10 text-cyan-300 shadow-[0_0_28px_rgba(34,211,238,0.2)]">
+              <Radio className="h-8 w-8" />
+            </div>
+            <h2 className="relative mt-4 font-headline text-[clamp(1.05rem,5.7vw,1.65rem)] font-black uppercase leading-none tracking-wide text-white">
+              Scene Pulse
+            </h2>
+            <p className="relative mt-1 text-[9px] leading-snug text-white/50">What is happening now</p>
+            <div className="relative mt-4 space-y-2.5">
+              {[
+                ['Live profiles', publicPulse.profiles],
+                ['Recent posts', publicPulse.posts],
+                ['Pressed songs', publicPulse.pressedSongs],
+              ].map(([label, value]) => (
+                <div key={String(label)} className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-2">
+                  <span className="block font-headline text-xl font-black text-cyan-100">
+                    {Number(value).toLocaleString()}
+                  </span>
+                  <span className="block text-[8px] font-bold uppercase leading-tight tracking-[0.12em] text-white/50">
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="relative min-w-0 overflow-hidden rounded-r-[1.5rem] border-y border-r border-fuchsia-300/60 bg-[radial-gradient(circle_at_65%_12%,rgba(217,70,239,0.2),transparent_36%),linear-gradient(195deg,rgba(38,7,42,0.94),rgba(12,5,26,0.98))] px-3 pb-5 pt-5">
+            <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_center,rgba(232,121,249,0.2)_0.65px,transparent_0.8px)] [background-size:7px_7px]" />
+            <div className="relative ml-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-fuchsia-300/60 bg-fuchsia-500/10 text-fuchsia-300 shadow-[0_0_28px_rgba(217,70,239,0.2)]">
+              <Disc3 className="h-8 w-8" />
+            </div>
+            <h2 className="relative mt-4 font-headline text-[clamp(1rem,5.4vw,1.55rem)] font-black uppercase leading-none tracking-wide text-white">
+              Newest Pressed
+            </h2>
+            <p className="relative mt-1 text-[9px] leading-snug text-white/50">Latest songs for preview</p>
+            <div className="relative mt-4 space-y-2.5">
+              {pressedSongs.length ? pressedSongs.map((drop) => (
+                <Link
+                  key={drop.shareId}
+                  href={`/song/${drop.shareId}`}
+                  className="block min-w-0 rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 transition hover:border-fuchsia-300/55 hover:bg-black/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-300"
+                >
+                  <span className="block truncate text-[10px] font-black text-white">{drop.title}</span>
+                  <span className="mt-0.5 block truncate font-code text-[8px] uppercase tracking-wide text-white/45">{drop.ownerName}</span>
+                </Link>
+              )) : (
+                <p className="rounded-lg border border-dashed border-white/15 bg-black/25 px-2.5 py-4 text-[9px] leading-relaxed text-white/45">
+                  Newly pressed songs will appear here.
+                </p>
+              )}
+            </div>
+          </section>
+
+          <svg className="pointer-events-none absolute left-1/2 top-0 z-20 h-full w-[4rem] -translate-x-1/2 overflow-visible" viewBox="0 0 64 400" preserveAspectRatio="none" aria-hidden>
+            <defs>
+              <linearGradient id="guest-scene-portal-seam" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#67e8f9" />
+                <stop offset="0.5" stopColor="#a78bfa" />
+                <stop offset="1" stopColor="#f0abfc" />
+              </linearGradient>
+            </defs>
+            <path d="M32 0 C 7 72, 57 135, 23 200 C -2 262, 54 330, 32 400" fill="rgba(2,7,18,0.74)" stroke="url(#guest-scene-portal-seam)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+          </svg>
+        </div>
+
+        <div className="relative mt-3 rounded-2xl border border-white/12 bg-black/35 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <span>
+              <span className="block font-headline text-lg font-black uppercase text-white">Fresh from the Scene</span>
+              <span className="block text-[9px] text-white/45">A quick look before opening the full feed</span>
+            </span>
+            <PortalStatus tone="sky">Public</PortalStatus>
+          </div>
+          <div className="mt-3">
+            <DiscoverPreviewList cards={discoverPreviews} />
+          </div>
+        </div>
+
+        <div className="relative mt-3 grid grid-cols-2 gap-2">
+          <Link
+            href="/try"
+            className="flex min-h-20 min-w-0 items-center gap-2 rounded-xl border border-sky-400/35 bg-sky-500/[0.07] px-3 py-3 text-sky-200 transition hover:border-sky-300/70 hover:bg-sky-500/[0.12]"
+          >
+            <AudioWaveform className="h-6 w-6 shrink-0" />
+            <span className="min-w-0">
+              <span className="block font-headline text-sm font-black uppercase leading-tight text-white">Try writing free</span>
+              <span className="mt-0.5 block text-[8px] leading-tight text-white/45">Open the songwriting demo</span>
+            </span>
+          </Link>
+          <Link
+            href="/login?mode=signup&next=%2Fdiscover"
+            className="flex min-h-20 min-w-0 items-center gap-2 rounded-xl border border-fuchsia-400/35 bg-fuchsia-500/[0.07] px-3 py-3 text-fuchsia-200 transition hover:border-fuchsia-300/70 hover:bg-fuchsia-500/[0.12]"
+          >
+            <Users className="h-6 w-6 shrink-0" />
+            <span className="min-w-0">
+              <span className="block font-headline text-sm font-black uppercase leading-tight text-white">Claim free profile</span>
+              <span className="mt-0.5 block text-[8px] leading-tight text-white/45">Join artists and Music Fans</span>
+            </span>
+          </Link>
+        </div>
+
+        <button
+          type="button"
+          onClick={onOpenDiscover}
+          className="relative mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/40 bg-cyan-500/10 px-4 font-headline text-base font-black uppercase tracking-wide text-cyan-100 transition hover:border-cyan-200 hover:bg-cyan-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+        >
+          Browse the public feed <ChevronRight className="h-5 w-5" />
+        </button>
       </div>
     </section>
   );

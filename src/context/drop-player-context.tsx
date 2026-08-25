@@ -96,8 +96,10 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       const ctx = new AC();
       const source = ctx.createMediaElementSource(audio);
       const node = ctx.createAnalyser();
-      node.fftSize = 256;
-      node.smoothingTimeConstant = 0.78;
+      // Enough frequency resolution for visibly distinct sub, bass, mid,
+      // presence, and air movement without making the shared visualizers heavy.
+      node.fftSize = 1024;
+      node.smoothingTimeConstant = 0.52;
       node.minDecibels = -90;
       node.maxDecibels = -20;
       source.connect(node);

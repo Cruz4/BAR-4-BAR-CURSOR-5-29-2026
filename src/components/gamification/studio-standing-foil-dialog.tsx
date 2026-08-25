@@ -220,7 +220,7 @@ export function StudioStandingRankBadge({
             setOpen(true);
           }}
           className={cn(
-            'inline-flex shrink-0 items-center justify-center gap-2 border px-4 py-2 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            'relative inline-flex shrink-0 items-center justify-center gap-2 border px-4 py-2 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             compactOnMobile && 'h-10 w-10 gap-0 px-0 sm:h-auto sm:w-auto sm:gap-2 sm:px-4',
             badgeClassName,
             className
@@ -228,7 +228,12 @@ export function StudioStandingRankBadge({
           aria-label={`View ${stats.rankLabel} Studio Standing plate`}
           title={`${stats.rankLabel} Studio Standing`}
         >
-          <Crown className="h-4 w-4 shrink-0" />
+          <Crown
+            className={cn(
+              'h-4 w-4 shrink-0',
+              compactOnMobile && 'max-sm:absolute max-sm:left-1/2 max-sm:top-1/2 max-sm:-translate-x-1/2 max-sm:-translate-y-1/2'
+            )}
+          />
           <span className={cn('text-xs font-bold uppercase tracking-[0.25em]', compactOnMobile && 'hidden sm:inline')}>
             {stats.rankLabel}
           </span>

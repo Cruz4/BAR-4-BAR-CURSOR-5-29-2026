@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Check, HeartHandshake, Star, UserMinus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Hint } from '@/components/ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +19,12 @@ import {
   updateSupportRelationship,
 } from '@/lib/relationships-client';
 import type { SupportRelationshipState } from '@/lib/relationships';
+
+const FOLLOW_HELP =
+  'Follow is one-way: their public posts and releases can appear in Your Block. No approval is needed, and it does not make you friends.';
+
+const FOLLOWING_HELP =
+  'You follow this profile, so their public activity can appear in Your Block. Friendship is a separate, mutual connection.';
 
 export function SupportButton({
   targetUserId,
@@ -43,9 +50,11 @@ export function SupportButton({
   if (user?.id === targetUserId) return null;
   if (!user) {
     return (
-      <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
-        <a href="/login" aria-label="Follow" title="Follow"><HeartHandshake className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Follow</span></a>
-      </Button>
+      <Hint content={FOLLOW_HELP} side="bottom" actionSafe>
+        <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
+          <a href="/login" aria-label="Follow" title="Follow"><HeartHandshake className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Follow</span></a>
+        </Button>
+      </Hint>
     );
   }
 
@@ -83,33 +92,39 @@ export function SupportButton({
 
   if (!state?.following) {
     return (
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-9 gap-1.5 font-bold uppercase"
-        disabled={busy || !state}
-        onClick={() => void run('follow')}
-        title={state ? `${state.followerCount} followers` : 'Loading followers'}
-      >
-        <HeartHandshake className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Follow</span>
-      </Button>
+      <Hint content={FOLLOW_HELP} side="bottom" actionSafe>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-9 gap-1.5 font-bold uppercase"
+          disabled={busy || !state}
+          onClick={() => void run('follow')}
+          aria-label={`Follow ${targetName}`}
+          title={state ? `${state.followerCount} followers` : 'Loading followers'}
+        >
+          <HeartHandshake className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Follow</span>
+        </Button>
+      </Hint>
     );
   }
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-9 gap-1.5 font-bold uppercase"
-          disabled={busy}
-          title={`${state.followerCount} followers · ${state.innerCircleCount} Inner Circle`}
-        >
-          {state.innerCircle ? <Star className="h-3.5 w-3.5 fill-amber-300 text-amber-300" /> : <Check className="h-3.5 w-3.5 text-emerald-300" />}
-          <span className="max-[380px]:hidden">{state.innerCircle ? 'Inner Circle' : 'Following'}</span>
-        </Button>
-      </DropdownMenuTrigger>
+      <Hint content={FOLLOWING_HELP} side="bottom" actionSafe>
+        <DropdownMenuTrigger asChild>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-9 gap-1.5 font-bold uppercase"
+            disabled={busy}
+            aria-label={`${state.innerCircle ? 'Inner Circle' : 'Following'}: ${targetName}`}
+            title={`${state.followerCount} followers · ${state.innerCircleCount} Inner Circle`}
+          >
+            {state.innerCircle ? <Star className="h-3.5 w-3.5 fill-amber-300 text-amber-300" /> : <Check className="h-3.5 w-3.5 text-emerald-300" />}
+            <span className="max-[380px]:hidden">{state.innerCircle ? 'Inner Circle' : 'Following'}</span>
+          </Button>
+        </DropdownMenuTrigger>
+      </Hint>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>
           {state.followerCount} followers · {state.innerCircleCount} Inner Circle
