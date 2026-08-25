@@ -10,6 +10,7 @@ import {
 import type { DropListenProof } from '@/lib/server/drop-listen-proof';
 import { dropListenerKeyForUser } from '@/lib/server/drop-listener-identity';
 import { emergingEntryPath } from '@/lib/emerging-ranking';
+import { isLiveMusicFanOnly } from '@/lib/server/music-fan-eligibility';
 
 function safeId(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 100);
@@ -78,21 +79,39 @@ export async function recordQualifiedListenProgress(
     `users/${ownerId}/dropInsightDays/${day}_${safeId(input.proof.s)}`
   );
   const emergingRef = db.doc(emergingEntryPath(ownerId, now));
+  const referralCandidate = input.proof.r && input.proof.r !== ownerId && input.proof.r !== input.viewerId
+    ? input.proof.r
+    : null;
+  const referralUserId = referralCandidate && await isLiveMusicFanOnly(db, referralCandidate)
+    ? referralCandidate
+    : null;
+  const referralEmergingRef = referralUserId ? db.doc(emergingEntryPath(referralUserId, now)) : null;
+  const referralTickRef = referralUserId
+    ? shareRef.collection('listenTicks').doc(`${day}_${listenerId}_ref_${safeId(referralUserId)}`)
+    : null;
+  const referralAudienceRef = referralUserId
+    ? db.doc(`users/${referralUserId}/discoveryAudience/${safeId(input.proof.s)}_${listenerId}`)
+    : null;
   const listenerProgressRef = input.viewerId
     ? db.doc(`users/${input.viewerId}/musicProgress/${input.proof.s}`)
     : null;
 
   const result = await db.runTransaction(async (tx) => {
-    const [milestoneTick, qualifiedTick, audienceSnap, listenerProgressSnap] = await Promise.all([
+    const [milestoneTick, qualifiedTick, audienceSnap, listenerProgressSnap, referralTick, referralAudienceSnap] = await Promise.all([
       tx.get(milestoneTickRef),
       qualifies ? tx.get(qualifiedTickRef) : Promise.resolve(null),
       tx.get(audienceRef),
       listenerProgressRef ? tx.get(listenerProgressRef) : Promise.resolve(null),
+      referralTickRef ? tx.get(referralTickRef) : Promise.resolve(null),
+      referralAudienceRef ? tx.get(referralAudienceRef) : Promise.resolve(null),
     ]);
-    if (milestoneTick.exists) return { counted: false, qualified: false };
 
     const audience = audienceSnap.data() || {};
     const newQualifiedDay = qualifies && !qualifiedTick?.exists;
+    const newReferralQualifiedDay = qualifies && Boolean(referralUserId) && !referralTick?.exists;
+    if (milestoneTick.exists && !newReferralQualifiedDay) {
+      return { counted: false, qualified: false, firstForCreator: false };
+    }
     const newAudienceDay = newQualifiedDay && audience.lastQualifiedDay !== day;
     const firstQualified = newAudienceDay && !audience.firstQualifiedAt;
     const repeatDay =
@@ -100,37 +119,32 @@ export async function recordQualifiedListenProgress(
       typeof audience.lastQualifiedDay === 'string' &&
       audience.lastQualifiedDay !== day;
 
-    tx.set(milestoneTickRef, {
-      milestone: input.milestone,
-      listenerKey: input.listenerKey,
-      source,
-      full: input.proof.f === 1,
-      trackId: input.proof.t || null,
-      at: nowIso,
-    });
+    if (!milestoneTick.exists) {
+      tx.set(milestoneTickRef, {
+        milestone: input.milestone,
+        listenerKey: input.listenerKey,
+        source,
+        full: input.proof.f === 1,
+        trackId: input.proof.t || null,
+        at: nowIso,
+      });
 
-    const milestoneField = `milestone${input.milestone}`;
-    const basePatch: Record<string, unknown> = {
-      ownerId,
-      shareId: input.proof.s,
-      title: titleFromShare(share),
-      day,
-      [milestoneField]: FieldValue.increment(1),
-      updatedAt: nowIso,
-    };
-    tx.set(dailyRef, basePatch, { merge: true });
-    tx.set(
-      summaryRef,
-      {
+      const milestoneField = `milestone${input.milestone}`;
+      const basePatch: Record<string, unknown> = {
+        ownerId,
+        shareId: input.proof.s,
+        title: titleFromShare(share),
+        day,
         [milestoneField]: FieldValue.increment(1),
         updatedAt: nowIso,
-      },
-      { merge: true }
-    );
+      };
+      tx.set(dailyRef, basePatch, { merge: true });
+      tx.set(summaryRef, { [milestoneField]: FieldValue.increment(1), updatedAt: nowIso }, { merge: true });
 
-    if (input.milestone === 100) {
-      tx.set(dailyRef, { completions: FieldValue.increment(1) }, { merge: true });
-      tx.set(summaryRef, { completions: FieldValue.increment(1) }, { merge: true });
+      if (input.milestone === 100) {
+        tx.set(dailyRef, { completions: FieldValue.increment(1) }, { merge: true });
+        tx.set(summaryRef, { completions: FieldValue.increment(1) }, { merge: true });
+      }
     }
 
     if (newQualifiedDay) {
@@ -195,6 +209,28 @@ export async function recordQualifiedListenProgress(
           { merge: true }
         );
       }
+    }
+
+    if (newReferralQualifiedDay && referralUserId && referralTickRef && referralAudienceRef && referralEmergingRef) {
+      const referralAudience = referralAudienceSnap?.data() || {};
+      const referralRepeatDay = typeof referralAudience.lastQualifiedDay === 'string'
+        && referralAudience.lastQualifiedDay !== day;
+      tx.set(referralTickRef, { listenerKey: input.listenerKey, referralUserId, source, at: nowIso });
+      tx.set(referralEmergingRef, {
+        userId: referralUserId,
+        convertedShares: FieldValue.increment(1),
+        ...(referralRepeatDay ? { repeatListeners: FieldValue.increment(1) } : {}),
+        updatedAt: nowIso,
+      }, { merge: true });
+      tx.set(referralAudienceRef, {
+        shareId: input.proof.s,
+        listenerKey: input.listenerKey,
+        firstQualifiedAt: referralAudience.firstQualifiedAt || nowIso,
+        lastQualifiedAt: nowIso,
+        lastQualifiedDay: day,
+        qualifiedDayCount: FieldValue.increment(1),
+      }, { merge: true });
+      tx.set(audienceRef, { lastReferralUserId: referralUserId, lastReferralAt: nowIso }, { merge: true });
     }
 
     return { counted: true, qualified: newQualifiedDay, firstForCreator: firstQualified };
@@ -291,6 +327,28 @@ export async function recordDropPurchaseInsight(
         },
         { merge: true }
       );
+      const referralUserId = typeof audience.lastReferralUserId === 'string'
+        ? audience.lastReferralUserId
+        : '';
+      const referralAt = typeof audience.lastReferralAt === 'string'
+        ? Date.parse(audience.lastReferralAt)
+        : 0;
+      if (
+        referralUserId &&
+        referralUserId !== input.ownerId &&
+        referralAt > 0 &&
+        Date.now() - referralAt <= 7 * 24 * 60 * 60 * 1000
+      ) {
+        tx.set(
+          db.doc(emergingEntryPath(referralUserId, now)),
+          {
+            userId: referralUserId,
+            purchaseConversions: FieldValue.increment(1),
+            updatedAt: nowIso,
+          },
+          { merge: true }
+        );
+      }
     }
   });
 }

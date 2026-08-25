@@ -33,6 +33,7 @@ export const EMERGING_FORMULA: EmergingRankingResponse['formula'] = [
   { signal: 'follows', label: 'new follower', points: 4 },
   { signal: 'innerCircleJoins', label: 'new Inner Circle supporter', points: 5 },
   { signal: 'convertedShares', label: 'shared-listen conversion', points: 5 },
+  { signal: 'sharedLoves', label: 'Love on a shared song', points: 1 },
   { signal: 'purchaseConversions', label: 'unique track buyer conversion', points: 8 },
 ];
 
@@ -43,6 +44,7 @@ export function emptyEmergingSignals(): EmergingSignals {
     follows: 0,
     innerCircleJoins: 0,
     convertedShares: 0,
+    sharedLoves: 0,
     purchaseConversions: 0,
   };
 }
@@ -67,6 +69,7 @@ export function emergingReasons(signals: EmergingSignals): string[] {
     signals.innerCircleJoins > 0 ? `${signals.innerCircleJoins} Inner Circle join${signals.innerCircleJoins === 1 ? '' : 's'}` : '',
     signals.purchaseConversions > 0 ? `${signals.purchaseConversions} listener-to-buyer conversion${signals.purchaseConversions === 1 ? '' : 's'}` : '',
     signals.convertedShares > 0 ? `${signals.convertedShares} shared-listen conversion${signals.convertedShares === 1 ? '' : 's'}` : '',
+    (signals.sharedLoves || 0) > 0 ? `${signals.sharedLoves} Love${signals.sharedLoves === 1 ? '' : 's'} on shared music` : '',
   ].filter(Boolean);
   return reasons.slice(0, 3);
 }

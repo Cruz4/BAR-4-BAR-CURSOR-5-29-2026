@@ -2147,6 +2147,7 @@ export type DiscoverShareSummary = {
   shareId: string;
   type: 'album' | 'track';
   title: string;
+  ownerId?: string;
   ownerName: string;
   ownerSlug?: string;
   avatarUrl?: string;
@@ -2276,6 +2277,7 @@ export type DiscoverPostSummary = {
   embedProvider?: string;
   imageUrl?: string;
   isReverb?: boolean;
+  sourceKind?: 'post' | 'song' | 'dna';
   reverbPostId?: string;
   reverbOwnerId?: string;
   reverbOwnerName?: string;
@@ -2313,6 +2315,9 @@ export async function listRecentPublicPosts(
       embedProvider: typeof data.embedProvider === 'string' ? data.embedProvider : undefined,
       imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : undefined,
       ...(data.isReverb === true ? { isReverb: true } : {}),
+      ...(data.sourceKind === 'post' || data.sourceKind === 'song' || data.sourceKind === 'dna'
+        ? { sourceKind: data.sourceKind }
+        : {}),
       ...(typeof data.reverbPostId === 'string' ? { reverbPostId: data.reverbPostId } : {}),
       ...(typeof data.reverbOwnerId === 'string' ? { reverbOwnerId: data.reverbOwnerId } : {}),
       ...(typeof data.reverbOwnerName === 'string'
@@ -2366,6 +2371,7 @@ export type DiscoverRiserSummary = {
   studioBadge?: 'pro' | 'free';
   barsWritten7d: number;
   currentStreak: number;
+  pressing?: PressingConfig;
 };
 
 /** Top of this week's bars-written leaderboard, sliced small for the Scene feed. */
@@ -2410,6 +2416,7 @@ export async function listLeaderboardRisers(
       starMarkUseStar: meta?.starMarkUseStar,
       starMarkSeed: meta?.starMarkSeed,
       studioBadge: meta?.studioBadge,
+      pressing: meta?.pressing,
     };
   });
 }

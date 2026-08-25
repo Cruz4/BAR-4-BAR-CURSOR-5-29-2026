@@ -62,6 +62,9 @@ export function postFromServerDoc(id: string, data: Record<string, unknown>): Pr
       ? { viewCount: Math.floor(data.viewCount) }
       : {}),
     ...(data.isReverb === true ? { isReverb: true } : {}),
+    ...(data.sourceKind === 'post' || data.sourceKind === 'song' || data.sourceKind === 'dna'
+      ? { sourceKind: data.sourceKind }
+      : {}),
     ...(clean(data.reverbPostId, 80) ? { reverbPostId: clean(data.reverbPostId, 80) } : {}),
     ...(clean(data.reverbOwnerId, 128) ? { reverbOwnerId: clean(data.reverbOwnerId, 128) } : {}),
     ...(clean(data.reverbOwnerName, 120) ? { reverbOwnerName: clean(data.reverbOwnerName, 120) } : {}),

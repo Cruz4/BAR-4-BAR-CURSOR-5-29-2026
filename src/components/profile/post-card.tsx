@@ -49,6 +49,8 @@ import { compactReachCount, recordPostViewClient } from '@/lib/post-view-client'
 import { LyricClipCard } from '@/components/profile/lyric-clip-card';
 import { isMasterAdminEmail } from '@/lib/master-admin';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MentionSuggestions } from '@/components/profile/mention-suggestions';
+import { MentionText } from '@/components/profile/mention-text';
 
 type PostCardProps = {
   post: ProfilePost;
@@ -180,7 +182,7 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
       ) : null}
       {post.reverbEmbedUrl || firstDropUrlFromText(post.reverbText) ? (
         <div className="mt-2">
-          <EmbedPlayer url={post.reverbEmbedUrl || firstDropUrlFromText(post.reverbText)!} />
+          <EmbedPlayer url={post.reverbEmbedUrl || firstDropUrlFromText(post.reverbText)!} referralPostId={post.id} />
         </div>
       ) : null}
       {post.reverbVoice ? (
@@ -477,7 +479,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           {showAuthor && (
-            <span className="inline-flex items-center gap-2.5">
+            <span className="flex min-w-0 items-center gap-2.5">
               {authorResolved && !authorIsLive ? (
                 <Hint content="Artist Home offline" side="top">
                   <span className="inline-flex cursor-default">
@@ -518,7 +520,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
           )}
           <Link
             href={`/p/${post.id}`}
-            className="text-[10px] uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))] hover:text-[var(--ph-text,#fff)] hover:underline"
+            className="mt-1 inline-flex whitespace-nowrap text-[10px] uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))] hover:text-[var(--ph-text,#fff)] hover:underline"
             aria-label="Open public post permalink"
           >
             {timeAgo(post.createdAt)}
@@ -545,7 +547,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         </div>
       ) : post.text ? (
         <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--ph-text,#fff)]">
-          {post.text}
+          <MentionText text={post.text} />
         </p>
       ) : null}
 
@@ -575,7 +577,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
 
       {!post.isReverb && (post.embedUrl || firstDropUrlFromText(post.text)) && (
         <div className="mt-3">
-          <EmbedPlayer url={post.embedUrl || firstDropUrlFromText(post.text)!} />
+          <EmbedPlayer url={post.embedUrl || firstDropUrlFromText(post.text)!} referralPostId={post.id} />
         </div>
       )}
 
@@ -683,7 +685,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
               Add your own thought above the original, then pass both to your wall.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="relative space-y-3">
             <Textarea
               value={reverbQuote}
               onChange={(event) => setReverbQuote(event.target.value.slice(0, 1000))}
@@ -693,6 +695,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
               className="resize-none border-violet-400/20 bg-black/30"
               autoFocus
             />
+            <MentionSuggestions value={reverbQuote} onChange={setReverbQuote} excludeUserId={user?.id} />
             <div className="rounded-lg border border-white/10 bg-black/25 px-3 py-2.5">
               <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
                 Original · {post.isReverb ? post.reverbOwnerName || 'Artist' : post.ownerName}

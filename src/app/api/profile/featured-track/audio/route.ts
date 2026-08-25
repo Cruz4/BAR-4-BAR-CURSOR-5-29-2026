@@ -76,6 +76,7 @@ export async function GET(req: Request) {
       authenticated: listener.authenticated,
       full,
       eligibleDurationSec,
+      ...(profileUserId !== share.ownerId ? { referralUserId: profileUserId } : {}),
     });
     const response = NextResponse.json({
       url: dropAudioFileUrl(ticket),

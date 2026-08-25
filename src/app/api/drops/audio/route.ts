@@ -29,6 +29,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const shareId = (searchParams.get('shareId') || '').trim();
     const trackId = (searchParams.get('trackId') || '').trim() || undefined;
+    const referralPostId = (searchParams.get('referralPostId') || '').trim().slice(0, 128);
     if (!shareId) return NextResponse.json({ error: 'Missing drop.' }, { status: 400 });
 
     const db = await getDb();
@@ -51,6 +52,17 @@ export async function GET(req: Request) {
     const eligibleDurationSec = full
       ? Math.max(1, audio.durationSec || DROP_PREVIEW_SECONDS)
       : Math.max(1, Math.min(DROP_PREVIEW_SECONDS, audio.durationSec || DROP_PREVIEW_SECONDS));
+    let referralUserId: string | undefined;
+    if (referralPostId) {
+      const post = await db.doc(`posts/${referralPostId}`).get();
+      const postData = post.data() || {};
+      const embedded = typeof postData.embedUrl === 'string' ? postData.embedUrl : '';
+      const linkedShareId = embedded.match(/\/(?:song|share)\/([^/?#]+)/)?.[1];
+      const postOwnerId = typeof postData.ownerId === 'string' ? postData.ownerId : '';
+      if (post.exists && linkedShareId && decodeURIComponent(linkedShareId) === shareId && postOwnerId && postOwnerId !== share.ownerId) {
+        referralUserId = postOwnerId;
+      }
+    }
     const listenProof = mintDropListenProof({
       shareId,
       trackId,
@@ -58,6 +70,7 @@ export async function GET(req: Request) {
       authenticated: listener.authenticated,
       full,
       eligibleDurationSec,
+      ...(referralUserId ? { referralUserId } : {}),
     });
     const response = NextResponse.json({
       url: dropAudioFileUrl(ticket),

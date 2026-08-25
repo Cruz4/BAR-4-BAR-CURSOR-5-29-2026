@@ -16,6 +16,7 @@ export const ACTIVITY_TYPES = [
   'post_love',
   'post_reply',
   'post_reverb',
+  'mention',
   'dna_import',
   'drop_loved',
   'drop_reply',
@@ -51,6 +52,7 @@ export const SERVER_ONLY_ACTIVITY_TYPES: readonly ActivityType[] = [
   'love_milestone',
   'profile_followed',
   'inner_circle_joined',
+  'mention',
 ];
 
 export function isCraftActivityType(type: ActivityType): boolean {
@@ -76,6 +78,12 @@ export type ActivityEvent = {
   preview?: string;
   href?: string;
   readAt?: string | null;
+};
+
+export type ActivityFeedPage = {
+  events: ActivityEvent[];
+  /** Opaque event id used to continue through older stored activity. */
+  nextCursor: string | null;
 };
 
 export type ActivityPrefs = {
@@ -142,6 +150,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     post_love: 'loved your post',
     post_reply: 'replied to your post',
     post_reverb: 'Reverbed your post',
+    mention: 'mentioned you',
     dna_import: 'imported your DNA Drop',
     drop_loved: 'loved your First Drop',
     drop_reply: 'replied on your First Drop',
@@ -168,6 +177,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     post_love: 'you loved a post by',
     post_reply: 'you replied to a post by',
     post_reverb: 'you Reverbed a post by',
+    mention: 'you mentioned',
     dna_import: 'you imported a DNA Drop from',
     drop_loved: 'you loved a First Drop by',
     drop_reply: 'you replied on a First Drop by',
@@ -285,6 +295,11 @@ export function pushCopyForActivity(
         title: 'Bar 4 Bar',
         body: `${actorName} Reverbed your post`,
       };
+    case 'mention':
+      return {
+        title: `${actorName} mentioned you`,
+        body: snippet || 'Open Activity to see the mention.',
+      };
     case 'dna_import':
       return {
         title: 'Bar 4 Bar',
@@ -345,6 +360,7 @@ export function prefsAllowsPush(prefs: ActivityPrefs, type: ActivityType): boole
     case 'post_reply':
       return prefs.postReplies;
     case 'post_reverb':
+    case 'mention':
       return prefs.postLoves;
     case 'dna_import':
       return prefs.dnaImports;

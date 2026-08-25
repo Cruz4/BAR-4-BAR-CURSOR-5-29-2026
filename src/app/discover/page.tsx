@@ -24,6 +24,9 @@ import {
 } from '@/lib/scene/discover-client';
 import type { DiscoveryGraphMode } from '@/lib/discovery-graph';
 import { DISCOVER_PAGE_SIZE } from '@/lib/scene/scene-section-prefs';
+import { LivingPressField } from '@/components/profile/living-press-field';
+import { pressTokens, pressingCssVars } from '@/lib/profile/pressing';
+import { cn } from '@/lib/utils';
 
 const LIST_SECTION_ID = 'discover-list';
 
@@ -94,6 +97,13 @@ export default function DiscoverPage() {
     safePage * DISCOVER_PAGE_SIZE,
     safePage * DISCOVER_PAGE_SIZE + DISCOVER_PAGE_SIZE
   );
+  const guestPressing = !user
+    ? discover?.artists.find((artist) => artist.pressing)?.pressing || discover?.drops.find((drop) => drop.pressing)?.pressing
+    : undefined;
+  const guestPressingStyle = useMemo(
+    () => guestPressing ? pressingCssVars(pressTokens(guestPressing)) : undefined,
+    [guestPressing]
+  );
 
   useEffect(() => {
     if (page !== safePage) setPage(safePage);
@@ -115,7 +125,10 @@ export default function DiscoverPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-2xl space-y-6 px-4 py-8">
+    <div className="relative min-h-screen overflow-hidden bg-background" style={guestPressingStyle as React.CSSProperties}>
+      {!user && guestPressing ? <LivingPressField config={guestPressing} /> : null}
+      <div className={cn('relative z-10 mx-auto px-4 py-8', user ? 'max-w-2xl' : 'grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]')}>
+      <main className="space-y-6">
       <header className="space-y-3">
         <Button size="sm" variant="outline" className="h-8 gap-1.5 font-bold uppercase" asChild>
           <Link href="/">
@@ -221,6 +234,33 @@ export default function DiscoverPage() {
           </>
         )}
       </div> : null}
+      </main>
+      {!user ? (
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <section className="rounded-2xl border border-cyan-400/25 bg-black/60 p-4 backdrop-blur-md">
+            <p className="font-headline text-lg font-bold uppercase text-cyan-200">Scene pulse</p>
+            <div className="mt-3 grid grid-cols-3 gap-2 lg:grid-cols-1">
+              {[
+                ['Live profiles', discover?.publicPulse.profiles || 0],
+                ['Recent posts', discover?.publicPulse.posts || 0],
+                ['Pressed songs', discover?.publicPulse.pressedSongs || 0],
+              ].map(([label, value]) => <div key={String(label)} className="rounded-lg border border-white/10 bg-black/35 p-2"><p className="font-headline text-xl font-bold">{Number(value).toLocaleString()}</p><p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p></div>)}
+            </div>
+          </section>
+          <section className="rounded-2xl border border-fuchsia-400/25 bg-black/60 p-4 backdrop-blur-md">
+            <p className="font-headline text-lg font-bold uppercase text-fuchsia-200">Newest pressed</p>
+            <div className="mt-3 space-y-2">
+              {(discover?.drops || []).filter((drop) => drop.type === 'track' && drop.hasDropAudio).slice(0, 5).map((drop) => (
+                <Link key={drop.shareId} href={`/song/${drop.shareId}`} className="block rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:border-fuchsia-300/40">
+                  <span className="block truncate text-xs font-bold">{drop.title}</span><span className="block truncate font-code text-[9px] text-muted-foreground">{drop.ownerName}</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+          <Button asChild className="w-full font-bold uppercase"><Link href="/login?mode=signup&next=%2Fdiscover">Join the Scene</Link></Button>
+        </aside>
+      ) : null}
+      </div>
     </div>
   );
 }

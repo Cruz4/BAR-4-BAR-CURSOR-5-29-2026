@@ -1,4 +1,5 @@
 import type { DropPrice } from '@/lib/drop-commerce';
+import type { PressingConfig } from '@/lib/profile/pressing';
 
 export function pressedSongHref(shareId: string): string {
   return `/song/${encodeURIComponent(shareId)}`;
@@ -28,6 +29,7 @@ export type PressedSongSummary = {
     studioBadge?: 'pro' | 'free';
     starMarkUseStar?: boolean;
     starMarkSeed?: number;
+    pressing?: PressingConfig;
   };
   publicTotals: { plays: number; buyers: number };
   member?: {

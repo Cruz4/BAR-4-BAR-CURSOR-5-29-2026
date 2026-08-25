@@ -13,16 +13,17 @@ const signals = {
   follows: 1,
   innerCircleJoins: 1,
   convertedShares: 1,
+  sharedLoves: 1,
   purchaseConversions: 1,
 };
 
-assert.equal(emergingScore(signals), 38, 'emerging score no longer matches its public weights');
+assert.equal(emergingScore(signals), 39, 'emerging score no longer matches its public weights');
 assert.equal(
   emergingScore({
     ...signals,
     ...({ amountCents: 1_000_000, inkSpent: 1_000_000, isPro: true, sponsored: true } as object),
   }),
-  38,
+  39,
   'money, Ink, tier, or sponsorship changed emerging rank'
 );
 assert.deepEqual(
@@ -35,7 +36,7 @@ assert.equal(emergingDayKey(fixed), '2026-08-24');
 assert.equal(emergingEntryPath('listener-1', fixed), 'emergingSignals/2026-08-24/entries/listener-1');
 assert.deepEqual(
   EMERGING_FORMULA.map(({ points }) => points),
-  [1, 3, 4, 5, 5, 8],
+  [1, 3, 4, 5, 5, 1, 8],
   'public formula no longer matches organic momentum weights'
 );
 

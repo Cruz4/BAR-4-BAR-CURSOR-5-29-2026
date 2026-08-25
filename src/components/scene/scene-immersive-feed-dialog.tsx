@@ -11,10 +11,16 @@ import type { ProfilePost } from '@/lib/profile/social-client';
 import type { DiscoverCard } from '@/lib/scene/discover-client';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { cn } from '@/lib/utils';
-import type { PressingConfig } from '@/lib/profile/pressing';
+import {
+  pressTokens,
+  pressingCssVars,
+  type PressingConfig,
+} from '@/lib/profile/pressing';
 import { LivingPressField } from '@/components/profile/living-press-field';
 
 type FeedMode = 'block' | 'discover';
+
+const MemoizedLivingPressField = React.memo(LivingPressField);
 
 type SlideMeta = {
   key: string;
@@ -86,6 +92,7 @@ function discoverMeta(card: DiscoverCard): SlideMeta {
       userId: card.lock.ownerId,
       slug: card.lock.ownerSlug,
       href: `/lock/${card.lock.id}`,
+      pressing: card.lock.pressing,
     };
   }
   const first = card.risers[0];
@@ -97,6 +104,7 @@ function discoverMeta(card: DiscoverCard): SlideMeta {
     slug: first?.profileSlug,
     avatarUrl: first?.avatarUrl,
     href: '/leaderboard',
+    pressing: first?.pressing,
   };
 }
 
@@ -110,12 +118,13 @@ function FeedBubble({ meta, active, onClick }: { meta: SlideMeta; active: boolea
       aria-current={active ? 'true' : undefined}
     >
       <span className={cn(
-        'rounded-full p-0.5 transition',
+        'p-0.5 transition',
+        meta.avatarUrl ? 'rounded-xl' : 'rounded-full',
         active
           ? 'bg-gradient-to-br from-fuchsia-400 via-sky-400 to-cyan-300 shadow-[0_0_18px_rgba(56,189,248,0.45)]'
           : 'bg-white/15 group-hover:bg-white/30'
       )}>
-        <span className="block rounded-full bg-[hsl(216_38%_6%)] p-0.5">
+        <span className={cn('block bg-[hsl(216_38%_6%)] p-0.5', meta.avatarUrl ? 'rounded-[0.65rem]' : 'rounded-full')}>
           <LiveArtistStarAvatar
             name={meta.name}
             userId={meta.userId}
@@ -133,6 +142,52 @@ function FeedBubble({ meta, active, onClick }: { meta: SlideMeta; active: boolea
   );
 }
 
+function feedScrollProgress(scroller: HTMLDivElement): number {
+  const slides = Array.from(scroller.children) as HTMLElement[];
+  if (slides.length < 2) return 0;
+  const top = scroller.scrollTop;
+  let lower = 0;
+  while (lower < slides.length - 1 && slides[lower + 1]!.offsetTop <= top) lower += 1;
+  const currentTop = slides[lower]!.offsetTop;
+  const nextTop = slides[lower + 1]?.offsetTop;
+  if (typeof nextTop !== 'number' || nextTop <= currentTop) return lower;
+  return lower + Math.max(0, Math.min(1, (top - currentTop) / (nextTop - currentTop)));
+}
+
+function FeedBackdrop({
+  meta,
+  mode,
+  opacity,
+}: {
+  meta: SlideMeta;
+  mode: FeedMode;
+  opacity: number;
+}) {
+  const pressingStyle = useMemo(
+    () => (meta.pressing ? pressingCssVars(pressTokens(meta.pressing)) : undefined),
+    [meta.pressing]
+  );
+
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 transition-opacity duration-300 ease-out will-change-[opacity]"
+      style={{ ...pressingStyle, opacity }}
+      aria-hidden
+    >
+      {meta.pressing ? (
+        <MemoizedLivingPressField config={meta.pressing} className="!absolute" />
+      ) : (
+        <div className={cn(
+          'absolute inset-0',
+          mode === 'block'
+            ? 'bg-[radial-gradient(circle_at_25%_35%,rgba(236,72,153,0.16),transparent_38%),radial-gradient(circle_at_75%_70%,rgba(37,99,235,0.16),transparent_44%),#030812]'
+            : 'bg-[radial-gradient(circle_at_25%_35%,rgba(34,211,238,0.15),transparent_38%),radial-gradient(circle_at_75%_70%,rgba(168,85,247,0.16),transparent_44%),#030812]'
+        )} />
+      )}
+    </div>
+  );
+}
+
 export function SceneImmersiveFeedDialog({
   mode,
   initialItemKey,
@@ -146,7 +201,10 @@ export function SceneImmersiveFeedDialog({
   const open = mode !== null;
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const bubbleRefs = useRef<Array<HTMLSpanElement | null>>([]);
+  const scrollFrameRef = useRef<number | null>(null);
+  const pendingProgressRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   const items = useMemo(() => {
     if (mode === 'block') {
@@ -161,8 +219,13 @@ export function SceneImmersiveFeedDialog({
   useEffect(() => {
     if (!open) return;
     setActiveIndex(0);
+    setScrollProgress(0);
     requestAnimationFrame(() => scrollerRef.current?.scrollTo({ top: 0 }));
   }, [mode, open]);
+
+  useEffect(() => () => {
+    if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
+  }, []);
 
   useEffect(() => {
     if (activeIndex < items.length) return;
@@ -182,6 +245,17 @@ export function SceneImmersiveFeedDialog({
     if (!scroller) return;
     scroller.children.item(next)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setActiveIndex(next);
+  };
+
+  const syncScrollPosition = (scroller: HTMLDivElement) => {
+    pendingProgressRef.current = feedScrollProgress(scroller);
+    if (scrollFrameRef.current !== null) return;
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      const progress = pendingProgressRef.current;
+      setScrollProgress(progress);
+      setActiveIndex(Math.max(0, Math.min(items.length - 1, Math.round(progress))));
+      scrollFrameRef.current = null;
+    });
   };
 
   useEffect(() => {
@@ -206,6 +280,22 @@ export function SceneImmersiveFeedDialog({
       >
         <DialogTitle className="sr-only">{title}</DialogTitle>
         <DialogDescription className="sr-only">Scroll one full-screen post or profile at a time.</DialogDescription>
+
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-[#030812]">
+          {mode ? items.map((item, index) => {
+            const opacity = Math.max(0, 1 - Math.abs(index - scrollProgress));
+            if (opacity <= 0) return null;
+            return (
+              <FeedBackdrop
+                key={`backdrop-${item.meta.key}`}
+                meta={item.meta}
+                mode={mode}
+                opacity={opacity}
+              />
+            );
+          }) : null}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgba(0,0,0,0.28)_100%)]" />
+        </div>
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-40 bg-gradient-to-b from-black via-black/85 to-transparent pb-6 pt-[max(0.65rem,env(safe-area-inset-top))]">
           <div className="pointer-events-auto flex items-center gap-2 px-3 sm:px-5">
@@ -250,50 +340,41 @@ export function SceneImmersiveFeedDialog({
 
         <div
           ref={scrollerRef}
-          className="h-[100dvh] touch-pan-y snap-y snap-mandatory overflow-y-auto overscroll-y-contain scroll-smooth [-webkit-overflow-scrolling:touch]"
-          onScroll={(event) => {
-            const el = event.currentTarget;
-            const slides = Array.from(el.children) as HTMLElement[];
-            const index = slides.reduce((closest, slide, candidate) => (
-              Math.abs(slide.offsetTop - el.scrollTop) < Math.abs(slides[closest].offsetTop - el.scrollTop)
-                ? candidate
-                : closest
-            ), 0);
-            if (index !== activeIndex) setActiveIndex(Math.max(0, Math.min(items.length - 1, index)));
-          }}
+          className="relative z-10 h-[100dvh] touch-pan-y snap-y snap-mandatory overflow-y-auto overscroll-y-contain scroll-smooth [-webkit-overflow-scrolling:touch]"
+          onScroll={(event) => syncScrollPosition(event.currentTarget)}
         >
           {items.length ? items.map((item, index) => (
             <section
               key={item.meta.key}
-              className="relative flex min-h-[100dvh] touch-pan-y snap-start snap-always items-center justify-center pb-[max(1rem,env(safe-area-inset-bottom))] pl-3 pr-14 pt-[7.4rem] sm:px-16 sm:pt-[8.25rem]"
+              className="relative flex min-h-[100dvh] touch-pan-y snap-start items-center justify-center pb-[max(1rem,env(safe-area-inset-bottom))] pl-3 pr-14 pt-[7.4rem] sm:px-16 sm:pt-[8.25rem]"
               aria-label={`${title}: ${item.meta.name}`}
             >
-              {item.meta.pressing && Math.abs(index - activeIndex) <= 1 ? (
-                <div className={cn('pointer-events-none absolute inset-0 transition-opacity duration-500', activeIndex === index ? 'opacity-75' : 'opacity-35')}>
-                  <LivingPressField config={item.meta.pressing} compact className="!absolute" />
-                </div>
-              ) : null}
-              <div className={cn(
-                'pointer-events-none absolute inset-0 opacity-70',
-                mode === 'block'
-                  ? 'bg-[radial-gradient(circle_at_25%_35%,rgba(236,72,153,0.16),transparent_34%),radial-gradient(circle_at_75%_70%,rgba(37,99,235,0.14),transparent_40%)]'
-                  : 'bg-[radial-gradient(circle_at_25%_35%,rgba(34,211,238,0.14),transparent_34%),radial-gradient(circle_at_75%_70%,rgba(168,85,247,0.14),transparent_40%)]'
-              )} />
-
               <div className="relative z-10 w-full max-w-[44rem]">
                 <div className="mb-2 flex min-w-0 items-center gap-2 px-1 pr-14 sm:pr-1">
-                  <LiveArtistStarAvatar
-                    name={item.meta.name}
-                    userId={item.meta.userId}
-                    slug={item.meta.slug}
-                    avatarUrl={item.meta.avatarUrl}
-                    size={42}
-                    link={false}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold text-white">{item.meta.name}</span>
-                    <span className="block truncate font-code text-[8px] uppercase tracking-[0.16em] text-white/40">{item.meta.label}</span>
-                  </span>
+                  {item.meta.href ? (
+                    <Link href={item.meta.href} onClick={() => onOpenChange(false)} className="contents">
+                      <LiveArtistStarAvatar
+                        name={item.meta.name}
+                        userId={item.meta.userId}
+                        slug={item.meta.slug}
+                        avatarUrl={item.meta.avatarUrl}
+                        size={42}
+                        link={false}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-bold text-white hover:text-sky-200">{item.meta.name}</span>
+                        <span className="block truncate font-code text-[8px] uppercase tracking-[0.16em] text-white/40">{item.meta.label}</span>
+                      </span>
+                    </Link>
+                  ) : (
+                    <>
+                      <LiveArtistStarAvatar name={item.meta.name} userId={item.meta.userId} slug={item.meta.slug} avatarUrl={item.meta.avatarUrl} size={42} link={false} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-bold text-white">{item.meta.name}</span>
+                        <span className="block truncate font-code text-[8px] uppercase tracking-[0.16em] text-white/40">{item.meta.label}</span>
+                      </span>
+                    </>
+                  )}
                 </div>
                 <div className="touch-pan-y rounded-2xl border border-white/10 bg-[hsl(216_38%_7%)]/95 p-0.5 shadow-[0_28px_90px_rgba(0,0,0,0.55)]">
                   {'post' in item ? (

@@ -69,6 +69,7 @@ export type DiscoverRiser = {
   studioBadge?: 'pro' | 'free';
   barsWritten7d: number;
   currentStreak: number;
+  pressing?: PressingConfig;
 };
 
 export type DiscoverLock = {
@@ -80,6 +81,7 @@ export type DiscoverLock = {
   echoCount: number;
   updatedAt: string;
   isHouse?: boolean;
+  pressing?: PressingConfig;
 };
 
 export type DiscoverData = {
@@ -93,6 +95,7 @@ export type DiscoverData = {
     hasTaste: boolean;
     hasCreation: boolean;
   };
+  publicPulse: { profiles: number; posts: number; pressedSongs: number };
 };
 
 export type DiscoverCard = (
@@ -115,6 +118,7 @@ const EMPTY: DiscoverData = {
   risers: [],
   locks: [],
   viewerGraph: { personalized: false, hasTaste: false, hasCreation: false },
+  publicPulse: { profiles: 0, posts: 0, pressedSongs: 0 },
 };
 
 export async function fetchDiscover(
@@ -160,6 +164,14 @@ export async function fetchDiscover(
               hasCreation: Boolean(data.viewerGraph.hasCreation),
             }
           : EMPTY.viewerGraph,
+      publicPulse:
+        data.publicPulse && typeof data.publicPulse === 'object'
+          ? {
+              profiles: Math.max(0, Number(data.publicPulse.profiles) || 0),
+              posts: Math.max(0, Number(data.publicPulse.posts) || 0),
+              pressedSongs: Math.max(0, Number(data.publicPulse.pressedSongs) || 0),
+            }
+          : EMPTY.publicPulse,
     };
   } catch {
     return EMPTY;

@@ -357,6 +357,11 @@ export function Header() {
                       {SCENE_HOME_ENABLED && (
                         <DropdownMenuItem onClick={() => router.push(VAULT_PATH)}><Archive className="mr-2 h-4 w-4 text-sky-400" /><span>The Vault</span></DropdownMenuItem>
                       )}
+                      <DropdownMenuItem onClick={() => router.push('/usage?tab=cloud')}>
+                        <Star className={cn('mr-2 h-4 w-4', studioTierMenuClass(studioChrome))} />
+                        <span className={studioTierMenuClass(studioChrome)}>Studio Tier</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => router.push('/usage?tab=buy-ink')}><LayoutGrid className="mr-2 h-4 w-4 text-primary" /><span>Ink Store</span></DropdownMenuItem>
                       <DropdownMenuItem className="md:hidden" onClick={() => setGuideOpen(true)}><HelpCircle className="mr-2 h-4 w-4 text-primary" /><span>Studio Manual</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/studio-progress')}><Trophy className="mr-2 h-4 w-4 text-amber-400" /><span>Studio Progress</span></DropdownMenuItem>
                       {foldsOn ? (
@@ -393,7 +398,6 @@ export function Header() {
                         <HeartHandshake className="mr-2 h-4 w-4 text-fuchsia-400" />
                         <span>Support Circle</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => router.push('/usage?tab=buy-ink')}><LayoutGrid className="mr-2 h-4 w-4 text-primary" /><span>Ink Store</span></DropdownMenuItem>
                       {firstDropsOn ? (
                         <>
                           <DropdownMenuItem onClick={() => router.push('/insights')}>
@@ -407,10 +411,6 @@ export function Header() {
                         </>
                       ) : null}
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=settings')}><Settings className="mr-2 h-4 w-4" /><span>Settings</span></DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => router.push('/usage?tab=cloud')}>
-                        <Star className={cn('mr-2 h-4 w-4', studioTierMenuClass(studioChrome))} />
-                        <span className={studioTierMenuClass(studioChrome)}>Studio Tier</span>
-                      </DropdownMenuItem>
                       {showPwaInstallMenu && (
                         <DropdownMenuItem className="md:hidden" onClick={() => requestPwaInstallPrompt()}>
                           <Smartphone className="mr-2 h-4 w-4 text-primary" /><span>Add to Home Screen</span>

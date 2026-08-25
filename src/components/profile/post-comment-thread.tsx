@@ -35,6 +35,8 @@ import { type RecordedVoiceClip } from '@/lib/profile/voice-notes';
 import { activityCommentElementId } from '@/lib/activity/post-deep-link';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 import { isMasterAdminEmail } from '@/lib/master-admin';
+import { MentionSuggestions } from '@/components/profile/mention-suggestions';
+import { MentionText } from '@/components/profile/mention-text';
 
 type PostCommentThreadProps = {
   postId?: string;
@@ -218,7 +220,7 @@ export function PostCommentThread({
               {node.authorName}
             </ArtistHomeLink>
             {node.text ? (
-              <span className="text-[var(--ph-text,#fff)]/90">{node.text}</span>
+              <span className="text-[var(--ph-text,#fff)]/90"><MentionText text={node.text} /></span>
             ) : null}
             {node.imageUrl ? (
               <div className="mt-1.5">
@@ -349,7 +351,7 @@ export function PostCommentThread({
             />
             <EmojiPickerButton compact disabled={busy} onInsert={insertEmoji} />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="relative flex items-center gap-2">
             <Input
               ref={draftRef}
               value={draft}
@@ -385,6 +387,7 @@ export function PostCommentThread({
               }
               className="h-8 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 text-sm"
             />
+            <MentionSuggestions value={draft} onChange={setDraft} excludeUserId={user?.id} />
             <Button
               size="icon"
               variant="ghost"

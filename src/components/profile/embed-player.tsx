@@ -52,7 +52,7 @@ function firstDropShareId(raw: string): string | null {
 }
 
 /** Native First Drop media inside a wall/feed post. Entitlements stay server-authoritative. */
-function FirstDropFeedPlayer({ shareId }: { shareId: string }) {
+function FirstDropFeedPlayer({ shareId, referralPostId }: { shareId: string; referralPostId?: string }) {
   const [song, setSong] = useState<PressedSongSummary | null>(null);
 
   useEffect(() => {
@@ -81,6 +81,7 @@ function FirstDropFeedPlayer({ shareId }: { shareId: string }) {
         ownerId={song.ownerId}
         price={song.price}
         hasAudio
+        referralPostId={referralPostId}
       />
     </Suspense>
   );
@@ -145,9 +146,9 @@ export function FeaturedTrackPlayer({
   );
 }
 
-export function EmbedPlayer({ url, title }: { url: string; title?: string }) {
+export function EmbedPlayer({ url, title, referralPostId }: { url: string; title?: string; referralPostId?: string }) {
   const dropShareId = firstDropShareId(url);
-  if (dropShareId) return <FirstDropFeedPlayer shareId={dropShareId} />;
+  if (dropShareId) return <FirstDropFeedPlayer shareId={dropShareId} referralPostId={referralPostId} />;
 
   const parsed = parseEmbedUrl(url);
 

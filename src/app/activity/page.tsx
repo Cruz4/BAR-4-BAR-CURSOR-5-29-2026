@@ -30,7 +30,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import {
-  fetchActivityFeed,
+  fetchActivityFeedPage,
   FRIENDSHIP_CHANGED_EVENT,
   clearFriendRequestActivityFromPeer,
   markActivityEventsRead,
@@ -38,7 +38,7 @@ import {
   type FriendshipChangedDetail,
 } from '@/lib/activity/client';
 import { navigateActivityHref, resolveActivityOpenHref } from '@/lib/activity/href';
-import { activityShowsActor, activityVerb, type ActivityEvent, type ActivityType } from '@/lib/activity/types';
+import { activityShowsActor, activityVerb, type ActivityDirection, type ActivityEvent, type ActivityType } from '@/lib/activity/types';
 import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import {
   acceptFriendRequest,
@@ -225,6 +225,16 @@ function ActivityRow({
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
             {timeAgo(event.createdAt)}
           </span>
+          {event.direction === 'received' ? (
+            <span className={cn(
+              'rounded-full border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider',
+              unread
+                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                : 'border-white/10 bg-white/5 text-muted-foreground'
+            )}>
+              {unread ? 'Unread' : 'Read'}
+            </span>
+          ) : null}
           {(event.type !== 'friend_request' && event.type !== 'contact_request') ||
           event.direction === 'given' ? (
             <button
@@ -295,6 +305,10 @@ function ActivityPageInner() {
   const [inbox, setInbox] = useState<ActivityEvent[]>([]);
   const [sent, setSent] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingOlder, setLoadingOlder] = useState<ActivityDirection | null>(null);
+  const [inboxCursor, setInboxCursor] = useState<string | null>(null);
+  const [sentCursor, setSentCursor] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
   /** Actor user ids whose incoming friend request is still pending in Firestore. */
   const [pendingRequesterIds, setPendingRequesterIds] = useState<Set<string>>(() => new Set());
@@ -307,21 +321,24 @@ function ActivityPageInner() {
   const load = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
+    setLoadError('');
     markedOnOpenRef.current = false;
     try {
-      const [received, given, pendingFriends, acceptedFriends, pendingContactIds] = await Promise.all([
-        fetchActivityFeed('received'),
-        fetchActivityFeed('given'),
+      const [receivedPage, givenPage, pendingFriends, acceptedFriends, pendingContactIds] = await Promise.all([
+        fetchActivityFeedPage('received'),
+        fetchActivityFeedPage('given'),
         fetchFriendships(user.id, 'pending').catch(() => []),
         fetchFriendships(user.id, 'accepted').catch(() => []),
         fetchPendingContactRequesterIds().catch(() => []),
       ]);
       const [inboxResolved, sentResolved] = await Promise.all([
-        withResolvedProfileLinks(received),
-        withResolvedProfileLinks(given),
+        withResolvedProfileLinks(receivedPage.events),
+        withResolvedProfileLinks(givenPage.events),
       ]);
       setInbox(inboxResolved);
       setSent(sentResolved);
+      setInboxCursor(receivedPage.nextCursor);
+      setSentCursor(givenPage.nextCursor);
 
       const acceptedPeerIds = new Set(
         acceptedFriends
@@ -389,10 +406,14 @@ function ActivityPageInner() {
         )
       );
       setPendingContactRequesterIds(new Set(pendingContactIds));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not load activity history.';
+      setLoadError(message);
+      toast({ variant: 'destructive', title: 'Activity history unavailable', description: message });
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [toast, user?.id]);
 
   useEffect(() => {
     if (!authReady) return;
@@ -452,14 +473,9 @@ function ActivityPageInner() {
 
   useEffect(() => {
     if (!user?.id || loading || markedOnOpenRef.current) return;
-    const unreadIds = inbox.filter((e) => !e.readAt).map((e) => e.id);
-    if (!unreadIds.length) {
-      markedOnOpenRef.current = true;
-      return;
-    }
     markedOnOpenRef.current = true;
     const t = window.setTimeout(() => {
-      void markActivityEventsRead(unreadIds).then(() => {
+      void markAllActivityEventsRead().then(() => {
         setInbox((prev) =>
           prev.map((e) => (e.readAt ? e : { ...e, readAt: new Date().toISOString() }))
         );
@@ -468,6 +484,35 @@ function ActivityPageInner() {
     }, 800);
     return () => window.clearTimeout(t);
   }, [user?.id, loading, inbox]);
+
+  const loadOlder = useCallback(async (direction: ActivityDirection) => {
+    const cursor = direction === 'received' ? inboxCursor : sentCursor;
+    if (!cursor || loadingOlder) return;
+    setLoadingOlder(direction);
+    try {
+      const page = await fetchActivityFeedPage(direction, 60, cursor);
+      const resolved = await withResolvedProfileLinks(page.events);
+      const appendUnique = (current: ActivityEvent[]) => {
+        const seen = new Set(current.map((event) => event.id));
+        return [...current, ...resolved.filter((event) => !seen.has(event.id))];
+      };
+      if (direction === 'received') {
+        setInbox(appendUnique);
+        setInboxCursor(page.nextCursor);
+      } else {
+        setSent(appendUnique);
+        setSentCursor(page.nextCursor);
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not load older activity',
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setLoadingOlder(null);
+    }
+  }, [inboxCursor, loadingOlder, sentCursor, toast]);
 
   const isRequestActionable = useCallback(
     (event: ActivityEvent) => {
@@ -605,6 +650,13 @@ function ActivityPageInner() {
               </TabsTrigger>
             </TabsList>
 
+            {loadError ? (
+              <div className="mb-4 flex flex-col gap-3 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-100 sm:flex-row sm:items-center sm:justify-between">
+                <span>{loadError}</span>
+                <Button size="sm" variant="outline" onClick={() => void load()}>Retry</Button>
+              </div>
+            ) : null}
+
             {loading ? (
               <div className="flex justify-center py-16">
                 <StudioLoader size="md" message="Loading…" />
@@ -612,24 +664,35 @@ function ActivityPageInner() {
             ) : (
               <>
                 <TabsContent value="inbox" className="mt-0 space-y-2">
-                  {inbox.length === 0 ? (
+                  {inbox.length === 0 && !loadError ? (
                     <EmptyState
                       icon={Bell}
                       title="Nothing yet"
                       body="When someone loves your post, replies, friends you, or imports your DNA Drop, it lands here."
                     />
-                  ) : (
-                    inbox.map((event) => (
-                      <ActivityRow
-                        key={event.id}
-                        event={event}
-                        onRespondRequest={handleRespond}
-                        onOpen={handleOpen}
-                        busyId={busyId}
-                        requestResolved={!isRequestActionable(event)}
-                      />
-                    ))
-                  )}
+                  ) : null}
+                  {inbox.map((event) => (
+                    <ActivityRow
+                      key={event.id}
+                      event={event}
+                      onRespondRequest={handleRespond}
+                      onOpen={handleOpen}
+                      busyId={busyId}
+                      requestResolved={!isRequestActionable(event)}
+                    />
+                  ))}
+                  {inboxCursor ? (
+                    <Button
+                      variant="outline"
+                      className="mt-3 w-full"
+                      disabled={loadingOlder !== null}
+                      onClick={() => void loadOlder('received')}
+                    >
+                      {loadingOlder === 'received' ? 'Loading older activity…' : 'Load older activity'}
+                    </Button>
+                  ) : inbox.length ? (
+                    <p className="py-3 text-center text-[9px] uppercase tracking-widest text-muted-foreground">Beginning of your stored activity</p>
+                  ) : null}
                 </TabsContent>
 
                 <TabsContent value="requests" className="mt-0 space-y-2">
@@ -654,17 +717,28 @@ function ActivityPageInner() {
                 </TabsContent>
 
                 <TabsContent value="sent" className="mt-0 space-y-2">
-                  {sent.length === 0 ? (
+                  {sent.length === 0 && !loadError ? (
                     <EmptyState
                       icon={Check}
                       title="No sent activity"
                       body="Loves, replies, requests, and DNA imports you make are listed here."
                     />
-                  ) : (
-                    sent.map((event) => (
-                      <ActivityRow key={event.id} event={event} onOpen={handleOpen} />
-                    ))
-                  )}
+                  ) : null}
+                  {sent.map((event) => (
+                    <ActivityRow key={event.id} event={event} onOpen={handleOpen} />
+                  ))}
+                  {sentCursor ? (
+                    <Button
+                      variant="outline"
+                      className="mt-3 w-full"
+                      disabled={loadingOlder !== null}
+                      onClick={() => void loadOlder('given')}
+                    >
+                      {loadingOlder === 'given' ? 'Loading older activity…' : 'Load older sent activity'}
+                    </Button>
+                  ) : sent.length ? (
+                    <p className="py-3 text-center text-[9px] uppercase tracking-widest text-muted-foreground">Beginning of your stored sent activity</p>
+                  ) : null}
                 </TabsContent>
               </>
             )}

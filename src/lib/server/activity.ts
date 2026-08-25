@@ -7,15 +7,21 @@ import { getPublicAppUrl } from '@/lib/app-url';
 import {
   DEFAULT_ACTIVITY_PREFS,
   SYSTEM_ACTOR_ID,
+  isActivityType,
   isCraftActivityType,
   prefsAllowsPush,
   pushCopyForActivity,
+  type ActivityDirection,
+  type ActivityEvent,
+  type ActivityFeedPage,
   type ActivityPrefs,
   type ActivityType,
 } from '@/lib/activity/types';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { activityPostHash } from '@/lib/activity/post-deep-link';
 import { shareDocCommerceFlags } from '@/lib/drop-commerce';
+import { emergingEntryPath } from '@/lib/emerging-ranking';
+import { isLiveMusicFanOnly } from '@/lib/server/music-fan-eligibility';
 
 export type EmitActivityInput = {
   type: ActivityType;
@@ -76,6 +82,42 @@ async function resolveProfileSlug(userId: string, known?: string): Promise<strin
   } catch {
     return undefined;
   }
+}
+
+async function creditSharedSongLove(postId: string, actorId: string): Promise<void> {
+  const db = await getDb();
+  const post = await db.doc(`posts/${postId}`).get();
+  const data = post.data() || {};
+  const ownerId = typeof data.ownerId === 'string' ? data.ownerId : '';
+  const embedded = typeof data.embedUrl === 'string' ? data.embedUrl : '';
+  const rawShareId = embedded.match(/\/(?:song|share)\/([^/?#]+)/)?.[1];
+  if (!post.exists || !ownerId || !rawShareId || actorId === ownerId) return;
+  if (!(await isLiveMusicFanOnly(db, ownerId))) return;
+  const shareId = decodeURIComponent(rawShareId);
+  const [share, love] = await Promise.all([
+    db.doc(`shares/${shareId}`).get(),
+    db.doc(`posts/${postId}/likes/${actorId}`).get(),
+  ]);
+  const originalOwnerId = typeof share.data()?.ownerId === 'string' ? share.data()!.ownerId : '';
+  const shareData = share.data() || {};
+  const payload = shareData.data && typeof shareData.data === 'object'
+    ? shareData.data as Record<string, unknown>
+    : {};
+  const isPressedSong = shareData.type !== 'album' && shareDocCommerceFlags('track', {
+    dropAudio: payload.dropAudio,
+    dropPrice: payload.dropPrice,
+  }).hasDropAudio;
+  if (!share.exists || !love.exists || !isPressedSong || !originalOwnerId || originalOwnerId === ownerId || originalOwnerId === actorId) return;
+  const tick = db.doc(`posts/${postId}/momentumTicks/love_${actorId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 100)}`);
+  await db.runTransaction(async (tx) => {
+    if ((await tx.get(tick)).exists) return;
+    tx.set(tick, { actorId, shareId, createdAt: new Date().toISOString() });
+    tx.set(db.doc(emergingEntryPath(ownerId)), {
+      userId: ownerId,
+      sharedLoves: FieldValue.increment(1),
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+  });
 }
 
 async function loadPrefs(userId: string): Promise<ActivityPrefs> {
@@ -149,7 +191,7 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
   let recipientName = input.recipientName?.trim() || 'Artist';
   let recipientSlug: string | undefined;
   let preview = input.preview?.trim().slice(0, 160) || undefined;
-  let shareId = input.shareId?.trim().toUpperCase() || undefined;
+  const shareId = input.shareId?.trim().toUpperCase() || undefined;
   let resolvedShareHref: string | undefined;
   const postId = input.postId?.trim() || undefined;
   const commentId = input.commentId?.trim() || undefined;
@@ -297,6 +339,12 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
   );
   await batch.commit();
 
+  if (input.type === 'post_love' && postId && !commentId) {
+    await creditSharedSongLove(postId, input.actorId).catch((error) => {
+      console.warn('[activity/shared-song-love]', error);
+    });
+  }
+
   const { title, body } = pushCopyForActivity(
     input.type,
     input.actorName || 'Artist',
@@ -306,6 +354,95 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
   void maybePush(recipientId, input.type, title, body, href);
 
   return { ok: true };
+}
+
+function activityIso(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object' && 'toDate' in value) {
+    const toDate = (value as { toDate?: unknown }).toDate;
+    if (typeof toDate === 'function') {
+      try {
+        return (toDate as () => Date)().toISOString();
+      } catch {
+        return '';
+      }
+    }
+  }
+  return '';
+}
+
+function activityEventFromData(
+  id: string,
+  data: Record<string, unknown>
+): ActivityEvent | null {
+  if (!isActivityType(data.type)) return null;
+  const direction: ActivityDirection = data.direction === 'given' ? 'given' : 'received';
+  return {
+    id,
+    type: data.type,
+    direction,
+    createdAt: activityIso(data.createdAt),
+    actorId: typeof data.actorId === 'string' ? data.actorId : '',
+    actorName:
+      typeof data.actorName === 'string' && data.actorName.trim()
+        ? data.actorName.trim()
+        : 'Artist',
+    ...(typeof data.actorSlug === 'string' ? { actorSlug: data.actorSlug } : {}),
+    ...(typeof data.targetUserId === 'string' ? { targetUserId: data.targetUserId } : {}),
+    ...(typeof data.targetName === 'string' ? { targetName: data.targetName } : {}),
+    ...(typeof data.targetSlug === 'string' ? { targetSlug: data.targetSlug } : {}),
+    ...(typeof data.postId === 'string' ? { postId: data.postId } : {}),
+    ...(typeof data.commentId === 'string' ? { commentId: data.commentId } : {}),
+    ...(typeof data.shareId === 'string' ? { shareId: data.shareId } : {}),
+    ...(typeof data.lockId === 'string' ? { lockId: data.lockId } : {}),
+    ...(typeof data.preview === 'string' ? { preview: data.preview } : {}),
+    ...(typeof data.href === 'string' ? { href: data.href } : {}),
+    readAt: data.readAt === null ? null : activityIso(data.readAt) || undefined,
+  };
+}
+
+/**
+ * Read stored activity without depending on a direction/createdAt compound index.
+ * The cursor advances over every scanned document so received and sent history can
+ * each be paginated without silently dropping already-read rows.
+ */
+export async function listActivityFeedPage(
+  userId: string,
+  direction: ActivityDirection,
+  requestedLimit = 60,
+  cursor?: string
+): Promise<ActivityFeedPage> {
+  const db = await getDb();
+  const pageSize = Math.min(100, Math.max(1, Math.floor(requestedLimit) || 60));
+  const collection = db.collection(`users/${userId}/activity`);
+  let after = cursor ? await collection.doc(cursor).get() : null;
+  if (cursor && !after?.exists) after = null;
+
+  const events: ActivityEvent[] = [];
+  let nextCursor: string | null = null;
+  let exhausted = false;
+
+  while (events.length < pageSize && !exhausted) {
+    let query = collection.orderBy('createdAt', 'desc').limit(200);
+    if (after?.exists) query = query.startAfter(after);
+    const snap = await query.get();
+    if (snap.empty) break;
+
+    let lastScanned = snap.docs[0];
+    for (const doc of snap.docs) {
+      lastScanned = doc;
+      const event = activityEventFromData(doc.id, doc.data() as Record<string, unknown>);
+      if (event?.direction === direction) events.push(event);
+      if (events.length >= pageSize) break;
+    }
+
+    nextCursor = lastScanned.id;
+    const consumedWholeBatch = lastScanned.id === snap.docs[snap.docs.length - 1]?.id;
+    exhausted = consumedWholeBatch && snap.size < 200;
+    after = lastScanned;
+  }
+
+  return { events, nextCursor: exhausted ? null : nextCursor };
 }
 
 export async function markActivityRead(userId: string, eventIds: string[]): Promise<number> {

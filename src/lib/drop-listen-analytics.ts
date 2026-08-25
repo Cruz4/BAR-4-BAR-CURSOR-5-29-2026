@@ -37,6 +37,7 @@ export type OrganicMomentumSignals = {
   follows: number;
   innerCircleJoins: number;
   convertedShares: number;
+  sharedLoves?: number;
   purchaseConversions: number;
 };
 
@@ -55,6 +56,7 @@ export function organicMomentumScore(signals: OrganicMomentumSignals): number {
     whole(signals.follows, 5_000) * 4 +
     whole(signals.innerCircleJoins, 5_000) * 5 +
     whole(signals.convertedShares, 5_000) * 5 +
+    whole(signals.sharedLoves || 0, 5_000) +
     whole(signals.purchaseConversions, 5_000) * 8
   );
 }

@@ -10,7 +10,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link';
 import { Check, ChevronDown, Radio, Send, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,7 +19,7 @@ import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
-import { FindArtistsPanel } from '@/components/profile/find-artists-panel';
+import { ReferAFriendSection } from '@/components/refer-a-friend-section';
 import { VaultStudioProgress, SCENE_STUDIO_PROGRESS_EXPANDED_KEY, SCENE_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY } from '@/components/gamification/vault-studio-progress';
 import { SceneNavDock } from '@/components/scene/scene-nav-dock';
 import { SceneBoothCard } from '@/components/scene/scene-booth-card';
@@ -40,10 +39,12 @@ import { ScenePortalHub } from '@/components/scene/scene-portal-hub';
 import { SceneImmersiveFeedDialog } from '@/components/scene/scene-immersive-feed-dialog';
 import { LockClaimBootstrap } from '@/components/lock/lock-claim-bootstrap';
 import { GuestPressingClaimBootstrap } from '@/components/profile/guest-pressing-claim-bootstrap';
+import { MentionSuggestions } from '@/components/profile/mention-suggestions';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   acceptFriendRequest,
   createPost,
@@ -204,7 +205,7 @@ function SceneComposer({
   };
 
   return (
-    <div data-tour="scene-composer">
+    <div data-tour="scene-composer" className="relative">
       <Textarea
         ref={textRef}
         value={text}
@@ -223,6 +224,7 @@ function SceneComposer({
         maxLength={1000}
         className="min-h-[3.5rem] overflow-hidden resize-none border-border/60 bg-background/60 text-sm leading-snug"
       />
+      <MentionSuggestions value={text} onChange={setText} />
       {showEmbed && (
         <Input
           value={embedUrl}
@@ -275,6 +277,8 @@ export function SceneHome() {
   const { summary } = useGamification();
   const { toast } = useToast();
   const { portalHubEnabled } = useSceneLayout();
+  const isMobile = useIsMobile();
+  const showPortalHub = portalHubEnabled && isMobile;
 
   const [friendships, setFriendships] = useState<Friendship[]>([]);
   const [posts, setPosts] = useState<ProfilePost[]>([]);
@@ -326,20 +330,20 @@ export function SceneHome() {
   const setBlockExpandedPersist = useCallback((next: boolean) => {
     setBlockExpanded(next);
     writePersistedExpanded(SCENE_BLOCK_EXPANDED_KEY, next);
-    if (next && !portalHubEnabled) {
+    if (next && !showPortalHub) {
       markBlockSeen();
       setBlockLastSeen(new Date().toISOString());
     }
-  }, [portalHubEnabled]);
+  }, [showPortalHub]);
 
   const setDiscoverExpandedPersist = useCallback((next: boolean) => {
     setDiscoverExpanded(next);
     writePersistedExpanded(SCENE_DISCOVER_EXPANDED_KEY, next);
-    if (next && !portalHubEnabled) {
+    if (next && !showPortalHub) {
       markDiscoverSeen();
       setDiscoverLastSeen(new Date().toISOString());
     }
-  }, [portalHubEnabled]);
+  }, [showPortalHub]);
 
   const sceneProgressTourPinned =
     tourActive && SCENE_HOME_TOUR_STEPS[tourStep]?.id === 'scene-progress';
@@ -349,7 +353,7 @@ export function SceneHome() {
       email: user?.email,
       displayName: user?.displayName,
     }).map((f) => f.userId);
-    const feed = await fetchPostsByOwners([viewerId, ...friendIds], 8, { enrichSlugs: false });
+    const feed = await fetchPostsByOwners([viewerId, ...friendIds], 8);
     setPosts((prev) => mergePosts(prev, feed));
   }, [user?.email, user?.displayName]);
 
@@ -363,13 +367,13 @@ export function SceneHome() {
       if (cancelled) return;
       setDiscover(data);
       setDiscoverReady(true);
-      if (!portalHubEnabled && readPersistedExpanded(SCENE_DISCOVER_EXPANDED_KEY, true)) {
+      if (!showPortalHub && readPersistedExpanded(SCENE_DISCOVER_EXPANDED_KEY, true)) {
         markDiscoverSeen();
         setDiscoverLastSeen(new Date().toISOString());
       }
     };
 
-    void fetchPostsByOwners([user.id], 8, { enrichSlugs: false })
+    void fetchPostsByOwners([user.id], 8)
       .then((ownPosts) => {
         if (cancelled) return;
         setPosts((prev) => mergePosts(prev, ownPosts));
@@ -398,6 +402,7 @@ export function SceneHome() {
           risers: [],
           locks: [],
           viewerGraph: { personalized: false, hasTaste: false, hasCreation: false },
+          publicPulse: { profiles: 0, posts: 0, pressedSongs: 0 },
         };
       });
 
@@ -450,7 +455,7 @@ export function SceneHome() {
           setBlockReady(true);
           setCircleLoading(false);
           if (heldDiscover) releaseDiscover(heldDiscover);
-          if (!portalHubEnabled && readPersistedExpanded(SCENE_BLOCK_EXPANDED_KEY, true)) {
+          if (!showPortalHub && readPersistedExpanded(SCENE_BLOCK_EXPANDED_KEY, true)) {
             markBlockSeen();
             setBlockLastSeen(new Date().toISOString());
           }
@@ -461,7 +466,7 @@ export function SceneHome() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, reloadBlockFeed, portalHubEnabled]);
+  }, [user?.id, reloadBlockFeed, showPortalHub]);
 
   // Accept/decline on Activity or profile — clear the Scene request strip too.
   useEffect(() => {
@@ -557,7 +562,7 @@ export function SceneHome() {
       const hash = window.location.hash.replace(/^#/, '');
       if (hash === BLOCK_SECTION_ID) {
         setBlockExpandedPersist(true);
-        if (portalHubEnabled) {
+        if (showPortalHub) {
           markBlockSeen();
           setBlockLastSeen(new Date().toISOString());
           setImmersiveInitialKey(undefined);
@@ -565,7 +570,7 @@ export function SceneHome() {
         }
       } else if (hash === DISCOVER_SECTION_ID) {
         setDiscoverExpandedPersist(true);
-        if (portalHubEnabled) {
+        if (showPortalHub) {
           markDiscoverSeen();
           setDiscoverLastSeen(new Date().toISOString());
           setImmersiveInitialKey(undefined);
@@ -588,7 +593,7 @@ export function SceneHome() {
       window.clearTimeout(retry);
       window.removeEventListener('hashchange', scrollToHashSection);
     };
-  }, [loaded, portalHubEnabled, setBlockExpandedPersist, setDiscoverExpandedPersist]);
+  }, [loaded, showPortalHub, setBlockExpandedPersist, setDiscoverExpandedPersist]);
 
   const handleTourBeforeStep = useCallback(
     (step: { id: string }) => {
@@ -681,13 +686,13 @@ export function SceneHome() {
     if (!target) return;
     setShowMinePersist(true);
     setBlockExpandedPersist(true);
-    if (portalHubEnabled) {
+    if (showPortalHub) {
       markBlockSeen();
       setBlockLastSeen(new Date().toISOString());
       setImmersiveInitialKey(`post-${target.postId}`);
       setImmersiveFeed('block');
     }
-  }, [portalHubEnabled, setShowMinePersist, setBlockExpandedPersist]);
+  }, [showPortalHub, setShowMinePersist, setBlockExpandedPersist]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -714,7 +719,7 @@ export function SceneHome() {
       if (idx >= 0) {
         setBlockVisible((n) => Math.max(n, idx + 1));
       }
-      if (portalHubEnabled) {
+      if (showPortalHub) {
         markBlockSeen();
         setBlockLastSeen(new Date().toISOString());
         setImmersiveInitialKey(`post-${target.postId}`);
@@ -728,7 +733,7 @@ export function SceneHome() {
     run();
     window.addEventListener('hashchange', run);
     return () => window.removeEventListener('hashchange', run);
-  }, [blockPosts, portalHubEnabled]);
+  }, [blockPosts, showPortalHub]);
 
   useEffect(() => {
     setBlockVisible((n) => Math.min(Math.max(BLOCK_PAGE_SIZE, n), Math.max(BLOCK_PAGE_SIZE, blockPosts.length)));
@@ -741,17 +746,17 @@ export function SceneHome() {
   }, [discoverCards.length]);
 
   const newBlockCount = useMemo(() => {
-    if ((!portalHubEnabled && blockExpanded) || !user?.id || !blockLastSeen) return 0;
+    if ((!showPortalHub && blockExpanded) || !user?.id || !blockLastSeen) return 0;
     return posts.filter((p) => p.ownerId !== user.id && p.createdAt > blockLastSeen).length;
-  }, [blockExpanded, blockLastSeen, portalHubEnabled, posts, user?.id]);
+  }, [blockExpanded, blockLastSeen, showPortalHub, posts, user?.id]);
 
   const newDiscoverCount = useMemo(() => {
-    if ((!portalHubEnabled && discoverExpanded) || !discoverLastSeen) return 0;
+    if ((!showPortalHub && discoverExpanded) || !discoverLastSeen) return 0;
     return discoverCards.filter((c) => {
       const ts = discoverCardTimestamp(c);
       return Boolean(ts) && ts > discoverLastSeen;
     }).length;
-  }, [discoverCards, discoverExpanded, discoverLastSeen, portalHubEnabled]);
+  }, [discoverCards, discoverExpanded, discoverLastSeen, showPortalHub]);
 
   // Drives the Scene Block atmosphere — the skyline gets busier as your
   // circle does, not on a canned timer.
@@ -843,7 +848,7 @@ export function SceneHome() {
       <SceneFeedJumpHints
         blockExpanded={blockExpanded}
         discoverExpanded={discoverExpanded}
-        hidden={tourActive || portalHubEnabled}
+        hidden={tourActive || showPortalHub}
         onEnsureBlock={() => setBlockExpandedPersist(true)}
         onEnsureDiscover={() => setDiscoverExpandedPersist(true)}
       />
@@ -889,7 +894,7 @@ export function SceneHome() {
               phoneStartsMinimized
               persistExpandedKey={SCENE_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY}
             />
-            {!portalHubEnabled ? <SceneNavDock compact /> : null}
+            {!showPortalHub ? <SceneNavDock compact /> : null}
           </div>
         </div>
 
@@ -908,7 +913,7 @@ export function SceneHome() {
         </aside>
 
         {/* Right rail — nav dock (xl only) */}
-        {!portalHubEnabled ? (
+        {!showPortalHub ? (
           <aside
             className="hidden xl:flex xl:col-start-3 xl:row-start-2 justify-start items-start self-start pl-2 2xl:pl-3 sticky top-[5.25rem] z-30 pointer-events-none [&>*]:pointer-events-auto"
             aria-label="Scene shortcuts"
@@ -984,7 +989,7 @@ export function SceneHome() {
 
           <SceneLiveDropsStrip />
 
-          {portalHubEnabled ? (
+          {showPortalHub ? (
             <>
               <div id={BLOCK_SECTION_ID} className="scroll-mt-[5.5rem]">
                 <span id={DISCOVER_SECTION_ID} className="sr-only" aria-hidden />
@@ -996,8 +1001,8 @@ export function SceneHome() {
                   }}
                   artistHomeHref={viewerSlug ? profileHref(viewerSlug) || '/profile/customize' : '/profile/customize'}
                   friendCount={friendCount}
-                  blockPreview={posts[0]}
-                  discoverPreview={discoverCards[0]}
+                  blockPreviews={posts.slice(0, 3)}
+                  discoverPreviews={discoverCards.slice(0, 3)}
                   newBlockCount={newBlockCount}
                   newDiscoverCount={newDiscoverCount}
                   onOpenBlock={openBlockPortal}
@@ -1190,7 +1195,7 @@ export function SceneHome() {
           )}
 
           <div id={FIND_ARTISTS_SECTION_ID} className="scroll-mt-[5.5rem]" data-tour="scene-find-artists">
-            <FindArtistsPanel viewerSlug={viewerSlug} />
+            <ReferAFriendSection />
           </div>
         </div>
       </div>

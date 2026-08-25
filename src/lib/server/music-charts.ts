@@ -2,9 +2,10 @@ import 'server-only';
 
 import type { DocumentSnapshot, Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { normalizeDropAudio } from '@/lib/drop-commerce';
-import { EMERGING_FORMULA } from '@/lib/emerging-ranking';
 import {
+  CREATOR_CHART_FORMULA,
   MUSIC_CHART_WINDOW_DAYS,
+  MUSIC_FAN_CHART_FORMULA,
   TRACK_CHART_FORMULA,
   chartRegionLabels,
   emptyTrackChartSignals,
@@ -30,6 +31,7 @@ type PublicChartProfile = {
   displayName: string;
   genres: string[];
   regions: string[];
+  creatorIdentity: boolean;
 };
 
 function count(value: unknown): number {
@@ -79,12 +81,14 @@ function profileFromSnapshot(snapshot: DocumentSnapshot): PublicChartProfile | n
   const userId = clean(data.userId, 128);
   if (!userId) return null;
   const identity = normalizeArtistHomeConfig(data.artistHome).featured.soundIdentity;
+  const kinds = identity?.kinds || [];
   return {
     userId,
     slug: snapshot.id,
     displayName: clean(data.displayName, 120) || 'Music Fan',
     genres: uniqueLabels(identity?.genres || []),
     regions: chartRegionLabels(identity?.region),
+    creatorIdentity: kinds.some((kind) => kind !== 'music_fan'),
   };
 }
 
@@ -219,27 +223,45 @@ export async function getMusicCharts(
     }];
   }).slice(0, trackLimit);
 
-  const artists = emerging.entries.flatMap((entry) => {
+  const people = emerging.entries.flatMap((entry) => {
     const profile = profilesByUser.get(entry.userId);
     if (!profile || profile.slug !== entry.profileSlug) return [];
-    return [{ ...entry, genres: profile.genres, regions: profile.regions }];
-  }).slice(0, artistLimit);
+    const audience = profile.creatorIdentity ? 'creator' as const : 'music_fan' as const;
+    const score = audience === 'music_fan'
+      ? entry.signals.convertedShares + (entry.signals.sharedLoves || 0) + entry.signals.repeatListeners * 2 + entry.signals.purchaseConversions * 8
+      : Math.max(0, entry.score - (entry.signals.sharedLoves || 0));
+    if (score <= 0) return [];
+    const reasons = audience === 'music_fan'
+      ? [
+          entry.signals.convertedShares > 0 ? `${entry.signals.convertedShares} qualified play${entry.signals.convertedShares === 1 ? '' : 's'} inspired` : '',
+          (entry.signals.sharedLoves || 0) > 0 ? `${entry.signals.sharedLoves} Love${entry.signals.sharedLoves === 1 ? '' : 's'} on shared music` : '',
+          entry.signals.repeatListeners > 0 ? `${entry.signals.repeatListeners} repeat listener day${entry.signals.repeatListeners === 1 ? '' : 's'}` : '',
+          entry.signals.purchaseConversions > 0 ? `${entry.signals.purchaseConversions} purchase${entry.signals.purchaseConversions === 1 ? '' : 's'} inspired` : '',
+        ].filter(Boolean)
+      : entry.reasons;
+    return [{ ...entry, score, reasons, genres: profile.genres, regions: profile.regions, audience }];
+  });
+  const creators = people.filter((entry) => entry.audience === 'creator').sort((a, b) => b.score - a.score).slice(0, artistLimit);
+  const musicFans = people.filter((entry) => entry.audience === 'music_fan').sort((a, b) => b.score - a.score).slice(0, artistLimit);
+  const artists = creators;
 
   const genres = uniqueLabels([
     ...tracks.flatMap((entry) => entry.genres),
-    ...artists.flatMap((entry) => entry.genres),
+    ...people.flatMap((entry) => entry.genres),
   ], 80).sort((a, b) => a.localeCompare(b));
   const regions = uniqueLabels([
     ...tracks.flatMap((entry) => entry.regions),
-    ...artists.flatMap((entry) => entry.regions),
+    ...people.flatMap((entry) => entry.regions),
   ], 80).sort((a, b) => a.localeCompare(b));
 
   return {
     window: { days: 7, from: days[0], through: days.at(-1) || days[0] },
     tracks,
+    creators,
+    musicFans,
     artists,
     filters: { genres, regions },
-    formula: { tracks: TRACK_CHART_FORMULA, artists: EMERGING_FORMULA },
+    formula: { tracks: TRACK_CHART_FORMULA, artists: CREATOR_CHART_FORMULA, creators: CREATOR_CHART_FORMULA, musicFans: MUSIC_FAN_CHART_FORMULA },
     integrity: {
       qualifiedAtPercent: 80,
       ownerActionsExcluded: true,

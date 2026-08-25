@@ -124,7 +124,7 @@ export function SceneDiscoverCard({
               {artist.displayName}
             </Link>
             <p className="font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
-              Artist Home {artist.updatedAt ? `· updated ${timeAgo(artist.updatedAt)}` : ''}
+              <span className="whitespace-nowrap">Artist Home {artist.updatedAt ? `· updated ${timeAgo(artist.updatedAt)}` : ''}</span>
             </p>
           </div>
           <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>
@@ -204,7 +204,7 @@ export function SceneDiscoverCard({
                   {drop.ownerName}
                 </span>
               )}
-              {drop.updatedAt ? ` · ${timeAgo(drop.updatedAt)}` : ''}
+              {drop.updatedAt ? <span className="whitespace-nowrap"> · {timeAgo(drop.updatedAt)}</span> : ''}
               {firstDrop && drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : ''}
               {pulse ? ` · ${pulse}` : ''}
               {drop.firstBuyerName ? ` · first cop ${drop.firstBuyerName}` : ''}
@@ -315,7 +315,7 @@ export function SceneDiscoverCard({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
                 {lock.echoCount} replies
-                {lock.updatedAt ? ` · ${timeAgo(lock.updatedAt)}` : ''}
+                {lock.updatedAt ? <span className="whitespace-nowrap"> · {timeAgo(lock.updatedAt)}</span> : ''}
               </p>
               <div className="flex flex-wrap items-center gap-1.5">
                 {isOwner ? (

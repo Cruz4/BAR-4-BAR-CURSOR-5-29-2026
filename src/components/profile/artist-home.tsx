@@ -6,7 +6,6 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { ChevronLeft, Compass, Dna, Flame, Globe, Music, PenLine, Repeat2, Settings2, Share2, Star, Trophy, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -72,11 +71,6 @@ import { Hint } from '@/components/ui/tooltip';
 import { SoundIdentityStrip } from '@/components/profile/sound-identity-strip';
 import { ArtistHomeBackButton } from '@/components/profile/artist-home-back-button';
 import { ProfileSectionTabs } from '@/components/profile/profile-section-tabs';
-
-const GuestDiscoverSearch = dynamic(
-  () => import('@/components/scene/scene-universal-search').then((module) => module.SceneUniversalSearch),
-  { ssr: false }
-);
 
 type ArtistHomeProps = {
   profile: PublicProfileData;
@@ -351,8 +345,8 @@ export function ArtistHome({
 
       <div className="relative z-10 mx-auto w-full max-w-[1200px] px-4 pt-6 sm:px-6 sm:pt-10">
         {/* Sheet header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-dashed border-[var(--ph-border)] pb-4">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center justify-between gap-1.5 border-b border-dashed border-[var(--ph-border)] pb-4 sm:gap-3">
+          <div className="flex min-w-0 shrink items-center gap-1.5 sm:gap-3">
             {studioHomeHref === '/' && !previewMode && !playgroundWall ? (
               <ArtistHomeBackButton label="Back" />
             ) : (
@@ -372,7 +366,7 @@ export function ArtistHome({
               {tokens.autoDrift ? ' · restless' : ''}
             </span>
           </div>
-          <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
+          <div className="flex min-w-0 shrink items-center justify-end gap-1 sm:max-w-full sm:flex-wrap sm:gap-2 [&_button]:shrink-0 max-[480px]:[&_button]:h-8 max-[480px]:[&_button]:px-2 max-[480px]:[&_button]:text-[9px]">
             {previewMode && onExitPreview ? (
               <Button
                 size="sm"
@@ -425,19 +419,6 @@ export function ArtistHome({
           <ProfileSectionTabs slug={profile.slug} className="mt-3" />
         ) : null}
 
-        {!user && !previewMode && !playgroundWall ? (
-          <section className="mt-4 rounded-xl border border-sky-400/25 bg-sky-500/[0.07] p-3 sm:p-4">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-sky-300"><Compass className="h-4 w-4" /> See what artists and Music Fans are doing</p>
-                <p className="mt-1 text-[11px] text-[var(--ph-muted)]">Search public profiles, pressed songs, DNA Drops, and Scene posts.</p>
-              </div>
-              <Button size="sm" variant="outline" asChild className="h-8 font-bold uppercase"><Link href="/discover">Open Discover</Link></Button>
-            </div>
-            <GuestDiscoverSearch className="relative z-30" />
-          </section>
-        ) : null}
-
         {/* Hero — original scale; preview/sandbox centers shorter copy with the photo column */}
         <section
           className={cn(
@@ -483,7 +464,10 @@ export function ArtistHome({
               <StudioStandingRankBadge
                 variant="pill"
                 allowShare={isOwner}
-                badgeClassName={rankBadgeClass(rankId)}
+                badgeClassName={cn(
+                  rankBadgeClass(rankId),
+                  'border-white/30 bg-black/70 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-md'
+                )}
                 stats={{
                   displayName: profile.displayName,
                   rankId,
@@ -751,37 +735,49 @@ export function ArtistHome({
             Written in Bar 4 Bar · {tokens.plateSerial}
           </p>
           {!user && (
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <Button
-                size="sm"
-                className="h-9 gap-1.5 bg-[var(--ph-accent)] font-bold uppercase text-black hover:opacity-90"
-                asChild
-              >
-                <Link
-                  href={buildLoginUrl({
-                    mode: 'signup',
-                    next: profileHref(profile.slug) || '/',
-                    intent: 'claim_artist_home',
-                    referralCode: profile.referralCode,
-                  })}
-                  onClick={() => trackGuestSignupCta('artist_home_footer')}
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button
+                  size="sm"
+                  className="h-9 gap-1.5 bg-[var(--ph-accent)] font-bold uppercase text-black hover:opacity-90"
+                  asChild
                 >
-                  <Globe className="h-3.5 w-3.5" /> Claim your free profile
-                </Link>
-              </Button>
+                  <Link
+                    href={buildLoginUrl({
+                      mode: 'signup',
+                      next: profileHref(profile.slug) || '/',
+                      intent: 'claim_artist_home',
+                      referralCode: profile.referralCode,
+                    })}
+                    onClick={() => trackGuestSignupCta('artist_home_footer')}
+                  >
+                    <Globe className="h-3.5 w-3.5" /> Claim your free profile
+                  </Link>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9 gap-1.5 border-[var(--ph-border)] font-bold uppercase"
+                  asChild
+                >
+                  <Link
+                    href={guestTryHref('profile')}
+                    onClick={() => trackGuestSignupCta('artist_home')}
+                    onMouseEnter={() => prefetchGuestTrySheetNow()}
+                    onFocus={() => prefetchGuestTrySheetNow()}
+                  >
+                    <PenLine className="h-3.5 w-3.5" /> Try writing free
+                  </Link>
+                </Button>
+              </div>
               <Button
                 size="sm"
                 variant="outline"
-                className="h-9 gap-1.5 border-[var(--ph-border)] font-bold uppercase"
+                className="h-9 gap-1.5 border-sky-400/35 bg-sky-500/[0.08] font-bold uppercase text-sky-200 hover:bg-sky-500/15 hover:text-white"
                 asChild
               >
-                <Link
-                  href={guestTryHref('profile')}
-                  onClick={() => trackGuestSignupCta('artist_home')}
-                  onMouseEnter={() => prefetchGuestTrySheetNow()}
-                  onFocus={() => prefetchGuestTrySheetNow()}
-                >
-                  <PenLine className="h-3.5 w-3.5" /> Try writing free
+                <Link href="/discover">
+                  <Compass className="h-3.5 w-3.5" /> See what others are doing on Bar4Bar
                 </Link>
               </Button>
             </div>

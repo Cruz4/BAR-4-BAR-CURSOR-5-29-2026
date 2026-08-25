@@ -64,6 +64,26 @@ export async function GET(req: Request) {
         : Promise.resolve([]),
     ]);
 
+    const pressingByOwner = new Map<string, (typeof artists)[number]['pressing']>();
+    for (const artist of artists) pressingByOwner.set(artist.userId, artist.pressing);
+    for (const post of posts) pressingByOwner.set(post.ownerId, post.pressing);
+    for (const drop of drops) {
+      if (drop.ownerId) pressingByOwner.set(drop.ownerId, drop.pressing);
+    }
+    for (const riser of risers) pressingByOwner.set(riser.userId, riser.pressing);
+
+    const missingLockOwners = [...new Set(
+      (locks || [])
+        .map((lock) => lock.ownerId)
+        .filter((ownerId): ownerId is string => Boolean(ownerId && !pressingByOwner.has(ownerId)))
+    )];
+    await Promise.all(
+      missingLockOwners.map(async (ownerId) => {
+        const config = await getArtistHomeConfig(ownerId).catch(() => null);
+        if (config) pressingByOwner.set(ownerId, config.theme);
+      })
+    );
+
     const lockCards = (locks || []).map((l) => ({
       id: l.id,
       ownerId: l.ownerId,
@@ -73,6 +93,7 @@ export async function GET(req: Request) {
       echoCount: l.echoCount,
       updatedAt: l.updatedAt,
       isHouse: l.isHouse,
+      pressing: l.ownerId ? pressingByOwner.get(l.ownerId) : undefined,
     }));
 
     const matchedArtists = artists.map((artist) => ({
@@ -95,6 +116,11 @@ export async function GET(req: Request) {
         personalized: Boolean(viewerIdentity),
         hasTaste: hasTasteSignals(viewerIdentity),
         hasCreation: hasCreationSignals(viewerIdentity),
+      },
+      publicPulse: {
+        profiles: artists.length,
+        posts: posts.length,
+        pressedSongs: drops.filter((drop) => drop.type === 'track' && drop.hasDropAudio).length,
       },
     });
     response.headers.set(

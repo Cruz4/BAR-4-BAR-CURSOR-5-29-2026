@@ -32,7 +32,7 @@ import type {
 } from '@/lib/music-charts';
 import { profileHref } from '@/lib/profile/profile-slug';
 
-const artistSignalLabels: Array<{
+const creatorSignalLabels: Array<{
   key: keyof ArtistChartEntry['signals'];
   label: string;
 }> = [
@@ -42,6 +42,13 @@ const artistSignalLabels: Array<{
   { key: 'innerCircleJoins', label: 'inner circle' },
   { key: 'convertedShares', label: 'share conversions' },
   { key: 'purchaseConversions', label: 'buyers' },
+];
+
+const musicFanSignalLabels: typeof creatorSignalLabels = [
+  { key: 'convertedShares', label: 'qualified plays inspired' },
+  { key: 'sharedLoves', label: 'shared Loves' },
+  { key: 'repeatListeners', label: 'repeat listener days' },
+  { key: 'purchaseConversions', label: 'purchases inspired' },
 ];
 
 const trackSignalLabels: Array<{
@@ -93,7 +100,7 @@ function TrackChartRow({ entry, index }: { entry: TrackChartEntry; index: number
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {trackSignalLabels.map(({ key, label, icon: Icon }) =>
-              entry.signals[key] > 0 ? (
+              (entry.signals[key] || 0) > 0 ? (
                 <span key={key} className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/25 px-2 py-1 font-code text-[9px] uppercase text-white/60">
                   <Icon className="h-3 w-3 text-cyan-300/80" /> {entry.signals[key]} {label}
                 </span>
@@ -120,6 +127,7 @@ function TrackChartRow({ entry, index }: { entry: TrackChartEntry; index: number
 }
 
 function ArtistChartRow({ entry, index }: { entry: ArtistChartEntry; index: number }) {
+  const signalLabels = entry.audience === 'music_fan' ? musicFanSignalLabels : creatorSignalLabels;
   return (
     <article className="rounded-xl border border-fuchsia-400/15 bg-fuchsia-500/[0.04] p-3 sm:p-4">
       <div className="flex min-w-0 items-start gap-3">
@@ -135,8 +143,8 @@ function ArtistChartRow({ entry, index }: { entry: ArtistChartEntry; index: numb
             Why they’re rising: {entry.reasons.join(' · ')}
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {artistSignalLabels.map(({ key, label }) =>
-              entry.signals[key] > 0 ? (
+            {signalLabels.map(({ key, label }) =>
+              (entry.signals[key] || 0) > 0 ? (
                 <span key={key} className="rounded-full border border-white/10 bg-black/25 px-2 py-1 font-code text-[9px] uppercase text-white/60">
                   {entry.signals[key]} {label}
                 </span>
@@ -163,7 +171,7 @@ export default function ChartsPage() {
   const [charts, setCharts] = useState<MusicChartsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [view, setView] = useState<'songs' | 'artists'>('songs');
+  const [view, setView] = useState<'songs' | 'creators' | 'musicFans'>('songs');
   const [genre, setGenre] = useState('');
   const [region, setRegion] = useState('');
 
@@ -188,9 +196,13 @@ export default function ChartsPage() {
     () => (charts?.tracks || []).filter((entry) => matchesLabel(entry.genres, genre) && matchesLabel(entry.regions, region)),
     [charts?.tracks, genre, region]
   );
-  const filteredArtists = useMemo(
-    () => (charts?.artists || []).filter((entry) => matchesLabel(entry.genres, genre) && matchesLabel(entry.regions, region)),
-    [charts?.artists, genre, region]
+  const filteredCreators = useMemo(
+    () => (charts?.creators || charts?.artists || []).filter((entry) => matchesLabel(entry.genres, genre) && matchesLabel(entry.regions, region)),
+    [charts?.artists, charts?.creators, genre, region]
+  );
+  const filteredMusicFans = useMemo(
+    () => (charts?.musicFans || []).filter((entry) => matchesLabel(entry.genres, genre) && matchesLabel(entry.regions, region)),
+    [charts?.musicFans, genre, region]
   );
   const hasFilters = Boolean(genre || region);
 
@@ -213,7 +225,7 @@ export default function ChartsPage() {
             <div>
               <h1 className="font-headline text-3xl font-bold uppercase tracking-tight sm:text-4xl">Bar 4 Bar Charts</h1>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Songs and artists rising through verified attention and real listener support—not bought visibility.
+                Songs, creators, and Music Fans rising through verified attention and real discovery impact.
               </p>
               <p className="mt-1 font-code text-[9px] uppercase tracking-widest text-cyan-200/55">
                 Rolling {charts?.window.days || 7} days · {charts?.window.from || '—'} through {charts?.window.through || '—'}
@@ -265,25 +277,31 @@ export default function ChartsPage() {
           </Button>
         </div>
 
-        <Tabs value={view} onValueChange={(next) => setView(next as 'songs' | 'artists')} className="space-y-4">
-          <TabsList className="grid h-11 w-full grid-cols-2 border border-white/10 bg-black/35">
+        <Tabs value={view} onValueChange={(next) => setView(next as 'songs' | 'creators' | 'musicFans')} className="space-y-4">
+          <TabsList className="grid h-11 w-full grid-cols-3 border border-white/10 bg-black/35">
             <TabsTrigger value="songs" className="gap-1.5 font-bold uppercase"><Music2 className="h-4 w-4" /> Songs ({filteredTracks.length})</TabsTrigger>
-            <TabsTrigger value="artists" className="gap-1.5 font-bold uppercase"><UserRound className="h-4 w-4" /> Artists ({filteredArtists.length})</TabsTrigger>
+            <TabsTrigger value="creators" className="gap-1.5 font-bold uppercase"><UserRound className="h-4 w-4" /> Creators ({filteredCreators.length})</TabsTrigger>
+            <TabsTrigger value="musicFans" className="gap-1.5 font-bold uppercase"><Headphones className="h-4 w-4" /> Music Fans ({filteredMusicFans.length})</TabsTrigger>
           </TabsList>
           <TabsContent value="songs" className="space-y-3">
             {filteredTracks.length ? filteredTracks.map((entry, index) => <TrackChartRow key={entry.shareId} entry={entry} index={index} />) : (
               <div className="rounded-xl border border-dashed border-white/15 bg-black/20 px-5 py-14 text-center text-sm text-muted-foreground">No qualified song momentum in this category yet.</div>
             )}
           </TabsContent>
-          <TabsContent value="artists" className="space-y-3">
-            {filteredArtists.length ? filteredArtists.map((entry, index) => <ArtistChartRow key={entry.userId} entry={entry} index={index} />) : (
-              <div className="rounded-xl border border-dashed border-white/15 bg-black/20 px-5 py-14 text-center text-sm text-muted-foreground">No qualified artist momentum in this category yet.</div>
+          <TabsContent value="creators" className="space-y-3">
+            {filteredCreators.length ? filteredCreators.map((entry, index) => <ArtistChartRow key={entry.userId} entry={entry} index={index} />) : (
+              <div className="rounded-xl border border-dashed border-white/15 bg-black/20 px-5 py-14 text-center text-sm text-muted-foreground">No qualified creator momentum in this category yet.</div>
+            )}
+          </TabsContent>
+          <TabsContent value="musicFans" className="space-y-3">
+            {filteredMusicFans.length ? filteredMusicFans.map((entry, index) => <ArtistChartRow key={entry.userId} entry={entry} index={index} />) : (
+              <div className="rounded-xl border border-dashed border-white/15 bg-black/20 px-5 py-14 text-center text-sm text-muted-foreground">Music Fan discovery impact is still warming up.</div>
             )}
           </TabsContent>
         </Tabs>
 
         <p className="text-center font-code text-[9px] uppercase tracking-wider text-muted-foreground">
-          <UserPlus className="mr-1 inline h-3 w-3" /> Artists appear only with a live public profile and leaderboard sharing enabled.
+          <UserPlus className="mr-1 inline h-3 w-3" /> People appear only with a live public profile and leaderboard sharing enabled.
         </p>
       </main>
     </div>

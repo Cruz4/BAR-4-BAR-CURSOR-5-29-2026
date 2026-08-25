@@ -27,18 +27,21 @@ export function SceneChartSpotlight({ excludedUserIds }: { excludedUserIds?: Set
     [charts?.tracks, excludedUserIds]
   );
   const artists = useMemo(
-    () => (charts?.artists || []).filter((entry) => !excludedUserIds?.has(entry.userId)).slice(0, 2),
-    [charts?.artists, excludedUserIds]
+    () => [...(charts?.creators || charts?.artists || []), ...(charts?.musicFans || [])]
+      .filter((entry) => !excludedUserIds?.has(entry.userId))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 2),
+    [charts?.artists, charts?.creators, charts?.musicFans, excludedUserIds]
   );
 
   return (
     <section data-chart-spotlight className="mt-3 overflow-hidden rounded-xl border border-cyan-400/20 bg-[hsl(216_38%_7%)] shadow-[0_12px_32px_rgba(0,0,0,0.2)] [&_span]:leading-tight" aria-label="Bar 4 Bar chart spotlight">
       <div className="flex items-center justify-between gap-3 border-b border-white/8 px-3 py-2">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 font-code text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-300">
+          <p className="flex items-center gap-1.5 font-code text-[11px] font-bold uppercase tracking-[0.13em] text-cyan-200">
             <TrendingUp className="h-3.5 w-3.5" /> Charts · real listener proof
           </p>
-          <p className="mt-0.5 truncate text-[10px] leading-tight text-muted-foreground">Qualified listens · repeats · completions · unique buyers</p>
+          <p className="mt-0.5 truncate text-[11px] leading-tight text-white/60">Qualified listens · repeats · completions · unique buyers</p>
         </div>
         <Link href="/charts" className="inline-flex shrink-0 items-center gap-1 font-code text-[10px] font-bold uppercase tracking-wide text-cyan-300 hover:text-cyan-100">
           View charts <ChevronRight className="h-3.5 w-3.5" />
@@ -53,10 +56,10 @@ export function SceneChartSpotlight({ excludedUserIds }: { excludedUserIds?: Set
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-cyan-400/25 bg-cyan-500/10 font-code text-[9px] text-cyan-200">{index + 1}</span>
               <Music2 className="h-3.5 w-3.5 shrink-0 text-fuchsia-300/80" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs font-bold text-white group-hover:text-cyan-200">{entry.title}</span>
-                <span className="block truncate font-code text-[9px] uppercase tracking-wide text-muted-foreground">{entry.artistName}</span>
+                <span className="block truncate text-[13px] font-bold text-white group-hover:text-cyan-200">{entry.title}</span>
+                <span className="block truncate font-code text-[10px] uppercase tracking-wide text-white/55">{entry.artistName}</span>
               </span>
-              <span className="shrink-0 font-code text-[11px] font-bold tabular-nums text-cyan-300">{entry.score}</span>
+              <span className="shrink-0 font-code text-[13px] font-bold tabular-nums text-cyan-200">{entry.score}</span>
             </Link>
           )) : (
             <p className="px-1.5 py-4 text-[10px] text-muted-foreground">Qualified song momentum is warming up.</p>
@@ -64,7 +67,7 @@ export function SceneChartSpotlight({ excludedUserIds }: { excludedUserIds?: Set
         </div>
 
         <div className="min-w-0 bg-[hsl(216_38%_7%)] p-2">
-          <p className="mb-1 px-1 font-code text-[9px] font-bold uppercase tracking-wider text-white/45">Trending artists</p>
+          <p className="mb-1 px-1 font-code text-[9px] font-bold uppercase tracking-wider text-white/45">People moving now</p>
           {artists.length ? artists.map((entry, index) => (
             <Link key={entry.userId} href={profileHref(entry.profileSlug) || `/${entry.profileSlug}`} className="group flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-2 hover:bg-white/[0.05]">
               <span className="font-code text-[9px] text-fuchsia-300">#{index + 1}</span>

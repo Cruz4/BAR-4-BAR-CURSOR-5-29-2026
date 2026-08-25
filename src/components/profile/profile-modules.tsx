@@ -70,6 +70,7 @@ import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 import { SCENE_BOOTH_ID } from '@/lib/scene-home';
 import { isMasterAdminEmail } from '@/lib/master-admin';
+import { MentionSuggestions } from '@/components/profile/mention-suggestions';
 
 export type ModuleContext = {
   profileUserId: string;
@@ -842,7 +843,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
         </p>
       ) : null}
       {canCompose && (
-        <div className={cn(inkWellClass, 'mb-5 space-y-2 p-4')}>
+        <div className={cn(inkWellClass, 'relative mb-5 space-y-2 p-4')}>
           <Textarea
             ref={textRef}
             value={text}
@@ -904,8 +905,9 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
                   title: 'Could not attach photo',
                   description: message,
                 })
-              }
-            />
+            }
+          />
+          {!playground ? <MentionSuggestions value={text} onChange={setText} excludeUserId={user?.id} /> : null}
             <EmojiPickerButton compact disabled={busy} onInsert={insertEmoji} />
           </div>
           <div className="flex justify-end">

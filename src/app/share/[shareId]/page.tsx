@@ -480,6 +480,7 @@ export default function SharedProjectPage() {
                       purchaseCount={share.purchaseCount}
                       firstBuyerName={share.firstBuyerName}
                       hasAudio={hasFirstDropAudio}
+                      ownerName={share.ownerName}
                     />
                     <Card className="border-2 overflow-hidden bg-card/80">
                         <div className="aspect-square relative w-full border-b bg-neutral-950">

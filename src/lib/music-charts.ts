@@ -1,4 +1,4 @@
-import type { EmergingRankingEntry, EmergingSignals } from '@/lib/emerging-ranking';
+import { EMERGING_FORMULA, type EmergingRankingEntry, type EmergingSignals } from '@/lib/emerging-ranking';
 
 export const MUSIC_CHART_WINDOW_DAYS = 7 as const;
 
@@ -26,7 +26,19 @@ export type TrackChartEntry = {
 export type ArtistChartEntry = EmergingRankingEntry & {
   genres: string[];
   regions: string[];
+  audience: 'creator' | 'music_fan';
 };
+
+export const MUSIC_FAN_CHART_FORMULA = [
+  { signal: 'convertedShares', label: 'qualified play inspired', points: 1 },
+  { signal: 'sharedLoves', label: 'Love on shared music', points: 1 },
+  { signal: 'repeatListeners', label: 'repeat listener day', points: 2 },
+  { signal: 'purchaseConversions', label: 'purchase inspired', points: 8 },
+] satisfies Array<{ signal: keyof EmergingSignals; label: string; points: number }>;
+
+export const CREATOR_CHART_FORMULA = EMERGING_FORMULA.filter(
+  ({ signal }) => signal !== 'sharedLoves'
+);
 
 export const TRACK_CHART_FORMULA: Array<{
   signal: keyof TrackChartSignals;
@@ -99,11 +111,16 @@ export function chartRegionLabels(value: unknown): string[] {
 export type MusicChartsResponse = {
   window: { days: 7; from: string; through: string };
   tracks: TrackChartEntry[];
+  creators: ArtistChartEntry[];
+  musicFans: ArtistChartEntry[];
+  /** Compatibility alias for older clients. */
   artists: ArtistChartEntry[];
   filters: { genres: string[]; regions: string[] };
   formula: {
     tracks: typeof TRACK_CHART_FORMULA;
     artists: Array<{ signal: keyof EmergingSignals; label: string; points: number }>;
+    creators: Array<{ signal: keyof EmergingSignals; label: string; points: number }>;
+    musicFans: Array<{ signal: keyof EmergingSignals; label: string; points: number }>;
   };
   integrity: {
     qualifiedAtPercent: 80;

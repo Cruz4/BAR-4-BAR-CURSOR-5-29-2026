@@ -15,6 +15,7 @@ import {
   Zap,
   TrendingUp,
   Headphones,
+  Heart,
   Repeat2,
   UserPlus,
   Star,
@@ -190,6 +191,7 @@ const emergingSignalLabels: Array<{
   { key: 'repeatListeners', label: 'repeat', icon: Repeat2 },
   { key: 'follows', label: 'follows', icon: UserPlus },
   { key: 'innerCircleJoins', label: 'inner circle', icon: Star },
+  { key: 'sharedLoves', label: 'shared Loves', icon: Heart },
   { key: 'purchaseConversions', label: 'buyer conversions', icon: ShoppingBag },
 ];
 
@@ -229,7 +231,7 @@ function EmergingTable({ rows }: { rows: EmergingRankingEntry[] }) {
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {emergingSignalLabels.map(({ key, label, icon: Icon }) =>
-              row.signals[key] > 0 ? (
+              (row.signals[key] || 0) > 0 ? (
                 <span key={key} className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/25 px-2 py-1 font-code text-[9px] uppercase text-white/55">
                   <Icon className="h-3 w-3 text-cyan-300/70" /> {row.signals[key]} {label}
                 </span>

@@ -47,6 +47,9 @@ export function DropListenPanel({
   source = 'direct',
   featuredByUserId,
   excerptStartSec = 0,
+  presentation = 'default',
+  onPlaybackStateChange,
+  referralPostId,
 }: {
   shareId: string;
   title: string;
@@ -58,6 +61,9 @@ export function DropListenPanel({
   /** Profile owner whose saved featured selection this player must match. */
   featuredByUserId?: string;
   excerptStartSec?: number;
+  presentation?: 'default' | 'song';
+  onPlaybackStateChange?: (state: { playing: boolean; currentTime: number; duration: number }) => void;
+  referralPostId?: string;
 }) {
   const { user, authReady } = useAuth();
   const { toast } = useToast();
@@ -90,6 +96,7 @@ export function DropListenPanel({
       const headers = await authHeaders();
       const qs = new URLSearchParams({ shareId });
       if (trackId) qs.set('trackId', trackId);
+      if (referralPostId) qs.set('referralPostId', referralPostId);
       if (featuredByUserId) qs.set('profileUserId', featuredByUserId);
       const endpoint = featuredByUserId
         ? '/api/profile/featured-track/audio'
@@ -116,7 +123,7 @@ export function DropListenPanel({
     } finally {
       setLoading(false);
     }
-  }, [featuredByUserId, firstDropsOn, hasAudio, shareId, trackId, toast]);
+  }, [featuredByUserId, firstDropsOn, hasAudio, referralPostId, shareId, trackId, toast]);
 
   useEffect(() => {
     void loadStream();
@@ -196,7 +203,9 @@ export function DropListenPanel({
   const previewCapped = !full && !isOwner;
 
   return (
-    <div className="rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-4 space-y-3">
+    <div className={presentation === 'song'
+      ? 'space-y-3 rounded-2xl border border-fuchsia-300/45 bg-black/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_18px_55px_rgba(0,0,0,.35)] sm:p-5'
+      : 'rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-4 space-y-3'}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-200">
           {full || isOwner ? 'Full stream' : hasAudio ? 'Play preview · 30 seconds' : 'On sale'}
@@ -249,14 +258,23 @@ export function DropListenPanel({
                   event.currentTarget.currentTime = playbackStartSec;
                 }
               }}
-              onEnded={() => setPlaying(false)}
-              onPause={() => setPlaying(false)}
+              onEnded={(event) => {
+                setPlaying(false);
+                onPlaybackStateChange?.({ playing: false, currentTime: event.currentTarget.currentTime, duration: event.currentTarget.duration || eligibleDurationSec });
+              }}
+              onPause={(event) => {
+                setPlaying(false);
+                onPlaybackStateChange?.({ playing: false, currentTime: event.currentTarget.currentTime, duration: event.currentTarget.duration || eligibleDurationSec });
+              }}
               onPlay={() => {
                 setPlaying(true);
                 recordDropSpinClient(shareId, previewCapped ? 'preview' : 'play');
+                const audio = audioRef.current;
+                onPlaybackStateChange?.({ playing: true, currentTime: audio?.currentTime || 0, duration: audio?.duration || eligibleDurationSec });
               }}
               onTimeUpdate={(e) => {
                 const el = e.currentTarget;
+                onPlaybackStateChange?.({ playing: !el.paused, currentTime: el.currentTime, duration: el.duration || eligibleDurationSec });
                 const listenedSec = Math.max(0, el.currentTime - playbackStartSec);
                 const progressDuration = Math.max(
                   1,

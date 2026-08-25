@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import {
+  CREATOR_CHART_FORMULA,
+  MUSIC_FAN_CHART_FORMULA,
   TRACK_CHART_FORMULA,
   chartRegionLabels,
   trackChartReasons,
@@ -26,6 +28,21 @@ assert.deepEqual(
   TRACK_CHART_FORMULA.map(({ points }) => points),
   [1, 2, 3, 8],
   'public song-chart formula changed unexpectedly'
+);
+assert.equal(
+  CREATOR_CHART_FORMULA.some(({ signal }) => signal === 'sharedLoves'),
+  false,
+  'creator formula must not award fan-only shared-song Loves'
+);
+assert.deepEqual(
+  MUSIC_FAN_CHART_FORMULA.map(({ signal, points }) => [signal, points]),
+  [
+    ['convertedShares', 1],
+    ['sharedLoves', 1],
+    ['repeatListeners', 2],
+    ['purchaseConversions', 8],
+  ],
+  'Music Fan discovery-impact formula changed unexpectedly'
 );
 assert.deepEqual(
   trackChartReasons(signals),

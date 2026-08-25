@@ -44,7 +44,7 @@ export function SupportButton({
   if (!user) {
     return (
       <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
-        <a href="/login"><HeartHandshake className="h-3.5 w-3.5" /> Follow</a>
+        <a href="/login" aria-label="Follow" title="Follow"><HeartHandshake className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Follow</span></a>
       </Button>
     );
   }
@@ -91,7 +91,7 @@ export function SupportButton({
         onClick={() => void run('follow')}
         title={state ? `${state.followerCount} followers` : 'Loading followers'}
       >
-        <HeartHandshake className="h-3.5 w-3.5" /> Follow
+        <HeartHandshake className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Follow</span>
       </Button>
     );
   }
@@ -107,7 +107,7 @@ export function SupportButton({
           title={`${state.followerCount} followers · ${state.innerCircleCount} Inner Circle`}
         >
           {state.innerCircle ? <Star className="h-3.5 w-3.5 fill-amber-300 text-amber-300" /> : <Check className="h-3.5 w-3.5 text-emerald-300" />}
-          {state.innerCircle ? 'Inner Circle' : 'Following'}
+          <span className="max-[380px]:hidden">{state.innerCircle ? 'Inner Circle' : 'Following'}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
@@ -119,7 +119,13 @@ export function SupportButton({
           <Star className="mr-2 h-4 w-4 text-amber-300" />
           {state.innerCircle ? 'Remove from Inner Circle' : 'Add to Inner Circle'}
         </DropdownMenuItem>
-        <DropdownMenuItem className="text-rose-300" onClick={() => void run('unfollow')}>
+        <DropdownMenuItem
+          className="text-rose-300"
+          onClick={() => {
+            if (!window.confirm(`Unfollow ${targetName}? Your friendship, if any, will stay in place.`)) return;
+            void run('unfollow');
+          }}
+        >
           <UserMinus className="mr-2 h-4 w-4" /> Unfollow
         </DropdownMenuItem>
       </DropdownMenuContent>

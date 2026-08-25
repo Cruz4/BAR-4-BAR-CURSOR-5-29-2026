@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { CalendarDays, Disc3, Headphones, Repeat2, ShoppingBag, Sparkles, Trophy } from 'lucide-react';
 import { auth } from '@/lib/firebase/client/firebase';
@@ -15,6 +15,8 @@ import { centsToUsdLabel } from '@/lib/drop-commerce';
 import { buildLoginUrl } from '@/lib/login-links';
 import { profileHref } from '@/lib/profile/profile-slug';
 import type { PressedSongSummary, PressedSongSupporter } from '@/lib/pressed-song';
+import { LivingPressField } from '@/components/profile/living-press-field';
+import { pressTokens, pressingCssVars } from '@/lib/profile/pressing';
 
 async function authorization(): Promise<HeadersInit> {
   const token = await auth.currentUser?.getIdToken();
@@ -44,6 +46,16 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
   const { toast } = useToast();
   const [summary, setSummary] = useState(initial);
   const [savingCredit, setSavingCredit] = useState(false);
+  const [playback, setPlayback] = useState({ playing: false, currentTime: 0, duration: 1 });
+  const [pageVisible, setPageVisible] = useState(true);
+  const pressingTokens = useMemo(
+    () => summary.artist.pressing ? pressTokens(summary.artist.pressing) : null,
+    [summary.artist.pressing]
+  );
+  const pressingStyle = useMemo(
+    () => pressingTokens ? pressingCssVars(pressingTokens) : undefined,
+    [pressingTokens]
+  );
   const refresh = useCallback(async () => {
     const response = await fetch(`/api/songs/${encodeURIComponent(initial.shareId)}`, {
       headers: await authorization(), cache: 'no-store',
@@ -54,6 +66,13 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
   useEffect(() => {
     if (authReady) void refresh();
   }, [authReady, user?.id, refresh]);
+
+  useEffect(() => {
+    const syncVisibility = () => setPageVisible(document.visibilityState === 'visible');
+    syncVisibility();
+    document.addEventListener('visibilitychange', syncVisibility);
+    return () => document.removeEventListener('visibilitychange', syncVisibility);
+  }, []);
 
   const setSupporterCredit = (checked: boolean) => {
     setSavingCredit(true);
@@ -87,11 +106,18 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
     ] : []),
   ];
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#050914] px-4 py-10 text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(236,72,153,.18),transparent_38%),radial-gradient(circle_at_80%_70%,rgba(59,130,246,.14),transparent_42%)]" />
+    <main className="relative min-h-screen overflow-hidden bg-[#050914] px-4 py-10 text-white" style={pressingStyle as React.CSSProperties}>
+      {summary.artist.pressing ? <LivingPressField config={summary.artist.pressing} /> : <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(236,72,153,.18),transparent_38%),radial-gradient(circle_at_80%_70%,rgba(59,130,246,.14),transparent_42%)]" />}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-0 flex h-[42vh] items-end justify-center gap-[clamp(3px,.8vw,12px)] overflow-hidden opacity-45 [mask-image:linear-gradient(to_top,black,transparent)] motion-reduce:hidden" aria-hidden>
+        {Array.from({ length: 28 }, (_, index) => {
+          const eqActive = playback.playing && pageVisible;
+          const wave = eqActive ? 28 + Math.abs(Math.sin(playback.currentTime * (1.4 + index * .07) + index)) * 62 : 12 + (index % 5) * 3;
+          return <span key={index} className="w-[clamp(4px,1.2vw,16px)] rounded-t-full bg-gradient-to-t from-fuchsia-500 via-sky-400 to-cyan-200 transition-[height,opacity] duration-150" style={{ height: `${wave}%`, opacity: eqActive ? .55 + (index % 4) * .1 : .25 }} />;
+        })}
+      </div>
       <div className="relative mx-auto max-w-4xl space-y-7">
         <div className="flex justify-between gap-3"><Button variant="outline" asChild className="font-bold uppercase"><Link href="/">The Scene</Link></Button><Button variant="outline" asChild className="font-bold uppercase"><Link href="/vault">The Vault</Link></Button></div>
-        <section className="rounded-3xl border border-fuchsia-400/30 bg-black/45 p-5 shadow-[0_0_70px_rgba(236,72,153,.12)] sm:p-8">
+        <section className="rounded-3xl border border-fuchsia-400/35 bg-black/60 p-5 shadow-[0_0_70px_rgba(236,72,153,.16)] backdrop-blur-md sm:p-8">
           <div className="mb-5 flex items-center gap-3">
             <ArtistStarAvatar name={summary.artist.name} avatarUrl={summary.artist.avatarUrl} useStarMark={summary.artist.starMarkUseStar} starMarkSeed={summary.artist.starMarkSeed} studioChrome={summary.artist.studioBadge || 'free'} size={48} />
             <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[.22em] text-fuchsia-300">Original artist</p>{artistHref ? <Link href={artistHref} className="truncate text-lg font-bold hover:text-fuchsia-300">{summary.artist.name}</Link> : <p className="text-lg font-bold">{summary.artist.name}</p>}</div>
@@ -100,7 +126,7 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
             <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-fuchsia-400/40 bg-fuchsia-500/15"><Disc3 className="h-8 w-8 text-fuchsia-300" /></span>
             <div><p className="text-[10px] font-bold uppercase tracking-[.25em] text-muted-foreground">Pressed song</p><h1 className="font-headline text-3xl font-black uppercase sm:text-5xl">{summary.title}</h1><p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> Released {new Date(summary.releasedAt).toLocaleDateString()}</p></div>
           </div>
-          <DropListenPanel shareId={summary.shareId} title={summary.title} ownerId={summary.ownerId} price={summary.price} hasAudio source="direct" />
+          <DropListenPanel shareId={summary.shareId} title={summary.title} ownerId={summary.ownerId} price={summary.price} hasAudio source="direct" presentation="song" onPlaybackStateChange={setPlayback} />
           <div className="mt-4">
             <DropSocialPanel
               shareId={summary.shareId}
@@ -109,6 +135,8 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
               playCount={summary.publicTotals.plays}
               purchaseCount={summary.publicTotals.buyers}
               hasAudio
+              ownerName={summary.artist.name}
+              ownerSlug={summary.artist.slug}
             />
           </div>
         </section>

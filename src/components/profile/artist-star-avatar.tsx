@@ -143,7 +143,7 @@ export function ArtistStarAvatar({
       >
         <span className={cn('absolute inset-0', toneClass)} />
         <span className="relative flex h-full w-full items-center justify-center bg-black/40">
-          <VesperfoldMark seed={seed} size={Math.round(size * 1.05)} />
+          <VesperfoldMark seed={seed} size={Math.round(size * 0.92)} />
         </span>
       </span>
     );

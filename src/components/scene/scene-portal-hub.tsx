@@ -5,12 +5,17 @@ import Link from 'next/link';
 import {
   Archive,
   ArrowUpRight,
+  AudioWaveform,
   BarChart3,
+  ChevronRight,
   Compass,
   Disc3,
+  Dna,
   HeartHandshake,
   Library,
   Radio,
+  Settings2,
+  Sparkles,
   Users,
 } from 'lucide-react';
 import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
@@ -27,116 +32,119 @@ type ScenePortalHubProps = {
   };
   artistHomeHref: string;
   friendCount: number;
-  blockPreview?: ProfilePost;
-  discoverPreview?: DiscoverCard;
+  blockPreviews: ProfilePost[];
+  discoverPreviews: DiscoverCard[];
   newBlockCount: number;
   newDiscoverCount: number;
   onOpenBlock: () => void;
   onOpenDiscover: () => void;
 };
 
-type PortalRegionProps = {
-  title: string;
-  eyebrow: string;
-  icon: React.ComponentType<{ className?: string }>;
-  tone: 'violet' | 'cyan' | 'fuchsia' | 'amber' | 'sky' | 'emerald';
-  href?: string;
-  onClick?: () => void;
-  badge?: number;
-  badgeClassName?: string;
-  className?: string;
-  children?: React.ReactNode;
-  titleClassName?: string;
+type PortalTone = 'sky' | 'pink' | 'amber' | 'cyan';
+
+const shortcutTone: Record<PortalTone, string> = {
+  sky: 'border-sky-400/35 bg-sky-500/[0.07] text-sky-300 hover:border-sky-300/70',
+  pink: 'border-fuchsia-400/35 bg-fuchsia-500/[0.07] text-fuchsia-300 hover:border-fuchsia-300/70',
+  amber: 'border-amber-400/35 bg-amber-500/[0.07] text-amber-300 hover:border-amber-300/70',
+  cyan: 'border-cyan-400/35 bg-cyan-500/[0.07] text-cyan-300 hover:border-cyan-300/70',
 };
 
-const regionTone: Record<PortalRegionProps['tone'], string> = {
-  violet: 'text-violet-200 hover:bg-violet-500/10',
-  cyan: 'text-cyan-200 hover:bg-cyan-500/10',
-  fuchsia: 'text-fuchsia-200 hover:bg-fuchsia-500/10',
-  amber: 'text-amber-200 hover:bg-amber-500/10',
-  sky: 'text-sky-200 hover:bg-sky-500/10',
-  emerald: 'text-emerald-200 hover:bg-emerald-500/10',
-};
-
-const regionGlow: Record<PortalRegionProps['tone'], string> = {
-  violet: 'bg-violet-400 shadow-[0_0_16px_rgba(167,139,250,0.55)]',
-  cyan: 'bg-cyan-300 shadow-[0_0_16px_rgba(103,232,249,0.55)]',
-  fuchsia: 'bg-fuchsia-400 shadow-[0_0_16px_rgba(232,121,249,0.55)]',
-  amber: 'bg-amber-300 shadow-[0_0_16px_rgba(252,211,77,0.55)]',
-  sky: 'bg-sky-300 shadow-[0_0_16px_rgba(125,211,252,0.55)]',
-  emerald: 'bg-emerald-300 shadow-[0_0_16px_rgba(110,231,183,0.55)]',
-};
-
-function CountBubble({ count, label, className }: { count?: number; label: string; className?: string }) {
-  if (!count) return null;
+function PortalStatus({ children, tone }: { children: React.ReactNode; tone: PortalTone }) {
   return (
     <span
-      className={cn('absolute right-2.5 top-2.5 z-20 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-400 px-1.5 font-code text-[9px] font-black text-black shadow-[0_0_18px_rgba(52,211,153,0.6)]', className)}
-      aria-label={`${count} new in ${label}`}
+      className={cn(
+        'inline-flex max-w-full items-center rounded-md border px-2 py-0.5 font-code text-[8px] font-bold uppercase tracking-[0.12em] sm:text-[9px]',
+        shortcutTone[tone]
+      )}
     >
-      {count > 99 ? '99+' : count}
+      {children}
     </span>
   );
 }
 
-function PortalRegion({
-  title,
-  eyebrow,
-  icon: Icon,
-  tone,
-  href,
-  onClick,
-  badge,
-  badgeClassName,
-  className,
-  children,
-  titleClassName,
-}: PortalRegionProps) {
-  const content = (
-    <>
-      <CountBubble count={badge} label={title} className={badgeClassName} />
-      <div className="relative z-10 flex min-w-0 items-start gap-1.5 sm:gap-2">
-        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-current/35 bg-black/25 sm:h-8 sm:w-8">
-          <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-        </span>
-        <span className="min-w-0 flex-1 text-left">
-          <span className="hidden font-code text-[7px] font-bold uppercase tracking-[0.18em] text-white/40 min-[430px]:block sm:text-[8px]">
-            {eyebrow}
+function previewText(text: string | undefined, fallback: string): string {
+  const clean = text?.trim();
+  return clean || fallback;
+}
+
+function PortalPreviewRow({
+  name,
+  detail,
+  userId,
+  slug,
+  avatarUrl,
+  imageUrl,
+}: {
+  name: string;
+  detail: string;
+  userId?: string;
+  slug?: string;
+  avatarUrl?: string;
+  imageUrl?: string;
+}) {
+  return (
+    <span className="flex min-w-0 items-center gap-2 sm:gap-2.5">
+      <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-white/15 bg-black/35 sm:h-11 sm:w-11">
+        {imageUrl ? (
+          <span
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${imageUrl})` }}
+          />
+        ) : (
+          <span className="absolute inset-0 flex items-center justify-center">
+            <LiveArtistStarAvatar
+              name={name}
+              userId={userId}
+              slug={slug}
+              avatarUrl={avatarUrl}
+              size={34}
+              link={false}
+            />
           </span>
-          <span className={cn('block font-headline text-[clamp(0.72rem,3.2vw,1.15rem)] font-bold uppercase leading-[0.95] tracking-tight text-white min-[430px]:mt-0.5', titleClassName)}>
-            {title}
-          </span>
+        )}
+      </span>
+      <span className="min-w-0 flex-1 text-left">
+        <span className="block truncate font-code text-[9px] font-black text-white sm:text-[11px]">
+          {name}
         </span>
-      </div>
-      {children ? <div className="relative z-10 mt-1.5 min-w-0 sm:mt-2">{children}</div> : null}
-      <span className={cn('pointer-events-none absolute bottom-2 left-2 h-1 w-1 rounded-full opacity-80', regionGlow[tone])} />
-    </>
-  );
-  const classes = cn(
-    'group absolute z-10 flex min-w-0 flex-col overflow-hidden p-2 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/80',
-    regionTone[tone],
-    className
-  );
-  return href ? (
-    <Link href={href} className={classes}>{content}</Link>
-  ) : (
-    <button type="button" onClick={onClick} className={classes}>{content}</button>
+        <span className="mt-0.5 block max-h-8 overflow-hidden text-[8px] leading-4 text-white/55 sm:text-[10px]">
+          {detail}
+        </span>
+      </span>
+    </span>
   );
 }
 
-function PostPreview({ post }: { post?: ProfilePost }) {
-  if (!post) return <p className="text-[10px] leading-relaxed text-white/50">Your circle is warming up. Open the Block to see what friends post next.</p>;
+function BlockPreviewList({ posts }: { posts: ProfilePost[] }) {
+  if (!posts.length) {
+    return (
+      <p className="max-w-[9rem] text-left text-[9px] leading-relaxed text-white/45 sm:max-w-[13rem] sm:text-[11px]">
+        Your circle is warming up. Open Your Block to see what friends share next.
+      </p>
+    );
+  }
   return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <LiveArtistStarAvatar name={post.ownerName} userId={post.ownerId} slug={post.ownerSlug} size={30} link={false} />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[10px] font-bold text-white sm:text-xs">{post.ownerName}</span>
-        <span className="mt-0.5 hidden max-h-[2.4rem] overflow-hidden text-[10px] leading-[1.2rem] text-white/55 min-[500px]:block">
-          {post.text || (post.imageUrl ? 'Shared a photo' : post.voice ? 'Shared a voice note' : 'Shared something new')}
-        </span>
-      </span>
-      {post.imageUrl ? <span className="hidden h-11 w-11 shrink-0 rounded-lg bg-cover bg-center sm:block" style={{ backgroundImage: `url(${post.imageUrl})` }} /> : null}
-    </div>
+    <span className="flex flex-col gap-3 sm:gap-4">
+      {posts.slice(0, 3).map((post) => (
+        <PortalPreviewRow
+          key={post.id}
+          name={post.ownerName}
+          detail={previewText(
+            post.text,
+            post.imageUrl
+              ? 'Shared a new image'
+              : post.voice
+                ? 'Shared a voice note'
+                : post.isReverb
+                  ? 'Reverbed a signal'
+                  : 'Shared something new'
+          )}
+          userId={post.ownerId}
+          slug={post.ownerSlug}
+          imageUrl={post.imageUrl}
+        />
+      ))}
+    </span>
   );
 }
 
@@ -151,7 +159,7 @@ function discoverPreviewMeta(card?: DiscoverCard): {
   if (card.kind === 'post') {
     return {
       name: card.post.ownerName,
-      detail: card.post.text || 'New post from the Scene',
+      detail: previewText(card.post.text, 'Posted something new'),
       userId: card.post.ownerId,
       slug: card.post.ownerSlug,
     };
@@ -159,7 +167,7 @@ function discoverPreviewMeta(card?: DiscoverCard): {
   if (card.kind === 'artist') {
     return {
       name: card.artist.displayName,
-      detail: card.match?.reasons?.join(' · ') || 'Recently live Artist Home',
+      detail: card.match?.reasons?.join(' · ') || 'Artist Home is live',
       userId: card.artist.userId,
       slug: card.artist.slug,
       avatarUrl: card.artist.avatarUrl,
@@ -168,7 +176,7 @@ function discoverPreviewMeta(card?: DiscoverCard): {
   if (card.kind === 'drop') {
     return {
       name: card.drop.ownerName,
-      detail: `${card.drop.title} · ${card.drop.hasDropAudio ? 'First Drop' : 'DNA Drop'}`,
+      detail: `${card.drop.title} · ${card.drop.hasDropAudio ? 'Pressed song' : 'DNA Drop'}`,
       userId: card.drop.ownerId,
       slug: card.drop.ownerSlug,
       avatarUrl: card.drop.avatarUrl,
@@ -194,24 +202,70 @@ function discoverPreviewMeta(card?: DiscoverCard): {
     : null;
 }
 
-function DiscoverPreview({ card }: { card?: DiscoverCard }) {
-  const preview = discoverPreviewMeta(card);
-  if (!preview) return <p className="text-[10px] leading-relaxed text-white/50">Fresh artists, posts, drops, and matches will appear here.</p>;
+function DiscoverPreviewList({ cards }: { cards: DiscoverCard[] }) {
+  const previews = cards
+    .slice(0, 3)
+    .map((card) => ({ key: card.key, preview: discoverPreviewMeta(card) }))
+    .filter(
+      (entry): entry is {
+        key: string;
+        preview: NonNullable<ReturnType<typeof discoverPreviewMeta>>;
+      } => Boolean(entry.preview)
+    );
+  if (!previews.length) {
+    return (
+      <p className="max-w-[9rem] text-left text-[9px] leading-relaxed text-white/45 sm:max-w-[13rem] sm:text-[11px]">
+        Fresh artists, posts, drops, and taste matches will appear here.
+      </p>
+    );
+  }
   return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <LiveArtistStarAvatar
-        name={preview.name}
-        userId={preview.userId}
-        slug={preview.slug}
-        avatarUrl={preview.avatarUrl}
-        size={30}
-        link={false}
-      />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[10px] font-bold text-white sm:text-xs">{preview.name}</span>
-        <span className="mt-0.5 hidden max-h-[2.4rem] overflow-hidden text-[10px] leading-[1.2rem] text-white/55 min-[500px]:block">{preview.detail}</span>
+    <span className="flex flex-col gap-3 sm:gap-4">
+      {previews.map(({ key, preview }) => (
+        <PortalPreviewRow key={key} {...preview} />
+      ))}
+    </span>
+  );
+}
+
+function WorldShortcut({
+  href,
+  title,
+  detail,
+  icon: Icon,
+  tone,
+  status,
+  avatar,
+}: {
+  href: string;
+  title: string;
+  detail: string;
+  icon: React.ComponentType<{ className?: string }>;
+  tone: PortalTone;
+  status: React.ReactNode;
+  avatar?: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        'group relative flex min-h-[6.4rem] min-w-0 items-center gap-3 overflow-hidden rounded-2xl border px-3 py-3 text-left shadow-[inset_0_0_28px_rgba(255,255,255,0.015),0_14px_35px_rgba(0,0,0,0.25)] transition duration-200 hover:-translate-y-0.5 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:min-h-[7rem] sm:px-4',
+        shortcutTone[tone]
+      )}
+    >
+      <span className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.12)_0.7px,transparent_0.8px)] [background-size:7px_7px]" />
+      <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-current/35 bg-current/[0.08] shadow-[0_0_24px_currentColor] sm:h-14 sm:w-14">
+        {avatar || <Icon className="h-7 w-7 sm:h-8 sm:w-8" />}
       </span>
-    </div>
+      <span className="relative min-w-0 flex-1">
+        <span className="block font-headline text-[clamp(0.92rem,4vw,1.25rem)] font-bold uppercase leading-none tracking-wide text-white">
+          {title}
+        </span>
+        <span className="mt-1 block truncate text-[10px] text-white/55 sm:text-xs">{detail}</span>
+        <span className="mt-2 block">{status}</span>
+      </span>
+      <ChevronRight className="relative h-5 w-5 shrink-0 text-white/75 transition-transform group-hover:translate-x-1" />
+    </Link>
   );
 }
 
@@ -245,105 +299,147 @@ export function ScenePortalHub({
   viewer,
   artistHomeHref,
   friendCount,
-  blockPreview,
-  discoverPreview,
+  blockPreviews,
+  discoverPreviews,
   newBlockCount,
   newDiscoverCount,
   onOpenBlock,
   onOpenDiscover,
 }: ScenePortalHubProps) {
   return (
-    <section className="space-y-3" data-tour="scene-feed" aria-label="Scene portals">
-      <div data-tour="scene-nav-mobile" className="overflow-hidden rounded-[1.35rem] border border-sky-400/25 bg-[radial-gradient(circle_at_50%_45%,rgba(37,99,235,0.14),transparent_34%),linear-gradient(145deg,rgba(7,16,31,0.97),rgba(4,9,20,0.98))] p-3 shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:p-4">
-        <div className="mb-3 flex items-end justify-between gap-3 px-1">
-          <div>
-            <p className="flex items-center gap-1.5 font-code text-[9px] font-bold uppercase tracking-[0.24em] text-sky-300">
-              <Radio className="h-3.5 w-3.5" /> Scene portals
-            </p>
-            <p className="mt-1 text-xs text-white/45">Open a room—or jump straight to your music and people.</p>
-          </div>
-          <span className="hidden font-code text-[8px] uppercase tracking-[0.2em] text-white/25 sm:block">Live previews</span>
-        </div>
+    <section className="space-y-3" data-tour="scene-feed" aria-label="Your World scene portals">
+      <div
+        data-tour="scene-nav-mobile"
+        className="relative overflow-hidden rounded-[1.7rem] border border-sky-400/20 bg-[radial-gradient(circle_at_8%_4%,rgba(14,165,233,0.1),transparent_30%),radial-gradient(circle_at_94%_25%,rgba(217,70,239,0.1),transparent_30%),linear-gradient(155deg,rgba(3,10,24,0.98),rgba(2,7,18,0.99))] p-3 shadow-[0_28px_90px_rgba(0,0,0,0.5)] sm:p-5"
+      >
+        <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_center,rgba(56,189,248,0.18)_0.65px,transparent_0.8px)] [background-size:8px_8px]" />
 
-        <div data-scene-portal-map className="relative mx-auto aspect-square w-full max-w-[52rem] overflow-hidden rounded-[1.1rem] border-2 border-sky-300/45 bg-[radial-gradient(circle_at_50%_48%,rgba(14,165,233,0.11),transparent_34%),linear-gradient(145deg,rgba(5,13,27,0.98),rgba(3,8,18,0.99))] shadow-[inset_0_0_55px_rgba(14,165,233,0.06),0_20px_60px_rgba(0,0,0,0.35)]">
-          <div className="pointer-events-none absolute inset-y-0 left-1/2 z-[1] w-px -translate-x-1/2 bg-gradient-to-b from-sky-300/45 via-fuchsia-300/55 to-violet-300/45" />
-          <div className="pointer-events-none absolute inset-x-0 top-1/2 z-[1] h-px -translate-y-1/2 bg-gradient-to-r from-violet-300/40 via-sky-300/50 to-fuchsia-300/40" />
+        <header className="relative mb-4 flex items-center gap-3 px-1 sm:mb-5 sm:gap-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sky-400/30 bg-sky-500/10 text-sky-300 shadow-[0_0_24px_rgba(14,165,233,0.18)] sm:h-12 sm:w-12">
+            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
+          </span>
+          <span className="min-w-0">
+            <span className="block font-headline text-3xl font-black uppercase leading-none tracking-wide text-white sm:text-4xl">Your World</span>
+            <span className="mt-1 block text-xs text-white/55 sm:text-sm">Create, explore, connect.</span>
+          </span>
+        </header>
 
-          <PortalRegion
-            title="The Vault"
-            eyebrow="Create · organize"
-            icon={Archive}
-            tone="violet"
-            href="/vault"
-            className="left-0 top-0 h-[17%] w-1/2 items-start justify-start pl-3 pt-3 sm:pl-5 sm:pt-4"
-          />
-          <PortalRegion
-            title="Your Circle"
-            eyebrow={`${friendCount} friend${friendCount === 1 ? '' : 's'}`}
-            icon={Users}
-            tone="emerald"
-            href="/friends"
-            className="bottom-0 right-0 h-[17%] w-1/2 items-end justify-end pb-3 pr-3 sm:pb-4 sm:pr-5"
-          />
+        <Link
+          href="/vault"
+          className="group relative flex min-h-[9.5rem] items-center gap-3 overflow-hidden rounded-[1.5rem] border border-sky-300/70 bg-[radial-gradient(circle_at_10%_50%,rgba(14,165,233,0.18),transparent_33%),radial-gradient(circle_at_88%_20%,rgba(217,70,239,0.16),transparent_32%),rgba(5,10,28,0.9)] px-3 py-4 shadow-[inset_0_0_45px_rgba(56,189,248,0.06),0_0_0_1px_rgba(217,70,239,0.24),0_18px_50px_rgba(0,0,0,0.32)] transition hover:border-white/80 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:min-h-[11rem] sm:gap-5 sm:px-6"
+        >
+          <span className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_center,rgba(56,189,248,0.22)_0.7px,transparent_0.8px)] [background-size:7px_7px]" />
+          <span className="relative flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-2xl border-2 border-sky-300/80 bg-sky-500/10 text-sky-300 shadow-[inset_0_0_24px_rgba(59,130,246,0.28),0_0_24px_rgba(56,189,248,0.22)] sm:h-24 sm:w-24">
+            <Archive className="h-10 w-10 sm:h-14 sm:w-14" />
+            <span className="absolute -bottom-1.5 left-2 h-2 w-3 border-x-2 border-b-2 border-sky-300/70" />
+            <span className="absolute -bottom-1.5 right-2 h-2 w-3 border-x-2 border-b-2 border-sky-300/70" />
+          </span>
+          <span className="relative min-w-0 flex-1">
+            <span className="block font-headline text-[clamp(1.45rem,7vw,2.45rem)] font-black uppercase leading-none tracking-wide text-white">The Vault</span>
+            <span className="mt-1 block text-[11px] text-white/55 sm:text-sm">Continue creating</span>
+            <span className="mt-2 block font-code text-[9px] text-sky-300 sm:text-xs">Albums · tracks · DNA</span>
+            <AudioWaveform className="mt-3 h-5 w-28 text-fuchsia-300/75 sm:w-44" />
+          </span>
+          <span className="relative hidden h-24 w-20 shrink-0 rotate-2 border border-white/10 bg-black/40 p-2 font-code text-[7px] leading-relaxed text-white/55 min-[390px]:block sm:h-28 sm:w-24 sm:text-[8px]">
+            <span className="block border-b border-white/10 pb-1 text-white/75">Current sheet</span>
+            <span className="mt-2 block">Bars, ideas, DNA and unfinished sparks stay ready.</span>
+          </span>
+          <span className="relative flex shrink-0 items-center gap-1 font-headline text-sm font-bold uppercase tracking-wide text-white sm:text-lg">
+            <span className="hidden min-[440px]:inline">Open</span>
+            <ChevronRight className="h-7 w-7 transition-transform group-hover:translate-x-1" />
+          </span>
+        </Link>
 
-          <div className="absolute left-[9%] top-1/2 z-20 aspect-square w-[82%] -translate-y-1/2 overflow-hidden rounded-full border-2 border-sky-300/55 bg-[radial-gradient(circle_at_50%_50%,rgba(30,64,175,0.15),rgba(3,8,18,0.96)_68%)] shadow-[0_0_42px_rgba(14,165,233,0.12)]">
-            <span className="pointer-events-none absolute inset-y-0 left-1/2 z-20 w-px -translate-x-1/2 bg-sky-200/35" />
-            <span className="pointer-events-none absolute inset-x-0 top-1/2 z-20 h-px -translate-y-1/2 bg-sky-200/35" />
-
-            <PortalRegion
-              title="Pressed + DNA"
-              eyebrow="Songs · drops"
-              icon={Disc3}
-              tone="fuchsia"
-              href="/vault"
-              className="left-0 top-0 h-1/2 w-1/2 items-start justify-start pl-[18%] pr-[8%] pt-[20%]"
-              titleClassName="max-w-[7.5rem]"
-            />
-            <PortalRegion
-              title="Discover"
-              eyebrow="For your taste"
-              icon={Compass}
-              tone="cyan"
+        <div data-scene-portal-map className="relative mt-3 min-h-[27rem] sm:mt-4 sm:min-h-[31rem]">
+          <div className="absolute inset-0 grid grid-cols-2 overflow-hidden rounded-[1.5rem] bg-black/45 shadow-[0_18px_50px_rgba(0,0,0,0.34)]">
+            <button
+              type="button"
               onClick={onOpenDiscover}
-              badge={newDiscoverCount}
-              badgeClassName="right-[25%] top-[25%]"
-              className="right-0 top-0 h-1/2 w-1/2 items-start justify-start pl-[6%] pr-[12%] pt-[20%]"
-              titleClassName="text-[9px] min-[430px]:text-xs sm:text-lg"
+              className="group relative flex min-w-0 flex-col overflow-hidden rounded-l-[1.5rem] border-y border-l border-cyan-300/70 bg-[radial-gradient(circle_at_38%_15%,rgba(6,182,212,0.2),transparent_35%),linear-gradient(165deg,rgba(4,23,42,0.96),rgba(3,11,27,0.98))] px-3 pb-5 pt-6 text-left transition hover:brightness-115 focus-visible:z-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-200 sm:px-5 sm:pb-7 sm:pt-8"
             >
-              <DiscoverPreview card={discoverPreview} />
-            </PortalRegion>
-            <PortalRegion
-              title="Library"
-              eyebrow="Music you own"
-              icon={Library}
-              tone="amber"
-              href="/library"
-              className="bottom-0 left-0 h-1/2 w-1/2 items-start justify-end pb-[20%] pl-[18%] pr-[8%]"
-            />
-            <PortalRegion
-              title="Your Block"
-              eyebrow="Friends · posts"
-              icon={Radio}
-              tone="fuchsia"
+              <span className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_center,rgba(34,211,238,0.18)_0.65px,transparent_0.8px)] [background-size:7px_7px]" />
+              <span className="relative flex h-16 w-16 items-center justify-center rounded-full border border-cyan-300/65 bg-cyan-500/10 text-cyan-300 shadow-[0_0_30px_rgba(34,211,238,0.2)] sm:h-20 sm:w-20">
+                <Compass className="h-9 w-9 sm:h-11 sm:w-11" />
+              </span>
+              <span className="relative mt-5 font-headline text-[clamp(1.25rem,6vw,2rem)] font-black uppercase leading-none tracking-wide text-white sm:mt-6">Discover</span>
+              <span className="relative mt-1 text-[10px] text-white/55 sm:text-xs">Explore everyone</span>
+              <span className="relative mt-2">
+                <PortalStatus tone="cyan">{newDiscoverCount > 0 ? `${Math.min(newDiscoverCount, 99)} new` : 'Fresh picks'}</PortalStatus>
+              </span>
+              <span className="relative mt-5 min-w-0 flex-1 sm:mt-6">
+                <DiscoverPreviewList cards={discoverPreviews} />
+              </span>
+              <ChevronRight className="relative mt-3 h-7 w-7 self-end text-cyan-300 transition-transform group-hover:translate-x-1" />
+              <span className="pointer-events-none absolute bottom-10 left-3 flex flex-col items-center gap-1 text-cyan-300/70 sm:left-4">
+                <span className="text-xs">↑</span>
+                <span className="h-16 w-1 rounded-full bg-gradient-to-b from-cyan-200 via-cyan-400/70 to-cyan-300/20" />
+                <span className="h-1.5 w-1.5 rounded-full bg-cyan-300" />
+              </span>
+            </button>
+
+            <button
+              type="button"
               onClick={onOpenBlock}
-              badge={newBlockCount}
-              className="bottom-0 right-0 h-1/2 w-1/2 items-start justify-end pb-[8%] pl-[15%] pr-[7%]"
+              className="group relative flex min-w-0 flex-col overflow-hidden rounded-r-[1.5rem] border-y border-r border-fuchsia-300/70 bg-[radial-gradient(circle_at_62%_15%,rgba(217,70,239,0.2),transparent_35%),linear-gradient(195deg,rgba(38,7,42,0.94),rgba(12,5,26,0.98))] px-3 pb-5 pt-6 text-left transition hover:brightness-115 focus-visible:z-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-fuchsia-200 sm:px-5 sm:pb-7 sm:pt-8"
             >
-              <PostPreview post={blockPreview} />
-            </PortalRegion>
+              <span className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_center,rgba(232,121,249,0.2)_0.65px,transparent_0.8px)] [background-size:7px_7px]" />
+              <span className="relative ml-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-fuchsia-300/65 bg-fuchsia-500/10 text-fuchsia-300 shadow-[0_0_30px_rgba(217,70,239,0.2)] sm:h-20 sm:w-20">
+                <Radio className="h-9 w-9 sm:h-11 sm:w-11" />
+              </span>
+              <span className="relative mt-5 font-headline text-[clamp(1.1rem,5.5vw,1.9rem)] font-black uppercase leading-none tracking-wide text-white sm:mt-6">Your Block</span>
+              <span className="relative mt-1 text-[10px] text-white/55 sm:text-xs">Friends &amp; Following</span>
+              <span className="relative mt-2">
+                <PortalStatus tone="pink">
+                  {newBlockCount > 0 ? `${Math.min(newBlockCount, 99)} new` : `${friendCount} friend${friendCount === 1 ? '' : 's'}`}
+                </PortalStatus>
+              </span>
+              <span className="relative mt-5 min-w-0 flex-1 sm:mt-6">
+                <BlockPreviewList posts={blockPreviews} />
+              </span>
+              <ChevronRight className="relative mt-3 h-7 w-7 self-end text-fuchsia-300 transition-transform group-hover:translate-x-1" />
+              <span className="pointer-events-none absolute bottom-10 right-3 flex flex-col items-center gap-1 text-fuchsia-300/70 sm:right-4">
+                <span className="text-xs">↑</span>
+                <span className="h-16 w-1 rounded-full bg-gradient-to-b from-fuchsia-200 via-fuchsia-400/70 to-fuchsia-300/20" />
+                <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-300" />
+              </span>
+            </button>
           </div>
 
-          <Link
-            href={artistHomeHref}
-            className="group absolute left-1/2 top-1/2 z-40 flex aspect-square w-[26%] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center gap-1 overflow-hidden border-2 border-sky-200/65 bg-[radial-gradient(circle_at_50%_35%,rgba(14,165,233,0.3),rgba(5,18,38,0.98)_70%)] p-1.5 text-center shadow-[0_0_0_4px_rgba(3,8,18,0.94),0_0_36px_rgba(14,165,233,0.28)] transition hover:border-white hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:gap-2 sm:p-3"
-          >
-            <LiveArtistStarAvatar name={viewer.displayName} userId={viewer.userId} slug={viewer.slug} size={42} link={false} toneClass="bg-sky-500/25 text-sky-200" />
-            <span className="font-headline text-[10px] font-bold uppercase leading-none text-white min-[430px]:text-xs sm:text-base">Artist Home</span>
-            <span className="hidden max-w-full truncate font-code text-[7px] uppercase tracking-[0.1em] text-sky-100/55 min-[500px]:block sm:text-[8px]">{viewer.displayName}</span>
-          </Link>
-
-          <span className="pointer-events-none absolute bottom-2 left-2 font-code text-[6px] uppercase tracking-[0.24em] text-white/15 sm:text-[7px]">BA · Scene map</span>
+          <svg className="pointer-events-none absolute left-1/2 top-0 z-20 h-full w-[4.5rem] -translate-x-1/2 overflow-visible" viewBox="0 0 72 500" preserveAspectRatio="none" aria-hidden>
+            <defs>
+              <linearGradient id="scene-portal-seam" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#67e8f9" />
+                <stop offset="0.5" stopColor="#a78bfa" />
+                <stop offset="1" stopColor="#f0abfc" />
+              </linearGradient>
+            </defs>
+            <path d="M36 0 C 9 88, 65 166, 26 250 C -4 326, 61 412, 36 500" fill="rgba(2,7,18,0.72)" stroke="url(#scene-portal-seam)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+          </svg>
         </div>
+
+        <div className="relative mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3">
+          <WorldShortcut
+            href={artistHomeHref}
+            title="Artist Home"
+            detail="Your public page"
+            icon={Radio}
+            tone="pink"
+            status={<PortalStatus tone="pink">{viewer.slug ? 'Live' : 'Set up'}</PortalStatus>}
+            avatar={<LiveArtistStarAvatar name={viewer.displayName} userId={viewer.userId} slug={viewer.slug} size={44} link={false} toneClass="bg-fuchsia-500/15 text-fuchsia-200" />}
+          />
+          <WorldShortcut href="/vault" title="Pressed + DNA" detail="Songs · sound identity" icon={Dna} tone="pink" status={<PortalStatus tone="pink">Open Vault</PortalStatus>} />
+          <WorldShortcut href="/library" title="Library" detail="Music you unlocked" icon={Library} tone="amber" status={<PortalStatus tone="amber">Saved music</PortalStatus>} />
+          <WorldShortcut href="/friends" title="Your Circle" detail="Friends & messages" icon={Users} tone="cyan" status={<PortalStatus tone="cyan">{friendCount} friend{friendCount === 1 ? '' : 's'}</PortalStatus>} />
+        </div>
+
+        <Link
+          href="/profile/customize"
+          className="group relative mt-3 flex min-h-16 items-center justify-center gap-3 overflow-hidden rounded-2xl border border-white/15 bg-white/[0.025] px-4 text-white/60 transition hover:border-sky-300/45 hover:bg-sky-500/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 sm:mt-4"
+        >
+          <Settings2 className="h-6 w-6 text-sky-300" />
+          <span className="text-sm sm:text-base">Customize your Artist Home</span>
+          <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" aria-label="Scene creator shortcuts">

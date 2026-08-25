@@ -155,9 +155,11 @@ export function PassBarButton({
           }
           setOpen(true);
         }}
+        aria-label="Message"
+        title="Message"
       >
         <MessageSquare className="h-3.5 w-3.5" />
-        Message
+        <span className="max-[380px]:hidden">Message</span>
       </Button>
       <PassBarDialog
         open={open}

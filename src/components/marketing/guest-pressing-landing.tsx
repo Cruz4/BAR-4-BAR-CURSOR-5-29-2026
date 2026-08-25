@@ -24,7 +24,6 @@ import {
 } from '@/components/ui/dialog';
 import { BrandLockup } from '@/components/brand-lockup';
 import { LandingSignInLink, LandingSignupLink } from '@/components/marketing/landing-signup-link';
-import { StudioThemeControls } from '@/components/studio-theme-controls';
 import { ArtistHome } from '@/components/profile/artist-home';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
 import {
@@ -501,7 +500,6 @@ function GuestPressingLandingInner() {
           <LandingSignInLink className="hidden text-[10px] font-bold uppercase tracking-widest text-amber-300 transition-colors hover:text-amber-200 sm:inline">
             Sign in
           </LandingSignInLink>
-          <StudioThemeControls className="hidden sm:inline-flex" />
           <Button
             asChild
             className="h-8 rounded-md bg-primary px-2.5 text-[11px] font-bold text-white hover:bg-primary/90 sm:h-9 sm:px-4 sm:text-sm"

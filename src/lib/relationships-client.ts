@@ -2,6 +2,7 @@
 
 import { auth } from '@/lib/firebase/client/firebase';
 import type {
+  SupportAnalyticsWindow,
   SupportDashboard,
   SupportRelationshipState,
 } from '@/lib/relationships';
@@ -47,9 +48,12 @@ export async function updateSupportRelationship(input: {
   return data as SupportRelationshipState;
 }
 
-export async function fetchSupportDashboard(userId: string): Promise<SupportDashboard> {
+export async function fetchSupportDashboard(
+  userId: string,
+  days: SupportAnalyticsWindow = 30
+): Promise<SupportDashboard> {
   const response = await request(
-    `/api/relationships?userId=${encodeURIComponent(userId)}&view=dashboard`
+    `/api/relationships?userId=${encodeURIComponent(userId)}&view=dashboard&days=${days}`
   );
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || 'Could not load supporters.');

@@ -20,6 +20,11 @@ import {
 } from '@/lib/drop-social-client';
 import type { PostComment } from '@/lib/profile/social-client';
 import { cn } from '@/lib/utils';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { MentionSuggestions } from '@/components/profile/mention-suggestions';
 
 type DropSocialPanelProps = {
   shareId: string;
@@ -30,6 +35,8 @@ type DropSocialPanelProps = {
   purchaseCount?: number;
   firstBuyerName?: string;
   hasAudio?: boolean;
+  ownerName?: string;
+  ownerSlug?: string;
 };
 
 export function DropSocialPanel({
@@ -41,6 +48,7 @@ export function DropSocialPanel({
   purchaseCount,
   firstBuyerName,
   hasAudio = true,
+  ownerName,
 }: DropSocialPanelProps) {
   const { user } = useAuth();
   const { summary } = useGamification();
@@ -55,6 +63,8 @@ export function DropSocialPanel({
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [walled, setWalled] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
+  const [quoteText, setQuoteText] = useState('');
 
   const pulse = formatDropPulseLine({ playCount, previewCount, purchaseCount, loveCount: likeCount });
   const dropPath = hasAudio ? `/song/${shareId}` : `/share/${shareId}`;
@@ -141,7 +151,7 @@ export function DropSocialPanel({
     await copyLink();
   };
 
-  const postToWall = async () => {
+  const postToWall = async (quote?: string) => {
     if (!user) {
       needAuth();
       return;
@@ -150,13 +160,16 @@ export function DropSocialPanel({
     setBusy(true);
     try {
       await createPost({
-        text: `First Drop · ${title}`,
+        text: [quote?.trim(), `${hasAudio ? 'First Drop' : 'DNA Drop'} · ${title}`, ownerName ? `Original · ${ownerName}` : ''].filter(Boolean).join('\n'),
         embedUrl: dropUrl,
+        sourceKind: hasAudio ? 'song' : 'dna',
         ownerName: user.displayName || 'Artist',
         ownerSlug: summary.profileSlug,
       });
       setWalled(true);
-      toast({ title: 'On your wall', description: 'Your circle can love and reply from there too.' });
+      setQuoteOpen(false);
+      setQuoteText('');
+      toast({ title: quote?.trim() ? 'Quote Reverb live' : 'Reverb live', description: 'The original artist and song link stay attached.' });
     } catch (err) {
       toast({
         variant: 'destructive',
@@ -196,19 +209,17 @@ export function DropSocialPanel({
           <MessageCircle className="h-3.5 w-3.5" />
           {commentCount > 0 ? commentCount : 'Reply'}
         </button>
-        <button
-          type="button"
-          disabled={busy || walled}
-          onClick={() => void postToWall()}
-          className={cn(
-            'flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors',
-            walled ? 'text-violet-300' : 'text-muted-foreground hover:text-violet-300'
-          )}
-          title="Post this First Drop on your wall"
-        >
-          <Repeat2 className={cn('h-3.5 w-3.5', walled && 'stroke-[2.5]')} />
-          {walled ? 'On your wall' : 'Post to wall'}
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" disabled={busy || walled} className={cn('flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors', walled ? 'text-violet-300' : 'text-muted-foreground hover:text-violet-300')} title="Reverb this First Drop">
+              <Repeat2 className={cn('h-3.5 w-3.5', walled && 'stroke-[2.5]')} /> {walled ? 'Reverbed' : 'Reverb'}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onSelect={() => void postToWall()}>Reverb</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setQuoteOpen(true)}>Quote</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <button
           type="button"
           onClick={() => void nativeShare()}
@@ -240,6 +251,14 @@ export function DropSocialPanel({
           isOwner={user?.id === ownerId}
         />
       )}
+      <Dialog open={quoteOpen} onOpenChange={setQuoteOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Quote Reverb</DialogTitle><DialogDescription>Add your thought above the original pressed song.</DialogDescription></DialogHeader>
+          <div className="relative"><Textarea value={quoteText} onChange={(event) => setQuoteText(event.target.value.slice(0, 1000))} rows={4} placeholder="Write your quote…" /><MentionSuggestions value={quoteText} onChange={setQuoteText} excludeUserId={user?.id} /></div>
+          <p className="text-xs text-muted-foreground">Original · {ownerName || 'Artist'} · {title}</p>
+          <DialogFooter><Button variant="outline" onClick={() => setQuoteOpen(false)}>Cancel</Button><Button disabled={busy || !quoteText.trim()} onClick={() => void postToWall(quoteText)}>Quote + Reverb</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

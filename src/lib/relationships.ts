@@ -37,9 +37,45 @@ export type SupportRelationshipRow = {
   innerCircle: boolean;
   createdAt: string;
   updatedAt: string;
+  mutual?: boolean;
+  engagement?: SupporterEngagement;
+};
+
+export type SupportAnalyticsWindow = 7 | 30 | 90;
+
+export type SupporterEngagement = {
+  qualifiedListeningDays: number;
+  purchaseCount: number;
+  totalPaidCents: number;
+  periodPaidCents: number;
+  firstQualifiedAt?: string;
+  lastQualifiedAt?: string;
+  firstPurchaseAt?: string;
+  lastPurchaseAt?: string;
+  lastSource?: string;
+};
+
+export type SupportTopSupporter = SupporterEngagement & {
+  userId: string;
+  displayName: string;
+  profileSlug?: string;
+  innerCircle: boolean;
+  followsYou: boolean;
+  mutual: boolean;
+  periodPurchases: number;
+  firstSupportedAt: string;
+  lastSupportedAt: string;
+  topTrackTitle?: string;
+};
+
+export type SupportGrowthDay = {
+  day: string;
+  newFollowers: number;
+  newInnerCircle: number;
 };
 
 export type SupportDashboard = {
+  windowDays: SupportAnalyticsWindow;
   followers: SupportRelationshipRow[];
   following: SupportRelationshipRow[];
   totals: {
@@ -47,5 +83,34 @@ export type SupportDashboard = {
     innerCircleSupporters: number;
     following: number;
     inMyInnerCircle: number;
+  };
+  analytics: {
+    newFollowers: number;
+    newInnerCircle: number;
+    activeFollowerListeners: number;
+    repeatFollowerListeners: number;
+    lifetimeFollowerBuyers: number;
+    periodFollowerBuyers: number;
+    repeatFollowerBuyers: number;
+    mutualSupporters: number;
+    publicProfileSupporters: number;
+    periodPurchases: number;
+    periodGrossCents: number;
+    followerPeriodGrossCents: number;
+    lifetimePurchases: number;
+    lifetimeGrossCents: number;
+    followerLifetimeGrossCents: number;
+    rates: {
+      innerCirclePercent: number;
+      mutualPercent: number;
+      activeListenerPercent: number;
+      supporterBuyerPercent: number;
+      repeatBuyerPercent: number;
+      publicProfilePercent: number;
+      supporterRevenuePercent: number;
+    };
+    growth: SupportGrowthDay[];
+    sources: Array<{ source: string; supporters: number }>;
+    topSupporters: SupportTopSupporter[];
   };
 };

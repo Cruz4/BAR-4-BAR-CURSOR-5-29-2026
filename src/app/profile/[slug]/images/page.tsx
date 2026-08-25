@@ -12,12 +12,14 @@ import { useAuth } from '@/hooks/use-auth';
 import { fetchGamificationSummary } from '@/lib/gamification-client';
 import { profileHref } from '@/lib/profile/profile-slug';
 import type { ProfilePost } from '@/lib/profile/social-client';
+import { PublicProfileSectionShell } from '@/components/profile/public-profile-section-shell';
 
 export default function ProfileImagesPage() {
   const params = useParams();
   const slug = typeof params?.slug === 'string' ? params.slug : '';
   const { user } = useAuth();
   const [displayName, setDisplayName] = useState('Artist');
+  const [rawProfile, setRawProfile] = useState<unknown>({});
   const [posts, setPosts] = useState<ProfilePost[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [viewerSlug, setViewerSlug] = useState<string>();
@@ -45,6 +47,7 @@ export default function ProfileImagesPage() {
         const profile = (await response.json()) as { displayName?: string };
         if (cancelled) return;
         setDisplayName(profile.displayName?.trim() || slug);
+        setRawProfile(profile);
         await loadPage();
       } catch {
         if (!cancelled) setMissing(true);
@@ -65,6 +68,7 @@ export default function ProfileImagesPage() {
     return <div className="mx-auto max-w-lg px-4 py-20 text-center">Artist page not found.</div>;
   }
   return (
+    <PublicProfileSectionShell rawProfile={rawProfile} slug={slug}>
     <main className="container mx-auto max-w-2xl space-y-6 px-4 py-8">
       <Button size="sm" variant="outline" asChild className="h-8 gap-1.5 font-bold uppercase">
         <Link href={profileHref(slug) || '/'}><ChevronLeft className="h-4 w-4" /> {displayName}</Link>
@@ -93,5 +97,6 @@ export default function ProfileImagesPage() {
         >{loadingMore ? 'Loading…' : 'Load more images'}</Button>
       ) : null}
     </main>
+    </PublicProfileSectionShell>
   );
 }

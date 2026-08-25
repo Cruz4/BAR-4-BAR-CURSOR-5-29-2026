@@ -88,8 +88,8 @@ export function AdminSceneLayoutCard() {
               Scene Layout
             </CardTitle>
             <CardDescription className="mt-2 max-w-xl">
-              Switch the signed-in Scene between the new Portal Map and the original full inline
-              feed. The change is live and does not delete posts, preferences, or discovery data.
+              Switch the phone Scene between the Portal Map and the original full inline feed.
+              iPad and desktop always keep the original Scene. No posts or discovery data are changed.
             </CardDescription>
           </div>
           <Badge
@@ -120,16 +120,15 @@ export function AdminSceneLayoutCard() {
                   Use Portal Map
                 </p>
                 <p className="mt-1 max-w-md text-xs text-muted-foreground">
-                  On uses the portal hub and immersive swipe feeds. Off restores the full inline
-                  Your Block and Discover layout with the original Scene shortcut dock.
+                  On uses the portal hub and immersive swipe feeds on phones under 768px. Off
+                  restores the full inline Your Block and Discover layout everywhere.
                 </p>
               </div>
               <Switch checked={portalHubEnabled} onCheckedChange={setPortalHubEnabled} />
             </div>
 
             <p className="text-[11px] text-muted-foreground">
-              Safe default: Portal Map. If the setting cannot load, visitors keep the current
-              portal experience instead of flashing between layouts.
+              Safe default: Portal Map on phones. iPad and desktop are unaffected by this toggle.
             </p>
 
             {config?.updatedAt ? (

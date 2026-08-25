@@ -57,6 +57,7 @@ import {
 } from '@/lib/profile/post-images';
 import { notifyLoveReward } from '@/lib/profile/love-reward-client';
 import type { PressingConfig } from '@/lib/profile/pressing';
+import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
 
 export type ProfilePost = {
   id: string;
@@ -75,6 +76,8 @@ export type ProfilePost = {
   viewCount?: number;
   /** True when this wall post is a Reverb (repost) of another artist's post. */
   isReverb?: boolean;
+  /** New shares identify the original content kind; legacy records safely omit it. */
+  sourceKind?: 'post' | 'song' | 'dna';
   reverbPostId?: string;
   reverbOwnerId?: string;
   reverbOwnerName?: string;
@@ -217,6 +220,7 @@ export async function createPost(input: {
   ownerSlug?: string;
   voice?: RecordedVoiceClip;
   lyricClip?: LyricClip;
+  sourceKind?: 'post' | 'song' | 'dna';
 }): Promise<ProfilePost> {
   const user = requireUser();
   const liveProfile = await requireLiveProfileForPosting(user.uid);
@@ -271,6 +275,7 @@ export async function createPost(input: {
     ...(imageStoragePath ? { imageStoragePath } : {}),
     ...(voice ? { voice } : {}),
     ...(parsedLyricClip ? { lyricClip: parsedLyricClip } : {}),
+    ...(input.sourceKind ? { sourceKind: input.sourceKind } : {}),
     createdAt: new Date().toISOString(),
   };
   const { id: postId, ...data } = post;
@@ -280,6 +285,10 @@ export async function createPost(input: {
     if (voice) await deleteVoiceStorage(voice.storagePath);
     if (imageStoragePath) await deletePostImageStorage(imageStoragePath);
     throw err;
+  }
+  if (text.includes('@')) {
+    const { notifyMentions } = await import('@/lib/profile/mentions-client');
+    notifyMentions({ sourceKind: 'post', sourceId: postId });
   }
   trackSocialEvent('profile_post_created', {
     hasEmbed: Boolean(embedUrl),
@@ -342,6 +351,9 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
       ? { viewCount: Math.floor(data.viewCount) }
       : {}),
     ...(data.isReverb === true ? { isReverb: true } : {}),
+    ...(data.sourceKind === 'post' || data.sourceKind === 'song' || data.sourceKind === 'dna'
+      ? { sourceKind: data.sourceKind }
+      : {}),
     ...(typeof data.reverbPostId === 'string' ? { reverbPostId: data.reverbPostId } : {}),
     ...(typeof data.reverbOwnerId === 'string' ? { reverbOwnerId: data.reverbOwnerId } : {}),
     ...(typeof data.reverbOwnerName === 'string'
@@ -444,6 +456,7 @@ export async function toggleReverb(
     source.isReverb && source.reverbLyricClip
       ? source.reverbLyricClip
       : source.lyricClip;
+  const rootSourceKind = source.sourceKind || (rootEmbed?.includes('/song/') ? 'song' : rootEmbed?.includes('/share/') ? 'dna' : 'post');
 
   const pointerRef = doc(db, 'users', user.uid, 'reverbs', rootPostId);
   const existing = await getDoc(pointerRef);
@@ -486,6 +499,7 @@ export async function toggleReverb(
     text: quote,
     createdAt: new Date().toISOString(),
     isReverb: true,
+    sourceKind: rootSourceKind,
     reverbPostId: rootPostId,
     reverbOwnerId: rootOwnerId,
     reverbOwnerName: rootOwnerName,
@@ -561,9 +575,14 @@ export async function fetchPostsByOwners(
 ): Promise<ProfilePost[]> {
   const unique = [...new Set(ownerIds)].filter(Boolean).slice(0, 60);
   const results = await Promise.all(
-    unique.map((uid) => fetchPostsByOwner(uid, perOwner, opts).catch(() => [] as ProfilePost[]))
+    unique.map((uid) =>
+      fetchPostsByOwner(uid, perOwner, { ...opts, enrichSlugs: false }).catch(
+        () => [] as ProfilePost[]
+      )
+    )
   );
-  return results.flat().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const merged = results.flat().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return opts?.enrichSlugs === false ? merged : enrichPostsWithLiveSlugs(merged);
 }
 
 /**
@@ -587,6 +606,7 @@ export async function enrichPostsWithLiveSlugs(posts: ProfilePost[]): Promise<Pr
       ...p,
       ...(owner?.slug ? { ownerSlug: owner.slug } : {}),
       ...(owner?.displayName ? { ownerName: owner.displayName } : {}),
+      ...(owner?.pressing ? { pressing: owner.pressing } : {}),
       ...(reverb?.slug ? { reverbOwnerSlug: reverb.slug } : {}),
       ...(reverb?.displayName ? { reverbOwnerName: reverb.displayName } : {}),
     };
@@ -743,6 +763,10 @@ export async function addComment(
     if (voice) await deleteVoiceStorage(voice.storagePath);
     if (imageStoragePath) await deletePostImageStorage(imageStoragePath);
     throw err;
+  }
+  if (clean.includes('@')) {
+    const { notifyMentions } = await import('@/lib/profile/mentions-client');
+    notifyMentions({ sourceKind: 'post_comment', sourceId: postId, commentId });
   }
   const { emitActivity } = await import('@/lib/activity/client');
   emitActivity({
@@ -1503,6 +1527,7 @@ export type PublicArtistMeta = {
   starMarkSeed?: number;
   displayName?: string;
   studioBadge?: 'pro' | 'free';
+  pressing?: PressingConfig;
 };
 
 function avatarFromPublicDoc(data: Record<string, unknown>): string | undefined {
@@ -1615,6 +1640,7 @@ export async function fetchPublicArtistMetas(
                 ? data.displayName.trim()
                 : undefined),
             studioBadge: live.studioBadge || parseStudioBadge(data?.studioBadge),
+            ...(data ? { pressing: normalizeArtistHomeConfig(data.artistHome).theme } : {}),
             ...chip,
           });
           return;
@@ -1643,6 +1669,7 @@ export async function fetchPublicArtistMetas(
                   ? data.displayName.trim()
                   : undefined,
               studioBadge: parseStudioBadge(data.studioBadge),
+              pressing: normalizeArtistHomeConfig(data.artistHome).theme,
               ...avatarChipFromPublic(data, asset),
             });
             return;

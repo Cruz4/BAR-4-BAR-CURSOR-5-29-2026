@@ -82,7 +82,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
     return (
       <Button size="sm" variant="outline" className={baseClass} asChild>
         <a href="/login">
-          <UserPlus className="h-3.5 w-3.5" /> Add friend
+          <UserPlus className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Add friend</span>
         </a>
       </Button>
     );
@@ -110,15 +110,16 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
         variant="outline"
         className={baseClass}
         disabled={busy}
-        onClick={() =>
-          run(async () => {
+        onClick={() => {
+          if (!window.confirm(`Unblock ${targetName}?`)) return;
+          void run(async () => {
             await unblockUser(targetUserId);
             setBlocked(false);
             toast({ title: 'Unblocked' });
-          }, 'Could not unblock')
-        }
+          }, 'Could not unblock');
+        }}
       >
-        <Ban className="h-3.5 w-3.5" /> Blocked · Unblock
+        <Ban className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Blocked · Unblock</span>
       </Button>
     );
   }
@@ -130,14 +131,15 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
       className="h-9 gap-1 font-bold uppercase text-muted-foreground"
       disabled={busy}
       title="Block this artist"
-      onClick={() =>
-        run(async () => {
+      onClick={() => {
+        if (!window.confirm(`Block ${targetName}? They will no longer be able to contact you or send friend requests.`)) return;
+        void run(async () => {
           await blockUser({ userId: targetUserId, name: targetName, slug: targetSlug });
           setFriendship(null);
           setBlocked(true);
           toast({ title: 'Blocked', description: `${targetName} can’t send you friend requests.` });
-        }, 'Could not block')
-      }
+        }, 'Could not block');
+      }}
     >
       <Ban className="h-3.5 w-3.5" />
     </Button>
@@ -167,7 +169,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
             }, 'Could not send request')
           }
         >
-          <UserPlus className="h-3.5 w-3.5" /> Add friend
+          <UserPlus className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Add friend</span>
         </Button>
         {blockAction}
       </div>
@@ -182,16 +184,17 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
           variant="ghost"
           className={baseClass}
           disabled={busy}
-          onClick={() =>
-            run(async () => {
+          onClick={() => {
+            if (!window.confirm(`Remove ${targetName} from your friends? You will continue following them unless you unfollow separately.`)) return;
+            void run(async () => {
               await removeFriendship(friendship.id);
               setFriendship(null);
               toast({ title: 'Removed from friends' });
-            }, 'Could not update friendship')
-          }
+            }, 'Could not update friendship');
+          }}
         >
-          <Check className="h-3.5 w-3.5 text-emerald-400" /> Friends
-          <UserMinus className="h-3 w-3 opacity-60" />
+          <Check className="h-3.5 w-3.5 text-emerald-400" /> <span className="max-[380px]:hidden">Friends</span>
+          <UserMinus className="hidden h-3 w-3 opacity-60 sm:block" />
         </Button>
         {blockAction}
       </div>
@@ -214,7 +217,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
             }, 'Could not cancel request')
           }
         >
-          <Clock className="h-3.5 w-3.5" /> Requested
+          <Clock className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Requested</span>
         </Button>
         {blockAction}
       </div>
@@ -235,7 +238,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
           }, 'Could not accept request')
         }
       >
-        <Check className="h-3.5 w-3.5" /> Accept
+        <Check className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Accept</span>
       </Button>
       <Button
         size="sm"

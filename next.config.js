@@ -18,6 +18,11 @@ const nextConfig = {
   // Keep dev/HMR output separate so a production build or deploy cannot remove
   // manifests underneath a running local server.
   distDir: process.env.NODE_ENV === 'development' ? '.next-dev' : '.next',
+  // The default dev script uses Turbopack. Keep its resolution boundary on this
+  // project while retaining the Webpack-only polling fallback below.
+  turbopack: {
+    root: __dirname,
+  },
   // Force public env into the Next runtime (server + client compile).
   env: {
     NEXT_PUBLIC_LOCK: process.env.NEXT_PUBLIC_LOCK ?? '',

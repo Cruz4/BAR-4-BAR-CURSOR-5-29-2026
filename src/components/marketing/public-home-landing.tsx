@@ -10,7 +10,6 @@ import { LandingShowcase } from '@/components/marketing/landing-showcase';
 import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmosphere';
 import { LandingHeroCtAs } from '@/components/marketing/landing-hero-ctas';
 import { LandingSignInLink, LandingSignupLink } from '@/components/marketing/landing-signup-link';
-import { StudioThemeControls } from '@/components/studio-theme-controls';
 import { ProBillingCheckoutCta } from '@/components/marketing/pro-billing-checkout-cta';
 import { getSignupInkMarketingLine } from '@/lib/studio-tiers';
 import { BrandLockup } from '@/components/brand-lockup';
@@ -47,7 +46,6 @@ export function PublicHomeLanding() {
           <LandingSignInLink className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
             Sign in
           </LandingSignInLink>
-          <StudioThemeControls className="hidden sm:inline-flex" />
           <Button
             asChild
             className="bg-primary hover:bg-primary/90 text-white font-bold h-9 px-3 sm:px-5 gap-1.5 sm:gap-2 rounded-md shadow-lg shrink-0 transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm"
@@ -101,13 +99,16 @@ export function PublicHomeLanding() {
                       When the song is ready, put it on that page.{' '}
                       <span className="bg-amber-500/20 text-amber-200 px-1 rounded-sm font-bold">Listen / buy</span>
                       {' '}
-                      sits at the top of your page so a first-time visitor does not have to hunt. Feature music you released or purchased, choose the public 30 seconds, then buy once and stream here.{' '}
+                      puts your featured release front and center. Feature music you released or purchased, choose the public 30 seconds, then buy once and stream here.{' '}
                       {firstDropsFeeCashoutLine()}
                     </>
                   ) : null}
                 </p>
 
                 <LandingHeroCtAs />
+                <Button asChild variant="outline" className="border-sky-400/40 bg-sky-500/10 font-bold uppercase tracking-wider text-sky-200">
+                  <Link href="/discover">Discover artists &amp; Music Fans</Link>
+                </Button>
               </div>
 
               <div className="mx-auto w-full max-w-5xl rounded-2xl border border-white/10 bg-black/35 p-3 shadow-2xl lg:justify-self-end">

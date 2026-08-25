@@ -19,12 +19,14 @@ import {
   fetchReverbsByOwner,
   type ProfilePost,
 } from '@/lib/profile/social-client';
+import { PublicProfileSectionShell } from '@/components/profile/public-profile-section-shell';
 
 export default function ProfileReverbsPage() {
   const params = useParams();
   const slug = typeof params?.slug === 'string' ? params.slug : '';
   const { user } = useAuth();
   const [displayName, setDisplayName] = useState('Artist');
+  const [rawProfile, setRawProfile] = useState<unknown>({});
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [posts, setPosts] = useState<ProfilePost[]>([]);
   const [viewerSlug, setViewerSlug] = useState<string | undefined>();
@@ -51,6 +53,7 @@ export default function ProfileReverbsPage() {
           return;
         }
         setOwnerId(data.userId);
+        setRawProfile(data);
         setDisplayName(
           typeof data.displayName === 'string' && data.displayName.trim()
             ? data.displayName.trim()
@@ -94,6 +97,7 @@ export default function ProfileReverbsPage() {
   }
 
   return (
+    <PublicProfileSectionShell rawProfile={rawProfile} slug={slug}>
     <div className="container mx-auto max-w-2xl space-y-6 px-4 py-8">
       <header className="space-y-3">
         <Button size="sm" variant="outline" className="h-8 gap-1.5 font-bold uppercase" asChild>
@@ -137,5 +141,6 @@ export default function ProfileReverbsPage() {
         </div>
       )}
     </div>
+    </PublicProfileSectionShell>
   );
 }

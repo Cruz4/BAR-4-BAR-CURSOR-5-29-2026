@@ -32,13 +32,14 @@ function signalsFrom(data: Record<string, unknown>): EmergingSignals {
     follows: count(data.follows),
     innerCircleJoins: count(data.innerCircleJoins),
     convertedShares: count(data.convertedShares),
+    sharedLoves: count(data.sharedLoves),
     purchaseConversions: count(data.purchaseConversions),
   };
 }
 
 function addSignals(target: EmergingSignals, next: EmergingSignals): void {
   for (const field of Object.keys(target) as Array<keyof EmergingSignals>) {
-    target[field] += next[field];
+    target[field] = (target[field] || 0) + (next[field] || 0);
   }
 }
 

@@ -59,7 +59,7 @@ export function ReferAFriendSection({ className }: { className?: string }) {
       setCopied(true);
       toast({
         title: 'Referral link copied',
-        description: `You and your friend each get ${REFERRAL_INK_REWARD} Ink when they join (residency pool on Visitor; permanent on Pro).`,
+        description: `Eligible new members can receive up to ${REFERRAL_INK_REWARD} Ink. Your reward unlocks after they legitimately spend 50 Ink.`,
       });
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -114,7 +114,7 @@ export function ReferAFriendSection({ className }: { className?: string }) {
             <div>
               <CardTitle className="font-headline text-lg uppercase tracking-tight">Refer a Friend</CardTitle>
               <CardDescription className="text-xs font-code mt-1">
-                {REFERRAL_INK_REWARD} Ink each (residency on Visitor, permanent on Pro) — up to {MAX_REFERRAL_REWARDS} friends.
+                Invite someone into the Scene. Eligible new members can receive up to {REFERRAL_INK_REWARD} Ink.
               </CardDescription>
             </div>
           </div>
@@ -143,7 +143,7 @@ export function ReferAFriendSection({ className }: { className?: string }) {
             </div>
             <p className="text-[10px] text-muted-foreground font-code flex items-center gap-1.5">
               <Sparkles className="h-3 w-3 text-primary" />
-              {remaining} referral{remaining === 1 ? '' : 's'} left · credited automatically when they sign up via your link
+              {remaining} referral{remaining === 1 ? '' : 's'} left · your reward unlocks after a referred member legitimately spends 50 Ink
             </p>
           </>
         )}

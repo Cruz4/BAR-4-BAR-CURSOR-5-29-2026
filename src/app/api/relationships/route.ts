@@ -7,6 +7,7 @@ import {
   setSupportRelationship,
 } from '@/lib/server/relationships';
 import { emitActivityEvent } from '@/lib/server/activity';
+import type { SupportAnalyticsWindow } from '@/lib/relationships';
 
 export const runtime = 'nodejs';
 
@@ -28,12 +29,15 @@ export async function GET(req: Request) {
     const userId = (searchParams.get('userId') || '').trim();
     const targetUserId = (searchParams.get('targetUserId') || '').trim();
     const view = searchParams.get('view');
+    const requestedDays = Number(searchParams.get('days'));
+    const days: SupportAnalyticsWindow =
+      requestedDays === 7 || requestedDays === 90 ? requestedDays : 30;
     if (!userId) return NextResponse.json({ error: 'Sign in required.' }, { status: 401 });
     const authError = await requireUser(req, userId);
     if (authError) return authError;
     const db = await getDb();
     if (view === 'dashboard') {
-      return NextResponse.json(await getSupportDashboard(db, userId), {
+      return NextResponse.json(await getSupportDashboard(db, userId, days), {
         headers: { 'Cache-Control': 'private, no-store' },
       });
     }

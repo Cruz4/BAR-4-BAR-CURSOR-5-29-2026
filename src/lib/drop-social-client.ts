@@ -122,6 +122,10 @@ export async function addDropComment(
     if (imageStoragePath) await deletePostImageStorage(imageStoragePath);
     throw err;
   }
+  if (clean.includes('@')) {
+    const { notifyMentions } = await import('@/lib/profile/mentions-client');
+    notifyMentions({ sourceKind: 'drop_comment', sourceId: shareId, commentId });
+  }
   const { emitActivity } = await import('@/lib/activity/client');
   emitActivity({
     type: 'drop_reply',

@@ -23,7 +23,7 @@ export function ArtistHomeBackButton({ label = 'Back' }: { label?: string }) {
         else router.push('/');
       }}
     >
-      <ChevronLeft className="h-4 w-4" /> {label}
+      <ChevronLeft className="h-4 w-4" /> <span className="max-[380px]:hidden">{label}</span>
     </Button>
   );
 }

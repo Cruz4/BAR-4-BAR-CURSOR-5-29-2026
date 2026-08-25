@@ -5,6 +5,7 @@ import { normalizeDropPrice } from '@/lib/drop-commerce';
 import { loadShare, priceFromShare } from '@/lib/server/drop-entitlements';
 import { needsVanitySlugUpgrade } from '@/lib/profile/profile-slug';
 import type { PressedSongSummary, PressedSongSupporter } from '@/lib/pressed-song';
+import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
 
 function nonnegative(value: unknown): number {
   return Math.max(0, Math.floor(Number(value) || 0));
@@ -95,6 +96,7 @@ export async function getPressedSongSummary(
       studioBadge: ownerData.studioBadge === 'pro' ? 'pro' : 'free',
       starMarkUseStar: ownerData.starMarkUseStar === true,
       ...(typeof ownerData.starMarkSeed === 'number' ? { starMarkSeed: ownerData.starMarkSeed } : {}),
+      pressing: normalizeArtistHomeConfig(ownerData.artistHome).theme,
     },
     publicTotals: {
       plays: nonnegative(shareRaw.playCount) + nonnegative(shareRaw.previewCount),

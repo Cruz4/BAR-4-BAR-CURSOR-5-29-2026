@@ -14,6 +14,8 @@ export type DropListenProof = {
   d: number;
   i: number;
   e: number;
+  /** Server-verified profile whose featured/share surface introduced the listen. */
+  r?: string;
 };
 
 function proofSecret(): string {
@@ -36,6 +38,7 @@ export function mintDropListenProof(input: {
   authenticated: boolean;
   full: boolean;
   eligibleDurationSec: number;
+  referralUserId?: string;
 }): string {
   const issuedAt = Date.now();
   const payload: DropListenProof = {
@@ -48,6 +51,7 @@ export function mintDropListenProof(input: {
     d: Math.max(1, Math.min(60 * 60, Number(input.eligibleDurationSec) || 30)),
     i: issuedAt,
     e: issuedAt + PROOF_TTL_MS,
+    ...(input.referralUserId?.trim() ? { r: input.referralUserId.trim().slice(0, 128) } : {}),
   };
   const encoded = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
   return `${encoded}.${sign(encoded)}`;

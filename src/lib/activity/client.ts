@@ -17,6 +17,7 @@ import {
   isActivityType,
   type ActivityDirection,
   type ActivityEvent,
+  type ActivityFeedPage,
   type ActivityPrefs,
   type ActivitySummary,
   type ActivityType,
@@ -101,24 +102,36 @@ export async function fetchActivityFeed(
   direction: ActivityDirection,
   max = 60
 ): Promise<ActivityEvent[]> {
+  return (await fetchActivityFeedPage(direction, max)).events;
+}
+
+export async function fetchActivityFeedPage(
+  direction: ActivityDirection,
+  max = 60,
+  cursor?: string | null
+): Promise<ActivityFeedPage> {
   const user = auth.currentUser;
-  if (!user) return [];
-  try {
-    const snap = await getDocs(
-      query(
-        collection(db, 'users', user.uid, 'activity'),
-        where('direction', '==', direction),
-        orderBy('createdAt', 'desc'),
-        limitTo(max)
-      )
-    );
-    return snap.docs
-      .map((d) => eventFromDoc(d.id, d.data()))
-      .filter((e): e is ActivityEvent => Boolean(e));
-  } catch (err) {
-    console.warn('[fetchActivityFeed]', err);
-    return [];
-  }
+  if (!user) return { events: [], nextCursor: null };
+  const headers = await authHeaders();
+  if (!headers) return { events: [], nextCursor: null };
+  const params = new URLSearchParams({
+    userId: user.uid,
+    direction,
+    limit: String(Math.min(100, Math.max(1, max))),
+  });
+  if (cursor) params.set('cursor', cursor);
+  const response = await fetch(`/api/activity/feed?${params.toString()}`, {
+    headers,
+    cache: 'no-store',
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Could not load activity history.');
+  return {
+    events: Array.isArray(data.events)
+      ? data.events.filter((event: unknown): event is ActivityEvent => Boolean(event && typeof event === 'object'))
+      : [],
+    nextCursor: typeof data.nextCursor === 'string' ? data.nextCursor : null,
+  };
 }
 
 export async function fetchPendingRequestActivity(max = 40): Promise<ActivityEvent[]> {
