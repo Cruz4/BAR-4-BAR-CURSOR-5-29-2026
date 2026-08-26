@@ -16,6 +16,7 @@ import {
 } from '@/lib/music-charts';
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
 import { getEmergingRanking } from '@/lib/server/emerging-ranking';
+import { isShareDocumentPublic } from '@/lib/release-management';
 
 type TrackAggregate = {
   shareId: string;
@@ -160,6 +161,7 @@ export async function getMusicCharts(
     const snapshot = shareSnapshots[index];
     if (!snapshot?.exists) return [];
     const share = snapshot.data() as Record<string, unknown>;
+    if (!isShareDocumentPublic(share)) return [];
     if (share.type === 'album') return [];
     const ownerId = clean(share.ownerId, 128);
     const payload = share.data && typeof share.data === 'object'

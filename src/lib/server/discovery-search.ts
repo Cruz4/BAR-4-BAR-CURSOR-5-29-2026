@@ -10,6 +10,7 @@ import {
   type ArtistHomeSoundIdentity,
 } from '@/lib/profile/sound-identity';
 import { needsVanitySlugUpgrade } from '@/lib/profile/profile-slug';
+import { isShareDocumentPublic } from '@/lib/release-management';
 
 type PublicProfileSearchRow = {
   userId: string;
@@ -144,6 +145,7 @@ async function buildCatalog(): Promise<SearchCatalog> {
   const drops: PublicDropSearchRow[] = [];
   for (const snap of shareSnap.docs) {
     const data = snap.data() as Record<string, unknown>;
+    if (!isShareDocumentPublic(data)) continue;
     const payload = data.data && typeof data.data === 'object'
       ? data.data as Record<string, unknown>
       : {};

@@ -1,0 +1,49 @@
+import { NextResponse } from 'next/server';
+import { getDb } from '@/lib/firebase/server';
+import { normalizeDropAudio } from '@/lib/drop-commerce';
+import { dropAudioFileUrl, mintDropAudioTicket } from '@/lib/server/drop-audio-stream';
+import { CheckoutAuthError, verifyCheckoutUser } from '@/lib/stripe-server';
+
+export const runtime = 'nodejs';
+
+function safeId(value: string): boolean {
+  return value.length > 0 && value.length <= 200 && !value.includes('/');
+}
+
+export async function GET(req: Request) {
+  try {
+    const params = new URL(req.url).searchParams;
+    const userId = (params.get('userId') || '').trim();
+    const albumId = (params.get('albumId') || '').trim();
+    const trackId = (params.get('trackId') || '').trim();
+    if (!userId || !safeId(albumId) || !safeId(trackId)) {
+      return NextResponse.json({ error: 'Invalid private song request.' }, { status: 400 });
+    }
+    try {
+      await verifyCheckoutUser(req, userId);
+    } catch (error) {
+      if (error instanceof CheckoutAuthError) {
+        return NextResponse.json({ error: error.message }, { status: 401 });
+      }
+      throw error;
+    }
+    const db = await getDb();
+    const snap = await db.doc(`users/${userId}/albums/${albumId}/tracks/${trackId}`).get();
+    if (!snap.exists) return NextResponse.json({ error: 'Song was not found.' }, { status: 404 });
+    const audio = normalizeDropAudio(snap.data()?.dropAudio);
+    if (!audio?.storagePath) return NextResponse.json({ error: 'No private audio is attached.' }, { status: 404 });
+    const ticket = mintDropAudioTicket({
+      storagePath: audio.storagePath,
+      contentType: audio.contentType || 'audio/mpeg',
+      full: true,
+    });
+    return NextResponse.json({
+      url: dropAudioFileUrl(ticket),
+      durationSec: audio.durationSec || null,
+      fileName: audio.fileName || 'Private recording',
+    });
+  } catch (error) {
+    console.error('[releases/private-audio]', error);
+    return NextResponse.json({ error: 'Could not open private audio.' }, { status: 500 });
+  }
+}

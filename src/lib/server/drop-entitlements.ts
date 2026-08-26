@@ -16,6 +16,8 @@ export type DropShareDoc = {
   ownerId: string;
   ownerName?: string;
   data?: Record<string, unknown>;
+  releaseStatus?: 'draft' | 'live' | 'unlisted';
+  dnaStatus?: 'live' | 'unlisted';
 };
 
 export async function loadShare(db: Firestore, shareId: string): Promise<DropShareDoc | null> {
@@ -32,7 +34,26 @@ export async function loadShare(db: Firestore, shareId: string): Promise<DropSha
     ownerId,
     ownerName: typeof data.ownerName === 'string' ? data.ownerName : undefined,
     data: (data.data as Record<string, unknown> | undefined) ?? undefined,
+    releaseStatus:
+      data.releaseStatus === 'draft' || data.releaseStatus === 'live' || data.releaseStatus === 'unlisted'
+        ? data.releaseStatus
+        : undefined,
+    dnaStatus: data.dnaStatus === 'live' || data.dnaStatus === 'unlisted' ? data.dnaStatus : undefined,
   };
+}
+
+/** Explicitly hidden/draft releases are not discoverable or purchasable. Legacy shares stay live. */
+export function isReleaseShareLive(share: DropShareDoc): boolean {
+  const nested = share.data?.releaseStatus;
+  const status = share.releaseStatus || (nested === 'draft' || nested === 'live' || nested === 'unlisted' ? nested : undefined);
+  return status !== 'draft' && status !== 'unlisted';
+}
+
+/** Explicitly hidden DNA pages stay private. Legacy DNA shares stay live. */
+export function isDnaShareLive(share: DropShareDoc): boolean {
+  const nested = share.data?.dnaStatus;
+  const status = share.dnaStatus || (nested === 'live' || nested === 'unlisted' ? nested : undefined);
+  return status !== 'unlisted';
 }
 
 export function priceFromShare(

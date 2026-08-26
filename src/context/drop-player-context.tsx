@@ -11,6 +11,7 @@ import React, {
   type ReactNode,
 } from 'react';
 import { auth } from '@/lib/firebase/client/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAudioVolume } from '@/hooks/use-audio-volume';
 import { recordDropListenProgressClient, recordDropSpinClient } from '@/lib/drop-pulse-client';
@@ -152,6 +153,9 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
     async (item: DeckPlayable, autoplay = true) => {
       const audio = audioRef.current;
       if (!audio) return;
+      document.querySelectorAll<HTMLMediaElement>('audio, video').forEach((media) => {
+        if (media !== audio && !media.paused) media.pause();
+      });
       setCurrent(item);
       currentRef.current = item;
       setLoading(true);
@@ -276,6 +280,9 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (audio.paused) {
+      document.querySelectorAll<HTMLMediaElement>('audio, video').forEach((media) => {
+        if (media !== audio && !media.paused) media.pause();
+      });
       userPausedRef.current = false;
       wantPlayingRef.current = true;
       ensureAnalyser();
@@ -315,6 +322,28 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       URL.revokeObjectURL(offlineObjectUrlRef.current);
       offlineObjectUrlRef.current = null;
     }
+  }, []);
+
+  useEffect(() => {
+    let previousUid = auth.currentUser?.uid || null;
+    return onAuthStateChanged(auth, (firebaseUser) => {
+      if (previousUid && !firebaseUser) stop();
+      previousUid = firebaseUser?.uid || null;
+    });
+  }, [stop]);
+
+  useEffect(() => {
+    const onInlinePlay = (event: Event) => {
+      const globalAudio = audioRef.current;
+      if (!globalAudio || event.target === globalAudio) return;
+      if (event.target instanceof HTMLMediaElement && !globalAudio.paused) {
+        userPausedRef.current = true;
+        wantPlayingRef.current = false;
+        globalAudio.pause();
+      }
+    };
+    document.addEventListener('play', onInlinePlay, true);
+    return () => document.removeEventListener('play', onInlinePlay, true);
   }, []);
 
   useEffect(() => () => {
@@ -435,6 +464,9 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       userPausedRef.current = false;
       wantPlayingRef.current = true;
       const el = audioRef.current;
+      document.querySelectorAll<HTMLMediaElement>('audio, video').forEach((media) => {
+        if (media !== el && !media.paused) media.pause();
+      });
       ensureAnalyser();
       if (el?.src) void el.play().then(() => setPlaying(true));
       else if (currentRef.current) void loadAndPlayRef.current(currentRef.current);

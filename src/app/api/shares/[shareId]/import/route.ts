@@ -33,13 +33,17 @@ export async function POST(
     if (!snap.exists) {
       return NextResponse.json({ error: 'Share not found' }, { status: 404 });
     }
+    const rawShare = snap.data() || {};
+    if (rawShare.dnaStatus === 'unlisted' || rawShare.data?.dnaStatus === 'unlisted') {
+      return NextResponse.json({ error: 'This lyric preview is offline.' }, { status: 404 });
+    }
 
     await shareRef.update({
       imports: FieldValue.increment(1),
       updatedAt: new Date().toISOString(),
     });
 
-    const share = snap.data() || {};
+    const share = rawShare;
     const ownerId = typeof share.ownerId === 'string' ? share.ownerId : '';
     const isForeignImport = Boolean(ownerId && ownerId !== userId);
 

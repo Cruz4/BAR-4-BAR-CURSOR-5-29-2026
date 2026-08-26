@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   ChevronDown,
@@ -24,6 +24,7 @@ import {
   SkipBack,
   SkipForward,
   Trash2,
+  Unlink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -93,6 +94,8 @@ import {
   listOfflinePressedAudioKeys,
   removePressedAudioOffline,
 } from '@/lib/offline/pressed-audio-cache';
+import { manageRelease } from '@/lib/release-management-client';
+import { DataContext } from '@/context/data-context';
 
 function PressingPlate({
   item,
@@ -144,6 +147,7 @@ export function DropDeck({
   pressing?: PressingConfig | null;
 }) {
   const { toast } = useToast();
+  const { updateAlbum, updateTrack } = useContext(DataContext);
   const { crates } = useDropCrates(userId);
   const {
     current,
@@ -181,6 +185,8 @@ export function DropDeck({
   const [expandedAlbums, setExpandedAlbums] = useState<Record<string, boolean>>({});
   const [offlineKeys, setOfflineKeys] = useState<Set<string>>(new Set());
   const [offlineBusyKey, setOfflineBusyKey] = useState<string | null>(null);
+  const [unpressBusyKey, setUnpressBusyKey] = useState<string | null>(null);
+  const [hiddenReleaseIds, setHiddenReleaseIds] = useState<Set<string>>(new Set());
   const currentKey = current?.key ?? null;
   const pressingStyle = useMemo(
     () => (pressing ? pressingCssVars(pressTokens(pressing)) : undefined),
@@ -190,13 +196,14 @@ export function DropDeck({
   const activeCrate = crateId === 'all' ? null : crates.find((c) => c.id === crateId) ?? null;
 
   const playables = useMemo(() => {
+    const visibleItems = items.filter((item) => !hiddenReleaseIds.has(item.shareId));
     const scoped = activeCrate
-      ? items.filter((item) => activeCrate.shareIds.includes(item.shareId))
-      : items;
+      ? visibleItems.filter((item) => activeCrate.shareIds.includes(item.shareId))
+      : visibleItems;
     const flat = flattenLibraryItems(scoped);
     const found = searchPlayables(flat, query);
     return sortPlayables(found, sort, played);
-  }, [items, activeCrate, query, sort, played]);
+  }, [items, activeCrate, query, sort, played, hiddenReleaseIds]);
 
   const buckets = useMemo(() => groupPlayables(playables, group), [playables, group]);
   const browseArtists: DeckBrowseArtist[] = useMemo(() => buildBrowseArtists(playables), [playables]);
@@ -284,6 +291,27 @@ export function DropDeck({
       setOfflineBusyKey(null);
     }
   }, [offlineBusyKey, offlineKeys, toast, userId]);
+
+  const unpressOwnRelease = useCallback(async (item: DeckPlayable) => {
+    if (!item.own || !item.albumId || !window.confirm(`Unpress “${item.title}”? Existing buyers keep access, but it leaves public discovery and checkout.`)) return;
+    setUnpressBusyKey(item.key);
+    try {
+      await manageRelease({
+        kind: item.scope === 'album' ? 'album' : 'track',
+        action: 'unpublish',
+        albumId: item.albumId,
+        ...(item.scope === 'track' && item.trackId ? { trackId: item.trackId } : {}),
+      });
+      if (item.scope === 'album') updateAlbum(item.albumId, { releaseStatus: 'unlisted', releaseShareId: item.shareId });
+      else if (item.trackId) updateTrack(item.albumId, item.trackId, { releaseStatus: 'unlisted', releaseShareId: item.shareId });
+      setHiddenReleaseIds((current) => new Set(current).add(item.shareId));
+      toast({ title: 'Release unpressed', description: 'Manage or re-press it from the Release Catalog in The Vault.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not unpress', description: error instanceof Error ? error.message : undefined });
+    } finally {
+      setUnpressBusyKey(null);
+    }
+  }, [toast, updateAlbum, updateTrack]);
 
   useEffect(() => {
     setExpandedArtists((prev) => {
@@ -596,7 +624,7 @@ export function DropDeck({
               </Button>
               {current && (
                 <Button type="button" size="icon" variant="ghost" asChild>
-                  <Link href={`/song/${current.shareId}`} aria-label="Open drop page">
+                  <Link href={current.scope === 'album' ? `/share/${current.shareId}` : `/song/${current.shareId}`} aria-label="Open release page">
                     <ExternalLink className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -767,10 +795,18 @@ export function DropDeck({
                                                       Update press
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem asChild>
-                                                      <Link href={`/song/${item.shareId}`}>
+                                                      <Link href={item.scope === 'album' ? `/share/${item.shareId}` : `/song/${item.shareId}`}>
                                                         <ExternalLink className="h-4 w-4" />
                                                         Open drop
                                                       </Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                      className="text-red-300 focus:text-red-200"
+                                                      disabled={unpressBusyKey === item.key || !item.albumId}
+                                                      onClick={() => void unpressOwnRelease(item)}
+                                                    >
+                                                      {unpressBusyKey === item.key ? <Loader className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
+                                                      Unpress release
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                   </>
@@ -930,10 +966,18 @@ export function DropDeck({
                                         Update press
                                       </DropdownMenuItem>
                                       <DropdownMenuItem asChild>
-                                        <Link href={`/song/${item.shareId}`}>
+                                        <Link href={item.scope === 'album' ? `/share/${item.shareId}` : `/song/${item.shareId}`}>
                                           <ExternalLink className="h-4 w-4" />
                                           Open drop
                                         </Link>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="text-red-300 focus:text-red-200"
+                                        disabled={unpressBusyKey === item.key || !item.albumId}
+                                        onClick={() => void unpressOwnRelease(item)}
+                                      >
+                                        {unpressBusyKey === item.key ? <Loader className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
+                                        Unpress release
                                       </DropdownMenuItem>
                                       <DropdownMenuSeparator />
                                     </>

@@ -9,7 +9,7 @@
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Banknote, Disc3, Library, Loader, Music, PlusCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, Banknote, Disc3, Library, Loader, Music, Play, PlusCircle, Save, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { DataContext } from '@/context/data-context';
-import { uploadDropAudio } from '@/lib/drop-audio-upload';
+import { deleteDropAudioFiles, uploadDropAudio } from '@/lib/drop-audio-upload';
 import {
   DROP_AUDIO_ACCEPT,
   defaultDropPrice,
@@ -39,6 +39,8 @@ import { isGuestTryAlbumId } from '@/lib/guest-try';
 import { PriceEditor } from '@/components/drop-commerce-panel';
 import { cn } from '@/lib/utils';
 import type { Album, Track } from '@/lib/types';
+import { getPrivateReleaseAudio, manageRelease } from '@/lib/release-management-client';
+import { releaseShareIdOf, releaseStatusOf } from '@/lib/release-management';
 
 type Picked = { album: Album; track: Track };
 
@@ -47,7 +49,7 @@ export function FirstDropLatheHost() {
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { albums, addTrack, updateAlbum, updateTrack, dropDNA, updateDNA, isCloudSyncActive } = useContext(DataContext);
+  const { albums, addTrack, updateAlbum, updateTrack, flushCloudNow, isCloudSyncActive } = useContext(DataContext);
   const fileRef = useRef<HTMLInputElement>(null);
   const albumFileRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -60,6 +62,9 @@ export function FirstDropLatheHost() {
   const [pressing, setPressing] = useState(false);
   const [rightsChecked, setRightsChecked] = useState(false);
   const [newCatalogTitle, setNewCatalogTitle] = useState('');
+  const [privateAudioUrl, setPrivateAudioUrl] = useState('');
+  const [testingAudio, setTestingAudio] = useState(false);
+  const [removingAudioId, setRemovingAudioId] = useState('');
 
   const catalog = useMemo(() => {
     const rows: Picked[] = [];
@@ -90,6 +95,33 @@ export function FirstDropLatheHost() {
     () => albums.filter((album) => album.id !== 'unassigned' && !isGuestTryAlbumId(album.id)),
     [albums]
   );
+
+  const removePrivateAudio = async (targetAlbum: Album, targetTrack: Track) => {
+    const albumLive = releaseStatusOf({ ...targetAlbum, tracks: targetAlbum.tracks }) === 'live';
+    const trackLive = releaseStatusOf(targetTrack) === 'live';
+    if (albumLive || trackLive) {
+      toast({
+        variant: 'destructive',
+        title: 'Unpress first',
+        description: `This recording is part of a live ${albumLive ? 'album' : 'song'}. Unpress it before removing the master.`,
+      });
+      return;
+    }
+    const audio = normalizeDropAudio(targetTrack.dropAudio);
+    if (!audio) return;
+    if (!window.confirm(`Permanently remove the private recording for "${targetTrack.title}"? This cannot be undone.`)) return;
+    setRemovingAudioId(targetTrack.id);
+    try {
+      await deleteDropAudioFiles(audio);
+      updateTrack(targetAlbum.id, targetTrack.id, { dropAudio: undefined, releaseStatus: 'draft' });
+      setPrivateAudioUrl('');
+      toast({ title: 'Private recording removed', description: 'The lyric sheet and other Vault work were kept.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not remove recording', description: error instanceof Error ? error.message : 'Try again.' });
+    } finally {
+      setRemovingAudioId('');
+    }
+  };
 
   const scopedCatalog = useMemo(() => {
     if (!albumScope) return catalog;
@@ -125,6 +157,7 @@ export function FirstDropLatheHost() {
       setNewCatalogTitle('');
       setAlbumUploadTrackId(null);
       setRightsChecked(false);
+      setPrivateAudioUrl('');
       setOpen(true);
     },
     [catalog]
@@ -159,8 +192,8 @@ export function FirstDropLatheHost() {
     setUploading(true);
     try {
       const meta = await uploadDropAudio({ userId: user.id, projectId: track.id, file });
-      updateTrack(album.id, track.id, { dropAudio: meta });
-      toast({ title: 'Song uploaded', description: '30-second preview is ready.' });
+      updateTrack(album.id, track.id, { dropAudio: meta, releaseStatus: 'draft' });
+      toast({ title: 'Private draft saved', description: 'Test it here, attach lyrics now or later, then press it live when ready.' });
     } catch (e: unknown) {
       toast({
         variant: 'destructive',
@@ -201,13 +234,42 @@ export function FirstDropLatheHost() {
     }
   };
 
+  const createAudioOnlySingle = () => {
+    if (!user || !newCatalogTitle.trim()) return;
+    const loose = albums.find((candidate) => candidate.id === 'unassigned');
+    if (!loose) {
+      toast({ variant: 'destructive', title: 'Loose Tracks is unavailable', description: 'Reload the Vault and try again.' });
+      return;
+    }
+    try {
+      const created = addTrack(loose.id, {
+        albumId: loose.id,
+        ownerId: user.id,
+        title: newCatalogTitle.trim().slice(0, 120),
+        vibe: { genre: 'General', tempoBPM: 90, feeling: [], enabled: false },
+        intentRefs: [],
+        sections: [],
+        status: 'in_progress',
+        createdAt: new Date().toISOString(),
+        direction: { enabled: false, inheritFromAlbum: false },
+        releaseStatus: 'draft',
+      });
+      setPicked({ album: { ...loose, tracks: [...loose.tracks, created] }, track: created });
+      setNewCatalogTitle('');
+      toast({ title: 'Audio-only single started', description: 'Upload and test the recording privately. A lyric sheet is optional.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not create single', description: error instanceof Error ? error.message : 'Your current track limit may be full.' });
+    }
+  };
+
   const onPickAlbumAudio = async (file: File | undefined) => {
     const targetId = albumUploadTrackId;
     if (!file || !user || !selectedAlbum || !targetId) return;
     setUploading(true);
     try {
       const meta = await uploadDropAudio({ userId: user.id, projectId: targetId, file });
-      updateTrack(selectedAlbum.id, targetId, { dropAudio: meta });
+      updateTrack(selectedAlbum.id, targetId, { dropAudio: meta, releaseStatus: 'draft' });
+      updateAlbum(selectedAlbum.id, { releaseStatus: 'draft' });
       toast({ title: 'Album track uploaded', description: 'Its 30-second preview is ready.' });
     } catch (error) {
       toast({
@@ -255,9 +317,15 @@ export function FirstDropLatheHost() {
     updateTrack(album.id, track.id, pressUpdates);
     setPressing(true);
     try {
-      const shareId = track.shareId
-        ? await updateDNA('track', track.id, track.shareId, { albumId: album.id })
-        : await dropDNA('track', track.id, { albumId: album.id });
+      await flushCloudNow();
+      const result = await manageRelease({ kind: 'track', action: 'publish', albumId: album.id, trackId: track.id });
+      const shareId = result.releaseShareId;
+      if (!shareId) throw new Error('Release link was not created.');
+      updateTrack(album.id, track.id, {
+        releaseShareId: shareId,
+        releaseStatus: 'live',
+        releaseSnapshotAt: new Date().toISOString(),
+      });
       toast({
         title: 'Pressed live',
         description: 'Visitors hear this first on your Artist Home and this share link.',
@@ -312,10 +380,15 @@ export function FirstDropLatheHost() {
 
     setPressing(true);
     try {
-      await Promise.resolve();
-      const shareId = selectedAlbum.shareId
-        ? await updateDNA('album', selectedAlbum.id, selectedAlbum.shareId)
-        : await dropDNA('album', selectedAlbum.id);
+      await flushCloudNow();
+      const result = await manageRelease({ kind: 'album', action: 'publish', albumId: selectedAlbum.id });
+      const shareId = result.releaseShareId;
+      if (!shareId) throw new Error('Album release link was not created.');
+      updateAlbum(selectedAlbum.id, {
+        releaseShareId: shareId,
+        releaseStatus: 'live',
+        releaseSnapshotAt: new Date().toISOString(),
+      });
       toast({
         title: selectedAlbum.shareId ? 'Album release updated' : 'Album pressed live',
         description: `${albumAudioTracks.length} audio track${albumAudioTracks.length === 1 ? '' : 's'} included. One purchase unlocks all of them.`,
@@ -328,6 +401,66 @@ export function FirstDropLatheHost() {
         title: 'Could not press album',
         description: error instanceof Error ? error.message : undefined,
       });
+    } finally {
+      setPressing(false);
+    }
+  };
+
+  const savePrivateDraft = async () => {
+    if (!track || !album || !hasAudio) return;
+    setPressing(true);
+    try {
+      updateTrack(album.id, track.id, { releaseStatus: 'draft' });
+      await flushCloudNow();
+      await manageRelease({ kind: 'track', action: 'save-draft', albumId: album.id, trackId: track.id });
+      toast({ title: 'Draft saved privately', description: 'It is not public or for sale. Return anytime to test or press it live.' });
+      setOpen(false);
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not save draft', description: error instanceof Error ? error.message : undefined });
+    } finally {
+      setPressing(false);
+    }
+  };
+
+  const testPrivateAudio = async () => {
+    if (!track || !album) return;
+    setTestingAudio(true);
+    try {
+      await flushCloudNow();
+      const result = await getPrivateReleaseAudio(album.id, track.id);
+      setPrivateAudioUrl(result.url);
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not test recording', description: error instanceof Error ? error.message : undefined });
+    } finally {
+      setTestingAudio(false);
+    }
+  };
+
+  const testAlbumAudio = async (trackId: string) => {
+    if (!selectedAlbum) return;
+    setTestingAudio(true);
+    try {
+      await flushCloudNow();
+      const result = await getPrivateReleaseAudio(selectedAlbum.id, trackId);
+      setPrivateAudioUrl(result.url);
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not test recording', description: error instanceof Error ? error.message : undefined });
+    } finally {
+      setTestingAudio(false);
+    }
+  };
+
+  const saveAlbumDraft = async () => {
+    if (!selectedAlbum || albumAudioTracks.length === 0) return;
+    setPressing(true);
+    try {
+      updateAlbum(selectedAlbum.id, { releaseStatus: 'draft' });
+      await flushCloudNow();
+      await manageRelease({ kind: 'album', action: 'save-draft', albumId: selectedAlbum.id });
+      toast({ title: 'Album draft saved privately', description: 'Test every recording and return to press the bundle live when ready.' });
+      setOpen(false);
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not save album draft', description: error instanceof Error ? error.message : undefined });
     } finally {
       setPressing(false);
     }
@@ -418,7 +551,7 @@ export function FirstDropLatheHost() {
                             <span className="block truncate text-sm font-bold">{candidate.title || 'Untitled album'}</span>
                             <span className="block font-code text-[9px] uppercase tracking-widest text-muted-foreground">
                               {candidate.tracks.length} catalog track{candidate.tracks.length === 1 ? '' : 's'} · {audioCount} with audio
-                              {candidate.shareId ? ' · page live' : ''}
+                              {releaseStatusOf({ ...candidate, tracks: candidate.tracks }) === 'live' ? ' · release live' : ''}
                             </span>
                           </span>
                         </button>
@@ -480,6 +613,18 @@ export function FirstDropLatheHost() {
                               {audio ? `${audio.fileName || 'Audio ready'}${audio.durationSec ? ` · ${Math.round(audio.durationSec)}s` : ''}` : 'No audio yet · lyrics optional'}
                             </span>
                           </span>
+                          {audio ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 shrink-0 px-2 text-[9px] font-bold uppercase"
+                              disabled={testingAudio}
+                              onClick={() => void testAlbumAudio(row.id)}
+                            >
+                              <Play className="mr-1 h-3 w-3" /> Test
+                            </Button>
+                          ) : null}
                           <Button
                             type="button"
                             size="sm"
@@ -494,11 +639,34 @@ export function FirstDropLatheHost() {
                             {busy ? <Loader className="mr-1 h-3 w-3 animate-spin" /> : <Music className="mr-1 h-3 w-3" />}
                             {audio ? 'Replace' : 'Upload'}
                           </Button>
+                          {audio ? (
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 shrink-0 text-red-400"
+                              disabled={Boolean(removingAudioId)}
+                              onClick={() => void removePrivateAudio(selectedAlbum, row)}
+                              aria-label={`Remove private recording for ${row.title}`}
+                              title={releaseStatusOf({ ...selectedAlbum, tracks: selectedAlbum.tracks }) === 'live' ? 'Unpress the album before removing audio' : 'Remove private recording'}
+                            >
+                              {removingAudioId === row.id ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                            </Button>
+                          ) : null}
                         </li>
                       );
                     })}
                   </ul>
                 )}
+
+                {privateAudioUrl ? (
+                  <audio
+                    controls
+                    src={privateAudioUrl}
+                    className="h-10 w-full"
+                    onPlay={() => window.dispatchEvent(new CustomEvent('b4b:inline-audio-play'))}
+                  />
+                ) : null}
 
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
                   <Input
@@ -546,15 +714,20 @@ export function FirstDropLatheHost() {
                 </Label>
               </div>
 
-              <Button
-                type="button"
-                className="h-12 w-full bg-fuchsia-400 font-headline text-lg font-bold uppercase tracking-wide text-black hover:bg-fuchsia-300"
-                disabled={pressing || uploading || albumAudioTracks.length === 0 || !rightsChecked}
-                onClick={() => void pressAlbumLive()}
-              >
-                {pressing ? <Loader className="mr-2 h-5 w-5 animate-spin" /> : <Disc3 className="mr-2 h-5 w-5" />}
-                {selectedAlbum.shareId ? 'Update album release' : 'Press album live'}
-              </Button>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Button type="button" variant="outline" className="h-12 font-bold uppercase" disabled={pressing || uploading || albumAudioTracks.length === 0} onClick={() => void saveAlbumDraft()}>
+                  <Save className="mr-2 h-4 w-4" /> Save private draft
+                </Button>
+                <Button
+                  type="button"
+                  className="h-12 bg-fuchsia-400 font-headline text-lg font-bold uppercase tracking-wide text-black hover:bg-fuchsia-300"
+                  disabled={pressing || uploading || albumAudioTracks.length === 0 || !rightsChecked}
+                  onClick={() => void pressAlbumLive()}
+                >
+                  {pressing ? <Loader className="mr-2 h-5 w-5 animate-spin" /> : <Disc3 className="mr-2 h-5 w-5" />}
+                  {releaseStatusOf({ ...selectedAlbum, tracks: selectedAlbum.tracks }) === 'live' ? 'Update live album' : 'Press album live'}
+                </Button>
+              </div>
               <p className="text-center text-[10px] leading-relaxed text-muted-foreground">
                 Album sales, price paid, buyer, timestamp, fees, and payout are recorded in Earnings. The buyer receives every included audio track in Library.
               </p>
@@ -565,6 +738,30 @@ export function FirstDropLatheHost() {
           )
         ) : !livePicked ? (
           <div className="space-y-3">
+            {!albumScope ? (
+              <div className="rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/5 p-3">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-300">Create audio-only single</Label>
+                <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">Start with the recording now. Add or attach lyrics whenever you want.</p>
+                <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                  <Input
+                    value={newCatalogTitle}
+                    onChange={(event) => setNewCatalogTitle(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        createAudioOnlySingle();
+                      }
+                    }}
+                    maxLength={120}
+                    placeholder="Single title"
+                    className="h-9 font-code text-sm"
+                  />
+                  <Button type="button" size="sm" className="h-9 bg-fuchsia-400 px-3 font-bold uppercase text-black hover:bg-fuchsia-300" disabled={!newCatalogTitle.trim()} onClick={createAudioOnlySingle}>
+                    <PlusCircle className="mr-1 h-3.5 w-3.5" /> Create
+                  </Button>
+                </div>
+              </div>
+            ) : null}
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -590,7 +787,7 @@ export function FirstDropLatheHost() {
               <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto pr-1">
                 {filtered.map((row) => {
                   const audio = Boolean(normalizeDropAudio(row.track.dropAudio));
-                  const live = Boolean(row.track.shareId);
+                  const live = releaseStatusOf(row.track) === 'live';
                   const priced = isCommerceLive(normalizeDropPrice(row.track.dropPrice));
                   return (
                     <li key={`${row.album.id}-${row.track.id}`}>
@@ -665,18 +862,43 @@ export function FirstDropLatheHost() {
                     variant="outline"
                     size="icon"
                     className="h-11 w-11 text-red-400"
-                    onClick={() => updateTrack(album.id, track.id, { dropAudio: undefined })}
+                    disabled={Boolean(removingAudioId)}
+                    onClick={() => void removePrivateAudio(album, track)}
                     aria-label="Remove audio"
+                    title={releaseStatusOf(track) === 'live' ? 'Unpress the song before removing audio' : 'Remove private recording'}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    {removingAudioId === track.id ? <Loader className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                   </Button>
                 ) : null}
               </div>
               {hasAudio && track?.dropAudio ? (
-                <p className={cn('font-code text-[10px] text-emerald-400/90')}>
-                  {track.dropAudio.fileName || 'Audio on file'}
-                  {track.dropAudio.durationSec ? ` · ${Math.round(track.dropAudio.durationSec)}s` : ''}
-                </p>
+                <div className="space-y-2">
+                  <p className={cn('font-code text-[10px] text-emerald-400/90')}>
+                    {track.dropAudio.fileName || 'Audio on file'}
+                    {track.dropAudio.durationSec ? ` · ${Math.round(track.dropAudio.durationSec)}s` : ''}
+                    {releaseStatusOf(track) === 'live' ? ' · live release' : ' · private until pressed live'}
+                  </p>
+                  {privateAudioUrl ? (
+                    <audio
+                      controls
+                      src={privateAudioUrl}
+                      className="h-10 w-full"
+                      onPlay={() => window.dispatchEvent(new CustomEvent('b4b:inline-audio-play'))}
+                    />
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-9 text-[10px] font-bold uppercase"
+                      disabled={testingAudio}
+                      onClick={() => void testPrivateAudio()}
+                    >
+                      {testingAudio ? <Loader className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Play className="mr-1.5 h-3.5 w-3.5" />}
+                      Test private recording
+                    </Button>
+                  )}
+                </div>
               ) : (
                 <p className="text-[11px] text-muted-foreground">mp3, wav, m4a — preview caps at 30 seconds until they unlock.</p>
               )}
@@ -707,15 +929,29 @@ export function FirstDropLatheHost() {
               </Label>
             </div>
 
-            <Button
-              type="button"
-              className="h-12 w-full bg-fuchsia-400 font-headline text-lg font-bold uppercase tracking-wide text-black hover:bg-fuchsia-300"
-              disabled={pressing || uploading || !hasAudio || !rightsChecked}
-              onClick={() => void pressLive()}
-            >
-              {pressing ? <Loader className="mr-2 h-5 w-5 animate-spin" /> : <Disc3 className="mr-2 h-5 w-5" />}
-              {track?.shareId ? 'Update the live press' : 'Press it live'}
-            </Button>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 font-bold uppercase"
+                disabled={pressing || uploading || !hasAudio}
+                onClick={() => void savePrivateDraft()}
+              >
+                <Save className="mr-2 h-4 w-4" /> Save private draft
+              </Button>
+              <Button
+                type="button"
+                className="h-12 bg-fuchsia-400 font-headline text-lg font-bold uppercase tracking-wide text-black hover:bg-fuchsia-300"
+                disabled={pressing || uploading || !hasAudio || !rightsChecked}
+                onClick={() => void pressLive()}
+              >
+                {pressing ? <Loader className="mr-2 h-5 w-5 animate-spin" /> : <Disc3 className="mr-2 h-5 w-5" />}
+                {releaseStatusOf(track || {}) === 'live' ? 'Update live press' : releaseShareIdOf(track || {}) ? 'Re-press live' : 'Press live'}
+              </Button>
+            </div>
+            <p className="text-center text-[10px] leading-relaxed text-muted-foreground">
+              Save Draft keeps the full recording private. Press Live publishes the preview and sale page. Lyrics can be attached now or later.
+            </p>
             <Button asChild variant="ghost" className="h-9 w-full text-[10px] font-bold uppercase">
               <Link href="/earnings">
                 <Banknote className="mr-1.5 h-3.5 w-3.5" />

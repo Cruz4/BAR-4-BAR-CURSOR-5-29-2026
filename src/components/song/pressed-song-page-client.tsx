@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { BarChart3, CalendarDays, Disc3, Download, Headphones, ReceiptText, ShoppingBag, Sparkles, Trophy } from 'lucide-react';
+import { BarChart3, CalendarDays, Disc3, Download, Headphones, ReceiptText, ShoppingBag, Sparkles, Trophy, Unlink } from 'lucide-react';
 import { auth } from '@/lib/firebase/client/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -18,6 +18,8 @@ import type { PressedSongSummary, PressedSongSupporter } from '@/lib/pressed-son
 import { LivingPressField } from '@/components/profile/living-press-field';
 import { pressTokens, pressingCssVars } from '@/lib/profile/pressing';
 import type { MusicChartsResponse } from '@/lib/music-charts';
+import { manageRelease } from '@/lib/release-management-client';
+import { DataContext } from '@/context/data-context';
 
 async function authorization(): Promise<HeadersInit> {
   const token = await auth.currentUser?.getIdToken();
@@ -44,12 +46,14 @@ function SupporterRow({ supporter, showAmount }: { supporter: PressedSongSupport
 
 export function PressedSongPageClient({ initial }: { initial: PressedSongSummary }) {
   const { user, authReady } = useAuth();
+  const { updateTrack } = useContext(DataContext);
   const { toast } = useToast();
   const [summary, setSummary] = useState(initial);
   const [savingCredit, setSavingCredit] = useState(false);
   const [chartRank, setChartRank] = useState<number | null>(null);
   const [playback, setPlayback] = useState({ playing: false, currentTime: 0, duration: 1 });
   const [pageVisible, setPageVisible] = useState(true);
+  const [unpressing, setUnpressing] = useState(false);
   const pressingTokens = useMemo(
     () => summary.artist.pressing ? pressTokens(summary.artist.pressing) : null,
     [summary.artist.pressing]
@@ -120,6 +124,21 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
       { icon: BarChart3, label: 'Current 7-day chart', value: chartRank ? `#${chartRank}` : '—' },
     ] : []),
   ];
+  const unpressSong = async () => {
+    const controls = summary.ownerControls;
+    if (!controls || !window.confirm(`Unpress “${summary.title}”? New checkout and public discovery stop, while existing buyers keep access.`)) return;
+    setUnpressing(true);
+    try {
+      await manageRelease({ kind: 'track', action: 'unpublish', albumId: controls.albumId, trackId: controls.trackId });
+      updateTrack(controls.albumId, controls.trackId, { releaseStatus: 'unlisted', releaseShareId: summary.shareId });
+      setSummary((current) => current.ownerControls ? { ...current, ownerControls: { ...current.ownerControls, releaseStatus: 'unlisted' } } : current);
+      toast({ title: 'Release unpressed', description: 'It is off public surfaces. Re-press from The Vault to restore this same URL.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not unpress', description: error instanceof Error ? error.message : undefined });
+    } finally {
+      setUnpressing(false);
+    }
+  };
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050914] px-4 py-10 text-white" style={pressingStyle as React.CSSProperties}>
       {summary.artist.pressing ? <LivingPressField config={summary.artist.pressing} /> : <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(236,72,153,.18),transparent_38%),radial-gradient(circle_at_80%_70%,rgba(59,130,246,.14),transparent_42%)]" />}
@@ -141,6 +160,20 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
             <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-fuchsia-400/40 bg-fuchsia-500/15"><Disc3 className="h-8 w-8 text-fuchsia-300" /></span>
             <div><p className="text-[10px] font-bold uppercase tracking-[.25em] text-muted-foreground">Pressed song</p><h1 className="font-headline text-3xl font-black uppercase sm:text-5xl">{summary.title}</h1><p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> Released {new Date(summary.releasedAt).toLocaleDateString()}</p></div>
           </div>
+          {summary.ownerControls ? (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2">
+              <span className="font-code text-[10px] uppercase tracking-widest text-muted-foreground">
+                Owner release status · {summary.ownerControls.releaseStatus}
+              </span>
+              {summary.ownerControls.releaseStatus === 'live' ? (
+                <Button type="button" size="sm" variant="outline" className="h-8 border-red-400/30 text-[10px] font-bold uppercase text-red-300" disabled={unpressing} onClick={() => void unpressSong()}>
+                  <Unlink className="mr-1.5 h-3.5 w-3.5" /> Unpress
+                </Button>
+              ) : (
+                <Button asChild size="sm" variant="outline" className="h-8 text-[10px] font-bold uppercase"><Link href="/vault">Re-press from Vault</Link></Button>
+              )}
+            </div>
+          ) : null}
           <DropListenPanel shareId={summary.shareId} title={summary.title} ownerId={summary.ownerId} price={summary.price} hasAudio source="direct" presentation="song" firstPressRank={viewer?.firstPressRank} onPlaybackStateChange={setPlayback} />
           <div className="mt-4">
             <DropSocialPanel

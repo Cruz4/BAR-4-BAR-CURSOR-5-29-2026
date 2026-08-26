@@ -12,7 +12,7 @@ import {
   isCommerceLive,
   resolveCheckoutCents,
 } from '@/lib/drop-commerce';
-import { loadShare, priceFromShare } from '@/lib/server/drop-entitlements';
+import { isReleaseShareLive, loadShare, priceFromShare } from '@/lib/server/drop-entitlements';
 import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
 import { connectStatusFromUser, isConnectTransferReady } from '@/lib/server/stripe-connect';
@@ -48,6 +48,9 @@ export async function POST(req: Request) {
     const db = await getDb();
     const share = await loadShare(db, shareId);
     if (!share) return NextResponse.json({ error: 'This drop is offline.' }, { status: 404 });
+    if (!isReleaseShareLive(share)) {
+      return NextResponse.json({ error: 'This release is not currently for sale.' }, { status: 404 });
+    }
     if (share.ownerId === userId) {
       return NextResponse.json({ error: 'This is your drop — it already streams for you.' }, { status: 400 });
     }

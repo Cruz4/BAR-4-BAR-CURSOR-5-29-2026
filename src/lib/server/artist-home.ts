@@ -18,6 +18,7 @@ import {
 } from '@/lib/profile/modules';
 import {
   audioForPlay,
+  isReleaseShareLive,
   loadShare,
   priceFromShare,
   userCanStreamFull,
@@ -66,6 +67,7 @@ async function validateFeaturedTrack(
   const db = await getDb();
   const share = await loadShare(db, selected.shareId);
   if (!share) throw new Error('That featured track is no longer live.');
+  if (!isReleaseShareLive(share)) throw new Error('That release is unpressed and cannot be featured publicly.');
   const audio = audioForPlay(share, selected.trackId);
   if (!audio?.storagePath) throw new Error('That featured track has no playable audio.');
   const entitled = await userCanStreamFull({ db, share, userId, trackId: selected.trackId });

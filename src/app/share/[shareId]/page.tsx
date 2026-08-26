@@ -70,6 +70,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { hasReleaseAudio } from '@/lib/release-management';
+import { manageRelease } from '@/lib/release-management-client';
 
 export default function SharedProjectPage() {
     const params = useParams();
@@ -88,17 +90,24 @@ export default function SharedProjectPage() {
 
     useEffect(() => {
         const fetchShare = async () => {
+            if (!authReady) return;
             const docRef = doc(db, 'shares', shareId);
             const snap = await getDoc(docRef);
             if (snap.exists()) {
                 const data = snap.data() as ProjectShare;
-                setShare(data);
-                updateDoc(docRef, { views: increment(1) }).catch(() => undefined);
+                const hiddenDna = data.dnaStatus === 'unlisted' || data.data?.dnaStatus === 'unlisted';
+                const keepsBuyerPage = hasReleaseAudio(data.data || {});
+                if (!hiddenDna || keepsBuyerPage || user?.id === data.ownerId) {
+                    setShare(data);
+                    updateDoc(docRef, { views: increment(1) }).catch(() => undefined);
+                } else {
+                    setShare(null);
+                }
             }
             setLoading(false);
         };
         void fetchShare();
-    }, [shareId]);
+    }, [shareId, authReady, user?.id]);
 
     const formattedShareDate = useMemo(() => {
         if (!share?.updatedAt && !share?.createdAt) return 'Recent';
@@ -129,6 +138,13 @@ export default function SharedProjectPage() {
       return Boolean(normalizeDropAudio((project as DnaDropTrackPayload).dropAudio));
     }, [project, isAlbum]);
     const isOwnShare = Boolean(user && share && user.id === share.ownerId);
+    const isReleaseShare = Boolean(
+      project && hasFirstDropAudio && (
+        project.releaseShareId === shareId
+        || share?.releaseStatus === 'live'
+        || (!project.releaseShareId && share?.releaseStatus !== 'unlisted')
+      )
+    );
 
     const vaultTrack = useMemo(() => {
         if (!project || isAlbum) return null;
@@ -263,6 +279,34 @@ export default function SharedProjectPage() {
         }
     };
 
+    const handleUnpressRelease = async () => {
+        if (!share || !project) return;
+        setOfflineConfirmOpen(false);
+        setIsTakingOffline(true);
+        try {
+            const albumId = isAlbum
+              ? project.id
+              : vaultTrack?.album.id || (project as DnaDropTrackPayload).albumId;
+            if (!albumId) throw new Error('Open this release from your Vault to manage it.');
+            await manageRelease({
+              kind: isAlbum ? 'album' : 'track',
+              action: 'unpublish',
+              albumId,
+              ...(isAlbum ? {} : { trackId: project.id }),
+            });
+            toast({
+                title: isAlbum ? 'Album unpressed' : 'Song unpressed',
+                description: 'New discovery and checkout are off. Existing buyers keep access.',
+            });
+            router.push(vaultHref());
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : 'Could not unpress this release.';
+            toast({ variant: 'destructive', title: 'Unpress failed', description: message });
+        } finally {
+            setIsTakingOffline(false);
+        }
+    };
+
     if (loading) {
         return <StudioLoader size="lg" fullscreen message="Accessing Studio Vault..." />;
     }
@@ -359,11 +403,11 @@ export default function SharedProjectPage() {
                             variant="outline"
                             className="h-8 sm:h-9 px-2 sm:px-3 font-bold border-red-500/30 text-red-500 hover:bg-red-500/10"
                             disabled={isTakingOffline}
-                            aria-label="Take offline"
-                            title="Take offline"
+                            aria-label={isReleaseShare ? 'Unpress release' : 'Take DNA offline'}
+                            title={isReleaseShare ? 'Unpress release' : 'Take DNA offline'}
                         >
                             {isTakingOffline ? <StudioLoader size="sm" /> : <EyeOff className="h-3.5 w-3.5 sm:mr-1.5" />}
-                            <span className="hidden sm:inline">Take offline</span>
+                            <span className="hidden sm:inline">{isReleaseShare ? 'Unpress' : 'Take offline'}</span>
                         </Button>
                     )}
                     {!user && hasFirstDropAudio ? (
@@ -779,20 +823,22 @@ export default function SharedProjectPage() {
             <AlertDialog open={offlineConfirmOpen} onOpenChange={setOfflineConfirmOpen}>
                 <AlertDialogContent className="bg-card border-2">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="font-headline text-2xl uppercase">Take this DNA Drop offline?</AlertDialogTitle>
+                        <AlertDialogTitle className="font-headline text-2xl uppercase">
+                          {isReleaseShare ? `Unpress this ${isAlbum ? 'album' : 'song'}?` : 'Take this DNA Drop offline?'}
+                        </AlertDialogTitle>
                         <AlertDialogDescription className="text-sm font-code leading-relaxed">
-                            The public link for <strong className="text-foreground">{project.title}</strong> will stop working immediately.
+                            {isReleaseShare ? 'New discovery and checkout will stop; existing buyers keep access.' : 'The public lyric link will stop working immediately.'}
                             You&apos;ll go back to where you came from — publish again anytime from the project.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className="font-bold">Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                            onClick={() => void handleTakeOffline()}
+                            onClick={() => void (isReleaseShare ? handleUnpressRelease() : handleTakeOffline())}
                             className="font-bold bg-red-500 hover:bg-red-600 text-white"
                             disabled={isTakingOffline}
                         >
-                            {isTakingOffline ? 'Taking offline…' : 'Take offline'}
+                            {isTakingOffline ? (isReleaseShare ? 'Unpressing…' : 'Taking offline…') : (isReleaseShare ? 'Unpress release' : 'Take offline')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

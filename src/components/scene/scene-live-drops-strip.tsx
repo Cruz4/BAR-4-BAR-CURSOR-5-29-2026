@@ -7,7 +7,7 @@
 
 import React, { useContext, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CassetteTape, Disc3, Dna, ExternalLink, Music, Settings2 } from 'lucide-react';
+import { CassetteTape, Disc3, Dna, ExternalLink, Loader, Music, Settings2, Unlink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,6 +21,9 @@ import { hasActiveDnaDrop } from '@/lib/dna-drop';
 import { dropPriceSummary, isCommerceLive, normalizeDropAudio, normalizeDropPrice } from '@/lib/drop-commerce';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
 import { cn } from '@/lib/utils';
+import { dnaStatusOf, releaseShareIdOf, releaseStatusOf } from '@/lib/release-management';
+import { manageRelease } from '@/lib/release-management-client';
+import { useToast } from '@/hooks/use-toast';
 
 type ManagedAlbumDrop = {
   kind: 'album';
@@ -47,8 +50,10 @@ type ManagedTrackDrop = {
 };
 
 export function SceneLiveDropsStrip({ className }: { className?: string }) {
-  const { albums, loading } = useContext(DataContext);
+  const { albums, loading, updateAlbum, updateTrack, flushCloudNow } = useContext(DataContext);
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState('');
 
   const { albumDrops, trackDrops, total, saleCount, lyricPreviewCount } = useMemo(() => {
     const albumsOut: ManagedAlbumDrop[] = [];
@@ -57,14 +62,16 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
 
     for (const album of albums) {
       if (album.id === 'unassigned') continue;
-      const albumLive = hasActiveDnaDrop(album.shareId);
-      if (albumLive && album.shareId) {
+      const albumDnaLive = hasActiveDnaDrop(album.shareId) && dnaStatusOf(album) === 'live';
+      const albumReleaseId = releaseShareIdOf({ ...album, tracks: album.tracks });
+      const albumReleaseLive = releaseStatusOf({ ...album, tracks: album.tracks }) === 'live';
+      if (albumReleaseLive && albumReleaseId) {
         const tracks = album.tracks || [];
         const audioTrackCount = tracks.filter((track) => normalizeDropAudio(track.dropAudio)).length;
         const albumPrice = normalizeDropPrice(album.dropPrice);
         albumsOut.push({
           kind: 'album',
-          shareId: album.shareId,
+          shareId: albumReleaseId,
           title: album.title || 'Untitled album',
           trackCount: tracks.length,
           liveTrackCount: tracks.filter((t) => hasActiveDnaDrop(t.shareId)).length,
@@ -74,22 +81,31 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
           dropPriceSummary: dropPriceSummary(albumPrice),
         });
       }
+      if (albumDnaLive && album.shareId && album.shareId !== albumReleaseId) {
+        const tracks = album.tracks || [];
+        albumsOut.push({
+          kind: 'album', shareId: album.shareId, title: album.title || 'Untitled album',
+          trackCount: tracks.length, liveTrackCount: tracks.filter((t) => hasActiveDnaDrop(t.shareId)).length,
+          albumId: album.id, audioTrackCount: 0, isForSale: false, dropPriceSummary: '',
+        });
+      }
 
       for (const track of album.tracks || []) {
-        if (!hasActiveDnaDrop(track.shareId) || !track.shareId) continue;
-        if (seenTracks.has(track.shareId)) continue;
-        seenTracks.add(track.shareId);
-        tracksOut.push({
-          kind: 'track',
-          shareId: track.shareId,
-          title: track.title || 'Untitled track',
-          albumTitle: album.title || 'Album',
-          albumId: album.id,
-          trackId: track.id,
-          fromAlbumHub: albumLive,
-          hasDropAudio: Boolean(normalizeDropAudio(track.dropAudio)),
-          dropPriceSummary: dropPriceSummary(normalizeDropPrice(track.dropPrice)),
-        });
+        const releaseId = releaseShareIdOf(track);
+        const releaseLive = releaseStatusOf(track) === 'live';
+        const dnaLive = hasActiveDnaDrop(track.shareId) && dnaStatusOf(track) === 'live';
+        const pushTrack = (publicId: string, hasDropAudio: boolean) => {
+          if (seenTracks.has(publicId)) return;
+          seenTracks.add(publicId);
+          tracksOut.push({
+            kind: 'track', shareId: publicId, title: track.title || 'Untitled track',
+            albumTitle: album.title || 'Album', albumId: album.id, trackId: track.id,
+            fromAlbumHub: albumDnaLive, hasDropAudio,
+            dropPriceSummary: dropPriceSummary(normalizeDropPrice(track.dropPrice)),
+          });
+        };
+        if (releaseLive && releaseId) pushTrack(releaseId, Boolean(normalizeDropAudio(track.dropAudio)));
+        if (dnaLive && track.shareId && track.shareId !== releaseId) pushTrack(track.shareId, false);
       }
     }
 
@@ -105,6 +121,28 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
         tracksOut.filter((track) => !track.hasDropAudio).length,
     };
   }, [albums]);
+
+  const unpressRelease = async (drop: ManagedTrackDrop | ManagedAlbumDrop) => {
+    if (!window.confirm(`Unpress “${drop.title}”? It will leave discovery and checkout, while existing buyers keep access.`)) return;
+    const key = `${drop.kind}:${drop.shareId}`;
+    setBusy(key);
+    try {
+      await flushCloudNow();
+      const result = await manageRelease({
+        kind: drop.kind,
+        action: 'unpublish',
+        albumId: drop.albumId,
+        ...(drop.kind === 'track' ? { trackId: drop.trackId } : {}),
+      });
+      if (drop.kind === 'track') updateTrack(drop.albumId, drop.trackId, { releaseStatus: 'unlisted', ...(result.releaseShareId ? { releaseShareId: result.releaseShareId } : {}) });
+      else updateAlbum(drop.albumId, { releaseStatus: 'unlisted', ...(result.releaseShareId ? { releaseShareId: result.releaseShareId } : {}) });
+      toast({ title: 'Release unpressed', description: 'The paid release is hidden. Its DNA lyric page, if any, stays live.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not unpress', description: error instanceof Error ? error.message : undefined });
+    } finally {
+      setBusy('');
+    }
+  };
 
   if (loading) return null;
 
@@ -237,6 +275,16 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
                             >
                               <Settings2 className="mr-1.5 h-3.5 w-3.5" /> Update press
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 border-red-400/30 text-[10px] font-bold uppercase text-red-300"
+                              disabled={busy === `track:${drop.shareId}`}
+                              onClick={() => void unpressRelease(drop)}
+                            >
+                              {busy === `track:${drop.shareId}` ? <Loader className="mr-1 h-3 w-3 animate-spin" /> : <Unlink className="mr-1 h-3 w-3" />}
+                              Unpress
+                            </Button>
                           </div>
                         </li>
                       ))}
@@ -275,6 +323,16 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
                             }}
                           >
                             <Settings2 className="mr-1.5 h-3.5 w-3.5" /> Update album
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 border-red-400/30 text-[10px] font-bold uppercase text-red-300"
+                            disabled={busy === `album:${drop.shareId}`}
+                            onClick={() => void unpressRelease(drop)}
+                          >
+                            {busy === `album:${drop.shareId}` ? <Loader className="mr-1 h-3 w-3 animate-spin" /> : <Unlink className="mr-1 h-3 w-3" />}
+                            Unpress
                           </Button>
                         </div>
                       </li>

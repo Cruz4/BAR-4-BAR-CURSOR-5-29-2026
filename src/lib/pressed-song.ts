@@ -59,4 +59,9 @@ export type PressedSongSummary = {
       edition: string;
     };
   };
+  ownerControls?: {
+    albumId: string;
+    trackId: string;
+    releaseStatus: 'draft' | 'live' | 'unlisted';
+  };
 };

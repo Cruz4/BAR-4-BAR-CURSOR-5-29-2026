@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase/server';
 import { normalizeDropAudio, dropPriceSummary, normalizeDropPrice } from '@/lib/drop-commerce';
 import { resolvePublicProfileSlugDoc } from '@/lib/server/profile-slug';
+import { isShareDocumentPublic } from '@/lib/release-management';
 
 export const runtime = 'nodejs';
 const PAGE_SIZE = 15;
@@ -16,6 +17,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     const snap = await db.collection('shares').where('ownerId', '==', owner.userId).get();
     const songs = snap.docs.flatMap((doc) => {
       const raw = doc.data() as Record<string, unknown>;
+      if (!isShareDocumentPublic(raw)) return [];
       if (raw.type === 'album') return [];
       const data = raw.data && typeof raw.data === 'object' ? raw.data as Record<string, unknown> : {};
       const audio = normalizeDropAudio(data.dropAudio);
@@ -25,6 +27,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       return [{
         shareId: doc.id,
         ownerId: owner.userId,
+        albumId: typeof data.albumId === 'string' ? data.albumId : '',
+        trackId: typeof raw.projectId === 'string' ? raw.projectId : typeof data.id === 'string' ? data.id : '',
         type: 'track' as const,
         title: typeof data.title === 'string' && data.title.trim() ? data.title.trim().slice(0, 120) : 'Untitled track',
         hasDropAudio: true,

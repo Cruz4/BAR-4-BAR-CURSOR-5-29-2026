@@ -19,6 +19,7 @@ export type DropLibraryItem = DropLibraryEntry & {
   tracks?: DropLibraryTrack[];
   /** Artist's own pressed song (not a purchase). */
   own?: boolean;
+  albumId?: string;
 };
 
 export type DeckSort = 'fresh' | 'az' | 'artist' | 'paid' | 'played';
@@ -129,6 +130,7 @@ export function flattenLibraryItems(items: DropLibraryItem[]): DeckPlayable[] {
       coverArtUrl: item.coverArtUrl,
       durationSec: item.durationSec,
       scope: item.scope,
+      albumId: item.albumId,
       purchasedAt: item.purchasedAt,
       amountCents: item.amountCents,
       free: item.free,

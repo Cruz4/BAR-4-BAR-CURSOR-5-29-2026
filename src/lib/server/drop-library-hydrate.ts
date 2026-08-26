@@ -2,6 +2,7 @@ import 'server-only';
 import type { DocumentSnapshot, Firestore } from 'firebase-admin/firestore';
 import { normalizeDropAudio, type DropLibraryEntry } from '@/lib/drop-commerce';
 import type { DropLibraryItem, DropLibraryTrack } from '@/lib/drop-library';
+import { isShareDocumentPublic } from '@/lib/release-management';
 
 function publicCoverUrl(url?: string): string | undefined {
   const u = url?.trim();
@@ -132,6 +133,7 @@ export async function listOwnerPressedLibraryItems(
 
   for (const doc of snap.docs) {
     const data = doc.data() as Record<string, unknown>;
+    if (!isShareDocumentPublic(data)) continue;
     const payload = (data.data as Record<string, unknown> | undefined) ?? {};
     const projectId = typeof data.projectId === 'string' ? data.projectId : '';
     const purchasedAt = sharePurchasedAt(data);
@@ -196,6 +198,7 @@ export async function listOwnerPressedLibraryItems(
       amountCents: 0,
       purchasedAt,
       own: true,
+      albumId: typeof payload.albumId === 'string' ? payload.albumId : undefined,
       ...(artistName ? { artistName } : {}),
       ...(audio.durationSec ? { durationSec: audio.durationSec } : {}),
       ...(cover ? { coverArtUrl: cover } : {}),

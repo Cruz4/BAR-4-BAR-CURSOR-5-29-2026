@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuth, getDb } from '@/lib/firebase/server';
-import { audioForPlay, loadShare, userCanStreamFull } from '@/lib/server/drop-entitlements';
+import { audioForPlay, isReleaseShareLive, loadShare, userCanStreamFull } from '@/lib/server/drop-entitlements';
 import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
 import { dropAudioFileUrl, mintDropAudioTicket } from '@/lib/server/drop-audio-stream';
 import { DROP_PREVIEW_SECONDS } from '@/lib/drop-commerce';
@@ -43,6 +43,9 @@ export async function GET(req: Request) {
 
     const userId = await optionalUid(req);
     const full = await userCanStreamFull({ db, share, userId, trackId });
+    if (!isReleaseShareLive(share) && !full) {
+      return NextResponse.json({ error: 'This release is no longer public.' }, { status: 404 });
+    }
     const path = full ? audio.storagePath : audio.previewPath || audio.storagePath;
     if (!path) return NextResponse.json({ error: 'Audio is not ready.' }, { status: 404 });
 

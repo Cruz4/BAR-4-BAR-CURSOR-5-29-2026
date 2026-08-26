@@ -88,7 +88,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const dropPlayer = useOptionalDropPlayer();
   const showDropNowPlaying =
-    Boolean(dropPlayer?.current) && !shouldHideDropNowPlayingBar(pathname);
+    Boolean(user && dropPlayer?.current) && !shouldHideDropNowPlayingBar(pathname);
   const isLoginPage = pathname === '/login';
   const isWelcomePage = pathname === '/welcome';
   const isPublicHome = pathname === '/' && !user;

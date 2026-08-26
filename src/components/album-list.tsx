@@ -100,6 +100,7 @@ import { VaultStudioProgress, VAULT_STUDIO_PROGRESS_EXPANDED_KEY, VAULT_STUDIO_P
 import { VaultProfileDock } from '@/components/profile/vault-profile-dock';
 import { VaultNeonWordCard } from '@/components/vault/vault-neon-word-card';
 import { LiveDnaDropsManage } from '@/components/scene/scene-live-drops-strip';
+import { ReleaseCatalog } from '@/components/vault/release-catalog';
 import { VaultChamberAtmosphere } from '@/components/vault-chamber-atmosphere';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
@@ -1128,6 +1129,7 @@ export function AlbumList() {
           {!loading && user && <VaultNeonWordCard />}
 
           <div className="relative min-w-0 w-full xl:col-start-2 xl:row-start-2 px-4 sm:px-6 pb-10">
+            {!loading && user && <ReleaseCatalog />}
             {!loading && user && <LiveDnaDropsManage className="mb-4" />}
             {user && isEmpty && !searchResults && vaultFilter === 'all' && <FirstSongHero />}
             {searchResults ? (

@@ -192,5 +192,18 @@ export async function getPressedSongSummary(
         }
       : {}),
   };
+  if (viewerId === share.ownerId) {
+    const albumId = typeof share.data?.albumId === 'string' ? share.data.albumId : '';
+    if (albumId) {
+      base.ownerControls = {
+        albumId,
+        trackId: share.projectId,
+        releaseStatus:
+          share.releaseStatus === 'draft' || share.releaseStatus === 'unlisted'
+            ? share.releaseStatus
+            : 'live',
+      };
+    }
+  }
   return base;
 }

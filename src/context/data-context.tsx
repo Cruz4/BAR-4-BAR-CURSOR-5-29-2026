@@ -907,12 +907,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const persistProjectShareId = useCallback(
     (type: 'album' | 'track', id: string, shareId: string, albumId?: string) => {
       if (type === 'album') {
-        updateAlbum(id, { shareId });
+        updateAlbum(id, { shareId, dnaStatus: 'live' });
         return;
       }
       const resolved = resolveTrackForDrop(id, albumId);
       if (resolved.album) {
-        updateTrack(resolved.album.id, id, { shareId });
+        updateTrack(resolved.album.id, id, { shareId, dnaStatus: 'live' });
       }
     },
     [resolveTrackForDrop, updateAlbum, updateTrack]
@@ -921,19 +921,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const clearProjectShareId = useCallback(
     async (type: 'album' | 'track', id: string, albumId?: string) => {
       if (type === 'album') {
-        updateAlbum(id, { shareId: undefined });
+        updateAlbum(id, { shareId: undefined, dnaStatus: 'unlisted' });
         if (user) {
-          await setDoc(doc(db, 'users', user.id, 'albums', id), { shareId: deleteField() }, { merge: true });
+          await setDoc(doc(db, 'users', user.id, 'albums', id), { shareId: deleteField(), dnaStatus: 'unlisted' }, { merge: true });
         }
         return;
       }
       const resolved = resolveTrackForDrop(id, albumId);
       if (resolved.album) {
-        updateTrack(resolved.album.id, id, { shareId: undefined });
+        updateTrack(resolved.album.id, id, { shareId: undefined, dnaStatus: 'unlisted' });
         if (user) {
           await setDoc(
             doc(db, 'users', user.id, 'albums', resolved.album.id, 'tracks', id),
-            { shareId: deleteField() },
+            { shareId: deleteField(), dnaStatus: 'unlisted' },
             { merge: true }
           );
         }
@@ -946,7 +946,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     async (type: 'album' | 'track', id: string, shareId: string, options?: { albumId?: string }): Promise<string> => {
       if (!user) throw new Error('Artist Session Required.');
       const albumId = options?.albumId;
-      const data = stripForFirestore(buildDropPayload(type, id, albumId));
+      const data = stripForFirestore({ ...buildDropPayload(type, id, albumId), dnaStatus: 'live' });
       const now = new Date().toISOString();
       const shareRef = doc(db, 'shares', shareId);
       const existing = await getDoc(shareRef);
@@ -958,6 +958,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             data,
             updatedAt: now,
             ownerName: user.displayName,
+            dnaStatus: 'live',
             ...shareDocCommerceFlags(type, data as { dropAudio?: unknown; dropPrice?: unknown }),
           },
           { merge: true }
@@ -969,6 +970,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           projectId: id,
           ownerId: user.id,
           ownerName: user.displayName,
+          dnaStatus: 'live',
           data,
           createdAt: now,
           updatedAt: now,
@@ -999,7 +1001,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const shareId = Math.random().toString(36).substring(2, 12).toUpperCase();
-      const data = stripForFirestore(buildDropPayload(type, id, albumId));
+      const data = stripForFirestore({ ...buildDropPayload(type, id, albumId), dnaStatus: 'live' });
       const now = new Date().toISOString();
 
       await setDoc(doc(db, 'shares', shareId), {
@@ -1008,6 +1010,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         projectId: id,
         ownerId: user.id,
         ownerName: user.displayName,
+        dnaStatus: 'live',
         data,
         createdAt: now,
         updatedAt: now,
@@ -1032,7 +1035,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         throw new Error('You can only take offline your own DNA Drops.');
       }
       if (existing.exists()) {
-        await deleteDoc(shareRef);
+        const existingData = existing.data()?.data;
+        await setDoc(
+          shareRef,
+          {
+            dnaStatus: 'unlisted',
+            updatedAt: new Date().toISOString(),
+            data: {
+              ...(existingData && typeof existingData === 'object' ? existingData : {}),
+              dnaStatus: 'unlisted',
+            },
+          },
+          { merge: true }
+        );
       }
       await clearProjectShareId(type, id, options?.albumId);
     },

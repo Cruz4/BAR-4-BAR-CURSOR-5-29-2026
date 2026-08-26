@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Music2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, EyeOff, Music2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StudioLoader } from '@/components/studio-loader';
 import { ProfileSectionTabs } from '@/components/profile/profile-section-tabs';
@@ -14,14 +14,21 @@ import { PublicProfileSectionShell } from '@/components/profile/public-profile-s
 import { formatDropPulseLine } from '@/lib/drop-pulse';
 import type { DropPrice } from '@/lib/drop-commerce';
 import { pressedSongHref } from '@/lib/pressed-song';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
+import { manageRelease } from '@/lib/release-management-client';
 
 type PressedProfileSong = LiveDnaDropItem & {
   ownerId: string;
+  albumId: string;
+  trackId: string;
   price: DropPrice;
 };
 
 export default function ProfileSongsPage() {
   const params = useParams();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const slug = typeof params?.slug === 'string' ? params.slug : '';
   const [displayName, setDisplayName] = useState('Artist');
   const [rawProfile, setRawProfile] = useState<unknown>({});
@@ -30,6 +37,7 @@ export default function ProfileSongsPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [missing, setMissing] = useState(false);
+  const [unpressingId, setUnpressingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -81,6 +89,28 @@ export default function ProfileSongsPage() {
                 >
                   Song page <ChevronRight className="h-3.5 w-3.5" />
                 </Link>
+                {user?.id === song.ownerId && song.albumId && song.trackId ? (
+                  <button
+                    type="button"
+                    disabled={unpressingId === song.shareId}
+                    className="flex shrink-0 items-center gap-1 text-red-300 transition-colors hover:text-red-200 disabled:opacity-50"
+                    onClick={() => {
+                      if (!window.confirm(`Unpress ${song.title}? Buyers keep access, but new discovery and checkout stop.`)) return;
+                      setUnpressingId(song.shareId);
+                      void manageRelease({ kind: 'track', action: 'unpublish', albumId: song.albumId, trackId: song.trackId })
+                        .then(() => {
+                          setSongs((current) => current.filter((item) => item.shareId !== song.shareId));
+                          toast({ title: 'Song unpressed', description: 'It is hidden from discovery and new checkout. Existing buyers keep access.' });
+                        })
+                        .catch((error: unknown) => {
+                          toast({ variant: 'destructive', title: 'Could not unpress song', description: error instanceof Error ? error.message : 'Try again.' });
+                        })
+                        .finally(() => setUnpressingId(null));
+                    }}
+                  >
+                    <EyeOff className="h-3.5 w-3.5" /> {unpressingId === song.shareId ? 'Unpressing…' : 'Unpress'}
+                  </button>
+                ) : null}
               </div>
               <Suspense fallback={<div className="h-40 animate-pulse rounded-2xl border border-fuchsia-400/20 bg-black/35" />}>
                 <DropListenPanel

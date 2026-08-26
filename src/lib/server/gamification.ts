@@ -50,6 +50,7 @@ import {
   shareCommerceFlags,
   shareDocCommerceFlags,
 } from '@/lib/drop-commerce';
+import { isShareDocumentPublic } from '@/lib/release-management';
 import {
   allocateUniqueProfileSlug,
   assertProfileSlugAvailable,
@@ -1372,7 +1373,21 @@ export async function getPublicProfile(slug: string) {
       ? 'initials'
       : profilePhotoMode;
 
-  const artistHome = enrichAlbumRoomsWithLiveCovers(data.artistHome, albumMeta);
+  let artistHome = enrichAlbumRoomsWithLiveCovers(data.artistHome, albumMeta);
+  const featuredTrack = (
+    artistHome && typeof artistHome === 'object' &&
+    (artistHome as { featured?: { featuredTrack?: { shareId?: unknown } } }).featured?.featuredTrack
+  ) as { shareId?: unknown } | undefined;
+  const featuredShareId = typeof featuredTrack?.shareId === 'string' ? featuredTrack.shareId.trim() : '';
+  if (featuredShareId) {
+    const featuredShare = await db.doc(`shares/${featuredShareId}`).get();
+    if (!featuredShare.exists || !isShareDocumentPublic((featuredShare.data() || {}) as Record<string, unknown>)) {
+      const home = artistHome as Record<string, unknown>;
+      const featured = home.featured as Record<string, unknown>;
+      const { featuredTrack: _hidden, ...publicFeatured } = featured;
+      artistHome = { ...home, featured: publicFeatured };
+    }
+  }
 
   const liveBadge = studioChromeFromSubscriptionStatus(
     typeof userSnap.data()?.subscriptionStatus === 'string'
@@ -1492,6 +1507,7 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
 
   for (const doc of snap.docs) {
     const data = doc.data();
+    if (!isShareDocumentPublic(data as Record<string, unknown>)) continue;
     const type = data.type === 'album' ? ('album' as const) : ('track' as const);
     const title =
       typeof data?.data?.title === 'string' && data.data.title.trim()
@@ -1543,6 +1559,7 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
   // Nest live tracks under their album DNA so the Drop Shelf can group them.
   for (const doc of snap.docs) {
     const data = doc.data();
+    if (!isShareDocumentPublic(data as Record<string, unknown>)) continue;
     if (data.type !== 'album') continue;
     const albumShareId = doc.id;
     const albumTitle =
@@ -2188,6 +2205,7 @@ export async function listRecentShareSummaries(
   }> = [];
   for (const doc of snap.docs) {
     const data = doc.data() as Record<string, unknown>;
+    if (!isShareDocumentPublic(data)) continue;
     const ownerId = typeof data.ownerId === 'string' ? data.ownerId : '';
     if (opts.excludeOwnerId && ownerId === opts.excludeOwnerId) continue;
     const type = data.type === 'album' ? ('album' as const) : ('track' as const);

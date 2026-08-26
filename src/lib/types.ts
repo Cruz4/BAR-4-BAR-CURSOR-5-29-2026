@@ -1,5 +1,8 @@
 import type { DropAudioMeta, DropPrice } from '@/lib/drop-commerce';
 
+export type ReleaseStatus = 'draft' | 'live' | 'unlisted';
+export type DnaStatus = 'live' | 'unlisted';
+
 export interface User {
   id: string;
   displayName: string;
@@ -94,6 +97,14 @@ export interface Album {
   }>;
   isPublic?: boolean;
   shareId?: string;
+  /** Durable paid-release identity. Kept separate from the optional DNA lyric page. */
+  releaseShareId?: string;
+  /** Draft audio is private; unlisted releases retain buyer access but leave public discovery. */
+  releaseStatus?: ReleaseStatus;
+  /** Snapshot timestamp for the most recent live press. */
+  releaseSnapshotAt?: string;
+  /** Visibility of the separate DNA lyric page. */
+  dnaStatus?: DnaStatus;
   /**
    * Links / embeds on the public DNA Drop page (YouTube, Spotify, etc.).
    * Included in the published snapshot; edit from the DNA Drop dialog.
@@ -151,6 +162,14 @@ export interface Track {
   suggestedTitlesHistory?: string[][];
   isPublic?: boolean;
   shareId?: string;
+  /** Durable paid-release identity. Kept separate from the optional DNA lyric page. */
+  releaseShareId?: string;
+  /** Draft audio is private; unlisted releases retain buyer access but leave public discovery. */
+  releaseStatus?: ReleaseStatus;
+  /** Snapshot timestamp for the most recent live press. */
+  releaseSnapshotAt?: string;
+  /** Visibility of the separate DNA lyric page. */
+  dnaStatus?: DnaStatus;
   /** Active Collab Sheet — live multi-user editing session id. */
   collabSheetId?: string;
   /**
@@ -234,6 +253,8 @@ export interface ProjectShare {
   firstBuyerId?: string;
   firstBuyerName?: string;
   firstBuyerAt?: string;
+  releaseStatus?: ReleaseStatus;
+  dnaStatus?: DnaStatus;
 }
 
 export interface SystemLog {
