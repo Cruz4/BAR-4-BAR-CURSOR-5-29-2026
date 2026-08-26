@@ -502,11 +502,17 @@ export function ArtistHome({
                   <Button
                     asChild
                     size="sm"
-                    className="h-auto min-h-10 min-w-0 flex-1 gap-1.5 whitespace-normal bg-fuchsia-400 px-3 py-2 text-center font-bold uppercase leading-tight tracking-wider text-black hover:bg-fuchsia-300 sm:h-9 sm:w-auto sm:flex-none sm:whitespace-nowrap sm:px-4 sm:py-0"
+                    className="h-10 min-w-0 flex-1 gap-1.5 overflow-hidden whitespace-nowrap bg-fuchsia-400 px-3 text-center font-bold uppercase leading-tight tracking-wider text-black hover:bg-fuchsia-300 sm:h-9 sm:w-auto sm:flex-none sm:px-4"
                   >
-                    <Link href={`/song/${saleDrops[0].shareId}`} className="inline-flex max-w-full items-center gap-1.5">
+                    <Link
+                      href={`/song/${saleDrops[0].shareId}`}
+                      className="inline-flex max-w-full items-center gap-1.5"
+                      aria-label={`Listen to or buy ${saleDrops[0].title}${saleDrops[0].dropPriceSummary ? ` · ${saleDrops[0].dropPriceSummary}` : ''}`}
+                      title={saleDrops[0].dropPriceSummary ? `Listen / buy · ${saleDrops[0].dropPriceSummary}` : 'Listen / buy'}
+                    >
                       <Music className="h-3.5 w-3.5 shrink-0" />
-                      <span className="min-w-0 break-words">
+                      <span className="min-w-0 truncate sm:hidden">Listen / buy</span>
+                      <span className="hidden min-w-0 truncate sm:inline">
                         Listen
                         {saleDrops[0].dropPriceSummary ? ` · ${saleDrops[0].dropPriceSummary}` : ''}
                       </span>
@@ -516,11 +522,17 @@ export function ArtistHome({
                   <Button
                     asChild
                     size="sm"
-                    className="h-auto min-h-10 min-w-0 flex-1 gap-1.5 whitespace-normal bg-fuchsia-400 px-3 py-2 text-center font-bold uppercase leading-tight tracking-wider text-black hover:bg-fuchsia-300 sm:h-9 sm:w-auto sm:flex-none sm:whitespace-nowrap sm:px-4 sm:py-0"
+                    className="h-10 min-w-0 flex-1 gap-1.5 overflow-hidden whitespace-nowrap bg-fuchsia-400 px-3 text-center font-bold uppercase leading-tight tracking-wider text-black hover:bg-fuchsia-300 sm:h-9 sm:w-auto sm:flex-none sm:px-4"
                   >
-                    <a href="#first-drops" className="inline-flex max-w-full items-center gap-1.5">
+                    <a
+                      href="#first-drops"
+                      className="inline-flex max-w-full items-center gap-1.5"
+                      aria-label={`Listen to or buy from ${saleDrops.length} songs`}
+                      title={`Listen / buy · ${saleDrops.length} songs`}
+                    >
                       <Music className="h-3.5 w-3.5 shrink-0" />
-                      <span className="min-w-0 truncate">Listen · {saleDrops.length} songs</span>
+                      <span className="min-w-0 truncate sm:hidden">Listen / buy</span>
+                      <span className="hidden min-w-0 truncate sm:inline">Listen · {saleDrops.length} songs</span>
                     </a>
                   </Button>
                 )
@@ -535,7 +547,10 @@ export function ArtistHome({
                       asChild
                       variant="outline"
                       size="sm"
-                      className="h-8 max-w-full gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
+                      className={cn(
+                        'h-8 max-w-full gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]',
+                        showFirstDropsStorefront && 'max-sm:w-full max-sm:basis-full'
+                      )}
                     >
                       <Link href={liveDnaDrops[0].hasDropAudio ? `/song/${liveDnaDrops[0].shareId}` : `/share/${liveDnaDrops[0].shareId}`} className="inline-flex max-w-full items-center gap-1.5">
                         <Dna className="h-3.5 w-3.5 shrink-0" />
@@ -557,7 +572,10 @@ export function ArtistHome({
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-8 max-w-full gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]"
+                    className={cn(
+                      'h-8 max-w-full gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]',
+                      showFirstDropsStorefront && 'max-sm:w-full max-sm:basis-full'
+                    )}
                     onClick={() => setDropsOpen(true)}
                   >
                     <Dna className="h-3.5 w-3.5 shrink-0" />
