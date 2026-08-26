@@ -30,6 +30,8 @@ type SlideMeta = {
   userId?: string;
   slug?: string;
   avatarUrl?: string;
+  useStarMark?: boolean;
+  starMarkSeed?: number;
   pressing?: PressingConfig;
 };
 
@@ -66,6 +68,8 @@ function discoverMeta(card: DiscoverCard): SlideMeta {
       userId: card.artist.userId,
       slug: card.artist.slug,
       avatarUrl: card.artist.avatarUrl,
+      useStarMark: card.artist.starMarkUseStar,
+      starMarkSeed: card.artist.starMarkSeed,
       href: profileHref(card.artist.slug),
       pressing: card.artist.pressing,
     };
@@ -78,6 +82,8 @@ function discoverMeta(card: DiscoverCard): SlideMeta {
       userId: card.drop.ownerId,
       slug: card.drop.ownerSlug,
       avatarUrl: card.drop.avatarUrl,
+      useStarMark: card.drop.starMarkUseStar,
+      starMarkSeed: card.drop.starMarkSeed,
       href: card.drop.hasDropAudio
         ? `/song/${card.drop.shareId}`
         : `/share/${card.drop.shareId}`,
@@ -103,6 +109,8 @@ function discoverMeta(card: DiscoverCard): SlideMeta {
     userId: first?.userId,
     slug: first?.profileSlug,
     avatarUrl: first?.avatarUrl,
+    useStarMark: first?.starMarkUseStar,
+    starMarkSeed: first?.starMarkSeed,
     href: '/leaderboard',
     pressing: first?.pressing,
   };
@@ -113,29 +121,29 @@ function FeedBubble({ meta, active, onClick }: { meta: SlideMeta; active: boolea
     <button
       type="button"
       onClick={onClick}
-      className="group flex w-[4.4rem] shrink-0 flex-col items-center gap-1 focus-visible:outline-none"
+      className="group flex w-[4.75rem] shrink-0 flex-col items-center gap-1 focus-visible:outline-none"
       aria-label={`Jump to ${meta.name}`}
       aria-current={active ? 'true' : undefined}
     >
-      <span className={cn(
-        'p-0.5 transition',
-        meta.avatarUrl ? 'rounded-xl' : 'rounded-full',
-        active
-          ? 'bg-gradient-to-br from-fuchsia-400 via-sky-400 to-cyan-300 shadow-[0_0_18px_rgba(56,189,248,0.45)]'
-          : 'bg-white/15 group-hover:bg-white/30'
-      )}>
-        <span className={cn('block bg-[hsl(216_38%_6%)] p-0.5', meta.avatarUrl ? 'rounded-[0.65rem]' : 'rounded-full')}>
-          <LiveArtistStarAvatar
-            name={meta.name}
-            userId={meta.userId}
-            slug={meta.slug}
-            avatarUrl={meta.avatarUrl}
-            size={38}
-            link={false}
-          />
-        </span>
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center">
+        <LiveArtistStarAvatar
+          name={meta.name}
+          userId={meta.userId}
+          slug={meta.slug}
+          avatarUrl={meta.avatarUrl}
+          useStarMark={meta.useStarMark}
+          starMarkSeed={meta.starMarkSeed}
+          size={44}
+          link={false}
+          className={cn(
+            'transition duration-200',
+            active
+              ? '!border-sky-300 brightness-110 drop-shadow-[0_0_9px_rgba(56,189,248,0.9)]'
+              : 'opacity-70 group-hover:opacity-100'
+          )}
+        />
       </span>
-      <span className={cn('w-full truncate text-center font-code text-[8px] font-bold uppercase tracking-wide', active ? 'text-white' : 'text-white/45')}>
+      <span className={cn('w-full truncate text-center font-code text-[8px] font-bold uppercase leading-4 tracking-wide', active ? 'text-white' : 'text-white/45')}>
         {meta.name}
       </span>
     </button>
@@ -298,29 +306,29 @@ export function SceneImmersiveFeedDialog({
         </div>
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-40 bg-gradient-to-b from-black via-black/85 to-transparent pb-6 pt-[max(0.65rem,env(safe-area-inset-top))]">
-          <div className="pointer-events-auto flex items-center gap-2 px-3 sm:px-5">
+          <div className="pointer-events-auto flex items-center gap-1 px-2 sm:gap-2 sm:px-5">
             <Link href="/" onClick={() => onOpenChange(false)} className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-white p-1" aria-label="Bar4Bar home">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/Logo.png" alt="" className="h-full w-full object-contain" />
             </Link>
             <span className={cn(
-              'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border',
+              'hidden h-9 w-9 shrink-0 items-center justify-center rounded-full border sm:flex',
               mode === 'block' ? 'border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200' : 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200'
             )}>
               {mode === 'block' ? <Radio className="h-4 w-4" /> : <Compass className="h-4 w-4" />}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-headline text-lg font-bold uppercase leading-none text-white">{title}</p>
+              <p className="whitespace-nowrap font-headline text-[0.85rem] font-bold uppercase leading-none tracking-tight text-white sm:text-lg">{title}</p>
               <p className="mt-1 font-code text-[8px] font-bold uppercase tracking-[0.18em] text-white/40">
                 {items.length ? `${activeIndex + 1} of ${items.length} · swipe or scroll` : 'Waiting for the Scene'}
               </p>
             </div>
-            <Link href="/" onClick={() => onOpenChange(false)} className="flex h-9 items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2.5 text-[9px] font-bold uppercase tracking-wider text-cyan-200 hover:border-cyan-300/60" aria-label="The Scene"><Radio className="h-3.5 w-3.5" /><span className="hidden sm:inline">Scene</span></Link>
-            <Link href="/vault" onClick={() => onOpenChange(false)} className="flex h-9 items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 text-[9px] font-bold uppercase tracking-wider text-amber-200 hover:border-amber-300/60" aria-label="The Vault"><Vault className="h-3.5 w-3.5" /><span className="hidden sm:inline">Vault</span></Link>
+            <Link href="/" onClick={() => onOpenChange(false)} className="flex h-9 items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 text-[9px] font-bold uppercase tracking-wider text-cyan-200 hover:border-cyan-300/60 sm:px-2.5" aria-label="The Scene"><Radio className="h-3.5 w-3.5" /><span className="hidden sm:inline">Scene</span></Link>
+            <Link href="/vault" onClick={() => onOpenChange(false)} className="flex h-9 items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 text-[9px] font-bold uppercase tracking-wider text-amber-200 hover:border-amber-300/60 sm:px-2.5" aria-label="The Vault"><Vault className="h-3.5 w-3.5" /><span className="hidden sm:inline">Vault</span></Link>
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white/70 transition hover:border-white/35 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white/70 transition hover:border-white/35 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:h-10 sm:w-10"
               aria-label={`Close ${title}`}
             >
               <X className="h-5 w-5" />
@@ -330,7 +338,7 @@ export function SceneImmersiveFeedDialog({
           {items.length > 0 ? (
             <div className="pointer-events-auto mt-2 flex gap-1.5 overflow-x-auto overscroll-x-contain px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-5">
               {items.map((item, index) => (
-                <span key={item.meta.key} ref={(node) => { bubbleRefs.current[index] = node; }}>
+                <span className="block shrink-0" key={item.meta.key} ref={(node) => { bubbleRefs.current[index] = node; }}>
                   <FeedBubble meta={item.meta} active={activeIndex === index} onClick={() => scrollTo(index)} />
                 </span>
               ))}
@@ -346,7 +354,7 @@ export function SceneImmersiveFeedDialog({
           {items.length ? items.map((item, index) => (
             <section
               key={item.meta.key}
-              className="relative flex min-h-[100dvh] touch-pan-y snap-start items-center justify-center pb-[max(1rem,env(safe-area-inset-bottom))] pl-3 pr-14 pt-[7.4rem] sm:px-16 sm:pt-[8.25rem]"
+              className="relative flex min-h-[100dvh] touch-pan-y snap-start items-center justify-center pb-[max(7.4rem,calc(env(safe-area-inset-bottom)+6rem))] pl-3 pr-14 pt-[7.4rem] sm:px-16 sm:pb-[max(8.25rem,calc(env(safe-area-inset-bottom)+6rem))] sm:pt-[8.25rem]"
               aria-label={`${title}: ${item.meta.name}`}
             >
               <div className="relative z-10 w-full max-w-[44rem]">
@@ -431,7 +439,7 @@ export function SceneImmersiveFeedDialog({
                 <button
                   type="button"
                   onClick={() => scrollTo(index + 1)}
-                  className="absolute bottom-[max(0.55rem,env(safe-area-inset-bottom))] left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-0.5 font-code text-[8px] font-bold uppercase tracking-[0.18em] text-white/35 hover:text-white/75"
+                  className="absolute bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-0.5 font-code text-[8px] font-bold uppercase tracking-[0.18em] text-white/45 hover:text-white/75 sm:bottom-[max(1rem,env(safe-area-inset-bottom))]"
                 >
                   Next <ChevronDown className="h-3.5 w-3.5 animate-bounce" />
                 </button>

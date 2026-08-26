@@ -127,8 +127,9 @@ export function SceneDiscoverCard({
             >
               {artist.displayName}
             </Link>
-            <p className="font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
-              <span className="whitespace-nowrap">Artist Home {artist.updatedAt ? `· updated ${timeAgo(artist.updatedAt)}` : ''}</span>
+            <p className="flex min-w-0 flex-col font-code text-[9px] font-bold uppercase leading-tight tracking-[0.13em] text-muted-foreground/70 sm:block sm:tracking-[0.18em]">
+              <span className="whitespace-nowrap">Artist Home</span>
+              {artist.updatedAt ? <span className="whitespace-nowrap sm:ml-1">· updated {timeAgo(artist.updatedAt)}</span> : null}
             </p>
           </div>
           <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>
