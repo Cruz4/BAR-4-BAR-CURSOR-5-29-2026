@@ -71,7 +71,7 @@ export default function ProfileSongsPage() {
       </Button>
       <ProfileSectionTabs slug={slug} />
       <header>
-        <h1 className="flex items-center gap-2 font-headline text-3xl font-bold uppercase"><Music2 className="h-7 w-7 text-fuchsia-400" /> Pressed Songs</h1>
+        <h1 className="flex items-center gap-2 font-headline text-3xl font-bold uppercase"><Music2 className="h-7 w-7 text-fuchsia-400" /> Releases</h1>
         <p className="text-sm text-muted-foreground">Play {displayName}&apos;s previews here like a playlist, or open any song for its full page.</p>
       </header>
       {songs.length ? (
@@ -95,20 +95,20 @@ export default function ProfileSongsPage() {
                     disabled={unpressingId === song.shareId}
                     className="flex shrink-0 items-center gap-1 text-red-300 transition-colors hover:text-red-200 disabled:opacity-50"
                     onClick={() => {
-                      if (!window.confirm(`Unpress ${song.title}? Buyers keep access, but new discovery and checkout stop.`)) return;
+                      if (!window.confirm(`Take ${song.title} offline? Buyers keep access, but new discovery and checkout stop.`)) return;
                       setUnpressingId(song.shareId);
                       void manageRelease({ kind: 'track', action: 'unpublish', albumId: song.albumId, trackId: song.trackId })
                         .then(() => {
                           setSongs((current) => current.filter((item) => item.shareId !== song.shareId));
-                          toast({ title: 'Song unpressed', description: 'It is hidden from discovery and new checkout. Existing buyers keep access.' });
+                          toast({ title: 'Release taken offline', description: 'It is hidden from discovery and new checkout. Existing buyers keep access.' });
                         })
                         .catch((error: unknown) => {
-                          toast({ variant: 'destructive', title: 'Could not unpress song', description: error instanceof Error ? error.message : 'Try again.' });
+                          toast({ variant: 'destructive', title: 'Could not take release offline', description: error instanceof Error ? error.message : 'Try again.' });
                         })
                         .finally(() => setUnpressingId(null));
                     }}
                   >
-                    <EyeOff className="h-3.5 w-3.5" /> {unpressingId === song.shareId ? 'Unpressing…' : 'Unpress'}
+                    <EyeOff className="h-3.5 w-3.5" /> {unpressingId === song.shareId ? 'Taking offline…' : 'Take offline'}
                   </button>
                 ) : null}
               </div>
@@ -120,6 +120,7 @@ export default function ProfileSongsPage() {
                   ownerId={song.ownerId}
                   price={song.price}
                   hasAudio={Boolean(song.hasDropAudio)}
+                  houseRelease={song.houseRelease}
                   source="artist_home"
                   presentation="playlist"
                   playbackGroup={`profile-pressed:${slug}`}
@@ -128,7 +129,7 @@ export default function ProfileSongsPage() {
             </article>
           ))}
         </div>
-      ) : <div className="rounded-2xl border border-dashed border-white/15 px-6 py-16 text-center text-sm text-muted-foreground">No live pressed songs yet.</div>}
+      ) : <div className="rounded-2xl border border-dashed border-white/15 px-6 py-16 text-center text-sm text-muted-foreground">No live music releases yet.</div>}
       {cursor ? <Button variant="outline" className="w-full font-bold uppercase" disabled={loadingMore} onClick={() => {
         setLoadingMore(true);
         void fetch(`/api/profile/${encodeURIComponent(slug)}/songs?cursor=${encodeURIComponent(cursor)}`)

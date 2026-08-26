@@ -8,6 +8,8 @@ import {
   type DropPrice,
 } from '@/lib/drop-commerce';
 import type { Track } from '@/lib/types';
+import { isHouseReleaseDocument } from '@/lib/release-management';
+import { isOwnedDropStoragePath } from '@/lib/server/drop-audio-stream';
 
 export type DropShareDoc = {
   id: string;
@@ -18,6 +20,7 @@ export type DropShareDoc = {
   data?: Record<string, unknown>;
   releaseStatus?: 'draft' | 'live' | 'unlisted';
   dnaStatus?: 'live' | 'unlisted';
+  houseRelease?: boolean;
 };
 
 export async function loadShare(db: Firestore, shareId: string): Promise<DropShareDoc | null> {
@@ -39,6 +42,7 @@ export async function loadShare(db: Firestore, shareId: string): Promise<DropSha
         ? data.releaseStatus
         : undefined,
     dnaStatus: data.dnaStatus === 'live' || data.dnaStatus === 'unlisted' ? data.dnaStatus : undefined,
+    houseRelease: isHouseReleaseDocument(data),
   };
 }
 
@@ -125,6 +129,7 @@ export async function userCanStreamFull(opts: {
   const { db, share, userId, trackId } = opts;
   if (userId && userId === share.ownerId) return true;
   if (!userId) return false;
+  if (share.houseRelease && isReleaseShareLive(share)) return true;
 
   const thisShare = await getLibraryEntry(db, userId, share.id);
   if (thisShare) {
@@ -177,5 +182,40 @@ export async function grantDropLibrary(
       { merge: true }
     );
   });
+}
+
+/**
+ * Resolve playback from the owner's private Vault document. Public share
+ * snapshots intentionally contain no usable Storage path. Legacy snapshots are
+ * accepted only when their path is inside the same owner's Storage folder.
+ */
+export async function loadAudioForPlay(
+  db: Firestore,
+  share: DropShareDoc,
+  trackId?: string
+): Promise<DropAudioMeta | undefined> {
+  const payload = share.data ?? {};
+  const publicTracks = Array.isArray(payload.tracks) ? (payload.tracks as Track[]) : [];
+  const resolvedTrackId = share.type === 'track'
+    ? share.projectId
+    : trackId || publicTracks.find((track) => normalizeDropAudio(track.dropAudio))?.id;
+  const albumId = share.type === 'album'
+    ? share.projectId
+    : typeof payload.albumId === 'string' && payload.albumId.trim()
+      ? payload.albumId.trim()
+      : 'unassigned';
+  if (resolvedTrackId && albumId && !resolvedTrackId.includes('/') && !albumId.includes('/')) {
+    const snap = await db.doc(`users/${share.ownerId}/albums/${albumId}/tracks/${resolvedTrackId}`).get();
+    const privateAudio = normalizeDropAudio(snap.data()?.dropAudio);
+    if (privateAudio && isOwnedDropStoragePath(privateAudio.storagePath, share.ownerId)) {
+      if (!privateAudio.previewPath || isOwnedDropStoragePath(privateAudio.previewPath, share.ownerId)) {
+        return privateAudio;
+      }
+    }
+  }
+  const legacy = audioForPlay(share, trackId);
+  if (!legacy || !isOwnedDropStoragePath(legacy.storagePath, share.ownerId)) return undefined;
+  if (legacy.previewPath && !isOwnedDropStoragePath(legacy.previewPath, share.ownerId)) return undefined;
+  return legacy;
 }
 

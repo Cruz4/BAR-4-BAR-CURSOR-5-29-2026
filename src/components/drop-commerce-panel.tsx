@@ -219,12 +219,12 @@ export function DropCommercePanel({
       <div className="flex items-center gap-2">
         <Music className="h-4 w-4 text-primary shrink-0" />
         <Label className="text-[10px] font-bold uppercase tracking-widest text-primary">
-          First Drop · audio &amp; price
+          Release · audio &amp; price
         </Label>
       </div>
       <p className="text-[10px] text-muted-foreground leading-relaxed">
         Upload the song to Bar 4 Bar (private storage). Fans buy once — set price or pay-what-you-want — then stream it
-        here. Preview is 30 seconds until they buy it. Live First Drops are always paid. {firstDropsFeeCashoutLine()}
+        here. Preview is 30 seconds until they buy it. Ordinary live releases are paid; House releases are included free. {firstDropsFeeCashoutLine()}
       </p>
       <Button asChild variant="outline" className="h-8 w-full text-[9px] font-bold uppercase tracking-widest">
         <Link href="/earnings">

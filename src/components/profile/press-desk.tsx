@@ -1777,7 +1777,7 @@ export function PressDesk() {
       <DeskSection
         icon={Disc3}
         title="Now Playing"
-        hint="Feature your own First Drop or a track you purchased. Visitors hear your chosen 30 seconds; owners hear the full track. External embeds still work below."
+        hint="Feature one of your releases or a track you purchased. Visitors hear your chosen 30 seconds; owners hear the full track. External embeds still work below."
       >
         <div className="space-y-4">
           {firstDropsOn && (
@@ -1787,7 +1787,7 @@ export function PressDesk() {
                   Featured from your Library
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Includes First Drops you made and tracks you bought as a Music Fan.
+                  Includes music you released and tracks you bought as a Music Fan.
                 </p>
               </div>
               <Select
@@ -1799,7 +1799,7 @@ export function PressDesk() {
                   <SelectValue placeholder={featuredTracksLoading ? 'Loading Library…' : 'Choose a track'} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">No First Drop featured</SelectItem>
+                  <SelectItem value="__none__">No release featured</SelectItem>
                   {featuredTracks.map((track) => (
                     <SelectItem key={track.key} value={track.key}>
                       {track.title} · {track.artistName} · {track.own ? 'Mine' : 'Purchased'}
@@ -1809,7 +1809,7 @@ export function PressDesk() {
               </Select>
               {!featuredTracksLoading && featuredTracks.length === 0 && (
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Your own live First Drops and purchased tracks will appear here.
+                  Your own live releases and purchased tracks will appear here.
                 </p>
               )}
               {selectedFeaturedTrack && (
@@ -2215,7 +2215,7 @@ export function PressDesk() {
         title="Releases on Artist Home"
         hint={
           firstDropsOn
-            ? `Songs for sale are pressed from The Scene — not inside DNA Drop. Live First Drops show on your Artist Home automatically. ${firstDropsFeeCashoutLine()} Open Manage to jump to a press, the vault, or Earnings.`
+            ? `Music is published through New release or Release Catalog—not inside DNA Drop. Live releases show on your Artist Home automatically. ${firstDropsFeeCashoutLine()} Open Manage to jump to a release, the Vault, or Earnings.`
             : 'Any album or track with an active DNA Drop shows on your Artist Home automatically — as a count under your bio and in the Live Lyric DNA Drops module. Open Manage to jump to a drop or the vault.'
         }
       >

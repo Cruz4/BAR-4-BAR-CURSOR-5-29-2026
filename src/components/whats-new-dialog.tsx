@@ -46,7 +46,7 @@ const WHATS_NEW_ITEMS = [
   },
   {
     title: 'Featured Library track',
-    desc: 'Feature a First Drop you released or purchased. Pick the 30-second public excerpt; entitled listeners receive the full stream and everyone else sees Buy.',
+    desc: 'Feature a release you published or purchased. Pick the 30-second public excerpt; entitled listeners receive the full stream and everyone else sees Buy.',
     icon: Music,
     color: 'text-fuchsia-300',
     bgColor: 'bg-fuchsia-500/5',
@@ -68,7 +68,7 @@ const WHATS_NEW_ITEMS = [
   },
   {
     title: 'Listener Insights',
-    desc: 'Creators see historical First Drop starts and sales immediately, plus verified qualified listeners, repeats, completions, sources, timeline, and track summaries without exposing named listener histories.',
+    desc: 'Creators see historical release starts and sales immediately, plus verified qualified listeners, repeats, completions, sources, timeline, and track summaries without exposing named listener histories.',
     icon: Radio,
     color: 'text-cyan-400',
     bgColor: 'bg-cyan-500/5',

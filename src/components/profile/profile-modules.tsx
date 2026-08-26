@@ -176,7 +176,7 @@ export function NowPlayingModule({ ctx }: { ctx: ModuleContext }) {
             {ctx.featured.featuredTrack.title}
           </p>
           <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
-            {ctx.featured.featuredTrack.source === 'purchased' ? 'From my Library' : 'My First Drop'}
+            {ctx.featured.featuredTrack.source === 'purchased' ? 'From my Library' : 'My release'}
           </p>
         </div>
         <FeaturedTrackPlayer

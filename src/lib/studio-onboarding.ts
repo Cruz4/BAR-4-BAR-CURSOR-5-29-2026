@@ -192,15 +192,15 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
     id: 'press-song',
     target: '[data-tour="press-song"]',
     mobileCardPlacement: 'bottom',
-    title: 'Press a song',
-    body: 'This is the sell desk. Press a song opens the lathe: upload the audio, set a price, confirm you have the rights, then Press it live on First Drops. DNA Drop below is lyric-share only — not the store. You can also Press from The Scene dock.',
-    example: 'Finished mix → Press a song → price it → live on The Scene.',
+    title: 'Release song',
+    body: 'This opens the music release desk: upload audio, set a price, confirm you have the rights, then publish the release. DNA Drop below is the separate lyric page. You can also start with New release on The Scene.',
+    example: 'Finished mix → Release song → set price → live on The Scene.',
   },
   {
     id: 'dna-drop',
     target: '[data-tour="dna-drop"]',
     title: 'DNA Drop (Pro)',
-    body: 'Publish a shareable lyric snapshot — lyrics, structure, DNA, and vibe. Collaborators import it after they sign in. This is not Press a song. Audio and price stay on First Drops.',
+    body: 'Publish a shareable lyric snapshot—lyrics, structure, DNA, and vibe. Collaborators import it after they sign in. This is separate from Release song; audio and price stay in Release Catalog.',
     example: 'Drop a link for feedback — they merge it into their vault.',
   },
   {
@@ -347,7 +347,7 @@ export const TRY_SHEET_TOUR_STEPS: LyricsTourStep[] = [
     mobileTarget: '[data-tour="generation-workstation"]',
     mobileCardPlacement: 'bottom',
     title: 'Left panel',
-    body: 'Workstation for the whole song: titles, paste, vibe suggester, scene prompt, export. Structure and Press a song are next — the sheet stays center.',
+    body: 'Workstation for the whole song: titles, paste, vibe suggester, scene prompt, export. Structure and Release song are next—the sheet stays center.',
   },
   {
     id: 'try-structure',
@@ -361,9 +361,9 @@ export const TRY_SHEET_TOUR_STEPS: LyricsTourStep[] = [
     id: 'try-press',
     target: '[data-tour="press-song"]',
     mobileCardPlacement: 'bottom',
-    title: 'Press a song',
-    body: 'This is the sell desk — the big one after you sign up. Press a song uploads the audio, sets a price, and presses it live on First Drops. It is not DNA Drop (that’s a lyric link) and not Takes (those stay private). On the try sheet it asks you to create an account first.',
-    example: 'Write here. Mix elsewhere. Sign up, Press a song, put it on sale.',
+    title: 'Release song',
+    body: 'This is the music release desk. Release song uploads the audio, sets a price, and publishes it for listening or purchase. DNA Drop is the lyric link, while Takes stay private. On the try sheet it asks you to create an account first.',
+    example: 'Write here. Mix elsewhere. Sign up, release the song.',
   },
   {
     id: 'try-workstation-locked',
@@ -564,8 +564,8 @@ export const SCENE_HOME_TOUR_STEPS: LyricsTourStep[] = [
     target: '[data-tour="scene-nav-mobile"], [data-tour="scene-nav-desktop"]',
     mobileCardPlacement: 'bottom',
     title: 'The Vault is where you write',
-    body: 'The portal hub opens The Vault, Library, Artist Home, Your Circle, Listener Insights, and Support Circle. New release below the hub is how you put a song or album on sale — not DNA Drop. The Scene is the block; the Vault is the booth.',
-    example: 'Replay this tour anytime from the Studio Manual (?).',
+    body: 'The portal hub opens The Vault, Library, Artist Home, Your Circle, Listener Insights, and Support Circle. Library also includes House releases you can use to test the player. New release below the hub is how you put a song or album on sale — not DNA Drop. The Scene is the block; the Vault is the booth.',
+    example: 'Try Mirror by Neomaiya Sol in Library when it is featured there. Replay this tour anytime from the Studio Manual (?).',
   },
 ];
 

@@ -41,7 +41,7 @@ export function HowItWorksSection() {
                 <p className="text-sm font-bold text-primary uppercase tracking-widest">{item.step}</p>
                 <h4 className="font-headline text-2xl font-bold uppercase">{item.title}</h4>
                 <p className="font-code text-sm md:text-base text-muted-foreground leading-relaxed">
-                  {firstDropsOn ? item.body : item.body.replace(/, sell a First Drop/, '')}
+                  {firstDropsOn ? item.body : item.body.replace(/, sell a release/, '')}
                 </p>
               </div>
             </article>

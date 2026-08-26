@@ -11,6 +11,7 @@ import type { ArtistHomeConfig } from '@/lib/profile/modules';
 import { publicProfileView } from '@/lib/profile/public-profile-view';
 import { profileHref, sanitizeProfileSlugParam } from '@/lib/profile/profile-slug';
 import { useAuth } from '@/hooks/use-auth';
+import { RELEASE_VISIBILITY_CHANGED_EVENT } from '@/lib/release-management-client';
 
 export function PublicProfilePageClient({
   slug,
@@ -29,6 +30,9 @@ export function PublicProfilePageClient({
 
   useEffect(() => {
     if (!slug) return;
+    let cancelled = false;
+    let redirected = false;
+    const hasInitial = Boolean(initialData);
     if (initialData) {
       const next = publicProfileView(initialData, slug);
       setProfile(next.profile);
@@ -36,14 +40,12 @@ export function PublicProfilePageClient({
       setLoading(false);
       setError(false);
       void trackShareCardEvent('share_card_opened', { slug: next.liveSlug });
-      return;
+    } else {
+      setLoading(true);
+      setError(false);
+      setProfile(null);
+      setConfig(null);
     }
-    let cancelled = false;
-    let redirected = false;
-    setLoading(true);
-    setError(false);
-    setProfile(null);
-    setConfig(null);
 
     const { slug: cleanSlug, hash: swallowedHash } = sanitizeProfileSlugParam(slug);
     if (!cleanSlug) {
@@ -59,11 +61,12 @@ export function PublicProfilePageClient({
       }
     }
 
-    const load = async () => {
+    const load = async (trackOpen = false) => {
       try {
-        const res = await fetch(`/api/profile/${encodeURIComponent(cleanSlug)}`);
+        const res = await fetch(`/api/profile/${encodeURIComponent(cleanSlug)}`, { cache: 'no-store' });
         if (!res.ok) {
-          if (!cancelled) setError(true);
+          // Keep already-rendered profile data during a background refresh.
+          if (!cancelled && trackOpen) setError(true);
           return;
         }
         const data = await res.json();
@@ -80,15 +83,26 @@ export function PublicProfilePageClient({
         if (cancelled) return;
         setProfile(view.profile);
         setConfig(view.config);
-        void trackShareCardEvent('share_card_opened', { slug: liveSlug });
+        setError(false);
+        if (trackOpen) void trackShareCardEvent('share_card_opened', { slug: liveSlug });
+      } catch {
+        // A refresh failure should not replace a profile that is already on screen.
+        if (!cancelled && trackOpen) setError(true);
       } finally {
         // Stay on the loader while the URL is rewritten to the live slug.
         if (!cancelled && !redirected) setLoading(false);
       }
     };
-    void load();
+    // Server props paint immediately, then this no-store refresh removes stale
+    // release/featured selections left in the router's back-forward cache.
+    void load(!hasInitial);
+    const refreshReleaseState = () => void load(false);
+    window.addEventListener(RELEASE_VISIBILITY_CHANGED_EVENT, refreshReleaseState);
+    window.addEventListener('pageshow', refreshReleaseState);
     return () => {
       cancelled = true;
+      window.removeEventListener(RELEASE_VISIBILITY_CHANGED_EVENT, refreshReleaseState);
+      window.removeEventListener('pageshow', refreshReleaseState);
     };
   }, [slug, router, initialData]);
 

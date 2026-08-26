@@ -6,7 +6,7 @@ import { pageMetadata } from '@/lib/seo';
 export const metadata = pageMetadata({
   title: 'Terms of Service',
   description:
-    'Terms governing Bar 4 Bar Studio, including The Scene, DNA Drops, First Drops, Ink, AI tools, and user content.',
+    'Terms governing Bar 4 Bar Studio, including The Scene, DNA Drops, music releases, Ink, AI tools, and user content.',
   path: '/terms',
 });
 
@@ -23,19 +23,19 @@ export default function TermsPage() {
         <article className="space-y-6 text-muted-foreground leading-relaxed text-sm font-code">
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">1. Agreement</h2>
-            <p>By creating an account, signing in, purchasing Ink or a subscription, pressing or buying a First Drop, posting on The Scene or an Artist Home, or otherwise using Bar 4 Bar Studio (the &quot;Service&quot;), you agree to these Terms and our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>. If you do not agree, do not use the Service.</p>
+            <p>By creating an account, signing in, purchasing Ink or a subscription, publishing or buying a music release, posting on The Scene or an Artist Home, or otherwise using Bar 4 Bar Studio (the &quot;Service&quot;), you agree to these Terms and our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>. If you do not agree, do not use the Service.</p>
             <p>These Terms are a contract between you and the operators of Bar 4 Bar Studio (&quot;Bar 4 Bar&quot;, &quot;we&quot;, &quot;us&quot;). We are a software platform. We are not a record label, publisher, manager, booking agent, lawyer, or bank.</p>
           </section>
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">2. The Service</h2>
-            <p>Bar 4 Bar is a creative workstation and social music platform. Features may include lyric tools, AI co-writing, project vaults, DNA Drops (public lyric snapshots), First Drops (in-app song sales and streams), Library (in-app player), The Scene, Artist Home pages, guestbook, friends, wall posts, comments, voice notes, Msgs (private in-app messages), Lock pages, Studio Progress, and related tools. Features can be added, changed, limited, or turned off at any time.</p>
+            <p>Bar 4 Bar is a creative workstation and social music platform. Features may include lyric tools, AI co-writing, project vaults, DNA Drops (public lyric snapshots), Releases (in-app song sales and streams), Library (in-app player), The Scene, Artist Home pages, guestbook, friends, wall posts, comments, voice notes, Msgs (private in-app messages), Lock pages, Studio Progress, and related tools. Features can be added, changed, limited, or turned off at any time.</p>
             <p>AI features — including line suggestions, draft generation, rhyme tools, vibe analysis, remix workflows, and similar outputs — are assistive tools only. They do not replace your creative judgment, legal review, or professional advice.</p>
           </section>
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">3. Eligibility, Accounts &amp; Ink</h2>
-            <p>You must be at least 13 years old to use the Service. You must be at least 18 years old to press, price, or sell a First Drop, connect payouts, or receive earnings. If you are between 13 and 18 you may use writing tools only with a parent or guardian&apos;s permission where required by law. You may not use the Service if you are barred from doing so under U.S. or other applicable law.</p>
+            <p>You must be at least 13 years old to use the Service. You must be at least 18 years old to publish, price, or sell a music release, connect payouts, or receive earnings. If you are between 13 and 18 you may use writing tools only with a parent or guardian&apos;s permission where required by law. You may not use the Service if you are barred from doing so under U.S. or other applicable law.</p>
             <p>You must provide accurate account information and keep credentials secure. You are responsible for activity on your account.</p>
             <p><strong className="text-foreground">Ink</strong> is the Service&apos;s virtual currency for AI actions and similar studio tools. Ink has no cash value outside the Service, is non-transferable, and residency Ink may reset per plan terms. Ink is never used to buy music. Purchases are processed by Stripe; refunds follow our billing policy and applicable law.</p>
             <p>We may log account and studio activity — including product analytics, billing events, and abuse-prevention signals — as described in our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>, to operate the Service, measure performance, prevent Ink and perk farming, and enforce these Terms.</p>
@@ -43,27 +43,27 @@ export default function TermsPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">4. Your Content &amp; License to Us</h2>
-            <p>You retain ownership of lyrics, recordings, artwork, voice notes, posts, and projects you create — including master recordings you upload to sell a First Drop. Bar 4 Bar is not a label and does not claim your masters or publishing.</p>
+            <p>You retain ownership of lyrics, recordings, artwork, voice notes, posts, and projects you create—including master recordings you upload as music releases. Bar 4 Bar is not a label and does not claim your masters or publishing.</p>
             <p>You grant Bar 4 Bar a worldwide, non-exclusive, royalty-free license to host, store, process, transcode, preview, stream, display, reproduce, and distribute your content solely as needed to operate and promote the Service (for example: Library, Artist Home, share links, The Scene, foil cards you post, and 30-second previews). This license lasts until you delete the content or your account, except for copies already shared, cached, backed up, or that other users lawfully unlocked.</p>
             <p>You represent and warrant that you have all rights needed to upload, post, remix, analyze, or sell anything you provide, including copyrights, neighboring rights, trademarks, publicity rights, and sample clearances. You are solely responsible for copyright, sampling, trademark, and publishing clearance for work you release or sell. Bar 4 Bar does not review uploads for clearance and does not guarantee that your work is legal to sell or perform.</p>
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">5. DNA Drops vs First Drops</h2>
+            <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">5. DNA Drops vs Music Releases</h2>
             <p><strong className="text-foreground">DNA Drop</strong> is a public lyric snapshot and related share page. It is not a sell desk. Publishing a DNA Drop does not sell audio or transfer rights.</p>
-            <p><strong className="text-foreground">First Drops</strong> is how you press a song for sale: upload audio, set a price or pay-what-you-want amount, and press it live. Fans buy once and stream in the app. Preview is typically 30 seconds until unlocked. Library is an in-app player, not a Spotify, Apple Music, or download store listing.</p>
-            <p>On First Drop sales we keep a tiered platform fee (currently 25% below $3, 15% from $3 through $4.99, and 10% from $5 up) to operate the Service; the remainder is the artist&apos;s share, subject to chargebacks, refunds, taxes, and Stripe&apos;s fees and payout rules. First Drops have no free unlock and the paid minimum is shown before purchase. Uploading a song is not a label deal and does not transfer ownership to us.</p>
+            <p><strong className="text-foreground">Music Releases</strong> publish recordings for sale or House distribution: upload audio, set a price or pay-what-you-want amount when applicable, and publish the release. Fans buy once and stream in the app. Preview is typically 30 seconds until unlocked. Library is an in-app player, not a Spotify, Apple Music, or download store listing.</p>
+            <p>On ordinary paid release sales we keep a tiered platform fee (currently 25% below $3, 15% from $3 through $4.99, and 10% from $5 up) to operate the Service; the remainder is the artist&apos;s share, subject to chargebacks, refunds, taxes, and Stripe&apos;s fees and payout rules. Artist releases have no free checkout; admin-selected House releases are the account-included exception. Uploading a song is not a label deal and does not transfer ownership to us.</p>
           </section>
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">6. In-App Stream License (Buyers)</h2>
-            <p>If you buy or unlock a First Drop, you receive a limited, personal, non-exclusive, non-transferable, revocable license to stream that recording inside the Service for your own private use. You do not buy the master, publishing, stems, download rights, sync rights, or a file you may copy off-platform.</p>
+            <p>If you buy or unlock a release, you receive a limited, personal, non-exclusive, non-transferable, revocable license to stream that recording inside the Service for your own private use. You do not buy the master, publishing, stems, download rights, sync rights, or a file you may copy off-platform.</p>
             <p>You may not rip, download (except any in-app control we expressly provide), redistribute, resell, publicly perform outside the Service, claim ownership of, train models on, or commercially exploit another artist&apos;s recording. We may revoke stream access if a sale is refunded, charged back, or the content is removed for legal or Terms reasons. Purchases are generally final except where law requires otherwise.</p>
           </section>
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">7. Marketplace, Payouts &amp; Taxes</h2>
-            <p>When a fan buys a First Drop, the contract for that recording is between the artist and the fan. Bar 4 Bar provides the platform, hosting, checkout, and a limited in-app stream. We are not a party to that sale beyond the platform fee and the licenses in these Terms.</p>
+            <p>When a fan buys a release, the contract for that recording is between the artist and the fan. Bar 4 Bar provides the platform, hosting, checkout, and a limited in-app stream. We are not a party to that sale beyond the platform fee and the licenses in these Terms.</p>
             <p>Artist payouts are processed by Stripe Connect after the artist completes identity and bank onboarding. Stripe, not Bar 4 Bar, pays the artist&apos;s bank on Stripe&apos;s schedule. Sales made before onboarding may be held and released once payouts are enabled, or handled as Stripe and these Terms allow. Chargebacks, refunds, unpaid negative balances, and fraud may reduce, reverse, or claw back an artist&apos;s share. You authorize us and Stripe to offset amounts you owe against future earnings.</p>
             <p>You are solely responsible for reporting and paying taxes on earnings. We may issue tax forms or collect tax information where legally required. We do not provide tax advice.</p>
             <p>Prices, fees, and payout timing may change. We may withhold, delay, or refuse payouts when we reasonably suspect fraud, infringement, or Terms violations.</p>
@@ -97,7 +97,7 @@ export default function TermsPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">11. Acceptable Use</h2>
-            <p>You may not use the Service to: generate or upload illegal content; exploit minors; harass, dox, or impersonate others; post malware; scrape or abuse APIs; circumvent Ink billing, paywalls, or stream limits; resell or rip First Drops; infringe IP; run spam or fake engagement; or attempt unauthorized access. We may suspend or terminate accounts that violate these Terms, and we may cooperate with law enforcement.</p>
+            <p>You may not use the Service to: generate or upload illegal content; exploit minors; harass, dox, or impersonate others; post malware; scrape or abuse APIs; circumvent Ink billing, paywalls, or stream limits; resell or rip releases; infringe IP; run spam or fake engagement; or attempt unauthorized access. We may suspend or terminate accounts that violate these Terms, and we may cooperate with law enforcement.</p>
           </section>
 
           <section className="space-y-3">
@@ -119,7 +119,7 @@ export default function TermsPage() {
               <li><strong className="text-foreground">Your backups.</strong> You are responsible for exporting and backing up your lyrics, albums, audio, and vault data. Pro members may use vault export; we are not liable for loss of access to projects after the Service changes or ends, subject to our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.</li>
               <li><strong className="text-foreground">Ink on discontinuation.</strong> Unused Ink has no cash value outside the Service and is not convertible to money if the Service shuts down.</li>
               <li><strong className="text-foreground">Subscriptions on discontinuation.</strong> Active subscriptions may be cancelled or handled through Stripe and applicable law; we do not promise refunds beyond what law requires.</li>
-              <li><strong className="text-foreground">Catalog on discontinuation.</strong> First Drop stream licenses may end if we stop hosting a recording. We are not obligated to keep audio online forever.</li>
+              <li><strong className="text-foreground">Catalog on discontinuation.</strong> Release stream licenses may end if we stop hosting a recording. We are not obligated to keep audio online forever.</li>
             </ul>
             <p>We are not liable to you or any third party for any modification, suspension, or discontinuation of the Service.</p>
           </section>
@@ -137,7 +137,7 @@ export default function TermsPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">17. Indemnity</h2>
-            <p>You will defend, indemnify, and hold harmless Bar 4 Bar Studio and its operators, affiliates, and suppliers from any claims, damages, losses, and costs (including reasonable attorneys&apos; fees) arising out of: (a) your content, recordings, posts, or First Drops; (b) your use of AI output; (c) your violation of these Terms or the law; (d) your infringement of someone else&apos;s rights; or (e) disputes between you and fans, collaborators, labels, or other users. We may assume exclusive defense of any matter, at your expense, and you will cooperate.</p>
+            <p>You will defend, indemnify, and hold harmless Bar 4 Bar Studio and its operators, affiliates, and suppliers from any claims, damages, losses, and costs (including reasonable attorneys&apos; fees) arising out of: (a) your content, recordings, posts, or releases; (b) your use of AI output; (c) your violation of these Terms or the law; (d) your infringement of someone else&apos;s rights; or (e) disputes between you and fans, collaborators, labels, or other users. We may assume exclusive defense of any matter, at your expense, and you will cooperate.</p>
           </section>
 
           <section className="space-y-3">

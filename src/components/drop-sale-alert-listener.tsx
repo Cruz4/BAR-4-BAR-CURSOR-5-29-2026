@@ -71,7 +71,7 @@ export function DropSaleAlertListener() {
           const who = sale.actorName?.trim() || 'Someone';
           toastRef.current({
             title: '💸 YOU GOT A SALE',
-            description: sale.preview?.trim() || `${who} bought your First Drop`,
+            description: sale.preview?.trim() || `${who} bought your release`,
             duration: 16_000,
             className:
               'border-2 border-emerald-300/70 bg-emerald-950/95 text-emerald-50 shadow-[0_0_40px_rgba(16,185,129,0.55)]',

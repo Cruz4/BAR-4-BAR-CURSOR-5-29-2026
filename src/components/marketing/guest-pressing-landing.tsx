@@ -436,7 +436,7 @@ function GuestPressingLandingInner() {
               <li className="flex gap-2">
                 <Music className="mt-0.5 h-3.5 w-3.5 shrink-0 text-fuchsia-400" />
                 <span>
-                  Creators can sell First Drops here. Music Fans can feature a purchased track with their chosen 30-second excerpt.
+                  Creators can sell music releases here. Music Fans can feature a purchased track with their chosen 30-second excerpt.
                 </span>
               </li>
             ) : null}
@@ -522,7 +522,7 @@ function GuestPressingLandingInner() {
             {' '}
             <span className="hidden text-zinc-300 sm:inline">
               Try The Pressing at the bottom to customize the skin.
-              {firstDropsOn ? ' Creators can sell First Drops; Music Fans can feature purchased music.' : ''}
+              {firstDropsOn ? ' Creators can sell releases; Music Fans can feature purchased music.' : ''}
             </span>
           </p>
           <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
@@ -799,7 +799,7 @@ function GuestPressingLandingInner() {
             This preview is your public music home—completely free for artists, creators, and Music Fans. Type above for The Pressing. Click Bar of the Week on
             the page to edit it. Mix & sizes still has faders and S/M/L. Claim keeps your look.
             {firstDropsOn
-              ? ' Creators can sell First Drops; Music Fans can feature purchased music.'
+              ? ' Creators can sell releases; Music Fans can feature purchased music.'
               : ''}
           </p>
         </div>

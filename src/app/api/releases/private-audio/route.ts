@@ -32,15 +32,20 @@ export async function GET(req: Request) {
     if (!snap.exists) return NextResponse.json({ error: 'Song was not found.' }, { status: 404 });
     const audio = normalizeDropAudio(snap.data()?.dropAudio);
     if (!audio?.storagePath) return NextResponse.json({ error: 'No private audio is attached.' }, { status: 404 });
+    const kind = params.get('kind') === 'preview' ? 'preview' : 'full';
+    const storagePath = kind === 'preview' ? audio.previewPath : audio.storagePath;
+    if (!storagePath) return NextResponse.json({ error: 'That private audio file is not available.' }, { status: 404 });
     const ticket = mintDropAudioTicket({
-      storagePath: audio.storagePath,
-      contentType: audio.contentType || 'audio/mpeg',
-      full: true,
+      storagePath,
+      ownerId: userId,
+      contentType: kind === 'preview' ? 'audio/wav' : audio.contentType || 'audio/mpeg',
+      full: kind === 'full',
     });
     return NextResponse.json({
       url: dropAudioFileUrl(ticket),
       durationSec: audio.durationSec || null,
-      fileName: audio.fileName || 'Private recording',
+      fileName: kind === 'preview' ? 'preview.wav' : audio.fileName || 'Private recording',
+      contentType: kind === 'preview' ? 'audio/wav' : audio.contentType || 'audio/mpeg',
     });
   } catch (error) {
     console.error('[releases/private-audio]', error);

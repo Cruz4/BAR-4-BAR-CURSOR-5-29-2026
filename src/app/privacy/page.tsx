@@ -5,7 +5,7 @@ import { pageMetadata } from '@/lib/seo';
 
 export const metadata = pageMetadata({
   title: 'Privacy Policy',
-  description: 'How Bar 4 Bar Studio collects, uses, and protects your data across the studio, The Scene, and First Drops.',
+  description: 'How Bar 4 Bar Studio collects, uses, and protects your data across the studio, The Scene, and music releases.',
   path: '/privacy',
 });
 
@@ -23,7 +23,7 @@ export default function PrivacyPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">1. Overview</h2>
             <p>Bar 4 Bar Studio (&quot;we&quot;, &quot;us&quot;) respects your creative privacy. This policy explains what data we collect when you use our web app at bar4bar.ink (the &quot;Service&quot;) and how we use it. By using the Service you also agree to our <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link href="/cookies" className="text-primary hover:underline">Cookie Policy</Link>.</p>
-            <p>The Service includes a lyric studio, The Scene, Artist Home pages, DNA Drops, First Drops, Library, Msgs (private in-app messages), Lock pages, and related tools. What we collect depends on which of those you use.</p>
+            <p>The Service includes a lyric studio, The Scene, Artist Home pages, DNA Drops, music Releases, Library, Msgs (private in-app messages), Lock pages, and related tools. What we collect depends on which of those you use.</p>
           </section>
 
           <section className="space-y-3">
@@ -31,10 +31,10 @@ export default function PrivacyPage() {
             <ul className="list-disc pl-5 space-y-2">
               <li><strong className="text-foreground">Account data:</strong> email, display name, photo URL (if provided by Google), authentication identifiers (via Firebase Auth), and account status.</li>
               <li><strong className="text-foreground">Creative data:</strong> albums, tracks, lyrics, style profiles, DNA/vibe settings, cover art, and project metadata stored in Firebase Firestore and Storage.</li>
-              <li><strong className="text-foreground">Audio &amp; media:</strong> First Drop song files and 30-second previews, DNA Drop images, Artist Home media, and voice notes / Auto-Tune takes you record. Audio you sell is stored privately and streamed in-app; we do not sell your masters.</li>
+              <li><strong className="text-foreground">Audio &amp; media:</strong> Release song files and 30-second previews, DNA Drop images, Artist Home media, and voice notes / Auto-Tune takes you record. Audio you sell is stored privately and streamed in-app; we do not sell your masters.</li>
               <li><strong className="text-foreground">Social data:</strong> Artist Home settings, wall posts, comments, likes, guestbook entries, friend requests/friendships, foil cards you share, unique post-view counts, and similar Scene activity. Public Artist Home and share links are visible to anyone with the link (and may be indexed if you make them public).</li>
               <li><strong className="text-foreground">Msgs:</strong> private in-app messages and related delivery metadata, stored on our servers so the inbox can work. Msgs are not end-to-end encrypted.</li>
-              <li><strong className="text-foreground">Usage &amp; billing data:</strong> Ink balances and ledgers, AI action costs, subscription tier/status, Stripe customer and subscription identifiers, and (for First Drop sellers) Stripe Connect payout account identifiers, earnings totals, and payout status (we do not store full card or bank numbers — Stripe does).</li>
+              <li><strong className="text-foreground">Usage &amp; billing data:</strong> Ink balances and ledgers, AI action costs, subscription tier/status, Stripe customer and subscription identifiers, and (for Release sellers) Stripe Connect payout account identifiers, earnings totals, and payout status (we do not store full card or bank numbers—Stripe does).</li>
               <li><strong className="text-foreground">Product analytics:</strong> in-app events tied to your account or session — for example signup, session/page views, opening the track editor, pricing and checkout steps, upgrade clicks, Ink depletion and free-tier limit hits, AI feature use, achievements/quests/streaks, share-card actions, drop plays, and similar studio activity. Events may include limited metadata (feature name, amounts, plan, referral code).</li>
               <li><strong className="text-foreground">Guest try-sheet funnel:</strong> anonymous, aggregate steps on the free try sheet before signup (opened sheet, wrote a bar, used/limited demo Generate Next, accepted or dismissed a suggestion, tapped signup, tapped a locked feature), plus a browser-local temporary guest alias (for example <code className="text-foreground/80">Guest-Silk-7F3A</code>) used only to connect demo activity to a later signup in admin alerts. Used to improve the product; not a named account until you sign up.</li>
               <li><strong className="text-foreground">Marketing attribution:</strong> campaign or referral tags from links you follow (for example <code className="text-foreground/80">?ref=</code> values), stored with your signup when present, and aggregate landing-hit counts used in admin metrics.</li>
@@ -50,7 +50,7 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">3. How We Use Data</h2>
             <ul className="list-disc pl-5 space-y-2">
               <li>Provide, sync, and secure the studio (auth, vault, AI tools, gamification).</li>
-              <li>Host and stream First Drops, DNA Drops, Artist Home, The Scene, Library, and Msgs.</li>
+              <li>Host and stream music Releases, DNA Drops, Artist Home, The Scene, Library, and Msgs.</li>
               <li>Process payments, fulfill Ink and Pro entitlements, pay artists through Stripe, and prevent billing or stream abuse.</li>
               <li>Count unique views, plays, and similar engagement so owners can see reach.</li>
               <li>Measure product performance and conversion (funnels, feature use, admin growth metrics).</li>
@@ -63,7 +63,7 @@ export default function PrivacyPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">4. Public vs Private</h2>
-            <p>Vault drafts stay in your account until you publish or share them. DNA Drops, live Artist Home pages, The Scene posts, guestbook, and share links are public or link-accessible. First Drop audio is streamed to buyers and may be previewed by visitors. Treat anything you press live or post to the block as public.</p>
+            <p>Vault drafts stay in your account until you publish or share them. DNA Drops, live Artist Home pages, The Scene posts, guestbook, and share links are public or link-accessible. Release audio is streamed to buyers and may be previewed by visitors. Treat anything you publish or post to the block as public.</p>
           </section>
 
           <section className="space-y-3">
@@ -106,7 +106,7 @@ export default function PrivacyPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">10. Children</h2>
-            <p>The Service is not directed to children under 13 (or 16 in the EU). We do not knowingly collect data from minors. You must be 18 or older to sell First Drops or connect payouts.</p>
+            <p>The Service is not directed to children under 13 (or 16 in the EU). We do not knowingly collect data from minors. You must be 18 or older to sell music releases or connect payouts.</p>
           </section>
 
           <section className="space-y-3">

@@ -11,7 +11,7 @@ export const SEO = {
   /** Open Graph / structured data — one clear line for search & shares. */
   titleLong: 'Bar 4 Bar — AI Songwriting Studio & Music Network',
   description:
-    'Bar-by-bar AI songwriting studio and music network for artists, creators, and fans. Write with Creative DNA, discover music, collaborate, and sell First Drops.',
+    'Bar-by-bar AI songwriting studio and music network for artists, creators, and fans. Write with Creative DNA, discover music, collaborate, and sell releases.',
   keywords: [
     'bar 4 bar',
     'bar4bar',
@@ -124,7 +124,7 @@ export function buildStructuredDataGraph(): Record<string, unknown>[] {
         'Follow, Inner Circle, Friends, and live collaboration',
         'Qualified listener insights and transparent Emerging rankings',
         'Proof-based song and artist charts by genre and public Scene region',
-        'First Drop direct-to-fan music sales',
+        'Direct-to-fan music releases',
         'Versioned non-destructive studio backups',
       ],
       offers: {

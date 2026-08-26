@@ -21,6 +21,7 @@ type DnaDropAlbumHubProps = {
   shareId: string;
   ownerId: string;
   ownerName: string;
+  houseRelease?: boolean;
 };
 
 function trackSubtitle(track: DnaDropTrackPayload, firstDropsOn: boolean): string {
@@ -35,19 +36,21 @@ function trackSubtitle(track: DnaDropTrackPayload, firstDropsOn: boolean): strin
   return bits.join(' · ') || 'No lyrics drafted yet';
 }
 
-export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName }: DnaDropAlbumHubProps) {
+export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName, houseRelease = false }: DnaDropAlbumHubProps) {
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const tracks = album.tracks ?? [];
   const liveCount = tracks.filter((t) => hasActiveDnaDrop(t.shareId)).length;
   const audioCount = tracks.filter((t) => normalizeDropAudio(t.dropAudio)).length;
-  const albumForSale = firstDropsOn && audioCount > 0 && isCommerceLive(normalizeDropPrice(album.dropPrice));
+  const albumForSale = firstDropsOn && audioCount > 0 && (
+    houseRelease || isCommerceLive(normalizeDropPrice(album.dropPrice))
+  );
 
   return (
     <Card className="border-2 shadow-2xl relative overflow-hidden bg-card/90 min-h-[50vh]">
       <div className="border-b px-4 py-5 sm:px-8 sm:py-6 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="text-[9px] uppercase tracking-widest border-primary/20 text-primary">
-            {albumForSale ? 'Album release' : 'Album DNA'}
+            {houseRelease ? 'House album · Free' : albumForSale ? 'Album release' : 'Album DNA'}
           </Badge>
           <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
             {albumForSale
@@ -60,7 +63,9 @@ export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName }: DnaDropA
         </h3>
         <p className="text-[11px] text-muted-foreground font-code leading-relaxed max-w-2xl">
           {albumForSale
-            ? 'Preview every included recording here. One album purchase unlocks every audio track in your Bar4Bar Library; lyrics are optional.'
+            ? houseRelease
+              ? 'Every signed-in member receives every included recording free in their Bar4Bar Library; lyrics are optional.'
+              : 'Preview every included recording here. One album purchase unlocks every audio track in your Bar4Bar Library; lyrics are optional.'
             : 'Open a live track to see its DNA Drop — lyrics, Creative DNA, and whatever was toggled on when it went public.'}
         </p>
       </div>
@@ -158,6 +163,7 @@ export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName }: DnaDropA
                       ownerId={ownerId}
                       price={album.dropPrice}
                       hasAudio
+                      houseRelease={houseRelease}
                       source="share"
                       presentation="compact"
                       playbackGroup={`album-${shareId}`}

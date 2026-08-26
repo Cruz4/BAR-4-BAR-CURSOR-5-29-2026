@@ -45,8 +45,6 @@ import {
 } from '@/lib/dna-drop';
 import { parseEmbedUrl } from '@/lib/profile/embeds';
 import { EmbedPlayer } from '@/components/profile/embed-player';
-import { openFirstDropLathe } from '@/lib/first-drop-lathe';
-import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { cn } from '@/lib/utils';
 import type { Track } from '@/lib/types';
 
@@ -81,7 +79,6 @@ export function ShareDialog({
     updateTrack,
   } = useContext(DataContext);
   const { toast } = useToast();
-  const { enabled: firstDropsOn } = useFirstDropsFeature();
   const [isWorking, setIsWorking] = useState(false);
   const [shareId, setShareId] = useState(existingShareId || '');
   const [copied, setCopied] = useState(false);
@@ -354,7 +351,7 @@ export function ShareDialog({
   const albumReadyCopy =
     type === 'album'
       ? 'Publishes an album page with your album DNA plus clickable cards for each song. Live tracks open their own DNA Drop (lyrics & rules). Offline tracks stay listed until you drop them.'
-      : 'Publishes a snapshot of lyrics & structure plus only the rules that are toggled on right now — Creative DNA, intents, vibe, guardrails, special instructions, and Style DNA when active. Selling from The Scene starts with New release — not this dialog.';
+      : 'Publishes a snapshot of lyrics & structure plus only the rules that are toggled on right now — Creative DNA, intents, vibe, guardrails, special instructions, and Style DNA when active. Music releases are managed separately in Release Catalog.';
 
   return (
     <>
@@ -456,7 +453,7 @@ export function ShareDialog({
                       <>
                         The link stays the same. Use <strong className="text-foreground">Update snapshot</strong> after
                         you edit lyrics, toggles, DNA, intents, vibe, style, or structure — otherwise visitors keep
-                        seeing the last published version. To sell the song, press it from The Scene — not here.
+                        seeing the last published version. Music releases are managed separately in Release Catalog.
                       </>
                     )}
                   </p>
@@ -488,35 +485,6 @@ export function ShareDialog({
               </div>
             )}
 
-            {firstDropsOn && type === 'track' ? (
-              <Button
-                type="button"
-                className="h-11 w-full bg-fuchsia-400 font-bold uppercase text-black hover:bg-fuchsia-300"
-                onClick={() => {
-                  onOpenChange(false);
-                  openFirstDropLathe({
-                    trackId: id,
-                    albumId: albumId,
-                  });
-                }}
-              >
-                Press this song for sale
-              </Button>
-            ) : null}
-
-            {firstDropsOn && type === 'album' ? (
-              <Button
-                type="button"
-                className="h-11 w-full bg-fuchsia-400 font-bold uppercase text-black hover:bg-fuchsia-300"
-                onClick={() => {
-                  onOpenChange(false);
-                  openFirstDropLathe({ albumId: id, mode: 'album' });
-                }}
-              >
-                Manage album audio &amp; price
-              </Button>
-            ) : null}
-
             <div className="space-y-3 border-t border-white/10 pt-4 min-w-0">
               <div className="flex items-center gap-2">
                 <Link2 className="h-4 w-4 text-primary shrink-0" />
@@ -525,7 +493,7 @@ export function ShareDialog({
                 </Label>
               </div>
               <p className="text-[10px] text-muted-foreground leading-relaxed">
-                Optional embeds on the lyric snapshot. Audio and price are on First Drops — use New release on The Scene — not here.
+                Optional embeds on the lyric snapshot. Audio and pricing belong to Releases, managed through Release Catalog.
               </p>
               <div className="flex gap-2 min-w-0">
                 <Input

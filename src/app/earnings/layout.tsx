@@ -4,9 +4,9 @@ import { pageMetadata } from '@/lib/seo';
 import { dropArtistShareLabel } from '@/lib/drop-commerce';
 
 export const metadata: Metadata = pageMetadata({
-  title: 'First Drop Earnings',
+  title: 'Release Earnings',
   description:
-    `Connect Stripe payouts, see First Drop sales, and cash out your ${dropArtistShareLabel()} artist share in Bar 4 Bar.`,
+    `Connect Stripe payouts, see release sales, and cash out your ${dropArtistShareLabel()} artist share in Bar 4 Bar.`,
   path: '/earnings',
   index: false,
 });

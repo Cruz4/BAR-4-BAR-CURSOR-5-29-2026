@@ -9,6 +9,7 @@ import { CheckoutAuthError, verifyCheckoutUser } from '@/lib/stripe-server';
 import type { Album, StyleProfile, Track, User } from '@/lib/types';
 import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
 import { isProOrTrial } from '@/lib/subscription';
+import { AdminAuthError, verifyAdminRequest } from '@/lib/server/admin-auth';
 
 export const runtime = 'nodejs';
 
@@ -38,6 +39,10 @@ export async function POST(req: Request) {
     const albumId = body.albumId;
     const trackId = body.trackId;
     const hideDna = body.hideDna === true;
+    const houseReleaseRequest = typeof body.houseRelease === 'boolean' ? body.houseRelease : undefined;
+    const houseLibraryNoticeRequest = typeof body.houseLibraryNotice === 'boolean'
+      ? body.houseLibraryNotice
+      : undefined;
     if (!userId || !kind || !action || !safeId(albumId) || (kind === 'track' && !safeId(trackId))) {
       return NextResponse.json({ error: 'Invalid release request.' }, { status: 400 });
     }
@@ -49,6 +54,16 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: error.message }, { status: 401 });
       }
       throw error;
+    }
+    if (houseReleaseRequest !== undefined || houseLibraryNoticeRequest !== undefined) {
+      try {
+        await verifyAdminRequest(req);
+      } catch (error) {
+        if (error instanceof AdminAuthError) {
+          return NextResponse.json({ error: error.message }, { status: 403 });
+        }
+        throw error;
+      }
     }
 
     const db = await getDb();
@@ -68,9 +83,12 @@ export async function POST(req: Request) {
     }
     if (action === 'publish') {
       if (!(await isFirstDropsEnabled())) {
-        return NextResponse.json({ error: 'First Drops is currently unavailable.' }, { status: 403 });
+        return NextResponse.json({ error: 'Music Releases is currently unavailable.' }, { status: 403 });
       }
-      if (!isProOrTrial(userSnap.data() as Pick<User, 'subscriptionStatus' | 'proFeaturePreviewExpiresAt'>)) {
+      if (
+        houseReleaseRequest !== true &&
+        !isProOrTrial(userSnap.data() as Pick<User, 'subscriptionStatus' | 'proFeaturePreviewExpiresAt'>)
+      ) {
         return NextResponse.json({ error: 'Studio Pro is required to press a release live.' }, { status: 403 });
       }
     }
@@ -86,6 +104,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Song was not found in your Vault.' }, { status: 404 });
     }
     const target = (kind === 'album' ? album : track!) as Album | Track;
+    // Never trust the owner-writable Vault document for a universal entitlement.
+    // Only an explicit flag on this admin-authorized request may set the public share flag.
+    const houseRelease = houseReleaseRequest === true;
+    const houseLibraryNotice = houseRelease && houseLibraryNoticeRequest === true;
     const style = styleSnap.exists ? (styleSnap.data() as StyleProfile) : undefined;
     const existingReleaseId = target.releaseShareId?.trim();
     let releaseShareId = existingReleaseId;
@@ -103,8 +125,16 @@ export async function POST(req: Request) {
     const now = new Date().toISOString();
     const targetRef = kind === 'album' ? albumRef : trackRef!;
     if (action === 'save-draft') {
-      await targetRef.set({ releaseStatus: 'draft', updatedAt: now }, { merge: true });
-      return NextResponse.json({ ok: true, releaseStatus: 'draft', releaseShareId: releaseShareId || null });
+      await targetRef.set({
+        releaseStatus: 'draft',
+        ...(
+          houseReleaseRequest !== undefined || houseLibraryNoticeRequest !== undefined
+            ? { houseRelease, houseLibraryNotice }
+            : {}
+        ),
+        updatedAt: now,
+      }, { merge: true });
+      return NextResponse.json({ ok: true, releaseStatus: 'draft', releaseShareId: releaseShareId || null, houseRelease, houseLibraryNotice });
     }
 
     if (action === 'unpublish') {
@@ -145,7 +175,7 @@ export async function POST(req: Request) {
         }
       }
       await batch.commit();
-      return NextResponse.json({ ok: true, releaseStatus: 'unlisted', releaseShareId: releaseShareId || null });
+      return NextResponse.json({ ok: true, releaseStatus: 'unlisted', releaseShareId: releaseShareId || null, houseRelease, houseLibraryNotice });
     }
 
     const audioTracks = kind === 'album'
@@ -163,7 +193,7 @@ export async function POST(req: Request) {
     if (kind === 'album' && audioTracks.some((item) => !item.dropRightsAttestedAt)) {
       return NextResponse.json({ error: 'Confirm rights for every recording included in this album.' }, { status: 400 });
     }
-    if (!isCommerceLive(normalizeDropPrice(target.dropPrice))) {
+    if (!houseRelease && !isCommerceLive(normalizeDropPrice(target.dropPrice))) {
       return NextResponse.json({ error: 'Set a valid sale price before pressing it live.' }, { status: 400 });
     }
     releaseShareId ||= await unusedShareId(db);
@@ -171,6 +201,8 @@ export async function POST(req: Request) {
       releaseShareId,
       releaseStatus: 'live' as const,
       releaseSnapshotAt: now,
+      houseRelease,
+      houseLibraryNotice,
       updatedAt: now,
     };
     const snapTarget = { ...target, ...privatePatch };
@@ -182,11 +214,20 @@ export async function POST(req: Request) {
     payload.releaseShareId = releaseShareId;
     payload.releaseStatus = 'live';
     payload.releaseSnapshotAt = now;
+    payload.houseRelease = houseRelease;
     const shareRef = db.doc(`shares/${releaseShareId}`);
     const existingShare = await shareRef.get();
     if (existingShare.exists && existingShare.data()?.ownerId !== userId) {
       return NextResponse.json({ error: 'That release link belongs to another account.' }, { status: 409 });
     }
+    const existingNoticeAt = typeof existingShare.data()?.houseLibraryNoticeAt === 'string'
+      ? existingShare.data()!.houseLibraryNoticeAt
+      : '';
+    const houseLibraryNoticeAt = houseLibraryNotice
+      ? existingShare.data()?.houseLibraryNotice === true && existingNoticeAt
+        ? existingNoticeAt
+        : now
+      : null;
     const batch = db.batch();
     batch.set(targetRef, privatePatch, { merge: true });
     batch.set(shareRef, {
@@ -197,6 +238,9 @@ export async function POST(req: Request) {
       ownerName: typeof userSnap.data()?.displayName === 'string' ? userSnap.data()!.displayName : 'Artist',
       data: payload,
       releaseStatus: 'live',
+      houseRelease,
+      houseLibraryNotice,
+      houseLibraryNoticeAt: houseLibraryNoticeAt || FieldValue.delete(),
       releaseSnapshotAt: now,
       createdAt: existingShare.exists ? existingShare.data()?.createdAt || now : now,
       updatedAt: now,
@@ -205,7 +249,7 @@ export async function POST(req: Request) {
       ...shareDocCommerceFlags(kind, payload),
     }, { merge: true });
     await batch.commit();
-    return NextResponse.json({ ok: true, releaseStatus: 'live', releaseShareId });
+    return NextResponse.json({ ok: true, releaseStatus: 'live', releaseShareId, houseRelease, houseLibraryNotice });
   } catch (error) {
     console.error('[releases/manage]', error);
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Release update failed.' }, { status: 500 });

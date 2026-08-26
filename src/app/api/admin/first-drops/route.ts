@@ -17,7 +17,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: err.message }, { status: 401 });
     }
     console.error('[admin/first-drops GET]', err);
-    return NextResponse.json({ error: 'Failed to load First Drops' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to load Music Releases' }, { status: 500 });
   }
 }
 
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: err.message }, { status: 401 });
     }
     console.error('[admin/first-drops POST]', err);
-    const message = err instanceof Error ? err.message : 'Failed to save First Drops';
+    const message = err instanceof Error ? err.message : 'Failed to save Music Releases';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

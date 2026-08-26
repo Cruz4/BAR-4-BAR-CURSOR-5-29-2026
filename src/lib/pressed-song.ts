@@ -25,6 +25,7 @@ export type PressedSongSummary = {
   ownerId: string;
   title: string;
   hasAudio: true;
+  houseRelease?: boolean;
   price: DropPrice;
   releasedAt: string;
   artist: {

@@ -1,6 +1,7 @@
 'use client';
 
 import { Globe } from 'lucide-react';
+import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -19,12 +20,14 @@ type DnaDropLiveIndicatorProps = {
   shareId?: string | null;
   variant?: 'badge' | 'dot' | 'compact';
   className?: string;
+  href?: string;
 };
 
 export function DnaDropLiveIndicator({
   shareId,
   variant = 'badge',
   className,
+  href,
 }: DnaDropLiveIndicatorProps) {
   if (!hasActiveDnaDrop(shareId)) return null;
 
@@ -65,10 +68,21 @@ export function DnaDropLiveIndicator({
       </Badge>
     );
 
+  const trigger = href ? (
+    <Link
+      href={href}
+      className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+      aria-label="Open live DNA page"
+      onClick={(event) => event.stopPropagation()}
+    >
+      {indicator}
+    </Link>
+  ) : indicator;
+
   return (
     <TooltipProvider delayDuration={300}>
       <Tooltip>
-        <TooltipTrigger asChild>{indicator}</TooltipTrigger>
+        <TooltipTrigger asChild>{trigger}</TooltipTrigger>
         <TooltipContent side="top" className="max-w-[220px]">
           {LIVE_TOOLTIP}
         </TooltipContent>

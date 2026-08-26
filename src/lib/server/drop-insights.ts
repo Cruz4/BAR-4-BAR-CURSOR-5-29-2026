@@ -33,7 +33,7 @@ function shareTitle(data: Record<string, unknown>): string {
     : {};
   return typeof payload.title === 'string' && payload.title.trim()
     ? payload.title.trim().slice(0, 120)
-    : 'First Drop';
+    : 'Release';
 }
 
 async function loadInsightDays(db: Firestore, ownerId: string, sinceDay: string, limit: number) {
@@ -148,7 +148,7 @@ export async function getDropInsights(
 
     const currentTrack = trackRows.get(shareId) || {
       shareId,
-      title: typeof data.title === 'string' ? data.title : 'First Drop',
+      title: typeof data.title === 'string' ? data.title : 'Release',
       lifetimePreviewStarts: shareStats.get(shareId)?.previewStarts || 0,
       lifetimeFullStarts: shareStats.get(shareId)?.fullStarts || 0,
       lifetimePurchases: shareStats.get(shareId)?.purchaseCount || 0,
@@ -248,7 +248,7 @@ export async function getDropInsights(
         title:
           typeof sale.title === 'string' && sale.title.trim()
             ? sale.title.trim().slice(0, 120)
-            : stats?.title || 'First Drop',
+            : stats?.title || 'Release',
         lifetimePreviewStarts: stats?.previewStarts || 0,
         lifetimeFullStarts: stats?.fullStarts || 0,
         lifetimePurchases: 0,

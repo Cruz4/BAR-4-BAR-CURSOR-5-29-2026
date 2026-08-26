@@ -77,15 +77,15 @@ export function firstDropsFeeCashoutLine(): string {
 
 /** Public selling copy — hide whenever First Drops is toggled off. */
 export function firstDropsPitch(): string {
-  return `Open New release from The Scene. Choose a song or album, upload the music, set a price, and press it live. Listen / buy sits at the top of your Artist Home, on The Scene, and on the share link. Preview 30 seconds, buy once, stream here. You keep the rights to your music — we take a small fee on the sale to run the platform. DNA Drop is your lyric preview card only — music uploads and sales happen in First Drops. ${firstDropsFeeLine()} ${firstDropsCashoutLine()}`;
+  return `Open New release from The Scene. Choose a song or album, upload the music, set a price, and publish the release. Listen / buy sits at the top of your Artist Home, on The Scene, and on the release link. Preview 30 seconds, buy once, stream here. You keep the rights to your music—we take a small fee on the sale to run the platform. DNA Drop is the separate lyric page. ${firstDropsFeeLine()} ${firstDropsCashoutLine()}`;
 }
 
 export function getFirstDropsWhatFaqAnswer(): string {
-  return `The record you press on First Drops — not a subsection of DNA Drop. Upload the song (private storage), set a price or pay-what-you-want, and fans buy once to stream it in Bar 4 Bar. Preview is 30 seconds until they unlock. Library on The Scene is the in-app player — crates, search, and a four-bar visualizer. Not a Spotify listing — exclusive in-app stream. ${firstDropsFeeLine()} ${firstDropsCashoutLine()} Ink is never used to buy music.`;
+  return `A Release is a recording you publish for listening or purchase—not a subsection of DNA Drop. Upload the song privately, set a price or pay-what-you-want, and fans buy once to stream it in Bar 4 Bar. Preview is 30 seconds until they unlock. Library is the in-app player—crates, search, and a four-bar visualizer. It is not a Spotify listing. ${firstDropsFeeLine()} ${firstDropsCashoutLine()} Ink is never used to buy music.`;
 }
 
 export function getFirstDropsSellFaqAnswer(): string {
-  return 'On The Scene, tap New release. Choose a vault song or album, upload the music, set a price or pay-what-you-want, then Press it live. You never open DNA Drop to sell. DNA Drop is lyrics-only. Visitors see Listen / buy at the top of your Artist Home, on The Scene, and on the share link. To get paid, open Earnings and connect Stripe payouts.';
+  return 'On The Scene, tap New release. Choose a Vault song or album, upload the music, set a price or pay-what-you-want, then Publish release. DNA Drop is the separate lyrics-only page. Visitors see Listen / buy on your Artist Home, The Scene, and the release link. To get paid, open Earnings and connect Stripe payouts.';
 }
 
 export function getFirstDropsRightsFaqAnswer(): string {
@@ -97,7 +97,7 @@ export function getFirstDropsFeeFaqAnswer(): string {
 }
 
 export function getFirstDropsCashoutFaqAnswer(): string {
-  return 'Open Earnings (Scene dock, account menu, Settings → First Drop payouts, or First Drop → Earnings & cash out). Connect Stripe payouts once — identity and bank. New sales go to your Stripe balance automatically; Stripe then pays your bank on its schedule (usually a few days after a sale clears). Sales made before you connect stay Held until you finish setup or tap Send held sales.';
+  return 'Open Earnings from the Scene dock, account menu, Settings → Release payouts, or Release Catalog. Connect Stripe payouts once—identity and bank. New sales go to your Stripe balance automatically; Stripe then pays your bank on its schedule, usually a few days after a sale clears. Sales made before you connect stay Held until you finish setup or tap Send held sales.';
 }
 
 export const DROP_AUDIO_MAX_BYTES = 40 * 1024 * 1024;
@@ -144,6 +144,11 @@ export type DropLibraryEntry = {
   /** Fulfilled purchase keys already merged into this Library entitlement. */
   purchaseIds?: string[];
   free?: boolean;
+  /** Shared House release entitlement; no purchase record is required. */
+  houseRelease?: boolean;
+  /** Quiet in-Library announcement controlled by an admin. */
+  houseLibraryNotice?: boolean;
+  houseLibraryNoticeAt?: string;
   own?: boolean;
   /** Per-song public supporter credit. Private unless the buyer explicitly opts in. */
   supporterCreditPublic?: boolean;
@@ -256,8 +261,9 @@ export function publicDropAudio(meta?: DropAudioMeta | null): DropAudioMeta | un
   const n = normalizeDropAudio(meta);
   if (!n) return undefined;
   return {
-    storagePath: n.storagePath,
-    previewPath: n.previewPath,
+    // Public share snapshots only need an availability marker. The actual
+    // owner-scoped Storage path is resolved server-side from the private track.
+    storagePath: 'private',
     contentType: n.contentType,
     durationSec: n.durationSec,
     fileName: n.fileName,

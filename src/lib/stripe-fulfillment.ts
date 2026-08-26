@@ -412,7 +412,7 @@ export async function fulfillPaidCheckoutSession(
         shareId: metadata.shareId,
         buyerId: userId,
         buyerName,
-        title: metadata.title || 'First Drop',
+        title: metadata.title || 'Release',
         amountCents,
       });
     } catch (err) {

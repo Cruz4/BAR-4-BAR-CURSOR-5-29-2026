@@ -45,4 +45,10 @@ const checkoutRoute = readFileSync(
 assert.match(checkoutRoute, /\.\.\.\(trackId \? \{ trackId \} : \{\}\)/);
 assert.doesNotMatch(checkoutRoute, /^\s*trackId,\s*$/m);
 
+const directCheckoutRoute = readFileSync(
+  new URL('../src/app/api/drops/checkout/route.ts', import.meta.url),
+  'utf8'
+);
+assert.match(directCheckoutRoute, /userCanStreamFull\(\{ db, share, userId, trackId \}\)/);
+
 console.log('Drop cart verification passed.');

@@ -147,8 +147,16 @@ service cloud.firestore {
     // Public DNA Drop shares
     match /shares/{shareId} {
       allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+      allow create: if request.auth != null
+        && (!request.resource.data.keys().hasAny(['houseRelease'])
+          || request.resource.data.houseRelease == false)
+        && (!request.resource.data.keys().hasAny(['houseLibraryNotice'])
+          || request.resource.data.houseLibraryNotice == false)
+        && !request.resource.data.keys().hasAny(['houseLibraryNoticeAt']);
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.ownerId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['houseRelease', 'houseLibraryNotice', 'houseLibraryNoticeAt']);
+      allow delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
 
       match /loves/{likerId} {
         allow read: if true;

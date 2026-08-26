@@ -1,9 +1,9 @@
 import { pageMetadata } from '@/lib/seo';
 
 export const metadata = pageMetadata({
-  title: 'Discover Independent Music People & First Drops',
+  title: 'Discover Independent Music People & Releases',
   description:
-    'Discover artists, creators, Music Fans, and First Drops by public taste and craft signals. Every personalized match explains why it fits.',
+    'Discover artists, creators, Music Fans, and releases by public taste and craft signals. Every personalized match explains why it fits.',
   path: '/discover',
 });
 

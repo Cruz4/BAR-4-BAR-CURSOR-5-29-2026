@@ -152,9 +152,9 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     post_reverb: 'Reverbed your post',
     mention: 'mentioned you',
     dna_import: 'imported your DNA Drop',
-    drop_loved: 'loved your First Drop',
-    drop_reply: 'replied on your First Drop',
-    drop_unlocked: 'unlocked your First Drop',
+    drop_loved: 'loved your release',
+    drop_reply: 'replied on your release',
+    drop_unlocked: 'unlocked your release',
     drop_sold: 'bought your song',
     love_milestone: 'rewarded you 2 Ink for 20 Loves',
     lock_answered: 'echoed your bar',
@@ -179,9 +179,9 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     post_reverb: 'you Reverbed a post by',
     mention: 'you mentioned',
     dna_import: 'you imported a DNA Drop from',
-    drop_loved: 'you loved a First Drop by',
-    drop_reply: 'you replied on a First Drop by',
-    drop_unlocked: 'you unlocked a First Drop by',
+    drop_loved: 'you loved a release by',
+    drop_reply: 'you replied on a release by',
+    drop_unlocked: 'you unlocked a release by',
     drop_sold: 'you bought a song from',
     love_milestone: 'rewarded you 2 Ink for 20 Loves',
     lock_answered: 'you echoed a bar on',
@@ -308,22 +308,22 @@ export function pushCopyForActivity(
     case 'drop_loved':
       return {
         title: 'Bar 4 Bar',
-        body: `${actorName} loved your First Drop`,
+        body: `${actorName} loved your release`,
       };
     case 'drop_reply':
       return {
         title: 'Bar 4 Bar',
-        body: snippet || `${actorName} replied on your First Drop`,
+        body: snippet || `${actorName} replied on your release`,
       };
     case 'drop_unlocked':
       return {
-        title: `${actorName} unlocked your First Drop`,
+        title: `${actorName} unlocked your release`,
         body: snippet || 'Someone copped the song.',
       };
     case 'drop_sold':
       return {
         title: 'You got a sale',
-        body: snippet || `${actorName} bought your First Drop`,
+        body: snippet || `${actorName} bought your release`,
       };
     case 'love_milestone':
       return {

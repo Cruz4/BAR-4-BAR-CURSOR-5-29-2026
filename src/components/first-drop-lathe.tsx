@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Press a song — sell without opening DNA Drop.
+ * Release a song — publish audio without opening DNA Drop.
  * Pick a vault track, upload the song, set a price, go live.
  * The public page still carries lyrics; this is the sell desk.
  */
@@ -9,7 +9,7 @@
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Banknote, Disc3, Library, Loader, Music, Play, PlusCircle, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, Banknote, Disc3, Gift, Library, Loader, Music, Play, PlusCircle, Save, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -44,12 +44,62 @@ import { releaseShareIdOf, releaseStatusOf } from '@/lib/release-management';
 
 type Picked = { album: Album; track: Track };
 
+function songReleasePlacement(row: Picked): 'single' | 'album' | null {
+  if (releaseStatusOf(row.track) === 'live') return 'single';
+  const albumLive = row.album.id !== 'unassigned'
+    && releaseStatusOf({ ...row.album, tracks: row.album.tracks }) === 'live';
+  return albumLive && Boolean(normalizeDropAudio(row.track.dropAudio)) ? 'album' : null;
+}
+
+function HouseReleaseToggle({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-3">
+      <Checkbox
+        id="house-release"
+        checked={checked}
+        onCheckedChange={(value) => onChange(value === true)}
+        className="mt-0.5 border-cyan-300 data-[state=checked]:bg-cyan-300 data-[state=checked]:text-black"
+      />
+      <Label htmlFor="house-release" className="min-w-0 cursor-pointer">
+        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-cyan-200">
+          <Gift className="h-3.5 w-3.5" /> House · Free for everyone
+        </span>
+        <span className="mt-1 block text-[10px] leading-relaxed text-muted-foreground">
+          Admin only. Every current and future member receives the full release in Library without checkout.
+        </span>
+      </Label>
+    </div>
+  );
+}
+
+function HouseLibraryNoticeToggle({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-fuchsia-400/20 bg-fuchsia-500/[0.06] p-3">
+      <Checkbox
+        id="house-library-notice"
+        checked={checked}
+        onCheckedChange={(value) => onChange(value === true)}
+        className="mt-0.5 border-fuchsia-300 data-[state=checked]:bg-fuchsia-300 data-[state=checked]:text-black"
+      />
+      <Label htmlFor="house-library-notice" className="min-w-0 cursor-pointer">
+        <span className="block text-[10px] font-bold uppercase tracking-widest text-fuchsia-200">
+          Show “New in Library” notice
+        </span>
+        <span className="mt-1 block text-[10px] leading-relaxed text-muted-foreground">
+          A quiet, dismissible strip inside Library—never a popup or push notification. Turn this off whenever the feature period is over.
+        </span>
+      </Label>
+    </div>
+  );
+}
+
 export function FirstDropLatheHost() {
   const router = useRouter();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const { user } = useAuth();
   const { toast } = useToast();
   const { albums, addTrack, updateAlbum, updateTrack, flushCloudNow, isCloudSyncActive } = useContext(DataContext);
+  const isAdmin = user?.role === 'admin';
   const fileRef = useRef<HTMLInputElement>(null);
   const albumFileRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -102,8 +152,8 @@ export function FirstDropLatheHost() {
     if (albumLive || trackLive) {
       toast({
         variant: 'destructive',
-        title: 'Unpress first',
-        description: `This recording is part of a live ${albumLive ? 'album' : 'song'}. Unpress it before removing the master.`,
+        title: 'Take the release offline first',
+        description: `This recording is part of a live ${albumLive ? 'album' : 'song'} release. Take it offline before removing the master.`,
       });
       return;
     }
@@ -138,6 +188,27 @@ export function FirstDropLatheHost() {
         row.album.title.toLowerCase().includes(q)
     );
   }, [query, scopedCatalog]);
+
+  const songPickerSections = useMemo(() => {
+    const released = filtered.filter((row) => songReleasePlacement(row));
+    const unreleased = filtered.filter((row) => !songReleasePlacement(row));
+    return [
+      {
+        id: 'released',
+        label: 'Already released',
+        detail: 'Live now · select one to update or manage it',
+        rows: released,
+        live: true,
+      },
+      {
+        id: 'unreleased',
+        label: released.length ? 'Not released yet' : 'Your songs',
+        detail: 'Select a song to prepare its release',
+        rows: unreleased,
+        live: false,
+      },
+    ].filter((section) => section.rows.length > 0);
+  }, [filtered]);
 
   const applyDetail = useCallback(
     (detail: FirstDropLatheDetail) => {
@@ -186,6 +257,10 @@ export function FirstDropLatheHost() {
   const albumAudioTracks = (selectedAlbum?.tracks || []).filter((candidate) =>
     Boolean(normalizeDropAudio(candidate.dropAudio))
   );
+  const houseRelease = Boolean(mode === 'album' ? selectedAlbum?.houseRelease : track?.houseRelease);
+  const houseLibraryNotice = Boolean(
+    mode === 'album' ? selectedAlbum?.houseLibraryNotice : track?.houseLibraryNotice
+  );
 
   const onPickAudio = async (file: File | undefined) => {
     if (!file || !user || !track || !album) return;
@@ -193,7 +268,7 @@ export function FirstDropLatheHost() {
     try {
       const meta = await uploadDropAudio({ userId: user.id, projectId: track.id, file });
       updateTrack(album.id, track.id, { dropAudio: meta, releaseStatus: 'draft' });
-      toast({ title: 'Private draft saved', description: 'Test it here, attach lyrics now or later, then press it live when ready.' });
+      toast({ title: 'Private draft saved', description: 'Test it here, attach lyrics now or later, then release it when ready.' });
     } catch (e: unknown) {
       toast({
         variant: 'destructive',
@@ -290,7 +365,7 @@ export function FirstDropLatheHost() {
       toast({
         variant: 'destructive',
         title: 'Studio Pro required',
-        description: 'Pressing a song live uses your public page — that’s a Pro publish.',
+        description: 'Publishing a music release uses your public page—that is a Pro feature.',
       });
       return;
     }
@@ -298,7 +373,7 @@ export function FirstDropLatheHost() {
       toast({
         variant: 'destructive',
         title: 'Drop the song first',
-        description: 'Upload the song, then press it live.',
+        description: 'Upload the song before publishing the release.',
       });
       return;
     }
@@ -310,32 +385,45 @@ export function FirstDropLatheHost() {
       });
       return;
     }
-    const pressUpdates: Partial<Track> = { dropRightsAttestedAt: new Date().toISOString() };
-    if (!isCommerceLive(normalizeDropPrice(track.dropPrice))) {
+    const pressUpdates: Partial<Track> = {
+      dropRightsAttestedAt: new Date().toISOString(),
+      ...(isAdmin ? { houseRelease, houseLibraryNotice } : {}),
+    };
+    if (!houseRelease && !isCommerceLive(normalizeDropPrice(track.dropPrice))) {
       pressUpdates.dropPrice = sellPrice;
     }
     updateTrack(album.id, track.id, pressUpdates);
     setPressing(true);
     try {
       await flushCloudNow();
-      const result = await manageRelease({ kind: 'track', action: 'publish', albumId: album.id, trackId: track.id });
+      const result = await manageRelease({
+        kind: 'track',
+        action: 'publish',
+        albumId: album.id,
+        trackId: track.id,
+        ...(isAdmin ? { houseRelease, houseLibraryNotice } : {}),
+      });
       const shareId = result.releaseShareId;
       if (!shareId) throw new Error('Release link was not created.');
       updateTrack(album.id, track.id, {
         releaseShareId: shareId,
         releaseStatus: 'live',
         releaseSnapshotAt: new Date().toISOString(),
+        houseRelease: result.houseRelease === true,
+        houseLibraryNotice: result.houseLibraryNotice === true,
       });
       toast({
-        title: 'Pressed live',
-        description: 'Visitors hear this first on your Artist Home and this share link.',
+        title: houseRelease ? 'House release published' : 'Release published',
+        description: houseRelease
+          ? 'Every current and future member now receives it free in Library.'
+          : 'Visitors hear this first on your Artist Home and this share link.',
       });
       setOpen(false);
       router.push(`/song/${shareId}`);
     } catch (e: unknown) {
       toast({
         variant: 'destructive',
-        title: 'Could not press live',
+        title: 'Could not publish release',
         description: e instanceof Error ? e.message : undefined,
       });
     } finally {
@@ -374,31 +462,45 @@ export function FirstDropLatheHost() {
     for (const included of albumAudioTracks) {
       updateTrack(selectedAlbum.id, included.id, { dropRightsAttestedAt: attestedAt });
     }
-    if (!isCommerceLive(normalizeDropPrice(selectedAlbum.dropPrice))) {
+    if (!houseRelease && !isCommerceLive(normalizeDropPrice(selectedAlbum.dropPrice))) {
       updateAlbum(selectedAlbum.id, { dropPrice: albumSellPrice });
     }
+    if (isAdmin) updateAlbum(selectedAlbum.id, { houseRelease, houseLibraryNotice });
 
     setPressing(true);
     try {
       await flushCloudNow();
-      const result = await manageRelease({ kind: 'album', action: 'publish', albumId: selectedAlbum.id });
+      const result = await manageRelease({
+        kind: 'album',
+        action: 'publish',
+        albumId: selectedAlbum.id,
+        ...(isAdmin ? { houseRelease, houseLibraryNotice } : {}),
+      });
       const shareId = result.releaseShareId;
       if (!shareId) throw new Error('Album release link was not created.');
       updateAlbum(selectedAlbum.id, {
         releaseShareId: shareId,
         releaseStatus: 'live',
         releaseSnapshotAt: new Date().toISOString(),
+        houseRelease: result.houseRelease === true,
+        houseLibraryNotice: result.houseLibraryNotice === true,
       });
       toast({
-        title: selectedAlbum.shareId ? 'Album release updated' : 'Album pressed live',
-        description: `${albumAudioTracks.length} audio track${albumAudioTracks.length === 1 ? '' : 's'} included. One purchase unlocks all of them.`,
+        title: houseRelease
+          ? 'House album published'
+          : selectedAlbum.shareId
+            ? 'Album release updated'
+            : 'Album release published',
+        description: houseRelease
+          ? `${albumAudioTracks.length} audio track${albumAudioTracks.length === 1 ? '' : 's'} added free to every member Library.`
+          : `${albumAudioTracks.length} audio track${albumAudioTracks.length === 1 ? '' : 's'} included. One purchase unlocks all of them.`,
       });
       setOpen(false);
       router.push(`/share/${shareId}`);
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Could not press album',
+        title: 'Could not publish album release',
         description: error instanceof Error ? error.message : undefined,
       });
     } finally {
@@ -412,8 +514,14 @@ export function FirstDropLatheHost() {
     try {
       updateTrack(album.id, track.id, { releaseStatus: 'draft' });
       await flushCloudNow();
-      await manageRelease({ kind: 'track', action: 'save-draft', albumId: album.id, trackId: track.id });
-      toast({ title: 'Draft saved privately', description: 'It is not public or for sale. Return anytime to test or press it live.' });
+      await manageRelease({
+        kind: 'track',
+        action: 'save-draft',
+        albumId: album.id,
+        trackId: track.id,
+        ...(isAdmin ? { houseRelease, houseLibraryNotice } : {}),
+      });
+      toast({ title: 'Draft saved privately', description: 'It is not public or for sale. Return anytime to test or publish it.' });
       setOpen(false);
     } catch (error) {
       toast({ variant: 'destructive', title: 'Could not save draft', description: error instanceof Error ? error.message : undefined });
@@ -456,8 +564,13 @@ export function FirstDropLatheHost() {
     try {
       updateAlbum(selectedAlbum.id, { releaseStatus: 'draft' });
       await flushCloudNow();
-      await manageRelease({ kind: 'album', action: 'save-draft', albumId: selectedAlbum.id });
-      toast({ title: 'Album draft saved privately', description: 'Test every recording and return to press the bundle live when ready.' });
+      await manageRelease({
+        kind: 'album',
+        action: 'save-draft',
+        albumId: selectedAlbum.id,
+        ...(isAdmin ? { houseRelease, houseLibraryNotice } : {}),
+      });
+      toast({ title: 'Album draft saved privately', description: 'Test every recording and publish the album release when ready.' });
       setOpen(false);
     } catch (error) {
       toast({ variant: 'destructive', title: 'Could not save album draft', description: error instanceof Error ? error.message : undefined });
@@ -480,10 +593,16 @@ export function FirstDropLatheHost() {
             New release
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
-            {mode === 'album'
-              ? 'Upload audio for the included tracks and set one bundle price. Lyrics and completed sheets are optional. One purchase unlocks every included recording.'
-              : 'Pick a track, upload the recording, and set its price. Written lyrics and a completed sheet are optional.'}{' '}
-            You keep the rights — we take a small fee on the sale. {firstDropsFeeCashoutLine()}
+            {houseRelease
+              ? mode === 'album'
+                ? 'Upload the included recordings and publish them as a House album. Every member receives the full album free in Library.'
+                : 'Upload the recording and publish it as a House release. Every member receives the full song free in Library.'
+              : <>
+                  {mode === 'album'
+                    ? 'Upload audio for the included tracks and set one bundle price. Lyrics and completed sheets are optional. One purchase unlocks every included recording.'
+                    : 'Pick a track, upload the recording, and set its price. Written lyrics and a completed sheet are optional.'}{' '}
+                  You keep the rights — we take a small fee on the sale. {firstDropsFeeCashoutLine()}
+                </>}
           </DialogDescription>
         </DialogHeader>
 
@@ -648,7 +767,7 @@ export function FirstDropLatheHost() {
                               disabled={Boolean(removingAudioId)}
                               onClick={() => void removePrivateAudio(selectedAlbum, row)}
                               aria-label={`Remove private recording for ${row.title}`}
-                              title={releaseStatusOf({ ...selectedAlbum, tracks: selectedAlbum.tracks }) === 'live' ? 'Unpress the album before removing audio' : 'Remove private recording'}
+                              title={releaseStatusOf({ ...selectedAlbum, tracks: selectedAlbum.tracks }) === 'live' ? 'Take the album release offline before removing audio' : 'Remove private recording'}
                             >
                               {removingAudioId === row.id ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                             </Button>
@@ -695,12 +814,36 @@ export function FirstDropLatheHost() {
                 </div>
               </div>
 
-              <PriceEditor
-                omitHidden
-                label="2. One price for the full album"
-                price={albumSellPrice}
-                onChange={(next) => updateAlbum(selectedAlbum.id, { dropPrice: next })}
-              />
+              {isAdmin ? (
+                <div className="space-y-2">
+                  <HouseReleaseToggle
+                    checked={houseRelease}
+                    onChange={(checked) => updateAlbum(selectedAlbum.id, {
+                      houseRelease: checked,
+                      ...(!checked ? { houseLibraryNotice: false } : {}),
+                    })}
+                  />
+                  {houseRelease ? (
+                    <HouseLibraryNoticeToggle
+                      checked={houseLibraryNotice}
+                      onChange={(checked) => updateAlbum(selectedAlbum.id, { houseLibraryNotice: checked })}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+
+              {houseRelease ? (
+                <p className="rounded-xl border border-cyan-400/20 bg-black/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100/80">
+                  No price or checkout. Signed-in members receive the complete album automatically.
+                </p>
+              ) : (
+                <PriceEditor
+                  omitHidden
+                  label="2. One price for the full album"
+                  price={albumSellPrice}
+                  onChange={(next) => updateAlbum(selectedAlbum.id, { dropPrice: next })}
+                />
+              )}
 
               <div className="flex min-h-10 items-center gap-3 rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/5 px-3 py-2">
                 <Checkbox
@@ -710,7 +853,7 @@ export function FirstDropLatheHost() {
                   className="border-fuchsia-300 data-[state=checked]:bg-fuchsia-400 data-[state=checked]:text-black"
                 />
                 <Label htmlFor="album-drop-rights" className="cursor-pointer text-[11px] font-medium leading-snug text-foreground/90">
-                  I have the rights to sell every recording included in this album.
+                  I have the rights to {houseRelease ? 'distribute' : 'sell'} every recording included in this album.
                 </Label>
               </div>
 
@@ -725,11 +868,19 @@ export function FirstDropLatheHost() {
                   onClick={() => void pressAlbumLive()}
                 >
                   {pressing ? <Loader className="mr-2 h-5 w-5 animate-spin" /> : <Disc3 className="mr-2 h-5 w-5" />}
-                  {releaseStatusOf({ ...selectedAlbum, tracks: selectedAlbum.tracks }) === 'live' ? 'Update live album' : 'Press album live'}
+                  {houseRelease
+                    ? releaseStatusOf({ ...selectedAlbum, tracks: selectedAlbum.tracks }) === 'live'
+                      ? 'Update House album'
+                      : 'Publish House album'
+                    : releaseStatusOf({ ...selectedAlbum, tracks: selectedAlbum.tracks }) === 'live'
+                      ? 'Update live album'
+                      : 'Publish album release'}
                 </Button>
               </div>
               <p className="text-center text-[10px] leading-relaxed text-muted-foreground">
-                Album sales, price paid, buyer, timestamp, fees, and payout are recorded in Earnings. The buyer receives every included audio track in Library.
+                {houseRelease
+                  ? 'The shared House entitlement puts every included recording in every member Library, including accounts created later.'
+                  : 'Album sales, price paid, buyer, timestamp, fees, and payout are recorded in Earnings. The buyer receives every included audio track in Library.'}
               </p>
               <Button asChild variant="ghost" className="h-9 w-full text-[10px] font-bold uppercase">
                 <Link href="/earnings"><Banknote className="mr-1.5 h-3.5 w-3.5" /> Earnings &amp; cash out</Link>
@@ -780,42 +931,74 @@ export function FirstDropLatheHost() {
             {filtered.length === 0 ? (
               <p className="rounded-xl border border-dashed border-border/70 px-4 py-6 text-center text-sm text-muted-foreground">
                 {albumScope
-                  ? 'No tracks in this album yet. Write one, then press it here.'
-                  : 'No tracks in the vault yet. Write one, then press it here — you never have to open DNA Drop to sell.'}
+                  ? 'No tracks in this album yet. Write one, then release it here.'
+                  : 'No tracks in the vault yet. Write one, then release it here—DNA Drop is only for the separate lyric page.'}
               </p>
             ) : (
-              <ul className="space-y-1.5">
-                {filtered.map((row) => {
-                  const audio = Boolean(normalizeDropAudio(row.track.dropAudio));
-                  const live = releaseStatusOf(row.track) === 'live';
-                  const priced = isCommerceLive(normalizeDropPrice(row.track.dropPrice));
-                  return (
-                    <li key={`${row.album.id}-${row.track.id}`}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPicked(row);
-                          setRightsChecked(false);
-                        }}
-                        className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-left hover:border-fuchsia-400/45 hover:bg-fuchsia-500/10"
-                      >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-fuchsia-400/30 bg-fuchsia-500/15 text-fuchsia-200">
-                          <Music className="h-4 w-4" />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block break-words text-sm font-bold">{row.track.title}</span>
-                          <span className="block break-words font-code text-[9px] uppercase tracking-widest text-muted-foreground">
-                            {row.album.title}
-                            {audio ? ' · song on file' : ' · no audio yet'}
-                            {priced ? ' · priced' : ''}
-                            {live ? ' · page live' : ''}
-                          </span>
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="space-y-4">
+                {songPickerSections.map((section) => (
+                  <section key={section.id} className="space-y-1.5" aria-label={section.label}>
+                    <div className="flex items-end justify-between gap-3 px-1">
+                      <div className="min-w-0">
+                        <p className={cn(
+                          'text-[10px] font-bold uppercase tracking-[0.2em]',
+                          section.live ? 'text-emerald-300' : 'text-muted-foreground'
+                        )}>
+                          {section.label}
+                        </p>
+                        <p className="text-[9px] text-muted-foreground">{section.detail}</p>
+                      </div>
+                      <span className="shrink-0 font-code text-[9px] text-muted-foreground">{section.rows.length}</span>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {section.rows.map((row) => {
+                        const audio = Boolean(normalizeDropAudio(row.track.dropAudio));
+                        const placement = songReleasePlacement(row);
+                        const priced = isCommerceLive(normalizeDropPrice(row.track.dropPrice));
+                        return (
+                          <li key={`${row.album.id}-${row.track.id}`}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPicked(row);
+                                setRightsChecked(false);
+                              }}
+                              className={cn(
+                                'flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors',
+                                placement
+                                  ? 'border-emerald-400/25 bg-emerald-500/[0.07] hover:border-emerald-300/55 hover:bg-emerald-500/10'
+                                  : 'border-white/10 bg-black/25 hover:border-fuchsia-400/45 hover:bg-fuchsia-500/10'
+                              )}
+                            >
+                              <span className={cn(
+                                'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border',
+                                placement
+                                  ? 'border-emerald-400/35 bg-emerald-500/15 text-emerald-200'
+                                  : 'border-fuchsia-400/30 bg-fuchsia-500/15 text-fuchsia-200'
+                              )}>
+                                {placement ? <Disc3 className="h-4 w-4" /> : <Music className="h-4 w-4" />}
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block break-words text-sm font-bold">{row.track.title}</span>
+                                <span className="block break-words font-code text-[9px] uppercase tracking-widest text-muted-foreground">
+                                  {row.album.title}
+                                  {audio ? ' · song on file' : ' · no audio yet'}
+                                  {priced ? ' · priced' : ''}
+                                </span>
+                              </span>
+                              {placement ? (
+                                <span className="max-w-[7.5rem] shrink-0 rounded-full border border-emerald-300/35 bg-emerald-400/10 px-2 py-1 text-center font-code text-[8px] font-bold uppercase tracking-wider text-emerald-200">
+                                  {placement === 'album' ? 'Live on album' : 'Live release'}
+                                </span>
+                              ) : null}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                ))}
+              </div>
             )}
           </div>
         ) : (
@@ -865,7 +1048,7 @@ export function FirstDropLatheHost() {
                     disabled={Boolean(removingAudioId)}
                     onClick={() => void removePrivateAudio(album, track)}
                     aria-label="Remove audio"
-                    title={releaseStatusOf(track) === 'live' ? 'Unpress the song before removing audio' : 'Remove private recording'}
+                    title={releaseStatusOf(track) === 'live' ? 'Take the release offline before removing audio' : 'Remove private recording'}
                   >
                     {removingAudioId === track.id ? <Loader className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                   </Button>
@@ -876,7 +1059,7 @@ export function FirstDropLatheHost() {
                   <p className={cn('font-code text-[10px] text-emerald-400/90')}>
                     {track.dropAudio.fileName || 'Audio on file'}
                     {track.dropAudio.durationSec ? ` · ${Math.round(track.dropAudio.durationSec)}s` : ''}
-                    {releaseStatusOf(track) === 'live' ? ' · live release' : ' · private until pressed live'}
+                    {releaseStatusOf(track) === 'live' ? ' · live release' : ' · private until published'}
                   </p>
                   {privateAudioUrl ? (
                     <audio
@@ -904,15 +1087,39 @@ export function FirstDropLatheHost() {
               )}
             </div>
 
-            <PriceEditor
-              omitHidden
-              label="2. What they pay"
-              price={sellPrice}
-              onChange={(next) => {
-                if (!album || !track) return;
-                updateTrack(album.id, track.id, { dropPrice: next });
-              }}
-            />
+            {isAdmin && album && track ? (
+              <div className="space-y-2">
+                <HouseReleaseToggle
+                  checked={houseRelease}
+                  onChange={(checked) => updateTrack(album.id, track.id, {
+                    houseRelease: checked,
+                    ...(!checked ? { houseLibraryNotice: false } : {}),
+                  })}
+                />
+                {houseRelease ? (
+                  <HouseLibraryNoticeToggle
+                    checked={houseLibraryNotice}
+                    onChange={(checked) => updateTrack(album.id, track.id, { houseLibraryNotice: checked })}
+                  />
+                ) : null}
+              </div>
+            ) : null}
+
+            {houseRelease ? (
+              <p className="rounded-xl border border-cyan-400/20 bg-black/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100/80">
+                No price or checkout. Signed-in members receive the complete song automatically.
+              </p>
+            ) : (
+              <PriceEditor
+                omitHidden
+                label="2. What they pay"
+                price={sellPrice}
+                onChange={(next) => {
+                  if (!album || !track) return;
+                  updateTrack(album.id, track.id, { dropPrice: next });
+                }}
+              />
+            )}
 
             <div className="flex min-h-10 items-center gap-3 rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/5 px-3">
               <Checkbox
@@ -925,7 +1132,7 @@ export function FirstDropLatheHost() {
                 htmlFor="drop-rights"
                 className="flex cursor-pointer items-center text-[11px] font-medium leading-none text-foreground/90"
               >
-                I have the rights to sell this recording.
+                I have the rights to {houseRelease ? 'distribute' : 'sell'} this recording.
               </Label>
             </div>
 
@@ -946,11 +1153,21 @@ export function FirstDropLatheHost() {
                 onClick={() => void pressLive()}
               >
                 {pressing ? <Loader className="mr-2 h-5 w-5 animate-spin" /> : <Disc3 className="mr-2 h-5 w-5" />}
-                {releaseStatusOf(track || {}) === 'live' ? 'Update live press' : releaseShareIdOf(track || {}) ? 'Re-press live' : 'Press live'}
+                {houseRelease
+                  ? releaseStatusOf(track || {}) === 'live'
+                    ? 'Update House release'
+                    : 'Publish House release'
+                  : releaseStatusOf(track || {}) === 'live'
+                    ? 'Update live release'
+                    : releaseShareIdOf(track || {})
+                      ? 'Republish release'
+                      : 'Publish release'}
               </Button>
             </div>
             <p className="text-center text-[10px] leading-relaxed text-muted-foreground">
-              Save Draft keeps the full recording private. Press Live publishes the preview and sale page. Lyrics can be attached now or later.
+              {houseRelease
+                ? 'Save Draft keeps the recording private. Publish House Release adds the full song to every member Library.'
+                : 'Save Draft keeps the full recording private. Publish Release creates the preview and sale page. Lyrics can be attached now or later.'}
             </p>
             <Button asChild variant="ghost" className="h-9 w-full text-[10px] font-bold uppercase">
               <Link href="/earnings">

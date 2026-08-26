@@ -688,7 +688,7 @@ function UsagePageContent() {
                 {firstDropsOn && (
                 <Card className="border-emerald-500/20">
                     <CardHeader className="pb-4">
-                        <CardTitle className="font-headline text-2xl flex items-center gap-2.5"><Banknote className="text-emerald-400 h-6 w-6"/> First Drop payouts</CardTitle>
+                        <CardTitle className="font-headline text-2xl flex items-center gap-2.5"><Banknote className="text-emerald-400 h-6 w-6"/> Release payouts</CardTitle>
                         <CardDescription className="text-sm uppercase tracking-tight">Connect Stripe and cash out {dropArtistShareLabel()} of each song sale.</CardDescription>
                     </CardHeader>
                     <CardFooter className="pt-2">

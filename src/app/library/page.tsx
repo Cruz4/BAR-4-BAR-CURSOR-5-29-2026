@@ -77,7 +77,7 @@ export default function DropLibraryPage() {
             <Library className="h-10 w-10 text-muted-foreground mx-auto" />
             <h1 className="font-headline text-3xl font-bold uppercase">Library is off</h1>
             <p className="text-sm text-muted-foreground">
-              First Drops is currently turned off. DNA Drops still work. Purchases stay saved if this comes back.
+              Music releases are currently turned off. DNA lyric pages still work. Purchases stay saved if releases return.
             </p>
             <Button variant="outline" asChild>
               <Link href="/">Back to The Scene</Link>
@@ -96,7 +96,7 @@ export default function DropLibraryPage() {
             <Library className="h-10 w-10 text-primary mx-auto" />
             <h1 className="font-headline text-3xl font-bold uppercase">Library</h1>
             <p className="text-sm text-muted-foreground">
-              Sign in to spin songs you pressed, plus First Drops you bought or unlocked.
+              Sign in to spin songs you released, bought, or unlocked.
             </p>
             <Button asChild className="w-full font-bold">
               <Link href="/login?next=/library">

@@ -189,7 +189,7 @@ export default function PricingPage() {
     ...(firstDropsOn
       ? [
           {
-            q: 'What is a First Drop?',
+            q: 'What is a music Release?',
             a: getFirstDropsWhatFaqAnswer(),
           },
           {

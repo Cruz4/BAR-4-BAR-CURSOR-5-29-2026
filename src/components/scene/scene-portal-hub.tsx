@@ -187,7 +187,7 @@ function discoverPreviewMeta(card?: DiscoverCard): {
   if (card.kind === 'drop') {
     return {
       name: card.drop.ownerName,
-      detail: `${card.drop.title} · ${card.drop.hasDropAudio ? 'Pressed song' : 'DNA Drop'}`,
+      detail: `${card.drop.title} · ${card.drop.hasDropAudio ? 'Music release' : 'DNA Drop'}`,
       userId: card.drop.ownerId,
       slug: card.drop.ownerSlug,
       avatarUrl: card.drop.avatarUrl,
@@ -438,7 +438,7 @@ export function ScenePortalHub({
             status={<PortalStatus tone="pink">{viewer.slug ? 'Live' : 'Set up'}</PortalStatus>}
             avatar={<LiveArtistStarAvatar name={viewer.displayName} userId={viewer.userId} slug={viewer.slug} size={44} link={false} toneClass="bg-fuchsia-500/15 text-fuchsia-200" />}
           />
-          <WorldShortcut href="/vault" title="Pressed + DNA" detail="Songs · sound identity" icon={Dna} tone="pink" status={<PortalStatus tone="pink">Open Vault</PortalStatus>} />
+          <WorldShortcut href="/vault" title="Releases + DNA" detail="Music · lyrics" icon={Dna} tone="pink" status={<PortalStatus tone="pink">Open Vault</PortalStatus>} />
           <WorldShortcut href="/library" title="Library" detail="Music you unlocked" icon={Library} tone="amber" status={<PortalStatus tone="amber">Saved music</PortalStatus>} />
           <WorldShortcut href="/friends" title="Your Circle" detail="Friends & messages" icon={Users} tone="cyan" status={<PortalStatus tone="cyan">{friendCount} friend{friendCount === 1 ? '' : 's'}</PortalStatus>} />
         </div>
@@ -456,7 +456,7 @@ export function ScenePortalHub({
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" aria-label="Scene creator shortcuts">
         <QuickAction href="/insights" title="Music Listener Insights" detail="Real listeners · proof" icon={BarChart3} tone="border-cyan-400/30 text-cyan-300" />
         <QuickAction href="/supporters" title="Support Circle" detail="Followers · Inner Circle" icon={HeartHandshake} tone="border-fuchsia-400/30 text-fuchsia-300" />
-        <QuickAction title="New Release" detail="Song or album · First Drops" icon={Disc3} tone="border-sky-300/40 text-sky-200" />
+        <QuickAction title="New Release" detail="Publish a song or album" icon={Disc3} tone="border-sky-300/40 text-sky-200" />
       </div>
     </section>
   );
@@ -526,7 +526,7 @@ export function GuestScenePortalHub({
               {[
                 ['Live profiles', publicPulse.profiles],
                 ['Recent posts', publicPulse.posts],
-                ['Pressed songs', publicPulse.pressedSongs],
+                ['Music releases', publicPulse.pressedSongs],
               ].map(([label, value]) => (
                 <div key={String(label)} className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-2">
                   <span className="block font-headline text-xl font-black text-cyan-100">
@@ -546,7 +546,7 @@ export function GuestScenePortalHub({
               <Disc3 className="h-8 w-8" />
             </div>
             <h2 className="relative mt-4 font-headline text-[clamp(1rem,5.4vw,1.55rem)] font-black uppercase leading-none tracking-wide text-white">
-              Newest Pressed
+              Newest Releases
             </h2>
             <p className="relative mt-1 text-[9px] leading-snug text-white/50">Latest songs for preview</p>
             <div className="relative mt-4 space-y-2.5">
@@ -561,7 +561,7 @@ export function GuestScenePortalHub({
                 </Link>
               )) : (
                 <p className="rounded-lg border border-dashed border-white/15 bg-black/25 px-2.5 py-4 text-[9px] leading-relaxed text-white/45">
-                  Newly pressed songs will appear here.
+                  Newly released songs will appear here.
                 </p>
               )}
             </div>

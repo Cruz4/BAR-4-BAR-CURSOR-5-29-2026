@@ -76,6 +76,16 @@ import {
   Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -239,6 +249,7 @@ import { GenerateSongDraftDialog } from './generate-song-draft-dialog';
 import { ExportDialog } from './export-dialog';
 import { ShareDialog } from './share-dialog';
 import { DnaDropLiveIndicator } from './dna-drop-live-indicator';
+import { FirstDropLiveIndicator } from './first-drop-live-indicator';
 import { CollabSheetLiveIndicator } from '@/components/collab-sheet/collab-sheet-live-indicator';
 import { CollabSheetSession } from '@/components/collab-sheet/collab-sheet-session';
 import { CollabSheetFloatingPresence } from '@/components/collab-sheet/collab-sheet-floating-presence';
@@ -1149,7 +1160,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                         actionSafe
                         content={
                           <p className="text-[10px] font-bold leading-snug">
-                            Sell this song: upload audio, set a price, and press it live.
+                            Release this recording: upload audio, set a price, and publish it for listening or purchase.
                           </p>
                         }
                       >
@@ -1160,17 +1171,20 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                           onClick={() => {
                             if (isGuestTryMode) {
                               void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.LOCKED_FEATURE, {
-                                feature: 'Press a song',
+                                feature: 'Release a song',
                               });
-                              promptGuestSignupLockedFeature('Press a song');
+                              promptGuestSignupLockedFeature('Release a song');
                               return;
                             }
                             openFirstDropLathe({ albumId: album.id, trackId: track.id });
                           }}
                         >
                           <Disc3 className="mr-2 h-4 w-4 shrink-0" />
-                          <span className="truncate min-w-0">
-                            {isGuestTryMode ? 'Press a song · Sign up' : 'Press a song'}
+                          <span className="flex min-w-0 flex-1 items-center justify-between gap-2 overflow-visible">
+                            <span className="truncate min-w-0">
+                              {isGuestTryMode ? 'Release song · Sign up' : 'Release song'}
+                            </span>
+                            {!isGuestTryMode ? <FirstDropLiveIndicator track={track} variant="compact" /> : null}
                           </span>
                         </Button>
                       </Hint>
@@ -2454,7 +2468,7 @@ function CoWriterSectionChevron({ open, label }: { open: boolean; label: string 
   );
 }
 
-function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, openCoWriterSections, onApplyChestEntry, mobileActive = false, trackLocked = false, completeLocked = false, tourMobilePad = false, isInkArmed, activeGeneratorBar }: any) {
+function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, openCoWriterSections, onApplyChestEntry, onRequestDeleteSheet, canDeleteSheet = false, mobileActive = false, trackLocked = false, completeLocked = false, tourMobilePad = false, isInkArmed, activeGeneratorBar }: any) {
   const { user } = useAuth();
   const { tooltip, buttonLabel } = useInkCosts();
   const activeSection = track.sections.find((s:any) => s.id === activeSectionId);
@@ -3547,6 +3561,23 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
             onApplyEntry={onApplyChestEntry}
           />
           </fieldset>
+
+          {canDeleteSheet ? (
+            <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-red-500/15 bg-red-500/[0.025] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="min-w-0 text-[9px] leading-relaxed text-muted-foreground">
+                Finished with this sheet? Deleting is permanent and requires confirmation.
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onRequestDeleteSheet}
+                className="h-8 shrink-0 justify-start px-2 text-[9px] font-bold uppercase tracking-wider text-red-400/75 hover:bg-red-500/10 hover:text-red-300 sm:justify-center"
+              >
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete sheet
+              </Button>
+            </div>
+          ) : null}
         </div>
       </div>
       
@@ -3609,7 +3640,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const isPro = isProOrTrial(user);
   const [initTimedOut, setInitTimedOut] = useState(false);
   const { toast } = useToast();
-  const { getTrackById, updateTrack, styleProfile, updateStyleProfile, updateAlbum, albums, loading: vaultLoading } = useContext(DataContext);
+  const { getTrackById, updateTrack, deleteTrack, styleProfile, updateStyleProfile, updateAlbum, albums, loading: vaultLoading } = useContext(DataContext);
   const { setGenerating } = useUIState();
   const { refundInk, addUsageLog, registerAiContext } = useUsage();
   const { getEffectiveCost } = useInkCosts();
@@ -3637,6 +3668,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const [styleVaultOpen, setStyleVaultOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [deleteSheetConfirmOpen, setDeleteSheetConfirmOpen] = useState(false);
   const [collabShareOpen, setCollabShareOpen] = useState(false);
   const [friendships, setFriendships] = useState<Friendship[]>([]);
   const { enabled: collabSheetOn } = useCollabSheetFeature();
@@ -4277,6 +4309,21 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   );
   const completeLocked = track ? isTrackLocked(track) : false;
   const editsLocked = tierLocked || completeLocked;
+  const canDeleteSheet = Boolean(
+    track && user?.id && track.ownerId === user.id && !isCollabGuest && !isGuestTryMode
+  );
+
+  const handleConfirmDeleteSheet = useCallback(() => {
+    if (!track || !canDeleteSheet) return;
+    const deletedTitle = track.title || 'Untitled Track';
+    setDeleteSheetConfirmOpen(false);
+    deleteTrack(albumId, trackId);
+    toast({
+      title: 'Sheet deleted',
+      description: `“${deletedTitle}” was removed from this album.`,
+    });
+    router.replace(`/albums/${albumId}`);
+  }, [albumId, canDeleteSheet, deleteTrack, router, toast, track, trackId]);
 
   const handleUpdateTrack = useCallback((updates: Partial<Track>) => {
     if (!track) return;
@@ -4940,6 +4987,8 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         onSectionChange={handleSectionChange}
         openCoWriterSections={openCoWriterSections}
         onApplyChestEntry={handleApplyChestEntry}
+        onRequestDeleteSheet={() => setDeleteSheetConfirmOpen(true)}
+        canDeleteSheet={canDeleteSheet}
         mobileActive={isMobileLayout && mobilePanelTab === 'cowriter'}
         trackLocked={editsLocked}
         completeLocked={completeLocked}
@@ -4969,6 +5018,27 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       />
       <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} album={album} tracks={[track]} exportType="track" allowDownload={isPro} />
       <ShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} type="track" id={track.id} title={track.title} albumId={album.id} existingShareId={track.shareId} />
+      <AlertDialog open={deleteSheetConfirmOpen} onOpenChange={setDeleteSheetConfirmOpen}>
+        <AlertDialogContent className="border-red-500/25 bg-card">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-headline text-xl uppercase text-red-400">
+              Delete this sheet?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="font-code text-xs leading-relaxed">
+              “{track.title || 'Untitled Track'}” and its private sheet takes will be permanently removed. This cannot be undone. You’ll return to {album.title || 'the album'} afterward.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-bold">Keep sheet</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteSheet}
+              className="bg-red-600 font-bold text-white hover:bg-red-500"
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Delete permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <FreestylePad open={freestyleOpen} onOpenChange={setFreestyleOpen} onAddFreestyle={(text) => { const lines = text.split('. ').filter(l => l.trim()); const activeS = track.sections.find(s => s.id === activeSectionId) || track.sections[0]; const startIdx = activeS.bars.length + 1; const newBars = lines.map((l, i) => withLineSource({ idx: startIdx + i, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' }, 'written')); handleUpdateTrack({ sections: track.sections.map(s => s.id === activeS.id ? { ...s, bars: [...s.bars, ...newBars] } : s) }); setFreestyleOpen(false); }} disabled={editsLocked} trackVibe={track.vibe} albumTheme={album.theme} styleProfileSummary={effectiveStyleProfile.history[0]?.analysis || ''} isPro={isPro} />
       <SmartStructureDialog
         open={smartStructureOpen}

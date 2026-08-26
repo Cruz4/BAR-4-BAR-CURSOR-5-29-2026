@@ -19,13 +19,13 @@ type UnpressTarget = { kind: 'album' | 'track'; album: Album; track?: Track };
 
 const GROUPS: Array<{ key: keyof VaultReleaseGroups; label: string; note: string }> = [
   { key: 'privateDrafts', label: 'Private release drafts', note: 'Uploaded recordings only you can test.' },
-  { key: 'liveSinglesWithLyrics', label: 'Live singles · lyrics attached', note: 'Pressed songs connected to a Bar4Bar lyric sheet.' },
-  { key: 'liveSinglesAudioOnly', label: 'Live singles · audio only', note: 'Pressed songs that can receive a lyric sheet later.' },
+  { key: 'liveSinglesWithLyrics', label: 'Live singles · lyrics attached', note: 'Music releases connected to a Bar4Bar lyric sheet.' },
+  { key: 'liveSinglesAudioOnly', label: 'Live singles · audio only', note: 'Music releases that can receive a lyric sheet later.' },
   { key: 'liveAlbumsAllLyrics', label: 'Live albums · all lyrics attached', note: 'Bundle releases whose audio tracks all have lyrics.' },
   { key: 'liveAlbumsMixedLyrics', label: 'Live albums · mixed', note: 'Bundle releases with some lyric sheets and some audio-only tracks.' },
   { key: 'liveAlbumsAudioOnly', label: 'Live albums · audio only', note: 'Bundle releases that do not require lyric sheets.' },
   { key: 'dnaPreviews', label: 'DNA lyric previews', note: 'Public lyric pages that are separate from paid releases.' },
-  { key: 'unpressed', label: 'Not pressed yet', note: 'Vault tracks and albums that are not publicly for sale.' },
+  { key: 'unpressed', label: 'Not released yet', note: 'Vault tracks and albums that are not publicly available.' },
 ];
 
 function asRows(value: VaultReleaseGroups[keyof VaultReleaseGroups]): Row[] {
@@ -72,14 +72,14 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
       if (track) updateTrack(album.id, track.id, patch);
       else updateAlbum(album.id, patch);
       toast({
-        title: 'Release unpressed',
+        title: 'Release taken offline',
         description: hideDna
           ? 'The sale and lyric page are off public surfaces. Existing buyers keep access.'
           : 'The sale is off public surfaces. The separate lyric page stays live and existing buyers keep access.',
       });
       setUnpress(null);
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Could not unpress', description: error instanceof Error ? error.message : undefined });
+      toast({ variant: 'destructive', title: 'Could not take release offline', description: error instanceof Error ? error.message : undefined });
     } finally {
       setBusy('');
     }
@@ -130,7 +130,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
-            Upload and test privately, press a single or full album when ready, then attach a lyric sheet now or later. DNA remains a separate lyric preview.
+            Upload and test privately, publish a single or album when ready, then attach a lyric sheet now or later. DNA Live remains a separate public lyric page.
           </p>
         </div>
         <Button type="button" className="bg-fuchsia-400 font-bold uppercase text-black hover:bg-fuchsia-300" onClick={() => openFirstDropLathe()}>
@@ -169,6 +169,8 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
                             <span className="block truncate font-code text-[9px] uppercase tracking-wider text-muted-foreground">
                               {track ? `${album.title} · ${hasLyrics(track) ? 'lyrics attached' : 'audio only'}` : `${album.tracks.length} tracks`}
                               {dnaGroup ? ' · lyric preview live' : status ? ` · ${status}` : ''}
+                              {!dnaGroup && (track?.houseRelease || (!track && album.houseRelease)) ? ' · House · Free' : ''}
+                              {!dnaGroup && (track?.houseLibraryNotice || (!track && album.houseLibraryNotice)) ? ' · Library notice on' : ''}
                             </span>
                           </span>
                           {busy.endsWith(track?.id || album.id) ? <Loader className="h-4 w-4 animate-spin" /> : null}
@@ -209,7 +211,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
                           ) : null}
                           {!dnaGroup && status === 'live' ? (
                             <Button size="sm" variant="outline" className="h-8 border-red-400/30 text-[9px] font-bold uppercase text-red-300" onClick={() => setUnpress({ kind: track ? 'track' : 'album', album, track })}>
-                              <Unlink className="mr-1 h-3 w-3" /> Unpress
+                              <Unlink className="mr-1 h-3 w-3" /> Take offline
                             </Button>
                           ) : null}
                         </div>
@@ -226,9 +228,9 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
       <Dialog open={Boolean(unpress)} onOpenChange={(open) => !open && setUnpress(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-headline uppercase">Unpress this release?</DialogTitle>
+            <DialogTitle className="font-headline uppercase">Take this release offline?</DialogTitle>
             <DialogDescription>
-              It leaves public discovery and new checkout immediately. Existing buyers keep it in Library, and re-pressing restores the same URL. Choose what happens to the separate lyric page.
+              It leaves public discovery and new checkout immediately. Existing buyers keep it in Library, and republishing restores the same URL. Choose what happens to the separate lyric page.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2 sm:grid-cols-2">

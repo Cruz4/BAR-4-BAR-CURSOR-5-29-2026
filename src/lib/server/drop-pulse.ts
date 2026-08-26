@@ -88,7 +88,7 @@ export async function recordDropUnlock(
     input.title?.trim() ||
     (data.data && typeof data.data === 'object' && typeof (data.data as { title?: string }).title === 'string'
       ? (data.data as { title: string }).title
-      : 'First Drop');
+      : 'Release');
 
   const patch: Record<string, unknown> = {
     purchaseCount: FieldValue.increment(1),

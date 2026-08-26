@@ -3,13 +3,17 @@ import { getDb } from '@/lib/firebase/server';
 import { CheckoutAuthError, verifyCheckoutUser } from '@/lib/stripe-server';
 import type { DropLibraryEntry } from '@/lib/drop-commerce';
 import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
-import { hydrateDropLibraryItems, listOwnerPressedLibraryItems } from '@/lib/server/drop-library-hydrate';
+import {
+  hydrateDropLibraryItems,
+  listHouseReleaseLibraryItems,
+  listOwnerPressedLibraryItems,
+} from '@/lib/server/drop-library-hydrate';
 
 export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
   if (!(await isFirstDropsEnabled())) {
-    return NextResponse.json({ error: 'First Drops is off' }, { status: 404 });
+    return NextResponse.json({ error: 'Music Releases is off' }, { status: 404 });
   }
   try {
     const { searchParams } = new URL(req.url);
@@ -30,12 +34,18 @@ export async function GET(req: Request) {
     const raw = snap.docs
       .map((d) => d.data() as DropLibraryEntry)
       .sort((a, b) => (b.purchasedAt || '').localeCompare(a.purchasedAt || ''));
-    const [bought, own] = await Promise.all([
+    const [bought, own, house] = await Promise.all([
       hydrateDropLibraryItems(db, raw),
       listOwnerPressedLibraryItems(db, userId),
+      listHouseReleaseLibraryItems(db),
     ]);
     const ownIds = new Set(own.map((item) => item.shareId));
-    const items = [...own, ...bought.filter((item) => !ownIds.has(item.shareId))];
+    const houseIds = new Set(house.map((item) => item.shareId));
+    const items = [
+      ...own,
+      ...house.filter((item) => !ownIds.has(item.shareId)),
+      ...bought.filter((item) => !ownIds.has(item.shareId) && !houseIds.has(item.shareId)),
+    ];
     return NextResponse.json({ items });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Library failed';

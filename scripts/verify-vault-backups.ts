@@ -6,6 +6,15 @@ import {
   parseVaultBackup,
   prepareVaultImport,
 } from '../src/lib/vault-backup';
+import {
+  buildVaultArchiveZip,
+  jsonArchiveEntry,
+  readVaultArchiveZip,
+  VAULT_ARCHIVE_BLUEPRINT,
+  VAULT_ARCHIVE_MANIFEST,
+  VAULT_ARCHIVE_SCHEMA,
+  VAULT_ARCHIVE_VERSION,
+} from '../src/lib/vault-archive';
 
 const track = (id: string, title = id): Track => ({
   id,
@@ -19,7 +28,7 @@ const track = (id: string, title = id): Track => ({
   createdAt: '2026-08-01T00:00:00.000Z',
 });
 const current: Album[] = [
-  { id: 'album-1', ownerId: 'owner-1', title: 'Current', theme: 'Keep', createdAt: '2026-08-01T00:00:00.000Z', shareId: 'live-album', tracks: [{ ...track('track-1'), shareId: 'live-track', collabSheetId: 'live-collab' }] },
+  { id: 'album-1', ownerId: 'owner-1', title: 'Current', theme: 'Keep', createdAt: '2026-08-01T00:00:00.000Z', shareId: 'live-album', coverArtUrl: 'data:image/jpeg;base64,YQ==', tracks: [{ ...track('track-1'), shareId: 'live-track', releaseShareId: 'release-track', collabSheetId: 'live-collab', dropAudio: { storagePath: 'drops/owner-1/track-1/audio.mp3', contentType: 'audio/mpeg', uploadedAt: '2026-08-01T00:00:00.000Z' } }] },
   { id: 'unassigned', ownerId: 'owner-1', title: 'Loose Tracks', theme: '', createdAt: '2026-08-01T00:00:00.000Z', tracks: [track('loose-1')] },
 ];
 
@@ -27,6 +36,9 @@ const backup = buildVaultBackup(current, null, new Date('2026-08-24T12:00:00.000
 assert.equal(backup.schema, VAULT_BACKUP_SCHEMA);
 assert.equal(backup.version, 2);
 assert.deepEqual(backup.counts, { albums: 1, looseTracks: 1, albumTracks: 1 });
+assert.equal(backup.data.albums[0].coverArtUrl, undefined, 'small blueprint must omit cover media');
+assert.equal(backup.data.albums[0].tracks[0].dropAudio, undefined, 'small blueprint must omit private audio paths');
+assert.equal(backup.data.albums[0].tracks[0].releaseShareId, undefined, 'blueprints must not alias live releases');
 
 const parsed = parseVaultBackup(backup);
 const prepared = prepareVaultImport(parsed, current, false, 'test');
@@ -51,4 +63,34 @@ assert.throws(
   'future unknown schemas must fail closed'
 );
 
-console.log('Vault backup verification passed.');
+async function verifyFullArchive() {
+const manifest = {
+  schema: VAULT_ARCHIVE_SCHEMA,
+  version: VAULT_ARCHIVE_VERSION,
+  exportedAt: backup.exportedAt,
+  blueprintFile: VAULT_ARCHIVE_BLUEPRINT,
+  restoreMode: 'merge-copy-on-conflict' as const,
+  assets: [{
+    kind: 'drop-audio' as const,
+    file: 'media/audio/album-1/track-1/master.mp3',
+    albumId: 'album-1',
+    trackId: 'track-1',
+    contentType: 'audio/mpeg',
+  }],
+};
+const zip = await buildVaultArchiveZip([
+  jsonArchiveEntry(VAULT_ARCHIVE_BLUEPRINT, backup),
+  { name: manifest.assets[0].file, blob: new Blob(['audio-bytes'], { type: 'audio/mpeg' }) },
+  jsonArchiveEntry(VAULT_ARCHIVE_MANIFEST, manifest),
+]);
+const archive = await readVaultArchiveZip(zip);
+assert.equal(archive.manifest.schema, VAULT_ARCHIVE_SCHEMA);
+assert.equal(await archive.files.get(manifest.assets[0].file)?.text(), 'audio-bytes');
+}
+
+void verifyFullArchive()
+  .then(() => console.log('Vault backup verification passed.'))
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });

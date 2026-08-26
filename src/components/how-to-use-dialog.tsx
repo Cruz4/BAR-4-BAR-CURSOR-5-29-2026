@@ -268,7 +268,7 @@ const CORE_FAQS = [
     },
     {
       q: "Do Loves earn Ink?",
-      a: "Yes — every 20 verified Loves received across your posts, comments, and First Drops earns 2 permanent Ink. You receive an unread Activity notification when the reward lands. Removing and re-adding the same Love does not count twice."
+      a: "Yes—every 20 verified Loves received across your posts, comments, and music releases earns 2 permanent Ink. You receive an unread Activity notification when the reward lands. Removing and re-adding the same Love does not count twice."
     },
     {
       q: "How does Refer a Friend work?",
@@ -288,7 +288,7 @@ const CORE_FAQS = [
     },
     {
       q: "What is DNA Drop?",
-      a: "Studio Pro — publish a shareable lyric snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live lyric drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. Selling is separate: use Press a song from a sheet or New release on The Scene."
+      a: "Studio Pro—publish a shareable lyric snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live lyric drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. Music is separate: use Release song from a sheet or New release on The Scene."
     },
     {
       q: "What is Collab Sheet?",
@@ -304,7 +304,7 @@ const CORE_FAQS = [
     },
     {
       q: "What is included in a DNA Drop?",
-      a: "Lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when toggled on. Album drops add album DNA presets and motifs. Optional links & embeds (YouTube, etc.) attach from the DNA Drop dialog for the lyric page. Audio and price live on First Drops — use New release on The Scene — not this dialog.",
+      a: "Lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when toggled on. Album drops add album DNA presets and motifs. Optional links and embeds attach from the DNA Drop dialog. Audio and pricing belong to Releases—use New release or Release Catalog, not the DNA dialog.",
     },
     {
       q: "Is my DNA Drop live-synced when I edit?",
@@ -326,11 +326,11 @@ const CORE_FAQS = [
 
 const FIRST_DROPS_FAQS = [
   {
-    q: "What is a First Drop?",
+    q: "What is a Release?",
     a: getFirstDropsWhatFaqAnswer(),
   },
   {
-    q: "How do I sell a First Drop?",
+    q: "How do I publish a Release?",
     a: getFirstDropsSellFaqAnswer(),
   },
   {
@@ -338,7 +338,7 @@ const FIRST_DROPS_FAQS = [
     a: getFirstDropsRightsFaqAnswer(),
   },
   {
-    q: "What does Bar 4 Bar keep on a First Drop sale?",
+    q: "What does Bar 4 Bar keep on a Release sale?",
     a: getFirstDropsFeeFaqAnswer(),
   },
   {
@@ -411,13 +411,13 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
     { label: 'Featured Library track', detail: 'Owned or purchased music on your profile', tab: 'scene', targetId: 'manual-featured-track', keywords: '30 second excerpt preview purchased song music fan buy full stream public page' },
     { label: 'Discover matches', detail: 'Taste, craft, and new public profiles', tab: 'scene', targetId: 'manual-discovery', keywords: 'for your taste craft new live genre mood influence region why matched private lyrics' },
     { label: 'Follow, Inner Circle, and Friends', detail: 'The three relationship levels', tab: 'scene', targetId: 'manual-relationships', keywords: 'support circle followers supporters friend collaboration messages inner circle' },
-    { label: 'Listener Insights', detail: 'Qualified First Drop listening and conversions', tab: 'scene', targetId: 'manual-listener-insights', keywords: '80 percent repeat completion purchase source analytics private creator' },
+    { label: 'Listener Insights', detail: 'Qualified release listening and conversions', tab: 'scene', targetId: 'manual-listener-insights', keywords: '80 percent repeat completion purchase source analytics private creator' },
     { label: 'Emerging (7d)', detail: 'Transparent momentum ranking', tab: 'scene', targetId: 'manual-emerging', keywords: 'leaderboard score qualified listeners follows inner circle buyer conversions fair no pay rank' },
     { label: 'Safe Vault backup', detail: 'Versioned export and merge-only restore', tab: 'scene', targetId: 'manual-vault-backup-v2', keywords: 'portable export import restore version 2 collision copy non destructive style profile legacy' },
-    { label: 'Sell your music', detail: 'First Drops setup, pricing, fees, and payouts', tab: 'first-drops', targetId: 'manual-selling-overview', keywords: 'sell song audio price pay what you want first drops stripe earnings cash out' },
-    { label: 'First Drop pricing options', detail: 'Fixed price and pay-what-you-want', tab: 'first-drops', targetId: 'manual-selling-pricing', keywords: 'minimum floor suggested fee 1.99 2.99 4.99 7.77' },
-    { label: 'First Drop fees', detail: 'Platform fee and artist share examples', tab: 'first-drops', targetId: 'manual-selling-fees', keywords: '25 percent 15 percent 10 percent stripe processing split' },
-    { label: 'First Drop payouts', detail: 'Stripe connection, held sales, and Earnings', tab: 'first-drops', targetId: 'manual-selling-payouts', keywords: 'bank connect cash out sales details origin timestamp' },
+    { label: 'Sell your music', detail: 'Release setup, pricing, fees, and payouts', tab: 'first-drops', targetId: 'manual-selling-overview', keywords: 'sell song audio price pay what you want release stripe earnings cash out' },
+    { label: 'Release pricing options', detail: 'Fixed price and pay-what-you-want', tab: 'first-drops', targetId: 'manual-selling-pricing', keywords: 'minimum floor suggested fee 1.99 2.99 4.99 7.77' },
+    { label: 'Release fees', detail: 'Platform fee and artist share examples', tab: 'first-drops', targetId: 'manual-selling-fees', keywords: '25 percent 15 percent 10 percent stripe processing split' },
+    { label: 'Release payouts', detail: 'Stripe connection, held sales, and Earnings', tab: 'first-drops', targetId: 'manual-selling-payouts', keywords: 'bank connect cash out sales details origin timestamp' },
     { label: 'Studio tiers', detail: 'Visitor and Studio Pro', tab: 'tiering', targetId: 'manual-studio-tiers', keywords: 'free pro monthly yearly price limits' },
     { label: 'Ink economy', detail: 'Residency and Raw Ink', tab: 'tiering', targetId: 'manual-ink-economy', keywords: 'credits fuel balance refill permanent' },
     { label: 'The Infinity Loop', detail: 'Extract, archive, calibrate, and sync', tab: 'loop', targetId: 'manual-infinity-loop', keywords: 'method workflow dna' },
@@ -605,10 +605,10 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <li><strong>Generate one bar</strong> — tap that line → Bar Workstation at the bottom → Generate Next (~{AI_COSTS.generateNextLine} Ink).</li>
                   </ol>
                   <p className="text-xs border-l-2 border-primary/30 pl-3 italic">
-                    Skip until you have a bar: Generation Workstation, DNA Drop, Collab Sheet, Press a song, Creative Effects, Takes, export, the sun/moon theme toggle. Co-Writer rails (DNA, Vibe, Intents, Style DNA) are optional — flip a switch on only if you want Next to follow it.
+                    Skip until you have a bar: Generation Workstation, DNA Drop, Collab Sheet, Release song, Creative Effects, Takes, export, the sun/moon theme toggle. Co-Writer rails (DNA, Vibe, Intents, Style DNA) are optional—flip a switch on only if you want Next to follow it.
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    When you do sell or share later: <strong>Press a song</strong> = audio + price. <strong>DNA Drop</strong> = lyric link. Do not open DNA Drop to sell.
+                    When you sell or share later: <strong>Release song</strong> = audio + price. <strong>DNA Drop</strong> = public lyric link. They are separate.
                   </p>
                 </ChapterCard>
 
@@ -653,7 +653,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     </Button>
                   </ChapterCard>
                   <ChapterCard icon={<Compass className="text-green-500" />} title="Workstation tour" colorClass="border-l-green-500">
-                    <p className="text-sm">This is the one to take after you open a sheet — sheet, Next/Previous, Co-Writer, Structure, Press a song, Ink.</p>
+                    <p className="text-sm">This is the one to take after you open a sheet—sheet, Next/Previous, Co-Writer, Structure, Release song, Ink.</p>
                     <Button type="button" className="font-bold uppercase text-[10px] tracking-widest gap-2" onClick={handleReplayWorkstationTour}>
                       <RefreshCw className="h-4 w-4" /> Replay tour
                     </Button>
@@ -691,7 +691,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 <ChapterCard id="manual-featured-track" icon={<Music className="text-fuchsia-300" />} title="Feature an Owned or Purchased Track" colorClass="border-l-fuchsia-500 text-fuchsia-300">
                   <ol className="list-decimal list-inside space-y-2 text-sm">
                     <li>Open <strong>Edit Public Page</strong> and find the featured Library track control.</li>
-                    <li>Choose a First Drop you released or one you purchased from another artist.</li>
+                    <li>Choose a release you published or purchased from another artist.</li>
                     <li>Pick the exact start of the 30-second public excerpt, build the showcase, then save.</li>
                   </ol>
                   <p className="text-xs">Visitors who do not own the track hear your excerpt and see Buy. The owner and purchasers get the full stream after Bar 4 Bar checks entitlement. Music Fans can use this to put a purchased favorite on their profile.</p>
@@ -722,7 +722,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </ChapterCard>
 
                 <ChapterCard id="manual-listener-insights" icon={<Radio className="text-cyan-400" />} title="Qualified Listener Insights" colorClass="border-l-cyan-500 text-cyan-400">
-                  <p className="text-sm">Listener Insights is the creator-only First Drop dashboard for historical starts and sales plus verified qualified listeners, repeats, completions, sources, timeline, and track summaries.</p>
+                  <p className="text-sm">Listener Insights is the creator-only release dashboard for historical starts and sales plus verified qualified listeners, repeats, completions, sources, timeline, and track summaries.</p>
                   <p className="text-xs">Existing preview/full starts and purchases appear retroactively. They stay separate from qualified listens because only playback recorded with proof of reaching 80% can qualify. Your own verified plays do not count, and listener identities stay private.</p>
                   <Button asChild variant="outline" className="w-full font-bold uppercase tracking-widest text-[10px]">
                     <Link href="/insights"><Radio className="mr-2 h-4 w-4" /> Open Listener Insights</Link>
@@ -738,10 +738,12 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </ChapterCard>
 
                 <ChapterCard id="manual-vault-backup-v2" icon={<Archive className="text-violet-300" />} title="Versioned, Non-Destructive Vault Backup" colorClass="border-l-violet-500 text-violet-300">
-                  <p className="text-sm">Use <strong>Export Studio Vault</strong> on The Vault to download a versioned backup of albums, tracks, embedded project presets, and Style Profile. Import previews what will be added before it writes.</p>
+                  <p className="text-sm">Open <strong>The Vault → Download</strong>, then choose <strong>Studio Blueprint (.json)</strong> for a fast writing/settings backup or <strong>Full Vault Archive (.zip)</strong> for the blueprint plus owned song files, previews, Sheet Takes, and cover artwork.</p>
                   <ul className="list-disc list-inside space-y-1.5 text-xs">
+                    <li><strong>Restore:</strong> return to The Vault, tap Import, choose the JSON or ZIP, review the preview, and tap Import.</li>
                     <li>Import merges; it never removes or overwrites current projects.</li>
                     <li>ID conflicts become clearly named imported copies.</li>
+                    <li>Media from a Full Vault Archive is uploaded to fresh private paths owned by the signed-in account.</li>
                     <li>Legacy backups remain supported; unknown future versions and malformed files are rejected.</li>
                     <li>Your existing Style Profile wins if one is already present.</li>
                   </ul>
@@ -752,26 +754,32 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
               </TabsContent>
 
               <TabsContent value="first-drops" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4 pb-16">
-                <ChapterCard id="manual-selling-overview" icon={<Music className="text-fuchsia-400" />} title="Sell Your Music with First Drops" colorClass="border-l-fuchsia-500 text-fuchsia-400">
+                <ChapterCard id="manual-selling-overview" icon={<Music className="text-fuchsia-400" />} title="Publish and Sell Music Releases" colorClass="border-l-fuchsia-500 text-fuchsia-400">
                   {!flags.firstDrops ? (
                     <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
-                      First Drops is currently paused by Studio Ops. Your existing sales remain saved; selling controls return when it is switched back on.
+                      Music releases are currently paused by Studio Ops. Existing sales remain saved; release controls return when the feature is switched back on.
                     </p>
                   ) : null}
                   <p className="text-sm text-foreground/90">{firstDropsPitch()}</p>
                   <div className="rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-4">
                     <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-fuchsia-300">Exactly where to go</p>
                     <ol className="list-decimal list-inside space-y-2 text-sm">
-                      <li><strong>Open The Scene → New release</strong>, or open the song&apos;s sheet and use <strong>Left panel → Track Status → Press a song</strong>.</li>
-                      <li><strong>Choose a Vault track</strong>. First Drops sells the recording; DNA Drop is the separate lyric-preview and import link.</li>
+                      <li><strong>Open The Scene → New release</strong>, or open the song&apos;s sheet and use <strong>Left panel → Track Status → Release song</strong>.</li>
+                      <li><strong>Choose a Vault track</strong>. A Release publishes the recording; DNA Drop is the separate lyric-preview and import link.</li>
                       <li><strong>Upload the finished audio</strong>, choose Fixed price or Pay what you want, and review the live artist-share line.</li>
-                      <li><strong>Press it live</strong>. Listen / buy appears on your Artist Home, The Scene, and its public share link.</li>
+                      <li><strong>Publish release</strong>. Listen / buy appears on your Artist Home, The Scene, and its public release link.</li>
                       <li><strong>Open Earnings</strong> and connect Stripe payouts so your share can reach your bank.</li>
                     </ol>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Fans hear a 30-second preview before purchase. After buying once, they stream the full song inside Bar 4 Bar from Library. Music purchases use money, never Ink. You keep ownership of your lyrics, recording, and master.
                   </p>
+                  <div className="rounded-xl border border-cyan-400/25 bg-cyan-400/[0.06] p-4 text-xs">
+                    <p className="font-bold text-cyan-200">Try the Library player with a House release</p>
+                    <p className="mt-1 text-muted-foreground">
+                      House releases are included free with every member account. Open <strong>Library</strong> from The Scene and spin <strong>Mirror by Neomaiya Sol</strong> when it is featured there to test playback, search, queues, and crates before buying anything.
+                    </p>
+                  </div>
                   <div className="rounded-xl border border-fuchsia-400/25 bg-fuchsia-400/5 p-4 text-xs">
                     <p className="font-bold text-fuchsia-200">Buy now or build a music cart</p>
                     <p className="mt-1 text-muted-foreground">
@@ -794,7 +802,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     </div>
                   </div>
                   <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 p-3 text-xs text-rose-100">
-                    <strong>No free checkout:</strong> live First Drops are paid. Current quick-price examples are {DROP_PRICE_PRESETS_CENTS.map(centsToUsdLabel).join(', ')}.
+                    <strong>No free artist checkout:</strong> ordinary live releases are paid. Admin-selected House releases are the free, account-included exception. Current quick-price examples are {DROP_PRICE_PRESETS_CENTS.map(centsToUsdLabel).join(', ')}.
                   </div>
                 </ChapterCard>
 
@@ -835,7 +843,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <div className="space-y-2">
                       <p className="font-bold text-foreground">Get paid</p>
                       <ol className="list-decimal list-inside space-y-1.5 text-xs">
-                        <li>Open <strong>Earnings</strong> from the Scene dock, account menu, Settings → First Drop payouts, or the First Drop sell desk.</li>
+                        <li>Open <strong>Earnings</strong> from the Scene dock, account menu, Settings → Release payouts, or Release Catalog.</li>
                         <li>Complete Stripe&apos;s identity and bank setup once.</li>
                         <li>New sales move to Stripe automatically. Sales made before setup remain <strong>Held</strong> until you connect or send held sales.</li>
                       </ol>
@@ -847,7 +855,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                   </div>
                   <Button asChild className="w-full font-bold uppercase tracking-widest text-[10px]">
                     <Link href="/earnings">
-                      <Banknote className="mr-2 h-4 w-4" /> Open First Drop Earnings
+                      <Banknote className="mr-2 h-4 w-4" /> Open Release Earnings
                     </Link>
                   </Button>
                   <p className="text-xs text-muted-foreground">
@@ -1140,7 +1148,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                             <AccordionTrigger className="font-bold text-xs uppercase">Left Panel: Track Status</AccordionTrigger>
                             <AccordionContent className="text-xs space-y-2">
                                 <p>• <strong>Status:</strong> Manage titles and enter Performance Mode.</p>
-                                <p>• <strong>Press a song:</strong> Sell desk — upload audio, set a price, press it live on First Drops. Not DNA Drop.</p>
+                                <p>• <strong>Release song:</strong> Upload audio, set a price, and publish the music release. This is separate from DNA Drop.</p>
                                 <p>• <strong>DNA Drop / Collab Sheet:</strong> DNA Drop = lyric snapshot link. Collab Sheet = live shared editing with presence + chat.</p>
                                 <p>• <strong>Structure:</strong> Live song map (Verse, Hook, Bridge). Tap a section to jump the sheet; Add Section to grow the form. Not the Smart Structure paste tool.</p>
                                 <p>• <strong>Vibe Suggester:</strong> Generate suno/udio instrumentation prompts.</p>
@@ -1161,7 +1169,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                                 <p>• <strong>Intents:</strong> Punchlines to weave in, with the <strong>Precision Lock Arrow</strong>.</p>
                                 <p>• <strong>Style DNA:</strong> Cadence and vocab from training this sheet. Switch on so gens clip like you.</p>
                                 <p>• <strong>Creative Effects:</strong> Pick a tool from the dropdown — the description under it tells you what it does. Results go to Scratch Pad.</p>
-                                <p>• <strong>Takes:</strong> Above Draft Chest — record up to 3 vocal memos per track (5 minutes each) and play them back anytime. Private booth notes — not Press a song.</p>
+                                <p>• <strong>Takes:</strong> Above Draft Chest—record up to 3 vocal memos per track (5 minutes each) and play them back anytime. Private booth notes, not a music release.</p>
                             </AccordionContent>
                         </AccordionItem>
                     </Accordion>

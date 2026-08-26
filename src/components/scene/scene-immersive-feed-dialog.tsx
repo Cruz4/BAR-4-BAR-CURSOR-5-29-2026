@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown, ChevronUp, Compass, ExternalLink, Radio, Vault, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -211,8 +211,53 @@ export function SceneImmersiveFeedDialog({
   const bubbleRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const scrollFrameRef = useRef<number | null>(null);
   const pendingProgressRef = useRef(0);
+  const historyEntryActiveRef = useRef(false);
+  const onOpenChangeRef = useRef(onOpenChange);
   const [activeIndex, setActiveIndex] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
+
+  useEffect(() => {
+    onOpenChangeRef.current = onOpenChange;
+  }, [onOpenChange]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (!historyEntryActiveRef.current) return;
+      historyEntryActiveRef.current = false;
+      onOpenChangeRef.current(false);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (!open || historyEntryActiveRef.current) return;
+
+    const currentState = window.history.state;
+    window.history.pushState(
+      {
+        ...(currentState && typeof currentState === 'object' ? currentState : {}),
+        bar4barSceneImmersive: true,
+      },
+      '',
+      window.location.href
+    );
+    historyEntryActiveRef.current = true;
+  }, [open]);
+
+  const closeToScene = useCallback(() => {
+    if (historyEntryActiveRef.current) {
+      window.history.back();
+      return;
+    }
+    onOpenChange(false);
+  }, [onOpenChange]);
+
+  const leaveForNavigation = useCallback(() => {
+    historyEntryActiveRef.current = false;
+    onOpenChange(false);
+  }, [onOpenChange]);
 
   const items = useMemo(() => {
     if (mode === 'block') {
@@ -280,7 +325,9 @@ export function SceneImmersiveFeedDialog({
   const title = mode === 'block' ? 'Your Block' : 'Discover the Scene';
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (!nextOpen) closeToScene();
+    }}>
       <DialogContent
         hideClose
         overlayClassName="bg-black/90 backdrop-blur-md"
@@ -307,10 +354,10 @@ export function SceneImmersiveFeedDialog({
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-40 bg-gradient-to-b from-black via-black/85 to-transparent pb-6 pt-[max(0.65rem,env(safe-area-inset-top))]">
           <div className="pointer-events-auto flex items-center gap-1 px-2 sm:gap-2 sm:px-5">
-            <Link href="/" onClick={() => onOpenChange(false)} className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-white p-1" aria-label="Bar4Bar home">
+            <button type="button" onClick={closeToScene} className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-white p-1" aria-label="Bar4Bar home">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/Logo.png" alt="" className="h-full w-full object-contain" />
-            </Link>
+            </button>
             <span className={cn(
               'hidden h-9 w-9 shrink-0 items-center justify-center rounded-full border sm:flex',
               mode === 'block' ? 'border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200' : 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200'
@@ -323,11 +370,11 @@ export function SceneImmersiveFeedDialog({
                 {items.length ? `${activeIndex + 1} of ${items.length} · swipe or scroll` : 'Waiting for the Scene'}
               </p>
             </div>
-            <Link href="/" onClick={() => onOpenChange(false)} className="flex h-9 items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 text-[9px] font-bold uppercase tracking-wider text-cyan-200 hover:border-cyan-300/60 sm:px-2.5" aria-label="The Scene"><Radio className="h-3.5 w-3.5" /><span className="hidden sm:inline">Scene</span></Link>
-            <Link href="/vault" onClick={() => onOpenChange(false)} className="flex h-9 items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 text-[9px] font-bold uppercase tracking-wider text-amber-200 hover:border-amber-300/60 sm:px-2.5" aria-label="The Vault"><Vault className="h-3.5 w-3.5" /><span className="hidden sm:inline">Vault</span></Link>
+            <button type="button" onClick={closeToScene} className="flex h-9 items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 text-[9px] font-bold uppercase tracking-wider text-cyan-200 hover:border-cyan-300/60 sm:px-2.5" aria-label="The Scene"><Radio className="h-3.5 w-3.5" /><span className="hidden sm:inline">Scene</span></button>
+            <Link href="/vault" onClick={leaveForNavigation} className="flex h-9 items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 text-[9px] font-bold uppercase tracking-wider text-amber-200 hover:border-amber-300/60 sm:px-2.5" aria-label="The Vault"><Vault className="h-3.5 w-3.5" /><span className="hidden sm:inline">Vault</span></Link>
             <button
               type="button"
-              onClick={() => onOpenChange(false)}
+              onClick={closeToScene}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white/70 transition hover:border-white/35 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:h-10 sm:w-10"
               aria-label={`Close ${title}`}
             >
@@ -360,7 +407,7 @@ export function SceneImmersiveFeedDialog({
               <div className="relative z-10 w-full max-w-[44rem]">
                 <div className="mb-2 flex min-w-0 items-center gap-2 px-1 pr-14 sm:pr-1">
                   {item.meta.href ? (
-                    <Link href={item.meta.href} onClick={() => onOpenChange(false)} className="contents">
+                    <Link href={item.meta.href} onClick={leaveForNavigation} className="contents">
                       <LiveArtistStarAvatar
                         name={item.meta.name}
                         userId={item.meta.userId}
@@ -426,7 +473,7 @@ export function SceneImmersiveFeedDialog({
                 {item.meta.href ? (
                   <Link
                     href={item.meta.href}
-                    onClick={() => onOpenChange(false)}
+                    onClick={leaveForNavigation}
                     className="flex h-10 w-10 items-center justify-center rounded-full border border-sky-400/30 bg-sky-500/15 text-sky-200 backdrop-blur transition hover:border-sky-300/60 hover:text-white"
                     aria-label={`Open ${item.meta.name}`}
                   >

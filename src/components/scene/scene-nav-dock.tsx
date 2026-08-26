@@ -285,7 +285,7 @@ function PressSongButton() {
           New release
         </span>
         <span className="mt-0.5 block font-code text-[8px] font-bold uppercase leading-tight tracking-[0.12em] text-sky-200/80 sm:text-[9px] sm:tracking-[0.16em]">
-          Sell · First Drops
+          Music · Releases
         </span>
       </span>
     </button>
@@ -333,7 +333,7 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       key: 'library',
       href: '/library',
       label: 'Library',
-      sub: 'Unlocked First Drops',
+      sub: 'Unlocked releases',
       icon: Library,
       tone: 'border-amber-400/45 bg-amber-500/10 hover:border-amber-300/60',
       iconTone: 'border-amber-400/40 bg-amber-500/20 text-amber-200',
@@ -360,7 +360,7 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       key: 'earnings',
       href: '/earnings',
       label: 'Earnings',
-      sub: 'Cash out First Drops',
+      sub: 'Release earnings',
       icon: Banknote,
       tone: 'border-emerald-500/30 bg-card/55 hover:border-emerald-400/50',
       iconTone: 'border-emerald-400/45 bg-emerald-500/15 text-emerald-400',

@@ -85,6 +85,7 @@ export async function getPressedSongSummary(
     ownerId: share.ownerId,
     title: priced.title,
     hasAudio: true,
+    houseRelease: share.houseRelease === true,
     price: normalizeDropPrice(priced.price),
     releasedAt,
     artist: {
@@ -172,7 +173,7 @@ export async function getPressedSongSummary(
     amountPaidCents: nonnegative(viewerLibrary.amountCents),
     supporterCreditPublic: viewerLibrary.supporterCreditPublic === true,
     ...(firstRankIndex >= 0 ? { firstPressRank: firstRankIndex + 1 } : {}),
-    owns: viewerId === share.ownerId || viewerLibrarySnap.exists,
+    owns: viewerId === share.ownerId || viewerLibrarySnap.exists || (Boolean(viewerId) && share.houseRelease === true),
     ...(viewerId !== share.ownerId && viewerLibrarySnap.exists
       ? {
           purchase: {

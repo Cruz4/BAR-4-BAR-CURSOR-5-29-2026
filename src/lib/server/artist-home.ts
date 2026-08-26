@@ -17,8 +17,8 @@ import {
   type ArtistHomeConfig,
 } from '@/lib/profile/modules';
 import {
-  audioForPlay,
   isReleaseShareLive,
+  loadAudioForPlay,
   loadShare,
   priceFromShare,
   userCanStreamFull,
@@ -67,8 +67,8 @@ async function validateFeaturedTrack(
   const db = await getDb();
   const share = await loadShare(db, selected.shareId);
   if (!share) throw new Error('That featured track is no longer live.');
-  if (!isReleaseShareLive(share)) throw new Error('That release is unpressed and cannot be featured publicly.');
-  const audio = audioForPlay(share, selected.trackId);
+  if (!isReleaseShareLive(share)) throw new Error('That release is offline and cannot be featured publicly.');
+  const audio = await loadAudioForPlay(db, share, selected.trackId);
   if (!audio?.storagePath) throw new Error('That featured track has no playable audio.');
   const entitled = await userCanStreamFull({ db, share, userId, trackId: selected.trackId });
   if (!entitled) throw new Error('Choose a track you own or purchased.');

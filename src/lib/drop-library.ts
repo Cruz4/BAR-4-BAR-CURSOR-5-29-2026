@@ -40,6 +40,9 @@ export type DeckPlayable = {
   purchasedAt: string;
   amountCents: number;
   free?: boolean;
+  houseRelease?: boolean;
+  houseLibraryNotice?: boolean;
+  houseLibraryNoticeAt?: string;
   ownerId: string;
   own?: boolean;
 };
@@ -115,6 +118,9 @@ export function flattenLibraryItems(items: DropLibraryItem[]): DeckPlayable[] {
           purchasedAt: item.purchasedAt,
           amountCents: item.amountCents,
           free: item.free,
+          houseRelease: item.houseRelease,
+          houseLibraryNotice: item.houseLibraryNotice,
+          houseLibraryNoticeAt: item.houseLibraryNoticeAt,
           ownerId: item.ownerId,
           own: item.own,
         });
@@ -134,6 +140,9 @@ export function flattenLibraryItems(items: DropLibraryItem[]): DeckPlayable[] {
       purchasedAt: item.purchasedAt,
       amountCents: item.amountCents,
       free: item.free,
+      houseRelease: item.houseRelease,
+      houseLibraryNotice: item.houseLibraryNotice,
+      houseLibraryNoticeAt: item.houseLibraryNoticeAt,
       ownerId: item.ownerId,
       own: item.own,
     });

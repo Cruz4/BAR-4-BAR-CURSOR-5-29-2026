@@ -71,6 +71,7 @@ export function DropListenPanel({
   showPurchase = true,
   firstPressRank,
   artistAttribution,
+  houseRelease = false,
 }: {
   shareId: string;
   title: string;
@@ -98,6 +99,8 @@ export function DropListenPanel({
   firstPressRank?: number;
   /** Optional linked artist identity rendered inside feed/shared players. */
   artistAttribution?: DropPlayerArtistAttribution;
+  /** Admin-selected release that streams free for every signed-in member. */
+  houseRelease?: boolean;
 }) {
   const { user, authReady } = useAuth();
   const { toast } = useToast();
@@ -119,6 +122,7 @@ export function DropListenPanel({
   const [playing, setPlaying] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pwyw, setPwyw] = useState('');
+  const [isHouseRelease, setIsHouseRelease] = useState(houseRelease);
   const normalized = normalizeDropPrice(price);
   const isOwner = Boolean(user && user.id === ownerId);
   const enteredPwywCents = parseUsdToCents(pwyw);
@@ -139,6 +143,11 @@ export function DropListenPanel({
     typeof firstPressRank === 'number' && firstPressRank >= 1 && firstPressRank <= 10;
   const trackDetailsHref =
     detailsHref || pressedSongHref(shareId, { referralPostId: effectiveReferralPostId });
+  const houseJoinHref = `/login?mode=signup&next=${encodeURIComponent(trackDetailsHref)}`;
+
+  useEffect(() => {
+    setIsHouseRelease(houseRelease);
+  }, [houseRelease, shareId]);
 
   const loadStream = useCallback(async () => {
     if (!firstDropsOn || !hasAudio) {
@@ -161,25 +170,32 @@ export function DropListenPanel({
       if (!res.ok) throw new Error(data.error || 'Could not load audio.');
       setSrc(data.url);
       setFull(Boolean(data.full));
+      setIsHouseRelease(Boolean(data.houseRelease || houseRelease));
       setListenProof(typeof data.listenProof === 'string' ? data.listenProof : '');
       setEligibleDurationSec(Math.max(1, Number(data.eligibleDurationSec) || 30));
       setPlaybackStartSec(Math.max(0, Number(data.playbackStartSec) || 0));
       reportedMilestonesRef.current = new Set();
     } catch (e: unknown) {
       const raw = e instanceof Error ? e.message : undefined;
-      toast({
-        variant: 'destructive',
-        title: 'Audio unavailable',
-        description:
-          raw && /iam\.|signBlob|Permission/i.test(raw)
-            ? 'Could not open this stream. Refresh and try again.'
-            : raw,
-      });
+      setSrc(null);
+      const staleFeaturedSelection = Boolean(
+        featuredByUserId && raw && /no longer featured|no longer public|not public|offline/i.test(raw)
+      );
+      if (!staleFeaturedSelection) {
+        toast({
+          variant: 'destructive',
+          title: 'Audio unavailable',
+          description:
+            raw && /iam\.|signBlob|Permission/i.test(raw)
+              ? 'Could not open this stream. Refresh and try again.'
+              : raw,
+        });
+      }
     } finally {
       setLoading(false);
       setStreamReady(true);
     }
-  }, [effectiveReferralPostId, effectiveTrackId, featuredByUserId, firstDropsOn, hasAudio, shareId, toast]);
+  }, [effectiveReferralPostId, effectiveTrackId, featuredByUserId, firstDropsOn, hasAudio, houseRelease, shareId, toast]);
 
   useEffect(() => {
     void loadStream();
@@ -366,9 +382,17 @@ export function DropListenPanel({
       ) : null}
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
         <p className={cn('text-[10px] font-bold uppercase tracking-widest', firstPressEdition ? 'text-amber-200' : 'text-fuchsia-200')}>
-          {full || isOwner ? 'Full stream' : hasAudio ? 'Play preview · 30 seconds' : 'On sale'}
+          {isHouseRelease
+            ? full || isOwner
+              ? 'House release · full stream'
+              : 'House release · free for members'
+            : full || isOwner
+              ? 'Full stream'
+              : hasAudio
+                ? 'Play preview · 30 seconds'
+                : 'On sale'}
         </p>
-        {showPurchase && dropPriceSummary(normalized) ? (
+        {showPurchase && !isHouseRelease && dropPriceSummary(normalized) ? (
           <span className="max-w-full break-words text-right font-code text-[10px] leading-relaxed text-muted-foreground">{dropPriceSummary(normalized)}</span>
         ) : null}
       </div>
@@ -443,7 +467,9 @@ export function DropListenPanel({
             ) : null}
             <p className={compactPresentation ? 'truncate text-[9px] text-muted-foreground' : 'text-[10px] text-muted-foreground'}>
               {previewCapped
-                ? showPurchase
+                ? isHouseRelease
+                  ? '30-second preview. Create a free account to unlock the full House release in Library.'
+                  : showPurchase
                   ? `Featured 30-second excerpt${excerptStartSec > 0 ? ` from ${Math.floor(excerptStartSec / 60)}:${Math.floor(excerptStartSec % 60).toString().padStart(2, '0')}` : ''}. Buy once to unlock.`
                   : '30-second album preview. Use the album button above to unlock every included track.'
                 : featuredByUserId && excerptStartSec > 0
@@ -535,7 +561,17 @@ export function DropListenPanel({
         />
       ) : null}
 
-      {showPurchase && !full && !isOwner && isCommerceLive(normalized) && (
+      {showPurchase && isHouseRelease && !full && !isOwner && authReady && !user ? (
+        <div className={compactPresentation
+          ? 'border-t border-white/10 pt-2'
+          : '!mt-2 border-t border-white/10 pt-2'}>
+          <Button asChild className={compactPresentation ? 'h-8 w-full text-[10px] font-bold uppercase' : 'h-9 w-full text-xs font-bold uppercase'}>
+            <Link href={houseJoinHref}>Join free · add to Library</Link>
+          </Button>
+        </div>
+      ) : null}
+
+      {showPurchase && !isHouseRelease && !full && !isOwner && isCommerceLive(normalized) && (
         <div className={compactPresentation
           ? 'space-y-1.5 border-t border-white/10 pt-2'
           : '!mt-2 space-y-1.5 border-t border-white/10 pt-2'}>

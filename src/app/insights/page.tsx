@@ -135,7 +135,7 @@ export default function ListenerInsightsPage() {
       <Card className="border-fuchsia-500/25 bg-gradient-to-r from-fuchsia-500/10 via-card/70 to-sky-500/10">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 font-headline uppercase">
-            <Play className="h-5 w-5 text-fuchsia-300" /> Lifetime First Drop activity
+            <Play className="h-5 w-5 text-fuchsia-300" /> Lifetime release activity
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -223,7 +223,7 @@ export default function ListenerInsightsPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No First Drop starts, sales, or verified listening have been recorded yet.</p>
+            <p className="text-sm text-muted-foreground">No release starts, sales, or verified listening have been recorded yet.</p>
           )}
         </CardContent>
       </Card>

@@ -14,6 +14,7 @@ import {
   getAlbumFirstDropTrack,
   getAlbumLiveDnaShareId,
 } from '@/lib/track-live-flags';
+import { releaseShareIdOf } from '@/lib/release-management';
 
 function CompleteLiveIndicator({
   variant = 'compact',
@@ -62,16 +63,34 @@ export function TrackLiveIndicators({
   variant = 'compact',
   className,
   showComplete = true,
+  linkLivePages = false,
+  releaseHref,
+  releaseLive,
 }: {
   track: Track;
   variant?: 'badge' | 'dot' | 'compact';
   className?: string;
   showComplete?: boolean;
+  /** Album rows can link each live badge to its own public destination. */
+  linkLivePages?: boolean;
+  /** Override for an audio track included in a parent album release. */
+  releaseHref?: string;
+  releaseLive?: boolean;
 }) {
+  const releaseId = releaseShareIdOf(track);
   return (
     <div className={cn('flex flex-wrap items-center gap-1.5', className)}>
-      <DnaDropLiveIndicator shareId={track.shareId} variant={variant} />
-      <FirstDropLiveIndicator track={track} variant={variant} />
+      <DnaDropLiveIndicator
+        shareId={track.shareId}
+        variant={variant}
+        href={linkLivePages && track.shareId ? `/share/${track.shareId}` : undefined}
+      />
+      <FirstDropLiveIndicator
+        track={track}
+        variant={variant}
+        live={releaseLive}
+        href={releaseHref || (linkLivePages && releaseId ? `/song/${releaseId}` : undefined)}
+      />
       <CollabSheetLiveIndicator collabSheetId={track.collabSheetId} variant={variant} />
       {showComplete && track.status === 'complete' ? <CompleteLiveIndicator variant={variant} /> : null}
     </div>

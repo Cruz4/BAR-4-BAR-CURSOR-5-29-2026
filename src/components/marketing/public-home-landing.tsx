@@ -144,7 +144,7 @@ export function PublicHomeLanding() {
             </h3>
             <p className="font-code text-xs md:text-sm text-fuchsia-300/90">
               Free public music home · The Scene · full studio one click in
-              {firstDropsOn ? ' · First Drops' : ''}
+              {firstDropsOn ? ' · Releases' : ''}
             </p>
             <p className="font-code text-[10px] md:text-xs text-muted-foreground">
               {getSignupInkMarketingLine('landing')}

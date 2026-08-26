@@ -74,6 +74,7 @@ function FirstDropFeedPlayer({ shareId, referralPostId }: { shareId: string; ref
         ownerId={song.ownerId}
         price={song.price}
         hasAudio
+        houseRelease={song.houseRelease}
         referralPostId={referralPostId}
         detailsHref={pressedSongHref(shareId, { referralPostId })}
         artistAttribution={{
@@ -99,7 +100,7 @@ export function FeaturedTrackPlayer({
   profileUserId: string;
   previewMode?: boolean;
 }) {
-  const [details, setDetails] = useState<{ price?: DropPrice; hasAudio: boolean } | null>(null);
+  const [details, setDetails] = useState<{ price?: DropPrice; hasAudio: boolean; houseRelease?: boolean } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -116,6 +117,7 @@ export function FeaturedTrackPlayer({
         setDetails({
           price: data.price as DropPrice | undefined,
           hasAudio: Boolean(data.hasAudio),
+          houseRelease: data.houseRelease === true,
         });
       }
     })().catch(() => {
@@ -139,6 +141,7 @@ export function FeaturedTrackPlayer({
         ownerId={selection.ownerId}
         price={details.price}
         hasAudio={details.hasAudio}
+        houseRelease={details.houseRelease}
         featuredByUserId={previewMode ? undefined : profileUserId}
         excerptStartSec={selection.excerptStartSec}
         firstPressRank={selection.showFirstPressBadge ? selection.firstPressRank : undefined}

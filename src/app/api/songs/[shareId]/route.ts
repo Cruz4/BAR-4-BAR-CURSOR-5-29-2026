@@ -20,7 +20,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ shareId:
     const { shareId } = await params;
     const uid = await viewerId(req);
     const summary = await getPressedSongSummary(await getDb(), shareId, uid);
-    if (!summary) return NextResponse.json({ error: 'Pressed song not found' }, { status: 404 });
+    if (!summary) return NextResponse.json({ error: 'Music release not found' }, { status: 404 });
     return NextResponse.json(summary, {
       headers: {
         'Cache-Control': uid ? 'private, no-store' : 'public, max-age=30, s-maxage=60',

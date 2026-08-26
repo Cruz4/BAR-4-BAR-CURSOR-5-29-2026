@@ -1,19 +1,17 @@
 import type { Track, Album } from '@/lib/types';
 import { hasActiveDnaDrop } from '@/lib/dna-drop';
 import { normalizeDropAudio } from '@/lib/drop-commerce';
+import { releaseStatusOf } from '@/lib/release-management';
 
 export function hasLiveCollabSheet(track: Pick<Track, 'collabSheetId'>): boolean {
   return Boolean(track.collabSheetId);
 }
 
-/** Pressed First Drop — live DNA share with audio attested for sale. */
+/** Live music release. Its public release is independent from the optional DNA lyric page. */
 export function hasLiveFirstDrop(
-  track: Pick<Track, 'dropAudio' | 'dropRightsAttestedAt' | 'shareId'>
+  track: Pick<Track, 'dropAudio' | 'dropRightsAttestedAt' | 'shareId' | 'releaseShareId' | 'releaseStatus' | 'houseRelease' | 'dropPrice'>
 ): boolean {
-  return (
-    hasActiveDnaDrop(track.shareId) &&
-    Boolean(normalizeDropAudio(track.dropAudio) && track.dropRightsAttestedAt)
-  );
+  return Boolean(normalizeDropAudio(track.dropAudio) && releaseStatusOf(track) === 'live');
 }
 
 export function trackHasLiveFlags(track: Track): boolean {
@@ -30,7 +28,7 @@ export const vaultLiveFilterLabels: Record<LooseTrackFilter, string> = {
   all: 'All',
   live: 'Anything live',
   dna: 'DNA Drop',
-  'first-drop': 'First Drop',
+  'first-drop': 'Release',
   collab: 'Collab',
   complete: 'Complete',
 };

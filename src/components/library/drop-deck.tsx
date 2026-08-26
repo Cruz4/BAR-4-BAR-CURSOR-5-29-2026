@@ -9,6 +9,7 @@ import {
   Download,
   ExternalLink,
   FolderOpen,
+  Gift,
   Layers2,
   ListPlus,
   Loader,
@@ -25,6 +26,7 @@ import {
   SkipForward,
   Trash2,
   Unlink,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -187,6 +189,7 @@ export function DropDeck({
   const [offlineBusyKey, setOfflineBusyKey] = useState<string | null>(null);
   const [unpressBusyKey, setUnpressBusyKey] = useState<string | null>(null);
   const [hiddenReleaseIds, setHiddenReleaseIds] = useState<Set<string>>(new Set());
+  const [dismissedHouseNotices, setDismissedHouseNotices] = useState<Set<string>>(new Set());
   const currentKey = current?.key ?? null;
   const pressingStyle = useMemo(
     () => (pressing ? pressingCssVars(pressTokens(pressing)) : undefined),
@@ -207,6 +210,43 @@ export function DropDeck({
 
   const buckets = useMemo(() => groupPlayables(playables, group), [playables, group]);
   const browseArtists: DeckBrowseArtist[] = useMemo(() => buildBrowseArtists(playables), [playables]);
+  const houseNotice = useMemo(() => {
+    return items
+      .filter((item) => item.houseRelease && item.houseLibraryNotice)
+      .sort((a, b) => (
+        b.houseLibraryNoticeAt || b.purchasedAt || ''
+      ).localeCompare(a.houseLibraryNoticeAt || a.purchasedAt || ''))[0] ?? null;
+  }, [items]);
+  const houseNoticeKey = houseNotice
+    ? `${houseNotice.shareId}:${houseNotice.houseLibraryNoticeAt || houseNotice.purchasedAt}`
+    : '';
+  const houseNoticePlayable = useMemo(() => {
+    if (!houseNotice) return null;
+    return flattenLibraryItems([houseNotice])[0] ?? null;
+  }, [houseNotice]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`b4b:library-house-notices:${userId}`);
+      const saved = raw ? JSON.parse(raw) : [];
+      setDismissedHouseNotices(new Set(Array.isArray(saved) ? saved.filter((value) => typeof value === 'string') : []));
+    } catch {
+      setDismissedHouseNotices(new Set());
+    }
+  }, [userId]);
+
+  const dismissHouseNotice = useCallback(() => {
+    if (!houseNoticeKey) return;
+    setDismissedHouseNotices((current) => {
+      const next = new Set(current).add(houseNoticeKey);
+      try {
+        localStorage.setItem(`b4b:library-house-notices:${userId}`, JSON.stringify([...next].slice(-100)));
+      } catch {
+        /* local dismissal is best-effort */
+      }
+      return next;
+    });
+  }, [houseNoticeKey, userId]);
 
   useEffect(() => {
     if (!shuffle) {
@@ -293,7 +333,7 @@ export function DropDeck({
   }, [offlineBusyKey, offlineKeys, toast, userId]);
 
   const unpressOwnRelease = useCallback(async (item: DeckPlayable) => {
-    if (!item.own || !item.albumId || !window.confirm(`Unpress “${item.title}”? Existing buyers keep access, but it leaves public discovery and checkout.`)) return;
+    if (!item.own || !item.albumId || !window.confirm(`Take “${item.title}” offline? Existing buyers keep access, but it leaves public discovery and checkout.`)) return;
     setUnpressBusyKey(item.key);
     try {
       await manageRelease({
@@ -305,9 +345,9 @@ export function DropDeck({
       if (item.scope === 'album') updateAlbum(item.albumId, { releaseStatus: 'unlisted', releaseShareId: item.shareId });
       else if (item.trackId) updateTrack(item.albumId, item.trackId, { releaseStatus: 'unlisted', releaseShareId: item.shareId });
       setHiddenReleaseIds((current) => new Set(current).add(item.shareId));
-      toast({ title: 'Release unpressed', description: 'Manage or re-press it from the Release Catalog in The Vault.' });
+      toast({ title: 'Release taken offline', description: 'Manage or republish it from Release Catalog in The Vault.' });
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Could not unpress', description: error instanceof Error ? error.message : undefined });
+      toast({ variant: 'destructive', title: 'Could not take release offline', description: error instanceof Error ? error.message : undefined });
     } finally {
       setUnpressBusyKey(null);
     }
@@ -376,26 +416,49 @@ export function DropDeck({
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-fuchsia-300">
-                Bar 4 Bar First Drops
+                Bar 4 Bar Releases
               </p>
               <h1 className="font-headline text-4xl font-bold uppercase leading-none sm:text-5xl">
                 Library
               </h1>
               <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-                Songs you pressed, plus First Drops you bought or unlocked — search, crate, play, and manage.
+                Songs you released, music you unlocked, and House releases included with your account—search, crate, and test the player here.
               </p>
             </div>
             <p className="font-code text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
               {playables.length} on platter · {items.length} unlocked
             </p>
           </div>
+          {houseNotice && houseNoticeKey && !dismissedHouseNotices.has(houseNoticeKey) ? (
+            <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-cyan-400/25 bg-cyan-500/[0.07] px-3 py-2.5 sm:flex-row sm:items-center">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-300/25 bg-cyan-400/10 text-cyan-200">
+                <Gift className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-code text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-200">New in your Library</p>
+                <p className="break-words text-xs leading-relaxed text-foreground/85">
+                  <strong>{houseNotice.title}</strong>{houseNotice.artistName ? ` by ${houseNotice.artistName}` : ''} is a House release included free. Spin it to try the Library player.
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {houseNoticePlayable ? (
+                  <Button type="button" size="sm" onClick={() => playItem(houseNoticePlayable)} className="h-8 px-3 text-[9px] font-bold uppercase tracking-wider">
+                    <Play className="mr-1.5 h-3.5 w-3.5 fill-current" /> Play now
+                  </Button>
+                ) : null}
+                <Button type="button" variant="ghost" size="icon" onClick={dismissHouseNotice} className="h-8 w-8 text-muted-foreground hover:text-foreground" aria-label="Dismiss new Library release notice">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ) : null}
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fuchsia-300/70" />
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search title, artist, pressing…"
+                placeholder="Search title, artist, release…"
                 className="border-fuchsia-500/25 bg-black/30 pl-9 font-code"
               />
             </div>
@@ -443,7 +506,7 @@ export function DropDeck({
                   <SelectValue placeholder="Group" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="kind">Singles / pressings</SelectItem>
+                  <SelectItem value="kind">Singles / releases</SelectItem>
                   <SelectItem value="artist">By artist</SelectItem>
                   <SelectItem value="access">Bought / free</SelectItem>
                   <SelectItem value="month">By month</SelectItem>
@@ -754,6 +817,8 @@ export function DropDeck({
                                                   {item.albumTitle ? ` · ${item.albumTitle}` : ` · ${item.scope}`}
                                                   {item.own
                                                     ? ' · Yours'
+                                                    : item.houseRelease
+                                                      ? ' · House · Free'
                                                     : item.free
                                                       ? ' · Free'
                                                       : ` · ${centsToUsdLabel(item.amountCents)}`}
@@ -792,7 +857,7 @@ export function DropDeck({
                                                       }
                                                     >
                                                       <Settings2 className="h-4 w-4" />
-                                                      Update press
+                                                      Update release
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem asChild>
                                                       <Link href={item.scope === 'album' ? `/share/${item.shareId}` : `/song/${item.shareId}`}>
@@ -806,7 +871,7 @@ export function DropDeck({
                                                       onClick={() => void unpressOwnRelease(item)}
                                                     >
                                                       {unpressBusyKey === item.key ? <Loader className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
-                                                      Unpress release
+                                                      Take release offline
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                   </>
@@ -925,6 +990,8 @@ export function DropDeck({
                                     {item.albumTitle ? ` · ${item.albumTitle}` : ` · ${item.scope}`}
                                     {item.own
                                       ? ' · Yours'
+                                      : item.houseRelease
+                                        ? ' · House · Free'
                                       : item.free
                                         ? ' · Free'
                                         : ` · ${centsToUsdLabel(item.amountCents)}`}
@@ -963,7 +1030,7 @@ export function DropDeck({
                                         }
                                       >
                                         <Settings2 className="h-4 w-4" />
-                                        Update press
+                                        Update release
                                       </DropdownMenuItem>
                                       <DropdownMenuItem asChild>
                                         <Link href={item.scope === 'album' ? `/share/${item.shareId}` : `/song/${item.shareId}`}>
@@ -977,7 +1044,7 @@ export function DropDeck({
                                         onClick={() => void unpressOwnRelease(item)}
                                       >
                                         {unpressBusyKey === item.key ? <Loader className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
-                                        Unpress release
+                                        Take release offline
                                       </DropdownMenuItem>
                                       <DropdownMenuSeparator />
                                     </>

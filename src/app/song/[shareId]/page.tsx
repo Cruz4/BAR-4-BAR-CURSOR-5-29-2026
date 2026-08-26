@@ -9,7 +9,7 @@ import { loadShare } from '@/lib/server/drop-entitlements';
 export async function generateMetadata({ params }: { params: Promise<{ shareId: string }> }): Promise<Metadata> {
   const { shareId } = await params;
   const song = await getPressedSongSummary(await getDb(), shareId);
-  if (!song) return { title: 'Pressed Song | Bar4Bar' };
+  if (!song) return { title: 'Music Release | Bar4Bar' };
   const description = `Listen to ${song.title} by ${song.artist.name} on Bar4Bar.`;
   const url = `${getPublicAppUrl()}/song/${encodeURIComponent(shareId)}`;
   return {

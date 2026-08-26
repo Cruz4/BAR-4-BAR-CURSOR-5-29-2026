@@ -126,15 +126,15 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
   ];
   const unpressSong = async () => {
     const controls = summary.ownerControls;
-    if (!controls || !window.confirm(`Unpress “${summary.title}”? New checkout and public discovery stop, while existing buyers keep access.`)) return;
+    if (!controls || !window.confirm(`Take “${summary.title}” offline? New checkout and public discovery stop, while existing buyers keep access.`)) return;
     setUnpressing(true);
     try {
       await manageRelease({ kind: 'track', action: 'unpublish', albumId: controls.albumId, trackId: controls.trackId });
       updateTrack(controls.albumId, controls.trackId, { releaseStatus: 'unlisted', releaseShareId: summary.shareId });
       setSummary((current) => current.ownerControls ? { ...current, ownerControls: { ...current.ownerControls, releaseStatus: 'unlisted' } } : current);
-      toast({ title: 'Release unpressed', description: 'It is off public surfaces. Re-press from The Vault to restore this same URL.' });
+      toast({ title: 'Release taken offline', description: 'It is off public surfaces. Republish from The Vault to restore this same URL.' });
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Could not unpress', description: error instanceof Error ? error.message : undefined });
+      toast({ variant: 'destructive', title: 'Could not take release offline', description: error instanceof Error ? error.message : undefined });
     } finally {
       setUnpressing(false);
     }
@@ -158,7 +158,7 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
           </div>
           <div className="mb-5 flex items-start gap-4">
             <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-fuchsia-400/40 bg-fuchsia-500/15"><Disc3 className="h-8 w-8 text-fuchsia-300" /></span>
-            <div><p className="text-[10px] font-bold uppercase tracking-[.25em] text-muted-foreground">Pressed song</p><h1 className="font-headline text-3xl font-black uppercase sm:text-5xl">{summary.title}</h1><p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> Released {new Date(summary.releasedAt).toLocaleDateString()}</p></div>
+            <div><p className="text-[10px] font-bold uppercase tracking-[.25em] text-muted-foreground">Music release</p><h1 className="font-headline text-3xl font-black uppercase sm:text-5xl">{summary.title}</h1><p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> Released {new Date(summary.releasedAt).toLocaleDateString()}</p></div>
           </div>
           {summary.ownerControls ? (
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2">
@@ -167,14 +167,14 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
               </span>
               {summary.ownerControls.releaseStatus === 'live' ? (
                 <Button type="button" size="sm" variant="outline" className="h-8 border-red-400/30 text-[10px] font-bold uppercase text-red-300" disabled={unpressing} onClick={() => void unpressSong()}>
-                  <Unlink className="mr-1.5 h-3.5 w-3.5" /> Unpress
+                  <Unlink className="mr-1.5 h-3.5 w-3.5" /> Take offline
                 </Button>
               ) : (
-                <Button asChild size="sm" variant="outline" className="h-8 text-[10px] font-bold uppercase"><Link href="/vault">Re-press from Vault</Link></Button>
+                <Button asChild size="sm" variant="outline" className="h-8 text-[10px] font-bold uppercase"><Link href="/vault">Republish from Vault</Link></Button>
               )}
             </div>
           ) : null}
-          <DropListenPanel shareId={summary.shareId} title={summary.title} artistName={summary.artist.name} ownerId={summary.ownerId} price={summary.price} hasAudio source="direct" presentation="song" firstPressRank={viewer?.firstPressRank} onPlaybackStateChange={setPlayback} />
+          <DropListenPanel shareId={summary.shareId} title={summary.title} artistName={summary.artist.name} ownerId={summary.ownerId} price={summary.price} hasAudio houseRelease={summary.houseRelease} source="direct" presentation="song" firstPressRank={viewer?.firstPressRank} onPlaybackStateChange={setPlayback} />
           <div className="mt-4">
             <DropSocialPanel
               shareId={summary.shareId}

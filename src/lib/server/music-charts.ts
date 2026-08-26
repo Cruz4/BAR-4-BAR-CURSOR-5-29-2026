@@ -137,7 +137,7 @@ export async function getMusicCharts(
     const current = trackTotals.get(shareId) || {
       shareId,
       ownerId,
-      title: clean(data.title, 120) || 'First Drop',
+      title: clean(data.title, 120) || 'Release',
       signals: emptyTrackChartSignals(),
     };
     addSignals(current.signals, data);

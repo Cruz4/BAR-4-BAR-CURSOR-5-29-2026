@@ -17,7 +17,7 @@ export function ProfileSectionTabs({ slug, className }: { slug?: string; classNa
   const tabs = [
     { label: 'Overview', href: profileHref(slug) || '/', suffix: '', icon: LayoutGrid },
     { label: 'Images', href: profileImagesHref(slug) || '/', suffix: '/images', icon: Images },
-    { label: 'Pressed Songs', href: profileSongsHref(slug) || '/', suffix: '/songs', icon: Music2 },
+    { label: 'Releases', href: profileSongsHref(slug) || '/', suffix: '/songs', icon: Music2 },
     { label: 'Reverbs', href: profileReverbsHref(slug) || '/', suffix: '/reverbs', icon: Repeat2 },
   ];
   return (

@@ -60,19 +60,19 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
   },
   {
     id: 'first-drops',
-    eyebrow: 'First Drops',
+    eyebrow: 'Music Releases',
     title: 'Sell The Song.',
     description:
-      'Start from The Scene, upload a finished recording, choose a fixed or pay-what-you-want price, select the public 30-second preview, and press it live. Fans buy once and stream it in Bar4Bar.',
+      'Start from The Scene, upload a finished recording, choose a fixed or pay-what-you-want price, select the public 30-second preview, and publish the release. Fans buy once and stream it in Bar4Bar.',
     bullets: [
       'Listen / buy appears on your Artist Home, The Scene, and the song share link',
-      `Fixed price or pay-what-you-want starts at ${centsToUsdLabel(DROP_PAID_MIN_CENTS)}. DNA Drop remains your lyric-preview card; finished-song sales happen in First Drops`,
+      `Fixed price or pay-what-you-want starts at ${centsToUsdLabel(DROP_PAID_MIN_CENTS)}. DNA Drop remains your lyric-preview card; finished-song sales happen through Releases`,
       'You keep every right to your music. We keep 25% below $3, 15% from $3–$4.99, and 10% from $5 up',
       'Connect payouts in Earnings so Stripe can send the rest to your bank',
     ],
     mediaSrc: '/marketing/feature-artist-home-live.jpg',
     mediaType: 'image',
-    mediaAlt: 'Bar 4 Bar First Drop — sell and stream your song on the public page',
+    mediaAlt: 'Bar 4 Bar music release—sell and stream your song on the public page',
     layout: 'hero-stack',
     mediaVariant: 'showcase',
     showMedia: false,
@@ -199,7 +199,7 @@ export const MARKETING_HOW_IT_WORKS = [
   {
     step: '03',
     title: 'Show Up on the Scene',
-    body: 'Post to your wall, drop DNA, sell a First Drop, feature a Library track, discover matches, and build your Support Circle.',
+    body: 'Post to your wall, publish DNA, sell a release, feature a Library track, discover matches, and build your Support Circle.',
     media: '/marketing/how-step-progress.png',
   },
 ] as const;
@@ -216,7 +216,7 @@ export const MARKETING_COMPARISON = {
     ['Black-box popularity feeds', 'Explainable Discover + transparent Emerging signals—no pay-to-rank'],
     [
       'Nowhere to sell the actual song',
-      `First Drops — set a price, fans buy once. ${firstDropsFeeCashoutLine()}`,
+      `Releases—set a price, fans buy once. ${firstDropsFeeCashoutLine()}`,
     ],
   ],
 };

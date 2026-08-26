@@ -244,7 +244,7 @@ function EarningsPageContent() {
             <Banknote className="h-10 w-10 text-muted-foreground mx-auto" />
             <h1 className="font-headline text-3xl font-bold uppercase">Earnings is off</h1>
             <p className="text-sm text-muted-foreground">
-              First Drops is currently turned off. Sales stay saved if this comes back.
+              Music releases are currently turned off. Sales stay saved if releases return.
             </p>
             <Button variant="outline" asChild>
               <Link href="/">Back to The Scene</Link>
@@ -263,7 +263,7 @@ function EarningsPageContent() {
             <Banknote className="h-10 w-10 text-primary mx-auto" />
             <h1 className="font-headline text-3xl font-bold uppercase">Earnings</h1>
             <p className="text-sm text-muted-foreground">
-              Sign in to connect payouts and cash out First Drop sales.
+              Sign in to connect payouts and cash out release sales.
             </p>
             <Button asChild className="w-full font-bold">
               <Link href="/login?next=/earnings">
@@ -292,7 +292,7 @@ function EarningsPageContent() {
           <ConnectBadge ready={payoutsReady && connect.payoutsEnabled} submitted={connect.detailsSubmitted} />
         </div>
         <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
-          Fans buy First Drops once. {firstDropsFeeCashoutLine()} Stripe then pays your bank on its schedule
+          Fans buy releases once. {firstDropsFeeCashoutLine()} Stripe then pays your bank on its schedule
           (usually a few days after each sale clears).
         </p>
       </header>
@@ -431,7 +431,7 @@ function EarningsPageContent() {
         <CardContent>
           {sales.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No First Drop sales yet. Price a DNA Drop, then share the public link.
+              No release sales yet. Open New release, set a price, and publish the music link.
             </p>
           ) : (
             <div className="divide-y divide-white/10 rounded-lg border border-white/10 overflow-hidden">
@@ -463,7 +463,7 @@ function EarningsPageContent() {
                             className="inline-flex items-center gap-1 text-[10px] font-code uppercase tracking-widest text-primary/90 hover:text-primary"
                           >
                             <Link2 className="h-3 w-3" />
-                            Origin · First Drop {sale.shareId}
+                            Origin · Release {sale.shareId}
                           </Link>
                         ) : null}
                       </div>

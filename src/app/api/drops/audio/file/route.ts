@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
   if (!(await isFirstDropsEnabled())) {
-    return NextResponse.json({ error: 'First Drops is off' }, { status: 404 });
+    return NextResponse.json({ error: 'Music Releases is off' }, { status: 404 });
   }
   try {
     const { searchParams } = new URL(req.url);

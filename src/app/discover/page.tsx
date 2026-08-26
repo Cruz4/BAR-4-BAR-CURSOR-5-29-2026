@@ -210,7 +210,7 @@ export default function DiscoverPage() {
               Discover
             </h1>
             <p className="mt-0.5 break-words text-sm leading-relaxed text-muted-foreground">
-              Public music people and First Drops, matched from the identity and taste you chose
+              Public music people and releases, matched from the identity and taste you chose
             </p>
           </div>
         </div>
@@ -342,7 +342,7 @@ export default function DiscoverPage() {
               {[
                 ['Live profiles', discover?.publicPulse.profiles || 0],
                 ['Recent posts', discover?.publicPulse.posts || 0],
-                ['Pressed songs', discover?.publicPulse.pressedSongs || 0],
+                ['Music releases', discover?.publicPulse.pressedSongs || 0],
               ].map(([label, value]) => <div key={String(label)} className="rounded-lg border border-white/10 bg-black/35 p-2"><p className="font-headline text-xl font-bold">{Number(value).toLocaleString()}</p><p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p></div>)}
             </div>
           </section>

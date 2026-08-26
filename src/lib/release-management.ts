@@ -5,6 +5,7 @@ type ReleaseRecord = {
   shareId?: string;
   releaseShareId?: string;
   releaseStatus?: ReleaseStatus;
+  houseRelease?: boolean;
   dnaStatus?: DnaStatus;
   dropAudio?: unknown;
   dropPrice?: unknown;
@@ -50,6 +51,11 @@ export function dnaStatusOf(record: Pick<ReleaseRecord, 'shareId' | 'dnaStatus'>
 
 export function isReleasePublic(record: ReleaseRecord): boolean {
   return releaseStatusOf(record) === 'live';
+}
+
+/** True only for the admin-controlled release distributed free to every member. */
+export function isHouseReleaseDocument(document: Record<string, unknown>): boolean {
+  return document.houseRelease === true;
 }
 
 /** Public-index guard for raw `shares/{id}` documents. Legacy documents remain compatible. */

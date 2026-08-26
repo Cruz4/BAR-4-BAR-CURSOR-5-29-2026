@@ -103,6 +103,10 @@ export interface Album {
   releaseStatus?: ReleaseStatus;
   /** Snapshot timestamp for the most recent live press. */
   releaseSnapshotAt?: string;
+  /** Admin-only release included free in every signed-in member's Library. */
+  houseRelease?: boolean;
+  /** Admin-controlled quiet announcement shown inside Library. */
+  houseLibraryNotice?: boolean;
   /** Visibility of the separate DNA lyric page. */
   dnaStatus?: DnaStatus;
   /**
@@ -168,6 +172,10 @@ export interface Track {
   releaseStatus?: ReleaseStatus;
   /** Snapshot timestamp for the most recent live press. */
   releaseSnapshotAt?: string;
+  /** Admin-only release included free in every signed-in member's Library. */
+  houseRelease?: boolean;
+  /** Admin-controlled quiet announcement shown inside Library. */
+  houseLibraryNotice?: boolean;
   /** Visibility of the separate DNA lyric page. */
   dnaStatus?: DnaStatus;
   /** Active Collab Sheet — live multi-user editing session id. */
@@ -245,6 +253,9 @@ export interface ProjectShare {
   imports: number;
   /** Lightweight First Drops flags for Discover / share page. */
   hasDropAudio?: boolean;
+  houseRelease?: boolean;
+  houseLibraryNotice?: boolean;
+  houseLibraryNoticeAt?: string;
   dropPriceSummary?: string;
   playCount?: number;
   previewCount?: number;

@@ -54,7 +54,7 @@ function profileShareCopy(data: Record<string, unknown>, slug: string) {
     featuredTitle ? `featuring ${featuredTitle}` : '',
     rankLabel,
   ].filter(Boolean);
-  const description = `${displayName} on Bar 4 Bar—${highlights.join(' · ')}. Discover their public music home, First Drops, and creative work.`;
+  const description = `${displayName} on Bar 4 Bar—${highlights.join(' · ')}. Discover their public music home, releases, and creative work.`;
   return { displayName, rankLabel, title, description };
 }
 

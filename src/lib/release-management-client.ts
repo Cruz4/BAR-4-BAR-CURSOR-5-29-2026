@@ -2,18 +2,24 @@
 
 import { auth } from '@/lib/firebase/client/firebase';
 
+export const RELEASE_VISIBILITY_CHANGED_EVENT = 'b4b:release-visibility-changed';
+
 export type ManageReleaseInput = {
   kind: 'album' | 'track';
   action: 'save-draft' | 'publish' | 'unpublish';
   albumId: string;
   trackId?: string;
   hideDna?: boolean;
+  houseRelease?: boolean;
+  houseLibraryNotice?: boolean;
 };
 
 export type ManageReleaseResult = {
   ok: true;
   releaseStatus: 'draft' | 'live' | 'unlisted';
   releaseShareId: string | null;
+  houseRelease?: boolean;
+  houseLibraryNotice?: boolean;
 };
 
 export async function manageRelease(input: ManageReleaseInput): Promise<ManageReleaseResult> {
@@ -29,6 +35,9 @@ export async function manageRelease(input: ManageReleaseInput): Promise<ManageRe
   });
   const result = (await response.json().catch(() => ({}))) as ManageReleaseResult & { error?: string };
   if (!response.ok) throw new Error(result.error || 'Release update failed.');
+  window.dispatchEvent(new CustomEvent(RELEASE_VISIBILITY_CHANGED_EVENT, {
+    detail: { action: input.action, releaseShareId: result.releaseShareId },
+  }));
   return result;
 }
 

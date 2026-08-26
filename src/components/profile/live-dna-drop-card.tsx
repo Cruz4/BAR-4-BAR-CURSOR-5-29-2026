@@ -22,6 +22,7 @@ export type LiveDnaDropItem = {
   trackIndex?: number;
   trackCount?: number;
   hasDropAudio?: boolean;
+  houseRelease?: boolean;
   dropPriceSummary?: string;
   playCount?: number;
   previewCount?: number;
@@ -91,8 +92,8 @@ export function LiveDnaDropLinkCard({
               firstDrop ? 'text-fuchsia-300/90' : isAlbum ? 'text-violet-300/90' : 'text-emerald-300/90'
             )}
           >
-            {firstDrop ? 'On sale' : isAlbum ? 'Album DNA' : 'Track DNA'}
-            {drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : null}
+            {drop.houseRelease ? 'House · Free' : firstDrop ? 'On sale' : isAlbum ? 'Album DNA' : 'Track DNA'}
+            {!drop.houseRelease && drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : null}
             {pulse ? ` · ${pulse}` : null}
             {isAlbum && typeof drop.trackCount === 'number'
               ? ` · ${drop.trackCount} track${drop.trackCount === 1 ? '' : 's'}`
@@ -115,7 +116,9 @@ export function LiveDnaDropLinkCard({
           ) : (
             <p className="text-[10px] text-[var(--ph-muted,rgba(255,255,255,0.45))]">
               {firstDrop
-                ? 'Play 30s · buy once to stream here'
+                ? drop.houseRelease
+                  ? 'Full release included in every member Library'
+                  : 'Play 30s · buy once to stream here'
                 : isAlbum
                   ? 'Open album · or pick a track below'
                   : 'Lyrics snapshot'}
@@ -124,7 +127,9 @@ export function LiveDnaDropLinkCard({
         {nested && (
           <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-300/70">
             {drop.hasDropAudio
-              ? `Listen${drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : ''}`
+              ? drop.houseRelease
+                ? 'House · Free'
+                : `Listen${drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : ''}`
               : 'Track DNA · open'}
           </p>
         )}

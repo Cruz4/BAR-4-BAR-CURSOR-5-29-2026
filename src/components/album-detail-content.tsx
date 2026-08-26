@@ -159,9 +159,10 @@ import {
   studioVaultCardTitle,
   studioVaultMetricCell,
   studioVaultRowButton,
-  studioVaultTrackCard,
 } from '@/lib/studio-panel-styles';
 import { isDataUrl } from '@/lib/cover-art';
+import { normalizeDropAudio } from '@/lib/drop-commerce';
+import { releaseShareIdOf, releaseStatusOf } from '@/lib/release-management';
 import {
   processCoverArtFile,
   COVER_ART_EXPORT_SIZE,
@@ -802,62 +803,67 @@ function LooseTrackCard({
   const sectionCount = track.sections?.length ?? 0;
 
   return (
-    <div className={cn('group relative flex flex-col hover:border-primary/35 hover:shadow-[0_0_32px_rgba(59,130,246,0.12)] transition-all min-h-[168px]', studioVaultTrackCard)}>
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <span className="font-code text-sm text-primary/70 tabular-nums">{String(index + 1).padStart(2, '0')}</span>
-        {!tierLocked && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white opacity-70 group-hover:opacity-100">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-card border-border w-48 dark:border-white/10">
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="text-[10px] font-bold uppercase">
-                  <Move className="mr-2 h-4 w-4" /> Move To Album
-                </DropdownMenuSubTrigger>
-                <DropdownMenuPortal>
-                  <DropdownMenuSubContent className="bg-card border-border dark:border-white/10">
-                    {realAlbums.map((targetAlbum) => (
-                      <DropdownMenuItem
-                        key={targetAlbum.id}
-                        onClick={() => onMoveTrack(track.id, targetAlbum.id)}
-                        className="text-[10px] font-bold uppercase"
-                      >
-                        <PlusCircle className="mr-2 h-3 w-3" /> {targetAlbum.title}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuPortal>
-              </DropdownMenuSub>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onDelete} className="text-red-500 focus:text-red-500 text-[10px] font-bold uppercase">
-                <Trash2 className="mr-2 h-4 w-4" /> Scrap Asset
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-        {tierLocked && (
-          <Badge variant="outline" className={cn('text-[7px] px-1.5 h-5', proLockText())}>View only</Badge>
-        )}
-      </div>
+    <div className="group relative flex min-w-0 items-start gap-3 overflow-hidden rounded-xl border border-border bg-gradient-to-r from-card via-card/95 to-primary/[0.045] px-3 py-3 transition-all hover:border-primary/35 hover:bg-primary/[0.055] hover:shadow-[0_12px_32px_rgba(59,130,246,0.1)] sm:gap-4 sm:px-4 dark:border-white/10 dark:from-black/55 dark:via-black/40 dark:to-primary/[0.08]">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 font-code text-[11px] font-bold tabular-nums text-primary/80">
+        {String(index + 1).padStart(2, '0')}
+      </span>
 
-      <Link href={`/albums/${albumId}/tracks/${track.id}`} className="flex flex-col flex-1 min-w-0">
-        <p className={cn('text-xl md:text-2xl group-hover:text-primary transition-colors line-clamp-2', studioVaultCardTitle)}>
+      <div className="min-w-0 flex-1 py-0.5">
+        <Link href={`/albums/${albumId}/tracks/${track.id}`}>
+        <p className={cn('break-words text-base leading-tight transition-colors group-hover:text-primary sm:text-lg', studioVaultCardTitle)}>
           {track.title}
         </p>
-        <div className="flex flex-wrap items-center gap-2 mt-3">
-          <TrackLiveIndicators track={track} variant="compact" />
-          <Badge variant="outline" className="h-5 px-2 text-[8px] border-border text-muted-foreground font-code dark:border-white/10">
+        </Link>
+        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
+          <TrackLiveIndicators track={track} variant="compact" linkLivePages />
+          {tierLocked ? (
+            <Badge variant="outline" className={cn('h-5 px-1.5 text-[7px]', proLockText())}>View only</Badge>
+          ) : null}
+          <Badge variant="outline" className="h-auto min-h-5 max-w-full whitespace-normal break-words px-2 py-0.5 text-left font-code text-[8px] leading-tight text-muted-foreground dark:border-white/10">
             {track.vibe?.genre || 'No genre'}
           </Badge>
-          <span className="text-[9px] text-muted-foreground/70 font-code uppercase">{track.vibe?.tempoBPM ?? '—'} BPM</span>
+          <span className="whitespace-nowrap font-code text-[9px] uppercase text-muted-foreground/70">
+            {track.vibe?.tempoBPM ?? '—'} BPM
+          </span>
+          <span className="font-code text-[9px] uppercase text-muted-foreground/70">
+            {barCount} bar{barCount === 1 ? '' : 's'} · {sectionCount} section{sectionCount === 1 ? '' : 's'}
+          </span>
         </div>
-        <p className="text-[9px] font-code text-muted-foreground/80 uppercase tracking-widest mt-auto pt-4">
-          {barCount} bar{barCount === 1 ? '' : 's'} · {sectionCount} section{sectionCount === 1 ? '' : 's'}
-        </p>
-      </Link>
+      </div>
+
+      {!tierLocked ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-lg text-muted-foreground opacity-75 hover:bg-primary/10 hover:text-primary group-hover:opacity-100" aria-label={`Manage ${track.title}`}>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48 border-border bg-card dark:border-white/10">
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="text-[10px] font-bold uppercase">
+                <Move className="mr-2 h-4 w-4" /> Move To Album
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent className="border-border bg-card dark:border-white/10">
+                  {realAlbums.map((targetAlbum) => (
+                    <DropdownMenuItem
+                      key={targetAlbum.id}
+                      onClick={() => onMoveTrack(track.id, targetAlbum.id)}
+                      className="text-[10px] font-bold uppercase"
+                    >
+                      <PlusCircle className="mr-2 h-3 w-3" /> {targetAlbum.title}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onDelete} className="text-[10px] font-bold uppercase text-red-500 focus:text-red-500">
+              <Trash2 className="mr-2 h-4 w-4" /> Scrap Asset
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
     </div>
   );
 }
@@ -1276,8 +1282,8 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                 )}
             </div>
 
-            <div className={cn('grid gap-8 pb-40', isUnassignedVault ? 'grid-cols-1 xl:grid-cols-12' : 'grid-cols-1 lg:grid-cols-3')}>
-                <div className={cn('space-y-10', isUnassignedVault ? 'xl:col-span-8' : 'lg:col-span-2')}>
+            <div className="grid grid-cols-1 gap-8 pb-40 xl:grid-cols-[minmax(0,1.65fr)_minmax(19rem,0.72fr)]">
+                <div className="min-w-0 space-y-10">
                     <Card className={cn('backdrop-blur-3xl shadow-2xl overflow-hidden min-w-0', studioVaultCard)}>
                         <CardHeader className="flex min-w-0 flex-col gap-4 border-b border-border p-4 sm:p-6 md:flex-row md:flex-wrap md:items-center md:justify-between md:p-8 dark:border-white/5">
                             <div className="flex items-center gap-3 sm:gap-4 min-w-0 shrink-0">
@@ -1285,8 +1291,8 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                     {isUnassignedVault ? <CassetteTape className="h-6 w-6 sm:h-8 sm:w-8 text-primary" /> : <ListMusic className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />}
                                 </div>
                                 <div className="min-w-0">
-                                    <CardTitle className="font-headline text-lg sm:text-xl md:text-2xl lg:text-3xl uppercase tracking-tighter whitespace-nowrap">{isUnassignedVault ? 'Idea Vault' : 'Tracklist'}</CardTitle>
-                                    <p className="text-[8px] sm:text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-0.5 whitespace-nowrap">Asset Reordering & Management</p>
+                                    <CardTitle className="break-words font-headline text-lg uppercase tracking-tighter sm:text-xl md:text-2xl lg:text-3xl">{isUnassignedVault ? 'Idea Vault' : 'Tracklist'}</CardTitle>
+                                    <p className="mt-0.5 break-words text-[8px] font-bold uppercase tracking-widest text-muted-foreground sm:text-[9px]">Asset Reordering &amp; Management</p>
                                 </div>
                             </div>
                             <div className="grid w-full min-w-0 grid-cols-1 gap-2 min-[420px]:grid-cols-2 md:flex md:flex-1 md:flex-wrap md:items-center md:justify-end">
@@ -1319,7 +1325,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                       className="h-9 w-full min-w-0 px-3 font-bold text-[10px] uppercase tracking-widest border-fuchsia-400/40 rounded-xl bg-fuchsia-500/10 text-fuchsia-200 hover:bg-fuchsia-500/20 md:w-auto md:flex-none md:px-4"
                                       onClick={() => openFirstDropLathe({ albumId: album.id, mode: 'album' })}
                                     >
-                                      <Disc3 className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Press album
+                                      <Disc3 className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Release album
                                     </Button>
                                     <Button
                                       variant="outline"
@@ -1327,7 +1333,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                       className="h-9 w-full min-w-0 px-3 font-bold text-[10px] uppercase tracking-widest border-fuchsia-400/40 rounded-xl bg-fuchsia-500/10 text-fuchsia-200 hover:bg-fuchsia-500/20 md:w-auto md:flex-none md:px-4"
                                       onClick={() => openFirstDropLathe({ albumId: album.id, mode: 'song' })}
                                     >
-                                      <Music className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Press single
+                                      <Music className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Release single
                                     </Button>
                                   </>
                                 ) : null}
@@ -1429,11 +1435,11 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                             </div>
                           </div>
                         ) : null}
-                        <CardContent className={cn(isUnassignedVault ? 'p-6' : 'p-0')}>
+                        <CardContent className={cn(isUnassignedVault ? 'p-3 sm:p-5' : 'p-0')}>
                             {album.tracks?.length > 0 ? (
                               isUnassignedVault ? (
                                 displayedLooseTracks.length > 0 ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2.5">
                                   {displayedLooseTracks.map((track, index) => (
                                     <LooseTrackCard
                                       key={track.id}
@@ -1460,28 +1466,49 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                   </div>
                                 )
                               ) : (
-                                <div className="divide-y divide-white/5">
+                                <div className="space-y-2 p-3 sm:p-4">
                                 {album.tracks.map((track, index) => {
                                   const trackTierLocked = albumTierLocked || !editableTrackIds.has(track.id);
+                                  const barCount = countRhymeBars(track.sections);
+                                  const sectionCount = track.sections?.length ?? 0;
+                                  const trackReleaseId = releaseShareIdOf(track);
+                                  const albumReleaseId = releaseShareIdOf({ ...album, tracks: album.tracks });
+                                  const includedInLiveAlbum = Boolean(
+                                    !trackReleaseId &&
+                                    albumReleaseId &&
+                                    releaseStatusOf({ ...album, tracks: album.tracks }) === 'live' &&
+                                    normalizeDropAudio(track.dropAudio)
+                                  );
                                   return (
-                                    <div key={track.id} className="group flex flex-col gap-3 sm:flex-row sm:items-center p-4 sm:p-6 hover:bg-primary/5 transition-all min-w-0">
-                                        <div className="flex items-start gap-3 sm:gap-0 min-w-0 flex-1 w-full">
-                                        <div className="text-muted-foreground font-code text-base sm:text-xl sm:mr-6 w-7 sm:w-8 text-right opacity-60 sm:opacity-30 group-hover:opacity-100 group-hover:text-primary transition-all shrink-0 pt-0.5">
+                                    <div key={track.id} className="group relative flex min-w-0 flex-col gap-2.5 overflow-hidden rounded-xl border border-border bg-gradient-to-r from-card via-card/95 to-emerald-500/[0.035] p-3 transition-all hover:border-primary/30 hover:bg-primary/[0.045] hover:shadow-[0_12px_32px_rgba(59,130,246,0.08)] sm:flex-row sm:items-center sm:gap-4 sm:p-4 dark:border-white/10 dark:from-black/55 dark:via-black/40 dark:to-emerald-500/[0.06]">
+                                        <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
+                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 font-code text-[11px] font-bold tabular-nums text-primary/75 transition-all group-hover:border-primary/40 group-hover:text-primary">
                                             {String(index + 1).padStart(2, '0')}
                                         </div>
-                                        <Link href={`/albums/${album.id}/tracks/${track.id}`} className="flex-grow min-w-0">
-                                            <p className={cn('font-bold text-lg sm:text-2xl group-hover:text-primary transition-colors break-words', studioVaultCardTitle)}>{track.title}</p>
-                                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
-                                                <TrackLiveIndicators track={track} variant="compact" />
+                                        <div className="min-w-0 flex-1">
+                                            <Link href={`/albums/${album.id}/tracks/${track.id}`}>
+                                            <p className={cn('break-words text-base leading-tight transition-colors group-hover:text-primary sm:text-xl', studioVaultCardTitle)}>{track.title}</p>
+                                            </Link>
+                                            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
+                                                <TrackLiveIndicators
+                                                  track={track}
+                                                  variant="compact"
+                                                  linkLivePages
+                                                  releaseLive={includedInLiveAlbum ? true : undefined}
+                                                  releaseHref={includedInLiveAlbum ? `/share/${albumReleaseId}` : undefined}
+                                                />
                                                 {trackTierLocked && (
-                                                  <Badge variant="outline" className={cn('h-4 px-1.5 text-[8px]', proLockText())}>View only</Badge>
+                                                  <Badge variant="outline" className={cn('h-5 px-1.5 text-[8px]', proLockText())}>View only</Badge>
                                                 )}
-                                                <Badge variant="outline" className="h-4 px-1.5 text-[8px] border-border text-muted-foreground font-code dark:border-white/10">{track.vibe?.genre}</Badge>
-                                                <span className="text-[9px] text-muted-foreground/60 font-code uppercase">{track.vibe?.tempoBPM} BPM</span>
+                                                <Badge variant="outline" className="h-auto min-h-5 max-w-full whitespace-normal break-words px-2 py-0.5 text-left font-code text-[8px] leading-tight text-muted-foreground dark:border-white/10">{track.vibe?.genre || 'No genre'}</Badge>
+                                                <span className="whitespace-nowrap font-code text-[9px] uppercase text-muted-foreground/70">{track.vibe?.tempoBPM ?? '—'} BPM</span>
+                                                <span className="font-code text-[9px] uppercase text-muted-foreground/70">
+                                                  {barCount} bar{barCount === 1 ? '' : 's'} · {sectionCount} section{sectionCount === 1 ? '' : 's'}
+                                                </span>
                                             </div>
-                                        </Link>
                                         </div>
-                                        <div className="flex items-center gap-1 justify-end sm:justify-start opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0 pl-10 sm:pl-0">
+                                        </div>
+                                        <div className="flex shrink-0 items-center justify-end gap-1 pl-12 opacity-100 transition-opacity sm:justify-start sm:pl-0 sm:opacity-65 sm:group-hover:opacity-100">
                                             {!isUnassignedVault && !trackTierLocked && (
                                                 <>
                                                     <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary" onClick={() => handleReorderTrack(track.id, 'up')} disabled={index === 0}><ArrowUp className="h-4 w-4" /></Button>
@@ -1524,7 +1551,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 </div>
                               )
                             ) : isUnassignedVault && isPro ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2.5 p-3 sm:p-5">
                                       <ProCreateTrackSlot onClick={openCreateTrack} />
                                     </div>
                                 ) : (
@@ -1537,7 +1564,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                     </Card>
                 </div>
 
-                <div className={cn(isUnassignedVault ? 'xl:col-span-4 space-y-6' : 'space-y-10')}>
+                <div className={cn('min-w-0', isUnassignedVault ? 'space-y-6' : 'space-y-10')}>
                     {isUnassignedVault ? (
                       <LooseTracksSidebar
                         tracks={album.tracks ?? []}

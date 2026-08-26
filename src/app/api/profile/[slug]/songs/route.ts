@@ -32,6 +32,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
         type: 'track' as const,
         title: typeof data.title === 'string' && data.title.trim() ? data.title.trim().slice(0, 120) : 'Untitled track',
         hasDropAudio: true,
+        houseRelease: raw.houseRelease === true,
         price,
         dropPriceSummary: dropPriceSummary(price),
         playCount: Math.max(0, Number(raw.playCount) || 0),
@@ -49,6 +50,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     }, { headers: { 'Cache-Control': 'public, max-age=30, s-maxage=60' } });
   } catch (error) {
     console.error('[profile/songs]', error);
-    return NextResponse.json({ error: 'Could not load pressed songs' }, { status: 500 });
+    return NextResponse.json({ error: 'Could not load music releases' }, { status: 500 });
   }
 }

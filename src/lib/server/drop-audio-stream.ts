@@ -14,6 +14,7 @@ const TICKET_TTL_MS = {
 
 type DropAudioTicketPayload = {
   p: string;
+  o: string;
   c: string;
   f: 0 | 1;
   e: number;
@@ -35,20 +36,27 @@ export function isSafeDropStoragePath(path: string): boolean {
   return true;
 }
 
+export function isOwnedDropStoragePath(path: string, ownerId: string): boolean {
+  if (!ownerId || ownerId.includes('/') || !isSafeDropStoragePath(path)) return false;
+  return path.startsWith(`drops/${ownerId}/`) || path.startsWith(`profile-previews/${ownerId}/`);
+}
+
 function signPayload(payloadB64: string): string {
   return createHmac('sha256', ticketSecret()).update(payloadB64).digest('base64url');
 }
 
 export function mintDropAudioTicket(input: {
   storagePath: string;
+  ownerId: string;
   contentType: string;
   full: boolean;
 }): string {
-  if (!isSafeDropStoragePath(input.storagePath)) {
+  if (!isOwnedDropStoragePath(input.storagePath, input.ownerId)) {
     throw new Error('Invalid audio path.');
   }
   const payload: DropAudioTicketPayload = {
     p: input.storagePath,
+    o: input.ownerId,
     c: input.contentType || 'application/octet-stream',
     f: input.full ? 1 : 0,
     e: Date.now() + (input.full ? TICKET_TTL_MS.full : TICKET_TTL_MS.preview),
@@ -74,9 +82,9 @@ export function verifyDropAudioTicket(raw: string): DropAudioTicketPayload {
     throw new Error('Invalid stream ticket.');
   }
   const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8')) as DropAudioTicketPayload;
-  if (!payload?.p || typeof payload.e !== 'number') throw new Error('Invalid stream ticket.');
+  if (!payload?.p || !payload.o || typeof payload.e !== 'number') throw new Error('Invalid stream ticket.');
   if (Date.now() > payload.e) throw new Error('Stream expired. Play again.');
-  if (!isSafeDropStoragePath(payload.p)) throw new Error('Invalid audio path.');
+  if (!isOwnedDropStoragePath(payload.p, payload.o)) throw new Error('Invalid audio path.');
   return payload;
 }
 

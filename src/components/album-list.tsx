@@ -36,6 +36,9 @@ import {
     ChevronUp,
     ChevronDown,
     Filter,
+    FileJson,
+    Package,
+    Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -152,6 +155,14 @@ import {
   prepareVaultImport,
   type PreparedVaultImport,
 } from '@/lib/vault-backup';
+import {
+  readVaultArchiveZip,
+  type VaultArchiveContents,
+} from '@/lib/vault-archive';
+import {
+  exportFullVaultArchive,
+  restoreVaultArchiveMedia,
+} from '@/lib/vault-archive-client';
 
 function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenChange: (open: boolean) => void, type: 'Album' | 'Track' }) {
   const [title, setTitle] = useState('');
@@ -566,7 +577,7 @@ function VaultHeaderToolbar({
   setCreateItemType,
   hasProWorkflow,
   fileInputRef,
-  onExport,
+  onOpenExport,
   compact = false,
 }: {
   sortBy: VaultSort;
@@ -576,7 +587,7 @@ function VaultHeaderToolbar({
   setCreateItemType: (value: 'Album' | 'Track') => void;
   hasProWorkflow: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
-  onExport: () => void;
+  onOpenExport: () => void;
   compact?: boolean;
 }) {
   return (
@@ -667,7 +678,7 @@ function VaultHeaderToolbar({
                 <Import className="h-4 w-4 text-muted-foreground" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent><p className="text-[10px] font-bold">Import Studio Vault</p></TooltipContent>
+            <TooltipContent><p className="text-[10px] font-bold">Import Blueprint (.json) or Full Vault Archive (.zip)</p></TooltipContent>
           </Tooltip>
         ) : (
           <LockedToolbarButton feature="Vault Import" benefit="Merge backup blueprints into your studio." icon={Import} />
@@ -675,11 +686,11 @@ function VaultHeaderToolbar({
         {hasProWorkflow ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10 border border-border bg-card/95 rounded-xl" onClick={onExport}>
+              <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10 border border-border bg-card/95 rounded-xl" onClick={onOpenExport}>
                 <Download className="h-4 w-4 text-muted-foreground" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent><p className="text-[10px] font-bold">Export Studio Vault</p></TooltipContent>
+            <TooltipContent><p className="text-[10px] font-bold">Choose Blueprint or Full Vault Archive</p></TooltipContent>
           </Tooltip>
         ) : (
           <LockedToolbarButton feature="Vault Export" benefit="Download your full studio as a portable blueprint." icon={Download} />
@@ -706,8 +717,15 @@ export function AlbumList() {
   const [sortBy, setSortBy] = useState<VaultSort>('newest');
   const [vaultFilter, setVaultFilter] = useState<LooseTrackFilter>('all');
   const [showImportConfirm, setShowImportConfirm] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const [showClearVaultConfirm, setShowClearVaultConfirm] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isExportingArchive, setIsExportingArchive] = useState(false);
+  const [archiveProgress, setArchiveProgress] = useState('');
+  const [archiveToImport, setArchiveToImport] = useState<{
+    contents: VaultArchiveContents;
+    parsed: ReturnType<typeof parseVaultBackup>;
+  } | null>(null);
   const [isClearingVault, setIsClearingVault] = useState(false);
   const [dataToImport, setDataToImport] = useState<PreparedVaultImport | null>(null);
   const [trackToDelete, setTrackToDelete] = useState<Track | null>(null);
@@ -960,7 +978,16 @@ export function AlbumList() {
   const isEmpty = realAlbums.length === 0 && unassignedTracks.length === 0;
   const clearVaultFilter = () => setVaultFilter('all');
 
-  const handleExport = () => {
+  const downloadBlob = (blob: Blob, fileName: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = fileName;
+    link.href = url;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const handleBlueprintExport = () => {
     if (!canExportVault(user)) {
       toast(EXPORT_PRO_TOAST);
       return;
@@ -968,11 +995,38 @@ export function AlbumList() {
     const backup = buildVaultBackup(albums, styleProfile);
     const dataStr = JSON.stringify(backup, null, 2);
     const dataBlob = new Blob([dataStr], {type: "application/json"});
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.download = `bar4bar-studio-vault-${new Date().toISOString().split('T')[0]}.json`;
-    link.href = url; link.click(); URL.revokeObjectURL(url);
-    toast({ title: 'Studio Vault Exported!' });
+    downloadBlob(dataBlob, `bar4bar-studio-blueprint-${new Date().toISOString().split('T')[0]}.json`);
+    setShowExportDialog(false);
+    toast({ title: 'Studio Blueprint Exported', description: 'Writing and project settings saved. Media is not included in this small JSON.' });
+  };
+
+  const handleFullArchiveExport = async () => {
+    if (!user || !canExportVault(user)) {
+      toast(EXPORT_PRO_TOAST);
+      return;
+    }
+    setIsExportingArchive(true);
+    setArchiveProgress('Preparing your Vault…');
+    try {
+      const archive = await exportFullVaultArchive({
+        albums,
+        styleProfile,
+        userId: user.id,
+        onProgress: setArchiveProgress,
+      });
+      downloadBlob(archive, `bar4bar-full-vault-${new Date().toISOString().split('T')[0]}.zip`);
+      setShowExportDialog(false);
+      toast({ title: 'Full Vault Archive Exported', description: 'ZIP saved with its importable blueprint and owned Vault media.' });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Full Archive Failed',
+        description: error instanceof Error ? error.message : 'Could not build the Vault ZIP.',
+      });
+    } finally {
+      setIsExportingArchive(false);
+      setArchiveProgress('');
+    }
   };
 
   const handleImportMerge = async () => {
@@ -985,21 +1039,38 @@ export function AlbumList() {
     }
     setIsImporting(true);
     try {
-      await mergeData(dataToImport.albums, dataToImport.looseTracks, {
-        styleProfile: dataToImport.styleProfile,
+      let ready = dataToImport;
+      if (archiveToImport && user) {
+        setArchiveProgress('Restoring archive media…');
+        ready = await restoreVaultArchiveMedia({
+          contents: archiveToImport.contents,
+          parsed: archiveToImport.parsed,
+          prepared: dataToImport,
+          userId: user.id,
+          onProgress: setArchiveProgress,
+        });
+      }
+      await mergeData(ready.albums, ready.looseTracks, {
+        styleProfile: ready.styleProfile,
         copyOnConflict: true,
         applyImportedTrackStyle: false,
       });
       setShowImportConfirm(false);
       setDataToImport(null);
+      setArchiveToImport(null);
       toast({
-        title: 'Vault Merged Safely',
-        description: `Added ${dataToImport.preview.albumsToAdd} albums and ${dataToImport.preview.albumTracksToAdd + dataToImport.preview.looseTracksToAdd} tracks. Existing work was kept.`,
+        title: archiveToImport ? 'Full Vault Archive Restored' : 'Studio Blueprint Imported',
+        description: `Added ${ready.preview.albumsToAdd} albums and ${ready.preview.albumTracksToAdd + ready.preview.looseTracksToAdd} tracks. Existing work was kept.`,
       });
-    } catch {
-      toast({ variant: 'destructive', title: 'Import Failed', description: 'Could not merge studio blueprint.' });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Import Failed',
+        description: error instanceof Error ? error.message : 'Could not import this Vault backup.',
+      });
     } finally {
       setIsImporting(false);
+      setArchiveProgress('');
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -1067,7 +1138,7 @@ export function AlbumList() {
                       setCreateItemType={setCreateItemType}
                       hasProWorkflow={hasProWorkflow}
                       fileInputRef={fileInputRef}
-                      onExport={handleExport}
+                      onOpenExport={() => setShowExportDialog(true)}
                     />
                   </div>
                 </div>
@@ -1082,7 +1153,7 @@ export function AlbumList() {
                     setCreateItemType={setCreateItemType}
                     hasProWorkflow={hasProWorkflow}
                     fileInputRef={fileInputRef}
-                    onExport={handleExport}
+                    onOpenExport={() => setShowExportDialog(true)}
                   />
                 </div>
               </div>
@@ -1356,44 +1427,93 @@ export function AlbumList() {
         type={createItemType || 'Album'}
       />
       
-      <input type="file" ref={fileInputRef} className="hidden" accept=".json,application/json" onChange={(e) => {
+      <Dialog open={showExportDialog} onOpenChange={(open) => !isExportingArchive && setShowExportDialog(open)}>
+        <DialogContent className="max-w-xl border-2 bg-card">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-2xl uppercase">Back Up Your Vault</DialogTitle>
+            <DialogDescription>
+              Choose the small writing backup or the complete, media-carrying archive. Both can be imported here later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isExportingArchive}
+              onClick={handleBlueprintExport}
+              className="h-auto min-h-20 justify-start gap-4 whitespace-normal border-violet-400/25 p-4 text-left"
+            >
+              <FileJson className="h-7 w-7 shrink-0 text-violet-300" />
+              <span>
+                <strong className="block text-sm">Export Studio Blueprint (.json)</strong>
+                <span className="mt-1 block text-xs font-normal text-muted-foreground">Fast and small: writing, albums, tracks, DNA settings, and Style Profile. No audio, takes, or artwork.</span>
+              </span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isExportingArchive}
+              onClick={() => void handleFullArchiveExport()}
+              className="h-auto min-h-20 justify-start gap-4 whitespace-normal border-emerald-400/25 p-4 text-left"
+            >
+              {isExportingArchive ? <Loader2 className="h-7 w-7 shrink-0 animate-spin text-emerald-300" /> : <Package className="h-7 w-7 shrink-0 text-emerald-300" />}
+              <span>
+                <strong className="block text-sm">Export Full Vault Archive (.zip)</strong>
+                <span className="mt-1 block text-xs font-normal text-muted-foreground">Blueprint plus owned song files, 30-second previews, Sheet Takes, and cover artwork.</span>
+              </span>
+            </Button>
+            {archiveProgress ? <p className="text-center text-xs font-bold text-emerald-300">{archiveProgress}</p> : null}
+          </div>
+          <div className="rounded-lg border border-cyan-400/20 bg-cyan-400/5 px-3 py-2 text-xs text-cyan-100">
+            <strong>Restore later:</strong> open The Vault, tap the Import arrow, choose this JSON or ZIP, review the safe merge, then tap Import. Existing work is never overwritten.
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <input type="file" ref={fileInputRef} className="hidden" accept=".json,.zip,application/json,application/zip" onChange={async (e) => {
           const file = e.target.files?.[0]; if(!file) return;
           if (!canExportVault(user)) {
             toast(IMPORT_PRO_TOAST);
             e.target.value = '';
             return;
           }
-          if (file.size > 50 * 1024 * 1024) {
-            toast({ variant: 'destructive', title: 'Import Failed', description: 'Vault backups must be 50 MB or smaller.' });
+          const isZip = file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip';
+          const maxBytes = isZip ? 1024 * 1024 * 1024 : 50 * 1024 * 1024;
+          if (file.size > maxBytes) {
+            toast({ variant: 'destructive', title: 'Import Failed', description: isZip ? 'Full Vault Archives must be 1 GB or smaller.' : 'Studio Blueprints must be 50 MB or smaller.' });
             e.target.value = '';
             return;
           }
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            try {
-              const parsed = parseVaultBackup(JSON.parse(String(ev.target?.result || '')));
+          try {
+            if (isZip) {
+              setArchiveProgress('Reading Full Vault Archive…');
+              const contents = await readVaultArchiveZip(file);
+              const parsed = parseVaultBackup(contents.blueprint);
+              setArchiveToImport({ contents, parsed });
               setDataToImport(prepareVaultImport(parsed, albums, Boolean(styleProfile)));
-              setShowImportConfirm(true);
-            } catch (error) {
-              toast({
-                variant: 'destructive',
-                title: 'Import Failed',
-                description: error instanceof Error ? error.message : 'Invalid studio blueprint file.',
-              });
-              e.target.value = '';
+            } else {
+              const parsed = parseVaultBackup(JSON.parse(await file.text()));
+              setArchiveToImport(null);
+              setDataToImport(prepareVaultImport(parsed, albums, Boolean(styleProfile)));
             }
-          };
-          reader.onerror = () => {
-            toast({ variant: 'destructive', title: 'Import Failed', description: 'Could not read that Vault backup.' });
+            setShowImportConfirm(true);
+          } catch (error) {
+            toast({
+              variant: 'destructive',
+              title: 'Import Failed',
+              description: error instanceof Error ? error.message : 'Invalid Vault backup file.',
+            });
             e.target.value = '';
-          };
-          reader.readAsText(file);
+          } finally {
+            setArchiveProgress('');
+          }
       }} />
 
       <AlertDialog open={showImportConfirm} onOpenChange={(open) => {
           setShowImportConfirm(open);
           if (!open && !isImporting) {
             setDataToImport(null);
+            setArchiveToImport(null);
             if (fileInputRef.current) fileInputRef.current.value = '';
           }
       }}>
@@ -1403,7 +1523,7 @@ export function AlbumList() {
                   <AlertDialogDescription asChild>
                     <div className="space-y-3 text-sm font-code text-muted-foreground">
                       <p>
-                        {dataToImport?.sourceVersion === 2 ? 'Version 2 Vault backup' : 'Legacy Vault blueprint'}
+                        {archiveToImport ? 'Full Vault Archive · media will be restored' : dataToImport?.sourceVersion === 2 ? 'Studio Blueprint' : 'Legacy Vault blueprint'}
                         {dataToImport?.exportedAt ? ` · exported ${new Date(dataToImport.exportedAt).toLocaleString()}` : ''}
                       </p>
                       <div className="grid grid-cols-3 gap-2">
@@ -1419,15 +1539,21 @@ export function AlbumList() {
                       <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-emerald-200/90">
                         Safe merge only: no current album or track will be removed or overwritten.
                       </p>
+                      <p className="text-xs">
+                        {archiveToImport
+                          ? 'Import restores the ZIP’s owned audio, previews, Sheet Takes, and cover art to fresh private paths under this account.'
+                          : 'Blueprint import restores writing and project settings only. Use a Full Vault Archive ZIP when you also need media.'}
+                      </p>
                       {dataToImport?.preview.styleProfile === 'add' ? <p>The backed-up Style Profile will be restored because this Vault has none.</p> : null}
                       {dataToImport?.preview.styleProfile === 'keep-current' ? <p>Your current Style Profile will remain unchanged.</p> : null}
+                      {isImporting && archiveProgress ? <p className="text-center font-bold text-emerald-300">{archiveProgress}</p> : null}
                     </div>
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                   <AlertDialogCancel className="font-bold">Abort</AlertDialogCancel>
                   <AlertDialogAction onClick={handleImportMerge} disabled={isImporting} className="font-bold">
-                    {isImporting ? 'Merging...' : 'Merge Blueprints'}
+                    {isImporting ? 'Importing…' : archiveToImport ? 'Import Full Archive' : 'Import Blueprint'}
                   </AlertDialogAction>
               </AlertDialogFooter>
           </AlertDialogContent>
@@ -1453,16 +1579,13 @@ export function AlbumList() {
                     type="button"
                     variant="outline"
                     onClick={() => {
-                      handleExport();
-                      toast({
-                        title: 'Vault Exported',
-                        description: 'Backup saved. You can erase the vault when ready.',
-                      });
+                      setShowClearVaultConfirm(false);
+                      setShowExportDialog(true);
                     }}
                     className="w-full sm:w-auto gap-2 font-bold border-primary/30 hover:bg-primary/10"
                   >
                     <Download className="h-4 w-4" />
-                    Export Vault First
+                    Back Up Vault First
                   </Button>
                   <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
                     <AlertDialogCancel className="font-bold" disabled={isClearingVault}>Cancel</AlertDialogCancel>

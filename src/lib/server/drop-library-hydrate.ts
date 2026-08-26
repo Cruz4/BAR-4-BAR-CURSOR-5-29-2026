@@ -1,8 +1,8 @@
 import 'server-only';
-import type { DocumentSnapshot, Firestore } from 'firebase-admin/firestore';
+import type { DocumentSnapshot, Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { normalizeDropAudio, type DropLibraryEntry } from '@/lib/drop-commerce';
 import type { DropLibraryItem, DropLibraryTrack } from '@/lib/drop-library';
-import { isShareDocumentPublic } from '@/lib/release-management';
+import { isHouseReleaseDocument, isShareDocumentPublic } from '@/lib/release-management';
 
 function publicCoverUrl(url?: string): string | undefined {
   const u = url?.trim();
@@ -122,88 +122,95 @@ function artistFromShare(data: Record<string, unknown>): string | undefined {
     : undefined;
 }
 
-/** Live First Drops the artist pressed — playable in Library without a purchase. */
-export async function listOwnerPressedLibraryItems(
-  db: Firestore,
-  userId: string
-): Promise<DropLibraryItem[]> {
-  if (!userId) return [];
-  const snap = await db.collection('shares').where('ownerId', '==', userId).get();
-  const items: DropLibraryItem[] = [];
+function libraryItemFromShare(
+  doc: QueryDocumentSnapshot,
+  options: { own?: boolean; houseRelease?: boolean } = {}
+): DropLibraryItem | null {
+  const data = doc.data() as Record<string, unknown>;
+  if (!isShareDocumentPublic(data)) return null;
+  const payload = (data.data as Record<string, unknown> | undefined) ?? {};
+  const ownerId = typeof data.ownerId === 'string' ? data.ownerId : '';
+  const projectId = typeof data.projectId === 'string' ? data.projectId : '';
+  if (!ownerId || !projectId) return null;
+  const purchasedAt = sharePurchasedAt(data);
+  const artistName = artistFromShare(data);
+  const cover = coverFromPayload(payload);
+  const houseLibraryNoticeAt = typeof data.houseLibraryNoticeAt === 'string'
+    ? data.houseLibraryNoticeAt
+    : undefined;
+  const shared = {
+    shareId: doc.id,
+    ownerId,
+    projectId,
+    amountCents: 0,
+    purchasedAt,
+    ...(options.own ? { own: true } : {}),
+    ...(options.houseRelease ? {
+      houseRelease: true,
+      free: true,
+      ...(data.houseLibraryNotice === true ? { houseLibraryNotice: true } : {}),
+      ...(data.houseLibraryNotice === true && houseLibraryNoticeAt ? { houseLibraryNoticeAt } : {}),
+    } : {}),
+    ...(artistName ? { artistName } : {}),
+    ...(cover ? { coverArtUrl: cover } : {}),
+  };
 
-  for (const doc of snap.docs) {
-    const data = doc.data() as Record<string, unknown>;
-    if (!isShareDocumentPublic(data)) continue;
-    const payload = (data.data as Record<string, unknown> | undefined) ?? {};
-    const projectId = typeof data.projectId === 'string' ? data.projectId : '';
-    const purchasedAt = sharePurchasedAt(data);
-    const artistName = artistFromShare(data);
-    const cover = coverFromPayload(payload);
-
-    if (data.type === 'album') {
-      const rows = Array.isArray(payload.tracks) ? payload.tracks : [];
-      const tracks: DropLibraryTrack[] = [];
-      for (const row of rows) {
-        if (!row || typeof row !== 'object') continue;
-        const o = row as Record<string, unknown>;
-        const id = typeof o.id === 'string' ? o.id : '';
-        if (!id) continue;
-        const audio = normalizeDropAudio(o.dropAudio);
-        if (!audio) continue;
-        const title =
-          typeof o.title === 'string' && o.title.trim() ? o.title.trim() : 'Untitled';
-        tracks.push({
-          id,
-          title,
-          durationSec: audio.durationSec,
-        });
-      }
-      if (tracks.length === 0) continue;
-      const title =
-        typeof payload.title === 'string' && payload.title.trim()
-          ? payload.title.trim()
-          : 'Untitled album';
-      const durationSec = tracks.reduce((sum, track) => sum + (track.durationSec || 0), 0) || undefined;
-      items.push({
-        shareId: doc.id,
-        ownerId: userId,
-        scope: 'album',
-        projectId,
-        title,
-        trackIds: tracks.map((track) => track.id),
-        amountCents: 0,
-        purchasedAt,
-        own: true,
-        tracks,
-        ...(artistName ? { artistName } : {}),
-        ...(durationSec ? { durationSec } : {}),
-        ...(cover ? { coverArtUrl: cover } : {}),
+  if (data.type === 'album') {
+    const rows = Array.isArray(payload.tracks) ? payload.tracks : [];
+    const tracks: DropLibraryTrack[] = [];
+    for (const row of rows) {
+      if (!row || typeof row !== 'object') continue;
+      const o = row as Record<string, unknown>;
+      const id = typeof o.id === 'string' ? o.id : '';
+      if (!id) continue;
+      const audio = normalizeDropAudio(o.dropAudio);
+      if (!audio) continue;
+      tracks.push({
+        id,
+        title: typeof o.title === 'string' && o.title.trim() ? o.title.trim() : 'Untitled',
+        durationSec: audio.durationSec,
       });
-      continue;
     }
-
-    const audio = normalizeDropAudio(payload.dropAudio);
-    if (!audio) continue;
-    const title =
-      typeof payload.title === 'string' && payload.title.trim()
-        ? payload.title.trim()
-        : 'Untitled track';
-    items.push({
-      shareId: doc.id,
-      ownerId: userId,
-      scope: 'track',
-      projectId,
-      title,
-      trackIds: projectId ? [projectId] : [],
-      amountCents: 0,
-      purchasedAt,
-      own: true,
-      albumId: typeof payload.albumId === 'string' ? payload.albumId : undefined,
-      ...(artistName ? { artistName } : {}),
-      ...(audio.durationSec ? { durationSec: audio.durationSec } : {}),
-      ...(cover ? { coverArtUrl: cover } : {}),
-    });
+    if (tracks.length === 0) return null;
+    const durationSec = tracks.reduce((sum, track) => sum + (track.durationSec || 0), 0) || undefined;
+    return {
+      ...shared,
+      scope: 'album',
+      title: typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : 'Untitled album',
+      trackIds: tracks.map((track) => track.id),
+      tracks,
+      ...(durationSec ? { durationSec } : {}),
+    };
   }
 
-  return items.sort((a, b) => (b.purchasedAt || '').localeCompare(a.purchasedAt || ''));
+  const audio = normalizeDropAudio(payload.dropAudio);
+  if (!audio) return null;
+  return {
+    ...shared,
+    scope: 'track',
+    title: typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : 'Untitled track',
+    trackIds: [projectId],
+    albumId: typeof payload.albumId === 'string' ? payload.albumId : undefined,
+    ...(audio.durationSec ? { durationSec: audio.durationSec } : {}),
+  };
+}
+
+/** Live First Drops the artist pressed — playable in Library without a purchase. */
+export async function listOwnerPressedLibraryItems(db: Firestore, userId: string): Promise<DropLibraryItem[]> {
+  if (!userId) return [];
+  const snap = await db.collection('shares').where('ownerId', '==', userId).get();
+  return snap.docs
+    .map((doc) => libraryItemFromShare(doc, { own: true }))
+    .filter((item): item is DropLibraryItem => Boolean(item))
+    .sort((a, b) => (b.purchasedAt || '').localeCompare(a.purchasedAt || ''));
+}
+
+/** Admin-selected live releases shared into every current and future member Library. */
+export async function listHouseReleaseLibraryItems(db: Firestore): Promise<DropLibraryItem[]> {
+  const snap = await db.collection('shares').where('houseRelease', '==', true).get();
+  return snap.docs
+    .filter((doc) => isHouseReleaseDocument(doc.data() as Record<string, unknown>))
+    .map((doc) => libraryItemFromShare(doc, { houseRelease: true }))
+    .filter((item): item is DropLibraryItem => Boolean(item))
+    .sort((a, b) => (b.purchasedAt || '').localeCompare(a.purchasedAt || ''));
 }

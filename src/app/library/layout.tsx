@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 export const metadata: Metadata = {
   title: 'Library',
-  description: 'Stream First Drops you unlocked — search, crate, and play them in Bar 4 Bar.',
+  description: 'Stream music releases you unlocked—search, crate, and play them in Bar 4 Bar.',
   robots: { index: false, follow: false },
 };
 

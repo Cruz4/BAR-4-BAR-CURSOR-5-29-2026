@@ -26,7 +26,7 @@ function titleFromShare(data: Record<string, unknown>): string {
     : {};
   return typeof payload.title === 'string' && payload.title.trim()
     ? payload.title.trim().slice(0, 120)
-    : 'First Drop';
+    : 'Release';
 }
 
 function sourceIncrement(source: DropListenSource): Record<string, unknown> {

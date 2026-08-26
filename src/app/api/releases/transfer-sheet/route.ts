@@ -76,6 +76,8 @@ export async function POST(req: Request) {
       releaseShareId: sourceReleaseId,
       releaseStatus: sourceReleaseStatus,
       releaseSnapshotAt: source.releaseSnapshotAt,
+      houseRelease: source.houseRelease,
+      houseLibraryNotice: source.houseLibraryNotice,
       updatedAt: now,
     };
     const nextTarget = { ...target, ...moved, id: targetTrackId, albumId: sourceAlbumId } as Track;

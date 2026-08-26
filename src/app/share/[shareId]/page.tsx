@@ -295,13 +295,13 @@ export default function SharedProjectPage() {
               ...(isAlbum ? {} : { trackId: project.id }),
             });
             toast({
-                title: isAlbum ? 'Album unpressed' : 'Song unpressed',
+                title: isAlbum ? 'Album release taken offline' : 'Song release taken offline',
                 description: 'New discovery and checkout are off. Existing buyers keep access.',
             });
             router.push(vaultHref());
         } catch (e: unknown) {
-            const message = e instanceof Error ? e.message : 'Could not unpress this release.';
-            toast({ variant: 'destructive', title: 'Unpress failed', description: message });
+            const message = e instanceof Error ? e.message : 'Could not take this release offline.';
+            toast({ variant: 'destructive', title: 'Take offline failed', description: message });
         } finally {
             setIsTakingOffline(false);
         }
@@ -403,11 +403,11 @@ export default function SharedProjectPage() {
                             variant="outline"
                             className="h-8 sm:h-9 px-2 sm:px-3 font-bold border-red-500/30 text-red-500 hover:bg-red-500/10"
                             disabled={isTakingOffline}
-                            aria-label={isReleaseShare ? 'Unpress release' : 'Take DNA offline'}
-                            title={isReleaseShare ? 'Unpress release' : 'Take DNA offline'}
+                            aria-label={isReleaseShare ? 'Take release offline' : 'Take DNA offline'}
+                            title={isReleaseShare ? 'Take release offline' : 'Take DNA offline'}
                         >
                             {isTakingOffline ? <StudioLoader size="sm" /> : <EyeOff className="h-3.5 w-3.5 sm:mr-1.5" />}
-                            <span className="hidden sm:inline">{isReleaseShare ? 'Unpress' : 'Take offline'}</span>
+                            <span className="hidden sm:inline">Take offline</span>
                         </Button>
                     )}
                     {!user && hasFirstDropAudio ? (
@@ -523,6 +523,7 @@ export default function SharedProjectPage() {
                             : normalizeDropPrice((project as DnaDropTrackPayload).dropPrice)
                         }
                         hasAudio={hasFirstDropAudio}
+                        houseRelease={share.houseRelease === true}
                         detailsHref={isAlbum ? `/share/${shareId}` : undefined}
                         checkoutDestination={isAlbum ? 'share' : 'song'}
                       />
@@ -725,6 +726,7 @@ export default function SharedProjectPage() {
                             shareId={shareId}
                             ownerId={share.ownerId}
                             ownerName={share.ownerName}
+                            houseRelease={share.houseRelease === true}
                         />
                     ) : (
                     <Card className="border-2 shadow-2xl relative overflow-hidden bg-notebook min-h-[60vh] md:min-h-[80vh] [--lyrics-gutter:2.75rem] md:[--lyrics-gutter:100px] [--lyrics-lh:20px] md:[--lyrics-lh:32px]">
@@ -825,7 +827,7 @@ export default function SharedProjectPage() {
                 <AlertDialogContent className="bg-card border-2">
                     <AlertDialogHeader>
                         <AlertDialogTitle className="font-headline text-2xl uppercase">
-                          {isReleaseShare ? `Unpress this ${isAlbum ? 'album' : 'song'}?` : 'Take this DNA Drop offline?'}
+                          {isReleaseShare ? `Take this ${isAlbum ? 'album' : 'song'} release offline?` : 'Take this DNA Drop offline?'}
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-sm font-code leading-relaxed">
                             {isReleaseShare ? 'New discovery and checkout will stop; existing buyers keep access.' : 'The public lyric link will stop working immediately.'}
@@ -839,7 +841,7 @@ export default function SharedProjectPage() {
                             className="font-bold bg-red-500 hover:bg-red-600 text-white"
                             disabled={isTakingOffline}
                         >
-                            {isTakingOffline ? (isReleaseShare ? 'Unpressing…' : 'Taking offline…') : (isReleaseShare ? 'Unpress release' : 'Take offline')}
+                            {isTakingOffline ? 'Taking offline…' : (isReleaseShare ? 'Take release offline' : 'Take offline')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

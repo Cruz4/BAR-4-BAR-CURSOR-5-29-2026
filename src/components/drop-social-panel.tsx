@@ -133,7 +133,7 @@ export function DropSocialPanel({
       await navigator.clipboard.writeText(dropUrl);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
-      toast({ title: 'Link copied', description: 'Send the First Drop.' });
+      toast({ title: 'Link copied', description: 'Send the release.' });
     } catch {
       toast({ variant: 'destructive', title: 'Could not copy link' });
     }
@@ -142,7 +142,7 @@ export function DropSocialPanel({
   const nativeShare = async () => {
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
-        await navigator.share({ title: `${title} · First Drop`, url: dropUrl });
+        await navigator.share({ title: `${title} · Release`, url: dropUrl });
         return;
       } catch {
         /* fall through to copy */
@@ -160,7 +160,7 @@ export function DropSocialPanel({
     setBusy(true);
     try {
       await createPost({
-        text: [quote?.trim(), `${hasAudio ? 'First Drop' : 'DNA Drop'} · ${title}`, ownerName ? `Original · ${ownerName}` : ''].filter(Boolean).join('\n'),
+        text: [quote?.trim(), `${hasAudio ? 'Release' : 'DNA Drop'} · ${title}`, ownerName ? `Original · ${ownerName}` : ''].filter(Boolean).join('\n'),
         embedUrl: dropUrl,
         sourceKind: hasAudio ? 'song' : 'dna',
         ownerName: user.displayName || 'Artist',
@@ -185,7 +185,7 @@ export function DropSocialPanel({
     <div className="rounded-xl border border-fuchsia-500/25 bg-fuchsia-500/[0.06] p-4 space-y-3">
       {(pulse || firstBuyerName) && (
         <p className="font-code text-[9px] font-bold uppercase tracking-[0.22em] text-fuchsia-300/90">
-          {pulse || 'First Drop'}
+          {pulse || 'Release'}
           {firstBuyerName ? ` · first cop ${firstBuyerName}` : ''}
         </p>
       )}
@@ -211,7 +211,7 @@ export function DropSocialPanel({
         </button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" disabled={busy || walled} className={cn('flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors', walled ? 'text-violet-300' : 'text-muted-foreground hover:text-violet-300')} title="Reverb this First Drop">
+            <button type="button" disabled={busy || walled} className={cn('flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors', walled ? 'text-violet-300' : 'text-muted-foreground hover:text-violet-300')} title="Reverb this release">
               <Repeat2 className={cn('h-3.5 w-3.5', walled && 'stroke-[2.5]')} /> {walled ? 'Reverbed' : 'Reverb'}
             </button>
           </DropdownMenuTrigger>

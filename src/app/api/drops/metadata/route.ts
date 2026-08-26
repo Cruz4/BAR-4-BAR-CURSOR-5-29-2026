@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAuth, getDb } from '@/lib/firebase/server';
 import {
-  audioForPlay,
   isReleaseShareLive,
+  loadAudioForPlay,
   loadShare,
   priceFromShare,
   userCanStreamFull,
@@ -23,7 +23,7 @@ async function optionalUid(req: Request): Promise<string | null> {
 
 export async function GET(req: Request) {
   if (!(await isFirstDropsEnabled())) {
-    return NextResponse.json({ error: 'First Drops is off' }, { status: 404 });
+    return NextResponse.json({ error: 'Music Releases is off' }, { status: 404 });
   }
   try {
     const { searchParams } = new URL(req.url);
@@ -42,7 +42,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'This release is not public.' }, { status: 404 });
     }
 
-    const audio = audioForPlay(share, trackId);
+    const audio = await loadAudioForPlay(db, share, trackId);
     const priced = priceFromShare(share, share.type === 'album' ? trackId : undefined);
     return NextResponse.json({
       shareId,
@@ -54,6 +54,8 @@ export async function GET(req: Request) {
       price: priced.price,
       hasAudio: Boolean(audio?.storagePath),
       live,
+      entitled,
+      houseRelease: share.houseRelease === true,
     }, {
       headers: {
         'Cache-Control': viewerId ? 'private, no-store' : 'public, max-age=20, s-maxage=30',

@@ -120,7 +120,7 @@ export const WEEKLY_CHALLENGES: ChallengeDef[] = [
   {
     id: 'qualified_listening_mix',
     label: 'Deep-listen to 3 songs',
-    description: 'Reach 80% on three different pressed songs this week. One qualified day per song counts.',
+    description: 'Reach 80% on three different music releases this week. One qualified day per song counts.',
     target: 3,
     scale: 'weekly',
     tier: 'standard',

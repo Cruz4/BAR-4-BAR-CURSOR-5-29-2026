@@ -1386,6 +1386,27 @@ export async function getPublicProfile(slug: string) {
       const featured = home.featured as Record<string, unknown>;
       const { featuredTrack: _hidden, ...publicFeatured } = featured;
       artistHome = { ...home, featured: publicFeatured };
+      // Self-heal both saved copies so a router-cached profile cannot keep
+      // retrying an offline featured release and showing an error toast.
+      try {
+        const canonicalRef = db.doc(`users/${userId}/gamification/artistHome`);
+        const canonicalSnap = await canonicalRef.get();
+        const canonicalShareId = canonicalSnap.data()?.featured?.featuredTrack?.shareId;
+        const cleanup = db.batch();
+        cleanup.update(snap.ref, {
+          'artistHome.featured.featuredTrack': FieldValue.delete(),
+          updatedAt: new Date().toISOString(),
+        });
+        if (canonicalShareId === featuredShareId) {
+          cleanup.update(canonicalRef, {
+            'featured.featuredTrack': FieldValue.delete(),
+            updatedAt: new Date().toISOString(),
+          });
+        }
+        await cleanup.commit();
+      } catch {
+        /* response is already clean; persistence can retry on the next load */
+      }
     }
   }
 
@@ -1488,6 +1509,7 @@ export type LiveDnaDropSummary = {
   /** Live track count on album cards. */
   trackCount?: number;
   hasDropAudio?: boolean;
+  houseRelease?: boolean;
   dropPriceSummary?: string;
   playCount?: number;
   previewCount?: number;
@@ -1504,6 +1526,7 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
   const snap = await db.collection('shares').where('ownerId', '==', userId).get();
 
   const byShareId = new Map<string, LiveDnaDropDraft>();
+  const shareDocsById = new Map(snap.docs.map((doc) => [doc.id, doc]));
 
   for (const doc of snap.docs) {
     const data = doc.data();
@@ -1539,6 +1562,7 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
       type,
       updatedAt,
       ...(flags.hasDropAudio ? { hasDropAudio: true } : {}),
+      ...(data.houseRelease === true ? { houseRelease: true } : {}),
       ...(flags.dropPriceSummary ? { dropPriceSummary: flags.dropPriceSummary } : {}),
       ...(Number(data.playCount) > 0 ? { playCount: Number(data.playCount) } : {}),
       ...(Number(data.previewCount) > 0 ? { previewCount: Number(data.previewCount) } : {}),
@@ -1582,6 +1606,10 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
           ? (track as { shareId: string }).shareId.trim()
           : '';
       if (!shareId) continue;
+      const linkedShare = shareDocsById.get(shareId);
+      if (linkedShare && !isShareDocumentPublic(linkedShare.data() as Record<string, unknown>)) {
+        continue;
+      }
 
       const trackTitle =
         typeof (track as { title?: unknown }).title === 'string' &&
@@ -1589,7 +1617,6 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
           ? (track as { title: string }).title.trim().slice(0, 120)
           : 'Untitled track';
 
-      const trackFlags = shareCommerceFlags(track as { dropAudio?: unknown; dropPrice?: unknown });
       const existing = byShareId.get(shareId);
       if (existing) {
         byShareId.set(shareId, {
@@ -1599,8 +1626,6 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
           albumShareId,
           trackIndex,
           updatedAt: existing.updatedAt || albumUpdatedAt,
-          hasDropAudio: existing.hasDropAudio || trackFlags.hasDropAudio || undefined,
-          dropPriceSummary: existing.dropPriceSummary || trackFlags.dropPriceSummary || undefined,
         });
       } else {
         byShareId.set(shareId, {
@@ -1611,8 +1636,6 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
           albumShareId,
           trackIndex,
           updatedAt: albumUpdatedAt,
-          ...(trackFlags.hasDropAudio ? { hasDropAudio: true } : {}),
-          ...(trackFlags.dropPriceSummary ? { dropPriceSummary: trackFlags.dropPriceSummary } : {}),
         });
       }
     }
@@ -1635,7 +1658,7 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
       return b.updatedAt.localeCompare(a.updatedAt);
     })
     .slice(0, 48)
-    .map(({ shareId, title, type, albumTitle, albumShareId, trackIndex, trackCount, hasDropAudio, dropPriceSummary, playCount, previewCount, purchaseCount, firstBuyerName }) => ({
+    .map(({ shareId, title, type, albumTitle, albumShareId, trackIndex, trackCount, hasDropAudio, houseRelease, dropPriceSummary, playCount, previewCount, purchaseCount, firstBuyerName }) => ({
       shareId,
       title,
       type,
@@ -1644,6 +1667,7 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
       ...(typeof trackIndex === 'number' ? { trackIndex } : {}),
       ...(typeof trackCount === 'number' ? { trackCount } : {}),
       ...(hasDropAudio ? { hasDropAudio: true } : {}),
+      ...(houseRelease ? { houseRelease: true } : {}),
       ...(dropPriceSummary ? { dropPriceSummary } : {}),
       ...(playCount ? { playCount } : {}),
       ...(previewCount ? { previewCount } : {}),
@@ -2168,6 +2192,7 @@ export type DiscoverShareSummary = {
   studioBadge?: 'pro' | 'free';
   updatedAt: string;
   hasDropAudio?: boolean;
+  houseRelease?: boolean;
   dropPriceSummary?: string;
   playCount?: number;
   previewCount?: number;
@@ -2196,6 +2221,7 @@ export async function listRecentShareSummaries(
     ownerName: string;
     updatedAt: string;
     hasDropAudio?: boolean;
+    houseRelease?: boolean;
     dropPriceSummary?: string;
     dropPrice?: ReturnType<typeof normalizeDropPrice>;
     playCount?: number;
@@ -2238,6 +2264,7 @@ export async function listRecentShareSummaries(
             ? data.createdAt
             : '',
       ...(hasDropAudio ? { hasDropAudio: true } : {}),
+      ...(data.houseRelease === true ? { houseRelease: true } : {}),
       dropPriceSummary: flags.dropPriceSummary || (typeof data.dropPriceSummary === 'string' ? data.dropPriceSummary : undefined),
       ...(priced ? { dropPrice: priced } : {}),
       playCount: Number(data.playCount) > 0 ? Number(data.playCount) : undefined,
@@ -2268,6 +2295,7 @@ export async function listRecentShareSummaries(
       studioBadge: meta?.studioBadge,
       updatedAt: r.updatedAt,
       hasDropAudio: r.hasDropAudio,
+      houseRelease: r.houseRelease,
       dropPriceSummary: r.dropPriceSummary,
       dropPrice: r.dropPrice,
       playCount: r.playCount,

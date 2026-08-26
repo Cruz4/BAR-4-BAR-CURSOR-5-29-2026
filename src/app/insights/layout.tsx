@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 export const metadata: Metadata = {
   title: 'Listener Insights',
-  description: 'Qualified First Drop listeners, supporters, conversions, and discovery sources.',
+  description: 'Qualified release listeners, supporters, conversions, and discovery sources.',
   robots: { index: false, follow: false },
 };
 

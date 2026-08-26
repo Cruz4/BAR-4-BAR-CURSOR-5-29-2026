@@ -250,10 +250,10 @@ export default function SupportersPage() {
     { label: `New in ${days} days`, value: analytics?.newFollowers || 0, note: 'Current supporters who joined during this window.', icon: TrendingUp },
     { label: 'Active listeners', value: analytics?.activeFollowerListeners || 0, note: `Supporters with a verified 80%+ listen in the last ${days} days.`, icon: Headphones },
     { label: 'Paid supporters', value: analytics?.periodFollowerBuyers || 0, note: `Current supporters who purchased in the last ${days} days.`, icon: ShoppingBag },
-    { label: 'Gross support', value: centsToUsdLabel(analytics?.periodGrossCents || 0), note: `All successful First Drop support in the last ${days} days.`, icon: CircleDollarSign },
+    { label: 'Gross support', value: centsToUsdLabel(analytics?.periodGrossCents || 0), note: `All successful release support in the last ${days} days.`, icon: CircleDollarSign },
     { label: 'Inner Circle', value: data?.totals.innerCircleSupporters || 0, note: `${analytics?.rates.innerCirclePercent || 0}% of your supporter base.`, icon: Star },
     { label: 'Mutual support', value: analytics?.mutualSupporters || 0, note: 'Supporters you also intentionally follow.', icon: Network },
-    { label: 'Lifetime purchases', value: analytics?.lifetimePurchases || 0, note: 'Successful First Drop purchases in your recorded sales history.', icon: Activity },
+    { label: 'Lifetime purchases', value: analytics?.lifetimePurchases || 0, note: 'Successful release purchases in your recorded sales history.', icon: Activity },
   ];
 
   return (
@@ -264,7 +264,7 @@ export default function SupportersPage() {
           <h1 className="mt-1 font-headline text-4xl font-bold uppercase">Support Circle</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
             See who follows, listens, returns, and financially supports your work. These are authenticated relationships,
-            qualified listening signals, and successful First Drop purchases—not estimated social impressions.
+            qualified listening signals, and successful release purchases—not estimated social impressions.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -378,7 +378,7 @@ export default function SupportersPage() {
                   </div>
                 ))}
               </div>
-            ) : <p className="text-sm leading-relaxed text-muted-foreground">No current supporter reached a verified 80% listen during this window yet. Share a First Drop from Artist Home or The Scene to begin measuring acquisition.</p>}
+            ) : <p className="text-sm leading-relaxed text-muted-foreground">No current supporter reached a verified 80% listen during this window yet. Share a release from Artist Home or The Scene to begin measuring acquisition.</p>}
           </CardContent>
         </Card>
       </div>
@@ -400,14 +400,14 @@ export default function SupportersPage() {
                       {href ? <Link href={href} className="truncate font-bold hover:text-primary">{supporter.displayName}</Link> : <p className="truncate font-bold">{supporter.displayName}</p>}
                       <p className="text-[9px] font-code uppercase tracking-wider text-muted-foreground">{supporter.innerCircle ? 'Inner Circle' : supporter.followsYou ? 'Supporter' : 'Buyer'}{supporter.mutual ? ' · Mutual' : ''}</p>
                     </div>
-                    <div className="min-w-0 text-xs text-muted-foreground"><span className="block truncate">Top: {supporter.topTrackTitle || 'First Drop'}</span><span>{supporter.qualifiedListeningDays} qualified listen day{supporter.qualifiedListeningDays === 1 ? '' : 's'}</span></div>
+                    <div className="min-w-0 text-xs text-muted-foreground"><span className="block truncate">Top: {supporter.topTrackTitle || 'Release'}</span><span>{supporter.qualifiedListeningDays} qualified listen day{supporter.qualifiedListeningDays === 1 ? '' : 's'}</span></div>
                     <div className="text-xs text-muted-foreground"><strong className="font-code text-foreground">{supporter.purchaseCount}</strong> purchase{supporter.purchaseCount === 1 ? '' : 's'}<span className="block text-[9px]">last {ago(supporter.lastSupportedAt)}</span></div>
                     <div className="text-left sm:text-right"><strong className="block font-code text-emerald-300">{centsToUsdLabel(supporter.totalPaidCents)}</strong><span className="text-[9px] uppercase tracking-wider text-muted-foreground">{centsToUsdLabel(supporter.periodPaidCents)} · {days}D</span></div>
                   </div>
                 );
               })}
             </div>
-          ) : <p className="px-5 pb-6 text-sm text-muted-foreground">No successful First Drop support has been recorded yet.</p>}
+          ) : <p className="px-5 pb-6 text-sm text-muted-foreground">No successful release support has been recorded yet.</p>}
         </CardContent>
       </Card>
 
@@ -425,7 +425,7 @@ export default function SupportersPage() {
           <CardContent className="p-0">
             {filteredFollowers.length ? (
               <div className="max-h-[34rem] divide-y divide-white/10 overflow-y-auto">{filteredFollowers.map((row) => <PersonRow key={row.userId} row={row} />)}</div>
-            ) : <p className="px-5 pb-6 text-sm text-muted-foreground">{data?.followers.length ? 'No supporters match that search.' : 'No supporters yet. Share your live profile or First Drop to start the circle.'}</p>}
+            ) : <p className="px-5 pb-6 text-sm text-muted-foreground">{data?.followers.length ? 'No supporters match that search.' : 'No supporters yet. Share your live profile or a release to start the circle.'}</p>}
           </CardContent>
         </Card>
 
@@ -466,7 +466,7 @@ export default function SupportersPage() {
       </div>
 
       <div className="rounded-xl border border-white/10 bg-black/15 px-4 py-3 text-[10px] leading-relaxed text-muted-foreground">
-        <strong className="text-foreground">How to read this:</strong> qualified listening means at least 80% of the available preview or full stream. Current-circle rates use people who follow you now; Bar4Bar does not retain deleted follow relationships as historical profiles. Successful purchase totals are read retroactively from your existing First Drop sale records. Detailed processing fees, artist net, Stripe status, and payouts remain private in Earnings.
+        <strong className="text-foreground">How to read this:</strong> qualified listening means at least 80% of the available preview or full stream. Current-circle rates use people who follow you now; Bar4Bar does not retain deleted follow relationships as historical profiles. Successful purchase totals are read retroactively from your existing release sale records. Detailed processing fees, artist net, Stripe status, and payouts remain private in Earnings.
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAuth, getDb } from '@/lib/firebase/server';
 import { DROP_PREVIEW_SECONDS } from '@/lib/drop-commerce';
 import { getArtistHomeConfig } from '@/lib/server/artist-home';
-import { audioForPlay, loadShare, userCanStreamFull } from '@/lib/server/drop-entitlements';
+import { loadAudioForPlay, loadShare, userCanStreamFull } from '@/lib/server/drop-entitlements';
 import { dropAudioFileUrl, mintDropAudioTicket } from '@/lib/server/drop-audio-stream';
 import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
 import { resolveDropListenerIdentity } from '@/lib/server/drop-listener-identity';
@@ -24,7 +24,7 @@ async function optionalUid(req: Request): Promise<string | null> {
 
 export async function GET(req: Request) {
   if (!(await isFirstDropsEnabled())) {
-    return NextResponse.json({ error: 'First Drops is off' }, { status: 404 });
+    return NextResponse.json({ error: 'Music Releases is off' }, { status: 404 });
   }
   try {
     const { searchParams } = new URL(req.url);
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
     const db = await getDb();
     const share = await loadShare(db, shareId);
     if (!share) return NextResponse.json({ error: 'This drop is offline.' }, { status: 404 });
-    const audio = audioForPlay(share, trackId);
+    const audio = await loadAudioForPlay(db, share, trackId);
     if (!audio?.storagePath) {
       return NextResponse.json({ error: 'No audio on this drop yet.' }, { status: 404 });
     }
@@ -67,7 +67,8 @@ export async function GET(req: Request) {
     const eligibleDurationSec = full
       ? Math.max(1, durationSec - playbackStartSec)
       : Math.max(1, Math.min(DROP_PREVIEW_SECONDS, durationSec - excerptStartSec));
-    const ticket = mintDropAudioTicket({ storagePath: path, contentType, full });
+    const pathOwnerId = path.startsWith('profile-previews/') ? profileUserId : share.ownerId;
+    const ticket = mintDropAudioTicket({ storagePath: path, ownerId: pathOwnerId, contentType, full });
     const listener = resolveDropListenerIdentity(req, userId);
     const listenProof = mintDropListenProof({
       shareId,
@@ -82,6 +83,7 @@ export async function GET(req: Request) {
       url: dropAudioFileUrl(ticket),
       full,
       preview: !full,
+      houseRelease: share.houseRelease === true,
       durationSec,
       eligibleDurationSec,
       playbackStartSec,

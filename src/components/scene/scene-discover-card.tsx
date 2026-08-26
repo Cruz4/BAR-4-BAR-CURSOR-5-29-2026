@@ -176,7 +176,7 @@ export function SceneDiscoverCard({
       >
         {loveBurst ? <Heart className="pointer-events-none absolute left-1/2 top-1/2 z-50 h-20 w-20 -translate-x-1/2 -translate-y-1/2 fill-fuchsia-400 text-fuchsia-400 drop-shadow-[0_0_24px_rgba(244,114,182,.9)]" /> : null}
         <DiscoverTag
-          label={firstDrop ? 'On sale' : 'Live DNA Drop'}
+          label={drop.houseRelease ? 'House release' : firstDrop ? 'On sale' : 'Live DNA Drop'}
           icon={firstDrop ? Music : Dna}
           tone={firstDrop ? 'text-fuchsia-400/90' : 'text-primary/90'}
         />
@@ -218,7 +218,7 @@ export function SceneDiscoverCard({
                 </span>
               )}
               {drop.updatedAt ? <span className="whitespace-nowrap"> · {timeAgo(drop.updatedAt)}</span> : ''}
-              {firstDrop && drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : ''}
+              {drop.houseRelease ? ' · House · Free' : firstDrop && drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : ''}
               {pulse ? ` · ${pulse}` : ''}
               {drop.firstBuyerName ? ` · first cop ${drop.firstBuyerName}` : ''}
             </p>
@@ -240,6 +240,7 @@ export function SceneDiscoverCard({
                 ownerId={drop.ownerId || ''}
                 price={normalizeDropPrice(drop.dropPrice)}
                 hasAudio
+                houseRelease={drop.houseRelease}
                 presentation={compactSalePlayer ? 'compact' : 'default'}
               />
             </Suspense>

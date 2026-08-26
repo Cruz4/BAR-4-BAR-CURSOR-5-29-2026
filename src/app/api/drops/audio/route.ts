@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuth, getDb } from '@/lib/firebase/server';
-import { audioForPlay, isReleaseShareLive, loadShare, userCanStreamFull } from '@/lib/server/drop-entitlements';
+import { isReleaseShareLive, loadAudioForPlay, loadShare, userCanStreamFull } from '@/lib/server/drop-entitlements';
 import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
 import { dropAudioFileUrl, mintDropAudioTicket } from '@/lib/server/drop-audio-stream';
 import { DROP_PREVIEW_SECONDS } from '@/lib/drop-commerce';
@@ -23,7 +23,7 @@ async function optionalUid(req: Request): Promise<string | null> {
 
 export async function GET(req: Request) {
   if (!(await isFirstDropsEnabled())) {
-    return NextResponse.json({ error: 'First Drops is off' }, { status: 404 });
+    return NextResponse.json({ error: 'Music Releases is off' }, { status: 404 });
   }
   try {
     const { searchParams } = new URL(req.url);
@@ -36,7 +36,7 @@ export async function GET(req: Request) {
     const share = await loadShare(db, shareId);
     if (!share) return NextResponse.json({ error: 'This drop is offline.' }, { status: 404 });
 
-    const audio = audioForPlay(share, trackId);
+    const audio = await loadAudioForPlay(db, share, trackId);
     if (!audio?.storagePath) {
       return NextResponse.json({ error: 'No audio on this drop yet.' }, { status: 404 });
     }
@@ -50,7 +50,7 @@ export async function GET(req: Request) {
     if (!path) return NextResponse.json({ error: 'Audio is not ready.' }, { status: 404 });
 
     const contentType = full ? audio.contentType || 'audio/mpeg' : 'audio/wav';
-    const ticket = mintDropAudioTicket({ storagePath: path, contentType, full });
+    const ticket = mintDropAudioTicket({ storagePath: path, ownerId: share.ownerId, contentType, full });
     const listener = resolveDropListenerIdentity(req, userId);
     const eligibleDurationSec = full
       ? Math.max(1, audio.durationSec || DROP_PREVIEW_SECONDS)
@@ -79,6 +79,7 @@ export async function GET(req: Request) {
       url: dropAudioFileUrl(ticket),
       full,
       preview: !full,
+      houseRelease: share.houseRelease === true,
       durationSec: audio.durationSec ?? null,
       eligibleDurationSec,
       listenProof,

@@ -12,7 +12,7 @@ import {
   isCommerceLive,
   resolveCheckoutCents,
 } from '@/lib/drop-commerce';
-import { isReleaseShareLive, loadShare, priceFromShare } from '@/lib/server/drop-entitlements';
+import { isReleaseShareLive, loadShare, priceFromShare, userCanStreamFull } from '@/lib/server/drop-entitlements';
 import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
 import { connectStatusFromUser, isConnectTransferReady } from '@/lib/server/stripe-connect';
@@ -22,7 +22,7 @@ export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   if (!(await isFirstDropsEnabled())) {
-    return NextResponse.json({ error: 'First Drops is off' }, { status: 404 });
+    return NextResponse.json({ error: 'Music Releases is off' }, { status: 404 });
   }
   try {
     const body = await req.json();
@@ -53,6 +53,9 @@ export async function POST(req: Request) {
     }
     if (share.ownerId === userId) {
       return NextResponse.json({ error: 'This is your drop — it already streams for you.' }, { status: 400 });
+    }
+    if (await userCanStreamFull({ db, share, userId, trackId })) {
+      return NextResponse.json({ error: 'This release is already free in your Library.' }, { status: 409 });
     }
 
     const priced = priceFromShare(share, share.type === 'album' ? trackId : undefined);
@@ -89,7 +92,7 @@ export async function POST(req: Request) {
             unit_amount: amountCents,
             product_data: {
               name: priced.title.slice(0, 120),
-              description: `Bar 4 Bar First Drop · ${scope === 'album' ? 'album' : 'song'} stream`,
+              description: `Bar 4 Bar Release · ${scope === 'album' ? 'album' : 'song'} stream`,
             },
           },
         },

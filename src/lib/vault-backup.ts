@@ -37,6 +37,47 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+/**
+ * A Studio Blueprint is deliberately media-free and cannot retain links to a
+ * live/collaborative document. Full Vault Archives restore media separately to
+ * fresh, owner-scoped Storage paths.
+ */
+function trackForBlueprint(source: Track): Track {
+  const track = clone(source);
+  delete track.coverArtUrl;
+  delete track.dropAudio;
+  delete track.sheetTakes;
+  delete track.shareId;
+  delete track.releaseShareId;
+  delete track.releaseSnapshotAt;
+  delete track.collabSheetId;
+  delete track.isPublic;
+  delete track.houseRelease;
+  delete track.houseLibraryNotice;
+  delete track.dropRightsAttestedAt;
+  track.releaseStatus = 'draft';
+  track.dnaStatus = 'unlisted';
+  return track;
+}
+
+function albumForBlueprint(source: Album): Album {
+  const album = clone(source);
+  delete album.coverArtUrl;
+  delete album.shareId;
+  delete album.releaseShareId;
+  delete album.releaseSnapshotAt;
+  delete album.houseRelease;
+  delete album.houseLibraryNotice;
+  album.releaseStatus = 'draft';
+  album.dnaStatus = 'unlisted';
+  album.tracks = (source.tracks || []).map(trackForBlueprint);
+  return album;
+}
+
+export function vaultAlbumsForBlueprint(albums: Album[]): Album[] {
+  return albums.map(albumForBlueprint);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -59,8 +100,9 @@ export function buildVaultBackup(
   styleProfile: StyleProfile | null,
   at = new Date()
 ): VaultBackupV2 {
-  const loose = albums.find((album) => album.id === 'unassigned')?.tracks || [];
-  const realAlbums = albums.filter((album) => album.id !== 'unassigned');
+  const blueprintAlbums = vaultAlbumsForBlueprint(albums);
+  const loose = blueprintAlbums.find((album) => album.id === 'unassigned')?.tracks || [];
+  const realAlbums = blueprintAlbums.filter((album) => album.id !== 'unassigned');
   return {
     schema: VAULT_BACKUP_SCHEMA,
     version: VAULT_BACKUP_VERSION,
@@ -71,7 +113,7 @@ export function buildVaultBackup(
       looseTracks: loose.length,
       albumTracks: realAlbums.reduce((total, album) => total + album.tracks.length, 0),
     },
-    data: { albums: clone(albums), styleProfile: styleProfile ? clone(styleProfile) : null },
+    data: { albums: blueprintAlbums, styleProfile: styleProfile ? clone(styleProfile) : null },
   };
 }
 
@@ -83,7 +125,7 @@ export function parseVaultBackup(value: unknown): ParsedVaultBackup {
   let styleProfile: StyleProfile | null = null;
 
   if (Array.isArray(value)) {
-    albums = albumsFrom(value);
+    albums = vaultAlbumsForBlueprint(albumsFrom(value));
   } else if (isRecord(value) && value.schema === VAULT_BACKUP_SCHEMA) {
     if (value.version !== VAULT_BACKUP_VERSION) {
       throw new Error(`Vault backup version ${String(value.version)} is not supported by this app.`);
@@ -91,10 +133,10 @@ export function parseVaultBackup(value: unknown): ParsedVaultBackup {
     if (!isRecord(value.data)) throw new Error('This Vault backup is missing its data section.');
     sourceVersion = 2;
     exportedAt = typeof value.exportedAt === 'string' ? value.exportedAt : undefined;
-    albums = albumsFrom(value.data.albums);
+    albums = vaultAlbumsForBlueprint(albumsFrom(value.data.albums));
     styleProfile = styleFrom(value.data.styleProfile);
   } else if (isRecord(value) && Array.isArray(value.albums)) {
-    albums = albumsFrom(value.albums);
+    albums = vaultAlbumsForBlueprint(albumsFrom(value.albums));
     if (value.tracks !== undefined && !Array.isArray(value.tracks)) {
       throw new Error('This legacy Vault backup contains an invalid loose-track list.');
     }
@@ -103,7 +145,7 @@ export function parseVaultBackup(value: unknown): ParsedVaultBackup {
           if (!isRecord(track) || typeof track.id !== 'string') {
             throw new Error('This Vault backup contains an invalid loose track.');
           }
-          return track as unknown as Track;
+          return trackForBlueprint(track as unknown as Track);
         })
       : [];
     styleProfile = styleFrom(value.styleProfile);
