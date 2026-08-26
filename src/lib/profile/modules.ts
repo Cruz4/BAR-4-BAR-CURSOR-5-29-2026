@@ -161,8 +161,8 @@ export const MODULE_META: Record<
     defaultEnabled: false,
   },
   dropShelf: {
-    label: 'Live drops',
-    description: 'Songs for sale sit at the top of your home automatically. This shelf also lists lyric DNA Drops.',
+    label: 'Live Lyric DNA Drops',
+    description: 'Public lyric DNA previews. Songs for sale stay in the separate Listen / Buy release area.',
     defaultSize: 'L',
     defaultEnabled: true,
   },

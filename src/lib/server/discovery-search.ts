@@ -3,7 +3,12 @@ import 'server-only';
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { getDb } from '@/lib/firebase/server';
 import { buildDiscoveryMatch } from '@/lib/discovery-graph';
-import type { DiscoverySearchHit } from '@/lib/discovery-search';
+import {
+  normalizeDiscoverySearchFilters,
+  type DiscoverySearchFilters,
+  type DiscoverySearchHit,
+  type DiscoverySearchKind,
+} from '@/lib/discovery-search';
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
 import {
   publicIdentityLabel,
@@ -20,6 +25,7 @@ type PublicProfileSearchRow = {
   identity?: ArtistHomeSoundIdentity;
   updatedAt: string;
   haystack: string;
+  publicText: string;
 };
 
 type PublicDropSearchRow = {
@@ -33,6 +39,7 @@ type PublicDropSearchRow = {
   identity?: ArtistHomeSoundIdentity;
   updatedAt: string;
   haystack: string;
+  publicText: string;
 };
 
 type PublicPostSearchRow = {
@@ -43,6 +50,8 @@ type PublicPostSearchRow = {
   text: string;
   updatedAt: string;
   haystack: string;
+  identity?: ArtistHomeSoundIdentity;
+  publicText: string;
 };
 
 type SearchCatalog = {
@@ -96,6 +105,32 @@ function identityStrings(identity?: ArtistHomeSoundIdentity): string[] {
   ].filter(Boolean);
 }
 
+function includesFacet(values: Array<string | undefined>, query: string): boolean {
+  const needle = query.trim().toLocaleLowerCase();
+  if (!needle) return true;
+  return values.some((value) => String(value || '').toLocaleLowerCase().includes(needle));
+}
+
+function matchesFilters(
+  kind: DiscoverySearchKind,
+  identity: ArtistHomeSoundIdentity | undefined,
+  publicText: string,
+  rawFilters?: DiscoverySearchFilters
+): boolean {
+  const filters = normalizeDiscoverySearchFilters(rawFilters);
+  if (filters.resultKinds.length && !filters.resultKinds.includes(kind)) return false;
+  if (
+    filters.identityKinds.length &&
+    !filters.identityKinds.some((selected) => identity?.kinds?.includes(selected))
+  ) return false;
+  if (!includesFacet([...(identity?.genres || []), publicText], filters.genre)) return false;
+  if (!includesFacet(identity?.moods || [], filters.mood)) return false;
+  if (!includesFacet(identity?.influences || [], filters.influence)) return false;
+  if (!includesFacet([identity?.region], filters.region)) return false;
+  if (filters.collaboration && identity?.collaboration !== filters.collaboration) return false;
+  return true;
+}
+
 function profileRows(docs: QueryDocumentSnapshot[]): PublicProfileSearchRow[] {
   const byUser = new Map<string, PublicProfileSearchRow>();
   for (const snap of docs) {
@@ -103,7 +138,11 @@ function profileRows(docs: QueryDocumentSnapshot[]): PublicProfileSearchRow[] {
     const userId = clean(data.userId, 128);
     if (!userId || needsVanitySlugUpgrade(snap.id, userId)) continue;
     const displayName = clean(data.displayName, 120) || snap.id;
-    const identity = normalizeArtistHomeConfig(data.artistHome).featured.soundIdentity;
+    const config = normalizeArtistHomeConfig(data.artistHome);
+    const identity = config.featured.soundIdentity;
+    const publicText = [config.featured.tagline || '', config.featured.bio || '', identity?.currentFocus || '']
+      .filter(Boolean)
+      .join(' ');
     const row: PublicProfileSearchRow = {
       userId,
       slug: snap.id,
@@ -111,7 +150,15 @@ function profileRows(docs: QueryDocumentSnapshot[]): PublicProfileSearchRow[] {
       studioBadge: data.studioBadge === 'pro' ? 'pro' : 'free',
       ...(identity ? { identity } : {}),
       updatedAt: clean(data.updatedAt, 40),
-      haystack: [displayName, snap.id, ...identityStrings(identity)].join(' ').toLocaleLowerCase(),
+      haystack: [
+        displayName,
+        snap.id,
+        'artist music person creator profile',
+        'genre style mood vibe influence scene region location',
+        ...identityStrings(identity),
+        publicText,
+      ].join(' ').toLocaleLowerCase(),
+      publicText,
     };
     const existing = byUser.get(userId);
     if (!existing || row.updatedAt > existing.updatedAt) byUser.set(userId, row);
@@ -168,6 +215,7 @@ async function buildCatalog(): Promise<SearchCatalog> {
       haystack: [title, ownerName, data.type === 'album' ? 'album DNA drop' : 'track song DNA drop', ...identityStrings(owner?.identity), ...publicStrings]
         .join(' ')
         .toLocaleLowerCase(),
+      publicText: publicStrings.join(' '),
     };
     drops.push(baseRow);
     if (data.type === 'album' && Array.isArray(payload.tracks)) {
@@ -197,6 +245,7 @@ async function buildCatalog(): Promise<SearchCatalog> {
             ...identityStrings(owner?.identity),
             ...trackStrings,
           ].join(' ').toLocaleLowerCase(),
+          publicText: trackStrings.join(' '),
         });
       }
     }
@@ -230,6 +279,8 @@ async function buildCatalog(): Promise<SearchCatalog> {
       haystack: [searchableText, owner.displayName, ...identityStrings(owner.identity)]
         .join(' ')
         .toLocaleLowerCase(),
+      ...(owner.identity ? { identity: owner.identity } : {}),
+      publicText: searchableText,
     });
   }
   return { profiles, drops, posts };
@@ -268,15 +319,22 @@ export async function searchPublicMusicNetwork(input: {
   viewerIdentity?: ArtistHomeSoundIdentity;
   excludeUserId?: string;
   limit: number;
+  filters?: DiscoverySearchFilters;
 }): Promise<{ hits: DiscoverySearchHit[]; total: number }> {
   const query = clean(input.query, 80).toLocaleLowerCase();
-  if (query.length < 2) return { hits: [], total: 0 };
+  const filters = normalizeDiscoverySearchFilters(input.filters);
+  const filterActive = Boolean(
+    filters.resultKinds.length || filters.identityKinds.length || filters.genre || filters.mood ||
+    filters.influence || filters.region || filters.collaboration
+  );
+  if (query.length < 2 && !filterActive) return { hits: [], total: 0 };
   const data = await catalog();
   const scored: Array<{ score: number; hit: DiscoverySearchHit }> = [];
 
   for (const profile of data.profiles) {
     if (input.excludeUserId && profile.userId === input.excludeUserId) continue;
-    const textScore = queryScore(query, profile.displayName, profile.haystack);
+    if (!matchesFilters('person', profile.identity, profile.publicText, filters)) continue;
+    const textScore = query.length >= 2 ? queryScore(query, profile.displayName, profile.haystack) : 1;
     if (!textScore) continue;
     const match = buildDiscoveryMatch(input.viewerIdentity, profile.identity, 'taste');
     const kinds = (profile.identity?.kinds || []).map(publicIdentityLabel);
@@ -302,7 +360,8 @@ export async function searchPublicMusicNetwork(input: {
 
   for (const drop of data.drops) {
     if (input.excludeUserId && drop.ownerId === input.excludeUserId) continue;
-    const textScore = queryScore(query, drop.title, drop.haystack);
+    if (!matchesFilters('drop', drop.identity, drop.publicText, filters)) continue;
+    const textScore = query.length >= 2 ? queryScore(query, drop.title, drop.haystack) : 1;
     if (!textScore) continue;
     const match = buildDiscoveryMatch(input.viewerIdentity, drop.identity, 'taste');
     scored.push({
@@ -325,7 +384,8 @@ export async function searchPublicMusicNetwork(input: {
 
   for (const post of data.posts) {
     if (input.excludeUserId && post.ownerId === input.excludeUserId) continue;
-    const textScore = queryScore(query, post.text.slice(0, 100), post.haystack);
+    if (!matchesFilters('post', post.identity, post.publicText, filters)) continue;
+    const textScore = query.length >= 2 ? queryScore(query, post.text.slice(0, 100), post.haystack) : 1;
     if (!textScore) continue;
     scored.push({
       score: textScore,

@@ -128,7 +128,7 @@ export function PublicHomeLanding() {
                 </div>
                 <p className="mt-2 text-center text-[10px] font-code text-muted-foreground lg:text-left">
                   Free to join. Your page stays private until you publish it.
-                  {firstDropsOn ? ' Ready to release? Press a song and put Listen / buy on your page.' : ''}
+                  {firstDropsOn ? ' Ready to release? Open New release and put Listen / buy on your page.' : ''}
                 </p>
               </div>
             </div>

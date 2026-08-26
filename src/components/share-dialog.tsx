@@ -354,7 +354,7 @@ export function ShareDialog({
   const albumReadyCopy =
     type === 'album'
       ? 'Publishes an album page with your album DNA plus clickable cards for each song. Live tracks open their own DNA Drop (lyrics & rules). Offline tracks stay listed until you drop them.'
-      : 'Publishes a snapshot of lyrics & structure plus only the rules that are toggled on right now — Creative DNA, intents, vibe, guardrails, special instructions, and Style DNA when active. Selling the song is Press a song on The Scene — not this dialog.';
+      : 'Publishes a snapshot of lyrics & structure plus only the rules that are toggled on right now — Creative DNA, intents, vibe, guardrails, special instructions, and Style DNA when active. Selling from The Scene starts with New release — not this dialog.';
 
   return (
     <>
@@ -525,7 +525,7 @@ export function ShareDialog({
                 </Label>
               </div>
               <p className="text-[10px] text-muted-foreground leading-relaxed">
-                Optional embeds on the lyric snapshot. Audio and price are on First Drops — Press a song — not here.
+                Optional embeds on the lyric snapshot. Audio and price are on First Drops — use New release on The Scene — not here.
               </p>
               <div className="flex gap-2 min-w-0">
                 <Input

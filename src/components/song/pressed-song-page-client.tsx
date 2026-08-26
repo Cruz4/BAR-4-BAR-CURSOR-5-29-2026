@@ -174,7 +174,7 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
               )}
             </div>
           ) : null}
-          <DropListenPanel shareId={summary.shareId} title={summary.title} ownerId={summary.ownerId} price={summary.price} hasAudio source="direct" presentation="song" firstPressRank={viewer?.firstPressRank} onPlaybackStateChange={setPlayback} />
+          <DropListenPanel shareId={summary.shareId} title={summary.title} artistName={summary.artist.name} ownerId={summary.ownerId} price={summary.price} hasAudio source="direct" presentation="song" firstPressRank={viewer?.firstPressRank} onPlaybackStateChange={setPlayback} />
           <div className="mt-4">
             <DropSocialPanel
               shareId={summary.shareId}

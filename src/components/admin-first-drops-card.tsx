@@ -119,7 +119,7 @@ export function AdminFirstDropsCard() {
             ) : null}
 
             <ul className="text-[11px] text-muted-foreground space-y-1.5 list-disc list-inside">
-              <li>Scene dock → Press a song — upload, price, press live</li>
+              <li>Scene dock → New release — choose a song or album, upload, price, press live</li>
               <li>Public /share player + Stripe buy / pay-what-you-want</li>
               <li>Library + Discover “First Drop” cards</li>
               <li>Earnings — Connect payouts, held sales, Stripe bank cashout</li>

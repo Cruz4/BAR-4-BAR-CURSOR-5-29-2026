@@ -7,7 +7,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink, Globe, Settings2, Trophy, UserRound, Bell, Link2 } from 'lucide-react';
+import { Bell, Disc3, ExternalLink, Globe, Link2, Settings2, Trophy, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ import { useSocialAlerts } from '@/hooks/use-social-alerts';
 import { patchGamificationSettings } from '@/lib/gamification-client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { ReleaseCatalogDialog } from '@/components/vault/release-catalog';
 
 type VaultProfileDockProps = {
   /** Horizontal strip under vault progress on < xl. */
@@ -63,6 +64,7 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
   const { toast } = useToast();
   const { total: alertCount } = useSocialAlerts();
   const [open, setOpen] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const [publicProfile, setPublicProfile] = useState(summary.publicProfile);
   const [showOnLeaderboard, setShowOnLeaderboard] = useState(!summary.leaderboardHidden);
   const [saving, setSaving] = useState(false);
@@ -161,6 +163,19 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
           'border-emerald-500/35 bg-gradient-to-b from-emerald-500/12 via-card/85 to-card/70',
           'shadow-[0_8px_28px_rgba(0,0,0,0.18)] backdrop-blur-md',
           'hover:-translate-y-0.5 hover:border-emerald-400/55 hover:shadow-[0_10px_32px_rgba(16,185,129,0.2)]'
+        )
+  );
+
+  const catalogBtnClass = cn(
+    'group relative text-left transition-all duration-300',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/45',
+    compact
+      ? 'flex w-full items-center gap-3 rounded-xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/10 via-card/80 to-card/60 px-3.5 py-3 hover:border-cyan-300/55'
+      : cn(
+          'flex w-[4.75rem] flex-col items-center gap-3 rounded-2xl border px-2.5 py-4',
+          'border-cyan-400/35 bg-gradient-to-b from-cyan-500/12 via-card/85 to-card/70',
+          'shadow-[0_8px_28px_rgba(0,0,0,0.18)] backdrop-blur-md',
+          'hover:-translate-y-0.5 hover:border-cyan-300/60 hover:shadow-[0_10px_32px_rgba(34,211,238,0.2)]'
         )
   );
 
@@ -290,7 +305,56 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
             />
           )}
         </Link>
+
+        <button
+          type="button"
+          onClick={() => setCatalogOpen(true)}
+          aria-label="Open Release Catalog"
+          className={catalogBtnClass}
+        >
+          <span
+            className={cn(
+              'flex shrink-0 items-center justify-center rounded-full border border-cyan-300/45 bg-cyan-400/15 text-cyan-200',
+              compact ? 'h-9 w-9' : 'h-10 w-10'
+            )}
+          >
+            <Disc3 className="h-4 w-4" />
+          </span>
+          <span className={cn('min-w-0', compact ? 'flex-1' : 'w-full text-center')}>
+            <span
+              className={cn(
+                'block whitespace-normal font-headline font-bold uppercase leading-tight tracking-tight text-foreground',
+                compact ? 'text-xs' : 'text-[10px]'
+              )}
+            >
+              {compact ? (
+                'Release Catalog'
+              ) : (
+                <>
+                  Release
+                  <br />
+                  Catalog
+                </>
+              )}
+            </span>
+            <span
+              className={cn(
+                'mt-1 block font-code font-bold uppercase tracking-[0.18em] text-cyan-300/90',
+                compact ? 'text-[9px]' : 'text-[8px]'
+              )}
+            >
+              Manage
+            </span>
+          </span>
+          {!compact ? (
+            <span className="mt-1 h-1 w-1 rounded-full bg-cyan-300/55 shadow-[0_0_8px_rgba(34,211,238,0.7)]" />
+          ) : (
+            <Settings2 className="h-3.5 w-3.5 shrink-0 text-cyan-300/70 transition-colors group-hover:text-cyan-200" />
+          )}
+        </button>
       </div>
+
+      <ReleaseCatalogDialog open={catalogOpen} onOpenChange={setCatalogOpen} />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md border-2 bg-card sm:rounded-2xl">

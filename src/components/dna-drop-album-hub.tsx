@@ -154,6 +154,7 @@ export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName }: DnaDropA
                       shareId={shareId}
                       trackId={track.id}
                       title={track.title || `Track ${idx + 1}`}
+                      artistName={ownerName}
                       ownerId={ownerId}
                       price={album.dropPrice}
                       hasAudio

@@ -30,6 +30,13 @@ import { DISCOVER_PAGE_SIZE } from '@/lib/scene/scene-section-prefs';
 import { LivingPressField } from '@/components/profile/living-press-field';
 import { pressTokens, pressingCssVars } from '@/lib/profile/pressing';
 import { cn } from '@/lib/utils';
+import {
+  EMPTY_DISCOVERY_SEARCH_FILTERS,
+  discoverySearchFiltersFromParams,
+  hasDiscoverySearchFilters,
+  writeDiscoverySearchFilters,
+  type DiscoverySearchFilters,
+} from '@/lib/discovery-search';
 
 const LIST_SECTION_ID = 'discover-list';
 
@@ -42,6 +49,7 @@ export default function DiscoverPage() {
   const [page, setPage] = useState(0);
   const [mode, setMode] = useState<DiscoveryGraphMode | 'fresh'>('fresh');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchFilters, setSearchFilters] = useState<DiscoverySearchFilters>({ ...EMPTY_DISCOVERY_SEARCH_FILTERS });
   const [guestFeedOpen, setGuestFeedOpen] = useState(false);
   const profileEntryTopRef = useRef(false);
   const isMobile = useIsMobile();
@@ -51,6 +59,7 @@ export default function DiscoverPage() {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
     setSearchQuery(url.searchParams.get('q')?.slice(0, 80) || '');
+    setSearchFilters(discoverySearchFiltersFromParams(url.searchParams));
     profileEntryTopRef.current = url.searchParams.get('entry') === 'profile';
     if (profileEntryTopRef.current) {
       url.searchParams.delete('entry');
@@ -80,6 +89,14 @@ export default function DiscoverPage() {
     const url = new URL(window.location.href);
     if (next.trim()) url.searchParams.set('q', next.trim());
     else url.searchParams.delete('q');
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+  }, []);
+
+  const updateSearchFilters = useCallback((next: DiscoverySearchFilters) => {
+    setSearchFilters(next);
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    writeDiscoverySearchFilters(url.searchParams, next);
     window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
   }, []);
 
@@ -127,6 +144,7 @@ export default function DiscoverPage() {
     safePage * DISCOVER_PAGE_SIZE + DISCOVER_PAGE_SIZE
   );
   const showGuestPortal = !user && isMobile && portalHubEnabled;
+  const searchActive = searchQuery.trim().length >= 2 || hasDiscoverySearchFilters(searchFilters);
   const guestPortalPreviews = useMemo(
     () => cards.filter((card) => card.kind !== 'drop' || !card.drop.hasDropAudio).slice(0, 3),
     [cards]
@@ -203,10 +221,12 @@ export default function DiscoverPage() {
         variant="page"
         query={searchQuery}
         onQueryChange={updateSearchQuery}
+        filters={searchFilters}
+        onFiltersChange={updateSearchFilters}
         excludedUserIds={blockedIds}
       />
 
-      {user && searchQuery.trim().length < 2 ? <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+      {user && !searchActive ? <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
         <div className="flex flex-wrap gap-2">
           {discover?.viewerGraph.hasTaste ? (
             <Button
@@ -249,7 +269,7 @@ export default function DiscoverPage() {
         ) : null}
       </div> : null}
 
-      {showGuestPortal && searchQuery.trim().length < 2 ? (
+      {showGuestPortal && !searchActive ? (
         <GuestScenePortalHub
           publicPulse={discover?.publicPulse || { profiles: 0, posts: 0, pressedSongs: 0 }}
           newestPressed={newestPressed}
@@ -258,7 +278,7 @@ export default function DiscoverPage() {
         />
       ) : null}
 
-      {searchQuery.trim().length < 2 && (!showGuestPortal || guestFeedOpen) ? <div id={LIST_SECTION_ID} className="scroll-mt-[5.5rem] space-y-4">
+      {!searchActive && (!showGuestPortal || guestFeedOpen) ? <div id={LIST_SECTION_ID} className="scroll-mt-[5.5rem] space-y-4">
         {showGuestPortal ? (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-cyan-400/20 bg-black/45 px-3 py-2">
             <div className="min-w-0">

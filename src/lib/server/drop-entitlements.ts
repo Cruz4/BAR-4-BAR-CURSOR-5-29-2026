@@ -156,17 +156,26 @@ export async function grantDropLibrary(
   entry: DropLibraryEntry
 ): Promise<void> {
   const ref = db.collection('users').doc(buyerId).collection('dropLibrary').doc(entry.shareId);
-  const existing = await ref.get();
-  const prev = existing.exists ? (existing.data() as DropLibraryEntry) : null;
-  const trackIds = Array.from(new Set([...(prev?.trackIds ?? []), ...entry.trackIds]));
-  await ref.set(
-    {
-      ...entry,
-      trackIds,
-      purchasedAt: prev?.purchasedAt || entry.purchasedAt,
-      amountCents: (prev?.amountCents ?? 0) + entry.amountCents,
-    },
-    { merge: true }
-  );
+  await db.runTransaction(async (tx) => {
+    const existing = await tx.get(ref);
+    const prev = existing.exists ? (existing.data() as DropLibraryEntry) : null;
+    if (entry.purchaseId && prev?.purchaseIds?.includes(entry.purchaseId)) return;
+    const trackIds = Array.from(new Set([...(prev?.trackIds ?? []), ...entry.trackIds]));
+    const purchaseIds = entry.purchaseId
+      ? Array.from(new Set([...(prev?.purchaseIds ?? []), entry.purchaseId])).slice(-100)
+      : prev?.purchaseIds;
+    const { purchaseId: _purchaseId, ...persistedEntry } = entry;
+    tx.set(
+      ref,
+      {
+        ...persistedEntry,
+        trackIds,
+        ...(purchaseIds ? { purchaseIds } : {}),
+        purchasedAt: prev?.purchasedAt || entry.purchasedAt,
+        amountCents: (prev?.amountCents ?? 0) + entry.amountCents,
+      },
+      { merge: true }
+    );
+  });
 }
 

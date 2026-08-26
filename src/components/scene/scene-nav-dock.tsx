@@ -282,7 +282,7 @@ function PressSongButton() {
       </span>
       <span className="min-w-0 flex-1 text-left">
         <span className="block font-sans text-[11px] font-bold uppercase leading-tight tracking-wide text-sky-100 sm:text-xs">
-          Press a song
+          New release
         </span>
         <span className="mt-0.5 block font-code text-[8px] font-bold uppercase leading-tight tracking-[0.12em] text-sky-200/80 sm:text-[9px] sm:tracking-[0.16em]">
           Sell · First Drops

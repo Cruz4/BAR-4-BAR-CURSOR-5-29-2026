@@ -39,7 +39,7 @@ export function SceneChartSpotlight({ excludedUserIds }: { excludedUserIds?: Set
       <div className="flex items-center justify-between gap-3 border-b border-white/8 px-3 py-2">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 font-code text-[11px] font-bold uppercase tracking-[0.13em] text-cyan-200">
-            <TrendingUp className="h-3.5 w-3.5" /> Charts · real listener proof
+            <TrendingUp className="h-3.5 w-3.5" /> Charts · real spins
           </p>
           <p className="mt-0.5 truncate text-[11px] leading-tight text-white/60">Qualified listens · repeats · completions · unique buyers</p>
         </div>

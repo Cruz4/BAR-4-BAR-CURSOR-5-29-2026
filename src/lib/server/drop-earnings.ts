@@ -17,6 +17,7 @@ import { recordStudioEvent } from '@/lib/server/studio-analytics';
 const HELD_FLUSH_LIMIT = 25;
 
 type SaleWrite = {
+  saleId?: string;
   shareId: string;
   title: string;
   scope: 'album' | 'track';
@@ -27,6 +28,7 @@ type SaleWrite = {
   netCents: number;
   payoutMode: DropPayoutMode;
   stripeSessionId: string;
+  stripeTransferId?: string;
   connectAccountId?: string;
 };
 
@@ -125,7 +127,7 @@ export async function listDropSales(
 export async function recordDropSale(db: Firestore, artistId: string, sale: SaleWrite): Promise<void> {
   if (!artistId || sale.amountCents <= 0 || sale.netCents <= 0) return;
 
-  const ref = saleRef(db, artistId, sale.stripeSessionId);
+  const ref = saleRef(db, artistId, sale.saleId || sale.stripeSessionId);
   const existing = await ref.get();
   if (existing.exists) return;
 
@@ -162,6 +164,7 @@ export async function recordDropSale(db: Firestore, artistId: string, sale: Sale
     status,
     payoutMode: sale.payoutMode,
     stripeSessionId: sale.stripeSessionId,
+    stripeTransferId: sale.stripeTransferId || null,
     connectAccountId: sale.connectAccountId || null,
     createdAt: now,
     paidAt: status === 'paid' ? now : null,

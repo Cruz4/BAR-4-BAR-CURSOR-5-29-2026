@@ -317,7 +317,7 @@ export function Header() {
                     </PopoverContent>
                 </Popover>
 
-                <DropdownMenu>
+                <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
                       <div className="relative cursor-pointer group ml-1">
                         <Avatar className={cn(

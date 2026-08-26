@@ -77,7 +77,7 @@ export function firstDropsFeeCashoutLine(): string {
 
 /** Public selling copy — hide whenever First Drops is toggled off. */
 export function firstDropsPitch(): string {
-  return `Press a song from The Scene. Upload the song, set a price, press it live. Listen / buy sits at the top of your Artist Home, on The Scene, and on the share link. Preview 30 seconds, buy once, stream here. You keep the rights to your music — we take a small fee on the sale to run the platform. DNA Drop is your lyric preview card only — song uploads and sales happen in First Drops. ${firstDropsFeeLine()} ${firstDropsCashoutLine()}`;
+  return `Open New release from The Scene. Choose a song or album, upload the music, set a price, and press it live. Listen / buy sits at the top of your Artist Home, on The Scene, and on the share link. Preview 30 seconds, buy once, stream here. You keep the rights to your music — we take a small fee on the sale to run the platform. DNA Drop is your lyric preview card only — music uploads and sales happen in First Drops. ${firstDropsFeeLine()} ${firstDropsCashoutLine()}`;
 }
 
 export function getFirstDropsWhatFaqAnswer(): string {
@@ -85,7 +85,7 @@ export function getFirstDropsWhatFaqAnswer(): string {
 }
 
 export function getFirstDropsSellFaqAnswer(): string {
-  return 'On The Scene, tap Press a song. Pick a vault track, upload the song, set a price or pay-what-you-want, then Press it live. You never open DNA Drop to sell. DNA Drop is lyrics-only. Visitors see Listen / buy at the top of your Artist Home, on The Scene, and on the share link. To get paid, open Earnings and connect Stripe payouts.';
+  return 'On The Scene, tap New release. Choose a vault song or album, upload the music, set a price or pay-what-you-want, then Press it live. You never open DNA Drop to sell. DNA Drop is lyrics-only. Visitors see Listen / buy at the top of your Artist Home, on The Scene, and on the share link. To get paid, open Earnings and connect Stripe payouts.';
 }
 
 export function getFirstDropsRightsFaqAnswer(): string {
@@ -139,6 +139,10 @@ export type DropLibraryEntry = {
   amountCents: number;
   purchasedAt: string;
   stripeSessionId?: string;
+  /** Idempotency key for a purchase inside a multi-item checkout. */
+  purchaseId?: string;
+  /** Fulfilled purchase keys already merged into this Library entitlement. */
+  purchaseIds?: string[];
   free?: boolean;
   own?: boolean;
   /** Per-song public supporter credit. Private unless the buyer explicitly opts in. */

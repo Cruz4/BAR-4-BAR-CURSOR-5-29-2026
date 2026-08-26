@@ -36,17 +36,46 @@ function SpotifyIcon({ className }: { className?: string }) {
   );
 }
 
-function LetterBadge({ letters, className }: { letters: string; className?: string }) {
+function SoundCloudIcon({ className }: { className?: string }) {
   return (
-    <span
-      className={cn(
-        'inline-flex items-center justify-center font-black leading-none tracking-tight',
-        letters.length > 2 ? 'text-[6px]' : 'text-[8px]',
-        className
-      )}
-    >
-      {letters}
-    </span>
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
+      <path d="M1.5 13.2h1v4.1h-1zm2-2.1h1v6.2h-1zm2-1.7h1v7.9h-1zm2-1.2h1v9.1h-1zm2.1.4a6.1 6.1 0 0 1 10.9 3.8h.7a2.9 2.9 0 1 1 0 5.8H9.6z" />
+    </svg>
+  );
+}
+
+function AppleMusicIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden>
+      <rect x="3" y="3" width="18" height="18" rx="4.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M15.8 7.4v7.2a2.35 2.35 0 1 1-1.5-2.18V9.2l-5.1 1v5.35a2.35 2.35 0 1 1-1.5-2.18V8.95l8.1-1.55Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function SnapchatIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden>
+      <path d="M12 3.25c-2.8 0-4.55 2.15-4.55 4.8 0 .78.13 1.48.13 2.08-.43.76-1.54 1.08-2.23 1.38-.6.25-.57 1.05.05 1.26.62.2 1.24.31 1.69.66.42.34.25 1.25.88 1.38.58.12 1.05-.22 1.4.02.66.46 1.16 1.92 2.63 1.92s1.97-1.46 2.63-1.92c.35-.24.82.1 1.4-.02.63-.13.46-1.04.88-1.38.45-.35 1.07-.46 1.69-.66.62-.21.65-1.01.05-1.26-.69-.3-1.8-.62-2.23-1.38 0-.6.13-1.3.13-2.08 0-2.65-1.75-4.8-4.55-4.8Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function MyspaceIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
+      <circle cx="5.2" cy="8" r="2.1" /><circle cx="11.4" cy="7" r="2.7" /><circle cx="18.5" cy="5.8" r="3.3" />
+      <path d="M1.8 14.6c0-2 1.5-3.5 3.4-3.5s3.4 1.5 3.4 3.5v3H1.8zm5.8.2c0-2.3 1.7-4.1 3.8-4.1s3.8 1.8 3.8 4.1v3.9H7.6zm6.5-.5c0-2.7 2-4.9 4.4-4.9s4.4 2.2 4.4 4.9v5.2h-8.8z" />
+    </svg>
+  );
+}
+
+function SunoIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden>
+      <path d="M4 8.2c2.2 0 2.2 7.6 4.4 7.6s2.2-9.6 4.4-9.6 2.2 11.6 4.4 11.6S19.4 9 21 9" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" />
+      <path d="M3 12h18" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" opacity=".55" />
+    </svg>
   );
 }
 
@@ -63,17 +92,17 @@ function SocialGlyph({ id, className }: { id: SocialProviderId; className?: stri
     case 'twitter':
       return <XIcon className={className} />;
     case 'myspace':
-      return <LetterBadge letters="MY" className={className} />;
+      return <MyspaceIcon className={className} />;
     case 'snapchat':
-      return <LetterBadge letters="SNAP" className={className} />;
+      return <SnapchatIcon className={className} />;
     case 'suno':
-      return <LetterBadge letters="SUNO" className={className} />;
+      return <SunoIcon className={className} />;
     case 'spotify':
       return <SpotifyIcon className={className} />;
     case 'soundcloud':
-      return <LetterBadge letters="SC" className={className} />;
+      return <SoundCloudIcon className={className} />;
     case 'appleMusic':
-      return <LetterBadge letters="AM" className={className} />;
+      return <AppleMusicIcon className={className} />;
     default:
       return null;
   }

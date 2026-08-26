@@ -288,7 +288,7 @@ const CORE_FAQS = [
     },
     {
       q: "What is DNA Drop?",
-      a: "Studio Pro — publish a shareable lyric snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live lyric drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. Selling is separate: Press a song from the left panel or The Scene dock."
+      a: "Studio Pro — publish a shareable lyric snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live lyric drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. Selling is separate: use Press a song from a sheet or New release on The Scene."
     },
     {
       q: "What is Collab Sheet?",
@@ -304,7 +304,7 @@ const CORE_FAQS = [
     },
     {
       q: "What is included in a DNA Drop?",
-      a: "Lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when toggled on. Album drops add album DNA presets and motifs. Optional links & embeds (YouTube, etc.) attach from the DNA Drop dialog for the lyric page. Audio and price live on First Drops — Press a song from The Scene — not in this dialog.",
+      a: "Lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when toggled on. Album drops add album DNA presets and motifs. Optional links & embeds (YouTube, etc.) attach from the DNA Drop dialog for the lyric page. Audio and price live on First Drops — use New release on The Scene — not this dialog.",
     },
     {
       q: "Is my DNA Drop live-synced when I edit?",
@@ -762,7 +762,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                   <div className="rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-4">
                     <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-fuchsia-300">Exactly where to go</p>
                     <ol className="list-decimal list-inside space-y-2 text-sm">
-                      <li><strong>Open The Scene → Press a song</strong>, or open the song&apos;s sheet and use <strong>Left panel → Track Status → Press a song</strong>.</li>
+                      <li><strong>Open The Scene → New release</strong>, or open the song&apos;s sheet and use <strong>Left panel → Track Status → Press a song</strong>.</li>
                       <li><strong>Choose a Vault track</strong>. First Drops sells the recording; DNA Drop is the separate lyric-preview and import link.</li>
                       <li><strong>Upload the finished audio</strong>, choose Fixed price or Pay what you want, and review the live artist-share line.</li>
                       <li><strong>Press it live</strong>. Listen / buy appears on your Artist Home, The Scene, and its public share link.</li>
@@ -772,6 +772,12 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                   <p className="text-xs text-muted-foreground">
                     Fans hear a 30-second preview before purchase. After buying once, they stream the full song inside Bar 4 Bar from Library. Music purchases use money, never Ink. You keep ownership of your lyrics, recording, and master.
                   </p>
+                  <div className="rounded-xl border border-fuchsia-400/25 bg-fuchsia-400/5 p-4 text-xs">
+                    <p className="font-bold text-fuchsia-200">Buy now or build a music cart</p>
+                    <p className="mt-1 text-muted-foreground">
+                      Every purchasable song or album offers immediate checkout and Add to cart. A cart can mix releases from different artists, fixed prices, and each listener&apos;s chosen pay-what-you-want amount. Stripe runs one transaction while Bar 4 Bar records each unlock, artist fee split, payout, and receipt separately.
+                    </p>
+                  </div>
                 </ChapterCard>
 
                 <ChapterCard id="manual-selling-pricing" icon={<BadgeDollarSign className="text-emerald-400" />} title="Pricing Options" colorClass="border-l-emerald-500 text-emerald-400">
@@ -845,7 +851,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     </Link>
                   </Button>
                   <p className="text-xs text-muted-foreground">
-                    Fans can buy from the Listen / buy player on your Artist Home, a First Drop card on The Scene, or the public share page. Manage live releases from The Scene, Vault, or Edit Public Page → Live drops.
+                    Fans can buy immediately or add releases to one multi-artist cart from the Listen / buy player on your Artist Home, The Scene, and public song or album pages. Manage live releases from The Scene, Vault, or Edit Public Page → Live Lyric DNA Drops.
                   </p>
                 </ChapterCard>
               </TabsContent>
@@ -1112,7 +1118,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </ChapterCard>
 
                 <ChapterCard id="manual-dna-drop" icon={<Link2 className="text-primary" />} title="DNA Drop" colorClass="border-l-primary">
-                    <p>Studio Pro — publish a shareable lyric snapshot from the left panel. Collaborators sign in and import lyrics, structure, Creative DNA, vibe, and related strains. Update snapshot after edits; <strong>Take offline</strong> to revoke the link. To sell the song, use <strong>Press a song</strong> on The Scene — DNA Drop is not the sell desk.</p>
+                    <p>Studio Pro — publish a shareable lyric snapshot from the left panel. Collaborators sign in and import lyrics, structure, Creative DNA, vibe, and related strains. Update snapshot after edits; <strong>Take offline</strong> to revoke the link. To sell from The Scene, use <strong>New release</strong> — DNA Drop is not the sell desk.</p>
                 </ChapterCard>
 
                 <ChapterCard id="manual-collab-sheet" icon={<Users className="text-violet-300" />} title="Collab Sheet" colorClass="border-l-violet-500 text-violet-300">

@@ -9,7 +9,7 @@ import { StudioLoader } from '@/components/studio-loader';
 import { DropDeck } from '@/components/library/drop-deck';
 import { useAuth } from '@/hooks/use-auth';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
-import { auth } from '@/lib/firebase/client/firebase';
+import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import type { DropLibraryItem } from '@/lib/drop-library';
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
 import type { PressingConfig } from '@/lib/profile/pressing';
@@ -22,19 +22,27 @@ export default function DropLibraryPage() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     if (!firstDropsOn) {
       setLoaded(true);
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
     if (!user?.id) {
       setLoaded(!authLoading);
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
+    setLoaded(false);
     setPressing(null);
     void (async () => {
       try {
-        const token = await auth.currentUser?.getIdToken();
-        const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+        const firebaseUser = await waitForAuthUser();
+        if (cancelled || !firebaseUser || firebaseUser.uid !== user.id) return;
+        const token = await firebaseUser.getIdToken(false);
+        const headers: HeadersInit = { Authorization: `Bearer ${token}` };
         const [libraryResponse, profileResponse] = await Promise.all([
           fetch(`/api/drops/library?userId=${encodeURIComponent(user.id)}`, { headers }),
           fetch(`/api/profile/config?userId=${encodeURIComponent(user.id)}`, { headers }).catch(() => null),
@@ -43,12 +51,18 @@ export default function DropLibraryPage() {
           libraryResponse.json(),
           profileResponse?.ok ? profileResponse.json() : Promise.resolve(null),
         ]);
+        if (cancelled) return;
         if (libraryResponse.ok && Array.isArray(libraryData.items)) setItems(libraryData.items);
         if (profileData?.config) setPressing(normalizeArtistHomeConfig(profileData.config).theme);
+      } catch (error) {
+        if (!cancelled) console.warn('[library] authenticated load skipped', error);
       } finally {
-        setLoaded(true);
+        if (!cancelled) setLoaded(true);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id, authLoading, firstDropsOn]);
 
   if (authLoading || featureLoading || !loaded) {

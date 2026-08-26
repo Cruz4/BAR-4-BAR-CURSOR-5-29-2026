@@ -456,7 +456,7 @@ export function ScenePortalHub({
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" aria-label="Scene creator shortcuts">
         <QuickAction href="/insights" title="Music Listener Insights" detail="Real listeners · proof" icon={BarChart3} tone="border-cyan-400/30 text-cyan-300" />
         <QuickAction href="/supporters" title="Support Circle" detail="Followers · Inner Circle" icon={HeartHandshake} tone="border-fuchsia-400/30 text-fuchsia-300" />
-        <QuickAction title="Press a Song" detail="Sell · First Drops" icon={Disc3} tone="border-sky-300/40 text-sky-200" />
+        <QuickAction title="New Release" detail="Song or album · First Drops" icon={Disc3} tone="border-sky-300/40 text-sky-200" />
       </div>
     </section>
   );

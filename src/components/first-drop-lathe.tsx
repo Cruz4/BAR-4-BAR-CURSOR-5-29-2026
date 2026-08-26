@@ -474,10 +474,10 @@ export function FirstDropLatheHost() {
         if (!next) setRightsChecked(false);
       }}
     >
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto border-fuchsia-500/35 bg-card">
+      <DialogContent className="max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-3xl overflow-y-auto overflow-x-hidden border-fuchsia-500/35 bg-card">
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl uppercase tracking-tight">
-            {mode === 'album' ? 'Press an album' : 'Press a song'}
+            New release
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
             {mode === 'album'
@@ -531,7 +531,7 @@ export function FirstDropLatheHost() {
                   </Button>
                 </div>
               ) : (
-                <ul className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
+                <ul className="space-y-2">
                   {releaseAlbums.map((candidate) => {
                     const audioCount = candidate.tracks.filter((row) => normalizeDropAudio(row.dropAudio)).length;
                     return (
@@ -548,8 +548,8 @@ export function FirstDropLatheHost() {
                             <Disc3 className="h-4 w-4" />
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-bold">{candidate.title || 'Untitled album'}</span>
-                            <span className="block font-code text-[9px] uppercase tracking-widest text-muted-foreground">
+                            <span className="block break-words text-sm font-bold">{candidate.title || 'Untitled album'}</span>
+                            <span className="block break-words font-code text-[9px] uppercase tracking-widest text-muted-foreground">
                               {candidate.tracks.length} catalog track{candidate.tracks.length === 1 ? '' : 's'} · {audioCount} with audio
                               {releaseStatusOf({ ...candidate, tracks: candidate.tracks }) === 'live' ? ' · release live' : ''}
                             </span>
@@ -598,18 +598,18 @@ export function FirstDropLatheHost() {
                     No catalog tracks yet. Add the first title below, then upload its recording.
                   </p>
                 ) : (
-                  <ul className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                  <ul className="space-y-2">
                     {selectedAlbum.tracks.map((row, index) => {
                       const audio = normalizeDropAudio(row.dropAudio);
                       const busy = uploading && albumUploadTrackId === row.id;
                       return (
-                        <li key={row.id} className="flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-black/25 p-2.5">
+                        <li key={row.id} className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-black/25 p-2.5">
                           <span className="w-6 shrink-0 text-center font-code text-[9px] text-muted-foreground">
                             {String(index + 1).padStart(2, '0')}
                           </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-bold">{row.title || `Track ${index + 1}`}</span>
-                            <span className={cn('block truncate font-code text-[9px]', audio ? 'text-emerald-400' : 'text-muted-foreground')}>
+                          <span className="min-w-[12rem] flex-1 basis-48">
+                            <span className="block break-words text-sm font-bold">{row.title || `Track ${index + 1}`}</span>
+                            <span className={cn('block break-all font-code text-[9px]', audio ? 'text-emerald-400' : 'text-muted-foreground')}>
                               {audio ? `${audio.fileName || 'Audio ready'}${audio.durationSec ? ` · ${Math.round(audio.durationSec)}s` : ''}` : 'No audio yet · lyrics optional'}
                             </span>
                           </span>
@@ -784,7 +784,7 @@ export function FirstDropLatheHost() {
                   : 'No tracks in the vault yet. Write one, then press it here — you never have to open DNA Drop to sell.'}
               </p>
             ) : (
-              <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto pr-1">
+              <ul className="space-y-1.5">
                 {filtered.map((row) => {
                   const audio = Boolean(normalizeDropAudio(row.track.dropAudio));
                   const live = releaseStatusOf(row.track) === 'live';
@@ -803,8 +803,8 @@ export function FirstDropLatheHost() {
                           <Music className="h-4 w-4" />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-bold">{row.track.title}</span>
-                          <span className="block truncate font-code text-[9px] uppercase tracking-widest text-muted-foreground">
+                          <span className="block break-words text-sm font-bold">{row.track.title}</span>
+                          <span className="block break-words font-code text-[9px] uppercase tracking-widest text-muted-foreground">
                             {row.album.title}
                             {audio ? ' · song on file' : ' · no audio yet'}
                             {priced ? ' · priced' : ''}

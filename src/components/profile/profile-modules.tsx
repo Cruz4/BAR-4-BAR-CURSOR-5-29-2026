@@ -80,6 +80,7 @@ export type ModuleContext = {
   profileName: string;
   profileSlug?: string;
   isOwner: boolean;
+  previewMode?: boolean;
   viewerSlug?: string;
   featured: ArtistHomeFeatured;
   badges: AchievementDef[];
@@ -181,6 +182,7 @@ export function NowPlayingModule({ ctx }: { ctx: ModuleContext }) {
         <FeaturedTrackPlayer
           selection={ctx.featured.featuredTrack}
           profileUserId={ctx.profileUserId}
+          previewMode={ctx.previewMode}
         />
       </ModuleShell>
     );
@@ -562,7 +564,7 @@ export function DropShelfModule({ ctx }: { ctx: ModuleContext }) {
   return (
     <ModuleShell
       icon={Dna}
-      title={hideFirstDropStrip ? 'Lyric DNA Drops' : firstCount > 0 ? 'Listen / Buy' : 'Live DNA Drops'}
+      title={hideFirstDropStrip ? 'Lyric DNA Drops' : firstCount > 0 ? 'Listen / Buy' : 'Live Lyric DNA Drops'}
       ctx={ctx}
     >
       <LiveDnaDropsGroupedList

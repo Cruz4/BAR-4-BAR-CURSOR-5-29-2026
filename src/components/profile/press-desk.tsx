@@ -1089,7 +1089,9 @@ export function PressDesk() {
   const soundIdentity: ArtistHomeSoundIdentity = config.featured.soundIdentity || {};
 
   return (
-    <div className="container mx-auto max-w-3xl space-y-5 px-4 pb-32 pt-8">
+    <div className="w-full px-4 pb-32 pt-8">
+      <div className="relative min-[1830px]:grid min-[1830px]:grid-cols-[minmax(0,1fr)_46rem_minmax(0,1fr)] min-[1830px]:items-start">
+        <div className="mx-auto w-full max-w-[46rem] min-w-0 space-y-5 min-[1830px]:col-start-2 min-[1830px]:row-start-1">
       <header className="space-y-2">
         <h1 className="font-headline text-3xl font-bold uppercase tracking-tight">Edit Public Page</h1>
         <p className="text-sm text-muted-foreground">
@@ -2206,7 +2208,7 @@ export function PressDesk() {
       </DeskSection>
       ) : null}
 
-      {/* 8. Live DNA Drops — manage + auto on Artist Home */}
+      {/* 8. Live Lyric DNA Drops — manage + auto on Artist Home */}
       <DeskSection
         id="artist-home-releases"
         icon={Dna}
@@ -2214,7 +2216,7 @@ export function PressDesk() {
         hint={
           firstDropsOn
             ? `Songs for sale are pressed from The Scene — not inside DNA Drop. Live First Drops show on your Artist Home automatically. ${firstDropsFeeCashoutLine()} Open Manage to jump to a press, the vault, or Earnings.`
-            : 'Any album or track with an active DNA Drop shows on your Artist Home automatically — as a count under your bio and in the Live DNA Drops module. Open Manage to jump to a drop or the vault.'
+            : 'Any album or track with an active DNA Drop shows on your Artist Home automatically — as a count under your bio and in the Live Lyric DNA Drops module. Open Manage to jump to a drop or the vault.'
         }
       >
         <LiveDnaDropsManage />
@@ -2317,6 +2319,58 @@ export function PressDesk() {
           })}
         </div>
       </DeskSection>
+
+        </div>
+
+        <aside
+          className="sticky top-20 hidden w-[29rem] self-start min-[1830px]:col-start-3 min-[1830px]:row-start-1 min-[1830px]:ml-[4.5rem] min-[1830px]:block"
+          aria-label="Live Artist Home preview"
+        >
+          <div className="overflow-hidden rounded-2xl border border-cyan-400/25 bg-[#07111f] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-black/35 px-3 py-2">
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">
+                  <Monitor className="h-3.5 w-3.5" /> Live page preview
+                </p>
+                <p className="mt-0.5 text-[9px] leading-tight text-white/50">
+                  Desktop · 1280 × 800. Scroll inside to inspect the full page.
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 w-auto shrink-0 gap-1.5 px-2.5 text-[9px] font-bold uppercase tracking-wider"
+                disabled={!previewProfile}
+                onClick={openPreview}
+              >
+                <Eye className="h-3.5 w-3.5" /> Full screen
+              </Button>
+            </div>
+            <div className="aspect-[16/10] w-full overflow-y-auto overflow-x-hidden overscroll-contain bg-black [scrollbar-width:thin]">
+              {previewProfile ? (
+                <div
+                  className="w-[1280px] bg-background [zoom:.356]"
+                >
+                  <ArtistHome
+                    profile={previewProfile}
+                    config={config}
+                    isOwner
+                    previewMode
+                    previewViewport="desktop"
+                    embeddedPreview
+                    onExitPreview={openPreview}
+                  />
+                </div>
+              ) : (
+                <div className="flex h-full items-center justify-center gap-2 text-xs text-white/55">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Building your preview…
+                </div>
+              )}
+            </div>
+          </div>
+        </aside>
+      </div>
 
       {/* Sticky save bar */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-background/90 backdrop-blur-md">

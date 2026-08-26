@@ -12,6 +12,7 @@ import { groupVaultReleases, hasLyrics, releaseShareIdOf, releaseStatusOf, type 
 import { normalizeDropAudio } from '@/lib/drop-commerce';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
 import type { Album, Track } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 type Row = { album: Album; track?: Track };
 type UnpressTarget = { kind: 'album' | 'track'; album: Album; track?: Track };
@@ -31,7 +32,13 @@ function asRows(value: VaultReleaseGroups[keyof VaultReleaseGroups]): Row[] {
   return value.map((item) => ('album' in item ? item : { album: item as Album }));
 }
 
-export function ReleaseCatalog() {
+type ReleaseCatalogDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  className?: string;
+};
+
+function ReleaseCatalogBody({ className }: { className?: string }) {
   const { albums, updateAlbum, updateTrack, deleteTrack, moveTrack, flushCloudNow } = useContext(DataContext);
   const { toast } = useToast();
   const groups = useMemo(() => groupVaultReleases(albums), [albums]);
@@ -119,12 +126,10 @@ export function ReleaseCatalog() {
   };
 
   return (
-    <section className="mb-4 rounded-2xl border border-cyan-400/25 bg-slate-950/70 p-3 sm:p-4" aria-labelledby="release-catalog-title">
+    <section className={cn('min-w-0 space-y-4', className)} aria-label="Release catalog contents">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="font-code text-[9px] font-bold uppercase tracking-[0.28em] text-cyan-300">Release catalog</p>
-          <h2 id="release-catalog-title" className="font-headline text-2xl font-bold uppercase">Music + lyrics, clearly grouped</h2>
-          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+        <div className="min-w-0 flex-1">
+          <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
             Upload and test privately, press a single or full album when ready, then attach a lyric sheet now or later. DNA remains a separate lyric preview.
           </p>
         </div>
@@ -133,7 +138,7 @@ export function ReleaseCatalog() {
         </Button>
       </div>
 
-      <div className="mt-4 grid gap-2 lg:grid-cols-2">
+      <div className="grid gap-2 lg:grid-cols-2">
         {GROUPS.map(({ key, label, note }) => {
           const rows = asRows(groups[key]);
           return (
@@ -252,5 +257,30 @@ export function ReleaseCatalog() {
         </DialogContent>
       </Dialog>
     </section>
+  );
+}
+
+export function ReleaseCatalogDialog({ open, onOpenChange, className }: ReleaseCatalogDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className={cn(
+          'flex max-h-[min(90vh,920px)] w-[calc(100vw-1.5rem)] max-w-6xl flex-col gap-4 overflow-hidden border-cyan-400/30 bg-slate-950 sm:rounded-2xl',
+          className
+        )}
+      >
+        <DialogHeader className="shrink-0 space-y-1.5 pr-8 text-left">
+          <DialogTitle className="font-headline text-2xl font-bold uppercase tracking-tight">
+            Release Catalog
+          </DialogTitle>
+          <DialogDescription>
+            Manage private drafts, live music, albums, and lyric previews from one place.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pr-1">
+          <ReleaseCatalogBody />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -36,6 +36,7 @@ import { AdminAlertListener } from './admin-alert-listener';
 import { DropSaleAlertListener } from './drop-sale-alert-listener';
 import { InviteGateGuard } from './invite-gate-guard';
 import { DropPlayerProvider, useOptionalDropPlayer } from '@/context/drop-player-context';
+import { DropCartProvider } from '@/context/drop-cart-context';
 import { DropNowPlayingBar, shouldHideDropNowPlayingBar } from '@/components/library/drop-now-playing-bar';
 import { FirstDropLatheHost } from '@/components/first-drop-lathe';
 import { ProFeaturePreviewBanner } from './pro-feature-preview-banner';
@@ -100,6 +101,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const isInsightsPage = pathname === '/insights';
   const isSupportersPage = pathname === '/supporters';
   const isMsgsPage = pathname === '/msgs' || pathname.startsWith('/msgs/');
+  const isProfileCustomizePage = pathname === '/profile/customize';
   const isPublicProfilePage = isPublicArtistHomePath(pathname);
   const isMarketingCapture = pathname.startsWith('/marketing/capture');
   const isSettingsRoute = pathname === '/usage' || pathname.startsWith('/usage/') || pathname === '/admin';
@@ -109,7 +111,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   // Public home / login / profile / share need document scroll — overflow-hidden
   // traps the Pressing landing and makes the brand mark feel dead.
   const allowPageScroll =
-    isMarketingShell || isPublicProfilePage || isSharePage || isMarketingCapture || isLibraryPage || isEarningsPage || isInsightsPage || isSupportersPage || isMsgsPage;
+    isMarketingShell || isPublicProfilePage || isProfileCustomizePage || isSharePage || isMarketingCapture || isLibraryPage || isEarningsPage || isInsightsPage || isSupportersPage || isMsgsPage;
 
   return (
     <InviteGateGuard>
@@ -133,7 +135,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <div
                 className={cn(
                   'relative z-10 flex min-h-screen flex-col flex-1',
-                  allowPageScroll ? 'overflow-x-hidden overflow-y-auto' : 'overflow-hidden',
+                  isProfileCustomizePage
+                    ? 'overflow-x-clip overflow-y-visible'
+                    : allowPageScroll
+                      ? 'overflow-x-hidden overflow-y-auto'
+                      : 'overflow-hidden',
                   showBottomNowPlaying && 'pb-[4.75rem]'
                 )}
               >
@@ -144,7 +150,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 <main
                   className={cn(
                     'flex-1 flex flex-col',
-                    allowPageScroll ? 'overflow-x-hidden overflow-y-auto' : 'overflow-hidden'
+                    isProfileCustomizePage
+                      ? 'overflow-x-clip overflow-y-visible'
+                      : allowPageScroll
+                        ? 'overflow-x-hidden overflow-y-auto'
+                        : 'overflow-hidden'
                   )}
                 >
                   {children}
@@ -191,7 +201,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     >
       <AuthProvider>
         <DropPlayerProvider>
-          <AppShell>{children}</AppShell>
+          <DropCartProvider>
+            <AppShell>{children}</AppShell>
+          </DropCartProvider>
         </DropPlayerProvider>
       </AuthProvider>
     </ThemeProvider>

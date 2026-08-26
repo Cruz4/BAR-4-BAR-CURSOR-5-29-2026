@@ -2,18 +2,111 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Compass, Loader2, MapPin, Music2, Radio, Search, TrendingUp, UserRound, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Compass, Filter, Loader2, MapPin, Music2, Radio, Search, TrendingUp, UserRound, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { DiscoverySearchHit, DiscoverySearchResponse } from '@/lib/discovery-search';
+import {
+  EMPTY_DISCOVERY_SEARCH_FILTERS,
+  hasDiscoverySearchFilters,
+  normalizeDiscoverySearchFilters,
+  writeDiscoverySearchFilters,
+  type DiscoverySearchFilters,
+  type DiscoverySearchHit,
+  type DiscoverySearchKind,
+  type DiscoverySearchResponse,
+} from '@/lib/discovery-search';
 import { fetchDiscoverySearch } from '@/lib/scene/discover-search-client';
 import { studioNameClass } from '@/lib/studio-tier-chrome';
 import { fetchMusicCharts } from '@/lib/music-charts-client';
 import type { ArtistChartEntry } from '@/lib/music-charts';
 import { profileHref } from '@/lib/profile/profile-slug';
+import { PUBLIC_IDENTITY_KINDS, type CollaborationStatus, type PublicIdentityKind } from '@/lib/profile/sound-identity';
 
 const EMPTY: DiscoverySearchResponse = { hits: [], total: 0, hasMore: false };
+
+function DiscoveryFilterControls({
+  filters,
+  onChange,
+}: {
+  filters: DiscoverySearchFilters;
+  onChange: (filters: DiscoverySearchFilters) => void;
+}) {
+  const set = (patch: Partial<DiscoverySearchFilters>) =>
+    onChange(normalizeDiscoverySearchFilters({ ...filters, ...patch }));
+  const resultKind = filters.resultKinds[0] || '';
+  const identityKind = filters.identityKinds[0] || '';
+  const fieldClass = 'h-9 min-w-0 rounded-md border border-white/10 bg-black/30 px-2.5 font-code text-[10px] text-foreground outline-none focus:border-sky-400/55';
+  return (
+    <div className="grid min-w-0 gap-2 border-t border-white/10 p-3 sm:grid-cols-2 lg:grid-cols-4">
+      <label className="min-w-0 space-y-1">
+        <span className="block text-[8px] font-bold uppercase tracking-widest text-muted-foreground">Results</span>
+        <select
+          className={cn(fieldClass, 'w-full')}
+          value={resultKind}
+          onChange={(event) => set({ resultKinds: event.target.value ? [event.target.value as DiscoverySearchKind] : [] })}
+        >
+          <option value="">Everything</option>
+          <option value="person">People</option>
+          <option value="drop">Songs &amp; Drops</option>
+          <option value="post">Scene posts</option>
+        </select>
+      </label>
+      <label className="min-w-0 space-y-1">
+        <span className="block text-[8px] font-bold uppercase tracking-widest text-muted-foreground">Identity</span>
+        <select
+          className={cn(fieldClass, 'w-full')}
+          value={identityKind}
+          onChange={(event) => set({ identityKinds: event.target.value ? [event.target.value as PublicIdentityKind] : [] })}
+        >
+          <option value="">Any identity</option>
+          {PUBLIC_IDENTITY_KINDS.map((kind) => <option key={kind.id} value={kind.id}>{kind.label}</option>)}
+        </select>
+      </label>
+      {([
+        ['genre', 'Genre / style', 'Hip-hop, neo-soul…'],
+        ['mood', 'Mood', 'Reflective, energetic…'],
+        ['influence', 'Influence', 'Artist or movement…'],
+        ['region', 'Location / scene', 'New York, Atlanta…'],
+      ] as const).map(([key, label, placeholder]) => (
+        <label key={key} className="min-w-0 space-y-1">
+          <span className="block text-[8px] font-bold uppercase tracking-widest text-muted-foreground">{label}</span>
+          <Input
+            value={filters[key]}
+            onChange={(event) => set({ [key]: event.target.value.slice(0, key === 'influence' || key === 'region' ? 80 : 50) })}
+            placeholder={placeholder}
+            className="h-9 min-w-0 bg-black/30 font-code text-[10px]"
+          />
+        </label>
+      ))}
+      <label className="min-w-0 space-y-1">
+        <span className="block text-[8px] font-bold uppercase tracking-widest text-muted-foreground">Collaboration</span>
+        <select
+          className={cn(fieldClass, 'w-full')}
+          value={filters.collaboration || ''}
+          onChange={(event) => set({ collaboration: (event.target.value || undefined) as CollaborationStatus | undefined })}
+        >
+          <option value="">Any status</option>
+          <option value="open">Open to collaborate</option>
+          <option value="selective">Selective</option>
+          <option value="not_now">Not right now</option>
+        </select>
+      </label>
+      <div className="flex items-end">
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-9 w-full text-[9px] font-bold uppercase"
+          disabled={!hasDiscoverySearchFilters(filters)}
+          onClick={() => onChange({ ...EMPTY_DISCOVERY_SEARCH_FILTERS })}
+        >
+          Clear filters
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 function SearchHitRow({ hit, onOpen }: { hit: DiscoverySearchHit; onOpen: () => void }) {
   const Icon = hit.kind === 'person' ? UserRound : hit.kind === 'drop' ? Music2 : Radio;
@@ -60,28 +153,42 @@ export function SceneUniversalSearch({
   variant = 'dropdown',
   query: controlledQuery,
   onQueryChange,
+  filters: controlledFilters,
+  onFiltersChange,
   excludedUserIds,
   className,
 }: {
   variant?: 'dropdown' | 'page';
   query?: string;
   onQueryChange?: (query: string) => void;
+  filters?: DiscoverySearchFilters;
+  onFiltersChange?: (filters: DiscoverySearchFilters) => void;
   excludedUserIds?: Set<string>;
   className?: string;
 }) {
   const [localQuery, setLocalQuery] = useState('');
+  const [localFilters, setLocalFilters] = useState<DiscoverySearchFilters>({ ...EMPTY_DISCOVERY_SEARCH_FILTERS });
   const query = controlledQuery ?? localQuery;
   const setQuery = onQueryChange ?? setLocalQuery;
+  const filters = useMemo(
+    () => normalizeDiscoverySearchFilters(controlledFilters ?? localFilters),
+    [controlledFilters, localFilters]
+  );
+  const setFilters = onFiltersChange ?? setLocalFilters;
   const [result, setResult] = useState<DiscoverySearchResponse>(EMPTY);
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [filtersExpanded, setFiltersExpanded] = useState(variant === 'page');
   const [trendingArtists, setTrendingArtists] = useState<ArtistChartEntry[] | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
   const cleanQuery = query.trim();
+  const filtersActive = hasDiscoverySearchFilters(filters);
+  const canSearch = cleanQuery.length >= 2 || filtersActive;
   const limit = variant === 'page' ? 60 : 7;
 
   useEffect(() => {
-    if (cleanQuery.length < 2) {
+    if (!canSearch) {
       setResult(EMPTY);
       setLoading(false);
       return;
@@ -89,7 +196,7 @@ export function SceneUniversalSearch({
     let cancelled = false;
     const timer = window.setTimeout(() => {
       setLoading(true);
-      void fetchDiscoverySearch(cleanQuery, limit)
+      void fetchDiscoverySearch(cleanQuery, limit, filters)
         .then((next) => {
           if (!cancelled) setResult(next);
         })
@@ -104,7 +211,7 @@ export function SceneUniversalSearch({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [cleanQuery, limit]);
+  }, [canSearch, cleanQuery, filters, limit]);
 
   useEffect(() => {
     if (variant !== 'dropdown') return;
@@ -138,8 +245,16 @@ export function SceneUniversalSearch({
     () => (trendingArtists || []).filter((artist) => !excludedUserIds?.has(artist.userId)).slice(0, 3),
     [excludedUserIds, trendingArtists]
   );
-  const showPanel = variant === 'page' || (focused && cleanQuery.length >= 2);
-  const showTrendingPanel = variant === 'dropdown' && focused && cleanQuery.length < 2;
+  const showPanel = variant === 'page' || (focused && canSearch);
+  const showTrendingPanel = variant === 'dropdown' && focused && !canSearch;
+
+  const fullResultsHref = () => {
+    const params = new URLSearchParams();
+    if (cleanQuery) params.set('q', cleanQuery);
+    writeDiscoverySearchFilters(params, filters);
+    const queryString = params.toString();
+    return `/discover${queryString ? `?${queryString}` : ''}`;
+  };
 
   return (
     <div ref={rootRef} className={cn('relative min-w-0', className)} data-tour="scene-search">
@@ -152,10 +267,15 @@ export function SceneUniversalSearch({
           onChange={(event) => setQuery(event.target.value.slice(0, 80))}
           onKeyDown={(event) => {
             if (event.key === 'Escape') setFocused(false);
+            if (event.key === 'Enter' && variant === 'dropdown' && canSearch) {
+              event.preventDefault();
+              setFocused(false);
+              router.push(fullResultsHref());
+            }
           }}
           placeholder="Discover people, taste, cities, songs, DNA Drops, posts…"
           aria-label="Search the Bar 4 Bar music network"
-          aria-expanded={showTrendingPanel || (showPanel && cleanQuery.length >= 2)}
+          aria-expanded={showTrendingPanel || (showPanel && canSearch)}
           className="h-11 w-full min-w-0 border-sky-400/30 bg-[hsl(216_35%_7%)] pl-10 pr-12 font-code text-xs shadow-[0_12px_32px_rgba(0,0,0,0.25)] placeholder:text-muted-foreground/70 focus-visible:ring-sky-400 sm:pr-20"
         />
         <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
@@ -172,6 +292,27 @@ export function SceneUniversalSearch({
           ) : null}
         </div>
       </div>
+
+      {(variant === 'page' || focused) ? (
+        <div className={cn(
+          'mt-2 overflow-hidden rounded-xl border border-white/10 bg-black/20',
+          filtersActive && 'border-sky-400/30'
+        )}>
+          <button
+            type="button"
+            className="flex h-9 w-full items-center justify-between gap-3 px-3 text-left text-[9px] font-bold uppercase tracking-widest text-sky-200 hover:bg-white/[0.04]"
+            onClick={() => setFiltersExpanded((current) => !current)}
+            aria-expanded={filtersExpanded}
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <Filter className="h-3.5 w-3.5" /> Filters
+              {filtersActive ? <span className="rounded-full bg-sky-400 px-1.5 py-0.5 text-[8px] text-black">On</span> : null}
+            </span>
+            <span className="text-muted-foreground">{filtersExpanded ? 'Hide' : 'Show'}</span>
+          </button>
+          {filtersExpanded ? <DiscoveryFilterControls filters={filters} onChange={setFilters} /> : null}
+        </div>
+      ) : null}
 
       {showTrendingPanel ? (
         <div className="absolute inset-x-0 top-[calc(100%+0.4rem)] z-50 overflow-hidden rounded-xl border border-sky-400/25 bg-[hsl(216_38%_7%)] shadow-2xl">
@@ -213,7 +354,7 @@ export function SceneUniversalSearch({
             </Link>
           </Button>
         </div>
-      ) : showPanel && cleanQuery.length >= 2 ? (
+      ) : showPanel && canSearch ? (
         <div className={cn(
           'z-50 overflow-hidden rounded-xl border border-sky-400/25 bg-[hsl(216_38%_7%)] shadow-2xl',
           variant === 'dropdown' ? 'absolute inset-x-0 top-[calc(100%+0.4rem)]' : 'mt-3'
@@ -224,14 +365,14 @@ export function SceneUniversalSearch({
             </div>
           ) : !loading ? (
             <p className="px-4 py-8 text-center text-xs text-muted-foreground">
-              No public people, songs, DNA Drops, or posts match “{cleanQuery}”.
+              No public people, songs, DNA Drops, or posts match {cleanQuery ? `“${cleanQuery}”` : 'these filters'}.
             </p>
           ) : (
             <div className="h-24 animate-pulse bg-white/[0.025]" />
           )}
           {variant === 'dropdown' && (result.hasMore || result.total > visibleHits.length) ? (
             <Button variant="ghost" className="h-11 w-full justify-between rounded-none border-t border-white/10 px-4 font-bold uppercase text-sky-300" asChild>
-              <Link href={`/discover?q=${encodeURIComponent(cleanQuery)}`} onClick={() => setFocused(false)}>
+              <Link href={fullResultsHref()} onClick={() => setFocused(false)}>
                 <span className="inline-flex items-center gap-2"><Compass className="h-4 w-4" /> View all results</span>
                 <span className="text-[10px] text-muted-foreground">{result.total}</span>
               </Link>

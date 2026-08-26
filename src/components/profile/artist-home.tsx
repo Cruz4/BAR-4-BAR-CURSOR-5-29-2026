@@ -79,6 +79,8 @@ type ArtistHomeProps = {
   /** Full-page draft preview from Edit Public Page (not the live URL). */
   previewMode?: boolean;
   previewViewport?: 'phone' | 'tablet' | 'desktop';
+  /** Keep the animated Pressing background inside an embedded preview frame. */
+  embeddedPreview?: boolean;
   onExitPreview?: () => void;
   /**
    * Guest landing playground — local Wall posts (no Firestore).
@@ -113,6 +115,7 @@ export function ArtistHome({
   isOwner,
   previewMode = false,
   previewViewport = 'desktop',
+  embeddedPreview = false,
   onExitPreview,
   playgroundWall,
   playgroundFriends,
@@ -358,7 +361,11 @@ export function ArtistHome({
         }
       `}</style>
 
-      <LivingPressField config={config.theme} onTokensChange={onTokensChange} />
+      <LivingPressField
+        config={config.theme}
+        compact={embeddedPreview}
+        onTokensChange={onTokensChange}
+      />
 
       <div className="relative z-10 mx-auto w-full max-w-[1200px] px-4 pt-6 sm:px-6 sm:pt-10">
         {/* Sheet header */}
@@ -689,18 +696,16 @@ export function ArtistHome({
                     studioChrome={parseStudioBadge(profile.studioBadge)}
                   />
                 )}
-              </button>
-              {useStarMark && (
-                <div
-                  className="pointer-events-none absolute bottom-4 right-4 z-10 flex h-10 w-10 items-center justify-center"
-                  title="Feed star mark"
-                  aria-hidden
-                >
-                  <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-white/20 bg-black/70 shadow-[0_8px_24px_rgba(0,0,0,0.45)] ring-2 ring-black/40">
-                    <VesperfoldMark seed={starSeed} size={40} />
+                {useStarMark && (
+                  <span
+                    className="pointer-events-none absolute bottom-3 right-3 z-10 flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-black/70 shadow-[0_8px_24px_rgba(0,0,0,0.45)] ring-2 ring-black/40"
+                    title="Feed star mark"
+                    aria-hidden
+                  >
+                    <VesperfoldMark seed={starSeed} size={34} />
                   </span>
-                </div>
-              )}
+                )}
+              </button>
               {previewMode && !isOwner ? (
                 <div className="relative z-20 mt-3 space-y-1.5 text-center">
                   <ProfileSocialExampleBadges />
@@ -733,6 +738,7 @@ export function ArtistHome({
               profileName: profile.displayName,
               profileSlug: profile.slug,
               isOwner,
+              previewMode,
               viewerSlug,
               featured: config.featured,
               badges: profile.badges,
@@ -872,7 +878,7 @@ export function ArtistHome({
         <DialogContent className="max-w-md border-[var(--ph-border)] bg-[hsl(216_28%_7%)] text-[var(--ph-text,#fff)]">
           <DialogHeader>
             <DialogTitle className="font-headline text-xl uppercase tracking-tight">
-              {showFirstDropsStorefront ? 'Lyric drops' : 'Live DNA Drops'}
+              {showFirstDropsStorefront ? 'Lyric DNA Drops' : 'Live Lyric DNA Drops'}
             </DialogTitle>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto pr-1">

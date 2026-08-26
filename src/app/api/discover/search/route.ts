@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { getAuth } from '@/lib/firebase/server';
 import { getArtistHomeConfig } from '@/lib/server/artist-home';
 import { searchPublicMusicNetwork } from '@/lib/server/discovery-search';
+import {
+  discoverySearchFiltersFromParams,
+  hasDiscoverySearchFilters,
+} from '@/lib/discovery-search';
 
 export const runtime = 'nodejs';
 
@@ -18,9 +22,10 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const query = (searchParams.get('q') || '').trim().slice(0, 80);
+    const filters = discoverySearchFiltersFromParams(searchParams);
     const requestedLimit = Number(searchParams.get('limit')) || 7;
     const limit = Math.min(Math.max(Math.floor(requestedLimit), 1), 60);
-    if (query.length < 2) {
+    if (query.length < 2 && !hasDiscoverySearchFilters(filters)) {
       return NextResponse.json({ hits: [], total: 0, hasMore: false });
     }
     const viewerUserId = await optionalUid(req);
@@ -32,6 +37,7 @@ export async function GET(req: Request) {
       viewerIdentity,
       excludeUserId: viewerUserId || undefined,
       limit,
+      filters,
     });
     const response = NextResponse.json({
       hits: result.hits,

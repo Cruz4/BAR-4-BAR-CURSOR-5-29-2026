@@ -9,6 +9,7 @@ import { inkBalanceFirestorePatch, normalizeInkPools } from '@/lib/ink-balance';
 import { patchPublicStudioBadge } from '@/lib/server/public-studio-badge';
 import { grantDropLibrary } from '@/lib/server/drop-entitlements';
 import { recordDropSale, splitDropSale } from '@/lib/server/drop-earnings';
+import { fulfillDropCartCheckout } from '@/lib/server/drop-cart-fulfillment';
 
 export type FulfillmentMetadata = {
   userId: string;
@@ -26,6 +27,7 @@ export type FulfillmentMetadata = {
   title?: string;
   payoutMode?: string;
   connectAccountId?: string;
+  orderId?: string;
 };
 
 export async function fulfillCheckoutSession(
@@ -319,6 +321,7 @@ export async function fulfillPaidCheckoutSession(
     client_reference_id: string | null;
     subscription?: string | { id: string } | null;
     customer?: string | { id: string } | null;
+    payment_intent?: string | { id: string } | null;
   }
 ): Promise<{ fulfilled: boolean; duplicate: boolean; inkAmount: number }> {
   const isFulfilled =
@@ -338,6 +341,18 @@ export async function fulfillPaidCheckoutSession(
   if (!claimed) {
     const inkAmount = parseInt(metadata?.inkAmount || '0', 10);
     return { fulfilled: true, duplicate: true, inkAmount };
+  }
+
+  if (metadata?.type === 'drop_cart_purchase' && metadata.orderId) {
+    try {
+      await fulfillDropCartCheckout(db, session, userId);
+      return { fulfilled: true, duplicate: false, inkAmount: 0 };
+    } catch (error) {
+      // Cart grants and transfers carry their own per-item idempotency keys. Release
+      // the outer claim so Stripe/manual fulfillment can safely retry a partial run.
+      await db.collection('stripe_fulfilled_sessions').doc(session.id).delete().catch(() => undefined);
+      throw error;
+    }
   }
 
   if (metadata?.type === 'drop_purchase' && metadata.shareId) {

@@ -27,6 +27,7 @@
     "verify:music-charts": "tsx scripts/verify-music-charts.ts",
     "verify:vault-backups": "tsx scripts/verify-vault-backups.ts",
     "verify:release-management": "tsx scripts/verify-release-management.ts",
+    "verify:drop-cart": "tsx scripts/verify-drop-cart.ts",
     "stripe:verify": "node scripts/verify-stripe-prices.mjs",
     "stripe:webhook-env": "node scripts/stripe-webhook-env-check.mjs",
     "stripe:webhook-sync-test": "node scripts/stripe-webhook-sync-test-secret.mjs",

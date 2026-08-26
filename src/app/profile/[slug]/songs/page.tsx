@@ -116,6 +116,7 @@ export default function ProfileSongsPage() {
                 <DropListenPanel
                   shareId={song.shareId}
                   title={song.title}
+                  artistName={displayName}
                   ownerId={song.ownerId}
                   price={song.price}
                   hasAudio={Boolean(song.hasDropAudio)}

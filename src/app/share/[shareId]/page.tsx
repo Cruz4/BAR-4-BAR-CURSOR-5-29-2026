@@ -515,6 +515,7 @@ export default function SharedProjectPage() {
                         shareId={shareId}
                         source="share"
                         title={project.title || 'Untitled'}
+                        artistName={share.ownerName}
                         ownerId={share.ownerId}
                         price={
                           isAlbum

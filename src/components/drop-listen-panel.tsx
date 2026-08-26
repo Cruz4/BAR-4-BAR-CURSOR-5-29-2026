@@ -19,7 +19,7 @@ import {
   type DropPrice,
 } from '@/lib/drop-commerce';
 import { buildDropBuyLoginPath, getDropBuyIntentFromPath } from '@/lib/checkout-intent';
-import { Pause, Play, Loader, Sparkles, Trophy } from 'lucide-react';
+import { Check, Pause, Play, Loader, ShoppingCart, Sparkles, Trophy } from 'lucide-react';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { useAudioVolume } from '@/hooks/use-audio-volume';
 import { AudioVolumeControl } from '@/components/audio-volume-control';
@@ -31,6 +31,17 @@ import {
 } from '@/lib/drop-listen-analytics';
 import { pressedSongHref } from '@/lib/pressed-song';
 import { cn } from '@/lib/utils';
+import { useDropCart } from '@/context/drop-cart-context';
+import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
+import { studioNameClass, type StudioNameChrome } from '@/lib/studio-tier-chrome';
+
+type DropPlayerArtistAttribution = {
+  href?: string;
+  avatarUrl?: string;
+  useStarMark?: boolean;
+  starMarkSeed?: number;
+  studioChrome?: StudioNameChrome | null;
+};
 
 async function authHeaders(): Promise<HeadersInit> {
   const user = auth.currentUser;
@@ -43,6 +54,7 @@ async function authHeaders(): Promise<HeadersInit> {
 export function DropListenPanel({
   shareId,
   title,
+  artistName,
   ownerId,
   price,
   hasAudio,
@@ -58,9 +70,11 @@ export function DropListenPanel({
   checkoutDestination = 'song',
   showPurchase = true,
   firstPressRank,
+  artistAttribution,
 }: {
   shareId: string;
   title: string;
+  artistName?: string;
   ownerId: string;
   price?: DropPrice | null;
   hasAudio: boolean;
@@ -82,10 +96,13 @@ export function DropListenPanel({
   showPurchase?: boolean;
   /** Verified founding-supporter edition. Changes the complete player treatment. */
   firstPressRank?: number;
+  /** Optional linked artist identity rendered inside feed/shared players. */
+  artistAttribution?: DropPlayerArtistAttribution;
 }) {
   const { user, authReady } = useAuth();
   const { toast } = useToast();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
+  const cart = useDropCart();
   const { volume, setVolume, toggleMute } = useAudioVolume();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -120,6 +137,8 @@ export function DropListenPanel({
   const compactPresentation = presentation === 'compact';
   const firstPressEdition =
     typeof firstPressRank === 'number' && firstPressRank >= 1 && firstPressRank <= 10;
+  const trackDetailsHref =
+    detailsHref || pressedSongHref(shareId, { referralPostId: effectiveReferralPostId });
 
   const loadStream = useCallback(async () => {
     if (!firstDropsOn || !hasAudio) {
@@ -295,6 +314,27 @@ export function DropListenPanel({
     void startCheckout(resolveCheckoutCents(normalized));
   };
 
+  const addToCart = () => {
+    if (cart.hasItem(shareId, effectiveTrackId)) {
+      cart.setOpen(true);
+      return;
+    }
+    const amountCents = normalized.mode === 'pwyw'
+      ? pwywCheckoutCents
+      : resolveCheckoutCents(normalized);
+    cart.addItem({
+      shareId,
+      trackId: effectiveTrackId,
+      title,
+      artistName,
+      ownerId,
+      scope: checkoutDestination === 'share' && !effectiveTrackId ? 'album' : 'track',
+      price: normalized,
+      amountCents,
+      detailsHref: detailsHref || pressedSongHref(shareId),
+    });
+  };
+
   if (!firstDropsOn) return null;
   if (!hasAudio && !isCommerceLive(normalized)) return null;
 
@@ -358,9 +398,21 @@ export function DropListenPanel({
           >
             {loading ? <Loader className="h-4 w-4 animate-spin" /> : playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
           </Button>
+          {artistAttribution ? (
+            <ArtistStarAvatar
+              name={artistName || 'Artist'}
+              avatarUrl={artistAttribution.avatarUrl}
+              useStarMark={artistAttribution.useStarMark}
+              starMarkSeed={artistAttribution.starMarkSeed}
+              href={artistAttribution.href}
+              size={compactPresentation ? 30 : 36}
+              studioChrome={artistAttribution.studioChrome}
+              toneClass="bg-fuchsia-500/20 text-fuchsia-200"
+            />
+          ) : null}
           <div className="min-w-0 flex-1">
             <Link
-              href={detailsHref || pressedSongHref(shareId, { referralPostId: effectiveReferralPostId })}
+              href={trackDetailsHref}
               className={cn(
                 'block truncate text-sm font-headline font-bold uppercase transition-colors hover:underline',
                 firstPressEdition ? 'text-amber-50 hover:text-amber-200' : 'hover:text-fuchsia-300'
@@ -368,6 +420,27 @@ export function DropListenPanel({
             >
               {title}
             </Link>
+            {artistAttribution ? (
+              <p className="mt-0.5 flex min-w-0 flex-wrap items-baseline gap-x-1 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                <span>Original artist</span>
+                <span aria-hidden>·</span>
+                {artistAttribution.href ? (
+                  <Link
+                    href={artistAttribution.href}
+                    className={cn(
+                      'min-w-0 truncate transition-colors hover:text-fuchsia-300 hover:underline',
+                      studioNameClass(artistAttribution.studioChrome)
+                    )}
+                  >
+                    {artistName || 'Artist'}
+                  </Link>
+                ) : (
+                  <span className={studioNameClass(artistAttribution.studioChrome)}>
+                    {artistName || 'Artist'}
+                  </span>
+                )}
+              </p>
+            ) : null}
             <p className={compactPresentation ? 'truncate text-[9px] text-muted-foreground' : 'text-[10px] text-muted-foreground'}>
               {previewCapped
                 ? showPurchase
@@ -464,20 +537,19 @@ export function DropListenPanel({
 
       {showPurchase && !full && !isOwner && isCommerceLive(normalized) && (
         <div className={compactPresentation
-          ? normalized.mode === 'pwyw'
-            ? 'grid grid-cols-[minmax(0,1fr)_auto] gap-1.5 border-t border-white/10 pt-2'
-            : 'border-t border-white/10 pt-2'
-          : 'space-y-2 border-t border-white/10 pt-3'}>
+          ? 'space-y-1.5 border-t border-white/10 pt-2'
+          : '!mt-2 space-y-1.5 border-t border-white/10 pt-2'}>
           {normalized.mode === 'pwyw' && (
             <Input
               value={pwyw}
               onChange={(e) => setPwyw(e.target.value)}
               placeholder={`Suggested ${centsToUsdLabel(Math.max(DROP_PAID_MIN_CENTS, normalized.suggestedCents ?? 777))}`}
-              className={compactPresentation ? 'h-8 font-code text-[11px]' : 'h-9 font-code text-xs'}
+              className="h-8 font-code text-[11px]"
             />
           )}
+          <div className={cn('grid gap-2', compactPresentation ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2')}>
           <Button
-            className={compactPresentation ? 'h-8 min-w-0 px-3 text-[11px] font-bold uppercase bg-fuchsia-400 text-black hover:bg-fuchsia-300' : 'w-full h-11 font-bold uppercase bg-fuchsia-400 text-black hover:bg-fuchsia-300'}
+            className={compactPresentation ? 'h-8 min-w-0 px-2 text-[10px] font-bold uppercase bg-fuchsia-400 text-black hover:bg-fuchsia-300' : 'h-9 min-w-0 px-3 text-xs font-bold uppercase bg-fuchsia-400 text-black hover:bg-fuchsia-300'}
             disabled={busy || (Boolean(user) && !authReady)}
             onClick={buy}
           >
@@ -490,7 +562,17 @@ export function DropListenPanel({
                     ? `Pay · ${centsToUsdLabel(pwywCheckoutCents)}`
                     : `Sign up · Pay · ${centsToUsdLabel(pwywCheckoutCents)}`}
           </Button>
-          <p className={compactPresentation ? 'sr-only' : 'text-[9px] text-muted-foreground text-center'}>
+          <Button
+            type="button"
+            variant="outline"
+            className={compactPresentation ? 'h-8 min-w-0 px-2 text-[10px] font-bold uppercase' : 'h-9 min-w-0 border-fuchsia-300/40 bg-fuchsia-300/5 px-3 text-xs font-bold uppercase text-fuchsia-100 hover:bg-fuchsia-300/15'}
+            onClick={addToCart}
+          >
+            {cart.hasItem(shareId, effectiveTrackId) ? <Check className="mr-1.5 h-4 w-4" /> : <ShoppingCart className="mr-1.5 h-4 w-4" />}
+            {cart.hasItem(shareId, effectiveTrackId) ? 'View cart' : 'Add to cart'}
+          </Button>
+          </div>
+          <p className={compactPresentation ? 'sr-only' : 'text-center text-[8px] leading-none text-muted-foreground'}>
             Buy once. Stream in the app. Not on Spotify unless the artist goes wide later.
           </p>
         </div>

@@ -235,6 +235,7 @@ export function SceneDiscoverCard({
                 shareId={drop.shareId}
                 source="scene"
                 title={drop.title}
+                artistName={drop.ownerName}
                 ownerId={drop.ownerId || ''}
                 price={normalizeDropPrice(drop.dropPrice)}
                 hasAudio

@@ -1,23 +1,18 @@
 'use client';
 
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import React, { Suspense, useEffect, useState } from 'react';
 import { ExternalLink, Music } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
 import {
   parseEmbedUrl,
   EMBED_PROVIDER_LABELS,
   type EmbedProvider,
 } from '@/lib/profile/embeds';
-import { db } from '@/lib/firebase/client/firebase';
-import type { ProjectShare } from '@/lib/types';
-import type { DnaDropAlbumPayload, DnaDropTrackPayload } from '@/lib/dna-drop';
-import { normalizeDropAudio, normalizeDropPrice } from '@/lib/drop-commerce';
+import { auth } from '@/lib/firebase/client/firebase';
+import type { DropPrice } from '@/lib/drop-commerce';
 import { DropListenPanel } from '@/components/drop-listen-panel';
 import type { FeaturedTrackSelection } from '@/lib/profile/modules';
-import type { PressedSongSummary } from '@/lib/pressed-song';
+import { pressedSongHref, type PressedSongSummary } from '@/lib/pressed-song';
 import { profileHref } from '@/lib/profile/profile-slug';
-import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { cn } from '@/lib/utils';
 
 /**
@@ -71,18 +66,25 @@ function FirstDropFeedPlayer({ shareId, referralPostId }: { shareId: string; ref
   const artistHref = profileHref(song.artist.slug);
   return (
     <Suspense fallback={null}>
-      <div className="mb-2 flex items-center gap-2 px-1">
-        <ArtistStarAvatar name={song.artist.name} avatarUrl={song.artist.avatarUrl} studioChrome={song.artist.studioBadge || 'free'} size={28} />
-        <div className="min-w-0"><p className="text-[8px] font-bold uppercase tracking-widest text-fuchsia-300">Original artist</p>{artistHref ? <Link href={artistHref} className="block truncate text-xs font-bold hover:text-fuchsia-300">{song.artist.name}</Link> : <p className="truncate text-xs font-bold">{song.artist.name}</p>}</div>
-      </div>
       <DropListenPanel
         shareId={shareId}
         source="artist_home"
         title={song.title}
+        artistName={song.artist.name}
         ownerId={song.ownerId}
         price={song.price}
         hasAudio
         referralPostId={referralPostId}
+        detailsHref={pressedSongHref(shareId, { referralPostId })}
+        artistAttribution={{
+          ...(artistHref ? { href: artistHref } : {}),
+          ...(song.artist.avatarUrl ? { avatarUrl: song.artist.avatarUrl } : {}),
+          useStarMark: song.artist.starMarkUseStar === true,
+          ...(typeof song.artist.starMarkSeed === 'number'
+            ? { starMarkSeed: song.artist.starMarkSeed }
+            : {}),
+          studioChrome: song.artist.studioBadge || 'free',
+        }}
       />
     </Suspense>
   );
@@ -91,37 +93,38 @@ function FirstDropFeedPlayer({ shareId, referralPostId }: { shareId: string; ref
 export function FeaturedTrackPlayer({
   selection,
   profileUserId,
+  previewMode = false,
 }: {
   selection: FeaturedTrackSelection;
   profileUserId: string;
+  previewMode?: boolean;
 }) {
-  const [share, setShare] = useState<ProjectShare | null>(null);
+  const [details, setDetails] = useState<{ price?: DropPrice; hasAudio: boolean } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    void getDoc(doc(db, 'shares', selection.shareId)).then((snapshot) => {
-      if (!cancelled && snapshot.exists()) setShare(snapshot.data() as ProjectShare);
+    const params = new URLSearchParams({ shareId: selection.shareId });
+    if (selection.trackId) params.set('trackId', selection.trackId);
+    void (async () => {
+      const headers: HeadersInit = {};
+      const current = auth.currentUser;
+      if (current) headers.Authorization = `Bearer ${await current.getIdToken()}`;
+      const response = await fetch(`/api/drops/metadata?${params.toString()}`, { headers });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Release metadata unavailable.');
+      if (!cancelled) {
+        setDetails({
+          price: data.price as DropPrice | undefined,
+          hasAudio: Boolean(data.hasAudio),
+        });
+      }
+    })().catch(() => {
+      if (!cancelled) setDetails({ hasAudio: false });
     });
     return () => { cancelled = true; };
-  }, [selection.shareId]);
+  }, [selection.shareId, selection.trackId]);
 
-  const details = useMemo(() => {
-    if (!share) return null;
-    const payload = share.data as DnaDropAlbumPayload | DnaDropTrackPayload;
-    if (share.type === 'album') {
-      const track = (payload as DnaDropAlbumPayload).tracks?.find((row) => row.id === selection.trackId);
-      return {
-        price: normalizeDropPrice(track?.dropPrice ?? payload.dropPrice),
-        hasAudio: Boolean(normalizeDropAudio(track?.dropAudio)),
-      };
-    }
-    return {
-      price: normalizeDropPrice(payload.dropPrice),
-      hasAudio: Boolean(normalizeDropAudio((payload as DnaDropTrackPayload).dropAudio)),
-    };
-  }, [selection.trackId, share]);
-
-  if (!share || !details) {
+  if (!details) {
     return <div className="h-24 animate-pulse rounded-xl border border-fuchsia-500/25 bg-fuchsia-500/10" />;
   }
 
@@ -132,10 +135,11 @@ export function FeaturedTrackPlayer({
         trackId={selection.trackId}
         source="artist_home"
         title={selection.title}
+        artistName={selection.artistName}
         ownerId={selection.ownerId}
         price={details.price}
         hasAudio={details.hasAudio}
-        featuredByUserId={profileUserId}
+        featuredByUserId={previewMode ? undefined : profileUserId}
         excerptStartSec={selection.excerptStartSec}
         firstPressRank={selection.showFirstPressBadge ? selection.firstPressRank : undefined}
       />

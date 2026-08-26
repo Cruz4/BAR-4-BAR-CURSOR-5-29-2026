@@ -564,7 +564,7 @@ export const SCENE_HOME_TOUR_STEPS: LyricsTourStep[] = [
     target: '[data-tour="scene-nav-mobile"], [data-tour="scene-nav-desktop"]',
     mobileCardPlacement: 'bottom',
     title: 'The Vault is where you write',
-    body: 'The portal hub opens The Vault, Library, Artist Home, Your Circle, Listener Insights, and Support Circle. Press a Song below the hub is how you put a track on sale — not DNA Drop. The Scene is the block; the Vault is the booth.',
+    body: 'The portal hub opens The Vault, Library, Artist Home, Your Circle, Listener Insights, and Support Circle. New release below the hub is how you put a song or album on sale — not DNA Drop. The Scene is the block; the Vault is the booth.',
     example: 'Replay this tour anytime from the Studio Manual (?).',
   },
 ];
