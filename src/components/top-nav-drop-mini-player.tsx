@@ -8,6 +8,7 @@ import { formatDeckTime } from '@/lib/drop-library';
 import { Button } from '@/components/ui/button';
 import { AudioVolumeControl } from '@/components/audio-volume-control';
 import { measureSpectrumBand } from '@/lib/audio-spectrum';
+import { DropRepeatControl } from '@/components/drop-repeat-control';
 
 const MINI_EQ_BANDS = [
   { lowHz: 35, highHz: 130, gain: 0.72 },
@@ -119,12 +120,14 @@ export function TopNavDropMiniPlayer() {
     elapsed,
     duration,
     volume,
+    repeat,
     analyser,
     togglePlay,
     skipNext,
     prev,
     stop,
     setVolume,
+    setRepeat,
     toggleMute,
   } = player;
 
@@ -167,6 +170,7 @@ export function TopNavDropMiniPlayer() {
           <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={skipNext} aria-label="Next">
             <SkipForward className="h-3.5 w-3.5" />
           </Button>
+          <DropRepeatControl repeat={repeat} onChange={setRepeat} compact />
           <AudioVolumeControl
             compact
             volume={volume}

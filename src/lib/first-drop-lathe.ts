@@ -3,6 +3,7 @@ export const OPEN_FIRST_DROP_LATHE = 'b4b:open-first-drop-lathe';
 export type FirstDropLatheDetail = {
   albumId?: string;
   trackId?: string;
+  mode?: 'song' | 'album';
 };
 
 export function openFirstDropLathe(detail: FirstDropLatheDetail = {}): void {

@@ -19,6 +19,7 @@ const HELD_FLUSH_LIMIT = 25;
 type SaleWrite = {
   shareId: string;
   title: string;
+  scope: 'album' | 'track';
   buyerId: string;
   buyerName?: string;
   amountCents: number;
@@ -65,6 +66,7 @@ function parseSale(id: string, raw: Record<string, unknown>): DropSaleRecord | n
     id,
     shareId: typeof raw.shareId === 'string' ? raw.shareId : '',
     title: typeof raw.title === 'string' && raw.title.trim() ? raw.title : 'Drop',
+    scope: raw.scope === 'album' ? 'album' : 'track',
     buyerId: typeof raw.buyerId === 'string' ? raw.buyerId : '',
     buyerName:
       typeof raw.buyerName === 'string' && raw.buyerName.trim()
@@ -102,9 +104,22 @@ export async function listDropSales(
     .orderBy('createdAt', 'desc')
     .limit(limit)
     .get();
-  return snap.docs
+  const rows = snap.docs
     .map((doc) => parseSale(doc.id, doc.data() as Record<string, unknown>))
     .filter((row): row is DropSaleRecord => Boolean(row));
+  const legacyShareIds = snap.docs
+    .filter((doc) => doc.data().scope !== 'album' && doc.data().scope !== 'track')
+    .map((doc) => String(doc.data().shareId || '').trim())
+    .filter(Boolean);
+  if (!legacyShareIds.length) return rows;
+
+  const shareSnaps = await db.getAll(
+    ...[...new Set(legacyShareIds)].map((shareId) => db.collection('shares').doc(shareId))
+  );
+  const albumShares = new Set(
+    shareSnaps.filter((share) => share.exists && share.data()?.type === 'album').map((share) => share.id)
+  );
+  return rows.map((row) => (albumShares.has(row.shareId) ? { ...row, scope: 'album' } : row));
 }
 
 export async function recordDropSale(db: Firestore, artistId: string, sale: SaleWrite): Promise<void> {
@@ -138,6 +153,7 @@ export async function recordDropSale(db: Firestore, artistId: string, sale: Sale
   await ref.set({
     shareId: sale.shareId,
     title,
+    scope: sale.scope,
     buyerId: sale.buyerId,
     buyerName,
     amountCents: sale.amountCents,

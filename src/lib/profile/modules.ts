@@ -28,7 +28,6 @@ import {
 export type ProfileModuleId =
   | 'nowPlaying'
   | 'barOfWeek'
-  | 'dnaStrip'
   | 'rhymeFingerprint'
   | 'barBoard'
   | 'openLock'
@@ -143,12 +142,6 @@ export const MODULE_META: Record<
     defaultSize: 'L',
     defaultEnabled: true,
   },
-  dnaStrip: {
-    label: 'Living DNA',
-    description: 'Reveal 1–2 Creative DNA lines from your world.',
-    defaultSize: 'M',
-    defaultEnabled: true,
-  },
   rhymeFingerprint: {
     label: 'Rhyme Fingerprint',
     description: 'Abstract visual of your rhyme + cadence pattern. No lyrics shown.',
@@ -203,7 +196,6 @@ export const MODULE_ORDER_DEFAULT: ProfileModuleId[] = [
   'nowPlaying',
   'dropShelf',
   'barOfWeek',
-  'dnaStrip',
   'wall',
   'openLock',
   'barBoard',
@@ -290,6 +282,7 @@ function isModuleId(id: unknown): id is ProfileModuleId {
 /** Old saves used albumRooms / theCatch — map to The Board. */
 function coerceModuleId(id: unknown): ProfileModuleId | null {
   if (id === 'albumRooms' || id === 'theCatch') return 'barBoard';
+  if (id === 'dnaStrip') return null;
   if (isModuleId(id)) return id;
   return null;
 }

@@ -50,5 +50,13 @@ export type PressedSongSummary = {
     supporterCreditPublic: boolean;
     firstPressRank?: number;
     owns: boolean;
+    purchase?: {
+      title: string;
+      artistName: string;
+      amountCents: number;
+      purchasedAt: string;
+      scope: 'album' | 'track';
+      edition: string;
+    };
   };
 };

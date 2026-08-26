@@ -8,6 +8,7 @@
 import React, { useRef, useState } from 'react';
 import { Download, Radio, Share2 } from 'lucide-react';
 import type { RankId } from '@/lib/gamification/types';
+import { STUDIO_RANKS } from '@/lib/gamification/ranks';
 import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
 import { StudioStandingFoilCard } from '@/components/gamification/studio-standing-foil-card';
@@ -209,6 +210,11 @@ export function StudioStandingRankBadge({
   compactOnMobile = false,
 }: StudioStandingRankBadgeProps) {
   const [open, setOpen] = useState(false);
+  const rankLabel =
+    stats.rankLabel?.trim() ||
+    STUDIO_RANKS.find((rank) => rank.id === stats.rankId)?.label ||
+    'Open Mic';
+  const normalizedStats = rankLabel === stats.rankLabel ? stats : { ...stats, rankLabel };
 
   return (
     <>
@@ -225,17 +231,20 @@ export function StudioStandingRankBadge({
             badgeClassName,
             className
           )}
-          aria-label={`View ${stats.rankLabel} Studio Standing plate`}
-          title={`${stats.rankLabel} Studio Standing`}
+          aria-label={`View ${rankLabel} Studio Standing plate`}
+          title={`${rankLabel} Studio Standing`}
         >
-          <Crown
+          <span
             className={cn(
-              'h-4 w-4 shrink-0',
-              compactOnMobile && 'max-sm:absolute max-sm:left-1/2 max-sm:top-1/2 max-sm:-translate-x-1/2 max-sm:-translate-y-1/2'
+              'inline-flex shrink-0 items-center justify-center',
+              compactOnMobile && 'max-sm:pointer-events-none max-sm:absolute max-sm:inset-0 max-sm:flex max-sm:items-center max-sm:justify-center'
             )}
-          />
+            aria-hidden
+          >
+            <Crown className="h-4 w-4" />
+          </span>
           <span className={cn('text-xs font-bold uppercase tracking-[0.25em]', compactOnMobile && 'hidden sm:inline')}>
-            {stats.rankLabel}
+            {rankLabel}
           </span>
         </button>
       ) : (
@@ -263,7 +272,7 @@ export function StudioStandingRankBadge({
       <StudioStandingFoilDialog
         open={open}
         onOpenChange={setOpen}
-        stats={stats}
+        stats={normalizedStats}
         allowShare={allowShare}
       />
     </>

@@ -9,6 +9,7 @@ import { formatDeckTime } from '@/lib/drop-library';
 import { Button } from '@/components/ui/button';
 import { AudioVolumeControl } from '@/components/audio-volume-control';
 import { cn } from '@/lib/utils';
+import { DropRepeatControl } from '@/components/drop-repeat-control';
 
 const artistAvatarCache = new Map<string, string | null>();
 
@@ -70,10 +71,12 @@ export function DropNowPlayingBar() {
     elapsed,
     duration,
     volume,
+    repeat,
     togglePlay,
     skipNext,
     prev,
     setVolume,
+    setRepeat,
     toggleMute,
   } = player;
   const playerImageUrl = artistAvatarUrl || current.coverArtUrl;
@@ -139,6 +142,7 @@ export function DropNowPlayingBar() {
         <Button type="button" size="icon" variant="ghost" className="h-9 w-9 shrink-0" onClick={skipNext} aria-label="Next">
           <SkipForward className="h-4 w-4" />
         </Button>
+        <DropRepeatControl repeat={repeat} onChange={setRepeat} />
         <AudioVolumeControl
           compact
           volume={volume}

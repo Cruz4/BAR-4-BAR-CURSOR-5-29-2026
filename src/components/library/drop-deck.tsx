@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronRight,
   Disc3,
+  Download,
   ExternalLink,
   FolderOpen,
   Layers2,
@@ -87,6 +88,11 @@ import { DropVisualizer } from '@/components/library/drop-visualizer';
 import { LibraryPressingBackground } from '@/components/library/library-pressing-background';
 import { AudioVolumeControl } from '@/components/audio-volume-control';
 import { pressTokens, pressingCssVars, type PressingConfig } from '@/lib/profile/pressing';
+import {
+  downloadPressedAudioOffline,
+  listOfflinePressedAudioKeys,
+  removePressedAudioOffline,
+} from '@/lib/offline/pressed-audio-cache';
 
 function PressingPlate({
   item,
@@ -173,6 +179,8 @@ export function DropDeck({
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [expandedArtists, setExpandedArtists] = useState<Record<string, boolean>>({});
   const [expandedAlbums, setExpandedAlbums] = useState<Record<string, boolean>>({});
+  const [offlineKeys, setOfflineKeys] = useState<Set<string>>(new Set());
+  const [offlineBusyKey, setOfflineBusyKey] = useState<string | null>(null);
   const currentKey = current?.key ?? null;
   const pressingStyle = useMemo(
     () => (pressing ? pressingCssVars(pressTokens(pressing)) : undefined),
@@ -226,6 +234,14 @@ export function DropDeck({
   }, [queue, setPlayerQueue]);
 
   useEffect(() => {
+    let cancelled = false;
+    void listOfflinePressedAudioKeys(userId)
+      .then((keys) => { if (!cancelled) setOfflineKeys(keys); })
+      .catch(() => { if (!cancelled) setOfflineKeys(new Set()); });
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  useEffect(() => {
     if (!currentKey) return;
     setPlayed((prev) => markPlayed(prev, currentKey));
   }, [currentKey]);
@@ -237,6 +253,37 @@ export function DropDeck({
     },
     [loadAndPlay]
   );
+
+  const toggleOffline = useCallback(async (item: DeckPlayable) => {
+    if (offlineBusyKey) return;
+    setOfflineBusyKey(item.key);
+    try {
+      if (offlineKeys.has(item.key)) {
+        await removePressedAudioOffline(userId, item);
+        setOfflineKeys((current) => {
+          const next = new Set(current);
+          next.delete(item.key);
+          return next;
+        });
+        toast({ title: 'Offline copy removed', description: `${item.title} still stays in your Library.` });
+      } else {
+        const saved = await downloadPressedAudioOffline(userId, item);
+        setOfflineKeys((current) => new Set(current).add(item.key));
+        toast({
+          title: 'Available offline',
+          description: `${item.title} saved on this device · ${(saved.byteSize / 1024 / 1024).toFixed(1)} MB`,
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not change offline access',
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setOfflineBusyKey(null);
+    }
+  }, [offlineBusyKey, offlineKeys, toast, userId]);
 
   useEffect(() => {
     setExpandedArtists((prev) => {
@@ -728,6 +775,21 @@ export function DropDeck({
                                                     <DropdownMenuSeparator />
                                                   </>
                                                 )}
+                                                <DropdownMenuLabel>Offline on this device</DropdownMenuLabel>
+                                                <DropdownMenuItem
+                                                  disabled={offlineBusyKey === item.key}
+                                                  onClick={() => void toggleOffline(item)}
+                                                >
+                                                  {offlineBusyKey === item.key ? (
+                                                    <Loader className="h-4 w-4 animate-spin" />
+                                                  ) : offlineKeys.has(item.key) ? (
+                                                    <Trash2 className="h-4 w-4" />
+                                                  ) : (
+                                                    <Download className="h-4 w-4" />
+                                                  )}
+                                                  {offlineKeys.has(item.key) ? 'Remove offline copy' : 'Download for offline'}
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
                                                 <DropdownMenuLabel>Add to crate</DropdownMenuLabel>
                                                 {crates.length === 0 && (
                                                   <DropdownMenuItem onClick={() => void makeCrate(item.shareId)}>
@@ -876,6 +938,21 @@ export function DropDeck({
                                       <DropdownMenuSeparator />
                                     </>
                                   )}
+                                  <DropdownMenuLabel>Offline on this device</DropdownMenuLabel>
+                                  <DropdownMenuItem
+                                    disabled={offlineBusyKey === item.key}
+                                    onClick={() => void toggleOffline(item)}
+                                  >
+                                    {offlineBusyKey === item.key ? (
+                                      <Loader className="h-4 w-4 animate-spin" />
+                                    ) : offlineKeys.has(item.key) ? (
+                                      <Trash2 className="h-4 w-4" />
+                                    ) : (
+                                      <Download className="h-4 w-4" />
+                                    )}
+                                    {offlineKeys.has(item.key) ? 'Remove offline copy' : 'Download for offline'}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
                                   <DropdownMenuLabel>Add to crate</DropdownMenuLabel>
                                   {crates.length === 0 && (
                                     <DropdownMenuItem onClick={() => void makeCrate(item.shareId)}>

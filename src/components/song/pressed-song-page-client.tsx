@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CalendarDays, Disc3, Headphones, Repeat2, ShoppingBag, Sparkles, Trophy } from 'lucide-react';
+import { BarChart3, CalendarDays, Disc3, Download, Headphones, ReceiptText, ShoppingBag, Sparkles, Trophy } from 'lucide-react';
 import { auth } from '@/lib/firebase/client/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +17,7 @@ import { profileHref } from '@/lib/profile/profile-slug';
 import type { PressedSongSummary, PressedSongSupporter } from '@/lib/pressed-song';
 import { LivingPressField } from '@/components/profile/living-press-field';
 import { pressTokens, pressingCssVars } from '@/lib/profile/pressing';
+import type { MusicChartsResponse } from '@/lib/music-charts';
 
 async function authorization(): Promise<HeadersInit> {
   const token = await auth.currentUser?.getIdToken();
@@ -46,6 +47,7 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
   const { toast } = useToast();
   const [summary, setSummary] = useState(initial);
   const [savingCredit, setSavingCredit] = useState(false);
+  const [chartRank, setChartRank] = useState<number | null>(null);
   const [playback, setPlayback] = useState({ playing: false, currentTime: 0, duration: 1 });
   const [pageVisible, setPageVisible] = useState(true);
   const pressingTokens = useMemo(
@@ -66,6 +68,19 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
   useEffect(() => {
     if (authReady) void refresh();
   }, [authReady, user?.id, refresh]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch('/api/charts?trackLimit=100&artistLimit=1')
+      .then((response) => response.ok ? response.json() : null)
+      .then((data: MusicChartsResponse | null) => {
+        if (cancelled || !data) return;
+        const index = data.tracks.findIndex((track) => track.shareId === initial.shareId);
+        setChartRank(index >= 0 ? index + 1 : null);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [initial.shareId]);
 
   useEffect(() => {
     const syncVisibility = () => setPageVisible(document.visibilityState === 'visible');
@@ -102,7 +117,7 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
     { icon: ShoppingBag, label: 'Buyers', value: summary.publicTotals.buyers },
     ...(summary.member ? [
       { icon: Sparkles, label: 'Qualified listens', value: summary.member.qualifiedListeningDays },
-      { icon: Repeat2, label: 'Repeats', value: summary.member.repeats },
+      { icon: BarChart3, label: 'Current 7-day chart', value: chartRank ? `#${chartRank}` : '—' },
     ] : []),
   ];
   return (
@@ -126,7 +141,7 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
             <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-fuchsia-400/40 bg-fuchsia-500/15"><Disc3 className="h-8 w-8 text-fuchsia-300" /></span>
             <div><p className="text-[10px] font-bold uppercase tracking-[.25em] text-muted-foreground">Pressed song</p><h1 className="font-headline text-3xl font-black uppercase sm:text-5xl">{summary.title}</h1><p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> Released {new Date(summary.releasedAt).toLocaleDateString()}</p></div>
           </div>
-          <DropListenPanel shareId={summary.shareId} title={summary.title} ownerId={summary.ownerId} price={summary.price} hasAudio source="direct" presentation="song" onPlaybackStateChange={setPlayback} />
+          <DropListenPanel shareId={summary.shareId} title={summary.title} ownerId={summary.ownerId} price={summary.price} hasAudio source="direct" presentation="song" firstPressRank={viewer?.firstPressRank} onPlaybackStateChange={setPlayback} />
           <div className="mt-4">
             <DropSocialPanel
               shareId={summary.shareId}
@@ -145,9 +160,29 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
           <section className="rounded-2xl border border-sky-400/25 bg-sky-500/10 p-5 text-center"><p className="font-bold">Sign in to see verified listening, supporter ranks, and your purchase history.</p><Button asChild className="mt-3 font-bold uppercase"><Link href={buildLoginUrl({ mode: 'signup', next: `/song/${summary.shareId}`, intent: 'pressed_song' })}>Join and continue</Link></Button></section>
         ) : summary.member ? (
           <>
-            <section className="grid gap-3 sm:grid-cols-3"><div className="rounded-xl border border-white/10 bg-black/30 p-4"><p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Completions</p><p className="font-headline text-2xl font-bold">{summary.member.completions.toLocaleString()}</p></div><div className="rounded-xl border border-white/10 bg-black/30 p-4"><p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Gross support</p><p className="font-headline text-2xl font-bold">{centsToUsdLabel(summary.member.grossSupportCents)}</p></div><div className="rounded-xl border border-white/10 bg-black/30 p-4"><p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">You paid</p><p className="font-headline text-2xl font-bold">{centsToUsdLabel(viewer?.amountPaidCents || 0)}</p></div></section>
+            <section className="grid gap-3 sm:grid-cols-2"><div className="rounded-xl border border-white/10 bg-black/30 p-4"><p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Verified supporters</p><p className="font-headline text-2xl font-bold">{summary.publicTotals.buyers.toLocaleString()}</p></div><div className="rounded-xl border border-white/10 bg-black/30 p-4"><p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Gross support</p><p className="font-headline text-2xl font-bold">{centsToUsdLabel(summary.member.grossSupportCents)}</p></div></section>
             {viewer?.firstPressRank ? <div className="flex items-center gap-3 rounded-2xl border border-amber-400/35 bg-amber-500/10 p-4"><Trophy className="h-6 w-6 text-amber-300" /><div><p className="font-bold">First Press #{viewer.firstPressRank}</p><p className="text-xs text-muted-foreground">Your verified place among this song’s first 10 supporters.</p></div></div> : null}
             {viewer?.amountPaidCents ? <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-black/30 p-4"><div><p className="font-bold">Show my supporter credit</p><p className="text-xs text-muted-foreground">Per-song choice. Your name stays private by default.</p></div><Switch checked={viewer.supporterCreditPublic} disabled={savingCredit} onCheckedChange={setSupporterCredit} /></div> : null}
+            {viewer?.purchase ? (
+              <section className="overflow-hidden rounded-2xl border border-amber-300/35 bg-[linear-gradient(135deg,rgba(68,43,5,.72),rgba(0,0,0,.58)_58%)] shadow-[0_16px_50px_rgba(245,158,11,.12)]">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200/15 px-5 py-4">
+                  <div className="flex items-center gap-2"><ReceiptText className="h-5 w-5 text-amber-300" /><div><h2 className="font-headline text-lg font-black uppercase text-amber-50">Purchase receipt</h2><p className="text-[9px] font-bold uppercase tracking-widest text-amber-200/70">Permanent Library access</p></div></div>
+                  <span className="rounded-full border border-amber-300/35 bg-amber-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-amber-100">{viewer.purchase.edition}</span>
+                </div>
+                <dl className="grid gap-x-6 gap-y-4 px-5 py-5 text-sm sm:grid-cols-2">
+                  <div><dt className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Purchased</dt><dd className="mt-1 font-bold">{viewer.purchase.title}</dd></div>
+                  <div><dt className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">From artist</dt><dd className="mt-1 font-bold">{viewer.purchase.artistName}</dd></div>
+                  <div><dt className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Purchase date</dt><dd className="mt-1 font-code">{new Date(viewer.purchase.purchasedAt).toLocaleString()}</dd></div>
+                  <div><dt className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Amount paid</dt><dd className="mt-1 font-headline text-xl font-black text-amber-100">{centsToUsdLabel(viewer.purchase.amountCents)}</dd></div>
+                  <div><dt className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Item type</dt><dd className="mt-1 capitalize">{viewer.purchase.scope}</dd></div>
+                  <div><dt className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Access</dt><dd className="mt-1">Full stream + device offline copy</dd></div>
+                </dl>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-amber-200/15 bg-black/20 px-5 py-4 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-2"><Download className="h-4 w-4 text-amber-300" /> Download from the song menu in your Library.</span>
+                  <Button asChild size="sm" variant="outline" className="border-amber-300/35 text-amber-100"><Link href="/library">Open Library</Link></Button>
+                </div>
+              </section>
+            ) : null}
             <section className="grid gap-6 md:grid-cols-2"><div className="space-y-2"><h2 className="font-headline text-xl font-bold uppercase">Top supporters</h2>{summary.member.topSupporters.length ? summary.member.topSupporters.map((supporter) => <SupporterRow key={supporter.rank} supporter={supporter} showAmount />) : <p className="text-sm text-muted-foreground">No verified supporters yet.</p>}</div><div className="space-y-2"><h2 className="font-headline text-xl font-bold uppercase">First 10</h2>{summary.member.firstPress.length ? summary.member.firstPress.map((supporter) => <SupporterRow key={supporter.rank} supporter={supporter} />) : <p className="text-sm text-muted-foreground">The First Press is still open.</p>}</div></section>
           </>
         ) : null}

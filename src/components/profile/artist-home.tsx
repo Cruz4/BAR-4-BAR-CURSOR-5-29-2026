@@ -23,6 +23,7 @@ import { FirstDropsStorefront, LiveDnaDropsGroupedList, firstDropTracks } from '
 import { AlbumCoverCollage } from '@/components/gamification/album-cover-collage';
 import { ProfileInitialsStar } from '@/components/profile/profile-initials-star';
 import { rankBadgeClass, rankIdFromLabel } from '@/lib/gamification/badge-styles';
+import { rankFromXp, STUDIO_RANKS } from '@/lib/gamification/ranks';
 import { StudioStandingRankBadge } from '@/components/gamification/studio-standing-foil-dialog';
 import { ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { FriendButton } from '@/components/profile/friend-button';
@@ -39,7 +40,6 @@ import { LivingPressField } from '@/components/profile/living-press-field';
 import type { ArtistHomeConfig } from '@/lib/profile/modules';
 import {
   BarOfWeekModule,
-  DnaStripModule,
   DropShelfModule,
   FriendsModule,
   GuestbookModule,
@@ -96,7 +96,6 @@ type ArtistHomeProps = {
 const MODULE_RENDERERS: Record<string, React.ComponentType<{ ctx: ModuleContext }>> = {
   nowPlaying: NowPlayingModule,
   barOfWeek: BarOfWeekModule,
-  dnaStrip: DnaStripModule,
   rhymeFingerprint: RhymeFingerprintModule,
   barBoard: BarBoardModule,
   theCatch: BarBoardModule,
@@ -157,7 +156,13 @@ export function ArtistHome({
   }, [user?.id, isOwner, profile.slug]);
 
   const cssVars = useMemo(() => pressingCssVars(tokens), [tokens]);
-  const rankId = profile.rankId ?? rankIdFromLabel(profile.rankLabel);
+  const totalXp = Number(profile.xp) || 0;
+  const computedRank = rankFromXp(totalXp, parseStudioBadge(profile.studioBadge) === 'pro');
+  const savedRankLabel = profile.rankLabel?.trim();
+  const rankId =
+    profile.rankId ?? (savedRankLabel ? rankIdFromLabel(savedRankLabel) : computedRank.id);
+  const rankLabel =
+    savedRankLabel || STUDIO_RANKS.find((rank) => rank.id === rankId)?.label || computedRank.label;
   const liveDnaDrops = useMemo(() => profile.liveDnaDrops || [], [profile.liveDnaDrops]);
   const saleDrops = useMemo(
     () => (firstDropsOn ? firstDropTracks(liveDnaDrops) : []),
@@ -176,7 +181,6 @@ export function ArtistHome({
   const useInitialsHero = !useCustomPhoto && !useCollageHero;
   const useStarMark = Boolean(profile.starMarkUseStar);
   const starSeed = normalizeVesperfoldSeed(profile.starMarkSeed ?? 0);
-  const totalXp = Number(profile.xp) || 0;
   const liveStreak = Number(profile.currentStreak) || 0;
   const bestStreak = Number(profile.longestStreak) || 0;
   const displayNameWords = useMemo(
@@ -486,7 +490,7 @@ export function ArtistHome({
                 stats={{
                   displayName: profile.displayName,
                   rankId,
-                  rankLabel: profile.rankLabel,
+                  rankLabel,
                   xp: profile.xp,
                   streak: profile.currentStreak,
                   longestStreak: profile.longestStreak,
@@ -688,12 +692,12 @@ export function ArtistHome({
               </button>
               {useStarMark && (
                 <div
-                  className="pointer-events-none absolute bottom-3 right-3 z-10 flex h-11 w-11 items-center justify-center sm:bottom-4 sm:right-4 sm:h-[3.25rem] sm:w-[3.25rem]"
+                  className="pointer-events-none absolute bottom-4 right-4 z-10 flex h-10 w-10 items-center justify-center"
                   title="Feed star mark"
                   aria-hidden
                 >
                   <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-white/20 bg-black/70 shadow-[0_8px_24px_rgba(0,0,0,0.45)] ring-2 ring-black/40">
-                    <VesperfoldMark seed={starSeed} size={52} />
+                    <VesperfoldMark seed={starSeed} size={40} />
                   </span>
                 </div>
               )}
@@ -733,7 +737,7 @@ export function ArtistHome({
               featured: config.featured,
               badges: profile.badges,
               unlockedAchievements: profile.unlockedAchievements,
-              rankLabel: profile.rankLabel,
+              rankLabel,
               xp: profile.xp,
               currentStreak: profile.currentStreak,
               liveDnaDrops,
@@ -858,7 +862,7 @@ export function ArtistHome({
           onOpenChange={setShareOpen}
           profile={{
             displayName: profile.displayName,
-            rankLabel: profile.rankLabel,
+            rankLabel,
             profileUrl,
           }}
         />

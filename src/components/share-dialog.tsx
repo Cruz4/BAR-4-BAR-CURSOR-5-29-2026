@@ -510,10 +510,10 @@ export function ShareDialog({
                 className="h-11 w-full bg-fuchsia-400 font-bold uppercase text-black hover:bg-fuchsia-300"
                 onClick={() => {
                   onOpenChange(false);
-                  openFirstDropLathe({ albumId: id });
+                  openFirstDropLathe({ albumId: id, mode: 'album' });
                 }}
               >
-                Press a track from this album
+                Manage album audio &amp; price
               </Button>
             ) : null}
 

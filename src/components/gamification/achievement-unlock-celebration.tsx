@@ -28,6 +28,9 @@ import {
   CELEBRATION_EMOJI_Z_CLASS,
   CELEBRATION_MODAL_Z_CLASS,
   CELEBRATION_OVERLAY_Z_CLASS,
+  isOtherCelebrationModalActive,
+  setCelebrationModalActive,
+  subscribeToCelebrationModalState,
 } from '@/components/gamification/celebration-overlay-portal';
 import { AchievementFoilCard } from '@/components/gamification/achievement-foil-card';
 import {
@@ -97,6 +100,7 @@ export function AchievementUnlockCelebration() {
   const [foilOpen, setFoilOpen] = useState(false);
   const [postingFeed, setPostingFeed] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [progressCelebrationOpen, setProgressCelebrationOpen] = useState(false);
   const shownIdsRef = useRef(new Set<string>());
   const pointerRef = useRef({ x: 0, y: 0 });
   const emojiTimersRef = useRef<number[]>([]);
@@ -107,6 +111,16 @@ export function AchievementUnlockCelebration() {
   useEffect(() => {
     shownIdsRef.current = user?.id ? loadSeenAchievementIds(user.id) : new Set();
   }, [user?.id]);
+
+  useEffect(() => {
+    const sync = () => setProgressCelebrationOpen(isOtherCelebrationModalActive('achievement'));
+    sync();
+    const unsubscribe = subscribeToCelebrationModalState(sync);
+    return () => {
+      unsubscribe();
+      setCelebrationModalActive('achievement', false);
+    };
+  }, []);
 
   useEffect(() => {
     const onPointer = (e: PointerEvent) => {
@@ -201,11 +215,13 @@ export function AchievementUnlockCelebration() {
   }, [enqueueUnlocks]);
 
   useEffect(() => {
-    if (active || queue.length === 0) return;
+    if (active || queue.length === 0 || progressCelebrationOpen || isOtherCelebrationModalActive('achievement')) return;
     // Brief breath between stacked unlocks so they don't feel like spam.
     const delayMs = 450;
     const timer = window.setTimeout(() => {
+      if (isOtherCelebrationModalActive('achievement')) return;
       const [next, ...rest] = queue;
+      setCelebrationModalActive('achievement', true);
       setQueue(rest);
       setActive(next);
       setFoilOpen(false);
@@ -213,12 +229,13 @@ export function AchievementUnlockCelebration() {
       fireAchievementConfetti();
     }, delayMs);
     return () => window.clearTimeout(timer);
-  }, [active, queue, spawnCursorEmojiSequence]);
+  }, [active, progressCelebrationOpen, queue, spawnCursorEmojiSequence]);
 
   const dismiss = () => {
     stopCelebrationConfetti();
     setFoilOpen(false);
     setActive(null);
+    setCelebrationModalActive('achievement', false);
   };
 
   const def = active ? getAchievement(active.id) : undefined;

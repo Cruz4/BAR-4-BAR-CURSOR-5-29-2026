@@ -18,6 +18,7 @@ import type { FeaturedTrackSelection } from '@/lib/profile/modules';
 import type { PressedSongSummary } from '@/lib/pressed-song';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
+import { cn } from '@/lib/utils';
 
 /**
  * Plays a whitelisted provider link right on the page (iframe embed).
@@ -136,17 +137,24 @@ export function FeaturedTrackPlayer({
         hasAudio={details.hasAudio}
         featuredByUserId={profileUserId}
         excerptStartSec={selection.excerptStartSec}
+        firstPressRank={selection.showFirstPressBadge ? selection.firstPressRank : undefined}
       />
-      {selection.showFirstPressBadge ? (
-        <p className="mt-2 inline-flex rounded-full border border-amber-400/35 bg-amber-500/10 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-amber-200">
-          First Press #{selection.firstPressRank || '1–10'}
-        </p>
-      ) : null}
     </Suspense>
   );
 }
 
-export function EmbedPlayer({ url, title, referralPostId }: { url: string; title?: string; referralPostId?: string }) {
+export function EmbedPlayer({
+  url,
+  title,
+  referralPostId,
+  viewportBounded = false,
+}: {
+  url: string;
+  title?: string;
+  referralPostId?: string;
+  /** Keep media inside one immersive slide without distorting its aspect ratio. */
+  viewportBounded?: boolean;
+}) {
   const dropShareId = firstDropShareId(url);
   if (dropShareId) return <FirstDropFeedPlayer shareId={dropShareId} referralPostId={referralPostId} />;
 
@@ -185,8 +193,15 @@ export function EmbedPlayer({ url, title, referralPostId }: { url: string; title
     <div className="min-w-0 max-w-full overflow-hidden rounded-[var(--ph-radius,16px)] border border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/40">
       {parsed.isVideo ? (
         <div
-          className={portrait ? 'relative mx-auto w-full max-w-[420px]' : 'relative w-full min-w-0'}
-          style={{ paddingBottom: `${aspectPad}%` }}
+          className={portrait
+            ? cn(
+                'relative mx-auto max-w-full',
+                viewportBounded ? 'h-[min(44dvh,32rem)]' : 'h-[min(65dvh,40rem)]'
+              )
+            : 'relative w-full min-w-0'}
+          style={portrait
+            ? { aspectRatio: `${100 / aspectPad} / 1` }
+            : { paddingBottom: `${aspectPad}%` }}
         >
           <iframe
             src={parsed.src}
@@ -204,7 +219,7 @@ export function EmbedPlayer({ url, title, referralPostId }: { url: string; title
           src={parsed.src}
           title={title || `${EMBED_PROVIDER_LABELS[parsed.provider]} player`}
           className="w-full max-w-full border-0"
-          style={{ height: parsed.height ?? 166, maxHeight: '80vh' }}
+          style={{ height: parsed.height ?? 166, maxHeight: viewportBounded ? '42dvh' : '60dvh' }}
           loading="lazy"
           referrerPolicy="strict-origin-when-cross-origin"
           allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; fullscreen"

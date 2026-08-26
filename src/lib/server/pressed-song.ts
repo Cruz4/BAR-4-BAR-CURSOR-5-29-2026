@@ -173,6 +173,24 @@ export async function getPressedSongSummary(
     supporterCreditPublic: viewerLibrary.supporterCreditPublic === true,
     ...(firstRankIndex >= 0 ? { firstPressRank: firstRankIndex + 1 } : {}),
     owns: viewerId === share.ownerId || viewerLibrarySnap.exists,
+    ...(viewerId !== share.ownerId && viewerLibrarySnap.exists
+      ? {
+          purchase: {
+            title:
+              typeof viewerLibrary.title === 'string' && viewerLibrary.title.trim()
+                ? viewerLibrary.title.trim()
+                : base.title,
+            artistName,
+            amountCents: nonnegative(viewerLibrary.amountCents),
+            purchasedAt: timestamp(viewerLibrary.purchasedAt),
+            scope: viewerLibrary.scope === 'album' ? ('album' as const) : ('track' as const),
+            edition:
+              firstRankIndex >= 0
+                ? `First Press #${firstRankIndex + 1}`
+                : 'Standard digital edition',
+          },
+        }
+      : {}),
   };
   return base;
 }

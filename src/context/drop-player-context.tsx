@@ -16,6 +16,7 @@ import { useAudioVolume } from '@/hooks/use-audio-volume';
 import { recordDropListenProgressClient, recordDropSpinClient } from '@/lib/drop-pulse-client';
 import type { DeckPlayable } from '@/lib/drop-library';
 import { DROP_LISTEN_MILESTONES, type DropListenMilestone } from '@/lib/drop-listen-analytics';
+import { getOfflinePressedAudioBlob } from '@/lib/offline/pressed-audio-cache';
 
 export type DropRepeatMode = 'off' | 'all' | 'one';
 
@@ -70,6 +71,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
   const listenProofRef = useRef('');
   const eligibleDurationRef = useRef(30);
   const reportedMilestonesRef = useRef<Set<DropListenMilestone>>(new Set());
+  const offlineObjectUrlRef = useRef<string | null>(null);
 
   const [queue, setQueueState] = useState<DeckPlayable[]>([]);
   const [current, setCurrent] = useState<DeckPlayable | null>(null);
@@ -154,13 +156,46 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
       currentRef.current = item;
       setLoading(true);
       userPausedRef.current = false;
+      const playOfflineCopy = async (): Promise<boolean> => {
+        const userId = auth.currentUser?.uid;
+        if (!userId) return false;
+        const blob = await getOfflinePressedAudioBlob(userId, item).catch(() => null);
+        if (!blob) return false;
+        if (offlineObjectUrlRef.current) URL.revokeObjectURL(offlineObjectUrlRef.current);
+        const objectUrl = URL.createObjectURL(blob);
+        offlineObjectUrlRef.current = objectUrl;
+        try {
+          audio.removeAttribute('crossorigin');
+          audio.src = objectUrl;
+          listenProofRef.current = '';
+          eligibleDurationRef.current = Math.max(1, item.durationSec || 30);
+          reportedMilestonesRef.current = new Set();
+          audio.load();
+          if (autoplay) {
+            wantPlayingRef.current = true;
+            ensureAnalyser();
+            await audio.play();
+            setPlaying(true);
+          }
+          return true;
+        } catch {
+          URL.revokeObjectURL(objectUrl);
+          offlineObjectUrlRef.current = null;
+          return false;
+        }
+      };
       try {
+        if (typeof navigator !== 'undefined' && !navigator.onLine && await playOfflineCopy()) return;
         const headers = await authHeaders();
         const qs = new URLSearchParams({ shareId: item.shareId });
         if (item.trackId) qs.set('trackId', item.trackId);
         const res = await fetch(`/api/drops/audio?${qs.toString()}`, { headers });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Could not load this drop.');
+        if (offlineObjectUrlRef.current) {
+          URL.revokeObjectURL(offlineObjectUrlRef.current);
+          offlineObjectUrlRef.current = null;
+        }
         audio.crossOrigin = 'anonymous';
         audio.src = data.url;
         listenProofRef.current = typeof data.listenProof === 'string' ? data.listenProof : '';
@@ -175,6 +210,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
           recordDropSpinClient(item.shareId, data.full ? 'play' : 'preview');
         }
       } catch (e: unknown) {
+        if (await playOfflineCopy()) return;
         wantPlayingRef.current = false;
         setPlaying(false);
         toast({
@@ -275,6 +311,14 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
     setDuration(0);
     setCurrent(null);
     currentRef.current = null;
+    if (offlineObjectUrlRef.current) {
+      URL.revokeObjectURL(offlineObjectUrlRef.current);
+      offlineObjectUrlRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => {
+    if (offlineObjectUrlRef.current) URL.revokeObjectURL(offlineObjectUrlRef.current);
   }, []);
 
   useEffect(() => {

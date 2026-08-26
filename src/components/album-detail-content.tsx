@@ -44,6 +44,7 @@ import {
   FolderOpen,
   Loader2,
   Disc3,
+  Music,
   Search,
   ArrowUpDown,
   SortDesc,
@@ -1278,7 +1279,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
             <div className={cn('grid gap-8 pb-40', isUnassignedVault ? 'grid-cols-1 xl:grid-cols-12' : 'grid-cols-1 lg:grid-cols-3')}>
                 <div className={cn('space-y-10', isUnassignedVault ? 'xl:col-span-8' : 'lg:col-span-2')}>
                     <Card className={cn('backdrop-blur-3xl shadow-2xl overflow-hidden min-w-0', studioVaultCard)}>
-                        <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-4 sm:p-6 md:p-8 border-b border-border dark:border-white/5">
+                        <CardHeader className="flex min-w-0 flex-col gap-4 border-b border-border p-4 sm:p-6 md:flex-row md:flex-wrap md:items-center md:justify-between md:p-8 dark:border-white/5">
                             <div className="flex items-center gap-3 sm:gap-4 min-w-0 shrink-0">
                                 <div className="p-2 sm:p-3 bg-primary/10 rounded-xl border border-primary/20 shrink-0">
                                     {isUnassignedVault ? <CassetteTape className="h-6 w-6 sm:h-8 sm:w-8 text-primary" /> : <ListMusic className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />}
@@ -1288,18 +1289,18 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                     <p className="text-[8px] sm:text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-0.5 whitespace-nowrap">Asset Reordering & Management</p>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:w-auto md:justify-end shrink-0">
+                            <div className="grid w-full min-w-0 grid-cols-1 gap-2 min-[420px]:grid-cols-2 md:flex md:flex-1 md:flex-wrap md:items-center md:justify-end">
                                 <Button
                                   onClick={openCreateTrack}
                                   disabled={!canAddTrack}
-                                  className="h-9 px-3 sm:px-6 font-bold text-[10px] uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 w-full sm:w-auto sm:flex-none"
+                                  className="h-9 w-full min-w-0 px-3 font-bold text-[10px] uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 md:w-auto md:flex-none md:px-6"
                                 >
                                     <PlusCircle className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Add Track
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-border rounded-xl bg-muted/40 w-full sm:w-auto sm:flex-none dark:border-white/10 dark:bg-white/5"
+                                  className="h-9 w-full min-w-0 px-3 font-bold text-[10px] uppercase tracking-widest border-border rounded-xl bg-muted/40 md:w-auto md:flex-none md:px-4 dark:border-white/10 dark:bg-white/5"
                                   onClick={() => {
                                     if (!canExportVault(user)) {
                                       toast(EXPORT_PRO_TOAST);
@@ -1311,18 +1312,28 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                     <FileDown className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Export
                                 </Button>
                                 {!isUnassignedVault && firstDropsOn ? (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-fuchsia-400/40 rounded-xl bg-fuchsia-500/10 text-fuchsia-200 hover:bg-fuchsia-500/20 w-full sm:w-auto sm:flex-none"
-                                    onClick={() => openFirstDropLathe({ albumId: album.id })}
-                                  >
-                                    <Disc3 className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Press a song
-                                  </Button>
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-9 w-full min-w-0 px-3 font-bold text-[10px] uppercase tracking-widest border-fuchsia-400/40 rounded-xl bg-fuchsia-500/10 text-fuchsia-200 hover:bg-fuchsia-500/20 md:w-auto md:flex-none md:px-4"
+                                      onClick={() => openFirstDropLathe({ albumId: album.id, mode: 'album' })}
+                                    >
+                                      <Disc3 className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Press album
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-9 w-full min-w-0 px-3 font-bold text-[10px] uppercase tracking-widest border-fuchsia-400/40 rounded-xl bg-fuchsia-500/10 text-fuchsia-200 hover:bg-fuchsia-500/20 md:w-auto md:flex-none md:px-4"
+                                      onClick={() => openFirstDropLathe({ albumId: album.id, mode: 'song' })}
+                                    >
+                                      <Music className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Press single
+                                    </Button>
+                                  </>
                                 ) : null}
                                 {!isUnassignedVault && (
                                   isPro ? (
-                                    <Button variant="outline" size="sm" className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest border-primary/30 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 w-full sm:w-auto sm:flex-none" onClick={() => setShareDialogOpen(true)}>
+                                    <Button variant="outline" size="sm" className="h-9 w-full min-w-0 px-3 font-bold text-[10px] uppercase tracking-widest border-primary/30 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 md:w-auto md:flex-none md:px-4" onClick={() => setShareDialogOpen(true)}>
                                       <Globe className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> DNA Drop
                                     </Button>
                                   ) : (
@@ -1333,7 +1344,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                       iconClassName="text-primary"
                                       label="DNA Drop"
                                       variant="outline"
-                                      className="h-9 px-3 sm:px-4 font-bold text-[10px] uppercase tracking-widest w-full sm:w-auto sm:flex-none border-primary/30 bg-primary/5 text-primary"
+                                      className="h-9 w-full min-w-0 px-3 font-bold text-[10px] uppercase tracking-widest border-primary/30 bg-primary/5 text-primary md:w-auto md:flex-none md:px-4"
                                     />
                                   )
                                 )}
@@ -1538,12 +1549,12 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                     <>
                     {!isUnassignedVault && (
                         <Card className="bg-emerald-500/5 border-emerald-500/20 shadow-2xl rounded-2xl">
-                            <CardHeader className="flex flex-col gap-4 p-8 sm:flex-row sm:items-start sm:justify-between">
+                            <CardHeader className="flex min-w-0 flex-col gap-4 p-4 sm:p-6 md:p-8">
                                 <div className="flex flex-col">
                                     <CardTitle className="font-headline text-2xl flex items-center gap-3 text-emerald-500 uppercase tracking-tighter"><Compass className="h-6 w-6" /> Album DNA</CardTitle>
                                     <CardDescription className="text-[9px] uppercase font-bold tracking-widest text-emerald-600/60 mt-1">Foundational Alignment</CardDescription>
                                 </div>
-                                <div className="flex flex-wrap items-center gap-2">
+                                <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
                                     {isPro ? (
                                       <>
                                         <Button

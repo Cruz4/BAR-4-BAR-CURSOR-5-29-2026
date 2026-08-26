@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getDb } from '@/lib/firebase/server';
 import { getPressedSongSummary } from '@/lib/server/pressed-song';
 import { PressedSongPageClient } from '@/components/song/pressed-song-page-client';
 import { getPublicAppUrl } from '@/lib/app-url';
+import { loadShare } from '@/lib/server/drop-entitlements';
 
 export async function generateMetadata({ params }: { params: Promise<{ shareId: string }> }): Promise<Metadata> {
   const { shareId } = await params;
@@ -21,7 +22,10 @@ export async function generateMetadata({ params }: { params: Promise<{ shareId: 
 
 export default async function PressedSongPage({ params }: { params: Promise<{ shareId: string }> }) {
   const { shareId } = await params;
-  const song = await getPressedSongSummary(await getDb(), shareId);
+  const db = await getDb();
+  const share = await loadShare(db, shareId);
+  if (share?.type === 'album') redirect(`/share/${encodeURIComponent(shareId)}`);
+  const song = await getPressedSongSummary(db, shareId);
   if (!song) notFound();
   const structured = {
     '@context': 'https://schema.org',

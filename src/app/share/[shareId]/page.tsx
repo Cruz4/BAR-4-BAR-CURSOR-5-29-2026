@@ -333,7 +333,11 @@ export default function SharedProjectPage() {
                             BAR 4 BAR
                         </h1>
                         <p className="text-[7px] sm:text-[8px] text-muted-foreground uppercase tracking-[0.18em] mt-0.5 truncate">
-                            {hasFirstDropAudio ? 'Song · 30s preview · buy to stream' : 'DNA Drop Snapshot'}
+                            {hasFirstDropAudio
+                              ? isAlbum
+                                ? 'Album · preview every track · buy once'
+                                : 'Song · 30s preview · buy to stream'
+                              : 'DNA Drop Snapshot'}
                         </p>
                     </div>
                 </Link>
@@ -425,12 +429,16 @@ export default function SharedProjectPage() {
                         <CardContent className="p-4 text-[11px] font-code text-muted-foreground leading-relaxed">
                             {hasFirstDropAudio ? (
                               <>
-                                Hit play for a 30-second preview. Buy once to stream the full song in Bar 4 Bar — not Spotify.
+                                Hit play for a 30-second preview. Buy once to stream the full {isAlbum ? 'album' : 'song'} in Bar4Bar — not Spotify.
                                 {' '}
-                                <button type="button" className="text-fuchsia-300 underline underline-offset-2 font-bold" onClick={() => router.push(buildDropBuyLoginPath(shareId))}>
+                                <button
+                                  type="button"
+                                  className="text-fuchsia-300 underline underline-offset-2 font-bold"
+                                  onClick={() => router.push(buildDropBuyLoginPath(shareId, {}, isAlbum ? 'share' : 'song'))}
+                                >
                                   Sign up to unlock
                                 </button>
-                                {'. Import lyrics & DNA is the button above — not the song.'}
+                                {`. Import lyrics & DNA is the button above — it does not purchase the ${isAlbum ? 'album' : 'song'}.`}
                               </>
                             ) : isAlbum ? (
                               <>
@@ -470,6 +478,8 @@ export default function SharedProjectPage() {
                             : normalizeDropPrice((project as DnaDropTrackPayload).dropPrice)
                         }
                         hasAudio={hasFirstDropAudio}
+                        detailsHref={isAlbum ? `/share/${shareId}` : undefined}
+                        checkoutDestination={isAlbum ? 'share' : 'song'}
                       />
                     </Suspense>
                     <DropSocialPanel
@@ -667,6 +677,8 @@ export default function SharedProjectPage() {
                     {isAlbum ? (
                         <DnaDropAlbumHub
                             album={project as DnaDropAlbumPayload}
+                            shareId={shareId}
+                            ownerId={share.ownerId}
                             ownerName={share.ownerName}
                         />
                     ) : (

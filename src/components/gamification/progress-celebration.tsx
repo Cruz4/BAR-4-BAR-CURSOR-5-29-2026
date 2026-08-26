@@ -19,6 +19,9 @@ import {
   CELEBRATION_EMOJI_Z_CLASS,
   CELEBRATION_MODAL_Z_CLASS,
   CELEBRATION_OVERLAY_Z_CLASS,
+  isOtherCelebrationModalActive,
+  setCelebrationModalActive,
+  subscribeToCelebrationModalState,
 } from '@/components/gamification/celebration-overlay-portal';
 import {
   PROGRESS_CELEBRATION_EVENT,
@@ -151,6 +154,7 @@ export function ProgressCelebration() {
   const [active, setActive] = useState<ProgressCelebrationItem | null>(null);
   const [cursorEmojis, setCursorEmojis] = useState<CursorEmojiBurst[]>([]);
   const [postingFeed, setPostingFeed] = useState(false);
+  const [achievementCelebrationOpen, setAchievementCelebrationOpen] = useState(false);
   const shownKeysRef = useRef(new Set<string>());
   const pointerRef = useRef({ x: 0, y: 0 });
   const emojiTimersRef = useRef<number[]>([]);
@@ -160,6 +164,16 @@ export function ProgressCelebration() {
   useEffect(() => {
     shownKeysRef.current = user?.id ? loadSeenProgressKeys(user.id) : new Set();
   }, [user?.id]);
+
+  useEffect(() => {
+    const sync = () => setAchievementCelebrationOpen(isOtherCelebrationModalActive('progress'));
+    sync();
+    const unsubscribe = subscribeToCelebrationModalState(sync);
+    return () => {
+      unsubscribe();
+      setCelebrationModalActive('progress', false);
+    };
+  }, []);
 
   useEffect(() => {
     const onPointer = (e: PointerEvent) => {
@@ -226,15 +240,19 @@ export function ProgressCelebration() {
   }, [enqueueItems]);
 
   useEffect(() => {
-    if (active || queue.length === 0) return;
+    if (active || queue.length === 0 || achievementCelebrationOpen || isOtherCelebrationModalActive('progress')) return;
     const [next, ...rest] = queue;
+    setCelebrationModalActive('progress', true);
     setQueue(rest);
     setActive(next);
     spawnCursorEmoji(next);
     fireItemConfetti(next);
-  }, [active, queue, spawnCursorEmoji]);
+  }, [achievementCelebrationOpen, active, queue, spawnCursorEmoji]);
 
-  const dismiss = () => setActive(null);
+  const dismiss = () => {
+    setActive(null);
+    setCelebrationModalActive('progress', false);
+  };
   const sub = active ? sublabel(active) : null;
   const displayName = user?.displayName || 'Studio Artist';
 

@@ -44,20 +44,24 @@ const SUMMARY_SYNC_INTERVAL_MS = 60_000;
 
 export function GamificationProvider({ children }: { children: ReactNode }) {
   const { user, authReady } = useAuth();
+  const userId = user?.id;
+  const userIsPro = isProUser(user);
   const [summary, setSummary] = useState<GamificationSummary>(DEFAULT_GAMIFICATION_SUMMARY);
   const [loading, setLoading] = useState(true);
   const prevUnlocksRef = useRef<Set<string>>(new Set());
   const summaryHydratedRef = useRef(false);
   const summaryFetchGenRef = useRef(0);
+  const summaryUserIdRef = useRef<string | null>(null);
   const prevSummaryRef = useRef<GamificationSummary | null>(null);
   const pbCelebrationRef = useRef<PersonalBestCelebrationState | null>(null);
 
   useEffect(() => {
-    if (!user?.id || !authReady) {
+    if (!userId || !authReady) {
       setSummary(DEFAULT_GAMIFICATION_SUMMARY);
       prevUnlocksRef.current = new Set();
       summaryHydratedRef.current = false;
       summaryFetchGenRef.current = 0;
+      summaryUserIdRef.current = null;
       prevSummaryRef.current = null;
       pbCelebrationRef.current = null;
       setLoading(false);
@@ -66,7 +70,18 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false;
     let inFlight = false;
-    setLoading(true);
+    const accountChanged = summaryUserIdRef.current !== userId;
+    if (accountChanged) {
+      setSummary(DEFAULT_GAMIFICATION_SUMMARY);
+      prevUnlocksRef.current = new Set();
+      summaryHydratedRef.current = false;
+      prevSummaryRef.current = null;
+      pbCelebrationRef.current = null;
+      summaryUserIdRef.current = userId;
+      setLoading(true);
+    } else if (!summaryHydratedRef.current) {
+      setLoading(true);
+    }
 
     const applySummary = (raw: GamificationSummary | null) => {
       if (raw === null) {
@@ -82,7 +97,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         prevUnlocksRef.current = currentIds;
         prevSummaryRef.current = data;
         pbCelebrationRef.current = createPersonalBestCelebrationState(data, getDayKey());
-        seedCelebrationsSeenFromSummary(user.id, data, isProUser(user));
+        seedCelebrationsSeenFromSummary(userId, data, userIsPro);
       } else {
         const newUnlocks = [...currentIds]
           .filter((id) => !prevUnlocksRef.current.has(id))
@@ -126,12 +141,12 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       const fetchGen = ++summaryFetchGenRef.current;
       try {
         const firebaseUser = await waitForAuthUser();
-        if (cancelled || !firebaseUser || firebaseUser.uid !== user.id) {
+        if (cancelled || !firebaseUser || firebaseUser.uid !== userId) {
           if (!cancelled) setLoading(false);
           return;
         }
 
-        const data = await fetchGamificationSummary(user.id);
+        const data = await fetchGamificationSummary(userId);
         if (cancelled || fetchGen !== summaryFetchGenRef.current) return;
         applySummary(data);
       } finally {
@@ -159,7 +174,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', onFocus);
     };
-  }, [user, authReady]);
+  }, [authReady, userId, userIsPro]);
 
   useEffect(() => {
     const onPatch = (e: Event) => {

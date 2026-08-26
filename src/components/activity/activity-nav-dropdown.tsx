@@ -35,7 +35,6 @@ import {
   FRIENDSHIP_CHANGED_EVENT,
   markActivityEventsRead,
   markActivityEventsUnread,
-  markAllActivityEventsRead,
   type FriendshipChangedDetail,
 } from '@/lib/activity/client';
 import { navigateActivityHref, resolveActivityOpenHref } from '@/lib/activity/href';
@@ -138,8 +137,7 @@ export function ActivityNavDropdown({
       );
       const pendingContact = new Set(pendingContactIds);
       // Drop request rows already answered elsewhere; keep every other recent event, read or unread.
-      const recent = received
-        .filter((e) => {
+      const visibleActivity = received.filter((e) => {
           if (e.type === 'friend_request') {
             return e.direction === 'received' && pendingRequesters.has(e.actorId);
           }
@@ -147,30 +145,48 @@ export function ActivityNavDropdown({
             return e.direction === 'received' && pendingContact.has(e.actorId);
           }
           return true;
-        })
-        .slice(0, PREVIEW_LIMIT);
+        });
+      const recent = visibleActivity.slice(0, PREVIEW_LIMIT);
       const lookups = recent
         .filter((e) => !e.actorSlug && e.actorId)
         .map((e) => ({ userId: e.actorId }));
       if (lookups.length) {
         const { fetchPublicArtistMetas } = await import('@/lib/profile/social-client');
         const metas = await fetchPublicArtistMetas(lookups);
-        setItems(
-          recent.map((e) => {
+        const resolved = recent.map((e) => {
             if (e.actorSlug) return e;
             const slug = metas.get(e.actorId)?.slug;
             return slug ? { ...e, actorSlug: slug } : e;
-          })
-        );
+          });
+        setItems(resolved);
       } else {
         setItems(recent);
+      }
+
+      // Opening the dropdown only acknowledges the five entries it actually shows.
+      // Anything beyond the preview stays unread until the member visits Activity.
+      const visibleUnreadIds = recent.filter((event) => !event.readAt).map((event) => event.id);
+      setHiddenNewCount(Math.max(0, unreadCount - visibleUnreadIds.length));
+      if (visibleUnreadIds.length) {
+        try {
+          const readAt = new Date().toISOString();
+          await markActivityEventsRead(visibleUnreadIds);
+          setItems((prev) =>
+            prev.map((event) =>
+              visibleUnreadIds.includes(event.id) ? { ...event, readAt } : event
+            )
+          );
+          refreshActivityAlerts();
+        } catch {
+          // Keep the visible rows unread when the receipt cannot be saved.
+        }
       }
     } catch {
       setItems([]);
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [unreadCount, user?.id]);
 
   useEffect(() => {
     const onFriendshipChanged = (ev: Event) => {
@@ -200,14 +216,6 @@ export function ActivityNavDropdown({
 
     setHiddenNewCount(Math.max(0, unreadCount - PREVIEW_LIMIT));
     void loadRecent();
-    if (unreadCount <= 0) return;
-    const readAt = new Date().toISOString();
-    void markAllActivityEventsRead()
-      .then(() => {
-        setItems((prev) => prev.map((event) => event.readAt ? event : { ...event, readAt }));
-        refreshActivityAlerts();
-      })
-      .catch(() => undefined);
   };
 
   const markOneUnread = async (event: ActivityEvent, e?: React.MouseEvent) => {

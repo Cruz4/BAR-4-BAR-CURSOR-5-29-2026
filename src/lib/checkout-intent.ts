@@ -32,7 +32,11 @@ export type DropBuyIntent = {
 };
 
 /** Song-page return URL that safely carries a guest's chosen checkout details. */
-export function buildDropBuyReturnPath(shareId: string, intent: DropBuyIntent = {}): string {
+export function buildDropBuyReturnPath(
+  shareId: string,
+  intent: DropBuyIntent = {},
+  destination: 'song' | 'share' = 'song'
+): string {
   const id = shareId.trim();
   const query = new URLSearchParams({ checkout: 'drop' });
   if (Number.isFinite(intent.amountCents) && (intent.amountCents ?? 0) > 0) {
@@ -40,12 +44,16 @@ export function buildDropBuyReturnPath(shareId: string, intent: DropBuyIntent = 
   }
   if (intent.trackId?.trim()) query.set('trackId', intent.trackId.trim());
   if (intent.referralPostId?.trim()) query.set('refPost', intent.referralPostId.trim());
-  return `/song/${encodeURIComponent(id)}?${query.toString()}`;
+  return `/${destination}/${encodeURIComponent(id)}?${query.toString()}`;
 }
 
 /** Guest First Drop checkout — sign up, return to the song, then resume checkout. */
-export function buildDropBuyLoginPath(shareId: string, intent: DropBuyIntent = {}): string {
-  const next = getSafeNextPath(buildDropBuyReturnPath(shareId, intent));
+export function buildDropBuyLoginPath(
+  shareId: string,
+  intent: DropBuyIntent = {},
+  destination: 'song' | 'share' = 'song'
+): string {
+  const next = getSafeNextPath(buildDropBuyReturnPath(shareId, intent, destination));
   return `/login?mode=signup&next=${encodeURIComponent(next)}&intent=drop-buy`;
 }
 
@@ -59,7 +67,11 @@ function parsePathUrl(path: string): URL | null {
 
 export function getDropBuyIntentFromPath(path: string): DropBuyIntent | null {
   const url = parsePathUrl(path);
-  if (!url || !url.pathname.startsWith('/song/') || url.searchParams.get('checkout') !== 'drop') {
+  if (
+    !url ||
+    (!url.pathname.startsWith('/song/') && !url.pathname.startsWith('/share/')) ||
+    url.searchParams.get('checkout') !== 'drop'
+  ) {
     return null;
   }
   const amountRaw = url.searchParams.get('amountCents');

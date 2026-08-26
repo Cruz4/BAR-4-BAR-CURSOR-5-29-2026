@@ -19,7 +19,7 @@ import {
   type DropPrice,
 } from '@/lib/drop-commerce';
 import { buildDropBuyLoginPath, getDropBuyIntentFromPath } from '@/lib/checkout-intent';
-import { Pause, Play, Loader } from 'lucide-react';
+import { Pause, Play, Loader, Sparkles, Trophy } from 'lucide-react';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { useAudioVolume } from '@/hooks/use-audio-volume';
 import { AudioVolumeControl } from '@/components/audio-volume-control';
@@ -30,6 +30,7 @@ import {
   type DropListenSource,
 } from '@/lib/drop-listen-analytics';
 import { pressedSongHref } from '@/lib/pressed-song';
+import { cn } from '@/lib/utils';
 
 async function authHeaders(): Promise<HeadersInit> {
   const user = auth.currentUser;
@@ -53,6 +54,10 @@ export function DropListenPanel({
   playbackGroup,
   onPlaybackStateChange,
   referralPostId,
+  detailsHref,
+  checkoutDestination = 'song',
+  showPurchase = true,
+  firstPressRank,
 }: {
   shareId: string;
   title: string;
@@ -69,6 +74,14 @@ export function DropListenPanel({
   playbackGroup?: string;
   onPlaybackStateChange?: (state: { playing: boolean; currentTime: number; duration: number }) => void;
   referralPostId?: string;
+  /** Override the title link for album bundles and other non-song pages. */
+  detailsHref?: string;
+  /** Album bundles return to their public album page after authentication. */
+  checkoutDestination?: 'song' | 'share';
+  /** Track previews inside an album use the album-level purchase control instead. */
+  showPurchase?: boolean;
+  /** Verified founding-supporter edition. Changes the complete player treatment. */
+  firstPressRank?: number;
 }) {
   const { user, authReady } = useAuth();
   const { toast } = useToast();
@@ -95,14 +108,18 @@ export function DropListenPanel({
   const pwywCheckoutCents = normalized.mode === 'pwyw'
     ? resolveCheckoutCents(normalized, enteredPwywCents ?? undefined)
     : 0;
-  const pendingBuyIntent = getDropBuyIntentFromPath(
-    `/song/${encodeURIComponent(shareId)}?${searchParams.toString()}`
-  );
+  const pendingBuyIntent = showPurchase
+    ? getDropBuyIntentFromPath(
+        `/${checkoutDestination}/${encodeURIComponent(shareId)}?${searchParams.toString()}`
+      )
+    : null;
   const queryReferralPostId = searchParams.get('refPost')?.trim() || undefined;
   const effectiveReferralPostId = referralPostId || queryReferralPostId;
   const effectiveTrackId = trackId || pendingBuyIntent?.trackId;
   const pendingCheckoutHandledRef = useRef<string | null>(null);
   const compactPresentation = presentation === 'compact';
+  const firstPressEdition =
+    typeof firstPressRank === 'number' && firstPressRank >= 1 && firstPressRank <= 10;
 
   const loadStream = useCallback(async () => {
     if (!firstDropsOn || !hasAudio) {
@@ -167,6 +184,7 @@ export function DropListenPanel({
   }, [playbackGroup, playerId]);
 
   useEffect(() => {
+    if (!showPurchase) return;
     const sessionId = searchParams.get('session_id');
     if (!sessionId || !user?.id) return;
     void (async () => {
@@ -183,15 +201,21 @@ export function DropListenPanel({
         /* webhook may already have fulfilled */
       }
     })();
-  }, [searchParams, user?.id, loadStream, toast]);
+  }, [searchParams, user?.id, loadStream, showPurchase, toast]);
 
   const startCheckout = useCallback(async (amountCents?: number) => {
     if (!user) {
-      router.push(buildDropBuyLoginPath(shareId, {
-        amountCents,
-        trackId: effectiveTrackId,
-        referralPostId: effectiveReferralPostId,
-      }));
+      router.push(
+        buildDropBuyLoginPath(
+          shareId,
+          {
+            amountCents,
+            trackId: effectiveTrackId,
+            referralPostId: effectiveReferralPostId,
+          },
+          checkoutDestination
+        )
+      );
       return;
     }
     if (!authReady) return;
@@ -221,7 +245,7 @@ export function DropListenPanel({
     } finally {
       setBusy(false);
     }
-  }, [authReady, effectiveReferralPostId, effectiveTrackId, router, shareId, toast, user]);
+  }, [authReady, checkoutDestination, effectiveReferralPostId, effectiveTrackId, router, shareId, toast, user]);
 
   useEffect(() => {
     if (!pendingBuyIntent || !authReady || !user || !streamReady || busy) return;
@@ -276,19 +300,35 @@ export function DropListenPanel({
 
   const previewCapped = !full && !isOwner;
 
-  return (
-    <div className={presentation === 'song'
+  const presentationClass = presentation === 'song'
       ? 'space-y-3 rounded-2xl border border-fuchsia-300/45 bg-black/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_18px_55px_rgba(0,0,0,.35)] sm:p-5'
       : presentation === 'playlist'
         ? 'space-y-3 rounded-2xl border border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500/15 via-black/65 to-blue-500/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.07),0_14px_38px_rgba(0,0,0,.28)] transition-colors hover:border-fuchsia-300/60 sm:p-5'
       : compactPresentation
         ? 'min-w-0 space-y-2 rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-2.5'
-        : 'min-w-0 rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-3 space-y-3 sm:p-4'}>
+        : 'min-w-0 rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-3 space-y-3 sm:p-4';
+
+  return (
+    <div className={cn(
+      presentationClass,
+      firstPressEdition &&
+        'relative overflow-hidden border-amber-300/70 bg-[linear-gradient(128deg,rgba(40,25,3,.96),rgba(8,11,18,.97)_48%,rgba(73,46,4,.86))] shadow-[inset_0_1px_0_rgba(255,244,185,.35),0_0_0_1px_rgba(251,191,36,.16),0_18px_60px_rgba(245,158,11,.24)]'
+    )}>
+      {firstPressEdition ? (
+        <div className="relative mb-1 flex items-center justify-between gap-3 rounded-xl border border-amber-200/25 bg-gradient-to-r from-amber-400/20 via-yellow-100/10 to-amber-500/15 px-3 py-2 text-amber-100">
+          <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em]">
+            <Trophy className="h-4 w-4 text-amber-300" /> First Press #{firstPressRank}
+          </span>
+          <span className="hidden items-center gap-1 text-[8px] font-bold uppercase tracking-[.16em] text-amber-200/80 sm:flex">
+            <Sparkles className="h-3 w-3" /> Founding supporter edition
+          </span>
+        </div>
+      ) : null}
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-200">
+        <p className={cn('text-[10px] font-bold uppercase tracking-widest', firstPressEdition ? 'text-amber-200' : 'text-fuchsia-200')}>
           {full || isOwner ? 'Full stream' : hasAudio ? 'Play preview · 30 seconds' : 'On sale'}
         </p>
-        {dropPriceSummary(normalized) ? (
+        {showPurchase && dropPriceSummary(normalized) ? (
           <span className="max-w-full break-words text-right font-code text-[10px] leading-relaxed text-muted-foreground">{dropPriceSummary(normalized)}</span>
         ) : null}
       </div>
@@ -298,7 +338,10 @@ export function DropListenPanel({
           <Button
             type="button"
             size="icon"
-            className={compactPresentation ? 'h-9 w-9 rounded-full' : 'h-11 w-11 rounded-full'}
+            className={cn(
+              compactPresentation ? 'h-9 w-9 rounded-full' : 'h-11 w-11 rounded-full',
+              firstPressEdition && 'bg-gradient-to-br from-yellow-200 via-amber-400 to-amber-600 text-black shadow-[0_0_24px_rgba(251,191,36,.38)] hover:from-yellow-100 hover:to-amber-500'
+            )}
             disabled={loading || !src}
             onClick={() => {
               const el = audioRef.current;
@@ -317,14 +360,19 @@ export function DropListenPanel({
           </Button>
           <div className="min-w-0 flex-1">
             <Link
-              href={pressedSongHref(shareId, { referralPostId: effectiveReferralPostId })}
-              className="block truncate text-sm font-headline font-bold uppercase transition-colors hover:text-fuchsia-300 hover:underline"
+              href={detailsHref || pressedSongHref(shareId, { referralPostId: effectiveReferralPostId })}
+              className={cn(
+                'block truncate text-sm font-headline font-bold uppercase transition-colors hover:underline',
+                firstPressEdition ? 'text-amber-50 hover:text-amber-200' : 'hover:text-fuchsia-300'
+              )}
             >
               {title}
             </Link>
             <p className={compactPresentation ? 'truncate text-[9px] text-muted-foreground' : 'text-[10px] text-muted-foreground'}>
               {previewCapped
-                ? `Featured 30-second excerpt${excerptStartSec > 0 ? ` from ${Math.floor(excerptStartSec / 60)}:${Math.floor(excerptStartSec % 60).toString().padStart(2, '0')}` : ''}. Buy once to unlock.`
+                ? showPurchase
+                  ? `Featured 30-second excerpt${excerptStartSec > 0 ? ` from ${Math.floor(excerptStartSec / 60)}:${Math.floor(excerptStartSec % 60).toString().padStart(2, '0')}` : ''}. Buy once to unlock.`
+                  : '30-second album preview. Use the album button above to unlock every included track.'
                 : featuredByUserId && excerptStartSec > 0
                   ? 'Full track unlocked · starts at the featured moment.'
                   : 'Streams in Library.'}
@@ -414,7 +462,7 @@ export function DropListenPanel({
         />
       ) : null}
 
-      {!full && !isOwner && isCommerceLive(normalized) && (
+      {showPurchase && !full && !isOwner && isCommerceLive(normalized) && (
         <div className={compactPresentation
           ? normalized.mode === 'pwyw'
             ? 'grid grid-cols-[minmax(0,1fr)_auto] gap-1.5 border-t border-white/10 pt-2'

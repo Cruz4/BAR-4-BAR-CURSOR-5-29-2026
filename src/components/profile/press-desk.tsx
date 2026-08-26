@@ -167,31 +167,6 @@ function collectVaultBars(albums: Album[]): VaultBar[] {
   return bars;
 }
 
-type DnaCandidate = { label: string; text: string };
-
-const DIRECTION_LABELS: Array<[keyof NonNullable<Album['direction']>, string]> = [
-  ['setting_world', 'World'],
-  ['emotion_core', 'Feels like'],
-  ['trigger_moment', 'The moment'],
-  ['message_truth', 'The truth'],
-  ['tone_palette', 'Tone'],
-];
-
-function collectDnaCandidates(albums: Album[]): DnaCandidate[] {
-  const candidates: DnaCandidate[] = [];
-  for (const album of albums) {
-    const direction = album.direction;
-    if (!direction) continue;
-    for (const [key, label] of DIRECTION_LABELS) {
-      const value = direction[key];
-      if (typeof value === 'string' && value.trim()) {
-        candidates.push({ label: `${album.title} · ${label}`, text: value.trim().slice(0, 160) });
-      }
-    }
-  }
-  return candidates.slice(0, 12);
-}
-
 function computeFingerprint(
   track: Track,
   meta?: { sourceLabel?: string; sourceKey?: string }
@@ -223,18 +198,20 @@ function computeFingerprint(
 // ---------------------------------------------------------------------------
 
 function DeskSection({
+  id,
   icon: Icon,
   title,
   hint,
   children,
 }: {
+  id?: string;
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   hint?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-black/30 p-5 backdrop-blur-sm">
+    <section id={id} className="scroll-mt-24 rounded-2xl border border-white/10 bg-black/30 p-5 backdrop-blur-sm">
       <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">
         <Icon className="h-3.5 w-3.5 text-primary" /> {title}
       </h2>
@@ -573,6 +550,14 @@ export function PressDesk() {
   }, [user?.id]);
 
   useEffect(() => {
+    if (!config || typeof window === 'undefined' || window.location.hash !== '#artist-home-releases') return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById('artist-home-releases')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [config]);
+
+  useEffect(() => {
     if (!user?.id || !firstDropsOn) {
       setFeaturedTracks([]);
       return;
@@ -606,7 +591,6 @@ export function PressDesk() {
   }, [firstDropsOn, toast, user?.id]);
 
   const vaultBars = useMemo(() => collectVaultBars(albums), [albums]);
-  const dnaCandidates = useMemo(() => collectDnaCandidates(albums), [albums]);
   const albumsWithCovers = useMemo(
     () =>
       albums.filter(
@@ -1961,53 +1945,6 @@ export function PressDesk() {
         </div>
       </DeskSection>
 
-      {/* 5. Living DNA */}
-      <DeskSection
-        icon={Dna}
-        title="Living DNA"
-        hint="Reveal up to two Creative DNA lines from your albums — a controlled peek into your world."
-      >
-        <div className="space-y-2">
-          {[0, 1].map((i) => (
-            <Input
-              key={i}
-              value={config.featured.dnaLines?.[i] || ''}
-              onChange={(e) =>
-                update((d) => {
-                  const lines = [...(d.featured.dnaLines || [])];
-                  lines[i] = e.target.value.slice(0, 160);
-                  d.featured.dnaLines = lines.filter((l) => l !== undefined);
-                })
-              }
-              maxLength={160}
-              placeholder={`DNA line ${i + 1}`}
-              className="bg-black/30 text-sm"
-            />
-          ))}
-          {dnaCandidates.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {dnaCandidates.map((candidate, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() =>
-                    update((d) => {
-                      const lines = (d.featured.dnaLines || []).filter(Boolean);
-                      if (lines.length >= 2) lines.pop();
-                      d.featured.dnaLines = [...lines, candidate.text].slice(0, 2);
-                    })
-                  }
-                  className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white/75 transition-colors hover:border-primary/50 hover:text-primary"
-                  title={candidate.text}
-                >
-                  {candidate.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </DeskSection>
-
       {/* 6. Rhyme Fingerprint */}
       <DeskSection
         icon={Fingerprint}
@@ -2271,8 +2208,9 @@ export function PressDesk() {
 
       {/* 8. Live DNA Drops — manage + auto on Artist Home */}
       <DeskSection
+        id="artist-home-releases"
         icon={Dna}
-        title="Live DNA Drops"
+        title="Releases on Artist Home"
         hint={
           firstDropsOn
             ? `Songs for sale are pressed from The Scene — not inside DNA Drop. Live First Drops show on your Artist Home automatically. ${firstDropsFeeCashoutLine()} Open Manage to jump to a press, the vault, or Earnings.`

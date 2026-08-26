@@ -335,29 +335,6 @@ export function BarOfWeekModule({ ctx }: { ctx: ModuleContext }) {
 }
 
 // ---------------------------------------------------------------------------
-// Living DNA
-// ---------------------------------------------------------------------------
-
-export function DnaStripModule({ ctx }: { ctx: ModuleContext }) {
-  const lines = ctx.featured.dnaLines;
-  if (!lines?.length) return null;
-  return (
-    <ModuleShell icon={Dna} title={"Living DNA"} ctx={ctx}>
-      <div className="space-y-3">
-        {lines.map((line, i) => (
-          <p
-            key={i}
-            className="border-l-2 border-[var(--ph-accent,#7dd3fc)] pl-3 text-sm italic leading-relaxed text-[var(--ph-text,#fff)]/90"
-          >
-            {line}
-          </p>
-        ))}
-      </div>
-    </ModuleShell>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Rhyme Fingerprint
 // ---------------------------------------------------------------------------
 

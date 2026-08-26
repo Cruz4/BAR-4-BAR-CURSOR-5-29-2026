@@ -454,9 +454,12 @@ function EarningsPageContent() {
                     <div className="min-w-0 space-y-1">
                       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                         <p className="truncate text-sm font-bold">{sale.title}</p>
+                        <Badge variant="outline" className="text-[8px] uppercase tracking-widest text-fuchsia-200">
+                          {sale.scope === 'album' ? 'Album sale' : 'Song sale'}
+                        </Badge>
                         {sale.shareId ? (
                           <Link
-                            href={`/song/${sale.shareId}`}
+                            href={`/${sale.scope === 'album' ? 'share' : 'song'}/${sale.shareId}`}
                             className="inline-flex items-center gap-1 text-[10px] font-code uppercase tracking-widest text-primary/90 hover:text-primary"
                           >
                             <Link2 className="h-3 w-3" />

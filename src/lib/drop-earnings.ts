@@ -10,6 +10,7 @@ export type DropSaleRecord = {
   id: string;
   shareId: string;
   title: string;
+  scope: 'album' | 'track';
   buyerId: string;
   buyerName?: string;
   amountCents: number;

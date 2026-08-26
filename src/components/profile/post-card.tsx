@@ -76,7 +76,12 @@ function firstDropUrlFromText(text?: string): string | undefined {
   return text.match(/https?:\/\/[^\s]+\/(?:song|share)\/[^\s?#]+|\/(?:song|share)\/[^\s?#]+/i)?.[0];
 }
 
-function ReverbSourceBody({ post }: { post: ProfilePost }) {
+/** Goal foil posts predate typed media, so recognize their stable generated caption. */
+function isStudioGoalShare(text?: string): boolean {
+  return Boolean(text && /\b(?:weekly|monthly|lifetime)\s+goal complete:/i.test(text));
+}
+
+function ReverbSourceBody({ post, immersive = false }: { post: ProfilePost; immersive?: boolean }) {
   const name = post.reverbOwnerName || 'Artist';
   const { liveSlug, href, resolved, isLive } = useLiveArtistHomeSlug(
     post.reverbOwnerId,
@@ -177,13 +182,23 @@ function ReverbSourceBody({ post }: { post: ProfilePost }) {
           <ExpandableImage
             src={post.reverbImageUrl}
             alt="Reverbed photo"
-            thumbClassName="block h-auto w-full max-w-[360px] rounded-lg object-contain"
+            thumbClassName={cn(
+              'block h-auto rounded-lg object-contain',
+              isStudioGoalShare(post.reverbText)
+                ? immersive
+                  ? 'w-full max-w-[28rem] max-h-[min(36dvh,21rem)]'
+                  : 'w-full max-w-[30rem] max-h-[24rem]'
+                : cn(
+                    'w-auto max-w-full',
+                    immersive ? 'max-h-[min(38dvh,25rem)]' : 'max-h-[min(65dvh,42rem)]'
+                  )
+            )}
           />
         </div>
       ) : null}
       {post.reverbEmbedUrl || firstDropUrlFromText(post.reverbText) ? (
         <div className="mt-2">
-          <EmbedPlayer url={post.reverbEmbedUrl || firstDropUrlFromText(post.reverbText)!} referralPostId={post.id} />
+          <EmbedPlayer url={post.reverbEmbedUrl || firstDropUrlFromText(post.reverbText)!} referralPostId={post.id} viewportBounded={immersive} />
         </div>
       ) : null}
       {post.reverbVoice ? (
@@ -561,21 +576,31 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         </div>
       ) : null}
 
-      {post.isReverb ? <ReverbSourceBody post={post} /> : null}
+      {post.isReverb ? <ReverbSourceBody post={post} immersive={immersive} /> : null}
 
       {!post.isReverb && post.imageUrl && (
         <div className="mt-3 mb-1 flex justify-center overflow-visible">
           <ExpandableImage
             src={post.imageUrl}
             alt="Posted photo"
-            thumbClassName="block h-auto w-full max-w-[420px] rounded-xl object-contain shadow-[0_8px_28px_rgba(0,0,0,0.45)] sm:max-w-[480px]"
+            thumbClassName={cn(
+              'block h-auto rounded-xl object-contain shadow-[0_8px_28px_rgba(0,0,0,0.45)]',
+              isStudioGoalShare(post.text)
+                ? immersive
+                  ? 'w-full max-w-[28rem] max-h-[min(36dvh,21rem)]'
+                  : 'w-full max-w-[30rem] max-h-[24rem]'
+                : cn(
+                    'w-auto max-w-full',
+                    immersive ? 'max-h-[min(42dvh,28rem)]' : 'max-h-[min(68dvh,46rem)]'
+                  )
+            )}
           />
         </div>
       )}
 
       {!post.isReverb && (post.embedUrl || firstDropUrlFromText(post.text)) && (
         <div className="mt-3">
-          <EmbedPlayer url={post.embedUrl || firstDropUrlFromText(post.text)!} referralPostId={post.id} />
+          <EmbedPlayer url={post.embedUrl || firstDropUrlFromText(post.text)!} referralPostId={post.id} viewportBounded={immersive} />
         </div>
       )}
 

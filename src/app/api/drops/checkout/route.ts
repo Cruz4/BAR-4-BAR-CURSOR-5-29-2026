@@ -73,7 +73,8 @@ export async function POST(req: Request) {
     const stripe = getStripe();
     const origin = getTrustedAppOrigin(req);
     const scope = share.type === 'album' && !trackId ? 'album' : 'track';
-    const successPath = `/song/${encodeURIComponent(shareId)}?purchased=1&session_id={CHECKOUT_SESSION_ID}`;
+    const publicPath = share.type === 'album' ? 'share' : 'song';
+    const successPath = `/${publicPath}/${encodeURIComponent(shareId)}?purchased=1&session_id={CHECKOUT_SESSION_ID}`;
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'payment',
@@ -91,7 +92,7 @@ export async function POST(req: Request) {
         },
       ],
       success_url: `${origin}${successPath}`,
-      cancel_url: `${origin}/song/${encodeURIComponent(shareId)}?canceled=1`,
+      cancel_url: `${origin}/${publicPath}/${encodeURIComponent(shareId)}?canceled=1`,
       client_reference_id: userId,
       metadata: {
         type: 'drop_purchase',

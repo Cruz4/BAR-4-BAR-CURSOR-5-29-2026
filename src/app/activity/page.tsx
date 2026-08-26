@@ -316,13 +316,17 @@ function ActivityPageInner() {
     () => new Set()
   );
   const [resolvedRequestIds, setResolvedRequestIds] = useState<Set<string>>(() => new Set());
-  const markedOnOpenRef = React.useRef(false);
+  /**
+   * Keep entries that were unread on arrival highlighted for this mounted page,
+   * even after their server read receipt is written. A later visit fetches them as read.
+   */
+  const sessionUnreadIdsRef = React.useRef<Set<string> | null>(null);
+  const serverMarkedIdsRef = React.useRef<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
     setLoadError('');
-    markedOnOpenRef.current = false;
     try {
       const [receivedPage, givenPage, pendingFriends, acceptedFriends, pendingContactIds] = await Promise.all([
         fetchActivityFeedPage('received'),
@@ -335,7 +339,15 @@ function ActivityPageInner() {
         withResolvedProfileLinks(receivedPage.events),
         withResolvedProfileLinks(givenPage.events),
       ]);
-      setInbox(inboxResolved);
+      const sessionUnreadIds = sessionUnreadIdsRef.current ?? new Set<string>();
+      for (const event of inboxResolved) {
+        if (event.direction === 'received' && !event.readAt) sessionUnreadIds.add(event.id);
+      }
+      sessionUnreadIdsRef.current = sessionUnreadIds;
+      const displayInbox = inboxResolved.map((event) =>
+        sessionUnreadIds.has(event.id) ? { ...event, readAt: null } : event
+      );
+      setInbox(displayInbox);
       setSent(sentResolved);
       setInboxCursor(receivedPage.nextCursor);
       setSentCursor(givenPage.nextCursor);
@@ -383,8 +395,13 @@ function ActivityPageInner() {
 
       if (healedNeoRequesters.size || staleRequestActors.length) {
         const clearActors = new Set([...healedNeoRequesters, ...staleRequestActors]);
+        for (const event of displayInbox) {
+          if (event.type === 'friend_request' && clearActors.has(event.actorId)) {
+            sessionUnreadIds.delete(event.id);
+          }
+        }
         setInbox(
-          inboxResolved.map((e) =>
+          displayInbox.map((e) =>
             e.type === 'friend_request' && clearActors.has(e.actorId)
               ? { ...e, readAt: e.readAt || new Date().toISOString() }
               : e
@@ -438,6 +455,12 @@ function ActivityPageInner() {
     };
   }, [authReady, load, user?.id]);
 
+  useEffect(() => {
+    const clearVisitHighlights = () => sessionUnreadIdsRef.current?.clear();
+    window.addEventListener('pagehide', clearVisitHighlights);
+    return () => window.removeEventListener('pagehide', clearVisitHighlights);
+  }, []);
+
   // Accept/decline from Scene, profile, or elsewhere — drop Accept/Decline here too.
   useEffect(() => {
     const onFriendshipChanged = (ev: Event) => {
@@ -453,13 +476,17 @@ function ActivityPageInner() {
           next.delete(peer);
           return next;
         });
-        setInbox((prev) =>
-          prev.map((e) =>
+        setInbox((prev) => {
+          const resolvedIds = prev
+            .filter((e) => e.type === 'friend_request' && e.actorId === peer)
+            .map((e) => e.id);
+          resolvedIds.forEach((id) => sessionUnreadIdsRef.current?.delete(id));
+          return prev.map((e) =>
             e.type === 'friend_request' && e.actorId === peer
               ? { ...e, readAt: e.readAt || new Date().toISOString() }
               : e
-          )
-        );
+          );
+        });
         setResolvedRequestIds((prev) => {
           const next = new Set(prev);
           if (detail.clearedActivityIds?.length) {
@@ -469,6 +496,7 @@ function ActivityPageInner() {
         });
       } else if (detail.clearedActivityIds?.length) {
         const cleared = new Set(detail.clearedActivityIds);
+        cleared.forEach((id) => sessionUnreadIdsRef.current?.delete(id));
         setResolvedRequestIds((prev) => {
           const next = new Set(prev);
           cleared.forEach((id) => next.add(id));
@@ -486,17 +514,17 @@ function ActivityPageInner() {
   }, []);
 
   useEffect(() => {
-    if (!user?.id || loading || markedOnOpenRef.current) return;
-    markedOnOpenRef.current = true;
-    const t = window.setTimeout(() => {
-      void markAllActivityEventsRead().then(() => {
-        setInbox((prev) =>
-          prev.map((e) => (e.readAt ? e : { ...e, readAt: new Date().toISOString() }))
-        );
-        refreshActivityAlerts();
-      });
-    }, 800);
-    return () => window.clearTimeout(t);
+    if (!user?.id || loading) return;
+    const sessionUnreadIds = sessionUnreadIdsRef.current;
+    if (!sessionUnreadIds?.size) return;
+    const eventIds = [...sessionUnreadIds].filter((id) => !serverMarkedIdsRef.current.has(id));
+    if (!eventIds.length) return;
+    eventIds.forEach((id) => serverMarkedIdsRef.current.add(id));
+    void markActivityEventsRead(eventIds)
+      .then(() => refreshActivityAlerts())
+      .catch(() => eventIds.forEach((id) => serverMarkedIdsRef.current.delete(id)));
+    // Intentionally keep local readAt values unchanged: this visit should visibly
+    // distinguish the entries the member had not seen before opening Activity.
   }, [user?.id, loading, inbox]);
 
   const loadOlder = useCallback(async (direction: ActivityDirection) => {
@@ -506,9 +534,17 @@ function ActivityPageInner() {
     try {
       const page = await fetchActivityFeedPage(direction, 60, cursor);
       const resolved = await withResolvedProfileLinks(page.events);
+      const sessionUnreadIds = sessionUnreadIdsRef.current ?? new Set<string>();
+      for (const event of resolved) {
+        if (event.direction === 'received' && !event.readAt) sessionUnreadIds.add(event.id);
+      }
+      sessionUnreadIdsRef.current = sessionUnreadIds;
+      const displayRows = resolved.map((event) =>
+        sessionUnreadIds.has(event.id) ? { ...event, readAt: null } : event
+      );
       const appendUnique = (current: ActivityEvent[]) => {
         const seen = new Set(current.map((event) => event.id));
-        return [...current, ...resolved.filter((event) => !seen.has(event.id))];
+        return [...current, ...displayRows.filter((event) => !seen.has(event.id))];
       };
       if (direction === 'received') {
         setInbox(appendUnique);
@@ -546,6 +582,7 @@ function ActivityPageInner() {
 
   const handleMarkAll = async () => {
     await markAllActivityEventsRead();
+    sessionUnreadIdsRef.current?.clear();
     setInbox((prev) =>
       prev.map((e) => ({ ...e, readAt: e.readAt || new Date().toISOString() }))
     );
@@ -592,6 +629,7 @@ function ActivityPageInner() {
         });
       }
       setResolvedRequestIds((prev) => new Set(prev).add(event.id));
+      sessionUnreadIdsRef.current?.delete(event.id);
       setInbox((prev) =>
         prev.map((e) =>
           e.id === event.id || (e.type === event.type && e.actorId === event.actorId)

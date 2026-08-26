@@ -375,6 +375,7 @@ export async function fulfillPaidCheckoutSession(
       await recordDropSale(db, metadata.artistId, {
         shareId: metadata.shareId,
         title: metadata.title || 'Drop',
+        scope: metadata.scope === 'album' ? 'album' : 'track',
         buyerId: userId,
         buyerName,
         amountCents,
