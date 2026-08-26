@@ -7,16 +7,12 @@ import { useToast } from '@/hooks/use-toast';
 import { db, auth } from '@/lib/firebase/client/firebase';
 import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
 import { subscribeDocument, subscribeQuery } from '@/lib/firebase/client/firestore-subscribe';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import { syncUserUsageBootstrap } from '@/lib/init-user-usage-client';
 import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import { computeActiveRules } from '@/lib/active-rules';
 import type { ActiveRules } from '@/components/dna-synthesis-loader';
 import type { Album, StyleProfile, Track } from '@/lib/types';
-import { isProUser, isYearlyPro } from '@/lib/subscription';
-import { trackLowInkHit, trackUpgradeClick } from '@/lib/conversion-analytics';
-import { formatFreeMonthlyRefillLabel } from '@/lib/ink-grants';
+import { trackLowInkHit } from '@/lib/conversion-analytics';
 import { totalInkBalance } from '@/lib/ink-balance';
 import { API_KEY_STORAGE_KEY, isValidGoogleApiKey } from '@/lib/byo-api';
 import { ZeroInkDialog } from '@/components/zero-ink-dialog';
@@ -96,7 +92,7 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  const addUsageLog = useCallback((log: Omit<AIUsageLog, 'id' | 'timestamp'>) => {
+  const addUsageLog = useCallback((_log: Omit<AIUsageLog, 'id' | 'timestamp'>) => {
       // System log handled via Firestore addDoc in deductInk
   }, []);
 
@@ -119,7 +115,7 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
     try {
       const savedKey = localStorage.getItem(`${API_KEY_STORAGE_KEY}-${user.id}`);
       setCustomApiKey(savedKey);
-    } catch (e) {
+    } catch {
       console.warn("Local usage load failed");
     }
 
@@ -175,7 +171,7 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
       unsubBalance = null;
       unsubLogs = null;
     };
-  }, [user?.id, authReady]);
+  }, [user, authReady]);
 
   const deductInk = useCallback((amount: number, actionName: string, mouseEvent?: any) => {
     if (!user) return false;
@@ -220,7 +216,7 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
 
     // Ink is deducted server-side only (runSecuredAiAction). Client shows preview animation + balance check.
     return true;
-  }, [inkBalance, residencyBalance, trialInkBalance, purchasedBalance, customApiKey, user, toast, mousePos]);
+  }, [inkBalance, user, toast, mousePos]);
 
   const refundInk = useCallback((_amount: number, _reason: string = 'AI Error') => {
     // Real refunds happen server-side in runSecuredAiAction when AI fails after deduction.

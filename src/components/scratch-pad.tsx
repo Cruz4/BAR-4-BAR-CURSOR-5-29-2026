@@ -41,7 +41,7 @@ const ScratchPad = forwardRef<{ addEffectResult: (result: ScratchPadEffectResult
       if (savedText) setText(savedText);
       const savedEffects = localStorage.getItem(EFFECTS_STORAGE_KEY);
       if (savedEffects) setEffectResults(JSON.parse(savedEffects));
-    } catch (error) {
+    } catch {
       console.warn('Could not access localStorage for scratch pad.');
     }
   }, []);
@@ -51,7 +51,7 @@ const ScratchPad = forwardRef<{ addEffectResult: (result: ScratchPadEffectResult
     setText(newContent);
     try {
       localStorage.setItem(TEXT_STORAGE_KEY, newContent);
-    } catch (error) {
+    } catch {
       console.warn('Could not access localStorage for scratch pad.');
     }
   };
@@ -61,7 +61,7 @@ const ScratchPad = forwardRef<{ addEffectResult: (result: ScratchPadEffectResult
       const newResults = [result, ...prev].slice(0, 20);
       try {
         localStorage.setItem(EFFECTS_STORAGE_KEY, JSON.stringify(newResults));
-      } catch (error) {
+      } catch {
         console.warn('Could not save effect results to localStorage.');
       }
       return newResults;
@@ -75,7 +75,7 @@ const ScratchPad = forwardRef<{ addEffectResult: (result: ScratchPadEffectResult
       const newResults = prev.filter((_, index) => index !== indexToDelete);
        try {
         localStorage.setItem(EFFECTS_STORAGE_KEY, JSON.stringify(newResults));
-      } catch (error) {
+      } catch {
         console.warn('Could not save effect results to localStorage.');
       }
       return newResults;
@@ -86,7 +86,7 @@ const ScratchPad = forwardRef<{ addEffectResult: (result: ScratchPadEffectResult
     setEffectResults([]);
     try {
         localStorage.removeItem(EFFECTS_STORAGE_KEY);
-    } catch (error) {
+    } catch {
         console.warn('Could not clear effect results from localStorage.');
     }
   };

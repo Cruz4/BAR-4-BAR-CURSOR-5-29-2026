@@ -10,8 +10,8 @@
 
 import React, { useState, useContext, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import type { Track, Album, StyleProfile, WizardState, Direction, TrackSection, Bar, WizardAnalysis, StyleAnalysis, DnaPreset } from '@/lib/types';
+import { motion } from 'framer-motion';
+import type { Track, StyleProfile, WizardState, Direction, WizardAnalysis, DnaPreset } from '@/lib/types';
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -39,9 +39,7 @@ import {
     Palette,
     RefreshCw,
     Wand2,
-    Settings,
     GitMerge,
-    Timer,
     Fingerprint,
     Waves,
     PlusCircle,
@@ -52,21 +50,15 @@ import {
     MessageSquareQuote,
     Save,
     ArrowRightLeft,
-    ListRestart,
-    FolderOpen,
     Clock,
     Link2,
-    Eye,
     Dna,
     GitBranch,
     ChevronUp,
-    Info,
     LayoutTemplate,
     UserCircle,
     TimerReset,
-    ArrowDown,
     Trash2,
-    ListMusic,
     Replace,
     HelpCircle,
     Lock,
@@ -90,11 +82,10 @@ import {
   lazyGenerateSongDraft,
   lazySuggestRelayDirections,
 } from '@/lib/lazy-ai-flows';
-import { mergeDirection, cn, stripForFirestore, resolveWorkstationDirection, hasDirectionContent, safeTrim } from '@/lib/utils';
+import { cn, stripForFirestore, resolveWorkstationDirection, hasDirectionContent, safeTrim } from '@/lib/utils';
 import {
   STRAIN_TARGETS,
   appendDirectionField,
-  buildDirectionMappingFromAnalysis,
   buildDnaPresetPayload,
   CREATIVE_DNA_FIELDS,
   normalizeWizardAnalysis,
@@ -105,7 +96,6 @@ import {
   formatRemixDirectionsWithWeights,
   getStrainInjectTooltip,
   getStrainDestinationTheme,
-  getVaultFieldInjectTooltip,
   DNA_HUB_TOOLTIPS,
   type StrainInjectionTarget,
 } from '@/lib/dna-strands';
@@ -146,7 +136,7 @@ import {
   coWriterEffectTitle,
 } from '@/lib/co-writer-rules';
 import { buildAlbumAlreadyUsed } from '@/lib/album-already-used';
-import { LockedSaveButton, ProLockBadge, proLockIcon, proLockShell, proLockText } from '@/components/pro-lock';
+import { LockedSaveButton, ProLockBadge, proLockIcon, proLockShell } from '@/components/pro-lock';
 import { UpgradeTooltip } from '@/components/upgrade-tooltip';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
 import { SYSTEM_DNA_PRESETS, SYSTEM_STYLE_PRESETS, SYSTEM_VIBE_PRESETS } from '@/lib/system-presets';
@@ -177,7 +167,7 @@ import {
 } from '@/lib/studio-panel-styles';
 import { HubCalibrationAmbient, HUB_INK_KEYS, type HubInkKey } from '@/components/hub-calibration-ambient';
 import { format } from 'date-fns';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArchivalNamingDialog } from '@/components/archival-naming-dialog';
 import { DnaVaultPresetDetails } from '@/components/dna-vault-preset-details';
 import { HighlightedText } from './highlighted-text';
@@ -479,7 +469,7 @@ export function GenerateSongDraftDialog({
   const [structurePresetId, setStructurePresetId] = useState('default');
   const [hubStructureGuide, setHubStructureGuide] = useState('');
   const [lyricsAbout, setLyricsAbout] = useState('');
-  const [maxLineLen, setMaxLineLen] = useState(120);
+  const maxLineLen = 120;
   const [hubCollapsed, setHubCollapsed] = useState<Record<HubSectionKey, boolean>>(DEFAULT_HUB_COLLAPSED);
   const [hubSeededSections, setHubSeededSections] = useState<Set<HubSectionKey>>(() => new Set());
   const [hubFlashKey, setHubFlashKey] = useState<HubInkKey | null>(null);
@@ -1014,7 +1004,7 @@ export function GenerateSongDraftDialog({
         badges.push({ id: 'REMIX PATHS', text: `${wizardState.selectedDirections.length} REMIX PATHS` });
       }
       return badges;
-  }, [enableGuardrails, intentsEnabled, hubIntents, lyricsAbout, hubVibeEnabled, inheritAlbum, album, inheritTrack, hubStyleEnabled, hubStyleAnalysis, wizardState.selectedDirections]);
+  }, [enableGuardrails, intentsEnabled, hubIntents, lyricsAbout, hubVibeEnabled, inheritAlbum, inheritTrack, hubStyleEnabled, hubStyleAnalysis, wizardState.selectedDirections]);
 
   const buildDraftSections = () => {
     if (!wizardState.generatedVariant) return [];
@@ -1233,7 +1223,7 @@ export function GenerateSongDraftDialog({
       }
   };
 
-  const loadDnaPreset = (preset: DnaPreset) => {
+  const loadDnaPreset = useCallback((preset: DnaPreset) => {
       setHubDirection(preset.mapping);
       const intents = preset.intents?.length
           ? preset.intents
@@ -1271,7 +1261,7 @@ export function GenerateSongDraftDialog({
       }
       CALIBRATION_HUB_SECTION_KEYS.forEach((key) => markHubSeeded(key));
       toast({ title: "Full DNA Profile Loaded" });
-  };
+  }, [album, markHubSeeded, toast, track, updateTrack]);
 
   const toggleRemixDirection = (dir: WizardState['selectedDirections'][number]) => {
       setWizardState((prev) => {
@@ -1293,7 +1283,7 @@ export function GenerateSongDraftDialog({
       }));
   };
 
-  const handleInjectStrain = (
+  const handleInjectStrain = useCallback((
       title: string,
       content: string | string[] | null | undefined,
       target: StrainInjectionTarget
@@ -1339,7 +1329,7 @@ export function GenerateSongDraftDialog({
       setHubDirection((prev) => appendDirectionField(prev, target.field, target.label, text));
       markHubSeeded('creativeDna');
       toast({ title: `DNA Part Injected: ${title}` });
-  };
+  }, [album, hubIntents, markHubSeeded, toast, track, updateTrack, wizardState.analysis?.styleMetrics]);
 
   const renderHubDnaPresetList = useCallback(
     (presets: DnaPreset[], options: { deletable: boolean; keyPrefix: string }) => {

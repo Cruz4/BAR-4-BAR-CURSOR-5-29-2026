@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
 import { cn } from '@/lib/utils';
@@ -51,7 +52,7 @@ export function BrandLockup({
             : 'h-9 w-9 border border-primary/20 bg-black p-0.5 sm:h-11 sm:w-11 group-hover:scale-110 transition-transform duration-300'
         )}
       >
-        <img src="/Logo.png" alt="" className="h-full w-full object-contain" aria-hidden />
+        <Image src="/Logo.png" alt="" width={44} height={44} className="h-full w-full object-contain" aria-hidden />
       </div>
       <div
         className={cn(

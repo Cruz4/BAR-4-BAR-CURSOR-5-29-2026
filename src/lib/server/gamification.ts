@@ -167,11 +167,6 @@ function resetDayBarCounter(summary: GamificationSummary, dayKey: string): Gamif
   return { ...summary, barsWrittenDayKey: dayKey, barsWrittenToday: 0 };
 }
 
-function resetBonusMonth(summary: GamificationSummary, monthKey: string): GamificationSummary {
-  if (summary.bonusInkMonthKey === monthKey) return summary;
-  return { ...summary, bonusInkMonthKey: monthKey, bonusInkGrantedThisMonth: 0 };
-}
-
 async function grantBonusInk(
   uid: string,
   amount: number,
@@ -875,7 +870,7 @@ export async function updateGamificationSettings(
 ): Promise<GamificationSummary> {
   const db = await getDb();
   const snap = await db.doc(`users/${userId}/gamification/summary`).get();
-  let summary = mergeSummary((snap.data() as Partial<GamificationSummary>) || {});
+  const summary = mergeSummary((snap.data() as Partial<GamificationSummary>) || {});
   const previousSlug = summary.profileSlug;
 
   if (typeof settings.publicProfile === 'boolean') {

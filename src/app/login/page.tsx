@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, Suspense, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -28,7 +29,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { LegalFooter } from '@/components/legal-footer';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StudioLoader } from '@/components/studio-loader';
 import { cn, stripForFirestore } from '@/lib/utils';
 import { trackStudioEvent } from '@/lib/analytics-client';
@@ -492,7 +493,7 @@ function LoginForm() {
                         aria-hidden
                       />
                       <div className="relative w-[7.5rem] h-[7.5rem] sm:w-36 sm:h-36 bg-white rounded-3xl flex items-center justify-center p-4 sm:p-5 shadow-[0_0_48px_rgba(59,130,246,0.35)] border border-primary/20 ring-1 ring-white/10">
-                        <img src="/Logo.png" alt="Bar 4 Bar logo" className="w-full h-full object-contain" />
+                        <Image src="/Logo.png" alt="Bar 4 Bar logo" width={144} height={144} className="w-full h-full object-contain" priority />
                       </div>
                     </div>
                     <div className="space-y-2.5 max-w-[16rem]">

@@ -1,4 +1,4 @@
-import type { Album, Track, User } from '@/lib/types';
+import type { Track, User } from '@/lib/types';
 import {
   countUserTracks,
   FREE_ALBUM_LIMIT,

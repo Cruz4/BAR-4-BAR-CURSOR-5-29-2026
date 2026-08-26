@@ -223,7 +223,7 @@ export function GenerationSyncAmbient({
       });
     }
 
-    let t0 = performance.now();
+    const t0 = performance.now();
     let frames = 0;
     let lastDriftSpawn = 0;
 
@@ -418,7 +418,7 @@ export function GenerationSyncAmbient({
       cancelAnimationFrame(frameRef.current);
       ro.disconnect();
     };
-  }, [palette.join(',')]);
+  }, [palette]);
 
   const wellMaskStyle = attractor
     ? {

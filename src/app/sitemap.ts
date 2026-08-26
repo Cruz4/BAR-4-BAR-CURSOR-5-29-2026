@@ -4,6 +4,10 @@ import { getDb } from '@/lib/firebase/server';
 import { isValidProfileSlug } from '@/lib/profile/profile-slug';
 
 export const revalidate = 3600;
+// Public profile/post entries require Firebase Admin credentials. Generate the
+// sitemap in the deployed runtime instead of freezing the credential-less build
+// fallback into the production artifact.
+export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();

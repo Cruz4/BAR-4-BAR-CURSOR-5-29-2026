@@ -71,7 +71,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   const [transcript, setTranscript] = useState('');
   const [interimTranscript, setInterimTranscript] = useState('');
   const [recordingElapsedSec, setRecordingElapsedSec] = useState(0);
-  const [rhymeGroups, setRhymeGroups] = useState<{ words: string[] }[]>([]);
+  const rhymeGroups = useMemo<{ words: string[] }[]>(() => [], []);
   const recognitionRef = useRef<InstanceType<BrowserSpeechRecognitionCtor> | null>(null);
   const listeningRef = useRef(false);
   const manualStopRef = useRef(false);
@@ -409,7 +409,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       refundInk(sessionCostRef.current);
       setIsListening(false);
     }
-  }, [enforceSessionLimit, refundInk, scheduleStudioRecorderRestart, stopListening, toast, enqueueStudioChunk]);
+  }, [clearSegmentTimer, enforceSessionLimit, refundInk, scheduleStudioRecorderRestart, stopListening, toast, enqueueStudioChunk]);
 
   const startBrowserListening = useCallback(async () => {
     const SpeechRecognitionAPI = getBrowserSpeechRecognition();
@@ -694,6 +694,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
             <InkArmAffordance armed={isArmed('freestyleTranscription')}>
             <Button
               onClick={(e) => (isListening ? stopListening() : startListening(e))}
+              disabled={disabled || isStudioTranscribing}
               size="icon"
               className={cn(
                 'w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-[0_0_40px_rgba(59,130,246,0.3)] transition-all active:scale-95 border-4 border-white/5 shrink-0',
@@ -740,7 +741,7 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
                 const final = (transcript + ' ' + interimTranscript).trim();
                 if (final) onAddFreestyle(final);
               }}
-              disabled={(!transcript && !interimTranscript) || isListening || isStudioTranscribing}
+              disabled={disabled || (!transcript && !interimTranscript) || isListening || isStudioTranscribing}
               className="h-11 sm:h-12 px-4 sm:px-8 font-bold shadow-xl gap-1.5 sm:gap-2 text-[10px] sm:text-sm uppercase tracking-widest flex-1 sm:flex-none min-w-0"
             >
               <PlusCircle className="h-4 w-4 shrink-0" /> <span className="truncate">Add to Editor</span>

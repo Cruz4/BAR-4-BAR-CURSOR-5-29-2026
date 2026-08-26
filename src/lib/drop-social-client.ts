@@ -195,7 +195,7 @@ export async function fetchDropCommentCount(shareId: string): Promise<number> {
 export async function likeDropComment(
   shareId: string,
   commentId: string,
-  actor?: { name?: string; slug?: string }
+  _actor?: { name?: string; slug?: string }
 ): Promise<void> {
   const user = requireUser();
   await setDoc(doc(db, 'shares', shareId, 'comments', commentId, 'likes', user.uid), {

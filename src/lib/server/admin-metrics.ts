@@ -537,7 +537,7 @@ export async function computeAdminMetrics(
   let inkPackRevenue30d = 0;
   let inkPackRevenue90d = 0;
   let subscriptionRevenue30d = 0;
-  let payingUsers = new Set<string>();
+  const payingUsers = new Set<string>();
 
   for (const doc of logsSnap.docs) {
     const log = doc.data();

@@ -100,7 +100,7 @@ export function DnaSeedExtractPanel({ lyrics, className, compact = false }: DnaS
     const ro = new ResizeObserver(() => requestAnimationFrame(resize));
     ro.observe(canvas.parentElement ?? canvas);
 
-    let t0 = performance.now();
+    const t0 = performance.now();
     let frames = 0;
 
     const draw = (now: number) => {

@@ -16,7 +16,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
     Users, 
     ShieldCheck, 
-    Droplets, 
     Settings, 
     Save, 
     Zap, 
@@ -415,7 +414,7 @@ export default function AdminPage() {
       cancelled = true;
       unsubLogs?.();
     };
-  }, [user?.id, user?.role, authLoading, authReady, opsLogFilter]);
+  }, [user, authLoading, authReady, opsLogFilter]);
 
   const handleBackfillAchievements = async () => {
     setBackfillingAchievements(true);

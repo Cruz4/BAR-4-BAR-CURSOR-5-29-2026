@@ -103,7 +103,10 @@ export function VaultStudioProgress({
 
   const showExpanded = tourForceExpanded || expanded;
 
-  const unlocked = summary?.unlockedAchievements || {};
+  const unlocked = useMemo(
+    () => summary?.unlockedAchievements || {},
+    [summary?.unlockedAchievements]
+  );
 
   const hasRecentEarn = useMemo(() => {
     const now = Date.now();

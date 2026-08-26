@@ -25,7 +25,6 @@ const FRAME_SHELL: Record<MarketingMediaVariant, string> = {
 export function MarketingMediaFrame({
   src,
   alt,
-  mediaType,
   className,
   priority = false,
   variant = 'feature',

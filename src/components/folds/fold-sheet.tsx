@@ -194,8 +194,9 @@ export function FoldSheet({ foldId }: { foldId: string }) {
     void markFoldReadClient(foldId).catch(() => undefined);
   }, [fold, foldId, me, fold?.lastBarId]);
 
+  const foldStatus = fold?.status;
   useEffect(() => {
-    if (!fold || fold.status === 'declined') return;
+    if (!foldStatus || foldStatus === 'declined') return;
     const pulse = () => {
       void writeFoldPresence(foldId, { viewing: true, typing: typingRef.current }).catch(
         () => undefined
@@ -208,7 +209,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
       typingRef.current = false;
       void writeFoldPresence(foldId, { viewing: false, typing: false }).catch(() => undefined);
     };
-  }, [foldId, fold?.status]);
+  }, [foldId, foldStatus]);
 
   useEffect(() => {
     const el = scrollerRef.current;

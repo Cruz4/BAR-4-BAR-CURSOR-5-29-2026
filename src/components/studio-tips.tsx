@@ -228,7 +228,7 @@ export function StudioTips() {
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, [getRandomIdx, pathname, user?.id, user?.lyricsTutorialCompletedAt, visitCount]);
+  }, [getRandomIdx, pathname, user, visitCount]);
 
   useEffect(() => {
     if (!isVisible || isPaused) return;

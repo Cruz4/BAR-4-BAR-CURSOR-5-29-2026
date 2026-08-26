@@ -45,7 +45,7 @@ export default function PerformancePage() {
   const params = useParams();
   const albumId = params.albumId as string;
   const trackId = params.trackId as string;
-  const { getTrackById, updateTrack, loading: dataLoading, albums } = useContext(DataContext);
+  const { getTrackById, updateTrack, loading: dataLoading } = useContext(DataContext);
   const router = useRouter();
   const { user, authReady } = useAuth();
   const [resolvedTrack, setResolvedTrack] = useState<Track | null>(null);
@@ -63,7 +63,7 @@ export default function PerformancePage() {
   
   const contextTrack = useMemo(
     () => getTrackById(albumId, trackId).track,
-    [getTrackById, albumId, trackId, albums],
+    [getTrackById, albumId, trackId],
   );
 
   useEffect(() => {

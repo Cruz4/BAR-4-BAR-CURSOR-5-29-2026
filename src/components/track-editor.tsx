@@ -16,7 +16,7 @@
  * - UPDATE (5/24): Added deletion protocols to DNA, Vibe, and Style vaults.
  */
 
-import React, { useState, useEffect, useMemo, useTransition, useContext, useRef, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useContext, useRef, useCallback, Suspense } from 'react';
 import { flushSync } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useWritingSurface } from '@/hooks/use-writing-surface';
@@ -39,7 +39,6 @@ import {
   Wand2,
   Palette,
   Compass,
-  ArrowRight,
   ArrowUp,
   ArrowDown,
   FileDown,
@@ -50,8 +49,6 @@ import {
   RefreshCw,
   Zap,
   PanelLeftClose,
-  PanelLeft,
-  PanelRight,
   PanelRightClose,
   Sparkles,
   Clapperboard,
@@ -62,19 +59,12 @@ import {
   ChevronRight,
   Mic,
   ArrowUpRight,
-  Check,
   X,
   ChevronUp,
-  ChevronsUpDown,
   ClipboardPaste,
   FolderOpen,
-  Timer,
-  MessageSquareQuote,
-  Clock,
-  LayoutTemplate,
   NotebookPen,
   Copy,
-  LayoutGrid,
   Fingerprint,
   HelpCircle,
   Info,
@@ -86,7 +76,7 @@ import {
   Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -191,12 +181,10 @@ import { buildClientRhymeGroups } from '@/lib/lyrics-analysis/client-rhyme-group
 import { loadPhoneticDictionary } from '@/lib/lyrics-analysis';
 import { MobileLyricsTabBar, type MobileLyricsTab } from '@/components/mobile-lyrics-tab-bar';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { UpgradeTooltip } from '@/components/upgrade-tooltip';
 import {
   LockedSaveButton,
   LockedProFeatureButton,
   ProLockBadge,
-  proLockShell,
   proLockIcon,
   proLockText,
   markBarAnchorGlow,
@@ -292,16 +280,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuPortal,
-  DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
 import { cn, mergeDirection } from '@/lib/utils';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, Hint } from '@/components/ui/tooltip';
 import { InkArmAffordance, inkArmedButtonClass } from '@/components/ui/ink-arm-affordance';
 import { useTouchInkRunner } from '@/hooks/use-touch-ink-runner';
@@ -336,7 +318,7 @@ function SmartStructureDialog({ open, onOpenChange, onApply }: any) {
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-  const { deductInk, refundInk, addUsageLog } = useUsage();
+  const { refundInk, addUsageLog } = useUsage();
   const { setGenerating } = useUIState();
   const { getEffectiveCost, buttonLabel, tooltip } = useInkCosts();
   const { runWithInk } = useTouchInkRunner();
@@ -502,7 +484,7 @@ function createCoWriterDnaInjectHandlers(deps: {
   openCoWriterSections?: (key: CoWriterSectionKey | CoWriterSectionKey[]) => void;
   toast: (t: { title: string; description?: string; variant?: 'destructive' }) => void;
 }) {
-  const { track, album, onUpdateTrack, updateAlbum, updateStyleProfile, openCoWriterSections, toast } = deps;
+  const { track, album, onUpdateTrack, updateStyleProfile, openCoWriterSections, toast } = deps;
 
   const onInjectMappingField = (field: keyof Direction, value: string | undefined) => {
     if (!value) return;
@@ -578,8 +560,6 @@ function DNAVaultDialog({
   onOpenChange,
   album,
   updateAlbum,
-  track,
-  onUpdateTrack,
   onLoadPreset,
   injectHandlers,
   isPro,
@@ -797,7 +777,6 @@ function mobileLyricsPanelClass(active: boolean, edge?: 'left' | 'right') {
 }
 
 function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSectionId, setExportDialogOpen, setShareDialogOpen, setCollabShareOpen, onCollapse, leftCollapsed, setGenerateDraftOpen, scratchPadRef, isPro, mobileActive = false, trackLocked = false, tierLocked = false, completeLocked = false, workstationAttention = false, tourMobilePad = false, isGuestTryMode = false }: any) {
-  const router = useRouter();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const { setGenerating } = useUIState();
   const { toast } = useToast();
@@ -1455,7 +1434,7 @@ function lineGenInkKey(mode: 'next' | 'previous', sectionId: string, barIdx: num
   return `generateNextLine-${mode}-${sectionId}-${barIdx}`;
 }
 
-function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, rhymePulseArmed = false, isInkArmed, activeSectionId, handleRunRhymeScan, generationOptions, setGenerationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false, isGuestTryMode = false, onNewStarter, collabEnabled = false, collabUserId, collabUserName, collabUserSlug, collabFriendships = [], collabIsOwner = false, collabShareOpen = false, onCollabShareOpenChange, onCollabSheetIdChange }: any) {
+function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, rhymePulseArmed = false, isInkArmed, handleRunRhymeScan, generationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false, isGuestTryMode = false, onNewStarter, collabEnabled = false, collabUserId, collabUserName, collabUserSlug, collabFriendships = [], collabIsOwner = false, collabShareOpen = false, onCollabShareOpenChange, onCollabSheetIdChange }: any) {
   const isPhoneView = useIsMobile();
   const [fontSize, setFontSize] = useState<'xs' | 'sm' | 'md' | 'lg'>('md');
   const responsiveDefaultSizeAppliedRef = useRef(false);
@@ -1463,7 +1442,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
   const emptySheetFocusRef = useRef(false);
   const [blockPost, setBlockPost] = useState<{ sectionId: string; from: number } | null>(null);
   const { user } = useAuth();
-  const { tooltip, buttonLabel, getCost, getEffectiveCost } = useInkCosts();
+  const { tooltip, buttonLabel, getEffectiveCost } = useInkCosts();
   const { toast } = useToast();
 
   const sheetEmpty = !trackHasWrittenLyrics(track);
@@ -1514,7 +1493,10 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
   ]);
   
   const fontSizes = { xs: 'text-[14px]', sm: 'text-[16px]', md: 'text-[24px]', lg: 'text-[36px]' };
-  const lineHeights = { xs: '20px', sm: '22px', md: '32px', lg: '40px' };
+  const lineHeights = useMemo(
+    () => ({ xs: '20px', sm: '22px', md: '32px', lg: '40px' }),
+    []
+  );
   const activeLineHeight = lineHeights[fontSize];
   const barTextStyle = {
     minHeight: activeLineHeight,
@@ -1686,18 +1668,8 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
 
   const ruleBadges = useMemo(
     () => (track ? getWorkstationRuleBadges(track, album) : []),
-    [
-    album?.id,
-    album?.direction?.enabled,
-    track.direction?.enabled,
-    track.direction?.inheritFromAlbum,
-    track.vibe?.enabled,
-    track.intentsEnabled,
-    track.checkedIntents,
-    track.endWith,
-    track.guardrails?.enabled,
-    track.styleEnabled,
-  ]);
+    [album, track]
+  );
 
   const handleBarSyncEnter = (e: React.KeyboardEvent) => {
       if (e.key === 'Enter') {
@@ -2482,7 +2454,7 @@ function CoWriterSectionChevron({ open, label }: { open: boolean; label: string 
   );
 }
 
-function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, improveStyleOpen, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, openCoWriterSections, onApplyChestEntry, mobileActive = false, trackLocked = false, completeLocked = false, tourMobilePad = false, isInkArmed, activeGeneratorBar }: any) {
+function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, openCoWriterSections, onApplyChestEntry, mobileActive = false, trackLocked = false, completeLocked = false, tourMobilePad = false, isInkArmed, activeGeneratorBar }: any) {
   const { user } = useAuth();
   const { tooltip, buttonLabel } = useInkCosts();
   const activeSection = track.sections.find((s:any) => s.id === activeSectionId);
@@ -2499,7 +2471,11 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   useEffect(() => {
     setForbiddenWordsDraft(formatGuardrailsCsv(track.guardrails?.forbiddenWords));
     setMustIncludeWordsDraft(formatGuardrailsCsv(track.guardrails?.mustIncludeWords));
-  }, [track.id]);
+  }, [
+    track.id,
+    track.guardrails?.forbiddenWords,
+    track.guardrails?.mustIncludeWords,
+  ]);
 
   // Fork legacy album-wide motifs onto this track once (only if intentRefs
   // was never set — empty [] means this track already owns an empty library).
@@ -2510,7 +2486,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
     );
     if (!legacy.length) return;
     onUpdateTrack({ intentRefs: [...new Set(legacy)] });
-  }, [track.id]);
+  }, [album?.thingsToSay, onUpdateTrack, track.id, track.intentRefs]);
 
   const dnaInjectHandlers = useMemo(
     () =>
@@ -2553,7 +2529,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
 
   const handleIntentCheck = (intent: string, checked: boolean) => {
       const current = track.checkedIntents || [];
-      let updated = checked ? [...current, intent] : current.filter((i: string) => i !== intent);
+      const updated = checked ? [...current, intent] : current.filter((i: string) => i !== intent);
       
       const updates: Partial<Track> = { 
         checkedIntents: updated,
@@ -3773,7 +3749,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     );
     setGuestBarsWritten(barCount);
     if (barCount > 0) trackGuestWroteBar(barCount);
-  }, [isGuestTryMode, track?.sections]);
+  }, [isGuestTryMode, track]);
 
   useEffect(() => {
     if (!isGuestTryMode || !track) return;
@@ -3791,16 +3767,14 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     return () => window.clearTimeout(t);
   }, [
     isGuestTryMode,
-    track?.sections,
-    track?.rhymeGroups,
-    track?.rhymeHighlightingEnabled,
+    track,
     albumId,
     trackId,
     updateTrack,
   ]);
 
   useEffect(() => {
-    if (!track || !user) return;
+    if (!track?.id || !user?.id) return;
     trackStudioEvent(ANALYTICS_EVENTS.TRACK_EDITOR_OPEN, { trackId, albumId });
   }, [trackId, albumId, track?.id, user?.id]);
 
@@ -4294,7 +4268,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       updateTrack(albumId, trackId, { sections: cleared });
     }, 3000);
     return () => clearTimeout(timer);
-  }, [track?.sections, track?.status, albumId, trackId, updateTrack, isCollabGuest]);
+  }, [track, albumId, trackId, updateTrack, isCollabGuest]);
 
   const tierLocked = track ? isTrackOverTierLimit(trackId, albumId, albums, user) : false;
   const tierLimitBanner = useMemo(
@@ -4350,7 +4324,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       updateTrack(albumId, trackId, { sections: previousState });
     }
     toast({ title: "Undo Successful" });
-  }, [sectionsHistory, albumId, trackId, updateTrack, toast, isCollabGuest]);
+  }, [sectionsHistory, albumId, trackId, updateTrack, toast, isCollabGuest, albums, track, user]);
 
   const handleRunRhymeScan = async (e: any) => {
     if (!track) return;

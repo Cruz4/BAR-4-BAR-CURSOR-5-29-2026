@@ -26,10 +26,8 @@ import {
   ChevronLeft,
   Compass,
   MoreVertical,
-  ChevronUp,
   ChevronDown,
   CheckCircle2,
-  Zap,
   NotebookPen,
   ArrowRightLeft,
   Dna,
@@ -109,7 +107,6 @@ import {
   canUserAddTrack,
   countUserTracks,
   FreeTrackLimitError,
-  FREE_TRACK_LIMIT,
   FREE_TRACK_LIMIT_TOAST,
   isProOrTrial,
   isProUser,
@@ -184,7 +181,6 @@ function CreateTrackDialog({
     const [title, setTitle] = useState('');
     const [showChoice, setShowChoice] = useState(false);
     const { toast } = useToast();
-    const [isCreating, setIsCreating] = useState(false);
     const { addTrack } = useContext(DataContext);
     const { user } = useAuth();
     const router = useRouter();
@@ -202,7 +198,6 @@ function CreateTrackDialog({
             onOpenChange(false);
             return;
         }
-        setIsCreating(true);
         try {
             const newTrack: Omit<Track, 'id'> = {
                 albumId,
@@ -235,7 +230,6 @@ function CreateTrackDialog({
                 toast({ variant: 'destructive', title: 'Creation Failed', description: (e as Error).message });
             }
         } finally {
-            setIsCreating(false);
             setShowChoice(false);
             setTitle('');
         }
@@ -447,7 +441,7 @@ function AlbumDnaVaultDialog({
 
 function DNAStrainMixerDialog({ open, onOpenChange, album, onApply }: { open: boolean, onOpenChange: (open: boolean) => void, album: Album, onApply: (dir: Partial<Direction>) => void }) {
     const { user } = useAuth();
-    const presets = album.dnaPresets || [];
+    const presets = useMemo(() => album.dnaPresets || [], [album.dnaPresets]);
     const { album: albumEntries, track: trackEntries } = useMemo(
       () => partitionDnaPresetsBySource(presets),
       [presets]
@@ -634,7 +628,7 @@ function EditCoverArtDialog({ album, onOpenChange }: { album: Album, onOpenChang
                                 )
                             ) : (
                                 <>
-                                    <img src="/Logo.png" alt="B4B" className="w-12 h-12 opacity-20 mb-2" />
+                                    <Image src="/Logo.png" alt="B4B" width={48} height={48} className="w-12 h-12 opacity-20 mb-2" />
                                     <p className="text-[8px] font-bold uppercase text-muted-foreground text-center px-2">
                                         Min {COVER_ART_MIN_DIMENSION}px · exports {COVER_ART_EXPORT_SIZE}px square
                                     </p>
@@ -908,8 +902,9 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   }, [albumId, loading, getAlbumById, router]);
 
   // Vault can leave window mid-scroll (manual scrollRestoration). Always land at top.
+  const loadedAlbumId = album?.id;
   useEffect(() => {
-    if (loading || !album || album.id !== albumId) return;
+    if (loading || !loadedAlbumId || loadedAlbumId !== albumId) return;
     const resetScroll = () => {
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
       document.documentElement.scrollTop = 0;
@@ -917,7 +912,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
     };
     resetScroll();
     requestAnimationFrame(() => requestAnimationFrame(resetScroll));
-  }, [albumId, loading, album?.id]);
+  }, [albumId, loading, loadedAlbumId]);
 
   const [editCoverArtDialogOpen, setEditCoverArtDialogOpen] = useState(false);
   const [strainMixerOpen, setStrainMixerOpen] = useState(false);
@@ -1165,11 +1160,12 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const showDowngradePicker =
     !downgradePickerDone && !loading && user != null && needsFreeEditableTrackPicker(user, albums);
 
+  const currentUserIsPro = Boolean(user && isProUser(user));
   useEffect(() => {
-    if (user && isProUser(user)) {
+    if (currentUserIsPro) {
       setDowngradePickerDone(false);
     }
-  }, [user?.subscriptionStatus, user?.proFeaturePreviewExpiresAt, user?.trialStartedAt]);
+  }, [currentUserIsPro]);
 
   if (loading || !album) return <StudioLoader size="lg" fullscreen />;
 
@@ -1248,7 +1244,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 )
                             ) : (
                                 <div className="flex flex-col items-center gap-2">
-                                    <img src="/Logo.png" alt="B4B" className="w-16 h-16 opacity-10" />
+                                    <Image src="/Logo.png" alt="B4B" width={64} height={64} className="w-16 h-16 opacity-10" />
                                     <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">1000 x 1000px</p>
                                 </div>
                             )}

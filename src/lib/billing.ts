@@ -24,7 +24,7 @@ export const SERVICE_RATES = {
  * Estimates the USD cost of an AI action.
  * Most actions cost less than $0.0001 USD.
  */
-export function estimateAiCost(action: string, responseLength: number = 100): number {
+export function estimateAiCost(action: string, _responseLength: number = 100): number {
   switch (action) {
     case 'generateNextLine':
       return 0.00001; // Tiny cost for single lines

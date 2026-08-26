@@ -12,7 +12,7 @@
  */
 
 import { ai, z } from '@/ai/genkit';
-import { runSecuredAiAction, stripAiAuth } from '@/lib/server/ai-gate';
+import { runSecuredAiAction } from '@/lib/server/ai-gate';
 import { getGenkitPromptOptions } from '@/lib/server/genkit-request';
 import { computeRelayDraftInkCostFromRates } from '@/lib/studio-costs';
 import { getStudioCosts } from '@/lib/server/studio-costs';

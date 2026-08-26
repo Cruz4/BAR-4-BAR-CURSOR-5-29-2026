@@ -8,16 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { 
     Loader, 
     Droplets, 
     Sparkles, 
     Check, 
-    Zap, 
     Star, 
-    Globe, 
     CreditCard, 
     ShieldAlert, 
     TrendingDown, 
@@ -25,12 +22,9 @@ import {
     History as HistoryIcon, 
     LayoutGrid, 
     Settings as SettingsIcon, 
-    ChevronRight,
     Clock,
     Timer,
-    Battery,
     Info,
-    X,
     Trash2,
     Mail,
     Coffee,
@@ -119,7 +113,7 @@ function InkPoolBadge({ pool }: { pool: InkPool | 'unknown' }) {
 }
 
 function UsagePageContent() {
-  const { usageHistory, inkBalance, residencyBalance, trialInkBalance, purchasedBalance, loading } = useUsage();
+  const { usageHistory, inkBalance, residencyBalance, trialInkBalance, purchasedBalance } = useUsage();
   const { isCloudSyncActive } = useContext(DataContext);
   const { user } = useAuth();
   const { enabled: firstDropsOn } = useFirstDropsFeature();

@@ -50,7 +50,7 @@ type InkNotification = {
 };
 
 export function FloatingInkSpent() {
-    const { lastSpent, mousePos } = useUsage();
+    const { lastSpent } = useUsage();
     const [notifications, setNotifications] = useState<InkNotification[]>([]);
     const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -73,8 +73,8 @@ export function FloatingInkSpent() {
             amount: lastSpent.amount,
             px: lastSpent.pressX,
             py: anchorY,
-            bx: mousePos.x,
-            by: mousePos.y,
+            bx: lastSpent.currentX,
+            by: lastSpent.currentY,
             activeRules: lastSpent.activeRules,
             showDna: false,
             dnaProgress: 0,

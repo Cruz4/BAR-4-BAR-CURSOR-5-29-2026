@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -10,23 +11,12 @@ import {
   Zap, 
   Sparkles, 
   Star, 
-  Globe, 
   Lock, 
-  ShieldCheck, 
-  Compass, 
-  Palette, 
-  Target, 
   Dna,
   ChevronRight,
-  ClipboardPaste,
-  RefreshCw,
-  Fingerprint,
   TrendingDown,
-  Timer,
-  Info,
   Shield,
   FileText,
-  Gavel,
   Wand2,
   MonitorPlay,
   Mic,
@@ -41,7 +31,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Accordion,
   AccordionContent,
@@ -54,7 +44,6 @@ import {
   PRO_YEARLY_BILLED,
   PRO_YEARLY_SAVINGS_BADGE,
   PRO_YEARLY_TOGGLE_LABEL,
-  INK_PACK_YEARLY_DISCOUNT_SHORT,
   PRO_MONTHLY_INK,
   PRO_YEARLY_INK,
   VISITOR_INK_SUMMARY,
@@ -391,7 +380,7 @@ export default function PricingPage() {
         <footer className="py-12 text-center space-y-6">
             <LegalFooter />
             <div className="bg-black/40 backdrop-blur-md border border-white/5 inline-flex items-center gap-2 p-2 rounded-xl px-6 shadow-2xl">
-                <img src="/Logo.png" alt="Logo" className="h-6 w-6" />
+                <Image src="/Logo.png" alt="Logo" width={24} height={24} className="h-6 w-6" />
                 <p className="text-[9px] font-code text-muted-foreground uppercase tracking-[0.4em]">Bar 4 Bar Studio &copy; 2026</p>
             </div>
         </footer>

@@ -176,7 +176,10 @@ export function StudioProgressBoard() {
   const standingCardRef = useRef<HTMLDivElement>(null);
 
   const isPro = isProUser(user);
-  const unlocked = summary?.unlockedAchievements || {};
+  const unlocked = useMemo(
+    () => summary?.unlockedAchievements || {},
+    [summary?.unlockedAchievements]
+  );
   const displayName = user?.displayName || 'Studio Artist';
   const prestigeLevel = getPrestigeLevel(summary);
   const prestigeReady = canPrestigeReset(summary, isPro);

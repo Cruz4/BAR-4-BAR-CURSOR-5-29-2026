@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useContext, useMemo, useCallback, Suspense } from 'react';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase/client/firebase';
 import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
@@ -325,7 +326,7 @@ export default function SharedProjectPage() {
                     title={user ? 'Go to vault' : 'Go to Bar 4 Bar'}
                 >
                     <div className="shrink-0 overflow-hidden rounded-lg h-8 w-8 sm:h-9 sm:w-9 border border-primary/20 bg-black">
-                        <img src="/Logo.png" alt="Bar 4 Bar" className="h-full w-full object-contain" />
+                        <Image src="/Logo.png" alt="Bar 4 Bar" width={36} height={36} className="h-full w-full object-contain" />
                     </div>
                     <div className="min-w-0 hidden sm:block">
                         <h1 className="truncate font-headline text-sm sm:text-lg font-bold leading-none tracking-tight text-foreground">
@@ -722,7 +723,7 @@ export default function SharedProjectPage() {
 
             <footer className="py-12 border-t mt-12 bg-muted/5 flex flex-col items-center gap-6 relative z-10">
                 <div className="overflow-hidden rounded-xl border border-primary/20 bg-black h-10 w-10">
-                    <img src="/Logo.png" alt="B4B" className="h-full w-full object-contain" />
+                    <Image src="/Logo.png" alt="B4B" width={40} height={40} className="h-full w-full object-contain" />
                 </div>
                 <p className="text-[11px] text-muted-foreground font-code text-center uppercase tracking-[0.4em]">
                     Built and shared via Bar 4 Bar Studio

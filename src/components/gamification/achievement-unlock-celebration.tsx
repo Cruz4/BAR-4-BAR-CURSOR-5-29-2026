@@ -121,8 +121,9 @@ export function AchievementUnlockCelebration() {
   }, []);
 
   useEffect(() => {
+    const emojiTimers = emojiTimersRef.current;
     return () => {
-      emojiTimersRef.current.forEach((t) => window.clearTimeout(t));
+      emojiTimers.forEach((t) => window.clearTimeout(t));
       stopCelebrationConfetti();
     };
   }, []);

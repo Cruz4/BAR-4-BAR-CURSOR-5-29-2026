@@ -159,7 +159,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', onFocus);
     };
-  }, [user?.id, authReady]);
+  }, [user, authReady]);
 
   useEffect(() => {
     const onPatch = (e: Event) => {

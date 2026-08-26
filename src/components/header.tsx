@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { LogOut, LayoutDashboard, LayoutGrid, HelpCircle, ChevronLeft, ChevronRight, Clock, Star, Droplets, Zap, Shield, Timer, Trophy, Smartphone, Settings, Users, Archive, Bell, Banknote, MessageSquare, BarChart3, HeartHandshake } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -116,7 +115,7 @@ export function Header() {
       clearCurrentDeviceSessionIdentity();
       await signOut(auth);
       router.push('/login');
-    } catch (error) {
+    } catch {
       toast({ variant: 'destructive', title: 'Sign Out Error' });
     }
   };

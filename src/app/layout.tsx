@@ -31,6 +31,8 @@ export default function RootLayout({
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Root App Router layout: this stylesheet is global, despite the legacy pages/_document lint rule. */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=Inter:wght@400;500;700&family=Architects+Daughter&display=swap" rel="stylesheet" />
         <link rel="icon" href={SEO.faviconIcoPath} sizes="any" />
         <link rel="icon" href={absoluteUrl(SEO.faviconPath)} type="image/png" sizes="1024x1024" />

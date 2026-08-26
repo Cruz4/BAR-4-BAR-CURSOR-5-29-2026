@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 
 export function HouseBarMicLike({
   echo,
-  compact = false,
+  compact: _compact = false,
   lockId = LOCK_HOUSE_ID,
 }: {
   echo: LockEcho;

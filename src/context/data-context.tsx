@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
-import type { Album, StyleProfile, Track, ProjectShare, Direction } from '@/lib/types';
+import type { Album, StyleProfile, Track } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
@@ -128,6 +128,7 @@ export const DataContext = createContext<DataContextType>({
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
   const { user, authReady } = useAuth();
+  const userId = user?.id;
   const { toast } = useToast();
   const [albums, setAlbums] = useState<Album[]>([]);
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
@@ -274,7 +275,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         sessionWrittenLineCount: countLinesWithSource(sections, 'written'),
       });
     }
-  }, [user]);
+  }, [user, queuePendingToOutbox]);
 
   const performAlbumSync = useCallback(async () => {
     if (!user) return;
@@ -303,7 +304,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     if (Object.keys(pendingTrackUpdates.current).length === 0 && Object.keys(pendingAlbumUpdates.current).length === 0) {
       setCloudSaveStatus('saved');
     }
-  }, [user]);
+  }, [user, queuePendingToOutbox]);
 
   const flushOutboxReplay = useCallback(async () => {
     if (!user || isBrowserOffline()) return;
@@ -418,26 +419,27 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const applyLocalVault = useCallback(
     (parsedAlbums: Album[], parsedStyle: StyleProfile | null) => {
-      let finalAlbums = [...parsedAlbums];
+      if (!userId) return;
+      const finalAlbums = [...parsedAlbums];
       if (!finalAlbums.find((a) => a.id === UNASSIGNED_ALBUM_ID)) {
-        finalAlbums.unshift({ ...createUnassignedShell(user!.id), tracks: [] });
+        finalAlbums.unshift({ ...createUnassignedShell(userId), tracks: [] });
       }
       setAlbums(finalAlbums);
       seedTrackProgressBaselines(finalAlbums);
       if (parsedStyle) setStyleProfile(parsedStyle);
-      setSyncPendingCount(outboxCount(user!.id));
+      setSyncPendingCount(outboxCount(userId));
       if (isBrowserOffline()) {
-        setCloudSaveStatus(outboxCount(user!.id) > 0 ? 'offline' : 'saved');
+        setCloudSaveStatus(outboxCount(userId) > 0 ? 'offline' : 'saved');
       }
     },
-    [seedTrackProgressBaselines, user?.id]
+    [seedTrackProgressBaselines, userId]
   );
 
   useEffect(() => {
     const loadData = async () => {
       if (!authReady) {
         // Auth still settling — seed guest try vault so the sheet can open without login redirect.
-        if (!user && isGuestTrySheetEnabled()) {
+        if (!userId && isGuestTrySheetEnabled()) {
           setAlbums([loadOrCreateGuestAlbum()]);
           setStyleProfile(null);
           setSyncPendingCount(0);
@@ -455,7 +457,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      if (!user) {
+      if (!userId) {
         if (isGuestTrySheetEnabled()) {
           setAlbums([loadOrCreateGuestAlbum()]);
           setStyleProfile(null);
@@ -477,9 +479,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       const offline = isBrowserOffline();
       setIsOfflineMode(offline);
-      setSyncPendingCount(outboxCount(user.id));
+      setSyncPendingCount(outboxCount(userId));
 
-      const cached = loadVaultSnapshot(user.id);
+      const cached = loadVaultSnapshot(userId);
       const onHome =
         typeof window !== 'undefined' &&
         (window.location.pathname === '/' || window.location.pathname === '/feed');
@@ -490,7 +492,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       if (offline) {
         setLoading(false);
-        vaultLoadedUserIdRef.current = user.id;
+        vaultLoadedUserIdRef.current = userId;
         return;
       }
 
@@ -498,7 +500,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         await new Promise((resolve) => window.setTimeout(resolve, cached.albums?.length ? 600 : 200));
       }
 
-      const isSameUserReload = vaultLoadedUserIdRef.current === user.id;
+      const isSameUserReload = vaultLoadedUserIdRef.current === userId;
       const hasVisibleVault = albumsRef.current.length > 0;
       if ((!isSameUserReload || !hasVisibleVault) && !onHome) {
         setLoading(true);
@@ -506,11 +508,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       try {
         const firebaseUser = await waitForAuthUser();
-        if (!firebaseUser || firebaseUser.uid !== user.id) {
+        if (!firebaseUser || firebaseUser.uid !== userId) {
           throw new Error('Auth session not ready');
         }
 
-        const userRef = doc(db, 'users', user.id);
+        const userRef = doc(db, 'users', userId);
         const userSnap = await getDoc(userRef);
         if (!userSnap.exists()) {
           const { markFreshSignup } = await import('@/lib/post-login-redirect');
@@ -579,17 +581,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
 
         // Universal Residency: Cloud Sync enabled for ALL users (Visitor and Pro)
-        const albumsSnap = await getDocs(collection(db, 'users', user.id, 'albums'));
+        const albumsSnap = await getDocs(collection(db, 'users', userId, 'albums'));
         const loadedAlbums: Album[] = [];
         
         for (const albumDoc of albumsSnap.docs) {
-          const tracksSnap = await getDocs(collection(db, 'users', user.id, 'albums', albumDoc.id, 'tracks'));
+          const tracksSnap = await getDocs(collection(db, 'users', userId, 'albums', albumDoc.id, 'tracks'));
           loadedAlbums.push({ ...albumDoc.data(), id: albumDoc.id, tracks: tracksSnap.docs.map(d => ({ ...d.data(), id: d.id })) } as Album);
         }
 
         // Loose tracks may exist under albums/unassigned/tracks without an album doc.
-        let looseTracks = (
-          await getDocs(collection(db, 'users', user.id, 'albums', UNASSIGNED_ALBUM_ID, 'tracks'))
+        const looseTracks = (
+          await getDocs(collection(db, 'users', userId, 'albums', UNASSIGNED_ALBUM_ID, 'tracks'))
         ).docs.map((d) => ({ ...d.data(), id: d.id, albumId: UNASSIGNED_ALBUM_ID })) as Track[];
 
         // Self-heal: if local backup has loose tracks missing from cloud, push them back up.
@@ -604,7 +606,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 const trackData = stripForFirestore({
                   ...track,
                   id: trackId,
-                  ownerId: user.id,
+                  ownerId: userId,
                   albumId: UNASSIGNED_ALBUM_ID,
                   updatedAt: new Date().toISOString(),
                 });
@@ -617,31 +619,34 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           console.warn('Loose track cloud recovery skipped', recoveryError);
         }
 
-        let finalAlbums = [...loadedAlbums];
+        const finalAlbums = [...loadedAlbums];
         const unassignedIdx = finalAlbums.findIndex((a) => a.id === UNASSIGNED_ALBUM_ID);
         if (unassignedIdx >= 0) {
           finalAlbums[unassignedIdx] = { ...finalAlbums[unassignedIdx], tracks: looseTracks };
         } else if (looseTracks.length > 0) {
-          finalAlbums.unshift({ ...createUnassignedShell(user.id), tracks: looseTracks });
+          finalAlbums.unshift({ ...createUnassignedShell(userId), tracks: looseTracks });
         }
 
         if (!finalAlbums.find((a) => a.id === UNASSIGNED_ALBUM_ID)) {
-          finalAlbums.unshift({ ...createUnassignedShell(user.id), tracks: [] });
+          finalAlbums.unshift({ ...createUnassignedShell(userId), tracks: [] });
         }
         
-        const styleSnap = await getDoc(doc(db, 'users', user.id, 'styleProfile', 'main'));
-        if (styleSnap.exists()) setStyleProfile(styleSnap.data() as StyleProfile);
+        const styleSnap = await getDoc(doc(db, 'users', userId, 'styleProfile', 'main'));
+        const loadedStyleProfile = styleSnap.exists()
+          ? (styleSnap.data() as StyleProfile)
+          : cached.styleProfile;
+        if (loadedStyleProfile) setStyleProfile(loadedStyleProfile);
         
         setAlbums(finalAlbums);
         seedTrackProgressBaselines(finalAlbums);
-        saveVaultSnapshot(user.id, finalAlbums, styleSnap.exists() ? (styleSnap.data() as StyleProfile) : styleProfile);
-        warmStudioRoutes(user.id, finalAlbums);
-        vaultLoadedUserIdRef.current = user.id;
+        saveVaultSnapshot(userId, finalAlbums, loadedStyleProfile);
+        warmStudioRoutes(userId, finalAlbums);
+        vaultLoadedUserIdRef.current = userId;
 
-        if (!styleProfile && !styleSnap.exists()) {
+        if (!loadedStyleProfile) {
           const defaultProfile: StyleProfile = {
-            id: `style-${user.id}`,
-            ownerId: user.id,
+            id: `style-${userId}`,
+            ownerId: userId,
             history: [{ timestamp: new Date().toISOString(), analysis: 'Initial neutral style profile. Train on existing lyrics to customize co-writer logic.' }],
             trainingRefs: [],
             updatedAt: new Date().toISOString()
@@ -658,7 +663,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     loadData();
-  }, [user?.id, authReady, applyLocalVault, seedTrackProgressBaselines]);
+  }, [userId, authReady, applyLocalVault, seedTrackProgressBaselines]);
 
   useEffect(() => {
     if (user && !loading) {
@@ -1070,7 +1075,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const persistedAlbums: Album[] = [];
-    let persistedLooseTracks: Track[] = [];
+    const persistedLooseTracks: Track[] = [];
 
     const looseFromUnassignedAlbum = importedAlbums
       .filter((album) => album.id === UNASSIGNED_ALBUM_ID)
@@ -1271,7 +1276,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     const orphanLooseSnap = await getDocs(collection(db, 'users', user.id, 'albums', UNASSIGNED_ALBUM_ID, 'tracks'));
     if (!orphanLooseSnap.empty) {
-      let batch = writeBatch(db);
+      const batch = writeBatch(db);
       orphanLooseSnap.docs.forEach((trackDoc) => batch.delete(trackDoc.ref));
       await batch.commit();
     }
@@ -1285,7 +1290,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     seedTrackProgressBaselines([freshUnassigned]);
     saveVaultSnapshot(user.id, [freshUnassigned], styleProfile);
     setCloudSaveStatus('saved');
-  }, [user, flushCloudNow, seedTrackProgressBaselines]);
+  }, [user, flushCloudNow, seedTrackProgressBaselines, styleProfile]);
 
   const moveTrack = useCallback((tId: string, fromId: string, toId: string) => {
     const { track } = getTrackById(fromId, tId);

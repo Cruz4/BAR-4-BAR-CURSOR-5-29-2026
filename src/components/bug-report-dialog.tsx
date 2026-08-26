@@ -17,7 +17,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase/client/firebase';
 import { collection, addDoc } from 'firebase/firestore';
-import { Loader, AlertCircle, MessageSquare } from 'lucide-react';
+import { Loader, MessageSquare } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 interface BugReportDialogProps {
@@ -54,7 +54,7 @@ export function BugReportDialog({ open, onOpenChange, prefilledError }: BugRepor
       });
       setMessage('');
       onOpenChange(false);
-    } catch (error) {
+    } catch {
       toast({
         variant: 'destructive',
         title: "Submission Failed",

@@ -23,22 +23,16 @@ import {
     MoreVertical, 
     Move, 
     CassetteTape, 
-    HelpCircle, 
     NotebookPen, 
-    Wand2, 
     Archive,
     Search,
     ArrowUpDown,
     X,
     ChevronRight,
     Import,
-    ShieldAlert,
-    Timer,
     SortDesc,
     SortAsc,
-    ArrowRightLeft,
     Clock,
-    Loader,
     ChevronUp,
     ChevronDown,
     Filter,
@@ -118,7 +112,6 @@ import {
   ProCreateAlbumSlot,
   ProCreateTrackSlot,
   IconWithLockOverlay,
-  proLockIcon,
   proLockText,
 } from '@/components/pro-lock';
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
@@ -166,7 +159,7 @@ function CreateItemDialog({ open, onOpenChange, type }: { open: boolean, onOpenC
   const [showChoice, setShowChoice] = useState(false);
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
-  const { addAlbum, addTrack, albums, isCloudSyncActive } = useContext(DataContext);
+  const { addAlbum, addTrack, albums } = useContext(DataContext);
   const { user } = useAuth();
   const router = useRouter();
 
@@ -549,7 +542,7 @@ const VinylRecord = ({ album, tierLocked = false }: { album: Album; tierLocked?:
                     )
                 ) : (
                     <div className="flex items-center justify-center h-full w-full p-2 bg-neutral-900">
-                        <img src="/Logo.png" alt="B4B" className="w-full h-full object-contain opacity-20" />
+                        <Image src="/Logo.png" alt="B4B" width={96} height={96} className="w-full h-full object-contain opacity-20" />
                     </div>
                 )}
                 <div className="absolute w-3 h-3 bg-neutral-950 rounded-full border border-white/20 shadow-inner z-20" />
@@ -698,11 +691,10 @@ function VaultHeaderToolbar({
 
 export function AlbumList() {
   const [createItemType, setCreateItemType] = useState<'Album' | 'Track' | null>(null);
-  const { albums, styleProfile, loading, deleteAlbum, deleteTrack, moveTrack, getAlbumById, mergeData, clearVault, isCloudSyncActive } = useContext(DataContext);
+  const { albums, styleProfile, loading, deleteTrack, moveTrack, getAlbumById, mergeData, clearVault } = useContext(DataContext);
   const { user, loading: authLoading } = useAuth();
   const isPaidPro = isProUser(user);
   const hasProWorkflow = isProOrTrial(user);
-  const albumCount = albums.filter((a) => a.id !== 'unassigned').length;
   const trackCount = countUserTracks(albums);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -735,13 +727,17 @@ export function AlbumList() {
     user != null &&
     needsFreeEditableTrackPicker(user, albums);
 
+  const currentUserIsPro = Boolean(user && isProUser(user));
   useEffect(() => {
-    if (user && isProUser(user)) {
+    if (currentUserIsPro) {
       setDowngradePickerDone(false);
     }
-  }, [user?.subscriptionStatus, user?.proFeaturePreviewExpiresAt, user?.trialStartedAt]);
+  }, [currentUserIsPro]);
 
-  const unassignedTracks = getAlbumById('unassigned')?.tracks || [];
+  const unassignedTracks = useMemo(
+    () => getAlbumById('unassigned')?.tracks || [],
+    [getAlbumById]
+  );
   const realAlbums = albums.filter(a => a.id !== 'unassigned');
 
   useEffect(() => {

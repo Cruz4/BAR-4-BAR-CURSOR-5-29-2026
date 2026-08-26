@@ -76,7 +76,7 @@ function CaptureHeader() {
     <div className="h-14 border-b border-white/10 bg-black/50 flex items-center justify-between px-5 shrink-0">
       <div className="flex items-center gap-3">
         <div className="bg-white p-1.5 rounded-lg">
-          <img src="/Logo.png" alt="" className="h-7 w-7" />
+          <Image src="/Logo.png" alt="" width={28} height={28} className="h-7 w-7" />
         </div>
         <span className="font-headline font-bold text-base uppercase tracking-widest">Bar 4 Bar</span>
       </div>

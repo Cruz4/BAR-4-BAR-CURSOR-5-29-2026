@@ -60,13 +60,7 @@ export function ProPreviewEndedDialog() {
 
     const t = window.setTimeout(() => setOpen(true), 700);
     return () => window.clearTimeout(t);
-  }, [
-    authReady,
-    loading,
-    user?.id,
-    user?.proFeaturePreviewExpiresAt,
-    user?.subscriptionStatus,
-  ]);
+  }, [authReady, loading, user]);
 
   const dismiss = useCallback(() => {
     if (user?.id) markPreviewEndedAcked(user.id);

@@ -17,7 +17,7 @@ export function ProductAnalytics() {
     if (!pathname || pathname === lastPathRef.current) return;
     lastPathRef.current = pathname;
     void trackStudioEvent(ANALYTICS_EVENTS.PAGE_VIEW, { path: pathname });
-  }, [pathname, user?.id, authReady, loading]);
+  }, [pathname, user, authReady, loading]);
 
   return null;
 }

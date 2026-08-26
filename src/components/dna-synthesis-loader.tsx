@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useMemo } from 'react';
+import Image from 'next/image';
 import { Hexagon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -240,10 +241,12 @@ function LogoMotif({
       ? LOGO_SCALE_CONSTRAINED
       : LOGO_SCALE_DEFAULT;
   return (
-    <img
+    <Image
       src="/Logo.png"
       alt=""
       aria-hidden
+      width={logoSize}
+      height={logoSize}
       className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[2] object-contain select-none"
       style={{
         opacity: 0.38,
@@ -448,7 +451,7 @@ export function DNASynthesisLoader({
 
     frameRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frameRef.current);
-  }, [activeRuleList.join(','), palette.join(','), cfg.strandRadius, cfg.dotScale, cfg.canvasW, cfg.canvasH]);
+  }, [activeRuleList, palette, cfg]);
 
   const strainsPanel = (
     <div

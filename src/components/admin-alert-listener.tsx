@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { auth } from '@/lib/firebase/client/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -125,7 +125,7 @@ export function AdminAlertListener() {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [authReady, loading, isAdmin, user?.id]);
+  }, [authReady, loading, isAdmin, user]);
 
   return null;
 }

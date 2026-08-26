@@ -236,7 +236,6 @@ export async function fulfillPendingReferralRewards(db: Firestore, userId: strin
     const data = docSnap.data();
     const referrerId = data.referrerId as string;
     const amount = (data.referrerInkPendingAmount as number) || REFERRAL_INK_REWARD;
-    const pool = (data.referrerInkPool as 'residency' | 'permanent') || 'residency';
     if (!referrerId || amount <= 0) continue;
 
     const referrerSnap = await db.collection('users').doc(referrerId).get();

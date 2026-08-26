@@ -17,7 +17,7 @@ export function MaintenanceWrapper({ children }: { children: React.ReactNode }) 
       if (isUnlocked) {
         setUnlocked(true);
       }
-    } catch (e) {
+    } catch {
       // sessionStorage may not be available
       console.warn('Could not access session storage.');
     }
@@ -28,7 +28,7 @@ export function MaintenanceWrapper({ children }: { children: React.ReactNode }) 
       if (input === SECRET_CODE) {
         try {
           sessionStorage.setItem(SESSION_STORAGE_KEY, 'true');
-        } catch (e) {
+        } catch {
             // sessionStorage may not be available
         }
         setUnlocked(true);

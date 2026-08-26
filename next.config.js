@@ -86,6 +86,9 @@ const nextConfig = {
     'firebase-admin/app',
     'firebase-admin/auth',
     'firebase-admin/firestore',
+    // dotprompt loads Handlebars through Node loader hooks that Webpack cannot
+    // bundle; keep the server dependency native for Genkit AI routes.
+    'handlebars',
   ],
   webpack: (config, { dev, isServer }) => {
     // Windows paths with special characters can miss file events; polling stabilizes dev HMR.
