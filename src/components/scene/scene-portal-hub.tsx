@@ -365,36 +365,11 @@ export function ScenePortalHub({
           <div className="absolute inset-0 grid grid-cols-2 overflow-hidden rounded-[1.5rem] bg-black/45 shadow-[0_18px_50px_rgba(0,0,0,0.34)]">
             <button
               type="button"
-              onClick={onOpenDiscover}
-              className="group relative flex min-w-0 flex-col overflow-hidden rounded-l-[1.5rem] border-y border-l border-cyan-300/70 bg-[radial-gradient(circle_at_38%_15%,rgba(6,182,212,0.2),transparent_35%),linear-gradient(165deg,rgba(4,23,42,0.96),rgba(3,11,27,0.98))] px-3 pb-5 pt-6 text-left transition hover:brightness-115 focus-visible:z-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-200 sm:px-5 sm:pb-7 sm:pt-8"
-            >
-              <span className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_center,rgba(34,211,238,0.18)_0.65px,transparent_0.8px)] [background-size:7px_7px]" />
-              <span className="relative flex h-16 w-16 items-center justify-center rounded-full border border-cyan-300/65 bg-cyan-500/10 text-cyan-300 shadow-[0_0_30px_rgba(34,211,238,0.2)] sm:h-20 sm:w-20">
-                <Compass className="h-9 w-9 sm:h-11 sm:w-11" />
-              </span>
-              <span className="relative mt-5 font-headline text-[clamp(1.25rem,6vw,2rem)] font-black uppercase leading-none tracking-wide text-white sm:mt-6">Discover</span>
-              <span className="relative mt-1 text-[10px] text-white/55 sm:text-xs">Explore everyone</span>
-              <span className="relative mt-2">
-                <PortalStatus tone="cyan">{newDiscoverCount > 0 ? `${Math.min(newDiscoverCount, 99)} new` : 'Fresh picks'}</PortalStatus>
-              </span>
-              <span className="relative mt-5 min-w-0 flex-1 sm:mt-6">
-                <DiscoverPreviewList cards={discoverPreviews} />
-              </span>
-              <ChevronRight className="relative mt-3 h-7 w-7 self-end text-cyan-300 transition-transform group-hover:translate-x-1" />
-              <span className="pointer-events-none absolute bottom-10 left-3 flex flex-col items-center gap-1 text-cyan-300/70 sm:left-4">
-                <span className="text-xs">↑</span>
-                <span className="h-16 w-1 rounded-full bg-gradient-to-b from-cyan-200 via-cyan-400/70 to-cyan-300/20" />
-                <span className="h-1.5 w-1.5 rounded-full bg-cyan-300" />
-              </span>
-            </button>
-
-            <button
-              type="button"
               onClick={onOpenBlock}
-              className="group relative flex min-w-0 flex-col overflow-hidden rounded-r-[1.5rem] border-y border-r border-fuchsia-300/70 bg-[radial-gradient(circle_at_62%_15%,rgba(217,70,239,0.2),transparent_35%),linear-gradient(195deg,rgba(38,7,42,0.94),rgba(12,5,26,0.98))] px-3 pb-5 pt-6 text-left transition hover:brightness-115 focus-visible:z-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-fuchsia-200 sm:px-5 sm:pb-7 sm:pt-8"
+              className="group relative flex min-w-0 flex-col overflow-hidden rounded-l-[1.5rem] border-y border-l border-fuchsia-300/70 bg-[radial-gradient(circle_at_38%_15%,rgba(217,70,239,0.2),transparent_35%),linear-gradient(165deg,rgba(38,7,42,0.94),rgba(12,5,26,0.98))] px-3 pb-5 pt-6 text-left transition hover:brightness-115 focus-visible:z-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-fuchsia-200 sm:px-5 sm:pb-7 sm:pt-8"
             >
               <span className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_center,rgba(232,121,249,0.2)_0.65px,transparent_0.8px)] [background-size:7px_7px]" />
-              <span className="relative ml-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-fuchsia-300/65 bg-fuchsia-500/10 text-fuchsia-300 shadow-[0_0_30px_rgba(217,70,239,0.2)] sm:h-20 sm:w-20">
+              <span className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-fuchsia-300/65 bg-fuchsia-500/10 text-fuchsia-300 shadow-[0_0_30px_rgba(217,70,239,0.2)] sm:h-20 sm:w-20">
                 <Radio className="h-9 w-9 sm:h-11 sm:w-11" />
               </span>
               <span className="relative mt-5 font-headline text-[clamp(1.1rem,5.5vw,1.9rem)] font-black uppercase leading-none tracking-wide text-white sm:mt-6">Your Block</span>
@@ -408,10 +383,35 @@ export function ScenePortalHub({
                 <BlockPreviewList posts={blockPreviews} />
               </span>
               <ChevronRight className="relative mt-3 h-7 w-7 self-end text-fuchsia-300 transition-transform group-hover:translate-x-1" />
-              <span className="pointer-events-none absolute bottom-10 right-3 flex flex-col items-center gap-1 text-fuchsia-300/70 sm:right-4">
+              <span className="pointer-events-none absolute bottom-10 left-3 flex flex-col items-center gap-1 text-fuchsia-300/70 sm:left-4">
                 <span className="text-xs">↑</span>
                 <span className="h-16 w-1 rounded-full bg-gradient-to-b from-fuchsia-200 via-fuchsia-400/70 to-fuchsia-300/20" />
                 <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-300" />
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenDiscover}
+              className="group relative flex min-w-0 flex-col overflow-hidden rounded-r-[1.5rem] border-y border-r border-cyan-300/70 bg-[radial-gradient(circle_at_62%_15%,rgba(6,182,212,0.2),transparent_35%),linear-gradient(195deg,rgba(4,23,42,0.96),rgba(3,11,27,0.98))] px-3 pb-5 pt-6 text-left transition hover:brightness-115 focus-visible:z-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-200 sm:px-5 sm:pb-7 sm:pt-8"
+            >
+              <span className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_center,rgba(34,211,238,0.18)_0.65px,transparent_0.8px)] [background-size:7px_7px]" />
+              <span className="relative ml-auto flex h-16 w-16 items-center justify-center rounded-full border border-cyan-300/65 bg-cyan-500/10 text-cyan-300 shadow-[0_0_30px_rgba(34,211,238,0.2)] sm:h-20 sm:w-20">
+                <Compass className="h-9 w-9 sm:h-11 sm:w-11" />
+              </span>
+              <span className="relative mt-5 font-headline text-[clamp(1.25rem,6vw,2rem)] font-black uppercase leading-none tracking-wide text-white sm:mt-6">Discover</span>
+              <span className="relative mt-1 text-[10px] text-white/55 sm:text-xs">Explore everyone</span>
+              <span className="relative mt-2">
+                <PortalStatus tone="cyan">{newDiscoverCount > 0 ? `${Math.min(newDiscoverCount, 99)} new` : 'Fresh picks'}</PortalStatus>
+              </span>
+              <span className="relative mt-5 min-w-0 flex-1 sm:mt-6">
+                <DiscoverPreviewList cards={discoverPreviews} />
+              </span>
+              <ChevronRight className="relative mt-3 h-7 w-7 self-end text-cyan-300 transition-transform group-hover:translate-x-1" />
+              <span className="pointer-events-none absolute bottom-10 right-3 flex flex-col items-center gap-1 text-cyan-300/70 sm:right-4">
+                <span className="text-xs">↑</span>
+                <span className="h-16 w-1 rounded-full bg-gradient-to-b from-cyan-200 via-cyan-400/70 to-cyan-300/20" />
+                <span className="h-1.5 w-1.5 rounded-full bg-cyan-300" />
               </span>
             </button>
           </div>
