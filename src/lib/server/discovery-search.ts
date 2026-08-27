@@ -15,13 +15,14 @@ import {
   type ArtistHomeSoundIdentity,
 } from '@/lib/profile/sound-identity';
 import { needsVanitySlugUpgrade } from '@/lib/profile/profile-slug';
-import { isShareDocumentPublic, shareDocumentVisibility } from '@/lib/release-management';
+import { canonicalDnaShareIds, shareDocumentVisibility } from '@/lib/release-management';
 import {
   combinePublicMusicMetadata,
   publicMusicMetadataFromTrack,
   publicMusicMetadataSearchText,
   type PublicMusicMetadata,
 } from '@/lib/music-discovery-metadata';
+import { canonicalLiveDnaShareIds } from '@/lib/server/dna-visibility';
 
 type PublicProfileSearchRow = {
   userId: string;
@@ -71,6 +72,11 @@ const CATALOG_LIMIT = 600;
 const CATALOG_TTL_MS = 45_000;
 let cachedCatalog: { expiresAt: number; value: SearchCatalog } | null = null;
 let loadingCatalog: Promise<SearchCatalog> | null = null;
+
+export function invalidateDiscoverySearchCatalog(): void {
+  cachedCatalog = null;
+  loadingCatalog = null;
+}
 
 function clean(value: unknown, max = 500): string {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').slice(0, max) : '';
@@ -187,12 +193,16 @@ async function buildCatalog(): Promise<SearchCatalog> {
   ]);
   const profiles = profileRows(profileSnap.docs);
   const profileByUser = new Map(profiles.map((profile) => [profile.userId, profile]));
+  const canonicalDnaIds = canonicalDnaShareIds(
+    shareSnap.docs.map((snap) => ({ id: snap.id, data: snap.data() as Record<string, unknown> }))
+  );
 
   const drops: PublicDropSearchRow[] = [];
   for (const snap of shareSnap.docs) {
     const data = snap.data() as Record<string, unknown>;
-    if (!isShareDocumentPublic(data)) continue;
     const visibility = shareDocumentVisibility(data);
+    const dnaLive = visibility.dnaLive && canonicalDnaIds.has(snap.id);
+    if (!visibility.releaseLive && !dnaLive) continue;
     const payload = data.data && typeof data.data === 'object'
       ? data.data as Record<string, unknown>
       : {};
@@ -258,9 +268,19 @@ async function buildCatalog(): Promise<SearchCatalog> {
     }
   }
 
+  const dnaPostShareIds = postSnap.docs
+    .map((snap) => snap.data() as Record<string, unknown>)
+    .filter((data) => data.sourceKind === 'dna' && typeof data.reverbPostId === 'string')
+    .map((data) => String(data.reverbPostId));
+  const liveDnaPostShareIds = await canonicalLiveDnaShareIds(db, dnaPostShareIds);
   const posts: PublicPostSearchRow[] = [];
   for (const snap of postSnap.docs) {
     const data = snap.data() as Record<string, unknown>;
+    if (
+      data.sourceKind === 'dna' &&
+      typeof data.reverbPostId === 'string' &&
+      !liveDnaPostShareIds.has(data.reverbPostId)
+    ) continue;
     const ownerId = clean(data.ownerId, 128);
     const owner = profileByUser.get(ownerId);
     if (!owner) continue;

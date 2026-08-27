@@ -150,6 +150,69 @@ export type ShareDocumentVisibility = {
   dnaLive: boolean;
 };
 
+export type ShareDocumentRecord = {
+  id: string;
+  data: Record<string, unknown>;
+};
+
+function shareTimestamp(document: Record<string, unknown>): string {
+  const value = document.updatedAt || document.createdAt;
+  return typeof value === 'string' ? value : '';
+}
+
+/**
+ * Stable identity for every snapshot that represents the same lyric/DNA page.
+ * Album title is retained as a legacy fallback because older album republishes
+ * occasionally received a new project id.
+ */
+export function dnaShareIdentity(document: Record<string, unknown>): string {
+  const ownerId = typeof document.ownerId === 'string' ? document.ownerId.trim() : '';
+  const type = document.type === 'album' ? 'album' : 'track';
+  const projectId = typeof document.projectId === 'string' ? document.projectId.trim() : '';
+  const payload = document.data && typeof document.data === 'object'
+    ? document.data as Record<string, unknown>
+    : {};
+  if (type === 'album') {
+    const title = typeof payload.title === 'string' ? payload.title.trim().toLocaleLowerCase() : '';
+    if (title) return `${ownerId}:album-title:${title.replace(/\s+/g, ' ')}`;
+  }
+  return `${ownerId}:${type}:${projectId}`;
+}
+
+export function isDnaShareLineage(document: Record<string, unknown>): boolean {
+  const payload = document.data && typeof document.data === 'object'
+    ? document.data as Record<string, unknown>
+    : {};
+  const topLevelStatus = document.dnaStatus;
+  const releaseStatus = document.releaseStatus || payload.releaseStatus;
+  if (topLevelStatus === 'live' || topLevelStatus === 'unlisted') return true;
+  // Legacy DNA documents predate explicit statuses. A modern commerce-only
+  // snapshot must not supersede its separate lyric page.
+  return !releaseStatus;
+}
+
+/**
+ * Select the newest DNA snapshot per project before applying visibility.
+ * Including an unlisted newest record is intentional: it acts as a tombstone
+ * so an older live snapshot can never reappear in a public reader.
+ */
+export function canonicalDnaShareIds(records: ShareDocumentRecord[]): Set<string> {
+  const newest = new Map<string, ShareDocumentRecord>();
+  for (const record of records) {
+    if (!isDnaShareLineage(record.data)) continue;
+    const identity = dnaShareIdentity(record.data);
+    const current = newest.get(identity);
+    if (
+      !current ||
+      shareTimestamp(record.data) > shareTimestamp(current.data) ||
+      (shareTimestamp(record.data) === shareTimestamp(current.data) && record.id > current.id)
+    ) {
+      newest.set(identity, record);
+    }
+  }
+  return new Set([...newest.values()].map((record) => record.id));
+}
+
 /**
  * Keep commerce visibility and lyric/DNA visibility independent. New release
  * snapshots always carry releaseStatus; new DNA snapshots always carry

@@ -14,45 +14,31 @@ import { useAuth } from '@/hooks/use-auth';
 import { fetchCraftResume } from '@/lib/activity/client';
 import {
   dismissBoothMemory,
-  readLocalBoothMemory,
   snippetBarText,
-  visibleBoothMemory,
   type BoothMemory,
 } from '@/lib/scene/booth-memory';
-import { getLastWorkedTrackPath } from '@/lib/studio-tips-session';
 import { SCENE_BOOTH_MEMORY_ID } from '@/lib/scene-home';
 import { cn } from '@/lib/utils';
 
-function fallbackMemory(): BoothMemory | null {
-  const local = readLocalBoothMemory();
-  if (local) return visibleBoothMemory(local);
-  const path = getLastWorkedTrackPath();
-  if (!path) return null;
-  return visibleBoothMemory({
-    trackPath: path,
-    trackTitle: 'Untitled',
-    barCount: 0,
-    updatedAt: new Date(0).toISOString(),
-  });
-}
-
 export function SceneBoothMemoryCard({ className }: { className?: string }) {
   const { user } = useAuth();
-  const [memory, setMemory] = useState<BoothMemory | null>(() => fallbackMemory());
+  const userId = user?.id;
+  const [memory, setMemory] = useState<BoothMemory | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    setMemory(null);
+    if (!userId) return;
     let cancelled = false;
-    void fetchCraftResume().then((next) => {
+    void fetchCraftResume(userId).then((next) => {
       if (cancelled) return;
-      setMemory(next ?? fallbackMemory());
+      setMemory(next);
     });
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [userId]);
 
-  if (!user || !memory) return null;
+  if (!userId || !memory || memory.ownerId !== userId) return null;
 
   const line = snippetBarText(memory.lastBarText);
   const barsLabel =

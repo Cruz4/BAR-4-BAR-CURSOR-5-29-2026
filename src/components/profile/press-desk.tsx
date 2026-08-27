@@ -105,6 +105,7 @@ import { LiveDnaDropsManage } from '@/components/scene/scene-live-drops-strip';
 import { PublishOpenLockPanel } from '@/components/lock/publish-open-lock-panel';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
 import { studioChromeFromUser } from '@/lib/studio-tier-chrome';
+import { dnaStatusOf } from '@/lib/release-management';
 import { VesperfoldForge } from '@/components/profile/vesperfold-forge';
 import { SoundIdentityStrip } from '@/components/profile/sound-identity-strip';
 import { auth } from '@/lib/firebase/client/firebase';
@@ -676,7 +677,7 @@ export function PressDesk() {
     >();
 
     for (const album of albums) {
-      if (album.isPublic && album.shareId) {
+      if (album.isPublic && album.shareId && dnaStatusOf(album) === 'live') {
         byId.set(album.shareId, {
           shareId: album.shareId,
           title: album.title,
@@ -688,9 +689,9 @@ export function PressDesk() {
         });
       }
       // Tracks under a live album nest under that album on the Drop Shelf.
-      const albumLive = Boolean(album.isPublic && album.shareId);
+      const albumLive = Boolean(album.isPublic && album.shareId && dnaStatusOf(album) === 'live');
       (album.tracks || []).forEach((track, trackIndex) => {
-        if (!(track.isPublic && track.shareId)) return;
+        if (!(track.isPublic && track.shareId && dnaStatusOf(track) === 'live')) return;
         const existing = byId.get(track.shareId);
         const flags = shareCommerceFlags({
           dropAudio: track.dropAudio,

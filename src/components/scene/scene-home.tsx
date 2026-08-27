@@ -950,10 +950,10 @@ export function SceneHome() {
         {/* Right rail — nav dock (xl only) */}
         {!showPortalHub ? (
           <aside
-            className="hidden xl:flex xl:col-start-3 xl:row-start-2 justify-start items-start self-start pl-2 2xl:pl-3 sticky top-[5.25rem] z-30 pointer-events-none [&>*]:pointer-events-auto"
+            className="pointer-events-none sticky top-[5.25rem] z-30 hidden max-h-[calc(100vh-6rem)] self-start justify-start overflow-y-auto overscroll-contain pl-2 xl:col-start-3 xl:row-start-2 xl:flex 2xl:pl-3 [&>*]:pointer-events-auto"
             aria-label="Scene shortcuts"
           >
-            <SceneNavDock />
+            <SceneNavDock className="pb-3" />
           </aside>
         ) : null}
 

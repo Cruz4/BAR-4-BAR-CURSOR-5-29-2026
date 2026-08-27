@@ -44,7 +44,7 @@ export async function GET(req: Request) {
       total: result.total,
       hasMore: result.total > result.hits.length,
     });
-    response.headers.set('Cache-Control', viewerUserId ? 'private, no-store' : 'public, max-age=30, s-maxage=45');
+    response.headers.set('Cache-Control', 'private, no-store');
     response.headers.set('Vary', 'Authorization');
     return response;
   } catch (error) {

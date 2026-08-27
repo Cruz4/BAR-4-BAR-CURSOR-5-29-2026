@@ -50,11 +50,15 @@ import {
   shareCommerceFlags,
   shareDocCommerceFlags,
 } from '@/lib/drop-commerce';
-import { isShareDocumentPublic, shareDocumentVisibility } from '@/lib/release-management';
+import {
+  canonicalDnaShareIds,
+  shareDocumentVisibility,
+} from '@/lib/release-management';
 import {
   allocateUniqueProfileSlug,
   assertProfileSlugAvailable,
 } from '@/lib/server/profile-slug';
+import { canonicalLiveDnaShareIds } from '@/lib/server/dna-visibility';
 
 export const MAX_DAILY_XP = 500;
 
@@ -1521,19 +1525,6 @@ export type LiveDnaDropSummary = {
 
 type LiveDnaDropDraft = LiveDnaDropSummary & { updatedAt: string };
 
-function dnaReleaseIdentity(data: Record<string, unknown>): string {
-  const type = data.type === 'album' ? 'album' : 'track';
-  const projectId = typeof data.projectId === 'string' ? data.projectId.trim() : '';
-  if (type === 'album') {
-    const payload = data.data && typeof data.data === 'object' ? data.data as Record<string, unknown> : {};
-    const title = typeof payload.title === 'string' ? payload.title.trim().toLocaleLowerCase() : '';
-    // Old album republishes can have a new project id while still representing
-    // the same named album. Keep one canonical DNA card for that release.
-    if (title) return `album-title:${title.replace(/\s+/g, ' ')}`;
-  }
-  return `${type}:${projectId}`;
-}
-
 /** Active public music releases and lyric DNA pages for an Artist Home. */
 export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDropSummary[]> {
   if (!userId) return [];
@@ -1542,29 +1533,14 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
 
   const byShareId = new Map<string, LiveDnaDropDraft>();
   const shareDocsById = new Map(snap.docs.map((doc) => [doc.id, doc]));
-  const preferredDnaShareByProject = new Map<string, { shareId: string; dedicated: boolean; updatedAt: string }>();
-
-  for (const doc of snap.docs) {
-    const data = doc.data() as Record<string, unknown>;
-    const visibility = shareDocumentVisibility(data);
-    if (!visibility.dnaLive) continue;
-    const projectId = typeof data.projectId === 'string' ? data.projectId : '';
-    if (!projectId) continue;
-    const key = dnaReleaseIdentity(data);
-    const updatedAt = typeof data.updatedAt === 'string' ? data.updatedAt : typeof data.createdAt === 'string' ? data.createdAt : '';
-    const candidate = { shareId: doc.id, dedicated: !visibility.releaseLive, updatedAt };
-    const current = preferredDnaShareByProject.get(key);
-    if (!current || (candidate.dedicated && !current.dedicated) || (candidate.dedicated === current.dedicated && candidate.updatedAt > current.updatedAt)) {
-      preferredDnaShareByProject.set(key, candidate);
-    }
-  }
+  const canonicalDnaIds = canonicalDnaShareIds(
+    snap.docs.map((doc) => ({ id: doc.id, data: doc.data() as Record<string, unknown> }))
+  );
 
   for (const doc of snap.docs) {
     const data = doc.data();
     const visibility = shareDocumentVisibility(data as Record<string, unknown>);
-    const projectId = typeof data.projectId === 'string' ? data.projectId : '';
-    const projectKey = dnaReleaseIdentity(data as Record<string, unknown>);
-    const dnaLive = visibility.dnaLive && (!projectId || preferredDnaShareByProject.get(projectKey)?.shareId === doc.id);
+    const dnaLive = visibility.dnaLive && canonicalDnaIds.has(doc.id);
     if (!visibility.releaseLive && !dnaLive) continue;
     const type = data.type === 'album' ? ('album' as const) : ('track' as const);
     const title =
@@ -1621,9 +1597,7 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
   for (const doc of snap.docs) {
     const data = doc.data();
     const visibility = shareDocumentVisibility(data as Record<string, unknown>);
-    const projectId = typeof data.projectId === 'string' ? data.projectId : '';
-    const projectKey = dnaReleaseIdentity(data as Record<string, unknown>);
-    if (!visibility.dnaLive || (projectId && preferredDnaShareByProject.get(projectKey)?.shareId !== doc.id)) continue;
+    if (!visibility.dnaLive || !canonicalDnaIds.has(doc.id)) continue;
     if (data.type !== 'album') continue;
     const albumShareId = doc.id;
     const albumTitle =
@@ -1647,7 +1621,11 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
           : '';
       if (!shareId) continue;
       const linkedShare = shareDocsById.get(shareId);
-      if (!linkedShare || !shareDocumentVisibility(linkedShare.data() as Record<string, unknown>).dnaLive) continue;
+      if (
+        !linkedShare ||
+        !canonicalDnaIds.has(linkedShare.id) ||
+        !shareDocumentVisibility(linkedShare.data() as Record<string, unknown>).dnaLive
+      ) continue;
 
       const trackTitle =
         typeof (track as { title?: unknown }).title === 'string' &&
@@ -2255,6 +2233,9 @@ export async function listRecentShareSummaries(
     .orderBy('updatedAt', 'desc')
     .limit(Math.max(48, limit * 3))
     .get();
+  const canonicalDnaIds = canonicalDnaShareIds(
+    snap.docs.map((doc) => ({ id: doc.id, data: doc.data() as Record<string, unknown> }))
+  );
   const rows: Array<{
     shareId: string;
     type: 'album' | 'track';
@@ -2275,8 +2256,9 @@ export async function listRecentShareSummaries(
   }> = [];
   for (const doc of snap.docs) {
     const data = doc.data() as Record<string, unknown>;
-    if (!isShareDocumentPublic(data)) continue;
     const visibility = shareDocumentVisibility(data);
+    const dnaLive = visibility.dnaLive && canonicalDnaIds.has(doc.id);
+    if (!visibility.releaseLive && !dnaLive) continue;
     const ownerId = typeof data.ownerId === 'string' ? data.ownerId : '';
     if (opts.excludeOwnerId && ownerId === opts.excludeOwnerId) continue;
     const type = data.type === 'album' ? ('album' as const) : ('track' as const);
@@ -2310,7 +2292,7 @@ export async function listRecentShareSummaries(
             : '',
       ...(hasDropAudio ? { hasDropAudio: true } : {}),
       ...(visibility.releaseLive ? { releaseLive: true } : {}),
-      ...(visibility.dnaLive ? { dnaLive: true } : {}),
+      ...(dnaLive ? { dnaLive: true } : {}),
       ...(visibility.releaseLive && data.houseRelease === true ? { houseRelease: true } : {}),
       dropPriceSummary: flags.dropPriceSummary || (typeof data.dropPriceSummary === 'string' ? data.dropPriceSummary : undefined),
       ...(priced ? { dropPrice: priced } : {}),
@@ -2428,13 +2410,21 @@ export async function listRecentPublicPosts(
     if (candidates.length >= limit * 3) break;
   }
 
-  const ownerIds = candidates.flatMap((p) =>
+  const dnaSourceIds = candidates
+    .filter((post) => post.sourceKind === 'dna' && post.reverbPostId)
+    .map((post) => post.reverbPostId!);
+  const liveDnaSourceIds = await canonicalLiveDnaShareIds(db, dnaSourceIds);
+  const publicCandidates = candidates.filter(
+    (post) => post.sourceKind !== 'dna' || !post.reverbPostId || liveDnaSourceIds.has(post.reverbPostId)
+  );
+
+  const ownerIds = publicCandidates.flatMap((p) =>
     [p.ownerId, p.reverbOwnerId].filter((id): id is string => Boolean(id))
   );
   const live = await resolvePublicAvatarsByUserIds(ownerIds);
 
   const out: DiscoverPostSummary[] = [];
-  for (const p of candidates) {
+  for (const p of publicCandidates) {
     const ownerMeta = live.get(p.ownerId);
     if (!ownerMeta?.slug) continue; // no live Artist Home
     const reverbMeta = p.reverbOwnerId ? live.get(p.reverbOwnerId) : undefined;

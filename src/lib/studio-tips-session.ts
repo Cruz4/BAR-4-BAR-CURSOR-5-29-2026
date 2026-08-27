@@ -27,6 +27,18 @@ export function getLastWorkedTrackPath(): string | null {
   }
 }
 
+/** Stop resume surfaces from reopening a track that has been marked complete. */
+export function clearLastWorkedTrack(pathname: string): void {
+  if (typeof window === 'undefined' || !isTrackEditorPath(pathname)) return;
+  try {
+    if (localStorage.getItem(LAST_WORKED_TRACK_KEY) === pathname) {
+      localStorage.removeItem(LAST_WORKED_TRACK_KEY);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Bump visit count when navigating onto a track sheet (not on re-renders). */
 export function recordTrackSheetEntry(pathname: string): number {
   if (typeof window === 'undefined' || !isTrackEditorPath(pathname)) return 0;
@@ -39,11 +51,6 @@ export function recordTrackSheetEntry(pathname: string): number {
     sessionStorage.setItem(visitKey, String(next));
     sessionStorage.setItem(LAST_TRACK_PATH_KEY, pathname);
     persistLastWorkedTrack(pathname);
-    try {
-      void import('@/lib/activity/client').then((m) => m.persistCraftResume(pathname));
-    } catch {
-      /* ignore */
-    }
     return next;
   } catch {
     return 0;

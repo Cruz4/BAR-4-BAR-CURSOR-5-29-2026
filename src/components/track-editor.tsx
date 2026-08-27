@@ -140,8 +140,12 @@ import {
   markTrySheetTourSeen,
   type LyricsTourStep,
 } from '@/lib/studio-onboarding';
-import { persistLastWorkedTrack } from '@/lib/studio-tips-session';
-import { boothMemoryFromTrack, persistBoothMemorySnapshot } from '@/lib/scene/booth-memory';
+import { clearLastWorkedTrack, persistLastWorkedTrack } from '@/lib/studio-tips-session';
+import {
+  boothMemoryFromTrack,
+  clearBoothMemoryForTrack,
+  persistBoothMemorySnapshot,
+} from '@/lib/scene/booth-memory';
 import {
   appendQuery,
   clearStaleLastWorkedTrackPath,
@@ -4022,25 +4026,45 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const workstationAttention = workstationBackgroundActive && !generateDraftOpen && pageVisible;
 
   const boothMemoryRef = useRef<ReturnType<typeof boothMemoryFromTrack>>(null);
+  const clearedBoothMemoryPathRef = useRef<string | null>(null);
+  const boothMemoryTrackStatus = track?.status;
 
   useEffect(() => {
-    if (albumId && trackId) {
-      persistLastWorkedTrack(`/albums/${albumId}/tracks/${trackId}`);
+    if (!albumId || !trackId || !boothMemoryTrackStatus) return;
+    const path = `/albums/${albumId}/tracks/${trackId}`;
+    if (boothMemoryTrackStatus === 'complete') {
+      clearLastWorkedTrack(path);
+      return;
     }
-  }, [albumId, trackId]);
+    persistLastWorkedTrack(path);
+  }, [albumId, boothMemoryTrackStatus, trackId]);
 
   useEffect(() => {
+    if (!user?.id) {
+      boothMemoryRef.current = null;
+      return;
+    }
     if (!track || !albumId || !trackId || isGuestTryMode) return;
+    const path = `/albums/${albumId}/tracks/${trackId}`;
     const memory = boothMemoryFromTrack({
-      path: `/albums/${albumId}/tracks/${trackId}`,
+      ownerId: user.id,
+      path,
       track,
       albumTitle: album?.title,
     });
-    if (!memory) return;
+    if (!memory) {
+      boothMemoryRef.current = null;
+      if (clearedBoothMemoryPathRef.current !== path) {
+        clearedBoothMemoryPathRef.current = path;
+        clearBoothMemoryForTrack(path, user.id);
+      }
+      return;
+    }
+    clearedBoothMemoryPathRef.current = null;
     boothMemoryRef.current = memory;
     const timer = window.setTimeout(() => persistBoothMemorySnapshot(memory), 2500);
     return () => window.clearTimeout(timer);
-  }, [album, albumId, isGuestTryMode, track, trackId]);
+  }, [album, albumId, isGuestTryMode, track, trackId, user?.id]);
 
   useEffect(() => {
     const flush = () => {

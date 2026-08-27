@@ -23,11 +23,15 @@ import {
   type ActivityType,
 } from '@/lib/activity/types';
 import {
+  boothMemoryFromTrack,
+  clearLocalBoothMemoryForTrack,
   craftToBoothMemory,
   readLocalBoothMemory,
   visibleBoothMemory,
   type BoothMemory,
 } from '@/lib/scene/booth-memory';
+import { clearLastWorkedTrack, isTrackEditorPath } from '@/lib/studio-tips-session';
+import type { Track } from '@/lib/types';
 
 export type EmitActivityClientInput = {
   type: ActivityType;
@@ -328,10 +332,14 @@ export type CraftResumePatch = {
   barCount?: number;
 };
 
-export function persistCraftResume(path: string, extras?: CraftResumePatch | string): void {
+export function persistCraftResume(
+  path: string,
+  extras?: CraftResumePatch | string,
+  expectedUserId?: string
+): void {
   void (async () => {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user || (expectedUserId && user.uid !== expectedUserId)) return;
     if (!/^\/albums\/[^/]+\/tracks\/[^/]+$/.test(path)) return;
     const patch: CraftResumePatch = typeof extras === 'string' ? { title: extras } : extras || {};
     const payload: Record<string, unknown> = {
@@ -358,19 +366,87 @@ export function persistCraftResume(path: string, extras?: CraftResumePatch | str
   })();
 }
 
-export async function fetchCraftResume(): Promise<BoothMemory | null> {
-  const local = readLocalBoothMemory();
+/** Clear this track only when it is still the current cross-device resume target. */
+export async function clearCraftResume(path: string, expectedUserId?: string): Promise<void> {
   const user = auth.currentUser;
-  if (!user) return visibleBoothMemory(local);
+  if (!user || (expectedUserId && user.uid !== expectedUserId) || !isTrackEditorPath(path)) return;
+  const craftRef = doc(db, 'users', user.uid, 'activityMeta', 'craft');
+  try {
+    const snap = await getDoc(craftRef);
+    if (!snap.exists() || snap.data().lastTrackPath !== path) return;
+    await setDoc(
+      craftRef,
+      {
+        lastTrackPath: null,
+        lastTrackTitle: null,
+        lastAlbumTitle: null,
+        lastBarText: null,
+        barCount: 0,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn('[clearCraftResume]', err);
+  }
+}
+
+async function clearInvalidResume(memory: BoothMemory, userId: string): Promise<null> {
+  clearLocalBoothMemoryForTrack(memory.trackPath, userId);
+  clearLastWorkedTrack(memory.trackPath);
+  await clearCraftResume(memory.trackPath, userId);
+  return null;
+}
+
+async function verifyOwnedResume(memory: BoothMemory, userId: string): Promise<BoothMemory | null> {
+  if (memory.ownerId !== userId) return clearInvalidResume(memory, userId);
+  const match = memory.trackPath.match(/^\/albums\/([^/]+)\/tracks\/([^/]+)$/);
+  if (!match) return clearInvalidResume(memory, userId);
+  const [, albumId, trackId] = match;
+  const [trackSnap, albumSnap] = await Promise.all([
+    getDoc(doc(db, 'users', userId, 'albums', albumId, 'tracks', trackId)),
+    getDoc(doc(db, 'users', userId, 'albums', albumId)),
+  ]);
+  if (!trackSnap.exists()) return clearInvalidResume(memory, userId);
+  const track = trackSnap.data() as Partial<Track>;
+  if (track.status === 'complete') return clearInvalidResume(memory, userId);
+  const verified = boothMemoryFromTrack({
+    ownerId: userId,
+    path: memory.trackPath,
+    track: {
+      title: typeof track.title === 'string' ? track.title : 'Untitled',
+      sections: Array.isArray(track.sections) ? track.sections : [],
+      status: 'in_progress',
+    },
+    albumTitle: albumSnap.exists() && typeof albumSnap.data().title === 'string'
+      ? albumSnap.data().title
+      : undefined,
+  });
+  return verified ? { ...verified, updatedAt: memory.updatedAt } : clearInvalidResume(memory, userId);
+}
+
+export async function fetchCraftResume(expectedUserId: string): Promise<BoothMemory | null> {
+  const user = auth.currentUser;
+  if (!user || user.uid !== expectedUserId) return null;
+  const local = readLocalBoothMemory(user.uid);
   try {
     const snap = await getDoc(doc(db, 'users', user.uid, 'activityMeta', 'craft'));
-    if (!snap.exists()) return visibleBoothMemory(local);
-    const remote = craftToBoothMemory(snap.data() as Parameters<typeof craftToBoothMemory>[0]);
-    if (!remote) return visibleBoothMemory(local);
-    if (!local) return visibleBoothMemory(remote);
-    const newer = Date.parse(remote.updatedAt) >= Date.parse(local.updatedAt) ? remote : local;
-    return visibleBoothMemory(newer);
+    const remote = snap.exists()
+      ? craftToBoothMemory(snap.data() as Parameters<typeof craftToBoothMemory>[0], user.uid)
+      : null;
+    const candidate = !remote
+      ? local
+      : !local
+        ? remote
+        : Date.parse(remote.updatedAt) >= Date.parse(local.updatedAt)
+          ? remote
+          : local;
+    const visible = visibleBoothMemory(candidate);
+    if (!visible) return null;
+    const verified = await verifyOwnedResume(visible, user.uid);
+    return visibleBoothMemory(verified);
   } catch {
-    return visibleBoothMemory(local);
+    // Privacy first: never display cached lyrics when ownership cannot be verified.
+    return null;
   }
 }

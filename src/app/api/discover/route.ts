@@ -123,10 +123,9 @@ export async function GET(req: Request) {
         pressedSongs: drops.filter((drop) => drop.type === 'track' && drop.hasDropAudio).length,
       },
     });
-    response.headers.set(
-      'Cache-Control',
-      viewerUserId ? 'private, no-store' : 'public, max-age=60, s-maxage=120'
-    );
+    // Visibility changes must take effect immediately; never serve a cached
+    // offline DNA snapshot back into the public Scene.
+    response.headers.set('Cache-Control', 'private, no-store');
     response.headers.set('Vary', 'Authorization');
     return response;
   } catch (err) {

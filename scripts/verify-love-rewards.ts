@@ -5,6 +5,7 @@ import {
   loveInkRewardDescription,
   loveInkRewardUnlockId,
 } from '../src/lib/gamification/love-rewards';
+import { readFileSync } from 'node:fs';
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(`FAIL: ${message}`);
@@ -23,5 +24,22 @@ for (const count of [20, 40, 60, 100]) {
   assert(loveInkRewardUnlockId(count) === `love_milestone_${count}`, `${count}-Love reward has a stable id`);
   assert(loveInkRewardDescription(count).includes(`${count} verified Loves`), `${count}-Love notification names the milestone`);
 }
+
+const rewardRoute = readFileSync(
+  new URL('../src/app/api/social/love-reward/route.ts', import.meta.url),
+  'utf8'
+);
+assert(
+  rewardRoute.includes("collection('loveRewards').doc(tickId)"),
+  'Love reward ticks use a valid user subcollection document path'
+);
+assert(
+  rewardRoute.includes('tickRef.create('),
+  'Duplicate Love reward requests are claimed atomically'
+);
+assert(
+  !rewardRoute.includes('/gamification/loveRewards/'),
+  'The invalid odd-segment Firestore path cannot return'
+);
 
 console.log('\nAll Love reward verification checks passed.');

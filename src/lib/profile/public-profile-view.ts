@@ -68,6 +68,9 @@ export function publicProfileView(raw: unknown, fallbackSlug: string): PublicPro
               ...(typeof d.trackIndex === 'number' ? { trackIndex: d.trackIndex } : {}),
               ...(typeof d.trackCount === 'number' ? { trackCount: d.trackCount } : {}),
               ...(d.hasDropAudio ? { hasDropAudio: true } : {}),
+              ...(d.releaseLive === true ? { releaseLive: true } : {}),
+              ...(d.dnaLive === true ? { dnaLive: true } : {}),
+              ...(d.houseRelease === true ? { houseRelease: true } : {}),
               ...(typeof d.dropPriceSummary === 'string' && d.dropPriceSummary.trim()
                 ? { dropPriceSummary: d.dropPriceSummary.trim() }
                 : {}),

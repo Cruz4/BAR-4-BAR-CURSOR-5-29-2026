@@ -19,6 +19,7 @@ import {
   Users,
 } from 'lucide-react';
 import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
+import { ReleaseCatalogDialog } from '@/components/vault/release-catalog';
 import type { ProfilePost } from '@/lib/profile/social-client';
 import type { DiscoverCard, DiscoverDrop } from '@/lib/scene/discover-client';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
@@ -241,6 +242,7 @@ function DiscoverPreviewList({ cards }: { cards: DiscoverCard[] }) {
 
 function WorldShortcut({
   href,
+  onClick,
   title,
   detail,
   icon: Icon,
@@ -248,7 +250,8 @@ function WorldShortcut({
   status,
   avatar,
 }: {
-  href: string;
+  href?: string;
+  onClick?: () => void;
   title: string;
   detail: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -256,14 +259,12 @@ function WorldShortcut({
   status: React.ReactNode;
   avatar?: React.ReactNode;
 }) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        'group relative flex min-h-[7rem] min-w-0 items-center gap-2 overflow-hidden rounded-2xl border px-2.5 py-3 text-left shadow-[inset_0_0_28px_rgba(255,255,255,0.015),0_14px_35px_rgba(0,0,0,0.25)] transition duration-200 hover:-translate-y-0.5 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:min-h-[7rem] sm:gap-3 sm:px-4',
-        shortcutTone[tone]
-      )}
-    >
+  const className = cn(
+    'group relative flex min-h-[7rem] w-full min-w-0 items-center gap-2 overflow-hidden rounded-2xl border px-2.5 py-3 text-left shadow-[inset_0_0_28px_rgba(255,255,255,0.015),0_14px_35px_rgba(0,0,0,0.25)] transition duration-200 hover:-translate-y-0.5 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:min-h-[7rem] sm:gap-3 sm:px-4',
+    shortcutTone[tone]
+  );
+  const content = (
+    <>
       <span className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.12)_0.7px,transparent_0.8px)] [background-size:7px_7px]" />
       <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-current/35 bg-current/[0.08] shadow-[0_0_24px_currentColor] sm:h-14 sm:w-14">
         {avatar || <Icon className="h-7 w-7 sm:h-8 sm:w-8" />}
@@ -276,8 +277,12 @@ function WorldShortcut({
         <span className="mt-2 block">{status}</span>
       </span>
       <ChevronRight className="relative h-5 w-5 shrink-0 text-white/75 transition-transform group-hover:translate-x-1" />
-    </Link>
+    </>
   );
+  if (onClick) {
+    return <button type="button" className={className} onClick={onClick}>{content}</button>;
+  }
+  return <Link href={href || '/'} className={className}>{content}</Link>;
 }
 
 function QuickAction({ href, title, detail, icon: Icon, tone }: {
@@ -317,6 +322,8 @@ export function ScenePortalHub({
   onOpenBlock,
   onOpenDiscover,
 }: ScenePortalHubProps) {
+  const [releaseCatalogOpen, setReleaseCatalogOpen] = React.useState(false);
+
   return (
     <section className="space-y-3" data-tour="scene-feed" aria-label="Scene Portal">
       <div
@@ -438,7 +445,14 @@ export function ScenePortalHub({
             status={<PortalStatus tone="pink">{viewer.slug ? 'Live' : 'Set up'}</PortalStatus>}
             avatar={<LiveArtistStarAvatar name={viewer.displayName} userId={viewer.userId} slug={viewer.slug} size={44} link={false} toneClass="bg-fuchsia-500/15 text-fuchsia-200" />}
           />
-          <WorldShortcut href="/vault" title="Releases + DNA" detail="Music · lyrics" icon={Dna} tone="pink" status={<PortalStatus tone="pink">Open Vault</PortalStatus>} />
+          <WorldShortcut
+            onClick={() => setReleaseCatalogOpen(true)}
+            title="Releases + DNA"
+            detail="Music · lyrics"
+            icon={Dna}
+            tone="pink"
+            status={<PortalStatus tone="pink">Release Catalog</PortalStatus>}
+          />
           <WorldShortcut href="/library" title="Library" detail="Music you unlocked" icon={Library} tone="amber" status={<PortalStatus tone="amber">Saved music</PortalStatus>} />
           <WorldShortcut href="/friends" title="Your Circle" detail="Friends & messages" icon={Users} tone="cyan" status={<PortalStatus tone="cyan">{friendCount} friend{friendCount === 1 ? '' : 's'}</PortalStatus>} />
         </div>
@@ -458,6 +472,7 @@ export function ScenePortalHub({
         <QuickAction href="/supporters" title="Support Circle" detail="Followers · Inner Circle" icon={HeartHandshake} tone="border-fuchsia-400/30 text-fuchsia-300" />
         <QuickAction title="New Release" detail="Publish a song or album" icon={Disc3} tone="border-sky-300/40 text-sky-200" />
       </div>
+      <ReleaseCatalogDialog open={releaseCatalogOpen} onOpenChange={setReleaseCatalogOpen} />
     </section>
   );
 }

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
+  canonicalDnaShareIds,
   fitAlbumReleasePayload,
   groupVaultReleases,
   isHouseReleaseDocument,
@@ -53,6 +54,23 @@ assert.deepEqual(
   { releaseLive: true, dnaLive: false },
   'a release payload copied from a DNA-enabled Vault track must not become a duplicate DNA page',
 );
+const canonicalDna = canonicalDnaShareIds([
+  {
+    id: 'OLD-LIVE',
+    data: { ownerId: 'u', type: 'track', projectId: 't', dnaStatus: 'live', updatedAt: '2026-01-01' },
+  },
+  {
+    id: 'NEW-OFFLINE',
+    data: { ownerId: 'u', type: 'track', projectId: 't', dnaStatus: 'unlisted', updatedAt: '2026-01-02' },
+  },
+  {
+    id: 'MUSIC-ONLY',
+    data: { ownerId: 'u', type: 'track', projectId: 't', releaseStatus: 'live', updatedAt: '2026-01-03', data: { dropAudio: audio } },
+  },
+]);
+assert.equal(canonicalDna.has('OLD-LIVE'), false, 'an older live DNA snapshot cannot resurrect');
+assert.equal(canonicalDna.has('NEW-OFFLINE'), true, 'the newest offline DNA snapshot remains the tombstone');
+assert.equal(canonicalDna.has('MUSIC-ONLY'), false, 'a separate commerce snapshot never replaces DNA visibility');
 assert.deepEqual(
   shareDocumentVisibility({ dnaStatus: 'live', data: { dropAudio: audio } }),
   { releaseLive: false, dnaLive: true },

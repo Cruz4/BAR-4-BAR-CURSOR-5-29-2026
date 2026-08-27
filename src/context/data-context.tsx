@@ -9,7 +9,7 @@ import { loadOrCreateGuestAlbum, persistGuestTrack } from '@/lib/guest-track-ses
 
 import { db } from '@/lib/firebase/client/firebase';
 import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
-import { doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch, deleteField } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
 import { stripForFirestore } from '@/lib/utils';
 import { deleteVoiceStorage } from '@/lib/profile/voice-notes';
 import { countNonEmptyBars } from '@/lib/gamification/bar-count';
@@ -934,30 +934,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     [resolveTrackForDrop, updateAlbum, updateTrack]
   );
 
-  const clearProjectShareId = useCallback(
-    async (type: 'album' | 'track', id: string, albumId?: string) => {
-      if (type === 'album') {
-        updateAlbum(id, { shareId: undefined, dnaStatus: 'unlisted' });
-        if (user) {
-          await setDoc(doc(db, 'users', user.id, 'albums', id), { shareId: deleteField(), dnaStatus: 'unlisted' }, { merge: true });
-        }
-        return;
-      }
-      const resolved = resolveTrackForDrop(id, albumId);
-      if (resolved.album) {
-        updateTrack(resolved.album.id, id, { shareId: undefined, dnaStatus: 'unlisted' });
-        if (user) {
-          await setDoc(
-            doc(db, 'users', user.id, 'albums', resolved.album.id, 'tracks', id),
-            { shareId: deleteField(), dnaStatus: 'unlisted' },
-            { merge: true }
-          );
-        }
-      }
-    },
-    [resolveTrackForDrop, updateAlbum, updateTrack, user]
-  );
-
   const updateDNA = useCallback(
     async (type: 'album' | 'track', id: string, shareId: string, options?: { albumId?: string }): Promise<string> => {
       if (!user) throw new Error('Artist Session Required.');
@@ -1045,29 +1021,36 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const revokeDNA = useCallback(
     async (type: 'album' | 'track', id: string, shareId: string, options?: { albumId?: string }) => {
       if (!user) throw new Error('Artist Session Required.');
-      const shareRef = doc(db, 'shares', shareId);
-      const existing = await getDoc(shareRef);
-      if (existing.exists() && existing.data()?.ownerId !== user.id) {
-        throw new Error('You can only take offline your own DNA Drops.');
+      const firebaseUser = await waitForAuthUser();
+      if (!firebaseUser || firebaseUser.uid !== user.id) {
+        throw new Error('Your secure session changed. Sign in again and retry.');
       }
-      if (existing.exists()) {
-        const existingData = existing.data()?.data;
-        await setDoc(
-          shareRef,
-          {
-            dnaStatus: 'unlisted',
-            updatedAt: new Date().toISOString(),
-            data: {
-              ...(existingData && typeof existingData === 'object' ? existingData : {}),
-              dnaStatus: 'unlisted',
-            },
-          },
-          { merge: true }
-        );
+      const response = await fetch('/api/dna/manage', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${await firebaseUser.getIdToken()}`,
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          type,
+          projectId: id,
+          shareId,
+          ...(options?.albumId ? { albumId: options.albumId } : {}),
+        }),
+      });
+      const result = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(result.error || 'Could not take this DNA Drop offline.');
+      if (type === 'album') {
+        updateAlbum(id, { shareId: undefined, dnaStatus: 'unlisted' });
+      } else {
+        const resolved = resolveTrackForDrop(id, options?.albumId);
+        if (resolved.album) {
+          updateTrack(resolved.album.id, id, { shareId: undefined, dnaStatus: 'unlisted' });
+        }
       }
-      await clearProjectShareId(type, id, options?.albumId);
     },
-    [user, clearProjectShareId]
+    [user, resolveTrackForDrop, updateAlbum, updateTrack]
   );
 
   const applyImportedStyle = useCallback(

@@ -70,7 +70,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { hasReleaseAudio } from '@/lib/release-management';
 import { manageRelease } from '@/lib/release-management-client';
 
 export default function SharedProjectPage() {
@@ -92,12 +91,17 @@ export default function SharedProjectPage() {
         const fetchShare = async () => {
             if (!authReady) return;
             const docRef = doc(db, 'shares', shareId);
-            const snap = await getDoc(docRef);
+            const [snap, visibilityResponse] = await Promise.all([
+                getDoc(docRef),
+                fetch(`/api/dna/manage?shareId=${encodeURIComponent(shareId)}`, { cache: 'no-store' }),
+            ]);
             if (snap.exists()) {
                 const data = snap.data() as ProjectShare;
-                const hiddenDna = data.dnaStatus === 'unlisted' || data.data?.dnaStatus === 'unlisted';
-                const keepsBuyerPage = hasReleaseAudio(data.data || {});
-                if (!hiddenDna || keepsBuyerPage || user?.id === data.ownerId) {
+                const visibility = visibilityResponse.ok
+                    ? await visibilityResponse.json() as { dnaLive?: boolean; releaseLive?: boolean }
+                    : null;
+                const isPublic = Boolean(visibility?.dnaLive || visibility?.releaseLive);
+                if (isPublic || user?.id === data.ownerId) {
                     setShare(data);
                     updateDoc(docRef, { views: increment(1) }).catch(() => undefined);
                 } else {
