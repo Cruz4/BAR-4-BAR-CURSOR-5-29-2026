@@ -47,6 +47,7 @@ import { canUserAddTrack, FreeTrackLimitError, hasUnlimitedCatalog, isProOrTrial
 import { computeRotatedFreeEditableTrackIds } from '@/lib/tier-limits';
 import { persistFreeEditableTrackIds } from '@/lib/free-editable-tracks';
 import { createCatalogAlbum, createCatalogTrack } from '@/lib/catalog-client';
+import { orderAlbumTracks, trackOrderFromTracks } from '@/lib/album-track-order';
 
 const UNASSIGNED_ALBUM_ID = 'unassigned';
 
@@ -586,7 +587,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         
         for (const albumDoc of albumsSnap.docs) {
           const tracksSnap = await getDocs(collection(db, 'users', userId, 'albums', albumDoc.id, 'tracks'));
-          loadedAlbums.push({ ...albumDoc.data(), id: albumDoc.id, tracks: tracksSnap.docs.map(d => ({ ...d.data(), id: d.id })) } as Album);
+          const albumData = albumDoc.data() as Omit<Album, 'id' | 'tracks'> & { tracks?: unknown };
+          const tracks = tracksSnap.docs.map(d => ({ ...d.data(), id: d.id })) as Track[];
+          const orderedTracks = orderAlbumTracks(tracks, albumData);
+          loadedAlbums.push({
+            ...albumData,
+            id: albumDoc.id,
+            tracks: orderedTracks,
+            trackOrder: trackOrderFromTracks(orderedTracks),
+          } as Album);
         }
 
         // Loose tracks may exist under albums/unassigned/tracks without an album doc.
@@ -792,13 +801,20 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const updateAlbum = useCallback((albumId: string, updates: Partial<Album>) => {
     const now = new Date().toISOString();
+    const localUpdates: Partial<Album> = Array.isArray(updates.tracks)
+      ? { ...updates, trackOrder: trackOrderFromTracks(updates.tracks) }
+      : updates;
+    const persistedUpdates: Partial<Album> = { ...localUpdates };
+    // Track bodies live in their subcollection. Persist only their lightweight
+    // order on the album document so reordering cannot duplicate whole sheets.
+    delete persistedUpdates.tracks;
     setAlbums((prev) => {
-      const next = prev.map((a) => (a.id === albumId ? { ...a, ...updates, updatedAt: now } : a));
+      const next = prev.map((a) => (a.id === albumId ? { ...a, ...localUpdates, updatedAt: now } : a));
       albumsRef.current = next;
       return next;
     });
     if (user) {
-      pendingAlbumUpdates.current[albumId] = { ...pendingAlbumUpdates.current[albumId], ...updates };
+      pendingAlbumUpdates.current[albumId] = { ...pendingAlbumUpdates.current[albumId], ...persistedUpdates };
       if (isBrowserOffline()) {
         const count = mergeAlbumOutbox(user.id, albumId, pendingAlbumUpdates.current[albumId]);
         setSyncPendingCount(count);

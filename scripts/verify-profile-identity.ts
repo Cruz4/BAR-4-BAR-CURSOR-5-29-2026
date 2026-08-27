@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict';
 import { normalizeArtistHomeConfig } from '../src/lib/profile/modules';
-import { normalizeSoundIdentity } from '../src/lib/profile/sound-identity';
+import {
+  normalizeSoundIdentity,
+  PUBLIC_GENRE_STYLE_OPTIONS,
+  PUBLIC_MOOD_OPTIONS,
+} from '../src/lib/profile/sound-identity';
+import { discoverySearchHref } from '../src/lib/discovery-search';
+import {
+  publicMusicMetadataFromTrack,
+  publicMusicMetadataSearchText,
+} from '../src/lib/music-discovery-metadata';
 import {
   isValidProfileSlug,
   legacyProfileAppRedirect,
@@ -21,6 +30,29 @@ assert.deepEqual(identity?.genres, ['Hip-Hop', 'R&B', 'Soul']);
 assert.equal(identity?.moods?.length, 5);
 assert.equal(identity?.influences?.length, 5);
 assert.equal(identity?.region, 'Brooklyn / Atlanta');
+assert.equal(PUBLIC_GENRE_STYLE_OPTIONS.includes('Fog Music'), true);
+assert.equal(PUBLIC_MOOD_OPTIONS.includes('Melodic'), true);
+assert.equal(
+  discoverySearchHref({ resultKinds: ['person'], genre: 'Fog Music' }),
+  '/discover?types=person&genre=Fog+Music'
+);
+
+const trackMetadata = publicMusicMetadataFromTrack({
+  vibe: {
+    enabled: true,
+    genre: 'Fog Music',
+    feeling: ['Melodic', 'Nocturnal'],
+    tempoBPM: 88,
+    instrumentation: 'Granular choir, muted drums',
+  },
+  sharedAlbumContext: { title: 'Mirror', shareId: 'MIRROR-DNA' },
+  specialInstructions: 'Private workstation direction',
+});
+assert.deepEqual(trackMetadata.genreStyles, ['Fog Music']);
+assert.deepEqual(trackMetadata.moods, ['Melodic', 'Nocturnal']);
+assert.equal(trackMetadata.bpm, 88);
+assert.match(publicMusicMetadataSearchText(trackMetadata), /Fog Music Melodic Nocturnal 88 BPM/);
+assert.doesNotMatch(publicMusicMetadataSearchText(trackMetadata), /Private workstation direction/);
 
 const migrated = normalizeArtistHomeConfig({
   version: 1,

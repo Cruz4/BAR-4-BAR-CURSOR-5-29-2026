@@ -1,13 +1,18 @@
 import type { DropPrice } from '@/lib/drop-commerce';
+import type { PublicMusicMetadata } from '@/lib/music-discovery-metadata';
 import type { PressingConfig } from '@/lib/profile/pressing';
 
 export function pressedSongHref(
   shareId: string,
-  options: { referralPostId?: string } = {}
+  options: { referralPostId?: string; trackId?: string } = {}
 ): string {
   const base = `/song/${encodeURIComponent(shareId)}`;
+  const query = new URLSearchParams();
+  const trackId = options.trackId?.trim();
   const referralPostId = options.referralPostId?.trim();
-  return referralPostId ? `${base}?refPost=${encodeURIComponent(referralPostId)}` : base;
+  if (trackId) query.set('trackId', trackId);
+  if (referralPostId) query.set('refPost', referralPostId);
+  return query.size ? `${base}?${query.toString()}` : base;
 }
 
 export type PressedSongSupporter = {
@@ -22,10 +27,20 @@ export type PressedSongSupporter = {
 
 export type PressedSongSummary = {
   shareId: string;
+  trackId?: string;
+  albumTitle?: string;
   ownerId: string;
   title: string;
   hasAudio: true;
+  releaseLive: boolean;
+  currentRelease?: {
+    shareId: string;
+    trackId: string;
+    title: string;
+    albumTitle: string;
+  };
   houseRelease?: boolean;
+  metadata: PublicMusicMetadata;
   price: DropPrice;
   releasedAt: string;
   artist: {

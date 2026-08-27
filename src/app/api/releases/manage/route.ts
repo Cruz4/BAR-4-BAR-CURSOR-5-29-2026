@@ -10,10 +10,15 @@ import type { Album, StyleProfile, Track, User } from '@/lib/types';
 import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
 import { isProOrTrial } from '@/lib/subscription';
 import { AdminAuthError, verifyAdminRequest } from '@/lib/server/admin-auth';
+import {
+  fitAlbumReleasePayload,
+  RELEASE_SHARE_PAYLOAD_BUDGET_BYTES,
+} from '@/lib/release-management';
+import { orderAlbumTracks, trackOrderFromTracks } from '@/lib/album-track-order';
 
 export const runtime = 'nodejs';
 
-type ManageAction = 'save-draft' | 'publish' | 'unpublish';
+type ManageAction = 'save-draft' | 'publish' | 'unpublish' | 'remove';
 
 function safeId(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= 200 && !value.includes('/');
@@ -33,7 +38,7 @@ export async function POST(req: Request) {
     const userId = typeof body.userId === 'string' ? body.userId : '';
     const kind = body.kind === 'album' || body.kind === 'track' ? body.kind : null;
     const action: ManageAction | null =
-      body.action === 'save-draft' || body.action === 'publish' || body.action === 'unpublish'
+      body.action === 'save-draft' || body.action === 'publish' || body.action === 'unpublish' || body.action === 'remove'
         ? body.action
         : null;
     const albumId = body.albumId;
@@ -93,11 +98,17 @@ export async function POST(req: Request) {
       }
     }
 
+    const albumData = albumSnap.data() as Omit<Album, 'tracks'> & { tracks?: unknown };
+    const orderedTracks = orderAlbumTracks(
+      tracksSnap.docs.map((doc) => ({ ...(doc.data() as Track), id: doc.id, albumId })),
+      albumData,
+    );
     const album = {
-      ...(albumSnap.data() as Omit<Album, 'tracks'>),
+      ...albumData,
       id: albumId,
       ownerId: userId,
-      tracks: tracksSnap.docs.map((doc) => ({ ...(doc.data() as Track), id: doc.id, albumId })),
+      tracks: orderedTracks,
+      trackOrder: trackOrderFromTracks(orderedTracks),
     } as Album;
     const track = kind === 'track' ? album.tracks.find((item) => item.id === trackId) : undefined;
     if (kind === 'track' && (!track || !trackRef)) {
@@ -119,7 +130,7 @@ export async function POST(req: Request) {
       const legacyHasAudio = kind === 'track'
         ? Boolean(normalizeDropAudio(payload.dropAudio))
         : Array.isArray(payload.tracks) && payload.tracks.some((row) => normalizeDropAudio((row as Record<string, unknown>).dropAudio));
-      if (legacyHasAudio) releaseShareId = target.shareId;
+      if (legacyHasAudio && !legacy.data()?.releaseRemovedAt) releaseShareId = target.shareId;
     }
 
     const now = new Date().toISOString();
@@ -178,6 +189,61 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, releaseStatus: 'unlisted', releaseShareId: releaseShareId || null, houseRelease, houseLibraryNotice });
     }
 
+    if (action === 'remove') {
+      const [artistHomeSnap, publicProfilesSnap] = await Promise.all([
+        db.doc(`users/${userId}/gamification/artistHome`).get(),
+        db.collection('publicProfiles').where('userId', '==', userId).get(),
+      ]);
+      const batch = db.batch();
+      batch.set(targetRef, {
+        releaseStatus: 'draft',
+        releaseShareId: FieldValue.delete(),
+        releaseSnapshotAt: FieldValue.delete(),
+        houseRelease: false,
+        houseLibraryNotice: false,
+        ...(hideDna && target.shareId ? { dnaStatus: 'unlisted' } : {}),
+        updatedAt: now,
+      }, { merge: true });
+      if (releaseShareId) {
+        const sameAsDna = hideDna && target.shareId === releaseShareId;
+        batch.set(db.doc(`shares/${releaseShareId}`), {
+          releaseStatus: 'unlisted',
+          releaseRemovedAt: now,
+          unpressedAt: now,
+          houseRelease: false,
+          houseLibraryNotice: false,
+          updatedAt: now,
+          'data.releaseStatus': 'unlisted',
+          'data.houseRelease': false,
+          ...(sameAsDna ? { dnaStatus: 'unlisted', 'data.dnaStatus': 'unlisted' } : {}),
+        }, { merge: true });
+      }
+      if (hideDna && target.shareId && target.shareId !== releaseShareId) {
+        batch.set(db.doc(`shares/${target.shareId}`), {
+          dnaStatus: 'unlisted',
+          updatedAt: now,
+          'data.dnaStatus': 'unlisted',
+        }, { merge: true });
+      }
+      if (releaseShareId && artistHomeSnap.data()?.featured?.featuredTrack?.shareId === releaseShareId) {
+        batch.update(artistHomeSnap.ref, { 'featured.featuredTrack': FieldValue.delete(), updatedAt: now });
+        for (const profile of publicProfilesSnap.docs) {
+          if (profile.data()?.artistHome?.featured?.featuredTrack?.shareId === releaseShareId) {
+            batch.update(profile.ref, { 'artistHome.featured.featuredTrack': FieldValue.delete(), updatedAt: now });
+          }
+        }
+      }
+      await batch.commit();
+      return NextResponse.json({
+        ok: true,
+        removed: true,
+        releaseStatus: 'draft',
+        releaseShareId: null,
+        houseRelease: false,
+        houseLibraryNotice: false,
+      });
+    }
+
     const audioTracks = kind === 'album'
       ? album.tracks.filter((item) => normalizeDropAudio(item.dropAudio))
       : [];
@@ -206,11 +272,24 @@ export async function POST(req: Request) {
       updatedAt: now,
     };
     const snapTarget = { ...target, ...privatePatch };
-    const payload = stripForFirestore(
+    let payload = stripForFirestore(
       kind === 'album'
         ? buildAlbumDropPayload({ ...album, ...privatePatch }, style)
         : buildTrackDropPayload(snapTarget as Track, album, style)
     ) as unknown as Record<string, unknown>;
+    let releaseSnapshotCompacted = false;
+    let releaseCoverOmitted = false;
+    if (kind === 'album') {
+      const fitted = fitAlbumReleasePayload(payload);
+      payload = fitted.payload;
+      releaseSnapshotCompacted = fitted.compacted;
+      releaseCoverOmitted = fitted.coverOmitted;
+      if (fitted.byteSize > RELEASE_SHARE_PAYLOAD_BUDGET_BYTES) {
+        return NextResponse.json({
+          error: 'This album release is still too large to publish. Shorten unusually large track metadata and try again.',
+        }, { status: 413 });
+      }
+    }
     payload.releaseShareId = releaseShareId;
     payload.releaseStatus = 'live';
     payload.releaseSnapshotAt = now;
@@ -238,6 +317,7 @@ export async function POST(req: Request) {
       ownerName: typeof userSnap.data()?.displayName === 'string' ? userSnap.data()!.displayName : 'Artist',
       data: payload,
       releaseStatus: 'live',
+      releaseRemovedAt: FieldValue.delete(),
       houseRelease,
       houseLibraryNotice,
       houseLibraryNoticeAt: houseLibraryNoticeAt || FieldValue.delete(),
@@ -249,7 +329,15 @@ export async function POST(req: Request) {
       ...shareDocCommerceFlags(kind, payload),
     }, { merge: true });
     await batch.commit();
-    return NextResponse.json({ ok: true, releaseStatus: 'live', releaseShareId, houseRelease, houseLibraryNotice });
+    return NextResponse.json({
+      ok: true,
+      releaseStatus: 'live',
+      releaseShareId,
+      houseRelease,
+      houseLibraryNotice,
+      releaseSnapshotCompacted,
+      releaseCoverOmitted,
+    });
   } catch (error) {
     console.error('[releases/manage]', error);
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Release update failed.' }, { status: 500 });

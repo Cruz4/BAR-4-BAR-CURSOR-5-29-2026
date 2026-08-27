@@ -3,16 +3,24 @@
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
+  Album,
+  ArrowDownAZ,
+  BadgeDollarSign,
+  CalendarDays,
+  Check,
   ChevronDown,
   ChevronRight,
+  Clock3,
   Disc3,
   Download,
   ExternalLink,
   FolderOpen,
   Gift,
   Layers2,
+  ListMusic,
   ListPlus,
   Loader,
+  Lock,
   Pause,
   Pencil,
   Play,
@@ -21,23 +29,19 @@ import {
   Repeat1,
   Search,
   Settings2,
+  SlidersHorizontal,
+  Sparkles,
   Shuffle,
   SkipBack,
   SkipForward,
   Trash2,
   Unlink,
+  UserRound,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -99,6 +103,42 @@ import {
 import { manageRelease } from '@/lib/release-management-client';
 import { DataContext } from '@/context/data-context';
 
+const LIBRARY_PREFERENCES_KEY = 'b4b:library-organizer:v1';
+const DECK_VIEW_OPTIONS: Array<{
+  value: DeckViewMode;
+  label: string;
+  detail: string;
+  icon: React.ComponentType<{ className?: string }>;
+}> = [
+  { value: 'browse', label: 'Artist shelves', detail: 'Artist → release → track', icon: FolderOpen },
+  { value: 'list', label: 'Track stack', detail: 'One quick playable list', icon: Layers2 },
+];
+const DECK_SORT_OPTIONS: Array<{
+  value: DeckSort;
+  label: string;
+  detail: string;
+  icon: React.ComponentType<{ className?: string }>;
+}> = [
+  { value: 'release', label: 'Tracklist order', detail: 'Keep albums in artist order', icon: ListMusic },
+  { value: 'fresh', label: 'Newest unlocks', detail: 'Latest additions first', icon: Sparkles },
+  { value: 'played', label: 'Recently spun', detail: 'What you played last', icon: Clock3 },
+  { value: 'az', label: 'Song title A–Z', detail: 'Alphabetical by track', icon: ArrowDownAZ },
+  { value: 'artist', label: 'Artist name', detail: 'Alphabetical by artist', icon: UserRound },
+  { value: 'paid', label: 'Highest support', detail: 'Largest purchase first', icon: BadgeDollarSign },
+];
+const DECK_GROUP_OPTIONS: Array<{
+  value: DeckGroup;
+  label: string;
+  detail: string;
+  icon: React.ComponentType<{ className?: string }>;
+}> = [
+  { value: 'kind', label: 'Release type', detail: 'Yours, albums, and singles', icon: Album },
+  { value: 'artist', label: 'Artist', detail: 'A section for each artist', icon: UserRound },
+  { value: 'access', label: 'How it unlocked', detail: 'House, purchased, and free', icon: Gift },
+  { value: 'month', label: 'Month added', detail: 'A timeline of your Library', icon: CalendarDays },
+  { value: 'none', label: 'No sections', detail: 'One uninterrupted stack', icon: ListMusic },
+];
+
 function PressingPlate({
   item,
   playing,
@@ -143,14 +183,16 @@ export function DropDeck({
   userId,
   items,
   pressing,
+  canDownloadOffline,
 }: {
   userId: string;
   items: DropLibraryItem[];
   pressing?: PressingConfig | null;
+  canDownloadOffline: boolean;
 }) {
   const { toast } = useToast();
   const { updateAlbum, updateTrack } = useContext(DataContext);
-  const { crates } = useDropCrates(userId);
+  const { crates, loaded: cratesLoaded } = useDropCrates(userId);
   const {
     current,
     playing,
@@ -172,10 +214,11 @@ export function DropDeck({
   } = useDropPlayer();
 
   const [query, setQuery] = useState('');
-  const [viewMode, setViewMode] = useState<DeckViewMode>('list');
-  const [sort, setSort] = useState<DeckSort>('fresh');
+  const [viewMode, setViewMode] = useState<DeckViewMode>('browse');
+  const [sort, setSort] = useState<DeckSort>('release');
   const [group, setGroup] = useState<DeckGroup>('kind');
   const [crateId, setCrateId] = useState<string>('all');
+  const [preferencesOwner, setPreferencesOwner] = useState<string | null>(null);
   const [played, setPlayed] = useState(readPlayedMap);
   const [shuffle, setShuffle] = useState(false);
   const [shuffleKeys, setShuffleKeys] = useState<string[] | null>(null);
@@ -196,7 +239,47 @@ export function DropDeck({
     [pressing]
   );
 
+  useEffect(() => {
+    const validViews: DeckViewMode[] = ['browse', 'list'];
+    const validSorts: DeckSort[] = ['release', 'fresh', 'played', 'az', 'artist', 'paid'];
+    const validGroups: DeckGroup[] = ['kind', 'artist', 'access', 'month', 'none'];
+    try {
+      const raw = localStorage.getItem(`${LIBRARY_PREFERENCES_KEY}:${userId}`);
+      const saved = raw ? JSON.parse(raw) as Record<string, unknown> : {};
+      if (validViews.includes(saved.viewMode as DeckViewMode)) setViewMode(saved.viewMode as DeckViewMode);
+      if (validSorts.includes(saved.sort as DeckSort)) setSort(saved.sort as DeckSort);
+      if (validGroups.includes(saved.group as DeckGroup)) setGroup(saved.group as DeckGroup);
+      setCrateId(typeof saved.crateId === 'string' && saved.crateId ? saved.crateId : 'all');
+    } catch {
+      setViewMode('browse');
+      setSort('release');
+      setGroup('kind');
+      setCrateId('all');
+    } finally {
+      setPreferencesOwner(userId);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (preferencesOwner !== userId) return;
+    try {
+      localStorage.setItem(
+        `${LIBRARY_PREFERENCES_KEY}:${userId}`,
+        JSON.stringify({ viewMode, sort, group, crateId }),
+      );
+    } catch {
+      /* Device preference storage is best-effort. */
+    }
+  }, [crateId, group, preferencesOwner, sort, userId, viewMode]);
+
+  useEffect(() => {
+    if (!cratesLoaded || crateId === 'all') return;
+    if (!crates.some((crate) => crate.id === crateId)) setCrateId('all');
+  }, [crateId, crates, cratesLoaded]);
+
   const activeCrate = crateId === 'all' ? null : crates.find((c) => c.id === crateId) ?? null;
+  const currentSortLabel = DECK_SORT_OPTIONS.find((option) => option.value === sort)?.label ?? 'Tracklist order';
+  const currentGroupLabel = DECK_GROUP_OPTIONS.find((option) => option.value === group)?.label ?? 'Release type';
 
   const playables = useMemo(() => {
     const visibleItems = items.filter((item) => !hiddenReleaseIds.has(item.shareId));
@@ -303,6 +386,10 @@ export function DropDeck({
 
   const toggleOffline = useCallback(async (item: DeckPlayable) => {
     if (offlineBusyKey) return;
+    if (!canDownloadOffline && !offlineKeys.has(item.key)) {
+      toast({ title: 'Studio Pro feature', description: 'Upgrade to save owned or purchased songs for offline play.' });
+      return;
+    }
     setOfflineBusyKey(item.key);
     try {
       if (offlineKeys.has(item.key)) {
@@ -330,7 +417,7 @@ export function DropDeck({
     } finally {
       setOfflineBusyKey(null);
     }
-  }, [offlineBusyKey, offlineKeys, toast, userId]);
+  }, [canDownloadOffline, offlineBusyKey, offlineKeys, toast, userId]);
 
   const unpressOwnRelease = useCallback(async (item: DeckPlayable) => {
     if (!item.own || !item.albumId || !window.confirm(`Take “${item.title}” offline? Existing buyers keep access, but it leaves public discovery and checkout.`)) return;
@@ -462,58 +549,103 @@ export function DropDeck({
                 className="border-fuchsia-500/25 bg-black/30 pl-9 font-code"
               />
             </div>
-            <div className="inline-flex h-10 items-center rounded-lg border border-fuchsia-500/25 bg-black/30 p-1">
-              <button
-                type="button"
-                onClick={() => setViewMode('list')}
-                className={cn(
-                  'inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[10px] font-bold uppercase tracking-[0.16em] transition-colors',
-                  viewMode === 'list'
-                    ? 'bg-fuchsia-500/25 text-fuchsia-100'
-                    : 'text-muted-foreground hover:text-fuchsia-100'
-                )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-10 w-full shrink-0 items-center gap-2 rounded-lg border border-fuchsia-400/35 bg-[linear-gradient(110deg,rgba(217,70,239,0.13),rgba(6,182,212,0.09))] px-3 text-left transition-colors hover:border-cyan-300/50 sm:w-auto sm:min-w-[230px]"
+                  aria-label="Organize Library"
+                >
+                  <SlidersHorizontal className="h-4 w-4 shrink-0 text-cyan-200" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-code text-[9px] font-bold uppercase tracking-[0.18em] text-fuchsia-200">
+                      Organize Library
+                    </span>
+                    <span className="block truncate text-[11px] text-foreground/75">
+                      {viewMode === 'browse' ? 'Artist shelves' : currentGroupLabel} · {currentSortLabel}
+                    </span>
+                  </span>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-[min(22rem,calc(100vw-2rem))] border-fuchsia-400/30 bg-slate-950/98 p-2 shadow-[0_20px_70px_rgba(0,0,0,0.65)]"
               >
-                <Layers2 className="h-3.5 w-3.5" /> List
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('browse')}
-                className={cn(
-                  'inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[10px] font-bold uppercase tracking-[0.16em] transition-colors',
-                  viewMode === 'browse'
-                    ? 'bg-cyan-500/20 text-cyan-100'
-                    : 'text-muted-foreground hover:text-cyan-100'
-                )}
-              >
-                <FolderOpen className="h-3.5 w-3.5" /> Browse
-              </button>
-            </div>
-            <Select value={sort} onValueChange={(v) => setSort(v as DeckSort)}>
-              <SelectTrigger className="w-full border-fuchsia-500/25 bg-black/30 sm:w-[160px]">
-                <SelectValue placeholder="Sort" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="fresh">Newest added</SelectItem>
-                <SelectItem value="played">Last spun</SelectItem>
-                <SelectItem value="az">Title A–Z</SelectItem>
-                <SelectItem value="artist">Artist</SelectItem>
-                <SelectItem value="paid">Paid first</SelectItem>
-              </SelectContent>
-            </Select>
-            {viewMode === 'list' ? (
-              <Select value={group} onValueChange={(v) => setGroup(v as DeckGroup)}>
-                <SelectTrigger className="w-full border-fuchsia-500/25 bg-black/30 sm:w-[160px]">
-                  <SelectValue placeholder="Group" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="kind">Singles / releases</SelectItem>
-                  <SelectItem value="artist">By artist</SelectItem>
-                  <SelectItem value="access">Bought / free</SelectItem>
-                  <SelectItem value="month">By month</SelectItem>
-                  <SelectItem value="none">Flat platter</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : null}
+                <DropdownMenuLabel className="font-code text-[9px] uppercase tracking-[0.2em] text-cyan-200">
+                  Library view
+                </DropdownMenuLabel>
+                {DECK_VIEW_OPTIONS.map((option) => {
+                  const Icon = option.icon;
+                  const active = viewMode === option.value;
+                  return (
+                    <DropdownMenuItem
+                      key={option.value}
+                      onSelect={() => setViewMode(option.value)}
+                      className={cn('items-start py-2.5', active && 'bg-cyan-500/10 text-cyan-50')}
+                    >
+                      <Icon className={cn('mt-0.5 h-4 w-4', active ? 'text-cyan-200' : 'text-muted-foreground')} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-bold">{option.label}</span>
+                        <span className="block text-[10px] text-muted-foreground">{option.detail}</span>
+                      </span>
+                      {active ? <Check className="mt-0.5 h-4 w-4 text-cyan-200" /> : null}
+                    </DropdownMenuItem>
+                  );
+                })}
+                <DropdownMenuSeparator className="bg-white/10" />
+                <DropdownMenuLabel className="font-code text-[9px] uppercase tracking-[0.2em] text-fuchsia-200">
+                  Play order
+                </DropdownMenuLabel>
+                {DECK_SORT_OPTIONS.map((option) => {
+                  const Icon = option.icon;
+                  const active = sort === option.value;
+                  return (
+                    <DropdownMenuItem
+                      key={option.value}
+                      onSelect={() => setSort(option.value)}
+                      className={cn('items-start py-2.5', active && 'bg-fuchsia-500/10 text-fuchsia-50')}
+                    >
+                      <Icon className={cn('mt-0.5 h-4 w-4', active ? 'text-fuchsia-200' : 'text-muted-foreground')} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-bold">{option.label}</span>
+                        <span className="block text-[10px] text-muted-foreground">{option.detail}</span>
+                      </span>
+                      {active ? <Check className="mt-0.5 h-4 w-4 text-fuchsia-200" /> : null}
+                    </DropdownMenuItem>
+                  );
+                })}
+                {viewMode === 'list' ? (
+                  <>
+                    <DropdownMenuSeparator className="bg-white/10" />
+                    <DropdownMenuLabel className="font-code text-[9px] uppercase tracking-[0.2em] text-amber-200">
+                      Stack sections
+                    </DropdownMenuLabel>
+                    {DECK_GROUP_OPTIONS.map((option) => {
+                      const Icon = option.icon;
+                      const active = group === option.value;
+                      return (
+                        <DropdownMenuItem
+                          key={option.value}
+                          onSelect={() => setGroup(option.value)}
+                          className={cn('items-start py-2.5', active && 'bg-amber-500/10 text-amber-50')}
+                        >
+                          <Icon className={cn('mt-0.5 h-4 w-4', active ? 'text-amber-200' : 'text-muted-foreground')} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-xs font-bold">{option.label}</span>
+                            <span className="block text-[10px] text-muted-foreground">{option.detail}</span>
+                          </span>
+                          {active ? <Check className="mt-0.5 h-4 w-4 text-amber-200" /> : null}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </>
+                ) : null}
+                <p className="px-2 pb-1 pt-2 font-code text-[9px] leading-relaxed text-muted-foreground">
+                  Saved automatically on this device.
+                </p>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
@@ -534,7 +666,7 @@ export function DropDeck({
                   : 'border-white/10 bg-black/20 text-muted-foreground hover:border-fuchsia-400/30'
               )}
             >
-              <span className="font-headline font-bold uppercase">All drops</span>
+              <span className="font-headline font-bold uppercase">Full Library</span>
               <span className="mt-0.5 block font-code text-[10px]">{items.length} unlocked</span>
             </button>
             {crates.map((crate) => (
@@ -620,9 +752,17 @@ export function DropDeck({
               <PressingPlate item={current} playing={playing} />
             </DropVisualizer>
             <div className="mt-4 min-w-0">
-              <p className="truncate font-headline text-2xl font-bold uppercase">
-                {current?.title || 'Nothing on the plate'}
-              </p>
+              {current ? (
+                <Link
+                  href={current.detailsHref}
+                  className="block truncate font-headline text-2xl font-bold uppercase transition-colors hover:text-fuchsia-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-300/60"
+                  title={`Open ${current.title}`}
+                >
+                  {current.title}
+                </Link>
+              ) : (
+                <p className="truncate font-headline text-2xl font-bold uppercase">Nothing on the plate</p>
+              )}
               <p className="truncate font-code text-xs uppercase tracking-wide text-muted-foreground">
                 {current
                   ? `${current.artistName}${current.albumTitle ? ` · ${current.albumTitle}` : ''}`
@@ -687,7 +827,7 @@ export function DropDeck({
               </Button>
               {current && (
                 <Button type="button" size="icon" variant="ghost" asChild>
-                  <Link href={current.scope === 'album' ? `/share/${current.shareId}` : `/song/${current.shareId}`} aria-label="Open release page">
+                  <Link href={current.detailsHref} aria-label="Open song page">
                     <ExternalLink className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -794,6 +934,11 @@ export function DropDeck({
                                                 else playItem(item);
                                               }}
                                             >
+                                              {item.trackNumber ? (
+                                                <span className="w-5 shrink-0 text-right font-code text-[10px] font-bold tabular-nums text-cyan-200/70">
+                                                  {String(item.trackNumber).padStart(2, '0')}
+                                                </span>
+                                              ) : null}
                                               <span
                                                 className={cn(
                                                   'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border',
@@ -860,7 +1005,7 @@ export function DropDeck({
                                                       Update release
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem asChild>
-                                                      <Link href={item.scope === 'album' ? `/share/${item.shareId}` : `/song/${item.shareId}`}>
+                                                      <Link href={item.detailsHref}>
                                                         <ExternalLink className="h-4 w-4" />
                                                         Open drop
                                                       </Link>
@@ -877,19 +1022,25 @@ export function DropDeck({
                                                   </>
                                                 )}
                                                 <DropdownMenuLabel>Offline on this device</DropdownMenuLabel>
-                                                <DropdownMenuItem
-                                                  disabled={offlineBusyKey === item.key}
-                                                  onClick={() => void toggleOffline(item)}
-                                                >
-                                                  {offlineBusyKey === item.key ? (
-                                                    <Loader className="h-4 w-4 animate-spin" />
-                                                  ) : offlineKeys.has(item.key) ? (
-                                                    <Trash2 className="h-4 w-4" />
-                                                  ) : (
-                                                    <Download className="h-4 w-4" />
-                                                  )}
-                                                  {offlineKeys.has(item.key) ? 'Remove offline copy' : 'Download for offline'}
-                                                </DropdownMenuItem>
+                                                {!canDownloadOffline && !offlineKeys.has(item.key) ? (
+                                                  <DropdownMenuItem asChild className="text-fuchsia-300 focus:text-fuchsia-200">
+                                                    <Link href="/pricing"><Lock className="h-4 w-4" /> Studio Pro · offline play</Link>
+                                                  </DropdownMenuItem>
+                                                ) : (
+                                                  <DropdownMenuItem
+                                                    disabled={offlineBusyKey === item.key}
+                                                    onClick={() => void toggleOffline(item)}
+                                                  >
+                                                    {offlineBusyKey === item.key ? (
+                                                      <Loader className="h-4 w-4 animate-spin" />
+                                                    ) : offlineKeys.has(item.key) ? (
+                                                      <Trash2 className="h-4 w-4" />
+                                                    ) : (
+                                                      <Download className="h-4 w-4" />
+                                                    )}
+                                                    {offlineKeys.has(item.key) ? 'Remove offline copy' : 'Download for offline'}
+                                                  </DropdownMenuItem>
+                                                )}
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuLabel>Add to crate</DropdownMenuLabel>
                                                 {crates.length === 0 && (
@@ -967,6 +1118,11 @@ export function DropDeck({
                                   else playItem(item);
                                 }}
                               >
+                                {item.trackNumber ? (
+                                  <span className="w-5 shrink-0 text-right font-code text-[10px] font-bold tabular-nums text-cyan-200/70">
+                                    {String(item.trackNumber).padStart(2, '0')}
+                                  </span>
+                                ) : null}
                                 <span
                                   className={cn(
                                     'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border',
@@ -1033,7 +1189,7 @@ export function DropDeck({
                                         Update release
                                       </DropdownMenuItem>
                                       <DropdownMenuItem asChild>
-                                        <Link href={item.scope === 'album' ? `/share/${item.shareId}` : `/song/${item.shareId}`}>
+                                        <Link href={item.detailsHref}>
                                           <ExternalLink className="h-4 w-4" />
                                           Open drop
                                         </Link>
@@ -1050,19 +1206,25 @@ export function DropDeck({
                                     </>
                                   )}
                                   <DropdownMenuLabel>Offline on this device</DropdownMenuLabel>
-                                  <DropdownMenuItem
-                                    disabled={offlineBusyKey === item.key}
-                                    onClick={() => void toggleOffline(item)}
-                                  >
-                                    {offlineBusyKey === item.key ? (
-                                      <Loader className="h-4 w-4 animate-spin" />
-                                    ) : offlineKeys.has(item.key) ? (
-                                      <Trash2 className="h-4 w-4" />
-                                    ) : (
-                                      <Download className="h-4 w-4" />
-                                    )}
-                                    {offlineKeys.has(item.key) ? 'Remove offline copy' : 'Download for offline'}
-                                  </DropdownMenuItem>
+                                  {!canDownloadOffline && !offlineKeys.has(item.key) ? (
+                                    <DropdownMenuItem asChild className="text-fuchsia-300 focus:text-fuchsia-200">
+                                      <Link href="/pricing"><Lock className="h-4 w-4" /> Studio Pro · offline play</Link>
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem
+                                      disabled={offlineBusyKey === item.key}
+                                      onClick={() => void toggleOffline(item)}
+                                    >
+                                      {offlineBusyKey === item.key ? (
+                                        <Loader className="h-4 w-4 animate-spin" />
+                                      ) : offlineKeys.has(item.key) ? (
+                                        <Trash2 className="h-4 w-4" />
+                                      ) : (
+                                        <Download className="h-4 w-4" />
+                                      )}
+                                      {offlineKeys.has(item.key) ? 'Remove offline copy' : 'Download for offline'}
+                                    </DropdownMenuItem>
+                                  )}
                                   <DropdownMenuSeparator />
                                   <DropdownMenuLabel>Add to crate</DropdownMenuLabel>
                                   {crates.length === 0 && (

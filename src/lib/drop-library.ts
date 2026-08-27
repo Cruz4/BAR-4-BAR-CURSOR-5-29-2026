@@ -10,6 +10,8 @@ export type DropLibraryTrack = {
   id: string;
   title: string;
   durationSec?: number;
+  /** Individual live song page, when this album track was also released alone. */
+  releaseShareId?: string;
 };
 
 export type DropLibraryItem = DropLibraryEntry & {
@@ -22,7 +24,7 @@ export type DropLibraryItem = DropLibraryEntry & {
   albumId?: string;
 };
 
-export type DeckSort = 'fresh' | 'az' | 'artist' | 'paid' | 'played';
+export type DeckSort = 'release' | 'fresh' | 'az' | 'artist' | 'paid' | 'played';
 export type DeckGroup = 'none' | 'kind' | 'artist' | 'access' | 'month';
 export type DeckViewMode = 'list' | 'browse';
 
@@ -37,6 +39,8 @@ export type DeckPlayable = {
   scope: 'album' | 'track';
   albumTitle?: string;
   albumId?: string;
+  trackNumber?: number;
+  detailsHref: string;
   purchasedAt: string;
   amountCents: number;
   free?: boolean;
@@ -103,7 +107,7 @@ export function flattenLibraryItems(items: DropLibraryItem[]): DeckPlayable[] {
         ? item.tracks
         : null;
     if (albumTracks) {
-      for (const track of albumTracks) {
+      for (const [trackIndex, track] of albumTracks.entries()) {
         out.push({
           key: `${item.shareId}:${track.id}`,
           shareId: item.shareId,
@@ -115,6 +119,10 @@ export function flattenLibraryItems(items: DropLibraryItem[]): DeckPlayable[] {
           scope: 'album',
           albumTitle: item.title,
           albumId: item.projectId,
+          trackNumber: trackIndex + 1,
+          detailsHref: track.releaseShareId
+            ? `/song/${encodeURIComponent(track.releaseShareId)}`
+            : `/song/${encodeURIComponent(item.shareId)}?trackId=${encodeURIComponent(track.id)}`,
           purchasedAt: item.purchasedAt,
           amountCents: item.amountCents,
           free: item.free,
@@ -137,6 +145,7 @@ export function flattenLibraryItems(items: DropLibraryItem[]): DeckPlayable[] {
       durationSec: item.durationSec,
       scope: item.scope,
       albumId: item.albumId,
+      detailsHref: `/song/${encodeURIComponent(item.shareId)}`,
       purchasedAt: item.purchasedAt,
       amountCents: item.amountCents,
       free: item.free,
@@ -172,6 +181,7 @@ export function sortPlayables(
   played: DeckPlayedMap
 ): DeckPlayable[] {
   const next = [...items];
+  if (sort === 'release') return next;
   next.sort((a, b) => {
     if (sort === 'az') return cmpText(a.title, b.title) || cmpText(a.artistName, b.artistName);
     if (sort === 'artist') return cmpText(a.artistName, b.artistName) || cmpText(a.title, b.title);
@@ -209,20 +219,25 @@ export function groupPlayables(items: DeckPlayable[], group: DeckGroup): DeckGro
   for (const item of items) {
     if (group === 'kind') {
       if (item.own) {
-        ensure('yours', 'Your songs').items.push(item);
+        ensure('yours', 'Your releases').items.push(item);
       } else {
         const id = item.scope === 'album' ? 'album' : 'track';
-        ensure(id, id === 'album' ? 'Pressings' : 'Singles').items.push(item);
+        ensure(id, id === 'album' ? 'Albums' : 'Singles').items.push(item);
       }
     } else if (group === 'artist') {
       const id = item.artistName.toLowerCase() || 'unknown';
       ensure(id, item.artistName || 'Unknown artist').items.push(item);
     } else if (group === 'access') {
       if (item.own) {
-        ensure('yours', 'Your songs').items.push(item);
+        ensure('yours', 'Your releases').items.push(item);
       } else {
-        const id = item.free ? 'free' : 'paid';
-        ensure(id, item.free ? 'Unlocked free' : 'Bought').items.push(item);
+        const id = item.houseRelease ? 'house' : item.free ? 'free' : 'paid';
+        const label = item.houseRelease
+          ? 'House releases'
+          : item.free
+            ? 'Other free unlocks'
+            : 'Purchased music';
+        ensure(id, label).items.push(item);
       }
     } else {
       const d = item.purchasedAt ? new Date(item.purchasedAt) : null;
@@ -237,7 +252,7 @@ export function groupPlayables(items: DeckPlayable[], group: DeckGroup): DeckGro
     return ['yours', 'album', 'track'].flatMap((id) => (buckets.get(id) ? [buckets.get(id)!] : []));
   }
   if (group === 'access') {
-    return ['yours', 'paid', 'free'].flatMap((id) => (buckets.get(id) ? [buckets.get(id)!] : []));
+    return ['yours', 'house', 'paid', 'free'].flatMap((id) => (buckets.get(id) ? [buckets.get(id)!] : []));
   }
   if (group === 'month') {
     return [...order].sort((a, b) => b.localeCompare(a)).map((id) => buckets.get(id)!);
@@ -284,7 +299,18 @@ export function buildBrowseArtists(items: DeckPlayable[]): DeckBrowseArtist[] {
     artist.trackCount += 1;
   }
 
-  return [...artists.values()];
+  const result = [...artists.values()];
+  // An album is a sequence, not a bag of songs. Browsing by artist/release must
+  // always restore that sequence even when the wider Library uses another sort.
+  for (const artist of result) {
+    for (const album of artist.albums) {
+      album.items.sort((a, b) => {
+        if (a.trackNumber === undefined || b.trackNumber === undefined) return 0;
+        return a.trackNumber - b.trackNumber;
+      });
+    }
+  }
+  return result;
 }
 
 export function readPlayedMap(): DeckPlayedMap {

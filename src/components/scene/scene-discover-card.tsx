@@ -143,7 +143,8 @@ export function SceneDiscoverCard({
   if (card.kind === 'drop') {
     const { drop } = card;
     const ownerHref = drop.ownerSlug ? profileHref(drop.ownerSlug) : undefined;
-    const firstDrop = firstDropsOn && Boolean(drop.hasDropAudio);
+    const musicRelease = firstDropsOn && (drop.releaseLive === true || (drop.releaseLive === undefined && Boolean(drop.hasDropAudio)));
+    const firstDrop = musicRelease && drop.type === 'track' && Boolean(drop.hasDropAudio);
     const pulse = formatDropPulseLine(drop);
     return (
       <Card
@@ -176,9 +177,9 @@ export function SceneDiscoverCard({
       >
         {loveBurst ? <Heart className="pointer-events-none absolute left-1/2 top-1/2 z-50 h-20 w-20 -translate-x-1/2 -translate-y-1/2 fill-fuchsia-400 text-fuchsia-400 drop-shadow-[0_0_24px_rgba(244,114,182,.9)]" /> : null}
         <DiscoverTag
-          label={drop.houseRelease ? 'House release' : firstDrop ? 'On sale' : 'Live DNA Drop'}
-          icon={firstDrop ? Music : Dna}
-          tone={firstDrop ? 'text-fuchsia-400/90' : 'text-primary/90'}
+          label={drop.houseRelease ? 'House release · free' : musicRelease ? (drop.type === 'album' ? 'Album release' : 'On sale') : 'Live DNA Drop'}
+          icon={musicRelease ? Music : Dna}
+          tone={musicRelease ? 'text-fuchsia-400/90' : 'text-primary/90'}
         />
         <MatchReasons match={card.match} />
         <div className="mt-2.5 flex items-center gap-3">
@@ -200,8 +201,8 @@ export function SceneDiscoverCard({
               {drop.title}
             </Link>
             <p className="break-words font-code text-[9px] font-bold uppercase leading-relaxed tracking-[0.14em] text-muted-foreground/70 sm:tracking-[0.18em]">
-              {firstDrop ? 'Song' : drop.type === 'album' ? 'Album' : 'Track'}
-              {firstDrop ? ' · stream' : ' DNA'} by{' '}
+              {drop.type === 'album' ? 'Album' : 'Track'}
+              {musicRelease ? (firstDrop ? ' · stream' : ' · release') : ' DNA'} by{' '}
               {ownerHref ? (
                 <Link
                   href={ownerHref}
@@ -218,7 +219,7 @@ export function SceneDiscoverCard({
                 </span>
               )}
               {drop.updatedAt ? <span className="whitespace-nowrap"> · {timeAgo(drop.updatedAt)}</span> : ''}
-              {drop.houseRelease ? ' · House · Free' : firstDrop && drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : ''}
+              {drop.houseRelease ? ' · House · Free' : musicRelease && drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : ''}
               {pulse ? ` · ${pulse}` : ''}
               {drop.firstBuyerName ? ` · first cop ${drop.firstBuyerName}` : ''}
             </p>

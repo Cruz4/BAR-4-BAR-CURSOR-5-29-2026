@@ -129,7 +129,9 @@ export async function userCanStreamFull(opts: {
   const { db, share, userId, trackId } = opts;
   if (userId && userId === share.ownerId) return true;
   if (!userId) return false;
-  if (share.houseRelease && isReleaseShareLive(share)) return true;
+  // House access is a permanent Library grant while the release keeps its
+  // House flag, including after it leaves public checkout and discovery.
+  if (share.houseRelease) return true;
 
   const thisShare = await getLibraryEntry(db, userId, share.id);
   if (thisShare) {

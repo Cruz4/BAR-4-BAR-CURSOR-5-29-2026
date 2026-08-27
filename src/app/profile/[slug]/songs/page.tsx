@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, EyeOff, Music2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, EyeOff, Gift, Music2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StudioLoader } from '@/components/studio-loader';
 import { ProfileSectionTabs } from '@/components/profile/profile-section-tabs';
@@ -17,12 +17,15 @@ import { pressedSongHref } from '@/lib/pressed-song';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { manageRelease } from '@/lib/release-management-client';
+import type { PublicMusicMetadata } from '@/lib/music-discovery-metadata';
+import { MusicDiscoveryTags } from '@/components/music-discovery-tags';
 
 type PressedProfileSong = LiveDnaDropItem & {
   ownerId: string;
   albumId: string;
   trackId: string;
   price: DropPrice;
+  metadata: PublicMusicMetadata;
 };
 
 export default function ProfileSongsPage() {
@@ -83,6 +86,11 @@ export default function ProfileSongsPage() {
                   {String(index + 1).padStart(2, '0')}
                 </span>
                 <span className="min-w-0 flex-1 truncate">{formatDropPulseLine(song)}</span>
+                {song.houseRelease ? (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-400/10 px-2 py-1 text-[8px] text-cyan-100">
+                    <Gift className="h-2.5 w-2.5" /> House · free
+                  </span>
+                ) : null}
                 <Link
                   href={pressedSongHref(song.shareId)}
                   className="flex shrink-0 items-center gap-1 text-fuchsia-200 transition-colors hover:text-fuchsia-100"
@@ -112,6 +120,7 @@ export default function ProfileSongsPage() {
                   </button>
                 ) : null}
               </div>
+              <MusicDiscoveryTags metadata={song.metadata} compact className="px-1" />
               <Suspense fallback={<div className="h-40 animate-pulse rounded-2xl border border-fuchsia-400/20 bg-black/35" />}>
                 <DropListenPanel
                   shareId={song.shareId}

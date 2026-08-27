@@ -9,7 +9,7 @@
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Banknote, Disc3, Gift, Library, Loader, Music, Play, PlusCircle, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, Banknote, Disc3, Gift, Library, Loader, Music, Play, PlusCircle, Save, Trash2, Unlink } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -49,6 +49,14 @@ function songReleasePlacement(row: Picked): 'single' | 'album' | null {
   const albumLive = row.album.id !== 'unassigned'
     && releaseStatusOf({ ...row.album, tracks: row.album.tracks }) === 'live';
   return albumLive && Boolean(normalizeDropAudio(row.track.dropAudio)) ? 'album' : null;
+}
+
+function offlineReleasePlacement(row: Picked): 'single' | 'album' | null {
+  if (releaseStatusOf(row.track) === 'unlisted' && releaseShareIdOf(row.track)) return 'single';
+  const albumOffline = row.album.id !== 'unassigned'
+    && releaseStatusOf({ ...row.album, tracks: row.album.tracks }) === 'unlisted'
+    && Boolean(releaseShareIdOf({ ...row.album, tracks: row.album.tracks }));
+  return albumOffline && Boolean(normalizeDropAudio(row.track.dropAudio)) ? 'album' : null;
 }
 
 function HouseReleaseToggle({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
@@ -260,6 +268,16 @@ export function FirstDropLatheHost() {
   const houseRelease = Boolean(mode === 'album' ? selectedAlbum?.houseRelease : track?.houseRelease);
   const houseLibraryNotice = Boolean(
     mode === 'album' ? selectedAlbum?.houseLibraryNotice : track?.houseLibraryNotice
+  );
+  const pickedReleasePlacement = livePicked ? songReleasePlacement(livePicked) : null;
+  const pickedOfflinePlacement = livePicked ? offlineReleasePlacement(livePicked) : null;
+  const selectedAlbumIsLive = Boolean(
+    selectedAlbum && releaseStatusOf({ ...selectedAlbum, tracks: selectedAlbum.tracks }) === 'live'
+  );
+  const selectedAlbumIsOffline = Boolean(
+    selectedAlbum
+    && releaseStatusOf({ ...selectedAlbum, tracks: selectedAlbum.tracks }) === 'unlisted'
+    && releaseShareIdOf({ ...selectedAlbum, tracks: selectedAlbum.tracks })
   );
 
   const onPickAudio = async (file: File | undefined) => {
@@ -491,9 +509,11 @@ export function FirstDropLatheHost() {
           : selectedAlbum.shareId
             ? 'Album release updated'
             : 'Album release published',
-        description: houseRelease
-          ? `${albumAudioTracks.length} audio track${albumAudioTracks.length === 1 ? '' : 's'} added free to every member Library.`
-          : `${albumAudioTracks.length} audio track${albumAudioTracks.length === 1 ? '' : 's'} included. One purchase unlocks all of them.`,
+        description: result.releaseCoverOmitted
+          ? 'Album published. Its older embedded cover was too large for the release page; re-upload the cover once to optimize it, then republish.'
+          : houseRelease
+            ? `${albumAudioTracks.length} audio track${albumAudioTracks.length === 1 ? '' : 's'} added free to every member Library.`
+            : `${albumAudioTracks.length} audio track${albumAudioTracks.length === 1 ? '' : 's'} included. One purchase unlocks all of them.`,
       });
       setOpen(false);
       router.push(`/share/${shareId}`);
@@ -501,6 +521,91 @@ export function FirstDropLatheHost() {
       toast({
         variant: 'destructive',
         title: 'Could not publish album release',
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setPressing(false);
+    }
+  };
+
+  const takeReleaseOffline = async (
+    kind: 'track' | 'album',
+    targetAlbum: Album,
+    targetTrack?: Track,
+  ) => {
+    const albumRelease = kind === 'album';
+    const subject = albumRelease ? `album "${targetAlbum.title}"` : `song "${targetTrack?.title || 'Untitled'}"`;
+    if (!window.confirm(`Take the ${subject} offline? New listeners will not be able to discover or buy it. Existing buyers keep access.`)) {
+      return;
+    }
+
+    setPressing(true);
+    try {
+      await flushCloudNow();
+      const result = await manageRelease({
+        kind,
+        action: 'unpublish',
+        albumId: targetAlbum.id,
+        ...(targetTrack ? { trackId: targetTrack.id } : {}),
+      });
+      const patch = {
+        releaseStatus: 'unlisted' as const,
+        ...(result.releaseShareId ? { releaseShareId: result.releaseShareId } : {}),
+      };
+      if (targetTrack) updateTrack(targetAlbum.id, targetTrack.id, patch);
+      else updateAlbum(targetAlbum.id, patch);
+      setRightsChecked(false);
+      toast({
+        title: albumRelease ? 'Album release taken offline' : 'Release taken offline',
+        description: 'Discovery and checkout are off. The recording stays attached and existing buyers keep access.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not take release offline',
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setPressing(false);
+    }
+  };
+
+  const removeReleaseRecord = async (
+    kind: 'track' | 'album',
+    targetAlbum: Album,
+    targetTrack?: Track,
+  ) => {
+    const name = kind === 'album' ? targetAlbum.title : targetTrack?.title || 'Untitled';
+    if (!window.confirm(
+      `Remove the old release record for "${name}"?\n\nThis retires its old public release link. Your Vault recording stays, and existing buyers keep Library playback. Publishing again creates a new release link. The separate lyric page stays live.`
+    )) return;
+
+    setPressing(true);
+    try {
+      await flushCloudNow();
+      await manageRelease({
+        kind,
+        action: 'remove',
+        albumId: targetAlbum.id,
+        ...(targetTrack ? { trackId: targetTrack.id } : {}),
+      });
+      const patch = {
+        releaseStatus: 'draft' as const,
+        releaseShareId: undefined,
+        releaseSnapshotAt: undefined,
+        houseRelease: false,
+        houseLibraryNotice: false,
+      };
+      if (targetTrack) updateTrack(targetAlbum.id, targetTrack.id, patch);
+      else updateAlbum(targetAlbum.id, patch);
+      toast({
+        title: 'Old release record removed',
+        description: 'The old link is retired. Vault audio, lyric DNA, and buyer access were kept.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not remove release record',
         description: error instanceof Error ? error.message : undefined,
       });
     } finally {
@@ -858,9 +963,21 @@ export function FirstDropLatheHost() {
               </div>
 
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <Button type="button" variant="outline" className="h-12 font-bold uppercase" disabled={pressing || uploading || albumAudioTracks.length === 0} onClick={() => void saveAlbumDraft()}>
-                  <Save className="mr-2 h-4 w-4" /> Save private draft
-                </Button>
+                {selectedAlbumIsLive ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-12 border-red-400/40 bg-red-500/5 font-bold uppercase text-red-300 hover:bg-red-500/15 hover:text-red-200"
+                    disabled={pressing || uploading}
+                    onClick={() => void takeReleaseOffline('album', selectedAlbum)}
+                  >
+                    <Unlink className="mr-2 h-4 w-4" /> Take album offline
+                  </Button>
+                ) : (
+                  <Button type="button" variant="outline" className="h-12 font-bold uppercase" disabled={pressing || uploading || albumAudioTracks.length === 0} onClick={() => void saveAlbumDraft()}>
+                    <Save className="mr-2 h-4 w-4" /> Save private draft
+                  </Button>
+                )}
                 <Button
                   type="button"
                   className="h-12 bg-fuchsia-400 font-headline text-lg font-bold uppercase tracking-wide text-black hover:bg-fuchsia-300"
@@ -877,6 +994,17 @@ export function FirstDropLatheHost() {
                       : 'Publish album release'}
                 </Button>
               </div>
+              {selectedAlbumIsOffline ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-9 w-full text-[10px] font-bold uppercase text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                  disabled={pressing || uploading}
+                  onClick={() => void removeReleaseRecord('album', selectedAlbum)}
+                >
+                  <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remove old album release record
+                </Button>
+              ) : null}
               <p className="text-center text-[10px] leading-relaxed text-muted-foreground">
                 {houseRelease
                   ? 'The shared House entitlement puts every included recording in every member Library, including accounts created later.'
@@ -1137,15 +1265,32 @@ export function FirstDropLatheHost() {
             </div>
 
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-12 font-bold uppercase"
-                disabled={pressing || uploading || !hasAudio}
-                onClick={() => void savePrivateDraft()}
-              >
-                <Save className="mr-2 h-4 w-4" /> Save private draft
-              </Button>
+              {pickedReleasePlacement && album && track ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 border-red-400/40 bg-red-500/5 font-bold uppercase text-red-300 hover:bg-red-500/15 hover:text-red-200"
+                  disabled={pressing || uploading}
+                  onClick={() => void (
+                    pickedReleasePlacement === 'album'
+                      ? takeReleaseOffline('album', album)
+                      : takeReleaseOffline('track', album, track)
+                  )}
+                >
+                  <Unlink className="mr-2 h-4 w-4" />
+                  {pickedReleasePlacement === 'album' ? 'Take album offline' : 'Take release offline'}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 font-bold uppercase"
+                  disabled={pressing || uploading || !hasAudio}
+                  onClick={() => void savePrivateDraft()}
+                >
+                  <Save className="mr-2 h-4 w-4" /> Save private draft
+                </Button>
+              )}
               <Button
                 type="button"
                 className="h-12 bg-fuchsia-400 font-headline text-lg font-bold uppercase tracking-wide text-black hover:bg-fuchsia-300"
@@ -1164,6 +1309,21 @@ export function FirstDropLatheHost() {
                       : 'Publish release'}
               </Button>
             </div>
+            {pickedOfflinePlacement && album && track ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-9 w-full text-[10px] font-bold uppercase text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                disabled={pressing || uploading}
+                onClick={() => void (
+                  pickedOfflinePlacement === 'album'
+                    ? removeReleaseRecord('album', album)
+                    : removeReleaseRecord('track', album, track)
+                )}
+              >
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remove old release record
+              </Button>
+            ) : null}
             <p className="text-center text-[10px] leading-relaxed text-muted-foreground">
               {houseRelease
                 ? 'Save Draft keeps the recording private. Publish House Release adds the full song to every member Library.'

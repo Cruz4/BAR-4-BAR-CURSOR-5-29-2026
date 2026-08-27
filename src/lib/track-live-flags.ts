@@ -14,6 +14,26 @@ export function hasLiveFirstDrop(
   return Boolean(normalizeDropAudio(track.dropAudio) && releaseStatusOf(track) === 'live');
 }
 
+export type TrackReleaseControlState = 'new' | 'attached' | 'offline' | 'live' | 'album-live';
+
+/** The state shown on a track sheet before the release dialog is opened. */
+export function trackReleaseControlState(
+  track: Pick<Track, 'dropAudio' | 'dropRightsAttestedAt' | 'shareId' | 'releaseShareId' | 'releaseStatus' | 'houseRelease' | 'dropPrice'>,
+  album: Pick<Album, 'id' | 'tracks' | 'shareId' | 'releaseShareId' | 'releaseStatus' | 'houseRelease' | 'dropPrice'>,
+): TrackReleaseControlState {
+  const hasAudio = Boolean(normalizeDropAudio(track.dropAudio));
+  const trackStatus = releaseStatusOf(track);
+
+  if (hasAudio && trackStatus === 'live') return 'live';
+
+  const albumIsLive = album.id !== 'unassigned'
+    && releaseStatusOf({ ...album, tracks: album.tracks }) === 'live';
+  if (hasAudio && albumIsLive) return 'album-live';
+  if (trackStatus === 'unlisted') return 'offline';
+  if (hasAudio) return 'attached';
+  return 'new';
+}
+
 export function trackHasLiveFlags(track: Track): boolean {
   return (
     hasActiveDnaDrop(track.shareId) ||

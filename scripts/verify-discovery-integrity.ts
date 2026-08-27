@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { organicMomentumScore } from '../src/lib/drop-listen-analytics';
 import { buildDiscoveryMatch } from '../src/lib/discovery-graph';
 
@@ -70,5 +71,18 @@ assert.equal(
   0,
   'invalid signals must not create score'
 );
+
+const searchSource = readFileSync(new URL('../src/lib/server/discovery-search.ts', import.meta.url), 'utf8');
+const identityStripSource = readFileSync(new URL('../src/components/profile/sound-identity-strip.tsx', import.meta.url), 'utf8');
+const songPageSource = readFileSync(new URL('../src/components/song/pressed-song-page-client.tsx', import.meta.url), 'utf8');
+assert.doesNotMatch(
+  searchSource,
+  /haystack:\s*\[searchableText, owner\.displayName,\s*\.\.\.identityStrings/,
+  'profile identity tags must not make every post match the same query'
+);
+assert.match(searchSource, /drop\.metadata\.genreStyles/, 'release results must expose their own genre/style tags');
+assert.match(identityStripSource, /resultKinds:\s*\['person'\]/, 'profile identity tags must open People discovery');
+assert.match(songPageSource, /<MusicDiscoveryTags metadata=\{summary\.metadata\}/, 'song pages must show discoverable music metadata');
+assert.match(songPageSource, /<MusicDiscoveryTags[^>]*soundAsText/, 'song-page Sound details must remain informational instead of becoming a search link');
 
 console.log('Discovery integrity verification passed.');

@@ -13,6 +13,7 @@ import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import type { DropLibraryItem } from '@/lib/drop-library';
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
 import type { PressingConfig } from '@/lib/profile/pressing';
+import { isProOrTrial } from '@/lib/subscription';
 
 export default function DropLibraryPage() {
   const { user, loading: authLoading } = useAuth();
@@ -111,7 +112,7 @@ export default function DropLibraryPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <DropDeck userId={user.id} items={items} pressing={pressing} />
+      <DropDeck userId={user.id} items={items} pressing={pressing} canDownloadOffline={isProOrTrial(user)} />
     </div>
   );
 }

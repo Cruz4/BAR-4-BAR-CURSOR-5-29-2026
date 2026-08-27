@@ -54,7 +54,7 @@ export type PublicProfileData = {
   starMarkSeed?: number;
   /** Live Studio Pro / Visitor chrome — from users.subscriptionStatus. */
   studioBadge?: 'pro' | 'free';
-  /** Live public DNA Drops (share docs still online). */
+  /** Live public music releases and lyric DNA pages. */
   liveDnaDrops?: Array<{
     shareId: string;
     title: string;
@@ -64,6 +64,9 @@ export type PublicProfileData = {
     trackIndex?: number;
     trackCount?: number;
     hasDropAudio?: boolean;
+    releaseLive?: boolean;
+    dnaLive?: boolean;
+    houseRelease?: boolean;
     dropPriceSummary?: string;
     playCount?: number;
     previewCount?: number;

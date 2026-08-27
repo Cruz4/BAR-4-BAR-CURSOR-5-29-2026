@@ -14,6 +14,7 @@ import {
 } from '@/lib/co-writer-rules';
 import { hasDirectionContent, mergeDirection } from '@/lib/utils';
 import { normalizeDropPrice, publicDropAudio } from '@/lib/drop-commerce';
+import { orderAlbumTracks, trackOrderFromTracks } from '@/lib/album-track-order';
 
 /** True when this project has an active public DNA Drop link (shareId persisted on album/track). */
 export function hasActiveDnaDrop(shareId?: string | null): boolean {
@@ -263,8 +264,19 @@ function sanitizeAlbumForSnapshot(
 
   // Preserve each track's live shareId so the public album hub can link
   // into that song's DNA Drop page (lyrics stay in the snapshot for import).
-  payload.tracks = (album.tracks ?? []).map((t) => {
+  const orderedTracks = orderAlbumTracks(album.tracks ?? [], album);
+  payload.trackOrder = trackOrderFromTracks(orderedTracks);
+  payload.tracks = orderedTracks.map((t) => {
     const sanitized = sanitizeTrackForSnapshot(t, styleProfile, album);
+    // The album hub already reads the top-level cover as every track's fallback.
+    // Repeating a base64 album cover inside each track can multiply one image into
+    // several megabytes and exceed Firestore's per-document limit.
+    if (sanitized.sharedAlbumContext) {
+      delete sanitized.sharedAlbumContext.coverArtUrl;
+    }
+    if (sanitized.coverArtUrl === payload.coverArtUrl) {
+      delete sanitized.coverArtUrl;
+    }
     if (hasActiveDnaDrop(t.shareId)) sanitized.shareId = t.shareId!.trim();
     else delete sanitized.shareId;
     return sanitized;

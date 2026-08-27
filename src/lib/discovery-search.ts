@@ -88,6 +88,18 @@ export function writeDiscoverySearchFilters(params: URLSearchParams, filters: Di
   }
 }
 
+export function discoverySearchHref(
+  filters: Partial<DiscoverySearchFilters>,
+  query = ''
+): string {
+  const params = new URLSearchParams();
+  const cleanQuery = query.trim().replace(/\s+/g, ' ').slice(0, 80);
+  if (cleanQuery) params.set('q', cleanQuery);
+  writeDiscoverySearchFilters(params, normalizeDiscoverySearchFilters(filters));
+  const serialized = params.toString();
+  return `/discover${serialized ? `?${serialized}` : ''}`;
+}
+
 export function hasDiscoverySearchFilters(filters: DiscoverySearchFilters): boolean {
   const normalized = normalizeDiscoverySearchFilters(filters);
   return Boolean(

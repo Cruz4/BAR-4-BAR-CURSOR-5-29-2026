@@ -125,6 +125,7 @@ export function TopNavDropMiniPlayer() {
     togglePlay,
     skipNext,
     prev,
+    seek,
     stop,
     setVolume,
     setRepeat,
@@ -133,22 +134,23 @@ export function TopNavDropMiniPlayer() {
 
   return (
     <div className="border-t border-border/40 bg-background/95 px-2 sm:px-4 md:px-6">
-      <div className="relative mx-auto flex h-10 w-full max-w-6xl items-center gap-1.5">
-        <Link
-          href="/library"
-          className="min-w-0 flex-1 rounded-md px-1.5 py-0.5 hover:bg-white/5 sm:max-w-[calc(50%-28px)]"
-          aria-label="Open Library"
-        >
-          <span className="block truncate font-headline text-[11px] font-bold uppercase leading-tight">
-            {current.title}
-          </span>
-          <span className="block truncate font-code text-[9px] uppercase leading-tight text-muted-foreground">
-            {current.artistName}
-            {duration > 0 ? ` · ${formatDeckTime(elapsed)} / ${formatDeckTime(duration)}` : ''}
-          </span>
-        </Link>
-        <MiniDropEqualizer analyser={analyser} playing={playing} />
-        <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1.5">
+      <div className="relative mx-auto w-full max-w-6xl py-1">
+        <div className="flex h-9 items-center gap-1.5">
+          <Link
+            href={current.detailsHref}
+            className="min-w-0 flex-1 rounded-md px-1.5 py-0.5 hover:bg-white/5 sm:max-w-[calc(50%-28px)]"
+            aria-label={`Open ${current.title}`}
+          >
+            <span className="block truncate font-headline text-[11px] font-bold uppercase leading-tight">
+              {current.title}
+            </span>
+            <span className="block truncate font-code text-[9px] uppercase leading-tight text-muted-foreground">
+              {current.artistName}
+              {duration > 0 ? ` · ${formatDeckTime(elapsed)} / ${formatDeckTime(duration)}` : ''}
+            </span>
+          </Link>
+          <MiniDropEqualizer analyser={analyser} playing={playing} />
+          <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1.5">
           <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={prev} aria-label="Previous">
             <SkipBack className="h-3.5 w-3.5" />
           </Button>
@@ -170,16 +172,26 @@ export function TopNavDropMiniPlayer() {
           <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={skipNext} aria-label="Next">
             <SkipForward className="h-3.5 w-3.5" />
           </Button>
-          <DropRepeatControl repeat={repeat} onChange={setRepeat} compact />
-          <AudioVolumeControl
-            compact
-            volume={volume}
-            onVolumeChange={setVolume}
-            onToggleMute={toggleMute}
+            <span className="hidden sm:inline-flex"><DropRepeatControl repeat={repeat} onChange={setRepeat} compact /></span>
+            <span className="hidden sm:inline-flex"><AudioVolumeControl compact volume={volume} onVolumeChange={setVolume} onToggleMute={toggleMute} /></span>
+            <Button type="button" size="icon" variant="outline" className="h-7 w-7 shrink-0 border-red-300/30 text-red-200 hover:bg-red-400/10 hover:text-red-100" onClick={stop} aria-label="Close mini player" title="Close mini player">
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 px-1.5 pb-0.5">
+          <span className="w-8 text-right font-code text-[8px] tabular-nums text-muted-foreground">{formatDeckTime(elapsed)}</span>
+          <input
+            type="range"
+            min={0}
+            max={Math.max(duration, 1)}
+            step={0.1}
+            value={Math.min(elapsed, Math.max(duration, 1))}
+            onChange={(event) => seek(Number(event.target.value))}
+            className="h-1.5 min-w-0 flex-1 cursor-pointer accent-fuchsia-400"
+            aria-label="Mini player playback position"
           />
-          <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-muted-foreground" onClick={stop} aria-label="Stop">
-            <X className="h-3.5 w-3.5" />
-          </Button>
+          <span className="w-8 font-code text-[8px] tabular-nums text-muted-foreground">{formatDeckTime(duration)}</span>
         </div>
       </div>
     </div>

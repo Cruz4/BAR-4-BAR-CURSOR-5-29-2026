@@ -80,7 +80,7 @@ export async function downloadPressedAudioOffline(userId: string, item: DeckPlay
   if (typeof navigator !== 'undefined' && !navigator.onLine) throw new Error('Connect to the internet to download this song first.');
 
   const token = await firebaseUser.getIdToken();
-  const query = new URLSearchParams({ shareId: item.shareId });
+  const query = new URLSearchParams({ shareId: item.shareId, offline: '1' });
   if (item.trackId) query.set('trackId', item.trackId);
   const entitlement = await fetch(`/api/drops/audio?${query.toString()}`, {
     headers: { Authorization: `Bearer ${token}` },

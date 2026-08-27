@@ -327,7 +327,7 @@ export const VISITOR_FEATURES = [
   'All 9 Creative Effects — Simile, Metaphor, Twist, POV, Blend & more (10 Ink each)',
   'Artist Home — shareable public page, Edit Public Page, The Block friends feed',
   'System presets only — custom DNA/Vibe/Style vault saves are Pro',
-  'Locked: PDF/TXT/JSON export, Performance Mode, Freestyle, Collab Sheet, vault import/export & DNA Drop links',
+  'Locked: offline Library downloads, PDF/TXT/JSON export, Performance Mode, Freestyle, Collab Sheet, vault import/export & DNA Drop links',
 ] as const;
 
 /** Everything Pro unlocks + why it matters vs Visitor */
@@ -337,6 +337,7 @@ export const PRO_UNLOCKS = [
   'UNLOCK: Performance Mode — teleprompter + rhyme-focus for rehearsal & stage',
   'UNLOCK: Freestyle capture — record flows straight into your rhyme book',
   'UNLOCK: Full-studio vault import / export — merge JSON blueprints across devices',
+  'UNLOCK: Offline Library downloads — save owned and purchased songs on this device',
   'UNLOCK: Shareable project links — DNA Drop snapshots & Collab Sheet live editing',
   `${PRO_MONTHLY_INK.toLocaleString()} monthly residency Ink — refreshes each billing cycle`,
 ] as const;

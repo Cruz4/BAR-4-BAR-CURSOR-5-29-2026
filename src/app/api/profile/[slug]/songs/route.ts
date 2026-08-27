@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase/server';
 import { normalizeDropAudio, dropPriceSummary, normalizeDropPrice } from '@/lib/drop-commerce';
 import { resolvePublicProfileSlugDoc } from '@/lib/server/profile-slug';
-import { isShareDocumentPublic } from '@/lib/release-management';
+import { shareDocumentVisibility } from '@/lib/release-management';
+import { publicMusicMetadataFromTrack } from '@/lib/music-discovery-metadata';
 
 export const runtime = 'nodejs';
 const PAGE_SIZE = 15;
@@ -17,7 +18,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     const snap = await db.collection('shares').where('ownerId', '==', owner.userId).get();
     const songs = snap.docs.flatMap((doc) => {
       const raw = doc.data() as Record<string, unknown>;
-      if (!isShareDocumentPublic(raw)) return [];
+      if (!shareDocumentVisibility(raw).releaseLive) return [];
       if (raw.type === 'album') return [];
       const data = raw.data && typeof raw.data === 'object' ? raw.data as Record<string, unknown> : {};
       const audio = normalizeDropAudio(data.dropAudio);
@@ -33,6 +34,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
         title: typeof data.title === 'string' && data.title.trim() ? data.title.trim().slice(0, 120) : 'Untitled track',
         hasDropAudio: true,
         houseRelease: raw.houseRelease === true,
+        metadata: publicMusicMetadataFromTrack(data),
         price,
         dropPriceSummary: dropPriceSummary(price),
         playCount: Math.max(0, Number(raw.playCount) || 0),

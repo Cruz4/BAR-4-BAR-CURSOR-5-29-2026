@@ -2,7 +2,7 @@
 
 import React, { useContext, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Disc3, ExternalLink, FileText, Link2, Loader, Music, Radio, Settings2, Unlink } from 'lucide-react';
+import { AlertTriangle, Disc3, ExternalLink, FileText, Link2, Loader, Music, Radio, Settings2, Trash2, Unlink } from 'lucide-react';
 import { DataContext } from '@/context/data-context';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -16,9 +16,11 @@ import { cn } from '@/lib/utils';
 
 type Row = { album: Album; track?: Track };
 type UnpressTarget = { kind: 'album' | 'track'; album: Album; track?: Track };
+type RemoveTarget = UnpressTarget;
 
 const GROUPS: Array<{ key: keyof VaultReleaseGroups; label: string; note: string }> = [
   { key: 'privateDrafts', label: 'Private release drafts', note: 'Uploaded recordings only you can test.' },
+  { key: 'offlineReleases', label: 'Offline releases', note: 'Hidden releases that can be republished at the same link or retired completely.' },
   { key: 'liveSinglesWithLyrics', label: 'Live singles · lyrics attached', note: 'Music releases connected to a Bar4Bar lyric sheet.' },
   { key: 'liveSinglesAudioOnly', label: 'Live singles · audio only', note: 'Music releases that can receive a lyric sheet later.' },
   { key: 'liveAlbumsAllLyrics', label: 'Live albums · all lyrics attached', note: 'Bundle releases whose audio tracks all have lyrics.' },
@@ -48,6 +50,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
   );
   const [busy, setBusy] = useState('');
   const [unpress, setUnpress] = useState<UnpressTarget | null>(null);
+  const [remove, setRemove] = useState<RemoveTarget | null>(null);
   const [attach, setAttach] = useState<Row | null>(null);
 
   const unpressRelease = async (hideDna: boolean) => {
@@ -80,6 +83,44 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
       setUnpress(null);
     } catch (error) {
       toast({ variant: 'destructive', title: 'Could not take release offline', description: error instanceof Error ? error.message : undefined });
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const removeRelease = async (hideDna: boolean) => {
+    if (!remove) return;
+    const { kind, album, track } = remove;
+    const key = `${kind}:${track?.id || album.id}`;
+    setBusy(key);
+    try {
+      await flushCloudNow();
+      await manageRelease({
+        kind,
+        action: 'remove',
+        albumId: album.id,
+        ...(track ? { trackId: track.id } : {}),
+        hideDna,
+      });
+      const patch = {
+        releaseStatus: 'draft' as const,
+        releaseShareId: undefined,
+        releaseSnapshotAt: undefined,
+        houseRelease: false,
+        houseLibraryNotice: false,
+        ...(hideDna ? { dnaStatus: 'unlisted' as const } : {}),
+      };
+      if (track) updateTrack(album.id, track.id, patch);
+      else updateAlbum(album.id, patch);
+      toast({
+        title: 'Old release record removed',
+        description: hideDna
+          ? 'The old release and lyric page are retired. Your Vault song and existing buyer access remain.'
+          : 'The old release link is retired. Your Vault song, lyric page, and existing buyer access remain.',
+      });
+      setRemove(null);
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not remove release record', description: error instanceof Error ? error.message : undefined });
     } finally {
       setBusy('');
     }
@@ -132,6 +173,9 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
           <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
             Upload and test privately, publish a single or album when ready, then attach a lyric sheet now or later. DNA Live remains a separate public lyric page.
           </p>
+          <p className="mt-1 max-w-2xl text-[10px] leading-relaxed text-cyan-100/75">
+            Take offline is reversible and keeps the same release link. Remove release retires that old link; your Vault audio and buyers’ Library access are never deleted.
+          </p>
         </div>
         <Button type="button" className="bg-fuchsia-400 font-bold uppercase text-black hover:bg-fuchsia-300" onClick={() => openFirstDropLathe()}>
           <Disc3 className="mr-2 h-4 w-4" /> New release
@@ -142,7 +186,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
         {GROUPS.map(({ key, label, note }) => {
           const rows = asRows(groups[key]);
           return (
-            <details key={key} className="group rounded-xl border border-white/10 bg-black/25" open={key === 'privateDrafts' || key === 'liveSinglesWithLyrics' || key === 'liveSinglesAudioOnly'}>
+            <details key={key} className="group rounded-xl border border-white/10 bg-black/25" open={key === 'privateDrafts' || key === 'offlineReleases' || key === 'liveSinglesWithLyrics' || key === 'liveSinglesAudioOnly'}>
               <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-3">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-400/25 bg-cyan-400/10 text-cyan-200">
                   {key.includes('Album') || key.includes('Albums') ? <Disc3 className="h-4 w-4" /> : <Music className="h-4 w-4" />}
@@ -181,7 +225,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
                               <Link href={`/share/${dnaId}`}><ExternalLink className="mr-1 h-3 w-3" /> Open lyric page</Link>
                             </Button>
                           ) : null}
-                          {releaseId && status !== 'draft' ? (
+                          {releaseId && status === 'live' ? (
                             <Button asChild size="sm" variant="secondary" className="h-8 text-[9px] font-bold uppercase">
                               <Link href={track ? `/song/${releaseId}` : `/share/${releaseId}`}>
                                 <ExternalLink className="mr-1 h-3 w-3" /> Open release
@@ -214,6 +258,11 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
                               <Unlink className="mr-1 h-3 w-3" /> Take offline
                             </Button>
                           ) : null}
+                          {!dnaGroup && status === 'unlisted' && releaseId ? (
+                            <Button size="sm" variant="outline" className="h-8 border-red-400/30 text-[9px] font-bold uppercase text-red-300" onClick={() => setRemove({ kind: track ? 'track' : 'album', album, track })}>
+                              <Trash2 className="mr-1 h-3 w-3" /> Remove release
+                            </Button>
+                          ) : null}
                         </div>
                       </li>
                     );
@@ -236,6 +285,27 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
           <div className="grid gap-2 sm:grid-cols-2">
             <Button variant="outline" disabled={Boolean(busy)} onClick={() => void unpressRelease(false)}>Keep lyric page live</Button>
             <Button className="bg-red-500 text-white hover:bg-red-400" disabled={Boolean(busy)} onClick={() => void unpressRelease(true)}>Hide release + lyrics</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(remove)} onOpenChange={(open) => !open && setRemove(null)}>
+        <DialogContent className="max-w-md border-red-400/30">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-headline uppercase text-red-200">
+              <AlertTriangle className="h-5 w-5" /> Remove this release record?
+            </DialogTitle>
+            <DialogDescription>
+              This is different from Take offline. The old public release link is retired and removed from your catalog. Your Vault recording is kept, and existing buyers keep Library playback. Publishing again creates a new release link.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <Button variant="outline" disabled={Boolean(busy)} onClick={() => void removeRelease(false)}>
+              Remove release · keep lyric page
+            </Button>
+            <Button className="bg-red-500 text-white hover:bg-red-400" disabled={Boolean(busy)} onClick={() => void removeRelease(true)}>
+              Remove release + hide lyric page
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

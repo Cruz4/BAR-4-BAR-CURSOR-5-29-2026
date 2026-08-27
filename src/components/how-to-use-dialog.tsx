@@ -779,6 +779,9 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                     <p className="mt-1 text-muted-foreground">
                       House releases are included free with every member account. Open <strong>Library</strong> from The Scene and spin <strong>Mirror by Neomaiya Sol</strong> when it is featured there to test playback, search, queues, and crates before buying anything.
                     </p>
+                    <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-fuchsia-200">
+                      Streaming is included with access. Saving a device copy for offline play requires Studio Pro.
+                    </p>
                   </div>
                   <div className="rounded-xl border border-fuchsia-400/25 bg-fuchsia-400/5 p-4 text-xs">
                     <p className="font-bold text-fuchsia-200">Buy now or build a music cart</p>

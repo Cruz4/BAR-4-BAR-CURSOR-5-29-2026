@@ -15,6 +15,10 @@ import { dropPriceSummary, isCommerceLive, normalizeDropAudio, normalizeDropPric
 import { cn } from '@/lib/utils';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { DropListenPanel } from '@/components/drop-listen-panel';
+import { MusicDiscoveryTags } from '@/components/music-discovery-tags';
+import { publicMusicMetadataFromTrack } from '@/lib/music-discovery-metadata';
+import { orderAlbumTracks } from '@/lib/album-track-order';
+import { pressedSongHref } from '@/lib/pressed-song';
 
 type DnaDropAlbumHubProps = {
   album: DnaDropAlbumPayload;
@@ -38,7 +42,7 @@ function trackSubtitle(track: DnaDropTrackPayload, firstDropsOn: boolean): strin
 
 export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName, houseRelease = false }: DnaDropAlbumHubProps) {
   const { enabled: firstDropsOn } = useFirstDropsFeature();
-  const tracks = album.tracks ?? [];
+  const tracks = orderAlbumTracks(album.tracks ?? [], album);
   const liveCount = tracks.filter((t) => hasActiveDnaDrop(t.shareId)).length;
   const audioCount = tracks.filter((t) => normalizeDropAudio(t.dropAudio)).length;
   const albumForSale = firstDropsOn && audioCount > 0 && (
@@ -78,6 +82,12 @@ export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName, houseRelea
             {tracks.map((track, idx) => {
               const live = hasActiveDnaDrop(track.shareId);
               const hasAudio = Boolean(normalizeDropAudio(track.dropAudio));
+              const releasedInAlbum = albumForSale && hasAudio;
+              const releaseHref = releasedInAlbum
+                ? pressedSongHref(shareId, { trackId: track.id })
+                : live
+                  ? `/share/${track.shareId}`
+                  : undefined;
               const inner = (
                 <>
                   <div className="relative aspect-square w-full overflow-hidden border-b bg-neutral-950">
@@ -91,12 +101,12 @@ export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName, houseRelea
                         variant="outline"
                         className={cn(
                           'text-[8px] uppercase tracking-widest border bg-black/50 backdrop-blur-sm',
-                          live
+                          releasedInAlbum || live
                             ? 'border-emerald-500/40 text-emerald-300'
                             : 'border-white/20 text-muted-foreground'
                         )}
                       >
-                        {live ? 'Live' : 'Offline'}
+                        {releasedInAlbum ? 'Released on album' : live ? 'DNA live' : 'Offline'}
                       </Badge>
                     </div>
                     <div className="absolute bottom-2 left-2 right-2 pointer-events-none">
@@ -112,7 +122,12 @@ export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName, houseRelea
                     <div className="min-w-0 space-y-1">
                       <p className="text-[10px] text-muted-foreground truncate">{trackSubtitle(track, firstDropsOn)}</p>
                       <p className="text-[9px] uppercase tracking-widest text-muted-foreground/70 flex items-center gap-1.5">
-                        {live ? (
+                        {releasedInAlbum ? (
+                          <>
+                            <CassetteTape className="h-3 w-3 text-emerald-300 shrink-0" />
+                            Open song page
+                          </>
+                        ) : live ? (
                           <>
                             <CassetteTape className="h-3 w-3 text-primary shrink-0" />
                             {hasAudio ? 'Audio included · open track DNA' : 'Open track DNA'}
@@ -125,7 +140,7 @@ export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName, houseRelea
                         )}
                       </p>
                     </div>
-                    {live ? (
+                    {releasedInAlbum || live ? (
                       <ChevronRight className="h-5 w-5 text-primary shrink-0" aria-hidden />
                     ) : null}
                   </div>
@@ -134,14 +149,14 @@ export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName, houseRelea
 
               return (
                 <li key={track.id}>
-                  {live ? (
+                  {releaseHref ? (
                     <Link
-                      href={`/share/${track.shareId}`}
+                      href={releaseHref}
                       className={cn(
                         'block overflow-hidden rounded-xl border-2 border-border bg-card/80 transition-colors',
                         'hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
                       )}
-                      aria-label={`Open DNA Drop for ${track.title}`}
+                      aria-label={releasedInAlbum ? `Open song page for ${track.title}` : `Open DNA Drop for ${track.title}`}
                     >
                       {inner}
                     </Link>
@@ -154,6 +169,11 @@ export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName, houseRelea
                       {inner}
                     </div>
                   )}
+                  <MusicDiscoveryTags
+                    metadata={publicMusicMetadataFromTrack(track)}
+                    compact
+                    className="mt-2 px-1"
+                  />
                   {albumForSale && hasAudio ? (
                     <DropListenPanel
                       shareId={shareId}
@@ -167,7 +187,7 @@ export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName, houseRelea
                       source="share"
                       presentation="compact"
                       playbackGroup={`album-${shareId}`}
-                      detailsHref={`/share/${shareId}`}
+                      detailsHref={pressedSongHref(shareId, { trackId: track.id })}
                       checkoutDestination="share"
                       showPurchase={false}
                     />

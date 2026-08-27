@@ -3,8 +3,8 @@
 export const COVER_ART_EXPORT_SIZE = 1000;
 export const COVER_ART_MIN_DIMENSION = 400;
 export const COVER_ART_MAX_INPUT_BYTES = 10 * 1024 * 1024;
-/** ~800KB base64 budget for Firestore-friendly payloads */
-export const COVER_ART_MAX_OUTPUT_BYTES = 800 * 1024;
+/** Base64 string budget, leaving room for album and release metadata in Firestore. */
+export const COVER_ART_MAX_OUTPUT_BYTES = 600 * 1024;
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -47,7 +47,9 @@ export async function processCoverArtFile(
 
     let quality = 0.92;
     let dataUrl = canvas.toDataURL('image/jpeg', quality);
-    while (dataUrl.length > COVER_ART_MAX_OUTPUT_BYTES * 1.37 && quality > 0.52) {
+    // Firestore stores the base64 string itself, so compare its actual length;
+    // multiplying by the base64 ratio previously allowed images over 1MB.
+    while (dataUrl.length > COVER_ART_MAX_OUTPUT_BYTES && quality > 0.36) {
       quality -= 0.08;
       dataUrl = canvas.toDataURL('image/jpeg', quality);
     }

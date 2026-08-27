@@ -249,7 +249,7 @@ import { GenerateSongDraftDialog } from './generate-song-draft-dialog';
 import { ExportDialog } from './export-dialog';
 import { ShareDialog } from './share-dialog';
 import { DnaDropLiveIndicator } from './dna-drop-live-indicator';
-import { FirstDropLiveIndicator } from './first-drop-live-indicator';
+import { trackReleaseControlState } from '@/lib/track-live-flags';
 import { CollabSheetLiveIndicator } from '@/components/collab-sheet/collab-sheet-live-indicator';
 import { CollabSheetSession } from '@/components/collab-sheet/collab-sheet-session';
 import { CollabSheetFloatingPresence } from '@/components/collab-sheet/collab-sheet-floating-presence';
@@ -800,6 +800,40 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
     setSuggestedTitles(null);
   }, [track.id]);
 
+  const releaseControlState = trackReleaseControlState(track, album);
+  const releaseControlCopy = {
+    new: {
+      label: 'New release',
+      hint: 'Upload a recording, set its price, and publish it for listening or purchase.',
+      badge: null,
+      badgeClassName: '',
+    },
+    attached: {
+      label: 'Audio attached',
+      hint: 'A private recording is attached to this song. Open it to finish the release or replace the audio.',
+      badge: 'Private',
+      badgeClassName: 'border-cyan-400/45 bg-cyan-400/10 text-cyan-200',
+    },
+    offline: {
+      label: 'Release offline',
+      hint: 'This release is currently offline. Its recording is still attached and can be managed or republished.',
+      badge: 'Offline',
+      badgeClassName: 'border-amber-400/45 bg-amber-400/10 text-amber-200',
+    },
+    live: {
+      label: 'Release live',
+      hint: 'This song is live. Open its release controls to manage the recording, price, or availability.',
+      badge: 'Live',
+      badgeClassName: 'border-fuchsia-300/55 bg-fuchsia-400/15 text-fuchsia-100',
+    },
+    'album-live': {
+      label: 'Live on album',
+      hint: 'This recording is live as part of its album release. Open the release controls to manage it.',
+      badge: 'Album',
+      badgeClassName: 'border-violet-300/55 bg-violet-400/15 text-violet-100',
+    },
+  }[releaseControlState];
+
   const gateGuestInk = (featureLabel: string) => {
     if (!isGuestTryMode) return false;
     void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.LOCKED_FEATURE, { feature: featureLabel });
@@ -1160,14 +1194,14 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                         actionSafe
                         content={
                           <p className="text-[10px] font-bold leading-snug">
-                            Release this recording: upload audio, set a price, and publish it for listening or purchase.
+                            {releaseControlCopy.hint}
                           </p>
                         }
                       >
                         <Button
                           variant="secondary"
                           size="sm"
-                          className="w-full min-w-0 bg-fuchsia-500/15 hover:bg-fuchsia-500/25 text-fuchsia-200 border border-fuchsia-400/35 text-[9px] font-bold h-9 uppercase justify-start leading-none pl-2 pr-2.5"
+                          className="w-full min-w-0 gap-0 bg-fuchsia-500/15 hover:bg-fuchsia-500/25 text-fuchsia-200 border border-fuchsia-400/35 text-[9px] font-bold h-9 uppercase justify-start leading-none pl-2 pr-2.5"
                           onClick={() => {
                             if (isGuestTryMode) {
                               void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.LOCKED_FEATURE, {
@@ -1180,11 +1214,22 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                           }}
                         >
                           <Disc3 className="mr-2 h-4 w-4 shrink-0" />
-                          <span className="flex min-w-0 flex-1 items-center justify-between gap-2 overflow-visible">
+                          <span className="flex min-w-0 flex-1 items-center justify-between gap-1 overflow-visible">
                             <span className="truncate min-w-0">
-                              {isGuestTryMode ? 'Release song · Sign up' : 'Release song'}
+                              {isGuestTryMode ? 'New release · Sign up' : releaseControlCopy.label}
                             </span>
-                            {!isGuestTryMode ? <FirstDropLiveIndicator track={track} variant="compact" /> : null}
+                            {!isGuestTryMode && releaseControlCopy.badge ? (
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'h-5 shrink-0 gap-1 px-1.5 text-[7px] font-black uppercase leading-none tracking-[0.12em]',
+                                  releaseControlCopy.badgeClassName,
+                                )}
+                              >
+                                <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />
+                                {releaseControlCopy.badge}
+                              </Badge>
+                            ) : null}
                           </span>
                         </Button>
                       </Hint>

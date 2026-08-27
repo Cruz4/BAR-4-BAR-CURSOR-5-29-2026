@@ -6,38 +6,49 @@ import { PressedSongPageClient } from '@/components/song/pressed-song-page-clien
 import { getPublicAppUrl } from '@/lib/app-url';
 import { loadShare } from '@/lib/server/drop-entitlements';
 
-export async function generateMetadata({ params }: { params: Promise<{ shareId: string }> }): Promise<Metadata> {
+type SongPageProps = {
+  params: Promise<{ shareId: string }>;
+  searchParams: Promise<{ trackId?: string }>;
+};
+
+export async function generateMetadata({ params, searchParams }: SongPageProps): Promise<Metadata> {
   const { shareId } = await params;
-  const song = await getPressedSongSummary(await getDb(), shareId);
+  const { trackId } = await searchParams;
+  const song = await getPressedSongSummary(await getDb(), shareId, undefined, trackId);
   if (!song) return { title: 'Music Release | Bar4Bar' };
-  const description = `Listen to ${song.title} by ${song.artist.name} on Bar4Bar.`;
-  const url = `${getPublicAppUrl()}/song/${encodeURIComponent(shareId)}`;
+  const categories = [...song.metadata.genreStyles, ...song.metadata.moods];
+  const description = `Listen to ${song.title} by ${song.artist.name} on Bar4Bar${categories.length ? ` · ${categories.join(' · ')}` : ''}.`;
+  const url = `${getPublicAppUrl()}/song/${encodeURIComponent(shareId)}${trackId ? `?trackId=${encodeURIComponent(trackId)}` : ''}`;
   return {
     title: `${song.title} by ${song.artist.name} | Bar4Bar`,
     description,
+    ...(categories.length ? { keywords: categories } : {}),
     alternates: { canonical: url },
     openGraph: { title: song.title, description, type: 'music.song', url },
   };
 }
 
-export default async function PressedSongPage({ params }: { params: Promise<{ shareId: string }> }) {
+export default async function PressedSongPage({ params, searchParams }: SongPageProps) {
   const { shareId } = await params;
+  const { trackId } = await searchParams;
   const db = await getDb();
   const share = await loadShare(db, shareId);
-  if (share?.type === 'album') redirect(`/share/${encodeURIComponent(shareId)}`);
-  const song = await getPressedSongSummary(db, shareId);
+  if (share?.type === 'album' && !trackId) redirect(`/share/${encodeURIComponent(shareId)}`);
+  const song = await getPressedSongSummary(db, shareId, undefined, trackId);
   if (!song) notFound();
+  const songUrl = `${getPublicAppUrl()}/song/${encodeURIComponent(shareId)}${trackId ? `?trackId=${encodeURIComponent(trackId)}` : ''}`;
   const structured = {
     '@context': 'https://schema.org',
     '@type': 'MusicRecording',
     name: song.title,
     datePublished: song.releasedAt,
+    ...(song.metadata.genreStyles.length ? { genre: song.metadata.genreStyles } : {}),
     byArtist: {
       '@type': 'MusicGroup',
       name: song.artist.name,
       ...(song.artist.slug ? { url: `${getPublicAppUrl()}/${song.artist.slug}` } : {}),
     },
-    url: `${getPublicAppUrl()}/song/${encodeURIComponent(shareId)}`,
+    url: songUrl,
   };
   return (
     <>

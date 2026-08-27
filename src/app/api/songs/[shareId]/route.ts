@@ -19,7 +19,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ shareId:
   try {
     const { shareId } = await params;
     const uid = await viewerId(req);
-    const summary = await getPressedSongSummary(await getDb(), shareId, uid);
+    const trackId = new URL(req.url).searchParams.get('trackId')?.trim() || undefined;
+    const summary = await getPressedSongSummary(await getDb(), shareId, uid, trackId);
     if (!summary) return NextResponse.json({ error: 'Music release not found' }, { status: 404 });
     return NextResponse.json(summary, {
       headers: {

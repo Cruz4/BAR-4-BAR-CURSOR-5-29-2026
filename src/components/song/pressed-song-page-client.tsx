@@ -2,7 +2,8 @@
 
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { BarChart3, CalendarDays, Disc3, Download, Headphones, ReceiptText, ShoppingBag, Sparkles, Trophy, Unlink } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, BarChart3, CalendarDays, Disc3, Download, Gift, Headphones, ReceiptText, ShoppingBag, Sparkles, Trophy, Unlink } from 'lucide-react';
 import { auth } from '@/lib/firebase/client/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +21,7 @@ import { pressTokens, pressingCssVars } from '@/lib/profile/pressing';
 import type { MusicChartsResponse } from '@/lib/music-charts';
 import { manageRelease } from '@/lib/release-management-client';
 import { DataContext } from '@/context/data-context';
+import { MusicDiscoveryTags } from '@/components/music-discovery-tags';
 
 async function authorization(): Promise<HeadersInit> {
   const token = await auth.currentUser?.getIdToken();
@@ -45,6 +47,7 @@ function SupporterRow({ supporter, showAmount }: { supporter: PressedSongSupport
 }
 
 export function PressedSongPageClient({ initial }: { initial: PressedSongSummary }) {
+  const router = useRouter();
   const { user, authReady } = useAuth();
   const { updateTrack } = useContext(DataContext);
   const { toast } = useToast();
@@ -63,11 +66,12 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
     [pressingTokens]
   );
   const refresh = useCallback(async () => {
-    const response = await fetch(`/api/songs/${encodeURIComponent(initial.shareId)}`, {
+    const trackQuery = initial.trackId ? `?trackId=${encodeURIComponent(initial.trackId)}` : '';
+    const response = await fetch(`/api/songs/${encodeURIComponent(initial.shareId)}${trackQuery}`, {
       headers: await authorization(), cache: 'no-store',
     });
     if (response.ok) setSummary((await response.json()) as PressedSongSummary);
-  }, [initial.shareId]);
+  }, [initial.shareId, initial.trackId]);
 
   useEffect(() => {
     if (authReady) void refresh();
@@ -97,7 +101,8 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
     setSavingCredit(true);
     void (async () => {
       try {
-        const response = await fetch(`/api/songs/${encodeURIComponent(summary.shareId)}`, {
+        const trackQuery = summary.trackId ? `?trackId=${encodeURIComponent(summary.trackId)}` : '';
+        const response = await fetch(`/api/songs/${encodeURIComponent(summary.shareId)}${trackQuery}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', ...(await authorization()) },
           body: JSON.stringify({ supporterCreditPublic: checked }),
@@ -115,7 +120,11 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
   };
 
   const artistHref = profileHref(summary.artist.slug);
+  const currentReleaseHref = summary.currentRelease
+    ? `/song/${encodeURIComponent(summary.currentRelease.shareId)}?trackId=${encodeURIComponent(summary.currentRelease.trackId)}`
+    : undefined;
   const viewer = summary.viewer;
+  const canPlayCurrentRelease = summary.releaseLive || Boolean(viewer?.owns) || Boolean(summary.ownerControls);
   const stats = [
     { icon: Headphones, label: 'Plays', value: summary.publicTotals.plays },
     { icon: ShoppingBag, label: 'Buyers', value: summary.publicTotals.buyers },
@@ -150,7 +159,23 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
         })}
       </div>
       <div className="relative mx-auto max-w-4xl space-y-7">
-        <div className="flex justify-between gap-3"><Button variant="outline" asChild className="font-bold uppercase"><Link href="/">The Scene</Link></Button><Button variant="outline" asChild className="font-bold uppercase"><Link href="/vault">The Vault</Link></Button></div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-1.5 font-bold uppercase"
+              onClick={() => {
+                if (window.history.length > 1) router.back();
+                else router.push(artistHref || '/');
+              }}
+            >
+              <ArrowLeft className="h-4 w-4" /> Back
+            </Button>
+            <Button variant="outline" asChild className="font-bold uppercase"><Link href="/">The Scene</Link></Button>
+          </div>
+          <Button variant="outline" asChild className="font-bold uppercase"><Link href="/vault">The Vault</Link></Button>
+        </div>
         <section className="rounded-3xl border border-fuchsia-400/35 bg-black/60 p-5 shadow-[0_0_70px_rgba(236,72,153,.16)] backdrop-blur-md sm:p-8">
           <div className="mb-5 flex items-center gap-3">
             <ArtistStarAvatar name={summary.artist.name} avatarUrl={summary.artist.avatarUrl} useStarMark={summary.artist.starMarkUseStar} starMarkSeed={summary.artist.starMarkSeed} studioChrome={summary.artist.studioBadge || 'free'} size={48} />
@@ -158,8 +183,25 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
           </div>
           <div className="mb-5 flex items-start gap-4">
             <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-fuchsia-400/40 bg-fuchsia-500/15"><Disc3 className="h-8 w-8 text-fuchsia-300" /></span>
-            <div><p className="text-[10px] font-bold uppercase tracking-[.25em] text-muted-foreground">Music release</p><h1 className="font-headline text-3xl font-black uppercase sm:text-5xl">{summary.title}</h1><p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> Released {new Date(summary.releasedAt).toLocaleDateString()}</p></div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-[.25em] text-muted-foreground">Music release</p>
+                {summary.houseRelease ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-400/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[.18em] text-cyan-100">
+                    <Gift className="h-2.5 w-2.5" /> House release · free
+                  </span>
+                ) : null}
+                {summary.albumTitle ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/35 bg-emerald-400/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[.18em] text-emerald-100">
+                    <Disc3 className="h-2.5 w-2.5" /> Album · {summary.albumTitle}
+                  </span>
+                ) : null}
+              </div>
+              <h1 className="font-headline text-3xl font-black uppercase sm:text-5xl">{summary.title}</h1>
+              <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> Released {new Date(summary.releasedAt).toLocaleDateString()}</p>
+            </div>
           </div>
+          <MusicDiscoveryTags metadata={summary.metadata} soundAsText className="mb-5" />
           {summary.ownerControls ? (
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2">
               <span className="font-code text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -174,7 +216,15 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
               )}
             </div>
           ) : null}
-          <DropListenPanel shareId={summary.shareId} title={summary.title} artistName={summary.artist.name} ownerId={summary.ownerId} price={summary.price} hasAudio houseRelease={summary.houseRelease} source="direct" presentation="song" firstPressRank={viewer?.firstPressRank} onPlaybackStateChange={setPlayback} />
+          {canPlayCurrentRelease ? (
+            <DropListenPanel shareId={summary.shareId} trackId={summary.trackId} title={summary.title} artistName={summary.artist.name} ownerId={summary.ownerId} price={summary.price} hasAudio houseRelease={summary.houseRelease} source="direct" presentation="song" songMetadata={summary.metadata} firstPressRank={viewer?.firstPressRank} onPlaybackStateChange={setPlayback} />
+          ) : (
+            <div className="rounded-2xl border border-amber-300/25 bg-amber-300/[0.06] px-4 py-4">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-200">Original release offline</p>
+              <p className="mt-1 text-sm text-muted-foreground">This page remains as release history, but its old player and checkout are closed.</p>
+              {currentReleaseHref || artistHref ? <Button asChild size="sm" variant="outline" className="mt-3 h-8 text-[10px] font-bold uppercase"><Link href={currentReleaseHref || `${artistHref}/songs`}>{currentReleaseHref ? `Play from ${summary.currentRelease?.albumTitle}` : 'See current releases'}</Link></Button> : null}
+            </div>
+          )}
           <div className="mt-4">
             <DropSocialPanel
               shareId={summary.shareId}
@@ -208,10 +258,10 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
                   <div><dt className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Purchase date</dt><dd className="mt-1 font-code">{new Date(viewer.purchase.purchasedAt).toLocaleString()}</dd></div>
                   <div><dt className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Amount paid</dt><dd className="mt-1 font-headline text-xl font-black text-amber-100">{centsToUsdLabel(viewer.purchase.amountCents)}</dd></div>
                   <div><dt className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Item type</dt><dd className="mt-1 capitalize">{viewer.purchase.scope}</dd></div>
-                  <div><dt className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Access</dt><dd className="mt-1">Full stream + device offline copy</dd></div>
+                  <div><dt className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Access</dt><dd className="mt-1">Full stream · offline device copy with Studio Pro</dd></div>
                 </dl>
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-amber-200/15 bg-black/20 px-5 py-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-2"><Download className="h-4 w-4 text-amber-300" /> Download from the song menu in your Library.</span>
+                  <span className="flex items-center gap-2"><Download className="h-4 w-4 text-amber-300" /> Studio Pro can save it for offline play from the Library song menu.</span>
                   <Button asChild size="sm" variant="outline" className="border-amber-300/35 text-amber-100"><Link href="/library">Open Library</Link></Button>
                 </div>
               </section>

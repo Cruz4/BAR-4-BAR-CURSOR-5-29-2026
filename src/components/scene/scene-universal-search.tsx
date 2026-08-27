@@ -37,7 +37,7 @@ function DiscoveryFilterControls({
     onChange(normalizeDiscoverySearchFilters({ ...filters, ...patch }));
   const resultKind = filters.resultKinds[0] || '';
   const identityKind = filters.identityKinds[0] || '';
-  const fieldClass = 'h-9 min-w-0 rounded-md border border-white/10 bg-black/30 px-2.5 font-code text-[10px] text-foreground outline-none focus:border-sky-400/55';
+  const fieldClass = 'h-9 min-w-0 rounded-md border border-white/15 bg-[#07111f] px-2.5 font-code text-[10px] text-white outline-none [color-scheme:dark] focus:border-sky-400/55 [&>option]:bg-[#07111f] [&>option]:text-white';
   return (
     <div className="grid min-w-0 gap-2 border-t border-white/10 p-3 sm:grid-cols-2 lg:grid-cols-4">
       <label className="min-w-0 space-y-1">

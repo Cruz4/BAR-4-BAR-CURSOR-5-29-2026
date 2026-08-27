@@ -2,10 +2,12 @@ import 'server-only';
 
 import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { normalizeDropPrice } from '@/lib/drop-commerce';
-import { loadShare, priceFromShare } from '@/lib/server/drop-entitlements';
+import { isReleaseShareLive, loadShare, priceFromShare } from '@/lib/server/drop-entitlements';
 import { needsVanitySlugUpgrade } from '@/lib/profile/profile-slug';
 import type { PressedSongSummary, PressedSongSupporter } from '@/lib/pressed-song';
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
+import { publicMusicMetadataFromTrack } from '@/lib/music-discovery-metadata';
+import { shareDocumentVisibility } from '@/lib/release-management';
 
 function nonnegative(value: unknown): number {
   return Math.max(0, Math.floor(Number(value) || 0));
@@ -62,11 +64,12 @@ async function avatarUrlsByProfile(
 export async function getPressedSongSummary(
   db: Firestore,
   shareId: string,
-  viewerId?: string | null
+  viewerId?: string | null,
+  trackId?: string,
 ): Promise<PressedSongSummary | null> {
   const share = await loadShare(db, shareId);
   if (!share) return null;
-  const priced = priceFromShare(share);
+  const priced = priceFromShare(share, trackId);
   if (!priced.audio) return null;
   const shareSnap = await db.collection('shares').doc(shareId).get();
   const shareRaw = shareSnap.data() || {};
@@ -80,12 +83,20 @@ export async function getPressedSongSummary(
     'Artist';
   const releasedAt = timestamp(priced.audio.uploadedAt || shareRaw.createdAt);
 
+  const albumTracks = share.type === 'album' && Array.isArray(share.data?.tracks)
+    ? share.data.tracks as Array<Record<string, unknown>>
+    : [];
+  const selectedTrack = trackId ? albumTracks.find((row) => row.id === trackId) : undefined;
   const base: PressedSongSummary = {
     shareId,
+    ...(trackId ? { trackId } : {}),
+    ...(share.type === 'album' && typeof share.data?.title === 'string' ? { albumTitle: share.data.title } : {}),
     ownerId: share.ownerId,
     title: priced.title,
     hasAudio: true,
+    releaseLive: isReleaseShareLive(share),
     houseRelease: share.houseRelease === true,
+    metadata: publicMusicMetadataFromTrack(selectedTrack || share.data),
     price: normalizeDropPrice(priced.price),
     releasedAt,
     artist: {
@@ -104,6 +115,32 @@ export async function getPressedSongSummary(
       buyers: nonnegative(shareRaw.purchaseCount),
     },
   };
+  if (!base.releaseLive && share.type === 'track') {
+    const ownerShares = await db.collection('shares').where('ownerId', '==', share.ownerId).get();
+    const successor = ownerShares.docs
+      .flatMap((doc) => {
+        const data = doc.data() as Record<string, unknown>;
+        if (data.type !== 'album' || !shareDocumentVisibility(data).releaseLive) return [];
+        const payload = data.data && typeof data.data === 'object'
+          ? data.data as Record<string, unknown>
+          : {};
+        const tracks = Array.isArray(payload.tracks) ? payload.tracks as Array<Record<string, unknown>> : [];
+        const track = tracks.find((row) => row.id === share.projectId);
+        if (!track) return [];
+        return [{
+          shareId: doc.id,
+          trackId: share.projectId,
+          title: typeof track.title === 'string' && track.title.trim() ? track.title.trim() : priced.title,
+          albumTitle: typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : 'Album',
+          updatedAt: timestamp(data.updatedAt || data.createdAt),
+        }];
+      })
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+    if (successor) {
+      const { updatedAt: _updatedAt, ...currentRelease } = successor;
+      base.currentRelease = currentRelease;
+    }
+  }
   if (!viewerId) return base;
 
   const [insightSnap, salesSnap, viewerLibrarySnap] = await Promise.all([
@@ -193,7 +230,7 @@ export async function getPressedSongSummary(
         }
       : {}),
   };
-  if (viewerId === share.ownerId) {
+  if (viewerId === share.ownerId && share.type === 'track') {
     const albumId = typeof share.data?.albumId === 'string' ? share.data.albumId : '';
     if (albumId) {
       base.ownerControls = {

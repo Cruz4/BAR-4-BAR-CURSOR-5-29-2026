@@ -84,6 +84,8 @@ export interface Album {
   coverArtUrl?: string;
   direction?: Direction;    
   tracks: Track[];
+  /** Durable artist-chosen album sequence; track bodies remain in the tracks subcollection. */
+  trackOrder?: string[];
   dnaPresets?: DnaPreset[];
   stylePresets?: Array<{
     name: string;

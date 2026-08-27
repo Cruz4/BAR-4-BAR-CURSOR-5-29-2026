@@ -50,7 +50,7 @@ import {
   shareCommerceFlags,
   shareDocCommerceFlags,
 } from '@/lib/drop-commerce';
-import { isShareDocumentPublic } from '@/lib/release-management';
+import { isShareDocumentPublic, shareDocumentVisibility } from '@/lib/release-management';
 import {
   allocateUniqueProfileSlug,
   assertProfileSlugAvailable,
@@ -1381,7 +1381,7 @@ export async function getPublicProfile(slug: string) {
   const featuredShareId = typeof featuredTrack?.shareId === 'string' ? featuredTrack.shareId.trim() : '';
   if (featuredShareId) {
     const featuredShare = await db.doc(`shares/${featuredShareId}`).get();
-    if (!featuredShare.exists || !isShareDocumentPublic((featuredShare.data() || {}) as Record<string, unknown>)) {
+    if (!featuredShare.exists || !shareDocumentVisibility((featuredShare.data() || {}) as Record<string, unknown>).releaseLive) {
       const home = artistHome as Record<string, unknown>;
       const featured = home.featured as Record<string, unknown>;
       const { featuredTrack: _hidden, ...publicFeatured } = featured;
@@ -1509,6 +1509,8 @@ export type LiveDnaDropSummary = {
   /** Live track count on album cards. */
   trackCount?: number;
   hasDropAudio?: boolean;
+  releaseLive?: boolean;
+  dnaLive?: boolean;
   houseRelease?: boolean;
   dropPriceSummary?: string;
   playCount?: number;
@@ -1519,7 +1521,20 @@ export type LiveDnaDropSummary = {
 
 type LiveDnaDropDraft = LiveDnaDropSummary & { updatedAt: string };
 
-/** Active public DNA Drops for a user (shares collection = live). */
+function dnaReleaseIdentity(data: Record<string, unknown>): string {
+  const type = data.type === 'album' ? 'album' : 'track';
+  const projectId = typeof data.projectId === 'string' ? data.projectId.trim() : '';
+  if (type === 'album') {
+    const payload = data.data && typeof data.data === 'object' ? data.data as Record<string, unknown> : {};
+    const title = typeof payload.title === 'string' ? payload.title.trim().toLocaleLowerCase() : '';
+    // Old album republishes can have a new project id while still representing
+    // the same named album. Keep one canonical DNA card for that release.
+    if (title) return `album-title:${title.replace(/\s+/g, ' ')}`;
+  }
+  return `${type}:${projectId}`;
+}
+
+/** Active public music releases and lyric DNA pages for an Artist Home. */
 export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDropSummary[]> {
   if (!userId) return [];
   const db = await getDb();
@@ -1527,10 +1542,30 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
 
   const byShareId = new Map<string, LiveDnaDropDraft>();
   const shareDocsById = new Map(snap.docs.map((doc) => [doc.id, doc]));
+  const preferredDnaShareByProject = new Map<string, { shareId: string; dedicated: boolean; updatedAt: string }>();
+
+  for (const doc of snap.docs) {
+    const data = doc.data() as Record<string, unknown>;
+    const visibility = shareDocumentVisibility(data);
+    if (!visibility.dnaLive) continue;
+    const projectId = typeof data.projectId === 'string' ? data.projectId : '';
+    if (!projectId) continue;
+    const key = dnaReleaseIdentity(data);
+    const updatedAt = typeof data.updatedAt === 'string' ? data.updatedAt : typeof data.createdAt === 'string' ? data.createdAt : '';
+    const candidate = { shareId: doc.id, dedicated: !visibility.releaseLive, updatedAt };
+    const current = preferredDnaShareByProject.get(key);
+    if (!current || (candidate.dedicated && !current.dedicated) || (candidate.dedicated === current.dedicated && candidate.updatedAt > current.updatedAt)) {
+      preferredDnaShareByProject.set(key, candidate);
+    }
+  }
 
   for (const doc of snap.docs) {
     const data = doc.data();
-    if (!isShareDocumentPublic(data as Record<string, unknown>)) continue;
+    const visibility = shareDocumentVisibility(data as Record<string, unknown>);
+    const projectId = typeof data.projectId === 'string' ? data.projectId : '';
+    const projectKey = dnaReleaseIdentity(data as Record<string, unknown>);
+    const dnaLive = visibility.dnaLive && (!projectId || preferredDnaShareByProject.get(projectKey)?.shareId === doc.id);
+    if (!visibility.releaseLive && !dnaLive) continue;
     const type = data.type === 'album' ? ('album' as const) : ('track' as const);
     const title =
       typeof data?.data?.title === 'string' && data.data.title.trim()
@@ -1561,8 +1596,10 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
       title: title.slice(0, 120),
       type,
       updatedAt,
-      ...(flags.hasDropAudio ? { hasDropAudio: true } : {}),
-      ...(data.houseRelease === true ? { houseRelease: true } : {}),
+      ...(type === 'track' && visibility.releaseLive && flags.hasDropAudio ? { hasDropAudio: true } : {}),
+      ...(visibility.releaseLive ? { releaseLive: true } : {}),
+      ...(dnaLive ? { dnaLive: true } : {}),
+      ...(visibility.releaseLive && data.houseRelease === true ? { houseRelease: true } : {}),
       ...(flags.dropPriceSummary ? { dropPriceSummary: flags.dropPriceSummary } : {}),
       ...(Number(data.playCount) > 0 ? { playCount: Number(data.playCount) } : {}),
       ...(Number(data.previewCount) > 0 ? { previewCount: Number(data.previewCount) } : {}),
@@ -1583,7 +1620,10 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
   // Nest live tracks under their album DNA so the Drop Shelf can group them.
   for (const doc of snap.docs) {
     const data = doc.data();
-    if (!isShareDocumentPublic(data as Record<string, unknown>)) continue;
+    const visibility = shareDocumentVisibility(data as Record<string, unknown>);
+    const projectId = typeof data.projectId === 'string' ? data.projectId : '';
+    const projectKey = dnaReleaseIdentity(data as Record<string, unknown>);
+    if (!visibility.dnaLive || (projectId && preferredDnaShareByProject.get(projectKey)?.shareId !== doc.id)) continue;
     if (data.type !== 'album') continue;
     const albumShareId = doc.id;
     const albumTitle =
@@ -1607,9 +1647,7 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
           : '';
       if (!shareId) continue;
       const linkedShare = shareDocsById.get(shareId);
-      if (linkedShare && !isShareDocumentPublic(linkedShare.data() as Record<string, unknown>)) {
-        continue;
-      }
+      if (!linkedShare || !shareDocumentVisibility(linkedShare.data() as Record<string, unknown>).dnaLive) continue;
 
       const trackTitle =
         typeof (track as { title?: unknown }).title === 'string' &&
@@ -1658,7 +1696,7 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
       return b.updatedAt.localeCompare(a.updatedAt);
     })
     .slice(0, 48)
-    .map(({ shareId, title, type, albumTitle, albumShareId, trackIndex, trackCount, hasDropAudio, houseRelease, dropPriceSummary, playCount, previewCount, purchaseCount, firstBuyerName }) => ({
+    .map(({ shareId, title, type, albumTitle, albumShareId, trackIndex, trackCount, hasDropAudio, releaseLive, dnaLive, houseRelease, dropPriceSummary, playCount, previewCount, purchaseCount, firstBuyerName }) => ({
       shareId,
       title,
       type,
@@ -1667,6 +1705,8 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
       ...(typeof trackIndex === 'number' ? { trackIndex } : {}),
       ...(typeof trackCount === 'number' ? { trackCount } : {}),
       ...(hasDropAudio ? { hasDropAudio: true } : {}),
+      ...(releaseLive ? { releaseLive: true } : {}),
+      ...(dnaLive ? { dnaLive: true } : {}),
       ...(houseRelease ? { houseRelease: true } : {}),
       ...(dropPriceSummary ? { dropPriceSummary } : {}),
       ...(playCount ? { playCount } : {}),
@@ -2192,6 +2232,8 @@ export type DiscoverShareSummary = {
   studioBadge?: 'pro' | 'free';
   updatedAt: string;
   hasDropAudio?: boolean;
+  releaseLive?: boolean;
+  dnaLive?: boolean;
   houseRelease?: boolean;
   dropPriceSummary?: string;
   playCount?: number;
@@ -2202,7 +2244,7 @@ export type DiscoverShareSummary = {
   pressing?: PressingConfig;
 };
 
-/** Recent live DNA Drops — summary only, heavy `data` payload stripped. */
+/** Recent live music releases and lyric DNA pages — heavy payload stripped. */
 export async function listRecentShareSummaries(
   opts: { limit?: number; excludeOwnerId?: string } = {}
 ): Promise<DiscoverShareSummary[]> {
@@ -2221,6 +2263,8 @@ export async function listRecentShareSummaries(
     ownerName: string;
     updatedAt: string;
     hasDropAudio?: boolean;
+    releaseLive?: boolean;
+    dnaLive?: boolean;
     houseRelease?: boolean;
     dropPriceSummary?: string;
     dropPrice?: ReturnType<typeof normalizeDropPrice>;
@@ -2232,6 +2276,7 @@ export async function listRecentShareSummaries(
   for (const doc of snap.docs) {
     const data = doc.data() as Record<string, unknown>;
     if (!isShareDocumentPublic(data)) continue;
+    const visibility = shareDocumentVisibility(data);
     const ownerId = typeof data.ownerId === 'string' ? data.ownerId : '';
     if (opts.excludeOwnerId && ownerId === opts.excludeOwnerId) continue;
     const type = data.type === 'album' ? ('album' as const) : ('track' as const);
@@ -2240,7 +2285,7 @@ export async function listRecentShareSummaries(
       dropAudio: payload.dropAudio,
       dropPrice: payload.dropPrice,
     });
-    const hasDropAudio = type === 'track' && (flags.hasDropAudio || data.hasDropAudio === true);
+    const hasDropAudio = visibility.releaseLive && type === 'track' && (flags.hasDropAudio || data.hasDropAudio === true);
     const priced = normalizeDropPrice(payload.dropPrice);
     const title =
       typeof payload.title === 'string' && payload.title.trim()
@@ -2264,7 +2309,9 @@ export async function listRecentShareSummaries(
             ? data.createdAt
             : '',
       ...(hasDropAudio ? { hasDropAudio: true } : {}),
-      ...(data.houseRelease === true ? { houseRelease: true } : {}),
+      ...(visibility.releaseLive ? { releaseLive: true } : {}),
+      ...(visibility.dnaLive ? { dnaLive: true } : {}),
+      ...(visibility.releaseLive && data.houseRelease === true ? { houseRelease: true } : {}),
       dropPriceSummary: flags.dropPriceSummary || (typeof data.dropPriceSummary === 'string' ? data.dropPriceSummary : undefined),
       ...(priced ? { dropPrice: priced } : {}),
       playCount: Number(data.playCount) > 0 ? Number(data.playCount) : undefined,
@@ -2276,8 +2323,8 @@ export async function listRecentShareSummaries(
           : undefined,
     });
   }
-  const sale = rows.filter((r) => r.hasDropAudio && r.type === 'track');
-  const rest = rows.filter((r) => !(r.hasDropAudio && r.type === 'track'));
+  const sale = rows.filter((r) => r.releaseLive);
+  const rest = rows.filter((r) => !r.releaseLive);
   const pinned = [...sale, ...rest].slice(0, limit);
   const avatars = await resolvePublicAvatarsByUserIds(pinned.map((r) => r.ownerId));
   return pinned.map((r) => {
@@ -2295,6 +2342,8 @@ export async function listRecentShareSummaries(
       studioBadge: meta?.studioBadge,
       updatedAt: r.updatedAt,
       hasDropAudio: r.hasDropAudio,
+      releaseLive: r.releaseLive,
+      dnaLive: r.dnaLive,
       houseRelease: r.houseRelease,
       dropPriceSummary: r.dropPriceSummary,
       dropPrice: r.dropPrice,

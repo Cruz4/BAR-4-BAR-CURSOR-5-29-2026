@@ -7,7 +7,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Compass, Dna, Flame, Globe, Music, PenLine, Repeat2, Settings2, Share2, Star, Trophy, Zap } from 'lucide-react';
+import { ChevronLeft, Compass, Dna, Flame, Gift, Globe, Music, PenLine, Repeat2, Settings2, Share2, Star, Trophy, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 import { parseActivityPostHash, scrollActivityPostTarget } from '@/lib/activity/post-deep-link';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
 import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
-import { FirstDropsStorefront, LiveDnaDropsGroupedList, firstDropTracks } from '@/components/profile/live-dna-drop-card';
+import { FirstDropsStorefront, LiveDnaDropsGroupedList, lyricDnaItems, musicReleaseItems } from '@/components/profile/live-dna-drop-card';
 import { AlbumCoverCollage } from '@/components/gamification/album-cover-collage';
 import { ProfileInitialsStar } from '@/components/profile/profile-initials-star';
 import { rankBadgeClass, rankIdFromLabel } from '@/lib/gamification/badge-styles';
@@ -168,9 +168,12 @@ export function ArtistHome({
     savedRankLabel || STUDIO_RANKS.find((rank) => rank.id === rankId)?.label || computedRank.label;
   const liveDnaDrops = useMemo(() => profile.liveDnaDrops || [], [profile.liveDnaDrops]);
   const saleDrops = useMemo(
-    () => (firstDropsOn ? firstDropTracks(liveDnaDrops) : []),
+    () => (firstDropsOn ? musicReleaseItems(liveDnaDrops) : []),
     [firstDropsOn, liveDnaDrops]
   );
+  const dnaDrops = useMemo(() => lyricDnaItems(liveDnaDrops), [liveDnaDrops]);
+  const houseDrops = useMemo(() => saleDrops.filter((drop) => drop.houseRelease), [saleDrops]);
+  const artistSaleDrops = useMemo(() => saleDrops.filter((drop) => !drop.houseRelease), [saleDrops]);
 
   const useCustomPhoto =
     profile.profilePhotoMode === 'custom' &&
@@ -234,9 +237,9 @@ export function ArtistHome({
 
   const showLiveDnaDrops = useMemo(
     () =>
-      liveDnaDrops.length > 0 &&
+      dnaDrops.length > 0 &&
       config.modules.some((m) => m.id === 'dropShelf' && m.enabled),
-    [config.modules, liveDnaDrops.length]
+    [config.modules, dnaDrops.length]
   );
   const showFirstDropsStorefront = saleDrops.length > 0;
 
@@ -508,24 +511,24 @@ export function ArtistHome({
                   profileSlug: profile.slug,
                 }}
               />
-              {showFirstDropsStorefront && (
-                saleDrops.length === 1 ? (
+              {artistSaleDrops.length > 0 && (
+                artistSaleDrops.length === 1 ? (
                   <Button
                     asChild
                     size="sm"
                     className="h-10 min-w-0 flex-1 gap-1.5 overflow-hidden whitespace-nowrap bg-fuchsia-400 px-3 text-center font-bold uppercase leading-tight tracking-wider text-black hover:bg-fuchsia-300 sm:h-9 sm:w-auto sm:flex-none sm:px-4"
                   >
                     <Link
-                      href={`/song/${saleDrops[0].shareId}`}
+                      href={artistSaleDrops[0].type === 'album' ? `/share/${artistSaleDrops[0].shareId}` : `/song/${artistSaleDrops[0].shareId}`}
                       className="inline-flex max-w-full items-center gap-1.5"
-                      aria-label={`Listen to or buy ${saleDrops[0].title}${saleDrops[0].dropPriceSummary ? ` · ${saleDrops[0].dropPriceSummary}` : ''}`}
-                      title={saleDrops[0].dropPriceSummary ? `Listen / buy · ${saleDrops[0].dropPriceSummary}` : 'Listen / buy'}
+                      aria-label={`Listen to or buy ${artistSaleDrops[0].title}${artistSaleDrops[0].dropPriceSummary ? ` · ${artistSaleDrops[0].dropPriceSummary}` : ''}`}
+                      title={artistSaleDrops[0].dropPriceSummary ? `Listen / buy · ${artistSaleDrops[0].dropPriceSummary}` : 'Listen / buy'}
                     >
                       <Music className="h-3.5 w-3.5 shrink-0" />
                       <span className="min-w-0 truncate sm:hidden">Listen / buy</span>
                       <span className="hidden min-w-0 truncate sm:inline">
                         Listen
-                        {saleDrops[0].dropPriceSummary ? ` · ${saleDrops[0].dropPriceSummary}` : ''}
+                        {artistSaleDrops[0].dropPriceSummary ? ` · ${artistSaleDrops[0].dropPriceSummary}` : ''}
                       </span>
                     </Link>
                   </Button>
@@ -538,21 +541,40 @@ export function ArtistHome({
                     <a
                       href="#first-drops"
                       className="inline-flex max-w-full items-center gap-1.5"
-                      aria-label={`Listen to or buy from ${saleDrops.length} songs`}
-                      title={`Listen / buy · ${saleDrops.length} songs`}
+                      aria-label={`Listen to or buy from ${artistSaleDrops.length} releases`}
+                      title={`Listen / buy · ${artistSaleDrops.length} releases`}
                     >
                       <Music className="h-3.5 w-3.5 shrink-0" />
                       <span className="min-w-0 truncate sm:hidden">Listen / buy</span>
-                      <span className="hidden min-w-0 truncate sm:inline">Listen · {saleDrops.length} songs</span>
+                      <span className="hidden min-w-0 truncate sm:inline">Listen · {artistSaleDrops.length} releases</span>
                     </a>
                   </Button>
                 )
               )}
+              {houseDrops.length > 0 ? (
+                <Button
+                  asChild
+                  size="sm"
+                  variant="outline"
+                  className="h-9 max-w-full gap-1.5 border-cyan-300/45 bg-cyan-400/10 px-3 font-bold uppercase tracking-wider text-cyan-100 hover:border-cyan-200 hover:bg-cyan-400/20 hover:text-white"
+                >
+                  <Link
+                    href={houseDrops.length === 1
+                      ? houseDrops[0].type === 'album' ? `/share/${houseDrops[0].shareId}` : `/song/${houseDrops[0].shareId}`
+                      : '#first-drops'}
+                    className="inline-flex max-w-full items-center gap-1.5"
+                  >
+                    <Gift className="h-3.5 w-3.5 shrink-0" />
+                    <span className="min-w-0 truncate">
+                      House free · {houseDrops.length} {houseDrops.length === 1 ? 'release' : 'releases'}
+                    </span>
+                  </Link>
+                </Button>
+              ) : null}
               {showLiveDnaDrops && (() => {
-                const albumCount = liveDnaDrops.filter((d) => d.type === 'album').length;
-                const trackCount = liveDnaDrops.filter((d) => d.type === 'track' && !d.hasDropAudio).length;
-                if (showFirstDropsStorefront && albumCount === 0 && trackCount === 0) return null;
-                if (liveDnaDrops.length === 1 && !showFirstDropsStorefront) {
+                const albumCount = dnaDrops.filter((d) => d.type === 'album').length;
+                const trackCount = dnaDrops.filter((d) => d.type === 'track').length;
+                if (dnaDrops.length === 1) {
                   return (
                     <Button
                       asChild
@@ -563,10 +585,10 @@ export function ArtistHome({
                         showFirstDropsStorefront && 'max-sm:w-full max-sm:basis-full'
                       )}
                     >
-                      <Link href={liveDnaDrops[0].hasDropAudio ? `/song/${liveDnaDrops[0].shareId}` : `/share/${liveDnaDrops[0].shareId}`} className="inline-flex max-w-full items-center gap-1.5">
+                      <Link href={`/share/${dnaDrops[0].shareId}`} className="inline-flex max-w-full items-center gap-1.5">
                         <Dna className="h-3.5 w-3.5 shrink-0" />
                         <span className="min-w-0 truncate">
-                          {liveDnaDrops[0].type === 'album' ? '1 album DNA live' : '1 track DNA live'}
+                          {dnaDrops[0].type === 'album' ? '1 album DNA live' : '1 lyric drop live'}
                         </span>
                       </Link>
                     </Button>
@@ -574,7 +596,7 @@ export function ArtistHome({
                 }
                 const label =
                   albumCount > 0 && trackCount > 0
-                    ? `${albumCount} album${albumCount === 1 ? '' : 's'} · ${trackCount} lyric drop${trackCount === 1 ? '' : 's'}`
+                      ? `${albumCount} album DNA · ${trackCount} lyric drop${trackCount === 1 ? '' : 's'}`
                     : albumCount > 0
                       ? `${albumCount} album DNA live`
                       : `${trackCount} lyric drop${trackCount === 1 ? '' : 's'}`;
@@ -883,7 +905,7 @@ export function ArtistHome({
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto pr-1">
             <LiveDnaDropsGroupedList
-              drops={liveDnaDrops}
+              drops={dnaDrops}
               layout="dialog"
               onNavigate={() => setDropsOpen(false)}
             />

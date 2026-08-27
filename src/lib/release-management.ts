@@ -53,30 +53,142 @@ export function isReleasePublic(record: ReleaseRecord): boolean {
   return releaseStatusOf(record) === 'live';
 }
 
+export const RELEASE_SHARE_PAYLOAD_BUDGET_BYTES = 900_000;
+
+export type AlbumReleasePayloadFit = {
+  payload: Record<string, unknown>;
+  byteSize: number;
+  compacted: boolean;
+  coverOmitted: boolean;
+};
+
+function serializedBytes(value: unknown): number {
+  return new TextEncoder().encode(JSON.stringify(value)).byteLength;
+}
+
+/**
+ * Keep album releases below Firestore's 1MB document limit without touching the
+ * private Vault. Full DNA remains in its separate DNA Drop; only an oversized
+ * commerce snapshot falls back to the compact public track manifest.
+ */
+export function fitAlbumReleasePayload(input: Record<string, unknown>): AlbumReleasePayloadFit {
+  const payload = JSON.parse(JSON.stringify(input)) as Record<string, unknown>;
+  const tracks = Array.isArray(payload.tracks)
+    ? payload.tracks.filter((row): row is Record<string, unknown> => Boolean(row && typeof row === 'object'))
+    : [];
+  const albumCover = typeof payload.coverArtUrl === 'string' ? payload.coverArtUrl : '';
+
+  for (const track of tracks) {
+    if (albumCover && track.coverArtUrl === albumCover) delete track.coverArtUrl;
+    const context = track.sharedAlbumContext;
+    if (context && typeof context === 'object' && !Array.isArray(context)) {
+      delete (context as Record<string, unknown>).coverArtUrl;
+    }
+  }
+
+  let byteSize = serializedBytes(payload);
+  if (byteSize <= RELEASE_SHARE_PAYLOAD_BUDGET_BYTES) {
+    return { payload, byteSize, compacted: false, coverOmitted: false };
+  }
+
+  const workstationKeys = [
+    'approvalDraftBacklog',
+    'checkedIntents',
+    'direction',
+    'draftChest',
+    'guardrails',
+    'relayData',
+    'rhymeGroups',
+    'sharedStyle',
+    'sheetTakes',
+    'specialInstructions',
+    'suggestedTitlesHistory',
+    'vibePresets',
+  ];
+  for (const track of tracks) {
+    track.sections = [];
+    track.intentRefs = [];
+    for (const key of workstationKeys) delete track[key];
+    const context = track.sharedAlbumContext;
+    if (context && typeof context === 'object' && !Array.isArray(context)) {
+      const row = context as Record<string, unknown>;
+      for (const key of Object.keys(row)) {
+        if (key !== 'title' && key !== 'shareId') delete row[key];
+      }
+    }
+    if (typeof track.coverArtUrl === 'string' && track.coverArtUrl.startsWith('data:')) {
+      delete track.coverArtUrl;
+    }
+  }
+  delete payload.direction;
+  delete payload.message;
+  delete payload.thingsToSay;
+  payload.releaseSnapshotFormat = 'commerce-compact-v1';
+
+  byteSize = serializedBytes(payload);
+  let coverOmitted = false;
+  if (
+    byteSize > RELEASE_SHARE_PAYLOAD_BUDGET_BYTES
+    && typeof payload.coverArtUrl === 'string'
+    && payload.coverArtUrl.startsWith('data:')
+  ) {
+    delete payload.coverArtUrl;
+    coverOmitted = true;
+    byteSize = serializedBytes(payload);
+  }
+
+  return { payload, byteSize, compacted: true, coverOmitted };
+}
+
 /** True only for the admin-controlled release distributed free to every member. */
 export function isHouseReleaseDocument(document: Record<string, unknown>): boolean {
   return document.houseRelease === true;
 }
 
-/** Public-index guard for raw `shares/{id}` documents. Legacy documents remain compatible. */
-export function isShareDocumentPublic(document: Record<string, unknown>): boolean {
+export type ShareDocumentVisibility = {
+  releaseLive: boolean;
+  dnaLive: boolean;
+};
+
+/**
+ * Keep commerce visibility and lyric/DNA visibility independent. New release
+ * snapshots always carry releaseStatus; new DNA snapshots always carry
+ * dnaStatus. A legacy snapshot with neither status remains visible in both
+ * places when it has audio, matching the old combined release page behavior.
+ */
+export function shareDocumentVisibility(document: Record<string, unknown>): ShareDocumentVisibility {
   const payload = document.data && typeof document.data === 'object'
     ? document.data as Record<string, unknown>
     : {};
   const hasAudio = hasReleaseAudio(payload as ReleaseRecord) || document.hasDropAudio === true;
-  if (hasAudio) {
-    const status = document.releaseStatus || payload.releaseStatus;
-    if (status === 'draft' || status === 'unlisted') return false;
-    // Release visibility is independent from the optional public lyric/DNA page.
-    // A creator can hide DNA and later re-press this same paid release URL.
-    return true;
-  }
-  const dnaStatus = document.dnaStatus || payload.dnaStatus;
-  return dnaStatus !== 'unlisted';
+  const releaseStatus = document.releaseStatus || payload.releaseStatus;
+  // A commerce snapshot may contain the Vault record's dnaStatus inside data;
+  // that does not make this release document a second DNA page. For modern
+  // release documents only the share document's top-level dnaStatus is authoritative.
+  const dnaStatus = document.dnaStatus || (!releaseStatus ? payload.dnaStatus : undefined);
+  const legacyCombined = hasAudio && !releaseStatus && !dnaStatus;
+  return {
+    releaseLive: Boolean(
+      hasAudio &&
+      !document.releaseRemovedAt &&
+      (
+        (Boolean(releaseStatus) && releaseStatus !== 'draft' && releaseStatus !== 'unlisted') ||
+        (!releaseStatus && !dnaStatus)
+      )
+    ),
+    dnaLive: dnaStatus === 'live' || (!dnaStatus && (!hasAudio || legacyCombined)),
+  };
+}
+
+/** Public-index guard for raw `shares/{id}` documents. */
+export function isShareDocumentPublic(document: Record<string, unknown>): boolean {
+  const visibility = shareDocumentVisibility(document);
+  return visibility.releaseLive || visibility.dnaLive;
 }
 
 export type VaultReleaseGroups = {
   privateDrafts: Array<{ album: Album; track?: Track }>;
+  offlineReleases: Array<{ album: Album; track?: Track }>;
   liveSinglesWithLyrics: Array<{ album: Album; track: Track }>;
   liveSinglesAudioOnly: Array<{ album: Album; track: Track }>;
   liveAlbumsAllLyrics: Album[];
@@ -89,6 +201,7 @@ export type VaultReleaseGroups = {
 export function groupVaultReleases(albums: Album[]): VaultReleaseGroups {
   const groups: VaultReleaseGroups = {
     privateDrafts: [],
+    offlineReleases: [],
     liveSinglesWithLyrics: [],
     liveSinglesAudioOnly: [],
     liveAlbumsAllLyrics: [],
@@ -114,6 +227,9 @@ export function groupVaultReleases(albums: Album[]): VaultReleaseGroups {
       if (dnaStatusOf(album) === 'live' && album.shareId !== releaseShareIdOf({ ...album, tracks: album.tracks })) {
         groups.dnaPreviews.push({ album });
       }
+    } else if (releaseStatusOf({ ...album, tracks: album.tracks }) === 'unlisted') {
+      groups.offlineReleases.push({ album });
+      if (dnaStatusOf(album) === 'live') groups.dnaPreviews.push({ album });
     } else if (releaseStatusOf({ ...album, tracks: album.tracks }) === 'draft') {
       groups.privateDrafts.push({ album });
     } else if (dnaStatusOf(album) === 'live') {
@@ -137,7 +253,10 @@ function classifyTrack(groups: VaultReleaseGroups, album: Album, track: Track): 
   const status = releaseStatusOf(track);
   if (status === 'draft' && hasReleaseAudio(track)) groups.privateDrafts.push({ album, track });
   else if (status === 'draft') groups.unpressed.push({ album, track });
-  else if (status === 'live') {
+  else if (status === 'unlisted') {
+    groups.offlineReleases.push({ album, track });
+    if (dnaStatusOf(track) === 'live') groups.dnaPreviews.push({ album, track });
+  } else if (status === 'live') {
     if (hasLyrics(track)) groups.liveSinglesWithLyrics.push({ album, track });
     else groups.liveSinglesAudioOnly.push({ album, track });
     if (dnaStatusOf(track) === 'live' && track.shareId !== releaseShareIdOf(track)) {

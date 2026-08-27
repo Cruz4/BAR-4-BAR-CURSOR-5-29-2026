@@ -1119,7 +1119,10 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
       const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
       if (targetIdx < 0 || targetIdx >= newTracks.length) return;
       [newTracks[idx], newTracks[targetIdx]] = [newTracks[targetIdx], newTracks[idx]];
-      handleAlbumUpdate({ tracks: newTracks });
+      handleAlbumUpdate({
+        tracks: newTracks,
+        trackOrder: newTracks.map((track) => track.id),
+      });
   };
 
   const handleUnassignTrack = (trackId: string) => {

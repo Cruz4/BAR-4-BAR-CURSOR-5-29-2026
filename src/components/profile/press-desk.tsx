@@ -119,7 +119,9 @@ import {
   deleteFeaturedTrackPreview,
 } from '@/lib/profile/featured-track-preview';
 import {
+  PUBLIC_GENRE_STYLE_OPTIONS,
   PUBLIC_IDENTITY_KINDS,
+  PUBLIC_MOOD_OPTIONS,
   type ArtistHomeSoundIdentity,
 } from '@/lib/profile/sound-identity';
 import {
@@ -390,24 +392,33 @@ function TagEditor({
   values,
   max,
   placeholder,
+  suggestions,
   onChange,
 }: {
   label: string;
   values: string[];
   max: number;
   placeholder: string;
+  suggestions?: readonly string[];
   onChange: (next: string[]) => void;
 }) {
   const [draft, setDraft] = useState('');
-  const add = () => {
-    const value = draft.trim().replace(/\s+/g, ' ').slice(0, 50);
+  const [suggestion, setSuggestion] = useState('');
+  const addValue = (raw: string) => {
+    const value = raw.trim().replace(/\s+/g, ' ').slice(0, 50);
     if (!value || values.some((item) => item.toLowerCase() === value.toLowerCase()) || values.length >= max) {
-      setDraft('');
-      return;
+      return false;
     }
     onChange([...values, value]);
+    return true;
+  };
+  const add = () => {
+    addValue(draft);
     setDraft('');
   };
+  const availableSuggestions = (suggestions || []).filter(
+    (option) => !values.some((value) => value.toLocaleLowerCase() === option.toLocaleLowerCase())
+  );
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
@@ -428,6 +439,26 @@ function TagEditor({
             </button>
           ))}
         </div>
+      ) : null}
+      {suggestions?.length ? (
+        <Select
+          value={suggestion}
+          disabled={values.length >= max || availableSuggestions.length === 0}
+          onValueChange={(value) => {
+            if (addValue(value)) setSuggestion('');
+          }}
+        >
+          <SelectTrigger className="h-9 border-primary/20 bg-[hsl(216_35%_7%)] text-sm text-white focus:ring-primary/40">
+            <SelectValue placeholder={values.length >= max ? `${label} full` : `Choose ${label.toLocaleLowerCase()}`} />
+          </SelectTrigger>
+          <SelectContent className="border-white/15 bg-[hsl(216_35%_7%)] text-white">
+            {availableSuggestions.map((option) => (
+              <SelectItem key={option} value={option} className="text-white focus:bg-primary/20 focus:text-white">
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       ) : null}
       <div className="flex gap-2">
         <Input
@@ -1581,17 +1612,19 @@ export function PressDesk() {
               })}
             </div>
             <TagEditor
-              label="Genres"
+              label="Genres / styles"
               values={soundIdentity.genres || []}
               max={3}
-              placeholder="Add a genre"
+              placeholder="Or add your own genre / style"
+              suggestions={PUBLIC_GENRE_STYLE_OPTIONS}
               onChange={(genres) => update((draft) => void (draft.featured.soundIdentity = { ...(draft.featured.soundIdentity || {}), genres }))}
             />
             <TagEditor
               label="Moods / energy"
               values={soundIdentity.moods || []}
               max={5}
-              placeholder="Add a mood"
+              placeholder="Or add your own mood"
+              suggestions={PUBLIC_MOOD_OPTIONS}
               onChange={(moods) => update((draft) => void (draft.featured.soundIdentity = { ...(draft.featured.soundIdentity || {}), moods }))}
             />
             <TagEditor
@@ -1623,12 +1656,12 @@ export function PressDesk() {
                     }))
                   }
                 >
-                  <SelectTrigger className="bg-black/30"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Not listed</SelectItem>
-                    <SelectItem value="open">Open to collaborate</SelectItem>
-                    <SelectItem value="selective">Selective collaborations</SelectItem>
-                    <SelectItem value="not_now">Not collaborating right now</SelectItem>
+                  <SelectTrigger className="border-white/15 bg-[hsl(216_35%_7%)] text-white"><SelectValue /></SelectTrigger>
+                  <SelectContent className="border-white/15 bg-[hsl(216_35%_7%)] text-white">
+                    <SelectItem value="none" className="text-white focus:bg-primary/20 focus:text-white">Not listed</SelectItem>
+                    <SelectItem value="open" className="text-white focus:bg-primary/20 focus:text-white">Open to collaborate</SelectItem>
+                    <SelectItem value="selective" className="text-white focus:bg-primary/20 focus:text-white">Selective collaborations</SelectItem>
+                    <SelectItem value="not_now" className="text-white focus:bg-primary/20 focus:text-white">Not collaborating right now</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

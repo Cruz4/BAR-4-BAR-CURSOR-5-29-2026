@@ -6,7 +6,7 @@
  */
 
 import Link from 'next/link';
-import { CassetteTape, Disc3, ChevronRight, Music } from 'lucide-react';
+import { CassetteTape, Disc3, ChevronRight, Gift, Music } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDropPulseLine } from '@/lib/drop-pulse';
 
@@ -22,6 +22,8 @@ export type LiveDnaDropItem = {
   trackIndex?: number;
   trackCount?: number;
   hasDropAudio?: boolean;
+  releaseLive?: boolean;
+  dnaLive?: boolean;
   houseRelease?: boolean;
   dropPriceSummary?: string;
   playCount?: number;
@@ -45,12 +47,12 @@ export function LiveDnaDropLinkCard({
   nested = false,
 }: LiveDnaDropLinkCardProps) {
   const isAlbum = drop.type === 'album';
-  const firstDrop = Boolean(drop.hasDropAudio);
+  const firstDrop = drop.releaseLive === true || (drop.releaseLive === undefined && Boolean(drop.hasDropAudio));
   const pulse = formatDropPulseLine(drop);
 
   return (
     <Link
-      href={firstDrop ? `/song/${drop.shareId}` : `/share/${drop.shareId}`}
+      href={firstDrop && !isAlbum ? `/song/${drop.shareId}` : `/share/${drop.shareId}`}
       onClick={onNavigate}
       className={cn(
         'group flex items-center transition-colors',
@@ -92,7 +94,7 @@ export function LiveDnaDropLinkCard({
               firstDrop ? 'text-fuchsia-300/90' : isAlbum ? 'text-violet-300/90' : 'text-emerald-300/90'
             )}
           >
-            {drop.houseRelease ? 'House · Free' : firstDrop ? 'On sale' : isAlbum ? 'Album DNA' : 'Track DNA'}
+            {firstDrop ? (isAlbum ? 'Album release' : 'Music release') : isAlbum ? 'Album DNA' : 'Track DNA'}
             {!drop.houseRelease && drop.dropPriceSummary ? ` · ${drop.dropPriceSummary}` : null}
             {pulse ? ` · ${pulse}` : null}
             {isAlbum && typeof drop.trackCount === 'number'
@@ -100,6 +102,11 @@ export function LiveDnaDropLinkCard({
               : null}
           </p>
         )}
+        {!nested && drop.houseRelease ? (
+          <span className="mb-1 inline-flex items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-300/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.18em] text-cyan-200">
+            <Gift className="h-2.5 w-2.5" /> House release · free
+          </span>
+        ) : null}
         <p
           className={cn(
             'truncate font-bold text-[var(--ph-text,#fff)]',
@@ -154,8 +161,9 @@ export function groupLiveDnaDrops(drops: LiveDnaDropItem[]): {
   albumGroups: AlbumDnaGroup[];
   standaloneTracks: LiveDnaDropItem[];
 } {
-  const albums = drops.filter((d) => d.type === 'album');
-  const tracks = drops.filter((d) => d.type === 'track');
+  const dnaDrops = lyricDnaItems(drops);
+  const albums = dnaDrops.filter((d) => d.type === 'album');
+  const tracks = dnaDrops.filter((d) => d.type === 'track');
   const albumIds = new Set(albums.map((a) => a.shareId));
   const albumTitles = new Map(albums.map((a) => [a.title.trim().toLowerCase(), a.shareId]));
 
@@ -207,7 +215,15 @@ type LiveDnaDropsGroupedListProps = {
 };
 
 export function firstDropTracks(drops: LiveDnaDropItem[]): LiveDnaDropItem[] {
-  return drops.filter((d) => d.hasDropAudio && d.type === 'track');
+  return musicReleaseItems(drops).filter((d) => d.type === 'track');
+}
+
+export function musicReleaseItems(drops: LiveDnaDropItem[]): LiveDnaDropItem[] {
+  return drops.filter((d) => d.releaseLive === true || (d.releaseLive === undefined && Boolean(d.hasDropAudio)));
+}
+
+export function lyricDnaItems(drops: LiveDnaDropItem[]): LiveDnaDropItem[] {
+  return drops.filter((d) => d.dnaLive === true || (d.dnaLive === undefined && !d.hasDropAudio));
 }
 
 export function LiveDnaDropsGroupedList({
@@ -217,9 +233,9 @@ export function LiveDnaDropsGroupedList({
   hideFirstDropStrip = false,
 }: LiveDnaDropsGroupedListProps) {
   const { albumGroups, standaloneTracks } = groupLiveDnaDrops(drops);
-  const firstDrops = firstDropTracks(drops);
+  const firstDrops = musicReleaseItems(drops);
   const visibleStandalone = hideFirstDropStrip
-    ? standaloneTracks.filter((d) => !d.hasDropAudio)
+    ? standaloneTracks
     : standaloneTracks;
   const showFirst = firstDrops.length > 0 && !hideFirstDropStrip;
   if (!albumGroups.length && !visibleStandalone.length && !showFirst) return null;
@@ -321,8 +337,10 @@ export function FirstDropsStorefront({
   isOwner?: boolean;
   onNavigate?: () => void;
 }) {
-  const sale = firstDropTracks(drops);
+  const sale = musicReleaseItems(drops);
   if (!sale.length) return null;
+  const houseReleases = sale.filter((drop) => drop.houseRelease);
+  const artistReleases = sale.filter((drop) => !drop.houseRelease);
 
   return (
     <section
@@ -332,13 +350,15 @@ export function FirstDropsStorefront({
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-fuchsia-200">
-            Listen · buy once
+            {artistReleases.length ? 'Listen · buy once' : 'House releases · free'}
           </p>
           <h2 className="mt-1 font-headline text-2xl font-bold uppercase tracking-tight text-[var(--ph-text,#fff)] sm:text-3xl">
-            {sale.length === 1 ? sale[0].title : `${sale.length} songs on sale`}
+            {sale.length === 1 ? sale[0].title : `${sale.length} releases`}
           </h2>
           <p className="mt-1 max-w-xl text-sm text-[var(--ph-muted,rgba(255,255,255,0.6))]">
-            Preview 30 seconds. Unlock to stream in Bar 4 Bar.
+            {artistReleases.length
+              ? 'Preview 30 seconds. Unlock to stream in Bar 4 Bar.'
+              : 'Included automatically in every signed-in member Library.'}
           </p>
         </div>
         {isOwner ? (
@@ -347,21 +367,36 @@ export function FirstDropsStorefront({
           </p>
         ) : null}
       </div>
+      {houseReleases.length ? (
+        <p className="mb-2 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.24em] text-cyan-200">
+          <Gift className="h-3 w-3" /> House free · {houseReleases.length}
+        </p>
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
-        {sale.map((drop) => (
+        {[...houseReleases, ...artistReleases].map((drop) => (
           <Link
             key={drop.shareId}
-            href={`/song/${drop.shareId}`}
+            href={drop.type === 'album' ? `/share/${drop.shareId}` : `/song/${drop.shareId}`}
             onClick={onNavigate}
-            className="group flex items-center gap-3 rounded-xl border border-fuchsia-400/40 bg-black/35 p-3.5 transition-colors hover:border-fuchsia-300/70 hover:bg-fuchsia-500/10"
+            className={cn(
+              'group flex items-center gap-3 rounded-xl border bg-black/35 p-3.5 transition-colors',
+              drop.houseRelease
+                ? 'border-cyan-300/45 hover:border-cyan-200/75 hover:bg-cyan-400/10'
+                : 'border-fuchsia-400/40 hover:border-fuchsia-300/70 hover:bg-fuchsia-500/10'
+            )}
           >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/20 text-fuchsia-200">
-              <Music className="h-6 w-6" />
+            <span className={cn(
+              'flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border',
+              drop.houseRelease
+                ? 'border-cyan-300/45 bg-cyan-400/15 text-cyan-100'
+                : 'border-fuchsia-400/40 bg-fuchsia-500/20 text-fuchsia-200'
+            )}>
+              {drop.houseRelease ? <Gift className="h-6 w-6" /> : drop.type === 'album' ? <Disc3 className="h-6 w-6" /> : <Music className="h-6 w-6" />}
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate font-bold text-[var(--ph-text,#fff)]">{drop.title}</p>
-              <p className="text-[11px] text-fuchsia-200/85">
-                {drop.dropPriceSummary || 'Stream here'}
+              <p className={cn('text-[11px]', drop.houseRelease ? 'text-cyan-100/85' : 'text-fuchsia-200/85')}>
+                {drop.houseRelease ? 'House release · free in Library' : drop.dropPriceSummary || 'Stream here'}
                 {drop.albumTitle ? ` · ${drop.albumTitle}` : ''}
               </p>
             </div>

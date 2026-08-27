@@ -1,6 +1,7 @@
 'use client';
 
 import React, { Suspense, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { ExternalLink, Music } from 'lucide-react';
 import {
   parseEmbedUrl,
@@ -14,6 +15,7 @@ import type { FeaturedTrackSelection } from '@/lib/profile/modules';
 import { pressedSongHref, type PressedSongSummary } from '@/lib/pressed-song';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/use-auth';
 
 /**
  * Plays a whitelisted provider link right on the page (iframe embed).
@@ -49,18 +51,52 @@ function firstDropShareId(raw: string): string | null {
 
 /** Native First Drop media inside a wall/feed post. Entitlements stay server-authoritative. */
 function FirstDropFeedPlayer({ shareId, referralPostId }: { shareId: string; referralPostId?: string }) {
+  const { user, authReady } = useAuth();
   const [song, setSong] = useState<PressedSongSummary | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
+    if (!authReady) return;
     let cancelled = false;
-    void fetch(`/api/songs/${encodeURIComponent(shareId)}`)
-      .then((response) => response.ok ? response.json() : null)
-      .then((data) => { if (!cancelled && data) setSong(data as PressedSongSummary); });
+    setSong(null);
+    setUnavailable(false);
+    void (async () => {
+      const token = await auth.currentUser?.getIdToken();
+      const response = await fetch(`/api/songs/${encodeURIComponent(shareId)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        cache: 'no-store',
+      });
+      const data = response.ok ? await response.json() : null;
+      if (cancelled) return;
+      if (data) setSong(data as PressedSongSummary);
+      else setUnavailable(true);
+    })().catch(() => { if (!cancelled) setUnavailable(true); });
     return () => { cancelled = true; };
-  }, [shareId]);
+  }, [authReady, shareId, user?.id]);
 
-  if (!song) {
+  if (!song && !unavailable) {
     return <div className="h-24 animate-pulse rounded-xl border border-fuchsia-500/25 bg-fuchsia-500/10" />;
+  }
+
+  const canPlay = song?.releaseLive || song?.viewer?.owns || Boolean(song?.ownerControls);
+  if (!song || !canPlay) {
+    const artistHref = song ? profileHref(song.artist.slug) : undefined;
+    const currentReleaseHref = song?.currentRelease
+      ? pressedSongHref(song.currentRelease.shareId, { trackId: song.currentRelease.trackId, referralPostId })
+      : undefined;
+    return (
+      <div className="rounded-xl border border-white/10 bg-black/35 px-4 py-3">
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Original release offline</p>
+        <p className="mt-1 text-sm text-foreground/80">
+          {song ? `“${song.title}” is no longer available from this older release post.` : 'This older release is no longer available.'}
+        </p>
+        {currentReleaseHref || artistHref ? (
+          <Link href={currentReleaseHref || `${artistHref}/songs`} className="mt-2 inline-flex text-[10px] font-bold uppercase tracking-widest text-fuchsia-300 hover:text-fuchsia-200">
+            {currentReleaseHref ? `Play from ${song?.currentRelease?.albumTitle} →` : 'Check the artist’s current releases →'}
+          </Link>
+        ) : null}
+      </div>
+    );
   }
 
   const artistHref = profileHref(song.artist.slug);

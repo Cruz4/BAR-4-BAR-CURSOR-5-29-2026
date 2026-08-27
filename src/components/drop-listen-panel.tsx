@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils';
 import { useDropCart } from '@/context/drop-cart-context';
 import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { studioNameClass, type StudioNameChrome } from '@/lib/studio-tier-chrome';
+import type { PublicMusicMetadata } from '@/lib/music-discovery-metadata';
 
 type DropPlayerArtistAttribution = {
   href?: string;
@@ -42,6 +43,12 @@ type DropPlayerArtistAttribution = {
   starMarkSeed?: number;
   studioChrome?: StudioNameChrome | null;
 };
+
+function formatPlaybackTime(value: number): string {
+  if (!Number.isFinite(value) || value < 0) return '0:00';
+  const seconds = Math.floor(value);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+}
 
 async function authHeaders(): Promise<HeadersInit> {
   const user = auth.currentUser;
@@ -72,6 +79,7 @@ export function DropListenPanel({
   firstPressRank,
   artistAttribution,
   houseRelease = false,
+  songMetadata,
 }: {
   shareId: string;
   title: string;
@@ -101,6 +109,8 @@ export function DropListenPanel({
   artistAttribution?: DropPlayerArtistAttribution;
   /** Admin-selected release that streams free for every signed-in member. */
   houseRelease?: boolean;
+  /** Compact public facts used by the dedicated song-page presentation. */
+  songMetadata?: PublicMusicMetadata;
 }) {
   const { user, authReady } = useAuth();
   const { toast } = useToast();
@@ -120,6 +130,8 @@ export function DropListenPanel({
   const [loading, setLoading] = useState(false);
   const [streamReady, setStreamReady] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [positionSec, setPositionSec] = useState(0);
+  const [mediaDurationSec, setMediaDurationSec] = useState(30);
   const [busy, setBusy] = useState(false);
   const [pwyw, setPwyw] = useState('');
   const [isHouseRelease, setIsHouseRelease] = useState(houseRelease);
@@ -172,8 +184,12 @@ export function DropListenPanel({
       setFull(Boolean(data.full));
       setIsHouseRelease(Boolean(data.houseRelease || houseRelease));
       setListenProof(typeof data.listenProof === 'string' ? data.listenProof : '');
-      setEligibleDurationSec(Math.max(1, Number(data.eligibleDurationSec) || 30));
-      setPlaybackStartSec(Math.max(0, Number(data.playbackStartSec) || 0));
+      const nextEligibleDurationSec = Math.max(1, Number(data.eligibleDurationSec) || 30);
+      const nextPlaybackStartSec = Math.max(0, Number(data.playbackStartSec) || 0);
+      setEligibleDurationSec(nextEligibleDurationSec);
+      setPlaybackStartSec(nextPlaybackStartSec);
+      setPositionSec(nextPlaybackStartSec);
+      setMediaDurationSec(nextPlaybackStartSec + nextEligibleDurationSec);
       reportedMilestonesRef.current = new Set();
     } catch (e: unknown) {
       const raw = e instanceof Error ? e.message : undefined;
@@ -355,6 +371,21 @@ export function DropListenPanel({
   if (!hasAudio && !isCommerceLive(normalized)) return null;
 
   const previewCapped = !full && !isOwner;
+  const timelineStartSec = previewCapped ? playbackStartSec : 0;
+  const previewEndSec = playbackStartSec + Math.min(30, eligibleDurationSec);
+  const timelineEndSec = Math.max(
+    timelineStartSec + 0.1,
+    previewCapped
+      ? Math.min(Math.max(mediaDurationSec, timelineStartSec + 0.1), previewEndSec)
+      : Math.max(mediaDurationSec, eligibleDurationSec),
+  );
+  const timelinePositionSec = Math.min(timelineEndSec, Math.max(timelineStartSec, positionSec));
+  const displayedPositionSec = previewCapped
+    ? timelinePositionSec - timelineStartSec
+    : timelinePositionSec;
+  const displayedDurationSec = previewCapped
+    ? timelineEndSec - timelineStartSec
+    : timelineEndSec;
 
   const presentationClass = presentation === 'song'
       ? 'space-y-3 rounded-2xl border border-fuchsia-300/45 bg-black/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_18px_55px_rgba(0,0,0,.35)] sm:p-5'
@@ -477,14 +508,6 @@ export function DropListenPanel({
                   : 'Streams in Library.'}
             </p>
           </div>
-          {compactPresentation ? (
-            <AudioVolumeControl
-              volume={volume}
-              onVolumeChange={setVolume}
-              onToggleMute={toggleMute}
-              compact
-            />
-          ) : null}
           {src ? (
             <audio
               ref={audioRef}
@@ -492,16 +515,23 @@ export function DropListenPanel({
               preload="none"
               playsInline
               onLoadedMetadata={(event) => {
+                const duration = Number.isFinite(event.currentTarget.duration) && event.currentTarget.duration > 0
+                  ? event.currentTarget.duration
+                  : playbackStartSec + eligibleDurationSec;
+                setMediaDurationSec(duration);
                 if (playbackStartSec > 0 && event.currentTarget.currentTime < playbackStartSec) {
                   event.currentTarget.currentTime = playbackStartSec;
                 }
+                setPositionSec(event.currentTarget.currentTime);
               }}
               onEnded={(event) => {
                 setPlaying(false);
+                setPositionSec(event.currentTarget.currentTime);
                 onPlaybackStateChange?.({ playing: false, currentTime: event.currentTarget.currentTime, duration: event.currentTarget.duration || eligibleDurationSec });
               }}
               onPause={(event) => {
                 setPlaying(false);
+                setPositionSec(event.currentTarget.currentTime);
                 onPlaybackStateChange?.({ playing: false, currentTime: event.currentTarget.currentTime, duration: event.currentTarget.duration || eligibleDurationSec });
               }}
               onPlay={() => {
@@ -517,6 +547,8 @@ export function DropListenPanel({
               }}
               onTimeUpdate={(e) => {
                 const el = e.currentTarget;
+                setPositionSec(el.currentTime);
+                if (Number.isFinite(el.duration) && el.duration > 0) setMediaDurationSec(el.duration);
                 onPlaybackStateChange?.({ playing: !el.paused, currentTime: el.currentTime, duration: el.duration || eligibleDurationSec });
                 const listenedSec = Math.max(0, el.currentTime - playbackStartSec);
                 const progressDuration = Math.max(
@@ -552,13 +584,73 @@ export function DropListenPanel({
         </div>
       )}
 
-      {hasAudio && !compactPresentation ? (
-        <AudioVolumeControl
-          volume={volume}
-          onVolumeChange={setVolume}
-          onToggleMute={toggleMute}
-          className={presentation === 'playlist' ? 'ml-[52px] w-[calc(100%-52px)] max-w-sm' : 'ml-[52px] w-[calc(100%-52px)] max-w-56'}
-        />
+      {hasAudio ? (
+        <>
+          {presentation === 'song' ? (
+            <dl className="grid grid-cols-2 gap-2 border-y border-white/10 py-3 sm:grid-cols-4">
+              <div className="min-w-0 rounded-lg bg-white/[0.025] px-2.5 py-2">
+                <dt className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Format</dt>
+                <dd className="mt-1 truncate text-[11px] font-bold text-white/85">
+                  {songMetadata?.albumTitle ? 'Album track' : 'Single release'}
+                </dd>
+              </div>
+              <div className="min-w-0 rounded-lg bg-white/[0.025] px-2.5 py-2">
+                <dt className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Runtime</dt>
+                <dd className="mt-1 font-code text-[11px] font-bold tabular-nums text-white/85">
+                  {formatPlaybackTime(displayedDurationSec)}
+                </dd>
+              </div>
+              <div className="min-w-0 rounded-lg bg-white/[0.025] px-2.5 py-2">
+                <dt className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Access</dt>
+                <dd className="mt-1 truncate text-[11px] font-bold text-white/85">
+                  {previewCapped ? '30-sec preview' : isOwner ? 'Artist copy' : 'Full stream'}
+                </dd>
+              </div>
+              <div className="min-w-0 rounded-lg bg-white/[0.025] px-2.5 py-2">
+                <dt className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Release</dt>
+                <dd className="mt-1 truncate text-[11px] font-bold text-white/85">
+                  {isHouseRelease ? 'House · free' : normalized.mode === 'pwyw' ? 'Pay your way' : 'Buy once'}
+                </dd>
+              </div>
+            </dl>
+          ) : null}
+          <div className={cn('flex min-w-0 items-center gap-2', compactPresentation ? 'pl-[44px]' : 'pl-[52px]')}>
+            <span className="w-9 shrink-0 font-code text-[9px] tabular-nums text-muted-foreground">
+              {formatPlaybackTime(displayedPositionSec)}
+            </span>
+            <input
+              type="range"
+              min={timelineStartSec}
+              max={timelineEndSec}
+              step={0.1}
+              value={timelinePositionSec}
+              disabled={!src}
+              onChange={(event) => {
+                const next = Number(event.target.value);
+                const audio = audioRef.current;
+                if (audio) audio.currentTime = next;
+                setPositionSec(next);
+                onPlaybackStateChange?.({
+                  playing: Boolean(audio && !audio.paused),
+                  currentTime: next,
+                  duration: mediaDurationSec,
+                });
+              }}
+              className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-white/10 accent-fuchsia-400 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Song playback position"
+              aria-valuetext={`${formatPlaybackTime(displayedPositionSec)} of ${formatPlaybackTime(displayedDurationSec)}`}
+            />
+            <span className="w-9 shrink-0 text-right font-code text-[9px] tabular-nums text-muted-foreground">
+              {formatPlaybackTime(displayedDurationSec)}
+            </span>
+            <AudioVolumeControl
+              volume={volume}
+              onVolumeChange={setVolume}
+              onToggleMute={toggleMute}
+              compact
+            />
+          </div>
+        </>
       ) : null}
 
       {showPurchase && isHouseRelease && !full && !isOwner && authReady && !user ? (

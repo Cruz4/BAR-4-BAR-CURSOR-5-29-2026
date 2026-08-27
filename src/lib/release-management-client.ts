@@ -6,7 +6,7 @@ export const RELEASE_VISIBILITY_CHANGED_EVENT = 'b4b:release-visibility-changed'
 
 export type ManageReleaseInput = {
   kind: 'album' | 'track';
-  action: 'save-draft' | 'publish' | 'unpublish';
+  action: 'save-draft' | 'publish' | 'unpublish' | 'remove';
   albumId: string;
   trackId?: string;
   hideDna?: boolean;
@@ -20,6 +20,9 @@ export type ManageReleaseResult = {
   releaseShareId: string | null;
   houseRelease?: boolean;
   houseLibraryNotice?: boolean;
+  releaseSnapshotCompacted?: boolean;
+  releaseCoverOmitted?: boolean;
+  removed?: boolean;
 };
 
 export async function manageRelease(input: ManageReleaseInput): Promise<ManageReleaseResult> {

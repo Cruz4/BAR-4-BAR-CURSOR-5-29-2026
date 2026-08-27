@@ -42,6 +42,8 @@ export type DiscoverDrop = {
   studioBadge?: 'pro' | 'free';
   updatedAt: string;
   hasDropAudio?: boolean;
+  releaseLive?: boolean;
+  dnaLive?: boolean;
   houseRelease?: boolean;
   dropPriceSummary?: string;
   dropPrice?: {

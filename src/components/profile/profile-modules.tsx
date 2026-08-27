@@ -44,7 +44,7 @@ import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
 import { PressPlate, type PressPlateChrome } from '@/components/profile/press-plate';
 import { PublicAchievementFoil } from '@/components/profile/public-achievement-foil';
-import { firstDropTracks, LiveDnaDropsGroupedList } from '@/components/profile/live-dna-drop-card';
+import { firstDropTracks, LiveDnaDropsGroupedList, lyricDnaItems, musicReleaseItems } from '@/components/profile/live-dna-drop-card';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import type { AchievementDef } from '@/lib/gamification/achievements';
 import {
@@ -89,7 +89,7 @@ export type ModuleContext = {
   rankLabel?: string;
   xp?: number;
   currentStreak?: number;
-  /** Live DNA Drops currently online for this artist. */
+  /** Live music releases and lyric DNA pages currently online for this artist. */
   liveDnaDrops?: Array<{
     shareId: string;
     title: string;
@@ -99,6 +99,9 @@ export type ModuleContext = {
     trackIndex?: number;
     trackCount?: number;
     hasDropAudio?: boolean;
+    releaseLive?: boolean;
+    dnaLive?: boolean;
+    houseRelease?: boolean;
     dropPriceSummary?: string;
     playCount?: number;
     previewCount?: number;
@@ -554,21 +557,19 @@ export function DropShelfModule({ ctx }: { ctx: ModuleContext }) {
   const drops = ctx.liveDnaDrops || [];
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   if (!drops.length) return null;
-  const firstCount = firstDropTracks(drops).length;
-  const hideFirstDropStrip = firstDropsOn && firstCount > 0;
-  if (hideFirstDropStrip) {
-    const hasDnaOnly = drops.some((d) => d.type === 'album' || !d.hasDropAudio);
-    if (!hasDnaOnly) return null;
-  }
+  const releaseCount = musicReleaseItems(drops).length;
+  const hideFirstDropStrip = firstDropsOn && releaseCount > 0;
+  const dnaDrops = lyricDnaItems(drops);
+  if (hideFirstDropStrip && !dnaDrops.length) return null;
 
   return (
     <ModuleShell
       icon={Dna}
-      title={hideFirstDropStrip ? 'Lyric DNA Drops' : firstCount > 0 ? 'Listen / Buy' : 'Live Lyric DNA Drops'}
+      title={hideFirstDropStrip ? 'Lyric DNA Drops' : releaseCount > 0 ? 'Listen / Buy' : 'Live Lyric DNA Drops'}
       ctx={ctx}
     >
       <LiveDnaDropsGroupedList
-        drops={drops}
+        drops={hideFirstDropStrip ? dnaDrops : drops}
         layout="shelf"
         hideFirstDropStrip={hideFirstDropStrip}
       />
