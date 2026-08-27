@@ -102,6 +102,8 @@ import {
 } from '@/lib/offline/pressed-audio-cache';
 import { manageRelease } from '@/lib/release-management-client';
 import { DataContext } from '@/context/data-context';
+import { fetchActivityFeed, markActivityEventsRead } from '@/lib/activity/client';
+import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
 
 const LIBRARY_PREFERENCES_KEY = 'b4b:library-organizer:v1';
 const DECK_VIEW_OPTIONS: Array<{
@@ -306,6 +308,19 @@ export function DropDeck({
   const houseNoticePlayable = useMemo(() => {
     if (!houseNotice) return null;
     return flattenLibraryItems([houseNotice])[0] ?? null;
+  }, [houseNotice]);
+
+  useEffect(() => {
+    if (!houseNotice) return;
+    void fetchActivityFeed('received', 100)
+      .then((events) => {
+        const unreadHouseIds = events
+          .filter((event) => event.type === 'house_release' && !event.readAt)
+          .map((event) => event.id);
+        if (!unreadHouseIds.length) return;
+        return markActivityEventsRead(unreadHouseIds).then(() => refreshActivityAlerts());
+      })
+      .catch(() => undefined);
   }, [houseNotice]);
 
   useEffect(() => {

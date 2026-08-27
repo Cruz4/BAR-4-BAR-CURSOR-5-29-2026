@@ -22,6 +22,7 @@ export const ACTIVITY_TYPES = [
   'drop_reply',
   'drop_unlocked',
   'drop_sold',
+  'house_release',
   'love_milestone',
   'lock_answered',
   'artist_pick',
@@ -49,6 +50,7 @@ export const SERVER_ONLY_ACTIVITY_TYPES: readonly ActivityType[] = [
   'collab_message',
   'drop_unlocked',
   'drop_sold',
+  'house_release',
   'love_milestone',
   'profile_followed',
   'inner_circle_joined',
@@ -124,6 +126,8 @@ export const DEFAULT_ACTIVITY_PREFS: ActivityPrefs = {
 
 export type ActivitySummary = {
   unreadReceived: number;
+  /** Unread admin House-release pings used by the Scene Library shortcut. */
+  unreadHouseReleases: number;
   updatedAt: string;
 };
 
@@ -156,6 +160,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     drop_reply: 'replied on your release',
     drop_unlocked: 'unlocked your release',
     drop_sold: 'bought your song',
+    house_release: 'New House Drop added to your Library',
     love_milestone: 'rewarded you 2 Ink for 20 Loves',
     lock_answered: 'echoed your bar',
     artist_pick: 'picked your echo',
@@ -183,6 +188,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     drop_reply: 'you replied on a release by',
     drop_unlocked: 'you unlocked a release by',
     drop_sold: 'you bought a song from',
+    house_release: 'New House Drop added to your Library',
     love_milestone: 'rewarded you 2 Ink for 20 Loves',
     lock_answered: 'you echoed a bar on',
     artist_pick: 'you picked an echo by',
@@ -195,7 +201,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
 
 /** Craft pings are full sentences — no “Bar 4 Bar echoed…” actor prefix. */
 export function activityShowsActor(type: ActivityType): boolean {
-  return !isCraftActivityType(type);
+  return !isCraftActivityType(type) && type !== 'house_release';
 }
 
 export function pushCopyForActivity(
@@ -325,6 +331,11 @@ export function pushCopyForActivity(
         title: 'You got a sale',
         body: snippet || `${actorName} bought your release`,
       };
+    case 'house_release':
+      return {
+        title: 'New in Library',
+        body: snippet || 'A new House release is ready to stream free.',
+      };
     case 'love_milestone':
       return {
         title: 'You earned +2 Ink',
@@ -368,6 +379,7 @@ export function prefsAllowsPush(prefs: ActivityPrefs, type: ActivityType): boole
     case 'drop_reply':
     case 'drop_unlocked':
     case 'drop_sold':
+    case 'house_release':
       return prefs.firstDrops !== false;
     case 'love_milestone':
       return prefs.postLoves;

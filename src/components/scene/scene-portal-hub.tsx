@@ -24,6 +24,7 @@ import type { ProfilePost } from '@/lib/profile/social-client';
 import type { DiscoverCard, DiscoverDrop } from '@/lib/scene/discover-client';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
 import { cn } from '@/lib/utils';
+import { useSocialAlerts } from '@/hooks/use-social-alerts';
 
 type ScenePortalHubProps = {
   viewer: {
@@ -249,6 +250,7 @@ function WorldShortcut({
   tone,
   status,
   avatar,
+  badge,
 }: {
   href?: string;
   onClick?: () => void;
@@ -258,6 +260,7 @@ function WorldShortcut({
   tone: PortalTone;
   status: React.ReactNode;
   avatar?: React.ReactNode;
+  badge?: number;
 }) {
   const className = cn(
     'group relative flex min-h-[7rem] w-full min-w-0 items-center gap-2 overflow-hidden rounded-2xl border px-2.5 py-3 text-left shadow-[inset_0_0_28px_rgba(255,255,255,0.015),0_14px_35px_rgba(0,0,0,0.25)] transition duration-200 hover:-translate-y-0.5 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 sm:min-h-[7rem] sm:gap-3 sm:px-4',
@@ -268,6 +271,14 @@ function WorldShortcut({
       <span className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.12)_0.7px,transparent_0.8px)] [background-size:7px_7px]" />
       <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-current/35 bg-current/[0.08] shadow-[0_0_24px_currentColor] sm:h-14 sm:w-14">
         {avatar || <Icon className="h-7 w-7 sm:h-8 sm:w-8" />}
+        {Boolean(badge && badge > 0) ? (
+          <span
+            className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-300 px-1 text-[9px] font-black text-black shadow-[0_0_14px_rgba(252,211,77,0.6)]"
+            aria-label={`${badge} new in Library`}
+          >
+            {badge! > 99 ? '99+' : badge}
+          </span>
+        ) : null}
       </span>
       <span className="relative min-w-0 flex-1">
         <span className="block font-headline text-[clamp(0.92rem,4vw,1.25rem)] font-bold uppercase leading-none tracking-wide text-white">
@@ -323,6 +334,7 @@ export function ScenePortalHub({
   onOpenDiscover,
 }: ScenePortalHubProps) {
   const [releaseCatalogOpen, setReleaseCatalogOpen] = React.useState(false);
+  const { libraryReleases } = useSocialAlerts();
 
   return (
     <section className="space-y-3" data-tour="scene-feed" aria-label="Scene Portal">
@@ -453,7 +465,19 @@ export function ScenePortalHub({
             tone="pink"
             status={<PortalStatus tone="pink">Release Catalog</PortalStatus>}
           />
-          <WorldShortcut href="/library" title="Library" detail="Music you unlocked" icon={Library} tone="amber" status={<PortalStatus tone="amber">Saved music</PortalStatus>} />
+          <WorldShortcut
+            href="/library"
+            title="Library"
+            detail="Music you unlocked"
+            icon={Library}
+            tone="amber"
+            badge={libraryReleases}
+            status={
+              <PortalStatus tone="amber">
+                {libraryReleases > 0 ? `${libraryReleases > 99 ? '99+' : libraryReleases} new` : 'Saved music'}
+              </PortalStatus>
+            }
+          />
           <WorldShortcut href="/friends" title="Your Circle" detail="Friends & messages" icon={Users} tone="cyan" status={<PortalStatus tone="cyan">{friendCount} friend{friendCount === 1 ? '' : 's'}</PortalStatus>} />
         </div>
 

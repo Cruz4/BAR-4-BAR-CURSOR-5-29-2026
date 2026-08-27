@@ -305,7 +305,7 @@ function leftoverFillClass(countInGroup: number): string | undefined {
 
 export function SceneNavDock({ compact = false, className }: SceneNavDockProps) {
   const { summary, loading } = useGamification();
-  const { total: alertCount } = useSocialAlerts();
+  const { total: alertCount, libraryReleases } = useSocialAlerts();
   const { enabled: lockOn } = useLockFeature();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const [lastTrackPath, setLastTrackPath] = useState<string | null>(null);
@@ -337,6 +337,7 @@ export function SceneNavDock({ compact = false, className }: SceneNavDockProps) 
       icon: Library,
       tone: 'border-amber-400/45 bg-amber-500/10 hover:border-amber-300/60',
       iconTone: 'border-amber-400/40 bg-amber-500/20 text-amber-200',
+      badge: libraryReleases,
     },
     {
       key: 'insights',

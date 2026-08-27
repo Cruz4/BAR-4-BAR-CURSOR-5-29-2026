@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import type { DropLibraryEntry } from '@/lib/drop-commerce';
+import type { DropListenSource } from '@/lib/drop-listen-analytics';
 
 export const DROP_CRATE_NAME_MAX = 48;
 export const DROP_CRATE_MAX_ITEMS = 80;
@@ -49,6 +50,8 @@ export type DeckPlayable = {
   houseLibraryNoticeAt?: string;
   ownerId: string;
   own?: boolean;
+  /** Where this queue was started so verified listening keeps correct attribution. */
+  listenSource?: DropListenSource;
 };
 
 export type DeckGroupBucket = {

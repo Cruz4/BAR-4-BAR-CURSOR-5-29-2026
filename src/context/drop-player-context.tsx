@@ -379,7 +379,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
               shareId: item.shareId,
               listenProof: proof,
               milestone,
-              source: 'library',
+              source: item.listenSource || 'library',
             }).then((recorded) => {
               if (!recorded) reportedMilestonesRef.current.delete(milestone);
             });

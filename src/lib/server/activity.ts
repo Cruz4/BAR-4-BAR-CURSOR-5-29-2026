@@ -7,6 +7,7 @@ import { getPublicAppUrl } from '@/lib/app-url';
 import {
   DEFAULT_ACTIVITY_PREFS,
   SYSTEM_ACTOR_ID,
+  SYSTEM_ACTOR_NAME,
   isActivityType,
   isCraftActivityType,
   prefsAllowsPush,
@@ -15,6 +16,7 @@ import {
   type ActivityEvent,
   type ActivityFeedPage,
   type ActivityPrefs,
+  type ActivitySummary,
   type ActivityType,
 } from '@/lib/activity/types';
 import { profileHref } from '@/lib/profile/profile-slug';
@@ -401,6 +403,54 @@ function activityEventFromData(
   };
 }
 
+const HOUSE_ACTIVITY_LIMIT = 100;
+
+async function listHouseReleaseActivity(userId: string): Promise<ActivityEvent[]> {
+  const db = await getDb();
+  const pings = await db
+    .collection('houseReleasePings')
+    .orderBy('createdAt', 'desc')
+    .limit(HOUSE_ACTIVITY_LIMIT)
+    .get();
+  if (pings.empty) return [];
+  const readRefs = pings.docs.map((ping) =>
+    db.doc(`users/${userId}/activityGlobalReads/${ping.id}`)
+  );
+  const reads = await db.getAll(...readRefs);
+  return pings.docs.map((ping, index) => {
+    const data = ping.data() || {};
+    const readData = reads[index]?.data() || {};
+    return {
+      id: ping.id,
+      type: 'house_release',
+      direction: 'received',
+      createdAt: activityIso(data.createdAt),
+      actorId: SYSTEM_ACTOR_ID,
+      actorName: SYSTEM_ACTOR_NAME,
+      preview: typeof data.title === 'string' ? data.title : 'New House release',
+      href: typeof data.href === 'string' ? data.href : '/library',
+      readAt: readData.readAt === null ? null : activityIso(readData.readAt) || null,
+    } satisfies ActivityEvent;
+  });
+}
+
+export async function getActivitySummary(userId: string): Promise<ActivitySummary> {
+  const db = await getDb();
+  const [local, houseEvents] = await Promise.all([
+    db.doc(`users/${userId}/activityMeta/summary`).get(),
+    listHouseReleaseActivity(userId),
+  ]);
+  const localUnread = typeof local.data()?.unreadReceived === 'number'
+    ? Math.max(0, Math.floor(local.data()!.unreadReceived))
+    : 0;
+  const unreadHouseReleases = houseEvents.filter((event) => !event.readAt).length;
+  return {
+    unreadReceived: localUnread + unreadHouseReleases,
+    unreadHouseReleases,
+    updatedAt: typeof local.data()?.updatedAt === 'string' ? local.data()!.updatedAt : '',
+  };
+}
+
 /**
  * Read stored activity without depending on a direction/createdAt compound index.
  * The cursor advances over every scanned document so received and sent history can
@@ -442,6 +492,12 @@ export async function listActivityFeedPage(
     after = lastScanned;
   }
 
+  if (direction === 'received' && !cursor) {
+    const houseEvents = await listHouseReleaseActivity(userId);
+    events.push(...houseEvents);
+    events.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
   return { events, nextCursor: exhausted ? null : nextCursor };
 }
 
@@ -449,9 +505,21 @@ export async function markActivityRead(userId: string, eventIds: string[]): Prom
   const db = await getDb();
   const now = new Date().toISOString();
   let marked = 0;
+  let markedGlobal = 0;
   const unique = [...new Set(eventIds)].filter(Boolean).slice(0, 50);
 
   for (const eventId of unique) {
+    if (eventId.startsWith('house_')) {
+      const [ping, receipt] = await Promise.all([
+        db.doc(`houseReleasePings/${eventId}`).get(),
+        db.doc(`users/${userId}/activityGlobalReads/${eventId}`).get(),
+      ]);
+      if (!ping.exists || receipt.data()?.readAt) continue;
+      await receipt.ref.set({ readAt: now }, { merge: true });
+      marked += 1;
+      markedGlobal += 1;
+      continue;
+    }
     const ref = db.doc(`users/${userId}/activity/${eventId}`);
     const snap = await ref.get();
     if (!snap.exists) continue;
@@ -461,7 +529,8 @@ export async function markActivityRead(userId: string, eventIds: string[]): Prom
     marked += 1;
   }
 
-  if (marked > 0) {
+  const markedLocal = marked - markedGlobal;
+  if (markedLocal > 0) {
     const summaryRef = db.doc(`users/${userId}/activityMeta/summary`);
     await db.runTransaction(async (tx) => {
       const s = await tx.get(summaryRef);
@@ -469,7 +538,7 @@ export async function markActivityRead(userId: string, eventIds: string[]): Prom
       tx.set(
         summaryRef,
         {
-          unreadReceived: Math.max(0, current - marked),
+          unreadReceived: Math.max(0, current - markedLocal),
           updatedAt: now,
         },
         { merge: true }
@@ -486,30 +555,49 @@ export async function markActivityUnread(userId: string, eventIds: string[]): Pr
   const unique = [...new Set(eventIds)].filter(Boolean).slice(0, 50);
   if (!unique.length) return 0;
 
-  const eventRefs = unique.map((eventId) => db.doc(`users/${userId}/activity/${eventId}`));
+  const houseIds = unique.filter((eventId) => eventId.startsWith('house_'));
+  let houseMarked = 0;
+  for (const eventId of houseIds) {
+    const [ping, receipt] = await Promise.all([
+      db.doc(`houseReleasePings/${eventId}`).get(),
+      db.doc(`users/${userId}/activityGlobalReads/${eventId}`).get(),
+    ]);
+    if (!ping.exists || !receipt.data()?.readAt) continue;
+    await receipt.ref.set({ readAt: null }, { merge: true });
+    houseMarked += 1;
+  }
+  const localIds = unique.filter((eventId) => !eventId.startsWith('house_'));
+  if (!localIds.length) return houseMarked;
+  const eventRefs = localIds.map((eventId) => db.doc(`users/${userId}/activity/${eventId}`));
   const summaryRef = db.doc(`users/${userId}/activityMeta/summary`);
 
   return db.runTransaction(async (tx) => {
     const snapshots = await Promise.all(eventRefs.map((ref) => tx.get(ref)));
-    const unreadRefs = snapshots
+    const unreadSnaps = snapshots
       .filter((snap) => {
         const data = snap.data() || {};
         return snap.exists && data.direction === 'received' && Boolean(data.readAt);
-      })
-      .map((snap) => snap.ref);
+      });
+    const unreadRefs = unreadSnaps.map((snap) => snap.ref);
+    const houseReleaseCount = unreadSnaps.filter(
+      (snap) => snap.data()?.type === 'house_release'
+    ).length;
 
-    if (!unreadRefs.length) return 0;
+    if (!unreadRefs.length) return houseMarked;
 
     unreadRefs.forEach((ref) => tx.update(ref, { readAt: null }));
     tx.set(
       summaryRef,
       {
         unreadReceived: FieldValue.increment(unreadRefs.length),
+        ...(houseReleaseCount > 0
+          ? { unreadHouseReleases: FieldValue.increment(houseReleaseCount) }
+          : {}),
         updatedAt: now,
       },
       { merge: true }
     );
-    return unreadRefs.length;
+    return unreadRefs.length + houseMarked;
   });
 }
 
@@ -534,8 +622,23 @@ export async function markAllActivityRead(userId: string): Promise<number> {
     if (snap.size < 400) break;
   }
 
+  const houseEvents = await listHouseReleaseActivity(userId);
+  const unreadHouseEvents = houseEvents.filter((event) => !event.readAt);
+  for (let index = 0; index < unreadHouseEvents.length; index += 400) {
+    const batch = db.batch();
+    unreadHouseEvents.slice(index, index + 400).forEach((event) => {
+      batch.set(
+        db.doc(`users/${userId}/activityGlobalReads/${event.id}`),
+        { readAt: now },
+        { merge: true }
+      );
+    });
+    await batch.commit();
+  }
+  marked += unreadHouseEvents.length;
+
   await db.doc(`users/${userId}/activityMeta/summary`).set(
-    { unreadReceived: 0, updatedAt: now },
+    { unreadReceived: 0, unreadHouseReleases: 0, updatedAt: now },
     { merge: true }
   );
   return marked;

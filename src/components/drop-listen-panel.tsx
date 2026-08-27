@@ -80,6 +80,7 @@ export function DropListenPanel({
   artistAttribution,
   houseRelease = false,
   songMetadata,
+  purchaseOnly = false,
 }: {
   shareId: string;
   title: string;
@@ -111,6 +112,8 @@ export function DropListenPanel({
   houseRelease?: boolean;
   /** Compact public facts used by the dedicated song-page presentation. */
   songMetadata?: PublicMusicMetadata;
+  /** Render entitlement and album checkout controls without a second inline audio player. */
+  purchaseOnly?: boolean;
 }) {
   const { user, authReady } = useAuth();
   const { toast } = useToast();
@@ -369,6 +372,7 @@ export function DropListenPanel({
 
   if (!firstDropsOn) return null;
   if (!hasAudio && !isCommerceLive(normalized)) return null;
+  if (purchaseOnly && (!streamReady || full || isOwner)) return null;
 
   const previewCapped = !full && !isOwner;
   const timelineStartSec = previewCapped ? playbackStartSec : 0;
@@ -413,7 +417,9 @@ export function DropListenPanel({
       ) : null}
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
         <p className={cn('text-[10px] font-bold uppercase tracking-widest', firstPressEdition ? 'text-amber-200' : 'text-fuchsia-200')}>
-          {isHouseRelease
+          {purchaseOnly
+            ? 'Album access'
+            : isHouseRelease
             ? full || isOwner
               ? 'House release · full stream'
               : 'House release · free for members'
@@ -428,7 +434,7 @@ export function DropListenPanel({
         ) : null}
       </div>
 
-      {hasAudio && (
+      {hasAudio && !purchaseOnly && (
         <div className="flex min-w-0 items-center gap-2">
           <Button
             type="button"
@@ -584,7 +590,7 @@ export function DropListenPanel({
         </div>
       )}
 
-      {hasAudio ? (
+      {hasAudio && !purchaseOnly ? (
         <>
           {presentation === 'song' ? (
             <dl className="grid grid-cols-2 gap-2 border-y border-white/10 py-3 sm:grid-cols-4">

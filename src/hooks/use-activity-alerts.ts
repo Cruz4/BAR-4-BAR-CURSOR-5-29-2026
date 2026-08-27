@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { fetchActivityUnreadCount } from '@/lib/activity/client';
+import { fetchActivitySummary } from '@/lib/activity/client';
 import { fetchFriendships } from '@/lib/profile/social-client';
 import { setActivityBadgeCount } from '@/lib/app-badge-counts';
 
@@ -12,9 +12,16 @@ export type ActivityAlertSummary = {
   unreadReceived: number;
   /** Pending incoming friend requests (still useful for docks). */
   friendRequests: number;
+  /** Unread House-release pings shown on the Scene Library shortcut. */
+  libraryReleases: number;
 };
 
-const EMPTY: ActivityAlertSummary = { total: 0, unreadReceived: 0, friendRequests: 0 };
+const EMPTY: ActivityAlertSummary = {
+  total: 0,
+  unreadReceived: 0,
+  friendRequests: 0,
+  libraryReleases: 0,
+};
 const POLL_MS = 45_000;
 const REFRESH_EVENT = 'b4b-activity-alerts-refresh';
 
@@ -40,8 +47,8 @@ export function useActivityAlerts() {
       return;
     }
     try {
-      const [unreadReceived, friendships] = await Promise.all([
-        fetchActivityUnreadCount(),
+      const [activity, friendships] = await Promise.all([
+        fetchActivitySummary(),
         fetchFriendships(user.id).catch(() => []),
       ]);
       const friendRequests = friendships.filter(
@@ -49,8 +56,13 @@ export function useActivityAlerts() {
       ).length;
       // Prefer activity unread; boost with live pending requests if higher
       // (covers the window before emit lands / before inbox open marks read).
-      const total = unreadReceived;
-      setSummary({ total, unreadReceived, friendRequests });
+      const total = activity.unreadReceived;
+      setSummary({
+        total,
+        unreadReceived: activity.unreadReceived,
+        friendRequests,
+        libraryReleases: activity.unreadHouseReleases,
+      });
       setActivityBadgeCount(total);
     } catch {
       /* keep last good count */

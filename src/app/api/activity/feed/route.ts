@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { listActivityFeedPage } from '@/lib/server/activity';
+import { getActivitySummary, listActivityFeedPage } from '@/lib/server/activity';
 import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 import type { ActivityDirection } from '@/lib/activity/types';
 
@@ -26,7 +26,9 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json(
-      await listActivityFeedPage(userId, direction, limit, cursor),
+      searchParams.get('summary') === '1'
+        ? await getActivitySummary(userId)
+        : await listActivityFeedPage(userId, direction, limit, cursor),
       { headers: { 'Cache-Control': 'private, no-store' } }
     );
   } catch (error) {

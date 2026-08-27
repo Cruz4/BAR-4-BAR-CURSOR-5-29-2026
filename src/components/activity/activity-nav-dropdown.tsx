@@ -11,6 +11,7 @@ import {
   Flame,
   Heart,
   Import,
+  Library,
   Lock,
   Mail,
   MailOpen,
@@ -80,6 +81,8 @@ function TypeIcon({ type }: { type: ActivityType }) {
       return <Flame className={cn(className, 'text-fuchsia-400')} />;
     case 'drop_sold':
       return <Banknote className={cn(className, 'text-emerald-400')} />;
+    case 'house_release':
+      return <Library className={cn(className, 'text-amber-300')} />;
     case 'love_milestone':
       return <Droplets className={cn(className, 'text-violet-300')} />;
     case 'lock_answered':

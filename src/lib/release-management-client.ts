@@ -44,6 +44,34 @@ export async function manageRelease(input: ManageReleaseInput): Promise<ManageRe
   return result;
 }
 
+export async function pingHouseRelease(shareId: string): Promise<{
+  ok: true;
+  sentAt: string;
+}> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Admin sign-in required.');
+  const pingId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID().replace(/-/g, '_')
+    : `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const response = await fetch('/api/admin/house-release-ping', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${await user.getIdToken()}`,
+    },
+    body: JSON.stringify({ shareId, pingId }),
+  });
+  const result = (await response.json().catch(() => ({}))) as {
+    ok?: true;
+    sentAt?: string;
+    error?: string;
+  };
+  if (!response.ok || !result.ok) {
+    throw new Error(result.error || 'Could not send the Library ping.');
+  }
+  return { ok: true, sentAt: result.sentAt || new Date().toISOString() };
+}
+
 export async function getPrivateReleaseAudio(albumId: string, trackId: string): Promise<{ url: string; fileName: string }> {
   const user = auth.currentUser;
   if (!user) throw new Error('Sign in to test this recording.');

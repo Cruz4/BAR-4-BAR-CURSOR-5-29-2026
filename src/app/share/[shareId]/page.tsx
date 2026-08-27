@@ -42,6 +42,7 @@ import {
 import { isLooseTrackAlbum } from '@/lib/co-writer-rules';
 import { DnaDropAlbumHub } from '@/components/dna-drop-album-hub';
 import { DropListenPanel } from '@/components/drop-listen-panel';
+import { AlbumReleasePlaylist } from '@/components/album-release-playlist';
 import { DropSocialPanel } from '@/components/drop-social-panel';
 import { normalizeDropAudio, normalizeDropPrice } from '@/lib/drop-commerce';
 import { EmbedPlayer } from '@/components/profile/embed-player';
@@ -515,22 +516,27 @@ export default function SharedProjectPage() {
             <main className="container max-w-7xl mx-auto py-8 px-4 grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
                 <div className="lg:col-span-4 space-y-6">
                     <Suspense fallback={null}>
-                      <DropListenPanel
-                        shareId={shareId}
-                        source="share"
-                        title={project.title || 'Untitled'}
-                        artistName={share.ownerName}
-                        ownerId={share.ownerId}
-                        price={
-                          isAlbum
-                            ? normalizeDropPrice((project as DnaDropAlbumPayload).dropPrice)
-                            : normalizeDropPrice((project as DnaDropTrackPayload).dropPrice)
-                        }
-                        hasAudio={hasFirstDropAudio}
-                        houseRelease={share.houseRelease === true}
-                        detailsHref={isAlbum ? `/share/${shareId}` : undefined}
-                        checkoutDestination={isAlbum ? 'share' : 'song'}
-                      />
+                      {isAlbum ? (
+                        <AlbumReleasePlaylist
+                          album={project as DnaDropAlbumPayload}
+                          shareId={shareId}
+                          ownerId={share.ownerId}
+                          ownerName={share.ownerName}
+                          houseRelease={share.houseRelease === true}
+                        />
+                      ) : (
+                        <DropListenPanel
+                          shareId={shareId}
+                          source="share"
+                          title={project.title || 'Untitled'}
+                          artistName={share.ownerName}
+                          ownerId={share.ownerId}
+                          price={normalizeDropPrice((project as DnaDropTrackPayload).dropPrice)}
+                          hasAudio={hasFirstDropAudio}
+                          houseRelease={share.houseRelease === true}
+                          checkoutDestination="song"
+                        />
+                      )}
                     </Suspense>
                     <DropSocialPanel
                       shareId={shareId}

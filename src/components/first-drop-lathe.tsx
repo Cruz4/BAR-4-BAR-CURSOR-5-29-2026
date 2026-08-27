@@ -9,7 +9,7 @@
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Banknote, Disc3, Gift, Library, Loader, Music, Play, PlusCircle, Save, Trash2, Unlink } from 'lucide-react';
+import { ArrowLeft, Banknote, BellRing, Disc3, Gift, Library, Loader, Music, Play, PlusCircle, Save, Trash2, Unlink } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -39,7 +39,7 @@ import { isGuestTryAlbumId } from '@/lib/guest-try';
 import { PriceEditor } from '@/components/drop-commerce-panel';
 import { cn } from '@/lib/utils';
 import type { Album, Track } from '@/lib/types';
-import { getPrivateReleaseAudio, manageRelease } from '@/lib/release-management-client';
+import { getPrivateReleaseAudio, manageRelease, pingHouseRelease } from '@/lib/release-management-client';
 import { releaseShareIdOf, releaseStatusOf } from '@/lib/release-management';
 
 type Picked = { album: Album; track: Track };
@@ -80,23 +80,32 @@ function HouseReleaseToggle({ checked, onChange }: { checked: boolean; onChange:
   );
 }
 
-function HouseLibraryNoticeToggle({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
+function HouseLibraryNoticePing({
+  sent,
+  disabled,
+  pinging,
+  onPing,
+}: {
+  sent: boolean;
+  disabled: boolean;
+  pinging: boolean;
+  onPing: () => void;
+}) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-fuchsia-400/20 bg-fuchsia-500/[0.06] p-3">
-      <Checkbox
-        id="house-library-notice"
-        checked={checked}
-        onCheckedChange={(value) => onChange(value === true)}
-        className="mt-0.5 border-fuchsia-300 data-[state=checked]:bg-fuchsia-300 data-[state=checked]:text-black"
-      />
-      <Label htmlFor="house-library-notice" className="min-w-0 cursor-pointer">
-        <span className="block text-[10px] font-bold uppercase tracking-widest text-fuchsia-200">
-          Show “New in Library” notice
-        </span>
-        <span className="mt-1 block text-[10px] leading-relaxed text-muted-foreground">
-          A quiet, dismissible strip inside Library—never a popup or push notification. Turn this off whenever the feature period is over.
-        </span>
-      </Label>
+    <div className="space-y-2 rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/[0.07] p-3">
+      <Button
+        type="button"
+        variant="outline"
+        className="h-10 w-full border-fuchsia-300/45 bg-fuchsia-400/10 text-[10px] font-bold uppercase tracking-wider text-fuchsia-100 hover:bg-fuchsia-400/20"
+        disabled={disabled || pinging}
+        onClick={onPing}
+      >
+        {pinging ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <BellRing className="mr-2 h-4 w-4" />}
+        {disabled ? 'Publish House Drop first' : sent ? 'Ping New in Library again' : 'Ping New in Library'}
+      </Button>
+      <p className="text-[10px] leading-relaxed text-muted-foreground">
+        Sends a Bar4Bar Activity notification and puts a new bubble on Library in The Scene. Members clear it by reading the notice.
+      </p>
     </div>
   );
 }
@@ -123,6 +132,7 @@ export function FirstDropLatheHost() {
   const [privateAudioUrl, setPrivateAudioUrl] = useState('');
   const [testingAudio, setTestingAudio] = useState(false);
   const [removingAudioId, setRemovingAudioId] = useState('');
+  const [pingingHouseNotice, setPingingHouseNotice] = useState(false);
 
   const catalog = useMemo(() => {
     const rows: Picked[] = [];
@@ -436,8 +446,10 @@ export function FirstDropLatheHost() {
           ? 'Every current and future member now receives it free in Library.'
           : 'Visitors hear this first on your Artist Home and this share link.',
       });
-      setOpen(false);
-      router.push(`/song/${shareId}`);
+      if (!houseRelease) {
+        setOpen(false);
+        router.push(`/song/${shareId}`);
+      }
     } catch (e: unknown) {
       toast({
         variant: 'destructive',
@@ -515,8 +527,10 @@ export function FirstDropLatheHost() {
             ? `${albumAudioTracks.length} audio track${albumAudioTracks.length === 1 ? '' : 's'} added free to every member Library.`
             : `${albumAudioTracks.length} audio track${albumAudioTracks.length === 1 ? '' : 's'} included. One purchase unlocks all of them.`,
       });
-      setOpen(false);
-      router.push(`/share/${shareId}`);
+      if (!houseRelease) {
+        setOpen(false);
+        router.push(`/share/${shareId}`);
+      }
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -525,6 +539,36 @@ export function FirstDropLatheHost() {
       });
     } finally {
       setPressing(false);
+    }
+  };
+
+  const sendHouseLibraryPing = async (kind: 'track' | 'album') => {
+    const target = kind === 'album' ? selectedAlbum : track;
+    const shareId = releaseShareIdOf(target || {});
+    if (!shareId) {
+      toast({ variant: 'destructive', title: 'Publish the House Drop first' });
+      return;
+    }
+    setPingingHouseNotice(true);
+    try {
+      await pingHouseRelease(shareId);
+      if (kind === 'album' && selectedAlbum) {
+        updateAlbum(selectedAlbum.id, { houseLibraryNotice: true });
+      } else if (album && track) {
+        updateTrack(album.id, track.id, { houseLibraryNotice: true });
+      }
+      toast({
+        title: 'Library ping sent',
+        description: 'Members now have a new Activity alert and a Library bubble in The Scene.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not send Library ping',
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setPingingHouseNotice(false);
     }
   };
 
@@ -929,9 +973,11 @@ export function FirstDropLatheHost() {
                     })}
                   />
                   {houseRelease ? (
-                    <HouseLibraryNoticeToggle
-                      checked={houseLibraryNotice}
-                      onChange={(checked) => updateAlbum(selectedAlbum.id, { houseLibraryNotice: checked })}
+                    <HouseLibraryNoticePing
+                      sent={houseLibraryNotice}
+                      disabled={!selectedAlbumIsLive || !releaseShareIdOf(selectedAlbum)}
+                      pinging={pingingHouseNotice}
+                      onPing={() => void sendHouseLibraryPing('album')}
                     />
                   ) : null}
                 </div>
@@ -1225,9 +1271,11 @@ export function FirstDropLatheHost() {
                   })}
                 />
                 {houseRelease ? (
-                  <HouseLibraryNoticeToggle
-                    checked={houseLibraryNotice}
-                    onChange={(checked) => updateTrack(album.id, track.id, { houseLibraryNotice: checked })}
+                  <HouseLibraryNoticePing
+                    sent={houseLibraryNotice}
+                    disabled={releaseStatusOf(track) !== 'live' || !releaseShareIdOf(track)}
+                    pinging={pingingHouseNotice}
+                    onPing={() => void sendHouseLibraryPing('track')}
                   />
                 ) : null}
               </div>

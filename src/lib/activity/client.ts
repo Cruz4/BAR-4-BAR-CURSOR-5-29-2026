@@ -162,32 +162,33 @@ export async function fetchPendingRequestActivity(max = 40): Promise<ActivityEve
 }
 
 export async function fetchActivityUnreadCount(): Promise<number> {
-  const user = auth.currentUser;
-  if (!user) return 0;
-  try {
-    const snap = await getDoc(doc(db, 'users', user.uid, 'activityMeta', 'summary'));
-    if (!snap.exists()) return 0;
-    const n = snap.data()?.unreadReceived;
-    return typeof n === 'number' && n > 0 ? Math.floor(n) : 0;
-  } catch {
-    return 0;
-  }
+  return (await fetchActivitySummary()).unreadReceived;
 }
 
 export async function fetchActivitySummary(): Promise<ActivitySummary> {
+  await auth.authStateReady();
   const user = auth.currentUser;
-  if (!user) return { unreadReceived: 0, updatedAt: '' };
+  if (!user) return { unreadReceived: 0, unreadHouseReleases: 0, updatedAt: '' };
   try {
-    const snap = await getDoc(doc(db, 'users', user.uid, 'activityMeta', 'summary'));
-    if (!snap.exists()) return { unreadReceived: 0, updatedAt: '' };
-    const data = snap.data() || {};
+    const headers = await authHeaders();
+    if (!headers) return { unreadReceived: 0, unreadHouseReleases: 0, updatedAt: '' };
+    const response = await fetch(
+      `/api/activity/feed?userId=${encodeURIComponent(user.uid)}&summary=1`,
+      { headers, cache: 'no-store' }
+    );
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Could not load activity summary.');
     return {
       unreadReceived:
         typeof data.unreadReceived === 'number' ? Math.max(0, Math.floor(data.unreadReceived)) : 0,
+      unreadHouseReleases:
+        typeof data.unreadHouseReleases === 'number'
+          ? Math.max(0, Math.floor(data.unreadHouseReleases))
+          : 0,
       updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : '',
     };
   } catch {
-    return { unreadReceived: 0, updatedAt: '' };
+    return { unreadReceived: 0, unreadHouseReleases: 0, updatedAt: '' };
   }
 }
 
