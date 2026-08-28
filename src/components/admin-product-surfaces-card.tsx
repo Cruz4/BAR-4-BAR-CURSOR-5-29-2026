@@ -45,6 +45,7 @@ function ModeSelect<T extends string>({
   id,
   label,
   hint,
+  modes,
   value,
   options,
   onChange,
@@ -52,6 +53,7 @@ function ModeSelect<T extends string>({
   id: string;
   label: string;
   hint: string;
+  modes: Array<{ value: T; meaning: string }>;
   value: T;
   options: readonly T[];
   onChange: (next: T) => void;
@@ -76,7 +78,18 @@ function ModeSelect<T extends string>({
           ))}
         </SelectContent>
       </Select>
-      <p className="text-[11px] text-muted-foreground">{hint}</p>
+      <p className="text-[11px] leading-relaxed text-muted-foreground">{hint}</p>
+      <ul className="space-y-1.5 border-t border-white/8 pt-2">
+        {modes.map((mode) => (
+          <li key={mode.value} className="text-[11px] leading-relaxed text-muted-foreground">
+            <span className="font-code font-bold uppercase tracking-wider text-amber-200/90">
+              {mode.value.replace(/_/g, ' ')}
+            </span>
+            <span className="text-white/40"> — </span>
+            {mode.meaning}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -194,7 +207,12 @@ export function AdminProductSurfacesCard() {
               <ModeSelect
                 id="ceoDashboard"
                 label="CEO dashboard"
-                hint="V2 desk + full Growth Metrics below · legacy = metrics only"
+                hint="Admin metrics tab in Master Control."
+                modes={[
+                  { value: 'legacy', meaning: 'Original Growth Metrics only (funnels, refs, guest try, LOCK, MRR, events).' },
+                  { value: 'v2', meaning: 'CEO Deck on top (Activation, Retention, Referral, Subs, Ink, Music) plus full Growth Metrics below.' },
+                  { value: 'off', meaning: 'Hides the metrics tab.' },
+                ]}
                 value={draft.ceoDashboard}
                 options={PRODUCT_SURFACE_MODES}
                 onChange={(v) => patchDraft('ceoDashboard', v as ProductSurfaceMode)}
@@ -202,7 +220,12 @@ export function AdminProductSurfacesCard() {
               <ModeSelect
                 id="supportCircle"
                 label="Support Circle"
-                hint="legacy list vs Artist Intelligence CRM"
+                hint="Supporters page for artists."
+                modes={[
+                  { value: 'legacy', meaning: 'Original supporter list and analytics.' },
+                  { value: 'crm', meaning: 'Artist Intelligence workspace — people, notes, priority, next actions.' },
+                  { value: 'off', meaning: 'Surface and CRM APIs stay off.' },
+                ]}
                 value={draft.supportCircle}
                 options={SUPPORT_CIRCLE_MODES}
                 onChange={(v) => patchDraft('supportCircle', v as SupportCircleMode)}
@@ -210,7 +233,12 @@ export function AdminProductSurfacesCard() {
               <ModeSelect
                 id="releaseComposer"
                 label="Release composer"
-                hint="New release lathe vs guided checklist"
+                hint="How artists cut a new release."
+                modes={[
+                  { value: 'legacy', meaning: 'Original First Drop Lathe flow.' },
+                  { value: 'guided', meaning: 'Guided checklist composer.' },
+                  { value: 'off', meaning: 'Composer is hidden.' },
+                ]}
                 value={draft.releaseComposer}
                 options={RELEASE_COMPOSER_MODES}
                 onChange={(v) => patchDraft('releaseComposer', v as ReleaseComposerMode)}
@@ -218,7 +246,12 @@ export function AdminProductSurfacesCard() {
               <ModeSelect
                 id="discoveryRails"
                 label="Discovery rails"
-                hint="On-sale / Scene discovery presentation"
+                hint="On-sale / Scene discovery presentation. Saved in config; not wired into Scene rails yet."
+                modes={[
+                  { value: 'legacy', meaning: 'Keep current Discover / On-sale presentation.' },
+                  { value: 'v2', meaning: 'Reserved for the next discovery layout (no UI change until wired).' },
+                  { value: 'off', meaning: 'Reserved to hide discovery rails once wired.' },
+                ]}
                 value={draft.discoveryRails}
                 options={PRODUCT_SURFACE_MODES}
                 onChange={(v) => patchDraft('discoveryRails', v as ProductSurfaceMode)}
@@ -226,7 +259,12 @@ export function AdminProductSurfacesCard() {
               <ModeSelect
                 id="sharing"
                 label="Sharing"
-                hint="Native share vs Share Studio V2"
+                hint="How profile and share dialogs work."
+                modes={[
+                  { value: 'legacy', meaning: 'Native share — copy plus network buttons.' },
+                  { value: 'v2', meaning: 'Share Studio with campaign codes and /c/[code] attribution.' },
+                  { value: 'off', meaning: 'Share Studio APIs stay off.' },
+                ]}
                 value={draft.sharing}
                 options={PRODUCT_SURFACE_MODES}
                 onChange={(v) => patchDraft('sharing', v as ProductSurfaceMode)}
@@ -234,7 +272,12 @@ export function AdminProductSurfacesCard() {
               <ModeSelect
                 id="sceneWeather"
                 label="Scene weather"
-                hint="legacy clouds vs Weather V2 vs off"
+                hint="Sky and weather layer on The Scene."
+                modes={[
+                  { value: 'legacy', meaning: 'Original clouds and weather chip.' },
+                  { value: 'v2', meaning: 'Weather V2 layers.' },
+                  { value: 'off', meaning: 'Weather is off.' },
+                ]}
                 value={draft.sceneWeather}
                 options={PRODUCT_SURFACE_MODES}
                 onChange={(v) => patchDraft('sceneWeather', v as ProductSurfaceMode)}
@@ -242,7 +285,11 @@ export function AdminProductSurfacesCard() {
               <ModeSelect
                 id="releaseRoom"
                 label="Release Room"
-                hint="Off until V1 listening rooms ship"
+                hint="Listening rooms for a drop."
+                modes={[
+                  { value: 'off', meaning: 'Rooms are not offered (default).' },
+                  { value: 'v1', meaning: 'Release Room V1 — /room/[roomId], RSVP, react, schedule from the lathe.' },
+                ]}
                 value={draft.releaseRoom}
                 options={RELEASE_ROOM_MODES}
                 onChange={(v) => patchDraft('releaseRoom', v as ReleaseRoomMode)}
@@ -250,7 +297,12 @@ export function AdminProductSurfacesCard() {
               <ModeSelect
                 id="emergency"
                 label="Emergency"
-                hint="read_only / maintenance pause writes (webhooks allowlisted later)"
+                hint="Global write kill-switch. Stripe webhooks / recovery can be allowlisted later (empty today)."
+                modes={[
+                  { value: 'normal', meaning: 'App writes as usual.' },
+                  { value: 'read_only', meaning: 'Ordinary mutations blocked server-side.' },
+                  { value: 'maintenance', meaning: 'Same write block, with maintenance copy.' },
+                ]}
                 value={draft.emergency}
                 options={EMERGENCY_MODES}
                 onChange={(v) => patchDraft('emergency', v as EmergencyMode)}

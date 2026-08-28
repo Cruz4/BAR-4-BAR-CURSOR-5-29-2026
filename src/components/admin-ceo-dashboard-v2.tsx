@@ -11,6 +11,7 @@ import {
   Activity,
   AlertTriangle,
   Droplets,
+  HardDrive,
   Music2,
   RefreshCw,
   Share2,
@@ -19,6 +20,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import type {
+  AudioStorageUsage,
   CeoDashboardSnapshot,
   CeoDashboardTabId,
   CeoMetricCell,
@@ -34,18 +36,33 @@ const TAB_META: Array<{ id: CeoDashboardTabId; label: string; icon: React.Elemen
   { id: 'music', label: 'Music', icon: Music2 },
 ];
 
+function formatUsd(value: number, digits = 2): string {
+  return value.toLocaleString(undefined, {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
+function formatStoredSize(bytes: number): string {
+  const gb = bytes / (1024 * 1024 * 1024);
+  if (bytes < 1024 * 1024) return `${Math.max(0, bytes / 1024).toFixed(0)} KB`;
+  if (gb < 0.01) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (gb < 1) return `${gb.toFixed(3)} GB`;
+  return `${gb.toFixed(2)} GB`;
+}
+
 function formatMetricValue(cell: CeoMetricCell): string {
   if (cell.value === null || cell.value === undefined) return '—';
   if (typeof cell.value === 'number') {
     if (cell.unit === '%' || cell.unit?.includes('%')) {
       return `${cell.value}`;
     }
-    if (cell.unit?.includes('USD') || /revenue|receipts|gross/i.test(cell.id)) {
-      return cell.value.toLocaleString(undefined, {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 0,
-      });
+    if (cell.unit?.includes('USD') || /revenue|receipts|gross|storage_usd/i.test(cell.id)) {
+      const abs = Math.abs(cell.value);
+      const digits = abs > 0 && abs < 100 ? 2 : 0;
+      return formatUsd(cell.value, digits);
     }
     return cell.value.toLocaleString();
   }
@@ -106,6 +123,111 @@ function MetricRow({ cell }: { cell: CeoMetricCell }) {
         </Badge>
       </div>
     </div>
+  );
+}
+
+function SongStorageBill({ usage }: { usage: AudioStorageUsage }) {
+  return (
+    <section
+      aria-label="Song storage bill"
+      className="rounded-xl border border-white/10 bg-gradient-to-b from-sky-500/[0.08] to-black/20 p-4 sm:p-5"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <HardDrive className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
+          <div>
+            <p className="font-code text-[10px] font-bold uppercase tracking-[0.22em] text-sky-200">
+              Song storage bill
+            </p>
+            <h3 className="mt-1 font-headline text-xl font-bold uppercase tracking-tight text-white">
+              GB stored vs $
+            </h3>
+          </div>
+        </div>
+        <Badge
+          variant="outline"
+          className={cn('w-fit px-1.5 py-0 text-[7px] uppercase tracking-wider', statusTone(usage.status))}
+        >
+          {usage.truncated ? 'partial' : usage.status}
+        </Badge>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border border-white/10 bg-black/25 px-3 py-3">
+          <p className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            Stored now
+          </p>
+          <p className="mt-1 font-headline text-2xl font-bold tabular-nums text-white">
+            {formatStoredSize(usage.totalBytes)}
+          </p>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            {usage.songCount.toLocaleString()} songs · {usage.previewCount.toLocaleString()} previews
+          </p>
+        </div>
+        <div className="rounded-lg border border-white/10 bg-black/25 px-3 py-3">
+          <p className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            Storage / month
+          </p>
+          <p className="mt-1 font-headline text-2xl font-bold tabular-nums text-emerald-200">
+            {formatUsd(usage.storageUsdPerMonth)}
+          </p>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            GCS Standard ~{formatUsd(usage.storageRateUsdPerGbMonth, 3)}/GB-mo · not an invoice
+          </p>
+        </div>
+        <div className="rounded-lg border border-white/10 bg-black/25 px-3 py-3">
+          <p className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            Avg per song
+          </p>
+          <p className="mt-1 font-headline text-2xl font-bold tabular-nums text-white">
+            {usage.avgMbPerSong || 0} MB
+          </p>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            Full + 30s preview · max 40 MB upload
+          </p>
+        </div>
+      </div>
+
+      {usage.projections.length ? (
+        <div className="mt-4">
+          <p className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            Catalog projection at current avg size
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {usage.projections.map((row) => (
+              <div key={row.songs} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                <p className="text-[10px] text-muted-foreground">{row.songs.toLocaleString()} songs</p>
+                <p className="font-code text-sm font-bold tabular-nums text-sky-200">
+                  {row.gb.toLocaleString()} GB
+                </p>
+                <p className="text-[10px] text-muted-foreground">{formatUsd(row.usdPerMonth)}/mo</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {usage.streamScenarios.length ? (
+        <div className="mt-4">
+          <p className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            Streaming egress if each play pulls the full file (~{formatUsd(usage.egressRateUsdPerGb)}/GB)
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {usage.streamScenarios.map((row) => (
+              <div key={row.plays} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                <p className="text-[10px] text-muted-foreground">{row.plays.toLocaleString()} plays</p>
+                <p className="font-code text-sm font-bold tabular-nums text-amber-200">
+                  {formatUsd(row.usd)}
+                </p>
+                <p className="text-[10px] text-muted-foreground">{row.gb.toLocaleString()} GB egress</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">{usage.note}</p>
+    </section>
   );
 }
 
@@ -213,6 +335,8 @@ export function AdminCeoDashboardV2() {
           ))}
         </div>
       </section>
+
+      {snapshot.audioStorage ? <SongStorageBill usage={snapshot.audioStorage} /> : null}
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as CeoDashboardTabId)} className="space-y-4">
         <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-muted/40 p-1.5">

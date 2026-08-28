@@ -5,7 +5,7 @@
  * Progress persists in localStorage per album/track. Dummy-proof, mobile-safe.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Circle } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
@@ -46,8 +46,8 @@ const STEP_COPY: Record<
   { label: string; hint: string; optional?: boolean }
 > = {
   titleLyrics: {
-    label: '1. Title & lyrics',
-    hint: 'Give it a clear title. Lyrics help, but you can publish audio-only.',
+    label: '1. Title & lyrics (optional)',
+    hint: 'Title is required. Lyrics (optional) — you can publish audio-only.',
   },
   audio: {
     label: '2. Audio + test play',
@@ -123,6 +123,14 @@ function csvToList(raw: string): string[] {
     .slice(0, 12);
 }
 
+export function scrollToReleaseStep(id: GuidedChecklistStepId) {
+  if (typeof document === 'undefined') return;
+  document.getElementById(`release-step-${id}`)?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'center',
+  });
+}
+
 export function GuidedReleaseChecklist({
   kind,
   album,
@@ -132,6 +140,7 @@ export function GuidedReleaseChecklist({
   hasPrivateAudioUrl,
   onMarkAudioTested,
   onDiscoveryChange,
+  onStepActivate,
   children,
   advanced,
 }: {
@@ -143,6 +152,7 @@ export function GuidedReleaseChecklist({
   hasPrivateAudioUrl: boolean;
   onMarkAudioTested?: () => void;
   onDiscoveryChange: (next: ReleaseDiscoveryMetadata) => void;
+  onStepActivate?: (id: GuidedChecklistStepId) => void;
   children?: React.ReactNode;
   advanced?: React.ReactNode;
 }) {
@@ -238,17 +248,30 @@ export function GuidedReleaseChecklist({
     ]
   );
 
-  const [genresDraft, setGenresDraft] = useState(() => listToCsv(discovery.genres));
-  const [moodsDraft, setMoodsDraft] = useState(() => listToCsv(discovery.moods));
+  const genresCsv = listToCsv(discovery.genres);
+  const moodsCsv = listToCsv(discovery.moods);
+  const [genresDraft, setGenresDraft] = useState(genresCsv);
+  const [moodsDraft, setMoodsDraft] = useState(moodsCsv);
+  const genresFocusedRef = useRef(false);
+  const moodsFocusedRef = useRef(false);
 
   useEffect(() => {
-    setGenresDraft(listToCsv(discovery.genres));
-    setMoodsDraft(listToCsv(discovery.moods));
-  }, [album.id, track?.id, discovery.genres, discovery.moods]);
+    if (!genresFocusedRef.current) setGenresDraft(genresCsv);
+  }, [album.id, trackId, genresCsv]);
+
+  useEffect(() => {
+    if (!moodsFocusedRef.current) setMoodsDraft(moodsCsv);
+  }, [album.id, trackId, moodsCsv]);
 
   const commitDiscovery = (patch: Partial<ReleaseDiscoveryMetadata>) => {
     const next = normalizeReleaseDiscoveryMetadata({ ...discovery, ...patch });
     onDiscoveryChange(next);
+  };
+
+  const activateStep = (id: GuidedChecklistStepId) => {
+    if (id === 'discovery') setDiscoveryOpen(true);
+    onStepActivate?.(id);
+    window.setTimeout(() => scrollToReleaseStep(id), id === 'discovery' ? 60 : 0);
   };
 
   return (
@@ -272,15 +295,24 @@ export function GuidedReleaseChecklist({
             const meta = STEP_COPY[id];
             const isDone = done[id];
             return (
-              <li
-                key={id}
-                className={cn(
-                  'flex items-start gap-2 rounded-lg border px-2.5 py-2',
-                  isDone
-                    ? 'border-emerald-400/30 bg-emerald-500/10'
-                    : 'border-white/10 bg-black/20'
-                )}
-              >
+              <li key={id}>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className={cn(
+                    'flex w-full cursor-pointer items-start gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors hover:border-fuchsia-400/40',
+                    isDone
+                      ? 'border-emerald-400/30 bg-emerald-500/10'
+                      : 'border-white/10 bg-black/20'
+                  )}
+                  onClick={() => activateStep(id)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      activateStep(id);
+                    }
+                  }}
+                >
                 <span className="mt-0.5 shrink-0 text-emerald-300" aria-hidden>
                   {isDone ? <Check className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5 opacity-40" />}
                 </span>
@@ -295,7 +327,10 @@ export function GuidedReleaseChecklist({
                       size="sm"
                       variant="ghost"
                       className="mt-1.5 h-7 px-2 text-[9px] font-bold uppercase text-muted-foreground"
-                      onClick={() => persist({ coverSkipped: true })}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        persist({ coverSkipped: true });
+                      }}
                     >
                       Skip cover for now
                     </Button>
@@ -307,7 +342,10 @@ export function GuidedReleaseChecklist({
                         size="sm"
                         variant="outline"
                         className="h-7 text-[9px] font-bold uppercase"
-                        onClick={() => setDiscoveryOpen((open) => !open)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setDiscoveryOpen((open) => !open);
+                        }}
                       >
                         {discoveryOpen ? 'Hide tags' : 'Edit tags'}
                       </Button>
@@ -317,7 +355,10 @@ export function GuidedReleaseChecklist({
                           size="sm"
                           variant="ghost"
                           className="h-7 px-2 text-[9px] font-bold uppercase text-muted-foreground"
-                          onClick={() => persist({ discoverySkipped: true })}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            persist({ discoverySkipped: true });
+                          }}
                         >
                           Skip for now
                         </Button>
@@ -335,6 +376,7 @@ export function GuidedReleaseChecklist({
                     </p>
                   ) : null}
                 </span>
+                </div>
               </li>
             );
           })}
@@ -342,7 +384,10 @@ export function GuidedReleaseChecklist({
       </div>
 
       {discoveryOpen ? (
-        <div className="space-y-2 rounded-xl border border-white/10 bg-black/25 p-3">
+        <div
+          id="release-step-discovery"
+          className="scroll-mt-4 space-y-2 rounded-xl border border-white/10 bg-black/25 p-3"
+        >
           <Label className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-300">
             Discovery essentials
           </Label>
@@ -371,11 +416,16 @@ export function GuidedReleaseChecklist({
             <Input
               value={genresDraft}
               onChange={(e) => setGenresDraft(e.target.value)}
+              onFocus={() => {
+                genresFocusedRef.current = true;
+              }}
               onBlur={() => {
+                genresFocusedRef.current = false;
                 persist({ discoverySkipped: false });
                 commitDiscovery({ genres: csvToList(genresDraft) });
               }}
               placeholder="Hip-hop, R&B"
+              autoComplete="off"
               className="h-9 font-code text-sm"
             />
           </div>
@@ -384,11 +434,16 @@ export function GuidedReleaseChecklist({
             <Input
               value={moodsDraft}
               onChange={(e) => setMoodsDraft(e.target.value)}
+              onFocus={() => {
+                moodsFocusedRef.current = true;
+              }}
               onBlur={() => {
+                moodsFocusedRef.current = false;
                 persist({ discoverySkipped: false });
                 commitDiscovery({ moods: csvToList(moodsDraft) });
               }}
               placeholder="Late night, confident"
+              autoComplete="off"
               className="h-9 font-code text-sm"
             />
           </div>

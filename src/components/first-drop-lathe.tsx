@@ -41,13 +41,15 @@ import { PriceEditor } from '@/components/drop-commerce-panel';
 import {
   GuidedReleaseChecklist,
   guidedPublishBlocked,
+  type GuidedChecklistStepId,
 } from '@/components/guided-release-checklist';
 import { useProductSurfaces } from '@/hooks/use-product-surfaces';
 import { cn } from '@/lib/utils';
-import type { Album, Track } from '@/lib/types';
+import type { Album, Track, TrackSection } from '@/lib/types';
 import type { ReleaseDiscoveryMetadata } from '@/lib/release-discovery';
 import { getPrivateReleaseAudio, manageRelease, pingHouseRelease } from '@/lib/release-management-client';
 import { releaseShareIdOf, releaseStatusOf } from '@/lib/release-management';
+import { Textarea } from '@/components/ui/textarea';
 
 type Picked = { album: Album; track: Track };
 
@@ -64,6 +66,105 @@ function offlineReleasePlacement(row: Picked): 'single' | 'album' | null {
     && releaseStatusOf({ ...row.album, tracks: row.album.tracks }) === 'unlisted'
     && Boolean(releaseShareIdOf({ ...row.album, tracks: row.album.tracks }));
   return albumOffline && Boolean(normalizeDropAudio(row.track.dropAudio)) ? 'album' : null;
+}
+
+function sectionsToLyricText(sections: TrackSection[] | undefined): string {
+  if (!sections?.length) return '';
+  return sections
+    .flatMap((section) => (section.bars || []).map((bar) => String(bar.text || '')))
+    .join('\n')
+    .replace(/\n+$/g, '');
+}
+
+function lyricTextToSections(text: string): TrackSection[] {
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  if (lines.length === 1 && !lines[0].trim()) return [];
+  return [
+    {
+      id: `section-${Date.now()}`,
+      type: 'verse',
+      bars: lines.map((line, index) => ({
+        idx: index + 1,
+        text: line,
+        accepted: true,
+        syllables: 0,
+        rhymeKey: '?',
+        lineSource: 'written' as const,
+      })),
+    },
+  ];
+}
+
+function ReleaseTitleLyricsEditor({
+  title,
+  lyrics,
+  lyricsHint,
+  titleInputRef,
+  onSaveTitle,
+  onSaveLyrics,
+  lyricsDisabled,
+}: {
+  title: string;
+  lyrics: string;
+  lyricsHint?: string;
+  titleInputRef?: React.Ref<HTMLInputElement>;
+  onSaveTitle: (next: string) => void;
+  onSaveLyrics: (next: string) => void;
+  lyricsDisabled?: boolean;
+}) {
+  const [titleDraft, setTitleDraft] = useState(title);
+  const [lyricsDraft, setLyricsDraft] = useState(lyrics);
+
+  useEffect(() => {
+    setTitleDraft(title);
+  }, [title]);
+
+  useEffect(() => {
+    setLyricsDraft(lyrics);
+  }, [lyrics]);
+
+  return (
+    <div id="release-step-titleLyrics" className="scroll-mt-4 space-y-3 rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/5 p-3">
+      <div className="space-y-1.5">
+        <Label className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-300">Title</Label>
+        <Input
+          ref={titleInputRef}
+          value={titleDraft}
+          onChange={(event) => setTitleDraft(event.target.value)}
+          onBlur={() => {
+            const next = titleDraft.trim().slice(0, 120);
+            if (!next || next === title) return;
+            onSaveTitle(next);
+          }}
+          maxLength={120}
+          placeholder="Release title"
+          className="h-10 font-headline text-base font-bold uppercase tracking-tight"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-300">
+          Lyrics (optional)
+        </Label>
+        {lyricsHint ? (
+          <p className="text-[10px] leading-relaxed text-muted-foreground">{lyricsHint}</p>
+        ) : null}
+        <Textarea
+          value={lyricsDraft}
+          onChange={(event) => setLyricsDraft(event.target.value)}
+          onBlur={() => {
+            if (lyricsDraft === lyrics) return;
+            onSaveLyrics(lyricsDraft);
+          }}
+          placeholder="Paste or type lyrics if you want them on the sheet."
+          className="min-h-[7rem] font-code text-sm"
+          disabled={lyricsDisabled}
+        />
+      </div>
+      <p id="release-step-cover" className="scroll-mt-4 text-[10px] leading-relaxed text-muted-foreground">
+        Cover art (optional) — this release uses art already on the Vault album or track. Skip cover in the checklist if you do not have art yet.
+      </p>
+    </div>
+  );
 }
 
 function HouseReleaseToggle({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
@@ -124,10 +225,11 @@ export function FirstDropLatheHost() {
   const guided = releaseComposer === 'guided';
   const { user } = useAuth();
   const { toast } = useToast();
-  const { albums, addTrack, updateAlbum, updateTrack, flushCloudNow, isCloudSyncActive } = useContext(DataContext);
+  const { albums, addTrack, updateAlbum, updateTrack, deleteTrack, flushCloudNow, isCloudSyncActive } = useContext(DataContext);
   const isAdmin = user?.role === 'admin';
   const fileRef = useRef<HTMLInputElement>(null);
   const albumFileRef = useRef<HTMLInputElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'song' | 'album'>('song');
   const [query, setQuery] = useState('');
@@ -417,6 +519,26 @@ export function FirstDropLatheHost() {
         title: 'Could not add track',
         description: error instanceof Error ? error.message : 'Your current track limit may be full.',
       });
+    }
+  };
+
+  const removeCatalogTrack = (row: Track) => {
+    if (!selectedAlbum) return;
+    if (normalizeDropAudio(row.dropAudio)) return;
+    if (
+      !window.confirm(
+        `Remove "${row.title || 'this track'}" from the album?\n\nIt has no audio yet. This only drops it from the catalog list.`
+      )
+    ) {
+      return;
+    }
+    deleteTrack(selectedAlbum.id, row.id);
+    toast({ title: 'Track removed' });
+  };
+
+  const onChecklistStep = (id: GuidedChecklistStepId) => {
+    if (id === 'titleLyrics') {
+      window.setTimeout(() => titleInputRef.current?.focus(), 80);
     }
   };
 
@@ -927,12 +1049,23 @@ export function FirstDropLatheHost() {
                 <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Different album
               </button>
 
-              <div className="rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/5 p-3">
-                <p className="font-headline text-xl font-bold uppercase tracking-tight">{selectedAlbum.title}</p>
-                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                  Add the recordings listeners receive. A catalog track does not need lyrics, sections, or a completed sheet.
-                </p>
-              </div>
+              <ReleaseTitleLyricsEditor
+                title={selectedAlbum.title}
+                lyrics={sectionsToLyricText(selectedAlbum.tracks[selectedAlbum.tracks.length - 1]?.sections)}
+                lyricsHint={
+                  selectedAlbum.tracks.length
+                    ? `Saved on “${selectedAlbum.tracks[selectedAlbum.tracks.length - 1]?.title || 'the last track'}”. Leave blank to publish audio-only.`
+                    : 'Add a catalog track below first if you want optional lyrics on a sheet.'
+                }
+                titleInputRef={titleInputRef}
+                onSaveTitle={(next) => updateAlbum(selectedAlbum.id, { title: next })}
+                onSaveLyrics={(next) => {
+                  const target = selectedAlbum.tracks[selectedAlbum.tracks.length - 1];
+                  if (!target) return;
+                  updateTrack(selectedAlbum.id, target.id, { sections: lyricTextToSections(next) });
+                }}
+                lyricsDisabled={selectedAlbum.tracks.length === 0}
+              />
 
               {guided ? (
                 <GuidedReleaseChecklist
@@ -942,6 +1075,7 @@ export function FirstDropLatheHost() {
                   houseRelease={houseRelease}
                   hasPrivateAudioUrl={Boolean(privateAudioUrl)}
                   onDiscoveryChange={saveAlbumDiscovery}
+                  onStepActivate={onChecklistStep}
                   advanced={
                     isAdmin ? (
                       <div className="space-y-2">
@@ -974,7 +1108,7 @@ export function FirstDropLatheHost() {
                 onChange={(event) => void onPickAlbumAudio(event.target.files?.[0])}
               />
 
-              <div className="space-y-2">
+              <div id="release-step-audio" className="scroll-mt-4 space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-300">
                   1. Album track audio
                 </Label>
@@ -995,7 +1129,7 @@ export function FirstDropLatheHost() {
                           <span className="min-w-[12rem] flex-1 basis-48">
                             <span className="block break-words text-sm font-bold">{row.title || `Track ${index + 1}`}</span>
                             <span className={cn('block break-all font-code text-[9px]', audio ? 'text-emerald-400' : 'text-muted-foreground')}>
-                              {audio ? `${audio.fileName || 'Audio ready'}${audio.durationSec ? ` · ${Math.round(audio.durationSec)}s` : ''}` : 'No audio yet · lyrics optional'}
+                              {audio ? `${audio.fileName || 'Audio ready'}${audio.durationSec ? ` · ${Math.round(audio.durationSec)}s` : ''}` : 'No audio yet · lyrics (optional)'}
                             </span>
                           </span>
                           {audio ? (
@@ -1037,7 +1171,19 @@ export function FirstDropLatheHost() {
                             >
                               {removingAudioId === row.id ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                             </Button>
-                          ) : null}
+                          ) : (
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 shrink-0 text-red-400"
+                              onClick={() => removeCatalogTrack(row)}
+                              aria-label={`Remove ${row.title || 'track'} from album`}
+                              title="Remove this track from the album"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </li>
                       );
                     })}
@@ -1045,13 +1191,17 @@ export function FirstDropLatheHost() {
                 )}
 
                 {privateAudioUrl ? (
-                  <audio
-                    controls
-                    src={privateAudioUrl}
-                    className="h-10 w-full"
-                    onPlay={() => window.dispatchEvent(new CustomEvent('b4b:inline-audio-play'))}
-                  />
-                ) : null}
+                  <div id="release-step-preview" className="scroll-mt-4">
+                    <audio
+                      controls
+                      src={privateAudioUrl}
+                      className="h-10 w-full"
+                      onPlay={() => window.dispatchEvent(new CustomEvent('b4b:inline-audio-play'))}
+                    />
+                  </div>
+                ) : (
+                  <div id="release-step-preview" className="scroll-mt-4" />
+                )}
 
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
                   <Input
@@ -1100,6 +1250,7 @@ export function FirstDropLatheHost() {
                 </div>
               ) : null}
 
+              <div id="release-step-price" className="scroll-mt-4">
               {houseRelease ? (
                 <p className="rounded-xl border border-cyan-400/20 bg-black/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100/80">
                   No price or checkout. Signed-in members receive the complete album automatically.
@@ -1112,8 +1263,9 @@ export function FirstDropLatheHost() {
                   onChange={(next) => updateAlbum(selectedAlbum.id, { dropPrice: next })}
                 />
               )}
+              </div>
 
-              <div className="flex min-h-10 items-center gap-3 rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/5 px-3 py-2">
+              <div id="release-step-rights" className="scroll-mt-4 flex min-h-10 items-center gap-3 rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/5 px-3 py-2">
                 <Checkbox
                   id="album-drop-rights"
                   checked={rightsChecked}
@@ -1125,7 +1277,7 @@ export function FirstDropLatheHost() {
                 </Label>
               </div>
 
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div id="release-step-publish" className="scroll-mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {selectedAlbumIsLive ? (
                   <Button
                     type="button"
@@ -1327,10 +1479,20 @@ export function FirstDropLatheHost() {
             >
               ← Different track
             </button>
-            <div>
-              <p className="font-headline text-xl font-bold uppercase tracking-tight">{track?.title}</p>
-              <p className="text-[11px] text-muted-foreground">{album?.title}</p>
-            </div>
+            <ReleaseTitleLyricsEditor
+              title={track?.title || ''}
+              lyrics={sectionsToLyricText(track?.sections)}
+              lyricsHint="Leave blank to publish audio-only. Lyrics stay on this sheet in The Vault."
+              titleInputRef={titleInputRef}
+              onSaveTitle={(next) => {
+                if (!album || !track) return;
+                updateTrack(album.id, track.id, { title: next });
+              }}
+              onSaveLyrics={(next) => {
+                if (!album || !track) return;
+                updateTrack(album.id, track.id, { sections: lyricTextToSections(next) });
+              }}
+            />
 
             {guided && album && track ? (
               <GuidedReleaseChecklist
@@ -1341,6 +1503,7 @@ export function FirstDropLatheHost() {
                 houseRelease={houseRelease}
                 hasPrivateAudioUrl={Boolean(privateAudioUrl)}
                 onDiscoveryChange={saveSongDiscovery}
+                onStepActivate={onChecklistStep}
                 advanced={
                   isAdmin ? (
                     <div className="space-y-2">
@@ -1365,7 +1528,7 @@ export function FirstDropLatheHost() {
               />
             ) : null}
 
-            <div className="space-y-2">
+            <div id="release-step-audio" className="scroll-mt-4 space-y-2">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-300">
                 1. Upload the song
               </Label>
@@ -1402,7 +1565,7 @@ export function FirstDropLatheHost() {
                 ) : null}
               </div>
               {hasAudio && track?.dropAudio ? (
-                <div className="space-y-2">
+                <div id="release-step-preview" className="scroll-mt-4 space-y-2">
                   <p className={cn('font-code text-[10px] text-emerald-400/90')}>
                     {track.dropAudio.fileName || 'Audio on file'}
                     {track.dropAudio.durationSec ? ` · ${Math.round(track.dropAudio.durationSec)}s` : ''}
@@ -1430,7 +1593,7 @@ export function FirstDropLatheHost() {
                   )}
                 </div>
               ) : (
-                <p className="text-[11px] text-muted-foreground">mp3, wav, m4a — preview caps at 30 seconds until they unlock.</p>
+                <p id="release-step-preview" className="scroll-mt-4 text-[11px] text-muted-foreground">mp3, wav, m4a — preview caps at 30 seconds until they unlock.</p>
               )}
             </div>
 
@@ -1454,6 +1617,7 @@ export function FirstDropLatheHost() {
               </div>
             ) : null}
 
+            <div id="release-step-price" className="scroll-mt-4">
             {houseRelease ? (
               <p className="rounded-xl border border-cyan-400/20 bg-black/25 px-3 py-2 text-[10px] leading-relaxed text-cyan-100/80">
                 No price or checkout. Signed-in members receive the complete song automatically.
@@ -1469,8 +1633,9 @@ export function FirstDropLatheHost() {
                 }}
               />
             )}
+            </div>
 
-            <div className="flex min-h-10 items-center gap-3 rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/5 px-3">
+            <div id="release-step-rights" className="scroll-mt-4 flex min-h-10 items-center gap-3 rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/5 px-3">
               <Checkbox
                 id="drop-rights"
                 checked={rightsChecked}
@@ -1485,7 +1650,7 @@ export function FirstDropLatheHost() {
               </Label>
             </div>
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div id="release-step-publish" className="scroll-mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {pickedReleasePlacement && album && track ? (
                 <Button
                   type="button"

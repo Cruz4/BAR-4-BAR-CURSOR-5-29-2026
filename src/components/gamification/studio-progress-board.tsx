@@ -67,7 +67,6 @@ import {
   Trophy,
   Zap,
 } from 'lucide-react';
-import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
 
 type UserRank = { rank: number; total: number; value: number } | null;
 
@@ -167,7 +166,6 @@ export function StudioProgressBoard() {
   const { toast } = useToast();
   const [leaderboard, setLeaderboard] = useState<LeaderboardPayload | null>(null);
   const [lbLoading, setLbLoading] = useState(true);
-  const [profileShareOpen, setProfileShareOpen] = useState(false);
   const [standingShareOpen, setStandingShareOpen] = useState(false);
   const [postingStanding, setPostingStanding] = useState(false);
   const [exportingStanding, setExportingStanding] = useState(false);
@@ -360,15 +358,6 @@ export function StudioProgressBoard() {
                 asChild
               >
                 <Link href="/studio-progress#sharing-visibility">Enable public profile</Link>
-              </Button>
-            )}
-            {summary.publicProfile && summary.profileSlug && (
-              <Button
-                variant="secondary"
-                className="text-xs font-bold uppercase gap-2"
-                onClick={() => setProfileShareOpen(true)}
-              >
-                <Share2 className="h-3.5 w-3.5" /> Share profile
               </Button>
             )}
           </div>
@@ -611,21 +600,6 @@ export function StudioProgressBoard() {
             You are off the public leaderboard. Rankings above are only visible to you until you turn on Show on
             leaderboard in Sharing &amp; visibility above.
           </p>
-        )}
-
-        {summary.publicProfile && summary.profileSlug && (
-          <ProfileShareDialog
-            open={profileShareOpen}
-            onOpenChange={setProfileShareOpen}
-            profile={{
-              displayName: user.displayName || 'Artist',
-              rankLabel,
-              profileUrl:
-                typeof window !== 'undefined'
-                  ? `${window.location.origin}${profileHref(summary.profileSlug) || `/${summary.profileSlug}`}`
-                  : profileHref(summary.profileSlug) || `/${summary.profileSlug}`,
-            }}
-          />
         )}
 
         <Dialog open={standingShareOpen} onOpenChange={setStandingShareOpen}>

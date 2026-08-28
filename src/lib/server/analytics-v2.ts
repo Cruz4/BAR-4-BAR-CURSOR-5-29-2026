@@ -2,6 +2,7 @@ import 'server-only';
 
 import { getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
 import { readCachedAdminMetrics } from '@/lib/server/admin-metrics-cache';
+import { getAudioStorageUsage } from '@/lib/server/audio-storage-usage';
 import type { AnalyticsEventV2 } from '@/lib/analytics-event-v2';
 import { isAnalyticsEventV2 } from '@/lib/analytics-event-v2';
 import type {
@@ -112,6 +113,8 @@ export async function getCeoDashboardSnapshot(): Promise<CeoDashboardSnapshot> {
   const healthNote =
     'Phase 0 aggregates pending acceptance — executive strip mixes legacy cache where cheap and placeholders for V2-only metrics.';
 
+  const audioStoragePromise = getAudioStorageUsage();
+
   let lastAdminMetricsAt: string | null = null;
   let fromCache = false;
   let signups: number | null = null;
@@ -186,6 +189,8 @@ export async function getCeoDashboardSnapshot(): Promise<CeoDashboardSnapshot> {
     pending('production_gate_status', 'Production gate', 'Phase 6 on-demand gate'),
   ];
 
+  const audioStorage = await audioStoragePromise;
+
   const tabs: CeoDashboardTabSnapshot[] = [
     {
       id: 'activation',
@@ -257,6 +262,15 @@ export async function getCeoDashboardSnapshot(): Promise<CeoDashboardSnapshot> {
         pending('release_purchase', 'Purchases'),
         cell('gross_30d', 'Gross receipts 30d', gross.value, gross.status, { unit: 'USD' }),
         pending('platform_fees', 'Platform fees / held'),
+        cell('songs_on_disk', 'Songs on disk', audioStorage.songCount, audioStorage.status, {
+          note: audioStorage.truncated
+            ? 'Bucket scan hit the file cap — lower bound'
+            : `${audioStorage.avgMbPerSong || 0} MB avg · ${audioStorage.totalGb} GB`,
+        }),
+        cell('audio_storage_usd', 'Audio storage / mo', audioStorage.storageUsdPerMonth, audioStorage.status, {
+          unit: 'USD',
+          note: `GCS Standard ~$${audioStorage.storageRateUsdPerGbMonth}/GB-mo · not an invoice`,
+        }),
       ],
     },
   ];
@@ -273,5 +287,6 @@ export async function getCeoDashboardSnapshot(): Promise<CeoDashboardSnapshot> {
     },
     executive,
     tabs,
+    audioStorage,
   };
 }

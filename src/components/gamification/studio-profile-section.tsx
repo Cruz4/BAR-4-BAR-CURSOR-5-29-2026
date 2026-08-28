@@ -15,7 +15,6 @@ import { blockFeedHref } from '@/lib/scene-home';
 import { useToast } from '@/hooks/use-toast';
 import { Share2, Globe, Trophy, ExternalLink, Settings2, Users, Link2 } from 'lucide-react';
 import { AchievementShareCard } from '@/components/gamification/achievement-share-card';
-import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
 import {
   NEOMAIYA_CANONICAL_SLUG,
   normalizeProfileSlugInput,
@@ -32,7 +31,6 @@ export function StudioSharingSection() {
   const [publicProfile, setPublicProfile] = useState(summary.publicProfile);
   const [showOnLeaderboard, setShowOnLeaderboard] = useState(!summary.leaderboardHidden);
   const [shareOpen, setShareOpen] = useState(false);
-  const [profileShareOpen, setProfileShareOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [slugDraft, setSlugDraft] = useState(summary.profileSlug || '');
   const [slugSaving, setSlugSaving] = useState(false);
@@ -240,13 +238,6 @@ export function StudioSharingSection() {
                     <Settings2 className="h-4 w-4" /> Edit Public Page
                   </Link>
                 </Button>
-                <Button
-                  variant="secondary"
-                  className="gap-2 h-11 text-sm font-bold"
-                  onClick={() => setProfileShareOpen(true)}
-                >
-                  <Share2 className="h-4 w-4" /> Share profile
-                </Button>
               </>
             )}
           </div>
@@ -263,18 +254,6 @@ export function StudioSharingSection() {
         recentBadge={pickFeaturedAchievementId(unlocked)}
         unlockedAchievements={unlocked}
       />
-
-      {profileUrl && (
-        <ProfileShareDialog
-          open={profileShareOpen}
-          onOpenChange={setProfileShareOpen}
-          profile={{
-            displayName: user?.displayName || 'Artist',
-            rankLabel,
-            profileUrl,
-          }}
-        />
-      )}
     </>
   );
 }

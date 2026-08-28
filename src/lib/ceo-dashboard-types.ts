@@ -26,6 +26,39 @@ export type CeoDashboardTabSnapshot = {
   stages?: Array<{ id: string; label: string; value: number | null; status: CeoMetricStatus }>;
 };
 
+export type AudioStorageProjection = {
+  songs: number;
+  gb: number;
+  usdPerMonth: number;
+};
+
+export type AudioStorageStreamScenario = {
+  plays: number;
+  gb: number;
+  usd: number;
+};
+
+/** Live GCS scan of drop audio + list-rate $ estimates (not an invoice). */
+export type AudioStorageUsage = {
+  scannedAt: string;
+  status: CeoMetricStatus;
+  note: string;
+  fileCount: number;
+  songCount: number;
+  previewCount: number;
+  fullBytes: number;
+  previewBytes: number;
+  totalBytes: number;
+  totalGb: number;
+  avgMbPerSong: number;
+  storageUsdPerMonth: number;
+  storageRateUsdPerGbMonth: number;
+  egressRateUsdPerGb: number;
+  truncated: boolean;
+  projections: AudioStorageProjection[];
+  streamScenarios: AudioStorageStreamScenario[];
+};
+
 export type CeoDashboardSnapshot = {
   generatedAt: string;
   mode: 'v2';
@@ -38,4 +71,5 @@ export type CeoDashboardSnapshot = {
   };
   executive: CeoMetricCell[];
   tabs: CeoDashboardTabSnapshot[];
+  audioStorage: AudioStorageUsage;
 };

@@ -1175,7 +1175,7 @@ export function AlbumList() {
 
           {!loading && user && (
             <aside
-              className="hidden xl:flex xl:col-start-1 xl:row-start-2 justify-end items-start self-start pr-2 2xl:pr-3 sticky top-[5.25rem] z-30 pointer-events-none [&>*]:pointer-events-auto"
+              className="hidden xl:flex xl:col-start-1 xl:row-start-2 justify-end items-start self-start pr-2 2xl:pr-3 pointer-events-none [&>*]:pointer-events-auto"
               aria-label="Studio progress"
             >
               <VaultStudioProgress
