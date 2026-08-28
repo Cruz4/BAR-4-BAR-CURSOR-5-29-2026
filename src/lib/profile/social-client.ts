@@ -105,6 +105,11 @@ export type ProfilePost = {
   reverbPoll?: PostPoll;
   /** Public Artist Home Pressing, attached only to lightweight Scene summaries. */
   pressing?: PressingConfig;
+  /** Baked public chip — skip live avatar waterfalls in feeds. */
+  ownerAvatarUrl?: string;
+  ownerStarMarkUseStar?: boolean;
+  ownerStarMarkSeed?: number;
+  ownerStudioBadge?: 'pro' | 'free';
 };
 
 export type PostComment = {
@@ -628,6 +633,18 @@ export async function enrichPostsWithLiveSlugs(posts: ProfilePost[]): Promise<Pr
       ...(owner?.slug ? { ownerSlug: owner.slug } : {}),
       ...(owner?.displayName ? { ownerName: owner.displayName } : {}),
       ...(owner?.pressing ? { pressing: owner.pressing } : {}),
+      ...(owner
+        ? {
+            ownerStarMarkUseStar: owner.starMarkUseStar === true,
+            ...(typeof owner.studioBadge === 'string' ? { ownerStudioBadge: owner.studioBadge } : {}),
+            ...(owner.starMarkUseStar === true && typeof owner.starMarkSeed === 'number'
+              ? { ownerStarMarkSeed: owner.starMarkSeed }
+              : {}),
+            ...(owner.starMarkUseStar !== true && owner.avatarUrl
+              ? { ownerAvatarUrl: owner.avatarUrl }
+              : {}),
+          }
+        : {}),
       ...(reverb?.slug ? { reverbOwnerSlug: reverb.slug } : {}),
       ...(reverb?.displayName ? { reverbOwnerName: reverb.displayName } : {}),
     };
@@ -1812,11 +1829,23 @@ export type PublicArtistAvatarMeta = {
   studioBadge?: 'pro' | 'free';
 };
 
-/** Avatar + optional Vesperfold seed for feed chips. */
+const publicArtistAvatarMetaInflight = new Map<string, Promise<PublicArtistAvatarMeta | undefined>>();
+
+/** Avatar + optional Vesperfold seed for feed chips. One in-flight request per slug. */
 export async function fetchPublicArtistAvatarMeta(
   slug?: string
 ): Promise<PublicArtistAvatarMeta | undefined> {
   if (!slug) return undefined;
+  const cached = publicArtistAvatarMetaInflight.get(slug);
+  if (cached) return cached;
+  const pending = loadPublicArtistAvatarMeta(slug);
+  publicArtistAvatarMetaInflight.set(slug, pending);
+  return pending;
+}
+
+async function loadPublicArtistAvatarMeta(
+  slug: string
+): Promise<PublicArtistAvatarMeta | undefined> {
   try {
     const asset = await readPublicAvatarAsset(slug);
     const snap = await getDoc(doc(db, 'publicProfiles', slug));

@@ -347,7 +347,21 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   }, [authLoading, post.id, post.ownerId, user?.id]);
 
   useEffect(() => {
-    if (!showAuthor || !liveAuthorSlug) {
+    if (!showAuthor) {
+      setAuthorAvatarUrl(undefined);
+      setAuthorStarSeed(undefined);
+      setAuthorUseStar(false);
+      setAuthorStudioChrome(undefined);
+      return;
+    }
+    if (post.ownerStarMarkUseStar === true || post.ownerStarMarkUseStar === false) {
+      setAuthorAvatarUrl(post.ownerAvatarUrl);
+      setAuthorUseStar(post.ownerStarMarkUseStar === true);
+      setAuthorStarSeed(post.ownerStarMarkSeed);
+      setAuthorStudioChrome(parseStudioBadge(post.ownerStudioBadge));
+      return;
+    }
+    if (!liveAuthorSlug) {
       setAuthorAvatarUrl(undefined);
       setAuthorStarSeed(undefined);
       setAuthorUseStar(false);
@@ -365,7 +379,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     return () => {
       cancelled = true;
     };
-  }, [showAuthor, liveAuthorSlug]);
+  }, [showAuthor, liveAuthorSlug, post.ownerAvatarUrl, post.ownerStarMarkUseStar, post.ownerStarMarkSeed, post.ownerStudioBadge]);
 
   const toggleLike = async (showBurst = false) => {
     if (loveBusyRef.current) return;

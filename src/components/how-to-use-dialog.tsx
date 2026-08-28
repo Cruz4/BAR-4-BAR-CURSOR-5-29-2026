@@ -20,6 +20,7 @@ import {
   getProMonthlyHeadlinePerks,
   getProYearlyHeadlinePerks,
   getReferralFaqAnswer,
+  getMusicReleaseTierFaqAnswer,
 } from '@/lib/studio-tiers';
 import { TierPriceSummary } from '@/components/tier-price-summary';
 import {
@@ -288,7 +289,7 @@ const CORE_FAQS = [
     },
     {
       q: "What is DNA Drop?",
-      a: "Studio Pro—publish a shareable lyric snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live lyric drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. Music is separate: use Release song from a sheet or New release on The Scene."
+      a: "Studio Pro—publish a shareable lyric snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live lyric drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. Music is separate and Free: use Release song from a sheet or New release on The Scene. DNA Drop is not the sell desk."
     },
     {
       q: "What is Collab Sheet?",
@@ -332,6 +333,10 @@ const FIRST_DROPS_FAQS = [
   {
     q: "How do I publish a Release?",
     a: getFirstDropsSellFaqAnswer(),
+  },
+  {
+    q: "Do I need Pro to publish a song or album?",
+    a: getMusicReleaseTierFaqAnswer(),
   },
   {
     q: "Do I keep the rights to my music?",
@@ -767,7 +772,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                       <li><strong>Open The Scene → New release</strong>, or open the song&apos;s sheet and use <strong>Left panel → Track Status → Release song</strong>.</li>
                       <li><strong>Choose a Vault track</strong>. A Release publishes the recording; DNA Drop is the separate lyric-preview and import link.</li>
                       <li><strong>Upload the finished audio</strong>, choose Fixed price or Pay what you want, and review the live artist-share line.</li>
-                      <li><strong>Publish release</strong>. Listen / buy appears on your Artist Home, The Scene, and its public release link.</li>
+                      <li><strong>Publish release</strong> — Free on every signed-in account (Visitor catalog slots apply). Listen / buy appears on your Artist Home, The Scene, and its public release link. DNA Drop lyric links stay Pro.</li>
                       <li><strong>Open Earnings</strong> and connect Stripe payouts so your share can reach your bank.</li>
                     </ol>
                   </div>
@@ -1129,7 +1134,7 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
                 </ChapterCard>
 
                 <ChapterCard id="manual-dna-drop" icon={<Link2 className="text-primary" />} title="DNA Drop" colorClass="border-l-primary">
-                    <p>Studio Pro — publish a shareable lyric snapshot from the left panel. Collaborators sign in and import lyrics, structure, Creative DNA, vibe, and related strains. Update snapshot after edits; <strong>Take offline</strong> to revoke the link. To sell from The Scene, use <strong>New release</strong> — DNA Drop is not the sell desk.</p>
+                    <p>Studio Pro — publish a shareable lyric snapshot from the left panel. Collaborators sign in and import lyrics, structure, Creative DNA, vibe, and related strains. Update snapshot after edits; <strong>Take offline</strong> to revoke the link. To sell from The Scene, use <strong>New release</strong> (Free) — DNA Drop is not the sell desk.</p>
                 </ChapterCard>
 
                 <ChapterCard id="manual-collab-sheet" icon={<Users className="text-violet-300" />} title="Collab Sheet" colorClass="border-l-violet-500 text-violet-300">

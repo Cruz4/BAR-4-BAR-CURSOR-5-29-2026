@@ -207,6 +207,9 @@ assert.match(releaseDialog, /action:\s*'unpublish'/, 'New release must be able t
 assert.match(libraryDeck, /Studio Pro · offline play/, 'Visitor Library menus must show the Pro offline-play upgrade');
 assert.match(offlineCache, /offline:\s*'1'/, 'offline cache requests must identify themselves to the entitlement endpoint');
 assert.match(audioRoute, /offlineDownload[\s\S]*isProOrTrial/, 'offline downloads must be enforced as Studio Pro on the server');
+assert.doesNotMatch(manageRoute, /Studio Pro is required to press a release live/, 'music releases must not require Studio Pro to press live');
+assert.doesNotMatch(releaseDialog, /Studio Pro required/, 'New release must not gate song/album publish behind Pro');
+assert.match(releaseDialog, /Free to press live/, 'New release copy must say pressing live is Free');
 assert.match(albumReleasePage, /orderAlbumTracks\(album\.tracks \?\? \[\], album\)/, 'open album releases must honor the saved track order');
 assert.match(albumReleasePage, /pressedSongHref\(shareId, \{ trackId: track\.id \}\)/, 'every playable album track must open its own song page');
 assert.match(releaseDialog, /action:\s*'remove'/, 'New release must be able to retire an offline release record');

@@ -82,6 +82,11 @@ type LivingPressFieldProps = {
   config?: PressingConfig;
   tokens?: PressingTokens;
   compact?: boolean;
+  /**
+   * Window-scroll parallax. Overlay surfaces (immersive Scene feed) keep the
+   * same look at scroll=0 and skip the unused window RAF.
+   */
+  followWindowScroll?: boolean;
   className?: string;
   onTokensChange?: (tokens: PressingTokens) => void;
 };
@@ -835,6 +840,7 @@ export function LivingPressField({
   config,
   tokens: tokensProp,
   compact = false,
+  followWindowScroll = true,
   className,
   onTokensChange,
 }: LivingPressFieldProps) {
@@ -860,7 +866,7 @@ export function LivingPressField({
   const motionOk = tokens.alive && !reducedMotion;
   const showLife = tokens.alive;
   const restless = tokens.autoDrift && motionOk;
-  const scroll = useSmoothScroll(showLife && !compact && !reducedMotion);
+  const scroll = useSmoothScroll(showLife && !compact && !reducedMotion && followWindowScroll);
   const pos = compact ? 'absolute' : 'fixed';
   const vignette = apertureMask(tokens.aperture, tokens.hue);
 

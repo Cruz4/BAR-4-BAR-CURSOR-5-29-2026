@@ -225,7 +225,7 @@ export function FirstDropLatheHost() {
   const guided = releaseComposer === 'guided';
   const { user } = useAuth();
   const { toast } = useToast();
-  const { albums, addTrack, updateAlbum, updateTrack, deleteTrack, flushCloudNow, isCloudSyncActive } = useContext(DataContext);
+  const { albums, addTrack, updateAlbum, updateTrack, deleteTrack, flushCloudNow } = useContext(DataContext);
   const isAdmin = user?.role === 'admin';
   const fileRef = useRef<HTMLInputElement>(null);
   const albumFileRef = useRef<HTMLInputElement>(null);
@@ -594,14 +594,6 @@ export function FirstDropLatheHost() {
 
   const pressLive = async () => {
     if (!track || !album) return;
-    if (!isCloudSyncActive) {
-      toast({
-        variant: 'destructive',
-        title: 'Studio Pro required',
-        description: 'Publishing a music release uses your public page—that is a Pro feature.',
-      });
-      return;
-    }
     if (!hasAudio) {
       toast({
         variant: 'destructive',
@@ -668,14 +660,6 @@ export function FirstDropLatheHost() {
 
   const pressAlbumLive = async () => {
     if (!selectedAlbum) return;
-    if (!isCloudSyncActive) {
-      toast({
-        variant: 'destructive',
-        title: 'Studio Pro required',
-        description: 'Publishing a paid album uses your public Artist Home.',
-      });
-      return;
-    }
     if (albumAudioTracks.length === 0) {
       toast({
         variant: 'destructive',
@@ -948,7 +932,7 @@ export function FirstDropLatheHost() {
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
             {guided
-              ? 'Follow the checklist. Upload, price, confirm rights, then publish. Lyrics and cover are optional.'
+              ? 'Follow the checklist. Upload, price, confirm rights, then publish. Lyrics and cover are optional. Free on every signed-in account — DNA Drop lyric links stay Pro.'
               : houseRelease
               ? mode === 'album'
                 ? 'Upload the included recordings and publish them as a House album. Every member receives the full album free in Library.'
@@ -957,7 +941,7 @@ export function FirstDropLatheHost() {
                   {mode === 'album'
                     ? 'Upload audio for the included tracks and set one bundle price. Lyrics and completed sheets are optional. One purchase unlocks every included recording.'
                     : 'Pick a track, upload the recording, and set its price. Written lyrics and a completed sheet are optional.'}{' '}
-                  You keep the rights — we take a small fee on the sale. {firstDropsFeeCashoutLine()}
+                  Free to press live — Pro is not required. DNA Drop is the separate Pro lyric page. You keep the rights — we take a small fee on the sale. {firstDropsFeeCashoutLine()}
                 </>}
           </DialogDescription>
         </DialogHeader>

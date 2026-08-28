@@ -243,9 +243,8 @@ export function LiveArtistStarAvatar({
   useEffect(() => {
     const targetSlug = liveSlug || (isLive ? slug || undefined : undefined);
     if (!targetSlug) return;
-    // Friends / circle lists already resolved the public chip — don't refetch.
-    if (bakedUseStar === true) return;
-    if (bakedUseStar === false && typeof bakedAvatarUrl === 'string') return;
+    // Friends / circle lists / Scene feed already resolved the public chip — don't refetch.
+    if (bakedUseStar === true || bakedUseStar === false) return;
 
     let cancelled = false;
     void fetchPublicArtistAvatarMeta(targetSlug).then((meta) => {

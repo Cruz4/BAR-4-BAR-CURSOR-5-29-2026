@@ -6,9 +6,8 @@ import { buildAlbumDropPayload, buildTrackDropPayload } from '@/lib/dna-drop';
 import { isCommerceLive, normalizeDropAudio, normalizeDropPrice, shareDocCommerceFlags } from '@/lib/drop-commerce';
 import { stripForFirestore } from '@/lib/utils';
 import { CheckoutAuthError, verifyCheckoutUser } from '@/lib/stripe-server';
-import type { Album, StyleProfile, Track, User } from '@/lib/types';
+import type { Album, StyleProfile, Track } from '@/lib/types';
 import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
-import { isProOrTrial } from '@/lib/subscription';
 import { AdminAuthError, verifyAdminRequest } from '@/lib/server/admin-auth';
 import {
   fitAlbumReleasePayload,
@@ -89,12 +88,6 @@ export async function POST(req: Request) {
     if (action === 'publish') {
       if (!(await isFirstDropsEnabled())) {
         return NextResponse.json({ error: 'Music Releases is currently unavailable.' }, { status: 403 });
-      }
-      if (
-        houseReleaseRequest !== true &&
-        !isProOrTrial(userSnap.data() as Pick<User, 'subscriptionStatus' | 'proFeaturePreviewExpiresAt'>)
-      ) {
-        return NextResponse.json({ error: 'Studio Pro is required to press a release live.' }, { status: 403 });
       }
     }
 

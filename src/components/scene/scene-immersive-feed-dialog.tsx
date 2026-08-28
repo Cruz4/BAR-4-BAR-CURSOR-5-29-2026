@@ -16,6 +16,7 @@ import {
   pressingCssVars,
   type PressingConfig,
 } from '@/lib/profile/pressing';
+import { parseStudioBadge, type StudioNameChrome } from '@/lib/studio-tier-chrome';
 import { LivingPressField } from '@/components/profile/living-press-field';
 
 type FeedMode = 'block' | 'discover';
@@ -32,6 +33,7 @@ type SlideMeta = {
   avatarUrl?: string;
   useStarMark?: boolean;
   starMarkSeed?: number;
+  studioChrome?: StudioNameChrome | null;
   pressing?: PressingConfig;
 };
 
@@ -54,6 +56,10 @@ function blockMeta(post: ProfilePost): SlideMeta {
     userId: post.ownerId,
     slug: post.ownerSlug,
     href: post.ownerSlug ? profileHref(post.ownerSlug) : undefined,
+    avatarUrl: post.ownerAvatarUrl,
+    useStarMark: post.ownerStarMarkUseStar,
+    starMarkSeed: post.ownerStarMarkSeed,
+    studioChrome: parseStudioBadge(post.ownerStudioBadge),
     pressing: post.pressing,
   };
 }
@@ -71,6 +77,7 @@ function discoverMeta(card: DiscoverCard): SlideMeta {
       useStarMark: card.artist.starMarkUseStar,
       starMarkSeed: card.artist.starMarkSeed,
       href: profileHref(card.artist.slug),
+      studioChrome: parseStudioBadge(card.artist.studioBadge),
       pressing: card.artist.pressing,
     };
   }
@@ -87,6 +94,7 @@ function discoverMeta(card: DiscoverCard): SlideMeta {
       href: card.drop.hasDropAudio
         ? `/song/${card.drop.shareId}`
         : `/share/${card.drop.shareId}`,
+      studioChrome: parseStudioBadge(card.drop.studioBadge),
       pressing: card.drop.pressing,
     };
   }
@@ -112,6 +120,7 @@ function discoverMeta(card: DiscoverCard): SlideMeta {
     useStarMark: first?.starMarkUseStar,
     starMarkSeed: first?.starMarkSeed,
     href: '/leaderboard',
+    studioChrome: parseStudioBadge(first?.studioBadge),
     pressing: first?.pressing,
   };
 }
@@ -133,6 +142,7 @@ function FeedBubble({ meta, active, onClick }: { meta: SlideMeta; active: boolea
           avatarUrl={meta.avatarUrl}
           useStarMark={meta.useStarMark}
           starMarkSeed={meta.starMarkSeed}
+          studioChrome={meta.studioChrome}
           size={44}
           link={false}
           className={cn(
@@ -183,7 +193,11 @@ function FeedBackdrop({
       aria-hidden
     >
       {meta.pressing ? (
-        <MemoizedLivingPressField config={meta.pressing} className="!absolute" />
+        <MemoizedLivingPressField
+          config={meta.pressing}
+          className="!absolute"
+          followWindowScroll={false}
+        />
       ) : (
         <div className={cn(
           'absolute inset-0',
@@ -338,8 +352,10 @@ export function SceneImmersiveFeedDialog({
 
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-[#030812]">
           {mode ? items.map((item, index) => {
-            const opacity = Math.max(0, 1 - Math.abs(index - scrollProgress));
-            if (opacity <= 0) return null;
+            const delta = Math.abs(index - scrollProgress);
+            const opacity = Math.max(0, 1 - delta);
+            const keepMounted = delta < 1.01 || Math.abs(index - activeIndex) <= 1;
+            if (!keepMounted) return null;
             return (
               <FeedBackdrop
                 key={`backdrop-${item.meta.key}`}
@@ -413,6 +429,9 @@ export function SceneImmersiveFeedDialog({
                         userId={item.meta.userId}
                         slug={item.meta.slug}
                         avatarUrl={item.meta.avatarUrl}
+                        useStarMark={item.meta.useStarMark}
+                        starMarkSeed={item.meta.starMarkSeed}
+                        studioChrome={item.meta.studioChrome}
                         size={42}
                         link={false}
                       />
@@ -423,7 +442,7 @@ export function SceneImmersiveFeedDialog({
                     </Link>
                   ) : (
                     <>
-                      <LiveArtistStarAvatar name={item.meta.name} userId={item.meta.userId} slug={item.meta.slug} avatarUrl={item.meta.avatarUrl} size={42} link={false} />
+                      <LiveArtistStarAvatar name={item.meta.name} userId={item.meta.userId} slug={item.meta.slug} avatarUrl={item.meta.avatarUrl} useStarMark={item.meta.useStarMark} starMarkSeed={item.meta.starMarkSeed} studioChrome={item.meta.studioChrome} size={42} link={false} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-bold text-white">{item.meta.name}</span>
                         <span className="block truncate font-code text-[8px] uppercase tracking-[0.16em] text-white/40">{item.meta.label}</span>

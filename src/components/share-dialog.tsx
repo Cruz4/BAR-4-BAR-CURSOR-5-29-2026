@@ -188,7 +188,7 @@ export function ShareDialog({
       toast({
         variant: 'destructive',
         title: 'Studio Pro Required',
-        description: 'Sharing DNA is a premium platform feature.',
+        description: 'DNA Drop lyric links are Studio Pro. Publishing a song or album from New release is Free.',
       });
       return;
     }
@@ -213,7 +213,7 @@ export function ShareDialog({
       toast({
         variant: 'destructive',
         title: 'Studio Pro Required',
-        description: 'Sharing DNA is a premium platform feature.',
+        description: 'DNA Drop lyric links are Studio Pro. Publishing a song or album from New release is Free.',
       });
       return;
     }

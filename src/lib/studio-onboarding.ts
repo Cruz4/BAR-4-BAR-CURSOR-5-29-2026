@@ -193,7 +193,7 @@ export const LYRICS_PAGE_TOUR_STEPS: LyricsTourStep[] = [
     target: '[data-tour="press-song"]',
     mobileCardPlacement: 'bottom',
     title: 'Release song',
-    body: 'This opens the music release desk: upload audio, set a price, confirm you have the rights, then publish the release. DNA Drop below is the separate lyric page. You can also start with New release on The Scene.',
+    body: 'This opens the music release desk: upload audio, set a price, confirm you have the rights, then publish the release. Free on every signed-in account. DNA Drop below is the separate Pro lyric page. You can also start with New release on The Scene.',
     example: 'Finished mix → Release song → set price → live on The Scene.',
   },
   {
@@ -412,7 +412,7 @@ export const WORKSTATION_MODE_TOUR_STEPS: LyricsTourStep[] = [
 
 export const FREE_TIER_EXPECTATIONS = {
   headline: 'Visitor — demo-scale studio',
-  body: `Free demo: ${FREE_ALBUM_LIMIT} album, ${FREE_TRACK_LIMIT} tracks. AI tools run on your Ink (${getVisitorInkGrantSummary()}). Artist Home and The Block are included. Pro unlocks custom vault saves, Performance, Freestyle, Collab Sheet live editing, import/export, and DNA Drop links. Load-only DNA/Vibe/Style presets on Visitor.`,
+  body: `Free demo: ${FREE_ALBUM_LIMIT} album, ${FREE_TRACK_LIMIT} tracks. AI tools run on your Ink (${getVisitorInkGrantSummary()}). Artist Home, The Pressing, The Block, and song/album music releases are included. Pro unlocks custom vault saves, Performance, Freestyle, Collab Sheet live editing, import/export, DNA Drop lyric links, unlimited catalog, and offline Library. Load-only DNA/Vibe/Style presets on Visitor.`,
   dismissKey: 'b4b-free-tier-expectations-dismissed',
 } as const;
 
@@ -564,7 +564,7 @@ export const SCENE_HOME_TOUR_STEPS: LyricsTourStep[] = [
     target: '[data-tour="scene-nav-mobile"], [data-tour="scene-nav-desktop"]',
     mobileCardPlacement: 'bottom',
     title: 'The Vault is where you write',
-    body: 'The portal hub opens The Vault, Library, Artist Home, Your Circle, Listener Insights, and Support Circle. Library also includes House releases you can use to test the player. New release below the hub is how you put a song or album on sale — not DNA Drop. The Scene is the block; the Vault is the booth.',
+    body: 'The portal hub opens The Vault, Library, Artist Home, Your Circle, Listener Insights, and Support Circle. Library also includes House releases you can use to test the player. New release below the hub is how you put a song or album on sale — Free, and not DNA Drop (that lyric link is Pro). The Scene is the block; the Vault is the booth.',
     example: 'Try Mirror by Neomaiya Sol in Library when it is featured there. Replay this tour anytime from the Studio Manual (?).',
   },
 ];

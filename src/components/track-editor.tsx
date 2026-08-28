@@ -808,7 +808,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   const releaseControlCopy = {
     new: {
       label: 'New release',
-      hint: 'Upload a recording, set its price, and publish it for listening or purchase.',
+      hint: 'Free — upload a recording, set its price, and publish it for listening or purchase. DNA Drop lyric links stay Pro.',
       badge: null,
       badgeClassName: '',
     },

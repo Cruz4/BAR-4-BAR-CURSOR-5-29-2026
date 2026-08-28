@@ -56,6 +56,7 @@ import {
   getResidencyVsPermanentFaqAnswer,
   getReferralFaqAnswer,
   getArtistHomeFaqAnswer,
+  getMusicReleaseTierFaqAnswer,
   getPostSharingFaqAnswer,
   getProCheckoutCtaLine,
 } from '@/lib/studio-tiers';
@@ -191,6 +192,10 @@ export default function PricingPage() {
           {
             q: 'What is a music Release?',
             a: getFirstDropsWhatFaqAnswer(),
+          },
+          {
+            q: 'Do I need Pro to publish a song or album?',
+            a: getMusicReleaseTierFaqAnswer(),
           },
           {
             q: 'How do I cash out after someone buys my song?',
