@@ -6,6 +6,11 @@ import type {
   DropInsightsResponse,
   DropInsightTrack,
 } from '@/lib/drop-insights';
+import {
+  linkDropInsightAlbumNesting,
+  partitionDropInsightReleases,
+  type DropInsightAlbumNestInput,
+} from '@/lib/drop-insights';
 
 function count(value: unknown): number {
   return Math.max(0, Math.floor(Number(value) || 0));
@@ -27,13 +32,75 @@ function isoDate(value: unknown): string | null {
   return null;
 }
 
-function shareTitle(data: Record<string, unknown>): string {
+function shareTitle(data: Record<string, unknown>, fallback = 'Release'): string {
   const payload = data.data && typeof data.data === 'object'
     ? (data.data as Record<string, unknown>)
     : {};
   return typeof payload.title === 'string' && payload.title.trim()
     ? payload.title.trim().slice(0, 120)
-    : 'Release';
+    : fallback;
+}
+
+function shareNestInput(
+  shareId: string,
+  data: Record<string, unknown>
+): DropInsightAlbumNestInput {
+  const type = data.type === 'album' ? 'album' : 'track';
+  const title = shareTitle(data, type === 'album' ? 'Untitled album' : 'Untitled track');
+  const payload = data.data && typeof data.data === 'object'
+    ? (data.data as Record<string, unknown>)
+    : {};
+  const nestedTracks =
+    type === 'album' && Array.isArray(payload.tracks)
+      ? payload.tracks.flatMap((raw, trackIndex) => {
+          if (!raw || typeof raw !== 'object') return [];
+          const track = raw as Record<string, unknown>;
+          const nestedShareId =
+            typeof track.shareId === 'string' ? track.shareId.trim() : '';
+          if (!nestedShareId) return [];
+          const nestedTitle =
+            typeof track.title === 'string' && track.title.trim()
+              ? track.title.trim().slice(0, 120)
+              : undefined;
+          return [{ shareId: nestedShareId, title: nestedTitle, trackIndex }];
+        })
+      : undefined;
+  return {
+    shareId,
+    type,
+    title,
+    ...(nestedTracks?.length ? { nestedTracks } : {}),
+  };
+}
+
+function emptyTrack(
+  shareId: string,
+  title: string,
+  meta?: {
+    kind: DropInsightTrack['kind'];
+    title: string;
+    albumTitle?: string;
+    albumShareId?: string;
+    trackIndex?: number;
+    trackCount?: number;
+  }
+): DropInsightTrack {
+  return {
+    shareId,
+    title: meta?.title || title,
+    kind: meta?.kind || 'song',
+    ...(meta?.albumTitle ? { albumTitle: meta.albumTitle } : {}),
+    ...(meta?.albumShareId ? { albumShareId: meta.albumShareId } : {}),
+    ...(typeof meta?.trackIndex === 'number' ? { trackIndex: meta.trackIndex } : {}),
+    ...(typeof meta?.trackCount === 'number' ? { trackCount: meta.trackCount } : {}),
+    lifetimePreviewStarts: 0,
+    lifetimeFullStarts: 0,
+    lifetimePurchases: 0,
+    qualifiedListeners: 0,
+    repeatListeners: 0,
+    completions: 0,
+    purchases: 0,
+  };
 }
 
 async function loadInsightDays(db: Firestore, ownerId: string, sinceDay: string, limit: number) {
@@ -84,14 +151,18 @@ export async function getDropInsights(
       .get(),
   ]);
 
+  const nestInputs = sharesSnap.docs.map((doc) => shareNestInput(doc.id, doc.data()));
+  const releaseMeta = linkDropInsightAlbumNesting(nestInputs);
+
   const shareStats = new Map<
     string,
     { title: string; previewStarts: number; fullStarts: number; purchaseCount: number }
   >();
   for (const doc of sharesSnap.docs) {
     const data = doc.data();
+    const meta = releaseMeta.get(doc.id);
     shareStats.set(doc.id, {
-      title: shareTitle(data),
+      title: meta?.title || shareTitle(data),
       previewStarts: count(data.previewCount),
       fullStarts: count(data.playCount),
       purchaseCount: count(data.purchaseCount),
@@ -114,6 +185,20 @@ export async function getDropInsights(
   const sources: Record<string, number> = {};
   const dayRows = new Map<string, DropInsightDay>();
   const trackRows = new Map<string, DropInsightTrack>();
+
+  const ensureTrack = (shareId: string, fallbackTitle: string): DropInsightTrack => {
+    const existing = trackRows.get(shareId);
+    if (existing) return existing;
+    const meta = releaseMeta.get(shareId);
+    const stats = shareStats.get(shareId);
+    const created = emptyTrack(shareId, fallbackTitle, meta);
+    created.lifetimePreviewStarts = stats?.previewStarts || 0;
+    created.lifetimeFullStarts = stats?.fullStarts || 0;
+    created.lifetimePurchases = stats?.purchaseCount || 0;
+    if (stats?.title) created.title = meta?.title || stats.title;
+    trackRows.set(shareId, created);
+    return created;
+  };
 
   for (const doc of dailySnap.docs) {
     const data = doc.data();
@@ -146,28 +231,15 @@ export async function getDropInsights(
     currentDay.purchases += purchases;
     dayRows.set(day, currentDay);
 
-    const currentTrack = trackRows.get(shareId) || {
-      shareId,
-      title: typeof data.title === 'string' ? data.title : 'Release',
-      lifetimePreviewStarts: shareStats.get(shareId)?.previewStarts || 0,
-      lifetimeFullStarts: shareStats.get(shareId)?.fullStarts || 0,
-      lifetimePurchases: shareStats.get(shareId)?.purchaseCount || 0,
-      qualifiedListeners: 0,
-      repeatListeners: 0,
-      completions: 0,
-      purchases: 0,
-    };
+    const title =
+      typeof data.title === 'string' && data.title.trim()
+        ? data.title.trim().slice(0, 120)
+        : shareStats.get(shareId)?.title || 'Release';
+    const currentTrack = ensureTrack(shareId, title);
     currentTrack.qualifiedListeners += qualified;
     currentTrack.repeatListeners += repeat;
     currentTrack.completions += completions;
     currentTrack.purchases += purchases;
-    trackRows.set(shareId, currentTrack);
-
-    if (data.sources && typeof data.sources === 'object') {
-      for (const [source, value] of Object.entries(data.sources as Record<string, unknown>)) {
-        sources[source] = (sources[source] || 0) + count(value);
-      }
-    }
   }
 
   for (let index = 0; index < sharesSnap.docs.length; index += 1) {
@@ -175,22 +247,17 @@ export async function getDropInsights(
     const stats = shareStats.get(shareDoc.id);
     if (!stats) continue;
     if (stats.previewStarts || stats.fullStarts || stats.purchaseCount) {
-      const currentTrack = trackRows.get(shareDoc.id) || {
-        shareId: shareDoc.id,
-        title: stats.title,
-        lifetimePreviewStarts: 0,
-        lifetimeFullStarts: 0,
-        lifetimePurchases: 0,
-        qualifiedListeners: 0,
-        repeatListeners: 0,
-        completions: 0,
-        purchases: 0,
-      };
-      currentTrack.title = stats.title;
+      const currentTrack = ensureTrack(shareDoc.id, stats.title);
+      const meta = releaseMeta.get(shareDoc.id);
+      currentTrack.title = meta?.title || stats.title;
+      currentTrack.kind = meta?.kind || currentTrack.kind;
+      if (meta?.albumTitle) currentTrack.albumTitle = meta.albumTitle;
+      if (meta?.albumShareId) currentTrack.albumShareId = meta.albumShareId;
+      if (typeof meta?.trackIndex === 'number') currentTrack.trackIndex = meta.trackIndex;
+      if (typeof meta?.trackCount === 'number') currentTrack.trackCount = meta.trackCount;
       currentTrack.lifetimePreviewStarts = stats.previewStarts;
       currentTrack.lifetimeFullStarts = stats.fullStarts;
       currentTrack.lifetimePurchases = stats.purchaseCount;
-      trackRows.set(shareDoc.id, currentTrack);
     }
 
     for (const tick of tickSnaps[index].docs) {
@@ -243,22 +310,12 @@ export async function getDropInsights(
 
     if (shareId) {
       const stats = shareStats.get(shareId);
-      const currentTrack = trackRows.get(shareId) || {
-        shareId,
-        title:
-          typeof sale.title === 'string' && sale.title.trim()
-            ? sale.title.trim().slice(0, 120)
-            : stats?.title || 'Release',
-        lifetimePreviewStarts: stats?.previewStarts || 0,
-        lifetimeFullStarts: stats?.fullStarts || 0,
-        lifetimePurchases: 0,
-        qualifiedListeners: 0,
-        repeatListeners: 0,
-        completions: 0,
-        purchases: 0,
-      };
+      const saleTitle =
+        typeof sale.title === 'string' && sale.title.trim()
+          ? sale.title.trim().slice(0, 120)
+          : stats?.title || 'Release';
+      const currentTrack = ensureTrack(shareId, saleTitle);
       currentTrack.purchases += 1;
-      trackRows.set(shareId, currentTrack);
     }
   }
 
@@ -270,6 +327,22 @@ export async function getDropInsights(
     if (currentTrack) {
       currentTrack.lifetimePurchases = Math.max(currentTrack.lifetimePurchases, saleCount);
     }
+  }
+
+  // Re-apply album nesting onto any rows that appeared only from daily/sales data.
+  for (const [shareId, row] of trackRows) {
+    const meta = releaseMeta.get(shareId);
+    if (!meta) continue;
+    row.kind = meta.kind;
+    row.title = meta.title || row.title;
+    if (meta.albumTitle) row.albumTitle = meta.albumTitle;
+    else delete row.albumTitle;
+    if (meta.albumShareId) row.albumShareId = meta.albumShareId;
+    else delete row.albumShareId;
+    if (typeof meta.trackIndex === 'number') row.trackIndex = meta.trackIndex;
+    else delete row.trackIndex;
+    if (typeof meta.trackCount === 'number') row.trackCount = meta.trackCount;
+    else delete row.trackCount;
   }
 
   const timeline: DropInsightDay[] = [];
@@ -289,21 +362,10 @@ export async function getDropInsights(
     );
   }
 
-  const tracks = [...trackRows.values()]
-    .sort(
-      (a, b) =>
-        b.lifetimePurchases * 8 +
-        b.repeatListeners * 3 +
-        b.qualifiedListeners +
-        b.lifetimePreviewStarts +
-        b.lifetimeFullStarts * 2 -
-        (a.lifetimePurchases * 8 +
-          a.repeatListeners * 3 +
-          a.qualifiedListeners +
-          a.lifetimePreviewStarts +
-          a.lifetimeFullStarts * 2)
-    )
-    .slice(0, 12);
+  const { tracks, albums } = partitionDropInsightReleases([...trackRows.values()], {
+    songs: 12,
+    albums: 8,
+  });
 
   return {
     days,
@@ -316,6 +378,7 @@ export async function getDropInsights(
     sources,
     timeline,
     tracks,
+    albums,
     lifetime: {
       trackedDrops: sharesSnap.size,
       previewStarts: [...shareStats.values()].reduce((sum, row) => sum + row.previewStarts, 0),
@@ -331,6 +394,7 @@ export async function getDropInsights(
       ownerActionsExcluded: true,
       paymentAmountAffectsOrganicRank: false,
       historicalStartsAreQualified: false,
+      albumAndSongCountsAreSeparate: true,
     },
   };
 }

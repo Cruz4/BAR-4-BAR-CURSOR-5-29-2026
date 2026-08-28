@@ -303,6 +303,12 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Artist Intelligence CRM overlays — Admin SDK / intelligence API only
+      match /supportCrm/{peerId} {
+        allow read: if isOwnerOrAdmin(userId);
+        allow write: if false;
+      }
+
       match /gamification/{docId} {
         allow read: if isOwnerOrAdmin(userId);
         allow write: if false;
@@ -697,6 +703,11 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
 
+    // AnalyticsEventV2 append-only raw stream — Admin SDK only
+    match /analytics_events_v2/{eventId} {
+      allow read, write: if false;
+    }
+
     // Collab Sheets — live lyric collaboration. Admin SDK writes sheet body + chat.
     // Clients read the sheet and heartbeat presence only.
     match /collabSheets/{collabId} {
@@ -771,6 +782,19 @@ service cloud.firestore {
 
     match /studio_guest_funnel_events/{eventId} {
       allow read, write: if false;
+    }
+
+    // Share Studio campaign codes — Admin SDK only (opaque public refs)
+    match /shareCampaigns/{code} {
+      allow read, write: if false;
+    }
+
+    // Release Room V1 — Admin SDK only
+    match /releaseRooms/{roomId} {
+      allow read, write: if false;
+      match /sessions/{userId} {
+        allow read, write: if false;
+      }
     }
   }
 }

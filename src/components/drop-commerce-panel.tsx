@@ -18,6 +18,7 @@ import {
   defaultDropPrice,
   firstDropsFeeCashoutLine,
   firstDropsSplitLine,
+  firstDropsStripeProcessingLine,
   normalizeDropPrice,
   parseUsdToCents,
   type DropPrice,
@@ -33,6 +34,16 @@ const MODES: { id: DropPriceMode; label: string }[] = [
   { id: 'pwyw', label: 'Pay what you want' },
 ];
 
+function FeePreviewBlock({ cents }: { cents: number }) {
+  const charged = Math.max(DROP_PAID_MIN_CENTS, cents);
+  return (
+    <div className="space-y-1 rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-2.5 py-2">
+      <p className="text-[10px] font-medium leading-snug text-foreground/95">{firstDropsSplitLine(charged)}</p>
+      <p className="text-[9px] leading-snug text-muted-foreground">{firstDropsStripeProcessingLine(charged)}</p>
+    </div>
+  );
+}
+
 export function PriceEditor({
   price,
   onChange,
@@ -44,13 +55,19 @@ export function PriceEditor({
   label: string;
   omitHidden?: boolean;
 }) {
-  const [custom, setCustom] = useState('');
   const amount = price.amountCents ?? 777;
-  const min = price.minCents ?? 0;
+  const min = price.minCents ?? DROP_PAID_MIN_CENTS;
   const suggested = price.suggestedCents ?? 777;
   const effectiveMin = Math.max(DROP_PAID_MIN_CENTS, min);
   const effectiveSuggested = Math.max(DROP_PAID_MIN_CENTS, suggested);
   const modes = omitHidden ? MODES.filter((m) => m.id !== 'hidden') : MODES;
+  const [fixedDraft, setFixedDraft] = useState(() => ((amount || DROP_PAID_MIN_CENTS) / 100).toFixed(2));
+  const [minDraft, setMinDraft] = useState(() => (effectiveMin / 100).toFixed(2));
+  const [suggestedDraft, setSuggestedDraft] = useState(() => (effectiveSuggested / 100).toFixed(2));
+
+  const liveFixedCents = parseUsdToCents(fixedDraft) ?? amount;
+  const liveMinCents = Math.max(DROP_PAID_MIN_CENTS, parseUsdToCents(minDraft) ?? effectiveMin);
+  const liveSuggestedCents = Math.max(DROP_PAID_MIN_CENTS, parseUsdToCents(suggestedDraft) ?? effectiveSuggested);
 
   return (
     <div className="space-y-2">
@@ -84,34 +101,43 @@ export function PriceEditor({
                 size="sm"
                 variant={amount === c ? 'secondary' : 'outline'}
                 className="h-7 text-[10px] font-bold"
-                onClick={() => onChange({ ...price, mode: 'fixed', amountCents: c })}
+                onClick={() => {
+                  setFixedDraft((c / 100).toFixed(2));
+                  onChange({ ...price, mode: 'fixed', amountCents: c });
+                }}
               >
                 {centsToUsdLabel(c)}
               </Button>
             ))}
           </div>
           <Input
-            value={custom}
-            onChange={(e) => setCustom(e.target.value)}
-            onBlur={() => {
-              const cents = parseUsdToCents(custom);
+            value={fixedDraft}
+            onChange={(e) => {
+              const next = e.target.value;
+              setFixedDraft(next);
+              const cents = parseUsdToCents(next);
               if (cents == null) return;
               onChange({ ...price, mode: 'fixed', amountCents: Math.max(DROP_PAID_MIN_CENTS, cents) });
             }}
+            onBlur={() => {
+              const cents = parseUsdToCents(fixedDraft);
+              if (cents == null) {
+                setFixedDraft((Math.max(DROP_PAID_MIN_CENTS, amount) / 100).toFixed(2));
+                return;
+              }
+              const clamped = Math.max(DROP_PAID_MIN_CENTS, cents);
+              setFixedDraft((clamped / 100).toFixed(2));
+              onChange({ ...price, mode: 'fixed', amountCents: clamped });
+            }}
+            inputMode="decimal"
             placeholder="Custom $"
             className="h-8 font-code text-xs"
           />
           <p className="text-[9px] text-muted-foreground">
-            Charged {centsToUsdLabel(Math.max(DROP_PAID_MIN_CENTS, amount))} · min {centsToUsdLabel(DROP_PAID_MIN_CENTS)}
+            Charged {centsToUsdLabel(Math.max(DROP_PAID_MIN_CENTS, liveFixedCents))} · min{' '}
+            {centsToUsdLabel(DROP_PAID_MIN_CENTS)}
           </p>
-          <p className="text-[10px] font-medium leading-snug text-foreground/90">
-            {firstDropsSplitLine(
-              Math.max(
-                DROP_PAID_MIN_CENTS,
-                parseUsdToCents(custom) ?? amount
-              )
-            )}
-          </p>
+          <FeePreviewBlock cents={liveFixedCents} />
         </div>
       )}
       {price.mode === 'pwyw' && (
@@ -119,41 +145,68 @@ export function PriceEditor({
           <div>
             <Label className="text-[9px] uppercase text-muted-foreground">Minimum</Label>
             <Input
-              defaultValue={(effectiveMin / 100).toFixed(2)}
-              onBlur={(e) => {
-                const cents = parseUsdToCents(e.target.value);
+              value={minDraft}
+              onChange={(e) => {
+                const next = e.target.value;
+                setMinDraft(next);
+                const cents = parseUsdToCents(next);
+                if (cents == null) return;
                 onChange({
                   ...price,
                   mode: 'pwyw',
-                  minCents: Math.max(DROP_PAID_MIN_CENTS, cents ?? DROP_PAID_MIN_CENTS),
+                  minCents: Math.max(DROP_PAID_MIN_CENTS, cents),
                 });
               }}
+              onBlur={() => {
+                const cents = parseUsdToCents(minDraft);
+                const clamped = Math.max(DROP_PAID_MIN_CENTS, cents ?? DROP_PAID_MIN_CENTS);
+                setMinDraft((clamped / 100).toFixed(2));
+                onChange({ ...price, mode: 'pwyw', minCents: clamped });
+              }}
+              inputMode="decimal"
               className="h-8 font-code text-xs"
             />
-            <p className="text-[8px] text-muted-foreground mt-1">
+            <p className="mt-1 text-[8px] text-muted-foreground">
               Lowest buyer price: {centsToUsdLabel(DROP_PAID_MIN_CENTS)}
             </p>
           </div>
           <div>
             <Label className="text-[9px] uppercase text-muted-foreground">Suggested</Label>
             <Input
-              defaultValue={(effectiveSuggested / 100).toFixed(2)}
-              onBlur={(e) => {
-                const cents = parseUsdToCents(e.target.value);
+              value={suggestedDraft}
+              onChange={(e) => {
+                const next = e.target.value;
+                setSuggestedDraft(next);
+                const cents = parseUsdToCents(next);
                 if (cents == null) return;
                 onChange({ ...price, mode: 'pwyw', suggestedCents: Math.max(DROP_PAID_MIN_CENTS, cents) });
               }}
+              onBlur={() => {
+                const cents = parseUsdToCents(suggestedDraft);
+                if (cents == null) {
+                  setSuggestedDraft((effectiveSuggested / 100).toFixed(2));
+                  return;
+                }
+                const clamped = Math.max(DROP_PAID_MIN_CENTS, cents);
+                setSuggestedDraft((clamped / 100).toFixed(2));
+                onChange({ ...price, mode: 'pwyw', suggestedCents: clamped });
+              }}
+              inputMode="decimal"
               className="h-8 font-code text-xs"
             />
           </div>
-          <p className="col-span-2 text-[10px] font-medium leading-snug text-foreground/90">
-            At the minimum: {firstDropsSplitLine(effectiveMin)}
-          </p>
-          {effectiveSuggested > 0 ? (
-            <p className="col-span-2 text-[10px] font-medium leading-snug text-foreground/90">
-              If they pay the suggested: {firstDropsSplitLine(effectiveSuggested)}
-            </p>
-          ) : null}
+          <div className="col-span-2 space-y-2">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">At the minimum</p>
+            <FeePreviewBlock cents={liveMinCents} />
+            {liveSuggestedCents > 0 ? (
+              <>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                  If they pay the suggested
+                </p>
+                <FeePreviewBlock cents={liveSuggestedCents} />
+              </>
+            ) : null}
+          </div>
         </div>
       )}
     </div>

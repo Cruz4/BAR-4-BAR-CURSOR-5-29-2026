@@ -14,6 +14,10 @@ type OpenMeteoResponse = {
   current?: {
     weather_code?: number;
     wind_speed_10m?: number;
+    wind_gusts_10m?: number;
+    wind_direction_10m?: number;
+    cloud_cover?: number;
+    visibility?: number;
     temperature_2m?: number;
     time?: string;
   };
@@ -22,6 +26,10 @@ type OpenMeteoResponse = {
     sunset?: string[];
   };
 };
+
+function finiteOrNull(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
 
 function parseCoord(raw: string | null, min: number, max: number): number | null {
   if (raw == null || raw === '') return null;
@@ -59,7 +67,10 @@ export async function GET(req: Request) {
     const upstream = new URL('https://api.open-meteo.com/v1/forecast');
     upstream.searchParams.set('latitude', place.lat.toFixed(4));
     upstream.searchParams.set('longitude', place.lon.toFixed(4));
-    upstream.searchParams.set('current', 'weather_code,wind_speed_10m,temperature_2m');
+    upstream.searchParams.set(
+      'current',
+      'weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,visibility,temperature_2m'
+    );
     upstream.searchParams.set('temperature_unit', 'fahrenheit');
     upstream.searchParams.set('daily', 'sunrise,sunset');
     upstream.searchParams.set('timezone', 'auto');
@@ -75,10 +86,14 @@ export async function GET(req: Request) {
     }
 
     const data = (await res.json()) as OpenMeteoResponse;
-    const wmoCode =
-      typeof data.current?.weather_code === 'number' ? data.current.weather_code : null;
-    const windspeedKmh =
-      typeof data.current?.wind_speed_10m === 'number' ? data.current.wind_speed_10m : null;
+    const wmoCode = finiteOrNull(data.current?.weather_code);
+    const windspeedKmh = finiteOrNull(data.current?.wind_speed_10m);
+    const gustsKmh = finiteOrNull(data.current?.wind_gusts_10m);
+    const windDirectionDeg = finiteOrNull(data.current?.wind_direction_10m);
+    const cloudCoverPct = finiteOrNull(data.current?.cloud_cover);
+    const visibilityM = finiteOrNull(data.current?.visibility);
+    const visibilityKm =
+      visibilityM != null ? Math.round((visibilityM / 1000) * 10) / 10 : null;
     const tempF =
       typeof data.current?.temperature_2m === 'number' && Number.isFinite(data.current.temperature_2m)
         ? Math.round(data.current.temperature_2m)
@@ -89,6 +104,10 @@ export async function GET(req: Request) {
     const sky = buildSceneSkyState({
       wmoCode,
       windspeedKmh,
+      gustsKmh,
+      windDirectionDeg,
+      cloudCoverPct,
+      visibilityKm,
       sunriseIso,
       sunsetIso,
     });
@@ -109,6 +128,10 @@ export async function GET(req: Request) {
         raw: {
           wmoCode,
           windspeedKmh,
+          gustsKmh,
+          windDirectionDeg,
+          cloudCoverPct,
+          visibilityKm,
           tempF,
           sunriseIso: sunriseIso ?? null,
           sunsetIso: sunsetIso ?? null,

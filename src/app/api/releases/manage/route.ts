@@ -117,8 +117,8 @@ export async function POST(req: Request) {
     const target = (kind === 'album' ? album : track!) as Album | Track;
     // Never trust the owner-writable Vault document for a universal entitlement.
     // Only an explicit flag on this admin-authorized request may set the public share flag.
+    // House Library notices are activated only by `/api/admin/house-release-ping`.
     const houseRelease = houseReleaseRequest === true;
-    const houseLibraryNotice = houseRelease && houseLibraryNoticeRequest === true;
     const style = styleSnap.exists ? (styleSnap.data() as StyleProfile) : undefined;
     const existingReleaseId = target.releaseShareId?.trim();
     let releaseShareId = existingReleaseId;
@@ -133,14 +133,25 @@ export async function POST(req: Request) {
       if (legacyHasAudio && !legacy.data()?.releaseRemovedAt) releaseShareId = target.shareId;
     }
 
+    const existingSharePreview = releaseShareId
+      ? await db.doc(`shares/${releaseShareId}`).get()
+      : null;
+    const existingNoticeLive =
+      houseRelease &&
+      existingSharePreview?.exists &&
+      existingSharePreview.data()?.houseRelease === true &&
+      existingSharePreview.data()?.houseLibraryNotice === true &&
+      !existingSharePreview.data()?.releaseRemovedAt;
+    const houseLibraryNotice = Boolean(existingNoticeLive);
+
     const now = new Date().toISOString();
     const targetRef = kind === 'album' ? albumRef : trackRef!;
     if (action === 'save-draft') {
       await targetRef.set({
         releaseStatus: 'draft',
         ...(
-          houseReleaseRequest !== undefined || houseLibraryNoticeRequest !== undefined
-            ? { houseRelease, houseLibraryNotice }
+          houseReleaseRequest !== undefined
+            ? { houseRelease, houseLibraryNotice: houseRelease ? houseLibraryNotice : false }
             : {}
         ),
         updatedAt: now,
@@ -156,6 +167,8 @@ export async function POST(req: Request) {
       const batch = db.batch();
       batch.set(targetRef, {
         releaseStatus: 'unlisted',
+        houseLibraryNotice: false,
+        houseLibraryNoticeAt: FieldValue.delete(),
         ...(releaseShareId ? { releaseShareId } : {}),
         ...(hideDna && target.shareId ? { dnaStatus: 'unlisted' } : {}),
         updatedAt: now,
@@ -167,6 +180,8 @@ export async function POST(req: Request) {
           unpressedAt: now,
           updatedAt: now,
           'data.releaseStatus': 'unlisted',
+          houseLibraryNotice: false,
+          houseLibraryNoticeAt: FieldValue.delete(),
           ...(sameAsDna ? { dnaStatus: 'unlisted', 'data.dnaStatus': 'unlisted' } : {}),
         });
       }

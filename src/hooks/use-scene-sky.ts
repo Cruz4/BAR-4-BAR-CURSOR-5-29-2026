@@ -23,6 +23,10 @@ type GeoCache = {
 type WeatherBits = {
   wmoCode?: number | null;
   windspeedKmh?: number | null;
+  gustsKmh?: number | null;
+  windDirectionDeg?: number | null;
+  cloudCoverPct?: number | null;
+  visibilityKm?: number | null;
   sunriseIso?: string;
   sunsetIso?: string;
 };
@@ -37,6 +41,10 @@ type WeatherApiPayload = {
   raw?: {
     wmoCode: number | null;
     windspeedKmh: number | null;
+    gustsKmh?: number | null;
+    windDirectionDeg?: number | null;
+    cloudCoverPct?: number | null;
+    visibilityKm?: number | null;
     tempF?: number | null;
     sunriseIso: string | null;
     sunsetIso: string | null;
@@ -166,6 +174,10 @@ async function fetchSceneWeather(): Promise<void> {
     sharedBits = {
       wmoCode: raw?.wmoCode ?? null,
       windspeedKmh: raw?.windspeedKmh ?? null,
+      gustsKmh: raw?.gustsKmh ?? null,
+      windDirectionDeg: raw?.windDirectionDeg ?? null,
+      cloudCoverPct: raw?.cloudCoverPct ?? null,
+      visibilityKm: raw?.visibilityKm ?? null,
       sunriseIso: raw?.sunriseIso ?? undefined,
       sunsetIso: raw?.sunsetIso ?? undefined,
     };
@@ -174,6 +186,10 @@ async function fetchSceneWeather(): Promise<void> {
     sharedSky = buildSceneSkyState({
       wmoCode: sharedBits.wmoCode,
       windspeedKmh: sharedBits.windspeedKmh,
+      gustsKmh: sharedBits.gustsKmh,
+      windDirectionDeg: sharedBits.windDirectionDeg,
+      cloudCoverPct: sharedBits.cloudCoverPct,
+      visibilityKm: sharedBits.visibilityKm,
       sunriseIso: sharedBits.sunriseIso,
       sunsetIso: sharedBits.sunsetIso,
     });
@@ -204,6 +220,10 @@ function tickPhaseFromBits(): SceneSkyState {
   return buildSceneSkyState({
     wmoCode: b.wmoCode,
     windspeedKmh: b.windspeedKmh,
+    gustsKmh: b.gustsKmh,
+    windDirectionDeg: b.windDirectionDeg,
+    cloudCoverPct: b.cloudCoverPct,
+    visibilityKm: b.visibilityKm,
     sunriseIso: b.sunriseIso,
     sunsetIso: b.sunsetIso,
   });
@@ -272,6 +292,11 @@ export function useSceneSky() {
     hasWeather: sky.hasWeather,
     windy: sky.windy,
     updatedAt: sky.updatedAt,
+    gustsKmh: sky.gustsKmh ?? null,
+    windDirectionDeg: sky.windDirectionDeg ?? null,
+    cloudCoverPct: sky.cloudCoverPct ?? null,
+    visibilityKm: sky.visibilityKm ?? null,
+    windspeedKmh: sharedBits.windspeedKmh ?? null,
     city,
     tempF,
     lat,

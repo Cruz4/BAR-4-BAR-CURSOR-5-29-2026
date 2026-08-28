@@ -1,4 +1,5 @@
 import type { DropAudioMeta, DropPrice } from '@/lib/drop-commerce';
+import type { ReleaseDiscoveryMetadata } from '@/lib/release-discovery';
 
 export type ReleaseStatus = 'draft' | 'live' | 'unlisted';
 export type DnaStatus = 'live' | 'unlisted';
@@ -118,6 +119,8 @@ export interface Album {
   dnaDropMedia?: string[];
   /** Album bundle price for Bar 4 Bar First Drops. */
   dropPrice?: DropPrice;
+  /** Optional discovery tags for rails / search (additive). */
+  releaseDiscovery?: ReleaseDiscoveryMetadata;
 }
 
 export interface TrackVibe {
@@ -193,6 +196,8 @@ export interface Track {
   dropPrice?: DropPrice;
   /** When the artist attested they have rights to sell this recording (Press it live). */
   dropRightsAttestedAt?: string;
+  /** Optional discovery tags for rails / search (additive). */
+  releaseDiscovery?: ReleaseDiscoveryMetadata;
 }
 
 /** How a lyric line was added — used for Studio Progress (written vs AI-generated). */

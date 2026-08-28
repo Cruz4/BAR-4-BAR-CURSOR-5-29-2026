@@ -53,15 +53,20 @@ import { mergeStudioCosts } from '@/lib/studio-costs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudioLoader } from '@/components/studio-loader';
 import { AdminMetricsTab } from '@/components/admin-metrics-tab';
+import { AdminCeoDashboardV2 } from '@/components/admin-ceo-dashboard-v2';
 import { AdminAchievementsTab } from '@/components/admin-achievements-tab';
 import { AdminInviteGateCard } from '@/components/admin-invite-gate-card';
 import { AdminSceneLayoutCard } from '@/components/admin-scene-layout-card';
+import { AdminProductSurfacesCard } from '@/components/admin-product-surfaces-card';
+import { AdminProPreviewAuditCard } from '@/components/admin-pro-preview-audit-card';
+import { AdminProductionGateCard } from '@/components/admin-production-gate-card';
 import { AdminLockFeatureCard } from '@/components/admin-lock-feature-card';
 import { AdminFoldsFeatureCard } from '@/components/admin-folds-feature-card';
 import { AdminCollabSheetFeatureCard } from '@/components/admin-collab-sheet-feature-card';
 import { AdminFirstDropsCard } from '@/components/admin-first-drops-card';
 import { AdminHouseBarCard } from '@/components/admin-house-bar-card';
 import { AdminWeeklyChallengeCard } from '@/components/admin-weekly-challenge-card';
+import { useProductSurfaces } from '@/hooks/use-product-surfaces';
 import type { AdminGamificationRosterEntry } from '@/lib/gamification/admin-roster-types';
 import { format } from 'date-fns';
 import { formatUserJoinDate, userDateSortValue } from '@/lib/user-date';
@@ -96,6 +101,11 @@ export default function AdminPage() {
   const { user, loading: authLoading, authReady } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const { ceoDashboard, loading: surfacesLoading } = useProductSurfaces();
+  const metricsSurfaceOn = ceoDashboard !== 'off';
+  const showCeoV2 = ceoDashboard === 'v2';
+  const showLegacyMetrics = ceoDashboard === 'legacy';
+  const defaultAdminTab = metricsSurfaceOn ? 'metrics' : 'users';
   
   const [users, setUsers] = useState<User[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<User[]>([]);
@@ -841,9 +851,13 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="metrics" className="space-y-8">
+      <Tabs key={defaultAdminTab} defaultValue={defaultAdminTab} className="space-y-8">
         <TabsList className="bg-muted/50 border h-auto p-1.5 gap-2 w-full justify-start flex-wrap">
-          <TabsTrigger value="metrics" className="gap-2 px-6 py-3 font-bold uppercase text-[10px] tracking-widest text-emerald-400"><LineChart className="h-4 w-4" /> Growth Metrics</TabsTrigger>
+          {metricsSurfaceOn ? (
+            <TabsTrigger value="metrics" className="gap-2 px-6 py-3 font-bold uppercase text-[10px] tracking-widest text-emerald-400">
+              <LineChart className="h-4 w-4" /> {showCeoV2 ? 'CEO Deck' : 'Growth Metrics'}
+            </TabsTrigger>
+          ) : null}
           <TabsTrigger value="users" className="gap-2 px-6 py-3 font-bold uppercase text-[10px] tracking-widest"><Users className="h-4 w-4" /> Artist Roster</TabsTrigger>
           <TabsTrigger value="achievements" className="gap-2 px-6 py-3 font-bold uppercase text-[10px] tracking-widest text-amber-400"><Trophy className="h-4 w-4" /> Studio Trophies</TabsTrigger>
           <TabsTrigger value="blacklist" className="gap-2 px-6 py-3 font-bold uppercase text-[10px] tracking-widest text-red-500"><ShieldX className="h-4 w-4" /> Blacklist</TabsTrigger>
@@ -851,9 +865,17 @@ export default function AdminPage() {
           <TabsTrigger value="config" className="gap-2 px-6 py-3 font-bold uppercase text-[10px] tracking-widest"><Settings className="h-4 w-4" /> Config</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="metrics">
-          <AdminMetricsTab />
-        </TabsContent>
+        {metricsSurfaceOn ? (
+          <TabsContent value="metrics">
+            {surfacesLoading ? (
+              <div className="py-16"><StudioLoader size="md" /></div>
+            ) : showCeoV2 ? (
+              <AdminCeoDashboardV2 />
+            ) : showLegacyMetrics ? (
+              <AdminMetricsTab />
+            ) : null}
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="users">
           {rosterLoading ? (
@@ -1267,6 +1289,9 @@ export default function AdminPage() {
 
         <TabsContent value="config" className="space-y-8">
             <AdminSceneLayoutCard />
+            <AdminProductSurfacesCard />
+            <AdminProPreviewAuditCard />
+            <AdminProductionGateCard />
             <AdminLockFeatureCard />
             <AdminFoldsFeatureCard />
             <AdminCollabSheetFeatureCard />

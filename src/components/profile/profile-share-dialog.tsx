@@ -10,7 +10,9 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useProductSurfaces } from '@/hooks/use-product-surfaces';
 import { trackShareCardEvent } from '@/lib/gamification-client';
+import { ShareStudioDialog } from '@/components/share-studio/share-studio-dialog';
 import {
   Check,
   Copy,
@@ -32,6 +34,16 @@ type ProfileShareDialogProps = {
   onOpenChange: (open: boolean) => void;
   profile: ProfileSocialShareData;
 };
+
+function profileTargetPath(profileUrl: string): string {
+  try {
+    if (profileUrl.startsWith('/')) return profileUrl;
+    const url = new URL(profileUrl);
+    return `${url.pathname}${url.search}` || '/';
+  } catch {
+    return profileUrl.startsWith('/') ? profileUrl : `/${profileUrl}`;
+  }
+}
 
 function XIcon({ className }: { className?: string }) {
   return (
@@ -55,12 +67,27 @@ export function buildProfileShareText(displayName: string, rankLabel: string, pr
 
 export function ProfileShareDialog({ open, onOpenChange, profile }: ProfileShareDialogProps) {
   const { toast } = useToast();
+  const { sharing } = useProductSurfaces();
   const [copied, setCopied] = React.useState(false);
 
   const shareText = useMemo(
     () => buildProfileShareText(profile.displayName, profile.rankLabel, profile.profileUrl),
     [profile.displayName, profile.rankLabel, profile.profileUrl]
   );
+
+  if (sharing === 'v2') {
+    return (
+      <ShareStudioDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        kind="profile"
+        targetPath={profileTargetPath(profile.profileUrl)}
+        title={profile.displayName}
+        subtitle={`${profile.rankLabel} on Bar 4 Bar`}
+        shareText={shareText}
+      />
+    );
+  }
 
   const encodedUrl = encodeURIComponent(profile.profileUrl);
   const encodedText = encodeURIComponent(shareText);

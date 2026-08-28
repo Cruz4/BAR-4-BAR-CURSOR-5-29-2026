@@ -144,7 +144,10 @@ export function SceneDiscoverCard({
     const { drop } = card;
     const ownerHref = drop.ownerSlug ? profileHref(drop.ownerSlug) : undefined;
     const musicRelease = firstDropsOn && (drop.releaseLive === true || (drop.releaseLive === undefined && Boolean(drop.hasDropAudio)));
-    const firstDrop = musicRelease && drop.type === 'track' && Boolean(drop.hasDropAudio);
+    const firstDrop =
+      musicRelease &&
+      ((drop.type === 'track' && Boolean(drop.hasDropAudio)) ||
+        (drop.type === 'album' && (Boolean(drop.hasDropAudio) || Boolean(drop.dropPriceSummary) || drop.houseRelease)));
     const pulse = formatDropPulseLine(drop);
     return (
       <Card

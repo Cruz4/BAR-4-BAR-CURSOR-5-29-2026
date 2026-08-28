@@ -37,6 +37,23 @@ export type SceneSkyState = {
   hasWeather: boolean;
   windy: boolean;
   updatedAt: string;
+  /** Peak gusts (km/h) — falls back from sustained wind when unknown. */
+  gustsKmh?: number | null;
+  /** Meteorological wind from-direction in degrees (0 = N, 90 = E). */
+  windDirectionDeg?: number | null;
+  /** 0–100 sky cover fraction. */
+  cloudCoverPct?: number | null;
+  /** Horizontal visibility in km. */
+  visibilityKm?: number | null;
+};
+
+/** Optional Open-Meteo extras used by Weather V2 (gusts, direction, cover, visibility). */
+export type SceneWeatherExtras = {
+  gustsKmh?: number | null;
+  windDirectionDeg?: number | null;
+  cloudCoverPct?: number | null;
+  visibilityKm?: number | null;
+  windspeedKmh?: number | null;
 };
 
 /** Windspeed (km/h) at which we treat the sky as windy overlay. */
@@ -127,6 +144,130 @@ export function defaultSceneSkyState(now: Date = new Date()): SceneSkyState {
     hasWeather: false,
     windy: false,
     updatedAt: now.toISOString(),
+    gustsKmh: null,
+    windDirectionDeg: null,
+    cloudCoverPct: 0,
+    visibilityKm: 16,
+  };
+}
+
+/** Sensible cover % when Open-Meteo omits `cloud_cover`. */
+export function cloudCoverPctFromWeather(weather: SceneWeather): number {
+  switch (weather) {
+    case 'clear':
+      return 5;
+    case 'partly_cloudy':
+    case 'windy':
+      return 35;
+    case 'drizzle':
+    case 'rain':
+      return 70;
+    case 'cloudy':
+    case 'fog':
+    case 'snow':
+      return 85;
+    case 'heavy_rain':
+    case 'heavy_snow':
+    case 'hail':
+    case 'thunderstorm':
+      return 95;
+    default:
+      return 40;
+  }
+}
+
+/** Visibility (km) when Open-Meteo omits `visibility`. */
+export function visibilityKmFromWeather(weather: SceneWeather): number {
+  switch (weather) {
+    case 'fog':
+      return 0.8;
+    case 'heavy_rain':
+    case 'thunderstorm':
+    case 'hail':
+      return 2.5;
+    case 'rain':
+    case 'heavy_snow':
+      return 4;
+    case 'drizzle':
+    case 'snow':
+      return 6;
+    case 'cloudy':
+      return 10;
+    default:
+      return 16;
+  }
+}
+
+/**
+ * Fill gusts / direction / cover / visibility from API fields, or derive from
+ * condition + sustained wind when upstream omits them.
+ */
+export function resolveWeatherExtras(
+  weather: SceneWeather,
+  extras: SceneWeatherExtras = {}
+): Required<Pick<SceneSkyState, 'gustsKmh' | 'windDirectionDeg' | 'cloudCoverPct' | 'visibilityKm'>> {
+  const wind =
+    typeof extras.windspeedKmh === 'number' && Number.isFinite(extras.windspeedKmh)
+      ? Math.max(0, extras.windspeedKmh)
+      : null;
+
+  const gusts =
+    typeof extras.gustsKmh === 'number' && Number.isFinite(extras.gustsKmh)
+      ? Math.max(0, extras.gustsKmh)
+      : wind != null
+        ? Math.round(wind * 1.35)
+        : null;
+
+  let direction: number | null =
+    typeof extras.windDirectionDeg === 'number' && Number.isFinite(extras.windDirectionDeg)
+      ? ((extras.windDirectionDeg % 360) + 360) % 360
+      : null;
+  if (direction == null && wind != null && wind >= 8) {
+    // Mild default westerly flow when we know it's breezy but lack a bearing.
+    direction = 270;
+  }
+
+  const cover =
+    typeof extras.cloudCoverPct === 'number' && Number.isFinite(extras.cloudCoverPct)
+      ? Math.max(0, Math.min(100, extras.cloudCoverPct))
+      : cloudCoverPctFromWeather(weather);
+
+  const visibility =
+    typeof extras.visibilityKm === 'number' && Number.isFinite(extras.visibilityKm)
+      ? Math.max(0.05, extras.visibilityKm)
+      : visibilityKmFromWeather(weather);
+
+  return {
+    gustsKmh: gusts,
+    windDirectionDeg: direction,
+    cloudCoverPct: cover,
+    visibilityKm: visibility,
+  };
+}
+
+/** Clamp display intensity for V2 layers (0–1). */
+export function clampWeatherIntensity(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
+
+/**
+ * Drift vector for cloud layers.
+ * Meteorological "from" degrees → CSS translate direction the air moves toward.
+ */
+export function windDriftVector(
+  windDirectionDeg: number | null | undefined,
+  gustsKmh: number | null | undefined,
+  windspeedKmh: number | null | undefined
+): { dx: number; dy: number; speedFactor: number } {
+  const speed = Math.max(gustsKmh ?? 0, windspeedKmh ?? 0, 0);
+  const speedFactor = clampWeatherIntensity(0.35 + speed / 55);
+  const fromDeg = typeof windDirectionDeg === 'number' ? windDirectionDeg : 270;
+  const towardRad = ((fromDeg + 180) * Math.PI) / 180;
+  return {
+    dx: Math.sin(towardRad),
+    dy: -Math.cos(towardRad) * 0.22,
+    speedFactor,
   };
 }
 
@@ -136,6 +277,10 @@ export function buildSceneSkyState(opts: {
   windspeedKmh?: number | null;
   sunriseIso?: string;
   sunsetIso?: string;
+  gustsKmh?: number | null;
+  windDirectionDeg?: number | null;
+  cloudCoverPct?: number | null;
+  visibilityKm?: number | null;
 }): SceneSkyState {
   const now = opts.now ?? new Date();
   const phase = resolveSceneSkyPhase(now, opts.sunriseIso, opts.sunsetIso);
@@ -145,12 +290,21 @@ export function buildSceneSkyState(opts: {
     ? applyWindOverlay(base, opts.windspeedKmh)
     : { weather: 'clear' as SceneWeather, windy: false };
 
+  const extras = resolveWeatherExtras(weather, {
+    gustsKmh: opts.gustsKmh,
+    windDirectionDeg: opts.windDirectionDeg,
+    cloudCoverPct: opts.cloudCoverPct,
+    visibilityKm: opts.visibilityKm,
+    windspeedKmh: opts.windspeedKmh,
+  });
+
   return {
     phase,
     weather,
     hasWeather,
     windy,
     updatedAt: now.toISOString(),
+    ...extras,
   };
 }
 

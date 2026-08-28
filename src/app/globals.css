@@ -1962,6 +1962,129 @@
     animation-duration: 22s;
   }
 
+  /* Weather off — static sky only (celestial overlays still render in JSX). */
+  .scene-block.is-weather-off .scene-block-clouds,
+  .scene-block.is-weather-off .scene-block-fog,
+  .scene-block.is-weather-off .scene-block-precip,
+  .scene-block.is-weather-off .scene-block-lightning {
+    display: none;
+  }
+
+  .scene-block.is-weather-off .scene-block-sky {
+    filter: saturate(0.92);
+  }
+
+  /* Weather V2 — multi-lobe SVG clouds, mist bands, storm shelf, local lightning */
+  @keyframes scene-wx-v2-drift {
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(var(--wx-travel-x, 10%), var(--wx-travel-y, 0%), 0); }
+  }
+
+  @keyframes scene-wx-v2-mist-drift {
+    0% { transform: translate3d(0, 0, 0); opacity: 0.55; }
+    50% { opacity: 0.9; }
+    100% { transform: translate3d(calc(var(--wx-travel-x, 8%) * 0.6), 0, 0); opacity: 0.5; }
+  }
+
+  @keyframes scene-wx-v2-bolt {
+    0%, 88%, 100% { opacity: 0; }
+    89% { opacity: 0.95; }
+    91% { opacity: 0.15; }
+    92.5% { opacity: 0.8; }
+    94% { opacity: 0; }
+  }
+
+  @keyframes scene-wx-v2-flash {
+    0%, 88%, 100% { opacity: 0; }
+    89.2% { opacity: 0.28; }
+    91% { opacity: 0; }
+    92.6% { opacity: 0.16; }
+    94% { opacity: 0; }
+  }
+
+  .scene-wx-v2-cloud {
+    animation: scene-wx-v2-drift 55s linear infinite alternate;
+    will-change: transform;
+    filter: drop-shadow(0 1px 1px rgba(10, 14, 28, 0.18));
+  }
+
+  .scene-wx-v2-cloud-fill {
+    fill: rgba(255, 255, 255, 0.42);
+    stroke: rgba(255, 255, 255, 0.22);
+    stroke-width: 0.6;
+  }
+
+  .scene-block[data-phase='day'] .scene-wx-v2-cloud-fill {
+    fill: rgba(255, 255, 255, 0.62);
+    stroke: rgba(230, 236, 255, 0.35);
+  }
+
+  .scene-block[data-phase='night'] .scene-wx-v2-cloud-fill,
+  .scene-block[data-phase='dusk'] .scene-wx-v2-cloud-fill {
+    fill: rgba(150, 164, 210, 0.34);
+    stroke: rgba(170, 184, 230, 0.2);
+  }
+
+  .scene-block[data-weather='thunderstorm'] .scene-wx-v2-cloud-fill,
+  .scene-block[data-weather='hail'] .scene-wx-v2-cloud-fill,
+  .scene-block[data-weather='heavy_rain'] .scene-wx-v2-cloud-fill {
+    fill: rgba(70, 78, 108, 0.55);
+    stroke: rgba(110, 120, 150, 0.25);
+  }
+
+  .scene-wx-v2-mist {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(200, 210, 225, 0.35) 20%,
+      rgba(210, 220, 235, 0.45) 50%,
+      rgba(200, 210, 225, 0.3) 80%,
+      transparent 100%
+    );
+    filter: blur(10px);
+    animation: scene-wx-v2-mist-drift 80s ease-in-out infinite alternate;
+    pointer-events: none;
+  }
+
+  .scene-wx-v2-storm-shelf {
+    top: 0;
+    height: 34%;
+    background: linear-gradient(
+      180deg,
+      rgba(28, 32, 48, 0.55) 0%,
+      rgba(40, 46, 68, 0.35) 55%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+
+  .scene-wx-v2-bolt path {
+    fill: rgba(230, 240, 255, 0.92);
+    filter: drop-shadow(0 0 6px rgba(180, 210, 255, 0.85));
+  }
+
+  .scene-wx-v2-bolt {
+    animation: scene-wx-v2-bolt 11s linear infinite;
+    opacity: 0;
+  }
+
+  .scene-wx-v2-flash {
+    background: radial-gradient(ellipse at 40% 18%, rgba(220, 235, 255, 0.55), transparent 55%);
+    animation: scene-wx-v2-flash 11s linear infinite;
+    pointer-events: none;
+  }
+
+  .scene-wx-v2.is-paused .scene-wx-v2-cloud,
+  .scene-wx-v2.is-paused .scene-wx-v2-mist,
+  .scene-wx-v2.is-paused .scene-wx-v2-bolt,
+  .scene-wx-v2.is-paused .scene-wx-v2-flash {
+    animation-play-state: paused;
+  }
+
+  .scene-wx-v2.is-windy .scene-wx-v2-cloud {
+    animation-duration: calc(28s * var(--wx-duration-scale, 1));
+  }
+
   /* Fog veil */
   .scene-block-fog {
     background: linear-gradient(
@@ -2310,7 +2433,11 @@
     .scene-block-cloud,
     .scene-block-lightning,
     .scene-block-precip-particle,
-    .scene-block-meteor {
+    .scene-block-meteor,
+    .scene-wx-v2-cloud,
+    .scene-wx-v2-mist,
+    .scene-wx-v2-bolt,
+    .scene-wx-v2-flash {
       animation: none !important;
     }
 

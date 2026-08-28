@@ -933,9 +933,9 @@ export function SceneHome() {
           </div>
         </div>
 
-        {/* Left rail — studio progress (xl only) */}
+        {/* Left rail — studio progress (xl only). Not sticky — scrolls with the page. */}
         <aside
-          className="hidden xl:flex xl:col-start-1 xl:row-start-2 justify-end items-start self-start pr-2 2xl:pr-3 sticky top-[5.25rem] z-30 pointer-events-none [&>*]:pointer-events-auto"
+          className="pointer-events-none relative z-30 hidden self-start justify-end pr-2 xl:col-start-1 xl:row-start-2 xl:flex 2xl:pr-3 [&>*]:pointer-events-auto"
           aria-label="Studio progress"
         >
           <VaultStudioProgress
@@ -950,10 +950,12 @@ export function SceneHome() {
         {/* Right rail — nav dock (xl only) */}
         {!showPortalHub ? (
           <aside
-            className="pointer-events-none sticky top-[5.25rem] z-30 hidden max-h-[calc(100vh-6rem)] self-start justify-start overflow-y-auto overscroll-contain pl-2 xl:col-start-3 xl:row-start-2 xl:flex 2xl:pl-3 [&>*]:pointer-events-auto"
+            className="pointer-events-none relative z-30 hidden self-stretch pl-2 xl:col-start-3 xl:row-start-2 xl:block 2xl:pl-3"
             aria-label="Scene shortcuts"
           >
-            <SceneNavDock className="pb-3" />
+            <div className="pointer-events-auto sticky top-[5.25rem] max-h-[calc(100vh-6rem)] w-fit overflow-y-auto overscroll-contain px-0.5 pb-3 pt-1.5">
+              <SceneNavDock />
+            </div>
           </aside>
         ) : null}
 

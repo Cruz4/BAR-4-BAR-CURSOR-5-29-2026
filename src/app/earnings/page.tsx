@@ -22,6 +22,8 @@ import {
   type DropEarningsSummary,
 } from '@/lib/drop-earnings';
 import { cn } from '@/lib/utils';
+import { useProductSurfaces } from '@/hooks/use-product-surfaces';
+import { ArtistIntelligenceShell } from '@/components/intelligence/artist-intelligence-shell';
 
 async function authHeaders(): Promise<HeadersInit> {
   const user = auth.currentUser;
@@ -509,6 +511,17 @@ function EarningsPageContent() {
 }
 
 export default function EarningsPage() {
+  const { supportCircle, loading: surfacesLoading } = useProductSurfaces();
+  if (surfacesLoading) {
+    return <StudioLoader size="lg" fullscreen message="Opening earnings..." />;
+  }
+  if (supportCircle === 'crm') {
+    return (
+      <Suspense fallback={<StudioLoader size="lg" fullscreen message="Opening Artist Intelligence..." />}>
+        <ArtistIntelligenceShell initialTab="earnings" />
+      </Suspense>
+    );
+  }
   return (
     <Suspense fallback={<StudioLoader size="lg" fullscreen message="Opening earnings..." />}>
       <EarningsPageContent />

@@ -105,6 +105,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const isPublicProfilePage = isPublicArtistHomePath(pathname);
   const isMarketingCapture = pathname.startsWith('/marketing/capture');
   const isSettingsRoute = pathname === '/usage' || pathname.startsWith('/usage/') || pathname === '/admin';
+  // Authenticated Scene / Vault need document scroll so sticky rails can bind
+  // (same pattern as Edit Public Page). overflow-hidden on shell breaks sticky.
+  const isStickyRailPage =
+    Boolean(user) && (pathname === '/' || pathname === '/vault');
+  const stickyDocumentScroll = isProfileCustomizePage || isStickyRailPage;
   const showAppHeader =
     !isMarketingShell && !isPerformPage && !isSharePage && !isPublicProfilePage && !isMarketingCapture;
   const showBottomNowPlaying = showDropNowPlaying && !showAppHeader;
@@ -135,7 +140,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <div
                 className={cn(
                   'relative z-10 flex min-h-screen flex-col flex-1',
-                  isProfileCustomizePage
+                  stickyDocumentScroll
                     ? 'overflow-x-clip overflow-y-visible'
                     : allowPageScroll
                       ? 'overflow-x-hidden overflow-y-auto'
@@ -150,7 +155,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 <main
                   className={cn(
                     'flex-1 flex flex-col',
-                    isProfileCustomizePage
+                    stickyDocumentScroll
                       ? 'overflow-x-clip overflow-y-visible'
                       : allowPageScroll
                         ? 'overflow-x-hidden overflow-y-auto'

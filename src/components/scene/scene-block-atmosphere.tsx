@@ -12,6 +12,7 @@ import {
 } from '@/lib/scene/scene-neon-lexicon';
 import { useSceneSky } from '@/hooks/use-scene-sky';
 import { useAppChromeBottom } from '@/hooks/use-app-chrome-bottom';
+import { useProductSurfaces } from '@/hooks/use-product-surfaces';
 import {
   cloudIntensity,
   precipKind,
@@ -33,6 +34,7 @@ import {
   type MoonPhase,
 } from '@/lib/scene/scene-celestial';
 import { SCENE_HOUSE_CITY } from '@/lib/scene/scene-sky';
+import { SceneWeatherV2Layers } from '@/components/scene/scene-weather-v2-layers';
 
 /** Sun/moon arc refresh while Scene is open — real sky drift is slow. */
 const CELESTIAL_TICK_MS = 5 * 60 * 1000;
@@ -338,7 +340,23 @@ export function SceneBlockAtmosphere({
   energy?: number;
   pulseKey?: number;
 }) {
-  const { phase, weather, windy, hasWeather, lat, lon } = useSceneSky();
+  const {
+    phase,
+    weather,
+    windy,
+    hasWeather,
+    lat,
+    lon,
+    gustsKmh,
+    windDirectionDeg,
+    cloudCoverPct,
+    visibilityKm,
+    windspeedKmh,
+  } = useSceneSky();
+  const { sceneWeather: weatherMode } = useProductSurfaces();
+  const weatherFxOff = weatherMode === 'off';
+  const weatherV2 = weatherMode === 'v2';
+  const weatherLegacy = weatherMode !== 'v2' && weatherMode !== 'off';
   const appChromeBottom = useAppChromeBottom(16);
   const [skyNow, setSkyNow] = useState(() => new Date());
   const [viewportH, setViewportH] = useState(() =>
@@ -377,11 +395,12 @@ export function SceneBlockAtmosphere({
   const prevPulseRef = useRef<number>(-1);
   const burstIdRef = useRef(0);
 
-  const clouds = cloudIntensity(weather);
-  const precip = precipKind(weather);
+  const clouds = weatherFxOff ? 0 : cloudIntensity(weather);
+  const precip = weatherFxOff ? 'none' : precipKind(weather);
   const starVisible = showsStars(phase);
   const sunVisible = showsSun(phase, weather) && sunPos.aboveHorizon;
-  const showLightning = weather === 'thunderstorm' || weather === 'hail';
+  const showLightning =
+    !weatherFxOff && !weatherV2 && (weather === 'thunderstorm' || weather === 'hail');
 
   useEffect(() => {
     const timer = window.setInterval(() => setSkyNow(new Date()), CELESTIAL_TICK_MS);
@@ -461,11 +480,14 @@ export function SceneBlockAtmosphere({
     <div
       className={cn(
         'scene-block pointer-events-none fixed inset-0 z-[1] overflow-hidden',
-        windy && 'is-windy',
+        windy && !weatherFxOff && 'is-windy',
+        weatherFxOff && 'is-weather-off',
+        weatherV2 && 'is-weather-v2',
         className
       )}
       data-phase={phase}
       data-weather={weather}
+      data-weather-mode={weatherMode}
       data-has-weather={hasWeather ? '1' : '0'}
     >
       <div className="scene-block-sky absolute inset-0" aria-hidden />
@@ -508,9 +530,22 @@ export function SceneBlockAtmosphere({
         />
       ) : null}
 
-      <SceneMeteors enabled={meteorsOn} shower={shower} />
+      <SceneMeteors enabled={meteorsOn && !weatherFxOff} shower={shower} />
 
-      {clouds > 0 && (
+      {weatherV2 ? (
+        <SceneWeatherV2Layers
+          weather={weather}
+          phase={phase}
+          windy={windy}
+          gustsKmh={gustsKmh}
+          windDirectionDeg={windDirectionDeg}
+          cloudCoverPct={cloudCoverPct}
+          visibilityKm={visibilityKm}
+          windspeedKmh={windspeedKmh}
+        />
+      ) : null}
+
+      {weatherLegacy && clouds > 0 && (
         <div
           className="scene-block-clouds absolute inset-0"
           style={{ opacity: clouds }}
@@ -532,7 +567,7 @@ export function SceneBlockAtmosphere({
         </div>
       )}
 
-      {weather === 'fog' && <div className="scene-block-fog absolute inset-0" />}
+      {weatherLegacy && weather === 'fog' && <div className="scene-block-fog absolute inset-0" />}
 
       {precip !== 'none' && (
         <div className={cn('scene-block-precip absolute inset-0', precipClass(weather))}>

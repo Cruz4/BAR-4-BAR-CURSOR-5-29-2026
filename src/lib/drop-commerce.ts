@@ -55,11 +55,47 @@ export function dropArtistNetCents(amountCents: number): number {
   return Math.max(0, amount - dropPlatformFeeCents(amount));
 }
 
+/** Approximate Stripe card processing Bar 4 Bar pays (not deducted from artist net). */
+export const DROP_STRIPE_PROCESSING_PERCENT = 2.9;
+export const DROP_STRIPE_PROCESSING_FIXED_CENTS = 30;
+
+export function dropStripeProcessingEstimateCents(amountCents: number): number {
+  const amount = Math.max(0, Math.round(amountCents));
+  if (amount <= 0) return 0;
+  return Math.round(amount * (DROP_STRIPE_PROCESSING_PERCENT / 100) + DROP_STRIPE_PROCESSING_FIXED_CENTS);
+}
+
+export type DropFeePreview = {
+  buyerPaysCents: number;
+  platformFeeCents: number;
+  platformFeePercent: number;
+  artistNetCents: number;
+  artistSharePercent: number;
+  stripeProcessingEstimateCents: number;
+};
+
+export function dropFeePreview(amountCents: number): DropFeePreview {
+  const buyerPaysCents = Math.max(DROP_PAID_MIN_CENTS, Math.max(0, Math.round(amountCents)));
+  return {
+    buyerPaysCents,
+    platformFeeCents: dropPlatformFeeCents(buyerPaysCents),
+    platformFeePercent: dropPlatformFeePercent(buyerPaysCents),
+    artistNetCents: dropArtistNetCents(buyerPaysCents),
+    artistSharePercent: dropArtistSharePercentForAmount(buyerPaysCents),
+    stripeProcessingEstimateCents: dropStripeProcessingEstimateCents(buyerPaysCents),
+  };
+}
+
 /** Live split under the price the artist is setting. */
 export function firstDropsSplitLine(amountCents: number): string {
-  const requested = Math.max(0, Math.round(amountCents));
-  const charged = Math.max(DROP_PAID_MIN_CENTS, requested);
-  return `You keep ${centsToUsdLabel(dropArtistNetCents(charged))} (${dropArtistSharePercentForAmount(charged)}%) · we keep ${centsToUsdLabel(dropPlatformFeeCents(charged))} (${dropPlatformFeePercent(charged)}%)`;
+  const p = dropFeePreview(amountCents);
+  return `Buyer pays ${centsToUsdLabel(p.buyerPaysCents)} · you keep ${centsToUsdLabel(p.artistNetCents)} (${p.artistSharePercent}%) · we keep ${centsToUsdLabel(p.platformFeeCents)} (${p.platformFeePercent}%)`;
+}
+
+/** Extra line clarifying Stripe is platform-borne — never subtracted from artist net. */
+export function firstDropsStripeProcessingLine(amountCents: number): string {
+  const p = dropFeePreview(amountCents);
+  return `Stripe processing ~${centsToUsdLabel(p.stripeProcessingEstimateCents)} is paid by Bar 4 Bar — not taken from your share.`;
 }
 
 export function firstDropsFeeLine(): string {

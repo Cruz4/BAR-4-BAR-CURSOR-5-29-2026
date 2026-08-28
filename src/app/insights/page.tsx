@@ -1,15 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { BarChart3, Headphones, HeartHandshake, Play, RefreshCw, Repeat2, ShoppingBag, ShieldCheck } from 'lucide-react';
 import { auth } from '@/lib/firebase/client/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { useProductSurfaces } from '@/hooks/use-product-surfaces';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StudioLoader } from '@/components/studio-loader';
-import type { DropInsightsResponse } from '@/lib/drop-insights';
+import { ArtistIntelligenceShell } from '@/components/intelligence/artist-intelligence-shell';
+import {
+  dropInsightReleaseSubtitle,
+  type DropInsightsResponse,
+} from '@/lib/drop-insights';
 import { centsToUsdLabel } from '@/lib/drop-commerce';
 
 async function authHeaders(): Promise<HeadersInit> {
@@ -31,6 +36,21 @@ function Metric({ label, value, note }: { label: string; value: string | number;
 }
 
 export default function ListenerInsightsPage() {
+  const { supportCircle, loading: surfacesLoading } = useProductSurfaces();
+  if (surfacesLoading) {
+    return <StudioLoader size="lg" fullscreen message="Reading real listener signals..." />;
+  }
+  if (supportCircle === 'crm') {
+    return (
+      <Suspense fallback={<StudioLoader size="lg" fullscreen message="Opening Artist Intelligence..." />}>
+        <ArtistIntelligenceShell initialTab="insights" />
+      </Suspense>
+    );
+  }
+  return <ListenerInsightsPageLegacy />;
+}
+
+function ListenerInsightsPageLegacy() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [days, setDays] = useState<7 | 30 | 90>(30);
@@ -208,22 +228,96 @@ export default function ListenerInsightsPage() {
       </Card>
 
       <Card className="border-white/10 bg-card/60">
-        <CardHeader><CardTitle className="font-headline uppercase">Tracks creating relationships</CardTitle></CardHeader>
-        <CardContent>
-          {data?.tracks.length ? (
-            <div className="divide-y divide-white/10 rounded-xl border border-white/10">
-              {data.tracks.map((track) => (
-                <div key={track.shareId} className="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_repeat(4,auto)] sm:items-center sm:gap-5">
-                  <Link href={`/song/${track.shareId}`} className="min-w-0 truncate font-bold hover:text-primary">{track.title}</Link>
-                  <span className="text-xs text-muted-foreground"><strong className="text-foreground">{track.lifetimePreviewStarts + track.lifetimeFullStarts}</strong> starts</span>
-                  <span className="text-xs text-muted-foreground"><strong className="text-foreground">{track.qualifiedListeners}</strong> qualified</span>
-                  <span className="text-xs text-muted-foreground"><strong className="text-foreground">{track.completions}</strong> complete</span>
-                  <span className="text-xs text-muted-foreground"><strong className="text-foreground">{track.lifetimePurchases}</strong> bought</span>
-                </div>
-              ))}
-            </div>
+        <CardHeader>
+          <CardTitle className="font-headline uppercase">Tracks creating relationships</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Album hubs and songs are listed separately. Album-page plays stay on the album; song-page plays stay
+            on each song — including album tracks pressed on their own page.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {!data?.albums?.length && !data?.tracks.length ? (
+            <p className="text-sm text-muted-foreground">
+              No release starts, sales, or verified listening have been recorded yet.
+            </p>
           ) : (
-            <p className="text-sm text-muted-foreground">No release starts, sales, or verified listening have been recorded yet.</p>
+            <>
+              {data?.albums?.length ? (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-fuchsia-200/90">Albums</p>
+                  <div className="divide-y divide-white/10 rounded-xl border border-fuchsia-400/20">
+                    {data.albums.map((album) => (
+                      <div
+                        key={album.shareId}
+                        className="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_repeat(4,auto)] sm:items-center sm:gap-5"
+                      >
+                        <div className="min-w-0">
+                          <Link href={`/share/${album.shareId}`} className="block truncate font-bold hover:text-primary">
+                            {album.title}
+                          </Link>
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            {dropInsightReleaseSubtitle(album)}
+                          </p>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          <strong className="text-foreground">
+                            {album.lifetimePreviewStarts + album.lifetimeFullStarts}
+                          </strong>{' '}
+                          starts
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          <strong className="text-foreground">{album.qualifiedListeners}</strong> qualified
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          <strong className="text-foreground">{album.completions}</strong> complete
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          <strong className="text-foreground">{album.lifetimePurchases}</strong> bought
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {data?.tracks.length ? (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-200/90">Songs</p>
+                  <div className="divide-y divide-white/10 rounded-xl border border-white/10">
+                    {data.tracks.map((track) => (
+                      <div
+                        key={track.shareId}
+                        className="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_repeat(4,auto)] sm:items-center sm:gap-5"
+                      >
+                        <div className="min-w-0">
+                          <Link href={`/song/${track.shareId}`} className="block truncate font-bold hover:text-primary">
+                            {track.title}
+                          </Link>
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            {dropInsightReleaseSubtitle(track)}
+                          </p>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          <strong className="text-foreground">
+                            {track.lifetimePreviewStarts + track.lifetimeFullStarts}
+                          </strong>{' '}
+                          starts
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          <strong className="text-foreground">{track.qualifiedListeners}</strong> qualified
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          <strong className="text-foreground">{track.completions}</strong> complete
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          <strong className="text-foreground">{track.lifetimePurchases}</strong> bought
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </>
           )}
         </CardContent>
       </Card>

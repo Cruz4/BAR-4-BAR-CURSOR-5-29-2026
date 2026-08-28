@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -22,10 +22,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { useProductSurfaces } from '@/hooks/use-product-surfaces';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { StudioLoader } from '@/components/studio-loader';
+import { ArtistIntelligenceShell } from '@/components/intelligence/artist-intelligence-shell';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { fetchSupportDashboard, updateSupportRelationship } from '@/lib/relationships-client';
 import { centsToUsdLabel } from '@/lib/drop-commerce';
@@ -123,6 +125,21 @@ function PersonRow({ row, action }: { row: SupportRelationshipRow; action?: Reac
 }
 
 export default function SupportersPage() {
+  const { supportCircle, loading: surfacesLoading } = useProductSurfaces();
+  if (surfacesLoading) {
+    return <StudioLoader size="lg" fullscreen message="Reading your support circle..." />;
+  }
+  if (supportCircle === 'crm') {
+    return (
+      <Suspense fallback={<StudioLoader size="lg" fullscreen message="Opening Artist Intelligence..." />}>
+        <ArtistIntelligenceShell initialTab="people" />
+      </Suspense>
+    );
+  }
+  return <SupportersPageLegacy />;
+}
+
+function SupportersPageLegacy() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [data, setData] = useState<SupportDashboard | null>(null);

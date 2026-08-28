@@ -1,0 +1,83 @@
+{
+  "generatedAt": "2026-08-27T22:29:38.450Z",
+  "overall": "pass",
+  "summary": {
+    "pass": 12,
+    "warning": 0,
+    "blocked": 0
+  },
+  "findings": [
+    {
+      "id": "firestore_rules",
+      "label": "Security · Firestore rules present",
+      "status": "pass",
+      "detail": "firestore.rules found"
+    },
+    {
+      "id": "storage_rules",
+      "label": "Security · Storage rules present",
+      "status": "pass",
+      "detail": "storage.rules found"
+    },
+    {
+      "id": "security_doc",
+      "label": "Privacy · SECURITY.md",
+      "status": "pass",
+      "detail": "docs/SECURITY.md present"
+    },
+    {
+      "id": "fee_preview",
+      "label": "Payments · Fee tiers + artist net (Stripe not deducted)",
+      "status": "pass",
+      "detail": "verify:drop-fee-preview passed"
+    },
+    {
+      "id": "release_counters",
+      "label": "Discovery · Release counters",
+      "status": "pass",
+      "detail": "verify:release-counters passed"
+    },
+    {
+      "id": "release_management",
+      "label": "Releases · Management invariants",
+      "status": "pass",
+      "detail": "verify:release-management passed"
+    },
+    {
+      "id": "product_surfaces",
+      "label": "Remote controls · Product surface modes",
+      "status": "pass",
+      "detail": "config/productSurfaces + emergency modes"
+    },
+    {
+      "id": "ceo_spec",
+      "label": "Analytics · CEO funnel spec (Phase 0)",
+      "status": "pass",
+      "detail": "Accept Phase 0 before enabling ceoDashboard=v2 aggregates"
+    },
+    {
+      "id": "weather_v2",
+      "label": "Scene · Weather V2 layers",
+      "status": "pass",
+      "detail": "Toggle sceneWeather=v2 in Admin Product Surfaces"
+    },
+    {
+      "id": "intelligence",
+      "label": "Artist Intelligence shell",
+      "status": "pass",
+      "detail": "Toggle supportCircle=crm"
+    },
+    {
+      "id": "share_room",
+      "label": "Share Studio + Release Room",
+      "status": "pass",
+      "detail": "Toggle sharing=v2 and releaseRoom=v1"
+    },
+    {
+      "id": "typecheck",
+      "label": "Performance · Typecheck",
+      "status": "pass",
+      "detail": "tsc --noEmit clean"
+    }
+  ]
+}

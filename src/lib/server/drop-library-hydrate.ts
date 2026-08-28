@@ -203,8 +203,14 @@ function libraryItemFromShare(
     ...(options.houseRelease ? {
       houseRelease: true,
       free: true,
-      ...(data.houseLibraryNotice === true ? { houseLibraryNotice: true } : {}),
-      ...(data.houseLibraryNotice === true && houseLibraryNoticeAt ? { houseLibraryNoticeAt } : {}),
+      ...(data.houseLibraryNotice === true && shareDocumentVisibility(data).releaseLive
+        ? { houseLibraryNotice: true }
+        : {}),
+      ...(data.houseLibraryNotice === true &&
+      shareDocumentVisibility(data).releaseLive &&
+      houseLibraryNoticeAt
+        ? { houseLibraryNoticeAt }
+        : {}),
     } : {}),
     ...(artistName ? { artistName } : {}),
     ...(cover ? { coverArtUrl: cover } : {}),

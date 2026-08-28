@@ -9,7 +9,8 @@
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Banknote, BellRing, Disc3, Gift, Library, Loader, Music, Play, PlusCircle, Save, Trash2, Unlink } from 'lucide-react';
+import { ArrowLeft, Banknote, BellRing, Disc3, Gift, Library, Loader, Music, Play, PlusCircle, Radio, Save, Trash2, Unlink } from 'lucide-react';
+import { auth } from '@/lib/firebase/client/firebase';
 import {
   Dialog,
   DialogContent,
@@ -37,8 +38,14 @@ import {
 import { OPEN_FIRST_DROP_LATHE, type FirstDropLatheDetail } from '@/lib/first-drop-lathe';
 import { isGuestTryAlbumId } from '@/lib/guest-try';
 import { PriceEditor } from '@/components/drop-commerce-panel';
+import {
+  GuidedReleaseChecklist,
+  guidedPublishBlocked,
+} from '@/components/guided-release-checklist';
+import { useProductSurfaces } from '@/hooks/use-product-surfaces';
 import { cn } from '@/lib/utils';
 import type { Album, Track } from '@/lib/types';
+import type { ReleaseDiscoveryMetadata } from '@/lib/release-discovery';
 import { getPrivateReleaseAudio, manageRelease, pingHouseRelease } from '@/lib/release-management-client';
 import { releaseShareIdOf, releaseStatusOf } from '@/lib/release-management';
 
@@ -113,6 +120,8 @@ function HouseLibraryNoticePing({
 export function FirstDropLatheHost() {
   const router = useRouter();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
+  const { releaseComposer, releaseRoom: releaseRoomMode } = useProductSurfaces();
+  const guided = releaseComposer === 'guided';
   const { user } = useAuth();
   const { toast } = useToast();
   const { albums, addTrack, updateAlbum, updateTrack, flushCloudNow, isCloudSyncActive } = useContext(DataContext);
@@ -133,6 +142,50 @@ export function FirstDropLatheHost() {
   const [testingAudio, setTestingAudio] = useState(false);
   const [removingAudioId, setRemovingAudioId] = useState('');
   const [pingingHouseNotice, setPingingHouseNotice] = useState(false);
+  const [schedulingRoom, setSchedulingRoom] = useState(false);
+
+  const scheduleListeningRoom = useCallback(
+    async (shareId: string, title: string) => {
+      const current = auth.currentUser;
+      if (!current) {
+        toast({ variant: 'destructive', title: 'Sign in to schedule a listening room' });
+        return;
+      }
+      setSchedulingRoom(true);
+      try {
+        const scheduledAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+        const res = await fetch('/api/release-rooms', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${await current.getIdToken()}`,
+          },
+          body: JSON.stringify({ shareId, scheduledAt, title }),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          room?: { id?: string };
+          error?: string;
+        };
+        if (!res.ok || !data.room?.id) {
+          throw new Error(data.error || 'Could not schedule listening room');
+        }
+        toast({
+          title: 'Listening room scheduled',
+          description: 'Opens in about one hour — you can start early from the room page.',
+        });
+        setOpen(false);
+        router.push(`/room/${encodeURIComponent(data.room.id)}`);
+      } catch (error) {
+        toast({
+          variant: 'destructive',
+          title: error instanceof Error ? error.message : 'Could not schedule room',
+        });
+      } finally {
+        setSchedulingRoom(false);
+      }
+    },
+    [router, toast]
+  );
 
   const catalog = useMemo(() => {
     const rows: Picked[] = [];
@@ -289,6 +342,36 @@ export function FirstDropLatheHost() {
     && releaseStatusOf({ ...selectedAlbum, tracks: selectedAlbum.tracks }) === 'unlisted'
     && releaseShareIdOf({ ...selectedAlbum, tracks: selectedAlbum.tracks })
   );
+  const guidedSongBlocked =
+    guided &&
+    Boolean(album && track) &&
+    guidedPublishBlocked({
+      kind: 'song',
+      album: album!,
+      track,
+      rightsChecked,
+      houseRelease,
+      hasPrivateAudioUrl: Boolean(privateAudioUrl),
+    });
+  const guidedAlbumBlocked =
+    guided &&
+    Boolean(selectedAlbum) &&
+    guidedPublishBlocked({
+      kind: 'album',
+      album: selectedAlbum!,
+      rightsChecked,
+      houseRelease,
+      hasPrivateAudioUrl: Boolean(privateAudioUrl),
+    });
+
+  const saveSongDiscovery = (next: ReleaseDiscoveryMetadata) => {
+    if (!album || !track) return;
+    updateTrack(album.id, track.id, { releaseDiscovery: next });
+  };
+  const saveAlbumDiscovery = (next: ReleaseDiscoveryMetadata) => {
+    if (!selectedAlbum) return;
+    updateAlbum(selectedAlbum.id, { releaseDiscovery: next });
+  };
 
   const onPickAudio = async (file: File | undefined) => {
     if (!file || !user || !track || !album) return;
@@ -742,7 +825,9 @@ export function FirstDropLatheHost() {
             New release
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
-            {houseRelease
+            {guided
+              ? 'Follow the checklist. Upload, price, confirm rights, then publish. Lyrics and cover are optional.'
+              : houseRelease
               ? mode === 'album'
                 ? 'Upload the included recordings and publish them as a House album. Every member receives the full album free in Library.'
                 : 'Upload the recording and publish it as a House release. Every member receives the full song free in Library.'
@@ -848,6 +933,38 @@ export function FirstDropLatheHost() {
                   Add the recordings listeners receive. A catalog track does not need lyrics, sections, or a completed sheet.
                 </p>
               </div>
+
+              {guided ? (
+                <GuidedReleaseChecklist
+                  kind="album"
+                  album={selectedAlbum}
+                  rightsChecked={rightsChecked}
+                  houseRelease={houseRelease}
+                  hasPrivateAudioUrl={Boolean(privateAudioUrl)}
+                  onDiscoveryChange={saveAlbumDiscovery}
+                  advanced={
+                    isAdmin ? (
+                      <div className="space-y-2">
+                        <HouseReleaseToggle
+                          checked={houseRelease}
+                          onChange={(checked) => updateAlbum(selectedAlbum.id, {
+                            houseRelease: checked,
+                            ...(!checked ? { houseLibraryNotice: false } : {}),
+                          })}
+                        />
+                        {houseRelease ? (
+                          <HouseLibraryNoticePing
+                            sent={houseLibraryNotice}
+                            disabled={!selectedAlbumIsLive || !releaseShareIdOf(selectedAlbum)}
+                            pinging={pingingHouseNotice}
+                            onPing={() => void sendHouseLibraryPing('album')}
+                          />
+                        ) : null}
+                      </div>
+                    ) : undefined
+                  }
+                />
+              ) : null}
 
               <input
                 ref={albumFileRef}
@@ -963,7 +1080,7 @@ export function FirstDropLatheHost() {
                 </div>
               </div>
 
-              {isAdmin ? (
+              {isAdmin && !guided ? (
                 <div className="space-y-2">
                   <HouseReleaseToggle
                     checked={houseRelease}
@@ -1027,7 +1144,7 @@ export function FirstDropLatheHost() {
                 <Button
                   type="button"
                   className="h-12 bg-fuchsia-400 font-headline text-lg font-bold uppercase tracking-wide text-black hover:bg-fuchsia-300"
-                  disabled={pressing || uploading || albumAudioTracks.length === 0 || !rightsChecked}
+                  disabled={pressing || uploading || albumAudioTracks.length === 0 || !rightsChecked || guidedAlbumBlocked}
                   onClick={() => void pressAlbumLive()}
                 >
                   {pressing ? <Loader className="mr-2 h-5 w-5 animate-spin" /> : <Disc3 className="mr-2 h-5 w-5" />}
@@ -1056,6 +1173,29 @@ export function FirstDropLatheHost() {
                   ? 'The shared House entitlement puts every included recording in every member Library, including accounts created later.'
                   : 'Album sales, price paid, buyer, timestamp, fees, and payout are recorded in Earnings. The buyer receives every included audio track in Library.'}
               </p>
+              {releaseRoomMode === 'v1'
+                && selectedAlbumIsLive
+                && releaseShareIdOf(selectedAlbum) ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full border-sky-400/35 font-bold uppercase text-sky-200 hover:bg-sky-500/10"
+                  disabled={pressing || uploading || schedulingRoom}
+                  onClick={() =>
+                    void scheduleListeningRoom(
+                      releaseShareIdOf(selectedAlbum)!,
+                      selectedAlbum.title || 'Album listening room'
+                    )
+                  }
+                >
+                  {schedulingRoom ? (
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Radio className="mr-2 h-4 w-4" />
+                  )}
+                  Schedule listening room
+                </Button>
+              ) : null}
               <Button asChild variant="ghost" className="h-9 w-full text-[10px] font-bold uppercase">
                 <Link href="/earnings"><Banknote className="mr-1.5 h-3.5 w-3.5" /> Earnings &amp; cash out</Link>
               </Button>
@@ -1192,6 +1332,39 @@ export function FirstDropLatheHost() {
               <p className="text-[11px] text-muted-foreground">{album?.title}</p>
             </div>
 
+            {guided && album && track ? (
+              <GuidedReleaseChecklist
+                kind="song"
+                album={album}
+                track={track}
+                rightsChecked={rightsChecked}
+                houseRelease={houseRelease}
+                hasPrivateAudioUrl={Boolean(privateAudioUrl)}
+                onDiscoveryChange={saveSongDiscovery}
+                advanced={
+                  isAdmin ? (
+                    <div className="space-y-2">
+                      <HouseReleaseToggle
+                        checked={houseRelease}
+                        onChange={(checked) => updateTrack(album.id, track.id, {
+                          houseRelease: checked,
+                          ...(!checked ? { houseLibraryNotice: false } : {}),
+                        })}
+                      />
+                      {houseRelease ? (
+                        <HouseLibraryNoticePing
+                          sent={houseLibraryNotice}
+                          disabled={releaseStatusOf(track) !== 'live' || !releaseShareIdOf(track)}
+                          pinging={pingingHouseNotice}
+                          onPing={() => void sendHouseLibraryPing('track')}
+                        />
+                      ) : null}
+                    </div>
+                  ) : undefined
+                }
+              />
+            ) : null}
+
             <div className="space-y-2">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-300">
                 1. Upload the song
@@ -1261,7 +1434,7 @@ export function FirstDropLatheHost() {
               )}
             </div>
 
-            {isAdmin && album && track ? (
+            {isAdmin && album && track && !guided ? (
               <div className="space-y-2">
                 <HouseReleaseToggle
                   checked={houseRelease}
@@ -1342,7 +1515,7 @@ export function FirstDropLatheHost() {
               <Button
                 type="button"
                 className="h-12 bg-fuchsia-400 font-headline text-lg font-bold uppercase tracking-wide text-black hover:bg-fuchsia-300"
-                disabled={pressing || uploading || !hasAudio || !rightsChecked}
+                disabled={pressing || uploading || !hasAudio || !rightsChecked || guidedSongBlocked}
                 onClick={() => void pressLive()}
               >
                 {pressing ? <Loader className="mr-2 h-5 w-5 animate-spin" /> : <Disc3 className="mr-2 h-5 w-5" />}
@@ -1377,6 +1550,30 @@ export function FirstDropLatheHost() {
                 ? 'Save Draft keeps the recording private. Publish House Release adds the full song to every member Library.'
                 : 'Save Draft keeps the full recording private. Publish Release creates the preview and sale page. Lyrics can be attached now or later.'}
             </p>
+            {releaseRoomMode === 'v1'
+              && track
+              && releaseStatusOf(track) === 'live'
+              && releaseShareIdOf(track) ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full border-sky-400/35 font-bold uppercase text-sky-200 hover:bg-sky-500/10"
+                disabled={pressing || uploading || schedulingRoom}
+                onClick={() =>
+                  void scheduleListeningRoom(
+                    releaseShareIdOf(track)!,
+                    track.title || 'Listening room'
+                  )
+                }
+              >
+                {schedulingRoom ? (
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Radio className="mr-2 h-4 w-4" />
+                )}
+                Schedule listening room
+              </Button>
+            ) : null}
             <Button asChild variant="ghost" className="h-9 w-full text-[10px] font-bold uppercase">
               <Link href="/earnings">
                 <Banknote className="mr-1.5 h-3.5 w-3.5" />
