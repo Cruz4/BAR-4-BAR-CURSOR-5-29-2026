@@ -12,8 +12,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/use-auth';
-import { auth } from '@/lib/firebase/client/firebase';
-import { signOut } from 'firebase/auth';
 import { useRouter, useParams, usePathname } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -57,13 +55,9 @@ import {
 } from '@/lib/studio-tier-chrome';
 import { useOptionalDropPlayer } from '@/context/drop-player-context';
 import { TopNavDropMiniPlayer } from '@/components/top-nav-drop-mini-player';
-import {
-  clearCurrentDeviceSessionIdentity,
-  endCurrentDeviceSession,
-} from '@/lib/device-sessions-client';
 
 export function Header() {
-  const { user, loading } = useAuth();
+  const { user, loading, signOutStudio } = useAuth();
   const router = useRouter();
   const params = useParams();
   const pathname = usePathname();
@@ -111,10 +105,7 @@ export function Header() {
 
   const handleLogout = async () => {
     try {
-      await endCurrentDeviceSession().catch(() => undefined);
-      clearCurrentDeviceSessionIdentity();
-      await signOut(auth);
-      router.push('/login');
+      await signOutStudio('/login');
     } catch {
       toast({ variant: 'destructive', title: 'Sign Out Error' });
     }

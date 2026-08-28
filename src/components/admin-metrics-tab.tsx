@@ -104,7 +104,7 @@ function SignupsChart({ data }: { data: { date: string; count: number }[] }) {
   );
 }
 
-export function AdminMetricsTab() {
+export function AdminMetricsTab({ embedded = false }: { embedded?: boolean }) {
   const [metrics, setMetrics] = useState<AdminMetricsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -306,13 +306,19 @@ export function AdminMetricsTab() {
       : `${period.label} · through ${format(new Date(period.endAt), 'MMM d, yyyy')}`;
 
   return (
-    <div className="space-y-8">
+    <div className={cn('space-y-8', embedded && 'pt-2')}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-3 min-w-0">
           <div>
-            <h2 className="text-xl font-headline font-bold uppercase text-white flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" /> Growth Metrics
-            </h2>
+            {embedded ? (
+              <h3 className="text-lg font-headline font-bold uppercase text-white flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" /> Growth Metrics
+              </h3>
+            ) : (
+              <h2 className="text-xl font-headline font-bold uppercase text-white flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" /> Growth Metrics
+              </h2>
+            )}
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
               {periodSub} · {cacheLabel}
             </p>

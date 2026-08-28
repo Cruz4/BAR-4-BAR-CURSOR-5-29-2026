@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { useRouter } from 'next/navigation';
-import { signOut } from 'firebase/auth';
 import {
   Laptop,
   Loader2,
@@ -13,11 +11,8 @@ import {
   Smartphone,
   Tablet,
 } from 'lucide-react';
-import { auth } from '@/lib/firebase/client/firebase';
 import type { DeviceSession } from '@/lib/device-sessions';
 import {
-  clearCurrentDeviceSessionIdentity,
-  endCurrentDeviceSession,
   fetchDeviceSessions,
   revokeAllDeviceSessions,
   revokeDeviceSession,
@@ -58,9 +53,8 @@ function lastActiveLabel(value: string): string {
 }
 
 export function DeviceSessionsCard() {
-  const { user } = useAuth();
+  const { user, signOutStudio } = useAuth();
   const { toast } = useToast();
-  const router = useRouter();
   const [sessions, setSessions] = useState<DeviceSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -92,9 +86,9 @@ export function DeviceSessionsCard() {
   }, [refresh]);
 
   const finishLocalSignOut = async (reason: 'device' | 'everywhere') => {
-    clearCurrentDeviceSessionIdentity();
-    await signOut(auth);
-    router.replace(`/login?error=${reason === 'everywhere' ? 'signed-out-everywhere' : 'signed-out'}`);
+    await signOutStudio(
+      `/login?error=${reason === 'everywhere' ? 'signed-out-everywhere' : 'signed-out'}`
+    );
   };
 
   const confirmAction = async () => {
@@ -116,7 +110,6 @@ export function DeviceSessionsCard() {
           description: `${result.revoked || 0} signed-in device${result.revoked === 1 ? '' : 's'} revoked.`,
         });
       } else if (pending.kind === 'current') {
-        await endCurrentDeviceSession().catch(() => undefined);
         await finishLocalSignOut('device');
       } else {
         await revokeAllDeviceSessions();

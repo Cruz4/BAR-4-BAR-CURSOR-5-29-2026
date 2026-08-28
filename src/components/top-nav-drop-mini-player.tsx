@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader, Pause, Play, SkipBack, SkipForward, X } from 'lucide-react';
 import { useOptionalDropPlayer } from '@/context/drop-player-context';
 import { formatDeckTime } from '@/lib/drop-library';
@@ -9,6 +9,16 @@ import { Button } from '@/components/ui/button';
 import { AudioVolumeControl } from '@/components/audio-volume-control';
 import { measureSpectrumBand } from '@/lib/audio-spectrum';
 import { DropRepeatControl } from '@/components/drop-repeat-control';
+import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
+import { LivingPressField } from '@/components/profile/living-press-field';
+import { profileHref } from '@/lib/profile/profile-slug';
+import {
+  normalizePressingConfig,
+  pressTokens,
+  pressingCssVars,
+  type PressingConfig,
+} from '@/lib/profile/pressing';
+import { parseStudioBadge, type StudioNameChrome } from '@/lib/studio-tier-chrome';
 
 const MINI_EQ_BANDS = [
   { lowHz: 35, highHz: 130, gain: 0.72 },
@@ -17,6 +27,17 @@ const MINI_EQ_BANDS = [
   { lowHz: 1_600, highHz: 5_200, gain: 1.02 },
   { lowHz: 5_200, highHz: 13_000, gain: 1.12 },
 ] as const;
+
+const artistChromeCache = new Map<string, MiniArtistChrome | null>();
+
+type MiniArtistChrome = {
+  avatarUrl?: string;
+  useStarMark: boolean;
+  starMarkSeed?: number;
+  studioChrome?: StudioNameChrome;
+  slug?: string;
+  pressing?: PressingConfig;
+};
 
 function clampMeter(value: number): number {
   return Math.max(0.12, Math.min(0.96, value));
@@ -57,8 +78,6 @@ function MiniDropEqualizer({ analyser, playing }: { analyser: AnalyserNode | nul
           calibrated = true;
         }
         targets = levels.map((level, index) => {
-          // Track the song's typical loudness slowly, then emphasize momentary
-          // movement. This preserves headroom on heavily mastered tracks.
           const baselineSpeed = level < baseline[index] ? 0.045 : 0.012;
           baseline[index] += (level - baseline[index]) * baselineSpeed;
           const lift = Math.max(0, level - baseline[index]);
@@ -111,6 +130,62 @@ function MiniDropEqualizer({ analyser, playing }: { analyser: AnalyserNode | nul
 
 export function TopNavDropMiniPlayer() {
   const player = useOptionalDropPlayer();
+  const currentShareId = player?.current?.shareId;
+  const currentTrackId = player?.current?.trackId;
+  const coverArtUrl = player?.current?.coverArtUrl;
+  const [chrome, setChrome] = useState<MiniArtistChrome | null>(null);
+
+  useEffect(() => {
+    if (!currentShareId) {
+      setChrome(null);
+      return;
+    }
+    if (artistChromeCache.has(currentShareId)) {
+      setChrome(artistChromeCache.get(currentShareId) || null);
+      return;
+    }
+
+    let cancelled = false;
+    setChrome(null);
+    const query = currentTrackId ? `?trackId=${encodeURIComponent(currentTrackId)}` : '';
+    void fetch(`/api/songs/${encodeURIComponent(currentShareId)}${query}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((summary) => {
+        const artist = summary?.artist as Record<string, unknown> | undefined;
+        if (!artist) {
+          artistChromeCache.set(currentShareId, null);
+          if (!cancelled) setChrome(null);
+          return;
+        }
+        const studioChrome = parseStudioBadge(artist.studioBadge);
+        const next: MiniArtistChrome = {
+          ...(typeof artist.avatarUrl === 'string' && artist.avatarUrl.trim()
+            ? { avatarUrl: artist.avatarUrl.trim() }
+            : {}),
+          useStarMark: artist.starMarkUseStar === true,
+          ...(typeof artist.starMarkSeed === 'number' ? { starMarkSeed: artist.starMarkSeed } : {}),
+          ...(studioChrome ? { studioChrome } : {}),
+          ...(typeof artist.slug === 'string' && artist.slug.trim() ? { slug: artist.slug.trim() } : {}),
+          pressing: normalizePressingConfig(artist.pressing),
+        };
+        artistChromeCache.set(currentShareId, next);
+        if (!cancelled) setChrome(next);
+      })
+      .catch(() => {
+        artistChromeCache.set(currentShareId, null);
+        if (!cancelled) setChrome(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentShareId, currentTrackId]);
+
+  const pressingStyle = useMemo(
+    () => (chrome?.pressing ? pressingCssVars(pressTokens(chrome.pressing)) : undefined),
+    [chrome?.pressing]
+  );
+
   if (!player?.current) return null;
 
   const {
@@ -132,66 +207,103 @@ export function TopNavDropMiniPlayer() {
     toggleMute,
   } = player;
 
+  const artistHref = profileHref(chrome?.slug);
+  const avatarUrl = chrome?.useStarMark ? chrome.avatarUrl : (chrome?.avatarUrl || coverArtUrl);
+
   return (
-    <div className="border-t border-border/40 bg-background/95 px-2 sm:px-4 md:px-6">
-      <div className="relative mx-auto w-full max-w-6xl py-1">
-        <div className="flex h-9 items-center gap-1.5">
-          <Link
-            href={current.detailsHref}
-            className="min-w-0 flex-1 rounded-md px-1.5 py-0.5 hover:bg-white/5 sm:max-w-[calc(50%-28px)]"
-            aria-label={`Open ${current.title}`}
-          >
-            <span className="block truncate font-headline text-[11px] font-bold uppercase leading-tight">
-              {current.title}
-            </span>
-            <span className="block truncate font-code text-[9px] uppercase leading-tight text-muted-foreground">
-              {current.artistName}
-              {duration > 0 ? ` · ${formatDeckTime(elapsed)} / ${formatDeckTime(duration)}` : ''}
-            </span>
-          </Link>
-          <MiniDropEqualizer analyser={analyser} playing={playing} />
-          <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1.5">
-          <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={prev} aria-label="Previous">
-            <SkipBack className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            type="button"
-            size="icon"
-            className="h-7 w-7 shrink-0 rounded-full"
-            onClick={togglePlay}
-            aria-label={playing ? 'Pause' : 'Play'}
-          >
-            {loading ? (
-              <Loader className="h-3.5 w-3.5 animate-spin" />
-            ) : playing ? (
-              <Pause className="h-3.5 w-3.5" />
-            ) : (
-              <Play className="h-3.5 w-3.5" />
-            )}
-          </Button>
-          <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={skipNext} aria-label="Next">
-            <SkipForward className="h-3.5 w-3.5" />
-          </Button>
-            <span className="hidden sm:inline-flex"><DropRepeatControl repeat={repeat} onChange={setRepeat} compact /></span>
-            <span className="hidden sm:inline-flex"><AudioVolumeControl compact volume={volume} onVolumeChange={setVolume} onToggleMute={toggleMute} /></span>
-            <Button type="button" size="icon" variant="outline" className="h-7 w-7 shrink-0 border-red-300/30 text-red-200 hover:bg-red-400/10 hover:text-red-100" onClick={stop} aria-label="Close mini player" title="Close mini player">
-              <X className="h-3.5 w-3.5" />
-            </Button>
+    <div
+      className="relative overflow-hidden border-t border-white/10"
+      style={{
+        ...(pressingStyle as React.CSSProperties | undefined),
+        backgroundColor: chrome?.pressing ? 'var(--ph-bg)' : undefined,
+      }}
+    >
+      {chrome?.pressing ? (
+        <LivingPressField config={chrome.pressing} compact className="[&>p]:hidden" />
+      ) : (
+        <div className="absolute inset-0 bg-background/95" aria-hidden />
+      )}
+      <div className="absolute inset-0 bg-black/35" aria-hidden />
+      <div className="relative z-10 px-2 sm:px-4 md:px-6">
+        <div className="relative mx-auto w-full max-w-6xl py-1">
+          <div className="flex h-9 items-center gap-1.5">
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:max-w-[calc(50%-28px)]">
+              <ArtistStarAvatar
+                name={current.artistName}
+                avatarUrl={avatarUrl}
+                useStarMark={chrome?.useStarMark}
+                starMarkSeed={chrome?.starMarkSeed}
+                studioChrome={chrome?.studioChrome}
+                href={artistHref}
+                size={22}
+                className="shrink-0"
+              />
+              <Link
+                href={current.detailsHref}
+                className="min-w-0 flex-1 rounded-md px-0.5 hover:bg-white/5"
+                aria-label={`Open ${current.title}`}
+              >
+                <span className="block truncate font-headline text-[13px] font-bold uppercase leading-none text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
+                  {current.title}
+                </span>
+                <span className="mt-0.5 block truncate font-code text-[11px] uppercase leading-none text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
+                  {current.artistName}
+                  {duration > 0 ? ` · ${formatDeckTime(elapsed)} / ${formatDeckTime(duration)}` : ''}
+                </span>
+              </Link>
+            </div>
+            <MiniDropEqualizer analyser={analyser} playing={playing} />
+            <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1.5">
+              <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-white hover:bg-white/10" onClick={prev} aria-label="Previous">
+                <SkipBack className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                className="h-7 w-7 shrink-0 rounded-full"
+                onClick={togglePlay}
+                aria-label={playing ? 'Pause' : 'Play'}
+              >
+                {loading ? (
+                  <Loader className="h-3.5 w-3.5 animate-spin" />
+                ) : playing ? (
+                  <Pause className="h-3.5 w-3.5" />
+                ) : (
+                  <Play className="h-3.5 w-3.5" />
+                )}
+              </Button>
+              <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-white hover:bg-white/10" onClick={skipNext} aria-label="Next">
+                <SkipForward className="h-3.5 w-3.5" />
+              </Button>
+              <span className="hidden sm:inline-flex"><DropRepeatControl repeat={repeat} onChange={setRepeat} compact className="text-white" /></span>
+              <span className="hidden sm:inline-flex"><AudioVolumeControl compact className="text-white" volume={volume} onVolumeChange={setVolume} onToggleMute={toggleMute} /></span>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 shrink-0 rounded-full text-white/40 hover:bg-white/10 hover:text-white/70"
+                onClick={stop}
+                aria-label="Close mini player"
+                title="Close mini player"
+              >
+                <X className="h-3 w-3 stroke-[1.75]" />
+              </Button>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2 px-1.5 pb-0.5">
-          <span className="w-8 text-right font-code text-[8px] tabular-nums text-muted-foreground">{formatDeckTime(elapsed)}</span>
-          <input
-            type="range"
-            min={0}
-            max={Math.max(duration, 1)}
-            step={0.1}
-            value={Math.min(elapsed, Math.max(duration, 1))}
-            onChange={(event) => seek(Number(event.target.value))}
-            className="h-1.5 min-w-0 flex-1 cursor-pointer accent-fuchsia-400"
-            aria-label="Mini player playback position"
-          />
-          <span className="w-8 font-code text-[8px] tabular-nums text-muted-foreground">{formatDeckTime(duration)}</span>
+          <div className="flex items-center gap-2 px-1.5 pb-0.5">
+            <span className="w-8 text-right font-code text-[8px] tabular-nums text-white/75">{formatDeckTime(elapsed)}</span>
+            <input
+              type="range"
+              min={0}
+              max={Math.max(duration, 1)}
+              step={0.1}
+              value={Math.min(elapsed, Math.max(duration, 1))}
+              onChange={(event) => seek(Number(event.target.value))}
+              className="h-1.5 min-w-0 flex-1 cursor-pointer accent-[var(--ph-accent,#e879f9)]"
+              aria-label="Mini player playback position"
+            />
+            <span className="w-8 font-code text-[8px] tabular-nums text-white/75">{formatDeckTime(duration)}</span>
+          </div>
         </div>
       </div>
     </div>

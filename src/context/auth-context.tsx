@@ -5,8 +5,11 @@ import React, {
   useState,
   useEffect,
   useLayoutEffect,
+  useRef,
+  useCallback,
   ReactNode,
 } from 'react';
+import { flushSync } from 'react-dom';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/client/firebase';
@@ -25,6 +28,7 @@ import {
   loadLastCachedUserProfile,
   saveCachedUserProfile,
   saveLastAuthUserId,
+  clearCachedUserProfile,
   type CachedUserProfile,
 } from '@/lib/offline/vault-cache';
 import { isMasterAdminEmail } from '@/lib/master-admin';
@@ -34,15 +38,21 @@ import { vaultHref } from '@/lib/scene-home';
 import {
   clearCurrentDeviceSessionIdentity,
   DeviceSessionEndedError,
+  endCurrentDeviceSession,
   touchCurrentDeviceSession,
 } from '@/lib/device-sessions-client';
 import { DEVICE_SESSION_HEARTBEAT_MS } from '@/lib/device-sessions';
+import {
+  prepareFirestoreForSignOut,
+  restoreFirestoreNetwork,
+} from '@/lib/firebase/client/firestore-sign-out';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   authReady: boolean;
   offlineAuth: boolean;
+  signOutStudio: (redirectTo?: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -50,6 +60,7 @@ export const AuthContext = createContext<AuthContextType>({
   loading: true,
   authReady: false,
   offlineAuth: false,
+  signOutStudio: async () => undefined,
 });
 
 const PROTECTED_ROUTES = ['/usage', '/albums', '/admin', '/studio-progress', '/vault'];
@@ -129,8 +140,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [offlineAuth, setOfflineAuth] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const authEpochRef = useRef(0);
+  const signingOutRef = useRef(false);
+  const profileUnsubRef = useRef<(() => void) | null>(null);
   const router = useRouter();
   const pathname = usePathname();
+
+  const signOutStudio = useCallback(async (redirectTo = '/login') => {
+    if (signingOutRef.current) return;
+    signingOutRef.current = true;
+    const uid = auth.currentUser?.uid || user?.id;
+    authEpochRef.current += 1;
+    profileUnsubRef.current?.();
+    profileUnsubRef.current = null;
+    flushSync(() => {
+      setUser(null);
+      setAuthReady(false);
+      setOfflineAuth(false);
+      setIsRedirecting(false);
+    });
+    saveLastAuthUserId(null);
+    if (uid) clearCachedUserProfile(uid);
+    try {
+      await endCurrentDeviceSession().catch(() => undefined);
+      clearCurrentDeviceSessionIdentity();
+      await prepareFirestoreForSignOut();
+      await signOut(auth);
+      router.replace(redirectTo);
+    } finally {
+      signingOutRef.current = false;
+    }
+  }, [router, user?.id]);
 
   useLayoutEffect(() => {
     const cached = loadLastCachedUserProfile();
@@ -165,9 +205,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      const epoch = ++authEpochRef.current;
+      const stillCurrent = () => authEpochRef.current === epoch;
       if (unsubscribeDoc) {
         unsubscribeDoc();
         unsubscribeDoc = null;
+        profileUnsubRef.current = null;
       }
       if (bootTimer) {
         clearTimeout(bootTimer);
@@ -188,6 +231,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
+      await restoreFirestoreNetwork();
+
+      if (!stillCurrent()) return;
+
       const isMaster = isMasterAdminEmail(firebaseUser.email);
       const offline = isBrowserOffline();
       const cached = loadCachedUserProfile(firebaseUser.uid);
@@ -197,17 +244,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         finishLoading();
       }
 
+      if (!stillCurrent()) return;
+
       if (offline) {
         applyCachedOfflineUser(firebaseUser);
       }
 
       bootTimer = setTimeout(() => {
-        if (!auth.currentUser) return;
+        if (!stillCurrent() || !auth.currentUser) return;
         applyCachedOfflineUser(auth.currentUser);
       }, AUTH_BOOT_TIMEOUT_MS);
 
       try {
         await firebaseUser.getIdToken(false);
+        if (!stillCurrent()) return;
         setOfflineAuth(false);
       } catch (error) {
         console.warn('Auth token error:', error);
@@ -229,7 +279,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setAuthReady(true);
 
       const readyUser = await waitForAuthUser();
-      if (!readyUser || readyUser.uid !== firebaseUser.uid) {
+      if (!stillCurrent() || !readyUser || readyUser.uid !== firebaseUser.uid) {
         finishLoading();
         return;
       }
@@ -259,6 +309,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       };
 
       const settleProfile = (nextUser: User, hasFirestoreDoc: boolean) => {
+        if (!stillCurrent()) return;
         setUser(nextUser);
         cacheUserProfile(nextUser);
         if (hasFirestoreDoc) {
@@ -280,6 +331,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       unsubscribeDoc = subscribeDocument(
         doc(db, 'users', firebaseUser.uid),
         (data) => {
+          if (!stillCurrent()) return;
           if (data) {
             if (data.status === 'blocked') {
               setIsBlocked(true);
@@ -302,17 +354,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         },
         (error) => {
+          if (!stillCurrent()) return;
           console.error('Auth profile listener error:', error);
           if (applyCachedOfflineUser(firebaseUser)) return;
           const fallback = userFromFirebase(firebaseUser, null, isMaster);
           settleProfile(fallback, false);
         }
       );
+      profileUnsubRef.current = unsubscribeDoc;
     });
 
     return () => {
       unsubscribeAuth();
       if (unsubscribeDoc) unsubscribeDoc();
+      profileUnsubRef.current = null;
       if (bootTimer) clearTimeout(bootTimer);
       if (profileWaitTimer) clearTimeout(profileWaitTimer);
     };
@@ -339,12 +394,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await touchCurrentDeviceSession(firebaseUser);
       } catch (error) {
         if (error instanceof DeviceSessionEndedError) {
-          clearCurrentDeviceSessionIdentity();
-          await signOut(auth).catch(() => undefined);
           if (!disposed) {
-            setUser(null);
-            setAuthReady(false);
-            router.replace('/login?error=session-ended');
+            await signOutStudio('/login?error=session-ended');
           }
         } else {
           console.warn('Device session check failed:', error);
@@ -369,7 +420,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [user?.id, authReady, loading, offlineAuth, router]);
+  }, [user?.id, authReady, loading, offlineAuth, router, signOutStudio]);
 
   useEffect(() => {
     if (loading) return;
@@ -406,7 +457,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           ? `/login?next=${encodeURIComponent(returnPath)}`
           : '/login';
       router.push(loginUrl);
-    } else if (user && shouldBounceLoggedInUser) {
+    } else if (user && shouldBounceLoggedInUser && !signingOutRef.current) {
       const nextParam =
         typeof window !== 'undefined'
           ? new URLSearchParams(window.location.search).get('next')
@@ -433,7 +484,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     (isRedirecting && isProtectedRoute && !isBrowserOffline());
 
   return (
-    <AuthContext.Provider value={{ user, loading, authReady, offlineAuth }}>
+    <AuthContext.Provider value={{ user, loading, authReady, offlineAuth, signOutStudio }}>
       {showLoader ? (
         <StudioLoader size="lg" fullscreen />
       ) : (

@@ -128,6 +128,15 @@ export function loadLastCachedUserProfile(): CachedUserProfile | null {
   return uid ? loadCachedUserProfile(uid) : null;
 }
 
+export function clearCachedUserProfile(userId: string): void {
+  if (typeof window === 'undefined' || !userId) return;
+  try {
+    localStorage.removeItem(`${USER_PROFILE_CACHE_KEY}-${userId}`);
+  } catch {
+    /* ignore */
+  }
+}
+
 const WARM_SESSION_PREFIX = 'bar4bar-studio-warm';
 
 function warmSignature(albums: Album[]): string {

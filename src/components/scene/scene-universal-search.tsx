@@ -18,6 +18,7 @@ import {
   type DiscoverySearchResponse,
 } from '@/lib/discovery-search';
 import { fetchDiscoverySearch } from '@/lib/scene/discover-search-client';
+import { StudioLoader } from '@/components/studio-loader';
 import { studioNameClass } from '@/lib/studio-tier-chrome';
 import { fetchMusicCharts } from '@/lib/music-charts-client';
 import type { ArtistChartEntry } from '@/lib/music-charts';
@@ -108,6 +109,47 @@ function DiscoveryFilterControls({
   );
 }
 
+function SearchResultsLoading({ rows }: { rows: number }) {
+  return (
+    <div role="status" aria-live="polite" aria-label="Loading search results">
+      <div className="flex items-center justify-center gap-2.5 border-b border-white/8 px-3 py-4">
+        <StudioLoader size="sm" />
+        <span className="font-code text-[10px] font-bold uppercase tracking-[0.18em] text-sky-200">
+          Searching the Scene
+        </span>
+      </div>
+      {Array.from({ length: rows }, (_, index) => (
+        <div
+          key={index}
+          className="flex min-w-0 items-start gap-3 border-b border-white/8 px-3 py-3 last:border-b-0"
+        >
+          <span
+            className="mt-0.5 h-8 w-8 shrink-0 animate-pulse rounded-full bg-sky-400/20"
+            style={{ animationDelay: `${index * 90}ms` }}
+          />
+          <span className="min-w-0 flex-1 space-y-2">
+            <span
+              className="block h-3.5 animate-pulse rounded bg-white/15"
+              style={{ width: `${58 - index * 7}%`, animationDelay: `${index * 90}ms` }}
+            />
+            <span
+              className="block h-2.5 animate-pulse rounded bg-white/10"
+              style={{ width: `${72 - index * 6}%`, animationDelay: `${index * 90 + 40}ms` }}
+            />
+            <span className="flex gap-1 pt-0.5">
+              <span className="h-4 w-14 animate-pulse rounded-full bg-white/8" style={{ animationDelay: `${index * 90 + 80}ms` }} />
+              <span className="h-4 w-16 animate-pulse rounded-full bg-white/8" style={{ animationDelay: `${index * 90 + 110}ms` }} />
+              {index % 2 === 0 ? (
+                <span className="h-4 w-12 animate-pulse rounded-full bg-white/8" style={{ animationDelay: `${index * 90 + 140}ms` }} />
+              ) : null}
+            </span>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SearchHitRow({ hit, onOpen }: { hit: DiscoverySearchHit; onOpen: () => void }) {
   const Icon = hit.kind === 'person' ? UserRound : hit.kind === 'drop' ? Music2 : Radio;
   const tone = hit.kind === 'person' ? 'text-sky-300' : hit.kind === 'drop' ? 'text-fuchsia-300' : 'text-emerald-300';
@@ -127,13 +169,13 @@ function SearchHitRow({ hit, onOpen }: { hit: DiscoverySearchHit; onOpen: () => 
         )}>
           {hit.title}
         </span>
-        <span className="mt-0.5 block truncate font-code text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+        <span className="mt-0.5 block truncate font-code text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
           {hit.subtitle}
         </span>
         {hit.tags.length > 0 ? (
           <span className="mt-1 flex flex-wrap gap-1">
             {hit.tags.slice(0, 3).map((tag) => (
-              <span key={tag} className="rounded-full border border-white/10 bg-black/20 px-1.5 py-0.5 text-[8px] text-muted-foreground">
+              <span key={tag} className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[11px] leading-tight text-muted-foreground">
                 {tag}
               </span>
             ))}
@@ -355,22 +397,25 @@ export function SceneUniversalSearch({
           </Button>
         </div>
       ) : showPanel && canSearch ? (
-        <div className={cn(
-          'z-50 overflow-hidden rounded-xl border border-sky-400/25 bg-[hsl(216_38%_7%)] shadow-2xl',
-          variant === 'dropdown' ? 'absolute inset-x-0 top-[calc(100%+0.4rem)]' : 'mt-3'
-        )}>
-          {visibleHits.length > 0 ? (
+        <div
+          className={cn(
+            'z-50 overflow-hidden rounded-xl border border-sky-400/25 bg-[hsl(216_38%_7%)] shadow-2xl',
+            variant === 'dropdown' ? 'absolute inset-x-0 top-[calc(100%+0.4rem)]' : 'mt-3'
+          )}
+          aria-busy={loading}
+        >
+          {loading ? (
+            <SearchResultsLoading rows={variant === 'page' ? 5 : 3} />
+          ) : visibleHits.length > 0 ? (
             <div>
               {visibleHits.map((hit) => <SearchHitRow key={`${hit.kind}-${hit.id}`} hit={hit} onOpen={() => setFocused(false)} />)}
             </div>
-          ) : !loading ? (
+          ) : (
             <p className="px-4 py-8 text-center text-xs text-muted-foreground">
               No public people, songs, DNA Drops, or posts match {cleanQuery ? `“${cleanQuery}”` : 'these filters'}.
             </p>
-          ) : (
-            <div className="h-24 animate-pulse bg-white/[0.025]" />
           )}
-          {variant === 'dropdown' && (result.hasMore || result.total > visibleHits.length) ? (
+          {!loading && variant === 'dropdown' && (result.hasMore || result.total > visibleHits.length) ? (
             <Button variant="ghost" className="h-11 w-full justify-between rounded-none border-t border-white/10 px-4 font-bold uppercase text-sky-300" asChild>
               <Link href={fullResultsHref()} onClick={() => setFocused(false)}>
                 <span className="inline-flex items-center gap-2"><Compass className="h-4 w-4" /> View all results</span>
@@ -378,9 +423,9 @@ export function SceneUniversalSearch({
               </Link>
             </Button>
           ) : null}
-          {variant === 'page' && visibleHits.length > 0 ? (
-            <p className="border-t border-white/10 px-4 py-3 text-center font-code text-[10px] uppercase tracking-widest text-muted-foreground">
-              {result.total} public result{result.total === 1 ? '' : 's'}
+          {!loading && variant === 'page' && visibleHits.length > 0 ? (
+            <p className="border-t border-white/10 px-4 py-3 text-center font-code text-[11px] uppercase tracking-widest text-muted-foreground">
+              {result.total} result{result.total === 1 ? '' : 's'}
             </p>
           ) : null}
         </div>
