@@ -100,7 +100,7 @@ service cloud.firestore {
         && data.contentType.matches('video/.*')
         && data.durationSec is number
         && data.durationSec > 0
-        && data.durationSec <= 20
+        && data.durationSec <= 45
         && data.byteSize is number
         && data.byteSize > 0
         && data.byteSize <= 20971520;
@@ -122,7 +122,7 @@ service cloud.firestore {
         && data.contentType.matches('video/.*')
         && data.durationSec is number
         && data.durationSec > 0
-        && data.durationSec <= 20
+        && data.durationSec <= 45
         && data.byteSize is number
         && data.byteSize > 0;
     }

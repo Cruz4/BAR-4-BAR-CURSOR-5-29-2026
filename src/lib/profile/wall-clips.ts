@@ -3,7 +3,9 @@ import { getClientStorage } from '@/lib/firebase/client/firebase';
 import { completeUploadTicket, requestUploadTicket } from '@/lib/upload-ticket-client';
 import { parseImageStoragePath } from '@/lib/profile/post-images';
 
-export const WALL_CLIP_MAX_SECONDS = 15;
+export const WALL_CLIP_MAX_SECONDS = 40;
+/** Read/write slack so a 40s export that lands at 40.4s still posts. */
+export const WALL_CLIP_STORED_MAX_SECONDS = 45;
 export const WALL_CLIP_MAX_INPUT_BYTES = 40 * 1024 * 1024;
 export const WALL_CLIP_MAX_BYTES = 18 * 1024 * 1024;
 export const IMAGE_TO_VIDEO_SECONDS = 6;
@@ -52,7 +54,9 @@ export function parseWallClip(raw: unknown): WallClip | undefined {
   const byteSize = Number(data.byteSize);
   if (!url || url.length > 2000 || !storagePath) return undefined;
   if (!contentType.startsWith('video/') || contentType.length > 80) return undefined;
-  if (!Number.isFinite(durationSec) || durationSec <= 0 || durationSec > 20) return undefined;
+  if (!Number.isFinite(durationSec) || durationSec <= 0 || durationSec > WALL_CLIP_STORED_MAX_SECONDS) {
+    return undefined;
+  }
   if (!Number.isFinite(byteSize) || byteSize <= 0 || byteSize > WALL_CLIP_MAX_BYTES + 1024 * 1024) {
     return undefined;
   }

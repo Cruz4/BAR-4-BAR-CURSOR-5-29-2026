@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Camera, FlipHorizontal, ImagePlus, Music2, Square, Trash2 } from 'lucide-react';
+import { Camera, FlipHorizontal, ImagePlus, Music2, Square, Trash2, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -10,13 +10,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { MEDIA_ASPECTS, MEDIA_FILTERS, mediaFilterCss, type MediaAspectId } from '@/lib/profile/media-filters';
+import { MEDIA_FILTERS, mediaFilterCss } from '@/lib/profile/media-filters';
 import {
   fetchStudioLibraryTracks,
   resolveStudioTrackUrl,
 } from '@/lib/profile/media-studio-music';
 import {
   applyStillFilter,
+  inspectAudioDuration,
   inspectImageFile,
   inspectVideoFile,
   pickRecorderMimeType,
@@ -40,8 +41,8 @@ type MediaStudioDialogProps = {
 };
 
 type MusicPick =
-  | { kind: 'library'; label: string; shareId: string; trackId?: string }
-  | { kind: 'device'; label: string; url: string };
+  | { kind: 'library'; label: string; shareId: string; trackId?: string; durationSec?: number }
+  | { kind: 'device'; label: string; url: string; durationSec?: number };
 
 function revokeUrl(url: string | undefined) {
   if (!url?.startsWith('blob:')) return;
@@ -119,10 +120,15 @@ export function MediaStudioDialog({
   const [recordSec, setRecordSec] = useState(0);
   const [source, setSource] = useState<StudioSource | null>(null);
   const [filterId, setFilterId] = useState('none');
-  const [aspect, setAspect] = useState<MediaAspectId>('original');
   const [trimStart, setTrimStart] = useState(0);
   const [trimEnd, setTrimEnd] = useState(WALL_CLIP_MAX_SECONDS);
   const [music, setMusic] = useState<MusicPick | null>(null);
+  const [musicDuration, setMusicDuration] = useState(0);
+  const [musicStart, setMusicStart] = useState(0);
+  const [musicVol, setMusicVol] = useState(0.72);
+  const [musicMuted, setMusicMuted] = useState(false);
+  const [videoVol, setVideoVol] = useState(1);
+  const [videoMuted, setVideoMuted] = useState(false);
   const [musicOpen, setMusicOpen] = useState(false);
   const [musicTab, setMusicTab] = useState<'library' | 'mine' | 'device'>('library');
   const [tracks, setTracks] = useState<{ library: DeckPlayable[]; mine: DeckPlayable[] }>({
@@ -162,10 +168,15 @@ export function MediaStudioDialog({
     setSource(null);
     setStep('capture');
     setFilterId('none');
-    setAspect('original');
     setTrimStart(0);
     setTrimEnd(WALL_CLIP_MAX_SECONDS);
     setMusic(null);
+    setMusicDuration(0);
+    setMusicStart(0);
+    setMusicVol(0.72);
+    setMusicMuted(false);
+    setVideoVol(1);
+    setVideoMuted(false);
     setMusicOpen(false);
     setExporting(false);
     setProgress(0);
@@ -176,7 +187,9 @@ export function MediaStudioDialog({
     if (source) revokeUrl(source.url);
     setSource(next);
     setTrimStart(0);
-    setTrimEnd(next.kind === 'video' ? next.durationSec : WALL_CLIP_MAX_SECONDS);
+    setTrimEnd(
+      next.kind === 'video' ? Math.min(WALL_CLIP_MAX_SECONDS, next.durationSec) : WALL_CLIP_MAX_SECONDS
+    );
     setStep('edit');
     stopCamera();
   };
@@ -228,6 +241,15 @@ export function MediaStudioDialog({
       .catch((err) => onError?.(err instanceof Error ? err.message : 'Could not open your library.'))
       .finally(() => setTracksBusy(false));
   }, [open, musicOpen, tracks.library.length, tracksBusy, onError]);
+
+  useEffect(() => {
+    if (musicDuration <= 0) return;
+    const windowSec =
+      source?.kind === 'video'
+        ? Math.max(0.6, Math.min(WALL_CLIP_MAX_SECONDS, trimEnd - trimStart))
+        : IMAGE_TO_VIDEO_SECONDS;
+    setMusicStart((prev) => Math.min(prev, Math.max(0, musicDuration - windowSec)));
+  }, [musicDuration, source?.kind, trimStart, trimEnd]);
 
   const takePhoto = async () => {
     const el = liveRef.current;
@@ -291,11 +313,33 @@ export function MediaStudioDialog({
     }
   };
 
+  const applyMusicPick = (next: MusicPick, previewUrl?: string) => {
+    if (music?.kind === 'device') revokeUrl(music.url);
+    setMusic(next);
+    setMusicStart(0);
+    setMusicMuted(false);
+    setMusicVol(0.72);
+    setMusicOpen(false);
+    const known = next.durationSec && next.durationSec > 0 ? next.durationSec : 0;
+    setMusicDuration(known);
+    if (!known && previewUrl) {
+      void inspectAudioDuration(previewUrl).then((sec) => {
+        if (sec > 0) setMusicDuration(sec);
+      });
+    } else if (!known && next.kind === 'library') {
+      void resolveStudioTrackUrl(next.shareId, next.trackId)
+        .then(inspectAudioDuration)
+        .then((sec) => {
+          if (sec > 0) setMusicDuration(sec);
+        })
+        .catch(() => undefined);
+    }
+  };
+
   const pickDeviceMusic = (file: File | undefined) => {
     if (!file || !file.type.startsWith('audio/')) return;
-    if (music?.kind === 'device') revokeUrl(music.url);
-    setMusic({ kind: 'device', label: file.name, url: URL.createObjectURL(file) });
-    setMusicOpen(false);
+    const url = URL.createObjectURL(file);
+    applyMusicPick({ kind: 'device', label: file.name, url }, url);
   };
 
   const exportMedia = async () => {
@@ -310,16 +354,19 @@ export function MediaStudioDialog({
             ? await resolveStudioTrackUrl(music.shareId, music.trackId)
             : undefined;
       if (source.kind === 'image' && !musicUrl) {
-        onExportImage(await applyStillFilter(source.url, filterId, aspect));
+        onExportImage(await applyStillFilter(source.url, filterId, 'original'));
       } else {
         onExportClip(
           await renderStudioClip({
             source,
             filterId,
-            aspect,
+            aspect: 'original',
             trimStart: source.kind === 'video' ? trimStart : undefined,
             trimEnd: source.kind === 'video' ? trimEnd : undefined,
             musicUrl,
+            musicOffsetSec: musicStart,
+            musicGain: musicMuted ? 0 : musicVol,
+            videoGain: source.kind === 'video' ? (videoMuted ? 0 : videoVol) : 0,
             onProgress: setProgress,
           })
         );
@@ -333,13 +380,18 @@ export function MediaStudioDialog({
     }
   };
 
+  const clipDuration = source
+    ? source.kind === 'video'
+      ? Math.max(0.6, Math.min(WALL_CLIP_MAX_SECONDS, trimEnd - trimStart))
+      : IMAGE_TO_VIDEO_SECONDS
+    : IMAGE_TO_VIDEO_SECONDS;
+  const maxMusicStart = Math.max(0, musicDuration - clipDuration);
+
   const visibleTracks = (musicTab === 'mine' ? tracks.mine : tracks.library).filter((item) => {
     if (!trackQuery.trim()) return true;
     const q = trackQuery.trim().toLowerCase();
     return item.title.toLowerCase().includes(q) || item.artistName.toLowerCase().includes(q);
   });
-
-  const previewRatio = MEDIA_ASPECTS.find((item) => item.id === aspect)?.ratio;
 
   return (
     <Dialog
@@ -351,26 +403,29 @@ export function MediaStudioDialog({
     >
       <DialogContent
         hideClose={exporting}
-        className="max-h-[92dvh] w-[min(100vw,28rem)] overflow-y-auto border-white/10 bg-[#0b0f14] p-4 text-white sm:rounded-2xl"
+        className="max-h-[min(92dvh,100svh)] w-[min(calc(100vw-1rem),28rem)] max-w-[min(calc(100vw-1rem),28rem)] min-w-0 overflow-x-hidden overflow-y-auto border-white/10 bg-[#0b0f14] p-4 text-white sm:rounded-2xl"
       >
-        <DialogHeader>
+        <DialogHeader className="min-w-0 space-y-1 pr-8 text-left">
           <DialogTitle className="text-sm font-bold uppercase tracking-widest text-cyan-200">
             {step === 'edit' ? 'Edit clip' : 'Camera'}
           </DialogTitle>
-          <DialogDescription className="text-xs text-white/55">
-            Take a photo or clip, crop it, add a filter, and layer music from your library or device.
+          <DialogDescription className="text-xs text-white/55 break-words">
+            Add a filter and layer music. The photo keeps its real shape.
           </DialogDescription>
         </DialogHeader>
 
         {step === 'capture' ? (
           <div className="space-y-3">
-            <div className="relative overflow-hidden rounded-xl bg-black">
+            <div className="relative mx-auto flex max-h-[min(42dvh,22rem)] min-w-0 w-full items-center justify-center overflow-hidden rounded-xl bg-black">
               <video
                 ref={liveRef}
                 muted
                 playsInline
                 autoPlay
-                className={cn('aspect-[3/4] w-full object-cover', !liveReady && 'opacity-40')}
+                className={cn(
+                  'max-h-[min(42dvh,22rem)] w-full object-contain',
+                  !liveReady && 'opacity-40'
+                )}
               />
               {recording ? (
                 <p className="absolute left-2 top-2 rounded-full bg-red-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest">
@@ -430,11 +485,8 @@ export function MediaStudioDialog({
             </div>
           </div>
         ) : source ? (
-          <div className="space-y-3">
-            <div
-              className="mx-auto overflow-hidden rounded-xl bg-black"
-              style={previewRatio ? { aspectRatio: String(previewRatio), maxHeight: '42dvh' } : undefined}
-            >
+          <div className="min-w-0 space-y-3">
+            <div className="mx-auto flex max-h-[min(38dvh,18rem)] min-w-0 w-full items-center justify-center overflow-hidden rounded-xl bg-black">
               {source.kind === 'video' ? (
                 <video
                   src={source.url}
@@ -442,7 +494,7 @@ export function MediaStudioDialog({
                   playsInline
                   autoPlay
                   loop
-                  className="h-full max-h-[42dvh] w-full object-cover"
+                  className="max-h-[min(38dvh,18rem)] max-w-full object-contain"
                   style={{ filter: mediaFilterCss(filterId) }}
                 />
               ) : (
@@ -450,32 +502,19 @@ export function MediaStudioDialog({
                 <img
                   src={source.url}
                   alt="Preview"
-                  className="h-full max-h-[42dvh] w-full object-cover"
+                  className="max-h-[min(38dvh,18rem)] max-w-full object-contain"
                   style={{ filter: mediaFilterCss(filterId) }}
                 />
               )}
             </div>
 
-            <div className="flex flex-wrap gap-1.5">
-              {MEDIA_ASPECTS.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setAspect(item.id)}
-                  className={cn(
-                    'rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-widest',
-                    aspect === item.id ? 'bg-cyan-400/20 text-cyan-200' : 'bg-white/5 text-white/55'
-                  )}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
             {source.kind === 'video' ? (
               <div className="space-y-1">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-white/45">
-                  Crop {formatSec(trimStart)}–{formatSec(trimEnd)}
+                  Video crop {formatSec(trimStart)}–{formatSec(trimEnd)}
+                  <span className="ml-1 font-normal text-white/35">
+                    ({formatSec(Math.min(WALL_CLIP_MAX_SECONDS, trimEnd - trimStart))} max {WALL_CLIP_MAX_SECONDS}s)
+                  </span>
                 </p>
                 <input
                   type="range"
@@ -484,8 +523,11 @@ export function MediaStudioDialog({
                   step={0.1}
                   value={trimStart}
                   onChange={(e) => {
-                    const next = Number(e.target.value);
-                    setTrimStart(Math.min(next, trimEnd - 0.6));
+                    const next = Math.min(Number(e.target.value), trimEnd - 0.6);
+                    setTrimStart(next);
+                    if (trimEnd - next > WALL_CLIP_MAX_SECONDS) {
+                      setTrimEnd(next + WALL_CLIP_MAX_SECONDS);
+                    }
                   }}
                   className="w-full accent-cyan-300"
                 />
@@ -496,8 +538,11 @@ export function MediaStudioDialog({
                   step={0.1}
                   value={trimEnd}
                   onChange={(e) => {
-                    const next = Number(e.target.value);
-                    setTrimEnd(Math.max(next, trimStart + 0.6));
+                    const next = Math.max(Number(e.target.value), trimStart + 0.6);
+                    setTrimEnd(next);
+                    if (next - trimStart > WALL_CLIP_MAX_SECONDS) {
+                      setTrimStart(next - WALL_CLIP_MAX_SECONDS);
+                    }
                   }}
                   className="w-full accent-fuchsia-300"
                 />
@@ -542,6 +587,8 @@ export function MediaStudioDialog({
                   onClick={() => {
                     if (music.kind === 'device') revokeUrl(music.url);
                     setMusic(null);
+                    setMusicDuration(0);
+                    setMusicStart(0);
                   }}
                 >
                   <Trash2 className="mr-1 inline h-3 w-3" />
@@ -549,6 +596,99 @@ export function MediaStudioDialog({
                 </button>
               ) : null}
             </div>
+
+            {source.kind === 'video' ? (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="shrink-0 text-white/70 hover:text-white"
+                  onClick={() => setVideoMuted((value) => !value)}
+                  title={videoMuted ? 'Unmute video' : 'Mute video'}
+                >
+                  {videoMuted || videoVol <= 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                </button>
+                <span className="w-14 shrink-0 text-[10px] font-bold uppercase tracking-widest text-white/45">
+                  Video
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.02}
+                  value={videoMuted ? 0 : videoVol}
+                  onChange={(e) => {
+                    const next = Number(e.target.value);
+                    setVideoVol(next);
+                    setVideoMuted(next <= 0);
+                  }}
+                  className="min-w-0 flex-1 accent-cyan-300"
+                />
+              </div>
+            ) : null}
+
+            {music ? (
+              <div className="space-y-2 rounded-xl border border-white/10 bg-black/30 p-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="shrink-0 text-white/70 hover:text-white"
+                    onClick={() => setMusicMuted((value) => !value)}
+                    title={musicMuted ? 'Unmute music' : 'Mute music'}
+                  >
+                    {musicMuted || musicVol <= 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                  </button>
+                  <span className="w-14 shrink-0 text-[10px] font-bold uppercase tracking-widest text-white/45">
+                    Music
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.02}
+                    value={musicMuted ? 0 : musicVol}
+                    onChange={(e) => {
+                      const next = Number(e.target.value);
+                      setMusicVol(next);
+                      setMusicMuted(next <= 0);
+                    }}
+                    className="min-w-0 flex-1 accent-fuchsia-300"
+                  />
+                </div>
+                {musicDuration > 0.6 ? (
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/45">
+                      Pick music {formatSec(musicStart)}–{formatSec(Math.min(musicDuration, musicStart + clipDuration))}
+                      <span className="ml-1 font-normal text-white/35">
+                        of {formatSec(musicDuration)} · same length as this clip
+                      </span>
+                    </p>
+                    <div className="relative h-2 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="absolute inset-y-0 rounded-full bg-fuchsia-400/55"
+                        style={{
+                          left: `${(musicStart / musicDuration) * 100}%`,
+                          width: `${Math.max(4, (clipDuration / musicDuration) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={maxMusicStart || 0}
+                      step={0.1}
+                      value={Math.min(musicStart, maxMusicStart)}
+                      disabled={maxMusicStart <= 0}
+                      onChange={(e) => setMusicStart(Number(e.target.value))}
+                      className="w-full accent-fuchsia-300"
+                    />
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-white/40">
+                    Uses the first {formatSec(clipDuration)} of this track.
+                  </p>
+                )}
+              </div>
+            ) : null}
 
             {musicOpen ? (
               <div className="space-y-2 rounded-xl border border-white/10 bg-black/40 p-2">
@@ -599,13 +739,13 @@ export function MediaStudioDialog({
                             type="button"
                             className="block w-full truncate rounded-md px-2 py-1.5 text-left text-xs text-white/80 hover:bg-white/10"
                             onClick={() => {
-                              setMusic({
+                              applyMusicPick({
                                 kind: 'library',
                                 label: item.title,
                                 shareId: item.shareId,
                                 trackId: item.trackId,
+                                durationSec: item.durationSec,
                               });
-                              setMusicOpen(false);
                             }}
                           >
                             {item.title}

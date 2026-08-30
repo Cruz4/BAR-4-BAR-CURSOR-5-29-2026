@@ -26,29 +26,39 @@ function pickRecorderMime(): string {
   return candidates.find((m) => MediaRecorder.isTypeSupported(m)) || '';
 }
 
-function cropRect(
-  width: number,
-  height: number,
-  aspect: MediaAspectId
-): { sx: number; sy: number; sw: number; sh: number } {
-  const ratio = MEDIA_ASPECTS.find((a) => a.id === aspect)?.ratio;
-  if (!ratio) return { sx: 0, sy: 0, sw: width, sh: height };
-  const src = width / height;
-  if (src > ratio) {
-    const sw = height * ratio;
-    return { sx: (width - sw) / 2, sy: 0, sw, sh: height };
-  }
-  const sh = width / ratio;
-  return { sx: 0, sy: (height - sh) / 2, sw: width, sh };
+function even(value: number): number {
+  return Math.max(16, Math.round(value / 2) * 2);
 }
 
-function outputSize(sw: number, sh: number): { w: number; h: number } {
+/** Canvas size for the chosen frame. Original keeps the photo’s shape. */
+function destSize(srcW: number, srcH: number, aspect: MediaAspectId): { w: number; h: number } {
+  const ratio = MEDIA_ASPECTS.find((a) => a.id === aspect)?.ratio ?? (srcW / Math.max(1, srcH));
   const maxEdge = 720;
-  const scale = Math.min(1, maxEdge / Math.max(sw, sh));
-  return {
-    w: Math.max(16, Math.round((sw * scale) / 2) * 2),
-    h: Math.max(16, Math.round((sh * scale) / 2) * 2),
-  };
+  if (ratio >= 1) {
+    const w = maxEdge;
+    return { w: even(w), h: even(w / ratio) };
+  }
+  const h = maxEdge;
+  return { w: even(h * ratio), h: even(h) };
+}
+
+/** Fit the whole source inside the frame (letterbox). Never crops. */
+function containDraw(
+  srcW: number,
+  srcH: number,
+  destW: number,
+  destH: number
+): { dx: number; dy: number; dw: number; dh: number } {
+  const src = srcW / Math.max(1, srcH);
+  const dest = destW / Math.max(1, destH);
+  if (src > dest) {
+    const dw = destW;
+    const dh = destW / src;
+    return { dx: 0, dy: (destH - dh) / 2, dw, dh };
+  }
+  const dh = destH;
+  const dw = destH * src;
+  return { dx: (destW - dw) / 2, dy: 0, dw, dh };
 }
 
 function loadVideo(url: string, muted = true): Promise<HTMLVideoElement> {
@@ -97,16 +107,31 @@ export async function applyStillFilter(
   const img = await loadImage(imageUrl);
   const srcW = img.naturalWidth || img.width;
   const srcH = img.naturalHeight || img.height;
-  const crop = cropRect(srcW, srcH, aspect);
-  const { w, h } = outputSize(crop.sw, crop.sh);
+  const { w, h } = destSize(srcW, srcH, aspect);
+  const fit = containDraw(srcW, srcH, w, h);
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Could not process that image.');
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, w, h);
   ctx.filter = mediaFilterCss(filterId);
-  ctx.drawImage(img, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, w, h);
+  ctx.drawImage(img, 0, 0, srcW, srcH, fit.dx, fit.dy, fit.dw, fit.dh);
   return processPostImageFile(await canvasToJpeg(canvas, 0.86));
+}
+
+export async function inspectAudioDuration(url: string): Promise<number> {
+  return new Promise((resolve) => {
+    const audio = document.createElement('audio');
+    audio.preload = 'metadata';
+    audio.src = url;
+    audio.onloadedmetadata = () => {
+      const duration = Number(audio.duration);
+      resolve(Number.isFinite(duration) && duration > 0 ? duration : 0);
+    };
+    audio.onerror = () => resolve(0);
+  });
 }
 
 export async function renderStudioClip(opts: {
@@ -116,6 +141,9 @@ export async function renderStudioClip(opts: {
   trimStart?: number;
   trimEnd?: number;
   musicUrl?: string;
+  musicOffsetSec?: number;
+  musicGain?: number;
+  videoGain?: number;
   onProgress?: (pct: number) => void;
 }): Promise<PendingWallClip> {
   const mime = pickRecorderMime();
@@ -125,8 +153,8 @@ export async function renderStudioClip(opts: {
   const videoEl = opts.source.kind === 'video' ? await loadVideo(opts.source.url, false) : null;
   const imgEl = opts.source.kind === 'image' ? await loadImage(opts.source.url) : null;
 
-  const crop = cropRect(opts.source.width, opts.source.height, opts.aspect);
-  const { w, h } = outputSize(crop.sw, crop.sh);
+  const { w, h } = destSize(opts.source.width, opts.source.height, opts.aspect);
+  const fit = containDraw(opts.source.width, opts.source.height, w, h);
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
@@ -143,17 +171,26 @@ export async function renderStudioClip(opts: {
     Math.min(WALL_CLIP_MAX_SECONDS, rawEnd - (opts.source.kind === 'video' ? start : 0))
   );
 
-  const paintFrame = (elapsed: number) => {
+  const paintFrame = () => {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
     ctx.filter = filter;
     if (videoEl) {
-      ctx.drawImage(videoEl, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, w, h);
+      ctx.drawImage(
+        videoEl,
+        0,
+        0,
+        videoEl.videoWidth || opts.source.width,
+        videoEl.videoHeight || opts.source.height,
+        fit.dx,
+        fit.dy,
+        fit.dw,
+        fit.dh
+      );
       return;
     }
     if (!imgEl) return;
-    const zoom = 1 + (elapsed / duration) * 0.08;
-    const dw = w * zoom;
-    const dh = h * zoom;
-    ctx.drawImage(imgEl, crop.sx, crop.sy, crop.sw, crop.sh, (w - dw) / 2, (h - dh) / 2, dw, dh);
+    ctx.drawImage(imgEl, 0, 0, opts.source.width, opts.source.height, fit.dx, fit.dy, fit.dw, fit.dh);
   };
 
   if (videoEl) {
@@ -167,34 +204,38 @@ export async function renderStudioClip(opts: {
       window.setTimeout(done, 400);
     });
   }
-  paintFrame(0);
+  paintFrame();
   const posterBlob = await canvasToJpeg(canvas, 0.78).catch(() => undefined);
 
   const audioCtx = new AudioContext();
   if (audioCtx.state === 'suspended') await audioCtx.resume();
   const dest = audioCtx.createMediaStreamDestination();
-  if (opts.musicUrl) {
+  const musicGain = Math.max(0, Math.min(1, opts.musicGain ?? 0.72));
+  const videoGain = Math.max(0, Math.min(1, opts.videoGain ?? 1));
+  if (opts.musicUrl && musicGain > 0) {
     const buffer = await decodeAudio(audioCtx, opts.musicUrl);
     const src = audioCtx.createBufferSource();
     src.buffer = buffer;
     const gain = audioCtx.createGain();
-    gain.gain.value = 0.72;
+    gain.gain.value = musicGain;
     src.connect(gain);
     gain.connect(dest);
-    src.start(0);
+    const offset = Math.max(0, Math.min(buffer.duration, opts.musicOffsetSec || 0));
+    src.start(0, offset);
   }
   if (videoEl) {
     try {
       const fromEl = audioCtx.createMediaElementSource(videoEl);
       const gain = audioCtx.createGain();
-      gain.gain.value = opts.musicUrl ? 0.28 : 1;
+      gain.gain.value = videoGain;
       fromEl.connect(gain);
       gain.connect(dest);
+      if (videoGain <= 0) videoEl.muted = true;
     } catch {
       videoEl.muted = true;
     }
   }
-  if (!opts.musicUrl && !videoEl) {
+  if (!(opts.musicUrl && musicGain > 0) && !(videoEl && videoGain > 0)) {
     const osc = audioCtx.createOscillator();
     const silent = audioCtx.createGain();
     silent.gain.value = 0;
@@ -222,7 +263,7 @@ export async function renderStudioClip(opts: {
   const draw = () => {
     const elapsed = (performance.now() - started) / 1000;
     opts.onProgress?.(Math.min(99, (elapsed / duration) * 100));
-    paintFrame(elapsed);
+    paintFrame();
     if (elapsed >= duration) {
       cancelAnimationFrame(raf);
       if (recorder.state !== 'inactive') recorder.stop();
@@ -277,7 +318,7 @@ export async function inspectVideoFile(file: File | Blob): Promise<StudioSource>
   return {
     kind: 'video',
     url,
-    durationSec: Math.min(WALL_CLIP_MAX_SECONDS, durationSec),
+    durationSec,
     width: video.videoWidth || 720,
     height: video.videoHeight || 720,
   };

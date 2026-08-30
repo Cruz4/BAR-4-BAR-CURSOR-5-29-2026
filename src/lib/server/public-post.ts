@@ -30,7 +30,7 @@ function publicWallClip(raw: unknown): WallClip | undefined {
   const durationSec = Number(data.durationSec);
   const byteSize = Number(data.byteSize);
   if (!url || !storagePath || !contentType?.startsWith('video/')) return undefined;
-  if (!Number.isFinite(durationSec) || durationSec <= 0 || durationSec > 20) return undefined;
+  if (!Number.isFinite(durationSec) || durationSec <= 0 || durationSec > 45) return undefined; // wall clip stored max
   if (!Number.isFinite(byteSize) || byteSize <= 0) return undefined;
   return { url, storagePath, contentType, durationSec, byteSize };
 }

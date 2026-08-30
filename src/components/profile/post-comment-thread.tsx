@@ -344,25 +344,29 @@ export function PostCommentThread({
               </button>
             </p>
           ) : null}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             {postId ? (
-              <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} compact />
+              <div className={cn('min-w-0', voice && 'basis-full')}>
+                <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} compact />
+              </div>
             ) : null}
-            <ImageAttachComposer
-              image={image}
-              onImageChange={setImage}
-              clip={clip}
-              onClipChange={setClip}
-              disabled={busy}
-              compact
-              onError={(message) =>
-                toast({
-                  variant: 'destructive',
-                  title: 'Could not attach photo',
-                  description: message,
-                })
-              }
-            />
+            <div className={cn('min-w-0', (image || clip) && 'basis-full')}>
+              <ImageAttachComposer
+                image={image}
+                onImageChange={setImage}
+                clip={clip}
+                onClipChange={setClip}
+                disabled={busy}
+                compact
+                onError={(message) =>
+                  toast({
+                    variant: 'destructive',
+                    title: 'Could not attach photo',
+                    description: message,
+                  })
+                }
+              />
+            </div>
             <EmojiPickerButton compact disabled={busy} onInsert={insertEmoji} />
           </div>
           <div className="relative flex items-center gap-2">

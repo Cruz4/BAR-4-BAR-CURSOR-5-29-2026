@@ -85,9 +85,17 @@ export function VoiceNoteComposer({
             type="button"
             onClick={removeClip}
             disabled={disabled}
-            className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.5))] hover:text-red-400"
+            title="Remove voice"
+            aria-label="Remove voice"
+            className={cn(
+              'inline-flex items-center gap-1 text-[var(--ph-muted,rgba(255,255,255,0.5))] hover:text-red-400',
+              compact
+                ? 'h-8 w-8 justify-center rounded-md'
+                : 'text-[10px] font-bold uppercase tracking-widest'
+            )}
           >
-            <Trash2 className="h-3 w-3" /> Remove voice
+            <Trash2 className="h-3 w-3" />
+            {compact ? null : 'Remove voice'}
           </button>
         </div>
       </div>

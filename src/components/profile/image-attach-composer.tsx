@@ -88,35 +88,37 @@ export function ImageAttachComposer({
         }}
       />
       {attached ? (
-        <div className={cn('flex items-start gap-2', compact ? 'min-w-0' : '')}>
+        <div className={cn('flex min-w-0 items-center gap-2', compact && 'w-full')}>
           {clip ? (
             <video
               src={clip.previewUrl}
               muted
               playsInline
-              className={cn(
-                'rounded-md object-cover ring-1 ring-white/15',
-                compact ? 'h-12 w-12' : 'h-16 w-16'
-              )}
+              className="h-12 w-12 shrink-0 rounded-md object-cover ring-1 ring-white/15"
             />
           ) : image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={image.previewUrl}
               alt="Attached"
-              className={cn(
-                'rounded-md object-cover ring-1 ring-white/15',
-                compact ? 'h-12 w-12' : 'h-16 w-16'
-              )}
+              className="h-12 w-12 shrink-0 rounded-md object-cover ring-1 ring-white/15"
             />
           ) : null}
           <button
             type="button"
             onClick={clearMedia}
             disabled={disabled || busy}
-            className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.5))] hover:text-red-400"
+            className={cn(
+              'shrink-0 text-[var(--ph-muted,rgba(255,255,255,0.5))] hover:text-red-400',
+              compact
+                ? 'inline-flex h-8 w-8 items-center justify-center rounded-md'
+                : 'inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest'
+            )}
+            title={clip ? 'Remove clip' : 'Remove photo'}
+            aria-label={clip ? 'Remove clip' : 'Remove photo'}
           >
-            <Trash2 className="h-3 w-3" /> Remove {clip ? 'clip' : 'photo'}
+            <Trash2 className="h-3.5 w-3.5" />
+            {compact ? null : `Remove ${clip ? 'clip' : 'photo'}`}
           </button>
         </div>
       ) : (

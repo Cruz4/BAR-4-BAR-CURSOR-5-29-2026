@@ -264,9 +264,11 @@ function SceneComposer({
           className="mt-1.5 h-8 border-border/60 bg-background/60 text-xs"
         />
       )}
-      <div className="mt-1 flex flex-row items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
+      <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-1 gap-y-1.5">
+        <div className={cn('min-w-0', voice && 'basis-full')}>
           <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} compact />
+        </div>
+        <div className={cn('min-w-0', (image || clip) && 'basis-full')}>
           <ImageAttachComposer
             image={image}
             onImageChange={setImage}
@@ -278,34 +280,34 @@ function SceneComposer({
               toast({ variant: 'destructive', title: 'Could not attach photo', description: message })
             }
           />
-          <EmojiPickerButton
-            compact
-            disabled={busy}
-            onInsert={insertEmoji}
-            className="text-muted-foreground hover:text-primary"
-          />
-          <button
-            type="button"
-            onClick={() => setShowEmbed((v) => !v)}
-            className="font-code text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70 transition-colors hover:text-primary"
-          >
-            {showEmbed ? '− link' : '+ link'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setPollOpen((value) => !value)}
-            disabled={busy}
-            className={cn(
-              'inline-flex items-center gap-1 font-code text-[9px] font-bold uppercase tracking-[0.16em] transition-colors',
-              pollOpen ? 'text-cyan-300' : 'text-muted-foreground/70 hover:text-cyan-300'
-            )}
-          >
-            <BarChart3 className="h-3.5 w-3.5" /> Poll
-          </button>
         </div>
+        <EmojiPickerButton
+          compact
+          disabled={busy}
+          onInsert={insertEmoji}
+          className="text-muted-foreground hover:text-primary"
+        />
+        <button
+          type="button"
+          onClick={() => setShowEmbed((v) => !v)}
+          className="shrink-0 whitespace-nowrap font-code text-[9px] font-bold uppercase tracking-wider text-muted-foreground/70 transition-colors hover:text-primary"
+        >
+          {showEmbed ? '− link' : '+ link'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setPollOpen((value) => !value)}
+          disabled={busy}
+          className={cn(
+            'inline-flex shrink-0 items-center gap-1 whitespace-nowrap font-code text-[9px] font-bold uppercase tracking-wider transition-colors',
+            pollOpen ? 'text-cyan-300' : 'text-muted-foreground/70 hover:text-cyan-300'
+          )}
+        >
+          <BarChart3 className="h-3.5 w-3.5" /> Poll
+        </button>
         <Button
           size="sm"
-          className="h-7 px-3 gap-1 font-bold uppercase"
+          className="ml-auto h-7 shrink-0 gap-1 px-2.5 font-bold uppercase"
           disabled={busy || !pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image && !clip)}
           onClick={() => void submit()}
         >

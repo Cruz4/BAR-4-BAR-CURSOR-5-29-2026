@@ -910,26 +910,30 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
               Demo wall — text, photos, and links stay here until you claim your free profile.
             </p>
           ) : null}
-          <div className="flex flex-wrap items-center gap-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-1">
             {!playground ? (
-              <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} compact />
+              <div className={cn('min-w-0', voice && 'basis-full')}>
+                <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} compact />
+              </div>
             ) : null}
-            <ImageAttachComposer
-              image={image}
-              onImageChange={setImage}
-              clip={playground ? null : clip}
-              onClipChange={playground ? undefined : setClip}
-              disabled={busy}
-              compact
-              maxBytes={playground ? POST_IMAGE_GUEST_MAX_BYTES : undefined}
-              onError={(message) =>
-                toast({
-                  variant: 'destructive',
-                  title: 'Could not attach photo',
-                  description: message,
-                })
-            }
-          />
+            <div className={cn('min-w-0', (image || clip) && 'basis-full')}>
+              <ImageAttachComposer
+                image={image}
+                onImageChange={setImage}
+                clip={playground ? null : clip}
+                onClipChange={playground ? undefined : setClip}
+                disabled={busy}
+                compact
+                maxBytes={playground ? POST_IMAGE_GUEST_MAX_BYTES : undefined}
+                onError={(message) =>
+                  toast({
+                    variant: 'destructive',
+                    title: 'Could not attach photo',
+                    description: message,
+                  })
+                }
+              />
+            </div>
           {!playground ? <MentionSuggestions value={text} onChange={setText} excludeUserId={user?.id} /> : null}
             <EmojiPickerButton compact disabled={busy} onInsert={insertEmoji} />
             {!playground ? (
