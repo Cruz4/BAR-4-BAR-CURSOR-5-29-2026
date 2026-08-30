@@ -52,15 +52,43 @@ function revokeUrl(url: string | undefined) {
   }
 }
 
+function cameraErrorMessage(err: unknown): string {
+  const name = err instanceof DOMException ? err.name : '';
+  if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+    return 'Camera is blocked. Allow camera in the browser address bar, then try again.';
+  }
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+    return 'No camera found. Use Library to pick a photo or clip.';
+  }
+  if (name === 'NotReadableError' || name === 'TrackStartError') {
+    return 'Camera is busy in another app. Close it and try again.';
+  }
+  if (name === 'SecurityError') {
+    return 'This page is not allowed to use the camera.';
+  }
+  return 'Could not open the camera. Use Library to pick a photo or clip.';
+}
+
 async function openCamera(facing: 'user' | 'environment'): Promise<MediaStream> {
-  try {
-    return await navigator.mediaDevices.getUserMedia({
+  const attempts: MediaStreamConstraints[] = [
+    {
       video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: true,
-    });
-  } catch {
-    return navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    },
+    { video: { facingMode: { ideal: facing } }, audio: true },
+    { video: { facingMode: { ideal: facing } }, audio: false },
+    { video: true, audio: true },
+    { video: true, audio: false },
+  ];
+  let last: unknown;
+  for (const constraints of attempts) {
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (err) {
+      last = err;
+    }
   }
+  throw last instanceof Error ? last : new Error('Could not open the camera.');
 }
 
 function formatSec(value: number): string {
@@ -169,8 +197,8 @@ export function MediaStudioDialog({
         await el.play().catch(() => undefined);
       }
       setLiveReady(true);
-    } catch {
-      setCamError('Allow camera and mic to take a photo or clip.');
+    } catch (err) {
+      setCamError(cameraErrorMessage(err));
     }
   };
 
