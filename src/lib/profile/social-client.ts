@@ -50,11 +50,23 @@ import { parseLyricClip, type LyricClip } from '@/lib/profile/lyric-clip';
 import {
   deletePostImageStorage,
   parseImageStoragePath,
+  processPostImageFile,
+  revokePostImagePreview,
   uploadPostImage,
   wallImageCommentPath,
   wallImagePostPath,
   type PendingPostImage,
 } from '@/lib/profile/post-images';
+import {
+  clipExtFromType,
+  deleteWallClipStorage,
+  parseWallClip,
+  uploadWallClip,
+  wallClipCommentPath,
+  wallClipPostPath,
+  type PendingWallClip,
+  type WallClip,
+} from '@/lib/profile/wall-clips';
 import { notifyLoveReward } from '@/lib/profile/love-reward-client';
 import type { PressingConfig } from '@/lib/profile/pressing';
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
@@ -77,6 +89,10 @@ export type ProfilePost = {
   imageUrl?: string;
   /** Storage object for attached wall photos (not used for foil data URLs). */
   imageStoragePath?: string;
+  /** Camera / studio clip. Playback prefers this over imageUrl. */
+  video?: WallClip;
+  /** Snapshot of the original post's clip when this wall item is a Reverb. */
+  reverbVideo?: WallClip;
   createdAt: string;
   /** Unique people who saw this post. Owner-only in the UI. */
   viewCount?: number;
@@ -122,6 +138,7 @@ export type PostComment = {
   voice?: VoiceNote;
   imageUrl?: string;
   imageStoragePath?: string;
+  video?: WallClip;
   /** Reply to another comment on the same post. */
   parentCommentId?: string;
 };
@@ -231,6 +248,7 @@ export async function createPost(input: {
   embedUrl?: string;
   imageUrl?: string;
   image?: PendingPostImage;
+  video?: PendingWallClip;
   ownerName: string;
   ownerSlug?: string;
   voice?: RecordedVoiceClip;
@@ -249,8 +267,8 @@ export async function createPost(input: {
     throw new Error('Image is too large to post.');
   }
   if (poll && !text) throw new Error('Write the poll question in your post.');
-  if (!text && !embedUrl && !imageUrl && !input.image && !input.voice && !parseLyricClip(input.lyricClip)) {
-    throw new Error('Write something, add a link, attach an image, or record a voice note.');
+  if (!text && !embedUrl && !imageUrl && !input.image && !input.video && !input.voice && !parseLyricClip(input.lyricClip)) {
+    throw new Error('Write something, add a link, attach a photo or clip, or record a voice note.');
   }
 
   const id = newestFirstId();
@@ -265,6 +283,18 @@ export async function createPost(input: {
       throw err instanceof Error ? err : new Error('Could not upload voice note.');
     }
   }
+  let video: WallClip | undefined;
+  if (input.video) {
+    try {
+      video = await uploadWallClip({
+        storagePath: wallClipPostPath(user.uid, id, clipExtFromType(input.video.contentType)),
+        clip: input.video,
+      });
+    } catch (err) {
+      if (voice) await deleteVoiceStorage(voice.storagePath);
+      throw err instanceof Error ? err : new Error('Could not upload clip.');
+    }
+  }
   if (input.image) {
     try {
       const uploaded = await uploadPostImage({
@@ -275,7 +305,21 @@ export async function createPost(input: {
       imageStoragePath = uploaded.storagePath;
     } catch (err) {
       if (voice) await deleteVoiceStorage(voice.storagePath);
+      if (video) await deleteWallClipStorage(video.storagePath);
       throw err instanceof Error ? err : new Error('Could not upload image.');
+    }
+  } else if (input.video?.posterBlob) {
+    try {
+      const poster = await processPostImageFile(input.video.posterBlob);
+      const uploaded = await uploadPostImage({
+        storagePath: wallImagePostPath(user.uid, id),
+        image: poster,
+      });
+      revokePostImagePreview(poster);
+      imageUrl = uploaded.url;
+      imageStoragePath = uploaded.storagePath;
+    } catch {
+      /* poster is optional — clip still posts */
     }
   }
 
@@ -291,6 +335,7 @@ export async function createPost(input: {
     ...(parsed ? { embedProvider: parsed.provider } : {}),
     ...(imageUrl ? { imageUrl } : {}),
     ...(imageStoragePath ? { imageStoragePath } : {}),
+    ...(video ? { video } : {}),
     ...(voice ? { voice } : {}),
     ...(parsedLyricClip ? { lyricClip: parsedLyricClip } : {}),
     ...(input.sourceKind ? { sourceKind: input.sourceKind } : {}),
@@ -303,6 +348,7 @@ export async function createPost(input: {
   } catch (err) {
     if (voice) await deleteVoiceStorage(voice.storagePath);
     if (imageStoragePath) await deletePostImageStorage(imageStoragePath);
+    if (video) await deleteWallClipStorage(video.storagePath);
     throw err;
   }
   if (text.includes('@')) {
@@ -312,6 +358,7 @@ export async function createPost(input: {
   trackSocialEvent('profile_post_created', {
     hasEmbed: Boolean(embedUrl),
     hasImage: Boolean(imageUrl),
+    hasVideo: Boolean(video),
     hasVoice: Boolean(voice),
     hasPoll: Boolean(poll),
   });
@@ -334,6 +381,8 @@ export async function deletePost(postId: string): Promise<void> {
       if (voice?.storagePath) await deleteVoiceStorage(voice.storagePath);
       const imagePath = parseImageStoragePath(data.imageStoragePath);
       if (imagePath) await deletePostImageStorage(imagePath);
+      const video = parseWallClip(data.video);
+      if (video?.storagePath) await deleteWallClipStorage(video.storagePath);
       if (
         data.isReverb === true &&
         typeof data.reverbPostId === 'string' &&
@@ -354,6 +403,8 @@ export async function deletePost(postId: string): Promise<void> {
 function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
   const parsedVoice = parseVoiceNote(data.voice);
   const parsedReverbVoice = parseVoiceNote(data.reverbVoice);
+  const parsedVideo = parseWallClip(data.video);
+  const parsedReverbVideo = parseWallClip(data.reverbVideo);
   const lyricClip = parseLyricClip(data.lyricClip);
   const reverbLyricClip = parseLyricClip(data.reverbLyricClip);
   const poll = parsePostPoll(data.poll);
@@ -369,6 +420,8 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
     imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : undefined,
     imageStoragePath: parseImageStoragePath(data.imageStoragePath),
     createdAt: String(data.createdAt || ''),
+    ...(parsedVideo ? { video: parsedVideo } : {}),
+    ...(parsedReverbVideo ? { reverbVideo: parsedReverbVideo } : {}),
     ...(typeof data.viewCount === 'number' && data.viewCount > 0
       ? { viewCount: Math.floor(data.viewCount) }
       : {}),
@@ -481,6 +534,7 @@ export async function toggleReverb(
       ? source.reverbLyricClip
       : source.lyricClip;
   const rootPoll = source.isReverb && source.reverbPoll ? source.reverbPoll : source.poll;
+  const rootVideo = source.isReverb && source.reverbVideo ? source.reverbVideo : source.video;
   const rootSourceKind = source.sourceKind || (rootEmbed?.includes('/song/') ? 'song' : rootEmbed?.includes('/share/') ? 'dna' : 'post');
 
   const pointerRef = doc(db, 'users', user.uid, 'reverbs', rootPostId);
@@ -537,6 +591,7 @@ export async function toggleReverb(
     ...(rootVoice ? { reverbVoice: voiceNoteToFirestore(rootVoice) } : {}),
     ...(rootLyricClip ? { reverbLyricClip: rootLyricClip } : {}),
     ...(rootPoll ? { reverbPoll: rootPoll } : {}),
+    ...(rootVideo ? { reverbVideo: rootVideo } : {}),
   };
 
   const { id, ...data } = post;
@@ -752,12 +807,13 @@ export async function addComment(
     parentCommentId?: string;
     recipientId?: string;
     recipientName?: string;
+    video?: PendingWallClip;
   }
 ): Promise<PostComment> {
   const user = requireUser();
   const liveProfile = await requireLiveProfileForPosting(user.uid);
   const clean = text.trim().slice(0, MAX_COMMENT_TEXT);
-  if (!clean && !voiceClip && !image) throw new Error('Comment is empty.');
+  if (!clean && !voiceClip && !image && !opts?.video) throw new Error('Comment is empty.');
   const parentCommentId = opts?.parentCommentId?.trim().slice(0, 80) || undefined;
   const id = chronoId();
   let voice: VoiceNote | undefined;
@@ -766,6 +822,18 @@ export async function addComment(
       storagePath: voiceCommentStoragePath(user.uid, postId, id, voiceClip.contentType),
       clip: voiceClip,
     });
+  }
+  let video: WallClip | undefined;
+  if (opts?.video) {
+    try {
+      video = await uploadWallClip({
+        storagePath: wallClipCommentPath(user.uid, postId, id, clipExtFromType(opts.video.contentType)),
+        clip: opts.video,
+      });
+    } catch (err) {
+      if (voice) await deleteVoiceStorage(voice.storagePath);
+      throw err instanceof Error ? err : new Error('Could not upload clip.');
+    }
   }
   let imageUrl: string | undefined;
   let imageStoragePath: string | undefined;
@@ -779,7 +847,21 @@ export async function addComment(
       imageStoragePath = uploaded.storagePath;
     } catch (err) {
       if (voice) await deleteVoiceStorage(voice.storagePath);
+      if (video) await deleteWallClipStorage(video.storagePath);
       throw err instanceof Error ? err : new Error('Could not upload image.');
+    }
+  } else if (opts?.video?.posterBlob) {
+    try {
+      const poster = await processPostImageFile(opts.video.posterBlob);
+      const uploaded = await uploadPostImage({
+        storagePath: wallImageCommentPath(user.uid, postId, id),
+        image: poster,
+      });
+      revokePostImagePreview(poster);
+      imageUrl = uploaded.url;
+      imageStoragePath = uploaded.storagePath;
+    } catch {
+      /* poster is optional */
     }
   }
   const comment: PostComment = {
@@ -793,6 +875,7 @@ export async function addComment(
     ...(voice ? { voice } : {}),
     ...(imageUrl ? { imageUrl } : {}),
     ...(imageStoragePath ? { imageStoragePath } : {}),
+    ...(video ? { video } : {}),
   };
   const { id: commentId, ...data } = comment;
   try {
@@ -800,6 +883,7 @@ export async function addComment(
   } catch (err) {
     if (voice) await deleteVoiceStorage(voice.storagePath);
     if (imageStoragePath) await deletePostImageStorage(imageStoragePath);
+    if (video) await deleteWallClipStorage(video.storagePath);
     throw err;
   }
   if (clean.includes('@')) {
@@ -814,7 +898,7 @@ export async function addComment(
     postId,
     ...(opts?.recipientId ? { recipientId: opts.recipientId } : {}),
     ...(opts?.recipientName ? { recipientName: opts.recipientName } : {}),
-    preview: (clean || voice?.transcript || (imageUrl ? 'Photo' : 'Voice note')).slice(0, 120),
+    preview: (clean || voice?.transcript || (video ? 'Clip' : imageUrl ? 'Photo' : 'Voice note')).slice(0, 120),
     commentId,
   });
   return comment;
@@ -828,6 +912,7 @@ export async function fetchComments(postId: string, max = 50): Promise<PostComme
       const voice = parseVoiceNote(data.voice);
       const imageUrl = typeof data.imageUrl === 'string' ? data.imageUrl : undefined;
       const imageStoragePath = parseImageStoragePath(data.imageStoragePath);
+      const video = parseWallClip(data.video);
       const parentCommentId =
         typeof data.parentCommentId === 'string' ? data.parentCommentId : undefined;
       return {
@@ -841,6 +926,7 @@ export async function fetchComments(postId: string, max = 50): Promise<PostComme
         ...(voice ? { voice } : {}),
         ...(imageUrl ? { imageUrl } : {}),
         ...(imageStoragePath ? { imageStoragePath } : {}),
+        ...(video ? { video } : {}),
       };
     });
     const ids = [...new Set(comments.map((c) => c.authorId).filter(Boolean))];
@@ -869,6 +955,8 @@ export async function deleteComment(postId: string, commentId: string): Promise<
       if (voice?.storagePath) await deleteVoiceStorage(voice.storagePath);
       const imagePath = parseImageStoragePath(snap.data().imageStoragePath);
       if (imagePath) await deletePostImageStorage(imagePath);
+      const video = parseWallClip(snap.data().video);
+      if (video?.storagePath) await deleteWallClipStorage(video.storagePath);
     }
   } catch {
     /* still attempt comment delete */

@@ -11,6 +11,7 @@ type QuotaSpec = { free: number; pro: number };
 
 const DAILY_QUOTAS: Record<UploadKind, QuotaSpec> = {
   wall_image: { free: 25, pro: 120 },
+  wall_video: { free: 8, pro: 40 },
   voice: { free: 30, pro: 150 },
   drop_audio: { free: 12, pro: 60 },
   sheet_take: { free: 40, pro: 200 },
@@ -19,6 +20,7 @@ const DAILY_QUOTAS: Record<UploadKind, QuotaSpec> = {
 
 const MAX_BYTES: Record<UploadKind, number> = {
   wall_image: 8 * 1024 * 1024,
+  wall_video: 18 * 1024 * 1024,
   voice: 5 * 1024 * 1024,
   drop_audio: 40 * 1024 * 1024,
   sheet_take: 12 * 1024 * 1024,
@@ -27,6 +29,7 @@ const MAX_BYTES: Record<UploadKind, number> = {
 
 const CONTENT_TYPE_PATTERN: Record<UploadKind, string> = {
   wall_image: 'image/.*',
+  wall_video: 'video/.*',
   voice: 'audio/.*',
   drop_audio: 'audio/.*',
   sheet_take: 'audio/.*',
@@ -40,6 +43,7 @@ function utcDayKey(d = new Date()): string {
 function pathPrefixForKind(kind: UploadKind, uid: string): string {
   switch (kind) {
     case 'wall_image':
+    case 'wall_video':
       return `wall/${uid}/`;
     case 'voice':
       return `voice/${uid}/`;

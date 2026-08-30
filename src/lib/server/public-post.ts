@@ -6,6 +6,7 @@ import { parseLyricClip } from '@/lib/profile/lyric-clip';
 import { needsVanitySlugUpgrade } from '@/lib/profile/profile-slug';
 import type { ProfilePost } from '@/lib/profile/social-client';
 import type { VoiceNote } from '@/lib/profile/voice-notes';
+import type { WallClip } from '@/lib/profile/wall-clips';
 import { parsePostPoll } from '@/lib/profile/post-polls';
 
 export type PublicPostPageData = {
@@ -18,6 +19,20 @@ function clean(value: unknown, max: number): string | undefined {
   if (typeof value !== 'string') return undefined;
   const next = value.trim();
   return next ? next.slice(0, max) : undefined;
+}
+
+function publicWallClip(raw: unknown): WallClip | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const data = raw as Record<string, unknown>;
+  const url = clean(data.url, 2000);
+  const storagePath = clean(data.storagePath, 400);
+  const contentType = clean(data.contentType, 80);
+  const durationSec = Number(data.durationSec);
+  const byteSize = Number(data.byteSize);
+  if (!url || !storagePath || !contentType?.startsWith('video/')) return undefined;
+  if (!Number.isFinite(durationSec) || durationSec <= 0 || durationSec > 20) return undefined;
+  if (!Number.isFinite(byteSize) || byteSize <= 0) return undefined;
+  return { url, storagePath, contentType, durationSec, byteSize };
 }
 
 function publicVoice(raw: unknown): VoiceNote | undefined {
@@ -44,6 +59,8 @@ function publicVoice(raw: unknown): VoiceNote | undefined {
 export function postFromServerDoc(id: string, data: Record<string, unknown>): ProfilePost {
   const voice = publicVoice(data.voice);
   const reverbVoice = publicVoice(data.reverbVoice);
+  const video = publicWallClip(data.video);
+  const reverbVideo = publicWallClip(data.reverbVideo);
   const lyricClip = parseLyricClip(data.lyricClip);
   const reverbLyricClip = parseLyricClip(data.reverbLyricClip);
   const poll = parsePostPoll(data.poll);
@@ -60,6 +77,8 @@ export function postFromServerDoc(id: string, data: Record<string, unknown>): Pr
       : {}),
     ...(clean(data.imageUrl, 900_000) ? { imageUrl: clean(data.imageUrl, 900_000) } : {}),
     ...(clean(data.imageStoragePath, 500) ? { imageStoragePath: clean(data.imageStoragePath, 500) } : {}),
+    ...(video ? { video } : {}),
+    ...(reverbVideo ? { reverbVideo } : {}),
     createdAt: clean(data.createdAt, 40) || '',
     ...(typeof data.viewCount === 'number' && data.viewCount > 0
       ? { viewCount: Math.floor(data.viewCount) }

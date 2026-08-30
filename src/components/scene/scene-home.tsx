@@ -60,6 +60,7 @@ import {
 } from '@/lib/profile/social-client';
 import { type RecordedVoiceClip } from '@/lib/profile/voice-notes';
 import { revokePostImagePreview, type PendingPostImage } from '@/lib/profile/post-images';
+import { revokeWallClipPreview, type PendingWallClip } from '@/lib/profile/wall-clips';
 import type { PostPollResultsVisibility } from '@/lib/profile/post-polls';
 import { FRIENDSHIP_CHANGED_EVENT, type FriendshipChangedDetail } from '@/lib/activity/client';
 import { getBlockLastSeenAt, markBlockSeen } from '@/lib/profile/social-alerts';
@@ -165,6 +166,7 @@ function SceneComposer({
   const [showEmbed, setShowEmbed] = useState(false);
   const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
   const [image, setImage] = useState<PendingPostImage | null>(null);
+  const [clip, setClip] = useState<PendingWallClip | null>(null);
   const [pollOpen, setPollOpen] = useState(false);
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [pollVisibility, setPollVisibility] = useState<PostPollResultsVisibility>('after_vote');
@@ -184,7 +186,7 @@ function SceneComposer({
   if (!user || profileLoading || !profileLive) return null;
 
   const submit = async () => {
-    if (busy || !pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image)) return;
+    if (busy || !pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image && !clip)) return;
     setBusy(true);
     try {
       const post = await createPost({
@@ -194,6 +196,7 @@ function SceneComposer({
         ...(profileSlug ? { ownerSlug: profileSlug } : {}),
         ...(voice ? { voice } : {}),
         ...(image ? { image } : {}),
+        ...(clip ? { video: clip } : {}),
         ...(pollOpen ? { poll: { options: pollOptions, resultsVisibility: pollVisibility } } : {}),
       });
       setText('');
@@ -202,6 +205,8 @@ function SceneComposer({
       setVoice(null);
       revokePostImagePreview(image);
       setImage(null);
+      revokeWallClipPreview(clip);
+      setClip(null);
       setPollOpen(false);
       setPollOptions(['', '']);
       setPollVisibility('after_vote');
@@ -225,6 +230,8 @@ function SceneComposer({
             disabled: busy,
             image,
             onImageChange: setImage,
+            clip,
+            onClipChange: setClip,
             onError: (message) =>
               toast({ variant: 'destructive', title: 'Could not attach photo', description: message }),
           });
@@ -263,6 +270,8 @@ function SceneComposer({
           <ImageAttachComposer
             image={image}
             onImageChange={setImage}
+            clip={clip}
+            onClipChange={setClip}
             disabled={busy}
             compact
             onError={(message) =>
@@ -297,7 +306,7 @@ function SceneComposer({
         <Button
           size="sm"
           className="h-7 px-3 gap-1 font-bold uppercase"
-          disabled={busy || !pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image)}
+          disabled={busy || !pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image && !clip)}
           onClick={() => void submit()}
         >
           <Send className="h-3 w-3" /> Post

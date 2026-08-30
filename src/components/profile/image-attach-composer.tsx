@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { ImagePlus, Trash2 } from 'lucide-react';
+import { Camera, ImagePlus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { MediaStudioDialog, type MediaStudioMode } from '@/components/profile/media-studio-dialog';
 import { cn } from '@/lib/utils';
 import {
   imageFileFromClipboard,
@@ -10,10 +11,13 @@ import {
   revokePostImagePreview,
   type PendingPostImage,
 } from '@/lib/profile/post-images';
+import { revokeWallClipPreview, type PendingWallClip } from '@/lib/profile/wall-clips';
 
 type ImageAttachComposerProps = {
   image: PendingPostImage | null;
   onImageChange: (image: PendingPostImage | null) => void;
+  clip?: PendingWallClip | null;
+  onClipChange?: (clip: PendingWallClip | null) => void;
   disabled?: boolean;
   compact?: boolean;
   maxBytes?: number;
@@ -23,6 +27,8 @@ type ImageAttachComposerProps = {
 export function ImageAttachComposer({
   image,
   onImageChange,
+  clip = null,
+  onClipChange,
   disabled = false,
   compact = false,
   maxBytes,
@@ -30,6 +36,17 @@ export function ImageAttachComposer({
 }: ImageAttachComposerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [studioOpen, setStudioOpen] = useState(false);
+  const [studioMode, setStudioMode] = useState<MediaStudioMode>('camera');
+  const allowVideo = Boolean(onClipChange);
+
+  const clearMedia = () => {
+    revokePostImagePreview(image);
+    revokeWallClipPreview(clip);
+    onImageChange(null);
+    onClipChange?.(null);
+    if (inputRef.current) inputRef.current.value = '';
+  };
 
   const applyFile = async (file: File | Blob | null | undefined) => {
     if (!file || disabled || busy) return;
@@ -37,6 +54,8 @@ export function ImageAttachComposer({
     try {
       const next = await processPostImageFile(file, maxBytes ? { maxBytes } : undefined);
       revokePostImagePreview(image);
+      revokeWallClipPreview(clip);
+      onClipChange?.(null);
       onImageChange(next);
     } catch (e) {
       onError?.(e instanceof Error ? e.message : 'Could not attach that image.');
@@ -45,18 +64,20 @@ export function ImageAttachComposer({
     }
   };
 
-  const remove = () => {
-    revokePostImagePreview(image);
-    onImageChange(null);
-    if (inputRef.current) inputRef.current.value = '';
+  const openStudio = (nextMode: MediaStudioMode) => {
+    if (disabled || busy) return;
+    setStudioMode(nextMode);
+    setStudioOpen(true);
   };
+
+  const attached = clip || image;
 
   return (
     <div className={cn(compact ? 'flex items-center gap-2' : 'space-y-2')}>
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept={allowVideo ? 'image/*,video/*' : 'image/*'}
         className="sr-only"
         tabIndex={-1}
         disabled={disabled || busy}
@@ -66,44 +87,96 @@ export function ImageAttachComposer({
           void applyFile(file);
         }}
       />
-      {image ? (
+      {attached ? (
         <div className={cn('flex items-start gap-2', compact ? 'min-w-0' : '')}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={image.previewUrl}
-            alt="Attached"
-            className={cn(
-              'rounded-md object-cover ring-1 ring-white/15',
-              compact ? 'h-12 w-12' : 'h-16 w-16'
-            )}
-          />
+          {clip ? (
+            <video
+              src={clip.previewUrl}
+              muted
+              playsInline
+              className={cn(
+                'rounded-md object-cover ring-1 ring-white/15',
+                compact ? 'h-12 w-12' : 'h-16 w-16'
+              )}
+            />
+          ) : image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={image.previewUrl}
+              alt="Attached"
+              className={cn(
+                'rounded-md object-cover ring-1 ring-white/15',
+                compact ? 'h-12 w-12' : 'h-16 w-16'
+              )}
+            />
+          ) : null}
           <button
             type="button"
-            onClick={remove}
+            onClick={clearMedia}
             disabled={disabled || busy}
             className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.5))] hover:text-red-400"
           >
-            <Trash2 className="h-3 w-3" /> Remove photo
+            <Trash2 className="h-3 w-3" /> Remove {clip ? 'clip' : 'photo'}
           </button>
         </div>
       ) : (
-        <Button
-          type="button"
-          size={compact ? 'icon' : 'sm'}
-          variant="ghost"
-          disabled={disabled || busy}
-          className={cn(
-            compact
-              ? 'h-8 w-8 shrink-0 text-[var(--ph-accent,#7dd3fc)]'
-              : 'h-8 gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.7))] hover:text-[var(--ph-accent,#7dd3fc)]'
-          )}
-          onClick={() => inputRef.current?.click()}
-          title="Attach a photo"
-        >
-          <ImagePlus className="h-3.5 w-3.5" />
-          {compact ? null : busy ? 'Adding…' : 'Photo'}
-        </Button>
+        <div className="flex items-center gap-1">
+          {allowVideo ? (
+            <Button
+              type="button"
+              size={compact ? 'icon' : 'sm'}
+              variant="ghost"
+              disabled={disabled || busy}
+              className={cn(
+                compact
+                  ? 'h-8 w-8 shrink-0 text-[var(--ph-accent,#7dd3fc)]'
+                  : 'h-8 gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.7))] hover:text-[var(--ph-accent,#7dd3fc)]'
+              )}
+              onClick={() => openStudio('camera')}
+              title="Open camera"
+            >
+              <Camera className="h-3.5 w-3.5" />
+              {compact ? null : 'Camera'}
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            size={compact ? 'icon' : 'sm'}
+            variant="ghost"
+            disabled={disabled || busy}
+            className={cn(
+              compact
+                ? 'h-8 w-8 shrink-0 text-[var(--ph-accent,#7dd3fc)]'
+                : 'h-8 gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.7))] hover:text-[var(--ph-accent,#7dd3fc)]'
+            )}
+            onClick={() => (allowVideo ? openStudio('library') : inputRef.current?.click())}
+            title={allowVideo ? 'Photo or clip from files' : 'Attach a photo'}
+          >
+            <ImagePlus className="h-3.5 w-3.5" />
+            {compact ? null : busy ? 'Adding…' : 'Photo'}
+          </Button>
+        </div>
       )}
+      {allowVideo ? (
+        <MediaStudioDialog
+          open={studioOpen}
+          mode={studioMode}
+          onOpenChange={setStudioOpen}
+          onExportImage={(next) => {
+            revokePostImagePreview(image);
+            revokeWallClipPreview(clip);
+            onClipChange?.(null);
+            onImageChange(next);
+          }}
+          onExportClip={(next) => {
+            revokePostImagePreview(image);
+            revokeWallClipPreview(clip);
+            onImageChange(null);
+            onClipChange?.(next);
+          }}
+          onError={onError}
+        />
+      ) : null}
     </div>
   );
 }
@@ -114,6 +187,8 @@ export async function attachPastedImage(
     disabled?: boolean;
     image: PendingPostImage | null;
     onImageChange: (image: PendingPostImage | null) => void;
+    clip?: PendingWallClip | null;
+    onClipChange?: (clip: PendingWallClip | null) => void;
     maxBytes?: number;
     onError?: (message: string) => void;
   }
@@ -124,6 +199,8 @@ export async function attachPastedImage(
   try {
     const next = await processPostImageFile(file, opts.maxBytes ? { maxBytes: opts.maxBytes } : undefined);
     revokePostImagePreview(opts.image);
+    revokeWallClipPreview(opts.clip);
+    opts.onClipChange?.(null);
     opts.onImageChange(next);
     return true;
   } catch (err) {

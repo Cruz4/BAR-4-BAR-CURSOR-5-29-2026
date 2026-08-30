@@ -22,6 +22,7 @@ import { ArtistHomeLink, useLiveArtistHomeSlug } from '@/components/profile/arti
 import { EmbedPlayer } from '@/components/profile/embed-player';
 import { PostShareDialog } from '@/components/profile/post-share-dialog';
 import { ExpandableImage } from '@/components/profile/expandable-image';
+import { WallClipPlayer } from '@/components/profile/wall-clip-player';
 import { PostCommentThread } from '@/components/profile/post-comment-thread';
 import { VoiceNotePlayer } from '@/components/profile/voice-note-player';
 import {
@@ -177,7 +178,15 @@ function ReverbSourceBody({ post, immersive = false }: { post: ProfilePost; imme
           {post.reverbText}
         </p>
       ) : null}
-      {post.reverbImageUrl && !post.reverbLyricClip ? (
+      {post.reverbVideo && !post.reverbLyricClip ? (
+        <div className="mt-2 flex justify-center">
+          <WallClipPlayer
+            clip={post.reverbVideo}
+            poster={post.reverbImageUrl}
+            className={immersive ? 'max-h-[min(38dvh,25rem)]' : undefined}
+          />
+        </div>
+      ) : post.reverbImageUrl && !post.reverbLyricClip ? (
         <div className="mt-2 flex justify-center">
           <ExpandableImage
             src={post.reverbImageUrl}
@@ -218,6 +227,7 @@ function ReverbSourceBody({ post, immersive = false }: { post: ProfilePost; imme
       ) : null}
       {!post.reverbText &&
       !post.reverbImageUrl &&
+      !post.reverbVideo &&
       !post.reverbEmbedUrl &&
       !post.reverbVoice &&
       !post.reverbLyricClip &&
@@ -592,7 +602,15 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
 
       {post.isReverb ? <ReverbSourceBody post={post} immersive={immersive} /> : null}
 
-      {!post.isReverb && post.imageUrl && (
+      {!post.isReverb && post.video ? (
+        <div className="mt-3 mb-1 flex justify-center overflow-visible">
+          <WallClipPlayer
+            clip={post.video}
+            poster={post.imageUrl}
+            className={immersive ? 'max-h-[min(42dvh,28rem)]' : undefined}
+          />
+        </div>
+      ) : !post.isReverb && post.imageUrl ? (
         <div className="mt-3 mb-1 flex justify-center overflow-visible">
           <ExpandableImage
             src={post.imageUrl}
@@ -610,7 +628,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
             )}
           />
         </div>
-      )}
+      ) : null}
 
       {!post.isReverb && (post.embedUrl || firstDropUrlFromText(post.text)) && (
         <div className="mt-3">

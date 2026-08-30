@@ -66,6 +66,7 @@ import {
   revokePostImagePreview,
   type PendingPostImage,
 } from '@/lib/profile/post-images';
+import { revokeWallClipPreview, type PendingWallClip } from '@/lib/profile/wall-clips';
 import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
@@ -647,6 +648,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const [embedUrl, setEmbedUrl] = useState('');
   const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
   const [image, setImage] = useState<PendingPostImage | null>(null);
+  const [clip, setClip] = useState<PendingWallClip | null>(null);
   const [pollOpen, setPollOpen] = useState(false);
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [pollVisibility, setPollVisibility] = useState<PostPollResultsVisibility>('after_vote');
@@ -793,7 +795,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       return;
     }
     if (!user) return;
-    if (!pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image)) return;
+    if (!pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image && !clip)) return;
     setBusy(true);
     try {
       const post = await createPost({
@@ -803,6 +805,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
         ownerSlug: ctx.profileSlug,
         ...(voice ? { voice } : {}),
         ...(image ? { image } : {}),
+        ...(clip ? { video: clip } : {}),
         ...(pollOpen ? { poll: { options: pollOptions, resultsVisibility: pollVisibility } } : {}),
       });
       setPosts((prev) => [post, ...prev]);
@@ -812,6 +815,8 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       setVoice(null);
       revokePostImagePreview(image);
       setImage(null);
+      revokeWallClipPreview(clip);
+      setClip(null);
       setPollOpen(false);
       setPollOptions(['', '']);
       setPollVisibility('after_vote');
@@ -854,6 +859,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
                 disabled: busy,
                 image,
                 onImageChange: setImage,
+                ...(playground ? {} : { clip, onClipChange: setClip }),
                 maxBytes: playground ? POST_IMAGE_GUEST_MAX_BYTES : undefined,
                 onError: (message) =>
                   toast({
@@ -911,6 +917,8 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
             <ImageAttachComposer
               image={image}
               onImageChange={setImage}
+              clip={playground ? null : clip}
+              onClipChange={playground ? undefined : setClip}
               disabled={busy}
               compact
               maxBytes={playground ? POST_IMAGE_GUEST_MAX_BYTES : undefined}
@@ -941,7 +949,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
             <Button
               size="sm"
               className="h-9 gap-1.5 font-bold uppercase"
-              disabled={busy || !pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image)}
+              disabled={busy || !pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image && !clip)}
               onClick={() => void submit()}
             >
               <Send className="h-3.5 w-3.5" /> Post

@@ -19,10 +19,21 @@ import {
 import {
   deletePostImageStorage,
   parseImageStoragePath,
+  processPostImageFile,
+  revokePostImagePreview,
   uploadPostImage,
   wallImageDropCommentPath,
   type PendingPostImage,
 } from '@/lib/profile/post-images';
+import {
+  clipExtFromType,
+  deleteWallClipStorage,
+  parseWallClip,
+  uploadWallClip,
+  wallClipDropCommentPath,
+  type PendingWallClip,
+  type WallClip,
+} from '@/lib/profile/wall-clips';
 import { notifyLoveReward } from '@/lib/profile/love-reward-client';
 
 const MAX_COMMENT_TEXT = 500;
@@ -86,23 +97,49 @@ export async function addDropComment(
     parentCommentId?: string;
     recipientId?: string;
     recipientName?: string;
+    video?: PendingWallClip;
   }
 ): Promise<PostComment> {
   const user = requireUser();
   const liveProfile = await requireLiveProfileForPosting(user.uid);
   const clean = text.trim().slice(0, MAX_COMMENT_TEXT);
-  if (!clean && !image) throw new Error('Comment is empty.');
+  if (!clean && !image && !opts?.video) throw new Error('Comment is empty.');
   const parentCommentId = opts?.parentCommentId?.trim().slice(0, 80) || undefined;
   const id = chronoId();
+  let video: WallClip | undefined;
+  if (opts?.video) {
+    video = await uploadWallClip({
+      storagePath: wallClipDropCommentPath(user.uid, shareId, id, clipExtFromType(opts.video.contentType)),
+      clip: opts.video,
+    });
+  }
   let imageUrl: string | undefined;
   let imageStoragePath: string | undefined;
   if (image) {
-    const uploaded = await uploadPostImage({
-      storagePath: wallImageDropCommentPath(user.uid, shareId, id),
-      image,
-    });
-    imageUrl = uploaded.url;
-    imageStoragePath = uploaded.storagePath;
+    try {
+      const uploaded = await uploadPostImage({
+        storagePath: wallImageDropCommentPath(user.uid, shareId, id),
+        image,
+      });
+      imageUrl = uploaded.url;
+      imageStoragePath = uploaded.storagePath;
+    } catch (err) {
+      if (video) await deleteWallClipStorage(video.storagePath);
+      throw err;
+    }
+  } else if (opts?.video?.posterBlob) {
+    try {
+      const poster = await processPostImageFile(opts.video.posterBlob);
+      const uploaded = await uploadPostImage({
+        storagePath: wallImageDropCommentPath(user.uid, shareId, id),
+        image: poster,
+      });
+      revokePostImagePreview(poster);
+      imageUrl = uploaded.url;
+      imageStoragePath = uploaded.storagePath;
+    } catch {
+      /* poster is optional */
+    }
   }
   const comment: PostComment = {
     id,
@@ -114,12 +151,14 @@ export async function addDropComment(
     ...(parentCommentId ? { parentCommentId } : {}),
     ...(imageUrl ? { imageUrl } : {}),
     ...(imageStoragePath ? { imageStoragePath } : {}),
+    ...(video ? { video } : {}),
   };
   const { id: commentId, ...data } = comment;
   try {
     await setDoc(doc(db, 'shares', shareId, 'comments', commentId), data);
   } catch (err) {
     if (imageStoragePath) await deletePostImageStorage(imageStoragePath);
+    if (video) await deleteWallClipStorage(video.storagePath);
     throw err;
   }
   if (clean.includes('@')) {
@@ -134,7 +173,7 @@ export async function addDropComment(
     shareId,
     ...(opts?.recipientId ? { recipientId: opts.recipientId } : {}),
     ...(opts?.recipientName ? { recipientName: opts.recipientName } : {}),
-    preview: (clean || (imageUrl ? 'Photo' : '')).slice(0, 120),
+    preview: (clean || (video ? 'Clip' : imageUrl ? 'Photo' : '')).slice(0, 120),
     commentId,
   });
   return comment;
@@ -147,6 +186,7 @@ export async function fetchDropComments(shareId: string, max = 50): Promise<Post
       .map((d) => {
         const data = d.data();
         const imageStoragePath = parseImageStoragePath(data.imageStoragePath);
+        const video = parseWallClip(data.video);
         const parentCommentId =
           typeof data.parentCommentId === 'string' ? data.parentCommentId : undefined;
         return {
@@ -161,6 +201,7 @@ export async function fetchDropComments(shareId: string, max = 50): Promise<Post
             ? { imageUrl: data.imageUrl }
             : {}),
           ...(imageStoragePath ? { imageStoragePath } : {}),
+          ...(video ? { video } : {}),
         } satisfies PostComment;
       })
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
@@ -176,6 +217,8 @@ export async function deleteDropComment(shareId: string, commentId: string): Pro
     if (snap.exists()) {
       const imageStoragePath = parseImageStoragePath(snap.data().imageStoragePath);
       if (imageStoragePath) await deletePostImageStorage(imageStoragePath);
+      const video = parseWallClip(snap.data().video);
+      if (video?.storagePath) await deleteWallClipStorage(video.storagePath);
     }
   } catch {
     // Still remove the comment if an attached image cannot be read or deleted.

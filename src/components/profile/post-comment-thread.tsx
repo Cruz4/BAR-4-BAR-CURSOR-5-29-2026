@@ -31,6 +31,8 @@ import {
   unlikeDropComment,
 } from '@/lib/drop-social-client';
 import { revokePostImagePreview, type PendingPostImage } from '@/lib/profile/post-images';
+import { revokeWallClipPreview, type PendingWallClip } from '@/lib/profile/wall-clips';
+import { WallClipPlayer } from '@/components/profile/wall-clip-player';
 import { type RecordedVoiceClip } from '@/lib/profile/voice-notes';
 import { activityCommentElementId } from '@/lib/activity/post-deep-link';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
@@ -81,6 +83,7 @@ export function PostCommentThread({
   const [draft, setDraft] = useState('');
   const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
   const [image, setImage] = useState<PendingPostImage | null>(null);
+  const [clip, setClip] = useState<PendingWallClip | null>(null);
   const [busy, setBusy] = useState(false);
   const draftRef = useRef<HTMLInputElement>(null);
   const insertEmoji = useEmojiInserter(draft, setDraft, draftRef);
@@ -110,7 +113,7 @@ export function PostCommentThread({
   }, [postId, shareId, comments]);
 
   const submitComment = async () => {
-    if (!user || (!draft.trim() && !voice && !image)) return;
+    if (!user || (!draft.trim() && !voice && !image && !clip)) return;
     if (!canWritePublic) {
       toast({
         variant: 'destructive',
@@ -140,15 +143,20 @@ export function PostCommentThread({
             author,
             voice || undefined,
             image || undefined,
-            replyOpts
+            { ...replyOpts, ...(clip ? { video: clip } : {}) }
           )
-        : await addDropComment(shareId!, draft, author, image || undefined, replyOpts);
+        : await addDropComment(shareId!, draft, author, image || undefined, {
+            ...replyOpts,
+            ...(clip ? { video: clip } : {}),
+          });
       onCommentsChange([...comments, comment]);
       onCommentCountChange(commentCount + 1);
       setDraft('');
       setVoice(null);
       revokePostImagePreview(image);
       setImage(null);
+      revokeWallClipPreview(clip);
+      setClip(null);
       setReplyTo(null);
     } catch (e) {
       toast({
@@ -222,7 +230,11 @@ export function PostCommentThread({
             {node.text ? (
               <span className="text-[var(--ph-text,#fff)]/90"><MentionText text={node.text} /></span>
             ) : null}
-            {node.imageUrl ? (
+            {node.video ? (
+              <div className="mt-1.5">
+                <WallClipPlayer clip={node.video} poster={node.imageUrl} compact />
+              </div>
+            ) : node.imageUrl ? (
               <div className="mt-1.5">
                 <ExpandableImage
                   src={node.imageUrl}
@@ -339,6 +351,8 @@ export function PostCommentThread({
             <ImageAttachComposer
               image={image}
               onImageChange={setImage}
+              clip={clip}
+              onClipChange={setClip}
               disabled={busy}
               compact
               onError={(message) =>
@@ -361,6 +375,8 @@ export function PostCommentThread({
                   disabled: busy,
                   image,
                   onImageChange: setImage,
+                  clip,
+                  onClipChange: setClip,
                   onError: (message) =>
                     toast({
                       variant: 'destructive',
@@ -379,7 +395,7 @@ export function PostCommentThread({
               placeholder={
                 replyTo
                   ? `Reply to ${replyTo.authorName}…`
-                  : voice || image
+                  : voice || image || clip
                     ? 'Add a caption (optional)…'
                     : shareId
                       ? 'Reply on this drop…'
@@ -392,7 +408,7 @@ export function PostCommentThread({
               size="icon"
               variant="ghost"
               className="h-8 w-8 shrink-0 text-[var(--ph-accent,#7dd3fc)]"
-              disabled={busy || (!draft.trim() && !voice && !image)}
+              disabled={busy || (!draft.trim() && !voice && !image && !clip)}
               onClick={() => void submitComment()}
             >
               <Send className="h-3.5 w-3.5" />

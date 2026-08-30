@@ -52,7 +52,7 @@ function blockMeta(post: ProfilePost): SlideMeta {
   return {
     key: `post-${post.id}`,
     name: post.ownerName,
-    label: post.text || (post.imageUrl ? 'Photo post' : post.voice ? 'Voice post' : 'Your Block'),
+    label: post.text || (post.video ? 'Clip' : post.imageUrl ? 'Photo post' : post.voice ? 'Voice post' : 'Your Block'),
     userId: post.ownerId,
     slug: post.ownerSlug,
     href: post.ownerSlug ? profileHref(post.ownerSlug) : undefined,
