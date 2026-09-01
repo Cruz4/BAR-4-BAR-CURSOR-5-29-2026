@@ -67,6 +67,7 @@ export function SceneDiscoverCard({
   viewerSlug,
   onLockRemoved,
   immersive = false,
+  mediaActive,
   compactSalePlayer = false,
 }: {
   card: DiscoverCard;
@@ -74,6 +75,7 @@ export function SceneDiscoverCard({
   /** Called after the owner or studio admin deletes a Finish this bar cast. */
   onLockRemoved?: (lockId: string) => void;
   immersive?: boolean;
+  mediaActive?: boolean;
   /** Keep guest Discover sale cards useful without letting each player dominate the feed. */
   compactSalePlayer?: boolean;
 }) {
@@ -95,7 +97,7 @@ export function SceneDiscoverCard({
     return (
       <div className="space-y-1.5">
         <DiscoverTag label="From the scene" icon={Radio} tone="text-fuchsia-400/90" />
-        <PostCard post={card.post} showAuthor viewerSlug={viewerSlug} immersive={immersive} />
+        <PostCard post={card.post} showAuthor viewerSlug={viewerSlug} immersive={immersive} mediaActive={mediaActive} />
       </div>
     );
   }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useContext, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 
 /**
@@ -80,6 +80,7 @@ import {
   Banknote,
   BadgeDollarSign,
   CircleDollarSign,
+  Map,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -118,9 +119,14 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+import { ManualPathDeck } from '@/components/manual-path-deck';
+
+type ManualTab = 'paths' | 'start-here' | 'scene' | 'first-drops' | 'tiering' | 'loop' | 'power-tools' | 'panels' | 'faq';
+
 interface HowToUseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialTab?: ManualTab;
 }
 
 const ChapterCard = ({ id, icon, title, children, colorClass }: { id?: string, icon: React.ReactNode, title: string, children: React.ReactNode, colorClass?: string }) => (
@@ -134,8 +140,6 @@ const ChapterCard = ({ id, icon, title, children, colorClass }: { id?: string, i
         <CardContent className="font-code text-sm text-muted-foreground pt-6 space-y-4 leading-relaxed">{children}</CardContent>
     </Card>
 );
-
-type ManualTab = 'start-here' | 'scene' | 'first-drops' | 'tiering' | 'loop' | 'power-tools' | 'panels' | 'faq';
 
 type ManualSearchItem = {
   label: string;
@@ -402,15 +406,20 @@ function buildStudioFaqs(flags: ConfigSurfaceFlags) {
   return faqs;
 }
 
-export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
+export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }: HowToUseDialogProps) {
   const { albums } = useContext(DataContext);
   const { toast } = useToast();
   const flags = useConfigSurfaceFlags();
   const faqs = useMemo(() => buildStudioFaqs(flags), [flags]);
-  const [activeTab, setActiveTab] = useState<ManualTab>('start-here');
+  const [activeTab, setActiveTab] = useState<ManualTab>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
 
+  useEffect(() => {
+    if (open) setActiveTab(initialTab);
+  }, [open, initialTab]);
+
   const searchItems = useMemo<ManualSearchItem[]>(() => [
+    { label: 'Paths', detail: 'Clickable lanes into the app', tab: 'paths', targetId: 'manual-paths', keywords: 'flashcard press song post clip go public vault dna drop discover library earnings ink lock refer' },
     { label: 'Start here', detail: 'First-hour walkthrough', tab: 'start-here', targetId: 'manual-start-here', keywords: 'begin new artist write first track tour scene vault' },
     { label: 'Public identity', detail: 'Artist, creator, and Music Fan labels', tab: 'scene', targetId: 'manual-public-identity', keywords: 'artist songwriter producer engineer dj music fan profile sound identity genre mood influence region collaboration' },
     { label: 'Featured Library track', detail: 'Owned or purchased music on your profile', tab: 'scene', targetId: 'manual-featured-track', keywords: '30 second excerpt preview purchased song music fan buy full stream public page' },
@@ -547,22 +556,37 @@ export function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
 
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ManualTab)} className="flex-grow flex flex-col min-h-0">
           <div className="px-4 sm:px-8 border-b bg-muted/10 shrink-0">
-            <TabsList className="bg-transparent h-11 sm:h-12 gap-4 sm:gap-8 overflow-x-auto justify-start w-full max-w-full flex-nowrap scrollbar-none">
-              <TabsTrigger value="start-here" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Start Here</TabsTrigger>
-              <TabsTrigger value="scene" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Scene &amp; Profile</TabsTrigger>
-              <TabsTrigger value="first-drops" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Sell Your Music</TabsTrigger>
-              <TabsTrigger value="tiering" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Studio Tiers</TabsTrigger>
-              <TabsTrigger value="loop" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">The ∞ Loop</TabsTrigger>
-              <TabsTrigger value="power-tools" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Precision Tools</TabsTrigger>
-              <TabsTrigger value="panels" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Workstation Map</TabsTrigger>
-              <TabsTrigger value="faq" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px]">Studio FAQ</TabsTrigger>
+            <TabsList className="flex h-auto min-h-11 w-full max-w-full flex-wrap items-end justify-start gap-x-4 gap-y-0 sm:gap-x-6 overflow-visible rounded-none bg-transparent p-0 no-scrollbar">
+              <TabsTrigger value="paths" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px] shrink-0">Paths</TabsTrigger>
+              <TabsTrigger value="start-here" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px] shrink-0">Start Here</TabsTrigger>
+              <TabsTrigger value="scene" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px] shrink-0">Scene &amp; Profile</TabsTrigger>
+              <TabsTrigger value="first-drops" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px] shrink-0">Sell Your Music</TabsTrigger>
+              <TabsTrigger value="tiering" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px] shrink-0">Studio Tiers</TabsTrigger>
+              <TabsTrigger value="loop" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px] shrink-0">The ∞ Loop</TabsTrigger>
+              <TabsTrigger value="power-tools" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px] shrink-0">Precision Tools</TabsTrigger>
+              <TabsTrigger value="panels" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px] shrink-0">Workstation Map</TabsTrigger>
+              <TabsTrigger value="faq" className="data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary px-0 font-bold uppercase tracking-widest text-[10px] shrink-0">Studio FAQ</TabsTrigger>
             </TabsList>
           </div>
 
           <ScrollArea className="flex-grow p-4 sm:p-8 min-h-0">
             <div className="max-w-4xl mx-auto space-y-12 pb-12">
 
+              <TabsContent id="manual-paths" value="paths" className="mt-0 scroll-mt-6 space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                <ManualPathDeck onLeave={() => onOpenChange(false)} />
+              </TabsContent>
+
               <TabsContent id="manual-start-here" value="start-here" className="mt-0 scroll-mt-6 space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                <ChapterCard icon={<Map className="text-cyan-300" />} title="Paths" colorClass="border-l-cyan-400 text-cyan-300">
+                  <p className="text-sm text-foreground/90">
+                    Clickable lanes for press a song, post a clip, go public, The Vault, DNA Drop, Discover, Library, and more.
+                    Start on any step. A coach stays up until that path is done.
+                  </p>
+                  <Button type="button" size="sm" className="h-8 font-bold uppercase" onClick={() => setActiveTab('paths')}>
+                    Open Paths
+                  </Button>
+                </ChapterCard>
+
                 <ChapterCard icon={<Radio className="text-emerald-400" />} title="The Scene" colorClass="border-l-emerald-500 text-emerald-400">
                   <p className="text-sm text-foreground/90">
                     You land here after sign-in. Do not stay. Open a sheet and write a bar — that is the first hour.

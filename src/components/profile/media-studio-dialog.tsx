@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Camera, FlipHorizontal, ImagePlus, Music2, Square, Trash2, Volume2, VolumeX } from 'lucide-react';
+import { Camera, FlipHorizontal, ImagePlus, Maximize2, Music2, Square, Trash2, Volume2, VolumeX, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -112,6 +112,8 @@ export function MediaStudioDialog({
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const recordTimerRef = useRef<number | null>(null);
+  const reviewVideoRef = useRef<HTMLVideoElement>(null);
+  const reviewAudioRef = useRef<HTMLAudioElement>(null);
 
   const [step, setStep] = useState<'capture' | 'edit'>('capture');
   const [facing, setFacing] = useState<'user' | 'environment'>('user');
@@ -137,6 +139,8 @@ export function MediaStudioDialog({
   });
   const [tracksBusy, setTracksBusy] = useState(false);
   const [trackQuery, setTrackQuery] = useState('');
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewMusicUrl, setReviewMusicUrl] = useState<string | undefined>();
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [camError, setCamError] = useState<string | null>(null);
@@ -178,9 +182,26 @@ export function MediaStudioDialog({
     setVideoVol(1);
     setVideoMuted(false);
     setMusicOpen(false);
+    setReviewOpen(false);
+    setReviewMusicUrl(undefined);
     setExporting(false);
     setProgress(0);
     setCamError(null);
+  };
+
+  const openReview = () => {
+    setReviewOpen(true);
+    if (!music) {
+      setReviewMusicUrl(undefined);
+      return;
+    }
+    if (music.kind === 'device') {
+      setReviewMusicUrl(music.url);
+      return;
+    }
+    void resolveStudioTrackUrl(music.shareId, music.trackId)
+      .then(setReviewMusicUrl)
+      .catch(() => setReviewMusicUrl(undefined));
   };
 
   const applySource = (next: StudioSource) => {
@@ -250,6 +271,26 @@ export function MediaStudioDialog({
         : IMAGE_TO_VIDEO_SECONDS;
     setMusicStart((prev) => Math.min(prev, Math.max(0, musicDuration - windowSec)));
   }, [musicDuration, source?.kind, trimStart, trimEnd]);
+
+  useEffect(() => {
+    if (!reviewOpen) return;
+    const video = reviewVideoRef.current;
+    if (video && source?.kind === 'video') {
+      video.currentTime = trimStart;
+      video.volume = videoMuted ? 0 : videoVol;
+      void video.play().catch(() => undefined);
+    }
+    const audio = reviewAudioRef.current;
+    if (audio && reviewMusicUrl) {
+      audio.currentTime = musicStart;
+      audio.volume = musicMuted ? 0 : musicVol;
+      void audio.play().catch(() => undefined);
+    }
+    return () => {
+      video?.pause();
+      audio?.pause();
+    };
+  }, [reviewOpen, reviewMusicUrl, source?.kind, trimStart, musicStart, videoVol, videoMuted, musicVol, musicMuted]);
 
   const takePhoto = async () => {
     const el = liveRef.current;
@@ -403,7 +444,7 @@ export function MediaStudioDialog({
     >
       <DialogContent
         hideClose={exporting}
-        className="max-h-[min(92dvh,100svh)] w-[min(calc(100vw-1rem),28rem)] max-w-[min(calc(100vw-1rem),28rem)] min-w-0 overflow-x-hidden overflow-y-auto border-white/10 bg-[#0b0f14] p-4 text-white sm:rounded-2xl"
+        className="relative max-h-[min(92dvh,100svh)] w-[min(calc(100vw-1rem),28rem)] max-w-[min(calc(100vw-1rem),28rem)] min-w-0 overflow-x-hidden overflow-y-auto border-white/10 bg-[#0b0f14] p-4 text-white sm:rounded-2xl"
       >
         <DialogHeader className="min-w-0 space-y-1 pr-8 text-left">
           <DialogTitle className="text-sm font-bold uppercase tracking-widest text-cyan-200">
@@ -486,7 +527,12 @@ export function MediaStudioDialog({
           </div>
         ) : source ? (
           <div className="min-w-0 space-y-3">
-            <div className="mx-auto flex max-h-[min(38dvh,18rem)] min-w-0 w-full items-center justify-center overflow-hidden rounded-xl bg-black">
+            <button
+              type="button"
+              onClick={openReview}
+              className="relative mx-auto flex max-h-[min(42dvh,20rem)] min-w-0 w-full cursor-zoom-in items-center justify-center overflow-hidden rounded-xl bg-black"
+              aria-label="Review fullscreen preview"
+            >
               {source.kind === 'video' ? (
                 <video
                   src={source.url}
@@ -494,7 +540,7 @@ export function MediaStudioDialog({
                   playsInline
                   autoPlay
                   loop
-                  className="max-h-[min(38dvh,18rem)] max-w-full object-contain"
+                  className="max-h-[min(42dvh,20rem)] max-w-full object-contain"
                   style={{ filter: mediaFilterCss(filterId) }}
                 />
               ) : (
@@ -502,11 +548,17 @@ export function MediaStudioDialog({
                 <img
                   src={source.url}
                   alt="Preview"
-                  className="max-h-[min(38dvh,18rem)] max-w-full object-contain"
+                  className="max-h-[min(42dvh,20rem)] max-w-full object-contain"
                   style={{ filter: mediaFilterCss(filterId) }}
                 />
               )}
-            </div>
+              <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-white/80">
+                <Maximize2 className="h-3 w-3" /> Review
+              </span>
+            </button>
+            <p className="text-center text-[10px] uppercase tracking-widest text-white/40">
+              Tap the picture to review it fullscreen before you use it.
+            </p>
 
             {source.kind === 'video' ? (
               <div className="space-y-1">
@@ -812,6 +864,51 @@ export function MediaStudioDialog({
             pickDeviceMusic(file);
           }}
         />
+        {reviewOpen && source ? (
+          <div className="absolute inset-0 z-20 flex flex-col bg-black/95 p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/55">
+                Review {source.kind === 'video' || music ? 'clip' : 'photo'}
+              </p>
+              <button
+                type="button"
+                onClick={() => setReviewOpen(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+                aria-label="Close review"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex min-h-0 flex-1 items-center justify-center">
+              {source.kind === 'video' ? (
+                <video
+                  ref={reviewVideoRef}
+                  src={source.url}
+                  controls
+                  playsInline
+                  className="max-h-full max-w-full rounded-lg object-contain"
+                  style={{ filter: mediaFilterCss(filterId) }}
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={source.url}
+                  alt="Review"
+                  className="max-h-full max-w-full rounded-lg object-contain"
+                  style={{ filter: mediaFilterCss(filterId) }}
+                />
+              )}
+            </div>
+            {reviewMusicUrl ? (
+              <audio ref={reviewAudioRef} src={reviewMusicUrl} className="mt-2 w-full" controls />
+            ) : music ? (
+              <p className="mt-2 text-center text-[10px] text-white/40">Opening attached music…</p>
+            ) : null}
+            <p className="mt-2 text-center text-[10px] uppercase tracking-widest text-white/40">
+              Close this if it looks right, then tap Use {source.kind === 'image' && !music ? 'photo' : 'clip'}.
+            </p>
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

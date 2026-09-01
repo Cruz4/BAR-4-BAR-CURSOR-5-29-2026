@@ -87,6 +87,11 @@ type LivingPressFieldProps = {
    * same look at scroll=0 and skip the unused window RAF.
    */
   followWindowScroll?: boolean;
+  /**
+   * Paint the composition (layers, hue, vignette, grain) with no breathe, spin,
+   * or parallax. Swipe-feed only — Artist Home stays alive.
+   */
+  staticField?: boolean;
   className?: string;
   onTokensChange?: (tokens: PressingTokens) => void;
 };
@@ -841,6 +846,7 @@ export function LivingPressField({
   tokens: tokensProp,
   compact = false,
   followWindowScroll = true,
+  staticField = false,
   className,
   onTokensChange,
 }: LivingPressFieldProps) {
@@ -856,17 +862,18 @@ export function LivingPressField({
   }, [tokens, onTokensChange]);
 
   useEffect(() => {
+    if (staticField) return;
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     setReducedMotion(mq.matches);
     const onChange = () => setReducedMotion(mq.matches);
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
-  }, []);
+  }, [staticField]);
 
-  const motionOk = tokens.alive && !reducedMotion;
-  const showLife = tokens.alive;
+  const motionOk = !staticField && tokens.alive && !reducedMotion;
+  const showLife = staticField || tokens.alive;
   const restless = tokens.autoDrift && motionOk;
-  const scroll = useSmoothScroll(showLife && !compact && !reducedMotion && followWindowScroll);
+  const scroll = useSmoothScroll(showLife && !staticField && !compact && !reducedMotion && followWindowScroll);
   const pos = compact ? 'absolute' : 'fixed';
   const vignette = apertureMask(tokens.aperture, tokens.hue);
 

@@ -39,6 +39,7 @@ import { DropPlayerProvider, useOptionalDropPlayer } from '@/context/drop-player
 import { DropCartProvider } from '@/context/drop-cart-context';
 import { DropNowPlayingBar, shouldHideDropNowPlayingBar } from '@/components/library/drop-now-playing-bar';
 import { FirstDropLatheHost } from '@/components/first-drop-lathe';
+import { ManualPathCoach } from '@/components/manual-path-coach';
 import { ProFeaturePreviewBanner } from './pro-feature-preview-banner';
 import { ProTrialWinQuestStrip } from './pro-trial-win-quest-strip';
 import { ProPreviewEndedDialog } from './pro-preview-ended-dialog';
@@ -178,6 +179,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               {!isSharePage && !isPublicProfilePage && <FloatingInkSpent />}
               {showBottomNowPlaying ? <DropNowPlayingBar /> : null}
               <FirstDropLatheHost />
+              {!isSharePage && !isPublicProfilePage && !isMarketingShell && !isMarketingCapture && <ManualPathCoach />}
               <Toaster />
               <AchievementUnlockCelebration />
               <ProgressCelebration />

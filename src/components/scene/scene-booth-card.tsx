@@ -124,7 +124,7 @@ export function SceneBoothCard({
           </p>
         </div>
 
-        <label className="flex shrink-0 items-center gap-2">
+        <label className="flex shrink-0 items-center gap-2" data-path="booth-live">
           <Globe className={cn('h-3.5 w-3.5', isLive ? 'text-sky-400' : 'text-muted-foreground/50')} />
           <span className="font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
             {isLive ? 'Live' : 'Go live'}

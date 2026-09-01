@@ -110,7 +110,7 @@ export function PostCommentThread({
     return () => {
       cancelled = true;
     };
-  }, [postId, shareId, comments]);
+  }, [postId, shareId, comments, user?.id]);
 
   const submitComment = async () => {
     if (!user || (!draft.trim() && !voice && !image && !clip)) return;
@@ -190,8 +190,15 @@ export function PostCommentThread({
         slug: viewerSlug,
       };
       if (nextLiked) {
-        if (postId) await likeComment(postId, commentId, actor);
-        else await likeDropComment(shareId!, commentId, actor);
+        if (postId) {
+          const result = await likeComment(postId, commentId, actor);
+          if (!result.created) {
+            setLikeStates((s) => ({
+              ...s,
+              [commentId]: { count: prev.count, liked: true },
+            }));
+          }
+        } else await likeDropComment(shareId!, commentId, actor);
       } else if (postId) await unlikeComment(postId, commentId);
       else await unlikeDropComment(shareId!, commentId);
     } catch {

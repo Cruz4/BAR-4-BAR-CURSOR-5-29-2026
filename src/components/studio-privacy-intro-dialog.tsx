@@ -34,7 +34,7 @@ import { dispatchActivityPushIntroEligible } from '@/lib/activity-push-intro';
 export function StudioPrivacyIntroDialog() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const { loading: gamificationLoading } = useGamification();
+  const { summary, loading: gamificationLoading } = useGamification();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   /** Both off = private. ON = opt in to that public surface. */
@@ -42,19 +42,21 @@ export function StudioPrivacyIntroDialog() {
   const [showOnLeaderboard, setShowOnLeaderboard] = useState(false);
   const [saving, setSaving] = useState(false);
   const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wasOpenRef = useRef(false);
 
   useEffect(() => {
     setStudioPrivacyIntroOpen(open);
     return () => setStudioPrivacyIntroOpen(false);
   }, [open]);
 
-  // First-run popup always starts private — artist opts in explicitly.
+  // Match Your Booth / Studio Progress — never force off over a live page.
   useEffect(() => {
-    if (open) {
-      setPublicProfile(false);
-      setShowOnLeaderboard(false);
+    if (open && !wasOpenRef.current) {
+      setPublicProfile(Boolean(summary.publicProfile));
+      setShowOnLeaderboard(!summary.leaderboardHidden);
     }
-  }, [open]);
+    wasOpenRef.current = open;
+  }, [open, summary.publicProfile, summary.leaderboardHidden]);
 
   const finishIntro = useCallback(async () => {
     setOpen(false);
@@ -166,10 +168,20 @@ export function StudioPrivacyIntroDialog() {
             Your studio visibility
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
-            You start <strong className="text-foreground">fully private</strong>. Artist Home is a core shareable
-            surface — turn Public profile on only when you want eyes on your page. Lyrics, DNA, and vault content are
-            never published unless you share a DNA Drop link. After you go live, customize modules and links on Edit
-            Public Page.
+            {publicProfile ? (
+              <>
+                Your Artist Home is <strong className="text-foreground">already live</strong> from Your Booth. These
+                switches match that — saving will not turn your page off unless you flip Public profile off here.
+                Lyrics, DNA, and vault content are never published unless you share a DNA Drop link.
+              </>
+            ) : (
+              <>
+                You start <strong className="text-foreground">fully private</strong>. Artist Home is a core shareable
+                surface — turn Public profile on only when you want eyes on your page. Lyrics, DNA, and vault content are
+                never published unless you share a DNA Drop link. After you go live, customize modules and links on Edit
+                Public Page.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -177,8 +189,27 @@ export function StudioPrivacyIntroDialog() {
           <p className="flex items-start gap-2">
             <Trophy className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
             <span>
-              <strong className="text-foreground/90">Both off</strong> — private studio. Leaderboard &amp; profile stay
-              off until you opt in.
+              {publicProfile && showOnLeaderboard ? (
+                <>
+                  <strong className="text-foreground/90">Both on</strong> — Artist Home is live and you appear on the
+                  weekly leaderboard.
+                </>
+              ) : publicProfile ? (
+                <>
+                  <strong className="text-foreground/90">Artist Home live</strong> — same as Go live on Your Booth.
+                  Leaderboard stays off until you opt in.
+                </>
+              ) : showOnLeaderboard ? (
+                <>
+                  <strong className="text-foreground/90">Leaderboard on</strong> — Artist Home stays private until you
+                  opt in.
+                </>
+              ) : (
+                <>
+                  <strong className="text-foreground/90">Both off</strong> — private studio. Leaderboard &amp; profile stay
+                  off until you opt in.
+                </>
+              )}
             </span>
           </p>
         </div>

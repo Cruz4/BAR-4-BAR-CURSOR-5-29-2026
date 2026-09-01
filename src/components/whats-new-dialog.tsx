@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Archive, Compass, Globe, Music, Radio, Sparkles, Trophy, Users } from 'lucide-react';
+import { Camera, Heart, Maximize2, Route, Smartphone, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
@@ -21,7 +21,6 @@ import {
   markWhatsNewShownThisLogin,
 } from '@/lib/whats-new-session';
 import { isStudioOnboardingBusy } from '@/lib/studio-privacy-intro';
-import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 
 function isVaultLanding(pathname: string | null): boolean {
   if (!pathname) return false;
@@ -38,55 +37,39 @@ function isBrandNewStudioAccount(createdAt: string | undefined): boolean {
 
 const WHATS_NEW_ITEMS = [
   {
-    title: 'Public music identity',
-    desc: 'Choose up to three public labels, including Music Fan, then add genres, moods, influences, region, collaboration status, and what you are focused on.',
-    icon: Globe,
+    title: 'Camera, clips & music',
+    desc: 'Shoot or upload photos and clips on posts and comments. Crop, apply filters, attach Library or released music, trim up to 40 seconds, and mix clip vs music volume.',
+    icon: Camera,
     color: 'text-fuchsia-400',
     bgColor: 'bg-fuchsia-500/5',
   },
   {
-    title: 'Featured Library track',
-    desc: 'Feature a release you published or purchased. Pick the 30-second public excerpt; entitled listeners receive the full stream and everyone else sees Buy.',
-    icon: Music,
-    color: 'text-fuchsia-300',
-    bgColor: 'bg-fuchsia-500/5',
-    firstDropsOnly: true,
-  },
-  {
-    title: 'Explainable Discover',
-    desc: 'Browse For your taste, For your craft, or New & live. Matches explain their public genre, mood, influence, region, role, or collaboration connection.',
-    icon: Compass,
+    title: 'Paths in Studio Manual',
+    desc: 'Open ? and tap Paths. Click a lane to stay coached until that path is finished.',
+    icon: Route,
     color: 'text-sky-400',
     bgColor: 'bg-sky-500/5',
   },
   {
-    title: 'Support Circle',
-    desc: 'Follow and Inner Circle are one-way support. Friends stay reciprocal and still control collaboration and Msgs.',
-    icon: Users,
+    title: 'Preview before you drop',
+    desc: 'In Camera studio and Your Booth, tap the thumb to review fullscreen. Clips play with sound.',
+    icon: Maximize2,
     color: 'text-emerald-400',
     bgColor: 'bg-emerald-500/5',
   },
   {
-    title: 'Listener Insights',
-    desc: 'Creators see historical release starts and sales immediately, plus verified qualified listeners, repeats, completions, sources, timeline, and track summaries without exposing named listener histories.',
-    icon: Radio,
+    title: 'Swipe feed that follows',
+    desc: 'Immersive phone feed highlights the author of the nearest card as you swipe. The current clip autoplays; others pause.',
+    icon: Smartphone,
     color: 'text-cyan-400',
     bgColor: 'bg-cyan-500/5',
-    firstDropsOnly: true,
   },
   {
-    title: 'Emerging (7d)',
-    desc: 'A transparent momentum board with visible scores, signals, and reasons. Money, Ink, Pro, ads, and sponsorship cannot buy ranking points.',
-    icon: Trophy,
-    color: 'text-amber-400',
-    bgColor: 'bg-amber-500/5',
-  },
-  {
-    title: 'Safer Vault restore',
-    desc: 'Versioned backups now preview imports and merge as collision-safe copies. Restore never removes or overwrites your current projects.',
-    icon: Archive,
-    color: 'text-violet-300',
-    bgColor: 'bg-violet-500/5',
+    title: 'Love from a ping',
+    desc: 'Open a post from a mention or notification and the heart already shows if you liked it.',
+    icon: Heart,
+    color: 'text-rose-400',
+    bgColor: 'bg-rose-500/5',
   },
 ] as const;
 
@@ -94,7 +77,6 @@ export function WhatsNewDialog() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const { user, authReady, loading } = useAuth();
-  const { enabled: firstDropsOn } = useFirstDropsFeature();
   const scheduledRef = useRef(false);
 
   const dismiss = useCallback(() => {
@@ -162,7 +144,7 @@ export function WhatsNewDialog() {
             <Sparkles className="h-14 w-14 sm:h-16 sm:w-16" />
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 pr-12">
-            <Badge className="bg-primary/20 text-primary border-primary/20 font-code px-2 text-[10px]">Bar 4 Bar v.09</Badge>
+            <Badge className="bg-primary/20 text-primary border-primary/20 font-code px-2 text-[10px]">Bar 4 Bar v.10</Badge>
             <span className="text-[9px] font-bold uppercase tracking-[0.25em] sm:tracking-[0.3em] text-muted-foreground">Studio notes</span>
           </div>
           <DialogTitle className="font-headline text-2xl sm:text-3xl font-bold tracking-tighter leading-tight pr-4">
@@ -172,7 +154,7 @@ export function WhatsNewDialog() {
 
         <div className="p-4 sm:p-6 overflow-y-auto studio-scrollbar">
           <ul className="space-y-2.5">
-            {WHATS_NEW_ITEMS.filter((item) => firstDropsOn || !('firstDropsOnly' in item)).map((item) => {
+            {WHATS_NEW_ITEMS.map((item) => {
               const Icon = item.icon;
               return (
                 <li

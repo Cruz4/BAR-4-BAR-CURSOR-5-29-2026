@@ -710,11 +710,16 @@ export async function enrichPostsWithLiveSlugs(posts: ProfilePost[]): Promise<Pr
 // Likes
 // ---------------------------------------------------------------------------
 
-export async function likePost(postId: string, actor?: { name?: string; slug?: string }): Promise<void> {
+export async function likePost(
+  postId: string,
+  actor?: { name?: string; slug?: string }
+): Promise<{ created: boolean }> {
   const user = requireUser();
   const actorName = actor?.name || user.displayName || 'Artist';
   const actorSlug = actor?.slug;
   const now = new Date().toISOString();
+  const likeRef = doc(db, 'posts', postId, 'likes', user.uid);
+  if ((await getDoc(likeRef)).exists()) return { created: false };
 
   const postSnap = await getDoc(doc(db, 'posts', postId));
   const postData = postSnap.data();
@@ -723,7 +728,7 @@ export async function likePost(postId: string, actor?: { name?: string; slug?: s
       ? postData.reverbPostId.trim()
       : '';
 
-  await setDoc(doc(db, 'posts', postId, 'likes', user.uid), { createdAt: now });
+  await setDoc(likeRef, { createdAt: now });
   notifyLoveReward({ postId });
 
   const { emitActivity } = await import('@/lib/activity/client');
@@ -748,6 +753,7 @@ export async function likePost(postId: string, actor?: { name?: string; slug?: s
       postId: originalPostId,
     });
   }
+  return { created: true };
 }
 
 export async function unlikePost(postId: string): Promise<void> {
@@ -977,9 +983,11 @@ export async function likeComment(
   postId: string,
   commentId: string,
   actor?: { name?: string; slug?: string }
-): Promise<void> {
+): Promise<{ created: boolean }> {
   const user = requireUser();
-  await setDoc(doc(db, 'posts', postId, 'comments', commentId, 'likes', user.uid), {
+  const likeRef = doc(db, 'posts', postId, 'comments', commentId, 'likes', user.uid);
+  if ((await getDoc(likeRef)).exists()) return { created: false };
+  await setDoc(likeRef, {
     createdAt: new Date().toISOString(),
   });
   notifyLoveReward({ postId, commentId });
@@ -991,6 +999,7 @@ export async function likeComment(
     postId,
     commentId,
   });
+  return { created: true };
 }
 
 export async function unlikeComment(postId: string, commentId: string): Promise<void> {

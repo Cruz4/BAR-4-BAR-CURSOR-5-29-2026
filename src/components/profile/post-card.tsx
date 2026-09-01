@@ -56,12 +56,14 @@ import { PostPollCard } from '@/components/profile/post-poll';
 
 type PostCardProps = {
   post: ProfilePost;
-  /** Show the author name/avatar header (feed, wall, and reverbs). */
+  /** Show the author name/avatar header (feed, wall, and reverbs). Hidden in immersive swipe — the slide already names them. */
   showAuthor?: boolean;
   viewerSlug?: string;
   onDeleted?: (postId: string) => void;
   onReverbed?: (post: ProfilePost) => void;
   immersive?: boolean;
+  /** Play this card's clip while it is the focused immersive slide. */
+  mediaActive?: boolean;
 };
 
 function timeAgo(iso: string): string {
@@ -82,7 +84,15 @@ function isStudioGoalShare(text?: string): boolean {
   return Boolean(text && /\b(?:weekly|monthly|lifetime)\s+goal complete:/i.test(text));
 }
 
-function ReverbSourceBody({ post, immersive = false }: { post: ProfilePost; immersive?: boolean }) {
+function ReverbSourceBody({
+  post,
+  immersive = false,
+  mediaActive,
+}: {
+  post: ProfilePost;
+  immersive?: boolean;
+  mediaActive?: boolean;
+}) {
   const name = post.reverbOwnerName || 'Artist';
   const { liveSlug, href, resolved, isLive } = useLiveArtistHomeSlug(
     post.reverbOwnerId,
@@ -184,6 +194,7 @@ function ReverbSourceBody({ post, immersive = false }: { post: ProfilePost; imme
             clip={post.reverbVideo}
             poster={post.reverbImageUrl}
             className={immersive ? 'max-h-[min(38dvh,25rem)]' : undefined}
+            active={immersive ? mediaActive : undefined}
           />
         </div>
       ) : post.reverbImageUrl && !post.reverbLyricClip ? (
@@ -238,7 +249,8 @@ function ReverbSourceBody({ post, immersive = false }: { post: ProfilePost; imme
   );
 }
 
-export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onReverbed, immersive = false }: PostCardProps) {
+export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onReverbed, immersive = false, mediaActive }: PostCardProps) {
+  const showInlineAuthor = showAuthor && !immersive;
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const articleRef = useRef<HTMLElement>(null);
@@ -267,7 +279,10 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     href: authorHref,
     resolved: authorResolved,
     isLive: authorIsLive,
-  } = useLiveArtistHomeSlug(showAuthor ? post.ownerId : undefined, showAuthor ? post.ownerSlug : undefined);
+  } = useLiveArtistHomeSlug(
+    showInlineAuthor ? post.ownerId : undefined,
+    showInlineAuthor ? post.ownerSlug : undefined
+  );
 
   const isOwner = Boolean(user?.id && user.id === post.ownerId);
   const isAdmin = Boolean(
@@ -281,10 +296,24 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   const canReverb = Boolean(user && !isOwner && rootIdForReverb);
 
   useEffect(() => {
-    void fetchLikeCount(post.id).then(setLikeCount).catch(() => undefined);
-    void fetchCommentCount(post.id).then(setCommentCount).catch(() => undefined);
-    void fetchHasLiked(post.id).then(setLiked).catch(() => undefined);
-  }, [post.id]);
+    if (authLoading) return;
+    let cancelled = false;
+    void Promise.all([
+      fetchLikeCount(post.id),
+      fetchHasLiked(post.id),
+      fetchCommentCount(post.id),
+    ])
+      .then(([count, hasLiked, replies]) => {
+        if (cancelled || loveBusyRef.current) return;
+        setLikeCount(count);
+        setLiked(hasLiked);
+        setCommentCount(replies);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [post.id, user?.id, authLoading]);
 
   useEffect(() => {
     const applyHash = () => {
@@ -357,7 +386,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   }, [authLoading, post.id, post.ownerId, user?.id]);
 
   useEffect(() => {
-    if (!showAuthor) {
+    if (!showInlineAuthor) {
       setAuthorAvatarUrl(undefined);
       setAuthorStarSeed(undefined);
       setAuthorUseStar(false);
@@ -389,7 +418,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     return () => {
       cancelled = true;
     };
-  }, [showAuthor, liveAuthorSlug, post.ownerAvatarUrl, post.ownerStarMarkUseStar, post.ownerStarMarkSeed, post.ownerStudioBadge]);
+  }, [showInlineAuthor, liveAuthorSlug, post.ownerAvatarUrl, post.ownerStarMarkUseStar, post.ownerStarMarkSeed, post.ownerStudioBadge]);
 
   const toggleLike = async (showBurst = false) => {
     if (loveBusyRef.current) return;
@@ -407,10 +436,14 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     }
     try {
       if (next) {
-        await likePost(post.id, {
+        const result = await likePost(post.id, {
           name: user.displayName || 'Artist',
           slug: viewerSlug,
         });
+        if (!result.created) {
+          setLiked(true);
+          setLikeCount((c) => Math.max(0, c - 1));
+        }
       } else await unlikePost(post.id);
     } catch {
       setLiked(!next);
@@ -513,7 +546,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
       )}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          {showAuthor && (
+          {showInlineAuthor && (
             <span className="flex min-w-0 items-center gap-2.5">
               {authorResolved && !authorIsLive ? (
                 <Hint content="Artist Home offline" side="top">
@@ -600,7 +633,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         </div>
       ) : null}
 
-      {post.isReverb ? <ReverbSourceBody post={post} immersive={immersive} /> : null}
+      {post.isReverb ? <ReverbSourceBody post={post} immersive={immersive} mediaActive={mediaActive} /> : null}
 
       {!post.isReverb && post.video ? (
         <div className="mt-3 mb-1 flex justify-center overflow-visible">
@@ -608,6 +641,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
             clip={post.video}
             poster={post.imageUrl}
             className={immersive ? 'max-h-[min(42dvh,28rem)]' : undefined}
+            active={immersive ? mediaActive : undefined}
           />
         </div>
       ) : !post.isReverb && post.imageUrl ? (

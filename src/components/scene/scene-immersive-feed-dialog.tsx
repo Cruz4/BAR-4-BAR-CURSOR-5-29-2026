@@ -146,7 +146,6 @@ function FeedBubble({ meta, active, onClick }: { meta: SlideMeta; active: boolea
           size={44}
           link={false}
           className={cn(
-            'transition duration-200',
             active
               ? '!border-sky-300 brightness-110 drop-shadow-[0_0_9px_rgba(56,189,248,0.9)]'
               : 'opacity-70 group-hover:opacity-100'
@@ -160,16 +159,18 @@ function FeedBubble({ meta, active, onClick }: { meta: SlideMeta; active: boolea
   );
 }
 
-function feedScrollProgress(scroller: HTMLDivElement): number {
+/** Card whose top is at the scroller top — the one being shown. */
+function feedTopIndex(scroller: HTMLDivElement): number {
   const slides = Array.from(scroller.children) as HTMLElement[];
-  if (slides.length < 2) return 0;
-  const top = scroller.scrollTop;
-  let lower = 0;
-  while (lower < slides.length - 1 && slides[lower + 1]!.offsetTop <= top) lower += 1;
-  const currentTop = slides[lower]!.offsetTop;
-  const nextTop = slides[lower + 1]?.offsetTop;
-  if (typeof nextTop !== 'number' || nextTop <= currentTop) return lower;
-  return lower + Math.max(0, Math.min(1, (top - currentTop) / (nextTop - currentTop)));
+  if (!slides.length) return 0;
+  const top = scroller.scrollTop + 8;
+  let index = 0;
+  while (index < slides.length - 1 && slides[index + 1]!.offsetTop <= top) index += 1;
+  return index;
+}
+
+function backdropId(meta: SlideMeta): string {
+  return meta.userId || meta.key;
 }
 
 function FeedBackdrop({
@@ -188,7 +189,7 @@ function FeedBackdrop({
 
   return (
     <div
-      className="pointer-events-none absolute inset-0 transition-opacity duration-300 ease-out will-change-[opacity]"
+      className="pointer-events-none absolute inset-0"
       style={{ ...pressingStyle, opacity }}
       aria-hidden
     >
@@ -197,6 +198,7 @@ function FeedBackdrop({
           config={meta.pressing}
           className="!absolute"
           followWindowScroll={false}
+          staticField
         />
       ) : (
         <div className={cn(
@@ -224,11 +226,12 @@ export function SceneImmersiveFeedDialog({
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const bubbleRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const scrollFrameRef = useRef<number | null>(null);
-  const pendingProgressRef = useRef(0);
+  const pendingIndexRef = useRef(0);
+  const activeIndexRef = useRef(0);
+  const itemsLengthRef = useRef(0);
   const historyEntryActiveRef = useRef(false);
   const onOpenChangeRef = useRef(onOpenChange);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
     onOpenChangeRef.current = onOpenChange;
@@ -283,10 +286,12 @@ export function SceneImmersiveFeedDialog({
     return [];
   }, [discoverCards, mode, posts]);
 
+  itemsLengthRef.current = items.length;
+
   useEffect(() => {
     if (!open) return;
+    activeIndexRef.current = 0;
     setActiveIndex(0);
-    setScrollProgress(0);
     requestAnimationFrame(() => scrollerRef.current?.scrollTo({ top: 0 }));
   }, [mode, open]);
 
@@ -296,31 +301,32 @@ export function SceneImmersiveFeedDialog({
 
   useEffect(() => {
     if (activeIndex < items.length) return;
-    setActiveIndex(Math.max(0, items.length - 1));
+    const next = Math.max(0, items.length - 1);
+    activeIndexRef.current = next;
+    setActiveIndex(next);
   }, [activeIndex, items.length]);
 
-  useEffect(() => {
-    const bubble = bubbleRefs.current[activeIndex];
-    if (!bubble) return;
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    bubble.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'nearest', inline: 'center' });
-  }, [activeIndex]);
+  const applyActiveIndex = (next: number) => {
+    if (activeIndexRef.current === next) return;
+    activeIndexRef.current = next;
+    setActiveIndex(next);
+    bubbleRefs.current[next]?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+  };
 
   const scrollTo = (index: number) => {
     const next = Math.max(0, Math.min(items.length - 1, index));
     const scroller = scrollerRef.current;
     if (!scroller) return;
     scroller.children.item(next)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setActiveIndex(next);
+    applyActiveIndex(next);
   };
 
   const syncScrollPosition = (scroller: HTMLDivElement) => {
-    pendingProgressRef.current = feedScrollProgress(scroller);
+    pendingIndexRef.current = feedTopIndex(scroller);
     if (scrollFrameRef.current !== null) return;
     scrollFrameRef.current = requestAnimationFrame(() => {
-      const progress = pendingProgressRef.current;
-      setScrollProgress(progress);
-      setActiveIndex(Math.max(0, Math.min(items.length - 1, Math.round(progress))));
+      const next = Math.max(0, Math.min(itemsLengthRef.current - 1, pendingIndexRef.current));
+      applyActiveIndex(next);
       scrollFrameRef.current = null;
     });
   };
@@ -337,6 +343,22 @@ export function SceneImmersiveFeedDialog({
 
   const current = items[activeIndex]?.meta;
   const title = mode === 'block' ? 'Your Block' : 'Discover the Scene';
+  const nearbyBackdrops = useMemo(() => {
+    if (!items.length) return [];
+    const start = Math.max(0, activeIndex - 1);
+    const end = Math.min(items.length - 1, activeIndex + 1);
+    const currentId = items[activeIndex] ? backdropId(items[activeIndex]!.meta) : '';
+    const seen = new Set<string>();
+    const out: Array<{ id: string; meta: SlideMeta; opacity: number }> = [];
+    for (let i = start; i <= end; i += 1) {
+      const meta = items[i]!.meta;
+      const id = backdropId(meta);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push({ id, meta, opacity: id === currentId ? 1 : 0 });
+    }
+    return out;
+  }, [activeIndex, items]);
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => {
@@ -351,20 +373,14 @@ export function SceneImmersiveFeedDialog({
         <DialogDescription className="sr-only">Scroll one full-screen post or profile at a time.</DialogDescription>
 
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-[#030812]">
-          {mode ? items.map((item, index) => {
-            const delta = Math.abs(index - scrollProgress);
-            const opacity = Math.max(0, 1 - delta);
-            const keepMounted = delta < 1.01 || Math.abs(index - activeIndex) <= 1;
-            if (!keepMounted) return null;
-            return (
-              <FeedBackdrop
-                key={`backdrop-${item.meta.key}`}
-                meta={item.meta}
-                mode={mode}
-                opacity={opacity}
-              />
-            );
-          }) : null}
+          {mode ? nearbyBackdrops.map((backdrop) => (
+            <FeedBackdrop
+              key={`backdrop-${backdrop.id}`}
+              meta={backdrop.meta}
+              mode={mode}
+              opacity={backdrop.opacity}
+            />
+          )) : null}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgba(0,0,0,0.28)_100%)]" />
         </div>
 
@@ -411,7 +427,7 @@ export function SceneImmersiveFeedDialog({
 
         <div
           ref={scrollerRef}
-          className="relative z-10 h-[100dvh] touch-pan-y snap-y snap-mandatory overflow-y-auto overscroll-y-contain scroll-smooth [-webkit-overflow-scrolling:touch]"
+          className="relative z-10 h-[100dvh] touch-pan-y snap-y snap-mandatory overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
           onScroll={(event) => syncScrollPosition(event.currentTarget)}
         >
           {items.length ? items.map((item, index) => (
@@ -458,6 +474,7 @@ export function SceneImmersiveFeedDialog({
                       viewerSlug={viewerSlug}
                       onDeleted={onPostDeleted}
                       immersive
+                      mediaActive={index === activeIndex}
                     />
                   ) : 'card' in item ? (
                     <SceneDiscoverCard
@@ -465,6 +482,7 @@ export function SceneImmersiveFeedDialog({
                       viewerSlug={viewerSlug}
                       onLockRemoved={onLockRemoved}
                       immersive
+                      mediaActive={index === activeIndex}
                     />
                   ) : null}
                 </div>

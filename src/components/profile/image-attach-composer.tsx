@@ -3,6 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { Camera, ImagePlus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ExpandableMedia } from '@/components/profile/expandable-image';
 import { MediaStudioDialog, type MediaStudioMode } from '@/components/profile/media-studio-dialog';
 import { cn } from '@/lib/utils';
 import {
@@ -90,18 +91,18 @@ export function ImageAttachComposer({
       {attached ? (
         <div className={cn('flex min-w-0 items-center gap-2', compact && 'w-full')}>
           {clip ? (
-            <video
+            <ExpandableMedia
+              kind="video"
               src={clip.previewUrl}
-              muted
-              playsInline
-              className="h-12 w-12 shrink-0 rounded-md object-cover ring-1 ring-white/15"
+              alt="Clip preview"
+              thumbClassName="h-12 w-12 shrink-0 rounded-md object-cover ring-1 ring-white/15"
             />
           ) : image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <ExpandableMedia
+              kind="image"
               src={image.previewUrl}
-              alt="Attached"
-              className="h-12 w-12 shrink-0 rounded-md object-cover ring-1 ring-white/15"
+              alt="Photo preview"
+              thumbClassName="h-12 w-12 shrink-0 rounded-md object-cover ring-1 ring-white/15"
             />
           ) : null}
           <button
@@ -135,6 +136,7 @@ export function ImageAttachComposer({
                   : 'h-8 gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.7))] hover:text-[var(--ph-accent,#7dd3fc)]'
               )}
               onClick={() => openStudio('camera')}
+              data-path="wall-camera"
               title="Open camera"
             >
               <Camera className="h-3.5 w-3.5" />
@@ -152,6 +154,7 @@ export function ImageAttachComposer({
                 : 'h-8 gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.7))] hover:text-[var(--ph-accent,#7dd3fc)]'
             )}
             onClick={() => (allowVideo ? openStudio('library') : inputRef.current?.click())}
+            data-path="wall-camera"
             title={allowVideo ? 'Photo or clip from files' : 'Attach a photo'}
           >
             <ImagePlus className="h-3.5 w-3.5" />

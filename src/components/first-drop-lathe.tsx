@@ -36,6 +36,7 @@ import {
   normalizeDropPrice,
 } from '@/lib/drop-commerce';
 import { OPEN_FIRST_DROP_LATHE, type FirstDropLatheDetail } from '@/lib/first-drop-lathe';
+import { emitReleasePublished } from '@/lib/manual-paths';
 import { isGuestTryAlbumId } from '@/lib/guest-try';
 import { PriceEditor } from '@/components/drop-commerce-panel';
 import {
@@ -643,6 +644,7 @@ export function FirstDropLatheHost() {
           ? 'Every current and future member now receives it free in Library.'
           : 'Visitors hear this first on your Artist Home and this share link.',
       });
+      emitReleasePublished();
       if (!houseRelease) {
         setOpen(false);
         router.push(`/song/${shareId}`);
@@ -716,6 +718,7 @@ export function FirstDropLatheHost() {
             ? `${albumAudioTracks.length} audio track${albumAudioTracks.length === 1 ? '' : 's'} added free to every member Library.`
             : `${albumAudioTracks.length} audio track${albumAudioTracks.length === 1 ? '' : 's'} included. One purchase unlocks all of them.`,
       });
+      emitReleasePublished();
       if (!houseRelease) {
         setOpen(false);
         router.push(`/share/${shareId}`);

@@ -64,6 +64,7 @@ export function Header() {
   const { toast } = useToast();
   const [bugReportOpen, setBugReportOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [guideTab, setGuideTab] = useState<'paths' | 'start-here'>('start-here');
   const { isGenerating, generatingMessage } = useUIState();
   const { inkBalance, residencyBalance, trialInkBalance, purchasedBalance } = useUsage();
   const { total: blockAlerts } = useSocialAlerts();
@@ -76,6 +77,16 @@ export function Header() {
 
   useEffect(() => {
     setShowPwaInstallMenu(isMobileInstallPlatform() && !isStandalonePwa());
+  }, []);
+
+  useEffect(() => {
+    const onOpenManual = (event: Event) => {
+      const tab = (event as CustomEvent<{ tab?: 'paths' | 'start-here' }>).detail?.tab;
+      setGuideTab(tab === 'paths' ? 'paths' : 'start-here');
+      setGuideOpen(true);
+    };
+    window.addEventListener('b4b:open-studio-manual', onOpenManual);
+    return () => window.removeEventListener('b4b:open-studio-manual', onOpenManual);
   }, []);
 
   const albumId = params?.albumId as string;
@@ -243,7 +254,7 @@ export function Header() {
                 <ActivityNavDropdown unreadCount={blockAlerts} />
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="hidden md:inline-flex h-8 md:h-9 w-8 md:w-9 text-primary hover:bg-primary/10 shrink-0" onClick={() => setGuideOpen(true)}>
+                        <Button variant="ghost" size="icon" className="hidden md:inline-flex h-8 md:h-9 w-8 md:w-9 text-primary hover:bg-primary/10 shrink-0" onClick={() => { setGuideTab('paths'); setGuideOpen(true); }}>
                             <HelpCircle className="h-5 w-5" />
                         </Button>
                     </TooltipTrigger>
@@ -352,7 +363,7 @@ export function Header() {
                         <span className={studioTierMenuClass(studioChrome)}>Studio Tier</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=buy-ink')}><LayoutGrid className="mr-2 h-4 w-4 text-primary" /><span>Ink Store</span></DropdownMenuItem>
-                      <DropdownMenuItem className="md:hidden" onClick={() => setGuideOpen(true)}><HelpCircle className="mr-2 h-4 w-4 text-primary" /><span>Studio Manual</span></DropdownMenuItem>
+                      <DropdownMenuItem className="md:hidden" onClick={() => { setGuideTab('paths'); setGuideOpen(true); }}><HelpCircle className="mr-2 h-4 w-4 text-primary" /><span>Studio Manual</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/studio-progress')}><Trophy className="mr-2 h-4 w-4 text-amber-400" /><span>Studio Progress</span></DropdownMenuItem>
                       {foldsOn ? (
                       <DropdownMenuItem onClick={() => router.push('/msgs')}>
@@ -424,7 +435,14 @@ export function Header() {
       {dropPlayer?.current ? <TopNavDropMiniPlayer /> : null}
     </header>
     <BugReportDialog open={bugReportOpen} onOpenChange={setBugReportOpen} />
-    <HowToUseDialog open={guideOpen} onOpenChange={setGuideOpen} />
+    <HowToUseDialog
+      open={guideOpen}
+      initialTab={guideTab}
+      onOpenChange={(next) => {
+        setGuideOpen(next);
+        if (!next) setGuideTab('start-here');
+      }}
+    />
     </>
   );
 }

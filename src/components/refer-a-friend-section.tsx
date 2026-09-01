@@ -71,6 +71,7 @@ export function ReferAFriendSection({ className }: { className?: string }) {
   if (!user || authLoading || loading) {
     return (
       <Card
+        id="refer-a-friend"
         className={cn(
           'border-primary/20 bg-gradient-to-br from-primary/[0.06] via-card/40 to-violet-500/[0.05] overflow-hidden',
           className
@@ -105,7 +106,7 @@ export function ReferAFriendSection({ className }: { className?: string }) {
   const exhausted = remaining <= 0;
 
   return (
-    <Card className={cn('border-primary/20 bg-gradient-to-br from-primary/[0.06] via-card/40 to-violet-500/[0.05] overflow-hidden', className)}>
+    <Card id="refer-a-friend" className={cn('border-primary/20 bg-gradient-to-br from-primary/[0.06] via-card/40 to-violet-500/[0.05] overflow-hidden', className)}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
