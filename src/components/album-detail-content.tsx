@@ -1442,7 +1442,9 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                   ) : (
                                     <LockedProFeatureButton
                                       feature="DNA Drop"
-                                      benefit="Publish a shareable link to your album blueprint for collab and feedback."
+                                      benefit="Publish, view, download, and import lyric DNA Drops — Pro only."
+                                      ctaLabel="Publish DNA Drop — Go Pro"
+                                      ctaHref="/usage?tab=cloud&highlight=dna-drop"
                                       icon={Globe}
                                       iconClassName="text-primary"
                                       label="DNA Drop"

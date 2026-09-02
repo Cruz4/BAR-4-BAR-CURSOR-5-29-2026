@@ -64,7 +64,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import Link from 'next/link';
-import { buildDropBuyLoginPath, buildLoginPath } from '@/lib/checkout-intent';
+import { buildDropBuyLoginPath } from '@/lib/checkout-intent';
+import {
+  DNA_DROP_UPGRADE_PATH,
+  buildDnaDropLoginPath,
+  resolveDnaDropImportPath,
+} from '@/lib/dna-drop-access';
 import {
   Tooltip,
   TooltipContent,
@@ -83,6 +88,7 @@ export default function SharedProjectPage() {
 
     const [share, setShare] = useState<ProjectShare | null>(null);
     const [loading, setLoading] = useState(true);
+    const [dnaAccessRedirecting, setDnaAccessRedirecting] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [isTakingOffline, setIsTakingOffline] = useState(false);
@@ -101,18 +107,28 @@ export default function SharedProjectPage() {
                 const visibility = visibilityResponse.ok
                     ? await visibilityResponse.json() as { dnaLive?: boolean; releaseLive?: boolean }
                     : null;
+                const isOwner = user?.id === data.ownerId;
                 const isPublic = Boolean(visibility?.dnaLive || visibility?.releaseLive);
-                if (isPublic || user?.id === data.ownerId) {
-                    setShare(data);
-                    updateDoc(docRef, { views: increment(1) }).catch(() => undefined);
-                } else {
+                const musicPublic = Boolean(visibility?.releaseLive);
+                const canViewDna = isOwner || isCloudSyncActive;
+                if (!isPublic && !isOwner) {
                     setShare(null);
+                } else if (!canViewDna && !musicPublic) {
+                    setShare(null);
+                    setDnaAccessRedirecting(true);
+                    router.replace(user ? DNA_DROP_UPGRADE_PATH : buildDnaDropLoginPath(shareId, 'view'));
+                    return;
+                } else {
+                    setShare(data);
+                    if (canViewDna || musicPublic) {
+                        updateDoc(docRef, { views: increment(1) }).catch(() => undefined);
+                    }
                 }
             }
             setLoading(false);
         };
         void fetchShare();
-    }, [shareId, authReady, user?.id]);
+    }, [shareId, authReady, user, isCloudSyncActive, router]);
 
     const formattedShareDate = useMemo(() => {
         if (!share?.updatedAt && !share?.createdAt) return 'Recent';
@@ -143,6 +159,7 @@ export default function SharedProjectPage() {
       return Boolean(normalizeDropAudio((project as DnaDropTrackPayload).dropAudio));
     }, [project, isAlbum]);
     const isOwnShare = Boolean(user && share && user.id === share.ownerId);
+    const canViewDnaLyrics = isOwnShare || isCloudSyncActive;
     const isReleaseShare = Boolean(
       project && hasFirstDropAudio && (
         project.releaseShareId === shareId
@@ -210,13 +227,11 @@ export default function SharedProjectPage() {
     const handleImportClick = () => {
         if (!authReady) return;
 
-        if (!user) {
-            router.push(`${buildLoginPath(`/share/${shareId}`)}&intent=dna-import`);
-            return;
-        }
-
-        if (!isCloudSyncActive) {
-            router.push(`/pricing?next=${encodeURIComponent(`/share/${shareId}`)}`);
+        if (!user || !isCloudSyncActive) {
+            router.push(resolveDnaDropImportPath(shareId, {
+              signedIn: Boolean(user),
+              isPro: isCloudSyncActive,
+            }));
             return;
         }
 
@@ -230,6 +245,10 @@ export default function SharedProjectPage() {
 
     const handleConfirmImport = async () => {
         if (!share || !project) return;
+        if (!isCloudSyncActive) {
+            router.push(DNA_DROP_UPGRADE_PATH);
+            return;
+        }
 
         setConfirmOpen(false);
         setIsImporting(true);
@@ -312,8 +331,14 @@ export default function SharedProjectPage() {
         }
     };
 
-    if (loading) {
-        return <StudioLoader size="lg" fullscreen message="Accessing Studio Vault..." />;
+    if (loading || dnaAccessRedirecting) {
+        return (
+          <StudioLoader
+            size="lg"
+            fullscreen
+            message={dnaAccessRedirecting ? 'DNA Drops are Studio Pro…' : 'Accessing Studio Vault...'}
+          />
+        );
     }
 
     if (!share || !project) {
@@ -338,7 +363,9 @@ export default function SharedProjectPage() {
     const importLabel = !user
         ? hasFirstDropAudio
           ? 'Import lyrics & DNA'
-          : 'Sign in to Import'
+          : 'Sign in to view DNA'
+        : !isCloudSyncActive
+          ? 'Upgrade to view DNA'
         : isOwnShare && alreadyInVault
           ? ownerEditLabel
           : 'Import Setup';
@@ -472,7 +499,7 @@ export default function SharedProjectPage() {
                 </div>
             </header>
 
-            {!user && (
+            {(!user || !canViewDnaLyrics) && (
                 <div className="container max-w-7xl mx-auto px-4 pt-4 relative z-10">
                     <Card className={hasFirstDropAudio ? 'border-fuchsia-500/40 bg-fuchsia-500/10' : 'border-primary/25 bg-primary/5'}>
                         <CardContent className="p-4 text-[11px] font-code text-muted-foreground leading-relaxed">
@@ -480,32 +507,45 @@ export default function SharedProjectPage() {
                               <>
                                 Hit play for a 30-second preview. Buy once to stream the full {isAlbum ? 'album' : 'song'} in Bar4Bar — not Spotify.
                                 {' '}
+                                {!user ? (
+                                  <button
+                                    type="button"
+                                    className="text-fuchsia-300 underline underline-offset-2 font-bold"
+                                    onClick={() => router.push(buildDropBuyLoginPath(shareId, {}, isAlbum ? 'share' : 'song'))}
+                                  >
+                                    Sign up to unlock
+                                  </button>
+                                ) : (
+                                  <span>Listen / buy stays Free.</span>
+                                )}
+                                {` DNA Drops (lyrics) — extract, view, and import — are Studio Pro only. `}
                                 <button
                                   type="button"
-                                  className="text-fuchsia-300 underline underline-offset-2 font-bold"
-                                  onClick={() => router.push(buildDropBuyLoginPath(shareId, {}, isAlbum ? 'share' : 'song'))}
+                                  className="text-primary underline underline-offset-2 font-bold"
+                                  onClick={() => router.push(resolveDnaDropImportPath(shareId, {
+                                    signedIn: Boolean(user),
+                                    isPro: isCloudSyncActive,
+                                  }))}
                                 >
-                                  Sign up to unlock
+                                  {user ? 'Upgrade to view & import lyrics' : 'Sign in to check your tier or create an account'}
                                 </button>
-                                {`. Import lyrics & DNA is the button above — it does not purchase the ${isAlbum ? 'album' : 'song'}.`}
-                              </>
-                            ) : isAlbum ? (
-                              <>
-                            Import Setup copies this album snapshot — album DNA plus every track’s lyrics & structure — into your Bar 4 Bar vault. Open a live song card for that track’s public DNA Drop page.
-                            {' '}
-                            <button type="button" className="text-primary underline underline-offset-2 font-bold" onClick={() => router.push(`${buildLoginPath(`/share/${shareId}`)}&intent=dna-import`)}>
-                                Sign in or create a free account
-                            </button>
-                            {' '}to import. Studio Pro is required to import DNA Drops from other artists.
+                                .
                               </>
                             ) : (
                               <>
-                            Import Setup copies this snapshot — lyrics, structure, Creative DNA, intents, vibe, guardrails, special instructions, and Style DNA when shared — into your Bar 4 Bar vault.
-                            {' '}
-                            <button type="button" className="text-primary underline underline-offset-2 font-bold" onClick={() => router.push(`${buildLoginPath(`/share/${shareId}`)}&intent=dna-import`)}>
-                                Sign in or create a free account
-                            </button>
-                            {' '}to import. Studio Pro is required to import DNA Drops from other artists.
+                                DNA Drops (lyrics) — extract, view, and import — are Studio Pro only. Sign in to check your tier or upgrade, or create an account.
+                                {' '}
+                                <button
+                                  type="button"
+                                  className="text-primary underline underline-offset-2 font-bold"
+                                  onClick={() => router.push(resolveDnaDropImportPath(shareId, {
+                                    signedIn: Boolean(user),
+                                    isPro: isCloudSyncActive,
+                                  }))}
+                                >
+                                  {user ? 'Open Studio Tier' : 'Sign in or create an account'}
+                                </button>
+                                .
                               </>
                             )}
                         </CardContent>
@@ -565,6 +605,8 @@ export default function SharedProjectPage() {
                             </div>
                         </div>
                         <CardContent className="p-4 sm:p-6 space-y-6">
+                            {canViewDnaLyrics ? (
+                            <>
                             <div>
                                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-2">
                                     <Globe className="h-3 w-3" /> {isAlbum ? 'Album DNA' : 'Track Theme'}
@@ -600,6 +642,17 @@ export default function SharedProjectPage() {
                                     {trackProject.vibe.instrumentation && (
                                         <p className="text-[11px] italic text-muted-foreground">&ldquo;{trackProject.vibe.instrumentation}&rdquo;</p>
                                     )}
+                                </div>
+                            )}
+                            </>
+                            ) : (
+                                <div className="rounded-lg border border-primary/25 bg-primary/5 p-3 space-y-2">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                                        DNA Drop · Studio Pro
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                        Lyrics, Creative DNA, and import are Pro only. Listen / buy on this page stays Free.
+                                    </p>
                                 </div>
                             )}
                             {dropMedia.length > 0 && (
@@ -657,6 +710,7 @@ export default function SharedProjectPage() {
                         </Card>
                     )}
 
+                    {canViewDnaLyrics && (
                     <Card className="border-sky-500/30 bg-sky-500/5">
                         <CardHeader className="p-4">
                             <CardTitle className="text-xs font-headline uppercase text-sky-500 flex items-center gap-2">
@@ -675,8 +729,9 @@ export default function SharedProjectPage() {
                             </div>
                         </CardContent>
                     </Card>
+                    )}
 
-                    {!isAlbum && trackProject?.sharedStyle?.analysis && (
+                    {canViewDnaLyrics && !isAlbum && trackProject?.sharedStyle?.analysis && (
                         <Card className="border-fuchsia-500/30 bg-fuchsia-500/5">
                             <CardHeader className="p-4 pb-2">
                                 <CardTitle className="text-xs font-headline uppercase text-fuchsia-400">Style DNA</CardTitle>
@@ -687,7 +742,7 @@ export default function SharedProjectPage() {
                         </Card>
                     )}
 
-                    {!isAlbum && trackProject?.specialInstructions?.trim() && (
+                    {canViewDnaLyrics && !isAlbum && trackProject?.specialInstructions?.trim() && (
                         <Card className="border-blue-500/30 bg-blue-500/5">
                             <CardHeader className="p-4 pb-2">
                                 <CardTitle className="text-xs font-headline uppercase text-blue-400">Special Instructions</CardTitle>
@@ -698,7 +753,7 @@ export default function SharedProjectPage() {
                         </Card>
                     )}
 
-                    {!isAlbum && trackProject?.guardrails?.enabled && (
+                    {canViewDnaLyrics && !isAlbum && trackProject?.guardrails?.enabled && (
                         <Card className="border-rose-500/30 bg-rose-500/5 overflow-hidden">
                             <CardHeader className="p-4 pb-2">
                                 <CardTitle className="text-xs font-headline uppercase text-rose-400">Guardrails</CardTitle>
@@ -737,8 +792,10 @@ export default function SharedProjectPage() {
                             ownerId={share.ownerId}
                             ownerName={share.ownerName}
                             houseRelease={share.houseRelease === true}
+                            canViewDna={canViewDnaLyrics}
+                            signedIn={Boolean(user)}
                         />
-                    ) : (
+                    ) : canViewDnaLyrics ? (
                     <Card className="border-2 shadow-2xl relative overflow-hidden bg-notebook min-h-[60vh] md:min-h-[80vh] [--lyrics-gutter:2.75rem] md:[--lyrics-gutter:100px] [--lyrics-lh:20px] md:[--lyrics-lh:32px]">
                         <style>{`
                             .bg-notebook {
@@ -784,6 +841,26 @@ export default function SharedProjectPage() {
                                         </div>
                                     ))}
                                 </div>
+                        </CardContent>
+                    </Card>
+                    ) : (
+                    <Card className="border-2 border-primary/25 bg-primary/5 min-h-[40vh] flex items-center justify-center">
+                        <CardContent className="p-8 max-w-md text-center space-y-4">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
+                                DNA Drops (Lyrics) · Studio Pro
+                            </p>
+                            <p className="text-sm text-muted-foreground font-code leading-relaxed">
+                                Extract, view, and import lyric DNA Drops are Pro only. Sign in to check your tier or upgrade.
+                            </p>
+                            <Button
+                              className="font-bold uppercase tracking-widest text-[10px]"
+                              onClick={() => router.push(resolveDnaDropImportPath(shareId, {
+                                signedIn: Boolean(user),
+                                isPro: isCloudSyncActive,
+                              }))}
+                            >
+                              {user ? 'Upgrade to view lyrics' : 'Sign in to check tier'}
+                            </Button>
                         </CardContent>
                     </Card>
                     )}

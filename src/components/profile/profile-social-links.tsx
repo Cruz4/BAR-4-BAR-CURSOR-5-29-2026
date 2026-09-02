@@ -70,6 +70,14 @@ function MyspaceIcon({ className }: { className?: string }) {
   );
 }
 
+function BeatStarsIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
+      <path d="M12 1.8 14.7 9h7.4l-6 4.4 2.3 7.1L12 16.8 5.6 20.5l2.3-7.1-6-4.4H9.3L12 1.8z" />
+    </svg>
+  );
+}
+
 function SunoIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden>
@@ -79,7 +87,7 @@ function SunoIcon({ className }: { className?: string }) {
   );
 }
 
-function SocialGlyph({ id, className }: { id: SocialProviderId; className?: string }) {
+export function SocialGlyph({ id, className }: { id: SocialProviderId; className?: string }) {
   switch (id) {
     case 'instagram':
       return <Instagram className={className} />;
@@ -103,6 +111,8 @@ function SocialGlyph({ id, className }: { id: SocialProviderId; className?: stri
       return <SoundCloudIcon className={className} />;
     case 'appleMusic':
       return <AppleMusicIcon className={className} />;
+    case 'beatstars':
+      return <BeatStarsIcon className={className} />;
     default:
       return null;
   }

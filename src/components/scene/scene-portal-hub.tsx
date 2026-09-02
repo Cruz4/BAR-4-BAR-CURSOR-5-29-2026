@@ -53,13 +53,14 @@ type GuestScenePortalHubProps = {
   onOpenDiscover: () => void;
 };
 
-type PortalTone = 'sky' | 'pink' | 'amber' | 'cyan';
+type PortalTone = 'sky' | 'pink' | 'amber' | 'cyan' | 'emerald';
 
 const shortcutTone: Record<PortalTone, string> = {
   sky: 'border-sky-400/35 bg-sky-500/[0.07] text-sky-300 hover:border-sky-300/70',
   pink: 'border-fuchsia-400/35 bg-fuchsia-500/[0.07] text-fuchsia-300 hover:border-fuchsia-300/70',
   amber: 'border-amber-400/35 bg-amber-500/[0.07] text-amber-300 hover:border-amber-300/70',
   cyan: 'border-cyan-400/35 bg-cyan-500/[0.07] text-cyan-300 hover:border-cyan-300/70',
+  emerald: 'border-emerald-500/35 bg-emerald-500/10 text-emerald-400 hover:border-emerald-400/55',
 };
 
 function PortalStatus({ children, tone }: { children: React.ReactNode; tone: PortalTone }) {
@@ -453,17 +454,17 @@ export function ScenePortalHub({
             title="Artist Home"
             detail="Your public page"
             icon={Radio}
-            tone="pink"
-            status={<PortalStatus tone="pink">{viewer.slug ? 'Live' : 'Set up'}</PortalStatus>}
-            avatar={<LiveArtistStarAvatar name={viewer.displayName} userId={viewer.userId} slug={viewer.slug} size={44} link={false} toneClass="bg-fuchsia-500/15 text-fuchsia-200" />}
+            tone="sky"
+            status={<PortalStatus tone="sky">{viewer.slug ? 'Live' : 'Set up'}</PortalStatus>}
+            avatar={<LiveArtistStarAvatar name={viewer.displayName} userId={viewer.userId} slug={viewer.slug} size={44} link={false} toneClass="bg-sky-500/15 text-sky-300" />}
           />
           <WorldShortcut
             onClick={() => setReleaseCatalogOpen(true)}
             title="Releases + DNA"
             detail="Music · lyrics"
             icon={Dna}
-            tone="pink"
-            status={<PortalStatus tone="pink">Release Catalog</PortalStatus>}
+            tone="emerald"
+            status={<PortalStatus tone="emerald">Release Catalog</PortalStatus>}
           />
           <WorldShortcut
             href="/library"

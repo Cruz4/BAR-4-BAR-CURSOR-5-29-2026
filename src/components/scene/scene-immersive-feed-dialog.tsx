@@ -18,6 +18,8 @@ import {
 } from '@/lib/profile/pressing';
 import { parseStudioBadge, type StudioNameChrome } from '@/lib/studio-tier-chrome';
 import { LivingPressField } from '@/components/profile/living-press-field';
+import { useAuth } from '@/hooks/use-auth';
+import { resolveDnaDropHref } from '@/lib/dna-drop-access';
 
 type FeedMode = 'block' | 'discover';
 
@@ -64,7 +66,7 @@ function blockMeta(post: ProfilePost): SlideMeta {
   };
 }
 
-function discoverMeta(card: DiscoverCard): SlideMeta {
+function discoverMeta(card: DiscoverCard, signedIn: boolean): SlideMeta {
   if (card.kind === 'post') return blockMeta(card.post);
   if (card.kind === 'artist') {
     return {
@@ -93,7 +95,7 @@ function discoverMeta(card: DiscoverCard): SlideMeta {
       starMarkSeed: card.drop.starMarkSeed,
       href: card.drop.hasDropAudio
         ? `/song/${card.drop.shareId}`
-        : `/share/${card.drop.shareId}`,
+        : resolveDnaDropHref(card.drop.shareId, signedIn),
       studioChrome: parseStudioBadge(card.drop.studioBadge),
       pressing: card.drop.pressing,
     };
@@ -222,6 +224,7 @@ export function SceneImmersiveFeedDialog({
   onPostDeleted,
   onLockRemoved,
 }: SceneImmersiveFeedDialogProps) {
+  const { user } = useAuth();
   const open = mode !== null;
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const bubbleRefs = useRef<Array<HTMLSpanElement | null>>([]);
@@ -281,10 +284,10 @@ export function SceneImmersiveFeedDialog({
       return posts.map((post) => ({ meta: blockMeta(post), post }));
     }
     if (mode === 'discover') {
-      return discoverCards.map((card) => ({ meta: discoverMeta(card), card }));
+      return discoverCards.map((card) => ({ meta: discoverMeta(card, Boolean(user)), card }));
     }
     return [];
-  }, [discoverCards, mode, posts]);
+  }, [discoverCards, mode, posts, user]);
 
   itemsLengthRef.current = items.length;
 

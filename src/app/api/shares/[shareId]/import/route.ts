@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getDb } from '@/lib/firebase/server';
 import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
+import { isProOrTrial } from '@/lib/subscription';
+import type { User } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
@@ -28,6 +30,13 @@ export async function POST(
     }
 
     const db = await getDb();
+    const userSnap = await db.collection('users').doc(userId).get();
+    if (!isProOrTrial(userSnap.data() as Pick<User, 'subscriptionStatus' | 'proFeaturePreviewExpiresAt'> | undefined)) {
+      return NextResponse.json(
+        { error: 'Studio Pro is required to import DNA Drops.' },
+        { status: 403 }
+      );
+    }
     const shareRef = db.collection('shares').doc(shareId.trim().toUpperCase());
     const snap = await shareRef.get();
     if (!snap.exists) {

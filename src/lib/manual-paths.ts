@@ -341,22 +341,6 @@ export const MANUAL_PATHS: ManualPathLane[] = [
     ],
   },
   {
-    id: 'lock-desk',
-    title: 'Lock desk',
-    blurb: 'Public bar challenges. Optional — not how you start.',
-    tier: 'free',
-    group: 'also',
-    steps: [
-      {
-        id: 'desk',
-        title: 'Open Lock desk',
-        body: 'Cast or reply to a public bar. Skip until you have written on a sheet.',
-        href: '/lock/desk',
-        isDone: (p) => normalizePath(p).startsWith('/lock'),
-      },
-    ],
-  },
-  {
     id: 'collab',
     title: 'Collab Sheet',
     blurb: 'Live shared lyric sheet. Pro.',

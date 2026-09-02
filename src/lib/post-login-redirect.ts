@@ -1,4 +1,5 @@
 import { getCheckoutFromPath, getSafeNextPath } from '@/lib/checkout-intent';
+import { DNA_DROP_UPGRADE_PATH, isDnaDropLoginIntent } from '@/lib/dna-drop-access';
 
 const FRESH_SIGNUP_KEY = 'b4b_fresh_signup';
 
@@ -28,8 +29,16 @@ function parseNextPath(next: string): { pathname: string; search: string } {
 }
 
 /** Fresh signups start at the signed-in home (Scene) unless they chose Pro checkout or a share import. */
-export function resolvePostLoginPath(nextParam: string | null | undefined): string {
+export function resolvePostLoginPath(
+  nextParam: string | null | undefined,
+  options?: { intent?: string | null; isPro?: boolean }
+): string {
   const safeNext = getSafeNextPath(nextParam);
+
+  if (isDnaDropLoginIntent(options?.intent) && options?.isPro === false) {
+    return DNA_DROP_UPGRADE_PATH;
+  }
+
   const isFreshSignup = consumeFreshSignup();
 
   if (!isFreshSignup) return safeNext;

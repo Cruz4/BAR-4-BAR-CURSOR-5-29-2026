@@ -114,6 +114,23 @@
   animation: studio-free-tier-flash 7s ease-in-out infinite;
 }
 
+@keyframes dna-drop-perk-flash {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(244 63 94 / 0);
+    background-color: hsl(var(--primary) / 0.08);
+  }
+  50% {
+    box-shadow: 0 0 18px 2px rgb(244 63 94 / 0.45);
+    background-color: hsl(var(--accent) / 0.22);
+  }
+}
+
+.dna-drop-perk-flash {
+  animation: dna-drop-perk-flash 1.05s ease-in-out 8;
+  border-color: hsl(var(--accent) / 0.55);
+}
+
 @keyframes studio-free-avatar-flash {
   0%,
   82%,

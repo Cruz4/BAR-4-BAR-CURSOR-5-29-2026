@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Camera, Heart, Maximize2, Route, Smartphone, Sparkles } from 'lucide-react';
+import { Camera, Maximize2, Route, Smartphone, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
@@ -45,7 +45,7 @@ const WHATS_NEW_ITEMS = [
   },
   {
     title: 'Paths in Studio Manual',
-    desc: 'Open ? and tap Paths. Click a lane to stay coached until that path is finished.',
+    desc: 'Open ? and tap Paths. Pick one job and stay on that screen until it is done.',
     icon: Route,
     color: 'text-sky-400',
     bgColor: 'bg-sky-500/5',
@@ -63,13 +63,6 @@ const WHATS_NEW_ITEMS = [
     icon: Smartphone,
     color: 'text-cyan-400',
     bgColor: 'bg-cyan-500/5',
-  },
-  {
-    title: 'Love from a ping',
-    desc: 'Open a post from a mention or notification and the heart already shows if you liked it.',
-    icon: Heart,
-    color: 'text-rose-400',
-    bgColor: 'bg-rose-500/5',
   },
 ] as const;
 

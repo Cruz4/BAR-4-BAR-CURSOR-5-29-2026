@@ -9,6 +9,8 @@ import Link from 'next/link';
 import { CassetteTape, Disc3, ChevronRight, Gift, Music } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDropPulseLine } from '@/lib/drop-pulse';
+import { useAuth } from '@/hooks/use-auth';
+import { resolveDnaDropHref } from '@/lib/dna-drop-access';
 
 export type LiveDnaDropItem = {
   shareId: string;
@@ -46,13 +48,19 @@ export function LiveDnaDropLinkCard({
   className,
   nested = false,
 }: LiveDnaDropLinkCardProps) {
+  const { user } = useAuth();
   const isAlbum = drop.type === 'album';
   const firstDrop = drop.releaseLive === true || (drop.releaseLive === undefined && Boolean(drop.hasDropAudio));
   const pulse = formatDropPulseLine(drop);
+  const href = firstDrop && !isAlbum
+    ? `/song/${drop.shareId}`
+    : firstDrop
+      ? `/share/${drop.shareId}`
+      : resolveDnaDropHref(drop.shareId, Boolean(user));
 
   return (
     <Link
-      href={firstDrop && !isAlbum ? `/song/${drop.shareId}` : `/share/${drop.shareId}`}
+      href={href}
       onClick={onNavigate}
       className={cn(
         'group flex items-center transition-colors',

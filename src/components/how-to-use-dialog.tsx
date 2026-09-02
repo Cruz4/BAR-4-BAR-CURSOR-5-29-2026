@@ -301,7 +301,7 @@ const CORE_FAQS = [
     },
     {
       q: "What is DNA Drop?",
-      a: "Studio Pro—publish a shareable lyric snapshot from the left panel. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live lyric drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. Music is separate and Free: use Release song from a sheet or New release on The Scene. DNA Drop is not the sell desk."
+      a: "Studio Pro—publish a shareable lyric snapshot from the left panel. Viewing, downloading, and importing DNA Drops are also Pro: guests are sent to sign in (check tier, upgrade, or create an account); Visitor members land on Studio Tier with the DNA Drop perk highlighted. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live lyric drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. Music is separate and Free: use Release song from a sheet or New release on The Scene. DNA Drop is not the sell desk."
     },
     {
       q: "What is Collab Sheet?",
@@ -427,7 +427,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
   }, [open, initialTab]);
 
   const searchItems = useMemo<ManualSearchItem[]>(() => [
-    { label: 'Paths', detail: 'One job, that screen, then start the coach', tab: 'paths', targetId: 'manual-paths', keywords: 'write lyrics press song live new release vault sheet post clip go public dna drop discover library earnings ink lock refer the pressing' },
+    { label: 'Paths', detail: 'One job, that screen, then start the coach', tab: 'paths', targetId: 'manual-paths', keywords: 'write lyrics press song live new release vault sheet post clip go public dna drop discover library earnings ink refer the pressing' },
     { label: 'Start here', detail: 'First-hour walkthrough', tab: 'start-here', targetId: 'manual-start-here', keywords: 'begin new artist write first track tour scene vault' },
     { label: 'Public identity', detail: 'Artist, creator, and Music Fan labels', tab: 'scene', targetId: 'manual-public-identity', keywords: 'artist songwriter producer engineer dj music fan profile sound identity genre mood influence region collaboration' },
     { label: 'Featured Library track', detail: 'Owned or purchased music on your profile', tab: 'scene', targetId: 'manual-featured-track', keywords: '30 second excerpt preview purchased song music fan buy full stream public page' },
@@ -1188,7 +1188,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                 </ChapterCard>
 
                 <ChapterCard id="manual-dna-drop" icon={<Link2 className="text-primary" />} title="DNA Drop" colorClass="border-l-primary">
-                    <p>Studio Pro — publish a shareable lyric snapshot from the left panel. Collaborators sign in and import lyrics, structure, Creative DNA, vibe, and related strains. Update snapshot after edits; <strong>Take offline</strong> to revoke the link. To sell from The Scene, use <strong>New release</strong> (Free) — DNA Drop is not the sell desk.</p>
+                    <p>Studio Pro — publish, view, download, and import lyric snapshots. Guests who tap a live drop go to sign in (must be Pro — sign in to check tier or create an account). Signed-in Visitor members go to Studio Tier with the DNA Drop perk flashing. Update snapshot after edits; <strong>Take offline</strong> to revoke the link. To sell from The Scene, use <strong>New release</strong> (Free) — DNA Drop is not the sell desk.</p>
                 </ChapterCard>
 
                 <ChapterCard id="manual-collab-sheet" icon={<Users className="text-violet-300" />} title="Collab Sheet" colorClass="border-l-violet-500 text-violet-300">
@@ -1211,7 +1211,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                             <AccordionContent className="text-xs space-y-2">
                                 <p>• <strong>Status:</strong> Manage titles and enter Performance Mode. Optional Press / Release stage (Beat → Released) lives here too — turn it off in Settings or on the album page. Not the same as Press live.</p>
                                 <p>• <strong>Release song:</strong> Upload audio, set a price, and publish the music release. This is separate from DNA Drop.</p>
-                                <p>• <strong>DNA Drop / Collab Sheet:</strong> DNA Drop = lyric snapshot link. Collab Sheet = live shared editing with presence + chat.</p>
+                                <p>• <strong>DNA Drop / Collab Sheet:</strong> DNA Drop = Pro lyric snapshot — publish, view, and import. Collab Sheet = live shared editing with presence + chat.</p>
                                 <p>• <strong>Structure:</strong> Live song map (Verse, Hook, Bridge). Tap a section to jump the sheet; Add Section to grow the form. Not the Smart Structure paste tool.</p>
                                 <p>• <strong>Vibe Suggester:</strong> Generate suno/udio instrumentation prompts.</p>
                             </AccordionContent>

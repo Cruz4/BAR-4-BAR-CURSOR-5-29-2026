@@ -76,14 +76,18 @@ function JobChip({
 
 function PathPhoto({ guide }: { guide: PathGuide }) {
   return (
-    <figure className="min-w-0 overflow-hidden rounded-xl border border-white/10 bg-black/40">
+    <figure className="min-w-0 overflow-hidden rounded-xl border border-white/10 bg-black">
       {guide.image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={guide.image.src}
-          alt={guide.image.alt}
-          className="aspect-[16/10] w-full object-cover object-top"
-        />
+        <div className="relative aspect-square w-full bg-[#070b10] sm:aspect-[4/3]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            key={guide.image.src}
+            src={guide.image.src}
+            alt={guide.image.alt}
+            loading="eager"
+            className="absolute inset-0 h-full w-full object-contain p-2 sm:p-3"
+          />
+        </div>
       ) : (
         <div className="p-3">
           <ManualPathScreen kind={guide.screen} />
@@ -195,9 +199,16 @@ export function ManualPathDeck({ onLeave }: { onLeave: () => void }) {
       <div className="space-y-3">
         {families.map((row) => (
           <div key={row.family} className="space-y-1.5">
-            <p className="flex items-baseline gap-2 font-code text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
-              <span>{row.meta.label}</span>
-              <span className="font-normal tracking-normal text-[10px] normal-case opacity-70">{row.meta.hint}</span>
+            <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span
+                className={cn(
+                  'font-code text-[12px] font-bold uppercase tracking-[0.14em] sm:text-[13px]',
+                  row.meta.heading
+                )}
+              >
+                {row.meta.label}
+              </span>
+              <span className="text-[11px] leading-snug text-muted-foreground">{row.meta.hint}</span>
             </p>
             <div className="flex flex-wrap gap-1.5">
               {row.guides.map((item) => (
@@ -219,7 +230,12 @@ export function ManualPathDeck({ onLeave }: { onLeave: () => void }) {
       >
         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
           <div className="min-w-0">
-            <p className="font-code text-[9px] font-bold uppercase tracking-[0.22em] text-cyan-200/80">
+            <p
+              className={cn(
+                'font-code text-[11px] font-bold uppercase tracking-[0.14em]',
+                PATH_FAMILY_META[guide.family].heading
+              )}
+            >
               {PATH_FAMILY_META[guide.family].label}
             </p>
             <h3 className="mt-1 font-headline text-lg font-bold uppercase tracking-wide text-foreground sm:text-xl">

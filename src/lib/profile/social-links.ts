@@ -12,6 +12,7 @@ export type SocialProviderId =
   | 'spotify'
   | 'soundcloud'
   | 'appleMusic'
+  | 'beatstars'
   | 'github'
   | 'twitter';
 
@@ -127,6 +128,13 @@ export const SOCIAL_PROVIDERS: Array<{
         return null;
       }
     },
+  },
+  {
+    id: 'beatstars',
+    label: 'BeatStars',
+    short: 'BS',
+    placeholder: 'beatstars.com/... or username',
+    toUrl: (raw) => socialUrl(raw, 'beatstars.com', (h) => `https://www.beatstars.com/${h}`),
   },
   {
     id: 'myspace',

@@ -93,6 +93,7 @@ import {
   buildLoginPath,
   isProCheckoutPriceKey,
 } from '@/lib/checkout-intent';
+import { DNA_DROP_HIGHLIGHT, isDnaDropAccessFeature } from '@/lib/dna-drop-access';
 import { patchGamificationSettings } from '@/lib/gamification-client';
 
 function InkPoolBadge({ pool }: { pool: InkPool | 'unknown' }) {
@@ -129,6 +130,8 @@ function UsagePageContent() {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const checkoutAutoStartedRef = useRef(false);
+  const dnaPerkRef = useRef<HTMLLIElement | null>(null);
+  const highlightDnaDrop = searchParams.get('highlight') === DNA_DROP_HIGHLIGHT;
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -192,6 +195,14 @@ function UsagePageContent() {
   useEffect(() => {
     setDisplayNameInput(user?.displayName || '');
   }, [user?.displayName]);
+
+  useEffect(() => {
+    if (!highlightDnaDrop || activeTab !== 'cloud') return;
+    const timer = window.setTimeout(() => {
+      dnaPerkRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 280);
+    return () => window.clearTimeout(timer);
+  }, [highlightDnaDrop, activeTab]);
 
   const handleSaveDisplayName = async () => {
     const trimmed = displayNameInput.trim();
@@ -259,9 +270,10 @@ function UsagePageContent() {
     priceKey: 'PRO_MONTHLY' | 'PRO_YEARLY' | 'INK_REFILL' | 'INK_ARTIST' | 'INK_VAULT'
   ) => {
     if (!user) {
+      const highlightQ = highlightDnaDrop ? `&highlight=${DNA_DROP_HIGHLIGHT}` : '';
       const loginPath =
         priceKey === 'PRO_MONTHLY' || priceKey === 'PRO_YEARLY'
-          ? buildLoginPath(`/usage?tab=cloud&checkout=${priceKey}`)
+          ? buildLoginPath(`/usage?tab=cloud&checkout=${priceKey}${highlightQ}`)
           : buildLoginPath('/usage?tab=buy-ink');
       router.push(loginPath);
       return;
@@ -518,6 +530,20 @@ function UsagePageContent() {
         </TabsContent>
         
         <TabsContent value="cloud" className="w-full space-y-8">
+            {highlightDnaDrop && (
+              <Card className="border-accent/50 bg-accent/10 dna-drop-perk-flash">
+                <CardHeader className="pb-3">
+                  <CardTitle className="font-headline text-lg flex items-center gap-2">
+                    <Sparkles className="text-accent h-5 w-5" />
+                    DNA Drops (Lyrics) — Studio Pro
+                  </CardTitle>
+                  <CardDescription className="text-xs font-code leading-relaxed">
+                    Extract, view, download, and import lyric DNA Drops are Pro only. Music releases (Listen / buy) stay Free.
+                    The DNA Drop perk is highlighted on the plans below — pick Monthly or Yearly to unlock it.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            )}
             {paidPro && user && (
               <Card className="border-primary/20 bg-card/50">
                 <CardHeader className="pb-4">
@@ -585,6 +611,7 @@ function UsagePageContent() {
                         </div>
                         <div className="p-6 bg-card flex-grow"><ul className="space-y-2">{plan.features.map((feature, idx) => {
                           const highlight = getTierFeatureHighlight(feature, plan.name);
+                          const dnaPerk = highlightDnaDrop && isDnaDropAccessFeature(feature);
                           const isFirstYearlyExclusive =
                             plan.name === 'Pro Yearly' &&
                             (PRO_YEARLY_EXCLUSIVES as readonly string[]).includes(feature) &&
@@ -598,10 +625,13 @@ function UsagePageContent() {
                               Yearly Exclusives — fuel, savings & roadmap input
                             </li>
                           )}
-                          <li className={cn(
+                          <li
+                            ref={dnaPerk && plan.name === 'Pro Monthly' ? dnaPerkRef : undefined}
+                            className={cn(
                             "flex items-start gap-3 text-[11px] font-code leading-relaxed rounded-lg px-2 py-1.5 -mx-2",
                             highlight === 'yearly' && "bg-accent/10 border border-accent/20 text-accent font-bold",
-                            highlight === 'pro' && "bg-primary/5 border border-primary/15 text-primary font-semibold"
+                            highlight === 'pro' && "bg-primary/5 border border-primary/15 text-primary font-semibold",
+                            dnaPerk && "dna-drop-perk-flash border-accent/50 text-accent font-bold"
                           )}>
                             <Check className={cn(
                               "h-3.5 w-3.5 mt-0.5 shrink-0",

@@ -33,6 +33,7 @@ import {
 } from '@/lib/offline/vault-cache';
 import { isMasterAdminEmail } from '@/lib/master-admin';
 import { resolvePostLoginPath } from '@/lib/post-login-redirect';
+import { isProOrTrial } from '@/lib/subscription';
 import { isGuestTryPath, isGuestTrySheetEnabled } from '@/lib/guest-try';
 import { vaultHref } from '@/lib/scene-home';
 import {
@@ -458,11 +459,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           : '/login';
       router.push(loginUrl);
     } else if (user && shouldBounceLoggedInUser && !signingOutRef.current) {
-      const nextParam =
-        typeof window !== 'undefined'
-          ? new URLSearchParams(window.location.search).get('next')
-          : null;
-      const destination = resolvePostLoginPath(nextParam);
+      const search =
+        typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const nextParam = search?.get('next') ?? null;
+      const destination = resolvePostLoginPath(nextParam, {
+        intent: search?.get('intent'),
+        isPro: isProOrTrial(user),
+      });
       const timer = setTimeout(() => {
         setIsRedirecting(true);
         router.push(destination);

@@ -52,6 +52,7 @@ import {
   type ModuleContext,
 } from '@/components/profile/profile-modules';
 import { useAuth } from '@/hooks/use-auth';
+import { resolveDnaDropHref } from '@/lib/dna-drop-access';
 import { fetchGamificationSummary } from '@/lib/gamification-client';
 import { trackGuestSignupCta } from '@/lib/guest-funnel-client';
 import { guestTryHref } from '@/lib/guest-try';
@@ -575,7 +576,7 @@ export function ArtistHome({
                         showFirstDropsStorefront && 'max-sm:w-full max-sm:basis-full'
                       )}
                     >
-                      <Link href={`/share/${dnaDrops[0].shareId}`} className="inline-flex max-w-full items-center gap-1.5">
+                      <Link href={resolveDnaDropHref(dnaDrops[0].shareId, Boolean(user))} className="inline-flex max-w-full items-center gap-1.5">
                         <Dna className="h-3.5 w-3.5 shrink-0" />
                         <span className="min-w-0 truncate">
                           {dnaDrops[0].type === 'album' ? '1 album DNA live' : '1 lyric drop live'}

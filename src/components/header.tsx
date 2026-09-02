@@ -363,7 +363,6 @@ export function Header() {
                         <span className={studioTierMenuClass(studioChrome)}>Studio Tier</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=buy-ink')}><LayoutGrid className="mr-2 h-4 w-4 text-primary" /><span>Ink Store</span></DropdownMenuItem>
-                      <DropdownMenuItem className="md:hidden" onClick={() => { setGuideTab('paths'); setGuideOpen(true); }}><HelpCircle className="mr-2 h-4 w-4 text-primary" /><span>Studio Manual</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/studio-progress')}><Trophy className="mr-2 h-4 w-4 text-amber-400" /><span>Studio Progress</span></DropdownMenuItem>
                       {foldsOn ? (
                       <DropdownMenuItem onClick={() => router.push('/msgs')}>
@@ -411,6 +410,7 @@ export function Header() {
                           </DropdownMenuItem>
                         </>
                       ) : null}
+                      <DropdownMenuItem className="md:hidden" onClick={() => { setGuideTab('paths'); setGuideOpen(true); }}><HelpCircle className="mr-2 h-4 w-4 text-primary" /><span>Studio Manual</span></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push('/usage?tab=settings')}><Settings className="mr-2 h-4 w-4" /><span>Settings</span></DropdownMenuItem>
                       {showPwaInstallMenu && (
                         <DropdownMenuItem className="md:hidden" onClick={() => requestPwaInstallPrompt()}>

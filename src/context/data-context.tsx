@@ -937,6 +937,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const updateDNA = useCallback(
     async (type: 'album' | 'track', id: string, shareId: string, options?: { albumId?: string }): Promise<string> => {
       if (!user) throw new Error('Artist Session Required.');
+      if (!isProOrTrial(user)) {
+        throw new Error('DNA Drop lyric links are Studio Pro. Upgrade to publish, view, or import drops.');
+      }
       const albumId = options?.albumId;
       const data = stripForFirestore({ ...buildDropPayload(type, id, albumId), dnaStatus: 'live' });
       const now = new Date().toISOString();
@@ -982,6 +985,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const dropDNA = useCallback(
     async (type: 'album' | 'track', id: string, options?: { albumId?: string }): Promise<string> => {
       if (!user) throw new Error('Artist Session Required.');
+      if (!isProOrTrial(user)) {
+        throw new Error('DNA Drop lyric links are Studio Pro. Upgrade to publish, view, or import drops.');
+      }
       const albumId = options?.albumId;
       const existingShareId =
         type === 'album'

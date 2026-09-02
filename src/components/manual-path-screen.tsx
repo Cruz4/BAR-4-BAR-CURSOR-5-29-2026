@@ -178,16 +178,6 @@ export function ManualPathScreen({ kind }: { kind: PathScreenKind }) {
     );
   }
 
-  if (kind === 'lock') {
-    return (
-      <Chrome room="Lock desk">
-        <div className="flex h-16 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] font-code text-[9px] uppercase tracking-widest text-white/45">
-          Public bar
-        </div>
-      </Chrome>
-    );
-  }
-
   return (
     <Chrome room="Pricing">
       <div className="grid grid-cols-2 gap-1.5">

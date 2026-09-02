@@ -37,6 +37,8 @@ import {
   Link2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
+import { DNA_DROP_UPGRADE_PATH } from '@/lib/dna-drop-access';
 import { DataContext } from '@/context/data-context';
 import {
   DNA_DROP_MEDIA_LIMIT,
@@ -78,6 +80,7 @@ export function ShareDialog({
     updateAlbum,
     updateTrack,
   } = useContext(DataContext);
+  const router = useRouter();
   const { toast } = useToast();
   const [isWorking, setIsWorking] = useState(false);
   const [shareId, setShareId] = useState(existingShareId || '');
@@ -190,6 +193,7 @@ export function ShareDialog({
         title: 'Studio Pro Required',
         description: 'DNA Drop lyric links are Studio Pro. Publishing a song or album from New release is Free.',
       });
+      router.push(DNA_DROP_UPGRADE_PATH);
       return;
     }
     const album = getAlbumById(id);
@@ -215,6 +219,7 @@ export function ShareDialog({
         title: 'Studio Pro Required',
         description: 'DNA Drop lyric links are Studio Pro. Publishing a song or album from New release is Free.',
       });
+      router.push(DNA_DROP_UPGRADE_PATH);
       return;
     }
 

@@ -644,7 +644,7 @@ export function SceneBlockAtmosphere({
     {/* Above feed chrome so the pin is clickable; desktop-only (sm+) on purpose. */}
     {neon && (
       <div
-        className="scene-block-neon pointer-events-none fixed right-[3%] z-[40] hidden max-w-[16rem] text-right sm:block sm:max-w-[18rem]"
+        className="scene-block-neon pointer-events-none fixed right-[3%] z-[40] hidden max-w-[16rem] overflow-hidden text-right sm:block sm:max-w-[18rem]"
         data-phase={phase}
         style={{ top: appChromeBottom }}
       >
@@ -679,7 +679,7 @@ export function SceneBlockAtmosphere({
         <p className="scene-block-neon-pron mt-1 font-sans text-xs font-medium normal-case tracking-wide sm:text-[13px]">
           /{neon.pron}/
         </p>
-        <p className="scene-block-neon-gloss mt-1.5 max-w-[18rem] font-code text-[12px] font-medium leading-relaxed tracking-wide sm:max-w-[22rem] sm:text-[13px]">
+        <p className="scene-block-neon-gloss mt-1.5 max-w-[18rem] overflow-hidden break-normal font-code text-[12px] font-medium leading-relaxed tracking-wide sm:max-w-[22rem] sm:text-[13px]">
           {neon.gloss}
         </p>
       </div>

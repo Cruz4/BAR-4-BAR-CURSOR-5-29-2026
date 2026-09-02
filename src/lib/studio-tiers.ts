@@ -178,7 +178,7 @@ export const COMPETITOR_ANCHOR_COPY =
  */
 export const MUSIC_RELEASE_FREE_LINE = `Song and album music releases are Free. Open New release on The Scene, upload, set a price, and press live — within your catalog slots (${FREE_ALBUM_LIMIT} album · ${FREE_TRACK_LIMIT} tracks on Visitor).`;
 export const DNA_DROP_PRO_LINE =
-  'DNA Drop is Studio Pro: a shareable lyric snapshot (lyrics, structure, DNA). It is not the music sell desk.';
+  'DNA Drop is Studio Pro: publish, view, download, and import lyric snapshots (lyrics, structure, DNA). Guests sign in to check tier or create an account; Visitor members upgrade on Studio Tier. It is not the music sell desk.';
 export const PRESSING_FREE_LINE =
   'The Pressing — your Artist Home living skin — is Free with your public page.';
 export const MUSIC_RELEASE_PRO_PERKS_LINE =

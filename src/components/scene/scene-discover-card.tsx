@@ -26,6 +26,7 @@ import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { formatDropPulseLine } from '@/lib/drop-pulse';
 import { normalizeDropPrice } from '@/lib/drop-commerce';
 import { fetchDropLoved, likeDrop, unlikeDrop } from '@/lib/drop-social-client';
+import { resolveDnaDropHref } from '@/lib/dna-drop-access';
 
 function timeAgo(iso: string): string {
   try {
@@ -151,6 +152,8 @@ export function SceneDiscoverCard({
       ((drop.type === 'track' && Boolean(drop.hasDropAudio)) ||
         (drop.type === 'album' && (Boolean(drop.hasDropAudio) || Boolean(drop.dropPriceSummary) || drop.houseRelease)));
     const pulse = formatDropPulseLine(drop);
+    const dnaHref = resolveDnaDropHref(drop.shareId, Boolean(user));
+    const dropHref = firstDrop ? `/song/${drop.shareId}` : dnaHref;
     return (
       <Card
         className="relative min-w-0 touch-pan-y overflow-hidden border-fuchsia-500/40 bg-gradient-to-r from-fuchsia-500/[0.12] via-card/85 to-card/70 p-3 sm:p-4"
@@ -200,7 +203,7 @@ export function SceneDiscoverCard({
           />
           <div className="min-w-0 flex-1">
             <Link
-              href={firstDrop ? `/song/${drop.shareId}` : `/share/${drop.shareId}`}
+              href={dropHref}
               className="block truncate font-headline text-sm font-bold uppercase tracking-tight text-foreground hover:text-primary"
             >
               {drop.title}
@@ -231,7 +234,7 @@ export function SceneDiscoverCard({
           </div>
           {!firstDrop ? (
             <Button size="sm" className="h-8 shrink-0 font-bold uppercase" variant="outline" asChild>
-              <Link href={`/share/${drop.shareId}`}>Open</Link>
+              <Link href={dropHref}>Open</Link>
             </Button>
           ) : null}
         </div>

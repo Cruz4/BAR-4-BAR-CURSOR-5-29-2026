@@ -19,6 +19,7 @@ import { MusicDiscoveryTags } from '@/components/music-discovery-tags';
 import { publicMusicMetadataFromTrack } from '@/lib/music-discovery-metadata';
 import { orderAlbumTracks } from '@/lib/album-track-order';
 import { pressedSongHref } from '@/lib/pressed-song';
+import { resolveDnaDropHref } from '@/lib/dna-drop-access';
 
 type DnaDropAlbumHubProps = {
   album: DnaDropAlbumPayload;
@@ -26,21 +27,33 @@ type DnaDropAlbumHubProps = {
   ownerId: string;
   ownerName: string;
   houseRelease?: boolean;
+  canViewDna?: boolean;
+  signedIn?: boolean;
 };
 
-function trackSubtitle(track: DnaDropTrackPayload, firstDropsOn: boolean): string {
+function trackSubtitle(track: DnaDropTrackPayload, firstDropsOn: boolean, canViewDna: boolean): string {
   const bits: string[] = [];
   if (firstDropsOn && normalizeDropAudio(track.dropAudio)) bits.push('Audio');
   const price = firstDropsOn ? dropPriceSummary(normalizeDropPrice(track.dropPrice)) : '';
   if (price) bits.push(price);
-  if (track.vibe?.enabled !== false && track.vibe?.genre) bits.push(track.vibe.genre);
-  if (track.vibe?.enabled !== false && track.vibe?.tempoBPM) bits.push(`${track.vibe.tempoBPM} BPM`);
-  const bars = trackLyricBarCount(track);
-  if (bars > 0) bits.push(`${bars} bar${bars === 1 ? '' : 's'}`);
-  return bits.join(' · ') || 'No lyrics drafted yet';
+  if (canViewDna && track.vibe?.enabled !== false && track.vibe?.genre) bits.push(track.vibe.genre);
+  if (canViewDna && track.vibe?.enabled !== false && track.vibe?.tempoBPM) bits.push(`${track.vibe.tempoBPM} BPM`);
+  if (canViewDna) {
+    const bars = trackLyricBarCount(track);
+    if (bars > 0) bits.push(`${bars} bar${bars === 1 ? '' : 's'}`);
+  }
+  return bits.join(' · ') || (canViewDna ? 'No lyrics drafted yet' : 'Release track');
 }
 
-export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName, houseRelease = false }: DnaDropAlbumHubProps) {
+export function DnaDropAlbumHub({
+  album,
+  shareId,
+  ownerId,
+  ownerName,
+  houseRelease = false,
+  canViewDna = true,
+  signedIn = false,
+}: DnaDropAlbumHubProps) {
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const tracks = orderAlbumTracks(album.tracks ?? [], album);
   const liveCount = tracks.filter((t) => hasActiveDnaDrop(t.shareId)).length;
@@ -70,7 +83,9 @@ export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName, houseRelea
             ? houseRelease
               ? 'Every signed-in member receives every included recording free in their Bar4Bar Library; lyrics are optional.'
               : 'Preview every included recording here. One album purchase unlocks every audio track in your Bar4Bar Library; lyrics are optional.'
-            : 'Open a live track to see its DNA Drop — lyrics, Creative DNA, and whatever was toggled on when it went public.'}
+            : canViewDna
+              ? 'Open a live track to see its DNA Drop — lyrics, Creative DNA, and whatever was toggled on when it went public.'
+              : 'Open a live track to listen. Viewing or importing DNA Drop lyrics is Studio Pro.'}
         </p>
       </div>
 
@@ -85,8 +100,8 @@ export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName, houseRelea
               const releasedInAlbum = albumForSale && hasAudio;
               const releaseHref = releasedInAlbum
                 ? pressedSongHref(shareId, { trackId: track.id })
-                : live
-                  ? `/share/${track.shareId}`
+                : live && track.shareId
+                  ? resolveDnaDropHref(track.shareId, signedIn, canViewDna)
                   : undefined;
               const inner = (
                 <>
@@ -120,7 +135,7 @@ export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName, houseRelea
                   </div>
                   <div className="p-3 sm:p-4 flex items-center justify-between gap-2">
                     <div className="min-w-0 space-y-1">
-                      <p className="text-[10px] text-muted-foreground truncate">{trackSubtitle(track, firstDropsOn)}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{trackSubtitle(track, firstDropsOn, canViewDna)}</p>
                       <p className="text-[9px] uppercase tracking-widest text-muted-foreground/70 flex items-center gap-1.5">
                         {releasedInAlbum ? (
                           <>
@@ -130,7 +145,9 @@ export function DnaDropAlbumHub({ album, shareId, ownerId, ownerName, houseRelea
                         ) : live ? (
                           <>
                             <CassetteTape className="h-3 w-3 text-primary shrink-0" />
-                            {hasAudio ? 'Audio included · open track DNA' : 'Open track DNA'}
+                            {canViewDna
+                              ? hasAudio ? 'Audio included · open track DNA' : 'Open track DNA'
+                              : 'Studio Pro to view lyrics'}
                           </>
                         ) : (
                           <>

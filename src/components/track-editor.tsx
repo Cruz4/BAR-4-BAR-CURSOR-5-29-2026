@@ -1282,9 +1282,10 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                     ) : (
                       <LockedProFeatureButton
                         feature="DNA Drop"
-                        benefit="Publish a shareable link to your track blueprint for collab and feedback."
+                        benefit="Publish, view, download, and import lyric DNA Drops — Pro only."
                         example="Drop a link so collaborators can import your structure."
                         ctaLabel="Publish DNA Drop — Go Pro"
+                        ctaHref="/usage?tab=cloud&highlight=dna-drop"
                         icon={Globe}
                         iconClassName="text-primary"
                         label={<span className="truncate flex items-center gap-2 min-w-0">DNA Drop (Share)</span>}

@@ -57,7 +57,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { useLockFeature } from '@/hooks/use-lock-feature';
-import { firstDropsFeeCashoutLine, firstDropsPitch, shareCommerceFlags } from '@/lib/drop-commerce';
+import { firstDropsFeeCashoutLine, shareCommerceFlags } from '@/lib/drop-commerce';
 import { DataContext } from '@/context/data-context';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
@@ -79,6 +79,7 @@ import {
 } from '@/lib/profile/modules';
 import { parseEmbedUrl, EMBED_HELP_TEXT } from '@/lib/profile/embeds';
 import { SOCIAL_PROVIDERS } from '@/lib/profile/social-links';
+import { SocialGlyph } from '@/components/profile/profile-social-links';
 import { CONTACT_MAX_CHARS } from '@/lib/profile/contact';
 import { ProfileVoiceMemoEditor } from '@/components/profile/profile-voice-memo-editor';
 import { deleteVoiceStorage } from '@/lib/profile/voice-notes';
@@ -221,6 +222,38 @@ function DeskSection({
       {hint && <p className="mt-1.5 text-xs text-muted-foreground/80">{hint}</p>}
       <div className="mt-4">{children}</div>
     </section>
+  );
+}
+
+function EditPageCheatSheet({ firstDropsOn }: { firstDropsOn: boolean }) {
+  return (
+    <div className={cn('grid gap-2', firstDropsOn ? 'sm:grid-cols-3' : 'sm:grid-cols-1')}>
+      <div className="rounded-xl border border-sky-400/25 bg-sky-500/10 px-3 py-2">
+        <p className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-sky-200">Your Home</p>
+        <p className="mt-1 text-[11px] leading-snug text-foreground/90">
+          Your public Artist Home — free, no Pro. Edit the look, name, links, featured track, and modules here. Watch it update in the live preview on the right, or tap Preview.
+        </p>
+      </div>
+      {firstDropsOn ? (
+        <>
+          <div className="rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/10 px-3 py-2">
+            <p className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-fuchsia-200">Sell audio</p>
+            <p className="mt-1 text-[11px] leading-snug text-foreground/90">
+              Scene → New release. Upload, price, press live. 30s preview · buy once · stream here. You keep the rights.
+            </p>
+            <p className="mt-1 text-[10px] leading-snug text-fuchsia-100/75">
+              Fee 25% under $3 · 15% $3–$4.99 · 10% $5+. Cash out on Earnings.
+            </p>
+          </div>
+          <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3 py-2">
+            <p className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-emerald-200">Not a sale</p>
+            <p className="mt-1 text-[11px] leading-snug text-foreground/90">
+              DNA Drop is the Pro lyric page — publishing that lyric link needs Pro. Offline Library download is Pro too. Listen / buy (audio) sits on Artist Home, The Scene, and the release link.
+            </p>
+          </div>
+        </>
+      ) : null}
+    </div>
   );
 }
 
@@ -1124,12 +1157,9 @@ export function PressDesk() {
     <div className="w-full px-4 pb-32 pt-8">
       <div className="relative min-[1830px]:grid min-[1830px]:grid-cols-[minmax(0,1fr)_46rem_minmax(0,1fr)] min-[1830px]:items-start">
         <div className="mx-auto w-full max-w-[46rem] min-w-0 space-y-5 min-[1830px]:col-start-2 min-[1830px]:row-start-1">
-      <header className="space-y-2">
+      <header className="space-y-3">
         <h1 className="font-headline text-3xl font-bold uppercase tracking-tight">Edit Public Page</h1>
-        <p className="text-sm text-muted-foreground">
-          Artist Home is completely free — no Pro required for the page. Seed a bar, ride four faders, stack your modules.
-          {firstDropsOn ? ` ${firstDropsPitch()}` : ''}
-        </p>
+        <EditPageCheatSheet firstDropsOn={firstDropsOn} />
         {!profileLive && (
           <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
             Your public profile is currently off. Your pressing is saved and goes live the moment you
@@ -1440,6 +1470,7 @@ export function PressDesk() {
 
       {/* 3. The Pressing */}
       <DeskSection
+        id="the-pressing"
         icon={Sparkles}
         title="The Pressing"
         hint="Pick the bar your skin is pressed from. Same bar, same skin — your lyrics style your page. Turn Alive on and the page breathes that bar's meter."
@@ -1763,9 +1794,9 @@ export function PressDesk() {
       <DeskSection
         icon={Link2}
         title="Links out"
-        hint="Optional 3-second hello plays first under your photo. Fill any socials you want — only filled ones show."
+        hint="3-second hello under your photo, then any links you fill."
       >
-        <div className="space-y-5">
+        <div className="space-y-3">
           <ProfileVoiceMemoEditor
             note={config.featured.voiceMemo}
             committedStoragePath={committedMemoPath}
@@ -1777,15 +1808,18 @@ export function PressDesk() {
               })
             }
           />
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-1.5 min-[420px]:grid-cols-2">
             {SOCIAL_PROVIDERS.map((provider) => (
-              <div key={provider.id} className="space-y-1">
-                <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-white/70">
-                  <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] text-primary">
-                    {provider.short}
-                  </span>
-                  {provider.label}
-                </label>
+              <label
+                key={provider.id}
+                className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/25 px-2 py-1"
+              >
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center text-primary"
+                  title={provider.label}
+                >
+                  <SocialGlyph id={provider.id} className="h-3.5 w-3.5" />
+                </span>
                 <Input
                   value={config.featured.socials?.[provider.id] || ''}
                   onChange={(e) =>
@@ -1799,9 +1833,10 @@ export function PressDesk() {
                   }
                   maxLength={200}
                   placeholder={provider.placeholder}
-                  className="bg-black/30 text-sm"
+                  aria-label={provider.label}
+                  className="h-8 border-0 bg-transparent px-0 text-xs shadow-none focus-visible:ring-0"
                 />
-              </div>
+              </label>
             ))}
           </div>
         </div>

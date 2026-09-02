@@ -102,6 +102,7 @@ function LoginForm() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const importIntent = searchParams.get('intent') === 'dna-import';
+  const dnaDropIntent = searchParams.get('intent') === 'dna-drop' || importIntent;
   const dropBuyIntent = searchParams.get('intent') === 'drop-buy';
   const guestTryIntent = searchParams.get('intent') === 'guest_try';
   const safeNext = getSafeNextPath(searchParams.get('next'));
@@ -461,15 +462,16 @@ function LoginForm() {
               </Card>
             )}
 
-            {importIntent && (
+            {dnaDropIntent && (
               <Card className="w-full border-primary/30 bg-primary/10 backdrop-blur-md relative z-50">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-headline uppercase tracking-wide flex items-center gap-2 text-primary">
-                    <Import className="h-4 w-4" /> DNA Drop — Import Setup
+                    <Import className="h-4 w-4" /> DNA Drops (Lyrics) — Studio Pro
                   </CardTitle>
                   <CardDescription className="text-[11px] font-code leading-relaxed text-left">
-                    Someone shared a Bar 4 Bar project with you. After you sign in, you&apos;ll return to that page and can merge its lyrics, structure, Creative DNA, and vibe into your vault — not the song file.
-                    Studio Pro is required to import drops from other artists.
+                    You must be Studio Pro to download, view, or import DNA Drops. Sign in to check your tier or upgrade, or create an account.
+                    After you sign in, Pro members return to the lyric snapshot; Visitor members go to Studio Tier with the DNA Drop perk highlighted.
+                    {' '}Listen / buy music releases stay Free — this gate is lyrics only.
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -662,7 +664,7 @@ function LoginForm() {
               </div>
             </Card>
 
-            {!proCheckoutIntent && !importIntent && !isTikTokRef && (
+            {!proCheckoutIntent && !isTikTokRef && (
               <Card className="w-full border-accent/20 bg-accent/[0.035] backdrop-blur-md relative z-10">
                 <CardHeader className="pb-3 space-y-3">
                   <CardTitle className="text-xs font-headline uppercase tracking-wide flex items-center gap-2 text-accent">
