@@ -196,6 +196,14 @@ const CORE_FAQS = [
       a: "Vault (albums & tracks) is at /vault — sky archive icon in the top nav, or top of the Scene dock. Activity (emerald bell) is for your work: unfinished verse, streak at midnight, someone echoing your bar, plus friends and DNA imports — not a feed dump. Optional push under Settings → Notifications.",
     },
     {
+      q: "What is Press / Release tracking on album sheets?",
+      a: "Optional personal stages on each sheet: Beat, Writing, Recorded, Mixed, Mastered, Artwork, Released. Change the stage on the album tracklist or in Track Status. Search and sort by name, date created, last edited, or % finished (ascending or descending). This is not Press live (audio) and not DNA Drop. Turn it off in Settings → Press / Release tracking, or with the switch on that album. Public identity labels (Producer, Music Fan, and so on) do not change the stages — one list for every account.",
+    },
+    {
+      q: "How do I add several blank sheets to an album?",
+      a: "Open a created album → Add sheets. Name them in the list (or leave untitled) and they stay on that album. You can also rename from the tracklist pencil without opening the sheet. Add Track still creates one sheet and opens it. Visitor accounts stay at 1 album / 2 editable sheets.",
+    },
+    {
       q: "What is Msgs?",
       a: "Private messages between friends. Amber message icon in the header, or account menu → Msgs. Send from a friend's public music home or Your circle. Stored on our servers so the inbox works—not end-to-end encrypted.",
     },
@@ -419,7 +427,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
   }, [open, initialTab]);
 
   const searchItems = useMemo<ManualSearchItem[]>(() => [
-    { label: 'Paths', detail: 'Clickable lanes into the app', tab: 'paths', targetId: 'manual-paths', keywords: 'flashcard press song post clip go public vault dna drop discover library earnings ink lock refer' },
+    { label: 'Paths', detail: 'One job, that screen, then start the coach', tab: 'paths', targetId: 'manual-paths', keywords: 'write lyrics press song live new release vault sheet post clip go public dna drop discover library earnings ink lock refer the pressing' },
     { label: 'Start here', detail: 'First-hour walkthrough', tab: 'start-here', targetId: 'manual-start-here', keywords: 'begin new artist write first track tour scene vault' },
     { label: 'Public identity', detail: 'Artist, creator, and Music Fan labels', tab: 'scene', targetId: 'manual-public-identity', keywords: 'artist songwriter producer engineer dj music fan profile sound identity genre mood influence region collaboration' },
     { label: 'Featured Library track', detail: 'Owned or purchased music on your profile', tab: 'scene', targetId: 'manual-featured-track', keywords: '30 second excerpt preview purchased song music fan buy full stream public page' },
@@ -427,6 +435,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
     { label: 'Follow, Inner Circle, and Friends', detail: 'The three relationship levels', tab: 'scene', targetId: 'manual-relationships', keywords: 'support circle followers supporters friend collaboration messages inner circle' },
     { label: 'Listener Insights', detail: 'Qualified release listening and conversions', tab: 'scene', targetId: 'manual-listener-insights', keywords: '80 percent repeat completion purchase source analytics private creator' },
     { label: 'Emerging (7d)', detail: 'Transparent momentum ranking', tab: 'scene', targetId: 'manual-emerging', keywords: 'leaderboard score qualified listeners follows inner circle buyer conversions fair no pay rank' },
+    { label: 'Blank sheets & Press tracking', detail: 'Name album sheets and optional Beat → Released stages', tab: 'scene', targetId: 'manual-album-sheets', keywords: 'blank tracklist add sheets press release tracking beat writing recorded mixed mastered artwork released sort search percent finished settings toggle off album' },
     { label: 'Safe Vault backup', detail: 'Versioned export and merge-only restore', tab: 'scene', targetId: 'manual-vault-backup-v2', keywords: 'portable export import restore version 2 collision copy non destructive style profile legacy' },
     { label: 'Sell your music', detail: 'Release setup, pricing, fees, and payouts', tab: 'first-drops', targetId: 'manual-selling-overview', keywords: 'sell song audio price pay what you want release stripe earnings cash out' },
     { label: 'Release pricing options', detail: 'Fixed price and pay-what-you-want', tab: 'first-drops', targetId: 'manual-selling-pricing', keywords: 'minimum floor suggested fee 1.99 2.99 4.99 7.77' },
@@ -579,8 +588,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
               <TabsContent id="manual-start-here" value="start-here" className="mt-0 scroll-mt-6 space-y-8 animate-in fade-in slide-in-from-bottom-4">
                 <ChapterCard icon={<Map className="text-cyan-300" />} title="Paths" colorClass="border-l-cyan-400 text-cyan-300">
                   <p className="text-sm text-foreground/90">
-                    Clickable lanes for press a song, post a clip, go public, The Vault, DNA Drop, Discover, Library, and more.
-                    Start on any step. A coach stays up until that path is done.
+                    One job at a time: the screen, where it lives, and the steps. Write lyrics (Vault) and Press a song (Scene → New release) are different jobs — they are not nested.
                   </p>
                   <Button type="button" size="sm" className="h-8 font-bold uppercase" onClick={() => setActiveTab('paths')}>
                     Open Paths
@@ -700,6 +708,12 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                   </ChapterCard>
                 </div>
 
+                <ChapterCard icon={<CassetteTape className="text-sky-300" />} title="Blank sheets &amp; Press tracking" colorClass="border-l-sky-400 text-sky-300">
+                  <p className="text-sm">
+                    Inside a created album, <strong>Add sheets</strong> drops empty lyric pages you name in a list — they stay on the album. Optional <strong>Press / Release</strong> stages (Beat → Writing → Recorded → Mixed → Mastered → Artwork → Released) show progress. Turn them off in Settings or on that album. Search and sort the tracklist. This is not Press live or DNA Drop.
+                  </p>
+                </ChapterCard>
+
                 <p className="text-[11px] text-muted-foreground font-code border border-border/40 rounded-lg px-3 py-2 bg-muted/10">
                   <Lightbulb className="inline h-3.5 w-3.5 mr-1.5 text-yellow-500 align-text-bottom" />
                   After your first tour, the lyrics page may show one tip per visit. Pause or dismiss — you do not have to follow it.
@@ -764,6 +778,22 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                   <Button asChild variant="outline" className="w-full font-bold uppercase tracking-widest text-[10px]">
                     <Link href="/leaderboard"><Trophy className="mr-2 h-4 w-4" /> View Emerging</Link>
                   </Button>
+                </ChapterCard>
+
+                <ChapterCard id="manual-album-sheets" icon={<CassetteTape className="text-sky-300" />} title="Blank Sheets &amp; Press / Release Tracking" colorClass="border-l-sky-400 text-sky-300">
+                  <p className="text-sm">
+                    Open any created album. <strong>Add Track</strong> still makes one sheet and opens it. <strong>Add sheets</strong> drops one or more blank lyric pages onto that album so you can name them in the list and keep working the tracklist.
+                  </p>
+                  <ul className="list-disc list-inside space-y-1.5 text-sm">
+                    <li><strong>Rename in place</strong> — pencil on a row, or change the title in Track Status on the sheet.</li>
+                    <li><strong>Search</strong> the album list by title, genre, mood, or stage.</li>
+                    <li><strong>Sort</strong> by album order, name, date created, last edited, or % finished — then flip ascending or descending. Manual up/down reorder only works in album order with an empty search.</li>
+                    <li><strong>Press / Release tracking</strong> is a personal checklist: Beat, Writing, Recorded, Mixed, Mastered, Artwork, Released. Same stages for every account — public identity labels do not change them.</li>
+                    <li><strong>Turn it off or on</strong> in Settings → Press / Release tracking (default for albums that have not set their own switch), or with the switch on that album page. The sheet also shows the stage under Track Status when tracking is on.</li>
+                  </ul>
+                  <p className="text-xs border-l-2 border-sky-400/40 pl-3">
+                    Released here means “this idea is ready or already out” on your checklist. It does not press audio live and it is not a DNA Drop.
+                  </p>
                 </ChapterCard>
 
                 <ChapterCard id="manual-vault-backup-v2" icon={<Archive className="text-violet-300" />} title="Versioned, Non-Destructive Vault Backup" colorClass="border-l-violet-500 text-violet-300">
@@ -1179,7 +1209,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                         <AccordionItem value="left">
                             <AccordionTrigger className="font-bold text-xs uppercase">Left Panel: Track Status</AccordionTrigger>
                             <AccordionContent className="text-xs space-y-2">
-                                <p>• <strong>Status:</strong> Manage titles and enter Performance Mode.</p>
+                                <p>• <strong>Status:</strong> Manage titles and enter Performance Mode. Optional Press / Release stage (Beat → Released) lives here too — turn it off in Settings or on the album page. Not the same as Press live.</p>
                                 <p>• <strong>Release song:</strong> Upload audio, set a price, and publish the music release. This is separate from DNA Drop.</p>
                                 <p>• <strong>DNA Drop / Collab Sheet:</strong> DNA Drop = lyric snapshot link. Collab Sheet = live shared editing with presence + chat.</p>
                                 <p>• <strong>Structure:</strong> Live song map (Verse, Hook, Bridge). Tap a section to jump the sheet; Add Section to grow the form. Not the Smart Structure paste tool.</p>

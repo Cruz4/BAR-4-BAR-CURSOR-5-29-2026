@@ -127,6 +127,14 @@ export function canUserAddTrack(
   return countUserTracks(albums as { id: string; tracks: unknown[] }[]) < FREE_TRACK_LIMIT;
 }
 
+export function remainingTrackSlots(
+  albums: { tracks?: unknown[] }[],
+  user: Pick<User, 'subscriptionStatus' | 'proFeaturePreviewExpiresAt'> | null | undefined
+): number {
+  if (hasUnlimitedCatalog(user)) return Number.POSITIVE_INFINITY;
+  return Math.max(0, FREE_TRACK_LIMIT - countUserTracks(albums as { id: string; tracks: unknown[] }[]));
+}
+
 /** Free / preview: max concept albums. */
 export function canUserAddAlbum(
   albums: { id: string }[],

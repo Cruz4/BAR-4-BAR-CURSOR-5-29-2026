@@ -121,6 +121,11 @@ export interface Album {
   dropPrice?: DropPrice;
   /** Optional discovery tags for rails / search (additive). */
   releaseDiscovery?: ReleaseDiscoveryMetadata;
+  /**
+   * Album-level Press/Release tracking (beat → released).
+   * Undefined falls back to the Settings default.
+   */
+  pressTrackingEnabled?: boolean;
 }
 
 export interface TrackVibe {
@@ -198,6 +203,8 @@ export interface Track {
   dropRightsAttestedAt?: string;
   /** Optional discovery tags for rails / search (additive). */
   releaseDiscovery?: ReleaseDiscoveryMetadata;
+  /** Personal Press/Release stage on this sheet — not the same as Press live. */
+  pressStage?: 'beat' | 'writing' | 'recorded' | 'mixed' | 'mastered' | 'artwork' | 'released';
 }
 
 /** How a lyric line was added — used for Studio Progress (written vs AI-generated). */

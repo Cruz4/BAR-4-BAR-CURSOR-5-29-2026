@@ -79,7 +79,7 @@ interface DataContextType {
   updateAlbum: (albumId: string, updates: Partial<Album>) => void;
   deleteAlbum: (albumId: string) => void;
   getAlbumById: (albumId: string) => Album | undefined;
-  addTrack: (albumId: string, track: Omit<Track, 'id'>) => Track;
+  addTrack: (albumId: string, track: Omit<Track, 'id'> & { id?: string }) => Track;
   updateTrack: (albumId: string, trackId: string, updates: Partial<Track>) => void;
   deleteTrack: (albumId: string, trackId: string) => void;
   getTrackById: (albumId: string, trackId: string) => { track: Track | undefined, album: Album | undefined };
@@ -707,7 +707,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     if (!canUserAddTrack(albums, user)) {
       throw new FreeTrackLimitError();
     }
-    const id = track.id || `track-${Date.now()}`;
+    const id = track.id || `track-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const now = new Date().toISOString();
     const newTrack = stripForFirestore({ ...track, id, ownerId: user!.id, albumId, updatedAt: now }) as Track;
     setAlbums(prev => {

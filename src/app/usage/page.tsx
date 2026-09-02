@@ -83,6 +83,7 @@ import { TierPriceSummary } from '@/components/tier-price-summary';
 import { PwaInstallGuideCard } from '@/components/pwa-install-prompt';
 import { StudioThemeSettingsCard } from '@/components/studio-theme-controls';
 import { NotificationSettingsCard } from '@/components/activity/notification-settings-card';
+import { PressTrackingSettingsCard } from '@/components/press-tracking-settings-card';
 import { DeviceSessionsCard } from '@/components/security/device-sessions-card';
 import { ReferAFriendSection } from '@/components/refer-a-friend-section';
 import { DeleteAccountDialog } from '@/components/delete-account-dialog';
@@ -684,6 +685,7 @@ function UsagePageContent() {
                 <PwaInstallGuideCard />
                 <StudioThemeSettingsCard />
                 <NotificationSettingsCard />
+                <PressTrackingSettingsCard />
                 <DeviceSessionsCard />
                 {firstDropsOn && (
                 <Card className="border-emerald-500/20">

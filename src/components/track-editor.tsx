@@ -301,6 +301,8 @@ import { linesToRhymeBars } from '@/lib/lyrics-units';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, Hint } from '@/components/ui/tooltip';
 import { InkArmAffordance, inkArmedButtonClass } from '@/components/ui/ink-arm-affordance';
+import { PressStageControl } from '@/components/press-stage-control';
+import { readPressTrackingPref } from '@/lib/press-release-tracking';
 import { useTouchInkRunner } from '@/hooks/use-touch-ink-runner';
 
 // --- Hoisted Workstation Dialogs ---
@@ -799,10 +801,23 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   const { getEffectiveCost, tooltip, buttonLabel } = useInkCosts();
   const { runWithInk } = useTouchInkRunner();
   const [suggestedTitles, setSuggestedTitles] = useState<string[] | null>(null);
+  const [pressTrackingPref, setPressTrackingPref] = useState(true);
 
   useEffect(() => {
     setSuggestedTitles(null);
   }, [track.id]);
+
+  useEffect(() => {
+    const syncPref = () => setPressTrackingPref(readPressTrackingPref());
+    syncPref();
+    window.addEventListener('b4b-press-tracking-changed', syncPref);
+    return () => window.removeEventListener('b4b-press-tracking-changed', syncPref);
+  }, []);
+
+  const trackingOn =
+    album && typeof album.pressTrackingEnabled === 'boolean'
+      ? album.pressTrackingEnabled
+      : pressTrackingPref;
 
   const releaseControlState = trackReleaseControlState(track, album);
   const releaseControlCopy = {
@@ -1072,6 +1087,19 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                       </div>
                     )}
                   </div>
+                  {trackingOn ? (
+                    <div className="space-y-1 pt-1 border-t border-sky-500/15">
+                      <Label className="text-[10px] uppercase font-bold text-sky-400/70 tracking-widest">Press / Release stage</Label>
+                      <PressStageControl
+                        stage={track.pressStage}
+                        disabled={trackLocked}
+                        onChange={(pressStage) => onUpdateTrack({ pressStage })}
+                      />
+                      <p className="text-[9px] text-muted-foreground leading-snug">
+                        Personal checklist — not Press live or DNA Drop. Turn off in Settings or on the album page.
+                      </p>
+                    </div>
+                  ) : null}
                   <div className="space-y-2 pt-1 border-t border-sky-500/15">
                     <div className="flex items-center justify-between gap-2">
                       <Label className="text-[10px] uppercase font-bold text-sky-400/70 tracking-widest">Completion</Label>

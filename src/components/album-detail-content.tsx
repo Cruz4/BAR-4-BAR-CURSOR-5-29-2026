@@ -168,6 +168,30 @@ import {
   COVER_ART_EXPORT_SIZE,
   COVER_ART_MIN_DIMENSION,
 } from '@/lib/cover-art';
+import { Switch } from '@/components/ui/switch';
+import { PressStageControl } from '@/components/press-stage-control';
+import { AddBlankSheetsDialog } from '@/components/add-blank-sheets-dialog';
+import {
+  albumTrackSearchHaystack,
+  readPressTrackingPref,
+  sortAlbumTracks,
+  type AlbumTrackSortDir,
+  type AlbumTrackSortKey,
+} from '@/lib/press-release-tracking';
+
+const ALBUM_SORT_LABELS: Record<AlbumTrackSortKey, string> = {
+  manual: 'Album order',
+  name: 'Name',
+  created: 'Date created',
+  updated: 'Last edited',
+  progress: '% finished',
+};
+
+function shortTrackDate(iso?: string) {
+  if (!iso) return null;
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? null : format(date, 'MMM d, yyyy');
+}
 
 function CreateTrackDialog({
   open,
@@ -210,6 +234,7 @@ function CreateTrackDialog({
                 sections: [{ id: `section-${Date.now()}`, type: 'verse', bars: [{ idx: 1, text: '', accepted: true, syllables: 0, rhymeKey: '?' }] }],
                 status: 'in_progress',
                 createdAt: new Date().toISOString(),
+                pressStage: 'beat',
                 direction: {
                   enabled: true,
                   inheritFromAlbum: albumId !== 'unassigned',
@@ -874,7 +899,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const { user } = useAuth();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const isPro = isProOrTrial(user);
-  const { getAlbumById, updateAlbum, deleteTrack, loading, moveTrack, deleteAlbum, albums } = useContext(DataContext);
+  const { getAlbumById, updateAlbum, updateTrack, deleteTrack, loading, moveTrack, deleteAlbum, albums } = useContext(DataContext);
   const totalTrackCount = countUserTracks(albums);
   const albumTierLocked = isAlbumOverTierLimit(albumId, albums, user);
   const editableTrackIds = getEditableTrackIds(albums, user);
@@ -891,6 +916,19 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
       return;
     }
     setCreateTrackOpen(true);
+  };
+  const openBlankSheets = () => {
+    if (albumTierLocked) {
+      toast(TIER_LIMIT_LOCKED_TOAST);
+      return;
+    }
+    if (!canUserAddTrack(albums, user)) {
+      trackStudioEvent(ANALYTICS_EVENTS.FREE_LIMIT_HIT, { limitType: 'track', count: totalTrackCount });
+      trackUpgradeClick('slot_limit', { limitType: 'track', count: totalTrackCount });
+      toast(FREE_TRACK_LIMIT_TOAST);
+      return;
+    }
+    setBlankSheetsOpen(true);
   };
   const [album, setAlbum] = useState<Album | null>(null);
 
@@ -924,6 +962,13 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const [editCoverArtDialogOpen, setEditCoverArtDialogOpen] = useState(false);
   const [strainMixerOpen, setStrainMixerOpen] = useState(false);
   const [createTrackOpen, setCreateTrackOpen] = useState(false);
+  const [blankSheetsOpen, setBlankSheetsOpen] = useState(false);
+  const [albumSearch, setAlbumSearch] = useState('');
+  const [albumSort, setAlbumSort] = useState<AlbumTrackSortKey>('manual');
+  const [albumSortDir, setAlbumSortDir] = useState<AlbumTrackSortDir>('asc');
+  const [renamingTrackId, setRenamingTrackId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState('');
+  const [pressTrackingPref, setPressTrackingPref] = useState(true);
   const [trackToDelete, setTrackToDelete] = useState<Track | null>(null);
   const [downgradePickerDone, setDowngradePickerDone] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -1166,6 +1211,45 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
     return sortLooseTracks(rows, looseSort);
   }, [album?.tracks, isUnassignedVault, looseSearch, looseSort, looseFilter]);
 
+  useEffect(() => {
+    const syncPref = () => setPressTrackingPref(readPressTrackingPref());
+    syncPref();
+    window.addEventListener('b4b-press-tracking-changed', syncPref);
+    return () => window.removeEventListener('b4b-press-tracking-changed', syncPref);
+  }, []);
+
+  const trackingOn =
+    album && typeof album.pressTrackingEnabled === 'boolean'
+      ? album.pressTrackingEnabled
+      : pressTrackingPref;
+
+  useEffect(() => {
+    if (!trackingOn && albumSort === 'progress') setAlbumSort('manual');
+  }, [trackingOn, albumSort]);
+
+  const displayedAlbumTracks = useMemo(() => {
+    if (isUnassignedVault || !album?.tracks) return [];
+    const q = albumSearch.trim().toLowerCase();
+    const rows = q
+      ? album.tracks.filter((track) => albumTrackSearchHaystack(track).includes(q))
+      : album.tracks;
+    return sortAlbumTracks(rows, albumSort, albumSortDir);
+  }, [album?.tracks, isUnassignedVault, albumSearch, albumSort, albumSortDir]);
+
+  const canReorderAlbumTracks = !isUnassignedVault && albumSort === 'manual' && !albumSearch.trim();
+
+  const commitAlbumTrackRename = (track: Track) => {
+    const next = renameDraft.trim() || 'Untitled Track';
+    if (next !== track.title) updateTrack(albumId, track.id, { title: next });
+    setRenamingTrackId(null);
+  };
+
+  const applyAlbumSort = (key: AlbumTrackSortKey) => {
+    setAlbumSort(key);
+    if (key === 'name') setAlbumSortDir('asc');
+    else if (key !== 'manual') setAlbumSortDir('desc');
+  };
+
   const looseFilterLabels = vaultLiveFilterLabels;
   const showDowngradePicker =
     !downgradePickerDone && !loading && user != null && needsFreeEditableTrackPicker(user, albums);
@@ -1306,6 +1390,16 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 >
                                     <PlusCircle className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Add Track
                                 </Button>
+                                {!isUnassignedVault && (
+                                  <Button
+                                    variant="outline"
+                                    onClick={openBlankSheets}
+                                    disabled={!canAddTrack}
+                                    className="h-9 w-full min-w-0 px-3 font-bold text-[10px] uppercase tracking-widest border-sky-500/30 rounded-xl bg-sky-500/10 text-sky-200 hover:bg-sky-500/20 md:w-auto md:flex-none md:px-4"
+                                  >
+                                    <NotebookPen className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Add sheets
+                                  </Button>
+                                )}
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -1359,7 +1453,95 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 )}
                             </div>
                         </CardHeader>
-                        {isUnassignedVault ? (
+                        {!isUnassignedVault ? (
+                          <div className="flex flex-col gap-3 border-b border-border px-4 sm:px-6 md:px-8 py-4 dark:border-white/5">
+                            {album.tracks?.length > 0 ? (
+                              <div className="relative w-full">
+                                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  value={albumSearch}
+                                  onChange={(e) => setAlbumSearch(e.target.value)}
+                                  placeholder="Search sheets… title, genre, mood, stage"
+                                  className="h-10 border-border bg-muted/40 pl-10 pr-10 font-code text-xs font-bold dark:border-white/10"
+                                />
+                                {albumSearch ? (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-1 top-1 h-8 w-8 rounded-full"
+                                    onClick={() => setAlbumSearch('')}
+                                    aria-label="Clear search"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                ) : null}
+                              </div>
+                            ) : null}
+                            <div className="flex flex-wrap items-center gap-2">
+                              {album.tracks?.length > 0 ? (
+                                <>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-9 gap-2 border-border bg-muted/40 text-[10px] font-bold uppercase tracking-wider dark:border-white/10"
+                                      >
+                                        <ArrowUpDown className="h-3.5 w-3.5" />
+                                        Sort · {ALBUM_SORT_LABELS[albumSort]}
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="bg-card border-border dark:border-white/10">
+                                      {(Object.keys(ALBUM_SORT_LABELS) as AlbumTrackSortKey[])
+                                        .filter((key) => trackingOn || key !== 'progress')
+                                        .map((key) => (
+                                          <DropdownMenuItem
+                                            key={key}
+                                            onClick={() => applyAlbumSort(key)}
+                                            className={cn(
+                                              'text-[10px] font-bold uppercase',
+                                              albumSort === key && 'bg-primary/10 text-primary'
+                                            )}
+                                          >
+                                            {ALBUM_SORT_LABELS[key]}
+                                          </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                  {albumSort !== 'manual' ? (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-9 gap-2 border-border bg-muted/40 text-[10px] font-bold uppercase tracking-wider dark:border-white/10"
+                                      onClick={() => setAlbumSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))}
+                                    >
+                                      {albumSortDir === 'asc' ? <SortAsc className="h-3.5 w-3.5" /> : <SortDesc className="h-3.5 w-3.5" />}
+                                      {albumSortDir === 'asc' ? 'Ascending' : 'Descending'}
+                                    </Button>
+                                  ) : null}
+                                </>
+                              ) : null}
+                              <div className="flex min-w-0 items-center gap-2 rounded-xl border border-sky-500/20 bg-sky-500/5 px-3 py-1.5">
+                                <Label htmlFor="album-press-tracking" className="text-[9px] font-bold uppercase tracking-wider text-sky-200">
+                                  Press / Release tracking
+                                </Label>
+                                <Switch
+                                  id="album-press-tracking"
+                                  checked={trackingOn}
+                                  disabled={albumTierLocked}
+                                  onCheckedChange={(next) => handleAlbumUpdate({ pressTrackingEnabled: next })}
+                                />
+                              </div>
+                              {album.tracks?.length > 0 ? (
+                                <Badge variant="outline" className="ml-auto border-sky-500/30 font-mono text-sky-400">
+                                  {displayedAlbumTracks.length} shown
+                                </Badge>
+                              ) : null}
+                            </div>
+                          </div>
+                        ) : (
                           <div className="flex flex-col gap-3 border-b border-border px-4 sm:px-6 md:px-8 py-4 dark:border-white/5">
                             <div className="relative w-full">
                               <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -1437,7 +1619,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                               </Badge>
                             </div>
                           </div>
-                        ) : null}
+                        )}
                         <CardContent className={cn(isUnassignedVault ? 'p-3 sm:p-5' : 'p-0')}>
                             {album.tracks?.length > 0 ? (
                               isUnassignedVault ? (
@@ -1468,9 +1650,9 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                     </Button>
                                   </div>
                                 )
-                              ) : (
+                              ) : displayedAlbumTracks.length > 0 ? (
                                 <div className="space-y-2 p-3 sm:p-4">
-                                {album.tracks.map((track, index) => {
+                                {displayedAlbumTracks.map((track, index) => {
                                   const trackTierLocked = albumTierLocked || !editableTrackIds.has(track.id);
                                   const barCount = countRhymeBars(track.sections);
                                   const sectionCount = track.sections?.length ?? 0;
@@ -1482,6 +1664,9 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                     releaseStatusOf({ ...album, tracks: album.tracks }) === 'live' &&
                                     normalizeDropAudio(track.dropAudio)
                                   );
+                                  const createdLabel = shortTrackDate(track.createdAt);
+                                  const editedLabel = shortTrackDate(track.updatedAt);
+                                  const albumOrderIndex = album.tracks.findIndex((row) => row.id === track.id);
                                   return (
                                     <div key={track.id} className="group relative flex min-w-0 flex-col gap-2.5 overflow-hidden rounded-xl border border-border bg-gradient-to-r from-card via-card/95 to-emerald-500/[0.035] p-3 transition-all hover:border-primary/30 hover:bg-primary/[0.045] hover:shadow-[0_12px_32px_rgba(59,130,246,0.08)] sm:flex-row sm:items-center sm:gap-4 sm:p-4 dark:border-white/10 dark:from-black/55 dark:via-black/40 dark:to-emerald-500/[0.06]">
                                         <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
@@ -1489,9 +1674,43 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                             {String(index + 1).padStart(2, '0')}
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <Link href={`/albums/${album.id}/tracks/${track.id}`}>
-                                            <p className={cn('break-words text-base leading-tight transition-colors group-hover:text-primary sm:text-xl', studioVaultCardTitle)}>{track.title}</p>
-                                            </Link>
+                                            {renamingTrackId === track.id ? (
+                                              <Input
+                                                value={renameDraft}
+                                                autoFocus
+                                                onChange={(e) => setRenameDraft(e.target.value)}
+                                                onBlur={() => commitAlbumTrackRename(track)}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    commitAlbumTrackRename(track);
+                                                  }
+                                                  if (e.key === 'Escape') setRenamingTrackId(null);
+                                                }}
+                                                className="h-9 font-headline text-base font-bold sm:text-xl"
+                                              />
+                                            ) : (
+                                              <div className="flex min-w-0 items-start gap-1.5">
+                                                <Link href={`/albums/${album.id}/tracks/${track.id}`} className="min-w-0 flex-1">
+                                                  <p className={cn('break-words text-base leading-tight transition-colors group-hover:text-primary sm:text-xl', studioVaultCardTitle)}>{track.title}</p>
+                                                </Link>
+                                                {!trackTierLocked ? (
+                                                  <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary"
+                                                    onClick={() => {
+                                                      setRenamingTrackId(track.id);
+                                                      setRenameDraft(track.title);
+                                                    }}
+                                                    aria-label={`Rename ${track.title}`}
+                                                  >
+                                                    <Pencil className="h-3.5 w-3.5" />
+                                                  </Button>
+                                                ) : null}
+                                              </div>
+                                            )}
                                             <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
                                                 <TrackLiveIndicators
                                                   track={track}
@@ -1508,14 +1727,30 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                                 <span className="font-code text-[9px] uppercase text-muted-foreground/70">
                                                   {barCount} bar{barCount === 1 ? '' : 's'} · {sectionCount} section{sectionCount === 1 ? '' : 's'}
                                                 </span>
+                                                {createdLabel ? (
+                                                  <span className="font-code text-[9px] uppercase text-muted-foreground/70">Created {createdLabel}</span>
+                                                ) : null}
+                                                {editedLabel && editedLabel !== createdLabel ? (
+                                                  <span className="font-code text-[9px] uppercase text-muted-foreground/70">Edited {editedLabel}</span>
+                                                ) : null}
                                             </div>
                                         </div>
                                         </div>
+                                        {trackingOn ? (
+                                          <div className="w-full min-w-0 pl-12 sm:w-48 sm:shrink-0 sm:pl-0">
+                                            <PressStageControl
+                                              compact
+                                              stage={track.pressStage}
+                                              disabled={trackTierLocked}
+                                              onChange={(pressStage) => updateTrack(album.id, track.id, { pressStage })}
+                                            />
+                                          </div>
+                                        ) : null}
                                         <div className="flex shrink-0 items-center justify-end gap-1 pl-12 opacity-100 transition-opacity sm:justify-start sm:pl-0 sm:opacity-65 sm:group-hover:opacity-100">
-                                            {!isUnassignedVault && !trackTierLocked && (
+                                            {canReorderAlbumTracks && !trackTierLocked && (
                                                 <>
-                                                    <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary" onClick={() => handleReorderTrack(track.id, 'up')} disabled={index === 0}><ArrowUp className="h-4 w-4" /></Button>
-                                                    <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary" onClick={() => handleReorderTrack(track.id, 'down')} disabled={index === album.tracks.length - 1}><ArrowDown className="h-4 w-4" /></Button>
+                                                    <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary" onClick={() => handleReorderTrack(track.id, 'up')} disabled={albumOrderIndex <= 0}><ArrowUp className="h-4 w-4" /></Button>
+                                                    <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary" onClick={() => handleReorderTrack(track.id, 'down')} disabled={albumOrderIndex === album.tracks.length - 1}><ArrowDown className="h-4 w-4" /></Button>
                                                 </>
                                             )}
                                             {!trackTierLocked && (
@@ -1552,7 +1787,15 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                   );
                                 })}
                                 </div>
-                              )
+                              ) : (
+                                  <div className="py-16 text-center flex flex-col items-center gap-4 opacity-60">
+                                    <Search className="h-10 w-10 text-muted-foreground" />
+                                    <p className="font-code text-sm uppercase tracking-[0.25em]">No sheets match your search</p>
+                                    <Button variant="outline" size="sm" className="text-[10px] font-bold uppercase" onClick={() => setAlbumSearch('')}>
+                                      Clear search
+                                    </Button>
+                                  </div>
+                                )
                             ) : isUnassignedVault && isPro ? (
                                     <div className="space-y-2.5 p-3 sm:p-5">
                                       <ProCreateTrackSlot onClick={openCreateTrack} />
@@ -1561,6 +1804,16 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                     <div className="py-20 text-center flex flex-col items-center gap-6 opacity-30">
                                         <CassetteTape className="h-16 w-16" />
                                         <p className="font-code text-sm uppercase tracking-[0.4em]">No tracks in this blueprint</p>
+                                        {!isUnassignedVault ? (
+                                          <div className="flex flex-wrap items-center justify-center gap-2 opacity-100">
+                                            <Button onClick={openCreateTrack} disabled={!canAddTrack} className="h-9 font-bold text-[10px] uppercase">
+                                              <PlusCircle className="mr-1.5 h-4 w-4" /> Add Track
+                                            </Button>
+                                            <Button variant="outline" onClick={openBlankSheets} disabled={!canAddTrack} className="h-9 font-bold text-[10px] uppercase">
+                                              <NotebookPen className="mr-1.5 h-4 w-4" /> Add sheets
+                                            </Button>
+                                          </div>
+                                        ) : null}
                                     </div>
                                 )}
                         </CardContent>
@@ -1721,6 +1974,13 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
           onOpenChange={setCreateTrackOpen}
           albumId={albumId}
           albums={albums}
+        />
+      )}
+      {!isUnassignedVault && (
+        <AddBlankSheetsDialog
+          open={blankSheetsOpen}
+          onOpenChange={setBlankSheetsOpen}
+          albumId={albumId}
         />
       )}
       
