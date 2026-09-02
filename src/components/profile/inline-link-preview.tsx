@@ -218,22 +218,6 @@ export function InlineLinkPreview({
 
   const target = classifyAppHref(normalized);
   if (target?.kind === 'song' || parseEmbedUrl(normalized)) {
-    if (!interactive) {
-      const label =
-        target?.kind === 'song'
-          ? 'Bar 4 Bar song'
-          : parseEmbedUrl(normalized)?.provider
-            ? 'Playable link'
-            : normalized;
-      return (
-        <GenericLinkCard
-          href={normalized}
-          eyebrow="Preview"
-          label={label}
-          interactive={false}
-        />
-      );
-    }
     return (
       <EmbedPlayer
         url={normalized}
