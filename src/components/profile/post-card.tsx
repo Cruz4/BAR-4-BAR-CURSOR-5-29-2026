@@ -19,7 +19,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { ArtistHomeLink, useLiveArtistHomeSlug } from '@/components/profile/artist-home-link';
-import { EmbedPlayer } from '@/components/profile/embed-player';
+import { FieldsLinkPreview } from '@/components/profile/inline-link-preview';
 import { PostShareDialog } from '@/components/profile/post-share-dialog';
 import { ExpandableImage } from '@/components/profile/expandable-image';
 import { WallClipPlayer } from '@/components/profile/wall-clip-player';
@@ -72,11 +72,6 @@ function timeAgo(iso: string): string {
   } catch {
     return '';
   }
-}
-
-function firstDropUrlFromText(text?: string): string | undefined {
-  if (!text) return undefined;
-  return text.match(/https?:\/\/[^\s]+\/(?:song|share)\/[^\s?#]+|\/(?:song|share)\/[^\s?#]+/i)?.[0];
 }
 
 /** Goal foil posts predate typed media, so recognize their stable generated caption. */
@@ -216,11 +211,13 @@ function ReverbSourceBody({
           />
         </div>
       ) : null}
-      {post.reverbEmbedUrl || firstDropUrlFromText(post.reverbText) ? (
-        <div className="mt-2">
-          <EmbedPlayer url={post.reverbEmbedUrl || firstDropUrlFromText(post.reverbText)!} referralPostId={post.id} viewportBounded={immersive} />
-        </div>
-      ) : null}
+      <FieldsLinkPreview
+        embedUrl={post.reverbEmbedUrl}
+        text={post.reverbText}
+        referralPostId={post.id}
+        viewportBounded={immersive}
+        className="mt-2"
+      />
       {post.reverbVoice ? (
         <div className="mt-2">
           <VoiceNotePlayer
@@ -664,11 +661,15 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         </div>
       ) : null}
 
-      {!post.isReverb && (post.embedUrl || firstDropUrlFromText(post.text)) && (
-        <div className="mt-3">
-          <EmbedPlayer url={post.embedUrl || firstDropUrlFromText(post.text)!} referralPostId={post.id} viewportBounded={immersive} />
-        </div>
-      )}
+      {!post.isReverb ? (
+        <FieldsLinkPreview
+          embedUrl={post.embedUrl}
+          text={post.text}
+          referralPostId={post.id}
+          viewportBounded={immersive}
+          className="mt-3"
+        />
+      ) : null}
 
       <div className="mt-3 flex items-center gap-2">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-4">

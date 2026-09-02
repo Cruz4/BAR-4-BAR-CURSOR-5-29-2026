@@ -13,6 +13,7 @@ import type { DropPrice } from '@/lib/drop-commerce';
 import { DropListenPanel } from '@/components/drop-listen-panel';
 import type { FeaturedTrackSelection } from '@/lib/profile/modules';
 import { pressedSongHref, type PressedSongSummary } from '@/lib/pressed-song';
+import { normalizeInlineHref, songShareIdFromHref } from '@/lib/profile/inline-links';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
@@ -39,14 +40,7 @@ const OPEN_LABELS: Record<EmbedProvider, string> = {
 };
 
 function firstDropShareId(raw: string): string | null {
-  try {
-    const base = typeof window !== 'undefined' ? window.location.origin : 'https://bar4bar.app';
-    const parsed = new URL(raw, base);
-    const match = parsed.pathname.match(/^\/(?:share|song)\/([^/?#]+)\/?$/);
-    return match ? decodeURIComponent(match[1]) : null;
-  } catch {
-    return null;
-  }
+  return songShareIdFromHref(raw);
 }
 
 /** Native First Drop media inside a wall/feed post. Entitlements stay server-authoritative. */
@@ -198,21 +192,23 @@ export function EmbedPlayer({
   /** Keep media inside one immersive slide without distorting its aspect ratio. */
   viewportBounded?: boolean;
 }) {
-  const dropShareId = firstDropShareId(url);
+  const normalized = normalizeInlineHref(url) || url;
+  const dropShareId = firstDropShareId(normalized);
   if (dropShareId) return <FirstDropFeedPlayer shareId={dropShareId} referralPostId={referralPostId} />;
 
-  const parsed = parseEmbedUrl(url);
+  const parsed = parseEmbedUrl(normalized);
 
   if (!parsed) {
+    const outbound = normalizeInlineHref(url) || url;
     let host = '';
     try {
-      host = new URL(url).hostname.replace(/^www\./, '');
+      host = new URL(outbound).hostname.replace(/^www\./, '');
     } catch {
       return null;
     }
     return (
       <a
-        href={url}
+        href={outbound}
         target="_blank"
         rel="noopener noreferrer nofollow"
         className="flex items-center gap-3 rounded-[var(--ph-radius,16px)] border border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 px-4 py-3 transition-colors hover:border-[var(--ph-accent,#7dd3fc)]"

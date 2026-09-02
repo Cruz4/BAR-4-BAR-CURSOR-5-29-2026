@@ -39,6 +39,7 @@ import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picke
 import { isMasterAdminEmail } from '@/lib/master-admin';
 import { MentionSuggestions } from '@/components/profile/mention-suggestions';
 import { MentionText } from '@/components/profile/mention-text';
+import { ComposerLinkPreview, FieldsLinkPreview } from '@/components/profile/inline-link-preview';
 
 type PostCommentThreadProps = {
   postId?: string;
@@ -237,6 +238,9 @@ export function PostCommentThread({
             {node.text ? (
               <span className="text-[var(--ph-text,#fff)]/90"><MentionText text={node.text} /></span>
             ) : null}
+            {node.text ? (
+              <FieldsLinkPreview text={node.text} compact className="mt-1.5 max-w-md" />
+            ) : null}
             {node.video ? (
               <div className="mt-1.5">
                 <WallClipPlayer clip={node.video} poster={node.imageUrl} compact />
@@ -410,7 +414,7 @@ export function PostCommentThread({
                     ? 'Add a caption (optional)…'
                     : shareId
                       ? 'Reply on this drop…'
-                      : 'Say something… or paste a photo'
+                      : 'Say something… or paste a link or photo'
               }
               className="h-8 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 text-sm"
             />
@@ -425,6 +429,7 @@ export function PostCommentThread({
               <Send className="h-3.5 w-3.5" />
             </Button>
           </div>
+          <ComposerLinkPreview text={draft} className="max-w-md" />
         </div>
       ) : user ? (
         <p className="text-xs text-[var(--ph-muted,rgba(255,255,255,0.55))]">

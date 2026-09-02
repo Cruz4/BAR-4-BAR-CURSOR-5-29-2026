@@ -11,12 +11,12 @@ import Link from 'next/link';
 import { BarChart3, Check, ChevronDown, Radio, Send, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { StudioLoader } from '@/components/studio-loader';
 import { PostCard } from '@/components/profile/post-card';
 import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
+import { ComposerLinkPreview } from '@/components/profile/inline-link-preview';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 import { ReferAFriendSection } from '@/components/refer-a-friend-section';
@@ -162,8 +162,6 @@ function SceneComposer({
   const { summary, loading: profileLoading } = useGamification();
   const { toast } = useToast();
   const [text, setText] = useState('');
-  const [embedUrl, setEmbedUrl] = useState('');
-  const [showEmbed, setShowEmbed] = useState(false);
   const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
   const [image, setImage] = useState<PendingPostImage | null>(null);
   const [clip, setClip] = useState<PendingWallClip | null>(null);
@@ -186,12 +184,11 @@ function SceneComposer({
   if (!user || profileLoading || !profileLive) return null;
 
   const submit = async () => {
-    if (busy || !pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image && !clip)) return;
+    if (busy || !pollReady || (!text.trim() && !voice && !image && !clip)) return;
     setBusy(true);
     try {
       const post = await createPost({
         text,
-        embedUrl: embedUrl.trim() || undefined,
         ownerName: user.displayName || 'Artist',
         ...(profileSlug ? { ownerSlug: profileSlug } : {}),
         ...(voice ? { voice } : {}),
@@ -200,8 +197,6 @@ function SceneComposer({
         ...(pollOpen ? { poll: { options: pollOptions, resultsVisibility: pollVisibility } } : {}),
       });
       setText('');
-      setEmbedUrl('');
-      setShowEmbed(false);
       setVoice(null);
       revokePostImagePreview(image);
       setImage(null);
@@ -236,12 +231,13 @@ function SceneComposer({
               toast({ variant: 'destructive', title: 'Could not attach photo', description: message }),
           });
         }}
-        placeholder="Write a post for your wall — or paste a photo..."
+        placeholder="Write a post, or paste a link or photo…"
         rows={2}
         maxLength={1000}
         className="min-h-[3.5rem] overflow-hidden resize-none border-border/60 bg-background/60 text-sm leading-snug"
       />
       <MentionSuggestions value={text} onChange={setText} />
+      <ComposerLinkPreview text={text} />
       {pollOpen ? (
         <PollComposerFields
           options={pollOptions}
@@ -256,14 +252,6 @@ function SceneComposer({
           disabled={busy}
         />
       ) : null}
-      {showEmbed && (
-        <Input
-          value={embedUrl}
-          onChange={(e) => setEmbedUrl(e.target.value)}
-          placeholder="YouTube / TikTok / Instagram / Facebook link (optional)"
-          className="mt-1.5 h-8 border-border/60 bg-background/60 text-xs"
-        />
-      )}
       <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-1 gap-y-1.5">
         <div className={cn('min-w-0', voice && 'basis-full')}>
           <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} compact />
@@ -289,13 +277,6 @@ function SceneComposer({
         />
         <button
           type="button"
-          onClick={() => setShowEmbed((v) => !v)}
-          className="shrink-0 whitespace-nowrap font-code text-[9px] font-bold uppercase tracking-wider text-muted-foreground/70 transition-colors hover:text-primary"
-        >
-          {showEmbed ? '− link' : '+ link'}
-        </button>
-        <button
-          type="button"
           onClick={() => setPollOpen((value) => !value)}
           disabled={busy}
           className={cn(
@@ -308,7 +289,7 @@ function SceneComposer({
         <Button
           size="sm"
           className="ml-auto h-7 shrink-0 gap-1 px-2.5 font-bold uppercase"
-          disabled={busy || !pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image && !clip)}
+          disabled={busy || !pollReady || (!text.trim() && !voice && !image && !clip)}
           onClick={() => void submit()}
         >
           <Send className="h-3 w-3" /> Post

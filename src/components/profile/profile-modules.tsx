@@ -37,8 +37,9 @@ import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
 import type { ArtistHomeFeatured, ModuleSize } from '@/lib/profile/modules';
 import { FingerprintSvg } from '@/components/profile/rhyme-fingerprint-svg';
 import { BarBoardView } from '@/components/profile/bar-board-module';
-import { parseEmbedUrl, EMBED_HELP_TEXT } from '@/lib/profile/embeds';
 import { EmbedPlayer, FeaturedTrackPlayer } from '@/components/profile/embed-player';
+import { ComposerLinkPreview } from '@/components/profile/inline-link-preview';
+import { firstInlineHref } from '@/lib/profile/inline-links';
 import { PostCard } from '@/components/profile/post-card';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
@@ -645,7 +646,6 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const [posts, setPosts] = useState<ProfilePost[]>(playground?.posts || []);
   const [loaded, setLoaded] = useState(Boolean(playground));
   const [text, setText] = useState('');
-  const [embedUrl, setEmbedUrl] = useState('');
   const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
   const [image, setImage] = useState<PendingPostImage | null>(null);
   const [clip, setClip] = useState<PendingWallClip | null>(null);
@@ -709,7 +709,6 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
     setPosts(playground.posts);
   }, [playground, playground?.posts]);
 
-  const embedPreview = useMemo(() => parseEmbedUrl(embedUrl), [embedUrl]);
   const profileLive = Boolean(summary.publicProfile && summary.profileSlug);
   const signedInOwner = Boolean(ctx.isOwner && user);
   const canCompose = Boolean(playground) || Boolean(signedInOwner && profileLive);
@@ -759,16 +758,8 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const submit = async () => {
     if (playground) {
       const clean = text.trim();
-      const link = embedUrl.trim();
-      if (!clean && !link && !image) return;
-      if (link && !parseEmbedUrl(link)) {
-        toast({
-          variant: 'destructive',
-          title: 'Unsupported link',
-          description: EMBED_HELP_TEXT,
-        });
-        return;
-      }
+      const link = firstInlineHref(clean);
+      if (!clean && !image) return;
       let guestImageUrl: string | undefined;
       if (image) {
         try {
@@ -788,19 +779,17 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
         ...(guestImageUrl ? { imageUrl: guestImageUrl } : {}),
       });
       setText('');
-      setEmbedUrl('');
       revokePostImagePreview(image);
       setImage(null);
       setPage(0);
       return;
     }
     if (!user) return;
-    if (!pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image && !clip)) return;
+    if (!pollReady || (!text.trim() && !voice && !image && !clip)) return;
     setBusy(true);
     try {
       const post = await createPost({
         text,
-        embedUrl: embedUrl.trim() || undefined,
         ownerName: user.displayName || 'Artist',
         ownerSlug: ctx.profileSlug,
         ...(voice ? { voice } : {}),
@@ -811,7 +800,6 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       setPosts((prev) => [post, ...prev]);
       setWallTotal((value) => value + 1);
       setText('');
-      setEmbedUrl('');
       setVoice(null);
       revokePostImagePreview(image);
       setImage(null);
@@ -874,23 +862,11 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
             placeholder={
               playground
                 ? 'Try a wall post — claim your profile to keep it…'
-                : 'Drop a thought, a photo, a release...'
+                : 'Drop a thought, a link, a photo, a release…'
             }
             className="border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 text-sm"
           />
-          <Input
-            value={embedUrl}
-            onChange={(e) => setEmbedUrl(e.target.value)}
-            maxLength={500}
-            placeholder="Optional: paste a YouTube / TikTok / Instagram / Facebook / SoundCloud / Spotify / Suno link"
-            className="h-9 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 text-sm"
-          />
-          {embedUrl.trim() && !embedPreview && (
-            <p className="text-[10px] uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.5))]">
-              {EMBED_HELP_TEXT}
-            </p>
-          )}
-          {embedPreview && <EmbedPlayer url={embedUrl} />}
+          <ComposerLinkPreview text={text} />
           {!playground && pollOpen ? (
             <PollComposerFields
               options={pollOptions}
@@ -953,7 +929,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
             <Button
               size="sm"
               className="h-9 gap-1.5 font-bold uppercase"
-              disabled={busy || !pollReady || (!text.trim() && !embedUrl.trim() && !voice && !image && !clip)}
+              disabled={busy || !pollReady || (!text.trim() && !voice && !image && !clip)}
               onClick={() => void submit()}
             >
               <Send className="h-3.5 w-3.5" /> Post
