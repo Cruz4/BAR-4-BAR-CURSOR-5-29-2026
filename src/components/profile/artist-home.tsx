@@ -7,7 +7,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Compass, Dna, Flame, Gift, Globe, Music, PenLine, Repeat2, Settings2, Share2, Star, Trophy, Zap } from 'lucide-react';
+import { ChevronLeft, Compass, Dna, Flame, Gift, Globe, Music, PenLine, Repeat2, Settings2, Star, Trophy, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -18,7 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import { parseActivityPostHash, scrollActivityPostTarget } from '@/lib/activity/post-deep-link';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
-import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
+import { CopyProfileLinkButton } from '@/components/profile/copy-profile-link-button';
 import { FirstDropsStorefront, LiveDnaDropsGroupedList, lyricDnaItems, musicReleaseItems } from '@/components/profile/live-dna-drop-card';
 import { AlbumCoverCollage } from '@/components/gamification/album-cover-collage';
 import { ProfileInitialsStar } from '@/components/profile/profile-initials-star';
@@ -127,7 +127,6 @@ export function ArtistHome({
   const { user } = useAuth();
   const { enabled: lockOn } = useLockFeature();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
-  const [shareOpen, setShareOpen] = useState(false);
   const [dropsOpen, setDropsOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const [viewerSlug, setViewerSlug] = useState<string | undefined>(undefined);
@@ -211,11 +210,6 @@ export function ArtistHome({
       : displayNameScale === 'medium'
         ? 'text-[clamp(2rem,5.5vw,4.25rem)]'
         : 'text-[clamp(2.4rem,7.5vw,5rem)]';
-
-  const profileUrl =
-    typeof window !== 'undefined' && profile.slug
-      ? `${window.location.origin}${profileHref(profile.slug) || `/${profile.slug}`}`
-      : undefined;
 
   const plateChrome = useMemo(
     () => ({
@@ -403,41 +397,37 @@ export function ArtistHome({
               >
                 <PenLine className="h-3.5 w-3.5" /> Back to edit
               </Button>
-            ) : previewMode ? null : isOwner ? (
+            ) : previewMode ? null : (
               <>
-                <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
-                  <Link href="/profile/customize">
-                    <Settings2 className="h-3.5 w-3.5" /> Edit Public Page
-                  </Link>
-                </Button>
-                <Button
-                  size="sm"
-                  className="h-9 gap-1.5 bg-[var(--ph-accent)] font-bold uppercase text-black hover:opacity-90"
-                  onClick={() => setShareOpen(true)}
-                >
-                  <Share2 className="h-3.5 w-3.5" /> Share
-                </Button>
+                {isOwner ? (
+                  <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
+                    <Link href="/profile/customize">
+                      <Settings2 className="h-3.5 w-3.5" /> Edit Public Page
+                    </Link>
+                  </Button>
+                ) : profile.userId ? (
+                  <>
+                    <PassBarButton
+                      peerId={profile.userId}
+                      peerName={profile.displayName}
+                      senderSlug={viewerSlug}
+                    />
+                    <SupportButton
+                      targetUserId={profile.userId}
+                      targetName={profile.displayName}
+                    />
+                    <FriendButton
+                      targetUserId={profile.userId}
+                      targetName={profile.displayName}
+                      targetSlug={profile.slug}
+                      viewerSlug={viewerSlug}
+                    />
+                  </>
+                ) : null}
+                {profile.slug ? (
+                  <CopyProfileLinkButton slug={profile.slug} displayName={profile.displayName} />
+                ) : null}
               </>
-            ) : (
-              profile.userId && (
-                <>
-                  <PassBarButton
-                    peerId={profile.userId}
-                    peerName={profile.displayName}
-                    senderSlug={viewerSlug}
-                  />
-                  <SupportButton
-                    targetUserId={profile.userId}
-                    targetName={profile.displayName}
-                  />
-                  <FriendButton
-                    targetUserId={profile.userId}
-                    targetName={profile.displayName}
-                    targetSlug={profile.slug}
-                    viewerSlug={viewerSlug}
-                  />
-                </>
-              )
             )}
           </div>
         </div>
@@ -883,18 +873,6 @@ export function ArtistHome({
           )
         ) : null}
       </ProfileMediaLightbox>
-
-      {isOwner && profileUrl && (
-        <ProfileShareDialog
-          open={shareOpen}
-          onOpenChange={setShareOpen}
-          profile={{
-            displayName: profile.displayName,
-            rankLabel,
-            profileUrl,
-          }}
-        />
-      )}
 
       <Dialog open={dropsOpen && showLiveDnaDrops} onOpenChange={setDropsOpen}>
         <DialogContent className="max-w-md border-[var(--ph-border)] bg-[hsl(216_28%_7%)] text-[var(--ph-text,#fff)]">

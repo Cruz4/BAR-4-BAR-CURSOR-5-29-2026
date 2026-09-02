@@ -9,7 +9,6 @@ import {
   Flame,
   LayoutGrid,
   Loader2,
-  Share2,
   Sparkles,
   Trophy,
   Zap,
@@ -19,10 +18,9 @@ import type { RankId } from '@/lib/gamification/types';
 import { AlbumCoverCollage } from '@/components/gamification/album-cover-collage';
 import { ProfileInitialsStar } from '@/components/profile/profile-initials-star';
 import { PublicAchievementFoil } from '@/components/profile/public-achievement-foil';
-import { ProfileShareDialog } from '@/components/profile/profile-share-dialog';
+import { CopyProfileLinkButton } from '@/components/profile/copy-profile-link-button';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { profileHref } from '@/lib/profile/profile-slug';
 import { processProfilePhotoFile } from '@/lib/cover-art';
 import { patchGamificationSettings } from '@/lib/gamification-client';
 import { rankBadgeClass, rankIdFromLabel } from '@/lib/gamification/badge-styles';
@@ -122,7 +120,6 @@ export function PublicProfileShowcase({
   const rankId = profile.rankId ?? rankIdFromLabel(profile.rankLabel);
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [shareOpen, setShareOpen] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [localMode, setLocalMode] = useState<'collage' | 'custom' | 'initials'>(
     profile.profilePhotoMode === 'custom'
@@ -140,13 +137,6 @@ export function PublicProfileShowcase({
     localMode === 'custom' && typeof localPhotoUrl === 'string' && localPhotoUrl.trim().length > 0;
   const useCollage = localMode === 'collage' && coverUrls.length > 0;
   const useInitials = !useCustom && !useCollage;
-
-  const profileUrl =
-    typeof window !== 'undefined' && profile.slug
-      ? `${window.location.origin}${profileHref(profile.slug) || `/${profile.slug}`}`
-      : profile.slug
-        ? `https://bar4bar.ink/${profile.slug}`
-        : undefined;
 
   const savePhoto = async (next: {
     profilePhotoMode: 'collage' | 'custom';
@@ -200,15 +190,13 @@ export function PublicProfileShowcase({
             </Link>
           </Button>
 
-          {isOwner && (
-            <Button
-              size="sm"
-              className="h-9 font-bold uppercase gap-1.5 bg-sky-500 hover:bg-sky-400 text-black"
-              onClick={() => setShareOpen(true)}
-            >
-              <Share2 className="h-3.5 w-3.5" /> Share profile
-            </Button>
-          )}
+          {profile.slug ? (
+            <CopyProfileLinkButton
+              slug={profile.slug}
+              displayName={profile.displayName}
+              className="bg-sky-500 hover:bg-sky-400 hover:opacity-100"
+            />
+          ) : null}
         </div>
 
         <motion.section
@@ -387,18 +375,6 @@ export function PublicProfileShowcase({
           Public studio profile · bar4bar.ink
         </p>
       </div>
-
-      {isOwner && profileUrl && (
-        <ProfileShareDialog
-          open={shareOpen}
-          onOpenChange={setShareOpen}
-          profile={{
-            displayName: profile.displayName,
-            rankLabel: profile.rankLabel,
-            profileUrl,
-          }}
-        />
-      )}
     </div>
   );
 }
