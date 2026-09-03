@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { Firestore } from 'firebase-admin/firestore';
 import { getAuth } from '@/lib/firebase/server';
+import { isAdminHeldPro } from '@/lib/admin-residency';
 
 let stripeClient: Stripe | null = null;
 
@@ -51,12 +52,19 @@ export function isStripeMissingCustomerError(err: unknown): boolean {
 
 /** Drop test-era Stripe ids so checkout can create a fresh live customer. */
 export async function clearStaleStripeBillingProfile(db: Firestore, userId: string): Promise<void> {
-  await db.collection('users').doc(userId).update({
+  const snap = await db.collection('users').doc(userId).get();
+  const prev = snap.data() || {};
+  const update: Record<string, unknown> = {
     stripeCustomerId: FieldValue.delete(),
     subscriptionId: FieldValue.delete(),
-    subscriptionStatus: 'canceled',
     updatedAt: FieldValue.serverTimestamp(),
-  });
+  };
+  if (!isAdminHeldPro(prev)) {
+    update.subscriptionStatus = 'canceled';
+    update.subscriptionTier = 'none';
+    update.proSource = FieldValue.delete();
+  }
+  await db.collection('users').doc(userId).update(update);
 }
 
 /**

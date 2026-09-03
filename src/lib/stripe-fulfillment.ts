@@ -7,6 +7,7 @@ import { recordStudioEvent } from '@/lib/server/studio-analytics';
 import { recordInkLedgerEntries } from '@/lib/server/ink-ledger';
 import { inkBalanceFirestorePatch, normalizeInkPools } from '@/lib/ink-balance';
 import { patchPublicStudioBadge } from '@/lib/server/public-studio-badge';
+import { isAdminHeldPro } from '@/lib/admin-residency';
 import { grantDropLibrary } from '@/lib/server/drop-entitlements';
 import { recordDropSale, splitDropSale } from '@/lib/server/drop-earnings';
 import { fulfillDropCartCheckout } from '@/lib/server/drop-cart-fulfillment';
@@ -75,6 +76,7 @@ export async function fulfillCheckoutSession(
     const userUpdate: Record<string, unknown> = {
       subscriptionStatus: 'active',
       subscriptionTier: tier,
+      proSource: 'stripe',
       updatedAt: FieldValue.serverTimestamp(),
       freeEditableTrackIds: FieldValue.delete(),
       freeEditableSelectionAt: FieldValue.delete(),
@@ -247,6 +249,7 @@ export async function activateOrUpgradeProSubscription(
   const userUpdate: Record<string, unknown> = {
     subscriptionStatus: 'active',
     subscriptionTier: tier,
+    proSource: 'stripe',
     updatedAt: FieldValue.serverTimestamp(),
     freeEditableTrackIds: FieldValue.delete(),
     freeEditableSelectionAt: FieldValue.delete(),
@@ -266,8 +269,23 @@ export async function activateOrUpgradeProSubscription(
 
 export async function deactivateSubscription(db: Firestore, userId: string) {
   const userRef = db.collection('users').doc(userId);
+  const snap = await userRef.get();
+  const prev = (snap.data() || {}) as {
+    subscriptionStatus?: string;
+    proSource?: string;
+    subscriptionId?: string;
+  };
+  if (isAdminHeldPro(prev)) {
+    await userRef.update({
+      subscriptionId: FieldValue.delete(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    return;
+  }
   await userRef.update({
     subscriptionStatus: 'canceled',
+    subscriptionTier: 'none',
+    proSource: FieldValue.delete(),
     updatedAt: FieldValue.serverTimestamp(),
   });
   await patchPublicStudioBadge(db, userId, 'free');

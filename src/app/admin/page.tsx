@@ -73,6 +73,12 @@ import { formatUserJoinDate, userDateSortValue } from '@/lib/user-date';
 import { isMasterAdminEmail } from '@/lib/master-admin';
 import { isProFeaturePreviewActive, formatProFeaturePreviewCountdown, PRO_FEATURE_PREVIEW_HOURS, computeProFeaturePreviewExpiresAt } from '@/lib/subscription';
 import {
+  isAdminResidencyMode,
+  residencyModeLabel,
+  rosterResidencyMode,
+  type AdminResidencyMode,
+} from '@/lib/admin-residency';
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -117,6 +123,7 @@ export default function AdminPage() {
   const [reseedingNeoCircle, setReseedingNeoCircle] = useState(false);
   const [reseedingJordieCircle, setReseedingJordieCircle] = useState(false);
   const [updatingRoleId, setUpdatingRoleId] = useState<string | null>(null);
+  const [updatingTierId, setUpdatingTierId] = useState<string | null>(null);
   const [grantingPreviewId, setGrantingPreviewId] = useState<string | null>(null);
   const [previewNow, setPreviewNow] = useState(() => Date.now());
   const [balances, setBalances] = useState<Record<string, { res: number, pur: number }>>({});
@@ -511,24 +518,38 @@ export default function AdminPage() {
     }
   };
 
-  const handleUpdateTier = async (targetUser: User, tier: 'none' | 'monthly' | 'yearly') => {
-    const status = tier === 'none' ? 'none' : 'active';
+  const handleUpdateTier = async (targetUser: User, mode: AdminResidencyMode) => {
+    if (rosterResidencyMode(targetUser) === mode) return;
+    setUpdatingTierId(targetUser.id);
     try {
-        await updateDoc(doc(db, 'users', targetUser.id), { 
-            subscriptionStatus: status,
-            subscriptionTier: tier
-        });
-        try {
-          const pubs = await getDocs(query(collection(db, 'publicProfiles'), where('userId', '==', targetUser.id)));
-          await Promise.all(
-            pubs.docs.map((d) => updateDoc(d.ref, { studioBadge: tier === 'none' ? 'free' : 'pro' }))
-          );
-        } catch {
-          /* public mirror is best-effort */
-        }
-        toast({ title: "Residency Updated", description: `${targetUser.displayName} is now on ${tier.toUpperCase()} Pro.` });
+      const res = await adminApiFetch('/api/admin/users/residency', {
+        method: 'POST',
+        body: JSON.stringify({ targetUserId: targetUser.id, mode }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body.error || `Residency update failed (${res.status})`);
+      }
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === targetUser.id
+            ? {
+                ...u,
+                subscriptionStatus: body.user?.subscriptionStatus ?? u.subscriptionStatus,
+                subscriptionTier: body.user?.subscriptionTier ?? u.subscriptionTier,
+                proSource: body.user?.proSource || undefined,
+              }
+            : u
+        )
+      );
+      toast({
+        title: 'Residency updated',
+        description: body.message || `${targetUser.displayName} is now ${residencyModeLabel(mode)}.`,
+      });
     } catch (e: any) {
-        toast({ variant: 'destructive', title: "Update Failed", description: e.message });
+      toast({ variant: 'destructive', title: 'Update Failed', description: e.message });
+    } finally {
+      setUpdatingTierId(null);
     }
   };
 
@@ -877,13 +898,16 @@ export default function AdminPage() {
           </TabsContent>
         ) : null}
 
-        <TabsContent value="users">
+        <TabsContent
+          value="users"
+          className="relative left-1/2 w-[min(106rem,calc(100vw-5rem))] -translate-x-1/2"
+        >
           {rosterLoading ? (
             <div className="py-20 text-center"><StudioLoader size="md" /></div>
           ) : (
           <Card className="bg-card border-2 shadow-2xl">
             <CardHeader className="border-b"><CardTitle className="font-headline text-2xl uppercase">Residency Management</CardTitle></CardHeader>
-            <CardContent className="p-0 overflow-x-auto">
+            <CardContent className="min-w-0 overflow-x-auto p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -964,9 +988,15 @@ export default function AdminPage() {
                       </TableCell>
                       <TableCell>
                           <div className="space-y-1.5">
-                          <Select value={u.subscriptionTier || 'none'} onValueChange={(val: any) => handleUpdateTier(u, val)}>
+                          <Select
+                            value={rosterResidencyMode(u)}
+                            disabled={updatingTierId === u.id}
+                            onValueChange={(val) => {
+                              if (isAdminResidencyMode(val)) void handleUpdateTier(u, val);
+                            }}
+                          >
                               <SelectTrigger className={cn(
-                                "h-8 w-32 text-[9px] font-bold uppercase",
+                                "h-8 w-36 text-[9px] font-bold uppercase",
                                 studioNameClass(studioChromeFromSubscriptionStatus(u.subscriptionStatus)),
                                 u.subscriptionStatus === 'active' ? "border-accent" : "border-primary"
                               )}>
@@ -974,10 +1004,21 @@ export default function AdminPage() {
                               </SelectTrigger>
                               <SelectContent className="bg-card border-2">
                                   <SelectItem value="none" className="text-[rgb(125,211,252)]">LOCAL</SelectItem>
-                                  <SelectItem value="monthly" className="text-accent">PRO MO</SelectItem>
-                                  <SelectItem value="yearly" className="text-accent">PRO YR</SelectItem>
+                                  <SelectItem value="admin-monthly" className="text-accent">ADMIN MO</SelectItem>
+                                  <SelectItem value="admin-yearly" className="text-accent">ADMIN YR</SelectItem>
+                                  <SelectItem value="stripe-monthly" className="text-sky-300">STRIPE MO</SelectItem>
+                                  <SelectItem value="stripe-yearly" className="text-sky-300">STRIPE YR</SelectItem>
                               </SelectContent>
                           </Select>
+                          {rosterResidencyMode(u).startsWith('admin') ? (
+                            <p className="font-code text-[8px] uppercase tracking-wide text-muted-foreground">
+                              Until you change it
+                            </p>
+                          ) : rosterResidencyMode(u).startsWith('stripe') ? (
+                            <p className="font-code text-[8px] uppercase tracking-wide text-muted-foreground">
+                              Follows Stripe
+                            </p>
+                          ) : null}
                           {u.subscriptionStatus === 'active' ? null : (
                             <div className="space-y-1">
                               {isProFeaturePreviewActive(u, previewNow) ? (

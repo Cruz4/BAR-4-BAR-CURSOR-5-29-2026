@@ -24,6 +24,8 @@ export interface User {
   stripeConnectPayoutsEnabled?: boolean;
   subscriptionStatus?: 'active' | 'canceled' | 'none';
   subscriptionTier?: 'monthly' | 'yearly' | 'none';
+  /** Who owns this Pro — admin grant stays until roster changes it; stripe follows their membership. */
+  proSource?: 'admin' | 'stripe';
   subscriptionId?: string;
   /** Unique code for refer-a-friend links */
   referralCode?: string;
