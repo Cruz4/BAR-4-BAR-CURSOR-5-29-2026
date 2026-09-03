@@ -49,14 +49,14 @@ export function registerFirestoreDevRecovery(_db: Firestore) {
     const attempts = sessionStorage.getItem(RELOAD_KEY);
     if (attempts === '2') {
       console.error(
-        '[Bar 4 Bar] Firestore still failing after recovery. Clear site data for this origin, then hard-refresh.'
+        '[AKAsheet] Firestore still failing after recovery. Clear site data for this origin, then hard-refresh.'
       );
       return;
     }
 
     if (attempts === '1') {
       sessionStorage.setItem(RELOAD_KEY, '2');
-      console.warn('[Bar 4 Bar] Purging stale Firestore cache and reloading…');
+      console.warn('[AKAsheet] Purging stale Firestore cache and reloading…');
       void purgeFirestoreIndexedDb().finally(() => {
         window.location.reload();
       });
@@ -64,7 +64,7 @@ export function registerFirestoreDevRecovery(_db: Firestore) {
     }
 
     sessionStorage.setItem(RELOAD_KEY, '1');
-    console.warn('[Bar 4 Bar] Firestore dev desync detected — reloading once to recover.');
+    console.warn('[AKAsheet] Firestore dev desync detected — reloading once to recover.');
     window.location.reload();
   };
 

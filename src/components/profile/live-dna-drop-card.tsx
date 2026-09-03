@@ -365,7 +365,7 @@ export function FirstDropsStorefront({
           </h2>
           <p className="mt-1 max-w-xl text-sm text-[var(--ph-muted,rgba(255,255,255,0.6))]">
             {artistReleases.length
-              ? 'Preview 30 seconds. Unlock to stream in Bar 4 Bar.'
+              ? 'Preview 30 seconds. Unlock to stream in AKAsheet.'
               : 'Included automatically in every signed-in member Library.'}
           </p>
         </div>

@@ -316,7 +316,7 @@ export function SceneUniversalSearch({
             }
           }}
           placeholder="Discover people, taste, cities, songs, DNA Drops, posts…"
-          aria-label="Search the Bar 4 Bar music network"
+          aria-label="Search the AKAsheet music network"
           aria-expanded={showTrendingPanel || (showPanel && canSearch)}
           className="h-11 w-full min-w-0 border-sky-400/30 bg-[hsl(216_35%_7%)] pl-10 pr-12 font-code text-xs shadow-[0_12px_32px_rgba(0,0,0,0.25)] placeholder:text-muted-foreground/70 focus-visible:ring-sky-400 sm:pr-20"
         />

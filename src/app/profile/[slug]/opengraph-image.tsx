@@ -4,7 +4,7 @@ import { rankFromXp } from '@/lib/gamification/ranks';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const alt = 'Bar 4 Bar Artist Home';
+export const alt = 'AKAsheet Artist Home';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -88,7 +88,7 @@ export default async function ProfileOpenGraphImage({ params }: ImageProps) {
               color: '#7dd3fc',
             }}
           >
-            BAR 4 BAR
+            AKAsheet
           </div>
           <div style={{ fontSize: 20, color: 'rgba(248,250,252,0.45)' }}>Artist Home</div>
         </div>
@@ -154,7 +154,7 @@ export default async function ProfileOpenGraphImage({ params }: ImageProps) {
               {rankLabel}
             </div>
             <div style={{ fontSize: 24, color: 'rgba(248,250,252,0.62)', lineHeight: 1.35 }}>
-              Studio profile on bar4bar.ink — trophies, live drops, and Artist Home.
+              Studio profile on akasheet.com — trophies, live drops, and Artist Home.
             </div>
           </div>
         </div>
@@ -172,7 +172,7 @@ export default async function ProfileOpenGraphImage({ params }: ImageProps) {
           }}
         >
           <span>Open profile</span>
-          <span>bar4bar.ink/{slug || '…'}</span>
+          <span>akasheet.com/{slug || '…'}</span>
         </div>
       </div>
     ),

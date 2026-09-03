@@ -16,7 +16,7 @@ export function registerFirestoreBlockedClientHint(): void {
     if (sessionStorage.getItem(HINT_STORAGE_KEY)) return;
     sessionStorage.setItem(HINT_STORAGE_KEY, '1');
     console.info(
-      '[Bar 4 Bar] Firestore cleanup requests were blocked (ERR_BLOCKED_BY_CLIENT). This is usually an ad blocker or Brave Shields — allow firestore.googleapis.com for this site. Your vault can still load; ignore the red "terminate" lines if everything works.'
+      '[AKAsheet] Firestore cleanup requests were blocked (ERR_BLOCKED_BY_CLIENT). This is usually an ad blocker or Brave Shields — allow firestore.googleapis.com for this site. Your vault can still load; ignore the red "terminate" lines if everything works.'
     );
   };
 

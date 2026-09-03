@@ -77,4 +77,4 @@ export type LockPublicPayload = {
 export const HOUSE_SEED_BAR =
   'I was talking to the moon before it knew my name…';
 
-export const HOUSE_OWNER_NAME = 'Bar 4 Bar';
+export const HOUSE_OWNER_NAME = 'AKAsheet';

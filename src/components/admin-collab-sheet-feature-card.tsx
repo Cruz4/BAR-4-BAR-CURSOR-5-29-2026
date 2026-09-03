@@ -121,7 +121,7 @@ export function AdminCollabSheetFeatureCard() {
             <ul className="text-[11px] text-muted-foreground space-y-1.5 list-disc list-inside">
               <li>Track editor · live 2/13 presence · bottom chat drawer</li>
               <li>Firestore <code className="text-foreground/80">collabSheets</code> · API sync for edits</li>
-              <li>Pro to share; collaborators need a Bar 4 Bar account</li>
+              <li>Pro to share; collaborators need a AKAsheet account</li>
             </ul>
 
             {config?.updatedAt ? (

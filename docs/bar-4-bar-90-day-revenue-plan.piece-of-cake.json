@@ -1,5 +1,5 @@
 {
-  "projectName": "Bar 4 Bar Studio — 90-Day Web-Only Revenue Plan",
+  "projectName": "AKAsheet — 90-Day Web-Only Revenue Plan",
   "isTimeline": false,
   "phases": [
     {
@@ -7,12 +7,12 @@
       "tasks": [
         {
           "taskName": "Lock Core Positioning Statement",
-          "description": "Establish the one-line positioning used everywhere: Bar 4 Bar is the rhyme book + co-writer for rappers and songwriters who think in bars—not paragraphs.",
+          "description": "Establish the one-line positioning used everywhere: AKAsheet is the rhyme book + co-writer for rappers and songwriters who think in bars—not paragraphs.",
           "priority": "High",
           "dependencies": [],
           "checklist": [
             "Write one-line positioning for all channels",
-            "Document what Bar 4 Bar is NOT (not ChatGPT in a box, not Suno/Udio, not a DAW)",
+            "Document what AKAsheet is NOT (not ChatGPT in a box, not Suno/Udio, not a DAW)",
             "Align all landing page and ad copy to this statement"
           ]
         },
@@ -394,7 +394,7 @@
             "Outcome: From voice memo chaos to structured lyrics in 60 seconds",
             "Objection: Web studio works on phone no download + PWA demo",
             "Objection: Free tier is a real demo not a 3-day trial scam",
-            "CTA: Try free — 250 Ink / Write bar 5 today / Link in bio Bar 4 Bar Studio"
+            "CTA: Try free — 250 Ink / Write bar 5 today / Link in bio AKAsheet"
           ]
         },
         {

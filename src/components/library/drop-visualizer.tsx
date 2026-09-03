@@ -14,7 +14,7 @@ type DropVisualizerProps = {
 const BAND_LABELS = ['LOW', 'LOW-MID', 'HIGH-MID', 'HIGH'] as const;
 
 /**
- * Bar 4 Bar Library visualizer — a pressing-lathe ring plus four live
+ * AKAsheet Library visualizer — a pressing-lathe ring plus four live
  * frequency-band energy lanes.
  */
 export function DropVisualizer({ analyser, playing, children, className }: DropVisualizerProps) {

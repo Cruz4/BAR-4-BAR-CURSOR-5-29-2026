@@ -258,7 +258,7 @@ export function StudioProgressBoard() {
           `🎤 Studio Standing — ${displayName}`,
           `${rankLabel} · ${summary.xp.toLocaleString()} XP · ${summary.currentStreak}d streak`,
           `${achievementCount}/${ACHIEVEMENTS.length} trophies · ${linesToRhymeBars(summary.lifetimeBarsWritten).toLocaleString()} bars written`,
-          '#bar4bar.ink',
+          '#akasheet',
         ].join('\n'),
         imageUrl,
         ownerName: displayName,
@@ -285,7 +285,7 @@ export function StudioProgressBoard() {
     if (!cardEl) return;
     setExportingStanding(true);
     try {
-      await downloadDomNodePng(cardEl, `bar4bar-standing-${rank.id}.png`);
+      await downloadDomNodePng(cardEl, `akasheet-standing-${rank.id}.png`);
       toast({ title: 'Standing plate downloaded' });
     } catch {
       toast({ variant: 'destructive', title: 'Download failed' });

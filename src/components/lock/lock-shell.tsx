@@ -44,7 +44,7 @@ export function LockShell({
             href="/"
             className="font-headline text-sm tracking-wide text-zinc-100 hover:text-white transition-colors shrink-0"
           >
-            Bar 4 Bar
+            AKAsheet
           </Link>
           {badge ? (
             <span className="truncate text-[11px] text-zinc-500">

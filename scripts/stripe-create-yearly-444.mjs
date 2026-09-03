@@ -26,10 +26,10 @@ if (existsSync(envPath)) {
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const products = await stripe.products.list({ limit: 100, active: true });
-let productId = products.data.find((p) => p.name === 'Bar 4 Bar Pro Yearly')?.id;
+let productId = products.data.find((p) => p.name === 'AKAsheet Pro Yearly')?.id;
 if (!productId) {
   const product = await stripe.products.create({
-    name: 'Bar 4 Bar Pro Yearly',
+    name: 'AKAsheet Pro Yearly',
     metadata: { tier: 'yearly' },
   });
   productId = product.id;

@@ -1,20 +1,24 @@
 import type { Metadata } from 'next';
 import { getPublicAppUrl } from '@/lib/app-url';
+import { APP_DESCRIPTION, APP_NAME, APP_SLOGAN, FAVICON_PATH, LOGO_PATH, SUPPORT_EMAIL } from '@/lib/brand';
 
 /** Shared on-page SEO + sitemap/robots (production URL from NEXT_PUBLIC_APP_URL). */
 export const SEO = {
-  siteName: 'Bar 4 Bar DNA Notebook',
+  siteName: APP_NAME,
   /** Installed PWA / browser tab — keep short; Windows prepends manifest name to `<title>`. */
-  appName: 'Bar 4 Bar',
+  appName: APP_NAME,
   /** Default document title (tab + PWA window suffix). Match appName to avoid duplicate title bar text. */
-  title: 'Bar 4 Bar',
-  /** Open Graph / structured data — one clear line for search & shares. */
-  titleLong: 'Bar 4 Bar — AI Songwriting Studio & Music Network',
-  description:
-    'Bar-by-bar AI songwriting studio and music network for artists, creators, and fans. Write with Creative DNA, discover music, collaborate, and sell releases.',
+  title: APP_NAME,
+  /** Open Graph / structured data — slogan for search & shares. */
+  titleLong: APP_SLOGAN,
+  description: APP_DESCRIPTION,
   keywords: [
-    'bar 4 bar',
-    'bar4bar',
+    'akasheet',
+    'aka sheet',
+    'lyric app',
+    'social music drop',
+    'music drop platform',
+    'put your world within reach',
     'artist home',
     'music fan profile',
     'public music profile',
@@ -25,7 +29,6 @@ export const SEO = {
     'artist listener analytics',
     'sell music directly to fans',
     'first drops music',
-    'DNA notebook',
     'AI rhyme book',
     'lyric notebook',
     'bar by bar songwriting',
@@ -43,10 +46,10 @@ export const SEO = {
     'real-time songwriting',
   ],
   url: getPublicAppUrl(),
-  /** Tab, PWA, Google site icon, and social preview (BAR 4 BAR logo). */
-  faviconPath: '/Logo.png',
-  faviconIcoPath: '/favicon.ico',
-  ogImagePath: '/Logo.png',
+  /** Tab, PWA, Google site icon, and social preview (AKAsheet logo). */
+  faviconPath: FAVICON_PATH,
+  faviconIcoPath: FAVICON_PATH,
+  ogImagePath: LOGO_PATH,
   twitterHandle: undefined as string | undefined,
 };
 
@@ -91,12 +94,12 @@ export function buildStructuredDataGraph(): Record<string, unknown>[] {
       name: SEO.siteName,
       url: appUrl,
       logo: imageUrl,
-      email: 'bar4bar.support@gmail.com',
+      email: SUPPORT_EMAIL,
       contactPoint: [
         {
           '@type': 'ContactPoint',
           contactType: 'customer support',
-          email: 'bar4bar.support@gmail.com',
+          email: SUPPORT_EMAIL,
           availableLanguage: ['English'],
         },
       ],
@@ -108,7 +111,7 @@ export function buildStructuredDataGraph(): Record<string, unknown>[] {
       url: appUrl,
       image: imageUrl,
       applicationCategory: 'MultimediaApplication',
-      applicationSubCategory: 'Songwriting and music community',
+      applicationSubCategory: APP_DESCRIPTION,
       operatingSystem: 'Web',
       description: SEO.description,
       audience: {

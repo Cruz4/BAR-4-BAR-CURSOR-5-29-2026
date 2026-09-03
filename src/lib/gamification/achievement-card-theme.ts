@@ -138,7 +138,7 @@ export function getAchievementSerial(achievementId: string, displayName: string)
     .toUpperCase()
     .slice(-4)
     .padStart(4, '0');
-  return `B4B-${slug}-${hash}`;
+  return `AKA-${slug}-${hash}`;
 }
 
 export function formatUnlockDate(iso?: string): string {

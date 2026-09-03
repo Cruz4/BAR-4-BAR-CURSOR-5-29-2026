@@ -518,7 +518,7 @@ export function DropDeck({
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-fuchsia-300">
-                Bar 4 Bar Releases
+                AKAsheet Releases
               </p>
               <h1 className="font-headline text-4xl font-bold uppercase leading-none sm:text-5xl">
                 Library

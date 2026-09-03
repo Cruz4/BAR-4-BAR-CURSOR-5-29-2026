@@ -119,7 +119,7 @@ export interface Album {
    * Included in the published snapshot; edit from the DNA Drop dialog.
    */
   dnaDropMedia?: string[];
-  /** Album bundle price for Bar 4 Bar First Drops. */
+  /** Album bundle price for AKAsheet First Drops. */
   dropPrice?: DropPrice;
   /** Optional discovery tags for rails / search (additive). */
   releaseDiscovery?: ReleaseDiscoveryMetadata;
@@ -197,9 +197,9 @@ export interface Track {
    * Included in the published snapshot; edit from the DNA Drop dialog.
    */
   dnaDropMedia?: string[];
-  /** Private song file + 30s preview for Bar 4 Bar First Drops. */
+  /** Private song file + 30s preview for AKAsheet First Drops. */
   dropAudio?: DropAudioMeta;
-  /** Song price for Bar 4 Bar First Drops. */
+  /** Song price for AKAsheet First Drops. */
   dropPrice?: DropPrice;
   /** When the artist attested they have rights to sell this recording (Press it live). */
   dropRightsAttestedAt?: string;

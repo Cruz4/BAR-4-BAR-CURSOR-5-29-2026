@@ -261,7 +261,7 @@ const CORE_FAQS = [
     },
     {
       q: "Is this like Suno or Udio?",
-      a: "No — those render audio. Bar 4 Bar is your rhyme book and DNA workstation. Ink powers lyric intelligence, not song audio."
+      a: "No — those render audio. AKAsheet is your rhyme book and DNA workstation. Ink powers lyric intelligence, not song audio."
     },
     {
       q: "How do I save a Vibe?",
@@ -355,7 +355,7 @@ const FIRST_DROPS_FAQS = [
     a: getFirstDropsRightsFaqAnswer(),
   },
   {
-    q: "What does Bar 4 Bar keep on a Release sale?",
+    q: "What does AKAsheet keep on a Release sale?",
     a: getFirstDropsFeeFaqAnswer(),
   },
   {
@@ -512,7 +512,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
             <DialogTitle className="font-headline text-2xl sm:text-4xl flex items-center gap-3 font-bold">
                 <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-primary shrink-0" /> Studio Master Manual
             </DialogTitle>
-            <DialogDescription className="font-tagline uppercase tracking-[0.3em] text-[10px] text-muted-foreground">Bar4Bar · Studio guide</DialogDescription>
+            <DialogDescription className="font-tagline uppercase tracking-[0.3em] text-[10px] text-muted-foreground">AKAsheet · Put Your World Within Reach</DialogDescription>
             <div className="relative pt-2">
               <Search className="absolute left-3 top-1/2 mt-1 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
               <Input
@@ -723,7 +723,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
               <TabsContent value="scene" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4 pb-16">
                 <ChapterCard id="manual-public-identity" icon={<Globe className="text-fuchsia-400" />} title="Your Public Music Identity" colorClass="border-l-fuchsia-500 text-fuchsia-400">
                   <p className="text-sm text-foreground/90">
-                    Bar 4 Bar is not artists-only. In <strong>Edit Public Page</strong>, choose up to three labels: Artist, Songwriter, Producer, Engineer, DJ, or Music Fan. These are public profile labels, not security permissions or subscription tiers.
+                    AKAsheet is not artists-only. In <strong>Edit Public Page</strong>, choose up to three labels: Artist, Songwriter, Producer, Engineer, DJ, or Music Fan. These are public profile labels, not security permissions or subscription tiers.
                   </p>
                   <p className="text-xs">Add public genres, moods, influences, region, collaboration status, and current focus. Those choices power explainable Discover matches; private lyrics and DNA never do.</p>
                   <Button asChild variant="outline" className="w-full font-bold uppercase tracking-widest text-[10px]">
@@ -737,7 +737,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                     <li>Choose a release you published or purchased from another artist.</li>
                     <li>Pick the exact start of the 30-second public excerpt, build the showcase, then save.</li>
                   </ol>
-                  <p className="text-xs">Visitors who do not own the track hear your excerpt and see Buy. The owner and purchasers get the full stream after Bar 4 Bar checks entitlement. Music Fans can use this to put a purchased favorite on their profile.</p>
+                  <p className="text-xs">Visitors who do not own the track hear your excerpt and see Buy. The owner and purchasers get the full stream after AKAsheet checks entitlement. Music Fans can use this to put a purchased favorite on their profile.</p>
                 </ChapterCard>
 
                 <ChapterCard id="manual-discovery" icon={<Compass className="text-sky-400" />} title="Discover by Taste, Craft, or What Is New" colorClass="border-l-sky-500 text-sky-400">
@@ -831,7 +831,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                     </ol>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Fans hear a 30-second preview before purchase. After buying once, they stream the full song inside Bar 4 Bar from Library. Music purchases use money, never Ink. You keep ownership of your lyrics, recording, and master.
+                    Fans hear a 30-second preview before purchase. After buying once, they stream the full song inside AKAsheet from Library. Music purchases use money, never Ink. You keep ownership of your lyrics, recording, and master.
                   </p>
                   <div className="rounded-xl border border-cyan-400/25 bg-cyan-400/[0.06] p-4 text-xs">
                     <p className="font-bold text-cyan-200">Try the Library player with a House release</p>
@@ -845,7 +845,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                   <div className="rounded-xl border border-fuchsia-400/25 bg-fuchsia-400/5 p-4 text-xs">
                     <p className="font-bold text-fuchsia-200">Buy now or build a music cart</p>
                     <p className="mt-1 text-muted-foreground">
-                      Every purchasable song or album offers immediate checkout and Add to cart. A cart can mix releases from different artists, fixed prices, and each listener&apos;s chosen pay-what-you-want amount. Stripe runs one transaction while Bar 4 Bar records each unlock, artist fee split, payout, and receipt separately.
+                      Every purchasable song or album offers immediate checkout and Add to cart. A cart can mix releases from different artists, fixed prices, and each listener&apos;s chosen pay-what-you-want amount. Stripe runs one transaction while AKAsheet records each unlock, artist fee split, payout, and receipt separately.
                     </p>
                   </div>
                 </ChapterCard>
@@ -896,7 +896,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                     <li><strong>Below $3:</strong> 25% platform fee.</li>
                     <li><strong>$3 through $4.99:</strong> 15% platform fee.</li>
                     <li><strong>$5 and up:</strong> 10% platform fee.</li>
-                    <li><strong>Stripe processing:</strong> Bar 4 Bar pays card processing; it is not another deduction from the artist share shown above.</li>
+                    <li><strong>Stripe processing:</strong> AKAsheet pays card processing; it is not another deduction from the artist share shown above.</li>
                   </ul>
                 </ChapterCard>
 
@@ -928,7 +928,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
               
               <TabsContent value="tiering" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
                 <ChapterCard id="manual-studio-tiers" icon={<ShieldCheck />} title="Visitor vs Studio Pro" colorClass="border-l-primary text-primary">
-                    <p>Bar 4 Bar is a professional workstation. Your membership level determines project scale, vault access, and monthly Ink residency.</p>
+                    <p>AKAsheet is a professional workstation. Your membership level determines project scale, vault access, and monthly Ink residency.</p>
                     <p className="text-xs bg-muted/30 border border-border/40 rounded-lg p-3"><strong>Visitor accounts:</strong> try the full DNA &amp; REMIX and Generation Workstation flows with system presets. <strong>Pro:</strong> archive your own DNA, Vibe, and Style strains; unlimited albums; cloud sync.</p>
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2 border-l-4 border-muted pl-4 bg-muted/5 p-3 rounded-r-lg">
@@ -991,7 +991,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
 
               <TabsContent value="loop" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-4">
                 <ChapterCard id="manual-infinity-loop" icon={<BrainCircuit className="text-primary" />} title="The ∞ Loop Methodology" colorClass="border-l-primary text-primary">
-                    <p>The core of Bar 4 Bar is a continuous cycle of creative refinement. You are never 'finished'—you are always evolving.</p>
+                    <p>The core of AKAsheet is a continuous cycle of creative refinement. You are never 'finished'—you are always evolving.</p>
                     <div className="space-y-6">
                         <div className="flex gap-4 p-4 bg-primary/5 rounded-xl border border-primary/10">
                             <div className="font-bold text-primary text-2xl">01</div>

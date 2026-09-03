@@ -1,5 +1,5 @@
 
-# Bar 4 Bar Studio: Master Blueprint (The "5/14/2026 State")
+# AKAsheet: Master Blueprint (The "5/14/2026 State")
 
 > **Pricing & tier copy (2026):** `src/lib/studio-tiers.ts` + `src/lib/stripe-catalog.ts` are the live source of truth for membership prices, Ink amounts, and feature lists shown in-app.
 

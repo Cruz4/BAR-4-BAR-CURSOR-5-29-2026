@@ -37,7 +37,7 @@ service firebase.storage {
       return isActiveUser(userId) && ticketWriteOk(userId);
     }
 
-    // Bar 4 Bar First Drops — private masters. Playback streams through /api/drops/audio.
+    // First Drops — private masters. Playback streams through /api/drops/audio.
     match /drops/{userId}/{allPaths=**} {
       allow read: if false;
       allow write: if ownerTicketWrite(userId);

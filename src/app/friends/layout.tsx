@@ -2,7 +2,7 @@ import { pageMetadata } from '@/lib/seo';
 
 export const metadata = pageMetadata({
   title: 'Your circle',
-  description: 'Friends list and blocked accounts on Bar 4 Bar.',
+  description: 'Friends list and blocked accounts on AKAsheet.',
   path: '/friends',
   index: false,
 });

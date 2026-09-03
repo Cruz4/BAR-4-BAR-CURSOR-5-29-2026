@@ -150,7 +150,7 @@ export function parseVaultBackup(value: unknown): ParsedVaultBackup {
       : [];
     styleProfile = styleFrom(value.styleProfile);
   } else {
-    throw new Error('Invalid Bar 4 Bar Vault backup.');
+    throw new Error('Invalid AKAsheet Vault backup.');
   }
 
   const unassigned = albums.find((album) => album.id === 'unassigned');

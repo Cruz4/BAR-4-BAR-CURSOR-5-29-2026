@@ -1,5 +1,5 @@
 
-# Bar 4 Bar: Stripe Production Master Guide
+# AKAsheet: Stripe Production Master Guide
 
 This is your **Absolute Source of Truth** for getting paid. Follow these steps to automate your studio economy.
 
@@ -10,7 +10,7 @@ This is your **Absolute Source of Truth** for getting paid. Follow these steps t
 If you pay for Ink but the balance doesn't increase, the "Handshake" between Stripe and your server is failing.
 
 ### Step 0: The "Heartbeat" Check
-Open this link in your browser: `https://bar4bar.ink/api/stripe/webhook`
+Open this link in your browser: `https://akasheet.com/api/stripe/webhook`
 *   **If `ok: true`**: At least one signing secret is loaded. Compare `testPrefix` / `livePrefix` to Stripe Dashboard → Webhooks → **Reveal** (Test vs Live endpoints differ).
 *   **If `ok: false`**: Add `STRIPE_WEBHOOK_SECRET_TEST` (sandbox) and/or `STRIPE_WEBHOOK_SECRET` (live) to `.env`, then `npm run deploy:live`.
 *   **If it says "404 Not Found"**: Deploy latest: `npm run deploy:live`.
@@ -26,7 +26,7 @@ There are TWO types of secrets. Using the wrong one will cause a **400 Error**.
 3.  Scroll down to **"Succeeded"** or **"Failed"** attempts.
 4.  **Click on an event**. It will show you the **Response**:
     *   **400**: Verification failed. Your `STRIPE_WEBHOOK_SECRET` is wrong. Double-check Step 1.
-    *   **404**: Stripe is hitting the wrong URL. Ensure the URL in Stripe is exactly `https://bar4bar.ink/api/stripe/webhook`.
+    *   **404**: Stripe is hitting the wrong URL. Ensure the URL in Stripe is exactly `https://akasheet.com/api/stripe/webhook`.
     *   **500**: The server crashed. Check the Google Cloud Logs (Step 3).
 
 ### Step 3: View Live Server Logs
@@ -77,7 +77,7 @@ const STRIPE_PRICES = {
 
 1.  **In Stripe**: Go to **Developers** > **Webhooks**.
 2.  **Click "Add endpoint"**.
-3.  **Endpoint URL**: `https://bar4bar.ink/api/stripe/webhook`
+3.  **Endpoint URL**: `https://akasheet.com/api/stripe/webhook`
 4.  **Select Events**: Choose `checkout.session.completed`.
 5.  **Click "Add events"** then **"Add endpoint"**.
 6.  **Get your Secret**: Click "Reveal" on the **Signing secret**. It starts with `whsec_`.
@@ -102,12 +102,12 @@ const STRIPE_PRICES = {
 
 ## 5. First Drop artist payouts (Stripe Connect)
 
-Fans pay Bar 4 Bar Checkout. Artists cash out **90%** through Stripe Connect; the platform keeps **10%**.
+Fans pay AKAsheet Checkout. Artists cash out **90%** through Stripe Connect; the platform keeps **10%**.
 
 1. Stripe Dashboard → **Connect** → get started / enable Connect for this account.
-2. Add webhook event **`account.updated`** on `https://bar4bar.ink/api/stripe/webhook` (plus the existing checkout/subscription events).
+2. Add webhook event **`account.updated`** on `https://akasheet.com/api/stripe/webhook` (plus the existing checkout/subscription events).
 3. Artists open **Earnings** in the app → **Connect payouts** → complete Stripe’s identity + bank form.
 4. After payouts are live, new First Drop sales destination-charge the artist (minus the 10% application fee). Stripe then pays their bank on its schedule.
 5. Sales made before they connect are **held**, then **Send held sales** (or the `account.updated` webhook) transfers the artist share.
 
-You do **not** pay artists from Ink. Platform Stripe payouts (this guide’s earlier checklist) are still how **Bar 4 Bar** receives Ink/Pro revenue.
+You do **not** pay artists from Ink. Platform Stripe payouts (this guide’s earlier checklist) are still how **AKAsheet** receives Ink/Pro revenue.

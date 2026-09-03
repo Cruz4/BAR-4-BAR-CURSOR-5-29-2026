@@ -41,9 +41,9 @@ function buildPostShareText(post: ProfilePost, shareUrl: string): string {
   const snippet = (post.text || '').trim().replace(/\s+/g, ' ').slice(0, 160);
   const who = post.ownerName?.trim() || 'an artist';
   const line = snippet
-    ? `"${snippet}${snippet.length >= 160 ? '…' : ''}" — ${who} on Bar 4 Bar`
-    : `${who} dropped something on Bar 4 Bar`;
-  return `${line}\n${shareUrl}\n#bar4bar.ink`;
+    ? `"${snippet}${snippet.length >= 160 ? '…' : ''}" — ${who} on AKAsheet`
+    : `${who} dropped something on AKAsheet`;
+  return `${line}\n${shareUrl}\n#akasheet`;
 }
 
 export function PostShareDialog({ open, onOpenChange, post }: PostShareDialogProps) {
@@ -60,7 +60,7 @@ export function PostShareDialog({ open, onOpenChange, post }: PostShareDialogPro
 
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedText = encodeURIComponent(shareText);
-  const encodedTitle = encodeURIComponent(`${post.ownerName || 'Artist'} on Bar 4 Bar`);
+  const encodedTitle = encodeURIComponent(`${post.ownerName || 'Artist'} on AKAsheet`);
 
   const openShare = (url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer,width=640,height=720');
@@ -81,7 +81,7 @@ export function PostShareDialog({ open, onOpenChange, post }: PostShareDialogPro
     if (!navigator.share) return;
     try {
       await navigator.share({
-        title: `${post.ownerName || 'Artist'} on Bar 4 Bar`,
+        title: `${post.ownerName || 'Artist'} on AKAsheet`,
         text: shareText,
         url: shareUrl || undefined,
       });

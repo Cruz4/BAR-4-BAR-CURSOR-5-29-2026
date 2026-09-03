@@ -1,5 +1,5 @@
 /**
- * List or create LIVE Stripe webhook for Bar 4 Bar production URL.
+ * List or create LIVE Stripe webhook for AKAsheet production URL.
  *
  * Prerequisites: STRIPE_SECRET_KEY=sk_live_... in .env
  *
@@ -15,7 +15,7 @@ import Stripe from 'stripe';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
 const envPath = resolve(root, '.env');
-const WEBHOOK_URL = 'https://bar4bar.ink/api/stripe/webhook';
+const WEBHOOK_URL = 'https://akasheet.com/api/stripe/webhook';
 
 const EVENTS = [
   'checkout.session.completed',
@@ -93,7 +93,7 @@ if (ours.length > 0) {
 const endpoint = await stripe.webhookEndpoints.create({
   url: WEBHOOK_URL,
   enabled_events: EVENTS,
-  description: 'Bar 4 Bar production (live)',
+  description: 'AKAsheet production (live)',
 });
 
 const whsec = endpoint.secret;

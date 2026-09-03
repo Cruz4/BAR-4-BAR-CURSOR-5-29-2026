@@ -282,7 +282,7 @@ export function DropCartProvider({ children }: { children: React.ReactNode }) {
                       {item.title}
                     </Link>
                     <p className="truncate text-[10px] uppercase tracking-widest text-white/50">
-                      {item.artistName || 'Bar4Bar artist'} · {item.scope}
+                      {item.artistName || 'AKAsheet artist'} · {item.scope}
                     </p>
                   </div>
                   <button type="button" onClick={() => removeItem(item.key)} className="p-2 text-white/45 hover:text-red-300" aria-label={`Remove ${item.title}`}>

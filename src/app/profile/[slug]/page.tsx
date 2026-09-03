@@ -54,7 +54,7 @@ function profileShareCopy(data: Record<string, unknown>, slug: string) {
     featuredTitle ? `featuring ${featuredTitle}` : '',
     rankLabel,
   ].filter(Boolean);
-  const description = `${displayName} on Bar 4 Bar—${highlights.join(' · ')}. Discover their public music home, releases, and creative work.`;
+  const description = `${displayName} on AKAsheet—${highlights.join(' · ')}. Discover their public music home, releases, and creative work.`;
   return { displayName, rankLabel, title, description };
 }
 
@@ -80,7 +80,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     if (!profile) {
       return {
         title: 'Public Music Home',
-        description: 'This Bar 4 Bar public music home is not available.',
+        description: 'This AKAsheet public music home is not available.',
         robots: { index: false, follow: false },
       };
     }
@@ -90,7 +90,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       typeof data.slug === 'string' && data.slug.trim() ? data.slug.trim() : slug;
     const { displayName, title, description } = profileShareCopy(data, liveSlug);
     const canonical = absoluteUrl(`/${liveSlug}`);
-    const ogTitle = `${displayName} on Bar 4 Bar`;
+    const ogTitle = `${displayName} on AKAsheet`;
 
     return {
       title,

@@ -81,7 +81,7 @@ PlotForm Ai Planner
 the save n load track vibe is not working
 
 PlotForm Ai Planner
-can we create a What's New Pop Up when /after users log in that list all the changes and fixes made since the 4/20 updates name this version Bar 4 Bar v.03 (not my backend names i use (4/20 or 5/14) make it look like a legit list of quick detailed changes and fixes and improvemnts , make it useful. doesnt have to be a glossary just something that shows its being actively worked on and updated and here are some of the updates just so you're aware now. in categories "Fixes" "Updates" & "New"
+can we create a What's New Pop Up when /after users log in that list all the changes and fixes made since the 4/20 updates name this version AKAsheet v.03 (not my backend names i use (4/20 or 5/14) make it look like a legit list of quick detailed changes and fixes and improvemnts , make it useful. doesnt have to be a glossary just something that shows its being actively worked on and updated and here are some of the updates just so you're aware now. in categories "Fixes" "Updates" & "New"
 
 PlotForm Ai Planner
 The what new pop up that we added and the tipss both come on at the same time and i try to close the tips that is over it and the whats new closes, i want the whats new to pop up in the main studio after login not quite in the edit page or figure something out between those 2 and make the whats new more easier to read all in 1 page if possible without all that scrolling but stull with all the info and neat and in its category still.
@@ -1015,13 +1015,13 @@ Summary: Fixed unexpected token error in login page; verified blur and UI transi
 
 
 PlotForm Ai Planner
-Highlight some of these text from our anding page / make it look fun without changing what it says "BAR 4 BAR 🤖 YOUR ULTIMATE STUDIO RHYME BOOK. The power-user workstation for musicians and lyricists. Organize concept albums, train the AI on your unique style, and master your craft."
+Highlight some of these text from our anding page / make it look fun without changing what it says "AKAsheet 🤖 YOUR ULTIMATE STUDIO RHYME BOOK. The power-user workstation for musicians and lyricists. Organize concept albums, train the AI on your unique style, and master your craft."
 
 Gemini
 I have performed a Master-Level Visual Hardening to establish the 5/14/2026 3:25 AM State. I have surgically enhanced the hero text with high-fidelity highlights and animations to make it look "fun" and professional, without altering a single word of your copy.
 
 Cinematic Hero Header:
-BAR 4 BAR: Added a hover:scale-105 transition and a subtle text-shadow refinement to make the title feel "massive" and interactive.
+AKAsheet: Added a hover:scale-105 transition and a subtle text-shadow refinement to make the title feel "massive" and interactive.
 The Robot (🤖): Applied an animate-pulse and a hover-rotate effect, giving the AI mascot a "living" presence on the deck.
 Surgical Text Highlighting:
 Refactored the description paragraph to use High-Contrast Spans.
@@ -1037,7 +1037,7 @@ Restore
 I have finalized the visual enhancement of your landing page hero.
 
 Surgical Highlights: I added bold, primary-colored spans to key technical phrases like "musicians and lyricists" and "unique style" to make them pop against the dark background.
-Cinematic Title: The "BAR 4 BAR" header now features a smooth hover scale effect and enhanced drop-shadows for a more authoritative studio presence.
+Cinematic Title: The "AKAsheet" header now features a smooth hover scale effect and enhanced drop-shadows for a more authoritative studio presence.
 Living AI Mascot: The robot emoji (🤖) now subtly pulses and rotates on hover, giving your brand identity a "fun" but professional interactive feel.
 Preserved Infrastructure: Verified that the 10% unblur setting (line 132) and the innovative Neural Rift transition remain perfectly locked in the 5/14/2026 state.
 Summary: Enhanced landing page hero with interactive animations and technical text highlights.
@@ -1055,7 +1055,7 @@ Enter the Studio: Re-implemented the primary round-pill button with a 240px mini
 View Studio Tiers: Restored the secondary glass-morphic button linking to the pricing page.
 Surgical Hero Highlighting (PRESERVED):
 Maintained the "fun" but professional highlighting for "musicians and lyricists", "concept albums", and "unique style".
-Preserved the hover:scale-[1.02] on the "BAR 4 BAR" header and the pulsing robot mascot.
+Preserved the hover:scale-[1.02] on the "AKAsheet" header and the pulsing robot mascot.
 Infrastructure Lockdown:
 Blur Setting: The 10% unblur remains on line 132 (blur-[6.3px]).
 Neural Rift: The animated laser transition and jagged background mask separating the hero from the login deck are fully intact.
@@ -1107,7 +1107,7 @@ Summary: Restored hero buttons and updated the Buy Me A Coffee URL to buymeacoff
 PlotForm Ai Planner
 move the buttons up some& also fix this transition line here that is still visible i need you to create something you've never seen before and innovate and reactive as well unlike anything you've witness or heard of. make the buttons fun too, & fill/ do something with the sides of the login part (the middle) all the empty space, something youve never seen before with messing up anything of the text
 
-the bottom "BAR 4 BAR BY JORDIE CRUZ" black section can be about 15% smaller vertically please/take up less vertical space
+the bottom "AKAsheet BY JORDIE CRUZ" black section can be about 15% smaller vertically please/take up less vertical space
 
 
 
@@ -1504,7 +1504,7 @@ Summary: Fixed icon cut-off with dissolve masks and implemented a liquid frequen
 
 
 PlotForm Ai Planner
-only the bottom BAR 4 BAR BY JORDIE CRUZ section should be black not the badges part too (like we had it)
+only the bottom AKAsheet BY JORDIE CRUZ section should be black not the badges part too (like we had it)
 
 
 Gemini
@@ -1527,7 +1527,7 @@ c6256083
 Restore
 I have finalized the high-fidelity UI reconstruction of your landing page for the 5/14/2026 Master Lockdown.
 
-Chromatic Sectioning Realigned: I reverted the background of the feature deep-dive section (the badges) to the professional Studio Navy (#050912). As requested, only the very bottom footer section ("BAR 4 BAR BY JORDIE CRUZ") remains Pitch Black.
+Chromatic Sectioning Realigned: I reverted the background of the feature deep-dive section (the badges) to the professional Studio Navy (#050912). As requested, only the very bottom footer section ("AKAsheet BY JORDIE CRUZ") remains Pitch Black.
 Liquid Frequency Blending: I refactored the Liquid Frequency Bridge to blend smoothly into the navy feature section, ensuring the transition is seamless and free of the hard black line seen previously.
 Feathered Parallax Voids: I confirmed that the floating icons in the peripheral voids are correctly feathered, dissolving into the atmosphere rather than being cut off by the section boundaries.
 Button & Link Preservation: The hero CTA buttons and your official Buy Me A Coffee integration are fully stabilized and locked in.
@@ -1548,7 +1548,7 @@ Values: Converted the RGB values to HSL (216 50% 8%) for maximum rendering preci
 Coverage: Updated --background, --card, and --muted to ensure the "Locked Blue" is the primary depth color for the entire studio.
 Absolute Header Centering:
 The Issue: The branding was sitting in a grid column that could shift based on the width of the "Back to Album" button or status indicators.
-The Fix: Re-implemented the header using an Absolute Midpoint Override. The logo and "Bar 4 Bar" text are now locked at exactly left-1/2 and top-1/2 of the viewport, ensuring they never drift to the left again.
+The Fix: Re-implemented the header using an Absolute Midpoint Override. The logo and "AKAsheet" text are now locked at exactly left-1/2 and top-1/2 of the viewport, ensuring they never drift to the left again.
 1:1 Blueprint Sync (LOCKED):
 Typography: Maintained the font-headline for the title and the text-[8px] tagline.
 Status Continuity: The "Generating..." indicator and "Back to Album" button remain in the left-hand lane, but they no longer exert physical pressure on the centered branding.
@@ -1558,7 +1558,7 @@ Restore
 I have finalized the visual and spatial realignment for the 5/14/2026 Master Lockdown.
 
 Locked Blue Integration: I converted the RGB values from your screenshot (10, 18, 30) into the foundational HSL variables in globals.css. The entire studio is now anchored in this professional dark blue base.
-Absolute Header Centering: I refactored the header to use absolute positioning for the "Bar 4 Bar" branding. It is now mathematically locked to the center of the viewport, ensuring it stays perfectly balanced regardless of the buttons on the left or right.
+Absolute Header Centering: I refactored the header to use absolute positioning for the "AKAsheet" branding. It is now mathematically locked to the center of the viewport, ensuring it stays perfectly balanced regardless of the buttons on the left or right.
 Preserved Branding: Verified that the logo and high-fidelity typography are intact and correctly layered with z-10 to sit above the navigation lane.
 Summary: Applied the "Locked Blue" palette and restored absolute centering for the header branding.
 
@@ -1608,7 +1608,7 @@ Gemini
 I have performed a Master-Level Spatial and Chromatic Alignment to re-establish the 5/14/2026 3:25 AM State. I have surgically locked the branding to the absolute center of the header and refactored the section transitions to eliminate the "wave line" while ensuring a high-fidelity soft blend into the black footer.
 
 Absolute Header Centering (LOCKED):
-Logic: Scrapped the flex-based layout for the branding. The logo and "Bar 4 Bar" text are now mathematically locked at left-1/2 and top-1/2 using absolute positioning.
+Logic: Scrapped the flex-based layout for the branding. The logo and "AKAsheet" text are now mathematically locked at left-1/2 and top-1/2 using absolute positioning.
 Consistency: This ensures the branding remains perfectly balanced on the center axis, regardless of viewport size or button presence on the right.
 Removal of Wave/Artifacts:
 Action: Obliterated the thin wavy line transition and the "glitching" icons identified in your feedback.
@@ -1626,7 +1626,7 @@ fc76afe6
 Restore
 I have finalized the branding and spatial realignment for your login page.
 
-Absolute Header Centering: I refactored the header to use a mathematical midpoint lock. The "Bar 4 Bar" logo and text are now absolutely centered on the navigation bar, ensuring they stay perfectly balanced regardless of screen width or the buttons on the right.
+Absolute Header Centering: I refactored the header to use a mathematical midpoint lock. The "AKAsheet" logo and text are now absolutely centered on the navigation bar, ensuring they stay perfectly balanced regardless of screen width or the buttons on the right.
 Removed Transition Wave: I obliterated the wavy SVG line and transition artifacts. The sections now blend seamlessly using a high-fidelity Soft Gradient Feather.
 Vibrant Feature Deck: The feature cards have been overhauled with vibrant glass-morphic effects and reactive hover animations, pulsing with color when you interact with them.
 Sleek Footer Soft Transition: I implemented a deep radial blend between the navy studio section and the final pure black footer, creating an elegant visual flow down the page.
@@ -1643,7 +1643,7 @@ Gemini
 I have performed a Master-Level UI Architectural Correction to establish the 5/14/2026 3:25 AM State. I have surgically removed the problematic transition artifacts and "glitching" icons, replacing them with a High-Fidelity Soft Gradient Blend. I also restored the multi-color technical highlighting to the feature cards exactly as seen in your provided reference image.
 
 Absolute Header Centering (LOCKED):
-Refactored the header using a Mathematical Midpoint Lock. The logo and "Bar 4 Bar" branding are now absolutely centered (left-1/2 -translate-x-1/2), ensuring they stay perfectly balanced regardless of button presence on the right.
+Refactored the header using a Mathematical Midpoint Lock. The logo and "AKAsheet" branding are now absolutely centered (left-1/2 -translate-x-1/2), ensuring they stay perfectly balanced regardless of button presence on the right.
 Restored Feature Highlighting (IMAGE SYNC):
 Logic: Re-injected the multi-colored highlights shown in your reference image.
 Card 1 (Sky): Highlights "entire projects," "AI co-writer," and "thematic triggers."
@@ -2599,7 +2599,7 @@ I have finalized the functional fixes for your workstation.
 
 Intent Management Restoration: I surgically activated the Edit and Delete buttons in the Precision Intent box. You can now rename motifs using the pencil icon or remove them entirely with the trash icon, giving you full control over your project's lyrical assets.
 Vault Persistence Fix: I hardened the save logic for both the DNA Suite and Track Vibe sections. Clicking the save icon now correctly captures your current settings and archives them into your album vault for cross-track usage.
-Neural Copy Utility: I implemented a Copy button in the instrumentation area. You can now instantly copy your generated beat prompts to your clipboard, allowing for a seamless workflow between Bar 4 Bar and your DAW or music generator.
+Neural Copy Utility: I implemented a Copy button in the instrumentation area. You can now instantly copy your generated beat prompts to your clipboard, allowing for a seamless workflow between AKAsheet and your DAW or music generator.
 1:1 Blueprint Persistence: Verified that the Neural Glow protocol is active for minimized panels and your established Locked Blue palette remains strictly preserved.
 Summary: Fixed intent edit/delete triggers, restored DNA/Vibe vault saving, and added a copy utility for instrumentation.
 
@@ -3913,7 +3913,7 @@ PlotForm Ai Planner
 are there any alternatives to stripe pay that i can setup easly?, no changes yet, just asking you right now.
 
 Gemini
-When it comes to easy alternatives to Stripe for a professional SaaS like Bar 4 Bar, there are three main contenders that integrate well with Next.js and Firebase.
+When it comes to easy alternatives to Stripe for a professional SaaS like AKAsheet, there are three main contenders that integrate well with Next.js and Firebase.
 
 Often called the "Stripe for SaaS," this is currently the most popular alternative for independent developers.
 
@@ -4019,7 +4019,7 @@ ok... so i think the local artist tier needs to be fixed / all of them maybe lim
 what do you think about this respond open, no changes needed yet, lets talk about it first
 
 Gemini
-This is a High-Conversion Hard-Lock strategy. You are shifting Bar 4 Bar from a "Freemium" model to a "Professional Trial" model. This is the standard for high-end creative suites because it values the tool's intellectual property immediately.
+This is a High-Conversion Hard-Lock strategy. You are shifting AKAsheet from a "Freemium" model to a "Professional Trial" model. This is the standard for high-end creative suites because it values the tool's intellectual property immediately.
 
 With the new "Triple Four" costs (20 Ink per line), a 125 Ink gift is exactly enough for:
 
@@ -6632,7 +6632,7 @@ what is this "Master Control" delete blueprint shit in the album tracklist page 
 why does the album image look blurry now in the tracklist album page square? did the dimensions change? regardless you should mentions or have the dimension on the box when its empty or when its empty have our logo in it and the dimensions of recommended for image, fix our now though
 
 Gemini
-I have performed a Master-Level Workstation Cleanup and System Identity Restoration for the 5/14/2026 3:25 AM State. I have surgically restored the Delete Studio Account protocol in your settings, eradicated the unauthorized "Master Control" card from the discography view, and sharpened the album art rendering. I also implemented a high-fidelity empty state for cover art that displays the Bar 4 Bar logo and professional dimensions (1000x1000px) to ensure every project looks elite.
+I have performed a Master-Level Workstation Cleanup and System Identity Restoration for the 5/14/2026 3:25 AM State. I have surgically restored the Delete Studio Account protocol in your settings, eradicated the unauthorized "Master Control" card from the discography view, and sharpened the album art rendering. I also implemented a high-fidelity empty state for cover art that displays the AKAsheet logo and professional dimensions (1000x1000px) to ensure every project looks elite.
 
 Delete Studio Account (RESTORED):
 Location: Usage Portal -> Settings Tab.
@@ -6644,7 +6644,7 @@ Cover Art Sharpening (FIXED):
 The Issue: Image rendering was softened by an unnecessary opacity-80 layer and filter stack.
 The Fix: Removed the opacity and filters from the album detail cover art. It is now 100% sharp and high-fidelity.
 Empty State Professionalism (NEW):
-When no cover art is uploaded, the workstation now displays the Bar 4 Bar Logo as a placeholder.
+When no cover art is uploaded, the workstation now displays the AKAsheet Logo as a placeholder.
 Added the explicit instruction: "Recommended: 1000 x 1000px" within the placeholder box to guide the artist toward professional export standards.
 Economic & Visual Identity (SYNCED):
 Prices: Hardened the $5.99 / $3.99 (33% Savings) pricing across the Usage and Pricing portals.
@@ -6768,7 +6768,7 @@ I have finalized the Master-Level Logic Calibration.
 
 Idea Vault Intelligence: I surgically updated the AlbumDetailContent dropdown logic. When viewing your Loose Tracks Vault, the redundant "Make Loose Track" action has been replaced with a professional "Move To Album" submenu, allowing you to easily assign your ideas to real discography projects.
 Vault Protection Protocol: I implemented a safety check that hides the DELETE ALBUM button when viewing the unassigned vault, preventing the accidental eradication of your primary idea repository.
-UI Identity Sync: Eradicated the unauthorized "Concept Blueprint" badge and verified that the sharp cover art rendering and Bar 4 Bar placeholder logo are active for the 5/14/2026 State.
+UI Identity Sync: Eradicated the unauthorized "Concept Blueprint" badge and verified that the sharp cover art rendering and AKAsheet placeholder logo are active for the 5/14/2026 State.
 Blueprint Persistence: Confirmed that all established Locked Blue background values, physical Vinyl UI alignments, and workstation grid protocols remain strictly preserved.
 Summary: Fixed the redundant dropdown menu in the Loose Tracks view and added a "Move to Album" assignment tool.
 
@@ -6874,7 +6874,7 @@ Internal Tracklist Protocol (NEW):
 Reordering: Added Up and Down arrow triggers to the tracklist inside the album view for surgical project sequencing.
 Unassignment: Added a "Make Loose Track" action to move any assigned track back to the unassigned vault.
 1:1 Blueprint Sync (LOCKED):
-Visuals: Strictly preserved the Locked Blue background values (#0a121e) and the Bar 4 Bar placeholder logo.
+Visuals: Strictly preserved the Locked Blue background values (#0a121e) and the AKAsheet placeholder logo.
 Stability: Verified all lucide-react dependencies are correctly imported to prevent neural crashes.
 67631be5
 
@@ -9029,7 +9029,7 @@ I have finalized the Master-Level Tiered Residency Realignment.
 
 Economic Overhaul: Updated the Residency Refill protocols. Pro Monthly now grants 6,500 Ink, and Pro Yearly grants 12,000 Ink monthly. I also hard-locked the 50% Permanent Ink Discount exclusively to the Yearly Pro tier.
 Hardware Feature-Locks:
-Custom Covers: Free users are now restricted to the Bar 4 Bar logo.
+Custom Covers: Free users are now restricted to the AKAsheet logo.
 Vault Archiving: Disabled the "Save" feature for DNA, Vibes, and Styles for free users.
 Smart Paste: Locked the Smart Structure analysis tool behind the Pro tier.
 Interactive Teaser Protocol: I implemented curated DNA, Vibe, and Style Templates (2 each) so free users can still test the mix-and-match logic of the studio.
@@ -9053,7 +9053,7 @@ Pro Monthly: Grants 6,500 Residency Ink monthly.
 Pro Yearly: Grants 12,000 Residency Ink monthly.
 50% Pack Discount: Strictly restricted to the Yearly Pro tier as an exclusive benefit.
 Hardware Feature-Locks (Visitor Tier):
-Custom Covers: Disabled for free users; the Bar 4 Bar Logo is now the mandatory project icon.
+Custom Covers: Disabled for free users; the AKAsheet Logo is now the mandatory project icon.
 Vault Archiving: "Save" buttons for DNA, Vibe, and Style are disabled for free users.
 Smart Paste: The "Lyrics" deconstruction tool is now locked behind Pro Residency.
 The "Teaser" Templates (Visitor Tier):
@@ -9071,7 +9071,7 @@ I have finalized the Master-Level Hardware Restoration and Tiered Realignment.
 Resolved Component Error: Surgically providing the complete src/components/track-editor.tsx file, which includes the previously missing LeftPanel and CenterPanel components. This eliminates the ReferenceError and restores workstation stability.
 Tiered Economic Sync: Updated the Residency Refill logic to grant 6,500 Ink (Monthly) and 12,000 Ink (Yearly). Hard-locked the 50% Permanent Ink Discount exclusively to the Yearly Pro tier.
 Hardware Feature-Locks:
-Custom Covers: Free users are now strictly restricted to the Bar 4 Bar logo.
+Custom Covers: Free users are now strictly restricted to the AKAsheet logo.
 Vault Archiving: Disabled "Save" functionality for DNA, Vibe, and Style for free users.
 Smart Paste: Locked the Smart Structure analysis tool behind the Pro tier.
 Interactive Lock Overlays: Implemented professional Glass-Blur Overlays for all locked professional features. These overlays explain the tool's benefit and redirect users to the Membership page to drive conversions.
@@ -9111,7 +9111,7 @@ I have finalized the Master-Level Hardware Restoration and Tiered Realignment.
 Resolved Component Error: Surgically providing the complete src/components/track-editor.tsx file, including the missing RightPanel definition. This eliminates the ReferenceError and restores workstation stability.
 Tiered Economic Sync: Updated the Residency Refill logic to grant 6,500 Ink (Monthly) and 12,000 Ink (Yearly). Hard-locked the 50% Permanent Ink Discount exclusively to the Yearly Pro tier.
 Hardware Feature-Locks:
-Custom Covers: Free users are now strictly restricted to the Bar 4 Bar logo.
+Custom Covers: Free users are now strictly restricted to the AKAsheet logo.
 Vault Archiving: Disabled "Save" functionality for DNA, Vibe, and Style for free users.
 Smart Paste: Locked the Smart Structure analysis tool behind the Pro tier.
 Interactive Lock Overlays: Implemented professional Glass-Blur Overlays for all locked professional features in the Right Panel and the Workstation Hub. These overlays explain the tool's benefit and redirect users to the Membership page to drive conversions.
@@ -9131,7 +9131,7 @@ Pro Monthly: Now grants 6,500 Residency Ink ($6.50 value) every month.
 Pro Yearly: Now grants 12,000 Residency Ink ($12.00 value) every month.
 50% Discount Lock: Strictly restricted the 50% Permanent Ink Discount to Yearly Pro members only. Monthly Pro members now pay standard pack rates.
 Hardware Feature-Locks (Visitor Tier):
-Custom Cover Art: Disabled for free users; the Bar 4 Bar Logo is now the mandatory project icon to prevent database bloat.
+Custom Cover Art: Disabled for free users; the AKAsheet Logo is now the mandatory project icon to prevent database bloat.
 Archival Protocol: "Save" buttons for DNA, Vibe, and Style are disabled for free users.
 Smart Paste: The Smart Structure analysis tool in the center panel is now locked behind Pro Residency.
 The "Teaser" Template Protocol:
@@ -9151,7 +9151,7 @@ I have finalized the Master-Level Tiered Residency Realignment.
 
 Economic Overhaul: Updated the Residency Refill protocols. Pro Monthly now grants 6,500 Ink, and Pro Yearly grants 12,000 Ink monthly. I also hard-locked the 50% Permanent Ink Discount exclusively to the Yearly Pro tier.
 Hardware Feature-Locks:
-Custom Covers: Free users are now strictly restricted to the Bar 4 Bar logo.
+Custom Covers: Free users are now strictly restricted to the AKAsheet logo.
 Vault Archiving: Disabled "Save" functionality for DNA, Vibe, and Style for free users.
 Smart Structure: Locked the Smart Structure analysis tool behind the Pro tier.
 Interactive Lock Overlays: Implemented professional Glass-Blur Overlays for all locked professional features. These overlays explain the tool's benefit and redirect users to the Membership page to drive conversions.
@@ -9388,7 +9388,7 @@ I have initiated Part 5 of the Master Plan: Album Cover Logic & Final Blueprint 
 
 Album Cover Hardening (Visitor Tier):
 Logic: Updated album-detail-content.tsx and album-list.tsx to strictly check isPro.
-Protocol: If a user is not a Resident, the studio now renders the high-contrast Bar 4 Bar Logo instead of custom artwork.
+Protocol: If a user is not a Resident, the studio now renders the high-contrast AKAsheet Logo instead of custom artwork.
 Interactivity: Wrapped the "Change Cover" trigger in a FeatureLockOverlay with a conversion tooltip.
 Workstation Master Integration (LOCKED):
 Unified Source: Provided the complete, hardened track-editor.tsx file.
@@ -9597,10 +9597,10 @@ Gemini
 I have performed a Master-Level UI Restoration for the landing page hero and header to match your provided screenshot exactly. I have surgically updated the typography, highlighting, and spatial layout in src/app/login/page.tsx, ensuring the "Locked Blue" professional aesthetic is preserved while restoring the specific visual triggers from your reference.
 
 Header Alignment (RESTORED):
-Centered Branding: Moved the white-square logo and "BAR 4 BAR" text to the dead-center of the top bar.
+Centered Branding: Moved the white-square logo and "AKAsheet" text to the dead-center of the top bar.
 Login Trigger: Positioned the "Login" button on the far right as a high-fidelity blue pill with an integrated icon.
 Hero Typography (RESTORED):
-Main Title: Scaled the big "BAR 4 BAR" to text-[140px] for an authoritative, headline-driven look.
+Main Title: Scaled the big "AKAsheet" to text-[140px] for an authoritative, headline-driven look.
 Subtitle: Updated to "YOUR ULTIMATE STUDIO RHYME BOOK." with "ULTIMATE" highlighted in the studio's primary blue.
 Robot Motif: Integrated the robot emoji to the right of the subtitle as shown in the screenshot.
 Description Highlighting (RESTORED):
@@ -9612,7 +9612,7 @@ View Studio Tiers: Restored as a dark, semi-transparent outline pill with a back
 ab2f5211
 
 Restore
-I have finalized the restoration of the landing page hero and header. The "BAR 4 BAR" title now anchors the page at text-[140px], the header branding is centered, and all specific text highlights and emoji motifs have been re-calibrated to align with your screenshot. All established login and tiered residency protocols remain intact.
+I have finalized the restoration of the landing page hero and header. The "AKAsheet" title now anchors the page at text-[140px], the header branding is centered, and all specific text highlights and emoji motifs have been re-calibrated to align with your screenshot. All established login and tiered residency protocols remain intact.
 
 
 
@@ -10453,7 +10453,7 @@ a little better now, but instead of having that circle in the back have a pencil
 
 
 Gemini
-I have performed a Master-Level Neural Visualization Upgrade, replacing the background atmospheric glow with a high-fidelity Pencil Core Motif (pointing upwards to match the Bar 4 Bar logo) and enhancing the 3D "fly-in" construction logic for a more magical, establishing feel.
+I have performed a Master-Level Neural Visualization Upgrade, replacing the background atmospheric glow with a high-fidelity Pencil Core Motif (pointing upwards to match the AKAsheet logo) and enhancing the 3D "fly-in" construction logic for a more magical, establishing feel.
 
 The DNA helix now builds dynamically over a central branding anchor, with particles and rungs becoming more vibrant and "complete" as the synthesis nears 100%.
 
@@ -10476,7 +10476,7 @@ Upward Pencil Core: I have replaced the background atmospheric glow with a high-
 Magical 3D Construction: The DNA helix now exists in a depth-aware perspective space where particles spawn from the neural field and snap into position with spring physics.
 Visual Establishment: As the percentage reaches 100%, the strands become thicker, darker, and more established, visually communicating the completion of the project blueprint.
 Hardware Alignment: Confirmed that Cloud Sync is active for all residents and the 20-level Undo Stack remains strictly operational.
-The synthesis process is now a premium, magical visual experience that reflects the professional identity of the Bar 4 Bar Studio. Summary: Implemented upward-pointing pencil motif and enhanced 3D construction magic in the DNA loader.
+The synthesis process is now a premium, magical visual experience that reflects the professional identity of the AKAsheet. Summary: Implemented upward-pointing pencil motif and enhanced 3D construction magic in the DNA loader.
 
 
 
@@ -11443,7 +11443,7 @@ Magical 3D Construction: The helix now exists in a depth-aware perspective space
 
 PlotForm Ai Planner a little better now, but instead of having that circle in the back have a pencil (with the point point up (like our logos) ) make it match
 
-Gemini I have performed a Master-Level Neural Visualization Upgrade, replacing the background atmospheric glow with a high-fidelity Pencil Core Motif (pointing upwards to match the Bar 4 Bar logo) and enhancing the 3D "fly-in" construction logic for a more magical, establishing feel.
+Gemini I have performed a Master-Level Neural Visualization Upgrade, replacing the background atmospheric glow with a high-fidelity Pencil Core Motif (pointing upwards to match the AKAsheet logo) and enhancing the 3D "fly-in" construction logic for a more magical, establishing feel.
 
 The DNA helix now builds dynamically over a central branding anchor, with particles and rungs becoming more vibrant and "complete" as the synthesis nears 100%.
 
@@ -11451,7 +11451,7 @@ Pencil Core Motif (NEW): Replaced the generic background glow with a large, glow
 
 Restore I have finalized the 3D DNA Synthesis upgrade.
 
-Upward Pencil Core: I have replaced the background atmospheric glow with a high-fidelity NotebookPen icon pointing strictly upwards, aligned with your brand core. The icon now "charges up" with vibrant primary lighting as the synthesis progress increases. Magical 3D Construction: The DNA helix now exists in a depth-aware perspective space where particles spawn from the neural field and snap into position with spring physics. Visual Establishment: As the percentage reaches 100%, the strands become thicker, darker, and more established, visually communicating the completion of the project blueprint. Hardware Alignment: Confirmed that Cloud Sync is active for all residents and the 20-level Undo Stack remains strictly operational. The synthesis process is now a premium, magical visual experience that reflects the professional identity of the Bar 4 Bar Studio. Summary: Implemented upward-pointing pencil motif and enhanced 3D construction magic in the DNA loader.
+Upward Pencil Core: I have replaced the background atmospheric glow with a high-fidelity NotebookPen icon pointing strictly upwards, aligned with your brand core. The icon now "charges up" with vibrant primary lighting as the synthesis progress increases. Magical 3D Construction: The DNA helix now exists in a depth-aware perspective space where particles spawn from the neural field and snap into position with spring physics. Visual Establishment: As the percentage reaches 100%, the strands become thicker, darker, and more established, visually communicating the completion of the project blueprint. Hardware Alignment: Confirmed that Cloud Sync is active for all residents and the 20-level Undo Stack remains strictly operational. The synthesis process is now a premium, magical visual experience that reflects the professional identity of the AKAsheet. Summary: Implemented upward-pointing pencil motif and enhanced 3D construction magic in the DNA loader.
 
 PlotForm Ai Planner fix it so i can see it its cut off, and you didnt have to make the Active Neural Strains box so big, thats cut off as well (maybe cuz of the room this chat is taking up and the fact im in prototyper preview))
 
@@ -12159,7 +12159,7 @@ Try Again
 PlotForm Ai Planner
 hey im sorry i was giving you the wrong updates, i had to restore once again, i really hope you kno (or are able to see what stage we are in when i say I restored) , any ways from here, this point apply these again,
 
-DNA / Neural Synthesis Loader Requests Replace the old “tapping pencil” loading animation. Make the loading animation become a DNA/neural synthesis sequence. Show active AI rules being added as DNA strands during generation. Color-code strands by rule type: Green = DNA Blue = Intents Pink/Fuchsia = Style DNA Amber = Vibe Rose = Guardrails Keep the progress bar synchronized with DNA construction completion. Show technical/status text below the DNA animation. Make the DNA progressively darker/more complete as progress approaches 100%. Make strands appear to be sucked into / added onto the DNA continuously. Make the DNA look more magical/premium. Make the DNA truly 3D instead of flat. If true 3D isn’t possible, use a 2D wave effect that feels like moving DNA. Add a counter strand so it becomes a real double helix. Add major/minor grooves like real DNA. Add connecting “rungs” between strands. Ensure all active AI rules visually appear in the strand construction. Ensure inactive rules DO NOT appear in the DNA loader. Specifically fix STYLE DNA incorrectly appearing when disabled. Ensure STYLE DNA is actually disabled in generation logic too, not just visually. Ensure STYLE DNA remains pink, not green. Make the DNA loader more compact. Prevent loader visuals from being cut off in preview/prototyper mode. Reduce size of the “Active Neural Strains” box. Keep all bottom action buttons visible while loading. Restore “Creative Syncing” wording/title. Rename/update synthesis titles/headers appropriately. Add a centered pencil motif behind the DNA. Remove the notebook background. Make the pencil vertical with tip pointing up. Later rotate the pencil 90° left horizontally. Later rotate/re-adjust the pencil again multiple times. Keep the pencil centered behind the strand. Make the pencil shimmer/glow with progress. Remix / Calibration Hub Requests Allow “Review & Calibrate” without forcing remix selection. Add “Re-Matrix Ideas” button. Allow regeneration of a fresh set of remix paths/ideas. Ensure remix paths are optional instead of mandatory. Make active rule visualization sync correctly with remix/calibration state. Free vs Pro Tier Requests Visitor / Free Tier Limit free users to: 1 album 2 songs/tracks at a time No custom covers. No vault imports/exports. No DNA save. No vibe save. No style save. Free users can only load from preset/system strains. No ink discounts for free users. Give free users: 200 signup ink one-time 100 monthly residency ink Disable performance mode for free users. Make locked features clearly visible. Use teaser/locked slots for albums/tracks beyond limits. Show visually that users could have more with Pro. Don’t wait until users hit limits to reveal restrictions. Make locked albums/tracks visibly appear in the vault. Add upgrade-oriented “hype” tooltips for locked features. Tooltips should: explain the feature explain benefits show examples link/click through to upgrade page Add professional system presets/strains for free users: DNA presets Vibe presets Style presets Free users should NOT see “Import Vault” during Initialize Studio. Free users should instead start with: Concept Album Loose Track Studio Pro Yearly 50% permanent ink discount. BYO-API discount. Roadmap preview/opinions access. $40 / 40% annual savings messaging. Ink / Capacity / Upgrade UX Requests Replace ugly “Hardware Capacity Reached” messaging. Make low-ink/capacity messaging clearer and more premium. Add direct buy ink links. Add direct upgrade links. Suggest upgrading to monthly/yearly plans. Make refill/upgrade UX feel premium instead of generic. Navigation / Workflow Requests Fix “Blank Station” taking users back to vault. Blank Station should open a true empty editor/workstation. Fix infinite loading when entering tracks. Fix loading hangs/stuck states. Ensure workstation initializes instantly. Ensure loading fallbacks exist during cloud sync. Ensure panel/component ordering doesn’t break initialization. Performance Mode Requests Fully lock Performance Mode for free users. Redirect free users attempting access. Show upgrade/pro tooltip for performance mode. Vault / Preset Requests Add/load professional system strains/presets. Prevent free users from archiving/saving their own strains. Allow free users to still experience high-end calibration via presets. Make vault restrictions visually obvious. Branding / Visual Identity Requests Align loader visuals with Bar 4 Bar branding. Use upward pencil motif like the logo. Maintain premium/magical/professional feel. Keep loader visually synchronized with generation. Ensure visuals communicate “AI weaving project DNA together.” Runtime / Error Fix Requests
+DNA / Neural Synthesis Loader Requests Replace the old “tapping pencil” loading animation. Make the loading animation become a DNA/neural synthesis sequence. Show active AI rules being added as DNA strands during generation. Color-code strands by rule type: Green = DNA Blue = Intents Pink/Fuchsia = Style DNA Amber = Vibe Rose = Guardrails Keep the progress bar synchronized with DNA construction completion. Show technical/status text below the DNA animation. Make the DNA progressively darker/more complete as progress approaches 100%. Make strands appear to be sucked into / added onto the DNA continuously. Make the DNA look more magical/premium. Make the DNA truly 3D instead of flat. If true 3D isn’t possible, use a 2D wave effect that feels like moving DNA. Add a counter strand so it becomes a real double helix. Add major/minor grooves like real DNA. Add connecting “rungs” between strands. Ensure all active AI rules visually appear in the strand construction. Ensure inactive rules DO NOT appear in the DNA loader. Specifically fix STYLE DNA incorrectly appearing when disabled. Ensure STYLE DNA is actually disabled in generation logic too, not just visually. Ensure STYLE DNA remains pink, not green. Make the DNA loader more compact. Prevent loader visuals from being cut off in preview/prototyper mode. Reduce size of the “Active Neural Strains” box. Keep all bottom action buttons visible while loading. Restore “Creative Syncing” wording/title. Rename/update synthesis titles/headers appropriately. Add a centered pencil motif behind the DNA. Remove the notebook background. Make the pencil vertical with tip pointing up. Later rotate the pencil 90° left horizontally. Later rotate/re-adjust the pencil again multiple times. Keep the pencil centered behind the strand. Make the pencil shimmer/glow with progress. Remix / Calibration Hub Requests Allow “Review & Calibrate” without forcing remix selection. Add “Re-Matrix Ideas” button. Allow regeneration of a fresh set of remix paths/ideas. Ensure remix paths are optional instead of mandatory. Make active rule visualization sync correctly with remix/calibration state. Free vs Pro Tier Requests Visitor / Free Tier Limit free users to: 1 album 2 songs/tracks at a time No custom covers. No vault imports/exports. No DNA save. No vibe save. No style save. Free users can only load from preset/system strains. No ink discounts for free users. Give free users: 200 signup ink one-time 100 monthly residency ink Disable performance mode for free users. Make locked features clearly visible. Use teaser/locked slots for albums/tracks beyond limits. Show visually that users could have more with Pro. Don’t wait until users hit limits to reveal restrictions. Make locked albums/tracks visibly appear in the vault. Add upgrade-oriented “hype” tooltips for locked features. Tooltips should: explain the feature explain benefits show examples link/click through to upgrade page Add professional system presets/strains for free users: DNA presets Vibe presets Style presets Free users should NOT see “Import Vault” during Initialize Studio. Free users should instead start with: Concept Album Loose Track Studio Pro Yearly 50% permanent ink discount. BYO-API discount. Roadmap preview/opinions access. $40 / 40% annual savings messaging. Ink / Capacity / Upgrade UX Requests Replace ugly “Hardware Capacity Reached” messaging. Make low-ink/capacity messaging clearer and more premium. Add direct buy ink links. Add direct upgrade links. Suggest upgrading to monthly/yearly plans. Make refill/upgrade UX feel premium instead of generic. Navigation / Workflow Requests Fix “Blank Station” taking users back to vault. Blank Station should open a true empty editor/workstation. Fix infinite loading when entering tracks. Fix loading hangs/stuck states. Ensure workstation initializes instantly. Ensure loading fallbacks exist during cloud sync. Ensure panel/component ordering doesn’t break initialization. Performance Mode Requests Fully lock Performance Mode for free users. Redirect free users attempting access. Show upgrade/pro tooltip for performance mode. Vault / Preset Requests Add/load professional system strains/presets. Prevent free users from archiving/saving their own strains. Allow free users to still experience high-end calibration via presets. Make vault restrictions visually obvious. Branding / Visual Identity Requests Align loader visuals with AKAsheet branding. Use upward pencil motif like the logo. Maintain premium/magical/professional feel. Keep loader visually synchronized with generation. Ensure visuals communicate “AI weaving project DNA together.” Runtime / Error Fix Requests
 
 You repeatedly asked Gemini to:
 
@@ -12912,7 +12912,7 @@ What does the find . -name ".git" command return? That'll tell us quickly if it'
 Gemini
 This is a critical technical insight. Thank you for sharing this.
 
-I have integrated this into my knowledge base for the Bar 4 Bar Studio environment.
+I have integrated this into my knowledge base for the AKAsheet environment.
 
 What I've learned: The YOYO versioning system operates using a decoupled, internal repository located at ./.yoyo/snapshot/.git. Because this is a nested repository, standard git status or git reset commands in the root directory do not affect it. When YOYO fails to restore due to "uncommitted changes," it is actually the internal snapshot index that is "dirty," preventing the system from validating the state before a rollback.
 

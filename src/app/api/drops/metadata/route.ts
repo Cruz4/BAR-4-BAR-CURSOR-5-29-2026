@@ -48,7 +48,7 @@ export async function GET(req: Request) {
       shareId,
       ...(trackId ? { trackId } : {}),
       title: priced.title,
-      artistName: share.ownerName || 'Bar4Bar artist',
+      artistName: share.ownerName || 'AKAsheet artist',
       ownerId: share.ownerId,
       scope: share.type === 'album' && !trackId ? 'album' : 'track',
       price: priced.price,

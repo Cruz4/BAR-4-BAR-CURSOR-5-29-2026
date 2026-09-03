@@ -15,12 +15,12 @@ export async function generateMetadata({ params, searchParams }: SongPageProps):
   const { shareId } = await params;
   const { trackId } = await searchParams;
   const song = await getPressedSongSummary(await getDb(), shareId, undefined, trackId);
-  if (!song) return { title: 'Music Release | Bar4Bar' };
+  if (!song) return { title: 'Music Release | AKAsheet' };
   const categories = [...song.metadata.genreStyles, ...song.metadata.moods];
-  const description = `Listen to ${song.title} by ${song.artist.name} on Bar4Bar${categories.length ? ` · ${categories.join(' · ')}` : ''}.`;
+  const description = `Listen to ${song.title} by ${song.artist.name} on AKAsheet${categories.length ? ` · ${categories.join(' · ')}` : ''}.`;
   const url = `${getPublicAppUrl()}/song/${encodeURIComponent(shareId)}${trackId ? `?trackId=${encodeURIComponent(trackId)}` : ''}`;
   return {
-    title: `${song.title} by ${song.artist.name} | Bar4Bar`,
+    title: `${song.title} by ${song.artist.name} | AKAsheet`,
     description,
     ...(categories.length ? { keywords: categories } : {}),
     alternates: { canonical: url },

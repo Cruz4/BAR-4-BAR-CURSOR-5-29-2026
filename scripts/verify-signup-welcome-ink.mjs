@@ -16,7 +16,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SIGNUP_INK = 250;
 const PREVIEW_HOURS = 48;
-const INIT_URL = process.env.WELCOME_INK_INIT_URL?.trim() || 'https://bar4bar.ink/api/usage/init';
+const INIT_URL = process.env.WELCOME_INK_INIT_URL?.trim() || 'https://akasheet.com/api/usage/init';
 
 function loadEnvFile(path) {
   if (!existsSync(path)) return;
@@ -258,7 +258,7 @@ async function deleteProbe(auth, db, uid, email) {
 
 async function probeGrant(auth, db, apiKey, { emailVerified }) {
   const stamp = Date.now();
-  const email = `inkprobe.${stamp}.${randomBytes(3).toString('hex')}@bar4bar.ink`;
+  const email = `inkprobe.${stamp}.${randomBytes(3).toString('hex')}@akasheet.com`;
   const password = `Tmp!${randomBytes(12).toString('hex')}`;
   const user = await auth.createUser({
     email,

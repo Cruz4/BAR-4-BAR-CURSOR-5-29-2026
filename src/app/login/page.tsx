@@ -360,7 +360,7 @@ function LoginForm() {
           toast({
             title: 'Account created',
             description:
-              'Check your inbox for a verification email from noreply@bar4bar.ink — and check junk/spam if you don\'t see it.',
+              'Check your inbox for a verification email from noreply@akasheet.com — and check junk/spam if you don\'t see it.',
           });
         } catch {
           toast({
@@ -494,8 +494,8 @@ function LoginForm() {
                         className="pointer-events-none absolute inset-0 rounded-3xl bg-primary/25 blur-2xl scale-110"
                         aria-hidden
                       />
-                      <div className="relative w-[7.5rem] h-[7.5rem] sm:w-36 sm:h-36 bg-white rounded-3xl flex items-center justify-center p-4 sm:p-5 shadow-[0_0_48px_rgba(59,130,246,0.35)] border border-primary/20 ring-1 ring-white/10">
-                        <Image src="/Logo.png" alt="Bar 4 Bar logo" width={144} height={144} className="w-full h-full object-contain" priority />
+                      <div className="relative w-[7.5rem] h-[7.5rem] sm:w-36 sm:h-36 overflow-hidden rounded-3xl border border-primary/20 bg-black p-0.5 shadow-[0_0_48px_rgba(59,130,246,0.35)] ring-1 ring-white/10">
+                        <Image src="/Logo.png" alt="AKAsheet logo" width={144} height={144} className="h-full w-full object-contain" priority />
                       </div>
                     </div>
                     <div className="space-y-2.5 max-w-[16rem]">

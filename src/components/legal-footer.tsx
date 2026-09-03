@@ -19,7 +19,7 @@ export function LegalFooter({ className = '' }: { className?: string }) {
       <Link href="/cookies" className="hover:text-primary transition-colors">
         Cookie Policy
       </Link>
-      <span className="opacity-50">Bar 4 Bar Studio © 2026</span>
+      <span className="opacity-50">AKAsheet © 2026</span>
     </nav>
   );
 }

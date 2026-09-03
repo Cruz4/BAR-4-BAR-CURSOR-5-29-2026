@@ -83,7 +83,7 @@ export function ChallengeRow({ challenge, summary, isPro = false, comfortable = 
           `🎯 ${SCALE_LABELS[challenge.scale]} goal complete: ${challenge.label}`,
           challenge.description.trim(),
           challenge.tier !== 'standard' ? TIER_LABELS[challenge.tier] : '',
-          '#bar4bar.ink',
+          '#akasheet',
         ]
           .filter(Boolean)
           .join('\n'),

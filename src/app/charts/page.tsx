@@ -242,7 +242,7 @@ export default function ChartsPage() {
               <TrendingUp className="h-6 w-6 text-cyan-300" />
             </span>
             <div>
-              <h1 className="font-headline text-3xl font-bold uppercase tracking-tight sm:text-4xl">Bar 4 Bar Charts</h1>
+              <h1 className="font-headline text-3xl font-bold uppercase tracking-tight sm:text-4xl">AKAsheet Charts</h1>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
                 Songs, creators, and Music Fans rising through verified attention and real discovery impact.
               </p>

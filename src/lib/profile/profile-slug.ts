@@ -1,5 +1,5 @@
 /**
- * Artist Home vanity slugs — bar4bar.ink/{slug}
+ * Artist Home vanity slugs — akasheet.com/{slug}
  * Prefer clean name links; spaces become `_`; only suffix on collision.
  * /profile/{slug} 308s to /{slug}. App routes stay reserved.
  */
@@ -64,6 +64,7 @@ export const APP_ROOT_SEGMENTS = new Set([
   'neomaiya',
   'jordie',
   'bar4bar',
+  'akasheet',
   'null',
   'undefined',
 ]);
@@ -80,6 +81,9 @@ export const RESERVED_PROFILE_SLUGS = new Set([
   'jordie_cruz',
   'bar-4-bar',
   'bar_4_bar',
+  'aka-sheet',
+  'aka_sheet',
+  'akasheet',
   'studio_progress',
 ]);
 
@@ -200,7 +204,7 @@ export function sanitizeProfileSlugParam(raw: string): { slug: string; hash?: st
   return { slug: q >= 0 ? s.slice(0, q) : s };
 }
 
-/** Artist Home path — bar4bar.ink/{slug}. */
+/** Artist Home path — akasheet.com/{slug}. */
 export function profileHref(slug?: string | null, hash?: string): string | undefined {
   const raw = (slug || '').trim();
   if (!raw) return undefined;

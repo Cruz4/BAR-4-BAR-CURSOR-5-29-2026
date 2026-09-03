@@ -26,7 +26,7 @@ Toggle those under Settings → **Verse still open + streak at midnight** and **
 
 Same `CRON_SECRET` as metrics. Evening run is best (artists still have hours left in the day):
 
-1. Cloud Scheduler → `https://bar4bar.ink/api/cron/craft-reminders`
+1. Cloud Scheduler → `https://akasheet.com/api/cron/craft-reminders`
 2. Header: `Authorization: Bearer YOUR_CRON_SECRET`
 
 Writes Activity inbox even without push. Skips anyone who already wrote today, and at most once per day per ping type.
@@ -45,8 +45,8 @@ Permission was granted, but Chrome’s push service refused the subscription. Co
 
 **Fix:**
 
-1. `chrome://settings/content/notifications` → remove bar4bar.ink if listed as blocked
-2. Site settings for bar4bar.ink → **Clear data**
+1. `chrome://settings/content/notifications` → remove akasheet.com if listed as blocked
+2. Site settings for akasheet.com → **Clear data**
 3. Hard reload, open Settings → turn Push **on once** and leave it
 4. If it still fails: try **Edge**, **Firefox**, or a **fresh Chrome profile**
 

@@ -472,7 +472,7 @@ export const VAULT_PAGE_TOUR_STEPS: LyricsTourStep[] = [
     mobileCardPlacement: 'bottom',
     title: 'Artist Home & Activity',
     body: 'These two buttons are on the right on a wide screen (under the vault header on phone). Artist Home turns your public page on or off and opens Edit Public Page. Activity is your inbox — loves, replies, and friend requests. A green badge means something new.',
-    example: 'Tap Artist Home for visibility and your bar4bar.ink link. Activity opens the inbox.',
+    example: 'Tap Artist Home for visibility and your akasheet.com link. Activity opens the inbox.',
   },
   {
     id: 'vault-search',

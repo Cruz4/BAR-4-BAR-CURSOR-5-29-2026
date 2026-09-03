@@ -42,7 +42,7 @@ console.log('STRIPE_WEBHOOK_SECRET_TEST (sandbox):', test ? prefix(test) : 'not 
 
 if (!live && !test) {
   console.error('\nNo webhook secrets. Add at least one:');
-  console.error('  STRIPE_WEBHOOK_SECRET_TEST=whsec_…  # Bar 4 Bar sandbox → b4b-b4b → Reveal');
+  console.error('  STRIPE_WEBHOOK_SECRET_TEST=whsec_…  # AKAsheet sandbox → b4b-b4b → Reveal');
   console.error('  STRIPE_WEBHOOK_SECRET=whsec_…       # Live endpoint when you go live');
   process.exit(1);
 }

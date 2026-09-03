@@ -10,7 +10,7 @@
 
 ## 1. What this is (one paragraph)
 
-LOCK is Bar 4 Bar’s **unfinished-bar dare**: someone starts a seed bar (optionally with DNA vibe + embed), anyone can write the next bar **without an account**, get an instant **LOCK score stamp** + share card, then feel pressure to **name the echo** (signup) so they get credit, Activity, and a path into **The Scene / Bloodline / Studio / Artist Home**. It is **not** music generation and **does not store audio** (embed URLs only).
+LOCK is AKAsheet’s **unfinished-bar dare**: someone starts a seed bar (optionally with DNA vibe + embed), anyone can write the next bar **without an account**, get an instant **LOCK score stamp** + share card, then feel pressure to **name the echo** (signup) so they get credit, Activity, and a path into **The Scene / Bloodline / Studio / Artist Home**. It is **not** music generation and **does not store audio** (embed URLs only).
 
 Think of it as the Auto-Tune analogy: the *tool effect* (LOCK score) becomes a **cultural stamp** people want on their name — not “try our blank SaaS sheet.”
 
@@ -109,7 +109,7 @@ Ops detail for guest doors: [GUEST_TRY_SHEET.md](./GUEST_TRY_SHEET.md).
 1. **Submit** = display license only (no ownership)
 2. **Artist Pick** = credit
 3. **Clear for release** = optional split/credit offer (accept/decline)
-4. **No music gen** · **no audio stored** on Bar 4 Bar — embeds are external links only
+4. **No music gen** · **no audio stored** on AKAsheet — embeds are external links only
 
 ---
 

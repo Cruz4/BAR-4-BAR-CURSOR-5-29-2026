@@ -159,7 +159,7 @@ export function Header() {
                     size="icon"
                     onClick={() => router.push(backHref)} 
                     className="h-9 w-9 shrink-0 text-muted-foreground hover:text-primary transition-all hover:bg-primary/5 md:hidden"
-                    aria-label={isGuestTry ? 'About Bar 4 Bar' : 'Back to album'}
+                    aria-label={isGuestTry ? 'About AKAsheet' : 'Back to album'}
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </Button>

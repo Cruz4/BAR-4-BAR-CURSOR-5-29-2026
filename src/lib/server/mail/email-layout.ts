@@ -1,4 +1,4 @@
-/** Shared HTML shell for Bar 4 Bar transactional emails. */
+/** Shared HTML shell for AKAsheet transactional emails. */
 
 import { getPublicAppUrl } from '@/lib/app-url';
 import { SUPPORT_EMAIL } from '@/lib/support';
@@ -37,9 +37,9 @@ export function wrapStudioEmail(opts: {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#121218;border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden">
           <tr>
             <td style="padding:28px 28px 12px;border-bottom:1px solid rgba(255,255,255,0.06)">
-              <img src="${escapeHtml(logoSrc)}" width="56" height="56" alt="Bar 4 Bar"
-                   style="display:block;width:56px;height:56px;border-radius:14px;background:#ffffff;padding:6px;margin:0 0 14px" />
-              <p style="margin:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.35em;text-transform:uppercase;color:#93c5fd">Bar 4 Bar</p>
+              <img src="${escapeHtml(logoSrc)}" width="56" height="56" alt="AKAsheet"
+                   style="display:block;width:56px;height:56px;border-radius:14px;background:#000000;padding:2px;margin:0 0 14px" />
+              <p style="margin:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.35em;text-transform:uppercase;color:#93c5fd">AKAsheet</p>
               <h1 style="margin:10px 0 0;font-size:26px;line-height:1.2;font-weight:700;color:#fff">${escapeHtml(opts.title)}</h1>
             </td>
           </tr>
@@ -52,7 +52,7 @@ export function wrapStudioEmail(opts: {
           <tr>
             <td style="padding:8px 28px 28px">
               <p style="margin:0 0 8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;color:#6b6b76">
-                ${escapeHtml(opts.footerNote || 'You’re getting this because of activity on your Bar 4 Bar studio account.')}
+                ${escapeHtml(opts.footerNote || 'You’re getting this because of activity on your AKAsheet studio account.')}
               </p>
               <p style="margin:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;color:#6b6b76">
                 This mailbox isn’t monitored. Questions? Email
@@ -74,7 +74,7 @@ export function wrapStudioEmail(opts: {
     stripTags(opts.bodyHtml),
     opts.ctaLabel && opts.ctaUrl ? `\n${opts.ctaLabel}: ${opts.ctaUrl}` : '',
     '',
-    opts.footerNote || 'You’re getting this because of activity on your Bar 4 Bar studio account.',
+    opts.footerNote || 'You’re getting this because of activity on your AKAsheet studio account.',
     `This mailbox isn’t monitored. Questions? Email ${SUPPORT_EMAIL} — or just reply and it’ll reach us.`,
   ]
     .filter(Boolean)

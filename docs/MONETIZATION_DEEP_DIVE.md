@@ -1,4 +1,4 @@
-# Bar 4 Bar — Ink economy (current)
+# AKAsheet — Ink economy (current)
 
 > **Source of truth:** `src/lib/costs.ts`, `src/lib/subscription.ts`, `src/lib/stripe-catalog.ts`, `src/lib/studio-tiers.ts`  
 > **Payments:** [STRIPE_SETUP.md](./STRIPE_SETUP.md)
@@ -46,4 +46,4 @@ Gemini Flash API cost per action is fractions of a cent (`src/lib/billing.ts`). 
 
 ## Competitor positioning
 
-Bar 4 Bar is a **lyric workstation** (rhyme book, DNA vault, remix strains)—not Suno/Udio-style full-song generation. Ink funds structured writing tools, not audio renders.
+AKAsheet is a **lyric workstation** (rhyme book, DNA vault, remix strains)—not Suno/Udio-style full-song generation. Ink funds structured writing tools, not audio renders.

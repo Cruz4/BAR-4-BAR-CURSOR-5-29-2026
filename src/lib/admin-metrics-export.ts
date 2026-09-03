@@ -22,7 +22,7 @@ export function formatAdminMetricsMarkdown(metrics: AdminMetricsResponse): strin
   const gam = metrics.gamification;
 
   const parts: string[] = [
-    `# Bar 4 Bar — Growth Metrics Export`,
+    `# AKAsheet — Growth Metrics Export`,
     ``,
     `Generated for AI analysis. Prefer this Markdown when asking for funnel, acquisition, retention, or monetization insights.`,
     ``,

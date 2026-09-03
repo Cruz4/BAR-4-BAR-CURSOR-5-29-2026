@@ -14,7 +14,7 @@ export function AiDisclaimer({ compact = false }: { compact?: boolean }) {
       <AlertTriangle className="h-4 w-4 text-pink-500 shrink-0 mt-0.5" />
       <p className="text-[10px] text-muted-foreground leading-relaxed font-code">
         <strong className="text-pink-400 uppercase tracking-wider">AI Co-Writer Notice:</strong>{' '}
-        Generated lyrics are suggestions only and may contain errors or unintended content. You retain responsibility for reviewing, editing, and ensuring you have rights to use any source material. AI output may not be copyrightable under current law. Bar 4 Bar does not provide legal advice.
+        Generated lyrics are suggestions only and may contain errors or unintended content. You retain responsibility for reviewing, editing, and ensuring you have rights to use any source material. AI output may not be copyrightable under current law. AKAsheet does not provide legal advice.
       </p>
     </div>
   );

@@ -36,7 +36,7 @@ export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 export type ActivityDirection = 'received' | 'given';
 
 export const SYSTEM_ACTOR_ID = 'system';
-export const SYSTEM_ACTOR_NAME = 'Bar 4 Bar';
+export const SYSTEM_ACTOR_NAME = 'AKAsheet';
 
 /** Client emit API must not mint these — cron / Admin SDK only. */
 export const SERVER_ONLY_ACTIVITY_TYPES: readonly ActivityType[] = [
@@ -199,7 +199,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
   return direction === 'received' ? received[type] : given[type];
 }
 
-/** Craft pings are full sentences — no “Bar 4 Bar echoed…” actor prefix. */
+/** Craft pings are full sentences — no “AKAsheet echoed…” actor prefix. */
 export function activityShowsActor(type: ActivityType): boolean {
   return !isCraftActivityType(type) && type !== 'house_release';
 }
@@ -238,18 +238,18 @@ export function pushCopyForActivity(
       };
     case 'friend_request':
       return {
-        title: 'Bar 4 Bar',
+        title: 'AKAsheet',
         body: `${actorName} sent you a friend request`,
       };
     case 'friend_accepted':
       return {
-        title: 'Bar 4 Bar',
+        title: 'AKAsheet',
         body: `${actorName} accepted your friend request`,
       };
     case 'profile_followed':
       return {
         title: 'New follower',
-        body: `${actorName} followed your Bar 4 Bar profile`,
+        body: `${actorName} followed your AKAsheet profile`,
       };
     case 'inner_circle_joined':
       return {
@@ -258,12 +258,12 @@ export function pushCopyForActivity(
       };
     case 'contact_request':
       return {
-        title: 'Bar 4 Bar',
+        title: 'AKAsheet',
         body: `${actorName} asked to see your contact`,
       };
     case 'contact_accepted':
       return {
-        title: 'Bar 4 Bar',
+        title: 'AKAsheet',
         body: snippet || `${actorName} shared their contact with you`,
       };
     case 'fold_pass':
@@ -288,17 +288,17 @@ export function pushCopyForActivity(
       };
     case 'post_love':
       return {
-        title: 'Bar 4 Bar',
+        title: 'AKAsheet',
         body: `${actorName} loved your post`,
       };
     case 'post_reply':
       return {
-        title: 'Bar 4 Bar',
+        title: 'AKAsheet',
         body: `${actorName} replied to your post`,
       };
     case 'post_reverb':
       return {
-        title: 'Bar 4 Bar',
+        title: 'AKAsheet',
         body: `${actorName} Reverbed your post`,
       };
     case 'mention':
@@ -308,17 +308,17 @@ export function pushCopyForActivity(
       };
     case 'dna_import':
       return {
-        title: 'Bar 4 Bar',
+        title: 'AKAsheet',
         body: `${actorName} imported your DNA Drop`,
       };
     case 'drop_loved':
       return {
-        title: 'Bar 4 Bar',
+        title: 'AKAsheet',
         body: `${actorName} loved your release`,
       };
     case 'drop_reply':
       return {
-        title: 'Bar 4 Bar',
+        title: 'AKAsheet',
         body: snippet || `${actorName} replied on your release`,
       };
     case 'drop_unlocked':
@@ -342,7 +342,7 @@ export function pushCopyForActivity(
         body: snippet || 'Your work reached another 20 verified Loves.',
       };
     default:
-      return { title: 'Bar 4 Bar', body: snippet || 'New activity' };
+      return { title: 'AKAsheet', body: snippet || 'New activity' };
   }
 }
 

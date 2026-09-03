@@ -75,10 +75,10 @@ function CaptureHeader() {
   return (
     <div className="h-14 border-b border-white/10 bg-black/50 flex items-center justify-between px-5 shrink-0">
       <div className="flex items-center gap-3">
-        <div className="bg-white p-1.5 rounded-lg">
+        <div className="overflow-hidden rounded-lg border border-primary/20 bg-black p-0.5">
           <Image src="/Logo.png" alt="" width={28} height={28} className="h-7 w-7" />
         </div>
-        <span className="font-headline font-bold text-base uppercase tracking-widest">Bar 4 Bar</span>
+        <span className="font-headline font-bold text-base uppercase tracking-widest">AKAsheet</span>
       </div>
       <Badge className="bg-primary/20 text-primary border-primary/30 text-xs uppercase px-3">Studio Pro</Badge>
     </div>

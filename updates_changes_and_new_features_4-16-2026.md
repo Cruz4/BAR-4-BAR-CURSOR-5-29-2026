@@ -1,4 +1,4 @@
-# Bar 4 Bar: Professional Workstation Update (4-16-2026)
+# AKAsheet: Professional Workstation Update (4-16-2026)
 
 ## 1. The Neural Ambient Engine (Studio Pro)
 We have introduced a revolutionary **Generative Ambient Engine** that replaces static background loops.

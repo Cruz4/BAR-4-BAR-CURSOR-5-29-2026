@@ -121,7 +121,7 @@ export async function POST(req: Request) {
       const artistName =
         (typeof share.ownerName === 'string' && share.ownerName.trim()) ||
         (typeof artist.displayName === 'string' && artist.displayName.trim()) ||
-        'Bar4Bar artist';
+        'AKAsheet artist';
       orderItems.push({
         key,
         shareId,
@@ -165,7 +165,7 @@ export async function POST(req: Request) {
           unit_amount: item.amountCents,
           product_data: {
             name: item.title,
-            description: `${item.artistName} · Bar4Bar ${item.scope === 'album' ? 'album' : 'song'} stream`,
+            description: `${item.artistName} · AKAsheet ${item.scope === 'album' ? 'album' : 'song'} stream`,
           },
         },
       })),
@@ -191,7 +191,7 @@ export async function POST(req: Request) {
       consent_collection: { terms_of_service: 'required' },
       custom_text: {
         terms_of_service_acceptance: {
-          message: `I agree to the [Terms of Service](${getPublicAppUrl()}/terms) of Bar 4 Bar Studio.`,
+          message: `I agree to the [Terms of Service](${getPublicAppUrl()}/terms) of AKAsheet.`,
         },
       },
       customer_creation: 'always',

@@ -1,5 +1,5 @@
 
-# Bar 4 Bar: Quick Payment Checklist
+# AKAsheet: Quick Payment Checklist
 
 > **Use the full tracked checklist:** [PRE_LAUNCH_CHECKLIST.md](./PRE_LAUNCH_CHECKLIST.md)  
 > **Post-launch marketing:** [MARKETING_QUICKSTART.md](./MARKETING_QUICKSTART.md)  
@@ -13,7 +13,7 @@ Follow this checklist to get the Studio economy running.
 3. [ ] Set all 5 **Price IDs** as `STRIPE_PRICE_*` environment variables. The server maps and validates them in `src/lib/stripe-catalog.ts`.
 
 ## 2. Webhook Setup
-1. [ ] Create webhook pointing to: `https://bar4bar.ink/api/stripe/webhook`
+1. [ ] Create webhook pointing to: `https://akasheet.com/api/stripe/webhook`
 2. [ ] Listen for: `checkout.session.completed`.
 3. [ ] Copy the `whsec_...` **Signing Secret**.
 

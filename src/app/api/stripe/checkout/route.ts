@@ -122,7 +122,7 @@ export async function POST(req: Request) {
       },
       custom_text: {
         terms_of_service_acceptance: {
-          message: `I agree to the [Terms of Service](${getPublicAppUrl()}/terms) and [Privacy Policy](${getPublicAppUrl()}/privacy) of Bar 4 Bar Studio.`,
+          message: `I agree to the [Terms of Service](${getPublicAppUrl()}/terms) and [Privacy Policy](${getPublicAppUrl()}/privacy) of AKAsheet.`,
         },
       },
     };

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * production:gate — Pass / Warning / Blocked readiness report for Bar 4 Bar.
+ * production:gate — Pass / Warning / Blocked readiness report for AKAsheet.
  * Runs local verify scripts + static checks. Does not mutate production data.
  */
 

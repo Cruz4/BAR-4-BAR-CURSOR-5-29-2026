@@ -238,7 +238,7 @@ function SupportersPageLegacy() {
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `bar4bar-support-circle-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.download = `akasheet-support-circle-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -483,7 +483,7 @@ function SupportersPageLegacy() {
       </div>
 
       <div className="rounded-xl border border-white/10 bg-black/15 px-4 py-3 text-[10px] leading-relaxed text-muted-foreground">
-        <strong className="text-foreground">How to read this:</strong> qualified listening means at least 80% of the available preview or full stream. Current-circle rates use people who follow you now; Bar4Bar does not retain deleted follow relationships as historical profiles. Successful purchase totals are read retroactively from your existing release sale records. Detailed processing fees, artist net, Stripe status, and payouts remain private in Earnings.
+        <strong className="text-foreground">How to read this:</strong> qualified listening means at least 80% of the available preview or full stream. Current-circle rates use people who follow you now; AKAsheet does not retain deleted follow relationships as historical profiles. Successful purchase totals are read retroactively from your existing release sale records. Detailed processing fees, artist net, Stripe status, and payouts remain private in Earnings.
       </div>
     </div>
   );

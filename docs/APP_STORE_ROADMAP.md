@@ -1,8 +1,8 @@
 # App Store & Google Play roadmap
 
-**Product:** Bar 4 Bar Studio  
+**Product:** AKAsheet  
 **Bundle ID:** `studio.bar4bar.app` ([capacitor.config.ts](../capacitor.config.ts))  
-**Hosted app:** https://bar4bar.ink  
+**Hosted app:** https://akasheet.com  
 
 **Marketing first:** Use PWA + web ads until signups convert reliably. See [MARKETING_QUICKSTART.md](./MARKETING_QUICKSTART.md).
 
@@ -24,15 +24,15 @@
 
 - [ ] [Google Play Console](https://play.google.com/console) account ($25 one-time)
 - [ ] Android Studio installed
-- [ ] Privacy policy URL: `https://bar4bar.ink/privacy`
-- [ ] Terms URL: `https://bar4bar.ink/terms`
+- [ ] Privacy policy URL: `https://akasheet.com/privacy`
+- [ ] Terms URL: `https://akasheet.com/terms`
 - [ ] Account deletion: users cancel/delete via **Usage → Settings** and support email in privacy policy
 
 ### Build
 
 ```bash
 npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/ios @capacitor/network @capacitor/splash-screen @capacitor/status-bar
-set CAPACITOR_SERVER_URL=https://bar4bar.ink
+set CAPACITOR_SERVER_URL=https://akasheet.com
 npx cap sync
 npx cap open android
 ```
@@ -42,7 +42,7 @@ npx cap open android
 
 ### Play Console listing
 
-- [ ] App name: **Bar 4 Bar Studio**
+- [ ] App name: **AKAsheet**
 - [ ] Short + full description (use positioning from [90-DAY-WEB-REVENUE-PLAN.md](./90-DAY-WEB-REVENUE-PLAN.md))
 - [ ] **5–8 screenshots** (phone frames from real device — reuse TikTok screen recordings)
 - [ ] Feature graphic (1024×500)
@@ -77,7 +77,7 @@ npx cap open android
 ### Build
 
 ```bash
-set CAPACITOR_SERVER_URL=https://bar4bar.ink
+set CAPACITOR_SERVER_URL=https://akasheet.com
 npx cap sync
 npx cap open ios
 ```

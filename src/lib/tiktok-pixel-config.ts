@@ -1,4 +1,4 @@
-/** Bar 4 Bar TikTok Ads pixel ("Pixel Bar"); override via NEXT_PUBLIC_TIKTOK_PIXEL_ID. */
+/** AKAsheet TikTok Ads pixel ("Pixel Bar"); override via NEXT_PUBLIC_TIKTOK_PIXEL_ID. */
 export const DEFAULT_TIKTOK_PIXEL_ID = 'D8VJK5RC77UB3EFMQG80';
 
 /** Matches `CookieConsent` localStorage key — do not rename without updating both. */

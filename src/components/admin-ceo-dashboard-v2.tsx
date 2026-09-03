@@ -287,7 +287,7 @@ export function AdminCeoDashboardV2() {
             CEO command deck · V2
           </p>
           <h2 className="mt-1 font-headline text-3xl font-bold uppercase tracking-tight text-white sm:text-4xl">
-            Bar4Bar Pulse
+            AKAsheet Pulse
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Dense funnel view for activation, retention, referral, and commerce. Placeholders stay honest until Phase 0

@@ -16,15 +16,10 @@ import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { initClientAppCheck } from '@/lib/firebase/client/app-check';
 
 /**
- * Production uses bar4bar.ink as authDomain (custom domain).
- * Local/dev must use *.firebaseapp.com — otherwise Google redirect/popup
- * lands on https://bar4bar.ink/__/auth/handler and never returns to localhost
- * (blank white page in Cursor/Simple Browser).
+ * Google “continue to …” uses this host. Stay on bar4bar.ink until
+ * akasheet.com is purchased and Connected in Firebase Hosting.
  */
-const DEFAULT_AUTH_DOMAIN =
-  process.env.NODE_ENV === 'development'
-    ? 'lyricai-studio-otgxn.firebaseapp.com'
-    : 'bar4bar.ink';
+const DEFAULT_AUTH_DOMAIN = 'bar4bar.ink';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAJX5uEhA_8SFvXGEnboud6i3VETJcfWVg',

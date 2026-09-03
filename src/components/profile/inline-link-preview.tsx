@@ -83,7 +83,7 @@ function GenericLinkCard({
   const nav = toNavigableHref(href);
   let host = '';
   try {
-    host = href.startsWith('/') ? 'bar4bar.ink' : new URL(href).hostname.replace(/^www\./, '');
+    host = href.startsWith('/') ? 'akasheet.com' : new URL(href).hostname.replace(/^www\./, '');
   } catch {
     host = 'link';
   }
@@ -105,7 +105,7 @@ function GenericLinkCard({
   );
 }
 
-function Bar4BarPostPreview({
+function AKAsheetPostPreview({
   postId,
   href,
   compact,
@@ -135,7 +135,7 @@ function Bar4BarPostPreview({
     <PreviewShell href={href} interactive={interactive} className={cn(!compact && 'items-start')}>
       <span className="min-w-0 flex-1">
         <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--ph-muted,rgba(255,255,255,0.55))]">
-          Bar 4 Bar post
+          AKAsheet post
         </span>
         <span className="mt-1 block text-sm font-semibold text-[var(--ph-text,#fff)]">
           {post?.ownerName || 'Open this post'}
@@ -155,7 +155,7 @@ function Bar4BarPostPreview({
   );
 }
 
-function Bar4BarProfilePreview({
+function AKAsheetProfilePreview({
   slug,
   href,
   interactive,
@@ -191,7 +191,7 @@ function Bar4BarProfilePreview({
         </span>
         <span className="block truncate text-sm font-semibold text-[var(--ph-text,#fff)]">{name}</span>
         <span className="block truncate text-xs text-[var(--ph-muted,rgba(255,255,255,0.6))]">
-          bar4bar.ink/{slug}
+          akasheet.com/{slug}
         </span>
       </span>
       <Radio className="h-4 w-4 shrink-0 text-[var(--ph-accent,#7dd3fc)]" />
@@ -228,7 +228,7 @@ export function InlineLinkPreview({
   }
   if (target?.kind === 'post') {
     return (
-      <Bar4BarPostPreview
+      <AKAsheetPostPreview
         postId={target.postId}
         href={target.href}
         compact={compact}
@@ -237,14 +237,14 @@ export function InlineLinkPreview({
     );
   }
   if (target?.kind === 'profile') {
-    return <Bar4BarProfilePreview slug={target.slug} href={target.href} interactive={interactive} />;
+    return <AKAsheetProfilePreview slug={target.slug} href={target.href} interactive={interactive} />;
   }
   if (target?.kind === 'internal') {
     return (
       <GenericLinkCard
         href={target.href}
-        eyebrow="Bar 4 Bar"
-        label={target.href === '/' ? 'bar4bar.ink' : target.href}
+        eyebrow="AKAsheet"
+        label={target.href === '/' ? 'akasheet.com' : target.href}
         interactive={interactive}
       />
     );

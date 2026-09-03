@@ -409,7 +409,7 @@ function GuestPressingLandingInner() {
               Your Public Music Home
             </p>
             <DialogTitle className="font-headline text-2xl font-bold tracking-tight">
-              This would be your Bar 4 Bar profile.
+              This would be your AKAsheet profile.
             </DialogTitle>
             <DialogDescription className="text-sm leading-relaxed text-zinc-400">
               Everything behind this tip is a live preview of your public page—Wall, friends,
@@ -479,7 +479,7 @@ function GuestPressingLandingInner() {
         </nav>
 
         <BrandLockup
-          variant="marketing"
+          variant="app"
           titleTag="h1"
           className="justify-center max-w-[min(100%,11.5rem)] sm:max-w-none"
         />
@@ -518,7 +518,7 @@ function GuestPressingLandingInner() {
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <p className="min-w-0 flex-1 text-[11px] leading-snug text-zinc-200 sm:text-xs">
             <span className="font-bold text-primary">Live preview</span>
-            <span className="text-zinc-400"> — this is your free Bar 4 Bar profile page.</span>
+            <span className="text-zinc-400"> — this is your free AKAsheet profile page.</span>
             {' '}
             <span className="hidden text-zinc-300 sm:inline">
               Try The Pressing at the bottom to customize the skin.
@@ -564,7 +564,7 @@ function GuestPressingLandingInner() {
           playgroundGuestbook={playgroundGuestbook}
           playgroundBarOfWeek={playgroundBarOfWeek}
           studioHomeHref="/welcome"
-          studioHomeLabel="About Bar 4 Bar"
+          studioHomeLabel="About AKAsheet"
         />
       </div>
 
@@ -772,7 +772,7 @@ function GuestPressingLandingInner() {
                 value={draft.seedText}
                 onChange={(e) => update({ seedText: e.target.value.slice(0, 280) })}
                 rows={2}
-                placeholder="Type something here & watch your page change."
+                placeholder="Change this text to watch your page change....."
                 aria-label="The Pressing — skins this page"
                 className={cn(
                   'resize-none border-white/15 bg-black/50 text-sm leading-snug transition-shadow',

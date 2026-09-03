@@ -5,7 +5,7 @@ import { pageMetadata } from '@/lib/seo';
 
 export const metadata = pageMetadata({
   title: 'Cookie Policy',
-  description: 'How Bar 4 Bar Studio uses cookies and local storage.',
+  description: 'How AKAsheet uses cookies and local storage.',
   path: '/cookies',
 });
 
@@ -20,7 +20,7 @@ export default function CookiesPage() {
         </header>
 
         <article className="space-y-6 text-muted-foreground leading-relaxed text-sm font-code">
-          <p>Bar 4 Bar Studio uses cookies and browser storage to operate the app, remember preferences, and (where enabled) measure marketing and show ads on public pages. See also our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.</p>
+          <p>AKAsheet uses cookies and browser storage to operate the app, remember preferences, and (where enabled) measure marketing and show ads on public pages. See also our <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.</p>
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">Essential Storage</h2>

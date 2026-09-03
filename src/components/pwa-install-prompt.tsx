@@ -30,7 +30,7 @@ function InstallSteps({ platform }: { platform: MobileInstallPlatform }) {
           On your <strong className="text-foreground">iPhone</strong>, open <strong className="text-foreground">Safari</strong> — not Chrome, Instagram, or TikTok (install only works in Safari).
         </li>
         <li>
-          Go to <strong className="text-foreground">bar4bar.ink</strong> and sign in to your studio.
+          Go to <strong className="text-foreground">akasheet.com</strong> and sign in to your studio.
         </li>
         <li>
           Tap <Share className="inline h-3.5 w-3.5 align-[-2px] text-primary" aria-hidden />{' '}
@@ -40,7 +40,7 @@ function InstallSteps({ platform }: { platform: MobileInstallPlatform }) {
           Scroll the share sheet and tap <strong className="text-foreground">Add to Home Screen</strong> (you may need to tap <strong className="text-foreground">More</strong> first).
         </li>
         <li>
-          Tap <strong className="text-foreground">Add</strong> in the top right — launch Bar 4 Bar from your home screen icon for full-screen studio mode.
+          Tap <strong className="text-foreground">Add</strong> in the top right — launch AKAsheet from your home screen icon for full-screen studio mode.
         </li>
       </ol>
     );
@@ -52,7 +52,7 @@ function InstallSteps({ platform }: { platform: MobileInstallPlatform }) {
         On your <strong className="text-foreground">Android phone</strong>, open <strong className="text-foreground">Chrome</strong> (Samsung Internet works too).
       </li>
       <li>
-        Go to <strong className="text-foreground">bar4bar.ink</strong> and sign in to your studio.
+        Go to <strong className="text-foreground">akasheet.com</strong> and sign in to your studio.
       </li>
       <li>
         If Chrome shows an <strong className="text-foreground">Install app</strong> banner at the bottom, tap it — or open the <strong className="text-foreground">⋮ menu</strong> (top right).
@@ -61,7 +61,7 @@ function InstallSteps({ platform }: { platform: MobileInstallPlatform }) {
         Choose <strong className="text-foreground">Install app</strong> or <strong className="text-foreground">Add to Home screen</strong>, then confirm.
       </li>
       <li>
-        Open Bar 4 Bar from your home screen or app drawer for the full-screen studio experience.
+        Open AKAsheet from your home screen or app drawer for the full-screen studio experience.
       </li>
     </ol>
   );
@@ -86,7 +86,7 @@ function DesktopInstallGuides() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground font-code leading-relaxed">
-        Install Bar 4 Bar on your phone for a full-screen studio — no App Store or Play Store download. Use your{' '}
+        Install AKAsheet on your phone for a full-screen studio — no App Store or Play Store download. Use your{' '}
         <strong className="text-foreground">actual phone</strong> (these steps do not work from a desktop browser).
       </p>
       <PlatformInstallGuide platform="ios" title="iPhone — Safari" />
@@ -117,7 +117,7 @@ export function PwaInstallGuideCard() {
             <Smartphone className="h-5 w-5" /> Installed on Home Screen
           </CardTitle>
           <CardDescription className="text-sm normal-case tracking-normal">
-            You&apos;re running Bar 4 Bar as an installed app. Open it from your home screen icon anytime.
+            You&apos;re running AKAsheet as an installed app. Open it from your home screen icon anytime.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -131,7 +131,7 @@ export function PwaInstallGuideCard() {
           <Smartphone className="h-5 w-5 text-primary" /> Add to Home Screen
         </CardTitle>
         <CardDescription className="text-sm normal-case tracking-normal">
-          Install Bar 4 Bar on your phone for a full-screen studio — no App Store download required.
+          Install AKAsheet on your phone for a full-screen studio — no App Store download required.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

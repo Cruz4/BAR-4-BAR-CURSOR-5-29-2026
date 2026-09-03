@@ -1,5 +1,5 @@
 
-# Bar 4 Bar Studio: Master Blueprint (The "4/20/2026 State")
+# AKAsheet: Master Blueprint (The "4/20/2026 State")
 
 This document serves as the absolute source of truth for the workstation's design, logic, and alignment. No updates shall deviate from these specifications. This state is permanently locked and serves as the master reference.
 

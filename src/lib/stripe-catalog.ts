@@ -1,5 +1,5 @@
 /**
- * Server-authoritative Stripe price catalog for Bar 4 Bar.
+ * Server-authoritative Stripe price catalog for AKAsheet.
  * Suno-calibrated ink economy. Override price IDs via env (see .env.example).
  */
 

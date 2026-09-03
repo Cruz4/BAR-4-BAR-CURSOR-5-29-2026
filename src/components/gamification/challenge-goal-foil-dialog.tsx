@@ -59,7 +59,7 @@ export function ChallengeGoalFoilDialog({
           `🎯 ${SCALE_LABELS[challenge.scale]} goal complete: ${challenge.label}`,
           challenge.description.trim(),
           challenge.tier !== 'standard' ? TIER_LABELS[challenge.tier] : '',
-          '#bar4bar.ink',
+          '#akasheet',
         ]
           .filter(Boolean)
           .join('\n'),
@@ -87,7 +87,7 @@ export function ChallengeGoalFoilDialog({
     if (!cardEl) return;
     setExporting(true);
     try {
-      await downloadDomNodePng(cardEl, `bar4bar-goal-${challenge.id}.png`);
+      await downloadDomNodePng(cardEl, `akasheet-goal-${challenge.id}.png`);
       toast({ title: 'Goal card downloaded' });
     } catch {
       toast({ variant: 'destructive', title: 'Download failed' });

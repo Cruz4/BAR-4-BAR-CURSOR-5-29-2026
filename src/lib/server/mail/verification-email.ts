@@ -14,7 +14,7 @@ export type SendVerificationEmailResult =
 
 /**
  * Build a Firebase email-verification link and deliver it via Resend
- * (Bar 4 Bar branded — not Firebase's *.firebaseapp.com noreply).
+ * (AKAsheet branded — not Firebase's *.firebaseapp.com noreply).
  */
 export async function sendBrandedVerificationEmail(opts: {
   auth: Auth;
@@ -70,7 +70,7 @@ export async function sendBrandedVerificationEmail(opts: {
   const name = opts.displayName?.trim() || null;
   const greet = name ? `Hey ${escapeHtml(name)},` : 'Hey,';
   const body = wrapStudioEmail({
-    preheader: 'Confirm your email to finish setting up Bar 4 Bar.',
+    preheader: 'Confirm your email to finish setting up AKAsheet.',
     title: 'Verify your email',
     bodyHtml: `
       <p style="margin:0 0 14px">${greet}</p>
@@ -79,12 +79,12 @@ export async function sendBrandedVerificationEmail(opts: {
     `,
     ctaLabel: 'Verify email',
     ctaUrl: link,
-    footerNote: 'If you didn’t create a Bar 4 Bar account, you can ignore this email.',
+    footerNote: 'If you didn’t create a AKAsheet account, you can ignore this email.',
   });
 
   const result = await sendStudioEmail({
     to: email,
-    subject: 'Verify your Bar 4 Bar email',
+    subject: 'Verify your AKAsheet email',
     html: body.html,
     text: `${body.text}\n\nVerify: ${link}`,
   });

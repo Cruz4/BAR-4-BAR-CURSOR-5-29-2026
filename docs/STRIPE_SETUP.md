@@ -1,4 +1,4 @@
-# Stripe go-live checklist (Bar 4 Bar)
+# Stripe go-live checklist (AKAsheet)
 
 **Full tracked pre-launch checklist (ads + live Stripe + QA):** [PRE_LAUNCH_CHECKLIST.md](./PRE_LAUNCH_CHECKLIST.md)  
 **Automated checks:** `npm run prelaunch:check`
@@ -31,7 +31,7 @@ Yearly Pro: **50% off** ink packs at checkout (`STRIPE_COUPON_YEARLY_INK_50` —
 
 ---
 
-**Custom domain:** [CUSTOM_DOMAIN.md](./CUSTOM_DOMAIN.md) (`https://bar4bar.ink`)
+**Custom domain:** [CUSTOM_DOMAIN.md](./CUSTOM_DOMAIN.md) (`https://akasheet.com`)
 
 ## Cloud Run runtime (SSR function)
 
@@ -61,7 +61,7 @@ stripe listen --forward-to localhost:9002/api/stripe/webhook
 
 ### Sandbox webhook (Test mode on production URL)
 
-If Stripe emails **400 signature** errors for your production domain (`bar4bar.ink` or legacy `.web.app`):
+If Stripe emails **400 signature** errors for your production domain (`akasheet.com` or legacy `.web.app`):
 
 1. Stripe Dashboard → **Test mode** on → **Developers → Webhooks** → endpoint **`b4b-b4b`** (URL `.../api/stripe/webhook`).
 2. **Reveal** signing secret → set in project root `.env`:
@@ -75,7 +75,7 @@ If Stripe emails **400 signature** errors for your production domain (`bar4bar.i
 
 The server tries **test secret first**, then live (`STRIPE_WEBHOOK_SECRET`). Test and live Dashboard endpoints each have a **different** `whsec_`.
 
-**Heartbeat:** `GET https://bar4bar.ink/api/stripe/webhook` returns `hasTestSecret`, `hasLiveSecret`, and `testPrefix` / `livePrefix` (first characters only) — match those to Dashboard **Reveal**.
+**Heartbeat:** `GET https://akasheet.com/api/stripe/webhook` returns `hasTestSecret`, `hasLiveSecret`, and `testPrefix` / `livePrefix` (first characters only) — match those to Dashboard **Reveal**.
 
 For Firestore fulfillment locally, add `FIREBASE_SERVICE_ACCOUNT_KEY` (JSON string) to `.env`. After checkout, the app credits Ink on return via `/api/stripe/fulfill-session` (no `stripe listen` required for ink packs). For subscription renewals in production, still configure the live webhook.
 
@@ -83,7 +83,7 @@ For Firestore fulfillment locally, add `FIREBASE_SERVICE_ACCOUNT_KEY` (JSON stri
 
 ## Go live (production)
 
-Follow these steps in order. Production site: `https://bar4bar.ink`.
+Follow these steps in order. Production site: `https://akasheet.com`.
 
 ### 1. Switch Stripe to Live mode
 
@@ -131,7 +131,7 @@ Never commit live keys. Set them only in production secrets (below).
 **Option A — Dashboard (recommended)**
 
 1. Stripe **Developers → Webhooks → Add endpoint**
-2. **URL:** `https://bar4bar.ink/api/stripe/webhook`
+2. **URL:** `https://akasheet.com/api/stripe/webhook`
 3. **Events:**
    - `checkout.session.completed`
    - `invoice.paid`
@@ -151,7 +151,7 @@ npm run stripe:create-live-webhook -- --create  # creates endpoint + updates STR
 
 Then copy `STRIPE_WEBHOOK_SECRET` into `.firebase/lyricai-studio-otgxn/functions/.env` and deploy.
 
-**Heartbeat check:** open `https://bar4bar.ink/api/stripe/webhook` — `ok: true` when at least one secret is set; compare `testPrefix` / `livePrefix` to Dashboard **Reveal**.
+**Heartbeat check:** open `https://akasheet.com/api/stripe/webhook` — `ok: true` when at least one secret is set; compare `testPrefix` / `livePrefix` to Dashboard **Reveal**.
 
 ### 5. Customer Portal (billing management)
 
@@ -166,7 +166,7 @@ STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_WEBHOOK_SECRET_TEST=whsec_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
-NEXT_PUBLIC_APP_URL=https://bar4bar.ink
+NEXT_PUBLIC_APP_URL=https://akasheet.com
 
 STRIPE_PRICE_PRO_MONTHLY=price_...
 STRIPE_PRICE_PRO_YEARLY=price_...

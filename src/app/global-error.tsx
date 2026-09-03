@@ -16,7 +16,7 @@ export default function GlobalError({
   return (
     <html lang="en">
       <head>
-        <title>Bar 4 Bar: Hardware Reset</title>
+        <title>AKAsheet: Hardware Reset</title>
       </head>
       <body style={{ 
         margin: 0, 
@@ -75,7 +75,7 @@ export default function GlobalError({
             Initialize Hard Reset
           </button>
           <p style={{ marginTop: '24px', fontSize: '10px', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>
-            Bar 4 Bar Studio &copy; 2026
+            AKAsheet &copy; 2026
           </p>
         </div>
       </body>

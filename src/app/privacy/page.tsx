@@ -5,7 +5,7 @@ import { pageMetadata } from '@/lib/seo';
 
 export const metadata = pageMetadata({
   title: 'Privacy Policy',
-  description: 'How Bar 4 Bar Studio collects, uses, and protects your data across the studio, The Scene, and music releases.',
+  description: 'How AKAsheet collects, uses, and protects your data across the studio, The Scene, and music releases.',
   path: '/privacy',
 });
 
@@ -16,13 +16,13 @@ export default function PrivacyPage() {
         <header className="space-y-2">
           <Link href="/" className="text-primary text-sm font-bold uppercase tracking-widest hover:underline">← Back to Studio</Link>
           <h1 className="font-headline text-4xl font-bold uppercase text-foreground">Privacy Policy</h1>
-          <p className="text-sm text-muted-foreground">Last updated: August 18, 2026 · Bar 4 Bar Studio</p>
+          <p className="text-sm text-muted-foreground">Last updated: August 18, 2026 · AKAsheet</p>
         </header>
 
         <article className="space-y-6 text-muted-foreground leading-relaxed text-sm font-code">
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">1. Overview</h2>
-            <p>Bar 4 Bar Studio (&quot;we&quot;, &quot;us&quot;) respects your creative privacy. This policy explains what data we collect when you use our web app at bar4bar.ink (the &quot;Service&quot;) and how we use it. By using the Service you also agree to our <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link href="/cookies" className="text-primary hover:underline">Cookie Policy</Link>.</p>
+            <p>AKAsheet (&quot;we&quot;, &quot;us&quot;) respects your creative privacy. This policy explains what data we collect when you use our web app at akasheet.com (the &quot;Service&quot;) and how we use it. By using the Service you also agree to our <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link href="/cookies" className="text-primary hover:underline">Cookie Policy</Link>.</p>
             <p>The Service includes a lyric studio, The Scene, Artist Home pages, DNA Drops, music Releases, Library, Msgs (private in-app messages), Lock pages, and related tools. What we collect depends on which of those you use.</p>
           </section>
 

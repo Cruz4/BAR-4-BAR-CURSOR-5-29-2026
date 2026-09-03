@@ -1,7 +1,7 @@
 
-# Bar 4 Bar: The Professional AI Rhyme Book & Studio Master Blueprint
+# AKAsheet: The Professional AI Rhyme Book & Studio Master Blueprint
 
-**Bar 4 Bar (BA)** is a high-end, universal workstation for musicians, rappers, and lyricists. It is designed to transform the chaotic process of writing a concept album into a structured, AI-assisted workflow. It assists the artist's writing process; it is not a full-song generator.
+**AKAsheet (BA)** is a high-end, universal workstation for musicians, rappers, and lyricists. It is designed to transform the chaotic process of writing a concept album into a structured, AI-assisted workflow. It assists the artist's writing process; it is not a full-song generator.
 
 ---
 

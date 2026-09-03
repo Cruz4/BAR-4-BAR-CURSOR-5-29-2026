@@ -4,8 +4,8 @@ import type { User } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client/firebase';
 
 /**
- * Send (or resend) a Bar 4 Bar branded verification email via Resend
- * (From: noreply@bar4bar.ink) — not Firebase’s *.firebaseapp.com mailer.
+ * Send (or resend) a AKAsheet branded verification email via Resend
+ * (From: noreply@akasheet.com) — not Firebase’s *.firebaseapp.com mailer.
  */
 export async function sendSignupVerificationEmail(
   user: User,

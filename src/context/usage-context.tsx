@@ -246,7 +246,7 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: "BYO-API Active", description: "Your Google key runs model calls. Ink is charged at 50% off for all AI actions — workstation orchestration only." });
     } else {
         localStorage.removeItem(`${API_KEY_STORAGE_KEY}-${user.id}`);
-        toast({ title: 'BYO-API Cleared', description: 'Studio will use Bar 4 Bar model access again. Standard Ink rates apply.' });
+        toast({ title: 'BYO-API Cleared', description: 'Studio will use AKAsheet model access again. Standard Ink rates apply.' });
     }
   }, [user, toast]);
 

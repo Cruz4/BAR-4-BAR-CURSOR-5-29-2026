@@ -475,7 +475,7 @@ export default function PerformancePage() {
       </div>
       
       <footer className="fixed bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none text-center">
-         <p className="text-[10px] font-code uppercase tracking-[0.6em] text-muted-foreground/30 font-bold">Performance Teleprompter &middot; Bar 4 Bar Studio &copy; 2026</p>
+         <p className="text-[10px] font-code uppercase tracking-[0.6em] text-muted-foreground/30 font-bold">Performance Teleprompter &middot; AKAsheet &copy; 2026</p>
       </footer>
     </div>
   );

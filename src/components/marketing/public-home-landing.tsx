@@ -71,7 +71,7 @@ export function PublicHomeLanding() {
                 <div className="space-y-3">
                   <motion.div whileHover={{ scale: 1.02 }} className="cursor-default">
                     <h2 className="text-6xl sm:text-7xl md:text-8xl lg:text-[5rem] xl:text-[5.6rem] font-headline font-bold text-foreground dark:text-white tracking-tight drop-shadow-[0_10px_25px_rgba(0,0,0,0.9)] dark:drop-shadow-[0_10px_25px_rgba(0,0,0,0.9)] leading-none lg:whitespace-nowrap">
-                      BAR 4 BAR
+                      AKAsheet
                     </h2>
                   </motion.div>
                   <div className="flex items-center justify-center lg:justify-start gap-2">
@@ -87,7 +87,7 @@ export function PublicHomeLanding() {
                   then open The Vault when you&apos;re ready to turn an idea into bars.
                 </p>
 
-                <div className="grid gap-2 text-left sm:grid-cols-3" aria-label="How Bar4Bar works">
+                <div className="grid gap-2 text-left sm:grid-cols-3" aria-label="How AKAsheet works">
                   <div className="rounded-lg border border-sky-400/25 bg-sky-500/[0.08] p-3">
                     <Compass className="mb-2 h-4 w-4 text-sky-300" />
                     <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-200">Find your Scene</p>
@@ -121,7 +121,7 @@ export function PublicHomeLanding() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/marketing/feature-artist-home-live.jpg"
-                    alt="Bar 4 Bar Artist Home — shareable public artist page"
+                    alt="AKAsheet Artist Home — shareable public artist page"
                     className="w-full h-auto object-contain object-top"
                     loading="eager"
                   />
@@ -181,7 +181,7 @@ export function PublicHomeLanding() {
 
       <footer className="py-16 px-4 relative z-10 flex flex-col items-center gap-6">
         <p className="text-[11px] text-muted-foreground font-code text-center uppercase tracking-[0.5em] opacity-50">
-          BAR 4 BAR BY JORDIE CRUZ
+          AKAsheet BY JORDIE CRUZ
         </p>
         <LegalFooter className="opacity-80 pt-4 border-t border-white/10 w-full max-w-2xl" />
       </footer>

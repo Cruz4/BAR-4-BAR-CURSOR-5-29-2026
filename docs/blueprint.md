@@ -22,7 +22,7 @@
 
 ## Current Product Blueprint — August 2026
 
-The original notes above describe the workstation foundation. The current product is **Bar 4 Bar (BA)**: an AI-assisted songwriting workstation and music network, not a full-song generator.
+The original notes above describe the workstation foundation. The current product is **AKAsheet (BA)**: an AI-assisted songwriting workstation and music network, not a full-song generator.
 
 ### Product system
 

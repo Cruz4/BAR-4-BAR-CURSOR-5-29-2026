@@ -9,7 +9,7 @@ export function LoginStudioAtmosphere() {
   return (
     <div className="pointer-events-none fixed inset-0 z-0" aria-hidden>
       <Image
-        src="/Bar 4 Bar background.png"
+        src="/AKAsheet background.png"
         alt=""
         fill
         priority

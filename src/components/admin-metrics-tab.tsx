@@ -161,7 +161,7 @@ export function AdminMetricsTab({ embedded = false }: { embedded?: boolean }) {
   const exportStamp = () => {
     const key = metrics?.period?.key || range;
     const day = format(new Date(), 'yyyy-MM-dd');
-    return `bar4bar-growth-metrics-${key}-${day}`;
+    return `akasheet-growth-metrics-${key}-${day}`;
   };
 
   const handleCopyMarkdown = async () => {
@@ -447,7 +447,7 @@ export function AdminMetricsTab({ embedded = false }: { embedded?: boolean }) {
             <CardTitle className="text-sm uppercase tracking-widest">Funnel by referral link</CardTitle>
             <CardDescription className="text-[10px]">
               Landing hits vs signups from{' '}
-              <span className="font-mono">bar4bar.ink/login?mode=signup&amp;ref=tiktok</span>, etc.
+              <span className="font-mono">akasheet.com/login?mode=signup&amp;ref=tiktok</span>, etc.
               Use that URL in TikTok Promote and bios.
             </CardDescription>
           </CardHeader>

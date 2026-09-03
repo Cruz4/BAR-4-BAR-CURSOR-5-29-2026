@@ -89,7 +89,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
           <AlertDialogDescription asChild>
             <div className="text-sm font-code space-y-3 text-muted-foreground">
               <p className="normal-case tracking-normal leading-relaxed">
-                This permanently deletes your Bar 4 Bar account, vault, trophies, and DNA. This cannot be undone.
+                This permanently deletes your AKAsheet account, vault, trophies, and DNA. This cannot be undone.
               </p>
               {paidPro ? (
                 <p className="text-amber-400/95 border border-amber-500/25 bg-amber-500/10 rounded-md px-3 py-2 normal-case tracking-normal leading-relaxed">

@@ -167,7 +167,7 @@ export function StudioSharingSection() {
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-border/70 bg-background/60 px-2.5 py-2 font-code text-xs">
-                <span className="shrink-0 text-muted-foreground">bar4bar.ink/</span>
+                <span className="shrink-0 text-muted-foreground">akasheet.com/</span>
                 <Input
                   value={slugDraft}
                   disabled={saving || slugSaving}
@@ -196,7 +196,7 @@ export function StudioSharingSection() {
                   className="underline underline-offset-2 hover:text-sky-200"
                   target="_blank"
                 >
-                  bar4bar.ink/{summary.profileSlug}
+                  akasheet.com/{summary.profileSlug}
                 </Link>
               </p>
             )}

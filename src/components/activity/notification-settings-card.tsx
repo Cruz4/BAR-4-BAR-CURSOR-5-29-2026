@@ -52,7 +52,7 @@ export function NotificationSettingsCard() {
             result.reason === 'permission'
               ? 'Allow notifications in your browser (address-bar tune icon → Notifications → Allow), then try again.'
               : result.reason === 'push_service'
-                ? 'Chrome push registration failed. Clear site data for bar4bar.ink (or try another browser/profile), reload, then turn Push on once — don’t toggle it repeatedly.'
+                ? 'Chrome push registration failed. Clear site data for akasheet.com (or try another browser/profile), reload, then turn Push on once — don’t toggle it repeatedly.'
                 : result.reason === 'unsupported'
                   ? 'This browser doesn’t support web push.'
                   : result.message || 'Could not register for push alerts.';

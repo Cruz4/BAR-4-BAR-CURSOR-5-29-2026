@@ -1,8 +1,8 @@
-# Bar 4 Bar — Commands Cheat Sheet
+# AKAsheet — Commands Cheat Sheet
 
 Quick reference for npm scripts and common commands.  
 **Local dev URL:** http://localhost:9002  
-**Live site:** https://bar4bar.ink
+**Live site:** https://akasheet.com
 
 > **Node version:** This project expects **Node 22** (`package.json` → `engines.node`).
 
@@ -151,7 +151,7 @@ See also: [MOBILE_STORE_GUIDE.md](./MOBILE_STORE_GUIDE.md)
 |------------|-----|
 | Code locally | `npm run dev` |
 | Check for TS errors | `npm run typecheck` |
-| Ship to bar4bar.ink | `npm run deploy:live` |
+| Ship to akasheet.com | `npm run deploy:live` |
 | Update Firestore rules only | `npm run firebase:deploy:rules` |
 | Refresh landing page images | `npm run marketing:assets` (with `dev` running) |
 | Fix Stripe before deploy | `npm run stripe:verify` then `npm run stripe:webhook-env` |

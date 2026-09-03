@@ -20,7 +20,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const envLocalPath = resolve(root, '.env.local');
-const DEFAULT_EMAIL = 'agent.demo@bar4bar.ink';
+const DEFAULT_EMAIL = 'agent.demo@akasheet.com';
 const DEMO_INK = 10_000;
 const DEMO_DISPLAY_NAME = 'Agent Demo (Pro)';
 
@@ -180,7 +180,7 @@ async function main() {
   console.log(`Ink:      ${DEMO_INK.toLocaleString()} permanent`);
   console.log(`Auth:     ${created ? 'created' : 'updated'}`);
   console.log(`Saved to: .env.local (AGENT_DEMO_EMAIL / AGENT_DEMO_PASSWORD / AGENT_DEMO_UID)`);
-  console.log('\nLogin: http://localhost:9002/login  or  https://bar4bar.ink/login\n');
+  console.log('\nLogin: http://localhost:9002/login  or  https://akasheet.com/login\n');
 }
 
 main().catch((err) => {

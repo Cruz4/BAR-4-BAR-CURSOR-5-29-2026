@@ -8,7 +8,7 @@
 export const JORDIE_CRUZ = {
   email: 'jordiecruzllc@gmail.com',
   displayName: 'Jordie Cruz',
-  /** Preferred Artist Home slug (bar4bar.ink/jordie_cruz). */
+  /** Preferred Artist Home slug (akasheet.com/jordie_cruz). */
   slug: 'jordie_cruz',
 } as const;
 

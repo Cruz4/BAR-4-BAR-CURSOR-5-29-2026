@@ -1,8 +1,8 @@
-# Bar 4 Bar — Outage & break-glass runbook
+# AKAsheet — Outage & break-glass runbook
 
-One-page guide for when **bar4bar.ink**, Firebase Hosting, or the admin UI is down but you still need control.
+One-page guide for when **akasheet.com**, Firebase Hosting, or the admin UI is down but you still need control.
 
-**Live site:** https://bar4bar.ink  
+**Live site:** https://akasheet.com  
 **Firebase fallback URL:** https://lyricai-studio-otgxn.web.app  
 **Firebase project:** `lyricai-studio-otgxn`  
 **Local dev admin:** http://localhost:9002/admin (with production `.env`)
@@ -20,7 +20,7 @@ Related: [COMMANDS.md](./COMMANDS.md) · [SECURITY.md](./SECURITY.md) · [CUSTOM
 | Production `.env` (full copy) | Redeploy, local admin, scripts |
 | `FIREBASE_SERVICE_ACCOUNT_KEY` or `firebase-service-account.json` | Admin SDK scripts when UI is down |
 | Stripe Dashboard login | Payments, refunds, webhook replay |
-| Domain registrar login | Fix DNS for `bar4bar.ink` |
+| Domain registrar login | Fix DNS for `akasheet.com` |
 | Master admin email | Default: `plotformaiplan@gmail.com` — must be able to sign in via Firebase Auth |
 | `CRON_SECRET` | Manual cron trigger (metrics, craft reminders) |
 | `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` | Alerts (only when server is running) |
@@ -34,7 +34,7 @@ Store secrets in a password manager — **never commit** `.env` or service accou
 | Layer | If it fails… | You lose… | You still have… |
 |-------|--------------|-----------|-----------------|
 | **Firebase Hosting / Next.js** | Site 500, blank page, bad deploy | `/admin` in browser, all `/api/*` routes | Firebase Console, local dev + `/admin`, redeploy / rollback |
-| **Custom domain / DNS** | `bar4bar.ink` unreachable | Branded URL | `*.web.app` URL, Console, fix DNS at registrar |
+| **Custom domain / DNS** | `akasheet.com` unreachable | Branded URL | `*.web.app` URL, Console, fix DNS at registrar |
 | **Firestore / Auth** | DB or login down | Most app function | Stripe Dashboard (money only); wait for Google |
 | **Stripe webhooks** | Site up but webhooks fail | Auto Ink / Pro sync | Stripe → resend events; manual user fixes in Console |
 | **Full Firebase outage** | Console also down | Everything in-app | Stripe, GitHub, cached Telegram history on phone |
@@ -59,12 +59,12 @@ Store secrets in a password manager — **never commit** `.env` or service accou
 
 1. [Firebase Console → Hosting → Release history](https://console.firebase.google.com/project/lyricai-studio-otgxn/hosting)  
 2. Select the last known-good release → **Rollback**  
-3. Hard-refresh `bar4bar.ink` and test login + `/admin`
+3. Hard-refresh `akasheet.com` and test login + `/admin`
 
 ### B. Redeploy from your machine (rollback not enough)
 
 ```powershell
-cd "G:\Bar 4 Bar App $\BAR 4 BAR FULL APP 5-28-2026 YOYO SAVE VER56"
+cd "G:\AKAsheet App $\AKAsheet FULL APP 5-28-2026 YOYO SAVE VER56"
 git status
 git log -5 --oneline
 npm run deploy:live
@@ -79,7 +79,7 @@ See [COMMANDS.md](./COMMANDS.md) for all scripts.
 ### C. Run admin locally (site down, Firebase data OK)
 
 ```powershell
-cd "G:\Bar 4 Bar App $\BAR 4 BAR FULL APP 5-28-2026 YOYO SAVE VER56"
+cd "G:\AKAsheet App $\AKAsheet FULL APP 5-28-2026 YOYO SAVE VER56"
 npm run dev
 ```
 
@@ -124,7 +124,7 @@ Admin routes require `Authorization: Bearer <Firebase ID token>`. Easiest token 
 Example:
 
 ```powershell
-curl -H "Authorization: Bearer YOUR_ID_TOKEN" https://bar4bar.ink/api/admin/metrics
+curl -H "Authorization: Bearer YOUR_ID_TOKEN" https://akasheet.com/api/admin/metrics
 ```
 
 ---
@@ -208,8 +208,8 @@ Auth: Firebase ID token + master admin email **or** `users/{uid}.role === 'admin
 ### User paid — no Ink / Pro
 
 1. [Stripe Dashboard](https://dashboard.stripe.com) → Payments → confirm charge  
-2. Developers → Webhooks → `https://bar4bar.ink/api/stripe/webhook` → **Resend** failed event  
-3. If webhook URL wrong: update to `https://bar4bar.ink/api/stripe/webhook`, redeploy env if needed  
+2. Developers → Webhooks → `https://akasheet.com/api/stripe/webhook` → **Resend** failed event  
+3. If webhook URL wrong: update to `https://akasheet.com/api/stripe/webhook`, redeploy env if needed  
 4. Manual fix: Firestore `users/{uid}` (subscription fields) + `users/{uid}/usage/balance` (ink)  
 5. Or local `/admin` → Artist Roster → Manual Calibration
 
@@ -227,8 +227,8 @@ Auth: Firebase ID token + master admin email **or** `users/{uid}.role === 'admin
 Cron routes need the **live site** + `CRON_SECRET`:
 
 ```powershell
-curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://bar4bar.ink/api/cron/refresh-metrics
-curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://bar4bar.ink/api/cron/craft-reminders
+curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://akasheet.com/api/cron/refresh-metrics
+curl -H "Authorization: Bearer YOUR_CRON_SECRET" https://akasheet.com/api/cron/craft-reminders
 ```
 
 Or trigger metrics refresh from `/admin` → Growth Metrics when UI is up.
@@ -244,7 +244,7 @@ Or trigger metrics refresh from `/admin` → Growth Metrics when UI is up.
 Alerts only send when the **server processes events** — they do not monitor uptime by themselves.
 
 - Check `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` on the Cloud Function env  
-- Add an external uptime monitor (UptimeRobot, Better Stack, etc.) pinging `https://bar4bar.ink`
+- Add an external uptime monitor (UptimeRobot, Better Stack, etc.) pinging `https://akasheet.com`
 
 ---
 
@@ -269,7 +269,7 @@ Alerts only send when the **server processes events** — they do not monitor up
 - [ ] Sign in to `/admin` on production — roster loads  
 - [ ] Stripe webhook endpoint shows recent **200** responses  
 - [ ] Know last good git commit (`git log -1`) before each `deploy:live`  
-- [ ] Optional: uptime monitor on `https://bar4bar.ink` → Telegram/SMS  
+- [ ] Optional: uptime monitor on `https://akasheet.com` → Telegram/SMS  
 - [ ] Optional: second admin account with `role: admin` in Firestore  
 
 ---

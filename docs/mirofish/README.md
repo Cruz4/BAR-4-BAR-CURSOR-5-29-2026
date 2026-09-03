@@ -11,7 +11,7 @@ Aligned with [Sanjay Shankar’s MiroFish setup guide](https://sanjayshankar.me/
 | **Web demo** (Reality Seeds + Simulation Requirement) | **2 files in this folder** — see below |
 | **Self-hosted** (clone GitHub repo) | Python 3.10+, Node 18+, `uv`, API keys (OpenAI, Gemini, Zep Cloud), `.env` — full steps in the [setup guide](https://sanjayshankar.me/mirofish-setup-guide-ai-market-simulation/) |
 
-Bar 4 Bar docs assume the **web UI** unless you install locally.
+AKAsheet docs assume the **web UI** unless you install locally.
 
 ---
 
@@ -60,4 +60,4 @@ From the setup guide:
 
 ---
 
-*Bar 4 Bar live economy: May 2026 — `studio-tiers.ts`, `subscription.ts`, `trial.ts`.*
+*AKAsheet live economy: May 2026 — `studio-tiers.ts`, `subscription.ts`, `trial.ts`.*

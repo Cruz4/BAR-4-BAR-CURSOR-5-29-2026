@@ -450,7 +450,7 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
     session.metadata = new MediaMetadata({
       title: current.title,
       artist: current.artistName,
-      album: current.albumTitle || 'Bar 4 Bar Releases',
+      album: current.albumTitle || 'AKAsheet Releases',
       artwork: mediaArtwork(current.coverArtUrl),
     });
     const bind = (action: MediaSessionAction, handler: MediaSessionActionHandler | null) => {

@@ -180,8 +180,8 @@ export default function PricingPage() {
       a: 'Ink powers AI tools in the studio—rhyme scans, vibe analysis, Studio Draft, creative effects, and similar actions. Typing your own lyrics, editing bars, saving albums, and moving tracks around does not spend Ink. You only use Ink when you run a billed AI feature.',
     },
     {
-      q: 'How is Bar 4 Bar different from Suno or ChatGPT?',
-      a: 'Unlike Suno, Udio, or a general chatbot, Bar 4 Bar is a lyric and rhyme workstation: DNA strains, section maps, rhyme pulse, and vault exports stay in your project. Copy-pasting to ChatGPT loses that context — here every generation already knows your track. Pro unlocks the catalog workflow (vault saves, unlimited slots, Performance Mode); Ink powers AI inside the studio.',
+      q: 'How is AKAsheet different from Suno or ChatGPT?',
+      a: 'Unlike Suno, Udio, or a general chatbot, AKAsheet is a lyric and rhyme workstation: DNA strains, section maps, rhyme pulse, and vault exports stay in your project. Copy-pasting to ChatGPT loses that context — here every generation already knows your track. Pro unlocks the catalog workflow (vault saves, unlimited slots, Performance Mode); Ink powers AI inside the studio.',
     },
     {
       q: 'Is my Artist Home page free?',
@@ -217,7 +217,7 @@ export default function PricingPage() {
     },
     {
       q: 'Can I store full discographies?',
-      a: 'Yes. Bar 4 Bar is built to be your career-long rhyme book. Unlike simple note apps, our Vault allows you to organize unlimited albums and tracks (Pro) in a professional structure.',
+      a: 'Yes. AKAsheet is built to be your career-long rhyme book. Unlike simple note apps, our Vault allows you to organize unlimited albums and tracks (Pro) in a professional structure.',
     },
     {
       q: 'How secure is my hardware?',
@@ -386,7 +386,7 @@ export default function PricingPage() {
             <LegalFooter />
             <div className="bg-black/40 backdrop-blur-md border border-white/5 inline-flex items-center gap-2 p-2 rounded-xl px-6 shadow-2xl">
                 <Image src="/Logo.png" alt="Logo" width={24} height={24} className="h-6 w-6" />
-                <p className="text-[9px] font-code text-muted-foreground uppercase tracking-[0.4em]">Bar 4 Bar Studio &copy; 2026</p>
+                <p className="text-[9px] font-code text-muted-foreground uppercase tracking-[0.4em]">AKAsheet &copy; 2026</p>
             </div>
         </footer>
       </div>

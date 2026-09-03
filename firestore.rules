@@ -425,7 +425,7 @@ service cloud.firestore {
         allow write: if false;
       }
 
-      // Bar 4 Bar First Drops library — Admin SDK writes; owner reads
+      // First Drops library — Admin SDK writes; owner reads
       match /dropLibrary/{shareId} {
         allow read: if isOwnerOrAdmin(userId);
         allow write: if false;

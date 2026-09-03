@@ -1,5 +1,5 @@
 /**
- * Bar 4 Bar lyric-comprehension engine.
+ * AKAsheet lyric-comprehension engine.
  *
  * Deterministic, Ink-free analysis: the AI handles meaning and creativity,
  * this code handles the measurable constraints — syllables, rhyme, timing,

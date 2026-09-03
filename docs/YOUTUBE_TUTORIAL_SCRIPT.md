@@ -2,13 +2,13 @@
 
 **Length:** 3–5 minutes  
 **Format:** Screen record desktop or phone (9:16 for Shorts cutdown; 16:9 for main video)  
-**URL in description:** `https://bar4bar.ink?ref=yt`
+**URL in description:** `https://akasheet.com?ref=yt`
 
 ---
 
 ## Title options (SEO)
 
-- How I write my next rap bar with an AI rhyme book (Bar 4 Bar Studio)
+- How I write my next rap bar with an AI rhyme book (AKAsheet)
 - Paste messy lyrics → verse / hook / verse in 60 seconds
 - Bar-by-bar songwriting workstation (not ChatGPT paragraphs)
 
@@ -17,10 +17,10 @@
 ## Description template
 
 ```
-Bar 4 Bar — bar-by-bar AI songwriting studio + public music network for artists, creators, and Music Fans.
+AKAsheet — bar-by-bar AI songwriting studio + public music network for artists, creators, and Music Fans.
 Free demo: 250 Ink at signup.
 
-Try it: https://bar4bar.ink?ref=yt
+Try it: https://akasheet.com?ref=yt
 
 Chapters:
 0:00 Intro
@@ -40,7 +40,7 @@ Chapters:
 ### Intro (0:00–0:20)
 
 > If you’re stuck on the **next bar**, not the whole song — this is built for that.  
-> Bar 4 Bar is a **bar-by-bar** rhyme book and co-writer. Not “write me a hit in one click.”  
+> AKAsheet is a **bar-by-bar** rhyme book and co-writer. Not “write me a hit in one click.”  
 > I’ll paste a messy verse, split it into structure, then generate **one line** that actually rhymes.
 
 **On screen:** Vault home → tap into a track or create album/track.
@@ -107,7 +107,7 @@ Chapters:
 ### Outro (4:20–end)
 
 > Link in description — free demo. If you’re serious about bars, try one verse tonight.  
-> Or open bar4bar.ink logged out and **press** a public music home first. Artists, creators, and Music Fans can choose a Sound Identity, feature a track they released or purchased, find explainable matches, and support people without turning every Follow into a collaboration request.
+> Or open akasheet.com logged out and **press** a public music home first. Artists, creators, and Music Fans can choose a Sound Identity, feature a track they released or purchased, find explainable matches, and support people without turning every Follow into a collaboration request.
 > Comment what you want next: Featured Library track, Discover and Emerging, Listener Insights, Freestyle Pad, DNA Drop, or Performance Mode.
 
 ---

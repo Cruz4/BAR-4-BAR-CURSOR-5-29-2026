@@ -32,7 +32,7 @@ Signed-in accounts sync to Firestore and land on **The Scene** (`/`)—friends f
 
 **Tip:** A typical default song (~52 bars) is about **104 Ink** with Studio Draft in the Calibration Hub. Use Next/Previous for surgical edits—not every bar on a full track.
 
-## 5. Bar 4 Bar vs full-song AI apps
+## 5. AKAsheet vs full-song AI apps
 Unlike Suno or Udio, this studio is for **lyrics, rhyme books, and DNA strains**—not finished audio. Ink powers drafting and analysis.
 
 ## 6. Public identity, discovery, and music support

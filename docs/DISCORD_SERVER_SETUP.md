@@ -1,7 +1,7 @@
-# Bar 4 Bar Discord — paste-ready setup
+# AKAsheet Discord — paste-ready setup
 
-**Server name:** Bar 4 Bar Studio  
-**Tagline / description:** Your album brain — bars, DNA, vault. Lyric workstation for [bar4bar.ink](https://bar4bar.ink) (not a song renderer).
+**Server name:** AKAsheet  
+**Tagline / description:** Your album brain — bars, DNA, vault. Lyric workstation for [akasheet.com](https://akasheet.com) (not a song renderer).
 
 Use this as a checklist while creating categories, channels, and roles in Discord.
 
@@ -31,11 +31,11 @@ Copy **Topic** into each channel’s topic field.
 
 | Channel | Topic |
 |---------|--------|
-| `#welcome` | Welcome to Bar 4 Bar Studio — lyric & rhyme workstation at https://bar4bar.ink · Read #rules · Start in #start-here |
+| `#welcome` | Welcome to AKAsheet — lyric & rhyme workstation at https://akasheet.com · Read #rules · Start in #start-here |
 | `#rules` | Own your bars. Credit DNA Drops. No stealing vaults. No billing drama in public — use #ink-and-billing. Respect the craft. |
 | `#announcements` | Official ship notes, Ink & Pro updates. Read-only for members. |
 | `#changelog` | What’s new in the studio — mirrors in-app What’s New. |
-| `#start-here` | 6 steps: 1) Sign up at bar4bar.ink 2) Claim welcome Ink 3) Land on The Scene → go live from Your Booth 4) Open The Vault → create a track 5) Try DNA & REMIX 6) Go Pro when you need vault / Freestyle / DNA Drop |
+| `#start-here` | 6 steps: 1) Sign up at akasheet.com 2) Claim welcome Ink 3) Land on The Scene → go live from Your Booth 4) Open The Vault → create a track 5) Try DNA & REMIX 6) Go Pro when you need vault / Freestyle / DNA Drop |
 
 **Permissions:** `#announcements` + `#changelog` → @everyone View + Read; only Studio Ops / Mod can Send.
 
@@ -75,12 +75,12 @@ Copy **Topic** into each channel’s topic field.
 
 ```
 DNA DROP — HOW TO POST
-1. In Bar 4 Bar (Pro): Left panel → DNA Drop → publish
+1. In AKAsheet (Pro): Left panel → DNA Drop → publish
 2. Paste the link here + one line: mood / genre / what you want feedback on
 3. After you edit the track: DNA Drop → Update snapshot (same URL)
 4. To unshare: Take offline
 Visitor artists can post their own bars; Pro DNA Drop links get priority feedback.
-App: https://bar4bar.ink
+App: https://akasheet.com
 ```
 
 ---
@@ -148,11 +148,11 @@ For category **PRO LOUNGE**:
 ### `#welcome`
 
 ```
-BAR 4 BAR STUDIO
+AKAsheet STUDIO
 Lyric & rhyme workstation — album brain, not a full-song AI renderer.
 
-→ App: https://bar4bar.ink
-→ Pricing / Pro: https://bar4bar.ink/pricing
+→ App: https://akasheet.com
+→ Pricing / Pro: https://akasheet.com/pricing
 → Start: #start-here
 → Rules: #rules
 
@@ -164,7 +164,7 @@ Pro = vault saves, Freestyle, Performance Mode, DNA Drop links, unlimited projec
 
 ```
 ONBOARDING (6 STEPS)
-1. Create an account at https://bar4bar.ink
+1. Create an account at https://akasheet.com
 2. Verify email → welcome Ink lands
 3. You land on The Scene (your home) → flip Artist Home live from Your Booth
 4. Open The Vault (right dock) → create a track → write a few bars

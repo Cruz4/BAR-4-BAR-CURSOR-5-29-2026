@@ -55,7 +55,7 @@ export function getStudioPassId(input: StudioPassInput): string {
   ].join('|');
   const checksum = fnv1a(key).toString(16).toUpperCase().padStart(6, '0').slice(-6);
   const nameFold = fnv1a(input.displayName).toString(16).toUpperCase().slice(-3);
-  return `B4B·${rank}·${checksum}·${nameFold}`;
+  return `AKA·${rank}·${checksum}·${nameFold}`;
 }
 
 export function getStudioPassTheme(lastAchievementId?: string) {
@@ -115,16 +115,16 @@ export function buildShareCopyText(
   lastDate?: string
 ): string {
   const lines = [
-    `🎤 ${input.displayName} · Bar 4 Bar Studio Residency`,
+    `🎤 ${input.displayName} · AKAsheet Residency`,
     `${input.rankLabel} · ${input.xp.toLocaleString()} XP · ${input.streak}d streak · ${input.badgeCount}/${input.totalBadges} badges`,
   ];
   if (lastTitle) {
     lines.push(`Latest milestone: ${lastTitle}${lastDate ? ` (${lastDate})` : ''}`);
   }
   lines.push(`Studio ID: ${passId}`);
-  lines.push('bar4bar.studio');
+  lines.push('akasheet.com');
   if (input.profileSlug) {
-    lines.push(`Profile: bar4bar.ink/${input.profileSlug}`);
+    lines.push(`Profile: akasheet.com/${input.profileSlug}`);
   }
   return lines.join('\n');
 }

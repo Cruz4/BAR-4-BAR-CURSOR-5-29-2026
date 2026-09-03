@@ -9,7 +9,7 @@ export const NEOMAIYA_SOL = {
   /** Live founder account (also master admin). */
   email: 'plotformaiplan@gmail.com',
   displayName: 'Neomaiya Sol',
-  /** Canonical live Artist Home slug (bar4bar.ink/neomaiya_sol). */
+  /** Canonical live Artist Home slug (akasheet.com/neomaiya_sol). */
   slug: 'neomaiya_sol',
 } as const;
 

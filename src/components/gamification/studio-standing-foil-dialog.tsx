@@ -85,7 +85,7 @@ export function StudioStandingFoilDialog({
           `🎤 Studio Standing — ${stats.displayName}`,
           `${stats.rankLabel} · ${stats.xp.toLocaleString()} XP · ${stats.streak}d streak`,
           `${stats.badgeCount}/${totalBadges} trophies · ${linesToRhymeBars(written).toLocaleString()} bars written`,
-          '#bar4bar.ink',
+          '#akasheet',
         ].join('\n'),
         imageUrl,
         ownerName: stats.displayName,
@@ -118,7 +118,7 @@ export function StudioStandingFoilDialog({
       if (!cardEl) throw new Error('Standing card not ready — try again.');
       await downloadDomNodePng(
         cardEl,
-        `bar4bar-standing-${stats.rankId}.png`
+        `akasheet-standing-${stats.rankId}.png`
       );
       toast({ title: 'Standing plate downloaded' });
     } catch (e) {

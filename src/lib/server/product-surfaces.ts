@@ -38,8 +38,8 @@ export class ProductSurfacesMutationBlockedError extends Error {
     super(
       message ||
         (emergency === 'maintenance'
-          ? 'Bar 4 Bar is in maintenance mode — writes are paused.'
-          : 'Bar 4 Bar is in read-only mode — writes are paused.')
+          ? 'AKAsheet is in maintenance mode — writes are paused.'
+          : 'AKAsheet is in read-only mode — writes are paused.')
     );
     this.name = 'ProductSurfacesMutationBlockedError';
     this.emergency = emergency;

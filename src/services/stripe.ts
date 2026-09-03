@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Stripe Checkout client for Bar 4 Bar (ink packs + Pro subscriptions).
+ * Stripe Checkout client for AKAsheet (ink packs + Pro subscriptions).
  */
 
 import { useCallback, useState } from 'react';

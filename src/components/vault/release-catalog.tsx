@@ -21,7 +21,7 @@ type RemoveTarget = UnpressTarget;
 const GROUPS: Array<{ key: keyof VaultReleaseGroups; label: string; note: string }> = [
   { key: 'privateDrafts', label: 'Private release drafts', note: 'Uploaded recordings only you can test.' },
   { key: 'offlineReleases', label: 'Offline releases', note: 'Hidden releases that can be republished at the same link or retired completely.' },
-  { key: 'liveSinglesWithLyrics', label: 'Live singles · lyrics attached', note: 'Music releases connected to a Bar4Bar lyric sheet.' },
+  { key: 'liveSinglesWithLyrics', label: 'Live singles · lyrics attached', note: 'Music releases connected to a AKAsheet lyric sheet.' },
   { key: 'liveSinglesAudioOnly', label: 'Live singles · audio only', note: 'Music releases that can receive a lyric sheet later.' },
   { key: 'liveAlbumsAllLyrics', label: 'Live albums · all lyrics attached', note: 'Bundle releases whose audio tracks all have lyrics.' },
   { key: 'liveAlbumsMixedLyrics', label: 'Live albums · mixed', note: 'Bundle releases with some lyric sheets and some audio-only tracks.' },

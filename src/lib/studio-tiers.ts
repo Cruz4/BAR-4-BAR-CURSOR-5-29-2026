@@ -166,9 +166,9 @@ export function getVaultPackSavingsPercent(): number {
   return Math.round(((equivStudioCost - vault.priceAmount) / equivStudioCost) * 100);
 }
 
-/** Why Bar 4 Bar vs full-song AI apps (pricing / FAQ). */
+/** Why AKAsheet vs full-song AI apps (pricing / FAQ). */
 export const COMPETITOR_ANCHOR_COPY =
-  'Unlike Suno or Udio, Bar 4 Bar is a lyric and rhyme workstation — you own the words, DNA strains, vault, and a shareable Artist Home page; Ink powers drafting and analysis, not finished audio renders.';
+  'Unlike Suno or Udio, AKAsheet is a lyric and rhyme workstation — you own the words, DNA strains, vault, and a shareable Artist Home page; Ink powers drafting and analysis, not finished audio renders.';
 
 /**
  * Three different products — keep these names distinct in UI copy:

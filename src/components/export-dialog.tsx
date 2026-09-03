@@ -285,7 +285,7 @@ export function ExportDialog({
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${(exportType === 'album' ? album.title : (tracks?.[0]?.title || 'export')).replace(/\s+/g, '_')}_bar4bar.json`;
+        a.download = `${(exportType === 'album' ? album.title : (tracks?.[0]?.title || 'export')).replace(/\s+/g, '_')}_akasheet.json`;
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
     });
   }

@@ -1,4 +1,4 @@
-# Bar 4 Bar Discord Tutorial Server Blueprint
+# AKAsheet Discord Tutorial Server Blueprint
 
 The cleanest Discord structure is a tutorial-first server organized around the app’s actual pages. This avoids creating a separate room for every button while still covering everything on your paper.
 
@@ -60,9 +60,9 @@ Use Discord Forum channels for the tutorial rooms. Each tutorial becomes its own
 
 ### `#welcome`
 
-Explain what Bar 4 Bar is:
+Explain what AKAsheet is:
 
-> Bar 4 Bar is an AI-assisted lyric and songwriting workstation. It helps artists write, organize, remix, analyze, share, perform, collaborate, and sell their work. It is not a one-click finished-song generator.
+> AKAsheet is an AI-assisted lyric and songwriting workstation. It helps artists write, organize, remix, analyze, share, perform, collaborate, and sell their work. It is not a one-click finished-song generator.
 
 Give new users a short path:
 
@@ -77,11 +77,11 @@ Give new users a short path:
 
 Pin these:
 
-- App: `https://bar4bar.ink`
-- Sign up: `https://bar4bar.ink/login?mode=signup`
-- Free writing sheet: `https://bar4bar.ink/try`
-- Pricing: `https://bar4bar.ink/pricing`
-- Support: `bar4bar.support@gmail.com`
+- App: `https://akasheet.com`
+- Sign up: `https://akasheet.com/login?mode=signup`
+- Free writing sheet: `https://akasheet.com/try`
+- Pricing: `https://akasheet.com/pricing`
+- Support: `akasheet.support@gmail.com`
 - Privacy, Terms, and other official links
 
 This covers the “links to sign up and landing-page content” item from the paper.
@@ -356,7 +356,7 @@ Explain the fan side:
 
 - 30-second preview
 - Buying once with money, not Ink
-- Streaming the unlocked song inside Bar 4 Bar
+- Streaming the unlocked song inside AKAsheet
 - Opening purchased First Drops in Library
 - Library is not a download store or Spotify listing
 
@@ -465,7 +465,7 @@ The app currently does not contain an official Discord link or Discord Artist Ho
 - Login/support footer
 - Usage → Settings
 - In-app Studio Manual
-- Official Bar 4 Bar support Artist Home
+- Official AKAsheet support Artist Home
 - “What’s New” announcement
 
 Adding Discord as a selectable Artist Home social provider would be a separate app change.

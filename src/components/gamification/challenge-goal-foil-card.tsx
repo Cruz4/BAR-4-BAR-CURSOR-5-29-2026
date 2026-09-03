@@ -110,7 +110,7 @@ export const ChallengeGoalFoilCard = React.forwardRef<HTMLDivElement, ChallengeG
                 {rankLabel}
               </p>
               <p className="truncate text-[8px] font-bold uppercase tracking-[0.18em] text-white/35">
-                Bar 4 Bar Studio
+                AKAsheet
               </p>
             </div>
           </div>

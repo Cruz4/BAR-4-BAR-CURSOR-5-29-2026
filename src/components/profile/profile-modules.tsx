@@ -3,7 +3,7 @@
 /**
  * Artist Home module renderers. Each module is one section in the maker's
  * ordered deck — every one exists to pull visitors one step deeper into the
- * artist's world on Bar4Bar.ink (share pages, DNA drops, the studio itself).
+ * artist's world on AKAsheet.ink (share pages, DNA drops, the studio itself).
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';

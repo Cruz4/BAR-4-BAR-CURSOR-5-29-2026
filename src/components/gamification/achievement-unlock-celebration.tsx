@@ -86,7 +86,7 @@ function buildUnlockFeedText(item: CelebrationItem, def?: AchievementDef | null)
   if (item.xpReward > 0) rewards.push(`+${item.xpReward} XP`);
   if (item.inkReward > 0) rewards.push(`+${item.inkReward} Ink`);
   if (rewards.length) bits.push(rewards.join(' · '));
-  bits.push('#bar4bar.ink');
+  bits.push('#akasheet');
   return bits.join('\n');
 }
 
@@ -330,7 +330,7 @@ export function AchievementUnlockCelebration() {
     if (!navigator.share) return;
     try {
       await navigator.share({
-        title: `${active?.title || 'Achievement'} — Bar 4 Bar`,
+        title: `${active?.title || 'Achievement'} — AKAsheet`,
         text: shareText,
         url: profileUrl || undefined,
       });
@@ -606,7 +606,7 @@ export function AchievementUnlockCelebration() {
                     className="h-9 text-[10px] font-bold uppercase gap-1.5"
                     onClick={() =>
                       openExternalShare(
-                        `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl || encodeURIComponent('https://bar4bar.ink')}&quote=${encodedText}`
+                        `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl || encodeURIComponent('https://akasheet.com')}&quote=${encodedText}`
                       )
                     }
                   >
@@ -628,7 +628,7 @@ export function AchievementUnlockCelebration() {
                     className="h-9 text-[10px] font-bold uppercase gap-1.5"
                     onClick={() =>
                       openExternalShare(
-                        `mailto:?subject=${encodeURIComponent(`${active.title} — Bar 4 Bar`)}&body=${encodedText}`
+                        `mailto:?subject=${encodeURIComponent(`${active.title} — AKAsheet`)}&body=${encodedText}`
                       )
                     }
                   >

@@ -14,7 +14,7 @@ export type InviteGateCopy = {
 export const DEFAULT_INVITE_GATE_COPY: InviteGateCopy = {
   headline: 'THE VAULT IS LOCKED.',
   subheadline:
-    'Bar 4 Bar Studio is in private invite-only beta — the rhyme book + AI co-writer for artists who think in bars. Drop your access code to enter before the world does.',
+    'AKAsheet is in private invite-only beta — the rhyme book + AI co-writer for artists who think in bars. Drop your access code to enter before the world does.',
   ctaLabel: 'Unlock the Studio',
   successHeadline: "YOU'RE IN.",
   successSubheadline:

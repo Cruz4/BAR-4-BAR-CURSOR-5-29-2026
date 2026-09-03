@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata = pageMetadata({
   title: 'Msgs',
-  description: 'Private messages between connected Bar 4 Bar members.',
+  description: 'Private messages between connected AKAsheet members.',
   path: '/msgs',
   index: false,
 });

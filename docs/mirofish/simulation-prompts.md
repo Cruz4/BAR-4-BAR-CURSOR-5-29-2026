@@ -9,15 +9,15 @@ Do **not** output fake conversion percentages. Rank upgrade intent **low / mediu
 ## Run 1 — Market positioning A (Catalog brain)
 
 ```
-Bar 4 Bar has just launched with MARKET A positioning: "Bar 4 Bar is your album brain — Pro is for catalog workflow (DNA vault saves, Performance Mode, DNA Drop links)."
+AKAsheet has just launched with MARKET A positioning: "AKAsheet is your album brain — Pro is for catalog workflow (DNA vault saves, Performance Mode, DNA Drop links)."
 
 Simulate 30 days of conversation on Twitter-like and Reddit-like platforms among Marcus (indie album rapper), Priya (ghostwriter), Jaylen (hobbyist), Dre (Suno producer), and Tasha (trial-maximizer).
 
 Fixed pricing: free (250 signup Ink + 150/mo, 1 album, 2 tracks, 2-day Pro feature preview). Pro $7.77/mo or $53.28/yr.
 
-Inject events: (1) user hits 4-track limit, (2) DNA extraction complete but cannot save on free, (3) threads "Bar 4 Bar vs Suno vs ChatGPT."
+Inject events: (1) user hits 4-track limit, (2) DNA extraction complete but cannot save on free, (3) threads "AKAsheet vs Suno vs ChatGPT."
 
-Who adopts immediately and why? Who hesitates — top 5 objections? Rank conversion hypotheses 1–8 per persona (credible vs unfair). Recommended hero headline for bar4bar.ink. Is word-of-mouth positive or skeptical?
+Who adopts immediately and why? Who hesitates — top 5 objections? Rank conversion hypotheses 1–8 per persona (credible vs unfair). Recommended hero headline for akasheet.com. Is word-of-mouth positive or skeptical?
 ```
 
 ---
@@ -63,7 +63,7 @@ Does early track cap beat trial-end vault save for pay intent — or trigger "de
 ## Run 5 — Pick a winner (recommended after Runs 1–4)
 
 ```
-Given all scenarios in the Reality Seed (Market A, Market B, Pricing A live, Pricing B hypothetical), which combined GTM package for bar4bar.ink's first 90 days minimizes trust backlash and maximizes stated Pro upgrade intent among indie album rappers vs hobbyists?
+Given all scenarios in the Reality Seed (Market A, Market B, Pricing A live, Pricing B hypothetical), which combined GTM package for akasheet.com's first 90 days minimizes trust backlash and maximizes stated Pro upgrade intent among indie album rappers vs hobbyists?
 
 Recommend: positioning + trial policy + free track count + pricing page default (monthly vs yearly). Rank conversion hypotheses 1–8. Top 5 risks and mitigations.
 ```

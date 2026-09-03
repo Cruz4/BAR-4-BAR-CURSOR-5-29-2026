@@ -123,7 +123,7 @@ export function ArtistHome({
   playgroundGuestbook,
   playgroundBarOfWeek,
   studioHomeHref = '/',
-  studioHomeLabel = 'Bar 4 Bar Studio',
+  studioHomeLabel = 'AKAsheet',
 }: ArtistHomeProps) {
   const { user } = useAuth();
   const { enabled: lockOn } = useLockFeature();
@@ -789,7 +789,7 @@ export function ArtistHome({
 
         <footer className="mt-16 flex flex-col items-center gap-3 border-t border-dashed border-[var(--ph-border)] pt-8 text-center">
           <p className="font-code text-[9px] uppercase tracking-[0.35em] text-[var(--ph-muted)]">
-            Written in Bar 4 Bar · {tokens.plateSerial}
+            Written in AKAsheet · {tokens.plateSerial}
           </p>
           {!user && (
             <div className="flex flex-col items-center gap-2">
@@ -834,7 +834,7 @@ export function ArtistHome({
                 asChild
               >
                 <Link href="/discover?entry=profile" scroll>
-                  <Compass className="h-3.5 w-3.5" /> See what others are doing on Bar4Bar
+                  <Compass className="h-3.5 w-3.5" /> See what others are doing on AKAsheet
                 </Link>
               </Button>
             </div>

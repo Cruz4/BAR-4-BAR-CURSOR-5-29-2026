@@ -1,6 +1,6 @@
-/* Bar 4 Bar Studio — PWA shell + FCM. Do NOT cache Next.js build chunks. */
-const CACHE_NAME = 'b4b-static-v9';
-const SHELL_CACHE = 'b4b-shell-v9';
+/* AKAsheet — PWA shell + FCM. Do NOT cache Next.js build chunks. */
+const CACHE_NAME = 'akasheet-static-v1';
+const SHELL_CACHE = 'akasheet-shell-v1';
 const STATIC_ASSETS = ['/Logo.png', '/B4B_Font.otf', '/YUSRB_font.ttf'];
 
 // Firebase Cloud Messaging (Activity push) — no-ops if messaging isn't used yet.
@@ -48,9 +48,9 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data.json();
   } catch {
-    payload = { notification: { title: 'Bar 4 Bar', body: event.data.text() } };
+    payload = { notification: { title: 'AKAsheet', body: event.data.text() } };
   }
-  const title = payload.notification?.title || payload.data?.title || 'Bar 4 Bar';
+  const title = payload.notification?.title || payload.data?.title || 'AKAsheet';
   const body = payload.notification?.body || payload.data?.body || 'You have new activity';
   const href = payload.data?.href || '/activity';
   event.waitUntil(

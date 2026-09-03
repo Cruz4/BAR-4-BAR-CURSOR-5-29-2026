@@ -273,7 +273,7 @@ export const StudioStandingFoilCard = React.forwardRef<HTMLDivElement, StudioSta
           <div className="flex items-end justify-between gap-2 border-t border-white/10 pt-3">
             <p className="min-w-0 truncate font-mono text-[9px] tracking-wider text-white/35">{passId}</p>
             <p className="shrink-0 whitespace-nowrap text-[8px] font-bold uppercase tracking-[0.14em] text-white/40">
-              Bar 4 Bar
+              AKAsheet
             </p>
           </div>
         </div>

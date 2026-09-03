@@ -1,4 +1,4 @@
-# Bar 4 Bar — Market Research Brief (MiroFish Reality Seed)
+# AKAsheet — Market Research Brief (MiroFish Reality Seed)
 
 **Upload this file once** to MiroFish **01 / Reality Seeds**. Reuse the same graph for multiple runs — only change **02 / Simulation Requirement** (see [simulation-prompts.md](./simulation-prompts.md)).
 
@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-**Bar 4 Bar** (bar4bar.ink) is a web-based **lyric and rhyme workstation** for hip-hop and songwriting artists. It is **not** a music generator like Suno or Udio.
+**AKAsheet** (akasheet.com) is a web-based **lyric and rhyme workstation** for hip-hop and songwriting artists. It is **not** a music generator like Suno or Udio.
 
 Artists build **albums, tracks, DNA strains, rhyme books**, and export vault JSON. **Ink** pays for AI actions (line generation, DNA extraction, Studio Draft, Creative Effects). Typing and saving lyrics does **not** spend Ink.
 
@@ -70,7 +70,7 @@ Artists build **albums, tracks, DNA strains, rhyme books**, and export vault JSO
 
 ## Competitive Landscape
 
-| Tool | What it does | Pricing | Strong | Weak vs Bar 4 Bar |
+| Tool | What it does | Pricing | Strong | Weak vs AKAsheet |
 |------|--------------|---------|--------|-------------------|
 | **Suno / Udio** | Finished audio | ~$10/mo | Instant song audio | No bar structure, no catalog DNA, no lyric vault |
 | **ChatGPT** | Generic chat | Free–$20/mo | Flexible | No rhyme pulse, no album/track model, no DNA strains |
@@ -79,7 +79,7 @@ Artists build **albums, tracks, DNA strains, rhyme books**, and export vault JSO
 
 **Switching trigger:** Artist finishes a mixtape draft elsewhere and hits “I need this on every track” or “I need to send DNA to my writer.”
 
-**Bar 4 Bar frame:** Suno gives you an mp3. Bar 4 Bar gives you the **blueprint**.
+**AKAsheet frame:** Suno gives you an mp3. AKAsheet gives you the **blueprint**.
 
 ---
 
@@ -116,7 +116,7 @@ Bar-by-bar AI on Ink, DNA & REMIX extraction, Generation Workstation, system pre
 3. **$7.77 feels cheap / scammy** vs accessible for indie artists
 4. **3-day trial** — fair preview vs “trial scam” when vault save locks on day 3
 5. **Free too generous** — why pay Pro if 250 + 150/mo runs the whole shop?
-6. **Bar 4 Bar vs Suno** — complementary (beats + blueprint) or redundant?
+6. **AKAsheet vs Suno** — complementary (beats + blueprint) or redundant?
 7. **Invite-gate beta** — exclusivity vs friction (if enabled at launch)
 8. **“Notion for rappers”** — pro workflow vs too nerdy for hobbyists
 
@@ -144,7 +144,7 @@ Bar-by-bar AI on Ink, DNA & REMIX extraction, Generation Workstation, system pre
 ## GTM scenarios (vary in simulation prompts only)
 
 ### Market A — Catalog workflow
-> **Bar 4 Bar is your album brain — not a beat toy.** Pro = catalog: DNA vault, Performance Mode, DNA Drop.
+> **AKAsheet is your album brain — not a beat toy.** Pro = catalog: DNA vault, Performance Mode, DNA Drop.
 
 ### Market B — Ink-first workstation
 > **Everything works on Ink — Pro unlocks scale.** Lead with Ink math (250 signup + 150/mo, 400 cap).
@@ -165,4 +165,4 @@ No trial, 2 tracks, yearly default. Primary pain: early track cap.
 
 ---
 
-*Source: Bar 4 Bar repo — `studio-tiers.ts`, `subscription.ts`, `trial.ts`, `pricing/page.tsx` (May 2026).*
+*Source: AKAsheet repo — `studio-tiers.ts`, `subscription.ts`, `trial.ts`, `pricing/page.tsx` (May 2026).*

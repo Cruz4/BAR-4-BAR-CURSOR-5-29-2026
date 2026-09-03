@@ -137,7 +137,7 @@ export function WhatsNewDialog() {
             <Sparkles className="h-14 w-14 sm:h-16 sm:w-16" />
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 pr-12">
-            <Badge className="bg-primary/20 text-primary border-primary/20 font-code px-2 text-[10px]">Bar 4 Bar v.10</Badge>
+            <Badge className="bg-primary/20 text-primary border-primary/20 font-code px-2 text-[10px]">AKAsheet v.10</Badge>
             <span className="text-[9px] font-bold uppercase tracking-[0.25em] sm:tracking-[0.3em] text-muted-foreground">Studio notes</span>
           </div>
           <DialogTitle className="font-headline text-2xl sm:text-3xl font-bold tracking-tighter leading-tight pr-4">

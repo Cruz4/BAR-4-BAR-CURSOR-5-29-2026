@@ -401,7 +401,7 @@ async function main() {
 
   writeFileSync(CACHE_PATH, JSON.stringify(cache));
 
-  const fallback = (word) => `${word} in the Bar 4 Bar neon lexicon.`;
+  const fallback = (word) => `${word} in the AKAsheet neon lexicon.`;
 
   const next = entries.map((e) => {
     const q = queryWord(e.word, e.id);

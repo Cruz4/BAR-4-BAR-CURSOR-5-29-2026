@@ -73,7 +73,7 @@ export function InviteGateScreen({ copy: copyPartial, onUnlocked }: InviteGateSc
           </div>
 
           <p className="text-[10px] font-code uppercase tracking-[0.35em] text-primary/80 mb-3">
-            Bar 4 Bar Studio · Private Beta
+            AKAsheet · Private Beta
           </p>
 
           <h1 className="font-headline text-3xl sm:text-4xl font-bold uppercase tracking-tight text-foreground dark:text-white leading-tight">

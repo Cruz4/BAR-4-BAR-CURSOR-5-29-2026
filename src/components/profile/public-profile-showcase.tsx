@@ -186,7 +186,7 @@ export function PublicProfileShowcase({
             asChild
           >
             <Link href="/">
-              <ChevronLeft className="h-4 w-4" /> Bar 4 Bar Studio
+              <ChevronLeft className="h-4 w-4" /> AKAsheet
             </Link>
           </Button>
 
@@ -372,7 +372,7 @@ export function PublicProfileShowcase({
         </section>
 
         <p className="mt-16 text-center text-[9px] font-code uppercase tracking-[0.35em] text-muted-foreground/45">
-          Public studio profile · bar4bar.ink
+          Public studio profile · akasheet.com
         </p>
       </div>
     </div>

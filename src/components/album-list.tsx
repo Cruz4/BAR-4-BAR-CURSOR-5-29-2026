@@ -553,7 +553,7 @@ const VinylRecord = ({ album, tierLocked = false }: { album: Album; tierLocked?:
                     )
                 ) : (
                     <div className="flex items-center justify-center h-full w-full p-2 bg-neutral-900">
-                        <Image src="/Logo.png" alt="B4B" width={96} height={96} className="w-full h-full object-contain opacity-20" />
+                        <Image src="/Logo.png" alt="AKAsheet" width={96} height={96} className="w-full h-full object-contain opacity-20" />
                     </div>
                 )}
                 <div className="absolute w-3 h-3 bg-neutral-950 rounded-full border border-white/20 shadow-inner z-20" />
@@ -995,7 +995,7 @@ export function AlbumList() {
     const backup = buildVaultBackup(albums, styleProfile);
     const dataStr = JSON.stringify(backup, null, 2);
     const dataBlob = new Blob([dataStr], {type: "application/json"});
-    downloadBlob(dataBlob, `bar4bar-studio-blueprint-${new Date().toISOString().split('T')[0]}.json`);
+    downloadBlob(dataBlob, `akasheet-studio-blueprint-${new Date().toISOString().split('T')[0]}.json`);
     setShowExportDialog(false);
     toast({ title: 'Studio Blueprint Exported', description: 'Writing and project settings saved. Media is not included in this small JSON.' });
   };
@@ -1014,7 +1014,7 @@ export function AlbumList() {
         userId: user.id,
         onProgress: setArchiveProgress,
       });
-      downloadBlob(archive, `bar4bar-full-vault-${new Date().toISOString().split('T')[0]}.zip`);
+      downloadBlob(archive, `akasheet-full-vault-${new Date().toISOString().split('T')[0]}.zip`);
       setShowExportDialog(false);
       toast({ title: 'Full Vault Archive Exported', description: 'ZIP saved with its importable blueprint and owned Vault media.' });
     } catch (error) {

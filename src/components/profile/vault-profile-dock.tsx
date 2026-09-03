@@ -425,7 +425,7 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
             </p>
             <div className="flex flex-col gap-2">
               <div className="flex min-w-0 items-center gap-1 rounded-lg border border-border/70 bg-background/60 px-2.5 py-1.5 font-code text-xs">
-                <span className="shrink-0 text-muted-foreground">bar4bar.ink/</span>
+                <span className="shrink-0 text-muted-foreground">akasheet.com/</span>
                 <Input
                   value={slugDraft}
                   disabled={saving || slugSaving}
@@ -448,7 +448,7 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
               </div>
               {summary.profileSlug && (
                 <p className="font-code text-[10px] text-sky-300/90">
-                  bar4bar.ink/{summary.profileSlug}
+                  akasheet.com/{summary.profileSlug}
                 </p>
               )}
             </div>

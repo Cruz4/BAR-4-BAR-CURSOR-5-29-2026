@@ -1,7 +1,7 @@
 
-# Bar 4 Bar: Intellectual Property & Legal Strategy Guide
+# AKAsheet: Intellectual Property & Legal Strategy Guide
 
-This document outlines the essential steps to protect the unique innovations, branding, and workflows of the Bar 4 Bar workstation.
+This document outlines the essential steps to protect the unique innovations, branding, and workflows of the AKAsheet workstation.
 
 ---
 
@@ -10,16 +10,16 @@ This document outlines the essential steps to protect the unique innovations, br
 
 ### Steps to Take:
 1.  **Register with the US Copyright Office**: While copyright is automatic upon creation, registration is required to sue for statutory damages.
-2.  **Display Notice**: Ensure the footer always reads `© 2024 Bar 4 Bar LLC. All Rights Reserved.` (Already implemented).
+2.  **Display Notice**: Ensure the footer always reads `© 2024 AKAsheet LLC. All Rights Reserved.` (Already implemented).
 3.  **Risk Level**: **Low**. Standard practice for all software.
 
 ---
 
 ## 2. Trademark Protection (The Brand Identity)
-**What it covers**: The name "Bar 4 Bar", the logo, and the term "Ink" as a digital currency for creative fuel.
+**What it covers**: The name "AKAsheet", the logo, and the term "Ink" as a digital currency for creative fuel.
 
 ### Steps to Take:
-1.  **USPTO Filing**: File for a "Word Mark" for "Bar 4 Bar" under Class 9 (Software) and Class 41 (Music Production Services).
+1.  **USPTO Filing**: File for a "Word Mark" for "AKAsheet" under Class 9 (Software) and Class 41 (Music Production Services).
 2.  **Search Clearance**: Verify that no other software in the music space is using a confusingly similar name.
 3.  **Risk Level**: **Medium**. If someone else uses the name, it dilutes your market presence.
 
@@ -37,7 +37,7 @@ This document outlines the essential steps to protect the unique innovations, br
 
 ## 4. AI-Specific Legal Considerations
 **Ownership of Output**: Current US law states that AI-generated content cannot be copyrighted by the user. 
-*   **Bar 4 Bar Strategy**: Market the app as a "Co-Writer." Because the user provides the "DNA" (The 5 Questions) and selects the "Intents," the resulting lyrics are a "Human-Directed Work," which strengthens the user's claim to ownership.
+*   **AKAsheet Strategy**: Market the app as a "Co-Writer." Because the user provides the "DNA" (The 5 Questions) and selects the "Intents," the resulting lyrics are a "Human-Directed Work," which strengthens the user's claim to ownership.
 
 ---
 
@@ -53,6 +53,6 @@ This document outlines the essential steps to protect the unique innovations, br
 ---
 
 ## 6. Execution Roadmap
-1.  **Month 1**: Finalize Trademark for "Bar 4 Bar."
+1.  **Month 1**: Finalize Trademark for "AKAsheet."
 2.  **Month 2**: File Provisional Patent for the "Thematic Alignment AI Workflow."
 3.  **Month 6**: Convert PPA to a Full Utility Patent if user growth justifies the $5k+ cost.

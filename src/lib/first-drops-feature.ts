@@ -1,5 +1,5 @@
 /**
- * Bar 4 Bar First Drops flag — buy-once audio on DNA Drops.
+ * AKAsheet First Drops flag — buy-once audio on DNA Drops.
  *
  * Live switch: Admin Panel → Config → First Drops (Firestore `config/firstDrops`).
  * Emergency hard kill: FIRST_DROPS_FORCE_OFF=1

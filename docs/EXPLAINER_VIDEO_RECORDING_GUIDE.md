@@ -1,6 +1,6 @@
 # Explainer video — demo vault, script & recording guide
 
-**Product:** Bar 4 Bar Studio · https://bar4bar.ink  
+**Product:** AKAsheet · https://akasheet.com  
 **Vault file:** `sample-data/bar4bar-marketing-demo-vault-import.json`  
 **Meta (IDs & hero paths):** `sample-data/bar4bar-marketing-demo-vault.meta.json`
 
@@ -26,10 +26,10 @@ Credentials are written to **`.env.local`** only (`AGENT_DEMO_EMAIL`, `AGENT_DEM
 
 | Setting | Value |
 |---------|--------|
-| **Email** | `AGENT_DEMO_EMAIL` from `.env.local` (default `agent.demo@bar4bar.ink`) |
+| **Email** | `AGENT_DEMO_EMAIL` from `.env.local` (default `agent.demo@akasheet.com`) |
 | **Tier** | Studio Pro (yearly) |
 | **Ink** | 10,000 permanent |
-| **Login** | `http://localhost:9002/login` or `https://bar4bar.ink/login` |
+| **Login** | `http://localhost:9002/login` or `https://akasheet.com/login` |
 
 ### Marketing-only login (manual)
 
@@ -43,7 +43,7 @@ Use a **separate account** from your daily driver — e.g. `bar4bar.demo@gmail.c
 
 ### 2. Import the demo vault
 
-1. Sign in as the demo account on **localhost:9002** or **bar4bar.ink**
+1. Sign in as the demo account on **localhost:9002** or **akasheet.com**
 2. Open **The Vault** at `/vault`
 3. Choose **Import Studio Vault** → select `sample-data/bar4bar-marketing-demo-vault-import.json`
 4. Review the version, project counts, Style Profile behavior, and collision copies, then confirm merge. Import never removes or overwrites current projects.
@@ -59,7 +59,7 @@ You should see **4 albums**:
 
 ### 3. Bookmark these paths (after import)
 
-Replace `{base}` with `https://bar4bar.ink` or `http://localhost:9002`.
+Replace `{base}` with `https://akasheet.com` or `http://localhost:9002`.
 
 | Beat | URL |
 |------|-----|
@@ -93,12 +93,12 @@ Replace `{base}` with `https://bar4bar.ink` or `http://localhost:9002`.
 | Time | VO | On screen |
 |------|-----|-----------|
 | **0:00–0:08** | “You ever get stuck on the *next bar* — not the whole song, just the next line that actually fits?” | Hero track editor; cursor on **empty bar 4** in BOOTH LIGHT — don’t click yet |
-| **0:08–0:18** | “Bar 4 Bar isn’t a ‘write my song’ button. It’s a studio rhyme book — bar by bar — for rappers and songwriters who care about structure, rhyme, and staying on theme.” | Cut to vault grid (4 vinyl albums). Optional overlay: *Bar by bar. Not paragraph soup.* |
+| **0:08–0:18** | “AKAsheet isn’t a ‘write my song’ button. It’s a studio rhyme book — bar by bar — for rappers and songwriters who care about structure, rhyme, and staying on theme.” | Cut to vault grid (4 vinyl albums). Optional overlay: *Bar by bar. Not paragraph soup.* |
 | **0:18–0:32** | “Start with your album’s DNA — five questions: setting, emotion, trigger, truth, tone. Set it once… every track inherits it.” | Open **NEON AFTER HOURS** → Album DNA panel; slow scroll all five fields |
 | **0:32–0:50** | “Write on the sheet — verse, hook, bridge. Stuck? Hit **Next Line**. Two rhyme-aware options. Pick one. It slots in. Structure stays intact.” | 1) Click bar 4 2) Footer **Bar Workstation** → Next 3) Opt 1 / Opt 2 4) Accept — **hold 1 sec** |
 | **0:50–1:05** | “Paste rough notes — the studio decodes themes and style into **strains** you save, remix, and inject. So the AI sounds like *your* project.” | DNA & Remix: paste `MARKETING_SEED_LYRICS` from below → strain cards → one ⚡ inject |
 | **1:05–1:20** | “Then step onto The Scene. Choose Artist, creator, or Music Fan. Feature a track you released or bought, discover people by public taste and craft, and see why every match or Emerging score moved.” | Fast montage: Sound Identity → featured track selector → Discover reason → Emerging reason |
-| **1:20–1:30** | “Start free at bar4bar.ink. Write the next bar, then build the music world around it.” | Landing → **Create free account**. End card 3s: **BAR 4 BAR · bar4bar.ink** |
+| **1:20–1:30** | “Start free at akasheet.com. Write the next bar, then build the music world around it.” | Landing → **Create free account**. End card 3s: **AKAsheet · akasheet.com** |
 
 ### DNA paste text (for 0:50 beat)
 
@@ -202,17 +202,17 @@ Drop DNA remix section. Keep: Hook → Vault → DNA panel → Next Line → Rhy
 | TikTok / Reels / Shorts | 9:16 | 15–22s clips |
 | Pricing page embed | 16:9 | 60s max |
 
-**Signup links:** `https://bar4bar.ink/login?mode=signup&ref=video`
+**Signup links:** `https://akasheet.com/login?mode=signup&ref=video`
 
 ---
 
 ## Part 6 — 60-second ad script (condensed VO)
 
 > Stuck on the next bar?  
-> Bar 4 Bar is your studio rhyme book — not a one-click song generator.  
+> AKAsheet is your studio rhyme book — not a one-click song generator.  
 > Set Album DNA once. Write bar by bar. Hit Next Line — two options, you pick.  
 > Rhyme Pulse shows the scheme. Paste notes, decode strains, stay on theme.  
-> Start free — bar4bar.ink — master the next bar.
+> Start free — akasheet.com — master the next bar.
 
 ---
 

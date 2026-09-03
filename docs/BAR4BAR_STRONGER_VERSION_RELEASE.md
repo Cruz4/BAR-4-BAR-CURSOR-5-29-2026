@@ -1,4 +1,4 @@
-# Bar 4 Bar Stronger Version — Release Guide
+# AKAsheet Stronger Version — Release Guide
 
 ## Release status
 

@@ -5,7 +5,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { getPublicAppUrl } from '@/lib/app-url';
 import { SUPPORT_EMAIL } from '@/lib/support';
 
-const DEFAULT_FROM = 'Bar 4 Bar <noreply@bar4bar.ink>';
+const DEFAULT_FROM = 'AKAsheet <noreply@akasheet.com>';
 
 function getResendClient(): Resend | null {
   const key = process.env.RESEND_API_KEY?.trim();

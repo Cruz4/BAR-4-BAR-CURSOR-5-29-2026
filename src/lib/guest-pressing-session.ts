@@ -178,7 +178,8 @@ export function readGuestPressingDraft(): GuestPressingDraft | null {
       seedText:
         typeof parsed.seedText === 'string' &&
         parsed.seedText !== 'Type a bar here to watch your page change.' &&
-        parsed.seedText !== 'Type something here & watch your page change'
+        parsed.seedText !== 'Type something here & watch your page change' &&
+        parsed.seedText !== 'Type something here & watch your page change.'
           ? parsed.seedText
           : base.seedText,
       barOfWeek:

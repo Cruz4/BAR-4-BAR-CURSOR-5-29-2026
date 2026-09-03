@@ -1,5 +1,5 @@
 /**
- * Bar 4 Bar First Drops — buy-once, stream-in-app commerce for DNA Drops.
+ * AKAsheet First Drops — buy-once, stream-in-app commerce for DNA Drops.
  * Named release: feat/bar4bar-first-drops
  * Live switch: Admin Panel → Config → First Drops (`config/firstDrops`).
  */
@@ -57,7 +57,7 @@ export function dropArtistNetCents(amountCents: number): number {
   return Math.max(0, amount - dropPlatformFeeCents(amount));
 }
 
-/** Approximate Stripe card processing Bar 4 Bar pays (not deducted from artist net). */
+/** Approximate Stripe card processing AKAsheet pays (not deducted from artist net). */
 export const DROP_STRIPE_PROCESSING_PERCENT = 2.9;
 export const DROP_STRIPE_PROCESSING_FIXED_CENTS = 30;
 
@@ -97,7 +97,7 @@ export function firstDropsSplitLine(amountCents: number): string {
 /** Extra line clarifying Stripe is platform-borne — never subtracted from artist net. */
 export function firstDropsStripeProcessingLine(amountCents: number): string {
   const p = dropFeePreview(amountCents);
-  return `Stripe processing ~${centsToUsdLabel(p.stripeProcessingEstimateCents)} is paid by Bar 4 Bar — not taken from your share.`;
+  return `Stripe processing ~${centsToUsdLabel(p.stripeProcessingEstimateCents)} is paid by AKAsheet — not taken from your share.`;
 }
 
 export function firstDropsFeeLine(): string {
@@ -119,7 +119,7 @@ export function firstDropsPitch(): string {
 }
 
 export function getFirstDropsWhatFaqAnswer(): string {
-  return `A Release is a recording you publish for listening or purchase—not a subsection of DNA Drop, and not a Pro-only feature. Upload the song privately, set a price or pay-what-you-want, and fans buy once to stream it in Bar 4 Bar. Preview is 30 seconds until they unlock. Library is the in-app player—crates, search, and a four-bar visualizer. It is not a Spotify listing. ${firstDropsFeeLine()} ${firstDropsCashoutLine()} Ink is never used to buy music. DNA Drop lyric links stay Pro.`;
+  return `A Release is a recording you publish for listening or purchase—not a subsection of DNA Drop, and not a Pro-only feature. Upload the song privately, set a price or pay-what-you-want, and fans buy once to stream it in AKAsheet. Preview is 30 seconds until they unlock. Library is the in-app player—crates, search, and a four-bar visualizer. It is not a Spotify listing. ${firstDropsFeeLine()} ${firstDropsCashoutLine()} Ink is never used to buy music. DNA Drop lyric links stay Pro.`;
 }
 
 export function getFirstDropsSellFaqAnswer(): string {
@@ -127,7 +127,7 @@ export function getFirstDropsSellFaqAnswer(): string {
 }
 
 export function getFirstDropsRightsFaqAnswer(): string {
-  return `Yes. You keep all rights to your lyrics, recordings, and masters. Uploading a song to sell on Bar 4 Bar is not a label deal and does not transfer ownership. We host the in-app stream and keep 25% below $3, 15% from $3–$4.99, or 10% from $5 up — the rest is yours. ${firstDropsCashoutLine()}`;
+  return `Yes. You keep all rights to your lyrics, recordings, and masters. Uploading a song to sell on AKAsheet is not a label deal and does not transfer ownership. We host the in-app stream and keep 25% below $3, 15% from $3–$4.99, or 10% from $5 up — the rest is yours. ${firstDropsCashoutLine()}`;
 }
 
 export function getFirstDropsFeeFaqAnswer(): string {

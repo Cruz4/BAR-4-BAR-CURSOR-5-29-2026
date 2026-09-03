@@ -47,27 +47,27 @@ export async function sendWelcomeEmail(
 
   const previewHours = PRO_FEATURE_PREVIEW_DAYS * 24;
   const body = wrapStudioEmail({
-    preheader: `Welcome to Bar 4 Bar — ${SIGNUP_INK} Ink and a ${previewHours}-hour Pro preview.`,
+    preheader: `Welcome to AKAsheet — ${SIGNUP_INK} Ink and a ${previewHours}-hour Pro preview.`,
     title: 'Welcome to the studio',
     bodyHtml: `
       <p style="margin:0 0 14px">${greet(opts.displayName || displayName)}</p>
-      <p style="margin:0 0 14px">Your Bar 4 Bar account is ready. Here’s what’s unlocked:</p>
+      <p style="margin:0 0 14px">Your AKAsheet account is ready. Here’s what’s unlocked:</p>
       <ul style="margin:0 0 14px;padding-left:18px;color:#c8c8d0">
         <li><strong style="color:#fff">${SIGNUP_INK} welcome Ink</strong> for AI co-writing tools</li>
         <li><strong style="color:#fff">${previewHours}-hour Pro feature preview</strong> — export, vault saves, Performance, Freestyle &amp; DNA Drop</li>
         <li>Demo catalog stays at <strong style="color:#fff">${FREE_ALBUM_LIMIT} album / ${FREE_TRACK_LIMIT} tracks</strong> until you Go Pro</li>
       </ul>
-      <p style="margin:0 0 14px">If you signed up with email, confirm your address with the verification email from <strong style="color:#fff">noreply@bar4bar.ink</strong> so Ink and preview unlock fully.</p>
+      <p style="margin:0 0 14px">If you signed up with email, confirm your address with the verification email from <strong style="color:#fff">noreply@akasheet.com</strong> so Ink and preview unlock fully.</p>
     `,
     ctaLabel: 'Open your vault',
     ctaUrl: studioEmailCtaUrl('/'),
-    footerNote: 'Welcome to Bar 4 Bar — write bar by bar.',
+    footerNote: 'Welcome to AKAsheet — write bar by bar.',
   });
 
   const result = await sendStudioEmail({
     db,
     to: email,
-    subject: 'Welcome to Bar 4 Bar',
+    subject: 'Welcome to AKAsheet',
     html: body.html,
     text: body.text,
     idempotencyKey: `welcome:${opts.userId}`,
@@ -90,7 +90,7 @@ export async function sendWelcomeBackEmail(
   if (!email) return;
 
   const body = wrapStudioEmail({
-    preheader: 'Welcome back to Bar 4 Bar — your vault is ready for a fresh start.',
+    preheader: 'Welcome back to AKAsheet — your vault is ready for a fresh start.',
     title: 'Welcome back',
     bodyHtml: `
       <p style="margin:0 0 14px">${greet(opts.displayName || displayName)}</p>
@@ -99,13 +99,13 @@ export async function sendWelcomeBackEmail(
     `,
     ctaLabel: 'Open your vault',
     ctaUrl: studioEmailCtaUrl('/'),
-    footerNote: 'Welcome back to Bar 4 Bar.',
+    footerNote: 'Welcome back to AKAsheet.',
   });
 
   const result = await sendStudioEmail({
     db,
     to: email,
-    subject: 'Welcome back to Bar 4 Bar',
+    subject: 'Welcome back to AKAsheet',
     html: body.html,
     text: body.text,
     idempotencyKey: `welcome_back:${opts.userId}`,
@@ -149,7 +149,7 @@ export async function sendInkPurchaseEmail(
   await sendStudioEmail({
     db,
     to: email,
-    subject: `${opts.inkAmount.toLocaleString()} Ink added to Bar 4 Bar`,
+    subject: `${opts.inkAmount.toLocaleString()} Ink added to AKAsheet`,
     html: body.html,
     text: body.text,
     idempotencyKey: `ink:${opts.eventKey}`,
@@ -237,7 +237,7 @@ export async function sendRenewalChargeEmail(
   await sendStudioEmail({
     db,
     to: email,
-    subject: `${tierLabel} renewed — Bar 4 Bar`,
+    subject: `${tierLabel} renewed — AKAsheet`,
     html: body.html,
     text: body.text,
     idempotencyKey: `renewal:${opts.eventKey}`,
@@ -275,7 +275,7 @@ export async function sendMembershipCanceledEmail(
   await sendStudioEmail({
     db,
     to: email,
-    subject: 'Studio Pro canceled — Bar 4 Bar',
+    subject: 'Studio Pro canceled — AKAsheet',
     html: body.html,
     text: body.text,
     idempotencyKey: `cancel:${opts.eventKey}`,
@@ -293,15 +293,15 @@ export async function sendAccountDeletedEmail(opts: {
   if (!email.includes('@')) return;
 
   const body = wrapStudioEmail({
-    preheader: 'Your Bar 4 Bar account and vault have been deleted.',
+    preheader: 'Your AKAsheet account and vault have been deleted.',
     title: 'Account deleted',
     bodyHtml: `
       <p style="margin:0 0 14px">${greet(opts.displayName || null)}</p>
-      <p style="margin:0 0 14px">Your Bar 4 Bar account has been permanently deleted, including vault data tied to that login.</p>
+      <p style="margin:0 0 14px">Your AKAsheet account has been permanently deleted, including vault data tied to that login.</p>
       <p style="margin:0 0 14px">Any active Studio Pro billing was canceled with this deletion so you won’t be charged again.</p>
       <p style="margin:0">If this wasn’t you, contact support right away. You’re always welcome back with a new account.</p>
     `,
-    ctaLabel: 'Visit Bar 4 Bar',
+    ctaLabel: 'Visit AKAsheet',
     ctaUrl: studioEmailCtaUrl('/welcome'),
     footerNote: 'This is a confirmation that your account wipe completed.',
   });
@@ -309,7 +309,7 @@ export async function sendAccountDeletedEmail(opts: {
   await sendStudioEmail({
     db: opts.db,
     to: email,
-    subject: 'Your Bar 4 Bar account was deleted',
+    subject: 'Your AKAsheet account was deleted',
     html: body.html,
     text: body.text,
     idempotencyKey: `delete:${opts.userId}`,

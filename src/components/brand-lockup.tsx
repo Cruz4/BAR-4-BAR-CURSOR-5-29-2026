@@ -48,7 +48,7 @@ export function BrandLockup({
         className={cn(
           'shrink-0 overflow-hidden rounded-xl flex items-center justify-center',
           isMarketing
-            ? 'h-9 w-9 bg-white p-1.5 shadow-2xl sm:h-10 sm:w-10'
+            ? 'h-9 w-9 border border-primary/20 bg-black p-0.5 shadow-2xl sm:h-10 sm:w-10'
             : 'h-9 w-9 border border-primary/20 bg-black p-0.5 sm:h-11 sm:w-11 group-hover:scale-110 transition-transform duration-300'
         )}
       >
@@ -72,7 +72,7 @@ export function BrandLockup({
         </TitleTag>
         <p
           className={cn(
-            'font-tagline -mt-0.5 truncate uppercase tracking-widest opacity-70 max-sm:hidden',
+            'font-tagline -mt-0.5 truncate uppercase tracking-[0.14em] opacity-70 max-sm:hidden',
             isMarketing
               ? 'text-[7px] text-muted-foreground sm:text-[8px]'
               : 'text-[7px] text-muted-foreground md:text-[8px]'

@@ -1,12 +1,12 @@
 
-# Bar 4 Bar: The Genius TikTok Strategy
+# AKAsheet: The Genius TikTok Strategy
 
 To sell a premium songwriting workstation on TikTok, you must move away from "AI Hype" and toward "Professional Aesthetic & Workflow." TikTok users love tools that look cool, solve a specific pain point, and have a high-end feel.
 
 ## 1. The Core Hook: "The Concept Album Problem"
 Don't market this as a "Lyric Generator." Market it as an **Album Manager.**
 *   **The Pain**: "Why do your songs sound like they don't belong on the same album?"
-*   **The Solution**: "Bar 4 Bar lets you set the DNA of your project once, and the AI co-writer keeps every track in that world."
+*   **The Solution**: "AKAsheet lets you set the DNA of your project once, and the AI co-writer keeps every track in that world."
 
 ## 2. Video Style: "Aesthetic ASMR Workflow"
 *   **The Visuals**: Close-up shots of the "Parchment & Charcoal" theme on a clean desk setup (MacBook, Studio Monitors, maybe a physical notebook).
@@ -35,7 +35,7 @@ In your "How to Upgrade" or "Pricing" videos, show the toggle flipping from Mont
 *   Call it out: "The Pro tier is cheaper than a coffee if you bill it yearly."
 
 ## 5. Captions & Tags
-*   **Primary Tags**: #SongwritingTips #RapWorkstation #HomeStudio #MusicProduction #ConceptAlbum #IndependentArtist #Bar 4 Bar
+*   **Primary Tags**: #SongwritingTips #RapWorkstation #HomeStudio #MusicProduction #ConceptAlbum #IndependentArtist #AKAsheet
 *   **Key Phrase**: "Your digital rhyme book just got a professional upgrade."
 
 ## 6. The Referral "Growth Hack"
@@ -44,7 +44,7 @@ Encourage users to "Refer a friend" to get bonus Ink. Create a video showing the
 *   Mention the cap: "Limit of 4 referrer bonuses, so invite your best collaborators first."
 # Stronger-version content angles (August 2026)
 
-Rotate these alongside workstation clips so Bar 4 Bar is understood as both a serious writing tool and a music network:
+Rotate these alongside workstation clips so AKAsheet is understood as both a serious writing tool and a music network:
 
 - **Music Fans belong:** choose Music Fan without pretending to be an artist; add public taste and feature a purchased favorite.
 - **The 30 seconds you choose:** show the featured-track excerpt picker, then compare a non-owner preview with purchaser full playback.

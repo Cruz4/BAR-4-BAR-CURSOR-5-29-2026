@@ -2,7 +2,7 @@
  * Embed whitelist + URL parsing for Artist Home / Scene playable media.
  *
  * Embeds-only strategy: the provider hosts and streams the media, so profile
- * plays cost Bar 4 Bar nothing. Unsupported URLs fall back to a link card.
+ * plays cost AKAsheet nothing. Unsupported URLs fall back to a link card.
  */
 
 export type EmbedProvider =

@@ -279,7 +279,7 @@ export function ProgressCelebration() {
         text: [
           `🎯 ${SCALE_LABELS[activeChallenge.scale]} goal complete: ${activeChallenge.label}`,
           activeChallenge.description.trim(),
-          '#bar4bar.ink',
+          '#akasheet',
         ].join('\n'),
         imageUrl,
         ownerName: displayName,

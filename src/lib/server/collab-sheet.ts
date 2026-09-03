@@ -218,7 +218,7 @@ export async function inviteToCollabSheet(opts: {
   if (sheet.revoked[opts.peerId]) throw new Error('Access was revoked — re-invite from Collab Sheet settings.');
 
   const friends = await areFriends(opts.ownerId, opts.peerId);
-  if (!friends) throw new Error('You can only share Collab Sheets with friends on Bar 4 Bar.');
+  if (!friends) throw new Error('You can only share Collab Sheets with friends on AKAsheet.');
 
   const db = await getDb();
   const peerMember = await memberProfile(opts.peerId, opts.peerName || 'Artist');

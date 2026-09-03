@@ -35,7 +35,7 @@ export function SceneChartSpotlight({ excludedUserIds }: { excludedUserIds?: Set
   );
 
   return (
-    <section data-chart-spotlight className="mt-3 overflow-hidden rounded-xl border border-cyan-400/20 bg-[hsl(216_38%_7%)] shadow-[0_12px_32px_rgba(0,0,0,0.2)] [&_span]:leading-tight" aria-label="Bar 4 Bar chart spotlight">
+    <section data-chart-spotlight className="mt-3 overflow-hidden rounded-xl border border-cyan-400/20 bg-[hsl(216_38%_7%)] shadow-[0_12px_32px_rgba(0,0,0,0.2)] [&_span]:leading-tight" aria-label="AKAsheet chart spotlight">
       <div className="flex items-center justify-between gap-3 border-b border-white/8 px-3 py-2">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 font-code text-[11px] font-bold uppercase tracking-[0.13em] text-cyan-200">

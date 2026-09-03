@@ -71,7 +71,7 @@ export function ShareStudioDialog({
       )
     : fallbackUrl;
 
-  const composedText = shareText || `${title}\n${campaignUrl}\n#bar4bar.ink`;
+  const composedText = shareText || `${title}\n${campaignUrl}\n#akasheet`;
 
   useEffect(() => {
     if (!open || !user) {
@@ -134,7 +134,7 @@ export function ShareStudioDialog({
     }
     try {
       await navigator.share({
-        title: `${title} · Bar 4 Bar`,
+        title: `${title} · AKAsheet`,
         text: composedText,
         url: campaignUrl,
       });
@@ -196,7 +196,7 @@ export function ShareStudioDialog({
                 <p className="text-[10px] text-white/70 line-clamp-2">{subtitle}</p>
               ) : null}
               <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-sky-300">
-                Bar 4 Bar
+                AKAsheet
               </p>
             </div>
           </div>

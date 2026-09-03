@@ -154,7 +154,7 @@ export function AchievementBadgeCell({
         `🏆 Unlocked ${achievement.title}`,
         achievement.description.trim(),
         rewards.length ? rewards.join(' · ') : '',
-        '#bar4bar.ink',
+        '#akasheet',
       ]
         .filter(Boolean)
         .join('\n');

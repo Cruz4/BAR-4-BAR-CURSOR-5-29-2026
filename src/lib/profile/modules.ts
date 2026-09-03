@@ -180,7 +180,7 @@ export const MODULE_META: Record<
   },
   friends: {
     label: 'Friends',
-    description: 'Your circle on Bar 4 Bar.',
+    description: 'Your circle on AKAsheet.',
     defaultSize: 'S',
     defaultEnabled: true,
   },

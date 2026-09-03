@@ -352,7 +352,7 @@ export default function SharedProjectPage() {
                     </CardHeader>
                     <CardFooter className="justify-center">
                         <Button className="w-full" onClick={() => router.push('/login')}>
-                            Go to Bar 4 Bar
+                            Go to AKAsheet
                         </Button>
                     </CardFooter>
                 </Card>
@@ -399,14 +399,14 @@ export default function SharedProjectPage() {
                 <Link
                     href={homeHref}
                     className="absolute left-1/2 top-1/2 z-[5] flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 sm:gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    title={user ? 'Go to vault' : 'Go to Bar 4 Bar'}
+                    title={user ? 'Go to vault' : 'Go to AKAsheet'}
                 >
                     <div className="shrink-0 overflow-hidden rounded-lg h-8 w-8 sm:h-9 sm:w-9 border border-primary/20 bg-black">
-                        <Image src="/Logo.png" alt="Bar 4 Bar" width={36} height={36} className="h-full w-full object-contain" />
+                        <Image src="/Logo.png" alt="AKAsheet" width={36} height={36} className="h-full w-full object-contain" />
                     </div>
                     <div className="min-w-0 hidden sm:block">
                         <h1 className="truncate font-headline text-sm sm:text-lg font-bold leading-none tracking-tight text-foreground">
-                            BAR 4 BAR
+                            AKAsheet
                         </h1>
                         <p className="text-[7px] sm:text-[8px] text-muted-foreground uppercase tracking-[0.18em] mt-0.5 truncate">
                             {hasFirstDropAudio
@@ -505,7 +505,7 @@ export default function SharedProjectPage() {
                         <CardContent className="p-4 text-[11px] font-code text-muted-foreground leading-relaxed">
                             {hasFirstDropAudio ? (
                               <>
-                                Hit play for a 30-second preview. Buy once to stream the full {isAlbum ? 'album' : 'song'} in Bar4Bar — not Spotify.
+                                Hit play for a 30-second preview. Buy once to stream the full {isAlbum ? 'album' : 'song'} in AKAsheet — not Spotify.
                                 {' '}
                                 {!user ? (
                                   <button
@@ -869,10 +869,10 @@ export default function SharedProjectPage() {
 
             <footer className="py-12 border-t mt-12 bg-muted/5 flex flex-col items-center gap-6 relative z-10">
                 <div className="overflow-hidden rounded-xl border border-primary/20 bg-black h-10 w-10">
-                    <Image src="/Logo.png" alt="B4B" width={40} height={40} className="h-full w-full object-contain" />
+                    <Image src="/Logo.png" alt="AKAsheet" width={40} height={40} className="h-full w-full object-contain" />
                 </div>
                 <p className="text-[11px] text-muted-foreground font-code text-center uppercase tracking-[0.4em]">
-                    Built and shared via Bar 4 Bar Studio
+                    Built and shared via AKAsheet
                 </p>
                 <Button
                     variant="outline"

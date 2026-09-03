@@ -49,7 +49,7 @@ async function createPrice({ productName, unitAmount, recurring, nickname, metad
 const created = {};
 
 created.PRO_MONTHLY = await createPrice({
-  productName: 'Bar 4 Bar Pro Monthly',
+  productName: 'AKAsheet Pro Monthly',
   unitAmount: 777,
   recurring: { interval: 'month' },
   nickname: 'Pro Monthly — $7.77/mo · 1,777 residency ink',
@@ -57,7 +57,7 @@ created.PRO_MONTHLY = await createPrice({
 });
 
 created.PRO_YEARLY = await createPrice({
-  productName: 'Bar 4 Bar Pro Yearly',
+  productName: 'AKAsheet Pro Yearly',
   unitAmount: 6660,
   recurring: { interval: 'year' },
   nickname: 'Pro Yearly — $66.60/yr · 13,500 residency ink',

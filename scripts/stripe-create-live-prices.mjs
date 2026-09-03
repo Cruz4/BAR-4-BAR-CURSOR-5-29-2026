@@ -1,5 +1,5 @@
 /**
- * Creates all six Bar 4 Bar prices in Stripe LIVE mode.
+ * Creates all six AKAsheet prices in Stripe LIVE mode.
  *
  * Prerequisites:
  *   STRIPE_SECRET_KEY=sk_live_... in .env (or exported in shell)
@@ -69,12 +69,12 @@ async function createPrice({ productName, unitAmount, recurring, nickname, metad
   return price;
 }
 
-console.log('\nCreating LIVE Stripe prices (Bar 4 Bar current catalog)...\n');
+console.log('\nCreating LIVE Stripe prices (AKAsheet current catalog)...\n');
 
 const created = {};
 
 created.PRO_MONTHLY = await createPrice({
-  productName: 'Bar 4 Bar Pro Monthly',
+  productName: 'AKAsheet Pro Monthly',
   unitAmount: 777,
   recurring: { interval: 'month' },
   nickname: 'Pro Monthly — $7.77/mo · 1,777 residency ink',
@@ -82,7 +82,7 @@ created.PRO_MONTHLY = await createPrice({
 });
 
 created.PRO_YEARLY = await createPrice({
-  productName: 'Bar 4 Bar Pro Yearly',
+  productName: 'AKAsheet Pro Yearly',
   unitAmount: 5328,
   recurring: { interval: 'year' },
   nickname: 'Pro Yearly — $4.44/mo · 3,444 residency ink',
@@ -128,7 +128,7 @@ console.log('# Copy into production env (.firebase/.../functions/.env + Google C
 console.log('STRIPE_SECRET_KEY=sk_live_...');
 console.log('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...');
 console.log('STRIPE_WEBHOOK_SECRET=whsec_...   # from LIVE webhook endpoint in Stripe Dashboard');
-console.log('NEXT_PUBLIC_APP_URL=https://bar4bar.ink');
+console.log('NEXT_PUBLIC_APP_URL=https://akasheet.com');
 console.log('');
 for (const [key, price] of Object.entries(created)) {
   console.log(`STRIPE_PRICE_${key}=${price.id}`);

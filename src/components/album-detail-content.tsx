@@ -655,7 +655,7 @@ function EditCoverArtDialog({ album, onOpenChange }: { album: Album, onOpenChang
                                 )
                             ) : (
                                 <>
-                                    <Image src="/Logo.png" alt="B4B" width={48} height={48} className="w-12 h-12 opacity-20 mb-2" />
+                                    <Image src="/Logo.png" alt="AKAsheet" width={48} height={48} className="w-12 h-12 opacity-20 mb-2" />
                                     <p className="text-[8px] font-bold uppercase text-muted-foreground text-center px-2">
                                         Min {COVER_ART_MIN_DIMENSION}px · exports {COVER_ART_EXPORT_SIZE}px square
                                     </p>
@@ -1338,7 +1338,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 )
                             ) : (
                                 <div className="flex flex-col items-center gap-2">
-                                    <Image src="/Logo.png" alt="B4B" width={64} height={64} className="w-16 h-16 opacity-10" />
+                                    <Image src="/Logo.png" alt="AKAsheet" width={64} height={64} className="w-16 h-16 opacity-10" />
                                     <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">1000 x 1000px</p>
                                 </div>
                             )}

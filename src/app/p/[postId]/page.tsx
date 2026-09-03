@@ -15,8 +15,8 @@ type PageProps = { params: Promise<{ postId: string }> };
 function descriptionFor(ownerName: string, text: string): string {
   const snippet = text.slice(0, 190);
   return snippet
-    ? `${snippet}${text.length > snippet.length ? '…' : ''} — ${ownerName} on Bar 4 Bar`
-    : `${ownerName} shared a public music post on Bar 4 Bar.`;
+    ? `${snippet}${text.length > snippet.length ? '…' : ''} — ${ownerName} on AKAsheet`
+    : `${ownerName} shared a public music post on AKAsheet.`;
 }
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { postId } = await params;
@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!data) {
     return {
       title: 'Post unavailable',
-      description: 'This public Bar 4 Bar post is not available.',
+      description: 'This public AKAsheet post is not available.',
       robots: { index: false, follow: false },
     };
   }
@@ -40,14 +40,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       locale: 'en_US',
       url: canonical,
       siteName: SEO.siteName,
-      title: `${data.ownerName} on Bar 4 Bar`,
+      title: `${data.ownerName} on AKAsheet`,
       description,
       publishedTime: data.post.createdAt || undefined,
       ...(data.post.imageUrl?.startsWith('https://') ? { images: [data.post.imageUrl] } : {}),
     },
     twitter: {
       card: data.post.imageUrl?.startsWith('https://') ? 'summary_large_image' : 'summary',
-      title: `${data.ownerName} on Bar 4 Bar`,
+      title: `${data.ownerName} on AKAsheet`,
       description,
       ...(data.post.imageUrl?.startsWith('https://') ? { images: [data.post.imageUrl] } : {}),
     },
@@ -63,7 +63,7 @@ export default async function PublicPostPage({ params }: PageProps) {
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'SocialMediaPosting',
-    headline: `${data.ownerName} on Bar 4 Bar`,
+    headline: `${data.ownerName} on AKAsheet`,
     ...(text ? { articleBody: text } : {}),
     ...(data.post.createdAt ? { datePublished: data.post.createdAt } : {}),
     url: canonical,

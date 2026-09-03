@@ -92,7 +92,7 @@ export async function POST(req: Request) {
             unit_amount: amountCents,
             product_data: {
               name: priced.title.slice(0, 120),
-              description: `Bar 4 Bar Release · ${scope === 'album' ? 'album' : 'song'} stream`,
+              description: `AKAsheet Release · ${scope === 'album' ? 'album' : 'song'} stream`,
             },
           },
         },
@@ -121,7 +121,7 @@ export async function POST(req: Request) {
       consent_collection: { terms_of_service: 'required' },
       custom_text: {
         terms_of_service_acceptance: {
-          message: `I agree to the [Terms of Service](${getPublicAppUrl()}/terms) of Bar 4 Bar Studio.`,
+          message: `I agree to the [Terms of Service](${getPublicAppUrl()}/terms) of AKAsheet.`,
         },
       },
       customer_creation: 'always',

@@ -52,9 +52,9 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
       'Feature an owned or purchased track: visitors hear your chosen 30 seconds, then buy or stream by entitlement',
       'Follow, Inner Circle, and Friends stay distinct so support does not automatically open collaboration or Msgs',
     ],
-    mediaSrc: '/marketing/feature-artist-home.png',
+    mediaSrc: '/AKA_artist_home_promo_poster.png',
     mediaType: 'image',
-    mediaAlt: 'Bar 4 Bar Artist Home — shareable public artist page',
+    mediaAlt: 'AKAsheet Artist Home — shareable public artist page',
     layout: 'hero-stack',
     mediaVariant: 'hero-full',
   },
@@ -63,7 +63,7 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     eyebrow: 'Music Releases',
     title: 'Sell The Song.',
     description:
-      'Start from The Scene, upload a finished recording, choose a fixed or pay-what-you-want price, select the public 30-second preview, and publish the release. Fans buy once and stream it in Bar4Bar.',
+      'Start from The Scene, upload a finished recording, choose a fixed or pay-what-you-want price, select the public 30-second preview, and publish the release. Fans buy once and stream it in AKAsheet.',
     bullets: [
       'Listen / buy appears on your Artist Home, The Scene, and the song share link',
       `Fixed price or pay-what-you-want starts at ${centsToUsdLabel(DROP_PAID_MIN_CENTS)}. DNA Drop remains your lyric-preview card; finished-song sales happen through Releases`,
@@ -72,7 +72,7 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     ],
     mediaSrc: '/marketing/feature-artist-home-live.jpg',
     mediaType: 'image',
-    mediaAlt: 'Bar 4 Bar music release—sell and stream your song on the public page',
+    mediaAlt: 'AKAsheet music release—sell and stream your song on the public page',
     layout: 'hero-stack',
     mediaVariant: 'showcase',
     showMedia: false,
@@ -107,7 +107,7 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     ],
     mediaSrc: '/marketing/how-step-workstation.png',
     mediaType: 'image',
-    mediaAlt: 'Bar 4 Bar Collab Sheet — live shared lyric editing on the workstation',
+    mediaAlt: 'AKAsheet Collab Sheet — live shared lyric editing on the workstation',
     layout: 'hero-stack',
     mediaVariant: 'showcase',
     showMedia: false,
@@ -159,7 +159,7 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     ],
     mediaSrc: '/marketing/feature-vault.png',
     mediaType: 'image',
-    mediaAlt: 'Bar 4 Bar vault with vinyl album grid',
+    mediaAlt: 'AKAsheet vault with vinyl album grid',
     layout: 'bento',
     mediaVariant: 'bento',
     bentoGroup: 'studio',
@@ -206,7 +206,7 @@ export const MARKETING_HOW_IT_WORKS = [
 
 export const MARKETING_COMPARISON = {
   otherLabel: 'Other AI tools',
-  b4bLabel: 'Bar 4 Bar',
+  b4bLabel: 'AKAsheet',
   rows: [
     ['Prompt, generate, forget', 'Structure, memory, intent, generation'],
     ['No album context', 'Album DNA on every bar'],

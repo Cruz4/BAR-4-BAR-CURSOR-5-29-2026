@@ -6,7 +6,7 @@ import { dropArtistShareLabel } from '@/lib/drop-commerce';
 export const metadata: Metadata = pageMetadata({
   title: 'Release Earnings',
   description:
-    `Connect Stripe payouts, see release sales, and cash out your ${dropArtistShareLabel()} artist share in Bar 4 Bar.`,
+    `Connect Stripe payouts, see release sales, and cash out your ${dropArtistShareLabel()} artist share in AKAsheet.`,
   path: '/earnings',
   index: false,
 });

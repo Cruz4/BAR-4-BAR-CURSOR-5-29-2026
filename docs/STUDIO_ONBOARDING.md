@@ -1,6 +1,6 @@
 # Studio Onboarding — Tips, Tour & What's New
 
-This document describes how Bar 4 Bar teaches new systems to artists in-app. Source of truth for tip copy lives in `src/components/studio-tips.tsx`.
+This document describes how AKAsheet teaches new systems to artists in-app. Source of truth for tip copy lives in `src/components/studio-tips.tsx`.
 
 ## Signed-in home = The Scene (Aug 2026 pivot)
 

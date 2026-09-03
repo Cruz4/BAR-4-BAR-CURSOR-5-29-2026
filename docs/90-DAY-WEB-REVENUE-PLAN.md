@@ -1,7 +1,7 @@
-# Bar 4 Bar Studio — 90-Day Web-Only Revenue Plan
+# AKAsheet — 90-Day Web-Only Revenue Plan
 
-**Product:** Bar 4 Bar Studio (AI lyric workstation & rhyme book)  
-**Live URL:** https://bar4bar.ink — see [CUSTOM_DOMAIN.md](./CUSTOM_DOMAIN.md)  
+**Product:** AKAsheet (AI lyric workstation & rhyme book)  
+**Live URL:** https://akasheet.com — see [CUSTOM_DOMAIN.md](./CUSTOM_DOMAIN.md)  
 **Firebase project:** `lyricai-studio-otgxn`  
 **Scope:** Web-only (PWA on mobile). No native App Store launch in this window.  
 **Last updated:** May 28, 2026
@@ -39,7 +39,7 @@
 
 ## Executive summary
 
-Bar 4 Bar is **not** a one-shot “write my song” generator. It is a **bar-by-bar AI lyric workstation** — rhyme book, structure paste, DNA/vibe/style co-writer, and album organization.
+AKAsheet is **not** a one-shot “write my song” generator. It is a **bar-by-bar AI lyric workstation** — rhyme book, structure paste, DNA/vibe/style co-writer, and album organization.
 
 This 90-day plan is **web-only**: all traffic converts through mobile/desktop browser (PWA install optional). The strategy is:
 
@@ -62,7 +62,7 @@ This 90-day plan is **web-only**: all traffic converts through mobile/desktop br
 
 ### One-line positioning (use everywhere)
 
-> **Bar 4 Bar is the rhyme book + co-writer for rappers and songwriters who think in bars—not paragraphs.**
+> **AKAsheet is the rhyme book + co-writer for rappers and songwriters who think in bars—not paragraphs.**
 
 ### Ideal customer profile (ICP)
 
@@ -326,7 +326,7 @@ Major new AI modes until MRR justifies spend.
 
 ### Should you advertise if it’s a web app?
 
-**Yes.** Creative tools (Canva, Notion, Suno’s web funnel) convert mobile traffic to **mobile browser** or **PWA**. Bar 4 Bar supports PWA install (Studio Tips #25).
+**Yes.** Creative tools (Canva, Notion, Suno’s web funnel) convert mobile traffic to **mobile browser** or **PWA**. AKAsheet supports PWA install (Studio Tips #25).
 
 You are **not** competing on the App Store — you compete on **outcome in 30 seconds**: *next bar appears / chaos becomes structure*.
 
@@ -368,7 +368,7 @@ Every ad follows this structure:
 
 - “Try free — 250 Ink”
 - “Write bar 5 today”
-- “Link in bio → Bar 4 Bar Studio”
+- “Link in bio → AKAsheet”
 
 ---
 
@@ -514,7 +514,7 @@ Use every Monday (or your chosen day):
 
 ## Quick reference — what to say in one sentence
 
-**To a rapper:** “Stuck on bar 5? Bar 4 Bar is a rhyme book that suggests the next line in your flow—not a generic paragraph.”
+**To a rapper:** “Stuck on bar 5? AKAsheet is a rhyme book that suggests the next line in your flow—not a generic paragraph.”
 
 **To an investor/partner:** “Bar-by-bar AI lyric workstation with freemium Ink economy; Pro at $7.77/mo, targeting serious independent lyricists via TikTok/Reels.”
 
@@ -522,4 +522,4 @@ Use every Monday (or your chosen day):
 
 ---
 
-*This document consolidates the 90-day web-only revenue strategy, positioning, channel playbook, ad creative guidance, tier economics, and metrics framework for Bar 4 Bar Studio. Import task breakdown into Piece of Cake via `bar-4-bar-90-day-revenue-plan.piece-of-cake.json`.*
+*This document consolidates the 90-day web-only revenue strategy, positioning, channel playbook, ad creative guidance, tier economics, and metrics framework for AKAsheet. Import task breakdown into Piece of Cake via `bar-4-bar-90-day-revenue-plan.piece-of-cake.json`.*

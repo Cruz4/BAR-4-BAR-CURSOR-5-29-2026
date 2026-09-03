@@ -81,8 +81,8 @@ export function DnaDropAlbumHub({
         <p className="text-[11px] text-muted-foreground font-code leading-relaxed max-w-2xl">
           {albumForSale
             ? houseRelease
-              ? 'Every signed-in member receives every included recording free in their Bar4Bar Library; lyrics are optional.'
-              : 'Preview every included recording here. One album purchase unlocks every audio track in your Bar4Bar Library; lyrics are optional.'
+              ? 'Every signed-in member receives every included recording free in their AKAsheet Library; lyrics are optional.'
+              : 'Preview every included recording here. One album purchase unlocks every audio track in your AKAsheet Library; lyrics are optional.'
             : canViewDna
               ? 'Open a live track to see its DNA Drop — lyrics, Creative DNA, and whatever was toggled on when it went public.'
               : 'Open a live track to listen. Viewing or importing DNA Drop lyrics is Studio Pro.'}

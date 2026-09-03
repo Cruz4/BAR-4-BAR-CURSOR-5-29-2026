@@ -292,7 +292,7 @@ export function FeatureShowcaseSection() {
                 </span>
               </h2>
               <p className="font-code text-amber-100/80 text-sm md:text-base leading-relaxed max-w-2xl mx-auto">
-                Bar 4 Bar is a studio app — store bars, poems, loose lines, and half-baked hooks. Write in the vault,
+                AKAsheet is a studio app — store bars, poems, loose lines, and half-baked hooks. Write in the vault,
                 then show up on your public music home when you are ready for listeners, supporters, friends, and DNA Drops.
               </p>
             </div>

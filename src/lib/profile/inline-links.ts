@@ -1,24 +1,26 @@
 /**
  * Detect pasted links in posts and comments — including scheme-less
- * bar4bar.ink/{slug} and in-app /p /song /share paths.
+ * akasheet.com/{slug} (and legacy bar4bar.ink/{slug}) plus in-app /p /song /share paths.
  */
 
-import { DEFAULT_PUBLIC_APP_URL, LEGACY_FIREBASE_HOSTING_URL } from '@/lib/app-url';
+import { DEFAULT_PUBLIC_APP_URL, LEGACY_FIREBASE_HOSTING_URL, LEGACY_PUBLIC_APP_URL } from '@/lib/app-url';
+import { APP_WWW_ORIGIN, LEGACY_APP_WWW_ORIGIN } from '@/lib/brand';
 import { APP_ROOT_SEGMENTS, isPublicArtistHomePath, slugFromProfileHref } from '@/lib/profile/profile-slug';
 
 const TRAILING_PUNCT_RE = /[),.;:!?…'"”’]+$/;
 
 const LINK_RE =
-  /https?:\/\/[^\s<>[\]{}"'`]+|www\.[^\s<>[\]{}"'`]+|(?:bar4bar\.(?:ink|app)|lyricai-studio-otgxn\.web\.app|localhost(?::\d+)?)(?:\/[^\s<>[\]{}"'`]*)?|\/(?:p|song|share|profile)\/[^\s<>[\]{}"'`]+/gi;
+  /https?:\/\/[^\s<>[\]{}"'`]+|www\.[^\s<>[\]{}"'`]+|(?:akasheet\.com|bar4bar\.(?:ink|app)|lyricai-studio-otgxn\.web\.app|localhost(?::\d+)?)(?:\/[^\s<>[\]{}"'`]*)?|\/(?:p|song|share|profile)\/[^\s<>[\]{}"'`]+/gi;
 
 const MENTION_RE = /@([a-z0-9_][a-z0-9_-]{1,47})/gi;
 
 const STATIC_APP_HOSTS = new Set(
   [
     DEFAULT_PUBLIC_APP_URL,
+    APP_WWW_ORIGIN,
+    LEGACY_PUBLIC_APP_URL,
+    LEGACY_APP_WWW_ORIGIN,
     LEGACY_FIREBASE_HOSTING_URL,
-    'https://bar4bar.ink',
-    'https://www.bar4bar.ink',
     'https://bar4bar.app',
     'https://www.bar4bar.app',
   ]

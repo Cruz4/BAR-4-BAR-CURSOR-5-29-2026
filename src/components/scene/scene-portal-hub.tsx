@@ -540,7 +540,7 @@ export function GuestScenePortalHub({
           </span>
           <span className="relative min-w-0 flex-1">
             <span className="block font-headline text-[clamp(1.45rem,7vw,2.25rem)] font-black uppercase leading-none tracking-wide text-white">
-              Discover Bar4Bar
+              Discover AKAsheet
             </span>
             <span className="mt-1 block text-[11px] leading-snug text-white/60">
               Preview public music, artists, and Music Fans.

@@ -1,6 +1,6 @@
 # Transactional email (Resend)
 
-Bar 4 Bar sends branded lifecycle emails via [Resend](https://resend.com). Without `RESEND_API_KEY`, the app still works — emails are skipped and logged.
+AKAsheet sends branded lifecycle emails via [Resend](https://resend.com). Without `RESEND_API_KEY`, the app still works — emails are skipped and logged.
 
 ## What gets emailed
 
@@ -25,10 +25,10 @@ Firebase’s **verify email** link stays separate (Auth templates). Welcome is t
 
 ### 2. Verify your domain (production)
 
-1. Resend → **Domains** → add `bar4bar.ink`
+1. Resend → **Domains** → add `akasheet.com`
 2. Add the DNS records Resend shows (SPF / DKIM)
 3. Wait until status is **Verified**
-4. Prefer from-address like: `Bar 4 Bar <hello@bar4bar.ink>` or `noreply@bar4bar.ink`
+4. Prefer from-address like: `AKAsheet <akasheet.support@gmail.com>` or `noreply@akasheet.com`
 
 Until the domain is verified, you can only send to **your own Resend signup email** using the default `onboarding@resend.dev` from-address (fine for local tests).
 
@@ -39,7 +39,7 @@ In **root `.env`** and **Firebase functions `.env`** (same place as Stripe keys)
 ```bash
 RESEND_API_KEY=re_xxxxxxxx
 # After domain verify:
-RESEND_FROM_EMAIL=Bar 4 Bar <hello@bar4bar.ink>
+RESEND_FROM_EMAIL=AKAsheet <akasheet.support@gmail.com>
 ```
 
 Optional: leave `RESEND_FROM_EMAIL` unset to use Resend’s onboarding sender for testing only.

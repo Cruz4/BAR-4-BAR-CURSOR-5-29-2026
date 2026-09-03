@@ -19,9 +19,9 @@ export function buildAchievementShareText(
 ): string {
   const serial = getAchievementSerial(achievement?.id || 'studio-stats', displayName);
   if (!achievement) {
-    return `${displayName} · ${rankLabel} · ${xp.toLocaleString()} XP · ${streak}d streak — Bar 4 Bar Studio`;
+    return `${displayName} · ${rankLabel} · ${xp.toLocaleString()} XP · ${streak}d streak — AKAsheet`;
   }
-  return `🏆 ${achievement.title} — ${displayName}\n${achievement.description}\n${rankLabel} · ${xp.toLocaleString()} XP · ${streak}d streak\n${unlockedAt ? `Unlocked ${formatUnlockDate(unlockedAt)}` : 'Unlocked'}\nBar 4 Bar Studio · ${serial}`;
+  return `🏆 ${achievement.title} — ${displayName}\n${achievement.description}\n${rankLabel} · ${xp.toLocaleString()} XP · ${streak}d streak\n${unlockedAt ? `Unlocked ${formatUnlockDate(unlockedAt)}` : 'Unlocked'}\nAKAsheet · ${serial}`;
 }
 
 function prepareAchievementExtras(clonedEl: HTMLElement) {
@@ -55,5 +55,5 @@ export async function downloadAchievementCardPng(
     prepare: prepareAchievementExtras,
   });
   const slug = (achievement?.id || 'studio-stats').replace(/_/g, '-');
-  downloadCanvasPng(canvas, `bar4bar-${slug}.png`);
+  downloadCanvasPng(canvas, `akasheet-${slug}.png`);
 }

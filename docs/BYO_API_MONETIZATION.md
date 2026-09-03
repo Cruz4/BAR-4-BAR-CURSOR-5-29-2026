@@ -1,5 +1,5 @@
 
-# Bar 4 Bar: BYO-API Monetization Strategy
+# AKAsheet: BYO-API Monetization Strategy
 
 ## 1. The Concept: "The Studio vs. The Fuel"
 By allowing users to "Bring Their Own API Key," we are shifting the value proposition from "Selling AI access" to "Selling a Professional Workstation."

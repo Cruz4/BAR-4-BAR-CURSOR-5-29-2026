@@ -129,7 +129,7 @@ export const AchievementFoilCard = React.forwardRef<HTMLDivElement, AchievementF
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
-                <p className="text-[8px] font-bold uppercase tracking-[0.35em] text-white/50">Bar 4 Bar Studio</p>
+                <p className="text-[8px] font-bold uppercase tracking-[0.35em] text-white/50">AKAsheet</p>
                 <p
                   className="text-[10px] font-bold uppercase tracking-widest mt-1"
                   style={{ color: theme.accent }}
@@ -247,7 +247,7 @@ export const AchievementFoilCard = React.forwardRef<HTMLDivElement, AchievementF
                 <Barcode accent={theme.accent} />
                 <div className="shrink-0 text-right overflow-visible">
                   <p className="text-[8px] font-mono text-white/45" style={{ lineHeight: 1.3 }}>
-                    bar4bar.ink
+                    akasheet.com
                   </p>
                   <p
                     data-achievement-serial

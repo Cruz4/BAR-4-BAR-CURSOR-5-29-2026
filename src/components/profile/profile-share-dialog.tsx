@@ -62,7 +62,7 @@ function RedditIcon({ className }: { className?: string }) {
 }
 
 export function buildProfileShareText(displayName: string, rankLabel: string, profileUrl: string) {
-  return `${displayName} · ${rankLabel} on Bar 4 Bar\n${profileUrl}\n#bar4bar.ink`;
+  return `${displayName} · ${rankLabel} on AKAsheet\n${profileUrl}\n#akasheet`;
 }
 
 export function ProfileShareDialog({ open, onOpenChange, profile }: ProfileShareDialogProps) {
@@ -83,7 +83,7 @@ export function ProfileShareDialog({ open, onOpenChange, profile }: ProfileShare
         kind="profile"
         targetPath={profileTargetPath(profile.profileUrl)}
         title={profile.displayName}
-        subtitle={`${profile.rankLabel} on Bar 4 Bar`}
+        subtitle={`${profile.rankLabel} on AKAsheet`}
         shareText={shareText}
       />
     );
@@ -91,7 +91,7 @@ export function ProfileShareDialog({ open, onOpenChange, profile }: ProfileShare
 
   const encodedUrl = encodeURIComponent(profile.profileUrl);
   const encodedText = encodeURIComponent(shareText);
-  const encodedTitle = encodeURIComponent(`${profile.displayName} · Bar 4 Bar`);
+  const encodedTitle = encodeURIComponent(`${profile.displayName} · AKAsheet`);
 
   const markShared = (network: string) => {
     void trackShareCardEvent('share_card_generated', { kind: 'profile_social', network });

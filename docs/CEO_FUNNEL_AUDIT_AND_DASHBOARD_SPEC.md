@@ -1,4 +1,4 @@
-# Bar 4 Bar — Funnel Audit, Metric Dictionary & CEO Dashboard Spec
+# AKAsheet — Funnel Audit, Metric Dictionary & CEO Dashboard Spec
 
 **Status:** Phase 0 deliverable (docs only). No analytics aggregation or `AnalyticsEventV2` writers until this document is accepted.
 

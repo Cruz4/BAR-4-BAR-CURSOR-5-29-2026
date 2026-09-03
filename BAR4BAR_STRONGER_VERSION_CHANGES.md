@@ -1,6 +1,6 @@
-# Bar 4 Bar Stronger Version — What Changed
+# AKAsheet Stronger Version — What Changed
 
-This file is the plain-language record of the stronger-version work added to Bar 4 Bar. The detailed release, deployment, privacy, changed-file, and manual-testing guide is also available at [`docs/BAR4BAR_STRONGER_VERSION_RELEASE.md`](docs/BAR4BAR_STRONGER_VERSION_RELEASE.md).
+This file is the plain-language record of the stronger-version work added to AKAsheet. The detailed release, deployment, privacy, changed-file, and manual-testing guide is also available at [`docs/BAR4BAR_STRONGER_VERSION_RELEASE.md`](docs/BAR4BAR_STRONGER_VERSION_RELEASE.md).
 
 The original proposed Industry Room item was skipped as requested. No production data was deleted or migrated, and no dependency package was added.
 
@@ -67,7 +67,7 @@ This lets listeners participate publicly without falsely labeling every account 
 
 ## 7. Safe, versioned Vault backup and restore
 
-- New exports use Bar 4 Bar Studio Vault schema version 2.
+- New exports use AKAsheet Vault schema version 2.
 - The backup includes export time, counts, albums, tracks, project presets, and Style Profile.
 - Existing legacy JSON exports remain accepted.
 - Import now previews the exact albums/tracks being added and identifies conflicts before writing.

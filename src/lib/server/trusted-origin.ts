@@ -1,5 +1,11 @@
 import 'server-only';
-import { DEFAULT_PUBLIC_APP_URL, LEGACY_FIREBASE_HOSTING_URL } from '@/lib/app-url';
+import {
+  DEFAULT_PUBLIC_APP_URL,
+  LEGACY_FIREBASE_HOSTING_URL,
+  LEGACY_PUBLIC_APP_URL,
+  LEGACY_PUBLIC_WWW_URL,
+  PUBLIC_WWW_APP_URL,
+} from '@/lib/app-url';
 
 const DEV_ORIGINS = ['http://localhost:9002', 'http://127.0.0.1:9002'];
 
@@ -25,7 +31,14 @@ function buildAllowlist(): string[] {
   if (process.env.NODE_ENV === 'development') {
     list.push(...DEV_ORIGINS);
   }
-  const merged = [...list, LEGACY_FIREBASE_HOSTING_URL];
+  const merged = [
+    ...list,
+    DEFAULT_PUBLIC_APP_URL,
+    PUBLIC_WWW_APP_URL,
+    LEGACY_PUBLIC_APP_URL,
+    LEGACY_PUBLIC_WWW_URL,
+    LEGACY_FIREBASE_HOSTING_URL,
+  ];
   return [...new Set(merged)];
 }
 

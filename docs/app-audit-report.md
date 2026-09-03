@@ -1,4 +1,4 @@
-# Bar 4 Bar — Full App Audit Report
+# AKAsheet — Full App Audit Report
 
 > **Historical snapshot:** This report records the repository state on July 10, 2026. Several findings have since been fixed. Use [CURRENT_SECURITY_MONEY_AUDIT.md](./CURRENT_SECURITY_MONEY_AUDIT.md) for the current re-audit status; do not treat unresolved items below as automatically current.
 

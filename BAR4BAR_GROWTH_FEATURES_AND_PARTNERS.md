@@ -1,10 +1,10 @@
-# Bar4Bar Growth Features & Partnership Targets
+# AKAsheet Growth Features & Partnership Targets
 
 > A single reference containing the six recommended product additions and the complete company-interest response from the original conversation.
 
 ## Quick navigation
 
-- [Part I — Six additions for Bar4Bar](#part-i--six-additions-for-bar4bar)
+- [Part I — Six additions for AKAsheet](#part-i--six-additions-for-bar4bar)
   1. [“Day One” fan identity](#1-day-one-fan-identity)
   2. [Pass the Bar](#2-pass-the-bar)
   3. [Professional split sheets](#3-professional-split-sheets)
@@ -27,7 +27,7 @@
 
 ---
 
-# Part I — Six additions for Bar4Bar
+# Part I — Six additions for AKAsheet
 
 ## 1. “Day One” fan identity
 
@@ -281,14 +281,14 @@ Bring them a 30-second demonstration, one specific integration proposal, evidenc
 
 > Original question: **“What about fan resale of a song while the artist always receives a percentage off every sale? A fan sends/sells a song and no longer has it—what do you think with our current structure?”**
 
-I think this could become one of Bar4Bar’s strongest differentiators—but it should be framed as an artist-authorized transfer of a limited “First Drop Edition,” not as reselling ownership of the song itself.
+I think this could become one of AKAsheet’s strongest differentiators—but it should be framed as an artist-authorized transfer of a limited “First Drop Edition,” not as reselling ownership of the song itself.
 
 Right now, BA is not structured for resale:
 
 - A purchase grants one permanent library entitlement associated with the song/share.
 - Purchases are not numbered or individually owned editions.
 - Checkout sends the artist’s share to one Stripe destination.
-- The current Terms explicitly describe the license as non-transferable and prohibit resale: [terms/page.tsx](</G:/Bar 4 Bar App $/BAR 4 BAR FULL APP 5-28-2026 YOYO SAVE VER56/src/app/terms/page.tsx:60>).
+- The current Terms explicitly describe the license as non-transferable and prohibit resale: [terms/page.tsx](</G:/AKAsheet App $/AKAsheet FULL APP 5-28-2026 YOYO SAVE VER56/src/app/terms/page.tsx:60>).
 - Full playback is controlled server-side, which is a major advantage: BA can revoke the seller’s stream access and grant it to the recipient.
 
 ## The version I would build

@@ -275,7 +275,7 @@ export function FindArtistsPanel({ viewerSlug, className }: FindArtistsPanelProp
 
       {searched && !searching && hits.length === 0 && query.trim().length >= 2 && (
         <p className="text-xs text-muted-foreground">
-          No live Artist Homes match that name. They may be private — or not on Bar 4 Bar yet.
+          No live Artist Homes match that name. They may be private — or not on AKAsheet yet.
         </p>
       )}
 

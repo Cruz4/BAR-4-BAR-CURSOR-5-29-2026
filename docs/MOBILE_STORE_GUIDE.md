@@ -1,4 +1,4 @@
-# Bar 4 Bar — Mobile Store Deployment Guide
+# AKAsheet — Mobile Store Deployment Guide
 
 > **Full Play Store + App Store checklist:** [APP_STORE_ROADMAP.md](./APP_STORE_ROADMAP.md)  
 > **Marketing (do first):** [MARKETING_QUICKSTART.md](./MARKETING_QUICKSTART.md)
@@ -6,7 +6,7 @@
 ## Phase 1: Installable PWA (done in codebase)
 
 1. Deploy web app: `npm run redeploy && firebase deploy`
-2. Open `https://bar4bar.ink` in Chrome (Android) or Safari (iOS)
+2. Open `https://akasheet.com` in Chrome (Android) or Safari (iOS)
 3. **Android:** Menu → Install app / Add to Home screen
 4. **iOS:** Share → Add to Home Screen
 5. Offline: full vault snapshot on device (editor + Performance mode); sync when back online; AI requires connection
@@ -24,7 +24,7 @@
 
 ```bash
 npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/ios @capacitor/network @capacitor/splash-screen @capacitor/status-bar
-npx cap init "Bar 4 Bar Studio" studio.bar4bar.app --web-dir out
+npx cap init "AKAsheet" studio.bar4bar.app --web-dir out
 npx cap add android
 npx cap add ios
 ```
@@ -32,7 +32,7 @@ npx cap add ios
 Set production URL in `.env` or shell:
 
 ```bash
-set CAPACITOR_SERVER_URL=https://bar4bar.ink
+set CAPACITOR_SERVER_URL=https://akasheet.com
 npx cap sync
 ```
 

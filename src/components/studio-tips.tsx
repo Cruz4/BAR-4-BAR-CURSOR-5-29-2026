@@ -63,7 +63,7 @@ const STUDIO_TIPS: StudioTip[] = [
   { id: 22, icon: Mic, title: "FREESTYLE PAD", text: "Caught a vibe? Open the Freestyle Pad in the footer to speak your bars. Tap 'Add to Editor' to drop them directly into the sheet.", color: "text-primary" },
   { id: 23, icon: Target, title: "PRECISION ENDING", text: "Set an 'End With' constraint in the footer Bar Workstation to force neural suggestions to land perfectly on your punchline.", color: "text-cyan-500" },
   { id: 24, icon: Settings, title: "CALIBRATION HUB", text: "Step 10 is the workstation's brain. Mix vault strains with your track intents to review your rules before generating lyrics.", color: "text-primary" },
-  { id: 25, icon: Rocket, title: "MOBILE PWA", text: "Install Bar 4 Bar to your home screen on iOS or Android for a full-screen, native studio experience on the go.", color: "text-primary" },
+  { id: 25, icon: Rocket, title: "MOBILE PWA", text: "Install AKAsheet to your home screen on iOS or Android for a full-screen, native studio experience on the go.", color: "text-primary" },
   { id: 26, icon: HelpCircle, title: "STUDIO MANUAL", text: "Stuck? Click the '?' icon in the header to open the Spatial Manual. It maps every tool to its exact location in the Left, Center, or Right panels.", color: "text-primary" },
   { id: 27, icon: Dna, title: "DNA MIXER", text: "Open the DNA Mixer in the Album page to selectively pick individual creative strains from your vault history.", color: "text-emerald-500" },
   { id: 28, icon: Clock, title: "INK PRIORITY", text: "The studio automatically uses your expiring monthly Residency Ink before touching your Permanent Ink.", color: "text-primary" },

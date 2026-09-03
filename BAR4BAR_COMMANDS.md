@@ -1,11 +1,11 @@
-# Bar4Bar GitHub and Firebase commands
+# AKAsheet GitHub and Firebase commands
 
 ## Commit and push everything to GitHub
 
-Run this one line from the Bar4Bar project folder. Change the message between the quotes if you want:
+Run this one line from the AKAsheet project folder. Change the message between the quotes if you want:
 
 ```powershell
-git add -A && git commit -m "update Bar4Bar" && git push origin main
+git add -A && git commit -m "update AKAsheet" && git push origin main
 ```
 
 This includes every changed and new file currently inside the project folder.

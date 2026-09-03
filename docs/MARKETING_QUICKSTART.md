@@ -1,6 +1,6 @@
 # Marketing quickstart — Week 1 (post-launch)
 
-**Live URL:** https://bar4bar.ink  
+**Live URL:** https://akasheet.com  
 **Full playbook:** [90-DAY-WEB-REVENUE-PLAN.md](./90-DAY-WEB-REVENUE-PLAN.md)  
 **TikTok style:** [TIKTOK_STRATEGY.md](./TIKTOK_STRATEGY.md)  
 **Explainer video (demo vault + 90s script):** [EXPLAINER_VIDEO_RECORDING_GUIDE.md](./EXPLAINER_VIDEO_RECORDING_GUIDE.md)  
@@ -10,9 +10,9 @@
 
 ## Positioning (copy/paste everywhere)
 
-**Bar 4 Bar** — the bar-by-bar AI songwriting studio with a music network built around the work. Artists, creators, and Music Fans get a free public music home, explainable discovery, real support layers, featured owned/purchased tracks, First Drops, and transparent Emerging momentum. It assists the writing process; it is not a full-song generator.
+**AKAsheet** — the bar-by-bar AI songwriting studio with a music network built around the work. Artists, creators, and Music Fans get a free public music home, explainable discovery, real support layers, featured owned/purchased tracks, First Drops, and transparent Emerging momentum. It assists the writing process; it is not a full-song generator.
 
-> Bar 4 Bar is the rhyme book + co-writer for rappers and songwriters who think in **bars**—not paragraphs.
+> AKAsheet is the rhyme book + co-writer for rappers and songwriters who think in **bars**—not paragraphs.
 
 **Bio line 1:** Rhyme book + AI co-writer for rappers & songwriters  
 **Bio line 2:** Free music home + 250 Ink — write, discover, support
@@ -23,10 +23,10 @@
 
 | Channel | Link |
 |---------|------|
-| TikTok bio / Promote | `https://bar4bar.ink/login?mode=signup&ref=tiktok` |
-| Instagram bio | `https://bar4bar.ink/login?mode=signup&ref=ig` |
-| YouTube description | `https://bar4bar.ink/login?mode=signup&ref=yt` |
-| Reddit posts | `https://bar4bar.ink/login?mode=signup&ref=reddit` |
+| TikTok bio / Promote | `https://akasheet.com/login?mode=signup&ref=tiktok` |
+| Instagram bio | `https://akasheet.com/login?mode=signup&ref=ig` |
+| YouTube description | `https://akasheet.com/login?mode=signup&ref=yt` |
+| Reddit posts | `https://akasheet.com/login?mode=signup&ref=reddit` |
 
 Signups store `ref` in analytics (Admin → Growth Metrics). Pin comment: **“250 Ink free — link in bio.”**
 
@@ -44,7 +44,7 @@ Signups store `ref` in analytics (Admin → Growth Metrics). Pin comment: **“2
 - [ ] **Rotate one network clip each week:** Music Fan identity → purchased featured track; “why this matched” Discover card; Follow vs Inner Circle vs Friends; Emerging score breakdown; creator Listener Insights; collision-safe Vault restore.
 - [ ] **CapCut** (1.5 hr): trim 15–22s each, auto-captions, end card: “Free demo — link in bio”
 - [ ] **Post schedule:** Mon / Wed / Fri / Sun → TikTok + cross-post Instagram Reels
-- [ ] **Accounts:** `@Bar4BarStudio` (or your handle) — same name on TikTok, IG, YouTube
+- [ ] **Accounts:** `@AKAsheetStudio` (or your handle) — same name on TikTok, IG, YouTube
 - [ ] **Track** in spreadsheet: views, profile clicks, signups (Admin Growth Metrics weekly)
 
 ### 20-second ad structure (every video)
@@ -76,7 +76,7 @@ Signups store `ref` in analytics (Admin → Growth Metrics). Pin comment: **“2
 | Platform | TikTok Ads → **Spark Ads** on winning organic post |
 | Budget | $5/day × 14 days (~$70); cap month at $150–300 |
 | Audience | Interests: songwriting, rap, music production, independent artist · 18–34 · US |
-| Promote URL | `https://bar4bar.ink/login?mode=signup&ref=tiktok` |
+| Promote URL | `https://akasheet.com/login?mode=signup&ref=tiktok` |
 | Creative | Boost the **same** organic video — do not shoot new ads yet |
 
 ### Weekly review

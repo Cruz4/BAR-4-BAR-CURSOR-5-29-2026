@@ -1,8 +1,8 @@
-# SEO — Bar 4 Bar Studio
+# SEO — AKAsheet
 
 On-page SEO is configured in code (`src/lib/seo.ts`) and applied via Next.js `metadata`, `sitemap.ts`, and `robots.ts`.
 
-Production canonical base: **https://bar4bar.ink** (`NEXT_PUBLIC_APP_URL`).
+Production canonical base: **https://akasheet.com** (`NEXT_PUBLIC_APP_URL`).
 
 ## Positioning (matches product)
 
@@ -12,9 +12,9 @@ Default description now joins the two real product loops: **bar-by-bar songwriti
 
 | Asset | URL |
 |-------|-----|
-| Sitemap | `https://bar4bar.ink/sitemap.xml` |
-| Robots | `https://bar4bar.ink/robots.txt` |
-| Manifest | `https://bar4bar.ink/manifest.webmanifest` |
+| Sitemap | `https://akasheet.com/sitemap.xml` |
+| Robots | `https://akasheet.com/robots.txt` |
+| Manifest | `https://akasheet.com/manifest.webmanifest` |
 
 **Indexed public routes (static sitemap):** home (`/`), `/try`, `/pricing`, `/discover`, `/leaderboard`, `/login`, `/terms`, `/privacy`, `/cookies`.
 
@@ -27,9 +27,9 @@ Default description now joins the two real product loops: **bar-by-bar songwriti
 ## Google Search Console (manual, ~10 min)
 
 1. Open [Google Search Console](https://search.google.com/search-console).
-2. **Add property** → URL prefix → `https://bar4bar.ink`.
+2. **Add property** → URL prefix → `https://akasheet.com`.
 3. **Verify** using DNS TXT (recommended on Porkbun/Cloudflare) or HTML tag.
-4. **Sitemaps** → submit `https://bar4bar.ink/sitemap.xml`.
+4. **Sitemaps** → submit `https://akasheet.com/sitemap.xml`.
 5. **URL inspection** → test home, `/try`, `/discover`, and `/leaderboard`, then **Request indexing**. Optionally inspect a known live public music home.
 
 Re-submit the sitemap after major marketing pushes or new public pages.
@@ -42,9 +42,9 @@ npm run deploy:live
 
 Confirm:
 
-- `curl -s https://bar4bar.ink/robots.txt` lists the sitemap URL and does **not** disallow `/profile/`.
-- `curl -s https://bar4bar.ink/sitemap.xml` includes home, `/try`, `/pricing`, `/discover`, and `/leaderboard`.
-- View source on `/login` — `<title>` and `og:title` mention Bar 4 Bar.
+- `curl -s https://akasheet.com/robots.txt` lists the sitemap URL and does **not** disallow `/profile/`.
+- `curl -s https://akasheet.com/sitemap.xml` includes home, `/try`, `/pricing`, `/discover`, and `/leaderboard`.
+- View source on `/login` — `<title>` and `og:title` mention AKAsheet.
 - Guest `/` OG/title cover the songwriting workstation and public music network (root layout defaults from `SEO.*`).
 
 ## Optional improvements (not in repo)

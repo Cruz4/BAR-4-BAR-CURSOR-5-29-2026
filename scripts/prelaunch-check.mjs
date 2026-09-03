@@ -27,7 +27,7 @@ function loadEnvFile(path) {
 loadEnvFile(resolve(root, '.env'));
 loadEnvFile(resolve(root, '.env.local'));
 
-console.log('\n=== Bar 4 Bar pre-launch check ===\n');
+console.log('\n=== AKAsheet pre-launch check ===\n');
 console.log(`Tracked checklist: ${checklist}\n`);
 
 const run = (label, script) => {

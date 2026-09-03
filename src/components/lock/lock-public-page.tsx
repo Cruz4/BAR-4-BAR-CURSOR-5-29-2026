@@ -375,7 +375,7 @@ function LockPublicPageInner({ lockId, lockEnabled }: LockPublicPageProps) {
   const ownerHome = lock.ownerSlug ? profileHref(lock.ownerSlug) : null;
   const named = watching || Boolean(user && result?.authorName);
   const fromLabel = lock.isHouse
-    ? 'Bar 4 Bar'
+    ? 'AKAsheet'
     : lock.ownerSlug
       ? `@${lock.ownerSlug}`
       : lock.ownerName;
@@ -597,7 +597,7 @@ function LockPublicPageInner({ lockId, lockEnabled }: LockPublicPageProps) {
                 className="space-y-5"
               >
               <p className="text-xs text-zinc-500">
-                Your line · {lock.isHouse ? 'Bar 4 Bar' : lock.ownerName}
+                Your line · {lock.isHouse ? 'AKAsheet' : lock.ownerName}
               </p>
               {path.length > 1 ? (
                 <div className="space-y-1 border-l border-white/10 pl-3">

@@ -389,7 +389,7 @@ export function SceneImmersiveFeedDialog({
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-40 bg-gradient-to-b from-black via-black/85 to-transparent pb-6 pt-[max(0.65rem,env(safe-area-inset-top))]">
           <div className="pointer-events-auto flex items-center gap-1 px-2 sm:gap-2 sm:px-5">
-            <button type="button" onClick={closeToScene} className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-white p-1" aria-label="Bar4Bar home">
+            <button type="button" onClick={closeToScene} className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-primary/20 bg-black p-0.5" aria-label="AKAsheet home">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/Logo.png" alt="" className="h-full w-full object-contain" />
             </button>

@@ -1,6 +1,6 @@
 # Computer-use TikTok DM session
 
-Repo path: Bar 4 Bar full app. Outreach kit: `docs/tiktok-outreach/`.
+Repo path: AKAsheet full app. Outreach kit: `docs/tiktok-outreach/`.
 
 ## Mission
 Message only the handles already queued as `todo` in `docs/tiktok-outreach/tracker.csv`. Use TikTok on this PC (already logged in). Rotate copy via the CLI. Log every outcome. Stop on any block/CAPTCHA.

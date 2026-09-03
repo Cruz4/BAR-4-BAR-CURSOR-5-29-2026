@@ -213,7 +213,7 @@ function HouseLibraryNoticePing({
         {disabled ? 'Publish House Drop first' : sent ? 'Ping New in Library again' : 'Ping New in Library'}
       </Button>
       <p className="text-[10px] leading-relaxed text-muted-foreground">
-        Sends a Bar4Bar Activity notification and puts a new bubble on Library in The Scene. Members clear it by reading the notice.
+        Sends a AKAsheet Activity notification and puts a new bubble on Library in The Scene. Members clear it by reading the notice.
       </p>
     </div>
   );

@@ -149,7 +149,7 @@ function findEndOfCentralDirectory(bytes: Uint8Array): number {
 export async function readVaultArchiveZip(file: Blob): Promise<VaultArchiveContents> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const endOffset = findEndOfCentralDirectory(bytes);
-  if (endOffset < 0) throw new Error('This is not a valid Bar 4 Bar Vault ZIP.');
+  if (endOffset < 0) throw new Error('This is not a valid AKAsheet Vault ZIP.');
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const entryCount = view.getUint16(endOffset + 10, true);
   const centralOffset = uint32(view, endOffset + 16);
@@ -167,7 +167,7 @@ export async function readVaultArchiveZip(file: Blob): Promise<VaultArchiveConte
     const commentLength = view.getUint16(cursor + 32, true);
     const localOffset = uint32(view, cursor + 42);
     const name = safeArchiveName(decoder.decode(bytes.subarray(cursor + 46, cursor + 46 + nameLength)));
-    if (method !== 0) throw new Error('This Vault ZIP uses unsupported compression. Export it again from Bar 4 Bar.');
+    if (method !== 0) throw new Error('This Vault ZIP uses unsupported compression. Export it again from AKAsheet.');
     if (uint32(view, localOffset) !== 0x04034b50) throw new Error('Archive file header is damaged.');
     const localNameLength = view.getUint16(localOffset + 26, true);
     const localExtraLength = view.getUint16(localOffset + 28, true);
