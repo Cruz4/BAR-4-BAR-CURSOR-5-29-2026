@@ -733,6 +733,26 @@ function plateSerialFrom(hash: number, family: number): string {
   return `${a}-${b}-${c}`;
 }
 
+/** Hue / vignette only — no layer geometry. Used by swipe-feed backdrops. */
+export function pressPlate(config: PressingConfig): {
+  hue: number;
+  saturation: number;
+  bgL: number;
+  aperture: ApertureMode;
+} {
+  const seedText = (config.seedText || DEFAULT_PRESSING.seedText).slice(0, 280);
+  const faders = normalizeFaders(config.faders);
+  const seedHash = hashSeed(seedText);
+  const pressHash = identityHash(seedHash, faders);
+  const { density } = syllableStats(seedText);
+  return {
+    hue: seedHash % 360,
+    saturation: clamp(32 + faders.heat * 0.5 + (density - 1.6) * 8, 20, 88),
+    bgL: clamp(11 - faders.ink * 0.09, 2, 11),
+    aperture: ((pressHash >>> 20) % 5) as ApertureMode,
+  };
+}
+
 export function pressTokens(config: PressingConfig): PressingTokens {
   const seedText = (config.seedText || DEFAULT_PRESSING.seedText).slice(0, 280);
   const faders = normalizeFaders(config.faders);

@@ -44,11 +44,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: `${SEO.faviconPath}?v=aka15`, type: 'image/svg+xml', sizes: 'any' },
-      { url: '/favicon-32.png?v=aka15', type: 'image/png', sizes: '32x32' },
+      { url: `${SEO.faviconPath}?v=aka16`, type: 'image/svg+xml', sizes: 'any' },
+      { url: '/favicon-32.png?v=aka16', type: 'image/png', sizes: '32x32' },
     ],
     shortcut: SEO.faviconPath,
-    apple: absoluteUrl(SEO.ogImagePath),
+    apple: `${SEO.appIconPath}?v=aka16`,
   },
   alternates: {
     canonical: SEO.url,

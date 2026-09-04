@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import './globals.css';
 import { ClientLayout } from '@/components/client-layout';
 export { metadata } from './metadata';
-import { absoluteUrl, buildStructuredDataGraph, SEO } from '@/lib/seo';
+import { buildStructuredDataGraph, SEO } from '@/lib/seo';
 import {
   buildTikTokPixelBootstrap,
   getTikTokEventsScriptUrl,
@@ -34,9 +34,9 @@ export default function RootLayout({
         {/* Root App Router layout: this stylesheet is global, despite the legacy pages/_document lint rule. */}
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=Inter:wght@400;500;700&family=Architects+Daughter&display=swap" rel="stylesheet" />
-        <link rel="icon" href={`${SEO.faviconPath}?v=aka15`} type="image/svg+xml" />
-        <link rel="icon" href="/favicon-32.png?v=aka15" type="image/png" sizes="32x32" />
-        <link rel="apple-touch-icon" href={absoluteUrl(SEO.ogImagePath)} />
+        <link rel="icon" href={`${SEO.faviconPath}?v=aka16`} type="image/svg+xml" />
+        <link rel="icon" href="/favicon-32.png?v=aka16" type="image/png" sizes="32x32" />
+        <link rel="apple-touch-icon" href={`${SEO.appIconPath}?v=aka16`} />
         {buildStructuredDataGraph().map((node, index) => (
           <script
             key={index}

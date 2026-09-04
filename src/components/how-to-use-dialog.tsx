@@ -201,7 +201,7 @@ const CORE_FAQS = [
     },
     {
       q: "How do I add several blank sheets to an album?",
-      a: "Open a created album → Add sheets. Name them in the list (or leave untitled) and they stay on that album. You can also rename from the tracklist pencil without opening the sheet. Add Track still creates one sheet and opens it. Visitor accounts stay at 1 album / 2 editable sheets.",
+      a: "Open a created album → Add sheets. Name them in the list (or leave untitled) and they stay on that album. Press Enter in a name box to jump to the next sheet. Vault → Create New → Blank Loose Sheets does the same for loose vault tracks. You can also rename from the tracklist pencil without opening the sheet. Add Track still creates one sheet and opens it. Visitor accounts stay at 1 album / 2 editable sheets.",
     },
     {
       q: "What is Msgs?",
@@ -645,7 +645,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                     Skip until you have a bar: Generation Workstation, DNA Drop, Collab Sheet, Release song, Creative Effects, Takes, export, the sun/moon theme toggle. Co-Writer rails (DNA, Vibe, Intents, Style DNA) are optional—flip a switch on only if you want Next to follow it.
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    When you sell or share later: <strong>Release song</strong> = audio + price. <strong>DNA Drop</strong> = public lyric link. They are separate.
+                    When you sell or share later: <strong>Release song</strong> = audio + price. <strong>DNA Drop</strong> = an opt-in lyric snapshot (Studio Pro to view or import; not your Vault). They are separate.
                   </p>
                 </ChapterCard>
 

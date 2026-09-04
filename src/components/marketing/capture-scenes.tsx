@@ -75,8 +75,8 @@ function CaptureHeader() {
   return (
     <div className="h-14 border-b border-white/10 bg-black/50 flex items-center justify-between px-5 shrink-0">
       <div className="flex items-center gap-3">
-        <div className="overflow-hidden rounded-lg border border-primary/20 bg-black p-0.5">
-          <Image src="/Logo.png" alt="" width={28} height={28} className="h-7 w-7" />
+        <div className="flex h-7 w-7 items-center justify-center">
+          <Image src="/Logo.png" alt="" width={28} height={28} className="h-7 w-7 object-contain" />
         </div>
         <span className="font-headline font-bold text-base uppercase tracking-widest">AKAsheet</span>
       </div>

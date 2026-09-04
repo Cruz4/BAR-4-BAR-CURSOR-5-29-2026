@@ -24,19 +24,19 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'any',
       },
       {
-        src: SEO.ogImagePath,
+        src: SEO.appIconPath,
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: SEO.ogImagePath,
+        src: SEO.appIconPath,
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: SEO.ogImagePath,
+        src: SEO.appIconPath,
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',

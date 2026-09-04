@@ -491,10 +491,10 @@ function LoginForm() {
                   <div className="relative z-10 flex flex-col items-center gap-5 w-full">
                     <div className="relative flex items-center justify-center">
                       <div
-                        className="pointer-events-none absolute inset-0 rounded-3xl bg-primary/25 blur-2xl scale-110"
+                        className="pointer-events-none absolute inset-0 rounded-full bg-primary/20 blur-2xl scale-110"
                         aria-hidden
                       />
-                      <div className="relative w-[7.5rem] h-[7.5rem] sm:w-36 sm:h-36 overflow-hidden rounded-3xl border border-primary/20 bg-black p-0.5 shadow-[0_0_48px_rgba(59,130,246,0.35)] ring-1 ring-white/10">
+                      <div className="relative w-[7.5rem] h-[7.5rem] sm:w-36 sm:h-36">
                         <Image src="/Logo.png" alt="AKAsheet logo" width={144} height={144} className="h-full w-full object-contain" priority />
                       </div>
                     </div>

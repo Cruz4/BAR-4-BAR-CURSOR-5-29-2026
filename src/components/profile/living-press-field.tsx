@@ -133,6 +133,7 @@ function LayerView({
   motionOk,
   restless,
   compact,
+  staticField = false,
 }: {
   layer: FieldLayer;
   tokens: PressingTokens;
@@ -140,6 +141,7 @@ function LayerView({
   motionOk: boolean;
   restless: boolean;
   compact: boolean;
+  staticField?: boolean;
 }) {
   const stroke = `hsl(${tokens.hue} ${Math.round(tokens.saturation * 0.7)}% 68%)`;
   const fillSoft = `hsl(${tokens.hue} ${Math.round(tokens.saturation * 0.6)}% 58%)`;
@@ -210,7 +212,7 @@ function LayerView({
           {layer.wells.map((w, i) => (
             <div
               key={i}
-              className={cn('absolute rounded-full blur-3xl', motionOk && 'ph-living-anim')}
+              className={cn('absolute rounded-full', !staticField && 'blur-3xl', motionOk && 'ph-living-anim')}
               style={
                 {
                   left: `${w.x}%`,
@@ -415,7 +417,7 @@ function LayerView({
           {layer.orbs.map((o, i) => (
             <span
               key={i}
-              className={cn('absolute rounded-full blur-md', motionOk && 'ph-living-anim')}
+              className={cn('absolute rounded-full', !staticField && 'blur-md', motionOk && 'ph-living-anim')}
               style={{
                 left: `${o.x}%`,
                 top: `${o.y + scroll * o.drift * 6}%`,
@@ -871,9 +873,9 @@ export function LivingPressField({
   }, [staticField]);
 
   const motionOk = !staticField && tokens.alive && !reducedMotion;
-  const showLife = staticField || tokens.alive;
+  const showLayers = !staticField;
   const restless = tokens.autoDrift && motionOk;
-  const scroll = useSmoothScroll(showLife && !staticField && !compact && !reducedMotion && followWindowScroll);
+  const scroll = useSmoothScroll(showLayers && !compact && !reducedMotion && followWindowScroll);
   const pos = compact ? 'absolute' : 'fixed';
   const vignette = apertureMask(tokens.aperture, tokens.hue);
 
@@ -888,7 +890,7 @@ export function LivingPressField({
         }}
       />
 
-      {showLife &&
+      {showLayers &&
         tokens.layers.map((layer, i) => (
           <LayerView
             key={`${layer.kind}-${i}`}
@@ -898,6 +900,7 @@ export function LivingPressField({
             motionOk={motionOk}
             restless={restless}
             compact={compact}
+            staticField={staticField}
           />
         ))}
 
@@ -913,17 +916,21 @@ export function LivingPressField({
         />
       )}
 
-      <p className="absolute bottom-6 right-6 font-code text-[9px] uppercase tracking-[0.35em] text-[var(--ph-muted)] opacity-40">
-        {tokens.plateSerial}
-        {' · '}
-        {tokens.compositionId}
-        {restless ? ' · restless' : ''}
-      </p>
+      {!staticField && (
+        <p className="absolute bottom-6 right-6 font-code text-[9px] uppercase tracking-[0.35em] text-[var(--ph-muted)] opacity-40">
+          {tokens.plateSerial}
+          {' · '}
+          {tokens.compositionId}
+          {restless ? ' · restless' : ''}
+        </p>
+      )}
 
-      <div
-        className="absolute inset-0 mix-blend-overlay"
-        style={{ backgroundImage: GRAIN_DATA_URI, opacity: 'var(--ph-grain)' }}
-      />
+      {!staticField && (
+        <div
+          className="absolute inset-0 mix-blend-overlay"
+          style={{ backgroundImage: GRAIN_DATA_URI, opacity: 'var(--ph-grain)' }}
+        />
+      )}
     </div>
   );
 }

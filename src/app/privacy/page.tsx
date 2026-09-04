@@ -16,7 +16,7 @@ export default function PrivacyPage() {
         <header className="space-y-2">
           <Link href="/" className="text-primary text-sm font-bold uppercase tracking-widest hover:underline">← Back to Studio</Link>
           <h1 className="font-headline text-4xl font-bold uppercase text-foreground">Privacy Policy</h1>
-          <p className="text-sm text-muted-foreground">Last updated: August 18, 2026 · AKAsheet</p>
+          <p className="text-sm text-muted-foreground">Last updated: September 4, 2026 · AKAsheet</p>
         </header>
 
         <article className="space-y-6 text-muted-foreground leading-relaxed text-sm font-code">
@@ -63,7 +63,7 @@ export default function PrivacyPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">4. Public vs Private</h2>
-            <p>Vault drafts stay in your account until you publish or share them. DNA Drops, live Artist Home pages, The Scene posts, guestbook, and share links are public or link-accessible. Release audio is streamed to buyers and may be previewed by visitors. Treat anything you publish or post to the block as public.</p>
+            <p>Vault drafts stay in your account until you publish or share them. Live Artist Home pages, The Scene posts, guestbook, and similar social surfaces are public or semi-public when you use them. DNA Drops are opt-in lyric snapshots: they are not your Vault, they do not go live until you confirm a Drop, they can be taken offline, and opening or importing the lyric page is limited to signed-in Studio Pro members. Share links for music releases stream to buyers and may include a short preview for visitors. Treat anything you post to The Scene or a live Artist Home as public.</p>
           </section>
 
           <section className="space-y-3">

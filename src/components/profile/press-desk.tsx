@@ -1998,7 +1998,7 @@ export function PressDesk() {
           />
           {config.featured.barOfWeekShareId && (
             <p className="text-[10px] uppercase tracking-widest text-emerald-400/90">
-              Linked to its public DNA Drop
+              Linked to its live DNA Drop
             </p>
           )}
           {!vaultLoading && (

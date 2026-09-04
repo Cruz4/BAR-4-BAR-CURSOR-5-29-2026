@@ -445,20 +445,19 @@ export function ShareDialog({
                   <div className="flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                     <span className="text-[10px] font-bold uppercase text-green-600">
-                      {type === 'album' ? 'Album DNA is public' : 'DNA Drop is public'}
+                      {type === 'album' ? 'Album DNA Drop is live' : 'DNA Drop is live'}
                     </span>
                   </div>
                   <p className="text-[10px] text-muted-foreground leading-relaxed">
                     {type === 'album' ? (
                       <>
-                        The album link stays the same. Use <strong className="text-foreground">Update snapshot</strong>{' '}
-                        after you edit album DNA or track drops — visitors see song cards that open each live track page.
+                        This is a published snapshot, not your private Vault. The album link stays the same. Studio Pro members who are signed in can open the lyric pages; guests are asked to sign in. Use{' '}
+                        <strong className="text-foreground">Update snapshot</strong> after you edit album DNA or track drops — visitors see song cards that open each live track page. Take it offline anytime. Music releases are separate.
                       </>
                     ) : (
                       <>
-                        The link stays the same. Use <strong className="text-foreground">Update snapshot</strong> after
-                        you edit lyrics, toggles, DNA, intents, vibe, style, or structure — otherwise visitors keep
-                        seeing the last published version. Music releases are managed separately in Release Catalog.
+                        This is a published lyric snapshot, not your Vault and not a public post on The Scene. The link stays the same. Signed-in Studio Pro members can open or import it; guests sign in first. Use{' '}
+                        <strong className="text-foreground">Update snapshot</strong> after you edit lyrics, toggles, DNA, intents, vibe, style, or structure — otherwise the last published version stays up. Take it offline anytime. Music releases are managed separately in Release Catalog.
                       </>
                     )}
                   </p>
@@ -609,7 +608,7 @@ export function ShareDialog({
             <AlertDialogDescription className="text-sm font-code leading-relaxed space-y-3">
               <span className="block">
                 {offlineTracks.length} song{offlineTracks.length === 1 ? '' : 's'} in this album{' '}
-                {offlineTracks.length === 1 ? "isn't" : "aren't"} on a public DNA Drop yet. The album works best
+                {offlineTracks.length === 1 ? "isn't" : "aren't"} on a live DNA Drop yet. The album works best
                 when each card opens that song&apos;s page.
               </span>
               <span className="block text-muted-foreground">

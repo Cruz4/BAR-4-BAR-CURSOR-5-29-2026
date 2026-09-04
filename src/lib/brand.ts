@@ -17,6 +17,8 @@ export const LEGACY_APP_ORIGIN = `https://${LEGACY_APP_DOMAIN}`;
 export const LEGACY_APP_WWW_ORIGIN = `https://www.${LEGACY_APP_DOMAIN}`;
 
 export const LOGO_PATH = '/Logo.png';
+/** Home-screen / PWA icon — padded so Android’s mask does not clip the sheet. */
+export const APP_ICON_PATH = '/app-icon.png';
 /** Simplified mark for browser tabs — the full logo turns into a blob at 16px. */
 export const FAVICON_PATH = '/favicon.svg';
 export const SHARE_HASHTAG = '#akasheet';

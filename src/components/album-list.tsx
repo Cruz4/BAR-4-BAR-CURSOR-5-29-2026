@@ -148,6 +148,7 @@ import {
   type LooseTrackFilter,
 } from '@/lib/track-live-flags';
 import { DowngradeTrackPickerDialog } from '@/components/downgrade-track-picker-dialog';
+import { AddBlankSheetsDialog } from '@/components/add-blank-sheets-dialog';
 import { FirstSongHero } from '@/components/first-song-hero';
 import {
   buildVaultBackup,
@@ -575,6 +576,7 @@ function VaultHeaderToolbar({
   vaultFilter,
   setVaultFilter,
   setCreateItemType,
+  onOpenBlankLooseSheets,
   hasProWorkflow,
   fileInputRef,
   onOpenExport,
@@ -585,6 +587,7 @@ function VaultHeaderToolbar({
   vaultFilter: LooseTrackFilter;
   setVaultFilter: (value: LooseTrackFilter) => void;
   setCreateItemType: (value: 'Album' | 'Track') => void;
+  onOpenBlankLooseSheets: () => void;
   hasProWorkflow: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onOpenExport: () => void;
@@ -660,12 +663,15 @@ function VaultHeaderToolbar({
             {compact ? 'Create' : 'Create New'}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="bg-card border-border w-48">
+        <DropdownMenuContent align="end" className="bg-card border-border w-56">
           <DropdownMenuItem onClick={() => setCreateItemType('Album')} className="text-[10px] font-bold uppercase">
             <Music className="mr-2 h-4 w-4" /> Concept Album
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setCreateItemType('Track')} className="text-[10px] font-bold uppercase">
             <CassetteTape className="mr-2 h-4 w-4" /> Loose Track
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onOpenBlankLooseSheets} className="text-[10px] font-bold uppercase">
+            <NotebookPen className="mr-2 h-4 w-4" /> Blank Loose Sheets
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -702,6 +708,7 @@ function VaultHeaderToolbar({
 
 export function AlbumList() {
   const [createItemType, setCreateItemType] = useState<'Album' | 'Track' | null>(null);
+  const [blankLooseSheetsOpen, setBlankLooseSheetsOpen] = useState(false);
   const { albums, styleProfile, loading, deleteTrack, moveTrack, getAlbumById, mergeData, clearVault } = useContext(DataContext);
   const { user, loading: authLoading } = useAuth();
   const isPaidPro = isProUser(user);
@@ -1136,6 +1143,7 @@ export function AlbumList() {
                       vaultFilter={vaultFilter}
                       setVaultFilter={setVaultFilter}
                       setCreateItemType={setCreateItemType}
+                      onOpenBlankLooseSheets={() => setBlankLooseSheetsOpen(true)}
                       hasProWorkflow={hasProWorkflow}
                       fileInputRef={fileInputRef}
                       onOpenExport={() => setShowExportDialog(true)}
@@ -1151,6 +1159,7 @@ export function AlbumList() {
                     vaultFilter={vaultFilter}
                     setVaultFilter={setVaultFilter}
                     setCreateItemType={setCreateItemType}
+                    onOpenBlankLooseSheets={() => setBlankLooseSheetsOpen(true)}
                     hasProWorkflow={hasProWorkflow}
                     fileInputRef={fileInputRef}
                     onOpenExport={() => setShowExportDialog(true)}
@@ -1425,6 +1434,11 @@ export function AlbumList() {
           }
         }}
         type={createItemType || 'Album'}
+      />
+      <AddBlankSheetsDialog
+        open={blankLooseSheetsOpen}
+        onOpenChange={setBlankLooseSheetsOpen}
+        albumId="unassigned"
       />
       
       <Dialog open={showExportDialog} onOpenChange={(open) => !isExportingArchive && setShowExportDialog(open)}>

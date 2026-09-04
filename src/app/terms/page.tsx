@@ -17,7 +17,7 @@ export default function TermsPage() {
         <header className="space-y-2">
           <Link href="/" className="text-primary text-sm font-bold uppercase tracking-widest hover:underline">← Back to Studio</Link>
           <h1 className="font-headline text-4xl font-bold uppercase text-foreground">Terms of Service</h1>
-          <p className="text-sm text-muted-foreground">Last updated: August 18, 2026 · AKAsheet</p>
+          <p className="text-sm text-muted-foreground">Last updated: September 4, 2026 · AKAsheet</p>
         </header>
 
         <article className="space-y-6 text-muted-foreground leading-relaxed text-sm font-code">
@@ -29,7 +29,7 @@ export default function TermsPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">2. The Service</h2>
-            <p>AKAsheet is a creative workstation and social music platform. Features may include lyric tools, AI co-writing, project vaults, DNA Drops (public lyric snapshots), Releases (in-app song sales and streams), Library (in-app player), The Scene, Artist Home pages, guestbook, friends, wall posts, comments, voice notes, Msgs (private in-app messages), Lock pages, Studio Progress, and related tools. Features can be added, changed, limited, or turned off at any time.</p>
+            <p>AKAsheet is a creative workstation and social music platform. Features may include lyric tools, AI co-writing, private project vaults, DNA Drops (opt-in published lyric snapshots, not your vault), Releases (in-app song sales and streams), Library (in-app player), The Scene, Artist Home pages, guestbook, friends, wall posts, comments, voice notes, Msgs (private in-app messages), Lock pages, Studio Progress, and related tools. Features can be added, changed, limited, or turned off at any time.</p>
             <p>AI features — including line suggestions, draft generation, rhyme tools, vibe analysis, remix workflows, and similar outputs — are assistive tools only. They do not replace your creative judgment, legal review, or professional advice.</p>
           </section>
 
@@ -50,8 +50,9 @@ export default function TermsPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">5. DNA Drops vs Music Releases</h2>
-            <p><strong className="text-foreground">DNA Drop</strong> is a public lyric snapshot and related share page. It is not a sell desk. Publishing a DNA Drop does not sell audio or transfer rights.</p>
-            <p><strong className="text-foreground">Music Releases</strong> publish recordings for sale or House distribution: upload audio, set a price or pay-what-you-want amount when applicable, and publish the release. Fans buy once and stream in the app. Preview is typically 30 seconds until unlocked. Library is an in-app player, not a Spotify, Apple Music, or download store listing.</p>
+            <p><strong className="text-foreground">DNA Drop</strong> is an opt-in lyric snapshot you publish from a sheet. It is not your Vault, not a music store, and not automatically visible to the whole internet. Your drafts, bars, and DNA stay private in your account until you confirm a Drop. Publishing copies a snapshot onto a share page; later edits in the studio do not appear there until you press Update snapshot. You can take a Drop offline at any time.</p>
+            <p>Opening or importing a live DNA Drop lyric page is a Studio Pro feature: guests are asked to sign in, and signed-in Visitor accounts are pointed to Studio Tier. A Drop is not a license to copy, record, or sell someone else&apos;s lyrics. Publishing a DNA Drop does not sell audio or transfer rights.</p>
+            <p><strong className="text-foreground">Music Releases</strong> are separate from DNA Drops. Releases publish recordings for sale or House distribution: upload audio, set a price or pay-what-you-want amount when applicable, and publish the release. Fans buy once and stream in the app. Preview is typically 30 seconds until unlocked. Library is an in-app player, not a Spotify, Apple Music, or download store listing.</p>
             <p>On ordinary paid release sales we keep a tiered platform fee (currently 25% below $3, 15% from $3 through $4.99, and 10% from $5 up) to operate the Service; the remainder is the artist&apos;s share, subject to chargebacks, refunds, taxes, and Stripe&apos;s fees and payout rules. Artist releases have no free checkout; admin-selected House releases are the account-included exception. Uploading a song is not a label deal and does not transfer ownership to us.</p>
           </section>
 
@@ -71,7 +72,8 @@ export default function TermsPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">8. The Scene, Artist Home &amp; User Posts</h2>
-            <p>The Scene, Artist Home, guestbook, comments, wall posts, foil cards, voice notes, Auto-Tune processing, friends, and similar features are public or semi-public by design when you use them. Content you post can be seen, copied, or shared by others. We do not promise confidentiality for anything you publish on those surfaces.</p>
+            <p>The Scene, live Artist Home pages, guestbook, comments, wall posts, foil cards, voice notes, Auto-Tune processing, friends, and similar features are public or semi-public by design when you use them. Content you post there can be seen, copied, or shared by others. We do not promise confidentiality for anything you publish on those surfaces.</p>
+            <p>A DNA Drop is different: it is only created when you confirm a snapshot, it can be taken offline, and opening the lyric page requires a signed-in Studio Pro account. Do not treat a Drop as a private vault backup, and do not treat The Scene or Artist Home as private just because a Drop is gated.</p>
             <p>You are solely responsible for what you post, including lyrics, images, voice recordings, and statements about other people. Do not post content you do not have the right to share. Voice notes and Auto-Tune takes are still your content; we may store processed audio to play it back.</p>
             <p>We are not obligated to monitor User Content, but we may remove, hide, or refuse any content, delist a drop, or suspend an account at any time, with or without notice, including for legal risk, abuse, or operational reasons. Other users&apos; posts are theirs, not ours. We are not liable for User Content or for other users&apos; conduct.</p>
           </section>

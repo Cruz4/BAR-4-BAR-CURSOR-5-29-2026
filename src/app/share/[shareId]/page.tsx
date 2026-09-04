@@ -401,7 +401,7 @@ export default function SharedProjectPage() {
                     className="absolute left-1/2 top-1/2 z-[5] flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 sm:gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     title={user ? 'Go to vault' : 'Go to AKAsheet'}
                 >
-                    <div className="shrink-0 overflow-hidden rounded-lg h-8 w-8 sm:h-9 sm:w-9 border border-primary/20 bg-black">
+                    <div className="shrink-0 h-8 w-8 sm:h-9 sm:w-9">
                         <Image src="/Logo.png" alt="AKAsheet" width={36} height={36} className="h-full w-full object-contain" />
                     </div>
                     <div className="min-w-0 hidden sm:block">
@@ -868,7 +868,7 @@ export default function SharedProjectPage() {
             </main>
 
             <footer className="py-12 border-t mt-12 bg-muted/5 flex flex-col items-center gap-6 relative z-10">
-                <div className="overflow-hidden rounded-xl border border-primary/20 bg-black h-10 w-10">
+                <div className="h-10 w-10">
                     <Image src="/Logo.png" alt="AKAsheet" width={40} height={40} className="h-full w-full object-contain" />
                 </div>
                 <p className="text-[11px] text-muted-foreground font-code text-center uppercase tracking-[0.4em]">
@@ -917,7 +917,7 @@ export default function SharedProjectPage() {
                           {isReleaseShare ? `Take this ${isAlbum ? 'album' : 'song'} release offline?` : 'Take this DNA Drop offline?'}
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-sm font-code leading-relaxed">
-                            {isReleaseShare ? 'New discovery and checkout will stop; existing buyers keep access.' : 'The public lyric link will stop working immediately.'}
+                            {isReleaseShare ? 'New discovery and checkout will stop; existing buyers keep access.' : 'The DNA Drop snapshot will go offline immediately. Your Vault copy stays private. Signed-in Studio Pro members will no longer open this lyric page.'}
                             You&apos;ll go back to where you came from — publish again anytime from the project.
                         </AlertDialogDescription>
                     </AlertDialogHeader>

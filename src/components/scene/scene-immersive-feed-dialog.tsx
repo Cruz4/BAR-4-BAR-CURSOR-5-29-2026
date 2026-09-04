@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ChevronDown, ChevronUp, Compass, ExternalLink, Radio, Vault, X } from 'lucide-react';
+import { Archive, ChevronDown, ChevronUp, Compass, ExternalLink, Radio, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { PostCard } from '@/components/profile/post-card';
 import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
@@ -12,18 +12,17 @@ import type { DiscoverCard } from '@/lib/scene/discover-client';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { cn } from '@/lib/utils';
 import {
-  pressTokens,
-  pressingCssVars,
+  apertureMask,
+  pressPlate,
   type PressingConfig,
 } from '@/lib/profile/pressing';
 import { parseStudioBadge, type StudioNameChrome } from '@/lib/studio-tier-chrome';
-import { LivingPressField } from '@/components/profile/living-press-field';
 import { useAuth } from '@/hooks/use-auth';
 import { resolveDnaDropHref } from '@/lib/dna-drop-access';
 
 type FeedMode = 'block' | 'discover';
 
-const MemoizedLivingPressField = React.memo(LivingPressField);
+const SLIDE_PAINT_WINDOW = 1;
 
 type SlideMeta = {
   key: string;
@@ -161,47 +160,36 @@ function FeedBubble({ meta, active, onClick }: { meta: SlideMeta; active: boolea
   );
 }
 
-/** Card whose top is at the scroller top — the one being shown. */
-function feedTopIndex(scroller: HTMLDivElement): number {
-  const slides = Array.from(scroller.children) as HTMLElement[];
-  if (!slides.length) return 0;
-  const top = scroller.scrollTop + 8;
-  let index = 0;
-  while (index < slides.length - 1 && slides[index + 1]!.offsetTop <= top) index += 1;
-  return index;
-}
-
-function backdropId(meta: SlideMeta): string {
-  return meta.userId || meta.key;
+/** Integer snap page — stable because every slide is exactly one scroller-tall. */
+function feedSnapIndex(scroller: HTMLDivElement, count: number): number {
+  const height = scroller.clientHeight || 1;
+  return Math.max(0, Math.min(count - 1, Math.round(scroller.scrollTop / height)));
 }
 
 function FeedBackdrop({
   meta,
   mode,
-  opacity,
 }: {
-  meta: SlideMeta;
+  meta: SlideMeta | undefined;
   mode: FeedMode;
-  opacity: number;
 }) {
-  const pressingStyle = useMemo(
-    () => (meta.pressing ? pressingCssVars(pressTokens(meta.pressing)) : undefined),
-    [meta.pressing]
+  const plate = useMemo(
+    () => (meta?.pressing ? pressPlate(meta.pressing) : null),
+    [meta?.pressing]
   );
 
   return (
     <div
       className="pointer-events-none absolute inset-0"
-      style={{ ...pressingStyle, opacity }}
+      style={{
+        background: plate
+          ? `radial-gradient(ellipse 90% 70% at 50% 38%, hsl(${plate.hue} ${Math.round(plate.saturation * 0.32)}% ${plate.bgL + 2}%), hsl(${plate.hue} ${Math.round(plate.saturation * 0.28)}% ${plate.bgL}%))`
+          : undefined,
+      }}
       aria-hidden
     >
-      {meta.pressing ? (
-        <MemoizedLivingPressField
-          config={meta.pressing}
-          className="!absolute"
-          followWindowScroll={false}
-          staticField
-        />
+      {plate ? (
+        <div className="absolute inset-0" style={{ background: apertureMask(plate.aperture, plate.hue) }} />
       ) : (
         <div className={cn(
           'absolute inset-0',
@@ -227,8 +215,10 @@ export function SceneImmersiveFeedDialog({
   const { user } = useAuth();
   const open = mode !== null;
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const bubbleRowRef = useRef<HTMLDivElement | null>(null);
   const bubbleRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const scrollFrameRef = useRef<number | null>(null);
+  const bubbleSettleRef = useRef<number | null>(null);
   const pendingIndexRef = useRef(0);
   const activeIndexRef = useRef(0);
   const itemsLengthRef = useRef(0);
@@ -295,11 +285,15 @@ export function SceneImmersiveFeedDialog({
     if (!open) return;
     activeIndexRef.current = 0;
     setActiveIndex(0);
-    requestAnimationFrame(() => scrollerRef.current?.scrollTo({ top: 0 }));
+    requestAnimationFrame(() => {
+      scrollerRef.current?.scrollTo({ top: 0 });
+      bubbleRowRef.current?.scrollTo({ left: 0 });
+    });
   }, [mode, open]);
 
   useEffect(() => () => {
     if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
+    if (bubbleSettleRef.current !== null) window.clearTimeout(bubbleSettleRef.current);
   }, []);
 
   useEffect(() => {
@@ -309,29 +303,48 @@ export function SceneImmersiveFeedDialog({
     setActiveIndex(next);
   }, [activeIndex, items.length]);
 
+  const centerBubble = (index: number) => {
+    const row = bubbleRowRef.current;
+    const el = bubbleRefs.current[index];
+    if (!row || !el) return;
+    const left = el.offsetLeft - (row.clientWidth - el.offsetWidth) / 2;
+    const target = Math.max(0, left);
+    if (Math.abs(row.scrollLeft - target) < 6) return;
+    row.scrollTo({ left: target, behavior: 'smooth' });
+  };
+
   const applyActiveIndex = (next: number) => {
     if (activeIndexRef.current === next) return;
     activeIndexRef.current = next;
     setActiveIndex(next);
-    bubbleRefs.current[next]?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+  };
+
+  const scheduleBubbleCenter = () => {
+    if (bubbleSettleRef.current !== null) window.clearTimeout(bubbleSettleRef.current);
+    bubbleSettleRef.current = window.setTimeout(() => {
+      bubbleSettleRef.current = null;
+      centerBubble(activeIndexRef.current);
+    }, 90);
   };
 
   const scrollTo = (index: number) => {
     const next = Math.max(0, Math.min(items.length - 1, index));
     const scroller = scrollerRef.current;
     if (!scroller) return;
-    scroller.children.item(next)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     applyActiveIndex(next);
+    scroller.scrollTo({ top: next * scroller.clientHeight, behavior: 'smooth' });
+    scheduleBubbleCenter();
   };
 
   const syncScrollPosition = (scroller: HTMLDivElement) => {
-    pendingIndexRef.current = feedTopIndex(scroller);
+    pendingIndexRef.current = feedSnapIndex(scroller, itemsLengthRef.current);
     if (scrollFrameRef.current !== null) return;
     scrollFrameRef.current = requestAnimationFrame(() => {
       const next = Math.max(0, Math.min(itemsLengthRef.current - 1, pendingIndexRef.current));
       applyActiveIndex(next);
       scrollFrameRef.current = null;
     });
+    scheduleBubbleCenter();
   };
 
   useEffect(() => {
@@ -346,22 +359,13 @@ export function SceneImmersiveFeedDialog({
 
   const current = items[activeIndex]?.meta;
   const title = mode === 'block' ? 'Your Block' : 'Discover the Scene';
-  const nearbyBackdrops = useMemo(() => {
-    if (!items.length) return [];
-    const start = Math.max(0, activeIndex - 1);
-    const end = Math.min(items.length - 1, activeIndex + 1);
-    const currentId = items[activeIndex] ? backdropId(items[activeIndex]!.meta) : '';
-    const seen = new Set<string>();
-    const out: Array<{ id: string; meta: SlideMeta; opacity: number }> = [];
-    for (let i = start; i <= end; i += 1) {
-      const meta = items[i]!.meta;
-      const id = backdropId(meta);
-      if (seen.has(id)) continue;
-      seen.add(id);
-      out.push({ id, meta, opacity: id === currentId ? 1 : 0 });
+  const paintedSlides = useMemo(() => {
+    const keep = new Set<number>();
+    for (let i = activeIndex - SLIDE_PAINT_WINDOW; i <= activeIndex + SLIDE_PAINT_WINDOW; i += 1) {
+      if (i >= 0 && i < items.length) keep.add(i);
     }
-    return out;
-  }, [activeIndex, items]);
+    return keep;
+  }, [activeIndex, items.length]);
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => {
@@ -369,27 +373,20 @@ export function SceneImmersiveFeedDialog({
     }}>
       <DialogContent
         hideClose
-        overlayClassName="bg-black/90 backdrop-blur-md"
+        overlayClassName="bg-black"
         className="!left-0 !top-0 !h-[100dvh] !w-screen !max-w-none !translate-x-0 !translate-y-0 !gap-0 !overflow-hidden !rounded-none !border-0 !bg-[#030812] !p-0 data-[state=open]:!slide-in-from-left-0 data-[state=open]:!slide-in-from-top-0"
       >
         <DialogTitle className="sr-only">{title}</DialogTitle>
         <DialogDescription className="sr-only">Scroll one full-screen post or profile at a time.</DialogDescription>
 
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-[#030812]">
-          {mode ? nearbyBackdrops.map((backdrop) => (
-            <FeedBackdrop
-              key={`backdrop-${backdrop.id}`}
-              meta={backdrop.meta}
-              mode={mode}
-              opacity={backdrop.opacity}
-            />
-          )) : null}
+          {mode ? <FeedBackdrop meta={current} mode={mode} /> : null}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgba(0,0,0,0.28)_100%)]" />
         </div>
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-40 bg-gradient-to-b from-black via-black/85 to-transparent pb-6 pt-[max(0.65rem,env(safe-area-inset-top))]">
           <div className="pointer-events-auto flex items-center gap-1 px-2 sm:gap-2 sm:px-5">
-            <button type="button" onClick={closeToScene} className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-primary/20 bg-black p-0.5" aria-label="AKAsheet home">
+            <button type="button" onClick={closeToScene} className="flex h-9 w-9 shrink-0 items-center justify-center" aria-label="AKAsheet home">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/Logo.png" alt="" className="h-full w-full object-contain" />
             </button>
@@ -405,8 +402,24 @@ export function SceneImmersiveFeedDialog({
                 {items.length ? `${activeIndex + 1} of ${items.length} · swipe or scroll` : 'Waiting for the Scene'}
               </p>
             </div>
-            <button type="button" onClick={closeToScene} className="flex h-9 items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 text-[9px] font-bold uppercase tracking-wider text-cyan-200 hover:border-cyan-300/60 sm:px-2.5" aria-label="The Scene"><Radio className="h-3.5 w-3.5" /><span className="hidden sm:inline">Scene</span></button>
-            <Link href="/vault" onClick={leaveForNavigation} className="flex h-9 items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 text-[9px] font-bold uppercase tracking-wider text-amber-200 hover:border-amber-300/60 sm:px-2.5" aria-label="The Vault"><Vault className="h-3.5 w-3.5" /><span className="hidden sm:inline">Vault</span></Link>
+            <button
+              type="button"
+              onClick={closeToScene}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-primary hover:bg-primary/10"
+              aria-label="The Scene"
+              title="The Scene"
+            >
+              <Radio className="h-4 w-4 md:h-5 md:w-5" />
+            </button>
+            <Link
+              href="/vault"
+              onClick={leaveForNavigation}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sky-400 hover:bg-sky-500/10"
+              aria-label="The Vault"
+              title="The Vault"
+            >
+              <Archive className="h-4 w-4 md:h-5 md:w-5" />
+            </Link>
             <button
               type="button"
               onClick={closeToScene}
@@ -418,7 +431,10 @@ export function SceneImmersiveFeedDialog({
           </div>
 
           {items.length > 0 ? (
-            <div className="pointer-events-auto mt-2 flex gap-1.5 overflow-x-auto overscroll-x-contain px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-5">
+            <div
+              ref={bubbleRowRef}
+              className="pointer-events-auto relative mt-2 flex gap-1.5 overflow-x-auto overscroll-x-contain px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-5"
+            >
               {items.map((item, index) => (
                 <span className="block shrink-0" key={item.meta.key} ref={(node) => { bubbleRefs.current[index] = node; }}>
                   <FeedBubble meta={item.meta} active={activeIndex === index} onClick={() => scrollTo(index)} />
@@ -433,12 +449,17 @@ export function SceneImmersiveFeedDialog({
           className="relative z-10 h-[100dvh] touch-pan-y snap-y snap-mandatory overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
           onScroll={(event) => syncScrollPosition(event.currentTarget)}
         >
-          {items.length ? items.map((item, index) => (
+          {items.length ? items.map((item, index) => {
+            const paint = paintedSlides.has(index);
+            return (
             <section
               key={item.meta.key}
-              className="relative flex min-h-[100dvh] touch-pan-y snap-start items-center justify-center pb-[max(7.4rem,calc(env(safe-area-inset-bottom)+6rem))] pl-3 pr-14 pt-[7.4rem] sm:px-16 sm:pb-[max(8.25rem,calc(env(safe-area-inset-bottom)+6rem))] sm:pt-[8.25rem]"
+              data-feed-index={index}
+              className="relative flex h-[100dvh] shrink-0 snap-start snap-always items-center justify-center overflow-hidden pb-[max(7.4rem,calc(env(safe-area-inset-bottom)+6rem))] pl-3 pr-14 pt-[7.4rem] sm:px-16 sm:pb-[max(8.25rem,calc(env(safe-area-inset-bottom)+6rem))] sm:pt-[8.25rem]"
               aria-label={`${title}: ${item.meta.name}`}
             >
+              {paint ? (
+              <>
               <div className="relative z-10 w-full max-w-[44rem]">
                 <div className="mb-2 flex min-w-0 items-center gap-2 px-1 pr-14 sm:pr-1">
                   {item.meta.href ? (
@@ -531,8 +552,11 @@ export function SceneImmersiveFeedDialog({
                   Next <ChevronDown className="h-3.5 w-3.5 animate-bounce" />
                 </button>
               ) : null}
+              </>
+              ) : null}
             </section>
-          )) : (
+            );
+          }) : (
             <section className="flex h-[100dvh] snap-start items-center justify-center px-6 pt-24 text-center">
               <div className="max-w-sm rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-6 py-10">
                 <p className="font-headline text-xl font-bold uppercase text-white">Nothing here yet</p>

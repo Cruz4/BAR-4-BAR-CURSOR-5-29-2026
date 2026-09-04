@@ -1,9 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges" role="img" aria-label="AKAsheet">
-  <path fill="#fff" d="M3 2h19L29 9v21H3z"/>
-  <rect x="6" y="4" width="5" height="5" rx="2.5" fill="#16C45A"/>
-  <rect x="8" y="14" width="3" height="6" rx="1.5" fill="#0A141F"/>
-  <rect x="12" y="12" width="3" height="10" rx="1.5" fill="#0A141F"/>
-  <rect x="16" y="9" width="3" height="16" rx="1.5" fill="#0A141F"/>
-  <rect x="20" y="12" width="3" height="10" rx="1.5" fill="#0A141F"/>
-  <rect x="24" y="14" width="3" height="6" rx="1.5" fill="#0A141F"/>
+  <path fill="#051428" d="M3 2h19L29 9v21H3z"/>
+  <polygon fill="#02AD87" points="22,2 29,2 29,9"/>
+  <rect x="6" y="4" width="5" height="5" rx="2.5" fill="#fff"/>
+  <rect x="8" y="14" width="3" height="6" rx="1.5" fill="#fff"/>
+  <rect x="12" y="12" width="3" height="10" rx="1.5" fill="#fff"/>
+  <rect x="16" y="9" width="3" height="16" rx="1.5" fill="#fff"/>
+  <rect x="20" y="12" width="3" height="10" rx="1.5" fill="#fff"/>
+  <rect x="24" y="14" width="3" height="6" rx="1.5" fill="#fff"/>
 </svg>

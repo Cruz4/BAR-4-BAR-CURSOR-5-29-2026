@@ -38,7 +38,7 @@ export function wrapStudioEmail(opts: {
           <tr>
             <td style="padding:28px 28px 12px;border-bottom:1px solid rgba(255,255,255,0.06)">
               <img src="${escapeHtml(logoSrc)}" width="56" height="56" alt="AKAsheet"
-                   style="display:block;width:56px;height:56px;border-radius:14px;background:#000000;padding:2px;margin:0 0 14px" />
+                   style="display:block;width:56px;height:56px;margin:0 0 14px" />
               <p style="margin:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.35em;text-transform:uppercase;color:#93c5fd">AKAsheet</p>
               <h1 style="margin:10px 0 0;font-size:26px;line-height:1.2;font-weight:700;color:#fff">${escapeHtml(opts.title)}</h1>
             </td>

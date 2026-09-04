@@ -46,10 +46,10 @@ export function BrandLockup({
     <div className="flex min-w-0 items-center gap-2 sm:gap-4">
       <div
         className={cn(
-          'shrink-0 overflow-hidden rounded-xl flex items-center justify-center',
+          'shrink-0 flex items-center justify-center',
           isMarketing
-            ? 'h-9 w-9 border border-primary/20 bg-black p-0.5 shadow-2xl sm:h-10 sm:w-10'
-            : 'h-9 w-9 border border-primary/20 bg-black p-0.5 sm:h-11 sm:w-11 group-hover:scale-110 transition-transform duration-300'
+            ? 'h-9 w-9 sm:h-10 sm:w-10'
+            : 'h-9 w-9 sm:h-11 sm:w-11 group-hover:scale-110 transition-transform duration-300'
         )}
       >
         <Image src="/Logo.png" alt="" width={44} height={44} className="h-full w-full object-contain" aria-hidden />

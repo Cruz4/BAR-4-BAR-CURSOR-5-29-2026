@@ -171,7 +171,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
-            Upload and test privately, publish a single or album when ready, then attach a lyric sheet now or later. DNA Live remains a separate public lyric page.
+            Upload and test privately, publish a single or album when ready, then attach a lyric sheet now or later. DNA Drop remains a separate opt-in lyric snapshot (Studio Pro to view or import).
           </p>
           <p className="mt-1 max-w-2xl text-[10px] leading-relaxed text-cyan-100/75">
             Take offline is reversible and keeps the same release link. Remove release retires that old link; your Vault audio and buyers’ Library access are never deleted.
