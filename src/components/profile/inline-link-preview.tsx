@@ -16,6 +16,13 @@ import {
 } from '@/lib/profile/inline-links';
 import { fetchPostById, type ProfilePost } from '@/lib/profile/social-client';
 import { cn } from '@/lib/utils';
+import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
+import { ExpandableImage } from '@/components/profile/expandable-image';
+import { WallClipPlayer } from '@/components/profile/wall-clip-player';
+import { VoiceNotePlayer } from '@/components/profile/voice-note-player';
+import { LyricClipCard } from '@/components/profile/lyric-clip-card';
+import { MentionText } from '@/components/profile/mention-text';
+import { parseStudioBadge } from '@/lib/studio-tier-chrome';
 
 function useDebounced<T>(value: T, ms = 200): T {
   const [next, setNext] = useState(value);
@@ -105,6 +112,62 @@ function GenericLinkCard({
   );
 }
 
+function LinkedPostMedia({
+  text,
+  imageUrl,
+  video,
+  voice,
+  lyricClip,
+  compact,
+}: {
+  text?: string | null;
+  imageUrl?: string | null;
+  video?: ProfilePost['video'];
+  voice?: ProfilePost['voice'];
+  lyricClip?: ProfilePost['lyricClip'];
+  compact?: boolean;
+}) {
+  const imgMax = compact ? 'max-h-[11rem]' : 'max-h-[min(36dvh,20rem)]';
+  return (
+    <>
+      {lyricClip ? (
+        <div className="mt-2">
+          <LyricClipCard clip={lyricClip} />
+        </div>
+      ) : text ? (
+        <p className={cn('mt-1 whitespace-pre-wrap text-sm leading-relaxed text-[var(--ph-text,#fff)]/90', compact && 'line-clamp-6')}>
+          <MentionText text={text} />
+        </p>
+      ) : null}
+      {video && !lyricClip ? (
+        <div className="mt-2 flex justify-center">
+          <WallClipPlayer clip={video} poster={imageUrl || undefined} className={imgMax} />
+        </div>
+      ) : imageUrl && !lyricClip ? (
+        <div className="mt-2 flex justify-center">
+          <ExpandableImage
+            src={imageUrl}
+            alt=""
+            thumbClassName={cn('block h-auto w-auto max-w-full rounded-lg object-contain', imgMax)}
+          />
+        </div>
+      ) : null}
+      {voice ? (
+        <div className="mt-2">
+          <VoiceNotePlayer
+            src={voice.url}
+            storagePath={voice.storagePath}
+            contentType={voice.contentType}
+            transcript={voice.transcript}
+            durationSec={voice.durationSec}
+            compact
+          />
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function AKAsheetPostPreview({
   postId,
   href,
@@ -117,41 +180,103 @@ function AKAsheetPostPreview({
   interactive: boolean;
 }) {
   const [post, setPost] = useState<ProfilePost | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    setPost(null);
+    setFailed(false);
     void fetchPostById(postId)
       .then((row) => {
-        if (!cancelled && row) setPost(row);
+        if (cancelled) return;
+        if (row) setPost(row);
+        else setFailed(true);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
     return () => {
       cancelled = true;
     };
   }, [postId]);
 
-  const snippet = (post?.text || '').trim();
-  return (
-    <PreviewShell href={href} interactive={interactive} className={cn(!compact && 'items-start')}>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--ph-muted,rgba(255,255,255,0.55))]">
-          AKAsheet post
-        </span>
-        <span className="mt-1 block text-sm font-semibold text-[var(--ph-text,#fff)]">
-          {post?.ownerName || 'Open this post'}
-        </span>
-        {snippet ? (
-          <span
-            className={cn(
-              'mt-1 block text-sm leading-snug text-[var(--ph-text,#fff)]/80',
-              compact ? 'line-clamp-2' : 'line-clamp-3'
-            )}
-          >
-            {snippet}
+  if (!post) {
+    return (
+      <PreviewShell href={href} interactive={interactive} className="items-start">
+        <span className="min-w-0 flex-1">
+          <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+            Original
           </span>
-        ) : null}
-      </span>
-    </PreviewShell>
+          <span className="mt-1 block text-sm text-[var(--ph-muted,rgba(255,255,255,0.7))]">
+            {failed ? 'This post is unavailable' : 'Loading post…'}
+          </span>
+        </span>
+      </PreviewShell>
+    );
+  }
+
+  const name = post.ownerName || 'Artist';
+  const originalHref = `/p/${post.id}`;
+  const chrome = parseStudioBadge(post.ownerStudioBadge);
+
+  return (
+    <div className="rounded-xl border border-[var(--ph-border,rgba(255,255,255,0.14))] bg-black/30 p-3">
+      <div className="mb-1.5 flex items-center gap-2">
+        <LiveArtistStarAvatar
+          name={name}
+          userId={post.ownerId}
+          slug={post.ownerSlug}
+          avatarUrl={post.ownerAvatarUrl}
+          useStarMark={post.ownerStarMarkUseStar}
+          starMarkSeed={post.ownerStarMarkSeed}
+          studioChrome={chrome}
+          size={36}
+          link={interactive}
+        />
+        <p className="min-w-0 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+          {interactive ? (
+            <Link href={originalHref} prefetch={false} className="transition-colors hover:text-[var(--ph-text,#fff)] hover:underline">
+              Original
+            </Link>
+          ) : (
+            'Original'
+          )}
+          {' · '}
+          <span className="text-[var(--ph-text,#fff)]/80">{name}</span>
+        </p>
+      </div>
+      {post.isReverb ? (
+        <>
+          {post.text ? (
+            <p className={cn('whitespace-pre-wrap text-sm leading-relaxed text-[var(--ph-text,#fff)]', compact && 'line-clamp-4')}>
+              <MentionText text={post.text} />
+            </p>
+          ) : null}
+          <div className="mt-2 rounded-lg border border-[var(--ph-border,rgba(255,255,255,0.1))] bg-black/25 p-2.5">
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.45))]">
+              {post.reverbOwnerName || 'Artist'}
+            </p>
+            <LinkedPostMedia
+              text={post.reverbText}
+              imageUrl={post.reverbImageUrl}
+              video={post.reverbVideo}
+              voice={post.reverbVoice}
+              lyricClip={post.reverbLyricClip}
+              compact={compact}
+            />
+          </div>
+        </>
+      ) : (
+        <LinkedPostMedia
+          text={post.text}
+          imageUrl={post.imageUrl}
+          video={post.video}
+          voice={post.voice}
+          lyricClip={post.lyricClip}
+          compact={compact}
+        />
+      )}
+    </div>
   );
 }
 

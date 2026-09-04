@@ -19,8 +19,13 @@ import {
 import { parseStudioBadge, type StudioNameChrome } from '@/lib/studio-tier-chrome';
 import { useAuth } from '@/hooks/use-auth';
 import { resolveDnaDropHref } from '@/lib/dna-drop-access';
+import {
+  isLeavingSceneHome,
+  rememberScenePortalSlide,
+  type ScenePortalFeed,
+} from '@/lib/scene/portal-feed';
 
-type FeedMode = 'block' | 'discover';
+type FeedMode = ScenePortalFeed;
 
 const SLIDE_PAINT_WINDOW = 1;
 
@@ -222,52 +227,7 @@ export function SceneImmersiveFeedDialog({
   const pendingIndexRef = useRef(0);
   const activeIndexRef = useRef(0);
   const itemsLengthRef = useRef(0);
-  const historyEntryActiveRef = useRef(false);
-  const onOpenChangeRef = useRef(onOpenChange);
   const [activeIndex, setActiveIndex] = useState(0);
-
-  useEffect(() => {
-    onOpenChangeRef.current = onOpenChange;
-  }, [onOpenChange]);
-
-  useEffect(() => {
-    const handlePopState = () => {
-      if (!historyEntryActiveRef.current) return;
-      historyEntryActiveRef.current = false;
-      onOpenChangeRef.current(false);
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  useEffect(() => {
-    if (!open || historyEntryActiveRef.current) return;
-
-    const currentState = window.history.state;
-    window.history.pushState(
-      {
-        ...(currentState && typeof currentState === 'object' ? currentState : {}),
-        bar4barSceneImmersive: true,
-      },
-      '',
-      window.location.href
-    );
-    historyEntryActiveRef.current = true;
-  }, [open]);
-
-  const closeToScene = useCallback(() => {
-    if (historyEntryActiveRef.current) {
-      window.history.back();
-      return;
-    }
-    onOpenChange(false);
-  }, [onOpenChange]);
-
-  const leaveForNavigation = useCallback(() => {
-    historyEntryActiveRef.current = false;
-    onOpenChange(false);
-  }, [onOpenChange]);
 
   const items = useMemo(() => {
     if (mode === 'block') {
@@ -281,15 +241,33 @@ export function SceneImmersiveFeedDialog({
 
   itemsLengthRef.current = items.length;
 
+  const closeToScene = useCallback(() => {
+    onOpenChange(false);
+  }, [onOpenChange]);
+
+  const leaveForNavigation = useCallback(() => {
+    if (!mode) return;
+    rememberScenePortalSlide(mode, items[activeIndexRef.current]?.meta.key);
+  }, [items, mode]);
+
+  const leaveForNavigationIfHref = useCallback(
+    (href: string | null) => {
+      if (!isLeavingSceneHome(href)) return;
+      leaveForNavigation();
+    },
+    [leaveForNavigation]
+  );
+
   useEffect(() => {
     if (!open) return;
+    if (initialItemKey) return;
     activeIndexRef.current = 0;
     setActiveIndex(0);
     requestAnimationFrame(() => {
       scrollerRef.current?.scrollTo({ top: 0 });
       bubbleRowRef.current?.scrollTo({ left: 0 });
     });
-  }, [mode, open]);
+  }, [initialItemKey, mode, open]);
 
   useEffect(() => () => {
     if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
@@ -375,6 +353,10 @@ export function SceneImmersiveFeedDialog({
         hideClose
         overlayClassName="bg-black"
         className="!left-0 !top-0 !h-[100dvh] !w-screen !max-w-none !translate-x-0 !translate-y-0 !gap-0 !overflow-hidden !rounded-none !border-0 !bg-[#030812] !p-0 data-[state=open]:!slide-in-from-left-0 data-[state=open]:!slide-in-from-top-0"
+        onClickCapture={(event) => {
+          const href = (event.target as HTMLElement | null)?.closest('a[href]')?.getAttribute('href');
+          leaveForNavigationIfHref(href ?? null);
+        }}
       >
         <DialogTitle className="sr-only">{title}</DialogTitle>
         <DialogDescription className="sr-only">Scroll one full-screen post or profile at a time.</DialogDescription>
@@ -477,7 +459,6 @@ export function SceneImmersiveFeedDialog({
                       />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-bold text-white hover:text-sky-200">{item.meta.name}</span>
-                        <span className="block truncate font-code text-[8px] uppercase tracking-[0.16em] text-white/40">{item.meta.label}</span>
                       </span>
                     </Link>
                   ) : (
@@ -485,7 +466,6 @@ export function SceneImmersiveFeedDialog({
                       <LiveArtistStarAvatar name={item.meta.name} userId={item.meta.userId} slug={item.meta.slug} avatarUrl={item.meta.avatarUrl} useStarMark={item.meta.useStarMark} starMarkSeed={item.meta.starMarkSeed} studioChrome={item.meta.studioChrome} size={42} link={false} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-bold text-white">{item.meta.name}</span>
-                        <span className="block truncate font-code text-[8px] uppercase tracking-[0.16em] text-white/40">{item.meta.label}</span>
                       </span>
                     </>
                   )}

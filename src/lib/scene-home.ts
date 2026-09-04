@@ -47,3 +47,9 @@ export function vaultHref(): string {
 export function blockFeedHref(): string {
   return SCENE_HOME_ENABLED ? `/#${BLOCK_SECTION_ID}` : '/feed';
 }
+
+export {
+  scenePortalHref,
+  parseScenePortalFeed,
+  type ScenePortalFeed,
+} from '@/lib/scene/portal-feed';

@@ -19,7 +19,13 @@ export function HomePage(_props: HomePageProps = {}) {
     return (
       <>
         {!SCENE_HOME_ENABLED ? <GuestPressingClaimBootstrap /> : null}
-        {SCENE_HOME_ENABLED ? <SceneHome /> : <AlbumList />}
+        {SCENE_HOME_ENABLED ? (
+          <Suspense fallback={<div className="min-h-screen bg-background" aria-busy="true" />}>
+            <SceneHome />
+          </Suspense>
+        ) : (
+          <AlbumList />
+        )}
       </>
     );
   }

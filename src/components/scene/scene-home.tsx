@@ -114,6 +114,15 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { useSceneLayout } from '@/hooks/use-scene-layout';
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  clearScenePortalSlide,
+  closeScenePortalFeed,
+  parseScenePortalFeed,
+  readScenePortalSlide,
+  rememberScenePortalSlide,
+  scenePortalHref,
+} from '@/lib/scene/portal-feed';
 
 const SCENE_BLOCK_SHOW_MINE_KEY = 'b4b.scene.block.showMine';
 
@@ -306,6 +315,9 @@ export function SceneHome() {
   const { portalHubEnabled } = useSceneLayout();
   const isMobile = useIsMobile();
   const showPortalHub = portalHubEnabled && isMobile;
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const portalFeed = showPortalHub ? parseScenePortalFeed(searchParams) : null;
 
   const [friendships, setFriendships] = useState<Friendship[]>([]);
   const [posts, setPosts] = useState<ProfilePost[]>([]);
@@ -327,6 +339,15 @@ export function SceneHome() {
   const [immersiveFeed, setImmersiveFeed] = useState<'block' | 'discover' | null>(null);
   const [immersiveInitialKey, setImmersiveInitialKey] = useState<string | undefined>(undefined);
   const tourAutoStartRef = useRef(false);
+
+  useEffect(() => {
+    if (!showPortalHub) {
+      setImmersiveFeed(null);
+      return;
+    }
+    setImmersiveFeed(portalFeed);
+    setImmersiveInitialKey(portalFeed ? readScenePortalSlide(portalFeed) : undefined);
+  }, [portalFeed, showPortalHub]);
 
   const viewerSlug = summary.profileSlug || undefined;
 
@@ -592,16 +613,18 @@ export function SceneHome() {
         if (showPortalHub) {
           markBlockSeen();
           setBlockLastSeen(new Date().toISOString());
+          clearScenePortalSlide();
           setImmersiveInitialKey(undefined);
-          setImmersiveFeed('block');
+          if (portalFeed !== 'block') router.push(scenePortalHref('block'));
         }
       } else if (hash === DISCOVER_SECTION_ID) {
         setDiscoverExpandedPersist(true);
         if (showPortalHub) {
           markDiscoverSeen();
           setDiscoverLastSeen(new Date().toISOString());
+          clearScenePortalSlide();
           setImmersiveInitialKey(undefined);
-          setImmersiveFeed('discover');
+          if (portalFeed !== 'discover') router.push(scenePortalHref('discover'));
         }
       } else {
         return;
@@ -620,7 +643,7 @@ export function SceneHome() {
       window.clearTimeout(retry);
       window.removeEventListener('hashchange', scrollToHashSection);
     };
-  }, [loaded, showPortalHub, setBlockExpandedPersist, setDiscoverExpandedPersist]);
+  }, [loaded, showPortalHub, portalFeed, router, setBlockExpandedPersist, setDiscoverExpandedPersist]);
 
   const handleTourBeforeStep = useCallback(
     (step: { id: string }) => {
@@ -716,10 +739,11 @@ export function SceneHome() {
     if (showPortalHub) {
       markBlockSeen();
       setBlockLastSeen(new Date().toISOString());
+      rememberScenePortalSlide('block', `post-${target.postId}`);
       setImmersiveInitialKey(`post-${target.postId}`);
-      setImmersiveFeed('block');
+      if (portalFeed !== 'block') router.push(scenePortalHref('block'));
     }
-  }, [showPortalHub, setShowMinePersist, setBlockExpandedPersist]);
+  }, [showPortalHub, portalFeed, router, setShowMinePersist, setBlockExpandedPersist]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -749,8 +773,9 @@ export function SceneHome() {
       if (showPortalHub) {
         markBlockSeen();
         setBlockLastSeen(new Date().toISOString());
+        rememberScenePortalSlide('block', `post-${target.postId}`);
         setImmersiveInitialKey(`post-${target.postId}`);
-        setImmersiveFeed('block');
+        if (portalFeed !== 'block') router.push(scenePortalHref('block'));
         return;
       }
       const tryScroll = () => scrollActivityPostTarget(target);
@@ -760,7 +785,7 @@ export function SceneHome() {
     run();
     window.addEventListener('hashchange', run);
     return () => window.removeEventListener('hashchange', run);
-  }, [blockPosts, showPortalHub]);
+  }, [blockPosts, showPortalHub, portalFeed, router]);
 
   useEffect(() => {
     setBlockVisible((n) => Math.min(Math.max(BLOCK_PAGE_SIZE, n), Math.max(BLOCK_PAGE_SIZE, blockPosts.length)));
@@ -802,22 +827,24 @@ export function SceneHome() {
     setBlockExpandedPersist(true);
     markBlockSeen();
     setBlockLastSeen(new Date().toISOString());
+    clearScenePortalSlide();
     setImmersiveInitialKey(undefined);
-    setImmersiveFeed('block');
-  }, [setBlockExpandedPersist]);
+    router.push(scenePortalHref('block'));
+  }, [router, setBlockExpandedPersist]);
 
   const openDiscoverPortal = useCallback(() => {
     setDiscoverExpandedPersist(true);
     markDiscoverSeen();
     setDiscoverLastSeen(new Date().toISOString());
+    clearScenePortalSlide();
     setImmersiveInitialKey(undefined);
-    setImmersiveFeed('discover');
+    router.push(scenePortalHref('discover'));
     if (!user?.id) return;
     void fetchDiscover(user.id, { view: 'all', enrichSlugs: false }).then((next) => {
       setDiscover(next);
       setDiscoverReady(true);
     });
-  }, [setDiscoverExpandedPersist, user?.id]);
+  }, [router, setDiscoverExpandedPersist, user?.id]);
 
   const onDiscoverLockRemoved = useCallback((lockId: string) => {
     setDiscover((prev) =>
@@ -1042,7 +1069,7 @@ export function SceneHome() {
                 mode={immersiveFeed}
                 initialItemKey={immersiveInitialKey}
                 onOpenChange={(open) => {
-                  if (!open) setImmersiveFeed(null);
+                  if (!open) closeScenePortalFeed(router);
                 }}
                 posts={posts}
                 discoverCards={discoverCards}
