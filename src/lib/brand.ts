@@ -17,8 +17,16 @@ export const LEGACY_APP_ORIGIN = `https://${LEGACY_APP_DOMAIN}`;
 export const LEGACY_APP_WWW_ORIGIN = `https://www.${LEGACY_APP_DOMAIN}`;
 
 export const LOGO_PATH = '/Logo.png';
-/** Home-screen / PWA icon — padded so Android’s mask does not clip the sheet. */
+/**
+ * Installed Brave/Chrome desktop PWA + Windows taskbar.
+ * Transparent Logo mark (same look as Logo.png) — never app-icon navy square or android burger.
+ */
+export const DESKTOP_PWA_ICON_PATH = '/desktop-pwa-icon.png';
+/** Legacy opaque padded icon — not referenced by the web manifest. */
 export const APP_ICON_PATH = '/app-icon.png';
+/** Native Android launcher only (APK mipmaps). Never list in the web manifest. */
+export const ANDROID_ICON_PATH = '/android-icon.png';
+export const ANDROID_ICON_192_PATH = '/android-icon-192.png';
 /** Simplified mark for browser tabs — the full logo turns into a blob at 16px. */
 export const FAVICON_PATH = '/favicon.svg';
 export const SHARE_HASHTAG = '#akasheet';

@@ -745,6 +745,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                     <li><strong>For your taste</strong> matches public genres, moods, influences, and region.</li>
                     <li><strong>For your craft</strong> matches public roles and collaboration choices.</li>
                     <li><strong>New &amp; live</strong> shows the newest public activity without personalization.</li>
+                    <li><strong>Knock</strong> on <strong>Recently live</strong> Artist Homes. Each door: up to <strong>5 visitors</strong> and <strong>15 knocks</strong> per day (3 from you). The card shows a small tally — visitors and knocks at their door, plus your knocks there. Artists collect knocks when they open their own public home; if they are already home, they get a live <strong>Say hello</strong> prompt and it still saves to Activity.</li>
                   </ul>
                   <p className="text-xs">Every personalized card explains why it matched. Money, Ink, Pro status, sales totals, private writing, and private listening history cannot buy placement.</p>
                   <Button asChild variant="outline" className="w-full font-bold uppercase tracking-widest text-[10px]">

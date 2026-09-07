@@ -7,6 +7,7 @@ export const ACTIVITY_TYPES = [
   'friend_accepted',
   'profile_followed',
   'inner_circle_joined',
+  'door_knock',
   'contact_request',
   'contact_accepted',
   'fold_pass',
@@ -54,6 +55,7 @@ export const SERVER_ONLY_ACTIVITY_TYPES: readonly ActivityType[] = [
   'love_milestone',
   'profile_followed',
   'inner_circle_joined',
+  'door_knock',
   'mention',
 ];
 
@@ -80,6 +82,8 @@ export type ActivityEvent = {
   preview?: string;
   href?: string;
   readAt?: string | null;
+  /** Door knocks stay hidden from Activity until the owner visits their Artist Home. */
+  homeDeliveredAt?: string | null;
 };
 
 export type ActivityFeedPage = {
@@ -145,6 +149,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     friend_accepted: 'accepted your friend request',
     profile_followed: 'followed your profile',
     inner_circle_joined: 'added you to their Inner Circle',
+    door_knock: 'knocked on your Artist Home door',
     contact_request: 'asked to see your contact',
     contact_accepted: 'shared their contact with you',
     fold_pass: 'sent you a message',
@@ -173,6 +178,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     friend_accepted: 'you accepted a friend request from',
     profile_followed: 'you followed',
     inner_circle_joined: 'you added to your Inner Circle',
+    door_knock: 'you knocked on the door at',
     contact_request: 'you asked to see contact for',
     contact_accepted: 'you shared your contact with',
     fold_pass: 'you sent a message to',
@@ -255,6 +261,11 @@ export function pushCopyForActivity(
       return {
         title: 'Inner Circle support',
         body: `${actorName} added you to their Inner Circle`,
+      };
+    case 'door_knock':
+      return {
+        title: 'Someone knocked',
+        body: snippet || `${actorName} knocked on your Artist Home door`,
       };
     case 'contact_request':
       return {
@@ -355,6 +366,7 @@ export function prefsAllowsPush(prefs: ActivityPrefs, type: ActivityType): boole
       return prefs.friendAccepted;
     case 'profile_followed':
     case 'inner_circle_joined':
+    case 'door_knock':
       return prefs.relationships !== false;
     case 'contact_request':
       return prefs.friendRequests;

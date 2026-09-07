@@ -75,9 +75,47 @@ export function normalizeInlineHref(raw: string | undefined | null): string | un
   try {
     const url = new URL(withScheme);
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return undefined;
-    return url.toString();
+    const href = url.toString();
+    return isPlausibleWebHref(href) ? href : undefined;
   } catch {
     return undefined;
+  }
+}
+
+function decodeHrefPart(value: string): string {
+  try {
+    return decodeURIComponent(value.replace(/\+/g, ' '));
+  } catch {
+    return value;
+  }
+}
+
+/** Drop encoded titles / fake hosts that were stored as embed URLs. */
+export function isPlausibleWebHref(href: string): boolean {
+  if (href.startsWith('/') && !href.startsWith('//')) return true;
+  try {
+    const url = new URL(href);
+    const host = url.hostname.replace(/^www\./, '');
+    if (!host || /%/.test(host) || /\s/.test(host)) return false;
+    if (host === 'localhost') return true;
+    if (!host.includes('.')) return false;
+    return /^[a-z0-9.-]+$/i.test(host);
+  } catch {
+    return false;
+  }
+}
+
+export function displayLabelForHref(href: string): string {
+  try {
+    const url = href.startsWith('/') ? new URL(href, DEFAULT_PUBLIC_APP_URL) : new URL(href);
+    const last = decodeHrefPart(url.pathname.split('/').filter(Boolean).pop() || '')
+      .replace(/[-_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (last && last.length >= 3 && last.length <= 72 && !/^https?:/i.test(last)) return last;
+    return url.hostname.replace(/^www\./, '') || 'Link';
+  } catch {
+    return 'Link';
   }
 }
 

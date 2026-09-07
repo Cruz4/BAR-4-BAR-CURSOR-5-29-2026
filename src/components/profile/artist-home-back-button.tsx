@@ -32,7 +32,7 @@ export function ArtistHomeBackButton({ label = 'Back', profileSlug }: { label?: 
         else router.push('/');
       }}
     >
-      <ChevronLeft className="h-4 w-4" /> <span className="max-[380px]:hidden">{label}</span>
+      <ChevronLeft className="h-4 w-4" /> <span className="hidden sm:inline">{label}</span>
     </Button>
   );
 }

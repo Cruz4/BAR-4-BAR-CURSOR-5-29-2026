@@ -17,6 +17,7 @@ import { getLastWorkedTrackPath } from '@/lib/studio-tips-session';
 import { VAULT_PATH } from '@/lib/scene-home';
 import { getChallengeProgress, WEEKLY_CHALLENGES } from '@/lib/gamification/challenges';
 import { SceneHouseBarPin } from '@/components/scene/scene-house-bar-pin';
+import { SceneTonightsFormCard } from '@/components/scene/scene-tonights-form-card';
 import { cn } from '@/lib/utils';
 
 export function SceneLivePrompts({ className }: { className?: string }) {
@@ -26,7 +27,13 @@ export function SceneLivePrompts({ className }: { className?: string }) {
   const writeHref = getLastWorkedTrackPath() || `${VAULT_PATH}?create=track`;
   const showHouse = houseBarOn && placement === 'hero';
 
-  if (!loaded || (!showHouse && !weeklyOn)) return null;
+  if (!loaded) {
+    return (
+      <div className={cn('space-y-3', className)}>
+        <SceneTonightsFormCard />
+      </div>
+    );
+  }
 
   const barsChallenge = WEEKLY_CHALLENGES.find((c) => c.id === 'bars_8');
   const written = barsChallenge
@@ -37,6 +44,7 @@ export function SceneLivePrompts({ className }: { className?: string }) {
 
   return (
     <div className={cn('space-y-3', className)}>
+      <SceneTonightsFormCard />
       {showHouse ? <SceneHouseBarPin /> : null}
 
       {weeklyOn ? (

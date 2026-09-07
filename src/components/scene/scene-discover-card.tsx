@@ -27,6 +27,7 @@ import { formatDropPulseLine } from '@/lib/drop-pulse';
 import { normalizeDropPrice } from '@/lib/drop-commerce';
 import { fetchDropLoved, likeDrop, unlikeDrop } from '@/lib/drop-social-client';
 import { resolveDnaDropHref } from '@/lib/dna-drop-access';
+import { DoorKnockButton } from '@/components/discover/door-knock-button';
 
 function timeAgo(iso: string): string {
   try {
@@ -109,7 +110,7 @@ export function SceneDiscoverCard({
       <Card className="min-w-0 overflow-hidden border-sky-500/25 bg-gradient-to-r from-sky-500/[0.07] via-card/85 to-card/70 p-4">
         <DiscoverTag label="Recently live" icon={Radio} tone="text-sky-400/90" />
         <MatchReasons match={card.match} />
-        <div className="mt-2.5 flex items-center gap-3">
+        <div className="mt-2.5 flex items-start gap-3">
           <ArtistStarAvatar
             name={artist.displayName}
             avatarUrl={artist.avatarUrl}
@@ -139,6 +140,13 @@ export function SceneDiscoverCard({
             <Link href={profileHref(artist.slug) || `/${artist.slug}`}>Visit</Link>
           </Button>
         </div>
+        <DoorKnockButton
+          className="mt-2"
+          targetUserId={artist.userId}
+          targetName={artist.displayName}
+          targetSlug={artist.slug}
+          knockerSlug={viewerSlug}
+        />
       </Card>
     );
   }

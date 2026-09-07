@@ -17,6 +17,7 @@ import {
   StickyNote,
   Timer,
   Users,
+  Loader,
   type LucideIcon,
 } from 'lucide-react';
 import { auth } from '@/lib/firebase/client/firebase';
@@ -211,9 +212,11 @@ export function ArtistIntelligenceShell({
   });
   const [loading, setLoading] = useState(true);
   const [busyPeer, setBusyPeer] = useState('');
+  const [payoutBusy, setPayoutBusy] = useState(false);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [expandedNote, setExpandedNote] = useState<string | null>(null);
   const connectHandled = useRef(false);
+  const refreshGen = useRef(0);
 
   const loadIntelligence = useCallback(async () => {
     if (!user?.id) return;
@@ -223,6 +226,7 @@ export function ArtistIntelligenceShell({
       { headers, cache: 'no-store' }
     );
     const data = await res.json().catch(() => ({}));
+    if (res.status === 429) return;
     if (!res.ok) throw new Error(data.error || 'Could not load Artist Intelligence.');
     setSummary(data as ArtistIntelligenceSummary);
   }, [days, user?.id]);
@@ -235,6 +239,7 @@ export function ArtistIntelligenceShell({
       { headers, cache: 'no-store' }
     );
     const data = await res.json().catch(() => ({}));
+    if (res.status === 429) return;
     if (!res.ok) throw new Error(data.error || 'Could not load insights.');
     setInsights(data as DropInsightsResponse);
   }, [days, user?.id]);
@@ -246,6 +251,7 @@ export function ArtistIntelligenceShell({
       headers,
     });
     const data = await res.json().catch(() => ({}));
+    if (res.status === 429) return;
     if (!res.ok) throw new Error(data.error || 'Could not load earnings.');
     setEarnings({
       connect: data.connect || EMPTY_DROP_CONNECT_STATUS,
@@ -256,6 +262,7 @@ export function ArtistIntelligenceShell({
 
   const refresh = useCallback(async () => {
     if (!user?.id) return;
+    const gen = ++refreshGen.current;
     setLoading(true);
     try {
       await Promise.all([
@@ -264,20 +271,25 @@ export function ArtistIntelligenceShell({
         loadEarnings().catch(() => undefined),
       ]);
     } catch (error) {
+      if (gen !== refreshGen.current) return;
       toast({
         variant: 'destructive',
         title: 'Artist Intelligence unavailable',
         description: error instanceof Error ? error.message : undefined,
       });
     } finally {
-      setLoading(false);
+      if (gen === refreshGen.current) setLoading(false);
     }
   }, [loadEarnings, loadInsights, loadIntelligence, toast, user?.id]);
 
   useEffect(() => {
-    if (!authLoading && user?.id) void refresh();
-    if (!authLoading && !user) setLoading(false);
-  }, [authLoading, refresh, user]);
+    if (authLoading) return;
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+    void refresh();
+  }, [authLoading, refresh, user?.id]);
 
   useEffect(() => {
     const connect = searchParams.get('connect');
@@ -734,6 +746,7 @@ export function ArtistIntelligenceShell({
                         defaultValue={earnings.connect.country || 'US'}
                         id="intel-payout-country"
                         aria-label="Payout country"
+                        disabled={payoutBusy}
                       >
                         {DROP_PAYOUT_COUNTRIES.map((c) => (
                           <option key={c.id} value={c.id}>
@@ -743,30 +756,81 @@ export function ArtistIntelligenceShell({
                       </select>
                       <Button
                         size="sm"
+                        disabled={payoutBusy || !user?.id}
                         onClick={() => {
                           void (async () => {
+                            if (!user?.id) throw new Error('Sign in required.');
+                            setPayoutBusy(true);
                             const country =
                               (document.getElementById('intel-payout-country') as HTMLSelectElement | null)
                                 ?.value || 'US';
                             const headers = await authHeaders();
+                            const openDashboard = async () => {
+                              const dash = await fetch('/api/drops/payouts/dashboard', {
+                                method: 'POST',
+                                headers,
+                                body: JSON.stringify({ userId: user.id }),
+                              });
+                              const dashData = await dash.json().catch(() => ({}));
+                              if (!dash.ok) {
+                                throw new Error(dashData.error || 'Could not open Stripe.');
+                              }
+                              if (dashData.url) {
+                                window.location.href = dashData.url;
+                                return;
+                              }
+                              throw new Error('Stripe did not return a dashboard URL.');
+                            };
+
+                            if (earnings.connect.payoutsEnabled) {
+                              await openDashboard();
+                              return;
+                            }
+
                             const res = await fetch('/api/drops/payouts/onboard', {
                               method: 'POST',
                               headers,
-                              body: JSON.stringify({ userId: user.id, country }),
+                              body: JSON.stringify({
+                                userId: user.id,
+                                country,
+                                email: user.email,
+                              }),
                             });
                             const data = await res.json().catch(() => ({}));
+                            if (res.status === 429) {
+                              throw new Error('Too many requests — wait a few seconds and try again.');
+                            }
                             if (!res.ok) throw new Error(data.error || 'Onboard failed');
-                            if (data.url) window.location.href = data.url;
-                          })().catch((error) =>
-                            toast({
-                              variant: 'destructive',
-                              title: 'Could not start payouts',
-                              description: error instanceof Error ? error.message : undefined,
-                            })
-                          );
+                            if (data.url) {
+                              window.location.href = data.url;
+                              return;
+                            }
+                            if (data.ready) {
+                              toast({
+                                title: 'Payouts already live',
+                                description: 'Opening your Stripe payouts dashboard.',
+                              });
+                              await openDashboard();
+                              return;
+                            }
+                            throw new Error('Stripe did not return a setup link.');
+                          })()
+                            .catch((error) =>
+                              toast({
+                                variant: 'destructive',
+                                title: 'Could not start payouts',
+                                description: error instanceof Error ? error.message : undefined,
+                              })
+                            )
+                            .finally(() => setPayoutBusy(false));
                         }}
                       >
-                        {earnings.connect.detailsSubmitted ? 'Continue Stripe' : 'Connect Stripe'}
+                        {payoutBusy ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        {earnings.connect.payoutsEnabled
+                          ? 'Open Stripe'
+                          : earnings.connect.detailsSubmitted
+                            ? 'Continue Stripe'
+                            : 'Connect Stripe'}
                       </Button>
                     </div>
                     <p className="text-[11px]">

@@ -53,6 +53,7 @@ import {
   deleteGuestbookEntry,
   enrichGuestbookEntries,
   fetchGuestbook,
+  fetchPostById,
   fetchPostsByOwner,
   resolvePlaygroundFriends,
   setGuestbookEntry,
@@ -76,6 +77,7 @@ import { isMasterAdminEmail } from '@/lib/master-admin';
 import { MentionSuggestions } from '@/components/profile/mention-suggestions';
 import { PollComposerFields } from '@/components/profile/poll-composer-fields';
 import type { PostPollResultsVisibility } from '@/lib/profile/post-polls';
+import { activityPostHash, parseActivityPostHash, scrollActivityPostTarget } from '@/lib/activity/post-deep-link';
 
 export type ModuleContext = {
   profileUserId: string;
@@ -658,50 +660,102 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const [wallTotal, setWallTotal] = useState(playground?.posts.length || 0);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const insertEmoji = useEmojiInserter(text, setText, textRef);
+  const [focusPostId, setFocusPostId] = useState('');
 
   useEffect(() => {
     if (playground) {
       setPosts(playground.posts);
       setLoaded(true);
       setPage(0);
+      setFocusPostId('');
       return;
     }
+
+    const readFocusId = () => {
+      if (typeof window === 'undefined') return '';
+      const fromQuery = new URLSearchParams(window.location.search).get('p')?.trim() || '';
+      if (fromQuery) return fromQuery;
+      return parseActivityPostHash(window.location.hash)?.postId || '';
+    };
+
+    const focusId = readFocusId();
+    setFocusPostId(focusId);
     setPage(0);
-    const target = typeof window !== 'undefined' ? window.location.hash.replace(/^#/, '') : '';
-    const params = new URLSearchParams({ page: '0' });
-    if (target.startsWith('post-')) params.set('target', target);
-    const endpoint = ctx.profileSlug
-      ? `/api/profile/${encodeURIComponent(ctx.profileSlug)}/posts?${params.toString()}`
-      : '';
-    if (!endpoint) {
-      fetchPostsByOwner(ctx.profileUserId, WALL_PAGE_SIZE)
-        .then((rows) => {
-          setPosts(rows);
-          setWallTotal(rows.length);
-        })
-        .catch(() => undefined)
-        .finally(() => setLoaded(true));
-      return;
-    }
-    void fetch(endpoint, { cache: 'no-store' })
-      .then(async (res) => {
-        if (!res.ok) throw new Error('Wall unavailable');
-        return res.json() as Promise<{
-          posts?: ProfilePost[];
-          page?: number;
-          pageCount?: number;
-          total?: number;
-        }>;
-      })
-      .then((data) => {
-        setPosts(Array.isArray(data.posts) ? data.posts : []);
-        setPage(Math.max(0, Number(data.page) || 0));
-        setWallPageCount(Math.max(1, Number(data.pageCount) || 1));
-        setWallTotal(Math.max(0, Number(data.total) || 0));
-      })
-      .catch(() => undefined)
-      .finally(() => setLoaded(true));
+    setLoaded(false);
+
+    const applyRows = async (rows: ProfilePost[], page = 0, pageCount = 1, total = rows.length) => {
+      let next = rows;
+      if (focusId && !next.some((post) => post.id === focusId)) {
+        const extra = await fetchPostById(focusId);
+        if (extra && extra.ownerId === ctx.profileUserId) {
+          next = [extra, ...next.filter((post) => post.id !== extra.id)];
+        }
+      }
+      setPosts(next);
+      setPage(Math.max(0, page));
+      setWallPageCount(Math.max(1, pageCount));
+      setWallTotal(Math.max(0, total));
+    };
+
+    const loadFromApi = async (withTarget: boolean) => {
+      if (!ctx.profileSlug) return false;
+      const params = new URLSearchParams({ page: '0' });
+      if (withTarget && focusId) params.set('target', activityPostHash(focusId));
+      const res = await fetch(
+        `/api/profile/${encodeURIComponent(ctx.profileSlug)}/posts?${params.toString()}`,
+        { cache: 'no-store' }
+      );
+      if (!res.ok) return false;
+      const data = (await res.json()) as {
+        posts?: ProfilePost[];
+        page?: number;
+        pageCount?: number;
+        total?: number;
+      };
+      await applyRows(
+        Array.isArray(data.posts) ? data.posts : [],
+        Number(data.page) || 0,
+        Number(data.pageCount) || 1,
+        Number(data.total) || 0
+      );
+      return true;
+    };
+
+    void (async () => {
+      try {
+        if (ctx.profileSlug) {
+          const ok = (await loadFromApi(Boolean(focusId))) || (focusId ? await loadFromApi(false) : false);
+          if (!ok) {
+            const rows = await fetchPostsByOwner(ctx.profileUserId, WALL_PAGE_SIZE);
+            await applyRows(rows, 0, 1, rows.length);
+          }
+        } else {
+          const rows = await fetchPostsByOwner(ctx.profileUserId, WALL_PAGE_SIZE);
+          await applyRows(rows, 0, 1, rows.length);
+        }
+      } catch {
+        try {
+          const rows = await fetchPostsByOwner(ctx.profileUserId, WALL_PAGE_SIZE);
+          await applyRows(rows, 0, 1, rows.length);
+        } catch {
+          /* keep empty */
+        }
+      } finally {
+        setLoaded(true);
+      }
+    })();
   }, [ctx.profileUserId, ctx.profileSlug, playground]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    const target = parseActivityPostHash(window.location.hash);
+    if (!target) return;
+    const delays = [40, 280, 700, 1400];
+    const ids = delays.map((ms) => window.setTimeout(() => scrollActivityPostTarget(target), ms));
+    return () => {
+      for (const id of ids) window.clearTimeout(id);
+    };
+  }, [loaded, posts.length, page]);
 
   // Keep playground posts in sync when the guest sandbox mutates them.
   useEffect(() => {
@@ -820,7 +874,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
     }
   };
 
-  if (!canCompose && !ownerNeedsLive && loaded && posts.length === 0) return null;
+  if (!canCompose && !ownerNeedsLive && loaded && posts.length === 0 && !focusPostId) return null;
 
   return (
     <ModuleShell icon={PenLine} title={"The Wall"} ctx={ctx}>
@@ -939,6 +993,14 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       )}
 
       <div className="space-y-4">
+        {!loaded ? (
+          <p className="py-6 text-center text-sm text-[var(--ph-muted,rgba(255,255,255,0.55))]">Loading the wall…</p>
+        ) : null}
+        {loaded && focusPostId && !posts.some((post) => post.id === focusPostId) ? (
+          <p className="py-2 text-center text-sm text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+            That original post is no longer on this wall.
+          </p>
+        ) : null}
         {pagePosts.map((post) => (
           <div key={post.id} className="relative">
             <PostCard

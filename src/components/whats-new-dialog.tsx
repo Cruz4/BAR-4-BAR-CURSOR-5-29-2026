@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Camera, Maximize2, Route, Smartphone, Sparkles } from 'lucide-react';
+import { Camera, Maximize2, Route, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
@@ -20,6 +20,7 @@ import {
   markWhatsNewDismissed,
   markWhatsNewShownThisLogin,
 } from '@/lib/whats-new-session';
+import { openStudioManual, startManualPath } from '@/lib/manual-paths';
 import { isStudioOnboardingBusy } from '@/lib/studio-privacy-intro';
 
 function isVaultLanding(pathname: string | null): boolean {
@@ -37,18 +38,22 @@ function isBrandNewStudioAccount(createdAt: string | undefined): boolean {
 
 const WHATS_NEW_ITEMS = [
   {
-    title: 'Camera, clips & music',
-    desc: 'Shoot or upload photos and clips on posts and comments. Crop, apply filters, attach Library or released music, trim up to 40 seconds, and mix clip vs music volume.',
+    title: 'Photos, clips, and a track',
+    desc: 'Shoot or upload on a post or comment, crop and filter, attach a Library or released song, and trim clips to 40 seconds.',
     icon: Camera,
     color: 'text-fuchsia-400',
     bgColor: 'bg-fuchsia-500/5',
+    pathLabel: 'Path: Post a photo or clip',
+    pathLaneId: 'post-clip',
   },
   {
     title: 'Paths in Studio Manual',
-    desc: 'Open ? and tap Paths. Pick one job and stay on that screen until it is done.',
+    desc: 'One job at a time: the screen, the steps, then the coach stays with you until it is done.',
     icon: Route,
     color: 'text-sky-400',
     bgColor: 'bg-sky-500/5',
+    pathLabel: 'Open Paths',
+    manualTab: 'paths' as const,
   },
   {
     title: 'Preview before you drop',
@@ -56,13 +61,8 @@ const WHATS_NEW_ITEMS = [
     icon: Maximize2,
     color: 'text-emerald-400',
     bgColor: 'bg-emerald-500/5',
-  },
-  {
-    title: 'Swipe feed that follows',
-    desc: 'Immersive phone feed highlights the author of the nearest card as you swipe. The current clip autoplays; others pause.',
-    icon: Smartphone,
-    color: 'text-cyan-400',
-    bgColor: 'bg-cyan-500/5',
+    pathLabel: 'Path: Post a photo or clip',
+    pathLaneId: 'post-clip',
   },
 ] as const;
 
@@ -161,9 +161,30 @@ export function WhatsNewDialog() {
                     <div className={cn('mt-0.5 p-1.5 rounded border border-current/20 shrink-0', item.color)}>
                       <Icon className="h-3.5 w-3.5" />
                     </div>
-                    <div className="space-y-0.5 min-w-0">
+                    <div className="space-y-1.5 min-w-0">
                       <h4 className="text-[11px] sm:text-xs font-bold text-foreground uppercase tracking-wide">{item.title}</h4>
                       <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-snug font-code">{item.desc}</p>
+                      {'pathLabel' in item ? (
+                        <button
+                          type="button"
+                          className={cn(
+                            'mt-1 text-[10px] font-bold uppercase tracking-widest underline-offset-2 hover:underline',
+                            item.color
+                          )}
+                          onClick={() => {
+                            dismiss();
+                            window.setTimeout(() => {
+                              if ('pathLaneId' in item && item.pathLaneId) {
+                                startManualPath(item.pathLaneId);
+                                return;
+                              }
+                              if ('manualTab' in item) openStudioManual(item.manualTab);
+                            }, 80);
+                          }}
+                        >
+                          {item.pathLabel} →
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 </li>
@@ -173,7 +194,7 @@ export function WhatsNewDialog() {
         </div>
 
         <DialogFooter className="p-4 sm:p-6 border-t bg-muted/5 flex-col-reverse sm:flex-row sm:justify-between gap-3 items-stretch sm:items-center">
-          <p className="text-[9px] text-muted-foreground font-code uppercase tracking-widest text-center sm:text-left">August 2026</p>
+          <p className="text-[9px] text-muted-foreground font-code uppercase tracking-widest text-center sm:text-left">September 2026</p>
           <Button onClick={dismiss} className="w-full sm:w-auto px-8 sm:px-10 font-bold h-10 shadow-lg">
             Got it
           </Button>

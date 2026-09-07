@@ -1,6 +1,13 @@
 import type { Metadata } from 'next';
 import { getPublicAppUrl } from '@/lib/app-url';
-import { APP_DESCRIPTION, APP_ICON_PATH, APP_NAME, APP_SLOGAN, FAVICON_PATH, LOGO_PATH, SUPPORT_EMAIL } from '@/lib/brand';
+import {
+  APP_DESCRIPTION,
+  APP_NAME,
+  APP_SLOGAN,
+  FAVICON_PATH,
+  LOGO_PATH,
+  SUPPORT_EMAIL,
+} from '@/lib/brand';
 
 /** Shared on-page SEO + sitemap/robots (production URL from NEXT_PUBLIC_APP_URL). */
 export const SEO = {
@@ -50,8 +57,8 @@ export const SEO = {
   faviconPath: FAVICON_PATH,
   faviconIcoPath: FAVICON_PATH,
   ogImagePath: LOGO_PATH,
-  /** Installed PWA / “Add to Home Screen” — padded lockup, not the full-bleed logo. */
-  appIconPath: APP_ICON_PATH,
+  /** Installed Brave/Chrome desktop PWA taskbar — transparent Logo.png only. */
+  appIconPath: LOGO_PATH,
   twitterHandle: undefined as string | undefined,
 };
 

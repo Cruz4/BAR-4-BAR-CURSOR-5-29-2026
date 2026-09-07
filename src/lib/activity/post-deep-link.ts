@@ -56,7 +56,7 @@ export function scrollActivityPostTarget(target: ActivityPostTarget): boolean {
   const postEl = document.getElementById(activityPostElementId(target.postId));
   const el = commentEl || postEl;
   if (!el) return false;
-  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   el.setAttribute('data-activity-focus', '1');
   window.setTimeout(() => el.removeAttribute('data-activity-focus'), 2600);
   return true;

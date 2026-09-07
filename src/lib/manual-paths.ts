@@ -266,6 +266,13 @@ export const MANUAL_PATHS: ManualPathLane[] = [
         target: '[data-tour="scene-search"]',
         isDone: (p) => normalizePath(p) === '/discover',
       },
+      {
+        id: 'door-knock',
+        title: 'Knock on a live door',
+        body: 'On Recently live cards, tap Knock. Each door takes up to 5 visitors and 15 knocks per day (3 from you). Artists collect knocks when they open their own Artist Home.',
+        href: '/discover',
+        isDone: (p) => normalizePath(p) === '/discover',
+      },
     ],
   },
   {

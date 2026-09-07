@@ -72,6 +72,7 @@ import { Hint } from '@/components/ui/tooltip';
 import { SoundIdentityStrip } from '@/components/profile/sound-identity-strip';
 import { ArtistHomeBackButton } from '@/components/profile/artist-home-back-button';
 import { ProfileSectionTabs } from '@/components/profile/profile-section-tabs';
+import { DoorKnockHomeListener } from '@/components/profile/door-knock-home-listener';
 
 type ArtistHomeProps = {
   profile: PublicProfileData;
@@ -247,6 +248,8 @@ export function ArtistHome({
       const tryScroll = () => scrollActivityPostTarget(target);
       window.setTimeout(tryScroll, 80);
       window.setTimeout(tryScroll, 450);
+      window.setTimeout(tryScroll, 900);
+      window.setTimeout(tryScroll, 1600);
     };
     run();
     window.addEventListener('hashchange', run);
@@ -367,8 +370,8 @@ export function ArtistHome({
 
       <div className="relative z-10 mx-auto w-full max-w-[1200px] px-4 pt-6 sm:px-6 sm:pt-10">
         {/* Sheet header */}
-        <div className="flex items-center justify-between gap-1.5 border-b border-dashed border-[var(--ph-border)] pb-4 sm:gap-3">
-          <div className="flex min-w-0 shrink items-center gap-1.5 sm:gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-dashed border-[var(--ph-border)] pb-4">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             {studioHomeHref === '/' && !previewMode && !playgroundWall ? (
               <ArtistHomeBackButton label="Back" profileSlug={profile.slug} />
             ) : (
@@ -379,7 +382,7 @@ export function ArtistHome({
                 asChild
               >
                 <Link href={studioHomeHref}>
-                  <ChevronLeft className="h-4 w-4" /> {studioHomeLabel}
+                  <ChevronLeft className="h-4 w-4" /> <span className="hidden sm:inline">{studioHomeLabel}</span>
                 </Link>
               </Button>
             )}
@@ -388,7 +391,7 @@ export function ArtistHome({
               {tokens.autoDrift ? ' · restless' : ''}
             </span>
           </div>
-          <div className="flex min-w-0 shrink items-center justify-end gap-1 sm:max-w-full sm:flex-wrap sm:gap-2 [&_button]:shrink-0 max-[480px]:[&_button]:h-8 max-[480px]:[&_button]:px-2 max-[480px]:[&_button]:text-[9px]">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1 sm:gap-2 [&_button]:shrink-0">
             {previewMode && onExitPreview ? (
               <Button
                 size="sm"
@@ -891,6 +894,14 @@ export function ArtistHome({
           </div>
         </DialogContent>
       </Dialog>
+
+      {isOwner && profile.userId && !previewMode ? (
+        <DoorKnockHomeListener
+          ownerUserId={profile.userId}
+          ownerSlug={profile.slug}
+          enabled
+        />
+      ) : null}
     </div>
   );
 }

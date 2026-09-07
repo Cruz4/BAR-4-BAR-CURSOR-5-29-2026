@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Check, Copy, Facebook, Mail, MessageCircle, Share2 } from 'lucide-react';
 import type { ProfilePost } from '@/lib/profile/social-client';
+import { publicScenePostHref } from '@/lib/activity/href';
 
 type PostShareDialogProps = {
   open: boolean;
@@ -34,7 +35,7 @@ function XIcon({ className }: { className?: string }) {
 
 function buildPostShareUrl(post: ProfilePost): string {
   if (typeof window === 'undefined') return '';
-  return `${window.location.origin}/p/${encodeURIComponent(post.id)}`;
+  return `${window.location.origin}${publicScenePostHref(post.id)}`;
 }
 
 function buildPostShareText(post: ProfilePost, shareUrl: string): string {

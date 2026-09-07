@@ -159,7 +159,7 @@ export function PassBarButton({
         title="Message"
       >
         <MessageSquare className="h-3.5 w-3.5" />
-        <span className="max-[380px]:hidden">Message</span>
+        <span className="hidden sm:inline">Message</span>
       </Button>
       <PassBarDialog
         open={open}

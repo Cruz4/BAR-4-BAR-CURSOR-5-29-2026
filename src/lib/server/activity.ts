@@ -65,6 +65,9 @@ function buildHref(input: EmitActivityInput, recipientSlug?: string): string | u
   if (input.type === 'friend_accepted' && input.actorSlug) {
     return profileHref(input.actorSlug) || '/friends';
   }
+  if (input.type === 'door_knock' && recipientSlug) {
+    return profileHref(recipientSlug) || '/activity';
+  }
   if (input.type === 'friend_accepted') return '/friends';
   if (input.type === 'contact_accepted' && input.actorSlug) {
     return profileHref(input.actorSlug) || '/activity';
@@ -144,7 +147,7 @@ async function loadPrefs(userId: string): Promise<ActivityPrefs> {
   };
 }
 
-async function maybePush(
+export async function maybePush(
   recipientId: string,
   type: ActivityType,
   title: string,
@@ -400,6 +403,10 @@ function activityEventFromData(
     ...(typeof data.preview === 'string' ? { preview: data.preview } : {}),
     ...(typeof data.href === 'string' ? { href: data.href } : {}),
     readAt: data.readAt === null ? null : activityIso(data.readAt) || undefined,
+    homeDeliveredAt:
+      data.homeDeliveredAt === null
+        ? null
+        : activityIso(data.homeDeliveredAt) || undefined,
   };
 }
 
@@ -482,7 +489,15 @@ export async function listActivityFeedPage(
     for (const doc of snap.docs) {
       lastScanned = doc;
       const event = activityEventFromData(doc.id, doc.data() as Record<string, unknown>);
-      if (event?.direction === direction) events.push(event);
+      if (!event || event.direction !== direction) continue;
+      if (
+        event.type === 'door_knock' &&
+        direction === 'received' &&
+        event.homeDeliveredAt == null
+      ) {
+        continue;
+      }
+      events.push(event);
       if (events.length >= pageSize) break;
     }
 

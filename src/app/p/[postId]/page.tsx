@@ -5,6 +5,7 @@ import { ChevronLeft, Compass, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PostCard } from '@/components/profile/post-card';
 import { absoluteUrl, SEO } from '@/lib/seo';
+import { publicScenePostHref } from '@/lib/activity/href';
 import { getPublicPostPageData, publicPostText } from '@/lib/server/public-post';
 
 export const runtime = 'nodejs';
@@ -30,7 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
   const text = publicPostText(data.post);
   const description = descriptionFor(data.ownerName, text);
-  const canonical = absoluteUrl(`/p/${data.post.id}`);
+  const canonical = absoluteUrl(publicScenePostHref(data.post.id));
   return {
     title: `${data.ownerName} on The Scene`,
     description,
@@ -58,7 +59,7 @@ export default async function PublicPostPage({ params }: PageProps) {
   const data = await getPublicPostPageData(postId);
   if (!data) notFound();
   const text = publicPostText(data.post);
-  const canonical = absoluteUrl(`/p/${data.post.id}`);
+  const canonical = absoluteUrl(publicScenePostHref(data.post.id));
   const authorUrl = absoluteUrl(`/${data.ownerSlug}`);
   const structuredData = {
     '@context': 'https://schema.org',

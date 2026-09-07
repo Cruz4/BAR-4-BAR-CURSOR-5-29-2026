@@ -9,11 +9,13 @@ import { EmbedPlayer } from '@/components/profile/embed-player';
 import { parseEmbedUrl } from '@/lib/profile/embeds';
 import {
   classifyAppHref,
+  displayLabelForHref,
   firstInlineHref,
   normalizeInlineHref,
   previewHrefFromFields,
   toNavigableHref,
 } from '@/lib/profile/inline-links';
+import { activityOpenLinkHref, artistHomePostHref } from '@/lib/activity/href';
 import { fetchPostById, type ProfilePost } from '@/lib/profile/social-client';
 import { cn } from '@/lib/utils';
 import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
@@ -40,7 +42,7 @@ function slugLabel(slug: string): string {
 }
 
 const CARD_CLASS =
-  'flex items-center gap-3 rounded-[var(--ph-radius,16px)] border border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 px-3 py-2.5';
+  'flex min-w-0 max-w-full items-center gap-3 overflow-hidden rounded-[var(--ph-radius,16px)] border border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 px-3 py-2.5';
 
 function PreviewShell({
   href,
@@ -105,8 +107,8 @@ function GenericLinkCard({
         ) : null}
         <span className="block truncate text-sm text-[var(--ph-text,#fff)]">{label}</span>
       </span>
-      <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.6))]">
-        {host} {nav.internal ? null : <ExternalLink className="h-3 w-3" />}
+      <span className="flex max-w-[38%] shrink-0 items-center gap-1 truncate text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.6))]">
+        {host} {nav.internal ? null : <ExternalLink className="h-3 w-3 shrink-0" />}
       </span>
     </PreviewShell>
   );
@@ -216,7 +218,7 @@ function AKAsheetPostPreview({
   }
 
   const name = post.ownerName || 'Artist';
-  const originalHref = `/p/${post.id}`;
+  const originalHref = artistHomePostHref(post.ownerSlug, post.id);
   const chrome = parseStudioBadge(post.ownerStudioBadge);
 
   return (
@@ -234,8 +236,16 @@ function AKAsheetPostPreview({
           link={interactive}
         />
         <p className="min-w-0 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
-          {interactive ? (
-            <Link href={originalHref} prefetch={false} className="transition-colors hover:text-[var(--ph-text,#fff)] hover:underline">
+          {interactive && originalHref ? (
+            <Link
+              href={activityOpenLinkHref(originalHref)}
+              prefetch={false}
+              onClick={(event) => {
+                event.preventDefault();
+                window.location.assign(originalHref);
+              }}
+              className="transition-colors hover:text-[var(--ph-text,#fff)] hover:underline"
+            >
               Original
             </Link>
           ) : (
@@ -369,12 +379,12 @@ export function InlineLinkPreview({
       <GenericLinkCard
         href={target.href}
         eyebrow="AKAsheet"
-        label={target.href === '/' ? 'akasheet.com' : target.href}
+        label={target.href === '/' ? 'akasheet.com' : displayLabelForHref(target.href)}
         interactive={interactive}
       />
     );
   }
-  return <GenericLinkCard href={normalized} label={normalized} interactive={interactive} />;
+  return <GenericLinkCard href={normalized} label={displayLabelForHref(normalized)} interactive={interactive} />;
 }
 
 export function ComposerLinkPreview({ text, className }: { text: string; className?: string }) {

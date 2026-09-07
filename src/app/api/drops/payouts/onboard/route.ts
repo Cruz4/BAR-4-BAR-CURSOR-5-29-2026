@@ -45,12 +45,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Could not create a payouts account.' }, { status: 500 });
     }
 
-    if (status.transfersActive && status.detailsSubmitted) {
+    if (status.transfersActive && status.detailsSubmitted && status.payoutsEnabled) {
       return NextResponse.json({ url: null, ready: true, created });
     }
 
     const origin = getTrustedAppOrigin(req);
-    const url = await createConnectOnboardingLink(status.accountId, origin);
+    const linkType = status.detailsSubmitted ? 'account_update' : 'account_onboarding';
+    let url: string;
+    try {
+      url = await createConnectOnboardingLink(status.accountId, origin, linkType);
+    } catch (linkErr) {
+      const raw = linkErr instanceof Error ? linkErr.message : '';
+      const connectOff = /connect is not enabled|signed up for connect/i.test(raw);
+      if (linkType === 'account_update' && !connectOff) {
+        url = await createConnectOnboardingLink(status.accountId, origin, 'account_onboarding');
+      } else {
+        throw linkErr;
+      }
+    }
     await recordStudioEvent(userId, 'drop_connect_started', { country, created }, email);
 
     return NextResponse.json({ url, ready: false, created });

@@ -13,7 +13,7 @@ import type { DropPrice } from '@/lib/drop-commerce';
 import { DropListenPanel } from '@/components/drop-listen-panel';
 import type { FeaturedTrackSelection } from '@/lib/profile/modules';
 import { pressedSongHref, type PressedSongSummary } from '@/lib/pressed-song';
-import { normalizeInlineHref, songShareIdFromHref } from '@/lib/profile/inline-links';
+import { normalizeInlineHref, songShareIdFromHref, displayLabelForHref, isPlausibleWebHref } from '@/lib/profile/inline-links';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
@@ -200,6 +200,7 @@ export function EmbedPlayer({
 
   if (!parsed) {
     const outbound = normalizeInlineHref(url) || url;
+    if (!isPlausibleWebHref(outbound)) return null;
     let host = '';
     try {
       host = new URL(outbound).hostname.replace(/^www\./, '');
@@ -211,14 +212,14 @@ export function EmbedPlayer({
         href={outbound}
         target="_blank"
         rel="noopener noreferrer nofollow"
-        className="flex items-center gap-3 rounded-[var(--ph-radius,16px)] border border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 px-4 py-3 transition-colors hover:border-[var(--ph-accent,#7dd3fc)]"
+        className="flex min-w-0 max-w-full items-center gap-3 overflow-hidden rounded-[var(--ph-radius,16px)] border border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 px-4 py-3 transition-colors hover:border-[var(--ph-accent,#7dd3fc)]"
       >
         <Music className="h-4 w-4 shrink-0 text-[var(--ph-accent,#7dd3fc)]" />
         <span className="min-w-0 flex-1 truncate text-sm text-[var(--ph-text,#fff)]">
-          {title || url}
+          {title || displayLabelForHref(outbound)}
         </span>
-        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.6))]">
-          {host} <ExternalLink className="h-3 w-3" />
+        <span className="flex max-w-[38%] shrink-0 items-center gap-1 truncate text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.6))]">
+          {host} <ExternalLink className="h-3 w-3 shrink-0" />
         </span>
       </a>
     );

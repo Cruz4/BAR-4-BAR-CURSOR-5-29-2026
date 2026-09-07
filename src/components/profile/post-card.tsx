@@ -46,6 +46,7 @@ import {
   parseActivityPostHash,
   scrollActivityPostTarget,
 } from '@/lib/activity/post-deep-link';
+import { activityOpenLinkHref, artistHomePostHref, publicScenePostHref } from '@/lib/activity/href';
 import { compactReachCount, recordPostViewClient } from '@/lib/post-view-client';
 import { LyricClipCard } from '@/components/profile/lyric-clip-card';
 import { isMasterAdminEmail } from '@/lib/master-admin';
@@ -119,7 +120,8 @@ function ReverbSourceBody({
     };
   }, [liveSlug]);
 
-  const originalPostHref = post.reverbPostId ? `/p/${post.reverbPostId}` : undefined;
+  const originalPostHref =
+    post.reverbPostId && liveSlug ? artistHomePostHref(liveSlug, post.reverbPostId) : undefined;
 
   return (
     <div className="mt-2 rounded-xl border border-[var(--ph-border,rgba(255,255,255,0.14))] bg-black/30 p-3">
@@ -153,7 +155,12 @@ function ReverbSourceBody({
         <p className="min-w-0 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
           {originalPostHref ? (
             <Link
-              href={originalPostHref}
+              href={activityOpenLinkHref(originalPostHref)}
+              prefetch={false}
+              onClick={(event) => {
+                event.preventDefault();
+                window.location.assign(originalPostHref);
+              }}
               className="text-[var(--ph-muted,rgba(255,255,255,0.55))] transition-colors hover:text-[var(--ph-text,#fff)] hover:underline"
             >
               Original
@@ -172,6 +179,18 @@ function ReverbSourceBody({
           >
             {name}
           </ArtistHomeLink>
+          {post.reverbPostId ? (
+            <>
+              {' · '}
+              <Link
+                href={publicScenePostHref(post.reverbPostId)}
+                prefetch={false}
+                className="text-[var(--ph-muted,rgba(255,255,255,0.55))] transition-colors hover:text-[var(--ph-text,#fff)] hover:underline"
+              >
+                Permalink
+              </Link>
+            </>
+          ) : null}
         </p>
       </div>
       {post.reverbLyricClip ? (
@@ -584,11 +603,13 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
             </span>
           )}
           <Link
-            href={`/p/${post.id}`}
+            href={publicScenePostHref(post.id)}
+            prefetch={false}
             className="mt-1 inline-flex whitespace-nowrap text-[10px] uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))] hover:text-[var(--ph-text,#fff)] hover:underline"
-            aria-label="Open public post permalink"
+            aria-label="Open public Scene post"
           >
             {timeAgo(post.createdAt)}
+            <span className="sr-only"> · Public Scene post</span>
           </Link>
         </div>
         {canDeletePost && (

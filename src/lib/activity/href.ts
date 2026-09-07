@@ -15,14 +15,43 @@ export function rewriteActivityProfileHref(href: string): string | undefined {
   return profileHref(slug, hash || undefined);
 }
 
+/** Artist Home + wall hash for a specific post (not the Scene `/p/` route). */
+export function artistHomePostHref(slug: string | undefined | null, postId: string): string | undefined {
+  const id = postId.trim();
+  if (!id) return undefined;
+  const base = profileHref(slug);
+  if (!base) return undefined;
+  return `${base}?p=${encodeURIComponent(id)}#${activityPostHash(id)}`;
+}
+
+/** Canonical public post URL for sharing, crawlers, and Scene permalinks. */
+export function publicScenePostHref(postId: string): string {
+  return `/p/${encodeURIComponent(postId.trim())}`;
+}
+
 /** Next.js Link-safe href so `#post-…` never gets folded into the `[slug]` param. */
-export function activityOpenLinkHref(href: string): string | { pathname: string; hash: string } {
-  const i = href.indexOf('#');
-  if (i <= 0) return href;
-  const pathname = href.slice(0, i);
-  const hash = href.slice(i + 1);
-  if (!pathname.startsWith('/') || !hash) return href;
-  return { pathname, hash };
+export function activityOpenLinkHref(
+  href: string
+): string | { pathname: string; query?: Record<string, string>; hash?: string } {
+  try {
+    const url = new URL(href, 'https://akasheet.local');
+    if (!url.hash && !url.search) return href;
+    const query = Object.fromEntries(url.searchParams.entries());
+    const hash = url.hash.replace(/^#/, '');
+    if (!url.pathname.startsWith('/')) return href;
+    return {
+      pathname: url.pathname,
+      ...(Object.keys(query).length ? { query } : {}),
+      ...(hash ? { hash } : {}),
+    };
+  } catch {
+    const i = href.indexOf('#');
+    if (i <= 0) return href;
+    const pathname = href.slice(0, i);
+    const hash = href.slice(i + 1);
+    if (!pathname.startsWith('/') || !hash) return href;
+    return { pathname, hash };
+  }
 }
 
 function publicPostHref(postId: string, hash: string): string {
@@ -64,6 +93,9 @@ export function activityOpenHref(event: ActivityEvent, _viewerSlug?: string): st
   }
   if (event.type === 'friend_accepted' && event.actorSlug) {
     return profileHref(event.actorSlug) || '/friends';
+  }
+  if (event.type === 'door_knock') {
+    return event.href || '/activity';
   }
   if (event.type === 'friend_request' || event.type === 'contact_request') return '/activity?tab=requests';
   if (event.type === 'fold_pass') return event.href || '/msgs';

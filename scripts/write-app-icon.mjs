@@ -3,8 +3,11 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const BG = [5, 10, 30, 255];
-const SAFE = 0.66;
+const BG = [5, 20, 42, 255];
+/** Opaque apple-touch / legacy padded icon (not used in the web manifest). */
+const SAFE_OPAQUE = 0.726;
+/** Transparent desktop PWA mark — ~23% larger than 0.726 without a filled square. */
+const SAFE_TRANSPARENT = 0.894;
 
 function crc32(buf) {
   let c = ~0;
@@ -86,43 +89,58 @@ function decodePng(buf) {
   return { w, h, px: out };
 }
 
-function compositePadded(src, size) {
-  const { w, h, px } = src;
-  let minX = w;
-  let minY = h;
+function contentBBox(src) {
+  let minX = src.w;
+  let minY = src.h;
   let maxX = 0;
   let maxY = 0;
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (px[(y * w + x) * 4 + 3] < 12) continue;
+  for (let y = 0; y < src.h; y++) {
+    for (let x = 0; x < src.w; x++) {
+      if (src.px[(y * src.w + x) * 4 + 3] < 12) continue;
       if (x < minX) minX = x;
       if (y < minY) minY = y;
       if (x > maxX) maxX = x;
       if (y > maxY) maxY = y;
     }
   }
-  const bw = Math.max(1, maxX - minX + 1);
-  const bh = Math.max(1, maxY - minY + 1);
-  const inner = Math.floor(size * SAFE);
+  if (maxX < minX) return { minX: 0, minY: 0, maxX: src.w - 1, maxY: src.h - 1 };
+  return { minX, minY, maxX, maxY };
+}
+
+function compositePadded(src, size, safe, background) {
+  const { w, h, px } = src;
+  const box = contentBBox({ w, h, px });
+  const bw = Math.max(1, box.maxX - box.minX + 1);
+  const bh = Math.max(1, box.maxY - box.minY + 1);
+  const inner = Math.floor(size * safe);
   const scale = inner / Math.max(bw, bh);
   const dw = Math.max(1, Math.round(bw * scale));
   const dh = Math.max(1, Math.round(bh * scale));
   const ox = Math.floor((size - dw) / 2);
   const oy = Math.floor((size - dh) / 2);
   const out = Buffer.alloc(size * size * 4);
-  for (let i = 0; i < size * size; i++) out.set(BG, i * 4);
+  if (background) {
+    for (let i = 0; i < size * size; i++) out.set(background, i * 4);
+  }
   for (let y = 0; y < dh; y++) {
-    const sy = minY + Math.min(bh - 1, Math.floor((y + 0.5) / scale));
+    const sy = box.minY + Math.min(bh - 1, Math.floor((y + 0.5) / scale));
     for (let x = 0; x < dw; x++) {
-      const sx = minX + Math.min(bw - 1, Math.floor((x + 0.5) / scale));
+      const sx = box.minX + Math.min(bw - 1, Math.floor((x + 0.5) / scale));
       const si = (sy * w + sx) * 4;
       const a = px[si + 3] / 255;
       if (a < 0.02) continue;
       const di = ((oy + y) * size + (ox + x)) * 4;
-      out[di] = Math.round(px[si] * a + BG[0] * (1 - a));
-      out[di + 1] = Math.round(px[si + 1] * a + BG[1] * (1 - a));
-      out[di + 2] = Math.round(px[si + 2] * a + BG[2] * (1 - a));
-      out[di + 3] = 255;
+      if (background) {
+        out[di] = Math.round(px[si] * a + background[0] * (1 - a));
+        out[di + 1] = Math.round(px[si + 1] * a + background[1] * (1 - a));
+        out[di + 2] = Math.round(px[si + 2] * a + background[2] * (1 - a));
+        out[di + 3] = 255;
+      } else {
+        out[di] = px[si];
+        out[di + 1] = px[si + 1];
+        out[di + 2] = px[si + 2];
+        out[di + 3] = px[si + 3];
+      }
     }
   }
   return out;
@@ -130,8 +148,19 @@ function compositePadded(src, size) {
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const logo = decodePng(readFileSync(join(root, 'public', 'Logo.png')));
-const icon512 = compositePadded(logo, 512);
-const icon180 = compositePadded(logo, 180);
-writeFileSync(join(root, 'public', 'app-icon.png'), encodePng(icon512, 512));
-writeFileSync(join(root, 'src', 'app', 'apple-icon.png'), encodePng(icon180, 180));
-console.log('wrote public/app-icon.png and src/app/apple-icon.png');
+
+writeFileSync(
+  join(root, 'public', 'app-icon.png'),
+  encodePng(compositePadded(logo, 512, SAFE_OPAQUE, BG), 512)
+);
+writeFileSync(
+  join(root, 'src', 'app', 'apple-icon.png'),
+  encodePng(compositePadded(logo, 180, SAFE_OPAQUE, BG), 180)
+);
+/** Brave/Chrome desktop PWA — transparent Logo (not navy square, not android burger). */
+writeFileSync(
+  join(root, 'public', 'desktop-pwa-icon.png'),
+  encodePng(compositePadded(logo, 512, SAFE_TRANSPARENT, null), 512)
+);
+
+console.log('wrote public/app-icon.png, public/desktop-pwa-icon.png, src/app/apple-icon.png');

@@ -162,13 +162,20 @@ function EarningsPageContent() {
         body: JSON.stringify({ userId: user.id, email: user.email, country }),
       });
       const data = await res.json();
+      if (res.status === 429) {
+        throw new Error('Too many requests — wait a few seconds and try Connect payouts again.');
+      }
       if (!res.ok) throw new Error(data.error || 'Could not start payouts.');
       if (data.ready) {
         toast({ title: 'Payouts already live', description: 'New sales go to your Stripe balance automatically.' });
         await load();
         return;
       }
-      if (data.url) window.location.href = data.url;
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      throw new Error('Stripe did not return a setup link.');
     } catch (err: unknown) {
       toast({
         variant: 'destructive',

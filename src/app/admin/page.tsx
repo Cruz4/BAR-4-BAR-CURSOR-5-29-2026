@@ -65,6 +65,7 @@ import { AdminFoldsFeatureCard } from '@/components/admin-folds-feature-card';
 import { AdminCollabSheetFeatureCard } from '@/components/admin-collab-sheet-feature-card';
 import { AdminFirstDropsCard } from '@/components/admin-first-drops-card';
 import { AdminHouseBarCard } from '@/components/admin-house-bar-card';
+import { AdminTonightsFormCard } from '@/components/admin-tonights-form-card';
 import { AdminWeeklyChallengeCard } from '@/components/admin-weekly-challenge-card';
 import { useProductSurfaces } from '@/hooks/use-product-surfaces';
 import type { AdminGamificationRosterEntry } from '@/lib/gamification/admin-roster-types';
@@ -1338,6 +1339,7 @@ export default function AdminPage() {
             <AdminCollabSheetFeatureCard />
             <AdminFirstDropsCard />
             <AdminHouseBarCard />
+            <AdminTonightsFormCard />
             <AdminWeeklyChallengeCard />
             <AdminInviteGateCard />
             <Card className="bg-card border-2 shadow-2xl">

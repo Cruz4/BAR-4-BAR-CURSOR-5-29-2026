@@ -54,9 +54,10 @@ export function CopyProfileLinkButton({
         className
       )}
       onClick={() => void copy()}
+      aria-label={copied ? 'Copied' : 'Share'}
     >
       {copied ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
-      {copied ? 'Copied' : 'Share'}
+      <span className="hidden sm:inline">{copied ? 'Copied' : 'Share'}</span>
     </Button>
   );
 }

@@ -54,15 +54,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     }
 
     if (target?.postId) {
-      const targetSnap = await posts.doc(target.postId).get();
-      const targetData = targetSnap.data() || {};
-      if (targetSnap.exists && targetData.ownerId === owner.userId && targetData.createdAt) {
-        const newer = await posts
-          .where('ownerId', '==', owner.userId)
-          .where('createdAt', '>', targetData.createdAt)
-          .count()
-          .get();
-        page = Math.floor((newer.data().count || 0) / PAGE_SIZE);
+      try {
+        const targetSnap = await posts.doc(target.postId).get();
+        const targetData = targetSnap.data() || {};
+        if (targetSnap.exists && targetData.ownerId === owner.userId && targetData.createdAt) {
+          const newer = await posts
+            .where('ownerId', '==', owner.userId)
+            .where('createdAt', '>', targetData.createdAt)
+            .count()
+            .get();
+          page = Math.floor((newer.data().count || 0) / PAGE_SIZE);
+        }
+      } catch (error) {
+        console.error('[profile/posts] target page', error);
       }
     }
 
@@ -76,8 +80,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
       posts.where('ownerId', '==', owner.userId).count().get(),
     ]);
     const total = totalSnap.data().count || 0;
+    const rows = snap.docs.map((doc) => postFromServerDoc(doc.id, doc.data() as Record<string, unknown>));
+    if (target?.postId && !rows.some((post) => post.id === target.postId)) {
+      try {
+        const targetSnap = await posts.doc(target.postId).get();
+        const targetData = targetSnap.data() || {};
+        if (targetSnap.exists && targetData.ownerId === owner.userId) {
+          rows.unshift(postFromServerDoc(targetSnap.id, targetData as Record<string, unknown>));
+        }
+      } catch (error) {
+        console.error('[profile/posts] target merge', error);
+      }
+    }
     return NextResponse.json({
-      posts: snap.docs.map((doc) => postFromServerDoc(doc.id, doc.data() as Record<string, unknown>)),
+      posts: rows,
       page,
       pageCount: Math.max(1, Math.ceil(total / PAGE_SIZE)),
       total,

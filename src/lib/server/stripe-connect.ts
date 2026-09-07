@@ -135,14 +135,15 @@ export async function ensureConnectAccount(
 
 export async function createConnectOnboardingLink(
   accountId: string,
-  origin: string
+  origin: string,
+  linkType: Stripe.AccountLinkCreateParams['type'] = 'account_onboarding'
 ): Promise<string> {
   const stripe = getStripe();
   const link = await stripe.accountLinks.create({
     account: accountId,
     refresh_url: `${origin}/earnings?connect=refresh`,
     return_url: `${origin}/earnings?connect=return`,
-    type: 'account_onboarding',
+    type: linkType,
   });
   if (!link.url) throw new Error('Stripe did not return an onboarding URL.');
   return link.url;

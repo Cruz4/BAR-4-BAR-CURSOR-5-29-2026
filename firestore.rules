@@ -418,6 +418,31 @@ service cloud.firestore {
         allow delete: if isOwner(userId) && (docId == 'prefs' || docId == 'push' || docId == 'craft');
       }
 
+      match /doorPresence/{docId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+
+      match /doorKnockLive/{knockId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+
+      match /doorKnocks/{knockId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+
+      match /doorKnockQuota/{dayKey} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+
+      match /doorKnockInbox/{dayKey} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+
       // Contact requests — Admin SDK writes; artist + requester can read status.
       match /contactRequests/{requesterId} {
         allow read: if request.auth != null
@@ -719,6 +744,11 @@ service cloud.firestore {
     match /reports/{reportId} {
       allow create: if request.auth != null;
       allow read, update, delete: if isAdmin();
+    }
+
+    match /tonightsForms/{nightKey} {
+      allow read: if true;
+      allow write: if false;
     }
 
     match /config/{configId} {

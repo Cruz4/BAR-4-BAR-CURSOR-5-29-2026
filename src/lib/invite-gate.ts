@@ -1,5 +1,7 @@
 /** Private beta invite gate — temporary launch control (admin-toggleable). */
 
+import { isPublicArtistHomePath } from '@/lib/profile/profile-slug';
+
 export const INVITE_GATE_COOKIE = 'b4b_invite_unlock';
 
 export type InviteGateCopy = {
@@ -42,8 +44,11 @@ export function normalizeInviteCode(code: string): string {
 export function isInviteGateExemptPath(pathname: string): boolean {
   if (!pathname || pathname === '/') return false;
   if (pathname.startsWith('/share/') || pathname.startsWith('/song/')) return true;
+  if (pathname === '/p' || pathname.startsWith('/p/')) return true;
+  if (pathname === '/discover' || pathname.startsWith('/discover/')) return true;
   if (pathname.startsWith('/lock/') || pathname === '/lock') return true;
   if (pathname.startsWith('/marketing/capture')) return true;
   if (pathname.startsWith('/api/')) return true;
+  if (isPublicArtistHomePath(pathname)) return true;
   return false;
 }

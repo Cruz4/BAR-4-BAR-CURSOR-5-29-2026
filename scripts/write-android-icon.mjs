@@ -1,6 +1,8 @@
 /**
  * Android home-screen icons only — sourced from public/AKAsheet_burgerlogo.png.
  * Does not touch Logo.png, favicon, apple-icon, or public/app-icon.png.
+ * Never add android-icon.png to the web app manifest — Chromium desktop PWAs
+ * must use transparent desktop-pwa-icon.png (Logo), not the navy app-icon or burger.
  */
 
 import { deflateSync, inflateSync } from 'node:zlib';
@@ -88,20 +90,78 @@ function decodePng(buf) {
   return { w, h, px: out };
 }
 
-/** Nearest-neighbor scale — burger art is already composed for the launcher. */
-function scaleNearest(src, size) {
-  const { w, h, px } = src;
+/** Interior fill of the AKA sheet — not black, not launcher white. */
+const BG = [5, 20, 42, 255];
+
+function isSheetNavy(r, g, b) {
+  return Math.abs(r - BG[0]) < 14 && Math.abs(g - BG[1]) < 14 && Math.abs(b - BG[2]) < 18;
+}
+
+/** Artwork only (outline, AKA, fold) — navy fill and transparent corners are not the mark. */
+function isArtwork(r, g, b, a) {
+  if (a < 24) return false;
+  if (isSheetNavy(r, g, b)) return false;
+  return true;
+}
+
+function contentBBox(src) {
+  let minX = src.w;
+  let minY = src.h;
+  let maxX = 0;
+  let maxY = 0;
+  for (let y = 0; y < src.h; y++) {
+    for (let x = 0; x < src.w; x++) {
+      const i = (y * src.w + x) * 4;
+      if (!isArtwork(src.px[i], src.px[i + 1], src.px[i + 2], src.px[i + 3])) continue;
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+    }
+  }
+  if (maxX < minX) return { minX: 0, minY: 0, maxX: src.w - 1, maxY: src.h - 1 };
+  const bw = maxX - minX + 1;
+  const bh = maxY - minY + 1;
+  const pad = Math.round(Math.max(bw, bh) * 0.16);
+  return {
+    minX: Math.max(0, minX - pad),
+    minY: Math.max(0, minY - pad),
+    maxX: Math.min(src.w - 1, maxX + pad),
+    maxY: Math.min(src.h - 1, maxY + pad),
+  };
+}
+
+/** Opaque navy square with the sheet scaled up so the launcher mask is full of mark, not padding. */
+function composeFilled(src, size, fillRatio) {
   const out = Buffer.alloc(size * size * 4);
-  for (let y = 0; y < size; y++) {
-    const sy = Math.min(h - 1, Math.floor((y + 0.5) * (h / size)));
-    for (let x = 0; x < size; x++) {
-      const sx = Math.min(w - 1, Math.floor((x + 0.5) * (w / size)));
-      const si = (sy * w + sx) * 4;
-      const di = (y * size + x) * 4;
-      out[di] = px[si];
-      out[di + 1] = px[si + 1];
-      out[di + 2] = px[si + 2];
-      out[di + 3] = px[si + 3];
+  for (let i = 0; i < size * size; i++) {
+    const di = i * 4;
+    out[di] = BG[0];
+    out[di + 1] = BG[1];
+    out[di + 2] = BG[2];
+    out[di + 3] = 255;
+  }
+  const box = contentBBox(src);
+  const bw = box.maxX - box.minX + 1;
+  const bh = box.maxY - box.minY + 1;
+  const dest = Math.max(1, Math.floor(size * fillRatio));
+  const scale = Math.min(dest / bw, dest / bh);
+  const dw = Math.max(1, Math.round(bw * scale));
+  const dh = Math.max(1, Math.round(bh * scale));
+  const ox = Math.floor((size - dw) / 2);
+  const oy = Math.floor((size - dh) / 2);
+  for (let y = 0; y < dh; y++) {
+    const iy = Math.min(box.maxY, box.minY + Math.floor((y + 0.5) * (bh / dh)));
+    for (let x = 0; x < dw; x++) {
+      const ix = Math.min(box.maxX, box.minX + Math.floor((x + 0.5) * (bw / dw)));
+      const si = (iy * src.w + ix) * 4;
+      const di = ((oy + y) * size + (ox + x)) * 4;
+      const a = src.px[si + 3] / 255;
+      if (a < 0.02) continue;
+      out[di] = Math.round(src.px[si] * a + BG[0] * (1 - a));
+      out[di + 1] = Math.round(src.px[si + 1] * a + BG[1] * (1 - a));
+      out[di + 2] = Math.round(src.px[si + 2] * a + BG[2] * (1 - a));
+      out[di + 3] = 255;
     }
   }
   return out;
@@ -131,7 +191,7 @@ const burger = decodePng(readFileSync(join(root, 'public', 'AKAsheet_burgerlogo.
 for (const [folder, size] of Object.entries(LAUNCHER)) {
   const dir = join(res, folder);
   mkdirSync(dir, { recursive: true });
-  const png = encodePng(scaleNearest(burger, size), size);
+  const png = encodePng(composeFilled(burger, size, 0.9), size);
   writeFileSync(join(dir, 'ic_launcher.png'), png);
   writeFileSync(join(dir, 'ic_launcher_round.png'), png);
 }
@@ -139,16 +199,20 @@ for (const [folder, size] of Object.entries(LAUNCHER)) {
 for (const [folder, size] of Object.entries(FOREGROUND)) {
   const dir = join(res, folder);
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, 'ic_launcher_foreground.png'), encodePng(scaleNearest(burger, size), size));
+  writeFileSync(join(dir, 'ic_launcher_foreground.png'), encodePng(composeFilled(burger, size, 0.74), size));
 }
 
 writeFileSync(
   join(res, 'values', 'ic_launcher_background.xml'),
   `<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#050A1E</color>
+    <color name="ic_launcher_background">#05142A</color>
 </resources>
 `
 );
 
-console.log('wrote Android mipmap icons from public/AKAsheet_burgerlogo.png');
+const pub = join(root, 'public');
+writeFileSync(join(pub, 'android-icon.png'), encodePng(composeFilled(burger, 512, 0.86), 512));
+writeFileSync(join(pub, 'android-icon-192.png'), encodePng(composeFilled(burger, 192, 0.86), 192));
+
+console.log('wrote Android mipmaps + public/android-icon.png from public/AKAsheet_burgerlogo.png');

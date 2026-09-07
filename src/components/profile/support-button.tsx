@@ -52,7 +52,7 @@ export function SupportButton({
     return (
       <Hint content={FOLLOW_HELP} side="bottom" actionSafe>
         <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
-          <a href="/login" aria-label="Follow" title="Follow"><HeartHandshake className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Follow</span></a>
+          <a href="/login" aria-label="Follow" title="Follow"><HeartHandshake className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Follow</span></a>
         </Button>
       </Hint>
     );
@@ -102,7 +102,7 @@ export function SupportButton({
           aria-label={`Follow ${targetName}`}
           title={state ? `${state.followerCount} followers` : 'Loading followers'}
         >
-          <HeartHandshake className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Follow</span>
+          <HeartHandshake className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Follow</span>
         </Button>
       </Hint>
     );
@@ -121,7 +121,7 @@ export function SupportButton({
             title={`${state.followerCount} followers · ${state.innerCircleCount} Inner Circle`}
           >
             {state.innerCircle ? <Star className="h-3.5 w-3.5 fill-amber-300 text-amber-300" /> : <Check className="h-3.5 w-3.5 text-emerald-300" />}
-            <span className="max-[380px]:hidden">{state.innerCircle ? 'Inner Circle' : 'Following'}</span>
+            <span className="hidden sm:inline">{state.innerCircle ? 'Inner Circle' : 'Following'}</span>
           </Button>
         </DropdownMenuTrigger>
       </Hint>

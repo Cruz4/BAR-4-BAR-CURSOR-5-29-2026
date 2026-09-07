@@ -96,7 +96,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
       <Hint content={ADD_FRIEND_HELP} side="bottom" actionSafe>
         <Button size="sm" variant="outline" className={baseClass} asChild>
           <a href="/login" aria-label={`Add ${targetName} as a friend`}>
-            <UserPlus className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Add friend</span>
+            <UserPlus className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Add friend</span>
           </a>
         </Button>
       </Hint>
@@ -134,7 +134,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
           }, 'Could not unblock');
         }}
       >
-        <Ban className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Blocked · Unblock</span>
+        <Ban className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Blocked · Unblock</span>
       </Button>
     );
   }
@@ -162,7 +162,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
 
   if (!friendship) {
     return (
-      <div className="flex gap-1.5">
+      <div className="flex flex-wrap justify-end gap-1.5">
         <Hint content={ADD_FRIEND_HELP} side="bottom" actionSafe>
           <Button
             size="sm"
@@ -186,7 +186,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
               }, 'Could not send request')
             }
           >
-            <UserPlus className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Add friend</span>
+            <UserPlus className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Add friend</span>
           </Button>
         </Hint>
         {blockAction}
@@ -196,7 +196,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
 
   if (friendship.status === 'accepted') {
     return (
-      <div className="flex gap-1.5">
+      <div className="flex flex-wrap justify-end gap-1.5">
         <Hint content={FRIENDS_HELP} side="bottom" actionSafe>
           <Button
             size="sm"
@@ -213,7 +213,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
               }, 'Could not update friendship');
             }}
           >
-            <Check className="h-3.5 w-3.5 text-emerald-400" /> <span className="max-[380px]:hidden">Friends</span>
+            <Check className="h-3.5 w-3.5 text-emerald-400" /> <span className="hidden sm:inline">Friends</span>
             <UserMinus className="hidden h-3 w-3 opacity-60 sm:block" />
           </Button>
         </Hint>
@@ -224,7 +224,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
 
   if (friendship.requestedBy === user.id) {
     return (
-      <div className="flex gap-1.5">
+      <div className="flex flex-wrap justify-end gap-1.5">
         <Hint content={REQUESTED_HELP} side="bottom" actionSafe>
           <Button
             size="sm"
@@ -240,7 +240,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
               }, 'Could not cancel request')
             }
           >
-            <Clock className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Requested</span>
+            <Clock className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Requested</span>
           </Button>
         </Hint>
         {blockAction}
@@ -249,7 +249,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
   }
 
   return (
-    <div className="flex gap-1.5">
+    <div className="flex flex-wrap justify-end gap-1.5">
       <Hint content={ACCEPT_HELP} side="bottom" actionSafe>
         <Button
           size="sm"
@@ -264,7 +264,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
             }, 'Could not accept request')
           }
         >
-          <Check className="h-3.5 w-3.5" /> <span className="max-[380px]:hidden">Accept</span>
+          <Check className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Accept</span>
         </Button>
       </Hint>
       <Button
