@@ -35,6 +35,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: `${data.ownerName} on The Scene`,
     description,
+    robots: { index: true, follow: true },
     alternates: { canonical },
     openGraph: {
       type: 'article',

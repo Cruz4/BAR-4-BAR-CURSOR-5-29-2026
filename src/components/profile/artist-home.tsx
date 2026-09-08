@@ -73,12 +73,18 @@ import { Hint } from '@/components/ui/tooltip';
 import { SoundIdentityStrip } from '@/components/profile/sound-identity-strip';
 import { ArtistHomeBackButton } from '@/components/profile/artist-home-back-button';
 import { ProfileSectionTabs } from '@/components/profile/profile-section-tabs';
+import type { PublicWallPostsPage } from '@/lib/server/public-post';
+import type { ProfilePost } from '@/lib/profile/social-client';
 import { DoorKnockHomeListener } from '@/components/profile/door-knock-home-listener';
 
 type ArtistHomeProps = {
   profile: PublicProfileData;
   config: ArtistHomeConfig;
   isOwner: boolean;
+  /** Server-rendered first wall page for crawlers and instant paint. */
+  initialWallPosts?: PublicWallPostsPage | null;
+  /** Server-rendered imprint shelf posts when configured. */
+  initialImprintPosts?: ProfilePost[];
   /** Full-page draft preview from Edit Public Page (not the live URL). */
   previewMode?: boolean;
   previewViewport?: 'phone' | 'tablet' | 'desktop';
@@ -117,6 +123,8 @@ export function ArtistHome({
   profile,
   config,
   isOwner,
+  initialWallPosts = null,
+  initialImprintPosts = [],
   previewMode = false,
   previewViewport = 'desktop',
   embeddedPreview = false,
@@ -769,6 +777,8 @@ export function ArtistHome({
               moduleIndex: i,
               size: setting.size,
               ...(playgroundWall ? { playgroundWall } : {}),
+              ...(initialWallPosts ? { initialWallPosts } : {}),
+              ...(initialImprintPosts.length ? { initialImprintPosts } : {}),
               ...(playgroundFriends ? { playgroundFriends } : {}),
               ...(playgroundGuestbook ? { playgroundGuestbook } : {}),
               ...(playgroundBarOfWeek ? { playgroundBarOfWeek } : {}),

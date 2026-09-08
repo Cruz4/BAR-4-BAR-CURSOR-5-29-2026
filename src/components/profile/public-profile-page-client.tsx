@@ -13,12 +13,19 @@ import { profileHref, sanitizeProfileSlugParam } from '@/lib/profile/profile-slu
 import { useAuth } from '@/hooks/use-auth';
 import { RELEASE_VISIBILITY_CHANGED_EVENT } from '@/lib/release-management-client';
 
+import type { PublicWallPostsPage } from '@/lib/server/public-post';
+import type { ProfilePost } from '@/lib/profile/social-client';
+
 export function PublicProfilePageClient({
   slug,
   initialData,
+  initialWallPosts = null,
+  initialImprintPosts = [],
 }: {
   slug: string;
   initialData?: unknown;
+  initialWallPosts?: PublicWallPostsPage | null;
+  initialImprintPosts?: ProfilePost[];
 }) {
   const { user } = useAuth();
   const router = useRouter();
@@ -129,5 +136,13 @@ export function PublicProfilePageClient({
 
   const isOwner = Boolean(user?.id && profile.userId && user.id === profile.userId);
 
-  return <ArtistHome profile={profile} config={config} isOwner={isOwner} />;
+  return (
+    <ArtistHome
+      profile={profile}
+      config={config}
+      isOwner={isOwner}
+      initialWallPosts={initialWallPosts}
+      initialImprintPosts={initialImprintPosts}
+    />
+  );
 }

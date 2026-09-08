@@ -84,6 +84,7 @@ import { useImprintComposer } from '@/hooks/use-imprint-composer';
 import { isProOrTrial } from '@/lib/subscription';
 import { quotePressSlotLabel } from '@/lib/profile/quote-press';
 import type { PostPollResultsVisibility } from '@/lib/profile/post-polls';
+import type { PublicWallPostsPage } from '@/lib/server/public-post';
 import { activityPostHash, parseActivityPostHash, scrollActivityPostTarget } from '@/lib/activity/post-deep-link';
 
 export type ModuleContext = {
@@ -134,6 +135,10 @@ export type ModuleContext = {
     onPost: (input: { text: string; embedUrl?: string; imageUrl?: string }) => void;
     onDelete?: (id: string) => void;
   };
+  /** Server-rendered first wall page — paints posts in HTML before client fetch. */
+  initialWallPosts?: PublicWallPostsPage | null;
+  /** Server-rendered imprint shelf posts when the module is enabled. */
+  initialImprintPosts?: ProfilePost[];
   /** Guest landing — local friends list (no Firestore). */
   playgroundFriends?: Array<{ userId: string; name: string; slug?: string }>;
   /** Guest landing — local guestbook entries (no Firestore). */
@@ -601,12 +606,19 @@ const IMPRINT_SHELF_LAYOUT: Record<ModuleSize, string> = {
 export function ImprintShelfModule({ ctx }: { ctx: ModuleContext }) {
   const ids = ctx.featured.imprintShelfPostIds;
   const idKey = ids?.join(',') || '';
-  const [posts, setPosts] = useState<ProfilePost[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const hasInitial = Boolean(ctx.initialImprintPosts?.length);
+  const [posts, setPosts] = useState<ProfilePost[]>(ctx.initialImprintPosts || []);
+  const [loaded, setLoaded] = useState(hasInitial);
 
   useEffect(() => {
     if (!ids?.length || !ctx.profileSlug) {
       setPosts([]);
+      setLoaded(true);
+      return;
+    }
+    if (hasInitial && ctx.initialImprintPosts?.length) {
+      const byId = new Map(ctx.initialImprintPosts.map((post) => [post.id, post]));
+      setPosts(ids.map((id) => byId.get(id)).filter((post): post is ProfilePost => Boolean(post)));
       setLoaded(true);
       return;
     }
@@ -633,7 +645,7 @@ export function ImprintShelfModule({ ctx }: { ctx: ModuleContext }) {
     return () => {
       cancelled = true;
     };
-  }, [ctx.profileSlug, idKey]);
+  }, [ctx.profileSlug, idKey, hasInitial, ctx.initialImprintPosts]);
 
   if (!ids?.length) return null;
   if (loaded && !posts.length) return null;
@@ -729,8 +741,11 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const { toast } = useToast();
   const isPro = isProOrTrial(user);
   const playground = ctx.playgroundWall;
-  const [posts, setPosts] = useState<ProfilePost[]>(playground?.posts || []);
-  const [loaded, setLoaded] = useState(Boolean(playground));
+  const initialWall = ctx.initialWallPosts;
+  const [posts, setPosts] = useState<ProfilePost[]>(
+    playground?.posts || initialWall?.posts || []
+  );
+  const [loaded, setLoaded] = useState(Boolean(playground || initialWall));
   const [text, setText] = useState('');
   const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
   const [image, setImage] = useState<PendingPostImage | null>(null);
@@ -739,9 +754,11 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [pollVisibility, setPollVisibility] = useState<PostPollResultsVisibility>('after_vote');
   const [busy, setBusy] = useState(false);
-  const [page, setPage] = useState(0);
-  const [wallPageCount, setWallPageCount] = useState(1);
-  const [wallTotal, setWallTotal] = useState(playground?.posts.length || 0);
+  const [page, setPage] = useState(initialWall?.page || 0);
+  const [wallPageCount, setWallPageCount] = useState(initialWall?.pageCount || 1);
+  const [wallTotal, setWallTotal] = useState(
+    playground?.posts.length || initialWall?.total || 0
+  );
   const textRef = useRef<HTMLTextAreaElement>(null);
   const imprintPreviewRef = useRef<HTMLDivElement | null>(null);
   const insertEmoji = useEmojiInserter(text, setText, textRef);
@@ -777,6 +794,25 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
 
     const focusId = readFocusId();
     setFocusPostId(focusId);
+
+    const hydrateFromInitial = () => {
+      if (!initialWall?.posts.length) return false;
+      setPosts(initialWall.posts);
+      setPage(initialWall.page);
+      setWallPageCount(initialWall.pageCount);
+      setWallTotal(initialWall.total);
+      setLoaded(true);
+      return true;
+    };
+
+    if (!focusId && hydrateFromInitial()) {
+      return;
+    }
+
+    if (focusId && initialWall?.posts.some((post) => post.id === focusId) && hydrateFromInitial()) {
+      return;
+    }
+
     setPage(0);
     setLoaded(false);
 
@@ -841,7 +877,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
         setLoaded(true);
       }
     })();
-  }, [ctx.profileUserId, ctx.profileSlug, playground]);
+  }, [ctx.profileUserId, ctx.profileSlug, playground, initialWall]);
 
   useEffect(() => {
     if (!loaded) return;

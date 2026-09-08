@@ -31,6 +31,7 @@ import { parseEmbedUrl, type EmbedProvider } from '@/lib/profile/embeds';
 import { firstInlineHref } from '@/lib/profile/inline-links';
 import { parseStudioBadge } from '@/lib/studio-tier-chrome';
 import { normalizeQuotePressConfig, type QuotePressConfig } from '@/lib/profile/quote-press';
+import { sanitizePostMediaFields, sanitizePostsForFeed } from '@/lib/profile/post-media';
 import { emitWallPostFeed } from '@/lib/scene/wall-post-feed-events';
 import {
   deleteVoiceStorage,
@@ -312,6 +313,9 @@ export async function createPost(input: {
   if (imageUrl && imageUrl.length > MAX_POST_IMAGE_URL) {
     throw new Error('Image is too large to post.');
   }
+  if (imageUrl?.startsWith('data:image/') && !input.image) {
+    throw new Error('Attach the photo again — wall images now upload to Storage instead of inline data.');
+  }
   if (poll && !text) throw new Error('Write the poll question in your post.');
   if (!text && !embedUrl && !imageUrl && !input.image && !input.video && !input.voice && !parseLyricClip(input.lyricClip)) {
     throw new Error('Write something, add a link, attach a photo or clip, or record a voice note.');
@@ -461,7 +465,7 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
   const quotePress = normalizeQuotePressConfig(data.quotePress);
   const reverbQuotePress = normalizeQuotePressConfig(data.reverbQuotePress);
   const giphySyndication = parseImprintGiphySyndication(data.giphySyndication);
-  return {
+  const post: ProfilePost = {
     id,
     ownerId: String(data.ownerId || ''),
     ownerName: String(data.ownerName || 'Artist'),
@@ -505,6 +509,7 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
     ...(reverbQuotePress ? { reverbQuotePress } : {}),
     ...(giphySyndication ? { giphySyndication } : {}),
   };
+  return sanitizePostMediaFields(post);
 }
 
 type FetchPostsOpts = { enrichSlugs?: boolean };
@@ -522,8 +527,10 @@ export async function fetchPostsByOwner(
     );
     const raw = snap.docs.map((d) => postFromDoc(d.id, d.data()));
     const posts = opts?.enrichSlugs === false ? raw : await enrichPostsWithLiveSlugs(raw);
-    return posts.sort(
-      (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id)
+    return sanitizePostsForFeed(
+      posts.sort(
+        (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id)
+      )
     );
   } catch (err) {
     console.warn('[posts]', err);

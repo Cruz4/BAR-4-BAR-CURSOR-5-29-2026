@@ -12,7 +12,14 @@ export function runWithGenkitContext<T>(
 }
 
 /** Per-request Google AI key override for Genkit prompt/generate calls. */
-export function getGenkitPromptOptions(): { config?: { apiKey: string } } {
+export function getGenkitPromptOptions(): {
+  config?: { apiKey?: string; maxOutputTokens?: number };
+} {
   const apiKey = apiKeyStore.getStore();
-  return apiKey ? { config: { apiKey } } : {};
+  return {
+    config: {
+      ...(apiKey ? { apiKey } : {}),
+      maxOutputTokens: 8192,
+    },
+  };
 }

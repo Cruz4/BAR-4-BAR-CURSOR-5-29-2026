@@ -20,7 +20,11 @@ Default description now joins the two real product loops: **bar-by-bar songwriti
 
 **Blocked in robots:** admin/API routes plus account-only albums, activity, earnings, feed, friends, insights, Library, Msgs, Edit Public Page, Studio Progress, Support Circle, Usage, and Vault. Their route metadata is also `noindex` where applicable.
 
-**Public music homes (`/{slug}`):** Up to 1,000 live `publicProfiles` are added to the sitemap, refreshed hourly; if Firebase is temporarily unavailable, the sitemap safely falls back to static routes. Legacy `/profile/{slug}` links permanently redirect to the clean vanity route. Live profiles get per-page metadata built from public identity labels, genres, featured-track title, and studio rank. Missing/private-unavailable slugs are `noindex`.
+**Public music homes (`/{slug}`):** Up to 5,000 live `publicProfiles` are added to the sitemap, refreshed hourly; if Firebase is temporarily unavailable, the sitemap safely falls back to static routes. Legacy `/profile/{slug}` links permanently redirect to the clean vanity route. Live profiles get per-page metadata built from public identity labels, genres, featured-track title, studio rank, and **recent wall/imprint post text**. The first wall page and configured imprint shelf posts are **server-rendered** in the initial HTML (copy-pasteable text + `/p/{postId}` permalinks). JSON-LD `ItemList` of `SocialMediaPosting` entries is emitted on each live profile when posts exist.
+
+**Public Scene posts (`/p/{postId}`):** Up to 5,000 posts from artists with live public profiles are in the sitemap. Each permalink is indexable (`robots: index, follow`), ships `SocialMediaPosting` JSON-LD with `articleBody` (including imprint `post.text`), and uses the imprint quote in meta description/Open Graph. Imprint styling (`quotePress`) is presentation only — crawlers read the underlying text.
+
+Missing/private-unavailable profile slugs are `noindex`.
 
 **Structured data:** `WebSite`, `Organization`, and `SoftwareApplication` JSON-LD on every page. The app schema includes its music/songwriting audience and a current feature list.
 

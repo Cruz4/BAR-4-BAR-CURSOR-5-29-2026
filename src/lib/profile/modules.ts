@@ -467,5 +467,15 @@ export function artistHomeForPublic(config: ArtistHomeConfig): ArtistHomeConfig 
     const { previewPath: _privatePath, ...publicTrack } = featured.featuredTrack;
     featured.featuredTrack = publicTrack;
   }
+  if (featured.albumRooms?.length) {
+    featured.albumRooms = featured.albumRooms.map((room) => {
+      const cover = room.coverArtUrl;
+      if (typeof cover === 'string' && cover.startsWith('data:image/')) {
+        const { coverArtUrl: _drop, ...rest } = room;
+        return rest;
+      }
+      return room;
+    });
+  }
   return { ...config, featured };
 }

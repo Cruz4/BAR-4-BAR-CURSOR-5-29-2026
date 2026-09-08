@@ -15,11 +15,14 @@ function shouldPollSubscriptions(): boolean {
   return typeof window !== 'undefined' && process.env.NODE_ENV === 'development';
 }
 
+/** Dev Turbopack HMR breaks listeners — poll slowly to avoid billing spikes. */
+const DEV_POLL_INTERVAL_MS = 120_000;
+
 export function subscribeDocument<T extends DocumentData>(
   ref: DocumentReference<T>,
   onNext: (data: T | undefined) => void,
   onError?: (err: unknown) => void,
-  pollIntervalMs = 15000
+  pollIntervalMs = DEV_POLL_INTERVAL_MS
 ): () => void {
   if (shouldPollSubscriptions()) {
     let active = true;
@@ -57,7 +60,7 @@ export function subscribeQuery<T extends DocumentData>(
   q: Query<T>,
   onNext: (rows: Array<T & { id: string }>) => void,
   onError?: (err: unknown) => void,
-  pollIntervalMs = 20000
+  pollIntervalMs = DEV_POLL_INTERVAL_MS
 ): () => void {
   if (shouldPollSubscriptions()) {
     let active = true;

@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { usePostImageUrl } from '@/hooks/use-post-image-url';
 import { cn } from '@/lib/utils';
 import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { ArtistHomeLink, useLiveArtistHomeSlug } from '@/components/profile/artist-home-link';
@@ -344,6 +345,7 @@ function ReverbSourceBody({
 
 export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onReverbed, immersive = false, mediaActive }: PostCardProps) {
   const showInlineAuthor = showAuthor && !immersive;
+  const resolvedImageUrl = usePostImageUrl(post.imageUrl, post.imageStoragePath);
   const { user, loading: authLoading } = useAuth();
   const { summary } = useGamification();
   const isPro = isProOrTrial(user);
@@ -892,15 +894,15 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         <div className="mt-3 mb-1 flex justify-center overflow-visible">
           <WallClipPlayer
             clip={post.video}
-            poster={post.imageUrl}
+            poster={resolvedImageUrl}
             className={immersive ? 'max-h-[min(42dvh,28rem)]' : undefined}
             active={immersive ? mediaActive : undefined}
           />
         </div>
-      ) : post.imageUrl ? (
+      ) : resolvedImageUrl ? (
         <div className="mt-3 mb-1 flex justify-center overflow-visible">
           <ExpandableImage
-            src={post.imageUrl}
+            src={resolvedImageUrl}
             alt={post.isReverb ? 'Reverb quote photo' : 'Posted photo'}
             thumbClassName={cn(
               'block h-auto rounded-xl object-contain shadow-[0_8px_28px_rgba(0,0,0,0.45)]',

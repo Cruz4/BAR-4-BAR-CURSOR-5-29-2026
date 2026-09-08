@@ -2,11 +2,23 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { cache } from 'react';
 import { PublicProfilePageClient } from '@/components/profile/public-profile-page-client';
+import {
+  ProfilePostCrawlIndex,
+  ProfilePostStructuredData,
+} from '@/components/profile/profile-post-seo';
 import { getPublicProfile } from '@/lib/server/gamification';
 import { rankFromXp } from '@/lib/gamification/ranks';
 import { absoluteUrl, SEO } from '@/lib/seo';
 import { legacyProfileAppRedirect } from '@/lib/profile/profile-slug';
 import { publicIdentityLabel, type PublicIdentityKind } from '@/lib/profile/sound-identity';
+import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
+import {
+  getPublicProfileImprintPosts,
+  getPublicProfileWallPosts,
+  postsSeoSnippet,
+  type PublicWallPostsPage,
+} from '@/lib/server/public-post';
+import type { ProfilePost } from '@/lib/profile/social-client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,7 +26,34 @@ export const dynamic = 'force-dynamic';
 type PageProps = { params: Promise<{ slug: string }> };
 const getCachedPublicProfile = cache(getPublicProfile);
 
-function profileShareCopy(data: Record<string, unknown>, slug: string) {
+type ProfileSeoPosts = {
+  initialWallPosts: PublicWallPostsPage | null;
+  initialImprintPosts: ProfilePost[];
+  crawlPosts: ProfilePost[];
+};
+
+const getCachedProfileSeoPosts = cache(async (userId: string, artistHome: unknown): Promise<ProfileSeoPosts> => {
+  const config = normalizeArtistHomeConfig(artistHome);
+  const imprintIds = config.featured.imprintShelfPostIds || [];
+  const [initialWallPosts, initialImprintPosts] = await Promise.all([
+    getPublicProfileWallPosts(userId, 0),
+    imprintIds.length ? getPublicProfileImprintPosts(userId, imprintIds) : Promise.resolve([]),
+  ]);
+  const crawlById = new Map<string, ProfilePost>();
+  for (const post of initialWallPosts?.posts || []) crawlById.set(post.id, post);
+  for (const post of initialImprintPosts) crawlById.set(post.id, post);
+  return {
+    initialWallPosts,
+    initialImprintPosts,
+    crawlPosts: [...crawlById.values()],
+  };
+});
+
+function profileShareCopy(
+  data: Record<string, unknown>,
+  slug: string,
+  postSnippet = ''
+) {
   const displayName =
     typeof data.displayName === 'string' && data.displayName.trim()
       ? data.displayName.trim()
@@ -54,7 +93,9 @@ function profileShareCopy(data: Record<string, unknown>, slug: string) {
     featuredTitle ? `featuring ${featuredTitle}` : '',
     rankLabel,
   ].filter(Boolean);
-  const description = `${displayName} on AKAsheet—${highlights.join(' · ')}. Discover their public music home, releases, and creative work.`;
+  const description = `${displayName} on AKAsheet—${highlights.join(' · ')}. Discover their public music home, releases, and creative work.${
+    postSnippet ? ` Recent posts: ${postSnippet}` : ''
+  }`;
   return { displayName, rankLabel, title, description };
 }
 
@@ -88,7 +129,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const data = profile as Record<string, unknown>;
     const liveSlug =
       typeof data.slug === 'string' && data.slug.trim() ? data.slug.trim() : slug;
-    const { displayName, title, description } = profileShareCopy(data, liveSlug);
+    const userId = typeof data.userId === 'string' ? data.userId.trim() : '';
+    const seoPosts = userId
+      ? await getCachedProfileSeoPosts(userId, data.artistHome)
+      : { initialWallPosts: null, initialImprintPosts: [], crawlPosts: [] };
+    const postSnippet = postsSeoSnippet(seoPosts.crawlPosts);
+    const { displayName, title, description } = profileShareCopy(data, liveSlug, postSnippet);
     const canonical = absoluteUrl(`/${liveSlug}`);
     const ogTitle = `${displayName} on AKAsheet`;
 
@@ -124,5 +170,44 @@ export default async function PublicProfilePage({ params }: PageProps) {
   const appRedirect = legacyProfileAppRedirect(slug);
   if (appRedirect) redirect(appRedirect);
   const profile = await getCachedPublicProfile(slug);
-  return <PublicProfilePageClient slug={slug} initialData={profile} />;
+  if (!profile) {
+    return <PublicProfilePageClient slug={slug} initialData={null} />;
+  }
+
+  const data = profile as Record<string, unknown>;
+  const liveSlug =
+    typeof data.slug === 'string' && data.slug.trim() ? data.slug.trim() : slug;
+  const displayName =
+    typeof data.displayName === 'string' && data.displayName.trim()
+      ? data.displayName.trim()
+      : liveSlug;
+  const userId = typeof data.userId === 'string' ? data.userId.trim() : '';
+  const seoPosts = userId
+    ? await getCachedProfileSeoPosts(userId, data.artistHome)
+    : { initialWallPosts: null, initialImprintPosts: [], crawlPosts: [] };
+
+  return (
+    <>
+      {seoPosts.crawlPosts.length > 0 ? (
+        <>
+          <ProfilePostStructuredData
+            ownerName={displayName}
+            ownerSlug={liveSlug}
+            posts={seoPosts.crawlPosts}
+          />
+          <ProfilePostCrawlIndex
+            ownerName={displayName}
+            ownerSlug={liveSlug}
+            posts={seoPosts.crawlPosts}
+          />
+        </>
+      ) : null}
+      <PublicProfilePageClient
+        slug={slug}
+        initialData={profile}
+        initialWallPosts={seoPosts.initialWallPosts}
+        initialImprintPosts={seoPosts.initialImprintPosts}
+      />
+    </>
+  );
 }

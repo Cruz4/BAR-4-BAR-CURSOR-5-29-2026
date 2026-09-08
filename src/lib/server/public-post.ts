@@ -9,6 +9,7 @@ import type { VoiceNote } from '@/lib/profile/voice-notes';
 import type { WallClip } from '@/lib/profile/wall-clips';
 import { parsePostPoll } from '@/lib/profile/post-polls';
 import { normalizeQuotePressConfig } from '@/lib/profile/quote-press';
+import { sanitizePostMediaFields } from '@/lib/profile/post-media';
 
 export type PublicPostPageData = {
   post: ProfilePost;
@@ -69,7 +70,7 @@ export function postFromServerDoc(id: string, data: Record<string, unknown>): Pr
   const quotePress = normalizeQuotePressConfig(data.quotePress);
   const reverbQuotePress = normalizeQuotePressConfig(data.reverbQuotePress);
   const giphySyndication = parseGiphySyndication(data.giphySyndication);
-  return {
+  const post: ProfilePost = {
     id,
     ownerId: clean(data.ownerId, 128) || '',
     ownerName: clean(data.ownerName, 120) || 'Music maker',
@@ -111,6 +112,7 @@ export function postFromServerDoc(id: string, data: Record<string, unknown>): Pr
     ...(reverbQuotePress ? { reverbQuotePress } : {}),
     ...(giphySyndication ? { giphySyndication } : {}),
   };
+  return sanitizePostMediaFields(post);
 }
 
 function parseGiphySyndication(raw: unknown): ProfilePost['giphySyndication'] {
@@ -146,6 +148,81 @@ export function publicPostText(post: ProfilePost): string {
     .trim()
     .replace(/\s+/g, ' ');
 }
+
+export type PublicWallPostsPage = {
+  posts: ProfilePost[];
+  page: number;
+  pageCount: number;
+  total: number;
+};
+
+const WALL_POSTS_PAGE_SIZE = 15;
+
+export function postsSeoSnippet(posts: ProfilePost[], maxChars = 180): string {
+  const chunks = posts
+    .map((post) => publicPostText(post))
+    .filter(Boolean)
+    .slice(0, 4);
+  if (!chunks.length) return '';
+  const joined = chunks.join(' · ');
+  if (joined.length <= maxChars) return joined;
+  return `${joined.slice(0, maxChars - 1).trimEnd()}…`;
+}
+
+export const getPublicProfileWallPosts = cache(
+  async (ownerUserId: string, page = 0): Promise<PublicWallPostsPage | null> => {
+    const userId = ownerUserId.trim();
+    if (!userId) return null;
+    const db = await getDb();
+    const posts = db.collection('posts');
+    const safePage = Math.max(0, Math.min(200, Math.floor(page)));
+    try {
+      const [snap, totalSnap] = await Promise.all([
+        posts
+          .where('ownerId', '==', userId)
+          .orderBy('createdAt', 'desc')
+          .offset(safePage * WALL_POSTS_PAGE_SIZE)
+          .limit(WALL_POSTS_PAGE_SIZE)
+          .get(),
+        posts.where('ownerId', '==', userId).count().get(),
+      ]);
+      const total = totalSnap.data().count || 0;
+      return {
+        posts: snap.docs.map((doc) => postFromServerDoc(doc.id, doc.data() as Record<string, unknown>)),
+        page: safePage,
+        pageCount: Math.max(1, Math.ceil(total / WALL_POSTS_PAGE_SIZE)),
+        total,
+      };
+    } catch (error) {
+      console.error('[public-post] wall posts', error);
+      return null;
+    }
+  }
+);
+
+export const getPublicProfileImprintPosts = cache(
+  async (ownerUserId: string, postIds: string[]): Promise<ProfilePost[]> => {
+    const userId = ownerUserId.trim();
+    const ids = postIds.map((id) => id.trim()).filter(Boolean).slice(0, 12);
+    if (!userId || !ids.length) return [];
+    const db = await getDb();
+    const posts = db.collection('posts');
+    const rows: ProfilePost[] = [];
+    for (const id of ids) {
+      try {
+        const snap = await posts.doc(id).get();
+        const data = snap.data() || {};
+        if (!snap.exists || data.ownerId !== userId || !data.quotePress) continue;
+        rows.push(postFromServerDoc(snap.id, data as Record<string, unknown>));
+      } catch {
+        /* skip missing imprint */
+      }
+    }
+    return ids
+      .map((id) => rows.find((post) => post.id === id))
+      .filter((post): post is ProfilePost => Boolean(post));
+  }
+);
 
 export const getPublicPostPageData = cache(async (rawPostId: string): Promise<PublicPostPageData | null> => {
   const postId = rawPostId.trim();
