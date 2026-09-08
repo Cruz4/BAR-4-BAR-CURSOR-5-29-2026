@@ -743,15 +743,17 @@ export function FirstDropLatheHost() {
     }
     setPingingHouseNotice(true);
     try {
-      await pingHouseRelease(shareId);
+      const result = await pingHouseRelease(shareId);
       if (kind === 'album' && selectedAlbum) {
         updateAlbum(selectedAlbum.id, { houseLibraryNotice: true });
       } else if (album && track) {
         updateTrack(album.id, track.id, { houseLibraryNotice: true });
       }
       toast({
-        title: 'Library ping sent',
-        description: 'Members now have a new Activity alert and a Library bubble in The Scene.',
+        title: result.refreshed ? 'Library ping refreshed' : 'Library ping sent',
+        description: result.refreshed
+          ? 'Members who already cleared it see +1 again. Anyone still waiting does not get stacked.'
+          : 'Members now have a new Activity alert and a Library bubble in The Scene.',
       });
     } catch (error) {
       toast({

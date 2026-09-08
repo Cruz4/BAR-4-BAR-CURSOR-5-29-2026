@@ -248,7 +248,7 @@ function EditPageCheatSheet({ firstDropsOn }: { firstDropsOn: boolean }) {
           <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3 py-2">
             <p className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-emerald-200">Not a sale</p>
             <p className="mt-1 text-[11px] leading-snug text-foreground/90">
-              DNA Drop is the Pro lyric page — publishing that lyric link needs Pro. Offline Library download is Pro too. Listen / buy (audio) sits on Artist Home, The Scene, and the release link.
+              DNA Drop is how you publish lyrics publicly (Studio Pro). Listen / buy is the audio release on Artist Home, The Scene, and the release link.
             </p>
           </div>
         </>

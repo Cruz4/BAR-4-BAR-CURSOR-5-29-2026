@@ -355,13 +355,13 @@ export function PostCommentThread({
               </button>
             </p>
           ) : null}
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
             {postId ? (
-              <div className={cn('min-w-0', voice && 'basis-full')}>
+              <div className={cn('shrink-0', voice && 'min-w-0 max-w-full basis-full sm:basis-auto')}>
                 <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} compact />
               </div>
             ) : null}
-            <div className={cn('min-w-0', (image || clip) && 'basis-full')}>
+            <div className="shrink-0">
               <ImageAttachComposer
                 image={image}
                 onImageChange={setImage}

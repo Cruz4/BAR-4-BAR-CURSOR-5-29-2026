@@ -34,6 +34,8 @@ export type MediaStudioMode = 'camera' | 'library';
 type MediaStudioDialogProps = {
   open: boolean;
   mode: MediaStudioMode;
+  /** When set, import this file straight into edit — no camera or file picker. */
+  initialFile?: File | null;
   onOpenChange: (open: boolean) => void;
   onExportImage: (image: PendingPostImage) => void;
   onExportClip: (clip: PendingWallClip) => void;
@@ -117,6 +119,7 @@ function formatSec(value: number): string {
 export function MediaStudioDialog({
   open,
   mode,
+  initialFile = null,
   onOpenChange,
   onExportImage,
   onExportClip,
@@ -169,6 +172,7 @@ export function MediaStudioDialog({
   const [inlinePreviewLoading, setInlinePreviewLoading] = useState(false);
   const [segmentPreviewPlaying, setSegmentPreviewPlaying] = useState(false);
   const [segmentPreviewLoading, setSegmentPreviewLoading] = useState(false);
+  const [importingFile, setImportingFile] = useState(false);
 
   const stopInlinePreview = useCallback(() => {
     const audio = inlineAudioRef.current;
@@ -229,6 +233,7 @@ export function MediaStudioDialog({
     setExporting(false);
     setProgress(0);
     setCamError(null);
+    setImportingFile(false);
   };
 
   const openReview = () => {
@@ -318,6 +323,13 @@ export function MediaStudioDialog({
       reset();
       return;
     }
+    if (initialFile) {
+      setImportingFile(true);
+      void pickFile(initialFile)
+        .catch(() => undefined)
+        .finally(() => setImportingFile(false));
+      return;
+    }
     setStep('capture');
     if (mode === 'camera') void startCamera();
     let libraryTimer: number | null = null;
@@ -329,7 +341,7 @@ export function MediaStudioDialog({
     };
     // Reset only when the dialog opens or the entry mode changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, mode]);
+  }, [open, mode, initialFile]);
 
   useEffect(() => {
     if (!open || !musicOpen || tracks.library.length || tracksBusy) return;
@@ -428,6 +440,7 @@ export function MediaStudioDialog({
       applySource(file.type.startsWith('video/') ? await inspectVideoFile(file) : await inspectImageFile(file));
     } catch (err) {
       onError?.(err instanceof Error ? err.message : 'Could not open that file.');
+      if (initialFile) onOpenChange(false);
     }
   };
 
@@ -603,6 +616,14 @@ export function MediaStudioDialog({
         </DialogHeader>
 
         {step === 'capture' ? (
+          importingFile || (initialFile && !source) ? (
+            <div className="flex min-h-[12rem] flex-col items-center justify-center gap-2 rounded-xl bg-black">
+              <Loader className="h-6 w-6 animate-spin text-cyan-300" />
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/55">
+                Opening file…
+              </p>
+            </div>
+          ) : (
           <div className="space-y-3">
             <div className="relative mx-auto flex min-h-[12rem] max-h-[min(42dvh,22rem)] min-w-0 w-full items-center justify-center overflow-hidden rounded-xl bg-black">
               <video
@@ -683,13 +704,17 @@ export function MediaStudioDialog({
                 size="sm"
                 variant="ghost"
                 className="h-8 gap-1.5 text-[10px] font-bold uppercase tracking-widest text-white/70"
-                onClick={() => fileRef.current?.click()}
+                onClick={() => {
+                  stopCamera();
+                  fileRef.current?.click();
+                }}
               >
                 <ImagePlus className="h-3.5 w-3.5" /> Library
               </Button>
               <p className="text-[10px] uppercase tracking-widest text-white/40">Photo or {WALL_CLIP_MAX_SECONDS}s clip</p>
             </div>
           </div>
+          )
         ) : source ? (
           <div className="min-w-0 space-y-3">
             <button

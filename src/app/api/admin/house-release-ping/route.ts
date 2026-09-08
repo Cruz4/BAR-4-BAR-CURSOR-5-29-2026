@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase/server';
+import { houseReleasePingEventId } from '@/lib/house-release-ping';
 import { AdminAuthError, verifyAdminRequest } from '@/lib/server/admin-auth';
 
 export const runtime = 'nodejs';
@@ -16,8 +17,7 @@ export async function POST(req: Request) {
     const admin = await verifyAdminRequest(req);
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const shareId = typeof body.shareId === 'string' ? body.shareId.trim().toUpperCase() : '';
-    const pingId = typeof body.pingId === 'string' ? body.pingId.trim() : '';
-    if (!safeId(shareId) || !safeId(pingId, 100) || !/^[a-zA-Z0-9_-]+$/.test(pingId)) {
+    if (!safeId(shareId)) {
       return NextResponse.json({ error: 'Invalid House-release ping.' }, { status: 400 });
     }
 
@@ -44,51 +44,52 @@ export async function POST(req: Request) {
       ? payload.title.trim().slice(0, 120)
       : 'New House release';
     const now = new Date().toISOString();
-    const eventId = `house_${pingId}`;
+    const eventId = houseReleasePingEventId(shareId);
     const href = `/library?release=${encodeURIComponent(shareId)}`;
     const pingRef = db.doc(`houseReleasePings/${eventId}`);
     const existingPing = await pingRef.get();
+    const firstCreatedAt = typeof existingPing.data()?.createdAt === 'string'
+      ? existingPing.data()!.createdAt
+      : now;
 
-    if (!existingPing.exists) {
-      const noticePatch = {
-        houseLibraryNotice: true,
-        houseLibraryNoticeAt: now,
-        updatedAt: now,
-      };
-      const batch = db.batch();
-      batch.create(pingRef, {
-        id: eventId,
-        type: 'house_release',
-        shareId,
-        title,
-        href,
-        createdAt: now,
-        sentBy: admin.uid,
-      });
-      batch.set(shareRef, noticePatch, { merge: true });
+    const noticePatch = {
+      houseLibraryNotice: true,
+      houseLibraryNoticeAt: now,
+      updatedAt: now,
+    };
+    const batch = db.batch();
+    batch.set(pingRef, {
+      id: eventId,
+      type: 'house_release',
+      shareId,
+      title,
+      href,
+      createdAt: firstCreatedAt,
+      pingedAt: now,
+      sentBy: admin.uid,
+    }, { merge: true });
+    batch.set(shareRef, noticePatch, { merge: true });
 
-      const ownerId = typeof share.ownerId === 'string' ? share.ownerId : '';
-      const projectId = typeof share.projectId === 'string' ? share.projectId : '';
-      const albumId = typeof payload.albumId === 'string' ? payload.albumId : '';
-      if (ownerId && projectId) {
-        const targetPath = share.type === 'album'
-          ? `users/${ownerId}/albums/${projectId}`
-          : albumId
-            ? `users/${ownerId}/albums/${albumId}/tracks/${projectId}`
-            : '';
-        if (targetPath) batch.set(db.doc(targetPath), noticePatch, { merge: true });
-      }
-      await batch.commit();
+    const ownerId = typeof share.ownerId === 'string' ? share.ownerId : '';
+    const projectId = typeof share.projectId === 'string' ? share.projectId : '';
+    const albumId = typeof payload.albumId === 'string' ? payload.albumId : '';
+    if (ownerId && projectId) {
+      const targetPath = share.type === 'album'
+        ? `users/${ownerId}/albums/${projectId}`
+        : albumId
+          ? `users/${ownerId}/albums/${albumId}/tracks/${projectId}`
+          : '';
+      if (targetPath) batch.set(db.doc(targetPath), noticePatch, { merge: true });
     }
+    await batch.commit();
 
     return NextResponse.json({
       ok: true,
-      duplicate: existingPing.exists,
+      refreshed: existingPing.exists,
       shareId,
       title,
-      sentAt: typeof existingPing.data()?.createdAt === 'string'
-        ? existingPing.data()!.createdAt
-        : now,
+      pingedAt: now,
+      sentAt: firstCreatedAt,
     });
   } catch (error) {
     if (error instanceof AdminAuthError) {

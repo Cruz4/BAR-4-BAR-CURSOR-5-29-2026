@@ -65,9 +65,14 @@ export function AdminHouseReleasesCard() {
   const ping = async (shareId: string) => {
     setBusyId(`ping:${shareId}`);
     try {
-      await pingHouseRelease(shareId);
+      const result = await pingHouseRelease(shareId);
       await load();
-      toast({ title: 'Library ping sent', description: 'Members get a New in Library notice.' });
+      toast({
+        title: result.refreshed ? 'Library ping refreshed' : 'Library ping sent',
+        description: result.refreshed
+          ? 'Members who already saw it get +1 on Activity. Anyone still waiting does not get stacked.'
+          : 'Members get a New in Library notice and Activity alert.',
+      });
     } catch (err) {
       toast({
         variant: 'destructive',

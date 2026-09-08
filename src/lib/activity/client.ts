@@ -231,6 +231,24 @@ export async function markAllActivityEventsRead(): Promise<void> {
   if (!response.ok) throw new Error('Failed to mark all activity read');
 }
 
+/** Mark unread House Library pings read — all pending, or one share when provided. */
+export async function markUnreadHouseReleasePingsRead(shareId?: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) return;
+  let eventIds: string[];
+  if (shareId?.trim()) {
+    const { houseReleasePingEventId } = await import('@/lib/house-release-ping');
+    eventIds = [houseReleasePingEventId(shareId)];
+  } else {
+    const events = await fetchActivityFeed('received', 100);
+    eventIds = events
+      .filter((event) => event.type === 'house_release' && !event.readAt)
+      .map((event) => event.id);
+  }
+  if (!eventIds.length) return;
+  await markActivityEventsRead(eventIds);
+}
+
 /**
  * After accept/decline: mark every inbox `friend_request` from that peer as read
  * so badge + dropdown + Activity stop treating it as pending action.

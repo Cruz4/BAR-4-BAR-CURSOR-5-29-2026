@@ -261,11 +261,11 @@ function SceneComposer({
           disabled={busy}
         />
       ) : null}
-      <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-1 gap-y-1.5">
-        <div className={cn('min-w-0', voice && 'basis-full')}>
+      <div className="mt-1.5 flex min-w-0 items-center gap-1 overflow-x-auto">
+        <div className={cn('shrink-0', voice && 'min-w-0 max-w-full basis-full sm:basis-auto')}>
           <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} compact />
         </div>
-        <div className={cn('min-w-0', (image || clip) && 'basis-full')}>
+        <div className="shrink-0">
           <ImageAttachComposer
             image={image}
             onImageChange={setImage}

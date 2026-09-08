@@ -534,7 +534,9 @@ function ActivityPageInner() {
     if (!user?.id || loading) return;
     const sessionUnreadIds = sessionUnreadIdsRef.current;
     if (!sessionUnreadIds?.size) return;
-    const eventIds = [...sessionUnreadIds].filter((id) => !serverMarkedIdsRef.current.has(id));
+    const eventIds = [...sessionUnreadIds]
+      .filter((id) => !serverMarkedIdsRef.current.has(id))
+      .filter((id) => inbox.find((event) => event.id === id)?.type !== 'house_release');
     if (!eventIds.length) return;
     eventIds.forEach((id) => serverMarkedIdsRef.current.add(id));
     void markActivityEventsRead(eventIds)
@@ -625,6 +627,19 @@ function ActivityPageInner() {
   };
 
   const handleOpen = async (event: ActivityEvent) => {
+    try {
+      await markActivityEventsRead([event.id]);
+      serverMarkedIdsRef.current.add(event.id);
+      sessionUnreadIdsRef.current?.delete(event.id);
+      setInbox((prev) =>
+        prev.map((item) =>
+          item.id === event.id ? { ...item, readAt: item.readAt || new Date().toISOString() } : item
+        )
+      );
+      refreshActivityAlerts();
+    } catch {
+      /* still navigate */
+    }
     const href = await resolveActivityOpenHref(event, { viewerUserId: user?.id });
     navigateActivityHref((h) => router.push(h), href);
   };

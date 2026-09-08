@@ -147,7 +147,7 @@ export function SceneBoothCard({
       {children ? <div className="mt-2">{children}</div> : null}
 
       {isLive && homeHref ? (
-        <div className="mt-2 flex flex-wrap items-center gap-2">
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
           <Button size="sm" className="h-9 gap-1.5 font-bold uppercase" asChild>
             <Link href={homeHref}>
               <ExternalLink className="h-3.5 w-3.5" /> View my page

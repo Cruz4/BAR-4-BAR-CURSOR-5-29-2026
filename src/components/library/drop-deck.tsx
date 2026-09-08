@@ -106,7 +106,7 @@ import {
 } from '@/lib/offline/library-offline';
 import { manageRelease } from '@/lib/release-management-client';
 import { DataContext } from '@/context/data-context';
-import { fetchActivityFeed, markActivityEventsRead } from '@/lib/activity/client';
+import { markUnreadHouseReleasePingsRead } from '@/lib/activity/client';
 import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
 
 const LIBRARY_PREFERENCES_KEY = 'b4b:library-organizer:v1';
@@ -317,19 +317,6 @@ export function DropDeck({
   }, [houseNotice]);
 
   useEffect(() => {
-    if (!houseNotice) return;
-    void fetchActivityFeed('received', 100)
-      .then((events) => {
-        const unreadHouseIds = events
-          .filter((event) => event.type === 'house_release' && !event.readAt)
-          .map((event) => event.id);
-        if (!unreadHouseIds.length) return;
-        return markActivityEventsRead(unreadHouseIds).then(() => refreshActivityAlerts());
-      })
-      .catch(() => undefined);
-  }, [houseNotice]);
-
-  useEffect(() => {
     try {
       const raw = localStorage.getItem(`b4b:library-house-notices:${userId}`);
       const saved = raw ? JSON.parse(raw) : [];
@@ -421,6 +408,14 @@ export function DropDeck({
     },
     [loadAndPlay]
   );
+
+  const engageHouseNotice = useCallback(() => {
+    if (!houseNotice) return;
+    void markUnreadHouseReleasePingsRead(houseNotice.shareId)
+      .then(() => refreshActivityAlerts())
+      .catch(() => undefined);
+    if (houseNoticePlayable) playItem(houseNoticePlayable);
+  }, [houseNotice, houseNoticePlayable, playItem]);
 
   const toggleOffline = useCallback(async (item: DeckPlayable) => {
     if (offlineBusyKey) return;
@@ -539,7 +534,7 @@ export function DropDeck({
 
   return (
     <div
-      className="relative flex flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden"
+      className="relative flex min-w-0 max-w-full flex-col overflow-x-hidden lg:min-h-0 lg:flex-1 lg:overflow-hidden"
       style={{
         ...(pressingStyle as React.CSSProperties),
         backgroundColor: pressing ? 'var(--ph-bg)' : '#050914',
@@ -578,7 +573,7 @@ export function DropDeck({
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
                 {houseNoticePlayable ? (
-                  <Button type="button" size="sm" onClick={() => playItem(houseNoticePlayable)} className="h-8 px-3 text-[9px] font-bold uppercase tracking-wider">
+                  <Button type="button" size="sm" onClick={engageHouseNotice} className="h-8 px-3 text-[9px] font-bold uppercase tracking-wider">
                     <Play className="mr-1.5 h-3.5 w-3.5 fill-current" /> Play now
                   </Button>
                 ) : null}
@@ -699,7 +694,7 @@ export function DropDeck({
         </div>
       </header>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 sm:px-6 lg:min-h-0 lg:flex-1 lg:flex-row lg:overflow-hidden">
+      <div className="relative z-10 mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-4 px-4 py-4 sm:px-6 lg:min-h-0 lg:flex-1 lg:flex-row lg:overflow-hidden">
         <aside className="flex shrink-0 flex-col gap-2 lg:w-56">
           <p className="font-headline text-xs font-bold uppercase tracking-[0.18em] text-fuchsia-300">
             Crates
@@ -849,8 +844,8 @@ export function DropDeck({
           </div>
         </aside>
 
-        <section className="flex min-w-0 flex-1 flex-col gap-4 lg:min-h-0">
-          <div className="rounded-2xl border border-fuchsia-400/20 bg-black/35 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-md sm:p-5">
+        <section className="flex min-w-0 max-w-full flex-1 flex-col gap-4 lg:min-h-0">
+          <div className="min-w-0 max-w-full rounded-2xl border border-fuchsia-400/20 bg-black/35 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-md sm:p-5">
             <DropVisualizer analyser={analyser} playing={playing}>
               <PressingPlate item={current} playing={playing} />
             </DropVisualizer>
@@ -944,8 +939,8 @@ export function DropDeck({
             />
           </div>
 
-          <div className="lg:min-h-0 lg:flex-1 lg:overflow-hidden">
-          <ScrollArea className="h-auto min-h-[240px] rounded-2xl border border-white/10 bg-black/25 lg:h-full">
+          <div className="min-w-0 max-w-full lg:min-h-0 lg:flex-1 lg:overflow-hidden">
+          <ScrollArea className="h-auto min-h-[240px] min-w-0 max-w-full rounded-2xl border border-white/10 bg-black/25 lg:h-full">
             {items.length === 0 ? (
               <div className="flex flex-col items-center gap-3 p-10 text-center">
                 <Disc3 className="h-10 w-10 text-fuchsia-400/70" />
@@ -961,69 +956,69 @@ export function DropDeck({
                 No drops match this crate or search.
               </p>
             ) : viewMode === 'browse' ? (
-              <div className="p-2 pr-3 sm:p-3 sm:pr-4">
+              <div className="box-border min-w-0 max-w-full p-2 sm:p-3">
                 {browseArtists.map((artist) => {
                   const artistOpen = expandedArtists[artist.id] ?? true;
                   return (
-                    <div key={artist.id} className="mb-3 overflow-x-clip rounded-xl border border-white/10 bg-black/20">
+                    <div key={artist.id} className="mb-3 min-w-0 max-w-full overflow-hidden rounded-xl border border-white/10 bg-black/20">
                       <button
                         type="button"
                         onClick={() =>
                           setExpandedArtists((prev) => ({ ...prev, [artist.id]: !artistOpen }))
                         }
-                        className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-white/5"
+                        className="flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden px-3 py-2.5 text-left hover:bg-white/5"
                       >
-                        <span className="inline-flex min-w-0 items-center gap-2">
+                        <span className="inline-flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                           {artistOpen ? (
-                            <ChevronDown className="h-4 w-4 text-cyan-300" />
+                            <ChevronDown className="h-4 w-4 shrink-0 text-cyan-300" />
                           ) : (
-                            <ChevronRight className="h-4 w-4 text-cyan-300" />
+                            <ChevronRight className="h-4 w-4 shrink-0 text-cyan-300" />
                           )}
                           <span className="truncate font-headline text-sm font-bold uppercase text-cyan-100">
                             {artist.label}
                           </span>
                         </span>
-                        <span className="shrink-0 font-code text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                        <span className="shrink-0 pl-2 font-code text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                           {artist.trackCount} tracks
                         </span>
                       </button>
                       {artistOpen ? (
-                        <div className="border-t border-white/10 bg-black/20 px-2 py-2 pr-3">
+                        <div className="box-border min-w-0 max-w-full border-t border-white/10 bg-black/20 p-2">
                           {artist.albums.map((album) => {
                             const albumKey = `${artist.id}:${album.id}`;
                             const albumOpen = expandedAlbums[albumKey] ?? true;
                             return (
-                              <div key={album.id} className="mb-2 rounded-lg border border-white/10 bg-black/20">
+                              <div key={album.id} className="mb-2 min-w-0 max-w-full overflow-hidden rounded-lg border border-white/10 bg-black/20">
                                 <button
                                   type="button"
                                   onClick={() =>
                                     setExpandedAlbums((prev) => ({ ...prev, [albumKey]: !albumOpen }))
                                   }
-                                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-white/5"
+                                  className="flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden px-3 py-2 text-left hover:bg-white/5"
                                 >
-                                  <span className="inline-flex min-w-0 items-center gap-2">
+                                  <span className="inline-flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                                     {albumOpen ? (
-                                      <ChevronDown className="h-3.5 w-3.5 text-fuchsia-300" />
+                                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-fuchsia-300" />
                                     ) : (
-                                      <ChevronRight className="h-3.5 w-3.5 text-fuchsia-300" />
+                                      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-fuchsia-300" />
                                     )}
                                     <span className="truncate font-code text-[11px] font-bold uppercase tracking-[0.14em] text-fuchsia-100/90">
                                       {album.label}
                                     </span>
                                   </span>
-                                  <span className="shrink-0 font-code text-[10px] text-muted-foreground">
+                                  <span className="shrink-0 pl-2 font-code text-[10px] text-muted-foreground">
                                     {album.items.length}
                                   </span>
                                 </button>
                                 {albumOpen ? (
-                                  <ul className="border-t border-white/10 px-2 py-1 pr-2.5">
+                                  <ul className="box-border min-w-0 max-w-full border-t border-white/10 px-1 py-1 sm:px-2">
                                     {album.items.map((item) => {
                                       const active = item.key === currentKey;
                                       return (
-                                        <li key={item.key}>
+                                        <li key={item.key} className="min-w-0 max-w-full">
                                           <div
                                             className={cn(
-                                              'group flex items-center gap-2 rounded-xl py-2 pl-2 pr-1 transition-colors',
+                                              'group flex min-w-0 max-w-full items-center gap-1 overflow-hidden rounded-xl py-2 pl-1 pr-0.5 sm:gap-2 sm:pl-2 sm:pr-1',
                                               active
                                                 ? 'bg-fuchsia-500/15 ring-1 ring-fuchsia-400/35'
                                                 : 'hover:bg-white/5'
@@ -1031,7 +1026,7 @@ export function DropDeck({
                                           >
                                             <button
                                               type="button"
-                                              className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                                              className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-left sm:gap-3"
                                               onClick={() => {
                                                 if (active) togglePlay();
                                                 else playItem(item);
@@ -1056,7 +1051,7 @@ export function DropDeck({
                                                   <Play className="h-3.5 w-3.5" />
                                                 )}
                                               </span>
-                                              <span className="min-w-0 flex-1">
+                                              <span className="min-w-0 flex-1 overflow-hidden">
                                                 <span className="block truncate font-headline text-sm font-bold uppercase">
                                                   {item.title}
                                                 </span>
@@ -1082,7 +1077,7 @@ export function DropDeck({
                                                   type="button"
                                                   size="icon"
                                                   variant="ghost"
-                                                  className="h-8 w-8 shrink-0 opacity-70 hover:opacity-100"
+                                                  className="h-7 w-7 shrink-0 opacity-70 hover:opacity-100 sm:h-8 sm:w-8"
                                                   aria-label={item.own ? 'Manage this song' : 'Add to crate'}
                                                 >
                                                   {item.own ? (
@@ -1183,9 +1178,9 @@ export function DropDeck({
                 })}
               </div>
             ) : (
-              <div className="p-2 pr-3 sm:p-3 sm:pr-4">
+              <div className="box-border min-w-0 max-w-full p-2 sm:p-3">
                 {buckets.map((bucket) => (
-                  <div key={bucket.id} className="mb-3">
+                  <div key={bucket.id} className="mb-3 min-w-0 max-w-full">
                     {group !== 'none' && (
                       <p className="sticky top-0 z-[1] bg-black/70 px-2 py-1.5 font-headline text-[11px] font-bold uppercase tracking-[0.16em] text-fuchsia-300/90 backdrop-blur-sm">
                         {bucket.label}
@@ -1194,14 +1189,14 @@ export function DropDeck({
                         </span>
                       </p>
                     )}
-                    <ul>
+                    <ul className="min-w-0 max-w-full">
                       {bucket.items.map((item) => {
                         const active = item.key === currentKey;
                         return (
-                          <li key={item.key}>
+                          <li key={item.key} className="min-w-0 max-w-full">
                             <div
                               className={cn(
-                                'group flex items-center gap-2 rounded-xl px-2 py-2 transition-colors',
+                                'group flex min-w-0 max-w-full items-center gap-1 overflow-hidden rounded-xl px-1 py-2 sm:gap-2 sm:px-2',
                                 active
                                   ? 'bg-fuchsia-500/15 ring-1 ring-fuchsia-400/35'
                                   : 'hover:bg-white/5'
@@ -1209,7 +1204,7 @@ export function DropDeck({
                             >
                               <button
                                 type="button"
-                                className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                                className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-left sm:gap-3"
                                 onClick={() => {
                                   if (active) togglePlay();
                                   else playItem(item);
@@ -1234,7 +1229,7 @@ export function DropDeck({
                                     <Play className="h-3.5 w-3.5" />
                                   )}
                                 </span>
-                                <span className="min-w-0 flex-1">
+                                <span className="min-w-0 flex-1 overflow-hidden">
                                   <span className="block truncate font-headline text-sm font-bold uppercase">
                                     {item.title}
                                   </span>
@@ -1260,7 +1255,7 @@ export function DropDeck({
                                     type="button"
                                     size="icon"
                                     variant="ghost"
-                                    className="h-8 w-8 shrink-0 opacity-70 hover:opacity-100"
+                                    className="h-7 w-7 shrink-0 opacity-70 hover:opacity-100 sm:h-8 sm:w-8"
                                     aria-label={item.own ? 'Manage this song' : 'Add to crate'}
                                   >
                                     {item.own ? (

@@ -39,6 +39,7 @@ export function ImageAttachComposer({
   const [busy, setBusy] = useState(false);
   const [studioOpen, setStudioOpen] = useState(false);
   const [studioMode, setStudioMode] = useState<MediaStudioMode>('camera');
+  const [studioInitialFile, setStudioInitialFile] = useState<File | null>(null);
   const allowVideo = Boolean(onClipChange);
 
   const clearMedia = () => {
@@ -75,7 +76,7 @@ export function ImageAttachComposer({
   const attached = clip || image;
 
   return (
-    <div className={cn(compact ? 'flex items-center gap-2' : 'space-y-2')}>
+    <div className={cn(compact ? 'inline-flex shrink-0 items-center' : 'space-y-2')}>
       <input
         ref={inputRef}
         type="file"
@@ -86,24 +87,42 @@ export function ImageAttachComposer({
         onChange={(e) => {
           const file = e.target.files?.[0];
           e.target.value = '';
+          if (!file) return;
+          if (allowVideo) {
+            setStudioInitialFile(file);
+            setStudioMode('library');
+            setStudioOpen(true);
+            return;
+          }
           void applyFile(file);
         }}
       />
       {attached ? (
-        <div className={cn('flex min-w-0 items-center gap-2', compact && 'w-full')}>
+        <div
+          className={cn(
+            'inline-flex shrink-0 items-center',
+            compact ? 'gap-1 rounded-lg border border-white/10 bg-black/20 px-1 py-0.5' : 'gap-2'
+          )}
+        >
           {clip ? (
             <ExpandableMedia
               kind="video"
               src={clip.previewUrl}
               alt="Clip preview"
-              thumbClassName="h-12 w-12 shrink-0 rounded-md object-cover ring-1 ring-white/15"
+              thumbClassName={cn(
+                'shrink-0 rounded-md object-cover ring-1 ring-white/15',
+                compact ? 'h-9 w-9' : 'h-12 w-12'
+              )}
             />
           ) : image ? (
             <ExpandableMedia
               kind="image"
               src={image.previewUrl}
               alt="Photo preview"
-              thumbClassName="h-12 w-12 shrink-0 rounded-md object-cover ring-1 ring-white/15"
+              thumbClassName={cn(
+                'shrink-0 rounded-md object-cover ring-1 ring-white/15',
+                compact ? 'h-9 w-9' : 'h-12 w-12'
+              )}
             />
           ) : null}
           <button
@@ -113,7 +132,7 @@ export function ImageAttachComposer({
             className={cn(
               'shrink-0 text-[var(--ph-muted,rgba(255,255,255,0.5))] hover:text-red-400',
               compact
-                ? 'inline-flex h-8 w-8 items-center justify-center rounded-md'
+                ? 'inline-flex h-7 w-7 items-center justify-center rounded-md'
                 : 'inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest'
             )}
             title={clip ? 'Remove clip' : 'Remove photo'}
@@ -154,8 +173,8 @@ export function ImageAttachComposer({
                 ? 'h-8 w-8 shrink-0 text-[var(--ph-accent,#7dd3fc)]'
                 : 'h-8 gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.7))] hover:text-[var(--ph-accent,#7dd3fc)]'
             )}
-            onClick={() => (allowVideo ? openStudio('library') : inputRef.current?.click())}
-            data-path="wall-camera"
+            onClick={() => inputRef.current?.click()}
+            data-path="wall-photo"
             title={allowVideo ? 'Photo or clip from files' : 'Attach a photo'}
           >
             <ImagePlus className="h-3.5 w-3.5" />
@@ -167,7 +186,11 @@ export function ImageAttachComposer({
         <MediaStudioDialog
           open={studioOpen}
           mode={studioMode}
-          onOpenChange={setStudioOpen}
+          initialFile={studioInitialFile}
+          onOpenChange={(next) => {
+            setStudioOpen(next);
+            if (!next) setStudioInitialFile(null);
+          }}
           onExportImage={(next) => {
             revokePostImagePreview(image);
             revokeWallClipPreview(clip);

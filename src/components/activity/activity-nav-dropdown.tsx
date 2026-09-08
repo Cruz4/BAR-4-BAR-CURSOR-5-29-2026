@@ -166,17 +166,19 @@ export function ActivityNavDropdown({
         setItems(recent);
       }
 
-      // Opening the dropdown only acknowledges the five entries it actually shows.
-      // Anything beyond the preview stays unread until the member visits Activity.
-      const visibleUnreadIds = recent.filter((event) => !event.readAt).map((event) => event.id);
-      setHiddenNewCount(Math.max(0, unreadCount - visibleUnreadIds.length));
-      if (visibleUnreadIds.length) {
+      // Opening the dropdown auto-reads most preview rows, but House Library pings
+      // stay unread until the member taps through to Library.
+      const autoReadUnreadIds = recent
+        .filter((event) => !event.readAt && event.type !== 'house_release')
+        .map((event) => event.id);
+      setHiddenNewCount(Math.max(0, unreadCount - autoReadUnreadIds.length));
+      if (autoReadUnreadIds.length) {
         try {
           const readAt = new Date().toISOString();
-          await markActivityEventsRead(visibleUnreadIds);
+          await markActivityEventsRead(autoReadUnreadIds);
           setItems((prev) =>
             prev.map((event) =>
-              visibleUnreadIds.includes(event.id) ? { ...event, readAt } : event
+              autoReadUnreadIds.includes(event.id) ? { ...event, readAt } : event
             )
           );
           refreshActivityAlerts();
@@ -276,7 +278,7 @@ export function ActivityNavDropdown({
             <Bell className="h-3 w-3" /> Recent activity
           </h4>
           <span className="text-[9px] font-code uppercase tracking-wider text-muted-foreground">
-            Opened = read
+            Tap to open
           </span>
         </div>
 

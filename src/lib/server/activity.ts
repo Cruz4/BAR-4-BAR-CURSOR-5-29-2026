@@ -21,6 +21,12 @@ import { profileHref } from '@/lib/profile/profile-slug';
 import { activityPostHash } from '@/lib/activity/post-deep-link';
 import { shareDocCommerceFlags } from '@/lib/drop-commerce';
 import { emergingEntryPath } from '@/lib/emerging-ranking';
+import {
+  effectiveHouseReleaseReadAt,
+  houseReleasePingEventId,
+  houseReleasePingSortAt,
+  isHouseReleasePingUnread,
+} from '@/lib/house-release-ping';
 import { isLiveMusicFanOnly } from '@/lib/server/music-fan-eligibility';
 import { listPushTokensFromDoc, sendWebPushToTokens } from '@/lib/server/push-devices';
 
@@ -412,23 +418,55 @@ async function listHouseReleaseActivity(userId: string): Promise<ActivityEvent[]
     .limit(HOUSE_ACTIVITY_LIMIT)
     .get();
   if (pings.empty) return [];
-  const readRefs = pings.docs.map((ping) =>
+
+  const byShare = new Map<string, (typeof pings.docs)[number]>();
+  for (const doc of pings.docs) {
+    const data = doc.data() || {};
+    const shareId = typeof data.shareId === 'string' ? data.shareId.trim().toUpperCase() : '';
+    if (!shareId) continue;
+    const stableId = houseReleasePingEventId(shareId);
+    const existing = byShare.get(shareId);
+    if (!existing) {
+      byShare.set(shareId, doc);
+      continue;
+    }
+    if (doc.id === stableId) {
+      byShare.set(shareId, doc);
+      continue;
+    }
+    if (existing.id === stableId) continue;
+    if (
+      houseReleasePingSortAt(data).localeCompare(houseReleasePingSortAt(existing.data() || {})) > 0
+    ) {
+      byShare.set(shareId, doc);
+    }
+  }
+
+  const uniqueDocs = [...byShare.values()].sort((a, b) =>
+    houseReleasePingSortAt(b.data() || {}).localeCompare(houseReleasePingSortAt(a.data() || {}))
+  );
+
+  const readRefs = uniqueDocs.map((ping) =>
     db.doc(`users/${userId}/activityGlobalReads/${ping.id}`)
   );
-  const reads = await db.getAll(...readRefs);
-  return pings.docs.map((ping, index) => {
+  const reads = readRefs.length ? await db.getAll(...readRefs) : [];
+  return uniqueDocs.map((ping, index) => {
     const data = ping.data() || {};
     const readData = reads[index]?.data() || {};
+    const pingedAt = houseReleasePingSortAt(data);
+    const storedReadAt = readData.readAt === null
+      ? null
+      : activityIso(readData.readAt) || null;
     return {
       id: ping.id,
       type: 'house_release',
       direction: 'received',
-      createdAt: activityIso(data.createdAt),
+      createdAt: pingedAt,
       actorId: SYSTEM_ACTOR_ID,
       actorName: SYSTEM_ACTOR_NAME,
       preview: typeof data.title === 'string' ? data.title : 'New House release',
       href: typeof data.href === 'string' ? data.href : '/library',
-      readAt: readData.readAt === null ? null : activityIso(readData.readAt) || null,
+      readAt: effectiveHouseReleaseReadAt(pingedAt, storedReadAt),
     } satisfies ActivityEvent;
   });
 }
@@ -521,7 +559,12 @@ export async function markActivityRead(userId: string, eventIds: string[]): Prom
         db.doc(`houseReleasePings/${eventId}`).get(),
         db.doc(`users/${userId}/activityGlobalReads/${eventId}`).get(),
       ]);
-      if (!ping.exists || receipt.data()?.readAt) continue;
+      if (!ping.exists) continue;
+      const pingedAt = houseReleasePingSortAt(ping.data() || {});
+      const storedReadAt = receipt.data()?.readAt === null
+        ? null
+        : activityIso(receipt.data()?.readAt) || null;
+      if (!isHouseReleasePingUnread(pingedAt, storedReadAt)) continue;
       await receipt.ref.set({ readAt: now }, { merge: true });
       marked += 1;
       markedGlobal += 1;
@@ -569,7 +612,11 @@ export async function markActivityUnread(userId: string, eventIds: string[]): Pr
       db.doc(`houseReleasePings/${eventId}`).get(),
       db.doc(`users/${userId}/activityGlobalReads/${eventId}`).get(),
     ]);
-    if (!ping.exists || !receipt.data()?.readAt) continue;
+    const pingedAt = houseReleasePingSortAt(ping.data() || {});
+    const storedReadAt = receipt.data()?.readAt === null
+      ? null
+      : activityIso(receipt.data()?.readAt) || null;
+    if (!ping.exists || isHouseReleasePingUnread(pingedAt, storedReadAt)) continue;
     await receipt.ref.set({ readAt: null }, { merge: true });
     houseMarked += 1;
   }

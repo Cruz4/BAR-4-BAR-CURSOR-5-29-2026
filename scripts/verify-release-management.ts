@@ -222,4 +222,11 @@ assert.match(libraryDeck, /Saved automatically on this device/);
 assert.match(libraryDeck, /LIBRARY_PREFERENCES_KEY/);
 assert.match(libraryDeck, /href=\{current\.detailsHref\}/, 'the Library now-playing title must open its song or release page');
 
+const housePingRoute = readFileSync(new URL('../src/app/api/admin/house-release-ping/route.ts', import.meta.url), 'utf8');
+const housePingLib = readFileSync(new URL('../src/lib/house-release-ping.ts', import.meta.url), 'utf8');
+assert.match(housePingLib, /houseReleasePingEventId/);
+assert.match(housePingRoute, /houseReleasePingEventId\(shareId\)/);
+assert.match(housePingRoute, /pingedAt:\s*now/);
+assert.doesNotMatch(housePingRoute, /if \(!existingPing\.exists\)/, 'House pings must refresh on every admin send');
+
 console.log('Release management verification passed.');

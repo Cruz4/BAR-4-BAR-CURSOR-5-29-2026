@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Library, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,13 +14,24 @@ import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import type { DropLibraryItem } from '@/lib/drop-library';
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
 import type { PressingConfig } from '@/lib/profile/pressing';
+import { markUnreadHouseReleasePingsRead } from '@/lib/activity/client';
+import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
 
 export default function DropLibraryPage() {
   const { user, loading: authLoading } = useAuth();
   const { enabled: firstDropsOn, loading: featureLoading } = useFirstDropsFeature();
+  const searchParams = useSearchParams();
+  const releaseShareId = searchParams.get('release');
   const [items, setItems] = useState<DropLibraryItem[]>([]);
   const [pressing, setPressing] = useState<PressingConfig | null>(null);
   const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id || !loaded) return;
+    void markUnreadHouseReleasePingsRead(releaseShareId || undefined)
+      .then(() => refreshActivityAlerts())
+      .catch(() => undefined);
+  }, [user?.id, loaded, releaseShareId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,7 +122,7 @@ export default function DropLibraryPage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-w-0 max-w-full flex-1 flex-col overflow-x-hidden">
       <DropDeck userId={user.id} items={items} pressing={pressing} />
     </div>
   );

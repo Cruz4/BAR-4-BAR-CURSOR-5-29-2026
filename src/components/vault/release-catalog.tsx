@@ -21,12 +21,12 @@ type RemoveTarget = UnpressTarget;
 const GROUPS: Array<{ key: keyof VaultReleaseGroups; label: string; note: string }> = [
   { key: 'privateDrafts', label: 'Private release drafts', note: 'Uploaded recordings only you can test.' },
   { key: 'offlineReleases', label: 'Offline releases', note: 'Hidden releases that can be republished at the same link or retired completely.' },
-  { key: 'liveSinglesWithLyrics', label: 'Live singles · lyrics attached', note: 'Music releases connected to a AKAsheet lyric sheet.' },
-  { key: 'liveSinglesAudioOnly', label: 'Live singles · audio only', note: 'Music releases that can receive a lyric sheet later.' },
+  { key: 'liveSinglesWithLyrics', label: 'Live singles · lyrics on sheet', note: 'Music is live and the Vault sheet has lyrics written (private until you DNA Drop).' },
+  { key: 'liveSinglesAudioOnly', label: 'Live singles · audio only', note: 'Music is live; add lyrics on the Vault sheet, then DNA Drop when you want them public (Pro).' },
   { key: 'liveAlbumsAllLyrics', label: 'Live albums · all lyrics attached', note: 'Bundle releases whose audio tracks all have lyrics.' },
   { key: 'liveAlbumsMixedLyrics', label: 'Live albums · mixed', note: 'Bundle releases with some lyric sheets and some audio-only tracks.' },
   { key: 'liveAlbumsAudioOnly', label: 'Live albums · audio only', note: 'Bundle releases that do not require lyric sheets.' },
-  { key: 'dnaPreviews', label: 'DNA lyric previews', note: 'Public lyric pages that are separate from paid releases.' },
+  { key: 'dnaPreviews', label: 'Live DNA Drops', note: 'Public lyric pages from a Vault sheet — Studio Pro to publish, view, or import.' },
   { key: 'unpressed', label: 'Not released yet', note: 'Vault tracks and albums that are not publicly available.' },
 ];
 
@@ -171,10 +171,10 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
-            Upload and test privately, publish a single or album when ready, then attach a lyric sheet now or later. DNA Drop remains a separate opt-in lyric snapshot (Studio Pro to view or import).
+            Upload and test recordings privately, then press music live when ready — free on every account.
           </p>
           <p className="mt-1 max-w-2xl text-[10px] leading-relaxed text-cyan-100/75">
-            Take offline is reversible and keeps the same release link. Remove release retires that old link; your Vault audio and buyers’ Library access are never deleted.
+            Lyrics live on your Vault sheet. To share them publicly, publish a DNA Drop from that sheet (Studio Pro to publish, view, or import). New release is for the recording, not the lyric link. Take offline keeps the link; Remove retires it — Vault audio and buyer Library access stay.
           </p>
         </div>
         <Button type="button" className="bg-fuchsia-400 font-bold uppercase text-black hover:bg-fuchsia-300" onClick={() => openFirstDropLathe()}>
@@ -212,7 +212,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
                             <span className="block truncate text-sm font-bold">{track?.title || album.title || 'Untitled'}</span>
                             <span className="block truncate font-code text-[9px] uppercase tracking-wider text-muted-foreground">
                               {track ? `${album.title} · ${hasLyrics(track) ? 'lyrics attached' : 'audio only'}` : `${album.tracks.length} tracks`}
-                              {dnaGroup ? ' · lyric preview live' : status ? ` · ${status}` : ''}
+                              {dnaGroup ? ' · DNA Drop live' : status ? ` · ${status}` : ''}
                               {!dnaGroup && (track?.houseRelease || (!track && album.houseRelease)) ? ' · House · Free' : ''}
                               {!dnaGroup && (track?.houseLibraryNotice || (!track && album.houseLibraryNotice)) ? ' · Library notice on' : ''}
                             </span>
@@ -346,7 +346,7 @@ export function ReleaseCatalogDialog({ open, onOpenChange, className }: ReleaseC
             Release Catalog
           </DialogTitle>
           <DialogDescription>
-            Manage private drafts, live music, albums, and lyric previews from one place.
+            Manage music releases, live DNA Drops, and drafts from one place.
           </DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pr-1">
